@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringKernel, AuthoringRequest, NavigationResult, QueryResult, SavedDocument,
 };
 use recite_core::{DocumentKey, SourcePosition};
@@ -14,7 +14,7 @@ fn navigation_scopes_unqualified_and_qualified_targets_deterministically() {
     let mut kernel = AuthoringKernel::new();
     kernel
         .apply(AuthoringRequest::new(
-            recite_compiler::SnapshotGeneration::initial(),
+            recite_compiler::authoring::SnapshotGeneration::initial(),
             [
                 SavedDocument::new(
                     key("main.recite"),
@@ -71,7 +71,7 @@ fn missing_ids_keep_typed_identity_and_exact_insertion_points_across_crlf_utf8()
     let mut kernel = AuthoringKernel::new();
     kernel
         .apply(AuthoringRequest::new(
-            recite_compiler::SnapshotGeneration::initial(),
+            recite_compiler::authoring::SnapshotGeneration::initial(),
             [SavedDocument::new(key("unicode.recite"), source)],
             [],
         ))
@@ -107,7 +107,7 @@ fn declaration_navigation_ignores_unrelated_reference_recovery() {
     let mut kernel = AuthoringKernel::new();
     kernel
         .apply(AuthoringRequest::new(
-            recite_compiler::SnapshotGeneration::initial(),
+            recite_compiler::authoring::SnapshotGeneration::initial(),
             [SavedDocument::new(
                 key("main.recite"),
                 ":: start\n->\n:: target\n",
@@ -121,7 +121,7 @@ fn declaration_navigation_ignores_unrelated_reference_recovery() {
     assert!(matches!(
         result,
         QueryResult::Ready(NavigationResult::Unique(location))
-            if location.identity() == &recite_compiler::SymbolIdentity::Block(
+            if location.identity() == &recite_compiler::authoring::SymbolIdentity::Block(
                 recite_core::BlockId::new("target").unwrap()
             )
     ));

@@ -41,11 +41,13 @@ fn deeply_nested_condition_returns_structured_depth_error() {
             "    Secret.\n",
             "-> END\n",
         ),
-    );
+    )
+    .into_payload();
     let CompiledStatementKind::If { condition, .. } = &mut asset.statements[0].kind else {
         panic!("expected if statement");
     };
     *condition = deeply_nested_condition(150);
+    let asset = CompiledDialogue::new(asset);
     let context = RecordingContext::default().with("trusts", true);
     let mut session = start_scene(&asset, None).expect("starts");
 

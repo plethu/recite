@@ -1,6 +1,6 @@
 use super::super::diagnostics::{MarkupDiagnostic, PoDiagnostic, error_span};
 use super::super::types::{EntryBuilder, PoFieldTarget};
-use crate::MarkupTranslationError;
+use crate::markup::MarkupTranslationError;
 
 pub(super) fn validate_translation_markup(
     name: &str,
@@ -14,7 +14,7 @@ pub(super) fn validate_translation_markup(
     if translation.is_empty() {
         return Ok(());
     }
-    let cause = match crate::validate_markup_translation(source_text, translation) {
+    let cause = match crate::markup::validate_markup_translation(source_text, translation) {
         Ok(()) => return Ok(()),
         Err(MarkupTranslationError::NewTag { tag, .. }) => {
             PoDiagnostic::Markup(MarkupDiagnostic::UnknownTag(tag))

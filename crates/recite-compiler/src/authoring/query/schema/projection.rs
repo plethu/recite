@@ -1,4 +1,4 @@
-use recite_core::{ProjectSchema, SourceSpan};
+use recite_core::{SourceSpan, schema::ProjectSchema};
 
 use super::super::types::{
     CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,

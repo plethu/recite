@@ -1,5 +1,6 @@
 use recite_runtime::{
-    ConditionValue, PreviewConditionArgument, PreviewConditionRequest, PreviewInputRevision,
+    ConditionValue,
+    preview::{PreviewConditionArgument, PreviewConditionRequest, PreviewInputRevision},
 };
 
 use super::fixture::{FixtureConditionValue, RuntimeFixture};
@@ -13,7 +14,7 @@ pub(super) fn make_inputs_revision() -> PreviewInputRevision {
 pub(super) fn condition_answer(
     fixture: &RuntimeFixture,
     request: &PreviewConditionRequest,
-) -> Result<recite_runtime::ConditionAnswer, crate::error::CliError> {
+) -> Result<recite_runtime::preview::ConditionAnswer, crate::error::CliError> {
     let arguments = request
         .query()
         .arguments()
@@ -22,22 +23,26 @@ pub(super) fn condition_answer(
         .collect::<Result<Vec<_>, _>>()?;
     let query = condition_query_text(request.query().function(), &arguments);
     let Some(value) = fixture.conditions.get(&query) else {
-        return Ok(recite_runtime::ConditionAnswer::Failed {
+        return Ok(recite_runtime::preview::ConditionAnswer::Failed {
             reason: format!("fixture is missing condition `{query}`"),
         });
     };
     let answer = match (request.query().expected_type(), value) {
         (recite_runtime::ConditionExpectedType::Bool, FixtureConditionValue::Bool(value)) => {
-            recite_runtime::ConditionAnswer::Value(ConditionValue::Bool(*value))
+            recite_runtime::preview::ConditionAnswer::Value(ConditionValue::Bool(*value))
         }
         (recite_runtime::ConditionExpectedType::Enum, FixtureConditionValue::Enum { r#enum }) => {
-            recite_runtime::ConditionAnswer::Value(ConditionValue::EnumVariant(r#enum.clone()))
+            recite_runtime::preview::ConditionAnswer::Value(ConditionValue::EnumVariant(
+                r#enum.clone(),
+            ))
         }
         (recite_runtime::ConditionExpectedType::Bool, FixtureConditionValue::Enum { r#enum }) => {
-            recite_runtime::ConditionAnswer::Value(ConditionValue::EnumVariant(r#enum.clone()))
+            recite_runtime::preview::ConditionAnswer::Value(ConditionValue::EnumVariant(
+                r#enum.clone(),
+            ))
         }
         (recite_runtime::ConditionExpectedType::Enum, FixtureConditionValue::Bool(value)) => {
-            recite_runtime::ConditionAnswer::Value(ConditionValue::Bool(*value))
+            recite_runtime::preview::ConditionAnswer::Value(ConditionValue::Bool(*value))
         }
     };
     Ok(answer)

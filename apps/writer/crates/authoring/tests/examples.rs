@@ -1,6 +1,9 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs_with_schema};
-use recite_core::{CompiledAssetId, CompilerVersion, SourceMapId, load_schema_manifest_str};
-use recite_runtime::{PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs_with_schema};
+use recite_core::{
+    compiled::{CompiledAssetId, CompilerVersion, SourceMapId},
+    schema::load_schema_manifest_str,
+};
+use recite_runtime::preview::{PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession};
 use recite_writer_model::WRITER_EXAMPLES;
 
 struct Trace {

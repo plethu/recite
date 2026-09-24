@@ -1,4 +1,4 @@
-use recite_core::ProjectSchema;
+use recite_core::schema::ProjectSchema;
 
 use super::errors::FreshnessSnapshotSide;
 use super::errors::SchemaSummaryBuildError;

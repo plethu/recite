@@ -1,4 +1,6 @@
-use recite_core::{CompiledDialogue, ContentFingerprint, canonical_compiled_dialogue_fingerprint};
+use recite_core::compiled::{
+    CompiledDialogue, ContentFingerprint, canonical_compiled_dialogue_fingerprint,
+};
 
 use crate::DialogueError;
 use crate::session_snapshot::{

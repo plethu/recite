@@ -102,11 +102,11 @@ fn filters_contextual_domain_completion_to_source_symbols() {
 
 #[test]
 fn schema_hover_preserves_freshness_without_producer_identity() {
-    let mut schema = recite_core::ProjectSchema::empty_v1();
-    schema.producer_metadata = Some(recite_core::ProducerMetadata {
+    let mut schema = recite_core::schema::ProjectSchema::empty_v1();
+    schema.producer_metadata = Some(recite_core::schema::ProducerMetadata {
         producer: None,
         content_fingerprint: Some(
-            recite_core::producer_content_fingerprint(
+            recite_core::schema::producer_content_fingerprint(
                 "blake3",
                 "0000000000000000000000000000000000000000000000000000000000000000",
             )
@@ -116,7 +116,7 @@ fn schema_hover_preserves_freshness_without_producer_identity() {
         inclusion_policy: None,
         producer_fingerprints: Vec::new(),
     });
-    let scoped = vec![recite_core::ProducerFingerprint {
+    let scoped = vec![recite_core::schema::ProducerFingerprint {
         id: "items".to_owned(),
         kind: "fixture".to_owned(),
         algorithm: "blake3".to_owned(),
@@ -124,7 +124,7 @@ fn schema_hover_preserves_freshness_without_producer_identity() {
     }];
     let catalog =
         recite_ui::UiCatalog::load(&recite_ui::UiLocale::default()).expect("default UI catalog");
-    let summary = recite_compiler::SchemaSummary::from_schema(&schema);
+    let summary = recite_compiler::authoring::SchemaSummary::from_schema(&schema);
     let detail = crate::features::schema_hover::hover_detail(None, &summary, &scoped, &catalog);
     assert!(detail.contains("Content fingerprint blake3:"));
     assert!(detail.contains("items-v1"));
@@ -148,14 +148,14 @@ fn schema_hover_uses_choice_selector_site_with_injected_catalog() {
         ],
     )
     .expect("catalog");
-    let schema = recite_core::ProjectSchema::empty_v1();
-    let scoped = vec![recite_core::ProducerFingerprint {
+    let schema = recite_core::schema::ProjectSchema::empty_v1();
+    let scoped = vec![recite_core::schema::ProducerFingerprint {
         id: "items".to_owned(),
         kind: "fixture".to_owned(),
         algorithm: "blake3".to_owned(),
         value: "items-v1".to_owned(),
     }];
-    let summary = recite_compiler::SchemaSummary::from_schema(&schema);
+    let summary = recite_compiler::authoring::SchemaSummary::from_schema(&schema);
     let detail = crate::features::schema_hover::hover_detail(None, &summary, &scoped, &catalog);
     assert!(detail.contains("scope localisé:"));
     assert!(!detail.contains("(scoped:"));

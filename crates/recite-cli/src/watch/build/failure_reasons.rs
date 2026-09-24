@@ -1,4 +1,4 @@
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCheckError, BuildFailureReason, BuildResultFailure, PublishFailureReason,
     PublishNotAttemptedReason, PublishOutcomeError, PublishRefusal,
 };

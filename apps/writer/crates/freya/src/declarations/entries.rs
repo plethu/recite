@@ -1,5 +1,7 @@
 use crate::messages::{MsgId, text};
-pub(super) fn entries(schema: &recite_core::ProjectSchema) -> Vec<(String, String, String)> {
+pub(super) fn entries(
+    schema: &recite_core::schema::ProjectSchema,
+) -> Vec<(String, String, String)> {
     let mut rows = Vec::new();
     for (name, condition) in &schema.conditions {
         rows.push((
@@ -70,15 +72,15 @@ pub(super) fn entries(schema: &recite_core::ProjectSchema) -> Vec<(String, Strin
     rows.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
     rows
 }
-fn signature(params: &[recite_core::ParameterDefinition]) -> String {
+fn signature(params: &[recite_core::schema::ParameterDefinition]) -> String {
     params
         .iter()
         .map(|p| format!("{}: {}", p.name, parameter_type(&p.type_ref)))
         .collect::<Vec<_>>()
         .join("\n")
 }
-fn parameter_type(value: &recite_core::SchemaTypeRef) -> String {
-    use recite_core::SchemaTypeRef as T;
+fn parameter_type(value: &recite_core::schema::SchemaTypeRef) -> String {
+    use recite_core::schema::SchemaTypeRef as T;
     match value {
         T::String => "Text".into(),
         T::Symbol => "Symbol".into(),

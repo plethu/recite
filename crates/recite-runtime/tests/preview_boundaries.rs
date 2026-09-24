@@ -2,12 +2,17 @@
 mod preview_support;
 
 use preview_support::asset;
-use recite_runtime::{PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, PreviewStatus};
+use recite_runtime::preview::{
+    PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, PreviewStatus,
+};
 
-fn changed(mut asset: recite_core::CompiledDialogue) -> recite_core::CompiledDialogue {
-    asset.lines[0].source_text.push_str(" changed");
-    asset.lines[0].authored_source_text.push_str(" changed");
-    asset
+fn changed(
+    asset: recite_core::compiled::CompiledDialogue,
+) -> recite_core::compiled::CompiledDialogue {
+    let mut payload = asset.into_payload();
+    payload.lines[0].source_text.push_str(" changed");
+    payload.lines[0].authored_source_text.push_str(" changed");
+    recite_core::compiled::CompiledDialogue::new(payload)
 }
 
 #[test]
@@ -73,7 +78,7 @@ fn restarting_old_asset_does_not_clear_replacement_requirement() {
     preview.assess_asset(&candidate).expect("assess");
     let replacement = preview.state().restart_required().cloned();
     preview.dispatch(
-        recite_runtime::PreviewCommand::Restart,
+        recite_runtime::preview::PreviewCommand::Restart,
         PreviewInputs::new(),
     );
     assert_eq!(preview.state().restart_required(), replacement.as_ref());
@@ -83,12 +88,15 @@ fn restarting_old_asset_does_not_clear_replacement_requirement() {
 #[test]
 fn malformed_candidate_revision_fails_without_mutating_restart_state() {
     let active = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
-    let mut malformed = active.clone();
-    malformed.metadata.push(recite_core::CompiledMetadataEntry {
-        key: "score".to_owned(),
-        value: recite_core::Value::Scalar(recite_core::ScalarValue::Float(f64::NAN)),
-        source_map: None,
-    });
+    let mut malformed = active.clone().into_payload();
+    malformed
+        .metadata
+        .push(recite_core::compiled::CompiledMetadataEntry {
+            key: "score".to_owned(),
+            value: recite_core::Value::Scalar(recite_core::ScalarValue::Float(f64::NAN)),
+            source_map: None,
+        });
+    let malformed = recite_core::compiled::CompiledDialogue::new(malformed);
     let mut preview = PreviewSession::new(&active, None, PreviewOptions::new()).expect("start");
     let before = preview.state().clone();
 
@@ -98,7 +106,7 @@ fn malformed_candidate_revision_fails_without_mutating_restart_state() {
 
     assert!(matches!(
         error,
-        recite_runtime::PreviewError::AssetRevisionFailed { .. }
+        recite_runtime::preview::PreviewError::AssetRevisionFailed { .. }
     ));
     assert_eq!(preview.state(), &before);
     assert!(preview.state().restart_required().is_none());
@@ -107,8 +115,9 @@ fn malformed_candidate_revision_fails_without_mutating_restart_state() {
 #[test]
 fn malformed_candidate_index_fails_without_mutating_restart_state() {
     let active = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
-    let mut malformed = active.clone();
-    malformed.default_block = recite_core::BlockIndex::new(99);
+    let mut malformed = active.clone().into_payload();
+    malformed.default_block = recite_core::compiled::BlockIndex::new(99);
+    let malformed = recite_core::compiled::CompiledDialogue::new(malformed);
     let mut preview = PreviewSession::new(&active, None, PreviewOptions::new()).expect("start");
     let before = preview.state().clone();
 
@@ -118,7 +127,7 @@ fn malformed_candidate_index_fails_without_mutating_restart_state() {
 
     assert!(matches!(
         error,
-        recite_runtime::PreviewError::AssetRevisionFailed { .. }
+        recite_runtime::preview::PreviewError::AssetRevisionFailed { .. }
     ));
     assert_eq!(preview.state(), &before);
     assert!(preview.state().restart_required().is_none());
@@ -130,43 +139,55 @@ fn mutable_candidate_interpolation_and_reason_invariants_are_transactional() {
         ":: start default\n> prompt@12345678901234567890\n  Prompt.\n  ? go@12345678901234567891\n    Go.\n    -> END\n",
     );
 
-    let mut mismatched_choice = active.clone();
+    let mut mismatched_choice = active.clone().into_payload();
     mismatched_choice.choices[0]
         .source_text
         .push_str(" {missing}");
-    assert_invalid_candidate(&active, &mismatched_choice);
+    assert_invalid_candidate(
+        &active,
+        &recite_core::compiled::CompiledDialogue::new(mismatched_choice),
+    );
 
-    let mut legacy_line = active.clone();
+    let mut legacy_line = active.clone().into_payload();
     legacy_line.lines[0].source_text = "{missing}".to_owned();
     legacy_line.lines[0].authored_source_text = "{missing}".to_owned();
-    legacy_line.lines[0].interpolation_mode = recite_core::CompiledInterpolationMode::Legacy;
-    assert_restart_required_candidate(&active, &legacy_line);
+    legacy_line.lines[0].interpolation_mode =
+        recite_core::compiled::CompiledInterpolationMode::Legacy;
+    assert_restart_required_candidate(
+        &active,
+        &recite_core::compiled::CompiledDialogue::new(legacy_line),
+    );
 
-    let mut malformed_reason = active.clone();
+    let mut malformed_reason = active.clone().into_payload();
     malformed_reason
         .availability_reasons
-        .push(recite_core::CompiledAvailabilityReason {
+        .push(recite_core::compiled::CompiledAvailabilityReason {
             id: recite_core::AvailabilityReasonId::new("weight").expect("valid reason id"),
             template: "Weight {value}.".to_owned(),
         });
     malformed_reason.condition_availability_reasons.push(
-        recite_core::CompiledConditionAvailabilityReason {
+        recite_core::compiled::CompiledConditionAvailabilityReason {
             function: "can_answer".to_owned(),
             reason: recite_core::AvailabilityReasonId::new("weight").expect("valid reason id"),
-            args: vec![recite_core::CompiledAvailabilityReasonArgBinding {
-                name: "value".to_owned(),
-                value: recite_core::CompiledAvailabilityReasonArgValue::Literal(
-                    recite_core::ScalarValue::Float(f64::NAN),
-                ),
-            }],
+            args: vec![
+                recite_core::compiled::CompiledAvailabilityReasonArgBinding {
+                    name: "value".to_owned(),
+                    value: recite_core::compiled::CompiledAvailabilityReasonArgValue::Literal(
+                        recite_core::ScalarValue::Float(f64::NAN),
+                    ),
+                },
+            ],
         },
     );
-    assert_invalid_candidate(&active, &malformed_reason);
+    assert_invalid_candidate(
+        &active,
+        &recite_core::compiled::CompiledDialogue::new(malformed_reason),
+    );
 }
 
 fn assert_invalid_candidate(
-    active: &recite_core::CompiledDialogue,
-    candidate: &recite_core::CompiledDialogue,
+    active: &recite_core::compiled::CompiledDialogue,
+    candidate: &recite_core::compiled::CompiledDialogue,
 ) {
     let Some(mut preview) = PreviewSession::new(active, None, PreviewOptions::new()).ok() else {
         panic!("valid test fixture must create a preview session");
@@ -175,14 +196,14 @@ fn assert_invalid_candidate(
     let result = preview.assess_asset(candidate);
     assert!(matches!(
         result,
-        Err(recite_runtime::PreviewError::AssetRevisionFailed { .. })
+        Err(recite_runtime::preview::PreviewError::AssetRevisionFailed { .. })
     ));
     assert_eq!(preview.state(), &before);
 }
 
 fn assert_restart_required_candidate(
-    active: &recite_core::CompiledDialogue,
-    candidate: &recite_core::CompiledDialogue,
+    active: &recite_core::compiled::CompiledDialogue,
+    candidate: &recite_core::compiled::CompiledDialogue,
 ) {
     let Some(mut preview) = PreviewSession::new(active, None, PreviewOptions::new()).ok() else {
         panic!("valid test fixture must create a preview session");

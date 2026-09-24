@@ -6,7 +6,9 @@ use super::{
     diagnostics::{project_diagnostic, related_presentation},
     spans::scene_key_span,
 };
-use crate::{Diagnostic, DiagnosticArgumentValue, ProjectSchema, toml_spans::TomlSpanIndex};
+use crate::{
+    Diagnostic, DiagnosticArgumentValue, schema::ProjectSchema, toml_spans::TomlSpanIndex,
+};
 
 /// Validate manifest-only project policy.
 #[must_use]

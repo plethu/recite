@@ -3,7 +3,10 @@ mod choice;
 mod choice_reason;
 mod line;
 
-use recite_core::{Comment, SourceRecoveryClass, Statement};
+use recite_core::{
+    SourceRecoveryClass,
+    ast::{Comment, Statement},
+};
 
 use crate::diagnostics::{misplaced_case, misplaced_else};
 use crate::layout::{ClassifiedLine, classify_line};

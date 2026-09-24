@@ -1,7 +1,8 @@
 use super::identity::{BuildInput, BuildInputAuthority, BuildInputKind};
 use recite_core::{
-    COMPILER_COMPATIBILITY_VERSION_V0, ContentFingerprint, DocumentKey, ProjectSchema,
-    SchemaFingerprint,
+    DocumentKey,
+    compiled::{COMPILER_COMPATIBILITY_VERSION_V0, ContentFingerprint, SchemaFingerprint},
+    schema::ProjectSchema,
 };
 
 /// A canonical fingerprint entry used by a publication guard.

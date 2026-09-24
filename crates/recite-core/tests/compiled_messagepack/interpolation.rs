@@ -1,4 +1,4 @@
-use recite_core::{CompiledAssetDecodeError, decode_compiled_dialogue_messagepack};
+use recite_core::compiled::{CompiledAssetDecodeError, decode_compiled_dialogue_messagepack};
 use serde::Serialize;
 use serde::ser::SerializeTuple;
 
@@ -149,8 +149,8 @@ fn decode_accepts_legacy_line_and_choice_rows() {
             None,
             None,
             None,
-            Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
-            Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+            Tagged::nil(recite_core::compiled::V0_DIVERT_TARGET_TAG_END),
+            Tagged::nil(recite_core::compiled::V0_CHOICE_ECHO_TAG_NONE),
             0,
         ),
     };

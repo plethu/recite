@@ -1,6 +1,6 @@
 use recite_core::{
     DiagnosticArgumentType, DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId,
-    contract_for, load_schema_manifest_str, migrated_diagnostic_presentation_contracts,
+    contract_for, migrated_diagnostic_presentation_contracts, schema::load_schema_manifest_str,
 };
 use std::collections::BTreeMap;
 
@@ -202,7 +202,7 @@ fn manifest_basic_lowering_diagnostics_have_exact_presentations() {
 }
 
 fn assert_structured(
-    report: &recite_core::SchemaLoadReport,
+    report: &recite_core::schema::SchemaLoadReport,
     presentation_id: &str,
     arguments: &[(&str, DiagnosticArgumentValue)],
 ) {

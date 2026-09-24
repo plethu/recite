@@ -1,4 +1,4 @@
-use recite_core::{SchemaTypeDefinition, load_schema_manifest_str};
+use recite_core::schema::{SchemaTypeDefinition, load_schema_manifest_str};
 
 use crate::diagnostic_codes;
 

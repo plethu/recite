@@ -1,5 +1,5 @@
 use lsp_types::Hover;
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringSnapshot, ClauseKind, FunctionReferenceKind, HoverInfo, SchemaSummary, SemanticFact,
     SymbolIdentity,
 };
@@ -139,7 +139,7 @@ pub(super) fn typed_hover(
                 SemanticFact::AvailabilityReason { .. } => Some(schema_symbol_hover(
                     name,
                     range,
-                    &recite_compiler::SemanticSymbolKind::AvailabilityReason,
+                    &recite_compiler::authoring::SemanticSymbolKind::AvailabilityReason,
                     schema,
                     catalog,
                 )),

@@ -1,4 +1,4 @@
-use recite_core::{ProjectSchema, load_schema_manifest_str};
+use recite_core::schema::{ProjectSchema, load_schema_manifest_str};
 
 use super::*;
 
@@ -14,7 +14,7 @@ fn generated_manifest_schema() -> ProjectSchema {
 #[test]
 fn validates_effects_against_generated_manifest_schema() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -28,7 +28,13 @@ fn validates_effects_against_generated_manifest_schema() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert!(report.is_ok(), "valid effects should pass: {report:?}");
 }
@@ -36,12 +42,18 @@ fn validates_effects_against_generated_manifest_schema() {
 #[test]
 fn reports_unknown_effect_function_on_function_span() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(":: start default\n", "! immediate missing_effect(snap)\n"),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE017"]);
     assert_spans(&report, [(2, 13)]);
@@ -50,7 +62,7 @@ fn reports_unknown_effect_function_on_function_span() {
 #[test]
 fn reports_wrong_arity_on_the_smallest_useful_span() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -59,7 +71,13 @@ fn reports_wrong_arity_on_the_smallest_useful_span() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE018", "RECITE_VALIDATE018"]);
     assert_spans(&report, [(2, 12), (3, 47)]);
@@ -72,12 +90,18 @@ fn reports_wrong_arity_on_the_smallest_useful_span() {
 #[test]
 fn reports_unsupported_effect_mode_on_mode_span() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(":: start default\n", "! blocking play_sfx(snap)\n"),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE020"]);
     assert_spans(&report, [(2, 3)]);
@@ -86,7 +110,7 @@ fn reports_unsupported_effect_mode_on_mode_span() {
 #[test]
 fn reports_wrong_scalar_argument_types_on_argument_spans() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -94,7 +118,13 @@ fn reports_wrong_scalar_argument_types_on_argument_spans() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,
@@ -111,7 +141,7 @@ fn reports_wrong_scalar_argument_types_on_argument_spans() {
 #[test]
 fn reports_invalid_speaker_registry_and_enum_values_on_argument_spans() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -120,7 +150,13 @@ fn reports_invalid_speaker_registry_and_enum_values_on_argument_spans() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,
@@ -146,11 +182,17 @@ fn keeps_schema_manifest_diagnostics_distinct_from_dialogue_validation() {
     );
 
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(":: start default\n", "! immediate missing_effect(snap)\n"),
     )];
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE017"]);
 }

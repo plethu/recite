@@ -3,12 +3,12 @@ use std::fs;
 use std::path::Path;
 
 use recite_cli::watch::{ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildRequest};
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildControl, BuildEngine, BuildFailure, BuildFailureReason, BuildGeneration,
     BuildPreparedHandle, BuildPublisher, BuildResultFailure, PreparedPublishIdentity,
     PublishAbortReason, PublishFailure, PublishOutcome, SnapshotGeneration,
 };
-use recite_core::decode_compiled_dialogue_messagepack;
+use recite_core::compiled::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
 fn require<T, E: Display>(result: Result<T, E>, context: &str) -> T {
@@ -40,7 +40,6 @@ fn ready(root: &Path) -> ProjectBuildRequest {
         ProjectBuildPreparation::Rejected { diagnostics } => {
             panic!("unexpected diagnostics: {diagnostics:?}")
         }
-        _ => panic!("unknown preparation outcome"),
     }
 }
 
@@ -65,8 +64,8 @@ impl BuildPublisher for CountingPublisher {
 
     fn prepare(
         &mut self,
-        request: &recite_compiler::BuildRequest,
-        candidates: &[recite_compiler::BuildCandidate],
+        request: &recite_compiler::authoring::BuildRequest,
+        candidates: &[recite_compiler::authoring::BuildCandidate],
         _control: &BuildControl,
     ) -> Result<Self::Prepared, PublishFailure> {
         self.prepare_calls += 1;
@@ -153,7 +152,7 @@ fn coordinator_rejects_foreign_request_before_publication() {
     let mut engine = ProjectBuildEngine::new(&request_a);
     let mut publisher = CountingPublisher::default();
     let result = require(
-        recite_compiler::BuildCoordinator::new().run(
+        recite_compiler::authoring::BuildCoordinator::new().run(
             request_b.build_request().clone(),
             &BuildControl::new(),
             &mut engine,
@@ -165,7 +164,7 @@ fn coordinator_rejects_foreign_request_before_publication() {
     assert!(matches!(
         result.failure(),
         Some(BuildResultFailure::Check(
-            recite_compiler::BuildCheckError::RequestMismatch
+            recite_compiler::authoring::BuildCheckError::RequestMismatch
         ))
     ));
     assert!(result.candidates().is_empty());

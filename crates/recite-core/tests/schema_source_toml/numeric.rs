@@ -1,9 +1,9 @@
-use recite_core::{
+use recite_core::schema::{
     AvailabilityReasonArgBinding, SchemaLiteralValue, canonical_schema_fingerprint,
     load_schema_manifest_str, load_schema_source_str,
 };
 
-fn toml_schema_for(token: &str) -> recite_core::SchemaSource {
+fn toml_schema_for(token: &str) -> recite_core::schema::SchemaSource {
     let source = format!(
         r#"schema_version = 1
 
@@ -30,7 +30,7 @@ value = {token}
         .unwrap_or_else(|| panic!("numeric source should load: {token}"))
 }
 
-fn json_schema_for(token: &str) -> recite_core::ProjectSchema {
+fn json_schema_for(token: &str) -> recite_core::schema::ProjectSchema {
     let source = format!(
         r#"{{
   "schema_version": 1,
@@ -47,7 +47,7 @@ fn json_schema_for(token: &str) -> recite_core::ProjectSchema {
         .unwrap_or_else(|| panic!("numeric manifest should load: {token}"))
 }
 
-fn toml_projection_schema_for(token: &str) -> recite_core::SchemaSource {
+fn toml_projection_schema_for(token: &str) -> recite_core::schema::SchemaSource {
     let source = format!(
         r#"schema_version = 1
 
@@ -77,7 +77,7 @@ type = "float"
         .unwrap_or_else(|| panic!("projection source should load: {token}"))
 }
 
-fn reason_value(schema: &recite_core::ProjectSchema) -> &AvailabilityReasonArgBinding {
+fn reason_value(schema: &recite_core::schema::ProjectSchema) -> &AvailabilityReasonArgBinding {
     match schema.conditions["ready"].availability_reason.as_ref() {
         Some(mapping) => &mapping.args["value"],
         None => panic!("availability mapping"),
@@ -221,16 +221,16 @@ fn toml_projection_float_tokens_survive_export_and_reload() {
         let projector = &source.schema().presentation_projectors["projector"];
         assert_eq!(
             projector.inputs[0].source,
-            recite_core::SchemaProjectionInputSource::Literal(SchemaLiteralValue::Float(
+            recite_core::schema::SchemaProjectionInputSource::Literal(SchemaLiteralValue::Float(
                 canonical.to_owned()
             )),
             "{token}"
         );
         assert_eq!(
             projector.outputs["badge"].fields["score"].source,
-            recite_core::PresentationAffordanceFieldSource::Literal(SchemaLiteralValue::Float(
-                canonical.to_owned()
-            )),
+            recite_core::schema::PresentationAffordanceFieldSource::Literal(
+                SchemaLiteralValue::Float(canonical.to_owned())
+            ),
             "{token}"
         );
 
@@ -254,16 +254,16 @@ fn toml_projection_float_syntax_normalizes_for_numeric_json_export() {
         let projector = &source.schema().presentation_projectors["projector"];
         assert_eq!(
             projector.inputs[0].source,
-            recite_core::SchemaProjectionInputSource::Literal(SchemaLiteralValue::Float(
+            recite_core::schema::SchemaProjectionInputSource::Literal(SchemaLiteralValue::Float(
                 normalized.to_owned()
             )),
             "{token}"
         );
         assert_eq!(
             projector.outputs["badge"].fields["score"].source,
-            recite_core::PresentationAffordanceFieldSource::Literal(SchemaLiteralValue::Float(
-                normalized.to_owned()
-            )),
+            recite_core::schema::PresentationAffordanceFieldSource::Literal(
+                SchemaLiteralValue::Float(normalized.to_owned())
+            ),
             "{token}"
         );
         let exported = source.export_json();

@@ -28,7 +28,7 @@ pub unsafe extern "C" fn recite_session_snapshot(
     if let Err(status) = super::ensure_session_thread(ffi_session) {
         return status;
     }
-    match recite_runtime::encode_session_messagepack(&ffi_session.session) {
+    match recite_runtime::snapshot::encode_session_messagepack(&ffi_session.session) {
         Ok(bytes) => {
             unsafe { *snapshot_out = ReciteBuffer::from_bytes(bytes) };
             ReciteStatus::Ok

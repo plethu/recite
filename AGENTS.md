@@ -19,11 +19,8 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Keep patches scoped to the issue or user request.
 - Do not revert unrelated user changes.
 - Prefer small, reviewable changes over broad refactors.
-- After a standalone pull request or the single stable-checkpoint milestone
-  integration pull request merges into `main`, verify `docs/roadmap.md`
-  against live GitHub issue and PR state before handoff. If the merge closed,
-  unblocked, or superseded roadmap items, update the roadmap on `main`, commit,
-  and push that follow-through.
+- Track outstanding work in GitHub issues and milestones. After a merge,
+  verify linked issue and milestone state before handoff.
 - For non-trivial Rust changes, use the relevant Recite overlay, especially
   `.agents/skills/recite-rust-quality/SKILL.md`, and load the global
   `rust-quality` skill when it is available.
@@ -64,9 +61,7 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
   `.agents/skills/recite-github-pm/SKILL.md`.
 - Clean diff review uses the global `code-review` skill plus the relevant
   Recite domain or language skill in a fresh reviewer context.
-- Roadmap ownership and final protected merges remain with the coordinating
-  main session; delegated work keeps `docs/roadmap.md` read-only unless its
-  issue explicitly includes it.
+- Final protected merges remain with the coordinating main session.
 
 ## Product Invariants
 

@@ -1,4 +1,7 @@
-use recite_core::{Block, BlockId, SourceMetadata, SourceRecoveryClass, Statement};
+use recite_core::{
+    BlockId, SourceRecoveryClass,
+    ast::{Block, SourceMetadata, Statement},
+};
 
 use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::diagnostics::{empty_block_id, missing_block_id, statement_before_block};

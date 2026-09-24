@@ -2,7 +2,10 @@ mod lexer;
 mod parser;
 mod token;
 
-use recite_core::{ConditionCall, ConditionExpression, SourceSpan};
+use recite_core::{
+    SourceSpan,
+    ast::{ConditionCall, ConditionExpression},
+};
 use std::fmt;
 
 use self::lexer::Lexer;

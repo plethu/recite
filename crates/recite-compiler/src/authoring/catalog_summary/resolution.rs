@@ -3,7 +3,7 @@ mod policy;
 #[path = "resolution_candidates.rs"]
 mod resolution_candidates;
 
-use recite_core::{PoDocument, PoEntry};
+use recite_core::po::{PoDocument, PoEntry};
 
 use super::CatalogSummaryError;
 use super::coverage::CatalogEntryKey;
@@ -136,7 +136,7 @@ fn entry_translation_is_complete(entry: &PoEntry, document: &PoDocument) -> bool
             .headers()
             .iter()
             .find(|header| header.key().eq_ignore_ascii_case("Plural-Forms"))
-            .and_then(|header| recite_core::validate_plural_rule(header.value()).ok())
+            .and_then(|header| recite_core::po::validate_plural_rule(header.value()).ok())
         else {
             return false;
         };

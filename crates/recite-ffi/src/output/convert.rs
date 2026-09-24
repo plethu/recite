@@ -3,7 +3,8 @@ use recite_runtime::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonTree,
     ChoiceAvailabilityReasonValue, ChoiceEchoMode, DialogueEffectArgument, DialogueEffectMode,
     DialogueEffectRequest, DialogueEvent, DialogueLine, DialoguePlural,
-    DialoguePluralResolutionOutcome, PluralResolutionAttempt, PluralResolutionOutcome,
+    DialoguePluralResolutionOutcome,
+    localisation::{PluralResolutionAttempt, PluralResolutionOutcome},
 };
 
 use super::model::{

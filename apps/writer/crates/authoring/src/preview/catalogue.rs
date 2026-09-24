@@ -1,9 +1,12 @@
 //! Immutable PO inputs for one trial. Files and editable drafts stay with the host.
-use recite_compiler::{
-    CatalogCoverageSummary, CatalogInput, CatalogResolution, CatalogResolutionPolicy, PotDocument,
+use recite_compiler::authoring::{
+    CatalogCoverageSummary, CatalogInput, CatalogResolution, CatalogResolutionPolicy,
 };
-use recite_core::{LocaleId, PoEntry};
-use recite_runtime::{
+use recite_core::{
+    LocaleId,
+    po::{PoEntry, PotDocument},
+};
+use recite_runtime::localisation::{
     LocaleError, LocaleLookupAttempt, LocaleLookupOutcome, LocaleLookupProvenance, LocaleProvider,
     PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
 };
@@ -136,7 +139,7 @@ impl LocaleProvider for TrialCatalogues {
             let rule = matched
                 .and_then(|(_, input)| plural_rule(input))
                 .or_else(|| self.rule(candidate.locale()));
-            let arm = rule.and_then(|rule| recite_core::evaluate_plural_form(rule, count).ok());
+            let arm = rule.and_then(|rule| recite_core::po::evaluate_plural_form(rule, count).ok());
             let entry = matched.map(|(entry, _)| entry);
             let translation = arm
                 .and_then(|arm| entry?.plural_translations().get(arm))
@@ -179,7 +182,7 @@ impl LocaleProvider for TrialCatalogues {
         let locale = LocaleId::new(locale).map_err(|e| LocaleError::new(e.to_string()))?;
         Ok(self
             .rule(&locale)
-            .and_then(|rule| recite_core::validate_plural_rule(rule).ok()))
+            .and_then(|rule| recite_core::po::validate_plural_rule(rule).ok()))
     }
 }
 fn context(id: &str, domain: TextDomain) -> String {

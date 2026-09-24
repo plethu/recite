@@ -1,5 +1,7 @@
 use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams};
-use recite_compiler::{AuthoringEditOperation, AuthoringEditPlan, AuthoringSnapshot, SourceRange};
+use recite_compiler::authoring::{
+    AuthoringEditOperation, AuthoringEditPlan, AuthoringSnapshot, SourceRange,
+};
 use recite_ui::{MsgId, UiCatalog};
 
 use super::CodeActionDocument;

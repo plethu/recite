@@ -1,4 +1,4 @@
-use recite_core::CompiledValueError;
+use recite_core::compiled::CompiledValueError;
 
 /// Non-content failures that prevent asset output even after validation passes.
 #[derive(Debug, thiserror::Error)]

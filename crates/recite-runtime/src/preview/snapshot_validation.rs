@@ -1,14 +1,14 @@
-use recite_core::{ChoiceId, CompiledChoiceEcho, LocaleId};
+use recite_core::{ChoiceId, LocaleId, compiled::CompiledChoiceEcho};
 
 use super::model::{PreviewState, PreviewStatus};
-use crate::{DialogueChoice, DialogueLine, DialogueSession, DialogueSessionSnapshot};
+use crate::{DialogueChoice, DialogueLine, DialogueSession, snapshot::DialogueSessionSnapshot};
 
 pub(super) fn state_matches_session(
-    asset: &recite_core::CompiledDialogue,
+    asset: &recite_core::compiled::CompiledDialogue,
     state: &PreviewState,
     session: &DialogueSession,
 ) -> bool {
-    let snapshot = crate::snapshot_session(session);
+    let snapshot = crate::snapshot::snapshot_session(session);
     let active_block = asset
         .blocks
         .get(session.active_block_index().as_u32() as usize)
@@ -32,8 +32,10 @@ pub(super) fn state_matches_session(
             state.block() == Some(prompt.identity().block())
                 && snapshot.pending_prompt.as_ref().is_some_and(|saved| {
                     let statement = asset.statements.get(saved.statement as usize);
-                    let Some(recite_core::CompiledStatementKind::Prompt { line, choices }) =
-                        statement.map(|statement| &statement.kind)
+                    let Some(recite_core::compiled::CompiledStatementKind::Prompt {
+                        line,
+                        choices,
+                    }) = statement.map(|statement| &statement.kind)
                     else {
                         return false;
                     };
@@ -103,10 +105,10 @@ fn selected_history_matches(state: &PreviewState, snapshot: &DialogueSessionSnap
 }
 
 fn prompt_matches_line(
-    asset: &recite_core::CompiledDialogue,
-    active_block: Option<&recite_core::CompiledBlock>,
+    asset: &recite_core::compiled::CompiledDialogue,
+    active_block: Option<&recite_core::compiled::CompiledBlock>,
     projected: Option<&DialogueLine>,
-    compiled: Option<&recite_core::CompiledLine>,
+    compiled: Option<&recite_core::compiled::CompiledLine>,
     plural_arm_count: Option<usize>,
 ) -> bool {
     match (projected, compiled) {
@@ -189,9 +191,9 @@ fn plural_arm_matches_resolution(
 }
 
 fn choice_projection_matches(
-    asset: &recite_core::CompiledDialogue,
+    asset: &recite_core::compiled::CompiledDialogue,
     projected: &DialogueChoice,
-    compiled: &recite_core::CompiledChoice,
+    compiled: &recite_core::compiled::CompiledChoice,
 ) -> bool {
     projected.id == compiled.id
         && projected.source_text == compiled.source_text
@@ -210,16 +212,16 @@ fn choice_projection_matches(
 trait MetadataProjection {
     fn key_metadata_matches(
         &self,
-        asset: &recite_core::CompiledDialogue,
-        range: recite_core::MetadataRange,
+        asset: &recite_core::compiled::CompiledDialogue,
+        range: recite_core::compiled::MetadataRange,
     ) -> bool;
 }
 
 impl MetadataProjection for DialogueLine {
     fn key_metadata_matches(
         &self,
-        asset: &recite_core::CompiledDialogue,
-        range: recite_core::MetadataRange,
+        asset: &recite_core::compiled::CompiledDialogue,
+        range: recite_core::compiled::MetadataRange,
     ) -> bool {
         metadata_matches(asset, range, &self.metadata)
     }
@@ -228,16 +230,16 @@ impl MetadataProjection for DialogueLine {
 impl MetadataProjection for DialogueChoice {
     fn key_metadata_matches(
         &self,
-        asset: &recite_core::CompiledDialogue,
-        range: recite_core::MetadataRange,
+        asset: &recite_core::compiled::CompiledDialogue,
+        range: recite_core::compiled::MetadataRange,
     ) -> bool {
         metadata_matches(asset, range, &self.metadata)
     }
 }
 
 fn metadata_matches(
-    asset: &recite_core::CompiledDialogue,
-    range: recite_core::MetadataRange,
+    asset: &recite_core::compiled::CompiledDialogue,
+    range: recite_core::compiled::MetadataRange,
     projected: &[recite_core::MetadataEntry],
 ) -> bool {
     let start = range.start.as_u32() as usize;

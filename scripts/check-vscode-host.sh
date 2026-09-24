@@ -316,7 +316,7 @@ cat > "$probe/package.json" <<'EOF'
     "commands": [{ "command": "recite.keyboardProbe", "title": "Recite: Keyboard probe" }],
     "keybindings": [
       { "command": "recite.keyboardProbe", "key": "ctrl+alt+shift+k" },
-      { "command": "recite.renameBlock", "key": "ctrl+alt+shift+r" },
+      { "command": "reciteHostProbe.rename", "key": "ctrl+alt+shift+r" },
       { "command": "recite.watch.start", "key": "ctrl+alt+shift+s" },
       { "command": "recite.watch.stop", "key": "ctrl+alt+shift+q" }
     ]
@@ -460,6 +460,8 @@ drive_keyboard() {
   sleep 3
   wtype_key -d 30 keyboard_done
   wtype_key -k Return
+  wait_for_file "$profile/keyboard.rename-command-result" "keyboard rename command result" || return 1
+  cat "$profile/keyboard.rename-command-result"
   wait_for_file "$profile/keyboard.rename-result" "keyboard rename edit" || return 1
 
   wtype_key -M ctrl -M alt -M shift -k s
@@ -516,6 +518,8 @@ run_host_process() {
     RECITE_HOST_PROBE_KEYBOARD_READY="$profile/keyboard.ready" \
     RECITE_HOST_PROBE_KEYBOARD_KEY_RESULT="$profile/keyboard.key-result" \
     RECITE_HOST_PROBE_KEYBOARD_RENAME_READY="$profile/keyboard.rename-ready" \
+    RECITE_HOST_PROBE_KEYBOARD_RENAME_STARTED="$profile/keyboard.rename-started" \
+    RECITE_HOST_PROBE_KEYBOARD_RENAME_COMMAND_RESULT="$profile/keyboard.rename-command-result" \
     RECITE_HOST_PROBE_KEYBOARD_RENAME_RESULT="$profile/keyboard.rename-result" \
     RECITE_HOST_PROBE_KEYBOARD_WATCH_RESULT="$profile/keyboard.watch-result" \
     RECITE_HOST_PROBE_HOST_LABEL="$host_label" \

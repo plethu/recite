@@ -1,4 +1,7 @@
-use recite_runtime::{ConditionValue, PreviewConditionArgument, PreviewConditionQuery};
+use recite_runtime::{
+    ConditionValue,
+    preview::{PreviewConditionArgument, PreviewConditionQuery},
+};
 
 use crate::{BenchmarkResult, error};
 

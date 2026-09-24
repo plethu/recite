@@ -1,5 +1,5 @@
-use recite_compiler::{FreshnessAssessment, FreshnessStatus, StaleReason};
-use recite_core::{Diagnostic, SchemaFingerprint};
+use recite_compiler::authoring::{FreshnessAssessment, FreshnessStatus, StaleReason};
+use recite_core::{Diagnostic, compiled::SchemaFingerprint};
 
 use super::{ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest};
 use crate::error::CliError;

@@ -12,5 +12,5 @@ The [serialization compatibility decision](https://github.com/plethu/recite/blob
 records the current MessagePack boundaries and the evidence required before a
 future encoding is introduced.
 
-The [schema and localisation readiness audit](https://github.com/plethu/recite/blob/main/docs/schema-localisation-readiness.md)
-records the current cross-surface evidence and remaining Milestone 2 work.
+The [production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)
+defines source, schema, localisation, runtime, and client contracts.

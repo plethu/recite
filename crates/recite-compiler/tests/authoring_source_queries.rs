@@ -2,15 +2,18 @@
 
 use std::collections::BTreeSet;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringKernel, AuthoringRequest, CompletionCandidateDetail, CompletionCandidateKind,
     MetadataValue, QueryResult, SavedDocument, SemanticFact, SnapshotGeneration,
 };
 use recite_core::{
-    AvailabilityReasonDefinition, ConditionDefinition, DocumentKey, FlatMetadataDomain,
-    MetadataDefinition, MetadataDomainDefinition, MetadataTarget, ProjectSchema,
-    ProjectionQueryFunctionDefinition, SchemaPresentationProjectorDefinition,
-    SchemaProjectionSelector, SchemaTypeRef, SourcePosition, SpeakerDefinition,
+    DocumentKey, SourcePosition,
+    schema::{
+        AvailabilityReasonDefinition, ConditionDefinition, FlatMetadataDomain, MetadataDefinition,
+        MetadataDomainDefinition, MetadataTarget, ProjectSchema, ProjectionQueryFunctionDefinition,
+        SchemaPresentationProjectorDefinition, SchemaProjectionSelector, SchemaTypeRef,
+        SpeakerDefinition,
+    },
 };
 
 #[path = "authoring_source_queries/typed.rs"]
@@ -36,7 +39,7 @@ fn fixture() -> AuthoringKernel {
         "knows_secret".to_owned(),
         ConditionDefinition {
             params: Vec::new(),
-            returns: recite_core::ConditionReturnType::Bool,
+            returns: recite_core::schema::ConditionReturnType::Bool,
             availability_reason: None,
         },
     );
@@ -184,7 +187,7 @@ fn references_are_key_scoped_and_include_declarations_is_typed() {
     let result = kernel.snapshot().references(
         &key("main.recite"),
         position(2, 4),
-        recite_compiler::SymbolQueryOptions::new(false),
+        recite_compiler::authoring::SymbolQueryOptions::new(false),
     );
     let QueryResult::Ready(references) = result else {
         panic!("references are ready");
@@ -254,7 +257,7 @@ fn block_completion_and_hover_keep_project_scope_and_source_identity() {
     };
     assert_eq!(
         hover.location().kind(),
-        recite_compiler::SymbolKind::BlockReference
+        recite_compiler::authoring::SymbolKind::BlockReference
     );
     assert!(matches!(hover.facts(), [SemanticFact::Reference]));
 }
@@ -275,7 +278,7 @@ fn references_without_declarations_do_not_require_incomplete_definitions() {
     let result = kernel.snapshot().references(
         &key("main.recite"),
         position(2, 4),
-        recite_compiler::SymbolQueryOptions::new(false),
+        recite_compiler::authoring::SymbolQueryOptions::new(false),
     );
     let QueryResult::Ready(references) = result else {
         panic!("reference-only query does not consume definitions: {result:?}");

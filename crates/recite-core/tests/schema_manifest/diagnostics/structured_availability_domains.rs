@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use recite_core::{
-    DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, SchemaLoadReport,
-    contract_for, load_schema_manifest_str,
+    DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, contract_for,
+    schema::{SchemaLoadReport, load_schema_manifest_str},
 };
 
 fn string(value: &str) -> DiagnosticArgumentValue {

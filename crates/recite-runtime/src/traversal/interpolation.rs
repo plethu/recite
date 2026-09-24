@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    CompiledInterpolationBinding, CompiledInterpolationMode, InterpolationType, ScalarValue,
+    ScalarValue,
+    ast::InterpolationType,
+    compiled::{CompiledInterpolationBinding, CompiledInterpolationMode},
 };
 
 use super::output::LocaleLookup;

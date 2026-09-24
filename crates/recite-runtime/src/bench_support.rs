@@ -1,6 +1,6 @@
 //! Maintainer-only probes for benchmark evidence.
 
-use crate::PreviewPrompt;
+use crate::preview::PreviewPrompt;
 
 /// Returns the validated plural arm cardinality attached to a preview prompt.
 #[must_use]

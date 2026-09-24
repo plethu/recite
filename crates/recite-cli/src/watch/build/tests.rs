@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCheckError, BuildControl, BuildFailureReason, BuildGeneration, BuildResultFailure,
     BuildTarget, BuildTerminalStatus, PublishNotAttemptedReason, PublishOutcome, PublishRefusal,
     RecoveryNeeded,
@@ -204,7 +204,7 @@ fn unchanged_request_is_fresh_after_post_publish_assessment() {
         status,
         BuildStatus::Fresh {
             asset_count: 1,
-            telemetry: recite_compiler::BuildTelemetry::none(),
+            telemetry: recite_compiler::authoring::BuildTelemetry::none(),
         }
     );
     assert!(stderr.is_empty());
@@ -235,14 +235,14 @@ fn empty_target_build_honours_cancellation_and_supersession() {
                 assert_eq!(
                     status,
                     if cancellation.is_some() {
-                        recite_compiler::BuildTerminalStatus::Superseded
+                        recite_compiler::authoring::BuildTerminalStatus::Superseded
                     } else {
-                        recite_compiler::BuildTerminalStatus::Cancelled
+                        recite_compiler::authoring::BuildTerminalStatus::Cancelled
                     }
                 );
                 assert_eq!(
                     outcome,
-                    recite_compiler::PublishOutcome::NotAttempted { reason: expected }
+                    recite_compiler::authoring::PublishOutcome::NotAttempted { reason: expected }
                 );
             }
             other => panic!("unexpected empty-target result: {other:?}"),

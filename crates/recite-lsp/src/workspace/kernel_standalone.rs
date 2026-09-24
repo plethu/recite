@@ -1,4 +1,4 @@
-use recite_compiler::{AuthoringRequest, OpenDocument as KernelOpenDocument};
+use recite_compiler::authoring::{AuthoringRequest, OpenDocument as KernelOpenDocument};
 
 use super::LspWorkspace;
 use super::document_keys::standalone_document_key;
@@ -21,7 +21,7 @@ impl LspWorkspace {
             Vec::new(),
             vec![KernelOpenDocument::new(
                 key.clone(),
-                recite_compiler::DocumentVersion::new(i64::from(document.version())),
+                recite_compiler::authoring::DocumentVersion::new(i64::from(document.version())),
                 document.text().to_owned(),
             )],
         )

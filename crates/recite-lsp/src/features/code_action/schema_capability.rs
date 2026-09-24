@@ -1,7 +1,7 @@
 mod collect;
 
 use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand};
-use recite_compiler::{SchemaAction, SchemaCapabilityUnavailableReason, SchemaSummary};
+use recite_compiler::authoring::{SchemaAction, SchemaCapabilityUnavailableReason, SchemaSummary};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 /// Project compiler capability descriptors into standard protocol actions.
@@ -76,8 +76,8 @@ fn action_name(action: &SchemaAction) -> &'static str {
 
 fn producer_name(
     action: &SchemaAction,
-    declaration_producer: Option<&recite_core::ProducerIdentity>,
-    declaration_origin: Option<&recite_core::ProducerOrigin>,
+    declaration_producer: Option<&recite_core::schema::ProducerIdentity>,
+    declaration_origin: Option<&recite_core::schema::ProducerOrigin>,
 ) -> String {
     match action {
         SchemaAction::InvokeProducer { producer }
@@ -96,8 +96,8 @@ fn producer_name(
 
 fn producer_state(
     action: &SchemaAction,
-    declaration_producer: Option<&recite_core::ProducerIdentity>,
-    declaration_origin: Option<&recite_core::ProducerOrigin>,
+    declaration_producer: Option<&recite_core::schema::ProducerIdentity>,
+    declaration_origin: Option<&recite_core::schema::ProducerOrigin>,
 ) -> &'static str {
     if matches!(
         action,

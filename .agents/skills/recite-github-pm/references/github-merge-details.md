@@ -42,8 +42,8 @@ At a stable checkpoint, open exactly one integration pull request to protected
 in its `[REC-N]` title. Integration mode allows multiple valid issue codes in
 the commit range while still requiring every commit's normal subject and
 no-attribution rules. Use this helper and the normal GitHub review path for
-that final PR. After the merge, refresh the roadmap on `main` against live
-GitHub state.
+that final PR. After the merge, verify linked issue and milestone state on
+GitHub.
 
 ## Maintainer Review
 

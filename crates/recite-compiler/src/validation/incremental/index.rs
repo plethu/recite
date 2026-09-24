@@ -2,7 +2,7 @@
 //! Only changed documents and consumers/colliders of their exports are checked.
 use super::{ProjectFacts, facts::Symbol, validate_context};
 use crate::validation::project::first_source_span;
-use recite_core::{Diagnostic, DocumentKey, SourceFile};
+use recite_core::{Diagnostic, DocumentKey, ast::SourceFile};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,

@@ -14,7 +14,7 @@ impl LspWorkspace {
     pub(crate) fn with_ui_catalog(
         config: WorkspaceConfig,
         ui_catalog: UiCatalog,
-    ) -> Result<Self, recite_compiler::AuthoringError> {
+    ) -> Result<Self, recite_compiler::authoring::AuthoringError> {
         let saved = SavedProjectIndex::discover(&config);
         let schema_override_path = config.schema_override_path.clone();
         let documents = OpenDocumentStore::default();

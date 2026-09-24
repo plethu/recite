@@ -25,7 +25,7 @@
 //! # Example: Load A Schema Manifest
 //!
 //! ```
-//! use recite_core::load_schema_manifest_str;
+//! use recite_core::schema::load_schema_manifest_str;
 //!
 //! let report = load_schema_manifest_str(
 //!     "schema/recite.schema.json",
@@ -96,52 +96,6 @@ mod text;
 mod toml_spans;
 mod value;
 
-pub use ast::{
-    Argument, Block, BlockReference, Choice, ChoiceAvailabilityReasonOverride,
-    ChoiceAvailabilityRequirement, ChoiceEcho, ChoiceTarget, Comment, ConditionCall,
-    ConditionExpression, ConditionGroup, ConditionUnary, Divert, DivertTarget, END_DIVERT_TARGET,
-    Effect, EffectMode, IfBranch, InterpolationBinding, InterpolationType, Line, MatchArm,
-    MatchBranch, MatchPattern, SourceFile, SourceMetadata, SourceMetadataEntry,
-    SourceMetadataScalar, SourceMetadataValue, SourceText, Statement, StatementKind,
-};
-pub use compiled::{
-    BLAKE3_DIGEST_LEN, BlockIndex, BlockLookupEntry, BlockLookupTable,
-    COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceIndex,
-    ChoiceLookupEntry, ChoiceLookupTable, ChoiceRange, CompiledArgument, CompiledAssetDecodeError,
-    CompiledAssetEncodeError, CompiledAssetEncoding, CompiledAssetHeader, CompiledAssetId,
-    CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
-    CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice, CompiledChoiceEcho,
-    CompiledConditionAvailabilityReason, CompiledConditionCall, CompiledConditionExpression,
-    CompiledDialogue, CompiledDialoguePayload, CompiledDivertTarget, CompiledEffect,
-    CompiledEffectMode, CompiledInspectionEncoding, CompiledInterpolationBinding,
-    CompiledInterpolationMode, CompiledLine, CompiledMatchArm, CompiledMatchPattern,
-    CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry, CompiledSpeaker,
-    CompiledStatement, CompiledStatementKind, CompiledValueError, CompilerVersion,
-    ContentFingerprint, EffectIndex, FingerprintAlgorithm, FingerprintDigest, LineIndex,
-    LineLookupEntry, LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange,
-    SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex, SpeakerIndex, StatementIndex,
-    StatementRange, TableRange, V0_ARGUMENT_TAG_IDENTIFIER, V0_ARGUMENT_TAG_VALUE,
-    V0_ASSET_ENCODING_MESSAGEPACK, V0_ASSET_HEADER_FIELDS,
-    V0_AVAILABILITY_REASON_ARG_BINDING_FIELDS, V0_AVAILABILITY_REASON_FIELDS, V0_BLOCK_FIELDS,
-    V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, V0_CHOICE_ECHO_TAG_NONE, V0_CHOICE_ECHO_TAG_SELECTED_TEXT,
-    V0_CHOICE_FIELDS, V0_COMPILED_DIALOGUE_FIELDS, V0_CONDITION_AVAILABILITY_REASON_FIELDS,
-    V0_CONDITION_CALL_FIELDS, V0_CONDITION_TAG_AND, V0_CONDITION_TAG_CALL, V0_CONDITION_TAG_NOT,
-    V0_CONDITION_TAG_OR, V0_DIVERT_TARGET_TAG_BLOCK, V0_DIVERT_TARGET_TAG_END, V0_EFFECT_FIELDS,
-    V0_EFFECT_MODE_TAG_BLOCKING, V0_EFFECT_MODE_TAG_DEFERRED, V0_EFFECT_MODE_TAG_IMMEDIATE,
-    V0_FINGERPRINT_FIELDS, V0_IF_STATEMENT_PAYLOAD_FIELDS, V0_INSPECTION_ENCODING_COMPACT_JSON,
-    V0_LINE_FIELDS, V0_LOOKUP_ENTRY_FIELDS, V0_MATCH_ARM_FIELDS, V0_MATCH_PATTERN_TAG_VARIANT,
-    V0_MATCH_PATTERN_TAG_WILDCARD, V0_MATCH_STATEMENT_PAYLOAD_FIELDS, V0_METADATA_ENTRY_FIELDS,
-    V0_PROMPT_STATEMENT_PAYLOAD_FIELDS, V0_RANGE_FIELDS, V0_SCALAR_TAG_BOOLEAN,
-    V0_SCALAR_TAG_FLOAT, V0_SCALAR_TAG_INTEGER, V0_SCALAR_TAG_STRING,
-    V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT, V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA,
-    V0_SOURCE_FILE_FIELDS, V0_SOURCE_MAP_ENTRY_FIELDS, V0_SOURCE_SPAN_FIELDS, V0_SPEAKER_FIELDS,
-    V0_STATEMENT_FIELDS, V0_STATEMENT_TAG_DIVERT, V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END,
-    V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE, V0_STATEMENT_TAG_MATCH, V0_STATEMENT_TAG_PROMPT,
-    V0_TAGGED_VALUE_FIELDS, V0_VALUE_TAG_ARRAY, V0_VALUE_TAG_SCALAR,
-    canonical_compiled_dialogue_fingerprint, canonical_source_fingerprint,
-    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack,
-    messagepack_array_len, messagepack_u16,
-};
 pub use diagnostic::{
     Diagnostic, DiagnosticArgumentSpec, DiagnosticArgumentType,
     DiagnosticAuxiliaryPresentationContract, DiagnosticExplanation, DiagnosticPresentationContract,
@@ -165,50 +119,11 @@ pub use diagnostic_record::{DIAGNOSTIC_RECORD_VERSION, DiagnosticRecord, Diagnos
 pub use document_key::{DocumentKey, DocumentKeyError};
 pub use error::CoreValueError;
 pub use ids::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
-pub use markup::{
-    MarkupTagKind, MarkupTranslationError, MarkupUnbalancedKind, MarkupValidationIssue,
-    validate_markup, validate_markup_translation,
-};
-pub use po::{
-    PluralRuleError, PoComment, PoCommentKind, PoDiagnosticKind, PoDocument, PoDocumentFingerprint,
-    PoEdit, PoEditError, PoEntry, PoEntryField, PoEntryId, PoHeader, PoIoError, PoParseError,
-    PoParseReport, PoPreviousField, PoPreviousValue, PoRefreshError, PoTranslation, PoUnknownField,
-    PoWriteError, evaluate_plural_form, validate_plural_rule,
-};
-pub use project::{
-    ProjectDiscovery, ProjectFreshnessInput, ProjectManifest, ProjectManifestLoadReport,
-    ProjectManifestMetadata, ProjectManifestSource, ProjectManifestSourceLoadReport, ProjectScene,
-    project_scene_key_span, validate_project_freshness, validate_project_freshness_source,
-    validate_project_manifest, validate_project_manifest_source,
-};
-pub use schema::{
-    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping,
-    ConditionDefinition, ConditionReturnType, ContentFingerprintFreshness,
-    ContextualMetadataDomain, ContextualMetadataProvenance, EffectDefinition, EnumTypeDefinition,
-    FlatMetadataDomain, FlatMetadataProvenance, MarkupDefinition, MetadataContextSelector,
-    MetadataDefinition, MetadataDomainDefinition, MetadataOccurrence, MetadataTarget,
-    MissingMetadataContextPolicy, ParameterDefinition, PresentationAffordanceFieldDefinition,
-    PresentationAffordanceFieldSource, PresentationAffordanceOutputDefinition,
-    PresentationLabelArgDefinition, PresentationLabelDefinition, ProducerFingerprint,
-    ProducerFingerprintMismatch, ProducerFreshness, ProducerIdentity, ProducerIdentityError,
-    ProducerIdentityPart, ProducerMetadata, ProducerMetadataValue, ProducerOrigin, ProjectSchema,
-    ProjectionInput, ProjectionInputRef, ProjectionOutputTarget, ProjectionQueryDefinition,
-    ProjectionQueryFunctionDefinition, RegistryDefinition, SchemaLiteralValue, SchemaLoadReport,
-    SchemaPresentationProjectorDefinition, SchemaProducerFreshness, SchemaProjectionInputSource,
-    SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
-    canonical_schema_fingerprint, compare_producer_fingerprints, compare_schema_producer_freshness,
-    compare_schema_producer_freshness_detailed, load_schema_manifest_for_freshness_str,
-    load_schema_manifest_str, producer_content_fingerprint,
-};
-pub use schema::{
-    SchemaDeclarationKind, SchemaSource, SchemaSourceEdit, SchemaSourceEditError,
-    SchemaSourceEditPlan, SchemaSourceLoadReport, SchemaSourceStaleDetails, load_schema_source_str,
-};
 pub use source_id::{
     SOURCE_ID_ANCHOR_HEX_LEN, SourceAnchor, SourceId, SourceIdKind, is_valid_source_anchor,
     is_valid_source_label,
 };
-pub use source_location::{SourcePosition, SourceSpan};
+pub use source_location::{SourcePosition, SourceSpan, byte_offset_for_position};
 pub use source_recovery::{SourceRecovery, SourceRecoveryClass};
 pub use text::{
     PlaceholderSyntaxError, PlaceholderSyntaxKind, PlaceholderValidationError,

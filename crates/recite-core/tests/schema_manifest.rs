@@ -3,7 +3,7 @@
 #[path = "schema_manifest/mod.rs"]
 mod manifest_tests;
 
-pub(crate) fn diagnostic_codes(report: &recite_core::SchemaLoadReport) -> Vec<&str> {
+pub(crate) fn diagnostic_codes(report: &recite_core::schema::SchemaLoadReport) -> Vec<&str> {
     assert_recordable_diagnostics(report);
     report
         .diagnostics
@@ -12,7 +12,7 @@ pub(crate) fn diagnostic_codes(report: &recite_core::SchemaLoadReport) -> Vec<&s
         .collect()
 }
 
-pub(crate) fn assert_recordable_diagnostics(report: &recite_core::SchemaLoadReport) {
+pub(crate) fn assert_recordable_diagnostics(report: &recite_core::schema::SchemaLoadReport) {
     for diagnostic in &report.diagnostics {
         assert!(
             diagnostic.presentation.is_some(),

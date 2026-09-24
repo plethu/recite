@@ -1,6 +1,6 @@
 use crate::{
-    AvailabilityReasonId, BlockId, ChoiceId, EffectId, InterpolationType, LineId, ScalarValue,
-    SourceSpan, SpeakerId, Value,
+    AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, ScalarValue, SourceSpan, SpeakerId,
+    Value, ast::InterpolationType,
 };
 
 use super::{

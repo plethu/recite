@@ -1,18 +1,27 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
+use recite_compiler::compile::{
+    CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema,
+};
 use recite_core::{
-    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, ContentFingerprint, EffectId,
-    LocaleId, SchemaFingerprint, SourceMapId, canonical_source_fingerprint,
-    decode_compiled_dialogue_messagepack,
+    ChoiceId, EffectId, LocaleId,
+    compiled::{
+        CompiledAssetId, CompiledDialogue, CompilerVersion, ContentFingerprint, SchemaFingerprint,
+        SourceMapId, canonical_source_fingerprint, decode_compiled_dialogue_messagepack,
+    },
 };
 use recite_runtime::{
-    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContentFingerprintSnapshot,
-    DialogueContext, DialogueError, DialogueEvent, DialogueSchemaFingerprintSnapshot,
-    DialogueSession, DialogueSessionOptions, EffectAck, InterpolationValues, LocaleResolution,
-    acknowledge_effect, choose, next_with, restore_session, snapshot_session, start_scene,
-    start_scene_with_options,
+    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext, DialogueError,
+    DialogueEvent, DialogueSession, DialogueSessionOptions, EffectAck, LocaleResolution,
+    acknowledge_effect, choose,
+    localisation::InterpolationValues,
+    next_with,
+    snapshot::{
+        DialogueContentFingerprintSnapshot, DialogueSchemaFingerprintSnapshot, restore_session,
+        snapshot_session,
+    },
+    start_scene, start_scene_with_options,
 };
 
 use super::availability::choice_availability_expectation;
@@ -94,7 +103,7 @@ pub(crate) struct ReferenceDriver {
     compiled_assets: BTreeMap<String, CompiledSlot>,
     imported_assets: BTreeMap<String, ImportedSlot>,
     active_session: Option<ActiveSession>,
-    snapshots: BTreeMap<String, recite_runtime::DialogueSessionSnapshot>,
+    snapshots: BTreeMap<String, recite_runtime::snapshot::DialogueSessionSnapshot>,
     remembered_choice_ids: BTreeMap<String, String>,
     remembered_effect_ids: BTreeMap<String, String>,
     condition_behaviors: BTreeMap<String, ConditionBehavior>,
@@ -286,7 +295,7 @@ impl ReferenceDriver {
                         );
                     }
                 };
-                match recite_core::load_schema_manifest_str(path, &schema_source).schema {
+                match recite_core::schema::load_schema_manifest_str(path, &schema_source).schema {
                     Some(schema) => Some(schema),
                     None => {
                         return self.error(
@@ -1128,7 +1137,7 @@ impl DialogueContext for DriverContext<'_> {
 
 fn schema_fingerprint_from_token(
     token: Option<&str>,
-    schema: Option<&recite_core::ProjectSchema>,
+    schema: Option<&recite_core::schema::ProjectSchema>,
 ) -> (SchemaFingerprint, String) {
     if let Some(token) = token {
         let fingerprint = canonical_source_fingerprint(token);

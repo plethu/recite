@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::compiled::SchemaFingerprint;
-use crate::{AvailabilityReasonId, ContentFingerprint, EffectMode};
+use crate::{AvailabilityReasonId, ast::EffectMode, compiled::ContentFingerprint};
 
 mod canonical;
 mod freshness;

@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use recite_core::{SourceText, extract_placeholder_names};
+use recite_core::{ast::SourceText, extract_placeholder_names};
 
 use super::super::state::Validator;
 use crate::diagnostics;
@@ -9,7 +9,7 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_interpolation(
         &mut self,
         source_text: &SourceText,
-        bindings: &[recite_core::InterpolationBinding],
+        bindings: &[recite_core::ast::InterpolationBinding],
     ) {
         self.validate_interpolation_with_ignored(source_text, bindings, &[]);
     }
@@ -17,7 +17,7 @@ impl<'a> Validator<'a> {
     fn validate_interpolation_with_ignored(
         &mut self,
         source_text: &SourceText,
-        bindings: &[recite_core::InterpolationBinding],
+        bindings: &[recite_core::ast::InterpolationBinding],
         ignored_unused: &[&str],
     ) {
         let placeholders = match extract_placeholder_names(&source_text.text) {
@@ -71,8 +71,8 @@ impl<'a> Validator<'a> {
 
     pub(super) fn validate_plural_line(
         &mut self,
-        source_file: &'a recite_core::SourceFile,
-        line: &'a recite_core::Line,
+        source_file: &'a recite_core::ast::SourceFile,
+        line: &'a recite_core::ast::Line,
         plural_source_text: &'a SourceText,
     ) {
         self.validate_source_text(
@@ -100,7 +100,7 @@ impl<'a> Validator<'a> {
             self.validate_interpolation(plural_source_text, &line.interpolation_bindings);
             return;
         };
-        if count.value_type != recite_core::InterpolationType::Integer {
+        if count.value_type != recite_core::ast::InterpolationType::Integer {
             self.diagnostics.push(diagnostics::invalid_plural_line(
                 line.span.clone(),
                 diagnostics::PluralError::CountType,

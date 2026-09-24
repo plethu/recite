@@ -1,6 +1,6 @@
 //! Host-neutral dialogue catalogue coverage and fallback projections.
 //!
-//! This module deliberately consumes the compiler's expected [`PotDocument`]
+//! This module consumes the expected [`recite_core::po::PotDocument`]
 //! and core's lossless [`PoDocument`] model. It does not load files, edit PO
 //! source, execute a locale provider, or render Recite-owned Fluent UI text.
 
@@ -20,7 +20,5 @@ pub use resolution::{
     CatalogEntryResolution, CatalogFallbackCandidate, CatalogMatch, CatalogResolution,
     CatalogResolutionPolicy, CatalogVariant,
 };
-pub use summary::{CatalogCoverageSummary, DialogueCatalogSummary};
-pub use types::{
-    CatalogIdentity, CatalogInput, CatalogSummary, DialogueCatalog, DialogueCatalogInput,
-};
+pub use summary::CatalogCoverageSummary;
+pub use types::{CatalogIdentity, CatalogInput, CatalogSummary};

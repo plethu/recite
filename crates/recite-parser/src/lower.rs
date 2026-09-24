@@ -6,8 +6,8 @@ mod metadata_values;
 mod statement;
 
 use recite_core::{
-    BlockId, Diagnostic, SourceFile, SourceMetadata, SourceRecovery, SourceRecoveryClass,
-    SourceSpan, SpeakerId, Statement,
+    BlockId, Diagnostic, SourceRecovery, SourceRecoveryClass, SourceSpan, SpeakerId,
+    ast::{SourceFile, SourceMetadata, Statement},
 };
 
 use crate::header::{HeaderField, fields_after_prefix};

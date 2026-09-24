@@ -1,4 +1,7 @@
-use recite_core::{IfBranch, SourceRecoveryClass, Statement};
+use recite_core::{
+    SourceRecoveryClass,
+    ast::{IfBranch, Statement},
+};
 
 use crate::diagnostics::malformed_header;
 use crate::layout::{ClassifiedLine, classify_line};

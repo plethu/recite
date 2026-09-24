@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use recite_core::LocaleId;
-use recite_runtime::TextDomain;
+use recite_runtime::localisation::TextDomain;
 
 use crate::adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
 
@@ -88,7 +88,7 @@ impl ReciteDialogueCatalog {
                 format!("no plural rule installed for `{locale}`"),
             ));
         };
-        let arm_count = recite_core::validate_plural_rule(header).map_err(|error| {
+        let arm_count = recite_core::po::validate_plural_rule(header).map_err(|error| {
             AdapterError::with_detail(
                 AdapterErrorKind::Localisation,
                 format!("invalid plural rule for `{locale}`: {error:?}"),
@@ -139,7 +139,7 @@ impl ReciteDialogueCatalog {
         let locale = valid_locale(locale)?;
         let header = header.into();
         validate_catalog_text(&header, "plural forms header")?;
-        let arm_count = recite_core::validate_plural_rule(&header).map_err(|error| {
+        let arm_count = recite_core::po::validate_plural_rule(&header).map_err(|error| {
             AdapterError::with_detail(
                 AdapterErrorKind::Localisation,
                 format!("invalid plural rule for `{locale}`: {error}"),

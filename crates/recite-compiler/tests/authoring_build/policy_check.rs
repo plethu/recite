@@ -1,5 +1,5 @@
 use super::support::*;
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCandidate, BuildCheck, BuildControl, BuildEngine, BuildFailure, BuildInput,
     BuildLifecycle, BuildRequest, BuildState, BuildTransition, BuildTransitionError,
     PreparedPublishIdentity,
@@ -37,9 +37,9 @@ fn reducer_rejects_error_diagnostics_before_building() {
 fn terminal_reducer_rejects_contradictory_retained_check_metadata() {
     let request = make_request(12, [BuildInput::saved_source(key("a.recite"), "a")]);
     let candidates = vec![candidate("a.recitec", b"a")];
-    let stale = recite_compiler::FreshnessAssessment::stale(
+    let stale = recite_compiler::authoring::FreshnessAssessment::stale(
         request.fingerprints().clone(),
-        vec![recite_compiler::StaleReason::Fingerprints],
+        vec![recite_compiler::authoring::StaleReason::Fingerprints],
     );
     let mut lifecycle = checked_lifecycle(&request, stale, vec![warning("a.recite")]);
     lifecycle
@@ -126,7 +126,7 @@ fn terminal_reducer_accepts_diagnostics_appended_after_check() {
 
 fn checked_lifecycle(
     request: &BuildRequest,
-    freshness: recite_compiler::FreshnessAssessment,
+    freshness: recite_compiler::authoring::FreshnessAssessment,
     diagnostics: Vec<recite_core::Diagnostic>,
 ) -> BuildLifecycle {
     let mut lifecycle = BuildLifecycle::new();

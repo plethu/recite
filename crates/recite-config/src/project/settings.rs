@@ -1,6 +1,6 @@
 //! Validated, conflict-checked project manifest editing for authoring clients.
 use crate::{ConfigWriteError, StateUpdateError, TextFileStore};
-use recite_core::{Diagnostic, ProjectManifest as CoreManifest};
+use recite_core::{Diagnostic, project::ProjectManifest as CoreManifest};
 use std::{
     io,
     path::{Path, PathBuf},
@@ -117,7 +117,7 @@ fn validate(
                 source,
             }
         })?;
-        let loaded = recite_core::load_schema_manifest_str(relative, &text);
+        let loaded = recite_core::schema::load_schema_manifest_str(relative, &text);
         if !loaded.diagnostics.is_empty() {
             return Err(ProjectSettingsError::Validation(loaded.diagnostics));
         }
@@ -125,7 +125,8 @@ fn validate(
     } else {
         None
     };
-    let diagnostics = recite_core::validate_project_manifest_source(&source, schema.as_ref());
+    let diagnostics =
+        recite_core::project::validate_project_manifest_source(&source, schema.as_ref());
     if !diagnostics.is_empty() {
         return Err(ProjectSettingsError::Validation(diagnostics));
     }

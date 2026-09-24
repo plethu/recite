@@ -21,7 +21,7 @@ impl ProjectFiles {
         let key = recite_core::DocumentKey::new(self.document_name()?)
             .map_err(recite_writer_model::EditError::from)
             .map_err(recite_writer_model::WorkbenchError::from)?;
-        let document = recite_compiler::SavedDocument::new(key, self.saved.to_string());
+        let document = recite_compiler::authoring::SavedDocument::new(key, self.saved.to_string());
         if let Some(old) = self
             .context
             .documents

@@ -1,4 +1,4 @@
-use recite_core::{ProducerIdentity, ProjectSchema};
+use recite_core::schema::{ProducerIdentity, ProjectSchema};
 
 use super::errors::SchemaSummaryEvidenceError;
 use super::freshness::SchemaFreshnessEvidence;

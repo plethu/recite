@@ -205,7 +205,7 @@ impl AuthoringSnapshot {
 }
 
 fn incomplete_symbol_classes(
-    participation: crate::ValidationParticipation,
+    participation: crate::validation::ValidationParticipation,
     options: SymbolQueryOptions,
 ) -> Vec<QueryUnavailableReason> {
     let mut classes = vec![

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { assertContainedRegularFile, assertRegularFile, assertSafeTree } from "./safety.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,6 +28,7 @@ try {
   assertSafeTree(path.join(packageRoot, "syntaxes"), "extension syntax grammars");
   await cp(path.join(packageRoot, "syntaxes"), path.join(extension, "syntaxes"), { recursive: true });
   await cp(path.join(packageRoot, "dist"), path.join(extension, "dist"), { recursive: true });
+  await copyProductionDependencies(extension);
   const license = assertContainedRegularFile(repositoryRoot, "LICENSE", "repository license");
   await cp(license, path.join(extension, "LICENSE"));
   await writeText(path.join(stage, "[Content_Types].xml"), contentTypes());
@@ -39,6 +41,53 @@ try {
   console.log(`${process.argv.includes("--check") ? "checked" : "created"} ${output}`);
 } finally {
   await rm(stage, { recursive: true, force: true });
+}
+
+async function copyProductionDependencies(extension) {
+  const pending = Object.keys(manifest.dependencies ?? {}).map((name) => ({ name, parent: packageRoot }));
+  const installed = new Map();
+  while (pending.length) {
+    const { name, parent } = pending.shift();
+    const parentRequire = createRequire(path.join(parent, "package.json"));
+    const sourceManifest = await packageManifestFor(parentRequire.resolve(name), name);
+    const source = path.dirname(sourceManifest);
+    const metadata = JSON.parse(await readFile(sourceManifest, "utf8"));
+    const previous = installed.get(name);
+    if (previous) {
+      if (previous !== metadata.version) throw new Error(`conflicting production dependency ${name}`);
+      continue;
+    }
+    installed.set(name, metadata.version);
+    const destination = path.join(extension, "node_modules", name);
+    assertSafeTree(source, `production dependency ${name}`);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await cp(source, destination, { recursive: true });
+    for (const dependency of Object.keys(metadata.dependencies ?? {})) {
+      pending.push({ name: dependency, parent: source });
+    }
+  }
+  for (const name of installed.keys()) {
+    const stagedRequire = createRequire(path.join(extension, "node_modules", name, "package.json"));
+    const metadata = JSON.parse(await readFile(path.join(extension, "node_modules", name, "package.json"), "utf8"));
+    for (const dependency of Object.keys(metadata.dependencies ?? {})) {
+      await packageManifestFor(stagedRequire.resolve(dependency), dependency);
+    }
+  }
+}
+
+async function packageManifestFor(entry, name) {
+  let directory = path.dirname(entry);
+  while (directory !== path.dirname(directory)) {
+    const candidate = path.join(directory, "package.json");
+    try {
+      const metadata = JSON.parse(await readFile(candidate, "utf8"));
+      if (metadata.name === name) return candidate;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    directory = path.dirname(directory);
+  }
+  throw new Error(`missing package manifest for ${name}`);
 }
 
 function files(directory) {

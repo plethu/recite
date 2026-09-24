@@ -1,15 +1,20 @@
 use std::cell::Cell;
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{CompiledAssetId, CompilerVersion, ScalarValue, SchemaFingerprint, SourceMapId};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
+use recite_core::{
+    ScalarValue,
+    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
+};
 use recite_runtime::{
-    DialogueEvent, DialogueSessionOptions, DialogueTrace, EmptyDialogueContext,
-    InterpolationValueProvider, InterpolationValues, LocaleError, LocaleProvider, LocaleResolution,
-    PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain, next_with,
-    start_scene, start_scene_with_options,
+    DialogueEvent, DialogueSessionOptions, DialogueTrace, EmptyDialogueContext, LocaleResolution,
+    localisation::{
+        InterpolationValueProvider, InterpolationValues, LocaleError, LocaleProvider,
+        PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
+    },
+    next_with, start_scene, start_scene_with_options,
 };
 
-fn asset() -> recite_core::CompiledDialogue {
+fn asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
         "> hello_001@8843fd6f53f020a12b31 bind=(name:string=$display)\n",
@@ -58,7 +63,7 @@ struct CountingValues {
     count: Cell<usize>,
 }
 
-fn plural_asset() -> recite_core::CompiledDialogue {
+fn plural_asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
         "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining)\n",

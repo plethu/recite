@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use recite_core::decode_compiled_dialogue_messagepack;
+use recite_core::compiled::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
 mod support;

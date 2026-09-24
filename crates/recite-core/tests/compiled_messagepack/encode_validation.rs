@@ -1,15 +1,19 @@
 use super::support::*;
 use recite_core::{
-    AvailabilityReasonId, ChoiceId, ChoiceIndex, ChoiceLookupEntry, ChoiceLookupTable,
-    CompiledArgument, CompiledAssetEncodeError, CompiledAvailabilityReason,
-    CompiledAvailabilityReasonArgBinding, CompiledAvailabilityReasonArgValue, CompiledChoice,
-    CompiledChoiceEcho, CompiledConditionCall, CompiledConditionExpression, CompiledDivertTarget,
-    CompiledEffect, CompiledEffectMode, CompiledInterpolationBinding, CompiledInterpolationMode,
-    CompiledLine, CompiledMetadataEntry, CompiledStatement, CompiledStatementKind,
-    InterpolationType, LineId, LineIndex, LineLookupEntry, LineLookupTable, MetadataIndex,
-    ScalarValue, SourceMapIndex, SourcePosition, TableRange, Value,
-    canonical_compiled_dialogue_fingerprint, decode_compiled_dialogue_messagepack,
-    encode_compiled_dialogue_messagepack,
+    AvailabilityReasonId, ChoiceId, LineId, ScalarValue, SourcePosition, Value,
+    ast::InterpolationType,
+    compiled::{
+        ChoiceIndex, ChoiceLookupEntry, ChoiceLookupTable, CompiledArgument,
+        CompiledAssetEncodeError, CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
+        CompiledAvailabilityReasonArgValue, CompiledChoice, CompiledChoiceEcho,
+        CompiledConditionCall, CompiledConditionExpression, CompiledDialogue,
+        CompiledDialoguePayload, CompiledDivertTarget, CompiledEffect, CompiledEffectMode,
+        CompiledInterpolationBinding, CompiledInterpolationMode, CompiledLine,
+        CompiledMetadataEntry, CompiledStatement, CompiledStatementKind, LineIndex,
+        LineLookupEntry, LineLookupTable, MetadataIndex, SourceMapIndex, TableRange,
+        canonical_compiled_dialogue_fingerprint, decode_compiled_dialogue_messagepack,
+        encode_compiled_dialogue_messagepack,
+    },
 };
 
 #[test]
@@ -37,8 +41,8 @@ fn mutable_models_are_checked_by_encode_and_fingerprint() {
                 function: "bad function".to_owned(),
                 args: Vec::new(),
             }),
-            then_statements: TableRange::new(recite_core::StatementIndex::new(0), 0),
-            else_statements: TableRange::new(recite_core::StatementIndex::new(0), 0),
+            then_statements: TableRange::new(recite_core::compiled::StatementIndex::new(0), 0),
+            else_statements: TableRange::new(recite_core::compiled::StatementIndex::new(0), 0),
         },
         source_map: SourceMapIndex::new(0),
     });
@@ -71,16 +75,16 @@ fn mutable_models_are_checked_by_encode_and_fingerprint() {
             id: AvailabilityReasonId::new("weight_reason").expect("valid reason id"),
             template: "Weight is {weight}.".to_owned(),
         });
-    reason
-        .condition_availability_reasons
-        .push(recite_core::CompiledConditionAvailabilityReason {
+    reason.condition_availability_reasons.push(
+        recite_core::compiled::CompiledConditionAvailabilityReason {
             function: "can_answer".to_owned(),
             reason: AvailabilityReasonId::new("weight_reason").expect("valid reason id"),
             args: vec![CompiledAvailabilityReasonArgBinding {
                 name: "weight".to_owned(),
                 value: CompiledAvailabilityReasonArgValue::Literal(ScalarValue::Float(f64::NAN)),
             }],
-        });
+        },
+    );
     assert_rejected(reason, "availability reason float literal");
 
     let mut mapping = decode_valid();
@@ -90,13 +94,13 @@ fn mutable_models_are_checked_by_encode_and_fingerprint() {
             id: AvailabilityReasonId::new("reason").expect("valid reason id"),
             template: "Reason.".to_owned(),
         });
-    mapping
-        .condition_availability_reasons
-        .push(recite_core::CompiledConditionAvailabilityReason {
+    mapping.condition_availability_reasons.push(
+        recite_core::compiled::CompiledConditionAvailabilityReason {
             function: String::new(),
             reason: AvailabilityReasonId::new("reason").expect("valid reason id"),
             args: Vec::new(),
-        });
+        },
+    );
     assert_rejected(mapping, "condition availability reason function");
 
     let mut binding = decode_valid();
@@ -106,16 +110,16 @@ fn mutable_models_are_checked_by_encode_and_fingerprint() {
             id: AvailabilityReasonId::new("reason").expect("valid reason id"),
             template: "Reason.".to_owned(),
         });
-    binding
-        .condition_availability_reasons
-        .push(recite_core::CompiledConditionAvailabilityReason {
+    binding.condition_availability_reasons.push(
+        recite_core::compiled::CompiledConditionAvailabilityReason {
             function: "can_answer".to_owned(),
             reason: AvailabilityReasonId::new("reason").expect("valid reason id"),
             args: vec![CompiledAvailabilityReasonArgBinding {
                 name: String::new(),
                 value: CompiledAvailabilityReasonArgValue::ConditionArg(0),
             }],
-        });
+        },
+    );
     assert_rejected(binding, "availability reason argument name");
 
     let mut empty_metadata = decode_valid();
@@ -169,6 +173,7 @@ fn canonical_encoding_checks_choice_and_legacy_interpolation_rows() {
         index: LineIndex::new(0),
     }])
     .expect("sorted lookup");
+    let legacy = CompiledDialogue::new(legacy);
     let encoded = encode_compiled_dialogue_messagepack(&legacy).expect("legacy row encodes");
     let decoded = decode_compiled_dialogue_messagepack(&encoded).expect("legacy row decodes");
     assert_eq!(decoded.lines[0].source_text, "{missing}");
@@ -177,14 +182,14 @@ fn canonical_encoding_checks_choice_and_legacy_interpolation_rows() {
         CompiledInterpolationMode::Legacy
     );
 
-    let mut mismatched_source = legacy.clone();
+    let mut mismatched_source = legacy.clone().into_payload();
     mismatched_source.lines[0].authored_source_text = "Different".to_owned();
     assert_rejected(
         mismatched_source,
         "legacy interpolation rows require authored and decoded source text to match",
     );
 
-    let mut bound_legacy = legacy.clone();
+    let mut bound_legacy = legacy.clone().into_payload();
     bound_legacy.lines[0]
         .interpolation_bindings
         .push(CompiledInterpolationBinding {
@@ -197,7 +202,7 @@ fn canonical_encoding_checks_choice_and_legacy_interpolation_rows() {
         "legacy interpolation rows cannot contain interpolation bindings",
     );
 
-    let mut plural_legacy = legacy.clone();
+    let mut plural_legacy = legacy.clone().into_payload();
     plural_legacy.lines[0].plural_source_text = Some("Many".to_owned());
     plural_legacy.lines[0].authored_plural_source_text = Some("Many".to_owned());
     assert_rejected(
@@ -229,6 +234,9 @@ fn canonical_fingerprint_includes_interpolation_mode() {
     let mut legacy = current.clone();
     legacy.lines[0].interpolation_mode = CompiledInterpolationMode::Legacy;
 
+    let current = CompiledDialogue::new(current);
+    let legacy = CompiledDialogue::new(legacy);
+
     let current_bytes = encode_compiled_dialogue_messagepack(&current).expect("current encodes");
     let legacy_bytes = encode_compiled_dialogue_messagepack(&legacy).expect("legacy encodes");
     assert_ne!(current_bytes, legacy_bytes);
@@ -238,12 +246,15 @@ fn canonical_fingerprint_includes_interpolation_mode() {
     );
 }
 
-fn decode_valid() -> recite_core::CompiledDialogue {
+fn decode_valid() -> CompiledDialoguePayload {
     let bytes = rmp_serde::to_vec(&valid_wire_asset()).expect("test wire encodes");
-    decode_compiled_dialogue_messagepack(&bytes).expect("valid asset decodes")
+    decode_compiled_dialogue_messagepack(&bytes)
+        .expect("valid asset decodes")
+        .into_payload()
 }
 
-fn assert_rejected(dialogue: recite_core::CompiledDialogue, expected: &str) {
+fn assert_rejected(payload: CompiledDialoguePayload, expected: &str) {
+    let dialogue = CompiledDialogue::new(payload);
     assert!(matches!(
         encode_compiled_dialogue_messagepack(&dialogue),
         Err(CompiledAssetEncodeError::InvalidDialogue(reason)) if reason.contains(expected)

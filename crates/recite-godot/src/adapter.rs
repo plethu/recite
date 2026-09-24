@@ -2,12 +2,14 @@ use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use recite_core::{ChoiceId, CompiledDialogue, EffectId};
+use recite_core::{ChoiceId, EffectId, compiled::CompiledDialogue};
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext, DialogueError,
-    DialogueEvent, DialogueSession, EffectAck, InterpolationValues, LocaleResolution,
-    acknowledge_effect, choose_with, decode_session_messagepack, encode_session_messagepack,
-    next_with, start_scene_with_options,
+    DialogueEvent, DialogueSession, EffectAck, LocaleResolution, acknowledge_effect, choose_with,
+    localisation::InterpolationValues,
+    next_with,
+    snapshot::{decode_session_messagepack, encode_session_messagepack},
+    start_scene_with_options,
 };
 
 use crate::adapter_policy::{session_options, should_continue_after_event};

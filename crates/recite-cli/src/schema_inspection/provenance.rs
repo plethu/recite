@@ -1,25 +1,29 @@
 use std::str::FromStr;
 
-use recite_compiler::SchemaDeclarationProvenance;
-use recite_core::{ProducerIdentity, ProducerMetadataValue, ProducerOrigin};
+use recite_compiler::authoring::SchemaDeclarationProvenance;
+use recite_core::schema::{ProducerIdentity, ProducerMetadataValue, ProducerOrigin};
 
 use super::model::{
     IdentityProjection, OriginProjection, OwnershipProjection, ProvenanceProjection,
 };
 
-pub(super) fn ownership_json(ownership: &recite_compiler::SchemaOwnership) -> OwnershipProjection {
+pub(super) fn ownership_json(
+    ownership: &recite_compiler::authoring::SchemaOwnership,
+) -> OwnershipProjection {
     match ownership {
-        recite_compiler::SchemaOwnership::Standalone { producer } => {
+        recite_compiler::authoring::SchemaOwnership::Standalone { producer } => {
             OwnershipProjection::Standalone {
                 producer: identity_json(producer),
             }
         }
-        recite_compiler::SchemaOwnership::Generated { producer } => {
+        recite_compiler::authoring::SchemaOwnership::Generated { producer } => {
             OwnershipProjection::Generated {
                 producer: identity_json(producer),
             }
         }
-        recite_compiler::SchemaOwnership::Unavailable => OwnershipProjection::Unavailable,
+        recite_compiler::authoring::SchemaOwnership::Unavailable => {
+            OwnershipProjection::Unavailable
+        }
         _ => OwnershipProjection::Unavailable,
     }
 }

@@ -1,5 +1,5 @@
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringSnapshot, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
     CompletionSiteKind, QueryResult, SchemaSummary, SymbolIdentity, SymbolQueryOptions, SymbolRole,
 };

@@ -3,9 +3,9 @@ use crate::condition::FfiContext;
 use crate::error::ReciteStatus;
 use crate::output::{encode_batch, encode_batch_output, should_continue};
 
-use recite_core::CompiledDialogue;
+use recite_core::compiled::CompiledDialogue;
 use recite_runtime::{
-    DialogueEvent, DialogueSession, InterpolationValues, LocaleResolution, next_with,
+    DialogueEvent, DialogueSession, LocaleResolution, localisation::InterpolationValues, next_with,
 };
 
 use crate::locale::FfiLocaleProvider;

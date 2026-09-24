@@ -1,5 +1,5 @@
 //! Deterministic, generated authoring workloads; compiled only for benchmarks.
-use recite_compiler::SavedDocument;
+use recite_compiler::authoring::SavedDocument;
 use recite_core::DocumentKey;
 
 pub fn source(passages: usize, first_id: usize, per_beat: usize) -> String {

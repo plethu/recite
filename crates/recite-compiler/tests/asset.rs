@@ -1,17 +1,23 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::compile::{
     CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs, compile_inputs_with_schema,
 };
 use recite_core::{
-    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, AvailabilityReasonId,
-    BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
-    CompiledAssetEncoding, CompiledAssetId, CompiledAvailabilityReasonArgValue, CompiledEffectMode,
-    CompiledInspectionEncoding, CompiledStatementKind, CompilerVersion,
-    ConditionAvailabilityReasonMapping, ConditionDefinition, ConditionReturnType,
-    ParameterDefinition, ProjectSchema, SchemaFingerprint, SchemaLiteralValue, SchemaTypeRef,
-    SourceMapId, StatementIndex, canonical_source_fingerprint,
-    decode_compiled_dialogue_messagepack, load_schema_manifest_str,
+    AvailabilityReasonId,
+    compiled::{
+        BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
+        CompiledAssetEncoding, CompiledAssetId, CompiledAvailabilityReasonArgValue,
+        CompiledEffectMode, CompiledInspectionEncoding, CompiledStatementKind, CompilerVersion,
+        SchemaFingerprint, SourceMapId, StatementIndex, canonical_source_fingerprint,
+        decode_compiled_dialogue_messagepack,
+    },
+    schema::{
+        AvailabilityReasonArgBinding, AvailabilityReasonDefinition,
+        ConditionAvailabilityReasonMapping, ConditionDefinition, ConditionReturnType,
+        ParameterDefinition, ProjectSchema, SchemaLiteralValue, SchemaTypeRef,
+        load_schema_manifest_str,
+    },
 };
 #[path = "../../../tests/support/fixtures.rs"]
 #[allow(dead_code, reason = "shared snapshot fixtures are selectively reused")]
@@ -628,8 +634,8 @@ fn options() -> CompileOptions {
 }
 
 fn metadata_keys_for(
-    dialogue: &recite_core::CompiledDialogue,
-    range: recite_core::MetadataRange,
+    dialogue: &recite_core::compiled::CompiledDialogue,
+    range: recite_core::compiled::MetadataRange,
 ) -> Vec<&str> {
     let start = range.start.as_u32() as usize;
     let end = start + range.len as usize;

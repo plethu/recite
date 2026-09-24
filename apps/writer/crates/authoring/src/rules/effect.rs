@@ -1,6 +1,6 @@
 use super::{RuleArgument, replace, values};
 use crate::{EditError, projection::offset};
-use recite_core::{EffectMode, SourceSpan};
+use recite_core::{SourceSpan, ast::EffectMode};
 use std::ops::Range;
 #[derive(Clone, Debug, PartialEq)]
 pub struct RuleEffect {
@@ -8,7 +8,7 @@ pub struct RuleEffect {
     pub arguments: Vec<RuleArgument>,
     pub mode: EffectMode,
     pub allowed_modes: Vec<EffectMode>,
-    pub(super) original: Option<recite_core::Effect>,
+    pub(super) original: Option<recite_core::ast::Effect>,
     pub(super) raw: String,
 }
 impl RuleEffect {

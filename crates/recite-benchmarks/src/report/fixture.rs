@@ -168,7 +168,7 @@ fn compiler_fixture_operations(
         "compile_with_schema",
         samples,
         || {
-            let report = recite_compiler::compile_inputs_with_schema(
+            let report = recite_compiler::compile::compile_inputs_with_schema(
                 inputs.clone(),
                 options.clone(),
                 &schema,
@@ -188,7 +188,7 @@ fn compiler_fixture_operations(
         "extract_pot_with_schema",
         samples,
         || {
-            let report = recite_compiler::extract_pot_with_schema(inputs.clone(), &schema);
+            let report = recite_compiler::pot::extract_pot_with_schema(inputs.clone(), &schema);
             if !report.is_ok() {
                 return Err(error(format!(
                     "POT extraction fixture produced {} diagnostics",

@@ -1,5 +1,5 @@
 use super::support::*;
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildAuthority, BuildAuthorityFence, BuildCandidate, BuildCheck, BuildControl, BuildEngine,
     BuildFailure, BuildGeneration, BuildInput, BuildRequest, BuildResultFailure,
     BuildStatusProjection, BuildTerminalStatus, PublishOutcome, RecoveryNeeded,
@@ -64,7 +64,7 @@ fn supersession_dominates_cancellation_and_engine_failure() {
             control.cancel();
             control.supersede(BuildGeneration::new(2));
             Err(BuildFailure::Engine {
-                reason: recite_compiler::BuildFailureReason::Host,
+                reason: recite_compiler::authoring::BuildFailureReason::Host,
             })
         }
     }
@@ -92,7 +92,7 @@ fn non_diagnostic_engine_failure_retains_check_warnings() {
             _: &BuildControl,
         ) -> Result<Vec<BuildCandidate>, BuildFailure> {
             Err(BuildFailure::Engine {
-                reason: recite_compiler::BuildFailureReason::Host,
+                reason: recite_compiler::authoring::BuildFailureReason::Host,
             })
         }
     }
@@ -119,7 +119,7 @@ fn stale_fence_and_invalid_partial_are_structured_failures() {
     let mut engine = FakeEngine::new([candidate("a.recitec", b"A")]);
     engine.check_diagnostics = vec![warning("a.recite")];
     let mut publisher = FakePublisher::new();
-    let stale = recite_compiler::BuildCoordinator::with_fence(fence)
+    let stale = recite_compiler::authoring::BuildCoordinator::with_fence(fence)
         .run(
             request.clone(),
             &BuildControl::new(),
@@ -237,7 +237,7 @@ fn empty_candidates_complete_without_preparing_or_publishing() {
     assert_eq!(
         result.publish(),
         &PublishOutcome::NotAttempted {
-            reason: recite_compiler::PublishNotAttemptedReason::NoCandidates
+            reason: recite_compiler::authoring::PublishNotAttemptedReason::NoCandidates
         }
     );
     assert_eq!(publisher.prepare_calls, 0);

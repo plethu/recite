@@ -1,4 +1,4 @@
-use recite_core::{InterpolationType, Statement};
+use recite_core::ast::{InterpolationType, Statement};
 use recite_parser::parse;
 
 #[test]

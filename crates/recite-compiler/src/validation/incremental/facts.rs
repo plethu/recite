@@ -1,8 +1,10 @@
 //! Compact project inputs. Prose and local schema syntax do not survive analysis.
-use crate::{ValidationInput, ValidationParticipation};
+use crate::{validation::ValidationInput, validation::ValidationParticipation};
 use recite_core::{
-    Block, BlockId, Choice, ChoiceEcho, ChoiceId, Divert, DivertTarget, Line, LineId, SourceFile,
-    SourceId, SourceSpan, SourceText, Statement,
+    BlockId, ChoiceId, LineId, SourceId, SourceSpan,
+    ast::{
+        Block, Choice, ChoiceEcho, Divert, DivertTarget, Line, SourceFile, SourceText, Statement,
+    },
 };
 
 #[derive(Debug, PartialEq)]

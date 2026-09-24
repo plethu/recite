@@ -187,7 +187,7 @@ impl ProjectFiles {
 }
 
 fn overlay(context: &mut recite_writer_model::ProjectContext, model: &Workbench) {
-    let saved = recite_compiler::SavedDocument::new(
+    let saved = recite_compiler::authoring::SavedDocument::new(
         model.document().key().clone(),
         model.document().source(),
     );

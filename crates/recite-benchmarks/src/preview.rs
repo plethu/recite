@@ -1,5 +1,5 @@
-use recite_core::CompiledDialogue;
-use recite_runtime::{PreviewInputs, PreviewOptions, PreviewSession};
+use recite_core::compiled::CompiledDialogue;
+use recite_runtime::preview::{PreviewInputs, PreviewOptions, PreviewSession};
 
 use crate::compiler::CompilerProject;
 use crate::fixture_context::RuntimeFixture;
@@ -17,7 +17,7 @@ pub struct PreviewTraversalShape {
     pub output_count: usize,
     /// Digest of the complete event stream, retained for event-level parity.
     pub event_hash: String,
-    /// Digest of each [`recite_runtime::PreviewOutput`] state in command order.
+    /// Digest of each [`recite_runtime::preview::PreviewOutput`] state in command order.
     pub state_hash: String,
 }
 

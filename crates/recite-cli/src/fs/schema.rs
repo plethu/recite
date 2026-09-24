@@ -3,7 +3,8 @@ use std::io::Write;
 use std::path::Path;
 
 use recite_core::{
-    Diagnostic, ProjectSchema, load_schema_manifest_for_freshness_str, load_schema_manifest_str,
+    Diagnostic,
+    schema::{ProjectSchema, load_schema_manifest_for_freshness_str, load_schema_manifest_str},
 };
 
 use super::paths::display_path;

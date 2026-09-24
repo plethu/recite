@@ -1,6 +1,8 @@
 #![cfg(test)]
 
-use recite_compiler::{AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration};
+use recite_compiler::authoring::{
+    AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration,
+};
 use recite_core::DocumentKey;
 
 fn key(value: &str) -> DocumentKey {

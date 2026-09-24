@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use recite_core::ProjectManifestSource;
+use recite_core::project::ProjectManifestSource;
 
 use super::diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 use super::enumerate::{Coverage, DiscoveredDocument, DiscoveredRoot};

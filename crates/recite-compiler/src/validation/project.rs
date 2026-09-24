@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_core::{Diagnostic, SourceFile, SourcePosition, SourceSpan};
+use recite_core::{Diagnostic, SourcePosition, SourceSpan, ast::SourceFile};
 
 use super::participation::{ValidationCompleteness, ValidationInput, ValidationParticipation};
 

@@ -1,6 +1,6 @@
 //! Original, schema-checked scenes for exercising everyday writer workflows.
 use crate::{Document, EditError, ProjectContext, Workbench, WorkbenchError};
-use recite_core::{DocumentKey, load_schema_manifest_str};
+use recite_core::{DocumentKey, schema::load_schema_manifest_str};
 
 pub struct WriterExample {
     pub name: &'static str,

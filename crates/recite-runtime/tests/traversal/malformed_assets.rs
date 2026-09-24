@@ -60,9 +60,11 @@ fn malformed_default_block_index_is_structured_error() {
             "  Start.\n",
             "-> END\n",
         ),
-    );
+    )
+    .into_payload();
     asset.default_block = BlockIndex::new(99);
 
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -79,8 +81,10 @@ fn malformed_line_index_is_rejected_at_start_as_structured_error() {
             "  Start.\n",
             "-> END\n",
         ),
-    );
+    )
+    .into_payload();
     asset.statements[0].kind = CompiledStatementKind::Line(LineIndex::new(99));
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -97,8 +101,10 @@ fn malformed_effect_index_is_rejected_at_start_as_structured_error() {
             "  Start.\n",
             "-> END\n",
         ),
-    );
+    )
+    .into_payload();
     asset.statements[0].kind = CompiledStatementKind::Effect(EffectIndex::new(99));
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -119,7 +125,8 @@ fn mismatched_explicit_block_lookup_entry_is_structured_error() {
             "  Work.\n",
             "-> END\n",
         ),
-    );
+    )
+    .into_payload();
     asset.block_lookup = BlockLookupTable::new(vec![
         BlockLookupEntry {
             id: asset.blocks[0].id.clone(),
@@ -132,6 +139,7 @@ fn mismatched_explicit_block_lookup_entry_is_structured_error() {
     ])
     .expect("lookup entries remain sorted");
 
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, Some("work")),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -150,11 +158,13 @@ fn prompt_with_empty_choice_range_is_rejected_at_start_as_structured_error() {
             "    Ask about work.\n",
             "    -> END\n",
         ),
-    );
+    )
+    .into_payload();
     let CompiledStatementKind::Prompt { choices, .. } = &mut asset.statements[0].kind else {
         panic!("expected prompt statement");
     };
     *choices = ChoiceRange::new(choices.start, 0);
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -163,7 +173,7 @@ fn prompt_with_empty_choice_range_is_rejected_at_start_as_structured_error() {
 
 #[test]
 fn missing_availability_reason_reference_is_rejected_at_start_as_structured_error() {
-    let schema = recite_core::load_schema_manifest_str(
+    let schema = recite_core::schema::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
     )
@@ -180,8 +190,9 @@ fn missing_availability_reason_reference_is_rejected_at_start_as_structured_erro
             "    -> END\n",
         ),
         &schema,
-    );
+    ).into_payload();
     asset.availability_reasons.clear();
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -198,7 +209,8 @@ fn malformed_match_arm_range_is_rejected_at_start_as_structured_error() {
             "  Start.\n",
             "-> END\n",
         ),
-    );
+    )
+    .into_payload();
     asset.statements[0].kind = CompiledStatementKind::Match {
         scrutinee: CompiledConditionCall {
             function: "mood".to_owned(),
@@ -206,6 +218,7 @@ fn malformed_match_arm_range_is_rejected_at_start_as_structured_error() {
         },
         arms: MatchArmRange::new(MatchArmIndex::new(99), 1),
     };
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -224,7 +237,8 @@ fn non_exhaustive_match_is_structured_error() {
             "      Tired.\n",
             "-> END\n",
         ),
-    );
+    )
+    .into_payload();
     let CompiledStatementKind::Match { arms, .. } = asset.statements[0].kind else {
         panic!("expected match statement");
     };
@@ -240,6 +254,7 @@ fn non_exhaustive_match_is_structured_error() {
         },
         arms: MatchArmRange::new(MatchArmIndex::new(0), 1),
     };
+    let asset = CompiledDialogue::new(asset);
     let context = RecordingContext::default().with_enum("mood", "tired");
     let mut session = start_scene(&asset, None).expect("starts");
 

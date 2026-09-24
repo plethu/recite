@@ -1,4 +1,7 @@
-use recite_core::{DivertTarget, SourceId, SourcePosition, SourceText, Statement};
+use recite_core::{
+    SourceId, SourcePosition,
+    ast::{DivertTarget, SourceText, Statement},
+};
 use recite_parser::{ReciteSyntaxKind, ReciteSyntaxNode, parse};
 use std::ops::Range;
 
@@ -150,28 +153,5 @@ fn prose_range(
 }
 
 pub(crate) fn offset(source: &str, position: SourcePosition) -> Result<usize, EditError> {
-    let mut start = 0;
-    for (index, line) in source.split_inclusive('\n').enumerate() {
-        if index + 1 == usize::try_from(position.line()).map_err(|_| EditError::Position)? {
-            let line = line.trim_end_matches(['\r', '\n']);
-            let column = usize::try_from(position.column() - 1).map_err(|_| EditError::Position)?;
-            let byte = if column == line.chars().count() {
-                line.len()
-            } else {
-                line.char_indices()
-                    .nth(column)
-                    .map(|(byte, _)| byte)
-                    .ok_or(EditError::Position)?
-            };
-            return Ok(start + byte);
-        }
-        start += line.len();
-    }
-    if position.column() == 1
-        && source.ends_with('\n')
-        && usize::try_from(position.line()).ok() == Some(source.lines().count() + 1)
-    {
-        return Ok(source.len());
-    }
-    Err(EditError::Position)
+    recite_core::byte_offset_for_position(source, position).ok_or(EditError::Position)
 }

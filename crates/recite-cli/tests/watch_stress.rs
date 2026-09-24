@@ -12,7 +12,9 @@ use std::time::{Duration, Instant};
 
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::{BenchmarkResult, BenchmarkScale};
-use recite_core::{CompiledDialogue, SchemaFingerprint, decode_compiled_dialogue_messagepack};
+use recite_core::compiled::{
+    CompiledDialogue, SchemaFingerprint, decode_compiled_dialogue_messagepack,
+};
 use serde::Serialize;
 use tempfile::{NamedTempFile, TempDir};
 

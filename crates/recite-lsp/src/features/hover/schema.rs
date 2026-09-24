@@ -1,6 +1,6 @@
 use lsp_types::Hover;
-use recite_compiler::{SchemaSummary, SemanticSymbolKind};
-use recite_core::{MetadataDomainDefinition, ProjectionOutputTarget};
+use recite_compiler::authoring::{SchemaSummary, SemanticSymbolKind};
+use recite_core::schema::{MetadataDomainDefinition, ProjectionOutputTarget};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 use super::position::hover_response;

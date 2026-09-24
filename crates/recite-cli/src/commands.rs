@@ -26,7 +26,8 @@ use recite_benchmarks::report::{
 };
 use recite_benchmarks::{BenchmarkFixture, BenchmarkScale};
 use recite_compiler::{
-    compile_inputs, compile_inputs_with_schema, extract_pot, extract_pot_with_schema,
+    compile::{compile_inputs, compile_inputs_with_schema},
+    pot::{extract_pot, extract_pot_with_schema},
 };
 use recite_core::{
     DiagnosticCategory, DiagnosticCode, explain_diagnostic_code, suggest_diagnostic_code,

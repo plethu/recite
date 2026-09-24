@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{
+use recite_core::schema::{
     MetadataOccurrence, ProjectionInputRef, ProjectionOutputTarget, ProjectionQueryDefinition,
     SchemaProjectionInputSource, SchemaProjectionSelector,
 };
@@ -8,7 +8,7 @@ use recite_core::{
 use super::core::{json_literal, json_parameter, json_type_ref, metadata_target};
 
 pub(crate) fn json_projection_query_function(
-    definition: &recite_core::ProjectionQueryFunctionDefinition,
+    definition: &recite_core::schema::ProjectionQueryFunctionDefinition,
 ) -> serde_json::Value {
     serde_json::json!({
         "params": definition.params.iter().map(json_parameter).collect::<Vec<_>>(),
@@ -18,7 +18,7 @@ pub(crate) fn json_projection_query_function(
 }
 
 pub(crate) fn json_presentation_projector(
-    definition: &recite_core::SchemaPresentationProjectorDefinition,
+    definition: &recite_core::schema::SchemaPresentationProjectorDefinition,
 ) -> serde_json::Value {
     serde_json::json!({
         "candidates": json_projection_selector(&definition.candidates),
@@ -57,7 +57,9 @@ pub(crate) fn json_projection_selector(value: &SchemaProjectionSelector) -> serd
     }
 }
 
-pub(crate) fn json_projection_input(value: &recite_core::ProjectionInput) -> serde_json::Value {
+pub(crate) fn json_projection_input(
+    value: &recite_core::schema::ProjectionInput,
+) -> serde_json::Value {
     serde_json::json!({
         "name": value.name,
         "source": json_input_source(&value.source),
@@ -134,7 +136,9 @@ pub(crate) fn json_output_target(value: &ProjectionOutputTarget) -> &'static str
     }
 }
 
-pub(crate) fn json_label(value: &recite_core::PresentationLabelDefinition) -> serde_json::Value {
+pub(crate) fn json_label(
+    value: &recite_core::schema::PresentationLabelDefinition,
+) -> serde_json::Value {
     serde_json::json!({
         "template_id": value.template_id,
         "source_text": value.source_text,
@@ -143,16 +147,18 @@ pub(crate) fn json_label(value: &recite_core::PresentationLabelDefinition) -> se
 }
 
 pub(crate) fn json_field_source(
-    value: &recite_core::PresentationAffordanceFieldSource,
+    value: &recite_core::schema::PresentationAffordanceFieldSource,
 ) -> serde_json::Value {
     match value {
-        recite_core::PresentationAffordanceFieldSource::Input { name } => {
+        recite_core::schema::PresentationAffordanceFieldSource::Input { name } => {
             serde_json::json!({ "kind": "input", "name": name })
         }
-        recite_core::PresentationAffordanceFieldSource::QueryResult { name } => {
+        recite_core::schema::PresentationAffordanceFieldSource::QueryResult { name } => {
             serde_json::json!({ "kind": "query_result", "name": name })
         }
-        recite_core::PresentationAffordanceFieldSource::Literal(value) => json_literal(value),
+        recite_core::schema::PresentationAffordanceFieldSource::Literal(value) => {
+            json_literal(value)
+        }
         _ => serde_json::json!({ "kind": "unknown" }),
     }
 }

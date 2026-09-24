@@ -5,9 +5,12 @@ use std::cell::Cell;
 
 use preview_support::asset;
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, LocaleError, LocaleProvider, PluralResolution,
-    PreviewConditionResult, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions,
-    PreviewSession, PreviewStatus, TextDomain,
+    ConditionValue,
+    localisation::{LocaleError, LocaleProvider, PluralResolution, TextDomain},
+    preview::{
+        ConditionAnswer, PreviewConditionResult, PreviewError, PreviewEvent, PreviewInputs,
+        PreviewOptions, PreviewSession, PreviewStatus,
+    },
 };
 
 struct CountingProvider {
@@ -82,7 +85,7 @@ fn restart_is_explicit_and_changed_payload_is_not_swapped_silently() {
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
     preview.step(PreviewInputs::new());
     let restarted = preview.dispatch(
-        recite_runtime::PreviewCommand::Restart,
+        recite_runtime::preview::PreviewCommand::Restart,
         PreviewInputs::new(),
     );
     assert!(matches!(
@@ -91,9 +94,10 @@ fn restart_is_explicit_and_changed_payload_is_not_swapped_silently() {
     ));
     assert!(matches!(preview.state().status(), PreviewStatus::Ready));
 
-    let mut candidate = asset.clone();
+    let mut candidate = asset.clone().into_payload();
     candidate.lines[0].source_text = "A different payload.".to_owned();
     candidate.lines[0].authored_source_text = "A different payload.".to_owned();
+    let candidate = recite_core::compiled::CompiledDialogue::new(candidate);
     let before = preview.session().clone();
     let changed = preview.assess_asset(&candidate).expect("assess");
     assert!(matches!(

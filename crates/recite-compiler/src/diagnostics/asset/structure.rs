@@ -1,4 +1,7 @@
-use recite_core::{Choice, Diagnostic, DiagnosticCode, Line, LineId, SourceSpan, Statement};
+use recite_core::{
+    Diagnostic, DiagnosticCode, LineId, SourceSpan,
+    ast::{Choice, Line, Statement},
+};
 
 use super::super::{
     auxiliary_presentation, compiler_diagnostic, diagnostic_contract, related_presentation,

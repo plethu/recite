@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Deserialize;
 
 use super::CompiledAssetDecodeError;
-use crate::InterpolationType;
+use crate::ast::InterpolationType;
 use crate::compiled::CompiledInterpolationBinding;
 use crate::compiled::{CompiledChoice, CompiledLine};
 
@@ -45,7 +45,7 @@ pub(crate) fn validate_line_interpolation_rows(
     line: &CompiledLine,
     canonical_wire: bool,
 ) -> Result<(), CompiledAssetDecodeError> {
-    if line.interpolation_mode == crate::CompiledInterpolationMode::Legacy {
+    if line.interpolation_mode == crate::compiled::CompiledInterpolationMode::Legacy {
         if canonical_wire {
             validate_legacy_line(line)?;
         }

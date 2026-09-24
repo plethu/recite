@@ -1,10 +1,6 @@
 # Serialization compatibility decision
 
-**Status:** accepted for Recite before v1, 2026-08-27
-
-**Issue:** [#138](https://github.com/plethu/recite/issues/138)
-
-This records the product decision for Recite's current binary boundaries.
+This defines Recite's current binary boundaries.
 Recite is an unpublished work in progress. Its snapshot contract is being
 completed as v1; development iterations do not create released compatibility
 obligations or require new format numbers.
@@ -48,8 +44,6 @@ Development snapshots may be discarded and regenerated; there are no released
 snapshot formats to migrate. Unknown versions and malformed snapshots,
 including those missing the required payload identity, are rejected. A reader
 must never invent missing identity from the asset supplied during restore.
-The older size measurements below are historical evidence and do not describe
-the completed v1 snapshot shape.
 
 ## Why MessagePack remains
 
@@ -62,23 +56,10 @@ lookups, stable IDs, source maps, and fingerprints. Snapshots and FFI values
 are structured data rather than asset fingerprints, and already have their own
 validation and lifecycle rules.
 
-The existing measured baseline covers the named fixture profiles below. These
-are measurements of the current MessagePack path, not claims about another
-codec:
-
-| Profile | Compiled asset bytes | Maximum session bytes |
-| --- | ---: | ---: |
-| `tiny` | 32,845 | 535 |
-| `small` | 337,885 | 706 |
-| `medium` | 3,416,640 | 1,181 |
-| `large` | 17,362,479 | 2,013 |
-| `epic` | 30,272,948 | 3,612 |
-| `realistic:v1-pack` | 12,235 | 719 |
-
-See the [memory profile report](benchmark-reports/memory-profiles-known-limits.md)
-for fixture counts, session checkpoints, and measurement limits. No candidate
-format has comparable Recite measurements. Generic claims such as “zero-copy”
-or “fast” are not a reason to replace the implemented boundary.
+Generate current asset and session sizes with `memory_profile_report` as
+described in [profiling and optimisation](profiling-and-optimisation.md).
+No candidate format has comparable Recite measurements. Generic claims such as
+“zero-copy” or “fast” do not justify replacing the implemented boundary.
 
 The alternatives were considered with these weights: compatibility and
 migration 25%; host and platform portability 20%; deterministic

@@ -118,8 +118,10 @@ impl ProjectFiles {
                 .iter_mut()
                 .find(|d| d.key() == &change.document)
             {
-                *source =
-                    recite_compiler::SavedDocument::new(change.document.clone(), &change.after);
+                *source = recite_compiler::authoring::SavedDocument::new(
+                    change.document.clone(),
+                    &change.after,
+                );
             }
         }
         let mut models = BTreeMap::new();

@@ -11,7 +11,7 @@ mod producer;
 mod projections;
 mod validation;
 
-use recite_core::SchemaFingerprint;
+use recite_core::compiled::SchemaFingerprint;
 
 pub use dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
 pub use errors::{FreshnessSnapshotSide, SchemaSummaryBuildError, SchemaSummaryEvidenceError};
@@ -39,7 +39,7 @@ pub use projections::{PresentationProjectorSummary, ProjectionQueryFunctionSumma
 
 /// A deterministic, host-neutral view of one canonical project schema.
 ///
-/// This is a read-only projection of [`recite_core::ProjectSchema`]. It does
+/// This is a read-only projection of [`recite_core::schema::ProjectSchema`]. It does
 /// not parse manifests, validate schema semantics, invoke producer processes,
 /// access a filesystem, or edit standalone source. Those responsibilities stay
 /// with `recite-core` and the host client boundaries.

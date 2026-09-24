@@ -1,9 +1,9 @@
-use recite_core::{
+use recite_core::schema::{
     AvailabilityReasonArgBinding, SchemaLiteralValue, canonical_schema_fingerprint,
     load_schema_manifest_str,
 };
 
-fn schema_for(number: &str) -> recite_core::ProjectSchema {
+fn schema_for(number: &str) -> recite_core::schema::ProjectSchema {
     let source = format!(
         r#"{{
   "schema_version": 1,
@@ -20,13 +20,13 @@ fn schema_for(number: &str) -> recite_core::ProjectSchema {
         .unwrap_or_else(|| panic!("numeric manifest should load: {number}"))
 }
 
-fn projection_schema_for(number: &str) -> recite_core::ProjectSchema {
+fn projection_schema_for(number: &str) -> recite_core::schema::ProjectSchema {
     projection_report_for(number)
         .schema
         .unwrap_or_else(|| panic!("projection manifest should load: {number}"))
 }
 
-fn projection_report_for(number: &str) -> recite_core::SchemaLoadReport {
+fn projection_report_for(number: &str) -> recite_core::schema::SchemaLoadReport {
     let source = format!(
         r#"{{
   "schema_version": 1,
@@ -86,7 +86,7 @@ fn json_projection_output_lexemes_survive_without_inputs() {
     let schema = projection_schema_for("1.0");
     assert_eq!(
         schema.presentation_projectors["projector"].outputs["badge"].fields["score"].source,
-        recite_core::PresentationAffordanceFieldSource::Literal(SchemaLiteralValue::Float(
+        recite_core::schema::PresentationAffordanceFieldSource::Literal(SchemaLiteralValue::Float(
             "1.0".to_owned()
         ))
     );

@@ -1,6 +1,6 @@
 # Recite for Zed
 
-This is the first Zed extension slice for Recite. It registers `.recite`
+The Recite Zed extension registers `.recite`
 files, reuses the pinned Recite Tree-sitter grammar, projects the shared
 highlights query, and starts a separately installed `recite-lsp` through Zed's
 native LSP host.
@@ -22,27 +22,13 @@ its pinned grammar from that directory. Rust with the `wasm32-wasip2` target
 and the grammar build prerequisites must be available to the host; the
 repository gate uses host checks when that target is unavailable.
 
-The installed Linux host path was exercised on 2026-09-06 with Arch Zed
-1.18.1 under a private headless Cage/WLR compositor. The probe installed and
-rendered this development extension, started the configured `recite-lsp`, and
-sent real keyboard-driven diagnostic, completion, hover, definition,
-references, prepare-rename, task, and shutdown actions. It never used the
-caller's display or desktop.
-
-That host run received a real `textDocument/codeAction` request for a missing
-ID, and Recite returned the canonical `Insert missing stable ID` quick-fix.
-Zed applied its versioned workspace edit, and the probe verified the generated
-stable ID on disk. The replacement-name keyboard flow sent
-`textDocument/rename` with `work_renamed`; Zed applied Recite's exact
-two-occurrence workspace edit and the probe verified both replacements. The
-host copy of the diagnostic fixture also carries a non-BMP marker, with the
-real `didOpen` text and a Zed-generated completion at line 2, UTF-16 character
-14 after the marker retained in the transport log. This proves the installed
-client emitted that post-marker UTF-16 request position, not additional
-rendering or response-range conversion behavior.
-
-macOS and Windows host smoke, gallery publication, and gallery installation
-remain residuals.
+Run `scripts/run-editor-host-check.sh zed` to exercise development-extension
+installation, rendering, LSP features, versioned code actions and rename,
+static tasks, keyboard diagnostics, and process cleanup in a private Linux
+compositor. The run writes a log and result under `target/editor-host-evidence/`.
+The UTF-16 probe checks a request position after a non-BMP marker; it does not
+establish response-range rendering behavior. macOS and Windows host smoke and
+gallery installation remain unverified.
 
 See Zed's [extension development guide](https://zed.dev/docs/extensions/developing-extensions)
 for the host-side development-extension workflow.

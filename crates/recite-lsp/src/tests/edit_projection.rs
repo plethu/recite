@@ -1,4 +1,6 @@
-use recite_compiler::{AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration};
+use recite_compiler::authoring::{
+    AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration,
+};
 use recite_core::DocumentKey;
 
 use crate::edit_projection::{EditDocument, project_plan};
@@ -32,14 +34,14 @@ pub(super) fn projector_refuses_mismatched_precondition_documents() {
             key: &source_key,
             uri: &source_uri,
             text: source,
-            layer: recite_compiler::DocumentLayer::Saved,
+            layer: recite_compiler::authoring::DocumentLayer::Saved,
             version: None,
         },
         EditDocument {
             key: &target_key,
             uri: &target_uri,
             text: mismatched_target,
-            layer: recite_compiler::DocumentLayer::Saved,
+            layer: recite_compiler::authoring::DocumentLayer::Saved,
             version: None,
         },
     ];
@@ -52,7 +54,7 @@ pub(super) fn projector_refuses_mismatched_precondition_documents() {
             key: &target_key,
             uri: &source_uri,
             text: target,
-            layer: recite_compiler::DocumentLayer::Saved,
+            layer: recite_compiler::authoring::DocumentLayer::Saved,
             version: None,
         },
     ];

@@ -1,6 +1,6 @@
 use std::ffi::{c_char, c_void};
 
-use recite_runtime::{PluralResolutionOutcome, TextDomain};
+use recite_runtime::localisation::{PluralResolutionOutcome, TextDomain};
 
 /// Operation requested from a locale callback.
 #[repr(u32)]

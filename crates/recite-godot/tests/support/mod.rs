@@ -5,8 +5,8 @@
 
 use std::path::PathBuf;
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
+use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 use recite_godot::{AdapterError, ReciteDialogueAsset, ReciteOutput};
 
 pub(crate) fn compile_asset(

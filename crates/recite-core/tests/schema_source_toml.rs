@@ -19,7 +19,7 @@ mod schema_source_numeric_projection;
 #[path = "schema_source_toml/structured_diagnostics.rs"]
 mod schema_source_structured_diagnostics;
 
-pub(crate) fn assert_recordable_diagnostics(report: &recite_core::SchemaSourceLoadReport) {
+pub(crate) fn assert_recordable_diagnostics(report: &recite_core::schema::SchemaSourceLoadReport) {
     for diagnostic in &report.diagnostics {
         assert!(
             diagnostic.presentation.is_some(),

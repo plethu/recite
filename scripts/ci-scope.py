@@ -28,7 +28,7 @@ def lanes_for_path(path):
         ".github/workflows/ci.yml", "scripts/ci-scope.py", "scripts/check-ci-results.py",
     } or path.startswith((".cargo/", "tests/ci/")):
         return LANES
-    if path == "docs/maintainability-baseline.md":
+    if path == "scripts/maintainability/exceptions.toml":
         return frozenset({"docs", "maintainability"})
     if path.startswith("docs/") or (
         path.endswith(".md") and not path.startswith(("fixtures/", "tests/"))

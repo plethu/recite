@@ -1,6 +1,8 @@
-use recite_core::{AvailabilityReasonArgBinding, SchemaLiteralValue, load_schema_manifest_str};
+use recite_core::schema::{
+    AvailabilityReasonArgBinding, SchemaLiteralValue, load_schema_manifest_str,
+};
 
-fn schema_for(value: &str) -> recite_core::ProjectSchema {
+fn schema_for(value: &str) -> recite_core::schema::ProjectSchema {
     let source = format!(
         r#"{{
   "schema_version": 1,
@@ -74,7 +76,7 @@ fn json_projection_literals_preserve_leading_dollars_exactly() {
         .unwrap_or_else(|| panic!("projection manifest should load: {:?}", report.diagnostics));
     assert_eq!(
         schema.presentation_projectors["projector"].inputs[0].source,
-        recite_core::SchemaProjectionInputSource::Literal(SchemaLiteralValue::String(
+        recite_core::schema::SchemaProjectionInputSource::Literal(SchemaLiteralValue::String(
             "$$legacy".to_owned()
         ))
     );

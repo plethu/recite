@@ -6,7 +6,7 @@ use recite_cli::watch::{
     ProjectBuildPreparation, ProjectBuildPublisher, ProjectBuildPublisherError,
     ProjectBuildRecoveryReason, ProjectBuildRequest, TargetMapError, TargetPathError,
 };
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCandidate, BuildControl, BuildPublisher, PublishAbortReason, PublishFailure,
     PublishFailureReason,
 };
@@ -43,7 +43,6 @@ fn request(root: &Path, assets: &str) -> ProjectBuildRequest {
         ProjectBuildPreparation::Rejected { diagnostics } => {
             panic!("unexpected diagnostics: {diagnostics:?}")
         }
-        _ => panic!("unknown preparation outcome"),
     }
 }
 
@@ -260,7 +259,7 @@ fn output_parent_symlink_swap_is_refused_at_commit() {
     let outcome = publisher.commit(prepared);
     assert!(matches!(
         outcome,
-        recite_compiler::PublishOutcome::Partial { .. }
+        recite_compiler::authoring::PublishOutcome::Partial { .. }
     ));
     assert!(!outside.path().join("dialogue.recitec").exists());
     assert_eq!(publisher.recovery().len(), 1);

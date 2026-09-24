@@ -1,5 +1,5 @@
 use language_tags::LanguageTag;
-use recite_core::{LocaleId, PoDocument};
+use recite_core::{LocaleId, po::PoDocument};
 
 use super::{CatalogIdentity, CatalogSummaryError};
 

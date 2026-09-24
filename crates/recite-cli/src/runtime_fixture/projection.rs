@@ -1,6 +1,9 @@
 use recite_runtime::{
-    ConditionValue, PreviewConditionArgument, PreviewConditionRequest, PreviewConditionResult,
-    PreviewEvent, PreviewPrompt, PreviewTrace,
+    ConditionValue,
+    preview::{
+        PreviewConditionArgument, PreviewConditionRequest, PreviewConditionResult, PreviewEvent,
+        PreviewPrompt, PreviewTrace,
+    },
 };
 use recite_ui::UiArg;
 
@@ -190,7 +193,7 @@ fn trace_prompt(
 }
 
 fn fixture_keys(
-    identity: &recite_runtime::PreviewPromptIdentity,
+    identity: &recite_runtime::preview::PreviewPromptIdentity,
     prompt_cardinality: &PromptCardinality,
 ) -> Vec<String> {
     let mut keys = identity

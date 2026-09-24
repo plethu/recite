@@ -49,7 +49,7 @@ pub(super) fn match_statement(block: &Block, index: usize) -> &MatchBranch {
     branch
 }
 
-pub(super) fn comment_statement(block: &Block, index: usize) -> &recite_core::Comment {
+pub(super) fn comment_statement(block: &Block, index: usize) -> &recite_core::ast::Comment {
     let Statement::Comment(comment) = &block.statements[index] else {
         panic!("expected statement {index} to be a comment");
     };
@@ -249,7 +249,7 @@ fn push_statement_summary(summary: &mut String, statement: &Statement, depth: us
     }
 }
 
-fn metadata_keys(metadata: &recite_core::SourceMetadata) -> String {
+fn metadata_keys(metadata: &recite_core::ast::SourceMetadata) -> String {
     metadata
         .iter()
         .map(|entry| entry.key.as_str())
@@ -270,7 +270,7 @@ fn source_id_summary(source_id: &recite_core::SourceId) -> String {
 
 fn divert_target_summary(target: &DivertTarget) -> String {
     match target {
-        DivertTarget::End => recite_core::END_DIVERT_TARGET.to_owned(),
+        DivertTarget::End => recite_core::ast::END_DIVERT_TARGET.to_owned(),
         DivertTarget::Block(reference) => match &reference.file {
             Some(file) => format!("{file}::{}", reference.block_id),
             None => reference.block_id.to_string(),
@@ -298,7 +298,7 @@ fn condition_group_summary(operator: &str, expressions: &[ConditionExpression]) 
         .join(&format!(" {operator} "))
 }
 
-fn condition_call_summary(call: &recite_core::ConditionCall) -> String {
+fn condition_call_summary(call: &recite_core::ast::ConditionCall) -> String {
     format!(
         "{}({})",
         call.function,

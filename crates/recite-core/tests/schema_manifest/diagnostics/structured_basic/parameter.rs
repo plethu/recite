@@ -1,5 +1,5 @@
 use super::{assert_structured_diagnostic, string};
-use recite_core::{DiagnosticArgumentValue, load_schema_manifest_str};
+use recite_core::{DiagnosticArgumentValue, schema::load_schema_manifest_str};
 
 #[test]
 fn manifest_parameter_diagnostics_have_exact_presentations() {
@@ -91,7 +91,7 @@ fn assert_primary_span(
 }
 
 fn assert_structured_at(
-    report: &recite_core::SchemaLoadReport,
+    report: &recite_core::schema::SchemaLoadReport,
     index: usize,
     presentation_id: &str,
     arguments: &[(&str, DiagnosticArgumentValue)],

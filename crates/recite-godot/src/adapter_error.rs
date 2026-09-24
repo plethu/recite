@@ -1,4 +1,4 @@
-use recite_core::CompiledAssetDecodeError;
+use recite_core::compiled::CompiledAssetDecodeError;
 use recite_runtime::DialogueError;
 
 #[non_exhaustive]

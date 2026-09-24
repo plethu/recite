@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::SourceFile;
+use recite_core::ast::SourceFile;
 
 /// Whether a source-file summary is complete enough for one validation class.
 #[non_exhaustive]

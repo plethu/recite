@@ -1,7 +1,7 @@
 use std::fs;
 
-use recite_compiler::SavedDocument;
-use recite_core::{load_schema_manifest_str, validate_project_manifest_source};
+use recite_compiler::authoring::SavedDocument;
+use recite_core::{project::validate_project_manifest_source, schema::load_schema_manifest_str};
 use recite_writer_model::ProjectContext;
 
 use crate::project::FileError;

@@ -256,7 +256,7 @@ unsafe fn restore_impl(request: RestoreRequest, outputs: RestoreOutputs) -> Reci
             return ReciteStatus::Validation;
         }
     };
-    let mut session = match recite_runtime::decode_session_messagepack(&dialogue, bytes) {
+    let mut session = match recite_runtime::snapshot::decode_session_messagepack(&dialogue, bytes) {
         Ok(session) => session,
         Err(error) => {
             set_last_error(&error.to_string());

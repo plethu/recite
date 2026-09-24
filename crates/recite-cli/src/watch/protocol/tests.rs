@@ -2,7 +2,7 @@ use std::io::{self, Read};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCandidate, BuildCheck, BuildControl, BuildEngine, BuildFailure, BuildGeneration,
     BuildInput, BuildPreparedHandle, BuildPublisher, BuildRequest, BuildTarget,
     FreshnessAssessment, PreparedPublishIdentity, PublishAbortReason, PublishFailure,
@@ -105,7 +105,7 @@ impl BuildEngine for BlockingEngine {
         while control.cancellation().is_none() {
             if started.elapsed() > Duration::from_secs(5) {
                 return Err(BuildFailure::Engine {
-                    reason: recite_compiler::BuildFailureReason::Host,
+                    reason: recite_compiler::authoring::BuildFailureReason::Host,
                 });
             }
             std::thread::yield_now();
@@ -204,7 +204,7 @@ fn active_cancellation_acknowledges_before_one_cancelled_completion() {
                 .expect("cancellation is a terminal result");
             assert_eq!(
                 result.status(),
-                recite_compiler::BuildTerminalStatus::Cancelled
+                recite_compiler::authoring::BuildTerminalStatus::Cancelled
             );
             assert_eq!(publisher.commits, 0);
             Ok(status_without_freshness(result, Vec::new()))
@@ -386,7 +386,7 @@ fn active_control_stream_error_emits_completion_before_fatal_stop() {
                 .expect("build result");
             assert_eq!(
                 result.status(),
-                recite_compiler::BuildTerminalStatus::Succeeded
+                recite_compiler::authoring::BuildTerminalStatus::Succeeded
             );
             Ok(status_without_freshness(result, Vec::new()))
         },

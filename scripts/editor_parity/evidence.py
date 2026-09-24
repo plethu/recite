@@ -8,7 +8,6 @@ from .paths import require_no_symlink_components, require_repo_file
 
 
 HOST_RUNNER_PATTERN = re.compile(r"scripts/check-[a-z0-9][a-z0-9-]*-host\.sh")
-HOST_RECORD_DIRECTORY = Path("docs/evidence/editor-hosts")
 ISSUE_REFERENCE_PATTERN = re.compile(r"#[1-9][0-9]*")
 HISTORICAL_EVIDENCE_ISSUES = frozenset({"#51", "#53", "#98", "#192", "#202"})
 CURRENT_FOLLOW_UP_OWNERS = {"#206": "lsp.cancellation"}
@@ -31,15 +30,6 @@ def host_runner_clients(command: str) -> frozenset[str]:
     slug = host_runner_client(command)
     if slug is None:
         return frozenset()
-    return SHARED_HOST_CLIENTS.get(slug, frozenset({slug}))
-
-
-def host_document_clients(document: str, platform: str) -> frozenset[str]:
-    stem = Path(document).stem.lower()
-    suffix = f"-{platform.lower()}"
-    if not stem.endswith(suffix):
-        return frozenset()
-    slug = stem[: -len(suffix)]
     return SHARED_HOST_CLIENTS.get(slug, frozenset({slug}))
 
 
@@ -247,10 +237,8 @@ def validate_host_records(
 ) -> None:
     """Validate optional installed-host evidence without changing old rows.
 
-    Host runners are deliberately separate from the source/package/protocol
-    evidence commands.  A runner is only meaningful when it has a checked-in
-    record naming the exact host it exercised; the record carries the stronger
-    keyboard assertions when the keyboard workflow uses it.
+    Host runners are separate from source/package/protocol commands. Each
+    configured host must have a runnable scenario and explicit client coverage.
     """
     host_commands = [command for command in evidence_commands if is_host_runner(command)]
     records = evidence.get("host_records")
@@ -278,7 +266,6 @@ def validate_host_records(
         client = record.get("client")
         platform = record.get("platform")
         runner = record.get("runner")
-        document = record.get("record")
         product = record.get("product")
         version = record.get("version")
         architecture = record.get("architecture")
@@ -290,19 +277,6 @@ def validate_host_records(
             validate_command(ctx, capability_id, runner)
             runner_clients = host_runner_clients(runner)
             ctx.require(client in runner_clients, f"{label} runner {runner} does not match client {client}")
-        ctx.require(isinstance(document, str) and bool(document), f"{label} must name an evidence document")
-        if isinstance(document, str) and document:
-            document_path = Path(document)
-            ctx.require(
-                not document_path.is_absolute()
-                and document_path.as_posix() == document
-                and document_path.parent == HOST_RECORD_DIRECTORY,
-                f"{label} evidence document must be a direct path under {HOST_RECORD_DIRECTORY}",
-            )
-            if document_path.parent == HOST_RECORD_DIRECTORY and isinstance(client, str) and isinstance(platform, str):
-                document_clients = host_document_clients(document, platform)
-                ctx.require(client in document_clients, f"{label} evidence document does not match client {client} and platform {platform}")
-            require_repo_file(ctx, document, f"{label} evidence document")
         for field, value in (("product", product), ("version", version), ("architecture", architecture)):
             ctx.require(isinstance(value, str) and value.strip(), f"{label} must name a non-empty {field}")
         if isinstance(client, str) and isinstance(platform, str) and isinstance(version, str) and isinstance(architecture, str):

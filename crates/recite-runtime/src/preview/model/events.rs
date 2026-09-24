@@ -1,4 +1,4 @@
-use recite_core::{BlockId, ChoiceId, CompiledAssetId, EffectId, LocaleId};
+use recite_core::{BlockId, ChoiceId, EffectId, LocaleId, compiled::CompiledAssetId};
 
 use crate::{DialogueChoice, DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck};
 use crate::{LocalizedLookupTrace, PluralLineTrace};

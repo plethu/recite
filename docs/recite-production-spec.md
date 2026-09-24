@@ -1529,6 +1529,10 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 
 The session must not serialise game state.
 
+Live sessions represent running, awaiting a choice, awaiting a blocking effect,
+and ended as exclusive states. The versioned snapshot keeps its existing fields;
+restore validates them and converts them into one live state.
+
 Runtime session snapshots use an explicit format version. The initial v1 stores the
 canonical compiled payload fingerprint so restoring against an asset with the
 same header and source metadata but different semantic tables is rejected.
@@ -1539,8 +1543,12 @@ and snapshots missing the required payload identity are rejected.
 
 Compilation and asset decoding prepare the canonical payload fingerprint once.
 Starting another session from that asset reuses the prepared identity; it must
-not serialize and hash the whole asset again. Exclusive payload edits invalidate
-the cached identity before allowing further mutation.
+not serialize and hash the whole asset again. Prepared assets expose no mutable
+payload access. Deliberate edits consume the asset into a raw payload and
+require construction of a new asset.
+Advance and choice operations compare that cached identity against the session's
+identity before they inspect executable tables. A changed payload with unchanged
+header and source metadata is rejected with a structured content mismatch.
 
 #### Save/load while waiting on a blocking effect
 
@@ -1629,7 +1637,9 @@ Each localisable string must have:
 
 ### 9.2 POT Extraction
 
-The CLI must emit POT files.
+The CLI must emit POT files. The compiler extracts and validates entries;
+`recite-core::po` owns POT values and serialization alongside lossless PO
+editing, so both use the same gettext escaping rules.
 
 For dialogue lines and choices:
 
@@ -3059,9 +3069,13 @@ the only authoring path.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Freya is the selected native frontend; see the
-[decision record](decisions/gui-framework.md). Retired framework comparisons
-remain in Git history. Linux, Windows, and macOS remain first-class v1 desktop
+Freya is the selected native frontend. The parser, authoring kernel,
+configuration discovery, compiler, and runtime remain authoritative; Freya
+owns presentation, focus, interaction, and file-session orchestration. A
+future frontend port would replace those responsibilities without replacing
+language semantics. Reconsider Freya for a concrete accessibility, text-input,
+distribution, or maintenance blocker, and run repeatable regression checks
+before upgrading the pinned release candidate. Linux, Windows, and macOS remain first-class v1 desktop
 targets for the core CLI, LSP, editor integrations, and standalone workbench;
 selection does not establish acceptance on those platforms.
 
@@ -3820,14 +3834,15 @@ verification baseline.
 **Entry gate:** the current parser, compiler, runtime, CLI, LSP, schema, FFI,
 benchmark, and adapter surfaces have been inventoried.
 
-**Exit gate:** a checked-in cohesion/maintainability audit assigns ownership for
-syntax, semantic lowering, schema, compiled wire data, snapshots, diagnostics,
-FFI, and adapters; duplicate semantic authority and file-size risks have an
-action plan; Batten-derived ast-grep structural gates cover sprawling
-constructs, test placement, module ownership, generated boundaries,
-documented exemptions, and checks close to the change; compatibility policy,
-fixtures, and the complete local gate are documented and passing. Line count is
-a review trigger, not the maintainability rule.
+**Exit gate:** syntax, semantic lowering, schema, compiled wire data, snapshots,
+diagnostics, FFI, and adapters have explicit owners. Structural ast-grep gates
+cover repeated equality cascades and private-test placement. The maintainability
+gate compares handwritten file sizes against the change base: unchanged or
+shrinking debt passes, while growth above 400 production/tooling lines or 500
+test/support lines requires an exact, issue-linked, bounded exception in
+`scripts/maintainability/exceptions.toml`. Generated paths are explicit
+exclusions. Compatibility fixtures and the complete local gate remain the
+acceptance checks. Line count is a review trigger, not a split rule.
 
 ### Milestone 2: Language, Schema, and Localisation Readiness
 
@@ -3885,9 +3900,8 @@ localisation, and UTF-16 fixtures produce equivalent semantic answers.
 
 ### Milestone 5: Native GUI Strategy and Accessibility Proof
 
-**Maintainer decision, 2026-09-08:** Freya is selected. Further candidate
-implementation, including the unrun platform-native lanes, is parked under the
-[decision record](decisions/gui-framework.md). Accessibility and declared-platform
+**Maintainer decision:** Freya is selected. Further candidate
+implementation, including the unrun platform-native lanes, is parked. Accessibility and declared-platform
 acceptance remain outstanding. Early workbench implementation is authorized
 alongside those checks, without claiming milestone completion.
 
@@ -3899,7 +3913,7 @@ be reused without reimplementing language semantics in each candidate; completed
 editor clients are not a prerequisite.
 
 **Exit gate:** the selected frontend has evidence for every claimed platform.
-The decision record names support, dependencies, maintenance burden, known
+The frontend assessment names support, dependencies, maintenance burden, known
 limits, and reconsideration triggers. Keyboard-only,
 focus, screen-reader, IME, BiDi/RTL, zoom/text scaling,
 high-contrast, non-colour, stale-generation, cancellation, progress/status

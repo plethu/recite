@@ -3,7 +3,7 @@ use recite_core::{ChoiceId, EffectId};
 use crate::session_snapshot::DialogueSessionSnapshotConversionError;
 use crate::{
     ChoiceAvailability, ConditionExpectedType, DialogueEffectMode,
-    DialogueSchemaFingerprintSnapshot,
+    snapshot::DialogueSchemaFingerprintSnapshot,
 };
 
 /// Runtime error for deterministic traversal over compiled dialogue assets.

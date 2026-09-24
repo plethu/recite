@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_core::{LocaleId, PoDocumentFingerprint, PoEntry};
+use recite_core::{
+    LocaleId,
+    po::{PoDocumentFingerprint, PoEntry},
+};
 
 use super::CatalogSummaryError;
 use super::coverage::{CatalogEntryKey, CatalogEntryStatus};
@@ -9,7 +12,7 @@ use super::record_status::CatalogRecordStatus;
 use super::resolution::{CatalogEntryResolution, CatalogResolution, CatalogResolutionPolicy};
 use super::summary::CatalogCoverageSummary;
 use super::types::{CatalogIdentity, CatalogInput, CatalogSummary};
-use crate::PotDocument;
+use recite_core::po::PotDocument;
 
 impl CatalogCoverageSummary {
     /// Build a deterministic summary from an expected POT and lossless PO
@@ -58,15 +61,6 @@ impl CatalogCoverageSummary {
             entries,
         })
     }
-
-    /// Alias for [`Self::build`] that reads naturally at authoring call sites.
-    pub fn from_documents(
-        expected: &PotDocument,
-        catalogs: impl IntoIterator<Item = CatalogInput>,
-        policy: CatalogResolutionPolicy,
-    ) -> Result<Self, CatalogSummaryError> {
-        Self::build(expected, catalogs, policy)
-    }
 }
 
 impl CatalogSummary {
@@ -80,7 +74,7 @@ impl CatalogSummary {
             .headers()
             .iter()
             .find(|header| header.key().eq_ignore_ascii_case("Plural-Forms"))
-            .and_then(|header| recite_core::validate_plural_rule(header.value()).ok());
+            .and_then(|header| recite_core::po::validate_plural_rule(header.value()).ok());
         let entries = expected
             .iter()
             .map(|key| CatalogEntryStatus::build(key, &input.document, plural_forms))

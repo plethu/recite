@@ -1,11 +1,14 @@
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    BlockIndex, BlockLookupTable, ChoiceId, ChoiceLookupTable, CompiledAssetHeader,
-    CompiledAssetId, CompiledDialogue, CompiledDialoguePayload, CompiledDivertTarget,
-    CompilerVersion, ContentFingerprint, LineLookupTable, SchemaFingerprint, SourceMapId,
-    StatementIndex, StatementRange,
+    ChoiceId,
+    compiled::{
+        BlockIndex, CompiledAssetId, CompiledDialogue, CompiledDivertTarget, CompilerVersion,
+        SchemaFingerprint, SourceMapId, StatementIndex, StatementRange,
+        canonical_compiled_dialogue_fingerprint,
+    },
 };
 
-use crate::session::{PendingPrompt, PendingPromptChoice};
+use crate::session::{PendingPrompt, PendingPromptChoice, SessionPhase};
 use crate::{
     ChoiceAvailability, ChoiceAvailabilityReason, DialogueError, DialogueSession,
     DialogueSessionOptions, EmptyDialogueContext,
@@ -15,17 +18,17 @@ use super::choose;
 
 #[test]
 fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
-    let asset = empty_asset();
+    let asset = compiled_asset();
     let choice_id = ChoiceId::new("locked_choice").expect("valid choice ID");
     let mut session = DialogueSession::new(
         &asset.header,
         asset.sources.clone(),
         BlockIndex::new(0),
         StatementRange::new(StatementIndex::new(0), 0),
-        ContentFingerprint::blake3([0; 32]).expect("valid test fingerprint"),
+        canonical_compiled_dialogue_fingerprint(&asset).expect("valid test fingerprint"),
         DialogueSessionOptions::default(),
     );
-    session.pending_prompt = Some(PendingPrompt {
+    session.phase = SessionPhase::AwaitingChoice(PendingPrompt {
         statement: StatementIndex::new(0),
         choices: vec![PendingPromptChoice {
             id: choice_id.clone(),
@@ -48,10 +51,10 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
         })
     );
     assert_eq!(
-        session
-            .pending_prompt
-            .as_ref()
-            .map(PendingPrompt::choice_ids),
+        match &session.phase {
+            SessionPhase::AwaitingChoice(prompt) => Some(prompt.choice_ids()),
+            _ => None,
+        },
         Some(vec![choice_id])
     );
     assert!(session.selected_choice_history().is_empty());
@@ -92,29 +95,21 @@ fn missing_trust_availability() -> ChoiceAvailability {
     )
 }
 
-fn empty_asset() -> CompiledDialogue {
-    CompiledDialogue::new(CompiledDialoguePayload {
-        header: CompiledAssetHeader::messagepack_v0(
+fn compiled_asset() -> CompiledDialogue {
+    compile_inputs(
+        [CompileInput::new(
+            "dialogue/start.recite",
+            ":: start default\n> line@12345678901234567890\n  Line.\n-> END\n",
+        )],
+        CompileOptions::new(
             CompilerVersion::new("0.0.1").expect("valid compiler version"),
             CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
             SourceMapId::new("dialogue/main.recitec.map").expect("valid source map id"),
             SchemaFingerprint::NoSchema,
         ),
-        default_block: BlockIndex::new(0),
-        sources: Vec::new(),
-        blocks: Vec::new(),
-        statements: Vec::new(),
-        match_arms: Vec::new(),
-        lines: Vec::new(),
-        choices: Vec::new(),
-        availability_reasons: Vec::new(),
-        condition_availability_reasons: Vec::new(),
-        speakers: Vec::new(),
-        metadata: Vec::new(),
-        effects: Vec::new(),
-        source_maps: Vec::new(),
-        block_lookup: BlockLookupTable::default(),
-        line_lookup: LineLookupTable::default(),
-        choice_lookup: ChoiceLookupTable::default(),
-    })
+    )
+    .expect("test source compiles")
+    .asset
+    .expect("asset emitted")
+    .dialogue
 }

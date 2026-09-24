@@ -1,23 +1,29 @@
 #![cfg(test)]
 
 use recite_core::{
-    BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledConditionCall,
-    CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledMatchArm,
-    CompiledMatchPattern, CompiledStatementKind, EffectId, EffectIndex, LineIndex, LocaleId,
-    MatchArmIndex, MatchArmRange,
+    ChoiceId, EffectId, LocaleId,
+    compiled::{
+        BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceRange, CompiledConditionCall,
+        CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledMatchArm,
+        CompiledMatchPattern, CompiledStatementKind, EffectIndex, LineIndex, MatchArmIndex,
+        MatchArmRange,
+    },
 };
 use recite_runtime::{
     ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
     ConditionArgument, ConditionEvaluationError, ConditionExpectedType, ConditionQuery,
     DialogueEffectArgument, DialogueEffectMode, DialogueEffectRequest, DialogueError,
     DialogueEvent, DialogueSessionOptions, DialogueTrace, EffectAck, EmptyDialogueContext,
-    LocaleProvider, LocaleResolution, TextDomain, acknowledge_effect, choose as runtime_choose,
-    choose_with as runtime_choose_with, next as runtime_next, next_with as runtime_next_with,
-    start_scene, start_scene_with_options,
+    LocaleResolution, acknowledge_effect, choose as runtime_choose,
+    choose_with as runtime_choose_with,
+    localisation::{LocaleProvider, TextDomain},
+    next as runtime_next, next_with as runtime_next_with, start_scene, start_scene_with_options,
 };
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
+#[path = "traversal/asset_identity.rs"]
+mod asset_identity;
 #[path = "traversal/choices.rs"]
 mod choices;
 #[path = "traversal/conditions.rs"]

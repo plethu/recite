@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_core::{
+use recite_core::compiled::{
     CompiledDialogue, CompiledDialoguePayload, ContentFingerprint,
     canonical_compiled_dialogue_fingerprint, canonical_source_fingerprint,
     decode_compiled_dialogue_messagepack,
@@ -23,26 +23,31 @@ fn expected_fingerprint() -> ContentFingerprint {
 }
 
 #[test]
-fn prepared_identity_changes_after_nested_payload_mutation() {
-    let mut asset = CompiledDialogue::prepare(prepared_payload()).expect("asset prepares");
+fn rebuilding_a_prepared_asset_changes_its_identity() {
+    let asset = CompiledDialogue::prepare(prepared_payload()).expect("asset prepares");
     let before = canonical_compiled_dialogue_fingerprint(&asset).expect("valid fingerprint");
 
-    asset.sources[0].fingerprint = canonical_source_fingerprint("changed source");
+    let mut payload = asset.into_payload();
+    payload.sources[0].fingerprint = canonical_source_fingerprint("changed source");
+    let asset = CompiledDialogue::prepare(payload).expect("changed asset prepares");
 
     let after = canonical_compiled_dialogue_fingerprint(&asset).expect("mutated fingerprint");
     assert_ne!(before, after);
 }
 
 #[test]
-fn cached_invalid_identity_is_replaced_after_repairing_nested_payload() {
-    let mut asset = decoded_asset();
-    asset.blocks[0].statements.len = 2;
+fn invalid_raw_payload_can_be_repaired_and_rebuilt() {
+    let mut payload = decoded_asset().into_payload();
+    payload.blocks[0].statements.len = 2;
+    let asset = CompiledDialogue::new(payload);
 
     let invalid = canonical_compiled_dialogue_fingerprint(&asset)
         .expect_err("invalid payload fingerprint is cached as an error");
     assert!(invalid.to_string().contains("statements"));
 
-    asset.blocks[0].statements.len = 1;
+    let mut payload = asset.into_payload();
+    payload.blocks[0].statements.len = 1;
+    let asset = CompiledDialogue::prepare(payload).expect("repaired asset prepares");
 
     assert_eq!(
         canonical_compiled_dialogue_fingerprint(&asset).expect("repaired payload fingerprints"),
@@ -51,16 +56,18 @@ fn cached_invalid_identity_is_replaced_after_repairing_nested_payload() {
 }
 
 #[test]
-fn cloned_identity_cache_is_independent_after_mutation() {
+fn cloned_identity_cache_is_independent_after_rebuilding() {
     let asset = decoded_asset();
     let original = canonical_compiled_dialogue_fingerprint(&asset).expect("valid fingerprint");
-    let mut clone = asset.clone();
+    let clone = asset.clone();
     assert_eq!(
         canonical_compiled_dialogue_fingerprint(&clone).expect("cloned fingerprint"),
         original
     );
 
-    clone.sources[0].fingerprint = canonical_source_fingerprint("clone-only source");
+    let mut payload = clone.into_payload();
+    payload.sources[0].fingerprint = canonical_source_fingerprint("clone-only source");
+    let clone = CompiledDialogue::prepare(payload).expect("changed clone prepares");
 
     assert_ne!(
         canonical_compiled_dialogue_fingerprint(&clone).expect("changed clone fingerprints"),

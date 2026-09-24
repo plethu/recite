@@ -1,12 +1,16 @@
-use recite_compiler::{
+use recite_compiler::compile::{
     CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs, compile_inputs_with_schema,
 };
 use recite_core::{
-    BLAKE3_DIGEST_LEN, CompiledArgument, CompiledAssetEncoding, CompiledAssetId,
-    CompiledChoiceEcho, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
-    CompiledEffectMode, CompiledInspectionEncoding, CompiledMatchPattern, CompiledStatementKind,
-    CompilerVersion, ContentFingerprint, ScalarValue, SchemaFingerprint, SourceMapId, Value,
-    decode_compiled_dialogue_messagepack, load_schema_manifest_str,
+    ScalarValue, Value,
+    compiled::{
+        BLAKE3_DIGEST_LEN, CompiledArgument, CompiledAssetEncoding, CompiledAssetId,
+        CompiledChoiceEcho, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
+        CompiledEffectMode, CompiledInspectionEncoding, CompiledMatchPattern,
+        CompiledStatementKind, CompilerVersion, ContentFingerprint, SchemaFingerprint, SourceMapId,
+        decode_compiled_dialogue_messagepack,
+    },
+    schema::load_schema_manifest_str,
 };
 use std::collections::BTreeSet;
 

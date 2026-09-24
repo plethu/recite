@@ -1,7 +1,10 @@
 use recite_core::{
-    BlockIndex, ChoiceId, CompiledAssetHeader, CompiledAssetId, CompiledDivertTarget,
-    CompiledSourceFile, CompilerVersion, ContentFingerprint, LocaleId, SchemaFingerprint,
-    SourceMapId, StatementIndex, StatementRange,
+    ChoiceId, LocaleId,
+    compiled::{
+        BlockIndex, CompiledAssetHeader, CompiledAssetId, CompiledDivertTarget, CompiledSourceFile,
+        CompilerVersion, ContentFingerprint, SchemaFingerprint, SourceMapId, StatementIndex,
+        StatementRange,
+    },
 };
 
 use crate::{ChoiceAvailability, DialogueEffectRequest, DialogueError, DialogueEvent};
@@ -21,14 +24,20 @@ pub struct DialogueSession {
     pub(crate) current_range: StatementRange,
     pub(crate) next_statement: StatementIndex,
     pub(crate) continuation_stack: Vec<StatementFrame>,
-    pub(crate) pending_prompt: Option<PendingPrompt>,
-    pub(crate) pending_effect: Option<PendingEffect>,
+    pub(crate) phase: SessionPhase,
     pub(crate) previous_prompt_choices: Vec<ChoiceId>,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
     pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
     pub(crate) locale: Option<LocaleId>,
     pub(crate) trace_counter: u64,
-    pub(crate) ended: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum SessionPhase {
+    Running,
+    AwaitingChoice(PendingPrompt),
+    AwaitingEffect(PendingEffect),
+    Ended,
 }
 
 impl DialogueSession {
@@ -53,14 +62,12 @@ impl DialogueSession {
             current_range,
             next_statement: current_range.start,
             continuation_stack: Vec::new(),
-            pending_prompt: None,
-            pending_effect: None,
+            phase: SessionPhase::Running,
             previous_prompt_choices: Vec::new(),
             selected_choice_history: Vec::new(),
             deferred_effects: Vec::new(),
             locale: options.locale,
             trace_counter: 0,
-            ended: false,
         }
     }
 
@@ -90,7 +97,10 @@ impl DialogueSession {
 
     #[must_use]
     pub fn pending_effect(&self) -> Option<&DialogueEffectRequest> {
-        self.pending_effect.as_ref().map(|effect| &effect.request)
+        match &self.phase {
+            SessionPhase::AwaitingEffect(effect) => Some(&effect.request),
+            _ => None,
+        }
     }
 
     #[must_use]

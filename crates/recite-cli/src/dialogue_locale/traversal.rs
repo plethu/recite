@@ -1,5 +1,5 @@
 use recite_core::LocaleId;
-use recite_runtime::LocaleProvider;
+use recite_runtime::localisation::LocaleProvider;
 
 /// Loaded dialogue-localisation inputs passed to the shared preview driver.
 ///

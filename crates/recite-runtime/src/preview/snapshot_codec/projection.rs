@@ -193,9 +193,10 @@ impl RequirementWire {
     }
 
     pub(super) fn into_requirement(self) -> Result<PreviewRestartRequirement, PreviewError> {
-        let active_asset = recite_core::CompiledAssetId::new(self.active_asset).map_err(invalid)?;
+        let active_asset =
+            recite_core::compiled::CompiledAssetId::new(self.active_asset).map_err(invalid)?;
         let replacement_asset =
-            recite_core::CompiledAssetId::new(self.replacement_asset).map_err(invalid)?;
+            recite_core::compiled::CompiledAssetId::new(self.replacement_asset).map_err(invalid)?;
         let active_revision = self
             .active_revision
             .ok_or_else(|| invalid("restart requirement is missing active revision"))?
@@ -228,7 +229,7 @@ impl AssetRevisionWire {
 
     pub(super) fn into_revision(self) -> Result<PreviewAssetRevision, PreviewError> {
         PreviewAssetRevision::from_fingerprint_snapshot(
-            recite_core::CompiledAssetId::new(self.asset_id).map_err(invalid)?,
+            recite_core::compiled::CompiledAssetId::new(self.asset_id).map_err(invalid)?,
             self.payload_fingerprint,
         )
     }

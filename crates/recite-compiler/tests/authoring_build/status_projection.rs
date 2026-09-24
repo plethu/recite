@@ -1,17 +1,18 @@
 use super::support::*;
-use recite_compiler::{
+use build::{
     BuildAuthority, BuildCancellation, BuildCheck, BuildControl, BuildEngine, BuildFailure,
     BuildGeneration, BuildInput, BuildInputAuthority, BuildInputPolicy, BuildLifecycle,
     BuildRequest, BuildStatusProjection, BuildTelemetry, BuildTerminalStatus, BuildTransition,
     FreshnessFinalization, PreparedPublishIdentity, PublishOutcome, RecoveryNeeded,
 };
+use recite_compiler::authoring as build;
 use std::time::Duration;
 
 #[test]
 fn projects_every_lifecycle_state_with_stable_fields() {
     let request = BuildRequest::new_with_policy(
         BuildGeneration::new(1),
-        recite_compiler::SnapshotGeneration::new(9),
+        build::SnapshotGeneration::new(9),
         [BuildInput::overlay_source(
             key("dialogue/start.recite"),
             "overlay",
@@ -24,7 +25,7 @@ fn projects_every_lifecycle_state_with_stable_fields() {
     let idle = BuildLifecycle::new();
     assert_eq!(
         BuildStatusProjection::from_state(idle.state()).phase(),
-        recite_compiler::BuildPhase::Idle
+        build::BuildPhase::Idle
     );
 
     let mut checking = BuildLifecycle::new();
@@ -34,17 +35,14 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         })
         .unwrap_or_else(|error| panic!("start: {error}"));
     let checking_projection = BuildStatusProjection::from_state(checking.state());
-    assert_eq!(
-        checking_projection.phase(),
-        recite_compiler::BuildPhase::Checking
-    );
+    assert_eq!(checking_projection.phase(), build::BuildPhase::Checking);
     assert_eq!(
         checking_projection.generation(),
         Some(BuildGeneration::new(1))
     );
     assert_eq!(
         checking_projection.snapshot_generation(),
-        Some(recite_compiler::SnapshotGeneration::new(9))
+        Some(build::SnapshotGeneration::new(9))
     );
     assert_eq!(
         checking_projection
@@ -60,7 +58,7 @@ fn projects_every_lifecycle_state_with_stable_fields() {
     );
     assert_eq!(
         checking_projection.restart_guidance(),
-        Some(recite_compiler::RestartGuidance::NotApplicable)
+        Some(build::RestartGuidance::NotApplicable)
     );
 
     checking
@@ -71,7 +69,7 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         .unwrap_or_else(|error| panic!("check: {error}"));
     assert_eq!(
         BuildStatusProjection::from_state(checking.state()).phase(),
-        recite_compiler::BuildPhase::Building
+        build::BuildPhase::Building
     );
     checking
         .transition(BuildTransition::BuildCompleted {
@@ -79,7 +77,7 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         })
         .unwrap_or_else(|error| panic!("build: {error}"));
     let ready_projection = BuildStatusProjection::from_state(checking.state());
-    assert_eq!(ready_projection.phase(), recite_compiler::BuildPhase::Ready);
+    assert_eq!(ready_projection.phase(), build::BuildPhase::Ready);
     assert_eq!(ready_projection.candidates(), candidates);
 
     let prepared = PreparedPublishIdentity::for_request(&request, candidates.clone());
@@ -87,15 +85,12 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         .transition(BuildTransition::PublishStarted { prepared })
         .unwrap_or_else(|error| panic!("publish start: {error}"));
     let publishing_projection = BuildStatusProjection::from_state(checking.state());
-    assert_eq!(
-        publishing_projection.phase(),
-        recite_compiler::BuildPhase::Publishing
-    );
+    assert_eq!(publishing_projection.phase(), build::BuildPhase::Publishing);
     assert_eq!(publishing_projection.candidates(), candidates);
 
     let result = run(
         request.clone(),
-        &recite_compiler::BuildControl::new(),
+        &build::BuildControl::new(),
         &mut FakeEngine::new([candidate("dialogue/start.recitec", b"compiled")]),
         &mut FakePublisher::new(),
     )
@@ -106,10 +101,7 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         })
         .unwrap_or_else(|error| panic!("publish complete: {error}"));
     let succeeded_projection = BuildStatusProjection::from_state(checking.state());
-    assert_eq!(
-        succeeded_projection.phase(),
-        recite_compiler::BuildPhase::Succeeded
-    );
+    assert_eq!(succeeded_projection.phase(), build::BuildPhase::Succeeded);
     assert_eq!(
         succeeded_projection.terminal_status(),
         Some(BuildTerminalStatus::Succeeded)
@@ -126,7 +118,7 @@ fn projects_every_lifecycle_state_with_stable_fields() {
     let failed_request = make_request(2, [BuildInput::saved_source(key("failed.recite"), "x")]);
     let failed_result = run(
         failed_request.clone(),
-        &recite_compiler::BuildControl::new(),
+        &build::BuildControl::new(),
         &mut FakeEngine::new([
             candidate("failed.recitec", b"one"),
             candidate("failed.recitec", b"two"),
@@ -157,22 +149,21 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         .unwrap_or_else(|error| panic!("failed terminal: {error}"));
     assert_eq!(
         BuildStatusProjection::from_state(failed.state()).phase(),
-        recite_compiler::BuildPhase::Failed
+        build::BuildPhase::Failed
     );
 
     let stale_request = make_request(3, [BuildInput::saved_source(key("stale.recite"), "old")]);
     let current_request = make_request(3, [BuildInput::saved_source(key("stale.recite"), "new")]);
     let stale_result = BuildAuthority::from_request(&current_request);
-    let stale_result = recite_compiler::BuildCoordinator::with_fence(
-        recite_compiler::BuildAuthorityFence::new(stale_result),
-    )
-    .run(
-        stale_request.clone(),
-        &recite_compiler::BuildControl::new(),
-        &mut FakeEngine::new([candidate("stale.recitec", b"stale")]),
-        &mut FakePublisher::new(),
-    )
-    .unwrap_or_else(|error| panic!("stale run: {error}"));
+    let stale_result =
+        build::BuildCoordinator::with_fence(build::BuildAuthorityFence::new(stale_result))
+            .run(
+                stale_request.clone(),
+                &build::BuildControl::new(),
+                &mut FakeEngine::new([candidate("stale.recitec", b"stale")]),
+                &mut FakePublisher::new(),
+            )
+            .unwrap_or_else(|error| panic!("stale run: {error}"));
     let mut stale = BuildLifecycle::new();
     stale
         .transition(BuildTransition::Start {
@@ -197,7 +188,7 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         .unwrap_or_else(|error| panic!("stale terminal: {error}"));
     assert_eq!(
         BuildStatusProjection::from_state(stale.state()).phase(),
-        recite_compiler::BuildPhase::Stale
+        build::BuildPhase::Stale
     );
 
     for (generation, status, control) in [
@@ -270,7 +261,7 @@ fn projection_repeats_deterministically_and_retains_recovery_truth() {
     });
     let result = run(
         request,
-        &recite_compiler::BuildControl::new(),
+        &build::BuildControl::new(),
         &mut engine,
         &mut publisher,
     );
@@ -292,7 +283,7 @@ fn projection_repeats_deterministically_and_retains_recovery_truth() {
 #[test]
 fn finalizing_post_publish_freshness_updates_shared_state_truthfully() {
     let request = make_request(20, [BuildInput::saved_source(key("a.recite"), "a")]);
-    let mut coordinator = recite_compiler::BuildCoordinator::new();
+    let mut coordinator = build::BuildCoordinator::new();
     let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
     let mut publisher = FakePublisher::new();
     coordinator
@@ -305,9 +296,9 @@ fn finalizing_post_publish_freshness_updates_shared_state_truthfully() {
         .unwrap_or_else(|error| panic!("successful run: {error}"));
     let stale = coordinator
         .finalize_freshness(FreshnessFinalization::Stale {
-            assessment: recite_compiler::FreshnessAssessment::stale(
+            assessment: build::FreshnessAssessment::stale(
                 request.fingerprints().clone(),
-                vec![recite_compiler::StaleReason::Fingerprints],
+                vec![build::StaleReason::Fingerprints],
             ),
             diagnostics: vec![warning("a.recite")],
             recovery: Some(RecoveryNeeded::for_targets(vec![target("a.recitec")])),
@@ -316,10 +307,10 @@ fn finalizing_post_publish_freshness_updates_shared_state_truthfully() {
     assert_eq!(stale.status(), BuildTerminalStatus::Stale);
     assert!(matches!(stale.publish(), PublishOutcome::Published { .. }));
     let projection = BuildStatusProjection::from_state(coordinator.state());
-    assert_eq!(projection.phase(), recite_compiler::BuildPhase::Stale);
+    assert_eq!(projection.phase(), build::BuildPhase::Stale);
     assert_eq!(
         projection.freshness().map(|value| value.status()),
-        Some(recite_compiler::FreshnessStatus::Stale)
+        Some(build::FreshnessStatus::Stale)
     );
     assert_eq!(
         projection.recovery().map(|value| value.targets()),
@@ -340,25 +331,23 @@ fn finalizing_post_publish_freshness_updates_shared_state_truthfully() {
         .unwrap_or_else(|error| panic!("second successful run: {error}"));
     let failed = coordinator
         .finalize_freshness(FreshnessFinalization::Indeterminate {
-            assessment: recite_compiler::FreshnessAssessment::not_assessed(
-                request.fingerprints().clone(),
-            ),
+            assessment: build::FreshnessAssessment::not_assessed(request.fingerprints().clone()),
             diagnostics: Vec::new(),
             recovery: None,
-            reason: recite_compiler::FreshnessFailureReason::RecheckFailed,
+            reason: build::FreshnessFailureReason::RecheckFailed,
         })
         .unwrap_or_else(|error| panic!("indeterminate finalization: {error}"));
     assert_eq!(failed.status(), BuildTerminalStatus::Failed);
     assert!(matches!(failed.publish(), PublishOutcome::Published { .. }));
     let projection = BuildStatusProjection::from_state(coordinator.state());
-    assert_eq!(projection.phase(), recite_compiler::BuildPhase::Failed);
+    assert_eq!(projection.phase(), build::BuildPhase::Failed);
     assert_eq!(
         projection.freshness().map(|value| value.status()),
-        Some(recite_compiler::FreshnessStatus::Unknown)
+        Some(build::FreshnessStatus::Unknown)
     );
     assert!(matches!(
         projection.failure(),
-        Some(recite_compiler::BuildResultFailure::Freshness { .. })
+        Some(build::BuildResultFailure::Freshness { .. })
     ));
 }
 
@@ -386,7 +375,7 @@ fn projection_retains_structured_diagnostics_and_freshness() {
             &mut self,
             _: &BuildRequest,
             _: &BuildControl,
-        ) -> Result<Vec<recite_compiler::BuildCandidate>, BuildFailure> {
+        ) -> Result<Vec<build::BuildCandidate>, BuildFailure> {
             unreachable!("a failed check never builds")
         }
     }
@@ -479,14 +468,14 @@ fn projection_preserves_terminal_telemetry_for_failure_and_cancellation() {
     );
 }
 
-fn cancelled_control() -> recite_compiler::BuildControl {
-    let control = recite_compiler::BuildControl::new();
+fn cancelled_control() -> build::BuildControl {
+    let control = build::BuildControl::new();
     control.cancel();
     control
 }
 
-fn superseded_control() -> recite_compiler::BuildControl {
-    let control = recite_compiler::BuildControl::new();
+fn superseded_control() -> build::BuildControl {
+    let control = build::BuildControl::new();
     control.supersede(BuildGeneration::new(9));
     control
 }

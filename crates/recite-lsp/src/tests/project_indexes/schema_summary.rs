@@ -1,11 +1,11 @@
-use recite_core::{
+use recite_core::schema::{
     ContextualMetadataDomain, ContextualMetadataProvenance, MetadataContextSelector,
     MetadataDomainDefinition, MissingMetadataContextPolicy, ProducerOrigin, ProjectSchema,
     RegistryDefinition,
 };
 use tempfile::TempDir;
 
-use recite_compiler::SchemaSummary;
+use recite_compiler::authoring::SchemaSummary;
 
 use crate::workspace::WorkspaceConfig;
 
@@ -68,7 +68,7 @@ pub(super) fn projection_schema_summary_exposes_queries_projectors_and_labels() 
     assert_eq!(summary.projection_queries()[0].name(), "actor_skill");
     assert_eq!(
         summary.projection_queries()[0].returns(),
-        &recite_core::SchemaTypeRef::Int
+        &recite_core::schema::SchemaTypeRef::Int
     );
     let projector = &summary.presentation_projectors()[0];
     assert_eq!(projector.name(), "choice_skill_prefix");
@@ -99,11 +99,12 @@ pub(super) fn schema_summary_preserves_source_ownership_and_generated_read_only_
     );
     let toml_summary = toml_workspace.schema().summary().expect("TOML summary");
     assert!(toml_summary.ownership().is_standalone());
-    assert!(
-        toml_summary.capability().actions().iter().any(|action| {
-            matches!(action, recite_compiler::SchemaAction::EditStandaloneSource)
-        })
-    );
+    assert!(toml_summary.capability().actions().iter().any(|action| {
+        matches!(
+            action,
+            recite_compiler::authoring::SchemaAction::EditStandaloneSource
+        )
+    }));
 
     let json_temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(

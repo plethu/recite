@@ -1,6 +1,6 @@
 //! Resolve catalogue context through the current scene or extracted PO metadata.
 use crate::editing::Writer;
-use recite_core::PoEntry;
+use recite_core::po::PoEntry;
 use recite_writer_model::Passage;
 
 #[derive(Clone)]

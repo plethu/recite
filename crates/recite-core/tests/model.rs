@@ -1,6 +1,10 @@
 #![cfg(test)]
 
-use recite_core::*;
+use recite_core::{
+    BlockId, ChoiceId, CoreValueError, Diagnostic, DiagnosticCategory, DiagnosticCode,
+    DiagnosticSeverity, EffectId, LineId, Metadata, MetadataEntry, RelatedSpan, ScalarValue,
+    SourcePosition, SourceSpan, SpeakerId, Value,
+};
 
 #[test]
 fn source_spans_support_points_and_ranges() {

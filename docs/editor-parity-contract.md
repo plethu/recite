@@ -117,8 +117,10 @@ The command boundary is structured for the finite `compile`, `validate`,
 opt-in version-1 NDJSON contracts are documented in
 [`docs/cli-structured-protocol.md`](cli-structured-protocol.md) and exercised
 by the external `recite-cli` tests, the VS Code/VSCodium adapter tests, and the
-Neovim headless command lane. Installed Linux host records additionally cover
-the bounded VS Code/VSCodium, Neovim, and Zed command paths. The shared CLI remains semantic authority:
+Neovim headless command lane. Configured Linux host runners additionally cover
+the bounded VS Code/VSCodium, Neovim, and Zed command paths. Run
+`scripts/run-editor-host-check.sh {vscode|neovim|zed}` to retain each native
+run's log and result under `target/editor-host-evidence/`. The shared CLI remains semantic authority:
 clients resolve a local binary, pass argv and the project root, validate every
 record, and project typed diagnostics and runtime/watch data without parsing
 human output. Neovim owns a separate `vim.system` process lifecycle and one

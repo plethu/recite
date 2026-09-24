@@ -1,13 +1,12 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::sync::OnceLock;
 
 use super::{CompiledAssetEncodeError, CompiledDialoguePayload, ContentFingerprint};
 
 /// Runtime-facing compiled dialogue asset.
 ///
-/// The payload is kept separate from the identity cache so raw-model editing
-/// remains available through `DerefMut`, while an exclusive borrow can always
-/// invalidate the cached identity before exposing mutable data.
+/// Prepared assets expose their payload for reading. To change a compiled
+/// program, consume it into a raw payload and prepare a new asset.
 #[derive(Debug)]
 pub struct CompiledDialogue {
     payload: CompiledDialoguePayload,
@@ -28,6 +27,11 @@ impl CompiledDialogue {
         let dialogue = Self::new(payload);
         dialogue.prime_content_fingerprint()?;
         Ok(dialogue)
+    }
+
+    #[must_use]
+    pub fn into_payload(self) -> CompiledDialoguePayload {
+        self.payload
     }
 
     pub(crate) fn cached_content_fingerprint(
@@ -79,12 +83,5 @@ impl Deref for CompiledDialogue {
 
     fn deref(&self) -> &Self::Target {
         &self.payload
-    }
-}
-
-impl DerefMut for CompiledDialogue {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        let _ = self.content_fingerprint.take();
-        &mut self.payload
     }
 }

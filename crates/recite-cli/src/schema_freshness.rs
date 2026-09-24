@@ -5,7 +5,7 @@ use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::fs::load_schema_for_freshness;
 use crate::i18n::Messages;
-use recite_core::{
+use recite_core::schema::{
     ContentFingerprintFreshness, ProducerFingerprint, ProducerFingerprintMismatch,
     ProducerFreshness, SchemaProducerFreshness, compare_schema_producer_freshness_detailed,
 };
@@ -179,7 +179,7 @@ fn mismatch_json(value: &ProducerFingerprintMismatch) -> serde_json::Value {
     serde_json::json!({ "expected": fingerprint_json(&value.expected), "actual": fingerprint_json(&value.actual) })
 }
 
-fn content_fingerprint(value: &recite_core::ContentFingerprint) -> serde_json::Value {
+fn content_fingerprint(value: &recite_core::compiled::ContentFingerprint) -> serde_json::Value {
     serde_json::json!({
         "algorithm": value.algorithm().as_str(),
         "value": value.digest().as_bytes().iter().map(|byte| format!("{byte:02x}")).collect::<String>(),

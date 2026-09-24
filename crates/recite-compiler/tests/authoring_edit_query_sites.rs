@@ -1,6 +1,8 @@
 #![cfg(test)]
 
-use recite_compiler::{AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration};
+use recite_compiler::authoring::{
+    AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration,
+};
 use recite_core::{DocumentKey, SourcePosition};
 
 fn key(value: &str) -> DocumentKey {
@@ -35,32 +37,32 @@ fn non_block_sites_have_no_block_target_resolution() {
         (
             "> speaker=hazel\n",
             position(1, 12),
-            recite_compiler::CompletionSiteKind::Speaker,
+            recite_compiler::authoring::CompletionSiteKind::Speaker,
         ),
         (
             "> mood=calm\n",
             position(1, 8),
-            recite_compiler::CompletionSiteKind::MetadataValue,
+            recite_compiler::authoring::CompletionSiteKind::MetadataValue,
         ),
         (
             "> speaker=hazel mood\n",
             position(1, 20),
-            recite_compiler::CompletionSiteKind::MetadataKey,
+            recite_compiler::authoring::CompletionSiteKind::MetadataKey,
         ),
         (
             ":if knows_secret\n",
             position(1, 8),
-            recite_compiler::CompletionSiteKind::Condition,
+            recite_compiler::authoring::CompletionSiteKind::Condition,
         ),
         (
             "! do_thing\n",
             position(1, 5),
-            recite_compiler::CompletionSiteKind::Effect,
+            recite_compiler::authoring::CompletionSiteKind::Effect,
         ),
         (
             "? reason=low\n",
             position(1, 10),
-            recite_compiler::CompletionSiteKind::AvailabilityReason,
+            recite_compiler::authoring::CompletionSiteKind::AvailabilityReason,
         ),
     ];
     for (source, position, kind) in cases {
@@ -86,21 +88,21 @@ fn block_sites_preserve_local_qualified_and_invalid_target_resolution() {
     };
     assert!(matches!(
         local.block_target_resolution(),
-        Some(recite_compiler::BlockTarget::Local)
+        Some(recite_compiler::authoring::BlockTarget::Local)
     ));
     let Some(qualified) = snapshot.completion_site(&key("main.recite"), position(2, 23)) else {
         panic!("qualified block site should be classified");
     };
     assert!(matches!(
         qualified.block_target_resolution(),
-        Some(recite_compiler::BlockTarget::Qualified(target)) if target.as_str() == "target.recite"
+        Some(recite_compiler::authoring::BlockTarget::Qualified(target)) if target.as_str() == "target.recite"
     ));
     let Some(invalid) = snapshot.completion_site(&key("main.recite"), position(3, 23)) else {
         panic!("invalid qualified block site should be classified");
     };
     assert!(matches!(
         invalid.block_target_resolution(),
-        Some(recite_compiler::BlockTarget::InvalidQualified { target })
+        Some(recite_compiler::authoring::BlockTarget::InvalidQualified { target })
             if target == "../target.recite"
     ));
 }

@@ -1,4 +1,4 @@
-use recite_compiler::SavedDocument;
+use recite_compiler::authoring::SavedDocument;
 use recite_core::DocumentKey;
 use recite_writer_model::{Document, ProjectContext};
 
@@ -54,7 +54,7 @@ fn extraction_reports_source_errors_instead_of_partial_catalogues()
 
 #[test]
 fn example_schema_text_is_included() -> Result<(), Box<dyn std::error::Error>> {
-    let schema = recite_core::load_schema_manifest_str(
+    let schema = recite_core::schema::load_schema_manifest_str(
         "schema.json",
         r#"{
         "schema_version": 1, "speakers": { "mara": { "display_name": "Mara" } }

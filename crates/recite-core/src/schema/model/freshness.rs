@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{ContentFingerprint, MetadataDomainDefinition};
+use crate::{compiled::ContentFingerprint, schema::MetadataDomainDefinition};
 
 use super::ProjectSchema;
 use super::producer::{

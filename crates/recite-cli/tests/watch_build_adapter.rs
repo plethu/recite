@@ -3,10 +3,10 @@ use std::fs;
 use std::path::Path;
 
 use recite_cli::watch::{ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildRequest};
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildControl, BuildEngine, BuildInputAuthority, BuildInputKind, FreshnessStatus,
 };
-use recite_core::decode_compiled_dialogue_messagepack;
+use recite_core::compiled::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
 fn write_file(root: &Path, relative: &str, contents: &str) {
@@ -48,7 +48,6 @@ fn ready(root: &Path) -> ProjectBuildRequest {
         ProjectBuildPreparation::Rejected { diagnostics } => {
             panic!("unexpected diagnostics: {diagnostics:?}")
         }
-        _ => panic!("unknown preparation outcome"),
     }
 }
 

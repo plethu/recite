@@ -12,7 +12,7 @@ pub enum PoDiagnosticKind {
     InvalidStableId(String),
     PlaceholderMismatch(String),
     InvalidPluralArms(String),
-    InvalidPluralRule(crate::PluralRuleError),
+    InvalidPluralRule(crate::po::PluralRuleError),
     InvalidHeader(String),
     InvalidFieldOrder(String),
     DuplicateKey(String),

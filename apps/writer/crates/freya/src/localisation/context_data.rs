@@ -1,5 +1,5 @@
 //! Extracted source order is context, not a claim about runtime traversal.
-use recite_core::{PoCommentKind, PoDocument, PoEntry};
+use recite_core::po::{PoCommentKind, PoDocument, PoEntry};
 use std::collections::BTreeMap;
 pub(super) fn metadata(entry: &PoEntry, key: &str) -> Option<String> {
     entry

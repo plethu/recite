@@ -1,13 +1,16 @@
 use std::ops::Range;
 
 use recite_core::{
-    AvailabilityReasonId, BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0,
-    COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex, ChoiceRange, CompiledAssetHeader,
-    CompiledAvailabilityReason, CompiledChoice, CompiledConditionAvailabilityReason,
-    CompiledDialogue, CompiledEffect, CompiledEffectMode, CompiledLine, CompiledMatchArm,
-    CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement, CompiledValueError, EffectId,
-    EffectIndex, LineIndex, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange,
-    SourceMapIndex, SpeakerIndex, StatementIndex, StatementRange, TableRange,
+    AvailabilityReasonId, ChoiceId, EffectId,
+    compiled::{
+        BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
+        ChoiceIndex, ChoiceRange, CompiledAssetHeader, CompiledAvailabilityReason, CompiledChoice,
+        CompiledConditionAvailabilityReason, CompiledDialogue, CompiledEffect, CompiledEffectMode,
+        CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceMapEntry,
+        CompiledStatement, CompiledValueError, EffectIndex, LineIndex, MatchArmIndex,
+        MatchArmRange, MetadataIndex, MetadataRange, SourceMapIndex, SpeakerIndex, StatementIndex,
+        StatementRange, TableRange, canonical_compiled_dialogue_fingerprint,
+    },
 };
 
 use crate::{DialogueError, DialogueSession};
@@ -60,6 +63,18 @@ impl<'a> AssetView<'a> {
             });
         }
 
+        let fingerprint = canonical_compiled_dialogue_fingerprint(self.asset).map_err(|error| {
+            DialogueError::MalformedCompiledAsset {
+                reason: error.to_string(),
+            }
+        })?;
+        if session.compiled_payload_fingerprint != fingerprint {
+            return Err(DialogueError::AssetContentMismatch {
+                asset_id: session.asset_id.as_str().to_owned(),
+                reason: "compiled payload fingerprint differs from the session asset".to_owned(),
+            });
+        }
+
         Ok(())
     }
 
@@ -89,7 +104,7 @@ impl<'a> AssetView<'a> {
     pub(crate) fn block_at(
         self,
         index: BlockIndex,
-    ) -> Result<&'a recite_core::CompiledBlock, DialogueError> {
+    ) -> Result<&'a recite_core::compiled::CompiledBlock, DialogueError> {
         self.asset
             .blocks
             .get(index.as_u32() as usize)
@@ -156,7 +171,7 @@ impl<'a> AssetView<'a> {
     pub(crate) fn speaker_at(
         self,
         index: SpeakerIndex,
-    ) -> Result<&'a recite_core::CompiledSpeaker, DialogueError> {
+    ) -> Result<&'a recite_core::compiled::CompiledSpeaker, DialogueError> {
         self.asset
             .speakers
             .get(index.as_u32() as usize)

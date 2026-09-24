@@ -1,13 +1,13 @@
-use recite_core::{CompiledDivertTarget, StatementIndex, StatementRange};
+use recite_core::compiled::{CompiledDivertTarget, StatementIndex, StatementRange};
 
 use crate::event::DialogueEvent;
-use crate::session::StatementFrame;
+use crate::session::{SessionPhase, StatementFrame};
 use crate::{DialogueError, DialogueSession};
 
 use super::{AssetView, malformed};
 
 pub(super) fn finish_scene(session: &mut DialogueSession) -> Result<DialogueEvent, DialogueError> {
-    session.ended = true;
+    session.phase = SessionPhase::Ended;
     if let Some(root_frame) = session.continuation_stack.first() {
         session.current_range = root_frame.range;
     }

@@ -1,6 +1,6 @@
 //! Completion queries use the current draft without applying it to the document.
 use crate::{Document, EditError};
-use recite_compiler::{CompletionCandidate, QueryResult};
+use recite_compiler::authoring::{CompletionCandidate, QueryResult};
 use recite_core::SourcePosition;
 
 #[derive(Clone, Debug, PartialEq)]
