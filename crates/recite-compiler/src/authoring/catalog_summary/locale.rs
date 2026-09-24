@@ -1,5 +1,5 @@
+use language_tags::LanguageTag;
 use recite_core::{LocaleId, PoDocument};
-use unic_langid::LanguageIdentifier;
 
 use super::{CatalogIdentity, CatalogSummaryError};
 
@@ -8,12 +8,12 @@ pub(super) fn canonicalize(locale: &LocaleId) -> Result<LocaleId, CatalogSummary
 }
 
 pub(super) fn canonicalize_value(value: &str) -> Result<LocaleId, CatalogSummaryError> {
-    let parsed =
-        value
-            .parse::<LanguageIdentifier>()
-            .map_err(|_| CatalogSummaryError::InvalidLocale {
-                locale: value.to_owned(),
-            })?;
+    let parsed = value
+        .replace('_', "-")
+        .parse::<LanguageTag>()
+        .map_err(|_| CatalogSummaryError::InvalidLocale {
+            locale: value.to_owned(),
+        })?;
     LocaleId::new(parsed.to_string()).map_err(|_| CatalogSummaryError::InvalidLocale {
         locale: value.to_owned(),
     })

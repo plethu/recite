@@ -255,6 +255,7 @@ fn play_keymap_invocation_is_checked_by_shared_resolution_adapter() {
             contrast: recite_config::TuiContrast::default(),
         },
         play: recite_config::PlayConfig::default(),
+        ..recite_config::UserConfig::default()
     });
     let resolved = recite_config::resolve_user_config(
         &loaded,

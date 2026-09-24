@@ -1871,6 +1871,11 @@ game code. Standalone projects without an engine producer must instead have a
 source-owning declarative producer path; the GUI edits that source and invokes
 deterministic generation rather than editing the manifest.
 
+The writer's explicit source-navigation and generation registration is specified
+in [Schema producer registration](schema-producer-registration.md). Registration
+loading never executes a command; validated generated output is published only
+after an author-requested generation succeeds.
+
 #### 10.2.1 Standalone TOML source contract
 
 The standalone source-owning producer uses a versioned, map-shaped TOML
@@ -2727,7 +2732,43 @@ contrast = "standard"    # "standard" or "accessible"
 
 [play]
 show_unavailable_choices = true
+
+[writer]
+confirm_exit = true
+view = "script"         # "script", "map", or "source"
+theme = "light"         # "light" or "dark"
+monochrome = false
+shortcut_hints = false # true keeps shortcut chips visible without holding a modifier
+reduced_motion = false
+zoom_to_pointer = true
 ```
+
+Workspace shortcuts can be changed in **Settings → Keyboard shortcuts**. The
+optional `[writer.shortcuts]` table uses action names such as `commands`, `save`,
+`save_all`, `script`, `map`, `source`, `focus`, and `split`. Values use portable
+chords such as `"Primary+Shift+P"` or `"F8"`; `Primary` means Command on macOS and
+Ctrl elsewhere. An empty string disables an assignment. Missing entries use the
+defaults. Duplicate assignments, unmodified character keys, and reserved editing
+or navigation keys are rejected when loading or saving. Apply, Undo and Redo stay
+with the focused editor. These bindings never enter project files.
+
+The native writer's Vim navigation adds `:` for Commands (`w`, `wa`, and `q`
+invoke Save, Save all, and Close), `/` for scene/beat search, `n`/`N` for matching
+beats, and `gg`/`G` for search-list boundaries. `Ctrl+o`/`Ctrl+i` follow navigation
+history; `Ctrl+w` followed by `h/j/k/l` moves between visible panes. Pending pane
+sequences show their destinations and can be cancelled with Escape. Search fields
+show INSERT/NORMAL; character navigation does not replace text insertion. The
+navigation actions also accept alternative workspace chords in Keyboard shortcuts.
+
+The native writer confirms routine closure unless `writer.confirm_exit` is false.
+This preference never bypasses unsaved project protection. Writer presentation
+preferences apply across scenes and are user-owned; the shared `ui.keymap`
+selects Standard or Vim navigation. Project manifests never supply these values.
+Shared user configuration
+loading is read-only; explicit typed edits reload and validate the current file,
+preserve unrelated settings and comments, and use cooperative locking and atomic
+replacement. Frontends own the controls and error presentation, not configuration
+paths or file-writing policy.
 
 When `color = "auto"`, TUI color is disabled if `NO_COLOR` is present or `CLICOLOR=0`; otherwise color may be used. `color = "always"` enables TUI color regardless of those environment variables, and `color = "never"` disables TUI color. `contrast = "accessible"` selects a higher-contrast, color-vision-friendlier palette when color is enabled. Color must never be the sole carrier of meaning: selected choices keep a `>` marker, unavailable choices keep textual unavailable/reason text, condition rows keep `yes`/`no` labels, and prompt, effect, transcript, and footer labels remain visible without color.
 
@@ -3018,41 +3059,20 @@ the only authoring path.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Before committing to a workbench frontend, Recite must compare these strategy
-families using one shared fixture and one shared authoring contract. Linux,
-Windows, and macOS are first-class v1 desktop platforms for the core CLI, LSP,
-editor integrations, and standalone workbench; companion matrices may be
-narrower by engine version and host platform:
-
-The bake-off must include an explicit candidate-by-platform applicability
-matrix. Each claimed candidate/platform cell is tested; candidates are not
-required to run on every operating system. The decision record names selected
-cells, unsupported cells, and the reason for each unsupported claim.
-
-- unified Rust candidates including Freya 0.5 RC, Floem, GPUI, and
-  Xilem/Masonry;
-- platform-appropriate frontends: SwiftUI/AppKit on macOS, WinUI 3 including a
-  separate `windows-reactor` Rust evaluation and an experimental C#
-  `Microsoft.UI.Reactor` fallback on Windows, and
-  GTK/GtkSourceView where a Linux-native path is selected;
-- Avalonia with code-first C# as the primary non-Rust cross-platform candidate;
-- Qt, Flutter, Compose, Slint, and wxWidgets as comparison baselines only until
-  authoring, accessibility, governance, and maintenance evidence earns a
-  commitment.
+Freya is the selected native frontend; see the
+[decision record](decisions/gui-framework.md). Retired framework comparisons
+remain in Git history. Linux, Windows, and macOS remain first-class v1 desktop
+targets for the core CLI, LSP, editor integrations, and standalone workbench;
+selection does not establish acceptance on those platforms.
 
 The fixture must cover source editing, stable-ID insertion, diagnostics,
 completion, schema inspection/editing, PO catalogue editing, localisation
 preview, graph navigation, undo/redo, external changes, and runtime preview.
-For non-Rust/native candidates, evidence must name the kernel crossing
-(in-process binding or local process protocol), protocol/versioning, structured
-requests/errors, cancellation, stale generations, source edits, and packaging.
 The proof must cover keyboard-only workflows, focus order, screen readers on
 each declared platform, IME composition, BiDi/RTL text, zoom/text scaling, high
 contrast, non-colour meaning, progress/status announcements, failure/retry,
 focus retention/restoration, save conflicts, reduced motion, and
-startup/memory/packaging evidence. The exact `windows-reactor` Rust repository
-and version, and the experimental C# Reactor repository and version, must be
-recorded as bake-off evidence rather than conflated.
+startup/memory/packaging evidence.
 
 The decision record must name the selected strategy, supported platforms,
 fallback route, framework versions, native dependencies, maintenance burden,
@@ -3863,6 +3883,12 @@ localisation, and UTF-16 fixtures produce equivalent semantic answers.
 
 ### Milestone 5: Native GUI Strategy and Accessibility Proof
 
+**Maintainer decision, 2026-09-08:** Freya is selected. Further candidate
+implementation, including the unrun platform-native lanes, is parked under the
+[decision record](decisions/gui-framework.md). Accessibility and declared-platform
+acceptance remain outstanding. Early workbench implementation is authorized
+alongside those checks, without claiming milestone completion.
+
 **Outcome:** the standalone workbench strategy is selected from comparable
 authoring and accessibility evidence.
 
@@ -3870,20 +3896,14 @@ authoring and accessibility evidence.
 be reused without reimplementing language semantics in each candidate; completed
 editor clients are not a prerequisite.
 
-**Exit gate:** the same fixture has been exercised across the candidate lanes
-(Freya 0.5 RC, Floem, GPUI, Xilem/Masonry, platform-native SwiftUI/AppKit and
-WinUI 3 including a separate `windows-reactor` Rust evaluation or experimental
-C# `Microsoft.UI.Reactor` fallback, GTK/GtkSourceView, and code-first Avalonia,
-with other toolkits as documented baselines). A decision record names support,
-fallbacks, dependencies, maintenance burden, known limits, and reconsideration
-triggers. The decision record includes the candidate-by-platform applicability
-matrix, tests every claimed cell, and names unsupported cells. Keyboard-only,
+**Exit gate:** the selected frontend has evidence for every claimed platform.
+The decision record names support, dependencies, maintenance burden, known
+limits, and reconsideration triggers. Keyboard-only,
 focus, screen-reader, IME, BiDi/RTL, zoom/text scaling,
 high-contrast, non-colour, stale-generation, cancellation, progress/status
 announcement, failure/retry, focus retention/restoration, external-file/save
 conflict, reduced-motion, startup, memory, and packaging evidence exists for
-every declared platform. The exact repositories and versions for both Reactor
-evaluations are recorded in the decision evidence.
+every declared platform.
 
 ### Milestone 6: GUI Workbench
 

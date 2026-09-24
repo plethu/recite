@@ -347,3 +347,26 @@ fn conflicting_catalogue_records_and_candidates_are_rejected() {
         Err(recite_compiler::CatalogSummaryError::EmptyCatalogIdentity)
     ));
 }
+
+#[test]
+fn private_use_catalogue_identity_and_welsh_parent_are_supported() {
+    let source = "msgid \"\"\nmsgstr \"Language: cy-x-cofi\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Dialect translation\"\n";
+    let dialect = input("cofi", "CY-x-COFI", source);
+    let base = input("welsh", "cy", &source.replace("cy-x-cofi", "cy"));
+    for (catalogues, wanted) in [(vec![base.clone(), dialect], "cofi"), (vec![base], "welsh")] {
+        let summary = CatalogCoverageSummary::build(
+            &expected(),
+            catalogues,
+            recite_compiler::CatalogResolutionPolicy::new(Some(locale("cy-x-cofi"))),
+        )
+        .expect("private-use locale summary");
+        assert_eq!(
+            summary.entries()[0]
+                .matched()
+                .expect("translation")
+                .catalog()
+                .id(),
+            wanted
+        );
+    }
+}

@@ -138,3 +138,5 @@ fn is_builtin_excluded(name: &str) -> bool {
             "target" | "build" | "dist" | "out" | "generated" | "vendor" | "node_modules"
         )
 }
+
+pub(super) use discovery::discover_source;

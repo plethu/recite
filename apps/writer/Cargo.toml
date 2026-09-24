@@ -1,0 +1,33 @@
+[workspace]
+members = ["crates/authoring", "crates/freya", "crates/grammar"]
+resolver = "3"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.96"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+recite-writer-model = { path = "crates/authoring" }
+recite-compiler = { path = "../../crates/recite-compiler" }
+recite-core = { path = "../../crates/recite-core" }
+recite-parser = { path = "../../crates/recite-parser" }
+recite-runtime = { path = "../../crates/recite-runtime" }
+thiserror = "2"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+[profile.dev]
+debug = 0
+
+[profile.bench]
+debug = "line-tables-only"

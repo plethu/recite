@@ -226,6 +226,11 @@ LSP, and runtime integration.
 
 ## 7. Schema Manifest Generation
 
+Adapters can expose explicit source navigation and generation to the writer using
+[the producer registration contract](schema-producer-registration.md). Its
+commands are author-requested tooling operations; loading a registration never
+executes game or generator code.
+
 Adapters should let game projects produce Recite schema manifests from typed
 host code where practical. The host-specific authoring surface may be a Rust
 builder or derive, Godot C#/GDScript registration, Unity C# attributes or

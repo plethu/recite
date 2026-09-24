@@ -187,6 +187,7 @@ fn settings_adapter_resolves_shared_values_and_invocation_keymap() {
         play: SharedPlayConfig {
             show_unavailable_choices: false,
         },
+        ..UserConfig::default()
     });
 
     let settings = TuiSettings::from_loaded(&loaded, None);

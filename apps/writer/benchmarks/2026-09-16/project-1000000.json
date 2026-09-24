@@ -1,0 +1,208 @@
+{
+  "os": "linux",
+  "arch": "x86_64",
+  "profile": "bench",
+  "passages": 1000000,
+  "documents": 2000,
+  "source_bytes": 122185364,
+  "history_bytes": 580,
+  "process_peak_rss": "VmHWM:\t 4049948 kB",
+  "samples": [
+    {
+      "operation": "generate",
+      "milliseconds": 132.377308
+    },
+    {
+      "operation": "index",
+      "milliseconds": 3419.9357489999998
+    },
+    {
+      "operation": "search",
+      "milliseconds": 3.2124770000000002
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.136464
+    },
+    {
+      "operation": "search",
+      "milliseconds": 3.338943
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.078887
+    },
+    {
+      "operation": "search",
+      "milliseconds": 1.1073039999999998
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.062457
+    },
+    {
+      "operation": "search",
+      "milliseconds": 0.72439
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.062056
+    },
+    {
+      "operation": "search",
+      "milliseconds": 0.7357009999999999
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.06191599999999999
+    },
+    {
+      "operation": "open_project_document",
+      "milliseconds": 4105.3615580000005
+    },
+    {
+      "operation": "project_script",
+      "milliseconds": 2.989843
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.000381
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.00023
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.000201
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.000311
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.00017999999999999998
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2138.601777
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2297.2793290000004
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2382.390633
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2441.7059600000002
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2428.7212280000003
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2616.574681
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2415.0003030000003
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2417.6465550000003
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2418.885752
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 2434.6184829999997
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2417.852616
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2414.591015
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2410.9407530000003
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2422.8960819999998
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2403.697593
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2403.794082
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2431.0630309999997
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2430.055563
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2450.6042780000002
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 2650.846438
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2723.40551
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2754.087707
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2775.887009
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2726.379763
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2621.5102429999997
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2691.636289
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2706.7621160000003
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2644.311178
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2600.420132
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 2711.519014
+    }
+  ]
+}

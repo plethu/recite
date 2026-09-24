@@ -516,3 +516,453 @@ neovim-command-watch-running = A Recite watch is already running.
 neovim-command-watch-not-running = No Recite watch is running.
 neovim-command-watch-stop-timeout = Recite watch did not stop cooperatively; terminating it.
 neovim-command-watch-status = Recite watch: {$detail}
+
+# Native writer localisation workspace
+writer-write = Write
+writer-localisation = Localize
+writer-localise = Localise
+writer-matching-entries = Matching entries
+writer-catalogue = Catalogue
+writer-translation-queue = Translation queue
+writer-optional = Localisation is optional. Start when your story is ready.
+writer-open-catalogue = Open PO catalogue
+writer-no-entry = No matching current PO entry. Update this catalogue in your PO editor.
+writer-untranslated = Untranslated
+writer-review-pending = Review pending save
+writer-reviewed = Reviewed
+writer-needs-review = Needs review
+writer-saved = Saved
+writer-unsaved = Unsaved changes
+writer-translation-saved = Translation saved to PO.
+writer-placeholder = Write a translation…
+writer-save = Save
+writer-discard = Discard draft
+writer-catalogue-path = PO catalogue path
+writer-file-workflow = The same file can be edited in Recite or your preferred PO editor. Drafts remain in this window until saved.
+writer-reload = Reload external changes
+writer-reloaded = Catalogue reloaded from disk.
+writer-close = Close
+writer-open = Open
+writer-po-catalogue = PO catalogue
+writer-close-drafts = Save or discard PO translation drafts before closing Recite.
+writer-open-drafts = Save or discard translation drafts before changing catalogue.
+writer-reload-drafts = Save or discard catalogue drafts before loading external changes.
+writer-empty-review = An empty translation cannot be reviewed.
+writer-queue-scope = Catalogue passages · open a passage in its full beat
+writer-search = Search source, translation, scene or ID
+writer-attention = Untranslated or awaiting review
+writer-no-matches = No matching passages.
+writer-previous = Previous
+writer-next = Next
+
+writer-compare = Compare external changes
+writer-compare-help = For each changed passage: source, your draft, then the current file version. Keeping drafts does not save them.
+writer-keep-drafts = Keep my drafts
+writer-use-file = Discard drafts and use file
+writer-compared = External version accepted. Review your drafts before saving.
+
+writer-incoming = Incoming prompts
+writer-source = Source
+writer-translation = Translation
+
+writer-start-localisation = Start localisation
+writer-add-language = Add language
+writer-target-language = Translate into
+writer-language-example = Search languages, native names or locale codes
+writer-new-catalogue-path = Creates
+writer-create-catalogue = Create catalogue
+writer-cancel = Cancel
+writer-create-project-scope = Translate project dialogue and schema text, including applied edits in this scene.
+writer-create-document-scope = Translate this document and its schema text, including applied edits.
+writer-create-help = Choose a language to see its catalogue location.
+writer-creating-catalogue = Preparing the catalogue…
+writer-catalogue-created = Catalogue created. Your translations can begin here.
+writer-invalid-language = Choose a recognised language from the list. Search by name or a locale code such as fr-CA. The dialogue language is independent of the app language.
+writer-gettext-missing = Catalogue creation needs gettext’s msginit. Install gettext and try again, or open an existing PO catalogue.
+writer-creation-failed = The catalogue could not be prepared. No destination file was written.
+writer-plural-unknown = The installed gettext has no plural rules for this language. Update its language data, or open a PO catalogue prepared with those rules. No file was created.
+writer-catalogue-exists = A file already exists at this path. Choose another path, or open that catalogue to continue its translations.
+writer-creation-changed = The source or translation drafts changed while preparing the catalogue. Try again with the current text.
+writer-create-source-draft = Apply or discard the Source view draft before creating a catalogue, so it matches the manuscript.
+writer-po-extension = Use a filename ending in .po for the new catalogue.
+writer-create-incomplete = The whole project could not be read. Resolve its discovery errors before creating a catalogue.
+writer-create-empty = There is no localisable text to extract yet. Add dialogue with stable IDs before creating a catalogue.
+
+writer-choose-language = Choose language
+
+writer-read-passage = Read passage
+
+writer-no-languages = No matching languages. Try a name or a registered locale code.
+
+writer-unavailable-passage = No matching passage in this project
+
+writer-cofi-language = Welsh (Cofi)
+
+writer-refresh = Refresh from source
+writer-refresh-save = Update catalogue
+writer-refresh-added = New entries
+writer-refresh-changed = Changed source entries
+writer-refresh-removed = Removed entries
+writer-refresh-help = Translations and translator notes are retained. Changed source needs review; removed entries remain as obsolete records. Save or cancel this refresh.
+writer-refreshed = Catalogue refreshed.
+
+writer-source-updates = Source updates
+writer-refresh-scope = Update scope
+writer-refresh-scope-help = Includes all saved project scenes and the current unsaved writing. Updating this catalogue does not save your source files or change other languages.
+writer-refresh-recheck = Check source updates
+writer-refresh-done = Catalogue updated. Changed translations still need review; removed entries remain in the PO file.
+writer-refresh-review = Review translations
+writer-refresh-no-changes = No added, changed or removed source entries. You can still update extracted context notes.
+writer-nearby-source = Nearby source · source order
+writer-previous-source = Previous source · changes underlined
+writer-current-source = Current source · changes underlined
+writer-translator-notes = Translator notes
+
+writer-source-changed = Source changed · needs review
+
+writer-change-new = New passage
+writer-change-changed = Source changed
+writer-change-removed = Removed passage
+
+writer-unified = Unified view
+writer-side-by-side = Side by side
+writer-draft-version = Your draft
+writer-disk-version = File on disk
+writer-missing-version = Not present in this version
+writer-wording = Wording
+writer-default-wording = Default wording
+writer-plural-form = Plural form
+writer-plural-rule = Plural rule
+writer-entry-editor = Edit translation
+writer-comparison-resolution = Continue editing from
+writer-compare-return = Use as editable draft
+
+writer-preview = Try this scene
+writer-restart-preview = Restart preview
+writer-close-preview = Return to writing
+writer-continue = Continue
+writer-true = True
+writer-false = False
+writer-condition-input = Test input requested
+writer-condition-answer = Use test value
+writer-acknowledge = Acknowledge completed
+writer-effect-failed = Report failure
+writer-preview-trace = What happened in this run?
+writer-preview-stale = Source changed. Restart to preview the new version.
+writer-awaiting-effect = Waiting for the game request
+writer-sample-failure = Failure reported in the writer preview
+
+writer-entry-plural-invalid = This entry does not match a valid Plural-Forms rule. Repair the catalogue metadata in your PO editor before saving; your draft is retained.
+
+writer-external-structure-changed = The plural source or rule changed on disk. Your draft is retained. Resolve the catalogue structure before combining these versions.
+
+writer-trial-inputs = Inputs for the next run
+
+writer-trial-inputs-help = Restart uses these inputs and the open catalogue. The current run stays unchanged until then.
+
+writer-source-only = Source text only
+
+writer-include-drafts = Include unsaved translations
+
+writer-trial-invalid-value = Enter a value matching the binding type.
+
+writer-lookup-matched = Translation found
+
+writer-lookup-missing = No usable translation
+
+writer-trial-ended = Conversation ended
+
+writer-trial-choice = Reply chosen
+
+writer-trial-deferred = Collected for scene end
+
+writer-trial-effect = Effect requested
+
+writer-complete-source = Complete at cursor
+
+writer-filter-completions = Filter suggestions
+
+writer-no-completions = No suggestions at this position.
+
+writer-return-translation = Return to translation
+
+writer-trial-saved = Saved translations
+
+writer-trial-drafts = Unsaved translations included
+
+writer-source-revision = Source revision
+
+writer-apply-draft = Apply draft
+
+writer-discard-draft = Discard draft
+
+# Structured reply rules
+writer-rules-title = Reply rules
+writer-rules-apply = Apply rules
+writer-rules-discard = Discard rule changes
+writer-rules-open = Open a reply to edit its rules.
+writer-rules-return = ← Return to reply
+writer-rules-source = Edit in Source
+writer-rules-availability = Availability
+writer-rules-always = Always available
+writer-rules-make-always = Make always available
+writer-rules-chosen = Destination effects
+writer-rules-no-effects = No direct destination effects to edit here.
+writer-rules-preserved = Other branch statements are preserved. Edit their structure in Source.
+writer-rules-source-changed = The source draft has changed. Apply or discard it in Source before reopening these rules.
+writer-rules-negate = Require the opposite
+writer-rules-remove-negation = Not · remove negation
+writer-rules-delivery = Delivery
+writer-rules-remove = Remove
+writer-rules-immediate = Immediate
+writer-rules-blocking = Wait for acknowledgement
+writer-rules-deferred = At scene end
+writer-rules-search-values = Search values
+writer-rules-choose-value = Choose a value
+writer-rules-no-values = No matching values
+writer-rules-add-effect = Add effect
+writer-rules-add-condition = Add condition
+writer-rules-choose-declaration = Choose a declaration
+writer-rules-no-declarations = No matching declarations
+
+writer-rules-destination = These edits affect every route into this destination.
+
+writer-rules-group = Group conditions
+
+writer-rules-match = Available when
+
+writer-rules-all = All are true
+
+writer-rules-any = Any is true
+
+writer-open-documents = Open documents
+writer-save-close-document = Save and close document
+writer-close-document-draft = This document has unsaved changes. Save it before closing, or cancel to keep working.
+writer-show-context = Show unchanged context
+writer-hide-context = Hide unchanged context
+writer-no-changes = No changes
+
+writer-all-changes = Show all changes
+writer-change = Change
+
+writer-declarations = Declarations
+writer-unknown-producer = Unknown producer · read-only
+writer-declaration-condition = Condition
+writer-declaration-effect = Effect request
+writer-declaration-speaker = Speaker
+writer-declaration-registry = Registry
+writer-declaration-source-details = Inspect the owning source for the full declaration.
+writer-bind-source = Open standalone source
+writer-edit-declaration-source = Edit declaration source
+writer-generate-schema = Save source and regenerate
+writer-schema-current = Generated declarations match this source.
+writer-schema-stale = Generated declarations differ from this source. Regenerate to use the changes.
+writer-schema-read-only = Generated declarations are read-only. Open their standalone TOML source to edit them.
+writer-browse-schema = Browse for standalone schema source
+writer-source-saved = Source saved and declarations regenerated. Restart preview to use the changes.
+
+writer-build-scenes = Build scenes
+writer-build-saved = Build saved source
+writer-save-build = Save changes and build
+writer-build-all = All declared outputs
+writer-build-scope = Build uses saved project sources and generated declarations. Unsaved drafts are excluded unless you save first. All project sources are validated; only the selected outputs are replaced.
+writer-build-inputs = Source files
+writer-building = Building saved source…
+writer-build-cancelling = Cancelling build…
+
+writer-rename-project = Rename beat
+writer-rename-review = Review rename
+writer-rename-apply = Apply rename
+writer-rename-hint = Review every affected document before applying. Passage IDs stay unchanged. Changes remain unsaved and can be undone together.
+writer-rename-name = New beat name
+writer-rename-from = Beat to rename
+writer-rename-applied = Rename applied across the project. Save when ready.
+
+writer-disk-draft-hint = This returns an editable draft without saving. The previous session is kept as a recovery copy, and Save checks the disk version again.
+writer-disk-changed = An open document changed outside Recite. Your draft is still here.
+writer-external-opened = Saved and handed to the system’s preferred application.
+writer-save-external = Save and open externally
+writer-compare-disk = Compare with disk
+
+writer-use-editable-draft = Use as editable draft
+
+writer-return-writing = Return to writing
+writer-proposed-source = Proposed source
+
+writer-back-declarations = Back to declarations
+
+writer-search-declarations = Search declarations
+writer-changes = Changes
+writer-line = Line
+
+writer-save-project = Save project
+
+writer-external-opening = Opening the system’s preferred application…
+writer-catalogue-changed = The catalogue changed outside Recite. Your translation drafts are still here.
+
+writer-reload-schema-source = Keep recovery copy and reload source
+
+writer-reload-producer = Reload producer registration
+writer-producer-not-registered = No generation command registered. An adapter can supply recite.producer.toml to connect these declarations to their source.
+writer-generating = Generating declarations…
+writer-regenerate = Regenerate declarations
+writer-configure-source-editor = Configure an editor command in recite.producer.toml to open this location.
+writer-open-declaration-source = Open declaration source
+writer-producer-finished = Declarations regenerated. Restart any preview to use the updated schema.
+
+writer-reload-generated = Reload generated declarations
+
+writer-gui-jobs-pending = A build or schema generation is still running. Cancel it here, then retry closing once it has stopped.
+
+writer-gui-add-beat = Add beat
+
+writer-gui-add-line = Add line
+
+writer-gui-add-reply = Add reply
+
+writer-gui-arrange = Arrange
+
+writer-gui-arrange-automatically = Arrange automatically
+
+writer-gui-beat-identifier-hint = Beat identifier · letters, digits and underscores · Enter to apply · Esc to cancel
+
+writer-gui-cancel-opening = Cancel opening
+
+writer-gui-cancel-running-jobs = Cancel running jobs
+
+writer-gui-change-destination = Change destination…
+
+writer-gui-change = Change…
+
+writer-gui-complete-ctrl-space = Complete · Ctrl Space
+
+writer-gui-configuration-file = Configuration file
+
+writer-gui-connections = Connections
+
+writer-gui-map-gesture-help = Dashed: return · Dotted: condition · Drag or scroll to pan · Ctrl+scroll to zoom
+
+writer-gui-dismiss-message = Dismiss message
+
+writer-gui-edit-source = Edit source
+
+writer-gui-end-conversation = End conversation
+
+writer-gui-fit = Fit
+
+writer-gui-help = Help
+
+writer-gui-connection-help = Hover or focus a connection to highlight its route. Select to navigate.
+
+writer-gui-keep-editing = Keep editing
+
+writer-gui-keep-recovery-copy-and-reload-disk = Keep recovery copy and reload disk
+
+writer-gui-map-help = Map help
+
+writer-gui-no-matching-saved-passages-try-fewer-words = No matching saved passages. Try fewer words.
+
+writer-gui-no-matching-scenes-or-beats = No matching scenes or beats
+
+writer-gui-none = None
+
+writer-gui-open-a-project-first = Open a project first.
+
+writer-gui-open-a-project-to-edit-its-settings = Open a project to edit its settings.
+
+writer-gui-open-project = Open project
+
+writer-gui-open-unsaved-translations = Open unsaved translations
+
+writer-gui-passage-actions = Passage actions
+
+writer-gui-preview-limit = Preview limited to 32 entries · open the beat to read more
+
+writer-gui-project = Project
+
+writer-gui-project-settings-hint = Project manifest · changes affect everyone using this project.
+
+writer-gui-project-settings = Project settings
+
+writer-gui-refresh-project-context = Refresh project context
+
+writer-gui-replies = Replies
+
+writer-gui-reset-zoom = Reset zoom
+
+writer-gui-save-all-translation-drafts = Save all translation drafts
+
+writer-gui-scenes = Scenes
+
+writer-gui-show-more-results = Show more results
+
+writer-gui-source-read-only = Source · read only
+
+writer-gui-target-is-outside-this-scene = Target is outside this scene
+
+writer-gui-toggle-pinned-reference = Toggle pinned reference
+
+writer-gui-try-scene = Try scene
+
+writer-gui-unpin-reference = Unpin reference
+
+writer-gui-user-preferences = User preferences
+
+writer-gui-vim-help = Vim: h j k l navigate · / find · n N matches · gg G list ends · Ctrl+o / Ctrl+i history · Ctrl+w then h j k l panes · : commands (w / wa / q) · Escape leaves text entry
+
+writer-workspace-script-view = Script
+
+writer-workspace-map-view = Map
+
+writer-workspace-source-view = Source
+
+writer-workspace-writing-view = Writing view
+
+writer-workspace-split-view = Script + Map
+
+writer-workspace-commands = Commands
+
+writer-workspace-go-to = Go to scene or beat
+
+writer-workspace-focus-writing = Focus writing
+
+writer-workspace-exit-focus = Exit focus writing
+
+writer-workspace-reading-size = Reading size
+
+writer-workspace-source-size = Source size
+
+writer-workspace-ui-scale = Interface text scale
+
+writer-workspace-resize-script = Resize script pane
+
+writer-workspace-resize-drawer = Resize scene drawer
+
+writer-workspace-open-script = Open script
+
+writer-workspace-undo = Undo
+
+writer-workspace-redo = Redo
+
+writer-workspace-save = Save
+
+writer-workspace-save-all = Save project
+
+writer-workspace-command-unavailable = Unavailable in the current view
+
+writer-workspace-command-search = Find an action…
+
+writer-workspace-go-to-search = Find a scene or beat…
+
+writer-workspace-no-command-results = No matching actions
+
+writer-workspace-close-commands = Close commands
+
+writer-workspace-decrease = Decrease
+
+writer-workspace-increase = Increase
+
+writer-workspace-presentation = Reading and layout
+
+writer-workspace-menu = Workspace
+writer-rules-actions = Condition actions

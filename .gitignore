@@ -1,4 +1,5 @@
 /target/
+/.flatpak-builder/
 /crates/recite-benchmarks/target/
 **/*.rs.bk
 

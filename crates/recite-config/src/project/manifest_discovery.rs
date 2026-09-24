@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::super::diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 use super::super::enumerate::{Coverage, DiscoveredRoot, enumerate_root};
@@ -20,9 +20,17 @@ pub(super) fn discover_project(
         String::from_utf8(source_text).map_err(|_| ProjectDiscoveryError::NonUtf8 {
             path: manifest_path.clone(),
         })?;
+    discover_source(project_root, manifest_path, &source_text)
+}
+
+pub(in crate::project) fn discover_source(
+    project_root: PathBuf,
+    manifest_path: PathBuf,
+    source_text: &str,
+) -> Result<ProjectDiscoveryReport, ProjectDiscoveryError> {
     let loaded = recite_core::ProjectManifest::load_str_with_spans(
         manifest_path.to_string_lossy().into_owned(),
-        &source_text,
+        source_text,
     );
     let source = loaded
         .source

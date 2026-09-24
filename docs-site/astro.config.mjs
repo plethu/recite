@@ -5,6 +5,12 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Recite",
+      logo: {
+        light: "../assets/identity/recite-wordmark.svg",
+        dark: "../assets/identity/recite-wordmark-reversed.svg",
+        replacesTitle: true,
+      },
+      favicon: "/favicon.svg",
       sidebar: [
         {
           label: "Getting Started",

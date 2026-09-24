@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "speakers": { "mara": {}, "lea": {}, "ivo": {} },
+  "registries": { "flag": { "values": ["courier_search"] } },
+  "effects": {
+    "set_flag": {
+      "modes": ["immediate"],
+      "params": [
+        { "name": "flag", "type": "registry:flag" },
+        { "name": "enabled", "type": "bool" }
+      ]
+    },
+    "change_disposition": {
+      "modes": ["immediate"],
+      "params": [
+        { "name": "speaker", "type": "speaker" },
+        { "name": "delta", "type": "int" }
+      ]
+    }
+  }
+}

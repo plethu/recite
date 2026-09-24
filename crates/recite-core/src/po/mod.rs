@@ -8,6 +8,8 @@ use std::ops::Range;
 mod document;
 mod entry;
 mod parser;
+mod refresh;
+mod review;
 mod write;
 
 pub use document::PoEditError;
@@ -16,6 +18,7 @@ pub use parser::{
     PoComment, PoCommentKind, PoDiagnosticKind, PoHeader, PoParseError, PoParseReport,
     PoPreviousField, PoPreviousValue, PoUnknownField,
 };
+pub use refresh::PoRefreshError;
 pub use write::{PoIoError, PoWriteError};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

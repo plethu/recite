@@ -165,4 +165,6 @@ echo "== cargo doc =="
 )
 
 echo
+(cd "$repo_root" && just check-writer)
+
 echo "Recite project gates passed."

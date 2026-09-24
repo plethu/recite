@@ -132,7 +132,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
-| `crates/recite-cli/src/dialogue_locale/catalog.rs` | 284 | production | cli/localisation | review | #180/#191: catalogue loading and validated plural-arm evidence remain a cohesive provider boundary |
+| `crates/recite-cli/src/dialogue_locale/catalog.rs` | 286 | production | cli/localisation | review | #180/#191: catalogue loading and validated plural-arm evidence remain a cohesive provider boundary |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-lsp/src/server.rs` | 279 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; notification lifecycle handlers are split into a focused protocol module |
@@ -164,7 +164,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/manifest/spans.rs` | 328 | production | core/schema | cohesive | JSON span calculation and shared span state |
 | `crates/recite-cli/src/play/tui/interaction.rs` | 293 | production | cli/tui | cohesive | Input-to-intent translation |
 | `crates/recite-compiler/src/validation/metadata.rs` | 276 | production | compiler/validation | review | Metadata validation ownership |
-| `crates/recite-compiler/src/validation/statements.rs` | 341 | production | compiler/validation | cohesive | Statement traversal owns per-class validation gates; interpolation and plural validation remain separate seams |
+| `crates/recite-compiler/src/validation/statements.rs` | 282 | production | compiler/validation | cohesive | Statement traversal owns per-class validation gates; interpolation and plural validation remain separate seams |
 | `crates/recite-core/src/schema/manifest/lower/domains.rs` | 342 | production | core/schema | review | Strict domain shape and declaration lowering |
 | `crates/recite-core/src/schema/manifest/validate.rs` | 278 | production | core/schema | review | Shared schema reference and name validation boundary |
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
@@ -244,3 +244,9 @@ production suppressions must carry a narrow scope and rationale.
 | `tests/editor-parity/mutate_fixture.py` | 478 | test/support | editor-parity/tests | review | #202: editor-parity contract mutations for host records and evidence boundaries remain one fixture mutation suite; split before another evidence family |
 | `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
 | `tests/maintainability/check.sh` | 376 | test/support | maintainability/tests | review | Core Rust threshold, baseline, zero-SHA, and inherited-debt fixtures remain one contract suite |
+| `crates/recite-compiler/tests/authoring_catalog_summary.rs` | 372 | test/support | compiler/localisation-tests | review | Catalogue identity, fallback candidates and summary counts share one provider contract suite, including private-use locale coverage |
+| `crates/recite-config/src/user/resolution/config.rs` | 299 | production | config/user | cohesive | #54: resolved presentation values and their provenance are assembled together; field authority policy and persistence remain separate modules |
+| `crates/recite-ui/src/contract/ownership.rs` | 388 | production | ui/contract | review | #54: exhaustive message-to-client ownership remains one dispatch boundary; client tables are already separate and further growth should move the Writer table into its own domain module |
+| `crates/recite-ui/src/inventory/message_ids.rs` | 386 | production | ui/inventory | cohesive | #54: one typed message identifier enum supports exhaustive consumer matching; key mappings and localisation data remain outside this declaration |
+| `crates/recite-ui/src/inventory/message_ids/writer.rs` | 363 | production | ui/inventory | review | #54: maps Writer identifiers to stable Fluent keys without rendering or translation policy; reassess grouping by authoring capability before extending the table |
+| `scripts/check-writer-desktop-links.py` | 297 | tooling | writer/packaging | cohesive | #54: one isolated desktop-activation probe owns its private bus, fixtures, child cleanup and observations; package inspection and human acceptance stay separate |

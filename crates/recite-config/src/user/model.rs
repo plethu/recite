@@ -3,6 +3,13 @@ use std::{fmt, path::PathBuf};
 use recite_ui::UiLocale;
 use serde::Deserialize;
 
+mod writer;
+pub use writer::{
+    ShortcutError, WriterCommand, WriterConfig, WriterPaneSide, WriterPresentation,
+    WriterPresentationError, WriterPresentationField, WriterShortcut, WriterShortcuts, WriterTheme,
+    WriterView,
+};
+
 mod presence;
 pub(super) use presence::UserConfigFieldPresence;
 
@@ -37,6 +44,17 @@ pub enum UserConfigField {
     Contrast,
     /// Whether the play surface displays unavailable choices.
     ShowUnavailableChoices,
+    /// Whether the native writer asks before ordinary exit.
+    WriterConfirmExit,
+    WriterView,
+    WriterPresentation,
+    WriterPaneSide,
+    WriterMonochrome,
+    WriterShortcutHints,
+    WriterShortcuts,
+    WriterTheme,
+    WriterReducedMotion,
+    WriterZoomToPointer,
 }
 
 /// A typed, read-only user presentation configuration.
@@ -49,6 +67,8 @@ pub struct UserConfig {
     pub ui: UiConfig,
     /// Play-surface preferences.
     pub play: PlayConfig,
+    /// Native writer preferences; never supplied by a project manifest.
+    pub writer: WriterConfig,
 }
 
 impl Default for UserConfig {
@@ -57,6 +77,7 @@ impl Default for UserConfig {
             config_version: CONFIG_VERSION,
             ui: UiConfig::default(),
             play: PlayConfig::default(),
+            writer: WriterConfig::default(),
         }
     }
 }

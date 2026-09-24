@@ -234,3 +234,23 @@ fn repeated_preparation_has_the_same_request_identity() {
         second.build_request().fingerprints()
     );
 }
+
+#[test]
+fn selected_asset_keeps_all_inputs_and_rejects_unknown_targets_without_mutation() {
+    let temp = require(TempDir::new(), "tempdir");
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        &(manifest(None)
+            + "\n[[scenes]]\nid = \"scene.other\"\nasset = \"compiled/other.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n"),
+    );
+    write_file(temp.path(), "dialogue/main.recite", valid_source());
+    let mut request = ready(temp.path());
+    let inputs = request.build_request().clone();
+    assert!(!request.select_asset("not-declared.recitec"));
+    assert_eq!(request.targets().len(), 2);
+    assert!(request.select_asset("compiled/other.recitec"));
+    assert_eq!(request.targets().len(), 1);
+    assert_eq!(request.targets()[0].asset_id(), "compiled/other.recitec");
+    assert_eq!(request.build_request(), &inputs);
+}

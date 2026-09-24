@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Recite Writer
+Comment=Write and check Recite dialogue projects
+Exec=recite-writer %u
+Icon=recite-writer
+Categories=Development;TextEditor;
+MimeType=x-scheme-handler/recite;
+Terminal=false

@@ -239,46 +239,27 @@ without a GUI workbench; editor docs contain tested setup instructions.
 **Outcome:** Recite chooses its GUI strategy from evidence rather than
 framework enthusiasm.
 
-**Candidate lanes:**
+Freya was selected by the maintainer on 2026-09-08. The
+[decision record](decisions/gui-framework.md) records that choice and the
+conditions for reconsidering it. The [maintained writer](../apps/writer/README.md)
+uses the shared [design system](../apps/writer/design-system.md). Retired candidate
+implementations and comparison harnesses are retained in Git history.
 
-- unified Rust frontends, including Freya 0.5 RC, Floem, GPUI, and
-  Xilem/Masonry candidates;
-- platform-appropriate frontends: SwiftUI/AppKit on macOS, WinUI 3 including a
-  separate `windows-reactor` Rust evaluation and experimental C#
-  `Microsoft.UI.Reactor` fallback on Windows, and a
-  Linux-native GTK/GtkSourceView path where that is the chosen host;
-- Avalonia using code-first C# as the primary non-Rust cross-platform control;
-- Qt, Flutter, Compose, Slint, and wxWidgets remain comparison baselines, not
-  commitments. A candidate must earn its place through authoring and
-  accessibility evidence, not only renderer reach or feature lists.
+Platform and accessibility acceptance remain open. The writer must demonstrate
+keyboard-only operation, focus order and restoration, screen readers, IME,
+BiDi/RTL, text scaling, high contrast, non-colour cues, status announcements,
+save conflicts, recovery, reduced motion, and packaging on each claimed platform.
+These checks reuse the shared authoring fixtures and semantics.
 
-The bake-off uses the same project, source, schema, catalog, and preview
-fixtures. It measures source editing, undo/redo, external changes, diagnostics,
-schema completion, localisation preview, graph navigation, startup, memory,
-packaging, and maintenance boundaries. Non-Rust/native candidates must also
-document the kernel crossing (in-process binding or local process protocol),
-protocol/versioning, structured requests/errors, cancellation, stale
-generations, source edits, and packaging. No candidate may introduce a second
-semantic implementation. Accessibility proof includes keyboard-only operation,
-focus order, screen readers, IME composition, BiDi/RTL text, zoom/text scaling,
-high contrast, non-colour cues, live diagnostics, progress/status announcements,
-failure/retry, focus retention/restoration, external-file/save conflicts,
-reduced motion, and manual assistive-technology verification where automation
-is insufficient.
+Writer packaging is still outstanding. Its acceptance includes `recite://`
+registration on every supported OS, opening the linked project on cold launch,
+delivery to an already-running window, and the existing unsaved-edit guards.
+The [packaging requirements](../apps/writer/packaging.md) define the installation,
+upgrade and uninstall smoke evidence tracked in #79.
 
-The bake-off includes an explicit candidate-by-platform applicability matrix.
-Each claimed candidate/platform cell is tested; candidates are not required to
-run on every operating system. The decision record names selected cells,
-unsupported cells, and the reason for each unsupported claim.
-
-**Entry gate:** the shared kernel, reusable editor-parity fixtures, and preview
-loop exist well enough to compare hosts without rebuilding Recite semantics in
-each one; completed editor clients are not a prerequisite.
-
-**Exit gate:** a checked-in decision record names the chosen frontend strategy,
-declared platform support, fallback path, known limitations, maintenance cost,
-and reconsideration triggers. No production workbench implementation is the
-default merely because it was easiest to prototype.
+**Exit gate:** the decision record and platform evidence establish the chosen
+frontend's support, dependencies, known limitations, maintenance cost, and
+reconsideration triggers. Selection does not imply platform acceptance.
 
 ### 6. GUI Workbench
 

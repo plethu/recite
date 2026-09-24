@@ -3,12 +3,17 @@
 //! This crate deliberately keeps the four configuration authorities separate:
 //! invocation owns command-line overrides, project configuration owns dialogue
 //! semantics, user configuration owns presentation preferences, and generated
-//! data owns derived reports. It does not merge those authorities or write any
-//! of them. The user configuration loader here is read-only and local-first.
+//! data owns derived reports. User preference writes are explicit, atomic,
+//! and preserve unrelated settings; loading never writes configuration.
 
 mod capabilities;
 mod path;
+mod producer;
 mod project;
+pub use producer::{
+    DeclarationSource, PRODUCER_REGISTRATION_FILE, ProducerCommand, ProducerRegistration,
+    ProducerRegistrationError,
+};
 mod user;
 
 pub use capabilities::{
@@ -22,17 +27,23 @@ pub use path::{
 pub use project::{
     Coverage, DiscoveredDocument, DiscoveredRoot, DiscoveryDiagnostic, DocumentKey,
     DocumentKeyError, PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION,
-    ProjectDiscoveryError, ProjectDiscoveryReport, ProjectManifest, allows_unscoped_source_path,
-    discover_project, discover_unscoped_sources,
+    ProjectDiscoveryError, ProjectDiscoveryReport, ProjectManifest, ProjectSettings,
+    ProjectSettingsError, allows_unscoped_source_path, discover_project, discover_unscoped_sources,
 };
 pub use user::{
     AuthorityValue, CONFIG_VERSION, ColorPolicy, ConfigAuthority, ConfigDiagnostic, ConfigError,
-    ConfigFormat, ConfigProvenance, ContrastPolicy, FieldPolicy, FieldProvenance,
+    ConfigFormat, ConfigProvenance, ConfigWriteError, ContrastPolicy, FieldPolicy, FieldProvenance,
     FieldResolutionError, InvocationOverrides, KeyHints, KeyHintsPolicy, Keymap, KeymapPolicy,
     LoadedUserConfig, PlayConfig, ResolvedField, ResolvedUiConfig, ResolvedUserConfig,
-    ShowUnavailableChoicesPolicy, TuiColorMode, TuiContrast, UiConfig, UiLocalePolicy, UserConfig,
-    UserConfigField, load_user_config, load_user_config_from, load_user_config_path, resolve_field,
-    resolve_user_config,
+    ShortcutError, ShowUnavailableChoicesPolicy, StateUpdateError, TextFileStore, TuiColorMode,
+    TuiContrast, UiConfig, UiLocalePolicy, UserConfig, UserConfigEdit, UserConfigField,
+    UserConfigStore, UserStateFile, WriterCommand, WriterConfig, WriterConfirmExitPolicy,
+    WriterMonochromePolicy, WriterPaneSide, WriterPaneSidePolicy, WriterPresentation,
+    WriterPresentationError, WriterPresentationField, WriterPresentationPolicy,
+    WriterReducedMotionPolicy, WriterShortcut, WriterShortcutHintsPolicy, WriterShortcuts,
+    WriterShortcutsPolicy, WriterTheme, WriterThemePolicy, WriterView, WriterViewPolicy,
+    WriterZoomToPointerPolicy, load_user_config, load_user_config_from, load_user_config_path,
+    resolve_field, resolve_user_config,
 };
 
 /// The user-facing locale type used by the existing UI resource contract.

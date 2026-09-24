@@ -7,3 +7,6 @@ ratatui = "ratatui"
 # French catalogue example and intentionally incomplete LSP completion input.
 registre = "registre"
 sav = "sav"
+
+# French text in the localisation workflow specimen.
+reste = "reste"

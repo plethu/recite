@@ -62,3 +62,55 @@ test-godot:
 
 test-editor-host client *args:
     case "$1" in neovim|vscode|zed) scripts/check-"$1"-host.sh "${@:2}" ;; *) echo 'Expected neovim, vscode, or zed' >&2; exit 2 ;; esac
+
+# Launch the native writer, optionally with --project PATH.
+writer *args:
+    cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer -- "$@"
+
+# Verify the maintained native application and its source-editing model.
+check-writer:
+    python3 scripts/check-writer-colors.py
+    just check-writer-packaging
+    cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
+    cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
+    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings
+    just check-writer-heap
+
+# Platform-independent package metadata and runtime dependency checks.
+check-writer-packaging:
+    python3 tests/writer-packaging/check.py
+    python3 scripts/package-writer.py --check-config > /dev/null
+    python3 scripts/check-writer-flatpak.py
+
+# Repeatable keyboard, accessibility metadata, scaling and contrast checks.
+check-writer-accessibility:
+    python3 scripts/check-writer-colors.py
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test accessibility --test commands --test keybindings --test options --test picker --test text_input --test writing_workspace
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib design::
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib feedback::
+
+# Linux AT-SPI bridge; needs python3-gi, dbus-run-session and a display or Xvfb.
+probe-writer-native-accessibility *args:
+    cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
+    /usr/bin/python3 scripts/check-writer-native-accessibility.py apps/writer/target/debug/recite-writer "$@"
+
+# Fixed-corpus allocation regression checks; no wall-clock budget.
+check-writer-heap:
+    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features heap-profile --bench large_project -- --passages 10000 --check-heap
+    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features heap-profile --bench large_project -- --passages 10000 --check-heap --linked
+
+# perf (Linux CPU) or DHAT (heap), using the optimized benchmark with debug lines.
+profile-writer mode="cpu" passages="10000" output="/tmp/recite-writer-profile":
+    scripts/profile-writer.sh "$1" "$2" "$3"
+
+# Generated saved-project workload; accepts --passages, --per-document and --output.
+bench-writer *args:
+    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features benchmarks --bench large_project -- "$@"
+
+# Headless large-conversation mounting and navigation timings (not native FPS).
+bench-writer-ui beats="1000":
+    RECITE_BENCH_BEATS="$1" cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test scale -- --ignored --nocapture
+
+# Background draft queue, durable flush and reopen timings.
+bench-writer-recovery:
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib recovery::tests::background_recovery_timing -- --ignored --nocapture

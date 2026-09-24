@@ -87,8 +87,16 @@ jobs:
       - name: Cache Rust dependencies and build output
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
+      - name: Install native writer build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config gettext cmake libgtk-3-dev libclang-dev libxkbcommon-x11-0 xvfb dbus-x11 python3-gi gir1.2-atspi-2.0 at-spi2-core
+
       - name: Run Rust and adapter gates
         run: scripts/check-project-gates.sh
+
+      - name: Probe the Linux native accessibility bridge
+        # Records current native limitations; --require-actions remains a
+        # separate acceptance gate until the pinned host implements actions.
+        run: xvfb-run -a just probe-writer-native-accessibility
 
   windows-publisher:
     name: Windows publisher contract
@@ -114,6 +122,9 @@ jobs:
         run: >-
           cargo test --locked -p recite-cli --all-features --lib
           --test watch_build_publisher --test watch_build_publisher_safety
+
+      - name: Run Windows user configuration contracts
+        run: cargo test --locked -p recite-config
 
       - name: Run Windows LSP path and identity contracts
         run: >-

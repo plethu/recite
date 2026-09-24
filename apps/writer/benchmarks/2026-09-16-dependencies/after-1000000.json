@@ -1,0 +1,371 @@
+{
+  "os": "linux",
+  "arch": "x86_64",
+  "profile": "bench",
+  "heap_instrumented": false,
+  "shared_destination": false,
+  "passages": 1000000,
+  "documents": 2000,
+  "source_bytes": 123754976,
+  "diagnostic_count": 0,
+  "history_bytes": 676,
+  "process_peak_rss": "VmHWM:\t 1531172 kB",
+  "samples": [
+    {
+      "operation": "generate",
+      "milliseconds": 103.687225
+    },
+    {
+      "operation": "index",
+      "milliseconds": 2722.04289
+    },
+    {
+      "operation": "search",
+      "milliseconds": 2.86241
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.11072599999999999
+    },
+    {
+      "operation": "search",
+      "milliseconds": 2.064742
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.061975
+    },
+    {
+      "operation": "search",
+      "milliseconds": 1.714989
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.058028
+    },
+    {
+      "operation": "search",
+      "milliseconds": 1.300747
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.047428
+    },
+    {
+      "operation": "search",
+      "milliseconds": 0.726576
+    },
+    {
+      "operation": "clone_saved_inputs",
+      "milliseconds": 0.05362
+    },
+    {
+      "operation": "open_project_document",
+      "milliseconds": 2664.733381
+    },
+    {
+      "operation": "project_script",
+      "milliseconds": 2.009188
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.00008999999999999999
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.00002
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.00002
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.00002
+    },
+    {
+      "operation": "cached_script",
+      "milliseconds": 0.00002
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 14.243409999999999
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 15.096542
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 12.935411
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 12.380234999999999
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 13.343011
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 12.39317
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 13.005031
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 12.486533
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 12.473229
+    },
+    {
+      "operation": "edit",
+      "milliseconds": 13.155431
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.487104
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.520266000000001
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.786794
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.269208
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 13.221464000000001
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.391625999999999
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.4045
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 13.266048000000001
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.471525000000002
+    },
+    {
+      "operation": "undo",
+      "milliseconds": 12.973531999999999
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.576922000000001
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.330793
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 13.305351
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.277543999999999
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.666148
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.583754
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.390704000000001
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 13.184705
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.545182
+    },
+    {
+      "operation": "redo",
+      "milliseconds": 12.284817
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 14.180914
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.121227
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 13.68539
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.216144000000002
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 13.292686999999999
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.975941
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 13.293038
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 14.045351
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 13.440752999999999
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.110868
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 14.244052
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.149800999999998
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 14.067682999999999
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.07968
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 13.352879999999999
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.717369999999999
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 13.198832000000001
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.857090000000001
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 13.29417
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.488692
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 13.553053
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.051497000000001
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 14.064928
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.066455
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 13.80315
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.204764
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 13.312063
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.979909000000001
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 13.295031
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.861939
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 13.423671
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.205164
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 14.187056
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.146876
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 14.099863000000001
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.117441000000001
+    },
+    {
+      "operation": "multiline_edit",
+      "milliseconds": 13.350415
+    },
+    {
+      "operation": "multiline_undo",
+      "milliseconds": 13.962316000000001
+    },
+    {
+      "operation": "id_edit",
+      "milliseconds": 13.323695
+    },
+    {
+      "operation": "id_undo",
+      "milliseconds": 13.897836
+    }
+  ]
+}

@@ -1,0 +1,236 @@
+//! Large beats are paged without recycling an active text editor or flattening conditions.
+use crate::scene::jump;
+use crate::{
+    design::{Button, tokens as t},
+    editing::Writer,
+    palette,
+};
+use freya::prelude::*;
+use recite_writer_model::{PassageKind, ScriptBlock, ScriptEntry};
+use std::sync::Arc;
+const PAGE_SIZE: usize = 32;
+#[derive(Clone)]
+pub(super) struct EntryPage {
+    pub writer: Writer,
+    pub blocks: Arc<[ScriptBlock]>,
+    pub block: usize,
+    pub path: Vec<usize>,
+}
+impl PartialEq for EntryPage {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.blocks, &other.blocks)
+            && self.block == other.block
+            && self.path == other.path
+            && self.writer.dark == other.writer.dark
+    }
+}
+impl Component for EntryPage {
+    fn render(&self) -> impl IntoElement {
+        let mut page = use_state(|| 0usize);
+        let mut previous_selection = use_state(|| None::<String>);
+        let writer = self.writer;
+        let origin = self.blocks[self.block].id.as_str();
+        let mut entries = self.blocks[self.block].entries.as_slice();
+        for &index in &self.path {
+            let Some(ScriptEntry::Group {
+                entries: nested, ..
+            }) = entries.get(index)
+            else {
+                return rect().into_element();
+            };
+            entries = nested;
+        }
+        let selected = writer
+            .buffers
+            .model
+            .read()
+            .as_ref()
+            .ok()
+            .and_then(|session| match session.view() {
+                recite_writer_model::View::Passage(id) => Some(id.clone()),
+                _ => None,
+            });
+        if *previous_selection.peek() != selected {
+            if let Some(id) = &selected
+                && let Some(index) = entries.iter().position(|entry| contains_passage(entry, id))
+            {
+                page.set(index / PAGE_SIZE);
+            }
+            previous_selection.set(selected);
+        }
+        let top_level = self.path.is_empty();
+        let pages = entries.len().div_ceil(PAGE_SIZE).max(1);
+        let current = (*page.read()).min(pages - 1);
+        let start = current * PAGE_SIZE;
+        let mut surface = rect().width(Size::fill()).spacing(t::SPACE_XS);
+        let translating = writer.localisation.read().translating();
+        let mut in_choices = false;
+        let mut reply_number = entries[..start].iter().filter(|entry| matches!(entry, ScriptEntry::Passage(p) if matches!(p.kind, PassageKind::Choice { .. }))).count();
+        for (index, entry) in entries.iter().enumerate().skip(start).take(PAGE_SIZE) {
+            match entry {
+                ScriptEntry::Passage(passage) => {
+                    let choice = matches!(passage.kind, PassageKind::Choice { .. });
+                    if choice && !in_choices {
+                        surface = surface.child(
+                            label()
+                                .text(crate::messages::text(
+                                    crate::messages::MsgId::WriterGuiReplies,
+                                ))
+                                .font_size(t::small())
+                                .color(palette::muted(writer.dark)),
+                        );
+                    }
+                    in_choices = choice;
+                    if choice {
+                        reply_number += 1;
+                    }
+                    let mut row = rect()
+                        .key(passage.id.clone())
+                        .width(Size::fill())
+                        .padding((t::SPACE_XS, 0.));
+                    let localising = writer.localisation.read().active;
+                    let prose = if localising {
+                        crate::localisation::source_passage(
+                            writer,
+                            passage,
+                            choice.then_some(reply_number),
+                        )
+                    } else {
+                        crate::prose::ProseField {
+                            writer,
+                            passage: passage.clone(),
+                            reply_number: choice.then_some(reply_number),
+                        }
+                        .into_element()
+                    };
+                    let mut source = rect().width(Size::fill()).spacing(t::SPACE_XS).child(prose);
+                    if let PassageKind::Choice {
+                        destination: Some(destination),
+                    } = &passage.kind
+                    {
+                        source = source.child(jump(
+                            writer,
+                            origin,
+                            destination,
+                            (!localising).then(|| {
+                                crate::route_editor::RouteOwner::Reply(passage.id.clone())
+                            }),
+                        ));
+                    }
+                    if writer.localisation.read().translating() {
+                        row = row.child(crate::localisation::columns(
+                            writer.dark,
+                            source.into_element(),
+                            crate::localisation::translation(writer, passage.clone()),
+                        ));
+                    } else {
+                        row = row.child(source);
+                    }
+                    surface = surface.child(row);
+                }
+                ScriptEntry::Jump(destination) => {
+                    let destination = jump(
+                        writer,
+                        origin,
+                        destination,
+                        (top_level && !writer.localisation.read().active)
+                            .then(|| crate::route_editor::RouteOwner::Beat(origin.into())),
+                    );
+                    surface = surface.child(if writer.localisation.read().translating() {
+                        crate::localisation::columns(
+                            writer.dark,
+                            destination,
+                            rect().into_element(),
+                        )
+                    } else {
+                        destination
+                    });
+                    in_choices = false;
+                }
+                ScriptEntry::Effect(text) => {
+                    surface = surface.child(
+                        rect().padding((0., t::SPACE_XS)).child(
+                            label()
+                                .text(format!(
+                                    "Effect request · {}",
+                                    text.trim_start_matches('!').trim()
+                                ))
+                                .font_size(t::small())
+                                .color(palette::muted(writer.dark)),
+                        ),
+                    );
+                    in_choices = false;
+                }
+                ScriptEntry::Group { heading, .. } => {
+                    surface = surface.child(
+                        rect()
+                            .padding((t::SPACE_XS, if translating { 0. } else { t::SPACE_MD }))
+                            .spacing(t::SPACE_XS)
+                            .child(label().text(heading.clone()).font_size(t::small()))
+                            .child(EntryPage {
+                                writer,
+                                blocks: self.blocks.clone(),
+                                block: self.block,
+                                path: {
+                                    let mut path = self.path.clone();
+                                    path.push(index);
+                                    path
+                                },
+                            }),
+                    );
+                    in_choices = false;
+                }
+                ScriptEntry::Source(text) => {
+                    surface = surface.child(label().text(text.clone()).font_size(t::body()));
+                    in_choices = false;
+                }
+            }
+        }
+
+        if pages > 1 {
+            let mut controls = rect().horizontal().spacing(t::SPACE_SM).child(
+                label()
+                    .text(format!(
+                        "Passages {}–{} of {}",
+                        start + 1,
+                        (start + PAGE_SIZE).min(entries.len()),
+                        entries.len()
+                    ))
+                    .font_size(t::small()),
+            );
+            for (caption, destination, enabled) in [
+                ("Previous passages", current.saturating_sub(1), current > 0),
+                ("Next passages", current + 1, current + 1 < pages),
+            ] {
+                controls = controls.child(
+                    Button::new()
+                        .flat()
+                        .enabled(enabled)
+                        .on_press(move |_| {
+                            if writer.try_navigate(|_| Ok(())).is_ok() {
+                                page.set(destination);
+                                writer.inspector_focus.request_focus();
+                            }
+                        })
+                        .child(caption),
+                );
+            }
+            surface = rect()
+                .width(Size::fill())
+                .spacing(t::SPACE_SM)
+                .child(controls)
+                .child(surface);
+        }
+        surface.into_element()
+    }
+}
+
+fn contains_passage(entry: &ScriptEntry, id: &str) -> bool {
+    match entry {
+        ScriptEntry::Passage(passage) => passage.id == id,
+        ScriptEntry::Group { entries, .. } => {
+            entries.iter().any(|entry| contains_passage(entry, id))
+        }
+        _ => false,
+    }
+}

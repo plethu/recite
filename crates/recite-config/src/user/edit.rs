@@ -1,0 +1,163 @@
+//! Typed, source-preserving edits to user-owned settings.
+use super::{KeyHints, Keymap, TuiColorMode, TuiContrast, WriterPaneSide, WriterTheme, WriterView};
+use recite_ui::UiLocale;
+use toml_edit::{DocumentMut, Value};
+
+/// One explicit preference change. Unmentioned fields retain their source text.
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub enum UserConfigEdit {
+    UiLocale(UiLocale),
+    Keymap(Keymap),
+    KeyHints(KeyHints),
+    Color(TuiColorMode),
+    Contrast(TuiContrast),
+    ShowUnavailableChoices(bool),
+    WriterConfirmExit(bool),
+    WriterView(WriterView),
+    WriterPresentation(super::WriterPresentation),
+    WriterPaneSide(WriterPaneSide),
+    WriterMonochrome(bool),
+    WriterShortcutHints(bool),
+    WriterShortcuts(super::WriterShortcuts),
+    WriterTheme(WriterTheme),
+    WriterReducedMotion(bool),
+    WriterZoomToPointer(bool),
+}
+
+impl UserConfigEdit {
+    /// Apply an edit to an in-memory preference draft. Persistence still validates
+    /// and merges against the current file through UserConfigStore.
+    pub fn apply_to(&self, config: &mut super::UserConfig) {
+        match self {
+            Self::UiLocale(v) => config.ui.locale = v.clone(),
+            Self::Keymap(v) => config.ui.keymap = *v,
+            Self::KeyHints(v) => config.ui.key_hints = *v,
+            Self::Color(v) => config.ui.color = *v,
+            Self::Contrast(v) => config.ui.contrast = *v,
+            Self::ShowUnavailableChoices(v) => config.play.show_unavailable_choices = *v,
+            Self::WriterConfirmExit(v) => config.writer.confirm_exit = *v,
+            Self::WriterView(v) => config.writer.view = *v,
+            Self::WriterPresentation(v) => config.writer.presentation = *v,
+            Self::WriterPaneSide(v) => config.writer.pane_side = *v,
+            Self::WriterMonochrome(v) => config.writer.monochrome = *v,
+            Self::WriterShortcutHints(v) => config.writer.shortcut_hints = *v,
+            Self::WriterShortcuts(v) => config.writer.shortcuts = v.clone(),
+            Self::WriterTheme(v) => config.writer.theme = *v,
+            Self::WriterReducedMotion(v) => config.writer.reduced_motion = *v,
+            Self::WriterZoomToPointer(v) => config.writer.zoom_to_pointer = *v,
+        }
+    }
+
+    pub(super) fn apply(&self, document: &mut DocumentMut) {
+        if let Self::WriterShortcuts(shortcuts) = self {
+            let mut table = toml_edit::Table::new();
+            for (command, binding) in shortcuts.overrides() {
+                table[command.key()] = toml_edit::value(binding.as_str());
+            }
+            document["writer"]["shortcuts"] = toml_edit::Item::Table(table);
+            return;
+        }
+        if let Self::WriterPresentation(presentation) = self {
+            use super::WriterPresentationField::*;
+            for field in [ReadingSize, SourceSize, UiScale, DrawerWidth, ScriptWidth] {
+                replace_value(
+                    &mut document["writer"]["presentation"][field.key()],
+                    i64::from(presentation.value(field)).into(),
+                );
+            }
+            replace_value(
+                &mut document["writer"]["presentation"]["split"],
+                presentation.split().into(),
+            );
+            return;
+        }
+        let (section, field, value): (_, _, Value) = match self {
+            Self::WriterShortcuts(_) => unreachable!("shortcuts handled above"),
+            Self::WriterPresentation(_) => unreachable!("presentation handled above"),
+            Self::UiLocale(locale) => ("ui", "locale", locale.to_string().into()),
+            Self::Keymap(keymap) => (
+                "ui",
+                "keymap",
+                match keymap {
+                    Keymap::Standard => "standard",
+                    Keymap::Vim => "vim",
+                }
+                .into(),
+            ),
+            Self::KeyHints(hints) => (
+                "ui",
+                "key_hints",
+                match hints {
+                    KeyHints::Contextual => "contextual",
+                    KeyHints::Compact => "compact",
+                    KeyHints::Hidden => "hidden",
+                }
+                .into(),
+            ),
+            Self::Color(color) => (
+                "ui",
+                "color",
+                match color {
+                    TuiColorMode::Auto => "auto",
+                    TuiColorMode::Always => "always",
+                    TuiColorMode::Never => "never",
+                }
+                .into(),
+            ),
+            Self::Contrast(contrast) => (
+                "ui",
+                "contrast",
+                match contrast {
+                    TuiContrast::Standard => "standard",
+                    TuiContrast::Accessible => "accessible",
+                }
+                .into(),
+            ),
+            Self::ShowUnavailableChoices(show) => {
+                ("play", "show_unavailable_choices", (*show).into())
+            }
+            Self::WriterView(view) => (
+                "writer",
+                "view",
+                match view {
+                    WriterView::Script => "script",
+                    WriterView::Map => "map",
+                    WriterView::Source => "source",
+                }
+                .into(),
+            ),
+            Self::WriterPaneSide(pane_side) => (
+                "writer",
+                "pane_side",
+                match pane_side {
+                    WriterPaneSide::Left => "left",
+                    WriterPaneSide::Right => "right",
+                }
+                .into(),
+            ),
+            Self::WriterTheme(theme) => (
+                "writer",
+                "theme",
+                match theme {
+                    WriterTheme::Light => "light",
+                    WriterTheme::Dark => "dark",
+                }
+                .into(),
+            ),
+            Self::WriterMonochrome(value) => ("writer", "monochrome", (*value).into()),
+            Self::WriterShortcutHints(value) => ("writer", "shortcut_hints", (*value).into()),
+            Self::WriterReducedMotion(value) => ("writer", "reduced_motion", (*value).into()),
+            Self::WriterZoomToPointer(value) => ("writer", "zoom_to_pointer", (*value).into()),
+            Self::WriterConfirmExit(confirm) => ("writer", "confirm_exit", (*confirm).into()),
+        };
+        replace_value(&mut document[section][field], value);
+    }
+}
+
+fn replace_value(slot: &mut toml_edit::Item, mut value: Value) {
+    if let Some(previous) = slot.as_value() {
+        *value.decor_mut() = previous.decor().clone();
+    }
+    *slot = toml_edit::Item::Value(value);
+}

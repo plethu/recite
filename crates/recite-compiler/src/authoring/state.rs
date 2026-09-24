@@ -2,14 +2,15 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use super::AuthoringSummary;
-use super::engine::{build_delta, build_documents, rebuild_analyses, validate_analyses};
+use super::engine::{build_delta, build_documents, rebuild_analyses};
 use super::input::{AuthoringRequest, OpenDocument, SavedDocument};
 use super::input_state::{
     changed_keys, effective_documents, unique_open, unique_saved, validate_overlay_versions,
 };
 use super::snapshot::{AnalysisDelta, AuthoringSnapshot};
 use crate::ValidationParticipation;
-use recite_core::{Diagnostic, DocumentKey, ProjectSchema, SourceFile};
+use crate::validation::incremental::{ProjectFacts, ProjectIndex};
+use recite_core::{Diagnostic, DocumentKey, ProjectSchema};
 
 /// A monotonic generation identifying one accepted authoring state.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -81,6 +82,8 @@ pub struct AuthoringKernel {
     open: BTreeMap<DocumentKey, OpenDocument>,
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
+    project_diagnostics: BTreeMap<DocumentKey, Vec<Diagnostic>>,
+    project_index: ProjectIndex,
     schema: Option<Arc<ProjectSchema>>,
     project_complete: bool,
 }
@@ -100,6 +103,8 @@ impl AuthoringKernel {
             saved: BTreeMap::new(),
             open: BTreeMap::new(),
             analyses: BTreeMap::new(),
+            project_diagnostics: BTreeMap::new(),
+            project_index: ProjectIndex::default(),
             snapshot: AuthoringSnapshot::new(generation, Vec::new(), None, true),
             schema: None,
             project_complete: true,
@@ -183,13 +188,33 @@ impl AuthoringKernel {
             changed_inputs.extend(old_effective.keys().map(|key| (*key).clone()));
             changed_inputs.extend(new_effective.keys().map(|key| (*key).clone()));
         }
-        let analyses = rebuild_analyses(
+        let (analyses, project_changed) = rebuild_analyses(
             std::mem::take(&mut self.analyses),
             &old_effective,
             &new_effective,
+            self.schema.as_deref(),
         );
-        let semantic = validate_analyses(&analyses, self.schema.as_deref(), project_complete);
-        let documents = build_documents(&new_effective, &analyses, &semantic, &self.snapshot);
+        if cfg!(test) && (!project_changed.is_empty() || project_complete != self.project_complete)
+        {
+            super::engine::PROJECT_VALIDATION_COUNT.with(|count| count.set(count.get() + 1));
+        }
+        let project_changed = self.project_index.update(
+            project_changed.into_iter().map(|key| {
+                let facts = analyses
+                    .get(&key)
+                    .map(|analysis| Arc::clone(&analysis.project_facts));
+                (key, facts)
+            }),
+            project_complete,
+            &mut self.project_diagnostics,
+        );
+        let documents = build_documents(
+            &new_effective,
+            &analyses,
+            &self.project_diagnostics,
+            &self.snapshot,
+            &project_changed,
+        );
         let (changed, removed) = build_delta(changed_inputs, &self.snapshot, &documents);
         let delta = AnalysisDelta::new(self.snapshot.generation(), generation, changed, removed);
 
@@ -205,9 +230,10 @@ impl AuthoringKernel {
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct DocumentAnalysis {
-    pub(crate) source_file: SourceFile,
+    pub(crate) project_facts: Arc<ProjectFacts>,
     pub(crate) source_text: Arc<str>,
     pub(crate) parse_diagnostics: Arc<[Diagnostic]>,
+    pub(crate) local_diagnostics: Arc<[Diagnostic]>,
     pub(crate) summary: Arc<AuthoringSummary>,
     pub(crate) participation: ValidationParticipation,
     pub(crate) byte_len: usize,

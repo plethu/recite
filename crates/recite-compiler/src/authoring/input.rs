@@ -4,7 +4,7 @@ use recite_core::DocumentKey;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SavedDocument {
     key: DocumentKey,
-    text: String,
+    text: std::sync::Arc<str>,
 }
 
 impl SavedDocument {
@@ -13,7 +13,7 @@ impl SavedDocument {
     pub fn new(key: DocumentKey, text: impl Into<String>) -> Self {
         Self {
             key,
-            text: text.into(),
+            text: text.into().into(),
         }
     }
 
@@ -21,6 +21,10 @@ impl SavedDocument {
     #[must_use]
     pub fn key(&self) -> &DocumentKey {
         &self.key
+    }
+
+    pub(super) fn shared_text(&self) -> &std::sync::Arc<str> {
+        &self.text
     }
 
     /// Returns the complete saved source text.
@@ -35,7 +39,7 @@ impl SavedDocument {
 pub struct OpenDocument {
     key: DocumentKey,
     version: DocumentVersion,
-    text: String,
+    text: std::sync::Arc<str>,
 }
 
 impl OpenDocument {
@@ -45,7 +49,7 @@ impl OpenDocument {
         Self {
             key,
             version,
-            text: text.into(),
+            text: text.into().into(),
         }
     }
 
@@ -59,6 +63,10 @@ impl OpenDocument {
     #[must_use]
     pub const fn version(&self) -> DocumentVersion {
         self.version
+    }
+
+    pub(super) fn shared_text(&self) -> &std::sync::Arc<str> {
+        &self.text
     }
 
     /// Returns the complete overlay source text.

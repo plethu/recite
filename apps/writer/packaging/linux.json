@@ -1,0 +1,13 @@
+{
+  "formats": ["deb"],
+  "icons": ["apps/writer/packaging/icons/recite-writer.png"],
+  "deepLinkProtocols": [{ "schemes": ["recite"] }],
+  "deb": {
+    "desktopTemplate": "apps/writer/packaging/recite-writer.desktop.hbs",
+    "section": "editors",
+    "depends": [
+      "libc6", "libgcc-s1", "libstdc++6", "libfreetype6",
+      "libfontconfig1", "libegl1", "libgl1", "libxkbcommon-x11-0"
+    ]
+  }
+}

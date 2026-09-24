@@ -19,3 +19,6 @@ pub use manifest::{
     ProjectManifest, discover_project,
 };
 pub use recite_core::{DocumentKey, DocumentKeyError};
+
+mod settings;
+pub use settings::{ProjectSettings, ProjectSettingsError};

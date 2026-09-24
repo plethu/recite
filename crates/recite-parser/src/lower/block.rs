@@ -132,6 +132,7 @@ impl Lowerer<'_, '_> {
 
             let (statement, next_index) = self.lower_statement(index);
             if let Some(statement) = statement {
+                self.reserve_single_statement(&mut statements, &cursor, next_index);
                 statements.push(statement);
             }
             cursor.set_index(next_index);
