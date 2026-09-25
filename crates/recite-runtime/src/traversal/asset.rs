@@ -9,7 +9,7 @@ use recite_core::{
         CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceMapEntry,
         CompiledStatement, CompiledValueError, EffectIndex, LineIndex, MatchArmIndex,
         MatchArmRange, MetadataIndex, MetadataRange, SourceMapIndex, SpeakerIndex, StatementIndex,
-        StatementRange, TableRange, canonical_compiled_dialogue_fingerprint,
+        StatementRange, TableRange,
     },
 };
 
@@ -63,12 +63,12 @@ impl<'a> AssetView<'a> {
             });
         }
 
-        let fingerprint = canonical_compiled_dialogue_fingerprint(self.asset).map_err(|error| {
+        let fingerprint = self.asset.content_fingerprint().map_err(|error| {
             DialogueError::MalformedCompiledAsset {
                 reason: error.to_string(),
             }
         })?;
-        if session.compiled_payload_fingerprint != fingerprint {
+        if &session.compiled_payload_fingerprint != fingerprint {
             return Err(DialogueError::AssetContentMismatch {
                 asset_id: session.asset_id.as_str().to_owned(),
                 reason: "compiled payload fingerprint differs from the session asset".to_owned(),

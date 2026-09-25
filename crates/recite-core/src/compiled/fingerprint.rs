@@ -26,7 +26,7 @@ pub fn canonical_compiled_dialogue_fingerprint(
     dialogue: &CompiledDialogue,
 ) -> Result<ContentFingerprint, CompiledAssetEncodeError> {
     dialogue
-        .cached_content_fingerprint()
+        .content_fingerprint()
         .cloned()
         .map_err(Clone::clone)
 }

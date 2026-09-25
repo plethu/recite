@@ -34,9 +34,10 @@ impl CompiledDialogue {
         self.payload
     }
 
-    pub(crate) fn cached_content_fingerprint(
-        &self,
-    ) -> Result<&ContentFingerprint, &CompiledAssetEncodeError> {
+    /// Borrow the canonical full-payload identity, preparing it on first use.
+    ///
+    /// The identity remains valid for the lifetime of this immutable asset.
+    pub fn content_fingerprint(&self) -> Result<&ContentFingerprint, &CompiledAssetEncodeError> {
         self.content_fingerprint
             .get_or_init(|| {
                 super::fingerprint::compute_canonical_compiled_dialogue_fingerprint(self)
@@ -45,9 +46,7 @@ impl CompiledDialogue {
     }
 
     pub(crate) fn prime_content_fingerprint(&self) -> Result<(), CompiledAssetEncodeError> {
-        self.cached_content_fingerprint()
-            .map(|_| ())
-            .map_err(Clone::clone)
+        self.content_fingerprint().map(|_| ()).map_err(Clone::clone)
     }
 
     pub(crate) fn cache_content_fingerprint(
