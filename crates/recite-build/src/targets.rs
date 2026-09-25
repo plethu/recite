@@ -7,6 +7,7 @@ use super::request::ProjectBuildRequest;
 use super::target_identity::{PhysicalIdentity, physical_identity, same_physical_path};
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum TargetPathError {
     #[error("target path is absolute")]
     Absolute,
@@ -204,6 +205,7 @@ pub(super) fn reject_symlink_components(root: &Path, output: &Path) -> Result<()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum TargetMapError {
     #[error("project manifest contains no output targets")]
     NoTargets,

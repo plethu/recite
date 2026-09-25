@@ -224,6 +224,7 @@ pub(super) fn recovery_record(value: &ProjectBuildRecovery) -> RecoveryDto {
             super::super::ProjectBuildRecoveryReason::PublicationUncommitted => {
                 RecoveryReasonDto::PublicationUncommitted
             }
+            _ => RecoveryReasonDto::Unknown,
         },
         detail: match value.detail() {
             ProjectBuildRecoveryDetail::None => None,
@@ -233,6 +234,7 @@ pub(super) fn recovery_record(value: &ProjectBuildRecovery) -> RecoveryDto {
                 kind: recovery_io_kind(kind),
                 raw_os_error,
             }),
+            _ => Some(RecoveryDetailDto::Unknown),
         },
     }
 }
@@ -331,5 +333,6 @@ fn recovery_io_kind(value: ProjectBuildRecoveryIoKind) -> RecoveryIoKindDto {
         ProjectBuildRecoveryIoKind::NotFound => RecoveryIoKindDto::NotFound,
         ProjectBuildRecoveryIoKind::PermissionDenied => RecoveryIoKindDto::PermissionDenied,
         ProjectBuildRecoveryIoKind::Other => RecoveryIoKindDto::Other,
+        _ => RecoveryIoKindDto::Other,
     }
 }

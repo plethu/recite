@@ -143,6 +143,7 @@ pub(super) enum RecoveryReasonDto {
     StageCleanupFailed,
     PublicationIndeterminate,
     PublicationUncommitted,
+    Unknown,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -152,6 +153,7 @@ pub(super) enum RecoveryDetailDto {
         kind: RecoveryIoKindDto,
         raw_os_error: Option<i32>,
     },
+    Unknown,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]

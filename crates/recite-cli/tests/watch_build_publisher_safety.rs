@@ -43,6 +43,7 @@ fn request(root: &Path, assets: &str) -> ProjectBuildRequest {
         ProjectBuildPreparation::Rejected { diagnostics } => {
             panic!("unexpected diagnostics: {diagnostics:?}")
         }
+        _ => panic!("unexpected preparation outcome"),
     }
 }
 

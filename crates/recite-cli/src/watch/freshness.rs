@@ -35,6 +35,15 @@ pub(super) fn assess_current_freshness(
                 ),
             });
         }
+        _ => {
+            return Ok(FreshnessResult {
+                diagnostics: Vec::new(),
+                assessment: FreshnessAssessment::stale(
+                    request.build_request().fingerprints().clone(),
+                    vec![StaleReason::Fingerprints],
+                ),
+            });
+        }
     };
 
     if !same_published_request(request, &current) {

@@ -7,6 +7,7 @@ use recite_core::{Diagnostic, project::ProjectManifestSource, schema::ProjectSch
 
 /// A project asset target selected from the manifest.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct ProjectBuildTarget {
     pub(super) target: BuildTarget,
 }
@@ -38,6 +39,7 @@ impl ProjectBuildTarget {
 /// [`recite_core::DocumentKey`]s and
 /// `Saved` authority, while a valid schema is carried as its canonical model.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct ProjectBuildRequest {
     pub(super) project_root: PathBuf,
     pub(super) manifest: ProjectManifestSource,
@@ -129,6 +131,7 @@ impl ProjectBuildRequest {
 
 /// Result of content preparation before a compiler request exists.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ProjectBuildPreparation {
     Ready(Box<ProjectBuildRequest>),
     Rejected { diagnostics: Vec<Diagnostic> },
@@ -171,6 +174,7 @@ impl ProjectBuildPreparation {
 
 /// Errors that prevent a project request from being prepared at all.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum ProjectBuildPreparationError {
     #[error(transparent)]
     Discovery(#[from] recite_config::ProjectDiscoveryError),

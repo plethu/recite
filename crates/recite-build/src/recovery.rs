@@ -5,6 +5,7 @@ use super::targets::TargetMapError;
 
 /// A stage marker requiring explicit host cleanup or recovery inspection.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct ProjectBuildRecovery {
     marker: PathBuf,
     reason: ProjectBuildRecoveryReason,
@@ -72,6 +73,7 @@ impl ProjectBuildRecovery {
 
 /// Stable, structured detail for a recovery record.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[non_exhaustive]
 pub enum ProjectBuildRecoveryDetail {
     None,
     Io {
@@ -83,6 +85,7 @@ pub enum ProjectBuildRecoveryDetail {
 
 /// Portable category for the I/O cause that left a recovery marker.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[non_exhaustive]
 pub enum ProjectBuildRecoveryIoKind {
     AlreadyExists,
     InvalidInput,
@@ -105,6 +108,7 @@ impl ProjectBuildRecoveryIoKind {
 
 /// The structured reason a publisher left a stage marker for host recovery.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[non_exhaustive]
 pub enum ProjectBuildRecoveryReason {
     StageCleanupFailed,
     PublicationIndeterminate,
@@ -112,6 +116,7 @@ pub enum ProjectBuildRecoveryReason {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum ProjectBuildPublisherError {
     #[error(transparent)]
     Targets(#[from] TargetMapError),

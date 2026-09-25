@@ -143,6 +143,7 @@ pub(super) fn format_recovery_reason(
         ProjectBuildRecoveryReason::PublicationUncommitted => {
             crate::i18n::MsgId::WatchBuildRecoveryReasonPublicationUncommitted
         }
+        _ => crate::i18n::MsgId::WatchBuildFailureUnknown,
     };
     messages.text(id)
 }
@@ -168,6 +169,7 @@ pub(super) fn format_recovery_detail(
                 ("message", message),
             ],
         ),
+        _ => messages.text(crate::i18n::MsgId::WatchBuildFailureUnknown),
     }
 }
 
@@ -187,6 +189,7 @@ fn format_recovery_io_kind(
             crate::i18n::MsgId::WatchBuildRecoveryIoPermissionDenied
         }
         ProjectBuildRecoveryIoKind::Other => crate::i18n::MsgId::WatchBuildRecoveryIoOther,
+        _ => crate::i18n::MsgId::WatchBuildRecoveryIoOther,
     };
     messages.text(id)
 }

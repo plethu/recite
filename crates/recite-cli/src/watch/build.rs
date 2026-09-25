@@ -97,6 +97,10 @@ where
                 Ok(ProjectBuildPreparation::Ready(_)) => Err(CliError::Watch {
                     message: "discovery error classification returned a ready request".to_owned(),
                 }),
+                Ok(_) => Err(CliError::Watch {
+                    message: "discovery error classification returned an unknown outcome"
+                        .to_owned(),
+                }),
                 Err(error) => Err(map_preparation_error(error)),
             };
         }
@@ -116,6 +120,11 @@ where
             report_diagnostics(stderr, messages, diagnostics.iter())?;
             return Ok(BuildStatus::Diagnostics {
                 telemetry: BuildTelemetry::from_duration(clock().saturating_sub(started_at)),
+            });
+        }
+        _ => {
+            return Err(CliError::Watch {
+                message: "project preparation returned an unknown outcome".to_owned(),
             });
         }
     };

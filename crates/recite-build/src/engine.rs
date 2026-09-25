@@ -19,6 +19,7 @@ use super::request::ProjectBuildRequest;
 /// discovery validation boundary; the engine only compiles those immutable
 /// inputs into deterministic candidates for a later host publisher.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct ProjectBuildEngine {
     request: BuildRequest,
     targets: Vec<super::request::ProjectBuildTarget>,
