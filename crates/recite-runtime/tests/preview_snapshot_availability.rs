@@ -1,7 +1,8 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs_with_schema};
-use recite_core::load_schema_manifest_str;
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs_with_schema};
+use recite_core::schema::load_schema_manifest_str;
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
+    ConditionValue,
+    preview::{ConditionAnswer, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession},
 };
 
 #[test]
@@ -66,7 +67,7 @@ fn hidden_choice_and_reason_tree_survive_prompt_snapshot_restore() -> Result<(),
         .map_err(|error| format!("restored: {error:?}"))?;
     restored
         .restore(
-            recite_runtime::PreviewSnapshot::decode(
+            recite_runtime::preview::PreviewSnapshot::decode(
                 &snapshot
                     .encode()
                     .map_err(|error| format!("encode: {error:?}"))?,
@@ -82,17 +83,14 @@ fn hidden_choice_and_reason_tree_survive_prompt_snapshot_restore() -> Result<(),
             .iter()
             .any(|event| matches!(event, PreviewEvent::Restored))
     );
-    assert!(
-        restored
-            .transcript()
-            .events()
-            .iter()
-            .any(|event| matches!(event, recite_runtime::PreviewTranscriptEvent::Restored))
-    );
+    assert!(restored.transcript().events().iter().any(|event| matches!(
+        event,
+        recite_runtime::preview::PreviewTranscriptEvent::Restored
+    )));
     Ok(())
 }
 
-fn asset_with_reason() -> Result<recite_core::CompiledDialogue, String> {
+fn asset_with_reason() -> Result<recite_core::compiled::CompiledDialogue, String> {
     let schema = load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../fixtures/schema/valid/generated_manifest.json"),
@@ -114,11 +112,11 @@ fn asset_with_reason() -> Result<recite_core::CompiledDialogue, String> {
             ),
         )],
         CompileOptions::new(
-            recite_core::CompilerVersion::new("0.0.1")
+            recite_core::compiled::CompilerVersion::new("0.0.1")
                 .map_err(|error| format!("version: {error:?}"))?,
-            recite_core::CompiledAssetId::new("dialogue/preview.recitec")
+            recite_core::compiled::CompiledAssetId::new("dialogue/preview.recitec")
                 .map_err(|error| format!("asset id: {error:?}"))?,
-            recite_core::SourceMapId::new("dialogue/preview.map")
+            recite_core::compiled::SourceMapId::new("dialogue/preview.map")
                 .map_err(|error| format!("map id: {error:?}"))?,
             schema.canonical_fingerprint(),
         ),

@@ -26,9 +26,9 @@ delegates activation to the ESM implementation.
 The language server and shared authoring kernel own parsing, validation,
 diagnostics, completion, navigation, edits, and stable IDs. The extension only
 adapts those LSP values to editor APIs. It does not parse Recite source, run a
-game, or require a hosted service. Its small JSON-RPC transport uses Node's
-standard library so the extension does not pull in a second client framework or
-an embedded browser runtime.
+game, or require a hosted service. Microsoft's MIT-licensed
+`vscode-languageclient` 9.0.1 owns the standard LSP transport and editor
+features; the VSIX includes its production dependencies for offline use.
 
 ## Local development
 
@@ -72,10 +72,9 @@ array without invoking a shell. `recite.lsp.projectRoot` optionally selects a
 project root; otherwise the first workspace folder is used.
 
 The server process is started when a trusted `.recite` document activates the
-package, receives full-document open/change/save/close notifications, and is
-shut down when the extension deactivates or its configuration changes. The
-client also honours the LSP server's `client/registerCapability` request for
-project file watching and forwards deterministic create/change/delete events.
+package, receives editor document synchronization, and is shut down when the
+extension deactivates or its configuration changes. The language client also
+handles the server's dynamic file-watching registration.
 The command palette also adapts the local structured CLI protocol for
 validation, compilation, extraction, fixture runs, traces, and a one-process
 watch loop. Commands use the saved active `.recite` document where applicable;
@@ -92,7 +91,7 @@ Code-action and rename edits are returned through extension-owned commands. The
 commands keep the LSP document versions, including zero-edit sibling
 preconditions, and check them again immediately before applying the edit. Use
 `Recite: Rename block` (the `recite.renameBlock` command) for version-safe block
-rename. Native F2 rename is deliberately not registered: VS Code's native
+rename. Native F2 rename is disabled by the Recite adapter: VS Code's native
 `WorkspaceEdit` path cannot preserve those LSP versions at its eventual apply
 boundary. The explicit command is covered by the installed-host activation
 evidence; native F2 remains intentionally unsupported by this client.
@@ -100,8 +99,7 @@ evidence; native F2 remains intentionally unsupported by this client.
 Relative paths and process spawning use Node's platform-neutral path and
 process APIs. Linux, macOS, and Windows are intended hosts, but this scaffold
 contains Linux-only executable evidence; platform packaging and publication
-smoke remain release work. Installed VS Code and VSCodium activation evidence
-is recorded in `docs/evidence/editor-hosts/vscode-linux.md`; this foundation
-intentionally does not add the unpinned `@vscode/test-electron` dependency or
-its browser download. The same VSIX can be submitted to the VS Code
+smoke remain release work. Run `scripts/check-vscode-host.sh` for installed
+VS Code and VSCodium activation checks; it prints the observed host versions
+and assertions. The same VSIX can be submitted to the VS Code
 Marketplace or Open VSX when those distribution decisions are made.

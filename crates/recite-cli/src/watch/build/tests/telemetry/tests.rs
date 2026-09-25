@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use recite_compiler::{BuildControl, BuildGeneration, BuildTerminalStatus};
+use recite_compiler::authoring::{BuildControl, BuildGeneration, BuildTerminalStatus};
 
 use super::super::super::events::WatchState;
 use super::super::{BuildStatus, build_once_with_clock};
@@ -130,9 +130,9 @@ fn recovery_status_consumers_retain_duration_explicitly() {
         (
             BuildStatus::DiagnosticsWithRecovery {
                 recovery: recovery.clone(),
-                telemetry: recite_compiler::BuildTelemetry::from_duration(Duration::from_millis(
-                    59,
-                )),
+                telemetry: recite_compiler::authoring::BuildTelemetry::from_duration(
+                    Duration::from_millis(59),
+                ),
             },
             Duration::from_millis(59),
         ),
@@ -140,9 +140,9 @@ fn recovery_status_consumers_retain_duration_explicitly() {
             BuildStatus::RecoveryRequired {
                 asset_count: 1,
                 recovery,
-                telemetry: recite_compiler::BuildTelemetry::from_duration(Duration::from_millis(
-                    61,
-                )),
+                telemetry: recite_compiler::authoring::BuildTelemetry::from_duration(
+                    Duration::from_millis(61),
+                ),
             },
             Duration::from_millis(61),
         ),
@@ -178,7 +178,7 @@ fn duration_report_uses_typed_unit_messages_and_alternate_catalogue_text() {
     ] {
         let status = BuildStatus::Fresh {
             asset_count: 1,
-            telemetry: recite_compiler::BuildTelemetry::from_duration(duration),
+            telemetry: recite_compiler::authoring::BuildTelemetry::from_duration(duration),
         };
         let mut output = Vec::new();
         report_build_result(&mut output, Ok(status), &messages).expect("report");

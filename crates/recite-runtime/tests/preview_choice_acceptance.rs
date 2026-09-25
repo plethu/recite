@@ -3,11 +3,14 @@ mod preview_support;
 
 use preview_support::asset;
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions,
-    PreviewSession, PreviewStatus, PreviewTranscriptEvent,
+    ConditionValue,
+    preview::{
+        ConditionAnswer, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
+        PreviewStatus, PreviewTranscriptEvent,
+    },
 };
 
-fn branch_asset() -> recite_core::CompiledDialogue {
+fn branch_asset() -> recite_core::compiled::CompiledDialogue {
     asset(concat!(
         ":: start default\n",
         "> intro@18c570b9af4d973ba876\n",
@@ -23,7 +26,7 @@ fn branch_asset() -> recite_core::CompiledDialogue {
     ))
 }
 
-fn choice_prompt(preview: &mut PreviewSession<'_>) -> recite_runtime::PreviewPrompt {
+fn choice_prompt(preview: &mut PreviewSession<'_>) -> recite_runtime::preview::PreviewPrompt {
     match preview.step(PreviewInputs::default()).events() {
         [PreviewEvent::Prompt(prompt)] => prompt.clone(),
         events => panic!("expected choice prompt, got {events:?}"),
@@ -34,7 +37,7 @@ fn pending_branch_condition(
     preview: &mut PreviewSession<'_>,
 ) -> (
     recite_core::ChoiceId,
-    recite_runtime::PreviewConditionRequest,
+    recite_runtime::preview::PreviewConditionRequest,
 ) {
     let prompt = choice_prompt(preview);
     let choice_id = prompt.choices()[0].id.clone();

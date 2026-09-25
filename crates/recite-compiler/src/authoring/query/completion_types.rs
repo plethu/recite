@@ -1,5 +1,5 @@
 use super::super::super::summary::MetadataValueKind;
-use recite_core::{SchemaTypeRef, SourceSpan};
+use recite_core::{SourceSpan, schema::SchemaTypeRef};
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]

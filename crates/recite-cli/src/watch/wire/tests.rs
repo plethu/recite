@@ -1,6 +1,6 @@
 use std::fs;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCandidate, BuildGeneration, BuildInput, BuildRequest, BuildTarget, FreshnessAssessment,
     PublishOutcome, RecoveryNeeded, SnapshotGeneration, StaleReason,
 };
@@ -119,14 +119,14 @@ fn stale_freshness_and_recovery_use_tagged_machine_dtos() {
 
 #[test]
 fn failure_mapping_is_typed_without_host_prose() {
-    let value = failure(&recite_compiler::BuildResultFailure::Freshness {
-        reason: recite_compiler::FreshnessFailureReason::RecheckFailed,
+    let value = failure(&recite_compiler::authoring::BuildResultFailure::Freshness {
+        reason: recite_compiler::authoring::FreshnessFailureReason::RecheckFailed,
     });
     let value: Value = serde_json::to_value(value).expect("failure JSON");
     assert_eq!(value["type"], "freshness");
 
-    let value = failure(&recite_compiler::BuildResultFailure::Engine {
-        reason: recite_compiler::BuildFailureReason::Host,
+    let value = failure(&recite_compiler::authoring::BuildResultFailure::Engine {
+        reason: recite_compiler::authoring::BuildFailureReason::Host,
     });
     let value: Value = serde_json::to_value(value).expect("engine failure JSON");
     assert_eq!(

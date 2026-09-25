@@ -31,7 +31,7 @@ fn native_configured_tools_run_directly() {
 fn staged_generation_validates_identity_without_touching_live_output()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
-    let schema = recite_core::SchemaSource::load_str(
+    let schema = recite_core::schema::SchemaSource::load_str(
         "schema.toml",
         "schema_version=1\n[producer]\nid=\"dialogue\"\n",
     )

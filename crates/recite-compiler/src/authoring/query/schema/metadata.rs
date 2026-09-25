@@ -1,5 +1,6 @@
 use recite_core::{
-    MetadataDomainDefinition, MetadataTarget, ProjectSchema, SchemaTypeDefinition, SourceSpan,
+    SourceSpan,
+    schema::{MetadataDomainDefinition, MetadataTarget, ProjectSchema, SchemaTypeDefinition},
 };
 
 use super::super::types::{
@@ -163,12 +164,14 @@ pub(super) fn value_candidates(
                         .get(value)
                         .or_else(|| fallback_values(schema, &domain.missing_context, unavailable)),
                     SelectorResolution::Missing => match &domain.missing_context {
-                        recite_core::MissingMetadataContextPolicy::Diagnostic => {
+                        recite_core::schema::MissingMetadataContextPolicy::Diagnostic => {
                             unavailable.push(QueryUnavailableReason::MissingMetadataContext);
                             None
                         }
-                        recite_core::MissingMetadataContextPolicy::Empty => Some(empty_values()),
-                        recite_core::MissingMetadataContextPolicy::Fallback { domain } => {
+                        recite_core::schema::MissingMetadataContextPolicy::Empty => {
+                            Some(empty_values())
+                        }
+                        recite_core::schema::MissingMetadataContextPolicy::Fallback { domain } => {
                             match schema.metadata_domains.get(domain) {
                                 Some(MetadataDomainDefinition::Flat(domain)) => {
                                     Some(&domain.values)
@@ -201,7 +204,7 @@ pub(super) fn value_candidates(
         return;
     }
     match &definition.type_ref {
-        recite_core::SchemaTypeRef::Speaker => {
+        recite_core::schema::SchemaTypeRef::Speaker => {
             output.extend(schema.speakers.iter().map(|(value, definition)| {
                 candidate(
                     value,
@@ -213,29 +216,29 @@ pub(super) fn value_candidates(
                 )
             }))
         }
-        recite_core::SchemaTypeRef::Registry(name) => {
+        recite_core::schema::SchemaTypeRef::Registry(name) => {
             if let Some(registry) = schema.registries.get(name) {
                 output.extend(registry.values.iter().map(|value| {
                     candidate(
                         value,
                         CompletionCandidateKind::MetadataValue,
                         CompletionCandidateDetail::SchemaType(
-                            recite_core::SchemaTypeRef::Registry(name.clone()),
+                            recite_core::schema::SchemaTypeRef::Registry(name.clone()),
                         ),
                         span,
                     )
                 }));
             }
         }
-        recite_core::SchemaTypeRef::Enum(name) => {
+        recite_core::schema::SchemaTypeRef::Enum(name) => {
             if let Some(SchemaTypeDefinition::Enum(definition)) = schema.types.get(name) {
                 output.extend(definition.values.iter().map(|value| {
                     candidate(
                         value,
                         CompletionCandidateKind::MetadataValue,
-                        CompletionCandidateDetail::SchemaType(recite_core::SchemaTypeRef::Enum(
-                            name.clone(),
-                        )),
+                        CompletionCandidateDetail::SchemaType(
+                            recite_core::schema::SchemaTypeRef::Enum(name.clone()),
+                        ),
                         span,
                     )
                 }));
@@ -247,11 +250,11 @@ pub(super) fn value_candidates(
 
 fn fallback_values<'a>(
     schema: &'a ProjectSchema,
-    policy: &recite_core::MissingMetadataContextPolicy,
+    policy: &recite_core::schema::MissingMetadataContextPolicy,
     unavailable: &mut Vec<QueryUnavailableReason>,
 ) -> Option<&'a std::collections::BTreeSet<String>> {
     match policy {
-        recite_core::MissingMetadataContextPolicy::Fallback { domain } => {
+        recite_core::schema::MissingMetadataContextPolicy::Fallback { domain } => {
             match schema.metadata_domains.get(domain) {
                 Some(MetadataDomainDefinition::Flat(domain)) => Some(&domain.values),
                 Some(MetadataDomainDefinition::Contextual(_)) | None => {
@@ -260,10 +263,10 @@ fn fallback_values<'a>(
                 }
             }
         }
-        recite_core::MissingMetadataContextPolicy::Diagnostic => {
+        recite_core::schema::MissingMetadataContextPolicy::Diagnostic => {
             unavailable.push(QueryUnavailableReason::MissingMetadataContext);
             None
         }
-        recite_core::MissingMetadataContextPolicy::Empty => Some(empty_values()),
+        recite_core::schema::MissingMetadataContextPolicy::Empty => Some(empty_values()),
     }
 }

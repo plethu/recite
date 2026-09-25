@@ -135,7 +135,6 @@ expect_failure keyboard-host-runner-non-executable "installed-host evidence runn
 expect_failure keyboard-host-runner-mismatch "runner scripts/check-vscode-host.sh does not match client neovim"
 expect_failure keyboard-host-platform-overclaim "host records do not cover claimed macos platform evidence"
 expect_failure keyboard-host-scenario-mismatch "partial/implemented status requires a partial/implemented keyboard-workflow scenario"
-expect_failure keyboard-host-doc-missing "evidence document does not exist"
 expect_failure keyboard-host-key-sequence "key_sequence must be a non-empty string or array"
 expect_failure keyboard-host-no-leak "keyboard assertion process_leak_check must be true"
 mutate_fixture non-keyboard-dual-client-host-evidence

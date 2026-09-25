@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::DialogueContentFingerprintSnapshot;
-use crate::DialogueSessionSnapshot;
+use crate::snapshot::DialogueContentFingerprintSnapshot;
+use crate::snapshot::DialogueSessionSnapshot;
 
 #[path = "status.rs"]
 mod status;
@@ -135,7 +135,7 @@ pub(super) struct ChoiceWire {
     pub(super) id: String,
     pub(super) source_text: String,
     pub(super) text: String,
-    pub(super) availability: crate::DialogueChoiceAvailabilitySnapshot,
+    pub(super) availability: crate::snapshot::DialogueChoiceAvailabilitySnapshot,
     pub(super) metadata: Vec<MetadataWire>,
     pub(super) echo: EchoWire,
 }

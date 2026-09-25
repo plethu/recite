@@ -2,7 +2,10 @@ use std::fs;
 use std::path::PathBuf;
 
 use lsp_types::Uri;
-use recite_core::{Diagnostic, ProjectSchema, SchemaSource, load_schema_manifest_str};
+use recite_core::{
+    Diagnostic,
+    schema::{ProjectSchema, SchemaSource, load_schema_manifest_str},
+};
 
 use crate::documents::OpenDocumentStore;
 use crate::paths::file_path_to_uri;

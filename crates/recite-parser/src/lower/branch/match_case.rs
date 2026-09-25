@@ -1,4 +1,7 @@
-use recite_core::{MatchArm, MatchBranch, MatchPattern, SourceRecoveryClass};
+use recite_core::{
+    SourceRecoveryClass,
+    ast::{MatchArm, MatchBranch, MatchPattern},
+};
 
 use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::diagnostics::malformed_case;

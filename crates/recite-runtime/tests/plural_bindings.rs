@@ -1,12 +1,17 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{CompiledAssetId, CompilerVersion, ScalarValue, SchemaFingerprint, SourceMapId};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
+use recite_core::{
+    ScalarValue,
+    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
+};
 use recite_runtime::{
-    DialogueEvent, DialogueSessionOptions, EmptyDialogueContext, InterpolationValues, LocaleError,
-    LocaleProvider, LocaleResolution, PluralResolution, TextDomain, next_with, start_scene,
-    start_scene_with_options,
+    DialogueEvent, DialogueSessionOptions, EmptyDialogueContext, LocaleResolution,
+    localisation::{
+        InterpolationValues, LocaleError, LocaleProvider, PluralResolution, TextDomain,
+    },
+    next_with, start_scene, start_scene_with_options,
 };
 
-fn distinct_plural_asset() -> recite_core::CompiledDialogue {
+fn distinct_plural_asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
         "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining) bind=(name:string=$name)\n",

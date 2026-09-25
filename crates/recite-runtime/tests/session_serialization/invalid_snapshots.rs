@@ -1,7 +1,9 @@
 use super::*;
 
-fn pending_prompt_snapshot_for_conversion_test()
--> (recite_core::CompiledDialogue, DialogueSessionSnapshot) {
+fn pending_prompt_snapshot_for_conversion_test() -> (
+    recite_core::compiled::CompiledDialogue,
+    DialogueSessionSnapshot,
+) {
     let asset = compile_asset(
         "dialogue/start.recite",
         concat!(

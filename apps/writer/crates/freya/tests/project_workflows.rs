@@ -48,7 +48,7 @@ fn fixture() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     )?;
     let schema = "schema_version = 1\n[producer]\nid = \"dialogue\"\n[speakers.mara]\ndisplay_name = \"Mara\"\n";
     std::fs::write(dir.path().join("schema.toml"), schema)?;
-    let source = recite_core::SchemaSource::load_str("schema.toml", schema)
+    let source = recite_core::schema::SchemaSource::load_str("schema.toml", schema)
         .source
         .ok_or("schema")?;
     std::fs::write(dir.path().join("schema.json"), source.export_json())?;

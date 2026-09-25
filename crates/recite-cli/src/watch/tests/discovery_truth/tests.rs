@@ -1,6 +1,6 @@
 use std::fs;
 
-use recite_compiler::BuildTelemetry;
+use recite_compiler::authoring::BuildTelemetry;
 use tempfile::TempDir;
 
 use super::super::events::WatchState;

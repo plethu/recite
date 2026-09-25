@@ -1,5 +1,5 @@
 use super::support::*;
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildAuthority, BuildGeneration, BuildInput, BuildInputAuthority, BuildInputKind,
     BuildInputPayload, BuildInputPolicy, BuildLifecycle, BuildRequest, BuildState, BuildTelemetry,
     BuildTransition, BuildTransitionError, PreparedPublishIdentity, RestartGuidance,
@@ -12,14 +12,14 @@ fn request_requires_explicit_overlays_and_has_stable_order() {
     assert!(matches!(
         BuildRequest::new(
             BuildGeneration::initial(),
-            recite_compiler::SnapshotGeneration::initial(),
+            recite_compiler::authoring::SnapshotGeneration::initial(),
             [overlay]
         ),
-        Err(recite_compiler::BuildRequestError::OverlayNotAllowed { .. })
+        Err(recite_compiler::authoring::BuildRequestError::OverlayNotAllowed { .. })
     ));
     let request = BuildRequest::new_with_policy(
         BuildGeneration::new(1),
-        recite_compiler::SnapshotGeneration::new(1),
+        recite_compiler::authoring::SnapshotGeneration::new(1),
         [
             BuildInput::saved_source(key("z.recite"), "saved"),
             BuildInput::overlay_source(key("z.recite"), "overlay"),
@@ -63,13 +63,13 @@ fn input_order_does_not_change_candidates_or_fingerprints() {
     let mut right_publisher = FakePublisher::new();
     let left_result = run(
         left,
-        &recite_compiler::BuildControl::new(),
+        &recite_compiler::authoring::BuildControl::new(),
         &mut left_engine,
         &mut left_publisher,
     );
     let right_result = run(
         right,
-        &recite_compiler::BuildControl::new(),
+        &recite_compiler::authoring::BuildControl::new(),
         &mut right_engine,
         &mut right_publisher,
     );
@@ -88,15 +88,15 @@ fn schema_payload_has_one_authority_and_canonical_fingerprint() {
     assert!(matches!(
         BuildRequest::new(
             BuildGeneration::new(1),
-            recite_compiler::SnapshotGeneration::new(1),
+            recite_compiler::authoring::SnapshotGeneration::new(1),
             [raw]
         ),
-        Err(recite_compiler::BuildRequestError::SchemaPayloadMismatch { .. })
+        Err(recite_compiler::authoring::BuildRequestError::SchemaPayloadMismatch { .. })
     ));
-    let model = recite_core::ProjectSchema::empty_v1();
+    let model = recite_core::schema::ProjectSchema::empty_v1();
     let left = BuildRequest::new(
         BuildGeneration::new(2),
-        recite_compiler::SnapshotGeneration::new(2),
+        recite_compiler::authoring::SnapshotGeneration::new(2),
         [BuildInput::schema(
             key("schema"),
             BuildInputAuthority::Saved,
@@ -106,7 +106,7 @@ fn schema_payload_has_one_authority_and_canonical_fingerprint() {
     .unwrap_or_else(|error| panic!("schema request: {error}"));
     let right = BuildRequest::new(
         BuildGeneration::new(2),
-        recite_compiler::SnapshotGeneration::new(2),
+        recite_compiler::authoring::SnapshotGeneration::new(2),
         [BuildInput::schema(
             key("schema"),
             BuildInputAuthority::Saved,
@@ -116,29 +116,31 @@ fn schema_payload_has_one_authority_and_canonical_fingerprint() {
     .unwrap_or_else(|error| panic!("schema request: {error}"));
     assert_eq!(
         left.fingerprints().schema(),
-        &recite_core::ProjectSchema::canonical_fingerprint(&recite_core::ProjectSchema::empty_v1())
+        &recite_core::schema::ProjectSchema::canonical_fingerprint(
+            &recite_core::schema::ProjectSchema::empty_v1()
+        )
     );
     assert_eq!(left.fingerprints().schema(), right.fingerprints().schema());
     assert_eq!(left, right);
     let second = BuildInput::schema(
         key("other-schema"),
         BuildInputAuthority::Saved,
-        recite_core::ProjectSchema::empty_v1(),
+        recite_core::schema::ProjectSchema::empty_v1(),
     );
     assert!(matches!(
         BuildRequest::new(
             BuildGeneration::new(3),
-            recite_compiler::SnapshotGeneration::new(3),
+            recite_compiler::authoring::SnapshotGeneration::new(3),
             [
                 BuildInput::schema(
                     key("schema"),
                     BuildInputAuthority::Saved,
-                    recite_core::ProjectSchema::empty_v1()
+                    recite_core::schema::ProjectSchema::empty_v1()
                 ),
                 second
             ]
         ),
-        Err(recite_compiler::BuildRequestError::MultipleSchemaInputs)
+        Err(recite_compiler::authoring::BuildRequestError::MultipleSchemaInputs)
     ));
 }
 
@@ -148,31 +150,32 @@ fn authority_includes_policy_when_payload_bytes_match() {
     let strict = make_request(4, [saved.clone()]);
     let permissive = BuildRequest::new_with_policy(
         BuildGeneration::new(4),
-        recite_compiler::SnapshotGeneration::new(4),
+        recite_compiler::authoring::SnapshotGeneration::new(4),
         [saved],
         BuildInputPolicy::SavedAndOverlays,
     )
     .unwrap_or_else(|error| panic!("policy request: {error}"));
     assert_eq!(strict.fingerprints(), permissive.fingerprints());
     assert_ne!(
-        recite_compiler::BuildRequestIdentity::from_request(&strict),
-        recite_compiler::BuildRequestIdentity::from_request(&permissive)
+        recite_compiler::authoring::BuildRequestIdentity::from_request(&strict),
+        recite_compiler::authoring::BuildRequestIdentity::from_request(&permissive)
     );
-    let fence = recite_compiler::BuildAuthorityFence::new(BuildAuthority::from_request(&strict));
+    let fence =
+        recite_compiler::authoring::BuildAuthorityFence::new(BuildAuthority::from_request(&strict));
     let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
     let mut publisher = FakePublisher::new();
-    let result = recite_compiler::BuildCoordinator::with_fence(fence)
+    let result = recite_compiler::authoring::BuildCoordinator::with_fence(fence)
         .run(
             permissive,
-            &recite_compiler::BuildControl::new(),
+            &recite_compiler::authoring::BuildControl::new(),
             &mut engine,
             &mut publisher,
         )
         .unwrap_or_else(|error| panic!("identity refusal: {error}"));
     assert!(matches!(
         result.publish(),
-        recite_compiler::PublishOutcome::Refused {
-            reason: recite_compiler::PublishRefusal::RequestIdentityMismatch
+        recite_compiler::authoring::PublishOutcome::Refused {
+            reason: recite_compiler::authoring::PublishRefusal::RequestIdentityMismatch
         }
     ));
     assert_eq!(publisher.commit_calls, 0);
@@ -204,7 +207,7 @@ fn reducer_enforces_ready_and_terminal_identity_phases() {
             lifecycle.transition(BuildTransition::CheckFailed {
                 result: run(
                     request.clone(),
-                    &recite_compiler::BuildControl::new(),
+                    &recite_compiler::authoring::BuildControl::new(),
                     &mut FakeEngine::new([]),
                     &mut FakePublisher::new()
                 )
@@ -263,14 +266,14 @@ fn duration_is_nonsemantic_and_results_keep_request_identity() {
     let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
     let result_a = run(
         request.clone(),
-        &recite_compiler::BuildControl::new(),
+        &recite_compiler::authoring::BuildControl::new(),
         &mut FakeEngine::new([candidate("a.recitec", b"a")]),
         &mut FakePublisher::new(),
     )
     .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(1)));
     let result_b = run(
         request,
-        &recite_compiler::BuildControl::new(),
+        &recite_compiler::authoring::BuildControl::new(),
         &mut FakeEngine::new([candidate("a.recitec", b"a")]),
         &mut FakePublisher::new(),
     )
@@ -284,26 +287,29 @@ fn duration_is_nonsemantic_and_results_keep_request_identity() {
 #[test]
 fn freshness_stale_assessment_is_rebuildable() {
     struct StaleCheck;
-    impl recite_compiler::BuildEngine for StaleCheck {
+    impl recite_compiler::authoring::BuildEngine for StaleCheck {
         fn check(
             &mut self,
             request: &BuildRequest,
-            _: &recite_compiler::BuildControl,
-        ) -> recite_compiler::BuildCheck {
-            recite_compiler::BuildCheck::new(
+            _: &recite_compiler::authoring::BuildControl,
+        ) -> recite_compiler::authoring::BuildCheck {
+            recite_compiler::authoring::BuildCheck::new(
                 request,
                 Vec::new(),
-                recite_compiler::FreshnessAssessment::stale(
+                recite_compiler::authoring::FreshnessAssessment::stale(
                     request.fingerprints().clone(),
-                    vec![recite_compiler::StaleReason::Fingerprints],
+                    vec![recite_compiler::authoring::StaleReason::Fingerprints],
                 ),
             )
         }
         fn build(
             &mut self,
             _: &BuildRequest,
-            _: &recite_compiler::BuildControl,
-        ) -> Result<Vec<recite_compiler::BuildCandidate>, recite_compiler::BuildFailure> {
+            _: &recite_compiler::authoring::BuildControl,
+        ) -> Result<
+            Vec<recite_compiler::authoring::BuildCandidate>,
+            recite_compiler::authoring::BuildFailure,
+        > {
             Ok(vec![candidate("a.recitec", b"rebuilt")])
         }
     }
@@ -312,17 +318,17 @@ fn freshness_stale_assessment_is_rebuildable() {
     let mut engine = StaleCheck;
     let result = run(
         request,
-        &recite_compiler::BuildControl::new(),
+        &recite_compiler::authoring::BuildControl::new(),
         &mut engine,
         &mut publisher,
     );
     assert_eq!(
         result.status(),
-        recite_compiler::BuildTerminalStatus::Succeeded
+        recite_compiler::authoring::BuildTerminalStatus::Succeeded
     );
     assert_eq!(
         result.freshness().status(),
-        recite_compiler::FreshnessStatus::Stale
+        recite_compiler::authoring::FreshnessStatus::Stale
     );
     assert_eq!(
         publisher.published.get("a.recitec"),

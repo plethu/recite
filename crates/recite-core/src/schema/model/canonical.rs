@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::compiled::canonical_blake3_fingerprint;
-use crate::{AvailabilityReasonId, ContentFingerprint, EffectMode};
+use crate::{AvailabilityReasonId, ast::EffectMode, compiled::ContentFingerprint};
 
 use super::{
     AvailabilityReasonArgBinding, AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping,

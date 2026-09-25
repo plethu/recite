@@ -1,6 +1,6 @@
 use recite_core::{
     DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, DiagnosticSeverity,
-    contract_for, load_schema_manifest_str,
+    contract_for, schema::load_schema_manifest_str,
 };
 use std::collections::BTreeMap;
 

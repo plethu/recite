@@ -1,8 +1,9 @@
 use std::io::Write;
 
-use recite_core::{CompiledDialogue, EffectId};
+use recite_core::{EffectId, compiled::CompiledDialogue};
 use recite_runtime::{
-    DialogueEffectRequest, DialogueLine, PreviewConditionRequest, PreviewConditionResult,
+    DialogueEffectRequest, DialogueLine,
+    preview::{PreviewConditionRequest, PreviewConditionResult},
 };
 
 use crate::error::CliError;

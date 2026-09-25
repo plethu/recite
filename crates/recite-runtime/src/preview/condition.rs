@@ -1,6 +1,8 @@
 use std::cell::RefCell;
 
-use crate::{ConditionEvaluationError, ConditionValue, DialogueContext, PreviewConditionQuery};
+use crate::{
+    ConditionEvaluationError, ConditionValue, DialogueContext, preview::PreviewConditionQuery,
+};
 
 use super::model::{
     ConditionAnswer, PreviewConditionRequest, PreviewInputRevision, PreviewPromptIdentity,

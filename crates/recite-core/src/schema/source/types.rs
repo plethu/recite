@@ -1,8 +1,9 @@
 use super::{edit::apply_edit, export::export_json, plan::SchemaSourceEditPlan};
 use crate::{
-    AvailabilityReasonDefinition, ConditionDefinition, ContentFingerprint, Diagnostic,
-    EffectDefinition, ProjectSchema, SchemaFingerprint, canonical_schema_fingerprint,
-    canonical_source_fingerprint,
+    Diagnostic, compiled::ContentFingerprint, compiled::SchemaFingerprint,
+    compiled::canonical_source_fingerprint, schema::AvailabilityReasonDefinition,
+    schema::ConditionDefinition, schema::EffectDefinition, schema::ProjectSchema,
+    schema::canonical_schema_fingerprint,
 };
 use toml_edit::DocumentMut;
 

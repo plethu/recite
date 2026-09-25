@@ -4,7 +4,9 @@ use crate::schema::manifest::{
     lower::{ManifestLoadOptions, ManifestSourceFormat, lower_manifest_with_format},
     raw::{Named, RawManifest, RawValue},
 };
-use crate::{Diagnostic, DiagnosticArgumentValue, ProjectSchema, schema::schema_diagnostic};
+use crate::{
+    Diagnostic, DiagnosticArgumentValue, schema::ProjectSchema, schema::schema_diagnostic,
+};
 use toml_edit::{DocumentMut, Item};
 #[rustfmt::skip]
 macro_rules! source_diagnostic {

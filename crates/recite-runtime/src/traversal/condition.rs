@@ -1,4 +1,4 @@
-use recite_core::{CompiledConditionCall, CompiledConditionExpression};
+use recite_core::compiled::{CompiledConditionCall, CompiledConditionExpression};
 
 use crate::DialogueError;
 use crate::context::{ConditionExpectedType, ConditionQuery, ConditionValue, DialogueContext};

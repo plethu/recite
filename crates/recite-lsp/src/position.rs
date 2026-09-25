@@ -1,5 +1,5 @@
 use lsp_types::{Position, Range};
-use recite_compiler::SourceRange;
+use recite_compiler::authoring::SourceRange;
 use recite_core::{SourcePosition, SourceSpan};
 
 pub(crate) fn span_to_range(text: &str, span: &SourceSpan) -> Range {

@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use recite_core::{ProjectManifest, decode_compiled_dialogue_messagepack};
+use recite_core::{compiled::decode_compiled_dialogue_messagepack, project::ProjectManifest};
 use recite_parser::parse;
 
 use super::{

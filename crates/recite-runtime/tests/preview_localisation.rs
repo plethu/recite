@@ -6,9 +6,14 @@ use std::cell::Cell;
 use preview_support::asset;
 use recite_core::{LocaleId, ScalarValue};
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, InterpolationValues, LocaleError, LocaleLookupAttempt,
-    LocaleLookupOutcome, LocaleLookupProvenance, LocaleProvider, PluralResolution, PreviewError,
-    PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, TextDomain,
+    ConditionValue,
+    localisation::{
+        InterpolationValues, LocaleError, LocaleLookupAttempt, LocaleLookupOutcome,
+        LocaleLookupProvenance, LocaleProvider, PluralResolution, TextDomain,
+    },
+    preview::{
+        ConditionAnswer, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
+    },
 };
 
 struct FrenchProvider {
@@ -248,7 +253,7 @@ fn repeated_localized_occurrences_preserve_order_after_restart() {
             .with_interpolation_values(&values),
     );
     preview.dispatch(
-        recite_runtime::PreviewCommand::Restart,
+        recite_runtime::preview::PreviewCommand::Restart,
         PreviewInputs::new(),
     );
     preview.step(

@@ -1,13 +1,13 @@
 use recite_core::{
-    AvailabilityReasonId, ChoiceId, CompiledAssetId, EffectId, LineId, MetadataEntry, ScalarValue,
-    SourcePosition, SourceSpan, Value,
+    AvailabilityReasonId, ChoiceId, EffectId, LineId, MetadataEntry, ScalarValue, SourcePosition,
+    SourceSpan, Value, compiled::CompiledAssetId,
 };
 use recite_runtime::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonOrigin,
     ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue, ChoiceEchoMode, DialogueChoice,
     DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueLine, DialoguePlural,
-    DialoguePluralResolution, EffectAck, PreviewConditionRequestId, PreviewError, PreviewEvent,
-    PreviewOutput,
+    DialoguePluralResolution, EffectAck,
+    preview::{PreviewConditionRequestId, PreviewError, PreviewEvent, PreviewOutput},
 };
 
 #[path = "tests/preview_prompt_evidence/tests.rs"]
@@ -199,24 +199,27 @@ fn preview_output_state_digest_changes_for_projected_fields()
     let default_output = default_preview.step(project.inputs());
     let default_digest = state_digest(&default_output);
 
-    let mut source_only_preview = recite_runtime::PreviewSession::new(
+    let mut source_only_preview = recite_runtime::preview::PreviewSession::new(
         &project.asset,
         None,
-        recite_runtime::PreviewOptions::new(),
+        recite_runtime::preview::PreviewOptions::new(),
     )?;
-    let source_only_output = source_only_preview.step(recite_runtime::PreviewInputs::new());
+    let source_only_output =
+        source_only_preview.step(recite_runtime::preview::PreviewInputs::new());
     assert_ne!(default_digest, state_digest(&source_only_output));
 
-    let mut explicit_block_preview = recite_runtime::PreviewSession::new(
+    let mut explicit_block_preview = recite_runtime::preview::PreviewSession::new(
         &project.asset,
         Some(project.runtime_fixture.first_prompt_block().as_str()),
-        recite_runtime::PreviewOptions::new().with_locale(project.runtime_fixture.locale()),
+        recite_runtime::preview::PreviewOptions::new()
+            .with_locale(project.runtime_fixture.locale()),
     )?;
     let explicit_block_output = explicit_block_preview.step(project.inputs());
     assert_ne!(default_digest, state_digest(&explicit_block_output));
 
-    let mut candidate = project.asset.clone();
-    candidate.header.asset_id = CompiledAssetId::new("replacement-asset")?;
+    let mut payload = project.asset.clone().into_payload();
+    payload.header.asset_id = CompiledAssetId::new("replacement-asset")?;
+    let candidate = recite_core::compiled::CompiledDialogue::prepare(payload)?;
     let restart_output = default_preview.assess_asset(&candidate)?;
     assert_ne!(default_digest, state_digest(&restart_output));
 
@@ -226,7 +229,7 @@ fn preview_output_state_digest_changes_for_projected_fields()
 
     let mut selected_preview = project.at_first_prompt()?;
     let choice = match selected_preview.state().status() {
-        recite_runtime::PreviewStatus::WaitingForChoice { prompt } => prompt
+        recite_runtime::preview::PreviewStatus::WaitingForChoice { prompt } => prompt
             .choices()
             .first()
             .expect("tiny preview prompt has a choice")

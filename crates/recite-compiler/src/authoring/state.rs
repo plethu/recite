@@ -8,9 +8,9 @@ use super::input_state::{
     changed_keys, effective_documents, unique_open, unique_saved, validate_overlay_versions,
 };
 use super::snapshot::{AnalysisDelta, AuthoringSnapshot};
-use crate::ValidationParticipation;
+use crate::validation::ValidationParticipation;
 use crate::validation::incremental::{ProjectFacts, ProjectIndex};
-use recite_core::{Diagnostic, DocumentKey, ProjectSchema};
+use recite_core::{Diagnostic, DocumentKey, schema::ProjectSchema};
 
 /// A monotonic generation identifying one accepted authoring state.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

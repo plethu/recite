@@ -1,4 +1,4 @@
-use recite_core::{DocumentKey, ProjectSchema, SourcePosition, SourceSpan};
+use recite_core::{DocumentKey, SourcePosition, SourceSpan, schema::ProjectSchema};
 
 use super::super::snapshot::{AuthoringSnapshot, DocumentSnapshot};
 use super::context;

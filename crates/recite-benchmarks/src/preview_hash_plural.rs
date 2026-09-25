@@ -23,10 +23,10 @@ fn hash_plural_resolution(hasher: &mut blake3::Hasher, resolution: &DialoguePlur
         tag(
             hasher,
             match attempt.outcome {
-                recite_runtime::PluralResolutionOutcome::MissingPluralForms => 0,
-                recite_runtime::PluralResolutionOutcome::MissingEntry => 1,
-                recite_runtime::PluralResolutionOutcome::MissingTranslation => 2,
-                recite_runtime::PluralResolutionOutcome::Matched => 3,
+                recite_runtime::localisation::PluralResolutionOutcome::MissingPluralForms => 0,
+                recite_runtime::localisation::PluralResolutionOutcome::MissingEntry => 1,
+                recite_runtime::localisation::PluralResolutionOutcome::MissingTranslation => 2,
+                recite_runtime::localisation::PluralResolutionOutcome::Matched => 3,
             },
         );
     }

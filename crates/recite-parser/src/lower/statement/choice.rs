@@ -1,6 +1,9 @@
 use recite_core::{
-    AvailabilityReasonId, Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement,
-    ChoiceTarget, SourceId, SourceRecoveryClass, SourceText, Statement,
+    AvailabilityReasonId, SourceId, SourceRecoveryClass,
+    ast::{
+        Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement, ChoiceTarget,
+        SourceText, Statement,
+    },
 };
 
 use crate::condition::parse_condition_expression;

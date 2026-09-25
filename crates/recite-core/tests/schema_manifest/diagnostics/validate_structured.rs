@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use recite_core::{DiagnosticArgumentValue, SchemaLoadReport, load_schema_manifest_str};
+use recite_core::{
+    DiagnosticArgumentValue,
+    schema::{SchemaLoadReport, load_schema_manifest_str},
+};
 
 fn assert_structured_diagnostic(
     report: &SchemaLoadReport,

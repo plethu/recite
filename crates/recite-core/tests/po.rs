@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_core::{PoCommentKind, PoDiagnosticKind, PoDocument, PoEdit, PoEntryField};
+use recite_core::po::{PoCommentKind, PoDiagnosticKind, PoDocument, PoEdit, PoEntryField};
 
 #[path = "po/document_operations.rs"]
 mod document_operations;
@@ -111,7 +111,7 @@ fn variants_and_plural_previous_values_are_structured_edits() {
     let mut document = PoDocument::parse(source).expect("plural PO parses");
     assert_eq!(
         document.entries()[1].previous()[1].field().to_owned(),
-        recite_core::PoPreviousField::PluralTranslation(0)
+        recite_core::po::PoPreviousField::PluralTranslation(0)
     );
     document
         .apply_edit(PoEdit::variant(document.entries()[1].id(), "casual"))
@@ -242,11 +242,11 @@ fn active_plural_entries_support_two_three_and_more_locale_arms() {
 #[test]
 fn plural_evaluator_handles_common_locale_rules_with_short_circuiting() {
     let rule = "nplurals=3; plural=(n == 0 ? 0 : n == 1 ? 1 : 2);";
-    assert_eq!(recite_core::evaluate_plural_form(rule, 0), Ok(0));
-    assert_eq!(recite_core::evaluate_plural_form(rule, 1), Ok(1));
-    assert_eq!(recite_core::evaluate_plural_form(rule, 8), Ok(2));
+    assert_eq!(recite_core::po::evaluate_plural_form(rule, 0), Ok(0));
+    assert_eq!(recite_core::po::evaluate_plural_form(rule, 1), Ok(1));
+    assert_eq!(recite_core::po::evaluate_plural_form(rule, 8), Ok(2));
     assert_eq!(
-        recite_core::evaluate_plural_form("nplurals=2; plural=(n == 0 || 1 / 0);", 0),
+        recite_core::po::evaluate_plural_form("nplurals=2; plural=(n == 0 || 1 / 0);", 0),
         Ok(1)
     );
 }
@@ -254,24 +254,24 @@ fn plural_evaluator_handles_common_locale_rules_with_short_circuiting() {
 #[test]
 fn plural_evaluator_rejects_negative_count_and_invalid_arm() {
     assert!(matches!(
-        recite_core::evaluate_plural_form("nplurals=2; plural=(n == 1 ? 3 : 1);", 1),
-        Err(recite_core::PluralRuleError::ArmOutOfRange { .. })
+        recite_core::po::evaluate_plural_form("nplurals=2; plural=(n == 1 ? 3 : 1);", 1),
+        Err(recite_core::po::PluralRuleError::ArmOutOfRange { .. })
     ));
     assert!(matches!(
-        recite_core::evaluate_plural_form("nplurals=2; plural=(n != 1);", -1),
-        Err(recite_core::PluralRuleError::NegativeCount)
+        recite_core::po::evaluate_plural_form("nplurals=2; plural=(n != 1);", -1),
+        Err(recite_core::po::PluralRuleError::NegativeCount)
     ));
 }
 
 #[test]
 fn plural_evaluator_rejects_identifier_prefixes_as_numbers() {
     assert_eq!(
-        recite_core::evaluate_plural_form("nplurals=2; plural=n1;", 1),
-        Err(recite_core::PluralRuleError::InvalidHeader)
+        recite_core::po::evaluate_plural_form("nplurals=2; plural=n1;", 1),
+        Err(recite_core::po::PluralRuleError::InvalidHeader)
     );
     assert_eq!(
-        recite_core::evaluate_plural_form("nplurals=2; plural= n1;", 1),
-        Err(recite_core::PluralRuleError::InvalidHeader)
+        recite_core::po::evaluate_plural_form("nplurals=2; plural= n1;", 1),
+        Err(recite_core::po::PluralRuleError::InvalidHeader)
     );
 }
 

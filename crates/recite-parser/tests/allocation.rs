@@ -1,4 +1,4 @@
-use recite_core::Statement;
+use recite_core::ast::Statement;
 use recite_parser::parse;
 
 #[test]

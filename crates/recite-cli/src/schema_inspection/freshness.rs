@@ -1,5 +1,7 @@
-use recite_compiler::SchemaFreshness;
-use recite_core::{ContentFingerprintFreshness, ProducerFreshness, SchemaProducerFreshness};
+use recite_compiler::authoring::SchemaFreshness;
+use recite_core::schema::{
+    ContentFingerprintFreshness, ProducerFreshness, SchemaProducerFreshness,
+};
 
 use super::fingerprints::producer_fingerprint_projection;
 use super::model::{FreshnessChannelsProjection, FreshnessProjection};
@@ -31,10 +33,10 @@ pub(super) fn freshness_json(freshness: &SchemaFreshness) -> FreshnessProjection
         SchemaFreshness::Unavailable { reason } => FreshnessProjection {
             status: "unavailable".to_owned(),
             reason: Some(match reason {
-                recite_compiler::SchemaFreshnessUnavailableReason::NoComparisonSnapshot => {
+                recite_compiler::authoring::SchemaFreshnessUnavailableReason::NoComparisonSnapshot => {
                     "no_comparison_snapshot".to_owned()
                 }
-                recite_compiler::SchemaFreshnessUnavailableReason::NoProducerMetadata => {
+                recite_compiler::authoring::SchemaFreshnessUnavailableReason::NoProducerMetadata => {
                     "no_producer_metadata".to_owned()
                 }
                 _ => "unknown".to_owned(),

@@ -1,7 +1,9 @@
 use recite_core::{
-    COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, CompiledAssetDecodeError,
-    CompiledDialogue, Diagnostic, DiagnosticArgumentValue, SourceSpan,
-    decode_compiled_dialogue_messagepack,
+    Diagnostic, DiagnosticArgumentValue, SourceSpan,
+    compiled::{
+        COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
+        CompiledAssetDecodeError, CompiledDialogue, decode_compiled_dialogue_messagepack,
+    },
     project::{MALFORMED_COMPILED_ASSET, STALE_COMPILER_COMPATIBILITY, UNSUPPORTED_ASSET_VERSION},
 };
 

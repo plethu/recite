@@ -40,7 +40,7 @@ impl ReciteDialogueCatalogResource {
         }
         let result = self.catalog.insert_for_domain(
             &locale.to_string(),
-            recite_runtime::TextDomain::Line,
+            recite_runtime::localisation::TextDomain::Line,
             &id.to_string(),
             &source_text.to_string(),
             translation.to_string(),
@@ -66,7 +66,7 @@ impl ReciteDialogueCatalogResource {
         }
         let result = self.catalog.insert_for_domain(
             &locale.to_string(),
-            recite_runtime::TextDomain::Choice,
+            recite_runtime::localisation::TextDomain::Choice,
             &id.to_string(),
             &source_text.to_string(),
             translation.to_string(),
@@ -92,7 +92,7 @@ impl ReciteDialogueCatalogResource {
         }
         let result = self.catalog.insert_for_domain(
             &locale.to_string(),
-            recite_runtime::TextDomain::AvailabilityReason,
+            recite_runtime::localisation::TextDomain::AvailabilityReason,
             &id.to_string(),
             &source_text.to_string(),
             translation.to_string(),
@@ -118,7 +118,7 @@ impl ReciteDialogueCatalogResource {
         }
         let result = self.catalog.insert_for_domain(
             &locale.to_string(),
-            recite_runtime::TextDomain::PresentationLabel,
+            recite_runtime::localisation::TextDomain::PresentationLabel,
             &id.to_string(),
             &source_text.to_string(),
             translation.to_string(),
@@ -235,10 +235,10 @@ impl ReciteDialogueCatalogResource {
                     let source_text = persisted_field_string(&record, "source_text")?;
                     let translation = persisted_field_string(&record, "translation")?;
                     let domain = match persisted_field_i64(&record, "domain")? {
-                        0 => recite_runtime::TextDomain::Line,
-                        1 => recite_runtime::TextDomain::Choice,
-                        2 => recite_runtime::TextDomain::AvailabilityReason,
-                        3 => recite_runtime::TextDomain::PresentationLabel,
+                        0 => recite_runtime::localisation::TextDomain::Line,
+                        1 => recite_runtime::localisation::TextDomain::Choice,
+                        2 => recite_runtime::localisation::TextDomain::AvailabilityReason,
+                        3 => recite_runtime::localisation::TextDomain::PresentationLabel,
                         _ => {
                             return Err(AdapterError::with_detail(
                                 AdapterErrorKind::Localisation,

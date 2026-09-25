@@ -1,4 +1,4 @@
-use recite_compiler::DocumentLayer;
+use recite_compiler::authoring::DocumentLayer;
 use recite_core::SourceId;
 use serde::Serialize;
 
@@ -54,7 +54,7 @@ impl LspMemoryReport {
                 .stable_ids()
                 .iter()
                 .filter(|stable| {
-                    stable.kind() == recite_compiler::StableIdKind::Line
+                    stable.kind() == recite_compiler::authoring::StableIdKind::Line
                         && matches!(stable.source_id(), SourceId::Frozen { .. })
                 })
                 .count();
@@ -62,7 +62,7 @@ impl LspMemoryReport {
                 .stable_ids()
                 .iter()
                 .filter(|stable| {
-                    stable.kind() == recite_compiler::StableIdKind::Choice
+                    stable.kind() == recite_compiler::authoring::StableIdKind::Choice
                         && matches!(stable.source_id(), SourceId::Frozen { .. })
                 })
                 .count();

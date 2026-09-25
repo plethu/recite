@@ -292,7 +292,7 @@ fn start_localisation_creates_a_catalogue_and_returns_to_the_same_beat()
     assert!(has_text(&test, "Replies"));
     assert!(has_text(&test, "fr-CA"));
     assert!(!has_text(&test, "catalogue location"));
-    let document = recite_core::PoDocument::read(&path)?;
+    let document = recite_core::po::PoDocument::read(&path)?;
     assert!(document.entries().iter().any(|e| e.context().is_some()));
     assert!(
         document
@@ -400,7 +400,7 @@ fn source_refresh_previews_cancels_and_saves_without_losing_translation()
     }
     support::click(&mut test, "Update catalogue")?;
     assert!(has_text(&test, "Catalogue refreshed."));
-    let saved = recite_core::PoDocument::read(&path)?;
+    let saved = recite_core::po::PoDocument::read(&path)?;
     let translated = saved
         .entries()
         .iter()

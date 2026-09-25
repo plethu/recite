@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildControl, BuildResult, BuildResultFailure, BuildTelemetry, BuildTerminalStatus,
     FreshnessAssessment, FreshnessFailureReason, FreshnessFinalization, FreshnessStatus,
     PublishOutcome, RecoveryNeeded,
@@ -84,7 +84,7 @@ where
     let discovery = match discover_project(&state.project_root) {
         Ok(discovery) => discovery,
         Err(error) => {
-            return match super::preparation::classify_discovery_error(error) {
+            return match recite_build::classify_discovery_error(error) {
                 Ok(ProjectBuildPreparation::Rejected { diagnostics }) => {
                     state.set_preparation_diagnostics(diagnostics.clone());
                     report_diagnostics(stderr, messages, diagnostics.iter())?;
@@ -97,16 +97,20 @@ where
                 Ok(ProjectBuildPreparation::Ready(_)) => Err(CliError::Watch {
                     message: "discovery error classification returned a ready request".to_owned(),
                 }),
+                Ok(_) => Err(CliError::Watch {
+                    message: "discovery error classification returned an unknown outcome"
+                        .to_owned(),
+                }),
                 Err(error) => Err(map_preparation_error(error)),
             };
         }
     };
     state.update_from_discovery(&discovery);
     state.set_preparation_inputs(discovery_input_keys(&discovery));
-    let preparation = super::preparation::prepare_discovered(
+    let preparation = recite_build::prepare_discovered(
         discovery,
         generation,
-        recite_compiler::SnapshotGeneration::initial(),
+        recite_compiler::authoring::SnapshotGeneration::initial(),
     )
     .map_err(map_preparation_error)?;
     let request = match preparation {
@@ -116,6 +120,11 @@ where
             report_diagnostics(stderr, messages, diagnostics.iter())?;
             return Ok(BuildStatus::Diagnostics {
                 telemetry: BuildTelemetry::from_duration(clock().saturating_sub(started_at)),
+            });
+        }
+        _ => {
+            return Err(CliError::Watch {
+                message: "project preparation returned an unknown outcome".to_owned(),
             });
         }
     };
@@ -236,7 +245,7 @@ fn discovery_input_keys(discovery: &recite_config::ProjectDiscoveryReport) -> Ve
         .chain(std::iter::once(super::PROJECT_MANIFEST_FILE.to_owned()))
         .collect::<Vec<_>>();
     if let Some(schema) = manifest.project.schema.as_deref()
-        && let Ok(key) = super::preparation::schema_document_key(
+        && let Ok(key) = recite_build::schema_document_key(
             project_root,
             &resolve_project_path(project_root, schema),
         )
@@ -274,7 +283,7 @@ pub(super) fn status_without_freshness(
     ) || matches!(
         result.publish(),
         PublishOutcome::NotAttempted {
-            reason: recite_compiler::PublishNotAttemptedReason::BuildFailed
+            reason: recite_compiler::authoring::PublishNotAttemptedReason::BuildFailed
         }
     ) && result
         .diagnostics()

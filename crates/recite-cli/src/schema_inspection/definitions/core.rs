@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{
+use recite_core::schema::{
     AvailabilityReasonArgBinding, ConditionReturnType, MetadataContextSelector,
     MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy, SchemaLiteralValue,
     SchemaTypeDefinition, SchemaTypeRef,
@@ -19,7 +19,7 @@ pub(crate) fn json_type_definition(definition: &SchemaTypeDefinition) -> serde_j
 }
 
 pub(crate) fn json_registry_definition(
-    definition: &recite_core::RegistryDefinition,
+    definition: &recite_core::schema::RegistryDefinition,
 ) -> serde_json::Value {
     serde_json::json!({
         "values": definition.values.iter().collect::<Vec<_>>(),
@@ -30,7 +30,7 @@ pub(crate) fn json_registry_definition(
 }
 
 pub(crate) fn json_condition_definition(
-    definition: &recite_core::ConditionDefinition,
+    definition: &recite_core::schema::ConditionDefinition,
 ) -> serde_json::Value {
     serde_json::json!({
         "params": definition.params.iter().map(json_parameter).collect::<Vec<_>>(),
@@ -50,7 +50,7 @@ pub(crate) fn json_condition_return(value: &ConditionReturnType) -> String {
 }
 
 pub(crate) fn json_availability_reason_definition(
-    definition: &recite_core::AvailabilityReasonDefinition,
+    definition: &recite_core::schema::AvailabilityReasonDefinition,
 ) -> serde_json::Value {
     serde_json::json!({
         "template": definition.template,
@@ -60,7 +60,7 @@ pub(crate) fn json_availability_reason_definition(
 }
 
 pub(crate) fn json_effect_definition(
-    definition: &recite_core::EffectDefinition,
+    definition: &recite_core::schema::EffectDefinition,
 ) -> serde_json::Value {
     serde_json::json!({
         "modes": definition.modes.iter().map(effect_mode).collect::<Vec<_>>(),
@@ -68,11 +68,11 @@ pub(crate) fn json_effect_definition(
     })
 }
 
-pub(crate) fn effect_mode(mode: &recite_core::EffectMode) -> &'static str {
+pub(crate) fn effect_mode(mode: &recite_core::ast::EffectMode) -> &'static str {
     match mode {
-        recite_core::EffectMode::Deferred => "deferred",
-        recite_core::EffectMode::Immediate => "immediate",
-        recite_core::EffectMode::Blocking => "blocking",
+        recite_core::ast::EffectMode::Deferred => "deferred",
+        recite_core::ast::EffectMode::Immediate => "immediate",
+        recite_core::ast::EffectMode::Blocking => "blocking",
     }
 }
 
@@ -118,7 +118,7 @@ pub(crate) fn json_missing_context(value: &MissingMetadataContextPolicy) -> serd
 }
 
 pub(crate) fn json_metadata_definition(
-    definition: &recite_core::MetadataDefinition,
+    definition: &recite_core::schema::MetadataDefinition,
 ) -> serde_json::Value {
     serde_json::json!({
         "targets": definition.targets.iter().map(metadata_target).collect::<Vec<_>>(),
@@ -137,7 +137,9 @@ pub(crate) fn metadata_target(value: &MetadataTarget) -> &'static str {
     }
 }
 
-pub(crate) fn json_parameter(value: &recite_core::ParameterDefinition) -> serde_json::Value {
+pub(crate) fn json_parameter(
+    value: &recite_core::schema::ParameterDefinition,
+) -> serde_json::Value {
     serde_json::json!({ "name": value.name, "type": json_type_ref(&value.type_ref) })
 }
 

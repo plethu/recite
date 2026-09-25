@@ -6,18 +6,22 @@ use std::fs;
 use std::path::Path;
 
 use recite_compiler::{
-    CompileInput, CompileOptions, compile_inputs_with_schema, extract_pot_with_schema,
+    compile::{CompileInput, CompileOptions, compile_inputs_with_schema},
+    pot::extract_pot_with_schema,
 };
 use recite_core::{
-    CompiledAssetId, CompilerVersion, LocaleId, SchemaFingerprint, SourceMapId,
-    load_schema_manifest_str,
+    LocaleId,
+    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
+    schema::load_schema_manifest_str,
 };
 use recite_fixturegen::{FixtureConfigSet, FixtureProfile, SummarySet, generate_tiny_in_memory};
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext, DialogueEvent,
-    DialogueSessionOptions, EffectAck, LocaleProvider, LocaleResolution, TextDomain,
-    acknowledge_effect, choose_with, decode_session_messagepack, encode_session_messagepack,
-    next_with, start_scene_with_options,
+    DialogueSessionOptions, EffectAck, LocaleResolution, acknowledge_effect, choose_with,
+    localisation::{LocaleProvider, TextDomain},
+    next_with,
+    snapshot::{decode_session_messagepack, encode_session_messagepack},
+    start_scene_with_options,
 };
 
 fn tiny_profile(seed: u64) -> FixtureProfile {
@@ -178,7 +182,7 @@ fn generated_tiny_fixture_validates_compiles_extracts_and_traverses() {
 }
 
 struct GeneratedTraversal<'a> {
-    asset: &'a recite_core::CompiledDialogue,
+    asset: &'a recite_core::compiled::CompiledDialogue,
     session: &'a mut recite_runtime::DialogueSession,
     context: &'a dyn DialogueContext,
     locale_provider: &'a dyn LocaleProvider,
@@ -189,7 +193,7 @@ struct GeneratedTraversal<'a> {
 
 impl<'a> GeneratedTraversal<'a> {
     fn new(
-        asset: &'a recite_core::CompiledDialogue,
+        asset: &'a recite_core::compiled::CompiledDialogue,
         session: &'a mut recite_runtime::DialogueSession,
         context: &'a dyn DialogueContext,
         locale_provider: &'a dyn LocaleProvider,
@@ -334,7 +338,7 @@ impl LocaleProvider for GeneratedCatalog {
         domain: TextDomain,
         _locale: &LocaleId,
         _variant: Option<&str>,
-    ) -> Result<Option<String>, recite_runtime::LocaleError> {
+    ) -> Result<Option<String>, recite_runtime::localisation::LocaleError> {
         Ok(self
             .entries
             .get(&(id.to_owned(), source_text.to_owned(), domain))
@@ -350,8 +354,11 @@ impl LocaleProvider for GeneratedCatalog {
         _domain: TextDomain,
         _locale: &LocaleId,
         _variant: Option<&str>,
-    ) -> Result<recite_runtime::PluralResolution, recite_runtime::LocaleError> {
-        Ok(recite_runtime::PluralResolution {
+    ) -> Result<
+        recite_runtime::localisation::PluralResolution,
+        recite_runtime::localisation::LocaleError,
+    > {
+        Ok(recite_runtime::localisation::PluralResolution {
             template: None,
             selected_arm: None,
             matched_locale: None,

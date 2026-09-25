@@ -1,10 +1,13 @@
 #![cfg(test)]
 
-use recite_compiler::{
-    CatalogCoverageSummary, CatalogIdentity, CatalogInput, CatalogVariant, PotDocument, PotEntry,
-    TranslationStatus,
+use recite_compiler::authoring::{
+    CatalogCoverageSummary, CatalogIdentity, CatalogInput, CatalogVariant, TranslationStatus,
 };
-use recite_core::{LocaleId, PoDocument};
+use recite_core::{
+    LocaleId,
+    po::PoDocument,
+    po::{PotDocument, PotEntry},
+};
 
 fn locale(value: &str) -> LocaleId {
     LocaleId::new(value).expect("test locale")
@@ -54,7 +57,7 @@ fn checked_in_locale_fallback_catalogue_resolves_deterministically() {
     let summary = CatalogCoverageSummary::build(
         &expected,
         [catalog.clone()],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr-FR"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr-FR"))),
     )
     .expect("checked-in fallback catalogue summary");
 
@@ -85,7 +88,7 @@ fn complete_catalogue_exposes_identity_fingerprint_and_counts() {
     let summary = CatalogCoverageSummary::build(
         &expected(),
         [catalog.clone()],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr-FR"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr-FR"))),
     )
     .expect("summary");
 
@@ -135,7 +138,7 @@ fn missing_fuzzy_obsolete_and_incomplete_plural_remain_visible() {
     let summary = CatalogCoverageSummary::build(
         &expected(),
         [input("fr", "fr", source)],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
     )
     .expect("summary");
     let coverage = summary.catalogs()[0].coverage();
@@ -177,7 +180,7 @@ fn variants_contexts_and_explicit_fallback_are_deterministic() {
         "msgid \"Hello\"\n",
         "msgstr \"Hallo\"\n",
     );
-    let policy = recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr-CA")))
+    let policy = recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr-CA")))
         .with_default_locale(locale("fr"))
         .with_fallback_locale(locale("de"))
         .with_variants([
@@ -218,7 +221,7 @@ fn variants_contexts_and_explicit_fallback_are_deterministic() {
     let reordered = CatalogCoverageSummary::build(
         &expected(),
         [input("fr", "fr", variant), input("de", "de", fallback)],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr-CA")))
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr-CA")))
             .with_default_locale(locale("fr"))
             .with_fallback_locale(locale("de"))
             .with_variants([
@@ -236,7 +239,7 @@ fn source_only_policy_has_no_candidates_and_uses_source_fallback() {
     let summary = CatalogCoverageSummary::build(
         &expected(),
         std::iter::empty(),
-        recite_compiler::CatalogResolutionPolicy::source_only(),
+        recite_compiler::authoring::CatalogResolutionPolicy::source_only(),
     )
     .expect("source-only summary");
     assert!(summary.resolution().is_source_only());
@@ -264,7 +267,7 @@ fn split_headerless_catalogues_share_an_explicit_locale() {
     let summary = CatalogCoverageSummary::build(
         &expected(),
         [first.clone(), second.clone()],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
     )
     .expect("split headerless catalogues are valid");
     assert_eq!(summary.catalogs().len(), 2);
@@ -288,7 +291,7 @@ fn split_headerless_catalogues_share_an_explicit_locale() {
     let reordered = CatalogCoverageSummary::build(
         &expected(),
         [second, first],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
     )
     .expect("reordered split catalogues are valid");
     assert_eq!(summary, reordered);
@@ -310,41 +313,43 @@ fn conflicting_catalogue_records_and_candidates_are_rejected() {
                 "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
             ),
         ],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
     );
     assert!(matches!(
         conflicting_catalogues,
-        Err(recite_compiler::CatalogSummaryError::CatalogEntryConflict {
+        Err(recite_compiler::authoring::CatalogSummaryError::CatalogEntryConflict {
             context,
             source_text,
             ..
         }) if context == "11111111111111111111" && source_text == "Hello"
     ));
 
-    let duplicate_variants = recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr")));
+    let duplicate_variants =
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr")));
     assert!(matches!(
         duplicate_variants.with_variants([CatalogVariant::Base, CatalogVariant::Base]),
-        Err(recite_compiler::CatalogSummaryError::DuplicateCandidate { .. })
+        Err(recite_compiler::authoring::CatalogSummaryError::DuplicateCandidate { .. })
     ));
     assert!(matches!(
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))).with_variants([]),
-        Err(recite_compiler::CatalogSummaryError::EmptyVariantCandidates)
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr")))
+            .with_variants([]),
+        Err(recite_compiler::authoring::CatalogSummaryError::EmptyVariantCandidates)
     ));
 
     let fallback_cycle = CatalogCoverageSummary::build(
         &expected(),
         std::iter::empty(),
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr")))
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr")))
             .with_fallback_locale(locale("fr")),
     );
     assert!(matches!(
         fallback_cycle,
-        Err(recite_compiler::CatalogSummaryError::FallbackCycle { .. })
+        Err(recite_compiler::authoring::CatalogSummaryError::FallbackCycle { .. })
     ));
 
     assert!(matches!(
         CatalogIdentity::new(" ", locale("fr")),
-        Err(recite_compiler::CatalogSummaryError::EmptyCatalogIdentity)
+        Err(recite_compiler::authoring::CatalogSummaryError::EmptyCatalogIdentity)
     ));
 }
 
@@ -357,7 +362,7 @@ fn private_use_catalogue_identity_and_welsh_parent_are_supported() {
         let summary = CatalogCoverageSummary::build(
             &expected(),
             catalogues,
-            recite_compiler::CatalogResolutionPolicy::new(Some(locale("cy-x-cofi"))),
+            recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("cy-x-cofi"))),
         )
         .expect("private-use locale summary");
         assert_eq!(

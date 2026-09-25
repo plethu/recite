@@ -1,5 +1,5 @@
 use recite_core::LocaleId;
-use recite_runtime::{
+use recite_runtime::localisation::{
     LocaleError, LocaleProvider, PluralResolution, PluralResolutionAttempt,
     PluralResolutionOutcome, TextDomain,
 };
@@ -55,7 +55,7 @@ impl LocaleProvider for ReciteDialogueCatalog {
                     ));
                     continue;
                 };
-                let arm = recite_core::evaluate_plural_form(header, count)
+                let arm = recite_core::po::evaluate_plural_form(header, count)
                     .map_err(|error| LocaleError::new(error.to_string()))?;
                 let Some(entry) = self.plural_entry(
                     &candidate_locale,
@@ -120,7 +120,7 @@ impl LocaleProvider for ReciteDialogueCatalog {
         self.plural_forms
             .get(locale)
             .map(|header| {
-                recite_core::validate_plural_rule(header)
+                recite_core::po::validate_plural_rule(header)
                     .map(Some)
                     .map_err(|error| LocaleError::new(error.to_string()))
             })

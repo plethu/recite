@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString, c_char, c_void};
 
 use recite_core::LocaleId;
-use recite_runtime::{
+use recite_runtime::localisation::{
     LocaleError, LocaleProvider, PluralResolution, PluralResolutionAttempt, TextDomain,
 };
 

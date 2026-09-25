@@ -1,4 +1,4 @@
-use recite_compiler::{BuildResultFailure, BuildTerminalStatus, PublishOutcome};
+use recite_compiler::authoring::{BuildResultFailure, BuildTerminalStatus, PublishOutcome};
 use recite_ui::{UiArg, UiArgs};
 
 use super::super::ProjectBuildRecovery;
@@ -168,7 +168,7 @@ fn format_recovery_summary(
                 [
                     (
                         "marker",
-                        super::super::recovery::encode_marker_path(record.marker()),
+                        super::super::marker_encoding::encode_marker_path(record.marker()),
                     ),
                     ("reason", format_recovery_reason(messages, record.reason())),
                     ("detail", format_recovery_detail(messages, record.detail())),
@@ -197,7 +197,7 @@ fn format_status(messages: &crate::i18n::Messages, status: BuildTerminalStatus) 
 
 fn format_targets(
     messages: &crate::i18n::Messages,
-    targets: &[recite_compiler::BuildTarget],
+    targets: &[recite_compiler::authoring::BuildTarget],
 ) -> String {
     if targets.is_empty() {
         return messages.text(crate::i18n::MsgId::WatchBuildRecoveryTargetsEmpty);

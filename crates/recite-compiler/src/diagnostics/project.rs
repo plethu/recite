@@ -1,4 +1,7 @@
-use recite_core::{Block, BlockId, BlockReference, SourceFile, SourceSpan};
+use recite_core::{
+    BlockId, SourceSpan,
+    ast::{Block, BlockReference, SourceFile},
+};
 
 use super::{compiler_diagnostic, diagnostic_contract, related_presentation, string_argument};
 

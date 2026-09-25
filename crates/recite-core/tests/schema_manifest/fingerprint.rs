@@ -1,18 +1,24 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, AvailabilityReasonId,
-    BLAKE3_DIGEST_LEN, ConditionAvailabilityReasonMapping, ConditionDefinition,
-    ConditionReturnType, ContextualMetadataDomain, EffectDefinition, EffectMode,
-    EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition, MetadataContextSelector,
-    MetadataDefinition, MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy,
-    ParameterDefinition, PresentationAffordanceFieldDefinition, PresentationAffordanceFieldSource,
-    PresentationAffordanceOutputDefinition, PresentationLabelArgDefinition,
-    PresentationLabelDefinition, ProducerOrigin, ProjectSchema, ProjectionInput,
-    ProjectionInputRef, ProjectionOutputTarget, ProjectionQueryDefinition,
-    ProjectionQueryFunctionDefinition, RegistryDefinition, SchemaFingerprint, SchemaLiteralValue,
-    SchemaPresentationProjectorDefinition, SchemaProjectionInputSource, SchemaProjectionSelector,
-    SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint,
+    AvailabilityReasonId,
+    ast::EffectMode,
+    compiled::{BLAKE3_DIGEST_LEN, SchemaFingerprint},
+    schema::{
+        AvailabilityReasonArgBinding, AvailabilityReasonDefinition,
+        ConditionAvailabilityReasonMapping, ConditionDefinition, ConditionReturnType,
+        ContextualMetadataDomain, EffectDefinition, EnumTypeDefinition, FlatMetadataDomain,
+        MarkupDefinition, MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition,
+        MetadataTarget, MissingMetadataContextPolicy, ParameterDefinition,
+        PresentationAffordanceFieldDefinition, PresentationAffordanceFieldSource,
+        PresentationAffordanceOutputDefinition, PresentationLabelArgDefinition,
+        PresentationLabelDefinition, ProducerOrigin, ProjectSchema, ProjectionInput,
+        ProjectionInputRef, ProjectionOutputTarget, ProjectionQueryDefinition,
+        ProjectionQueryFunctionDefinition, RegistryDefinition, SchemaLiteralValue,
+        SchemaPresentationProjectorDefinition, SchemaProjectionInputSource,
+        SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+        canonical_schema_fingerprint,
+    },
 };
 
 #[test]

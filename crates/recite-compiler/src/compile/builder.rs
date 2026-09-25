@@ -1,14 +1,17 @@
 use std::collections::BTreeMap;
 
 use recite_core::{
-    AvailabilityReasonArgBinding, BlockIndex, Choice, CompiledAssetHeader,
-    CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
-    CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice,
-    CompiledConditionAvailabilityReason, CompiledDialogue, CompiledDialoguePayload, CompiledEffect,
-    CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile,
-    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch,
-    Line, ProjectSchema, ScalarValue, SchemaLiteralValue, SourceFileIndex, SpeakerIndex,
-    canonical_source_fingerprint,
+    ScalarValue,
+    ast::{Choice, DivertTarget, Effect, IfBranch, Line},
+    compiled::{
+        BlockIndex, CompiledAssetHeader, CompiledAvailabilityReason,
+        CompiledAvailabilityReasonArgBinding, CompiledAvailabilityReasonArgValue, CompiledBlock,
+        CompiledChoice, CompiledConditionAvailabilityReason, CompiledDialogue,
+        CompiledDialoguePayload, CompiledEffect, CompiledLine, CompiledMatchArm,
+        CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry, CompiledSpeaker,
+        CompiledStatement, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
+    },
+    schema::{AvailabilityReasonArgBinding, ProjectSchema, SchemaLiteralValue},
 };
 
 use super::CompileError;
@@ -40,7 +43,7 @@ enum StatementPlan<'a> {
     StandalonePrompt(Vec<&'a Choice>),
     Divert(&'a DivertTarget),
     If(&'a IfBranch),
-    Match(&'a recite_core::MatchBranch),
+    Match(&'a recite_core::ast::MatchBranch),
     Effect(&'a Effect),
 }
 
@@ -267,7 +270,7 @@ impl<'a> AssetBuilder<'a> {
     fn compile_block(
         &mut self,
         source_file: SourceFileIndex,
-        block: &recite_core::Block,
+        block: &recite_core::ast::Block,
     ) -> Result<(), CompileError> {
         let metadata = self.compile_metadata(&block.metadata)?;
         let default_speaker = block
@@ -306,7 +309,7 @@ impl<'a> AssetBuilder<'a> {
 
 fn compiled_reason_arg_value(
     value: &AvailabilityReasonArgBinding,
-    params: &[recite_core::ParameterDefinition],
+    params: &[recite_core::schema::ParameterDefinition],
 ) -> Result<CompiledAvailabilityReasonArgValue, CompileError> {
     match value {
         AvailabilityReasonArgBinding::ConditionParam(name) => {

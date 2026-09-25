@@ -1,4 +1,4 @@
-use recite_compiler::{
+use recite_compiler::authoring::{
     ProducerActionDescriptor, ProducerActionEvidence, ProducerActionOperation,
     ProducerRetryGuidance, SchemaAction, SchemaCapability,
 };
@@ -23,10 +23,10 @@ pub(super) fn capability_json(capability: &SchemaCapability) -> CapabilityProjec
             SchemaAction::Unavailable { reason } => {
                 actions.push("unavailable");
                 unavailable_reasons.push(match reason {
-                    recite_compiler::SchemaCapabilityUnavailableReason::UnknownSourceOwner => {
+                    recite_compiler::authoring::SchemaCapabilityUnavailableReason::UnknownSourceOwner => {
                         "unknown_source_owner"
                     }
-                    recite_compiler::SchemaCapabilityUnavailableReason::ProducerCapabilityUnavailable => {
+                    recite_compiler::authoring::SchemaCapabilityUnavailableReason::ProducerCapabilityUnavailable => {
                         "producer_capability_unavailable"
                     }
                     _ => "unknown",

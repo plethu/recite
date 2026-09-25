@@ -7,7 +7,7 @@ const UNBALANCED_MARKUP_TAG: DiagnosticCode = DiagnosticCode::new_static("RECITE
 const MISSING_MARKUP_CLOSING_TAG: DiagnosticCode = DiagnosticCode::new_static("RECITE_VALIDATE024");
 const INVALID_MARKUP_NESTING: DiagnosticCode = DiagnosticCode::new_static("RECITE_VALIDATE025");
 
-pub(crate) use recite_core::MarkupUnbalancedKind as UnbalancedMarkupKind;
+pub(crate) use recite_core::markup::MarkupUnbalancedKind as UnbalancedMarkupKind;
 
 pub(crate) fn unknown_markup_tag(tag: &str, span: SourceSpan) -> Diagnostic {
     compiler_diagnostic(

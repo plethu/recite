@@ -59,8 +59,8 @@ test("the CommonJS entry injects the host API into the built ESM lifecycle", asy
 
     const context = { subscriptions: [] };
     await entry.activate(context);
-    assert.equal(context.subscriptions.length, 3);
-    const controller = context.subscriptions[2];
+    assert.equal(context.subscriptions.length, 2);
+    const controller = context.subscriptions[1];
     assert.equal(controller.api, api);
     assert.equal(controller.disposed, false);
     assert.equal(outputChannels.length, 1);

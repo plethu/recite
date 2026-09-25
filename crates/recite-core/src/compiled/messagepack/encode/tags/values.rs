@@ -2,7 +2,9 @@ use super::super::{scalar_value_tag, value_tag};
 use super::{
     MsgArgument, MsgConditionCall, MsgConditionExpression, MsgScalarValue, MsgSourceSpan, MsgValue,
 };
-use crate::{CompiledArgument, CompiledConditionExpression, ScalarValue, Value};
+use crate::{
+    ScalarValue, Value, compiled::CompiledArgument, compiled::CompiledConditionExpression,
+};
 use serde::Serialize;
 use serde::ser::SerializeTuple;
 
@@ -14,12 +16,12 @@ impl Serialize for MsgConditionExpression<'_> {
         match self.0 {
             CompiledConditionExpression::Call(call) => serialize_tagged!(
                 serializer,
-                crate::V0_CONDITION_TAG_CALL,
+                crate::compiled::V0_CONDITION_TAG_CALL,
                 MsgConditionCall(call)
             ),
             CompiledConditionExpression::And(expressions) => serialize_tagged!(
                 serializer,
-                crate::V0_CONDITION_TAG_AND,
+                crate::compiled::V0_CONDITION_TAG_AND,
                 expressions
                     .iter()
                     .map(MsgConditionExpression)
@@ -27,7 +29,7 @@ impl Serialize for MsgConditionExpression<'_> {
             ),
             CompiledConditionExpression::Or(expressions) => serialize_tagged!(
                 serializer,
-                crate::V0_CONDITION_TAG_OR,
+                crate::compiled::V0_CONDITION_TAG_OR,
                 expressions
                     .iter()
                     .map(MsgConditionExpression)
@@ -35,7 +37,7 @@ impl Serialize for MsgConditionExpression<'_> {
             ),
             CompiledConditionExpression::Not(expression) => serialize_tagged!(
                 serializer,
-                crate::V0_CONDITION_TAG_NOT,
+                crate::compiled::V0_CONDITION_TAG_NOT,
                 MsgConditionExpression(expression)
             ),
         }
@@ -47,7 +49,8 @@ impl Serialize for MsgConditionCall<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(crate::V0_CONDITION_CALL_FIELDS as usize)?;
+        let mut tuple =
+            serializer.serialize_tuple(crate::compiled::V0_CONDITION_CALL_FIELDS as usize)?;
         tuple.serialize_element(self.0.function.as_str())?;
         tuple.serialize_element(&self.0.args.iter().map(MsgArgument).collect::<Vec<_>>())?;
         tuple.end()
@@ -61,11 +64,15 @@ impl Serialize for MsgArgument<'_> {
     {
         match self.0 {
             CompiledArgument::Identifier(value) => {
-                serialize_tagged!(serializer, crate::V0_ARGUMENT_TAG_IDENTIFIER, value)
+                serialize_tagged!(
+                    serializer,
+                    crate::compiled::V0_ARGUMENT_TAG_IDENTIFIER,
+                    value
+                )
             }
             CompiledArgument::Value(value) => serialize_tagged!(
                 serializer,
-                crate::V0_ARGUMENT_TAG_VALUE,
+                crate::compiled::V0_ARGUMENT_TAG_VALUE,
                 MsgScalarValue(value)
             ),
         }
@@ -117,7 +124,8 @@ impl Serialize for MsgSourceSpan<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(crate::V0_SOURCE_SPAN_FIELDS as usize)?;
+        let mut tuple =
+            serializer.serialize_tuple(crate::compiled::V0_SOURCE_SPAN_FIELDS as usize)?;
         tuple.serialize_element(self.0.file.as_str())?;
         tuple.serialize_element(&self.0.start.line())?;
         tuple.serialize_element(&self.0.start.column())?;

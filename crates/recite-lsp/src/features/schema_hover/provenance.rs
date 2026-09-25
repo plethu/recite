@@ -1,11 +1,11 @@
-use recite_compiler::SchemaSummary;
-use recite_core::{ContentFingerprintFreshness, ProducerFreshness};
+use recite_compiler::authoring::SchemaSummary;
+use recite_core::schema::{ContentFingerprintFreshness, ProducerFreshness};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 pub(crate) fn hover_detail(
-    origin: Option<&recite_core::ProducerOrigin>,
+    origin: Option<&recite_core::schema::ProducerOrigin>,
     schema: &SchemaSummary,
-    scoped_fingerprints: &[recite_core::ProducerFingerprint],
+    scoped_fingerprints: &[recite_core::schema::ProducerFingerprint],
     catalog: &UiCatalog,
 ) -> String {
     let origin = origin.map_or_else(String::new, |origin| origin_detail(catalog, origin));
@@ -22,7 +22,7 @@ pub(crate) fn hover_detail(
     }
     let compared = matches!(
         schema.freshness(),
-        recite_compiler::SchemaFreshness::Compared(_)
+        recite_compiler::authoring::SchemaFreshness::Compared(_)
     );
     let content_fingerprint = metadata.and_then(|metadata| metadata.content_fingerprint());
     let producer_fingerprints =
@@ -69,7 +69,7 @@ pub(crate) fn hover_detail(
 
 fn freshness_state_detail(schema: &SchemaSummary, catalog: &UiCatalog) -> String {
     match schema.freshness() {
-        recite_compiler::SchemaFreshness::Compared(comparison) => {
+        recite_compiler::authoring::SchemaFreshness::Compared(comparison) => {
             let comparison = comparison.as_ref();
             catalog.format_args(
                 MsgId::LspHoverSchemaFreshnessState,
@@ -101,7 +101,7 @@ fn freshness_state_detail(schema: &SchemaSummary, catalog: &UiCatalog) -> String
                 ]),
             )
         }
-        recite_compiler::SchemaFreshness::Unavailable { reason } => catalog.format_args(
+        recite_compiler::authoring::SchemaFreshness::Unavailable { reason } => catalog.format_args(
             MsgId::LspHoverSchemaFreshnessUnavailable,
             &UiArgs::from([("reason".to_owned(), UiArg::from(freshness_reason(*reason)))]),
         ),
@@ -154,19 +154,21 @@ fn localized_status(catalog: &UiCatalog, status: &str) -> String {
     )
 }
 
-fn freshness_reason(reason: recite_compiler::SchemaFreshnessUnavailableReason) -> &'static str {
+fn freshness_reason(
+    reason: recite_compiler::authoring::SchemaFreshnessUnavailableReason,
+) -> &'static str {
     match reason {
-        recite_compiler::SchemaFreshnessUnavailableReason::NoComparisonSnapshot => {
+        recite_compiler::authoring::SchemaFreshnessUnavailableReason::NoComparisonSnapshot => {
             "no-comparison-snapshot"
         }
-        recite_compiler::SchemaFreshnessUnavailableReason::NoProducerMetadata => {
+        recite_compiler::authoring::SchemaFreshnessUnavailableReason::NoProducerMetadata => {
             "no-producer-metadata"
         }
         _ => "other",
     }
 }
 
-fn format_fingerprint(fingerprint: &recite_core::ContentFingerprint) -> String {
+fn format_fingerprint(fingerprint: &recite_core::compiled::ContentFingerprint) -> String {
     format!(
         "{}:{}",
         fingerprint.algorithm().as_str(),
@@ -179,7 +181,7 @@ fn format_fingerprint(fingerprint: &recite_core::ContentFingerprint) -> String {
     )
 }
 
-fn format_scoped_fingerprints(fingerprints: &[recite_core::ProducerFingerprint]) -> String {
+fn format_scoped_fingerprints(fingerprints: &[recite_core::schema::ProducerFingerprint]) -> String {
     let mut values = fingerprints
         .iter()
         .map(|fingerprint| {
@@ -193,7 +195,10 @@ fn format_scoped_fingerprints(fingerprints: &[recite_core::ProducerFingerprint])
     values.join(", ")
 }
 
-pub(crate) fn origin_detail(catalog: &UiCatalog, origin: &recite_core::ProducerOrigin) -> String {
+pub(crate) fn origin_detail(
+    catalog: &UiCatalog,
+    origin: &recite_core::schema::ProducerOrigin,
+) -> String {
     catalog.format_args(
         MsgId::LspHoverProducedBy,
         &UiArgs::from([

@@ -1,10 +1,10 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     ProducerCapabilityStatus, ProducerFailureEvidence, SchemaAction, SchemaSummary,
     SchemaSummaryBuildError, SchemaSummaryEvidence, SchemaSummaryEvidenceError,
 };
-use recite_core::{ProjectSchema, load_schema_manifest_str};
+use recite_core::schema::{ProjectSchema, load_schema_manifest_str};
 
 const GENERATED: &str = include_str!("../../../fixtures/schema/valid/full_manifest.json");
 
@@ -95,7 +95,7 @@ fn absent_read_only_and_unavailable_capabilities_are_distinct() {
             .any(|action| matches!(action, SchemaAction::Unavailable { .. }))
     );
 
-    let other = recite_core::ProducerIdentity::new("adapter", "other").expect("identity");
+    let other = recite_core::schema::ProducerIdentity::new("adapter", "other").expect("identity");
     let mismatch = SchemaSummaryEvidence::builder(other.clone())
         .capability(ProducerCapabilityStatus::Supported)
         .build()

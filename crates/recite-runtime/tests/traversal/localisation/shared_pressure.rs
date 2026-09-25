@@ -20,7 +20,7 @@ fn shared_language_pressure_fixture_preserves_localised_markup_and_source_fallba
             Some("formal"),
             "Parle-moi de {topic}.",
         );
-    let mut values = recite_runtime::InterpolationValues::new();
+    let mut values = recite_runtime::localisation::InterpolationValues::new();
     values.insert(
         "traveller_name".to_owned(),
         recite_core::ScalarValue::from("Mara"),

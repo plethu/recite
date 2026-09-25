@@ -1,4 +1,4 @@
-use crate::{Diagnostic, DiagnosticArgumentValue, EffectMode, SourceSpan};
+use crate::{Diagnostic, DiagnosticArgumentValue, SourceSpan, ast::EffectMode};
 
 use crate::schema::{
     MetadataContextSelector, MetadataDomainDefinition, MetadataTarget, ProjectSchema,

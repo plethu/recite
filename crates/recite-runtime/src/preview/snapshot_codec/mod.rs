@@ -146,7 +146,8 @@ impl StateWire {
     }
 
     fn into_state(self) -> Result<PreviewState, PreviewError> {
-        let asset_id = recite_core::CompiledAssetId::new(self.asset_id).map_err(invalid)?;
+        let asset_id =
+            recite_core::compiled::CompiledAssetId::new(self.asset_id).map_err(invalid)?;
         let block = self.block.map(BlockId::new).transpose().map_err(invalid)?;
         let locale = self
             .locale

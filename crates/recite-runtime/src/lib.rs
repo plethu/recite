@@ -21,10 +21,10 @@
 //! # Example: Start A Session And Handle Events
 //!
 //! ```
-//! # fn compile_asset() -> Result<recite_core::CompiledDialogue, Box<dyn std::error::Error>> {
-//! #     use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
+//! # fn compile_asset() -> Result<recite_core::compiled::CompiledDialogue, Box<dyn std::error::Error>> {
+//! #     use recite_compiler::{compile::CompileInput, compile::CompileOptions, compile::compile_inputs};
 //! #     use recite_core::{
-//! #         CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId,
+//! #         compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
 //! #     };
 //! #     let source = concat!(
 //! #         ":: start default\n",
@@ -68,10 +68,12 @@ mod context;
 mod error;
 mod event;
 mod locale;
-mod preview;
+pub mod localisation;
+pub mod preview;
 mod session;
 mod session_serialization;
 mod session_snapshot;
+pub mod snapshot;
 mod traversal;
 
 pub use context::{
@@ -86,35 +88,7 @@ pub use event::{
     DialogueEffectRequest, DialogueEvent, DialogueLine, DialoguePlural, DialoguePluralResolution,
     DialoguePluralResolutionOutcome, EffectAck,
 };
-pub use locale::{
-    InterpolationValueProvider, InterpolationValues, LocaleError, LocaleLookupAttempt,
-    LocaleLookupOutcome, LocaleLookupProvenance, LocaleProvider, PluralResolution,
-    PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
-};
-pub use preview::{
-    ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewAssetRevision, PreviewCommand,
-    PreviewConditionArgument, PreviewConditionQuery, PreviewConditionRequest,
-    PreviewConditionRequestId, PreviewConditionResult, PreviewError, PreviewEvent,
-    PreviewInputRevision, PreviewInputs, PreviewOptions, PreviewOutput, PreviewPrompt,
-    PreviewPromptIdentity, PreviewRestartRequirement, PreviewSession, PreviewSessionState,
-    PreviewSnapshot, PreviewState, PreviewStatus, PreviewTrace, PreviewTranscript,
-    PreviewTranscriptEvent,
-};
 pub use session::{DialogueSession, DialogueSessionOptions};
-pub use session_serialization::{
-    decode_session_messagepack, encode_session_messagepack, restore_session,
-};
-pub use session_snapshot::{
-    CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueChoiceAvailabilityReasonArgSnapshot,
-    DialogueChoiceAvailabilityReasonOriginSnapshot, DialogueChoiceAvailabilityReasonSnapshot,
-    DialogueChoiceAvailabilityReasonTreeSnapshot, DialogueChoiceAvailabilityReasonValueSnapshot,
-    DialogueChoiceAvailabilitySnapshot, DialogueContentFingerprintSnapshot,
-    DialogueDeferredEffectSnapshot, DialogueSchemaFingerprintSnapshot,
-    DialogueSessionFrameSnapshot, DialogueSessionPendingChoiceSnapshot,
-    DialogueSessionPendingEffectSnapshot, DialogueSessionPendingPromptSnapshot,
-    DialogueSessionRangeSnapshot, DialogueSessionSnapshot, DialogueSessionSnapshotConversionError,
-    DialogueSessionSourceSnapshot, snapshot_session,
-};
 pub use traversal::{
     DialogueTrace, LocaleResolution, LocalizedLookupTrace, PluralLineTrace, acknowledge_effect,
     choose, choose_with, next, next_with, start_scene, start_scene_with_options,

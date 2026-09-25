@@ -11,7 +11,8 @@ pub(super) fn validate_lines(
         interpolation::validate_line_interpolation_rows(line, mode == ValidationMode::Canonical)?;
         if line.plural_source_text.is_some()
             && !line.interpolation_bindings.iter().any(|binding| {
-                binding.name == "count" && binding.value_type == crate::InterpolationType::Integer
+                binding.name == "count"
+                    && binding.value_type == crate::ast::InterpolationType::Integer
             })
         {
             return Err(super::malformed(
@@ -46,7 +47,7 @@ pub(super) fn validate_choices(
     mode: ValidationMode,
 ) -> Result<(), super::CompiledAssetDecodeError> {
     for choice in &dialogue.choices {
-        if choice.interpolation_mode == crate::CompiledInterpolationMode::Legacy {
+        if choice.interpolation_mode == crate::compiled::CompiledInterpolationMode::Legacy {
             if mode == ValidationMode::Canonical {
                 interpolation::validate_legacy_choice(choice)?;
             }

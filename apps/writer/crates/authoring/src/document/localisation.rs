@@ -1,6 +1,9 @@
 //! Extract the same project that the author sees, including the current overlay.
 use crate::Document;
-use recite_compiler::{CompileInput, PotExtractionReport, extract_pot, extract_pot_with_schema};
+use recite_compiler::{
+    compile::CompileInput,
+    pot::{PotExtractionReport, extract_pot, extract_pot_with_schema},
+};
 
 impl Document {
     /// Extract a locale-neutral catalogue without changing source or stable IDs.

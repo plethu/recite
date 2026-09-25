@@ -2,15 +2,18 @@
 
 use std::collections::BTreeSet;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringKernel, AuthoringRequest, CompletionCandidateKind, QueryResult, SavedDocument,
     SnapshotGeneration,
 };
 use recite_core::{
-    ContextualMetadataDomain, DocumentKey, MetadataContextSelector, MetadataDefinition,
-    MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy, ProjectSchema,
-    ProjectionQueryFunctionDefinition, SchemaPresentationProjectorDefinition,
-    SchemaProjectionSelector, SchemaTypeRef, SourcePosition,
+    DocumentKey, SourcePosition,
+    schema::{
+        ContextualMetadataDomain, MetadataContextSelector, MetadataDefinition,
+        MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy, ProjectSchema,
+        ProjectionQueryFunctionDefinition, SchemaPresentationProjectorDefinition,
+        SchemaProjectionSelector, SchemaTypeRef,
+    },
 };
 
 fn key(value: &str) -> DocumentKey {

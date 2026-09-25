@@ -15,7 +15,7 @@
 
 use std::fmt::Write as _;
 
-use recite_core::decode_compiled_dialogue_messagepack;
+use recite_core::compiled::decode_compiled_dialogue_messagepack;
 
 use super::fixture_support::assert_text_snapshot;
 use super::tag_surface::{
@@ -73,16 +73,16 @@ fn literal_reason_tag_surface_messagepack_matches_the_golden_v0_wire_bytes() {
             .map(|binding| &binding.value)
             .collect::<Vec<_>>(),
         [
-            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+            &recite_core::compiled::CompiledAvailabilityReasonArgValue::Literal(
                 recite_core::ScalarValue::Boolean(true)
             ),
-            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+            &recite_core::compiled::CompiledAvailabilityReasonArgValue::Literal(
                 recite_core::ScalarValue::Float(1.25)
             ),
-            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+            &recite_core::compiled::CompiledAvailabilityReasonArgValue::Literal(
                 recite_core::ScalarValue::Integer(7)
             ),
-            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+            &recite_core::compiled::CompiledAvailabilityReasonArgValue::Literal(
                 recite_core::ScalarValue::String("literal".to_owned())
             ),
         ]

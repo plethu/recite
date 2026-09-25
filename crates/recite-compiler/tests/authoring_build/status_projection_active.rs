@@ -1,5 +1,5 @@
 use super::support::*;
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildInput, BuildLifecycle, BuildStatusProjection, BuildTransition, PreparedPublishIdentity,
 };
 
@@ -16,9 +16,9 @@ fn active_post_check_phases_retain_diagnostics_and_freshness() {
                 .unwrap_or_else(|error| panic!("test position: {error}")),
         ),
     );
-    let freshness = recite_compiler::FreshnessAssessment::stale(
+    let freshness = recite_compiler::authoring::FreshnessAssessment::stale(
         request.fingerprints().clone(),
-        vec![recite_compiler::StaleReason::Fingerprints],
+        vec![recite_compiler::authoring::StaleReason::Fingerprints],
     );
     let candidates = vec![candidate("warning.recitec", b"compiled")];
     let mut lifecycle = BuildLifecycle::new();

@@ -3,7 +3,7 @@
 use super::{
     ValidationInput, ValidationReport, project::sort_diagnostics_by_source, state::Validator,
 };
-use recite_core::{ProjectSchema, Statement};
+use recite_core::{ast::Statement, schema::ProjectSchema};
 
 mod facts;
 pub(crate) use facts::ProjectFacts;

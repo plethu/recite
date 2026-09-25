@@ -1,4 +1,6 @@
-use recite_compiler::{BuildResultFailure, BuildTelemetry, BuildTerminalStatus, PublishOutcome};
+use recite_compiler::authoring::{
+    BuildResultFailure, BuildTelemetry, BuildTerminalStatus, PublishOutcome,
+};
 
 use super::super::ProjectBuildRecovery;
 

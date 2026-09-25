@@ -1,4 +1,4 @@
-use recite_compiler::{SchemaCapability, SchemaDeclarationProvenance, SchemaSummary};
+use recite_compiler::authoring::{SchemaCapability, SchemaDeclarationProvenance, SchemaSummary};
 
 use crate::error::CliError;
 
@@ -12,7 +12,7 @@ use super::provenance::{identity_json, ownership_json, provenance_json};
 use super::{INSPECTION_FORMAT_VERSION, input::InputFormat};
 
 pub(super) fn from_source(
-    source: &recite_core::SchemaSource,
+    source: &recite_core::schema::SchemaSource,
     path: MachinePathProjection,
 ) -> Result<SchemaInspectionProjection, CliError> {
     let summary = SchemaSummary::from_source(source);
@@ -20,7 +20,7 @@ pub(super) fn from_source(
 }
 
 pub(super) fn from_generated(
-    schema: &recite_core::ProjectSchema,
+    schema: &recite_core::schema::ProjectSchema,
     path: MachinePathProjection,
 ) -> Result<SchemaInspectionProjection, CliError> {
     let summary = SchemaSummary::from_schema(schema);
@@ -29,7 +29,7 @@ pub(super) fn from_generated(
 
 fn from_summary(
     summary: &SchemaSummary,
-    schema: &recite_core::ProjectSchema,
+    schema: &recite_core::schema::ProjectSchema,
     format: InputFormat,
     path: MachinePathProjection,
 ) -> Result<SchemaInspectionProjection, CliError> {

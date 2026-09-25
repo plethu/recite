@@ -1,6 +1,7 @@
 use recite_core::{MetadataEntry, ScalarValue, SourceSpan, Value};
 use recite_runtime::{
-    DialogueChoice, DialogueEffectArgument, DialogueEffectRequest, DialogueLine, PreviewTrace,
+    DialogueChoice, DialogueEffectArgument, DialogueEffectRequest, DialogueLine,
+    preview::PreviewTrace,
 };
 
 use super::availability::trace_availability;
@@ -44,14 +45,16 @@ fn trace_plural(trace: recite_runtime::PluralLineTrace) -> TracePlural {
                 key: attempt.key,
                 selected_arm: attempt.selected_arm,
                 outcome: match attempt.outcome {
-                    recite_runtime::PluralResolutionOutcome::MissingPluralForms => {
+                    recite_runtime::localisation::PluralResolutionOutcome::MissingPluralForms => {
                         "missing_plural_forms"
                     }
-                    recite_runtime::PluralResolutionOutcome::MissingEntry => "missing_entry",
-                    recite_runtime::PluralResolutionOutcome::MissingTranslation => {
+                    recite_runtime::localisation::PluralResolutionOutcome::MissingEntry => {
+                        "missing_entry"
+                    }
+                    recite_runtime::localisation::PluralResolutionOutcome::MissingTranslation => {
                         "missing_translation"
                     }
-                    recite_runtime::PluralResolutionOutcome::Matched => "matched",
+                    recite_runtime::localisation::PluralResolutionOutcome::Matched => "matched",
                 },
             })
             .collect(),

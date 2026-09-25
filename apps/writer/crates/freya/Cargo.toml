@@ -9,7 +9,7 @@ publish.workspace = true
 [dependencies]
 similar = "=2.7.0"
 notify = "8.2.0"
-recite-cli = { path = "../../../../crates/recite-cli" }
+recite-build = { path = "../../../../crates/recite-build" }
 rfd = "=0.17.2"
 atomic-write-file = "0.3.1"
 accesskit = "0.24.1"

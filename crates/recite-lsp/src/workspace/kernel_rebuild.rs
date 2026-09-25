@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_compiler::AuthoringKernel;
+use recite_compiler::authoring::AuthoringKernel;
 
 use super::kernel::{KernelPartition, effective_open_documents};
 use super::partition_rollback::take_old_partitions;
@@ -25,7 +25,7 @@ impl LspWorkspace {
         saved: SavedProjectIndex,
         documents: OpenDocumentStore,
         schemas: BTreeMap<String, SchemaIndex>,
-    ) -> Result<(), recite_compiler::AuthoringError> {
+    ) -> Result<(), recite_compiler::authoring::AuthoringError> {
         let retired = self
             .partitions
             .iter()
@@ -47,7 +47,7 @@ impl LspWorkspace {
         documents: OpenDocumentStore,
         schemas: BTreeMap<String, SchemaIndex>,
         retired: BTreeMap<String, BTreeSet<String>>,
-    ) -> Result<(), recite_compiler::AuthoringError> {
+    ) -> Result<(), recite_compiler::authoring::AuthoringError> {
         let old_partitions = std::mem::take(&mut self.partitions);
         match self.rebuild_partitions(saved, documents, schemas, retired, Some(old_partitions)) {
             Ok(()) => Ok(()),
@@ -68,7 +68,7 @@ impl LspWorkspace {
     ) -> Result<
         (),
         (
-            recite_compiler::AuthoringError,
+            recite_compiler::authoring::AuthoringError,
             BTreeMap<String, KernelPartition>,
         ),
     > {
@@ -76,9 +76,13 @@ impl LspWorkspace {
             self.generation
                 .0
                 .checked_add(1)
-                .ok_or(recite_compiler::AuthoringError::GenerationExhausted {
-                    current: recite_compiler::SnapshotGeneration::new(self.generation.0),
-                })
+                .ok_or(
+                    recite_compiler::authoring::AuthoringError::GenerationExhausted {
+                        current: recite_compiler::authoring::SnapshotGeneration::new(
+                            self.generation.0,
+                        ),
+                    },
+                )
                 .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?,
         );
         let mut next_partition_build_id = self.next_partition_build_id;
@@ -191,9 +195,13 @@ impl LspWorkspace {
             } else {
                 let build_id = next_partition_build_id
                     .checked_add(1)
-                    .ok_or(recite_compiler::AuthoringError::GenerationExhausted {
-                        current: recite_compiler::SnapshotGeneration::new(next_partition_build_id),
-                    })
+                    .ok_or(
+                        recite_compiler::authoring::AuthoringError::GenerationExhausted {
+                            current: recite_compiler::authoring::SnapshotGeneration::new(
+                                next_partition_build_id,
+                            ),
+                        },
+                    )
                     .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?;
                 next_partition_build_id = build_id;
                 build_id

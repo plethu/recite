@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCancellation, BuildCheckError, BuildResultFailure, BuildStatusProjection,
     BuildTerminalStatus, FreshnessStatus, PublishFailureReason, PublishNotAttemptedReason,
     PublishOutcome, PublishRefusal, RestartGuidance,
@@ -10,10 +10,8 @@ use crate::schema_inspection::machine_path;
 use crate::structured::data::{ArtifactMetadata, artifact_metadata};
 
 use super::super::build::BuildStatus;
-use super::super::recovery::{
-    ProjectBuildRecovery, ProjectBuildRecoveryDetail, ProjectBuildRecoveryIoKind,
-};
 use super::super::wire_types::*;
+use super::super::{ProjectBuildRecovery, ProjectBuildRecoveryDetail, ProjectBuildRecoveryIoKind};
 
 pub(super) fn build_status(status: BuildTerminalStatus) -> BuildStatusDto {
     match status {
@@ -114,7 +112,7 @@ pub(super) fn input_keys(projection: &BuildStatusProjection) -> Vec<String> {
     inputs
 }
 
-pub(super) fn freshness(value: &recite_compiler::FreshnessAssessment) -> FreshnessDto {
+pub(super) fn freshness(value: &recite_compiler::authoring::FreshnessAssessment) -> FreshnessDto {
     match value.status() {
         FreshnessStatus::Fresh => FreshnessDto::Fresh,
         FreshnessStatus::Stale => FreshnessDto::Stale {
@@ -122,13 +120,15 @@ pub(super) fn freshness(value: &recite_compiler::FreshnessAssessment) -> Freshne
                 .reasons()
                 .iter()
                 .map(|reason| match reason {
-                    recite_compiler::StaleReason::BuildGeneration => {
+                    recite_compiler::authoring::StaleReason::BuildGeneration => {
                         StaleReasonDto::BuildGeneration
                     }
-                    recite_compiler::StaleReason::SnapshotGeneration => {
+                    recite_compiler::authoring::StaleReason::SnapshotGeneration => {
                         StaleReasonDto::SnapshotGeneration
                     }
-                    recite_compiler::StaleReason::Fingerprints => StaleReasonDto::Fingerprints,
+                    recite_compiler::authoring::StaleReason::Fingerprints => {
+                        StaleReasonDto::Fingerprints
+                    }
                     _ => StaleReasonDto::Unknown,
                 })
                 .collect(),
@@ -171,7 +171,7 @@ pub(super) fn publication(value: &PublishOutcome) -> PublicationDto {
     }
 }
 
-fn target_names(targets: &[recite_compiler::BuildTarget]) -> Vec<String> {
+fn target_names(targets: &[recite_compiler::authoring::BuildTarget]) -> Vec<String> {
     let mut names = targets
         .iter()
         .map(|target| target.as_str().to_owned())
@@ -184,7 +184,7 @@ fn target_names(targets: &[recite_compiler::BuildTarget]) -> Vec<String> {
 pub(super) fn artifact_metadata_for_publication(
     project_root: &Path,
     publication: Option<&PublishOutcome>,
-    candidates: &[recite_compiler::BuildCandidate],
+    candidates: &[recite_compiler::authoring::BuildCandidate],
 ) -> Result<Vec<ArtifactMetadata>, crate::error::CliError> {
     let targets = match publication {
         Some(PublishOutcome::Published { targets }) => targets,
@@ -224,6 +224,7 @@ pub(super) fn recovery_record(value: &ProjectBuildRecovery) -> RecoveryDto {
             super::super::ProjectBuildRecoveryReason::PublicationUncommitted => {
                 RecoveryReasonDto::PublicationUncommitted
             }
+            _ => RecoveryReasonDto::Unknown,
         },
         detail: match value.detail() {
             ProjectBuildRecoveryDetail::None => None,
@@ -233,6 +234,7 @@ pub(super) fn recovery_record(value: &ProjectBuildRecovery) -> RecoveryDto {
                 kind: recovery_io_kind(kind),
                 raw_os_error,
             }),
+            _ => Some(RecoveryDetailDto::Unknown),
         },
     }
 }
@@ -269,11 +271,15 @@ pub(super) fn failure(value: &BuildResultFailure) -> FailureDto {
         BuildResultFailure::Diagnostics { .. } => FailureDto::Diagnostics,
         BuildResultFailure::Engine { reason } => FailureDto::Engine {
             reason: match reason {
-                recite_compiler::BuildFailureReason::InvalidOutput => {
+                recite_compiler::authoring::BuildFailureReason::InvalidOutput => {
                     EngineFailureReasonDto::InvalidOutput
                 }
-                recite_compiler::BuildFailureReason::Host => EngineFailureReasonDto::Host,
-                recite_compiler::BuildFailureReason::Unknown => EngineFailureReasonDto::Unknown,
+                recite_compiler::authoring::BuildFailureReason::Host => {
+                    EngineFailureReasonDto::Host
+                }
+                recite_compiler::authoring::BuildFailureReason::Unknown => {
+                    EngineFailureReasonDto::Unknown
+                }
                 _ => EngineFailureReasonDto::Unknown,
             },
         },
@@ -327,5 +333,6 @@ fn recovery_io_kind(value: ProjectBuildRecoveryIoKind) -> RecoveryIoKindDto {
         ProjectBuildRecoveryIoKind::NotFound => RecoveryIoKindDto::NotFound,
         ProjectBuildRecoveryIoKind::PermissionDenied => RecoveryIoKindDto::PermissionDenied,
         ProjectBuildRecoveryIoKind::Other => RecoveryIoKindDto::Other,
+        _ => RecoveryIoKindDto::Other,
     }
 }

@@ -58,11 +58,6 @@ impl PoDocument {
             .map_err(|source| PoIoError::Parse { path, source })
     }
 
-    /// Alias for [`PoDocument::read`].
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, PoIoError> {
-        Self::read(path)
-    }
-
     /// Atomically replace a PO file after a fingerprint check.
     ///
     /// Recite writers serialize through an OS-locked same-directory sidecar
@@ -153,24 +148,6 @@ impl PoDocument {
         #[cfg(unix)]
         sync_parent(parent);
         Ok(self.fingerprint())
-    }
-
-    /// Alias for [`PoDocument::write_atomically`].
-    pub fn save(
-        &self,
-        path: impl AsRef<Path>,
-        expected: &PoDocumentFingerprint,
-    ) -> Result<PoDocumentFingerprint, PoWriteError> {
-        self.write_atomically(path, expected)
-    }
-
-    /// Alias for [`PoDocument::write_atomically`].
-    pub fn write_atomic(
-        &self,
-        path: impl AsRef<Path>,
-        expected: &PoDocumentFingerprint,
-    ) -> Result<PoDocumentFingerprint, PoWriteError> {
-        self.write_atomically(path, expected)
     }
 }
 

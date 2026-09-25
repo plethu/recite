@@ -1,4 +1,6 @@
-use crate::{ContentFingerprint, FingerprintAlgorithm, FingerprintDigest};
+use crate::{
+    compiled::ContentFingerprint, compiled::FingerprintAlgorithm, compiled::FingerprintDigest,
+};
 use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, PartialEq, Error)]
@@ -36,7 +38,7 @@ pub(crate) fn producer_content_fingerprint_detailed(
     let digest =
         FingerprintDigest::new(digest).map_err(|_| ProducerContentFingerprintError::EmptyDigest)?;
     ContentFingerprint::new(algorithm, digest).map_err(|error| match error {
-        crate::CompiledValueError::InvalidFingerprintDigestLength { actual, .. } => {
+        crate::compiled::CompiledValueError::InvalidFingerprintDigestLength { actual, .. } => {
             ProducerContentFingerprintError::Blake3DigestLength { actual }
         }
         _ => unreachable!("algorithm and digest have already passed their validation"),

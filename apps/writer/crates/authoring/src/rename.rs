@@ -57,13 +57,13 @@ impl Document {
 
 /// Rewrite manifest scene entry points through the TOML CST, preserving comments.
 pub fn rename_manifest_source(source: &str, block: &str, name: &str) -> Result<String, EditError> {
-    if name == recite_core::END_DIVERT_TARGET
+    if name == recite_core::ast::END_DIVERT_TARGET
         || name.contains("::")
         || !recite_core::is_valid_source_label(name)
     {
         return Err(EditError::Destination);
     }
-    let loaded = recite_core::ProjectManifest::load_str("recite.project.toml", source);
+    let loaded = recite_core::project::ProjectManifest::load_str("recite.project.toml", source);
     let manifest = loaded.manifest.ok_or(EditError::SourceRequired(
         "repair the project manifest before renaming",
     ))?;

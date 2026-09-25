@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{DiagnosticRecord, ProducerIdentity};
+use recite_core::{DiagnosticRecord, schema::ProducerIdentity};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use super::name::CapabilityName;

@@ -1,7 +1,7 @@
 use super::toml::{
     SchemaSource, SchemaSourceEdit, SchemaSourceEditError, SchemaSourceStaleDetails,
 };
-use crate::ContentFingerprint;
+use crate::compiled::ContentFingerprint;
 
 /// A non-mutating source edit with optimistic-concurrency preconditions.
 ///

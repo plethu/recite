@@ -1,8 +1,9 @@
 use std::mem::size_of;
 
 use recite_core::{
-    BlockId, ChoiceEcho, ChoiceId, CompiledChoiceEcho, CompiledDialogue, CompiledEffect,
-    DivertTarget, EffectId, LineId, LocaleId, SourceFile, SpeakerId, Statement,
+    BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId,
+    ast::{ChoiceEcho, DivertTarget, SourceFile, Statement},
+    compiled::{CompiledChoiceEcho, CompiledDialogue, CompiledEffect},
 };
 use recite_runtime::DialogueSession;
 use serde::Serialize;
@@ -54,11 +55,11 @@ pub fn id_storage_report() -> IdStorageReport {
         string_size_bytes: size_of::<String>(),
         id_size_bytes: size_of::<LineId>(),
         compact_inline_capacity_bytes: compact_inline_capacity(),
-        compiled_block_size_bytes: size_of::<recite_core::CompiledBlock>(),
-        compiled_line_size_bytes: size_of::<recite_core::CompiledLine>(),
-        compiled_choice_size_bytes: size_of::<recite_core::CompiledChoice>(),
+        compiled_block_size_bytes: size_of::<recite_core::compiled::CompiledBlock>(),
+        compiled_line_size_bytes: size_of::<recite_core::compiled::CompiledLine>(),
+        compiled_choice_size_bytes: size_of::<recite_core::compiled::CompiledChoice>(),
         compiled_effect_size_bytes: size_of::<CompiledEffect>(),
-        compiled_speaker_size_bytes: size_of::<recite_core::CompiledSpeaker>(),
+        compiled_speaker_size_bytes: size_of::<recite_core::compiled::CompiledSpeaker>(),
         dialogue_session_size_bytes: size_of::<DialogueSession>(),
     }
 }

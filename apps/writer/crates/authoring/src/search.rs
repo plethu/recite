@@ -1,6 +1,6 @@
 //! Source-ordered word index for project passage navigation; never executes dialogue.
-use recite_compiler::SavedDocument;
-use recite_core::Statement;
+use recite_compiler::authoring::SavedDocument;
+use recite_core::ast::Statement;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, PartialEq)]

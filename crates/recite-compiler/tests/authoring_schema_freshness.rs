@@ -1,10 +1,10 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     SchemaFreshness, SchemaFreshnessEvidence, SchemaSummary, SchemaSummaryBuildError,
     SchemaSummaryEvidence, SchemaSummaryEvidenceError,
 };
-use recite_core::{
+use recite_core::schema::{
     ContentFingerprintFreshness, ProducerFingerprint, ProducerFreshness, ProjectSchema,
     SchemaProducerFreshness, load_schema_manifest_str,
 };
@@ -43,7 +43,7 @@ fn freshness_comparison_retains_simultaneous_stale_channels() {
         .expect("registry")
         .producer_fingerprints
         .clear();
-    if let Some(recite_core::MetadataDomainDefinition::Flat(domain)) =
+    if let Some(recite_core::schema::MetadataDomainDefinition::Flat(domain)) =
         actual.metadata_domains.get_mut("tone")
     {
         domain.provenance.producer_fingerprints.clear();
@@ -97,7 +97,8 @@ fn freshness_requires_both_snapshot_producer_identities() {
         .producer_metadata
         .as_mut()
         .expect("producer metadata")
-        .producer = Some(recite_core::ProducerIdentity::new("adapter", "other").expect("identity"));
+        .producer =
+        Some(recite_core::schema::ProducerIdentity::new("adapter", "other").expect("identity"));
     assert!(matches!(
         SchemaFreshnessEvidence::from_snapshots(&generated, &other),
         Err(SchemaSummaryEvidenceError::ProducerIdentityMismatch { .. })
@@ -119,7 +120,7 @@ fn freshness_evidence_cannot_be_attached_to_another_schema_with_same_producer() 
         .build()
         .expect("bound freshness evidence");
     let mut unrelated = expected.clone();
-    if let Some(recite_core::SchemaTypeDefinition::Enum(definition)) =
+    if let Some(recite_core::schema::SchemaTypeDefinition::Enum(definition)) =
         unrelated.types.get_mut("mood")
     {
         definition.values.insert("unrelated".to_owned());
@@ -134,7 +135,8 @@ fn freshness_evidence_cannot_be_attached_to_another_schema_with_same_producer() 
 fn mismatched_expected_fingerprint_is_rejected() {
     let expected = generated_schema();
     let mut actual = expected.clone();
-    if let Some(recite_core::SchemaTypeDefinition::Enum(definition)) = actual.types.get_mut("mood")
+    if let Some(recite_core::schema::SchemaTypeDefinition::Enum(definition)) =
+        actual.types.get_mut("mood")
     {
         definition.values.insert("current-only".to_owned());
     }
@@ -162,8 +164,9 @@ fn producer_b_freshness_cannot_be_wrapped_as_producer_a() {
         .producer_metadata
         .as_mut()
         .expect("producer metadata")
-        .producer =
-        Some(recite_core::ProducerIdentity::new("adapter", "producer-b").expect("identity"));
+        .producer = Some(
+        recite_core::schema::ProducerIdentity::new("adapter", "producer-b").expect("identity"),
+    );
     let producer_a_identity = producer_a
         .producer_metadata
         .as_ref()
@@ -199,7 +202,7 @@ fn freshness_identity_normalizes_input_order_without_dropping_entries() {
             .expect("registry")
             .producer_fingerprints
             .extend([extra.clone(), extra.clone()]);
-        if let Some(recite_core::MetadataDomainDefinition::Flat(domain)) =
+        if let Some(recite_core::schema::MetadataDomainDefinition::Flat(domain)) =
             schema.metadata_domains.get_mut("tone")
         {
             domain
@@ -229,8 +232,8 @@ fn freshness_identity_normalizes_input_order_without_dropping_entries() {
         .get_mut("tone")
         .expect("metadata domain");
     if let (
-        recite_core::MetadataDomainDefinition::Flat(expected_domain),
-        recite_core::MetadataDomainDefinition::Flat(actual_domain),
+        recite_core::schema::MetadataDomainDefinition::Flat(expected_domain),
+        recite_core::schema::MetadataDomainDefinition::Flat(actual_domain),
     ) = (expected_domain, actual_domain)
     {
         expected_domain.provenance.producer_fingerprints.reverse();

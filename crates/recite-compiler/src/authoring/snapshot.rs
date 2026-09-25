@@ -2,12 +2,12 @@ mod model;
 
 pub use model::{DocumentLayer, DocumentMetadata, DocumentSnapshot};
 
-use recite_core::ProjectSchema;
+use recite_core::schema::ProjectSchema;
 use recite_core::{Diagnostic, DocumentKey};
 use std::sync::Arc;
 
 use super::DocumentVersion;
-use crate::ValidationParticipation;
+use crate::validation::ValidationParticipation;
 
 /// Deterministically ordered view of all effective saved and open documents.
 #[derive(Clone, Debug, PartialEq)]

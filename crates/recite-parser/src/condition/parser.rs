@@ -1,4 +1,7 @@
-use recite_core::{Argument, ConditionCall, ConditionExpression, ScalarValue, SourceSpan};
+use recite_core::{
+    ScalarValue, SourceSpan,
+    ast::{Argument, ConditionCall, ConditionExpression},
+};
 
 use super::token::{Token, TokenKind, TokenKindDiscriminant};
 use super::{ParseError, ParseErrorKind};

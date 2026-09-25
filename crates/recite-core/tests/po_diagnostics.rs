@@ -5,7 +5,10 @@
 
 use std::collections::BTreeMap;
 
-use recite_core::{DiagnosticArgumentValue, DiagnosticSeverity, PoDiagnosticKind, PoDocument};
+use recite_core::{
+    DiagnosticArgumentValue, DiagnosticSeverity,
+    po::{PoDiagnosticKind, PoDocument},
+};
 
 fn string(value: &str) -> DiagnosticArgumentValue {
     DiagnosticArgumentValue::String(value.to_owned())

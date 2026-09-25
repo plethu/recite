@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCandidate, BuildCheck, BuildControl, BuildCoordinator, BuildEngine, BuildFailure,
     BuildGeneration, BuildInput, BuildPreparedHandle, BuildPublisher, BuildRequest, BuildTarget,
     FreshnessAssessment, PreparedPublishIdentity, PublishAbortReason, PublishFailure,
@@ -208,7 +208,7 @@ pub(crate) fn run<E: BuildEngine, P: BuildPublisher>(
     control: &BuildControl,
     engine: &mut E,
     publisher: &mut P,
-) -> recite_compiler::BuildResult {
+) -> recite_compiler::authoring::BuildResult {
     BuildCoordinator::new()
         .run(request, control, engine, publisher)
         .unwrap_or_else(|error| panic!("test coordinator transition is valid: {error}"))

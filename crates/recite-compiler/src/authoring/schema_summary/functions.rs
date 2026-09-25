@@ -1,8 +1,12 @@
 use std::collections::BTreeSet;
 
 use recite_core::{
-    AvailabilityReasonDefinition, AvailabilityReasonId, ConditionDefinition, ConditionReturnType,
-    EffectDefinition, EffectMode, MarkupDefinition, ParameterDefinition, ProducerOrigin,
+    AvailabilityReasonId,
+    ast::EffectMode,
+    schema::{
+        AvailabilityReasonDefinition, ConditionDefinition, ConditionReturnType, EffectDefinition,
+        MarkupDefinition, ParameterDefinition, ProducerOrigin,
+    },
 };
 
 use super::identity::{SchemaCapability, SchemaDeclarationProvenance};
@@ -41,7 +45,7 @@ impl ConditionSummary {
     #[must_use]
     pub const fn availability_reason(
         &self,
-    ) -> Option<&recite_core::ConditionAvailabilityReasonMapping> {
+    ) -> Option<&recite_core::schema::ConditionAvailabilityReasonMapping> {
         self.definition.availability_reason.as_ref()
     }
 

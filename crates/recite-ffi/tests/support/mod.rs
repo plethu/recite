@@ -8,8 +8,8 @@
 
 use std::ffi::CString;
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
+use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 pub(crate) use recite_ffi::{
     ReciteBuffer, ReciteConditionFn, ReciteConditionQuery, ReciteConditionResult,
     ReciteInterpolationValue, ReciteInterpolationValueKind, ReciteLocaleAttempt, ReciteLocaleFn,

@@ -1,5 +1,5 @@
 use recite_core::ChoiceId;
-use recite_runtime::PreviewPrompt;
+use recite_runtime::preview::PreviewPrompt;
 
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};

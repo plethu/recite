@@ -1,5 +1,5 @@
 use lsp_types::{Hover, Position};
-use recite_compiler::{AuthoringSnapshot, QueryResult, SchemaSummary};
+use recite_compiler::authoring::{AuthoringSnapshot, QueryResult, SchemaSummary};
 use recite_core::DocumentKey;
 use recite_ui::UiCatalog;
 

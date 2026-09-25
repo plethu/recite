@@ -6,7 +6,7 @@ mod validate;
 
 use std::collections::BTreeMap;
 
-use crate::{CompiledDialogue, DiagnosticCode, SchemaFingerprint};
+use crate::{DiagnosticCode, compiled::CompiledDialogue, compiled::SchemaFingerprint};
 
 pub use freshness::{validate_project_freshness, validate_project_freshness_source};
 pub use spans::project_scene_key_span;

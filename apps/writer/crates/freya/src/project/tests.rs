@@ -416,7 +416,7 @@ fn interrupted_project_checkpoint_restores_every_recorded_document()
 fn refresh_invalidates_declarations_when_schema_changes() -> Result<(), Box<dyn std::error::Error>>
 {
     let (dir, mut files) = project()?;
-    let schema = recite_core::SchemaSource::load_str(
+    let schema = recite_core::schema::SchemaSource::load_str(
         "schema.toml",
         "schema_version = 1\n[producer]\nid = 'dialogue'\n",
     )

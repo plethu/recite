@@ -1,6 +1,8 @@
 use recite_core::{
-    Choice, CompiledStatement, CompiledStatementKind, DivertTarget, Effect, IfBranch, Line,
-    SourceMapIndex, Statement, StatementIndex, StatementRange,
+    ast::{Choice, DivertTarget, Effect, IfBranch, Line, Statement},
+    compiled::{
+        CompiledStatement, CompiledStatementKind, SourceMapIndex, StatementIndex, StatementRange,
+    },
 };
 
 use super::{AssetBuilder, ReservedStatement, StatementPlan};
@@ -170,7 +172,7 @@ impl AssetBuilder<'_> {
 
     fn compile_match_statement_kind(
         &mut self,
-        branch: &recite_core::MatchBranch,
+        branch: &recite_core::ast::MatchBranch,
     ) -> Result<CompiledStatementKind, CompileError> {
         let arms = self.compile_match_arms(&branch.arms)?;
         Ok(CompiledStatementKind::Match {

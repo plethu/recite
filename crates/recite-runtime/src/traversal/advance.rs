@@ -1,11 +1,11 @@
-use recite_core::{
+use recite_core::compiled::{
     CompiledDialogue, CompiledDivertTarget, CompiledMatchPattern, CompiledStatementKind,
     StatementRange,
 };
 
 use crate::context::DialogueContext;
 use crate::event::DialogueEvent;
-use crate::session::PendingPrompt;
+use crate::session::{PendingPrompt, SessionPhase};
 use crate::{DialogueError, DialogueSession};
 
 use super::choice::prompt_choices;
@@ -54,23 +54,23 @@ pub(super) fn next_with_locale(
     let asset_view = AssetView::new(asset)?;
     asset_view.ensure_session_matches(session)?;
 
-    if session.ended {
-        return Err(DialogueError::SessionEnded);
-    }
-    if let Some(effect) = &mut session.pending_effect {
-        if effect.reemit_on_next {
-            effect.reemit_on_next = false;
-            return Ok(DialogueEvent::Effect(effect.request.clone()));
+    match &mut session.phase {
+        SessionPhase::Running => {}
+        SessionPhase::Ended => return Err(DialogueError::SessionEnded),
+        SessionPhase::AwaitingEffect(effect) => {
+            if effect.reemit_on_next {
+                effect.reemit_on_next = false;
+                return Ok(DialogueEvent::Effect(effect.request.clone()));
+            }
+            return Err(DialogueError::EffectPending {
+                effect: effect.request.id.clone(),
+            });
         }
-
-        return Err(DialogueError::EffectPending {
-            effect: effect.request.id.clone(),
-        });
-    }
-    if let Some(prompt) = &session.pending_prompt {
-        return Err(DialogueError::PromptPending {
-            choices: prompt.choice_ids(),
-        });
+        SessionPhase::AwaitingChoice(prompt) => {
+            return Err(DialogueError::PromptPending {
+                choices: prompt.choice_ids(),
+            });
+        }
     }
 
     for _ in 0..MAX_INTERNAL_STEPS {
@@ -130,7 +130,7 @@ pub(super) fn next_with_locale(
                 let prompt_statement = session.next_statement;
                 session.next_statement = next_statement_after(session.next_statement)?;
                 session.previous_prompt_choices = choice_ids;
-                session.pending_prompt = Some(PendingPrompt {
+                session.phase = SessionPhase::AwaitingChoice(PendingPrompt {
                     statement: prompt_statement,
                     choices: prompt_choices.pending,
                 });
@@ -185,7 +185,7 @@ pub(super) fn next_with_locale(
 
 fn select_match_arm(
     asset: AssetView<'_>,
-    arms: recite_core::MatchArmRange,
+    arms: recite_core::compiled::MatchArmRange,
     variant: &str,
 ) -> Result<StatementRange, DialogueError> {
     let mut wildcard_range = None;

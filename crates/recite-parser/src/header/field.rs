@@ -1,4 +1,4 @@
-use recite_core::{SourceMetadataValue, SourceSpan};
+use recite_core::{SourceSpan, ast::SourceMetadataValue};
 
 use crate::source::span_for_text;
 

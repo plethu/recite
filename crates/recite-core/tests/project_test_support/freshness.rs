@@ -1,11 +1,15 @@
 use recite_core::{
-    BlockId, BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceLookupTable,
-    CompiledAssetHeader, CompiledAssetId, CompiledDialogue, CompiledDialoguePayload,
-    CompiledSourceFile, CompiledSpeaker, CompilerVersion, LineLookupTable, ProjectManifest,
-    SchemaFingerprint, SourceMapId, SpeakerId, canonical_source_fingerprint,
+    BlockId, SpeakerId,
+    compiled::{
+        BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceLookupTable, CompiledAssetHeader,
+        CompiledAssetId, CompiledDialogue, CompiledDialoguePayload, CompiledSourceFile,
+        CompiledSpeaker, CompilerVersion, LineLookupTable, SchemaFingerprint, SourceMapId,
+        canonical_source_fingerprint,
+    },
+    project::ProjectManifest,
 };
 
-pub(crate) fn manifest_source() -> recite_core::ProjectManifestSource {
+pub(crate) fn manifest_source() -> recite_core::project::ProjectManifestSource {
     let report = ProjectManifest::load_str_with_spans(
         "recite.project.toml",
         "[[scenes]]\nid = \"opening\"\nasset = \"dialogue.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
@@ -71,6 +75,6 @@ pub(crate) fn asset_with(
     })
 }
 
-pub(crate) fn source_fingerprint(value: &str) -> recite_core::ContentFingerprint {
+pub(crate) fn source_fingerprint(value: &str) -> recite_core::compiled::ContentFingerprint {
     canonical_source_fingerprint(value)
 }

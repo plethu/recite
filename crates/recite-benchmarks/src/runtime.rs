@@ -1,8 +1,9 @@
-use recite_core::CompiledDialogue;
+use recite_core::compiled::CompiledDialogue;
 use recite_runtime::{
     DialogueEffectMode, DialogueEvent, DialogueSession, DialogueSessionOptions, EffectAck,
-    LocaleResolution, acknowledge_effect, choose, decode_session_messagepack,
-    encode_session_messagepack, next, next_with, start_scene, start_scene_with_options,
+    LocaleResolution, acknowledge_effect, choose, next, next_with,
+    snapshot::{decode_session_messagepack, encode_session_messagepack},
+    start_scene, start_scene_with_options,
 };
 
 use crate::catalog::CatalogProvider;
@@ -36,6 +37,11 @@ impl RuntimeProject {
             fixture: &self.fixture,
             catalog: &self.catalog,
         }
+    }
+
+    #[must_use]
+    pub fn dialogue(&self) -> &CompiledDialogue {
+        &self.dialogue
     }
 }
 

@@ -109,14 +109,38 @@
       }
     },
     "commands": [
-      { "command": "recite.validate", "title": "%vscode-command-validate-title%" },
-      { "command": "recite.compile", "title": "%vscode-command-compile-title%" },
-      { "command": "recite.extract", "title": "%vscode-command-extract-title%" },
-      { "command": "recite.watch.start", "title": "%vscode-command-watch-start-title%" },
-      { "command": "recite.watch.stop", "title": "%vscode-command-watch-stop-title%" },
-      { "command": "recite.run", "title": "%vscode-command-run-title%" },
-      { "command": "recite.trace", "title": "%vscode-command-trace-title%" },
-      { "command": "recite.renameBlock", "title": "%vscode-command-rename-command-title%" }
+      {
+        "command": "recite.validate",
+        "title": "%vscode-command-validate-title%"
+      },
+      {
+        "command": "recite.compile",
+        "title": "%vscode-command-compile-title%"
+      },
+      {
+        "command": "recite.extract",
+        "title": "%vscode-command-extract-title%"
+      },
+      {
+        "command": "recite.watch.start",
+        "title": "%vscode-command-watch-start-title%"
+      },
+      {
+        "command": "recite.watch.stop",
+        "title": "%vscode-command-watch-stop-title%"
+      },
+      {
+        "command": "recite.run",
+        "title": "%vscode-command-run-title%"
+      },
+      {
+        "command": "recite.trace",
+        "title": "%vscode-command-trace-title%"
+      },
+      {
+        "command": "recite.renameBlock",
+        "title": "%vscode-command-rename-command-title%"
+      }
     ]
   },
   "scripts": {
@@ -131,5 +155,8 @@
     "fflate": "0.8.2",
     "vscode-oniguruma": "1.7.0",
     "vscode-textmate": "9.2.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "9.0.1"
   }
 }

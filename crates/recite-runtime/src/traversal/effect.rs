@@ -1,6 +1,9 @@
-use recite_core::{CompiledEffectMode, EffectId, EffectIndex};
+use recite_core::{
+    EffectId,
+    compiled::{CompiledEffectMode, EffectIndex},
+};
 
-use crate::session::PendingEffect;
+use crate::session::{PendingEffect, SessionPhase};
 use crate::{DialogueError, DialogueEvent, DialogueSession, EffectAck};
 
 use super::AssetView;
@@ -18,7 +21,7 @@ pub fn acknowledge_effect(
     effect_id: recite_core::EffectId,
     _ack: EffectAck,
 ) -> Result<(), DialogueError> {
-    let Some(pending) = &session.pending_effect else {
+    let SessionPhase::AwaitingEffect(pending) = &session.phase else {
         return Err(DialogueError::NoEffectPending { effect: effect_id });
     };
     if pending.request.id != effect_id {
@@ -28,7 +31,7 @@ pub fn acknowledge_effect(
         });
     }
 
-    session.pending_effect = None;
+    session.phase = SessionPhase::Running;
     Ok(())
 }
 
@@ -52,7 +55,7 @@ pub(super) fn handle_effect(
         CompiledEffectMode::Immediate => emit_effect_for_next_trace_event(session, request),
         CompiledEffectMode::Blocking => {
             let request = request_for_next_trace_event(session, request)?;
-            session.pending_effect = Some(PendingEffect {
+            session.phase = SessionPhase::AwaitingEffect(PendingEffect {
                 statement: effect_statement,
                 request: request.clone(),
                 reemit_on_next: false,

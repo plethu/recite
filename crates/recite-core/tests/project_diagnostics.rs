@@ -2,8 +2,9 @@ mod project_test_support;
 
 use project_test_support::{assert_diagnostic, assert_recordable, string};
 use recite_core::{
-    ProjectManifest, ProjectSchema, SourcePosition, SpeakerDefinition,
-    validate_project_manifest_source,
+    SourcePosition,
+    project::{ProjectManifest, validate_project_manifest_source},
+    schema::{ProjectSchema, SpeakerDefinition},
 };
 
 fn position(line: u32, column: u32) -> SourcePosition {

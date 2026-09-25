@@ -3,14 +3,20 @@
 use std::collections::BTreeMap;
 
 use recite_compiler::{
-    CompileInput, PotDocument, PotEntry, PotReference, extract_pot, extract_pot_with_schema,
+    compile::CompileInput,
+    pot::{extract_pot, extract_pot_with_schema},
 };
 use recite_core::{
-    AvailabilityReasonDefinition, AvailabilityReasonId, ConditionDefinition, ConditionReturnType,
-    EnumTypeDefinition, ParameterDefinition, PoDocument, PresentationAffordanceOutputDefinition,
-    PresentationLabelArgDefinition, PresentationLabelDefinition, ProducerOrigin, ProjectSchema,
-    ProjectionInputRef, ProjectionOutputTarget, SchemaPresentationProjectorDefinition,
-    SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    AvailabilityReasonId,
+    po::PoDocument,
+    po::{PotDocument, PotEntry, PotReference},
+    schema::{
+        AvailabilityReasonDefinition, ConditionDefinition, ConditionReturnType, EnumTypeDefinition,
+        ParameterDefinition, PresentationAffordanceOutputDefinition,
+        PresentationLabelArgDefinition, PresentationLabelDefinition, ProducerOrigin, ProjectSchema,
+        ProjectionInputRef, ProjectionOutputTarget, SchemaPresentationProjectorDefinition,
+        SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    },
 };
 
 #[path = "../../../tests/support/fixtures.rs"]

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use recite_core::{CompiledDialogue, decode_compiled_dialogue_messagepack};
+use recite_core::compiled::{CompiledDialogue, decode_compiled_dialogue_messagepack};
 use recite_runtime::{
     ConditionArgument, ConditionExpectedType, ConditionQuery, DialogueChoice,
     DialogueEffectRequest, DialogueEvent, DialogueLine,

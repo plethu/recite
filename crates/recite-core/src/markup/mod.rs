@@ -6,7 +6,7 @@
 
 use std::ops::Range;
 
-use crate::{MarkupDefinition, ProjectSchema};
+use crate::{schema::MarkupDefinition, schema::ProjectSchema};
 
 mod translation;
 

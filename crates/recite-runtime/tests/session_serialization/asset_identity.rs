@@ -1,6 +1,6 @@
 use super::*;
-use recite_core::{CompiledArgument, SchemaFingerprint, canonical_source_fingerprint};
-use recite_runtime::DialogueSchemaFingerprintSnapshot;
+use recite_core::compiled::{CompiledArgument, SchemaFingerprint, canonical_source_fingerprint};
+use recite_runtime::snapshot::DialogueSchemaFingerprintSnapshot;
 
 #[test]
 fn same_id_different_asset_content_is_rejected() {
@@ -48,8 +48,9 @@ fn same_header_different_compiled_payload_is_rejected() {
     next(&asset, &mut session).expect("collects deferred effect and emits line");
     let snapshot = snapshot_session(&session);
 
-    let mut modified = asset.clone();
+    let mut modified = asset.clone().into_payload();
     modified.effects[0].args[0] = CompiledArgument::Identifier("changed_item".to_owned());
+    let modified = recite_core::compiled::CompiledDialogue::new(modified);
 
     assert_eq!(asset.header, modified.header);
     assert_eq!(asset.sources, modified.sources);
@@ -72,11 +73,12 @@ fn schema_fingerprint_mismatch_returns_structured_error() {
         ),
     );
     let session = start_scene(&asset, None).expect("starts");
-    let mut incompatible_asset = asset.clone();
+    let mut incompatible_asset = asset.clone().into_payload();
     incompatible_asset.header.schema_fingerprint =
         SchemaFingerprint::Fingerprint(canonical_source_fingerprint("different schema"));
     incompatible_asset.header.compiler_version =
-        recite_core::CompilerVersion::new("0.0.2").expect("valid compiler version");
+        recite_core::compiled::CompilerVersion::new("0.0.2").expect("valid compiler version");
+    let incompatible_asset = recite_core::compiled::CompiledDialogue::new(incompatible_asset);
 
     let error = restore_session(&incompatible_asset, snapshot_session(&session))
         .expect_err("schema mismatch is rejected");

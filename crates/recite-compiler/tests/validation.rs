@@ -1,10 +1,12 @@
 #![cfg(test)]
 
-use recite_compiler::{ValidationReport, validate_source_files, validate_source_files_with_schema};
+use recite_compiler::validation::{ValidationReport, validate_inputs, validate_source_files};
 use recite_core::{
-    Block, BlockId, Choice, ChoiceId, ChoiceTarget, Diagnostic, DivertTarget, Line, LineId,
-    SourceFile, SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourcePosition,
-    SourceSpan, SourceText, Statement,
+    BlockId, ChoiceId, Diagnostic, LineId, SourcePosition, SourceSpan,
+    ast::{
+        Block, Choice, ChoiceTarget, DivertTarget, Line, SourceFile, SourceMetadata,
+        SourceMetadataEntry, SourceMetadataScalar, SourceText, Statement,
+    },
 };
 use recite_parser::parse;
 
@@ -35,7 +37,7 @@ mod source_spans;
 
 use fixture_support::assert_diagnostic_snapshot;
 
-fn lower(path: &str, source: &str) -> recite_core::SourceFile {
+fn lower(path: &str, source: &str) -> recite_core::ast::SourceFile {
     let parse = parse(path, source);
     let lowered = parse.lower_source_file();
 

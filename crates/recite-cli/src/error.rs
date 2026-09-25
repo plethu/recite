@@ -1,6 +1,6 @@
 use crate::dialogue_locale::DialogueCatalogMalformedReason;
 use crate::fs::display_path;
-use recite_core::CompiledAssetDecodeError;
+use recite_core::compiled::CompiledAssetDecodeError;
 use std::io;
 use std::path::PathBuf;
 
@@ -9,8 +9,8 @@ mod user_message;
 #[derive(Debug)]
 pub(crate) enum CliError {
     Core(recite_core::CoreValueError),
-    Compile(recite_compiler::CompileError),
-    CompiledValue(recite_core::CompiledValueError),
+    Compile(recite_compiler::compile::CompileError),
+    CompiledValue(recite_core::compiled::CompiledValueError),
     DecodeAsset {
         path: PathBuf,
         source: CompiledAssetDecodeError,
@@ -105,7 +105,7 @@ pub(crate) enum CliError {
         source: io::Error,
     },
     Runtime(recite_runtime::DialogueError),
-    Preview(recite_runtime::PreviewError),
+    Preview(recite_runtime::preview::PreviewError),
     BlockingEffectNeedsAcknowledgement {
         effect: String,
     },
@@ -135,7 +135,7 @@ pub(crate) enum CliError {
         source: crate::watch::ProjectBuildPublisherError,
     },
     WatchCoordinator {
-        source: recite_compiler::BuildRunError,
+        source: recite_compiler::authoring::BuildRunError,
         recovery: Vec<crate::watch::ProjectBuildRecovery>,
     },
     WatchRecovery {
@@ -355,14 +355,14 @@ impl From<recite_core::CoreValueError> for CliError {
     }
 }
 
-impl From<recite_core::CompiledValueError> for CliError {
-    fn from(error: recite_core::CompiledValueError) -> Self {
+impl From<recite_core::compiled::CompiledValueError> for CliError {
+    fn from(error: recite_core::compiled::CompiledValueError) -> Self {
         Self::CompiledValue(error)
     }
 }
 
-impl From<recite_compiler::CompileError> for CliError {
-    fn from(error: recite_compiler::CompileError) -> Self {
+impl From<recite_compiler::compile::CompileError> for CliError {
+    fn from(error: recite_compiler::compile::CompileError) -> Self {
         Self::Compile(error)
     }
 }

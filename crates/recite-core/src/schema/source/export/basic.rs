@@ -1,5 +1,5 @@
 use super::{insert_object, json_literal_string, provenance};
-use crate::EffectMode;
+use crate::ast::EffectMode;
 use crate::schema::{
     AvailabilityReasonArgBinding, ConditionReturnType, MetadataContextSelector,
     MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy, ParameterDefinition,

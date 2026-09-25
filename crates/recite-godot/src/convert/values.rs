@@ -1,7 +1,7 @@
 use godot::builtin::{GString, VarDictionary, Variant, VariantType};
 use godot::prelude::ToGodot;
 use recite_core::{ScalarValue, Value};
-use recite_runtime::InterpolationValues;
+use recite_runtime::localisation::InterpolationValues;
 
 use crate::adapter::{AdapterError, AdapterErrorKind, AdapterValue};
 

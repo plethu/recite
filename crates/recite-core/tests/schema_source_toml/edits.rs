@@ -1,4 +1,4 @@
-use recite_core::load_schema_source_str;
+use recite_core::schema::load_schema_source_str;
 
 #[test]
 fn typed_edit_preserves_comments_and_updates_source_fingerprint() {
@@ -17,7 +17,7 @@ values = ["calm"]
         .expect("valid source");
     let before = source.source_fingerprint().clone();
     source
-        .apply_edit(recite_core::SchemaSourceEdit::SetProducerId(
+        .apply_edit(recite_core::schema::SchemaSourceEdit::SetProducerId(
             "dialogue-v2".to_owned(),
         ))
         .expect("producer edit");
@@ -36,7 +36,7 @@ fn source_fidelity_preserves_newline_policy_and_enum_decorations() {
         .expect("valid source");
     assert_eq!(source.source_text(), source_text);
     source
-        .apply_edit(recite_core::SchemaSourceEdit::SetEnumValues {
+        .apply_edit(recite_core::schema::SchemaSourceEdit::SetEnumValues {
             name: "mood".to_owned(),
             values: vec!["calm".to_owned(), "tense".to_owned()],
         })
@@ -50,7 +50,7 @@ fn source_fidelity_preserves_newline_policy_and_enum_decorations() {
     assert!(!updated.ends_with('\n'));
 
     let before = updated.clone();
-    let error = source.apply_edit(recite_core::SchemaSourceEdit::SetEnumValues {
+    let error = source.apply_edit(recite_core::schema::SchemaSourceEdit::SetEnumValues {
         name: "mood".to_owned(),
         values: vec![String::new()],
     });
@@ -77,7 +77,7 @@ values = [
         .source
         .expect("valid source");
     source
-        .apply_edit(recite_core::SchemaSourceEdit::SetEnumValues {
+        .apply_edit(recite_core::schema::SchemaSourceEdit::SetEnumValues {
             name: "mood".to_owned(),
             values: vec!["calm".to_owned(), "bright".to_owned()],
         })
@@ -93,7 +93,7 @@ values = [
     assert!(updated.contains("\"bright\""));
 
     let before = updated.clone();
-    let error = source.apply_edit(recite_core::SchemaSourceEdit::SetEnumValues {
+    let error = source.apply_edit(recite_core::schema::SchemaSourceEdit::SetEnumValues {
         name: "mood".to_owned(),
         values: vec!["calm".to_owned(), "calm".to_owned()],
     });

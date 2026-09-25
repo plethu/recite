@@ -2,8 +2,11 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use recite_core::{CompiledDialogue, ScalarValue, decode_compiled_dialogue_messagepack};
-use recite_runtime::{InterpolationValueProvider, LocaleError};
+use recite_core::{
+    ScalarValue,
+    compiled::{CompiledDialogue, decode_compiled_dialogue_messagepack},
+};
+use recite_runtime::localisation::{InterpolationValueProvider, LocaleError};
 use serde::Deserialize;
 
 use crate::dialogue_locale::DialoguePreviewConfig;

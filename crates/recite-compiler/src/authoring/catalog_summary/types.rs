@@ -1,4 +1,4 @@
-use recite_core::{PoDocument, PoDocumentFingerprint};
+use recite_core::po::{PoDocument, PoDocumentFingerprint};
 
 use super::coverage::{CatalogCoverage, CatalogEntryStatus};
 use super::error::CatalogSummaryError;
@@ -200,9 +200,3 @@ impl CatalogSummary {
         &self.records
     }
 }
-
-/// Alias for callers that use the shorter input name.
-pub type DialogueCatalogInput = CatalogInput;
-
-/// Alias for the per-catalogue projection.
-pub type DialogueCatalog = CatalogSummary;

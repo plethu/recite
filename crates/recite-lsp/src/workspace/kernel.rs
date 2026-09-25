@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_compiler::{AuthoringKernel, AuthoringRequest, OpenDocument as KernelOpenDocument};
+use recite_compiler::authoring::{
+    AuthoringKernel, AuthoringRequest, OpenDocument as KernelOpenDocument,
+};
 use recite_core::DocumentKey;
 
 use super::project_index::{SavedDocument, SavedProjectIndex};
@@ -176,7 +178,7 @@ pub(super) fn authoring_request(
     saved_index: &SavedProjectIndex,
     open_documents: &BTreeMap<DocumentKey, &OpenDocument>,
     partition: &str,
-    expected_generation: recite_compiler::SnapshotGeneration,
+    expected_generation: recite_compiler::authoring::SnapshotGeneration,
 ) -> AuthoringRequest {
     let saved = saved_index
         .documents
@@ -188,7 +190,7 @@ pub(super) fn authoring_request(
                 == Some(partition)
         })
         .filter_map(|document| {
-            Some(recite_compiler::SavedDocument::new(
+            Some(recite_compiler::authoring::SavedDocument::new(
                 document_key_for_saved(document)?,
                 document.text.clone(),
             ))
@@ -208,7 +210,7 @@ pub(super) fn authoring_request(
         .map(|(key, document)| {
             KernelOpenDocument::new(
                 key.clone(),
-                recite_compiler::DocumentVersion::new(i64::from(document.version())),
+                recite_compiler::authoring::DocumentVersion::new(i64::from(document.version())),
                 document.text().to_owned(),
             )
         })

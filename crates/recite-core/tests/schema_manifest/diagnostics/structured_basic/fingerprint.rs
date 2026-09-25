@@ -1,4 +1,4 @@
-use recite_core::{DiagnosticArgumentValue, DiagnosticCode, load_schema_manifest_str};
+use recite_core::{DiagnosticArgumentValue, DiagnosticCode, schema::load_schema_manifest_str};
 use std::collections::BTreeMap;
 
 #[test]
@@ -43,7 +43,7 @@ fn manifest_content_fingerprint_failures_have_exact_structured_records() {
 
     for (algorithm, value, presentation_id, compatibility_message, arguments) in cases {
         assert_eq!(
-            recite_core::producer_content_fingerprint(algorithm, value)
+            recite_core::schema::producer_content_fingerprint(algorithm, value)
                 .expect_err("invalid fingerprint"),
             compatibility_message
                 .strip_prefix("manifest content_fingerprint is invalid: ")

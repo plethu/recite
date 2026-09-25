@@ -3,9 +3,9 @@ use crate::preview_hash_primitives::{hash_expected_type, hash_text, hash_u64, ta
 
 pub(super) fn hash_preview_error(
     hasher: &mut blake3::Hasher,
-    error: &recite_runtime::PreviewError,
+    error: &recite_runtime::preview::PreviewError,
 ) {
-    use recite_runtime::PreviewError;
+    use recite_runtime::preview::PreviewError;
     match error {
         PreviewError::Runtime(error) => {
             tag(hasher, 0);

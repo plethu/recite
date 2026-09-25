@@ -2032,16 +2032,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "recite-cli"
+name = "recite-build"
 version = "0.1.0"
 dependencies = [
  "atomic-write-file",
+ "recite-compiler",
+ "recite-config",
+ "recite-core",
+ "tempfile",
+ "thiserror 2.0.18",
+ "unicase",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "recite-cli"
+version = "0.1.0"
+dependencies = [
  "clap",
  "crossterm",
  "language-tags",
  "notify",
  "ratatui",
  "recite-benchmarks",
+ "recite-build",
  "recite-compiler",
  "recite-config",
  "recite-core",
@@ -2051,11 +2065,8 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "thiserror 2.0.18",
  "toml",
  "unic-langid",
- "unicase",
- "unicode-normalization",
 ]
 
 [[package]]

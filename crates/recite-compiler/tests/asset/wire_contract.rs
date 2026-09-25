@@ -7,7 +7,7 @@
 //! change to both codec mirrors therefore still has to account for the shared
 //! v0 shape before the typed round-trip can pass.
 
-use recite_core::{
+use recite_core::compiled::{
     V0_ASSET_HEADER_FIELDS, V0_AVAILABILITY_REASON_ARG_BINDING_FIELDS,
     V0_AVAILABILITY_REASON_FIELDS, V0_BLOCK_FIELDS, V0_CHOICE_FIELDS, V0_COMPILED_DIALOGUE_FIELDS,
     V0_CONDITION_AVAILABILITY_REASON_FIELDS, V0_CONDITION_CALL_FIELDS, V0_EFFECT_FIELDS,

@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use recite_cli::watch::ProjectBuildRequest;
-use recite_compiler::BuildInputKind;
+use recite_compiler::authoring::BuildInputKind;
 use tempfile::TempDir;
 
 fn write_file(root: &Path, relative: &str, contents: &str) {

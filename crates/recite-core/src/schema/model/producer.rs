@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::ContentFingerprint;
+use crate::compiled::ContentFingerprint;
 use serde_json::Value;
 
 mod fingerprint;

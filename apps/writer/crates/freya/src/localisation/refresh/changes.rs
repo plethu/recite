@@ -1,7 +1,7 @@
 //! Source-order change descriptions. Proximity is not runtime traversal.
 use crate::localisation::context_data::{Nearby, metadata, source};
 use crate::localisation::{messages::MsgId, navigation::Destination};
-use recite_core::{PoCommentKind, PoDocument, PoEntry};
+use recite_core::po::{PoCommentKind, PoDocument, PoEntry};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Copy, PartialEq, Eq)]

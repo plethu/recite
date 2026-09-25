@@ -3,7 +3,7 @@ use std::sync::Arc;
 use recite_core::{Diagnostic, DocumentKey};
 
 use super::super::{AuthoringSummary, DocumentVersion};
-use crate::ValidationParticipation;
+use crate::validation::ValidationParticipation;
 
 /// Whether a snapshot document comes from saved state or an open overlay.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

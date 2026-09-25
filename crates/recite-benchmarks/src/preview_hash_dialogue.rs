@@ -1,7 +1,7 @@
 use recite_runtime::{
     ChoiceAvailabilityReason, ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree,
-    ChoiceAvailabilityReasonValue, ChoiceEchoMode, DialogueChoice, DialogueLine, PreviewPrompt,
-    PreviewPromptIdentity,
+    ChoiceAvailabilityReasonValue, ChoiceEchoMode, DialogueChoice, DialogueLine,
+    preview::{PreviewPrompt, PreviewPromptIdentity},
 };
 
 use crate::preview_hash_plural::hash_plural;

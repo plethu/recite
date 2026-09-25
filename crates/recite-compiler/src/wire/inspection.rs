@@ -1,9 +1,12 @@
 use recite_core::{
-    ChoiceIndex, CompiledArgument, CompiledAssetEncoding, CompiledChoiceEcho,
-    CompiledConditionCall, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
-    CompiledEffectMode, CompiledInspectionEncoding, CompiledMatchPattern, CompiledStatementKind,
-    ContentFingerprint, LineIndex, MatchArmIndex, MetadataIndex, ScalarValue, SchemaFingerprint,
-    SourceMapIndex, SourceSpan, SpeakerIndex, StatementIndex, TableRange, Value,
+    ScalarValue, SourceSpan, Value,
+    compiled::{
+        ChoiceIndex, CompiledArgument, CompiledAssetEncoding, CompiledChoiceEcho,
+        CompiledConditionCall, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
+        CompiledEffectMode, CompiledInspectionEncoding, CompiledMatchPattern,
+        CompiledStatementKind, ContentFingerprint, LineIndex, MatchArmIndex, MetadataIndex,
+        SchemaFingerprint, SourceMapIndex, SpeakerIndex, StatementIndex, TableRange,
+    },
 };
 use serde_json::{Value as JsonValue, json};
 
@@ -116,29 +119,31 @@ fn json_dialogue(dialogue: &CompiledDialogue) -> JsonValue {
     })
 }
 
-fn json_interpolation_binding(binding: &recite_core::CompiledInterpolationBinding) -> JsonValue {
+fn json_interpolation_binding(
+    binding: &recite_core::compiled::CompiledInterpolationBinding,
+) -> JsonValue {
     json!({
         "name": binding.name,
         "value": binding.value,
         "type": match binding.value_type {
-            recite_core::InterpolationType::String => "string",
-            recite_core::InterpolationType::Integer => "int",
-            recite_core::InterpolationType::Float => "float",
-            recite_core::InterpolationType::Boolean => "bool",
+            recite_core::ast::InterpolationType::String => "string",
+            recite_core::ast::InterpolationType::Integer => "int",
+            recite_core::ast::InterpolationType::Float => "float",
+            recite_core::ast::InterpolationType::Boolean => "bool",
         },
     })
 }
 
 fn json_availability_reason_arg_binding(
-    binding: &recite_core::CompiledAvailabilityReasonArgBinding,
+    binding: &recite_core::compiled::CompiledAvailabilityReasonArgBinding,
 ) -> JsonValue {
     json!({
         "name": binding.name.as_str(),
         "value": match &binding.value {
-            recite_core::CompiledAvailabilityReasonArgValue::ConditionArg(value) => {
+            recite_core::compiled::CompiledAvailabilityReasonArgValue::ConditionArg(value) => {
                 tagged_json("condition_arg", json!(value))
             }
-            recite_core::CompiledAvailabilityReasonArgValue::Literal(value) => match value {
+            recite_core::compiled::CompiledAvailabilityReasonArgValue::Literal(value) => match value {
                 recite_core::ScalarValue::String(value) => tagged_json("literal_string", json!(value)),
                 recite_core::ScalarValue::Integer(value) => tagged_json("literal_int", json!(value)),
                 recite_core::ScalarValue::Float(value) => tagged_json("literal_float", json!(value)),

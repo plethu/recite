@@ -1,10 +1,10 @@
-use recite_compiler::{SchemaAction, SchemaCapability, SchemaSummary};
+use recite_compiler::authoring::{SchemaAction, SchemaCapability, SchemaSummary};
 
 pub(super) struct DeclaredAction<'a> {
     pub(super) context: DeclarationContext,
     pub(super) action: &'a SchemaAction,
-    pub(super) producer: Option<&'a recite_core::ProducerIdentity>,
-    pub(super) origin: Option<&'a recite_core::ProducerOrigin>,
+    pub(super) producer: Option<&'a recite_core::schema::ProducerIdentity>,
+    pub(super) origin: Option<&'a recite_core::schema::ProducerOrigin>,
 }
 
 #[derive(Clone)]
@@ -144,8 +144,8 @@ fn add_capability<'a>(
     declared: &mut Vec<DeclaredAction<'a>>,
     context: DeclarationContext,
     capability: &'a SchemaCapability,
-    producer: Option<&'a recite_core::ProducerIdentity>,
-    origin: Option<&'a recite_core::ProducerOrigin>,
+    producer: Option<&'a recite_core::schema::ProducerIdentity>,
+    origin: Option<&'a recite_core::schema::ProducerOrigin>,
 ) {
     for action in capability.actions() {
         if declared.iter().any(|candidate| {

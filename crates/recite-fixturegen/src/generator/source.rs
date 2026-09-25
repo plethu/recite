@@ -3,7 +3,7 @@ use recite_core::{SourceId, SourceIdKind};
 use super::{FixtureGenerator, append_line};
 use crate::content::GeneratedText;
 
-const END_TARGET: &str = recite_core::END_DIVERT_TARGET;
+const END_TARGET: &str = recite_core::ast::END_DIVERT_TARGET;
 
 impl FixtureGenerator {
     pub(super) fn emit_sources(&mut self) {
