@@ -26,7 +26,7 @@ export class ReciteStandardClient extends EventEmitter {
         { scheme: "untitled", language: "recite" }
       ],
       diagnosticCollectionName: "recite",
-      workspaceFolder: cwd ? {
+      workspaceFolder: this.configuration.projectRootOverridden && cwd ? {
         uri: this.api.Uri.file(cwd),
         name: cwd.split(/[\\/]/).at(-1),
         index: 0

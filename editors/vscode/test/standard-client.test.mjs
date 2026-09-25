@@ -33,7 +33,7 @@ test("standard client delegates synchronization and language features to the lib
     createEditCommand: () => ({ title: "Apply", command: "recite.applyCodeAction" })
   };
   const client = new ReciteStandardClient(api,
-    { command: "recite-lsp", args: ["--stdio"], cwd: "/project" }, controller, load);
+    { command: "recite-lsp", args: ["--stdio"], cwd: "/project", projectRootOverridden: true }, controller, load);
   await client.start();
   const implementation = FakeLanguageClient.current;
   assert.equal(client.status, "running");
@@ -49,6 +49,21 @@ test("standard client delegates synchronization and language features to the lib
     "raw requests without cancellation must not pass an undefined token");
   await client.stop();
   assert.equal(implementation.stopped, true);
+});
+
+test("multi-root workspaces leave folder discovery to the language client", async () => {
+  const api = hostApi({ isTrusted: () => true });
+  api.workspace.workspaceFolders = ["/first", "/second"].map((root, index) => ({
+    name: root.slice(1), uri: api.Uri.file(root), index
+  }));
+  const client = new ReciteStandardClient(api,
+    { command: "recite-lsp", args: [], cwd: "/first", projectRootOverridden: false },
+    {}, load);
+
+  await client.start();
+  assert.equal(FakeLanguageClient.current.options.workspaceFolder, undefined);
+  assert.equal(FakeLanguageClient.current.server.options.cwd, "/first");
+  await client.stop();
 });
 
 test("code actions keep version guards and cancellation at the Recite boundary", async () => {
