@@ -1,4 +1,4 @@
-use recite_core::{ProducerIdentity, ProjectSchema};
+use recite_core::schema::{ProducerIdentity, ProjectSchema};
 
 use super::super::evidence::ProducerFailureEvidence;
 use super::evidence::{ProducerActionOutputEvidence, ProducerRetryGuidance};

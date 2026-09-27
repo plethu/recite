@@ -1,8 +1,8 @@
 use std::io::{Read, Write};
 
 use recite_runtime::{
-    ConditionAnswer, ConditionExpectedType, ConditionValue, PreviewConditionArgument,
-    PreviewConditionRequest,
+    ConditionExpectedType, ConditionValue,
+    preview::{ConditionAnswer, PreviewConditionArgument, PreviewConditionRequest},
 };
 
 use crate::error::CliError;
@@ -91,11 +91,13 @@ pub(super) fn condition_query_text(request: &PreviewConditionRequest) -> Result<
             PreviewConditionArgument::Integer(value) => Ok(RuntimeDisplayArgument::Integer(*value)),
             PreviewConditionArgument::Float(value) => Ok(RuntimeDisplayArgument::Float(*value)),
             PreviewConditionArgument::Boolean(value) => Ok(RuntimeDisplayArgument::Boolean(*value)),
-            _ => Err(CliError::Preview(recite_runtime::PreviewError::Runtime(
-                recite_runtime::DialogueError::MalformedCompiledAsset {
-                    reason: "unsupported condition argument".to_owned(),
-                },
-            ))),
+            _ => Err(CliError::Preview(
+                recite_runtime::preview::PreviewError::Runtime(
+                    recite_runtime::DialogueError::MalformedCompiledAsset {
+                        reason: "unsupported condition argument".to_owned(),
+                    },
+                ),
+            )),
         });
     Ok(format_condition_query(
         request.query().function(),

@@ -9,7 +9,7 @@ use crate::{
     editing::Writer,
 };
 use freya::prelude::*;
-use recite_core::PoEntryId;
+use recite_core::po::PoEntryId;
 
 #[derive(Clone)]
 pub(super) struct EntryEditor {
@@ -69,7 +69,7 @@ impl Component for EntryEditor {
         let valid = !plural
             || rule
                 .as_deref()
-                .and_then(|rule| recite_core::validate_plural_rule(rule).ok())
+                .and_then(|rule| recite_core::po::validate_plural_rule(rule).ok())
                 == Some(draft.forms.len());
         let changed = catalogue.changed(id);
         let primary = crate::design::SubmitAction {
@@ -130,7 +130,7 @@ impl Component for EntryEditor {
                 .map(|rule| {
                     (0..=200)
                         .filter(|count| {
-                            recite_core::evaluate_plural_form(rule, *count).ok() == Some(index)
+                            recite_core::po::evaluate_plural_form(rule, *count).ok() == Some(index)
                         })
                         .take(5)
                         .map(|count| count.to_string())

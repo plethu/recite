@@ -107,6 +107,16 @@ function assertZipArchive(data) {
   ]) {
     assert.ok(entries[expected], `VSIX is missing ${expected}`);
   }
+  const packages = ["vscode-languageclient", "vscode-languageserver-protocol",
+    "vscode-jsonrpc", "vscode-languageserver-types", "minimatch", "semver"];
+  for (const name of packages) {
+    assert.ok(entries[`extension/node_modules/${name}/package.json`],
+      `offline VSIX is missing production dependency ${name}`);
+  }
+  for (const name of ["acorn", "fflate", "vscode-textmate", "vscode-oniguruma"]) {
+    assert.equal(entries[`extension/node_modules/${name}/package.json`], undefined,
+      `VSIX must exclude development dependency ${name}`);
+  }
 }
 
 function crc32(data) {

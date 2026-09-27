@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_core::{
+use recite_core::schema::{
     ContextualMetadataDomain, ContextualMetadataProvenance, FlatMetadataDomain,
     FlatMetadataProvenance, MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition,
     MetadataTarget, MissingMetadataContextPolicy, SchemaTypeRef,

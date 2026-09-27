@@ -2,7 +2,7 @@ mod support;
 
 use recite_core::ScalarValue;
 use recite_godot::{ReciteDialogueDriver, ReciteOutput};
-use recite_runtime::InterpolationValues;
+use recite_runtime::localisation::InterpolationValues;
 
 use support::{assert_error_code, assert_line, compile_asset, must_ok, output_kinds};
 

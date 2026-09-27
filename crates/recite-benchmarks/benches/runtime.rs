@@ -6,9 +6,11 @@ use recite_benchmarks::compiler::CompilerProject;
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::runtime::RuntimeProject;
 use recite_benchmarks::{BenchmarkFixture, BenchmarkResult};
+use recite_core::compiled::CompiledDialogue;
 
 fn runtime_benchmarks(criterion: &mut Criterion) {
     for fixture in load_runtime_projects() {
+        bench_asset_preparation(criterion, &fixture);
         bench_start_scene(criterion, &fixture);
         bench_next_line(criterion, &fixture);
         bench_next_prompt(criterion, &fixture);
@@ -22,6 +24,27 @@ fn runtime_benchmarks(criterion: &mut Criterion) {
         bench_session_decode(criterion, &fixture);
         bench_full_traversal(criterion, &fixture);
     }
+}
+
+fn bench_asset_preparation(criterion: &mut Criterion, fixture: &RuntimeFixture) {
+    criterion
+        .benchmark_group("runtime/asset_preparation")
+        .bench_function(
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
+            |bencher| {
+                bencher.iter_batched(
+                    || fixture.project.dialogue().clone().into_payload(),
+                    |payload| {
+                        let asset = match CompiledDialogue::prepare(black_box(payload)) {
+                            Ok(asset) => asset,
+                            Err(error) => panic!("invalid benchmark asset: {error}"),
+                        };
+                        black_box(asset)
+                    },
+                    BatchSize::LargeInput,
+                );
+            },
+        );
 }
 
 fn bench_start_scene(criterion: &mut Criterion, fixture: &RuntimeFixture) {

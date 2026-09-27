@@ -1,4 +1,4 @@
-use recite_core::{
+use recite_core::compiled::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, CompiledAssetDecodeError,
     decode_compiled_dialogue_messagepack,
 };
@@ -51,7 +51,7 @@ fn decode_reports_unsupported_format_before_future_body_shape_validation() {
 fn decode_rejects_invalid_fingerprint_digest_length() {
     let mut asset = valid_wire_asset();
     asset.header.schema_fingerprint = Tagged::payload(
-        recite_core::V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT,
+        recite_core::compiled::V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT,
         WireFingerprint {
             algorithm: "blake3",
             digest: Bytes::new(&SHORT_DIGEST),
@@ -94,8 +94,8 @@ fn decode_preserves_choice_availability_reason_override() {
         availability_requirement: None,
         availability_requirement_source_text: None,
         availability_reason_override: Some("innkeeper_trust_hint"),
-        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
-        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        target: Tagged::nil(recite_core::compiled::V0_DIVERT_TARGET_TAG_END),
+        echo: Tagged::nil(recite_core::compiled::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
     });
     asset.availability_reasons.push(WireAvailabilityReason {

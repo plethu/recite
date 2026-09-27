@@ -12,34 +12,25 @@ use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
 
 mod build;
-mod commit;
 mod control;
 mod emitter;
-mod engine;
 mod events;
 mod freshness;
 mod inputs;
-mod preparation;
+mod marker_encoding;
 mod protocol;
-mod publisher;
-mod recovery;
-mod request;
-mod staging;
-mod target_identity;
-mod targets;
 mod wire;
 mod wire_types;
 
-pub use engine::ProjectBuildEngine;
-pub use publisher::{ProjectBuildPublisher, ProjectPreparedBuild};
-pub use recovery::{
+pub use recite_build::{ProjectBuildEngine, ProjectBuildPublisher, ProjectPreparedBuild};
+pub use recite_build::{
+    ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
+};
+pub use recite_build::{
     ProjectBuildPublisherError, ProjectBuildRecovery, ProjectBuildRecoveryDetail,
     ProjectBuildRecoveryIoKind, ProjectBuildRecoveryReason,
 };
-pub use request::{
-    ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
-};
-pub use targets::{TargetMapError, TargetPathError};
+pub use recite_build::{TargetMapError, TargetPathError};
 
 use build::{
     BuildStatus, build_once, format_failure_with_recovery, format_recovery_notice,

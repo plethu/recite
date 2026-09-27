@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{
+use recite_core::schema::{
     ParameterDefinition, PresentationAffordanceOutputDefinition, PresentationLabelDefinition,
     ProjectionInput, ProjectionQueryDefinition, ProjectionQueryFunctionDefinition,
     SchemaPresentationProjectorDefinition, SchemaProjectionSelector, SchemaTypeRef,

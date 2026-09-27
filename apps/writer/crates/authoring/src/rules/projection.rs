@@ -1,6 +1,9 @@
 use super::{ReplyRules, RuleArgument, RuleEffect, RuleExpression};
 use crate::{Document, EditError, projection::offset};
-use recite_core::{Choice, ConditionExpression, SourceId, Statement};
+use recite_core::{
+    SourceId,
+    ast::{Choice, ConditionExpression, Statement},
+};
 
 impl Document {
     pub fn reply_rules(&self, id: &str) -> Result<ReplyRules, EditError> {
@@ -23,7 +26,7 @@ impl Document {
             return Err(EditError::MissingPassage);
         };
         let destination = choice.target.as_ref().and_then(|target| {
-            let recite_core::DivertTarget::Block(reference) = &target.target else {
+            let recite_core::ast::DivertTarget::Block(reference) = &target.target else {
                 return None;
             };
             if reference.file.is_some() {
@@ -43,7 +46,7 @@ impl Document {
         &self,
         id: &str,
         choice: &Choice,
-        destination: Option<&recite_core::Block>,
+        destination: Option<&recite_core::ast::Block>,
     ) -> Result<ReplyRules, EditError> {
         let mut effects = Vec::new();
         let mut ranges = Vec::new();
@@ -134,7 +137,7 @@ impl Document {
                 schema
                     .conditions
                     .iter()
-                    .filter(|(_, d)| d.returns == recite_core::ConditionReturnType::Bool)
+                    .filter(|(_, d)| d.returns == recite_core::schema::ConditionReturnType::Bool)
                     .map(|(name, d)| RuleExpression::Call {
                         function: name.clone(),
                         arguments: d
@@ -207,7 +210,7 @@ impl Document {
 }
 fn project_condition(
     condition: &ConditionExpression,
-    schema: Option<&recite_core::ProjectSchema>,
+    schema: Option<&recite_core::schema::ProjectSchema>,
 ) -> RuleExpression {
     match condition {
         ConditionExpression::Call(call) => RuleExpression::Call {

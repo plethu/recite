@@ -2,7 +2,7 @@ use super::{DialogueCatalogProvider, DialogueCatalogSource};
 use crate::error::CliError;
 use crate::i18n::{Messages, UiLocale};
 use recite_core::{DiagnosticArgumentValue, LocaleId};
-use recite_runtime::{LocaleProvider, TextDomain};
+use recite_runtime::localisation::{LocaleProvider, TextDomain};
 use tempfile::TempDir;
 
 #[path = "../tests/dialogue_locale_catalog.rs"]
@@ -231,11 +231,11 @@ fn plural_resolution_uses_the_matching_catalogues_rule_only() {
     assert_eq!(resolution.attempts[0].selected_arm, Some(1));
     assert!(matches!(
         resolution.attempts[0].outcome,
-        recite_runtime::PluralResolutionOutcome::MissingEntry
+        recite_runtime::localisation::PluralResolutionOutcome::MissingEntry
     ));
     assert!(matches!(
         resolution.attempts[1].outcome,
-        recite_runtime::PluralResolutionOutcome::Matched
+        recite_runtime::localisation::PluralResolutionOutcome::Matched
     ));
 }
 

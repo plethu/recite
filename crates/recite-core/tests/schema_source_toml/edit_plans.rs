@@ -1,13 +1,18 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, AvailabilityReasonId,
-    ConditionAvailabilityReasonMapping, ConditionDefinition, ConditionReturnType, EffectDefinition,
-    EffectMode, ParameterDefinition, ProducerMetadataValue, ProducerOrigin, SchemaLiteralValue,
-    SchemaSourceEdit, SchemaSourceEditError, SchemaTypeRef, load_schema_source_str,
+    AvailabilityReasonId,
+    ast::EffectMode,
+    schema::{
+        AvailabilityReasonArgBinding, AvailabilityReasonDefinition,
+        ConditionAvailabilityReasonMapping, ConditionDefinition, ConditionReturnType,
+        EffectDefinition, ParameterDefinition, ProducerMetadataValue, ProducerOrigin,
+        SchemaLiteralValue, SchemaSourceEdit, SchemaSourceEditError, SchemaTypeRef,
+        load_schema_source_str,
+    },
 };
 
-fn source(text: &str) -> recite_core::SchemaSource {
+fn source(text: &str) -> recite_core::schema::SchemaSource {
     match load_schema_source_str("schema.toml", text).source {
         Some(source) => source,
         None => panic!("valid standalone schema required"),

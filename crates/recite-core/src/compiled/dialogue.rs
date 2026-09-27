@@ -1,13 +1,12 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::sync::OnceLock;
 
 use super::{CompiledAssetEncodeError, CompiledDialoguePayload, ContentFingerprint};
 
 /// Runtime-facing compiled dialogue asset.
 ///
-/// The payload is kept separate from the identity cache so raw-model editing
-/// remains available through `DerefMut`, while an exclusive borrow can always
-/// invalidate the cached identity before exposing mutable data.
+/// Prepared assets expose their payload for reading. To change a compiled
+/// program, consume it into a raw payload and prepare a new asset.
 #[derive(Debug)]
 pub struct CompiledDialogue {
     payload: CompiledDialoguePayload,
@@ -30,9 +29,15 @@ impl CompiledDialogue {
         Ok(dialogue)
     }
 
-    pub(crate) fn cached_content_fingerprint(
-        &self,
-    ) -> Result<&ContentFingerprint, &CompiledAssetEncodeError> {
+    #[must_use]
+    pub fn into_payload(self) -> CompiledDialoguePayload {
+        self.payload
+    }
+
+    /// Borrow the canonical full-payload identity, preparing it on first use.
+    ///
+    /// The identity remains valid for the lifetime of this immutable asset.
+    pub fn content_fingerprint(&self) -> Result<&ContentFingerprint, &CompiledAssetEncodeError> {
         self.content_fingerprint
             .get_or_init(|| {
                 super::fingerprint::compute_canonical_compiled_dialogue_fingerprint(self)
@@ -41,9 +46,7 @@ impl CompiledDialogue {
     }
 
     pub(crate) fn prime_content_fingerprint(&self) -> Result<(), CompiledAssetEncodeError> {
-        self.cached_content_fingerprint()
-            .map(|_| ())
-            .map_err(Clone::clone)
+        self.content_fingerprint().map(|_| ()).map_err(Clone::clone)
     }
 
     pub(crate) fn cache_content_fingerprint(
@@ -79,12 +82,5 @@ impl Deref for CompiledDialogue {
 
     fn deref(&self) -> &Self::Target {
         &self.payload
-    }
-}
-
-impl DerefMut for CompiledDialogue {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        let _ = self.content_fingerprint.take();
-        &mut self.payload
     }
 }

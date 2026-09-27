@@ -163,5 +163,7 @@ fn unique_navigation(
 }
 
 fn valid_block_name(name: &str) -> bool {
-    name != recite_core::END_DIVERT_TARGET && !name.contains("::") && is_valid_source_label(name)
+    name != recite_core::ast::END_DIVERT_TARGET
+        && !name.contains("::")
+        && is_valid_source_label(name)
 }

@@ -7,7 +7,9 @@ use std::ops::Range;
 
 mod document;
 mod entry;
+mod escape;
 mod parser;
+mod pot;
 mod refresh;
 mod review;
 mod write;
@@ -18,6 +20,7 @@ pub use parser::{
     PoComment, PoCommentKind, PoDiagnosticKind, PoHeader, PoParseError, PoParseReport,
     PoPreviousField, PoPreviousValue, PoUnknownField,
 };
+pub use pot::{PotDocument, PotEntry, PotReference};
 pub use refresh::PoRefreshError;
 pub use write::{PoIoError, PoWriteError};
 

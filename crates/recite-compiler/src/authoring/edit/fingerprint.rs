@@ -12,7 +12,7 @@ impl SourceFingerprint {
     /// Computes the in-process fingerprint used by edit preconditions.
     #[must_use]
     pub fn for_source(source: &str) -> Self {
-        let fingerprint = recite_core::canonical_source_fingerprint(source);
+        let fingerprint = recite_core::compiled::canonical_source_fingerprint(source);
         let mut digest = [0; 32];
         digest.copy_from_slice(fingerprint.digest().as_bytes());
         Self(digest)

@@ -1,7 +1,7 @@
 use recite_runtime::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
     ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
-    PreviewTrace, TextDomain,
+    localisation::TextDomain, preview::PreviewTrace,
 };
 
 use super::model::{

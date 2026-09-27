@@ -1,4 +1,4 @@
-use recite_core::{CompiledArgument, ScalarValue};
+use recite_core::{ScalarValue, compiled::CompiledArgument};
 
 /// Caller-provided pure condition evaluation for runtime traversal.
 ///

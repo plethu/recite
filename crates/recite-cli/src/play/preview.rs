@@ -1,10 +1,13 @@
 use std::collections::VecDeque;
 
-use recite_core::{ChoiceId, CompiledDialogue};
+use recite_core::{ChoiceId, compiled::CompiledDialogue};
 use recite_runtime::{
-    ConditionAnswer, DialogueEffectMode, EffectAck, PreviewCommand, PreviewConditionRequest,
-    PreviewConditionResult, PreviewError, PreviewEvent, PreviewInputRevision, PreviewInputs,
-    PreviewOptions, PreviewPrompt, PreviewSession,
+    DialogueEffectMode, EffectAck,
+    preview::{
+        ConditionAnswer, PreviewCommand, PreviewConditionRequest, PreviewConditionResult,
+        PreviewError, PreviewEvent, PreviewInputRevision, PreviewInputs, PreviewOptions,
+        PreviewPrompt, PreviewSession,
+    },
 };
 
 use crate::dialogue_locale::DialogueTraversalPreview;

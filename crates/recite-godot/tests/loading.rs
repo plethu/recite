@@ -1,8 +1,8 @@
 mod support;
 
-use recite_core::{ProducerFingerprint, ProducerFreshness, compare_producer_fingerprints};
+use recite_core::schema::{ProducerFingerprint, ProducerFreshness, compare_producer_fingerprints};
 use recite_godot::{ReciteDialogueAsset, ReciteDialogueDriver};
-use recite_runtime::{DialogueError, DialogueSchemaFingerprintSnapshot};
+use recite_runtime::{DialogueError, snapshot::DialogueSchemaFingerprintSnapshot};
 
 use support::{
     assert_deferred_effects, assert_effect, assert_line, assert_prompt_choice_ids, compile_asset,

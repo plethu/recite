@@ -2,14 +2,20 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use recite_compiler::{AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration};
+use recite_compiler::authoring::{
+    AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration,
+};
 use recite_config::discover_project;
 use recite_core::{
-    Diagnostic, DiagnosticArgumentValue, ProjectFreshnessInput, ProjectManifest,
-    ProjectManifestSource, ProjectSchema, SchemaFingerprint,
+    Diagnostic, DiagnosticArgumentValue,
+    compiled::SchemaFingerprint,
+    project::ProjectFreshnessInput,
+    project::ProjectManifest,
+    project::ProjectManifestSource,
     project::{
         MISSING_COMPILED_ASSET, validate_project_freshness_source, validate_project_manifest_source,
     },
+    schema::ProjectSchema,
 };
 
 use super::paths::resolve_project_path;
@@ -109,9 +115,11 @@ fn validate_project_sources(
         kernel.apply_with_incomplete_project(request)
     }
     .map_err(|error| {
-        CliError::Compile(recite_compiler::CompileError::InvalidValidatedInput(
-            format!("authoring kernel rejected initial project request: {error}"),
-        ))
+        CliError::Compile(
+            recite_compiler::compile::CompileError::InvalidValidatedInput(format!(
+                "authoring kernel rejected initial project request: {error}"
+            )),
+        )
     })?;
 
     Ok(kernel.snapshot().diagnostics().iter().cloned().collect())

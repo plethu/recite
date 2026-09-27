@@ -1,4 +1,4 @@
-use recite_core::{MarkupValidationIssue, SourcePosition, SourceSpan, SourceText};
+use recite_core::{SourcePosition, SourceSpan, ast::SourceText, markup::MarkupValidationIssue};
 
 use super::state::Validator;
 use crate::diagnostics;
@@ -9,7 +9,7 @@ impl<'a> Validator<'a> {
             return;
         };
 
-        for issue in recite_core::validate_markup(&source_text.text, schema) {
+        for issue in recite_core::markup::validate_markup(&source_text.text, schema) {
             match issue {
                 MarkupValidationIssue::UnknownTag { tag, span } => {
                     self.diagnostics.push(diagnostics::unknown_markup_tag(

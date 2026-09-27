@@ -1,4 +1,7 @@
-use recite_core::{DiagnosticArgumentValue, PluralRuleError, PoDiagnosticKind, PoDocument};
+use recite_core::{
+    DiagnosticArgumentValue,
+    po::{PluralRuleError, PoDiagnosticKind, PoDocument},
+};
 
 fn catalogue(rule: &str, arms: usize) -> String {
     let translations = (0..arms)

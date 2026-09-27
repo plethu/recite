@@ -1,5 +1,5 @@
 use lsp_types::{GotoDefinitionResponse, Location, PrepareRenameResponse, WorkspaceEdit};
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringSnapshot, NavigationResult, QueryResult, SymbolIdentity, SymbolLocation,
     SymbolQueryOptions, SymbolRole,
 };

@@ -5,7 +5,7 @@ use super::{
 };
 use crate::{editing::Writer, project::ProjectFiles};
 use freya::prelude::State;
-use recite_core::{PoDocument, PoDocumentFingerprint};
+use recite_core::po::{PoDocument, PoDocumentFingerprint};
 use std::path::PathBuf;
 mod changes;
 mod detail;

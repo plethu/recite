@@ -1,4 +1,4 @@
-use recite_core::{load_schema_manifest_str, load_schema_source_str};
+use recite_core::schema::{load_schema_manifest_str, load_schema_source_str};
 
 use crate::assert_recordable_diagnostics;
 
@@ -78,13 +78,13 @@ value = "calm"
         .expect("availability mapping");
     assert!(matches!(
         mapping.args.get("speaker"),
-        Some(recite_core::AvailabilityReasonArgBinding::ConditionParam(name))
+        Some(recite_core::schema::AvailabilityReasonArgBinding::ConditionParam(name))
             if name == "actor"
     ));
     assert!(matches!(
         mapping.args.get("mood"),
-        Some(recite_core::AvailabilityReasonArgBinding::Literal(
-            recite_core::SchemaLiteralValue::String(value)
+        Some(recite_core::schema::AvailabilityReasonArgBinding::Literal(
+            recite_core::schema::SchemaLiteralValue::String(value)
         )) if value == "calm"
     ));
 }
@@ -114,8 +114,8 @@ value = "$literal"
             .as_ref()
             .expect("mapping")
             .args["value"],
-        recite_core::AvailabilityReasonArgBinding::Literal(
-            recite_core::SchemaLiteralValue::String("$literal".to_owned())
+        recite_core::schema::AvailabilityReasonArgBinding::Literal(
+            recite_core::schema::SchemaLiteralValue::String("$literal".to_owned())
         )
     );
 

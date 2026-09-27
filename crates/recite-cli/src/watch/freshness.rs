@@ -1,5 +1,5 @@
-use recite_compiler::{FreshnessAssessment, FreshnessStatus, StaleReason};
-use recite_core::{Diagnostic, SchemaFingerprint};
+use recite_compiler::authoring::{FreshnessAssessment, FreshnessStatus, StaleReason};
+use recite_core::{Diagnostic, compiled::SchemaFingerprint};
 
 use super::{ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest};
 use crate::error::CliError;
@@ -29,6 +29,15 @@ pub(super) fn assess_current_freshness(
                 // published asset is therefore known not to describe the
                 // current project, even though no fingerprint comparison was
                 // possible.
+                assessment: FreshnessAssessment::stale(
+                    request.build_request().fingerprints().clone(),
+                    vec![StaleReason::Fingerprints],
+                ),
+            });
+        }
+        _ => {
+            return Ok(FreshnessResult {
+                diagnostics: Vec::new(),
                 assessment: FreshnessAssessment::stale(
                     request.build_request().fingerprints().clone(),
                     vec![StaleReason::Fingerprints],

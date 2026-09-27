@@ -4,7 +4,7 @@ use super::{
     catalogue::Catalogue,
     messages::{MsgId, text as wording},
 };
-use recite_core::{PoDiagnosticKind, PoDocument, PoEdit};
+use recite_core::po::{PoDiagnosticKind, PoDocument, PoEdit};
 use std::{
     fs,
     io::Write,
@@ -149,7 +149,7 @@ fn normalise(mut document: PoDocument, locale: &TargetLocale) -> Result<PoDocume
         "Language: {locale}\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
     );
     if let Some(plural) = plural {
-        recite_core::validate_plural_rule(plural.value()).map_err(|e| e.to_string())?;
+        recite_core::po::validate_plural_rule(plural.value()).map_err(|e| e.to_string())?;
         header.push_str(&format!("Plural-Forms: {}\n", plural.value()));
     }
     let mut edits = Vec::new();

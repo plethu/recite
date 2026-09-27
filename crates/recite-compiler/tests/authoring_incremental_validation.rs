@@ -1,8 +1,11 @@
 #![cfg(test)]
 
 //! Cached authoring diagnostics must equal the uncached batch validator, including locations.
-use recite_compiler::{AuthoringKernel, AuthoringRequest, SavedDocument, ValidationInput};
-use recite_core::{Diagnostic, DocumentKey, ProjectSchema};
+use recite_compiler::{
+    authoring::{AuthoringKernel, AuthoringRequest, SavedDocument},
+    validation::{ProjectCompleteness, ValidationInput, validate_inputs},
+};
+use recite_core::{Diagnostic, DocumentKey, schema::ProjectSchema};
 
 fn ordered(mut diagnostics: Vec<Diagnostic>) -> Vec<Diagnostic> {
     diagnostics.sort_by(|a, b| {
@@ -49,18 +52,12 @@ fn compare(
             )
         })
         .collect();
-    let report = match (schema, complete) {
-        (None, true) => recite_compiler::validate_source_files_with_participation(&inputs),
-        (None, false) => recite_compiler::validate_source_files_with_incomplete_project(&inputs),
-        (Some(schema), true) => {
-            recite_compiler::validate_source_files_with_participation_with_schema(&inputs, schema)
-        }
-        (Some(schema), false) => {
-            recite_compiler::validate_source_files_with_incomplete_project_with_schema(
-                &inputs, schema,
-            )
-        }
+    let project = if complete {
+        ProjectCompleteness::Complete
+    } else {
+        ProjectCompleteness::Incomplete
     };
+    let report = validate_inputs(&inputs, schema, project);
     let expected = ordered(
         parsed
             .into_iter()

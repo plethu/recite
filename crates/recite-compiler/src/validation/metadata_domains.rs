@@ -1,8 +1,9 @@
 use std::collections::BTreeSet;
 
 use recite_core::{
-    MetadataContextSelector, MetadataDomainDefinition, MissingMetadataContextPolicy,
-    SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue, SourceSpan,
+    SourceSpan,
+    ast::{SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue},
+    schema::{MetadataContextSelector, MetadataDomainDefinition, MissingMetadataContextPolicy},
 };
 
 use super::metadata::MetadataValidationContext;
@@ -127,7 +128,7 @@ impl<'a> Validator<'a> {
 
     fn missing_context_values(
         &mut self,
-        schema: &'a recite_core::ProjectSchema,
+        schema: &'a recite_core::schema::ProjectSchema,
         entry: &SourceMetadataEntry,
         domain_name: &str,
         selector: &str,

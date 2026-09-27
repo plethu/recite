@@ -1,4 +1,7 @@
-use recite_core::{ProjectManifest, SourcePosition, project_scene_key_span};
+use recite_core::{
+    SourcePosition,
+    project::{ProjectManifest, project_scene_key_span},
+};
 
 fn position(line: u32, column: u32) -> SourcePosition {
     SourcePosition::new(line, column).unwrap_or_else(|error| panic!("valid test position: {error}"))

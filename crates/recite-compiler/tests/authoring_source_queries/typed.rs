@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringRequest, QueryResult, SavedDocument, SemanticFact, SnapshotGeneration,
 };
 use recite_core::DocumentKey;
@@ -32,7 +32,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
         .expect("block completion site");
     assert_eq!(
         block_site.kind(),
-        recite_compiler::CompletionSiteKind::Block
+        recite_compiler::authoring::CompletionSiteKind::Block
     );
     assert!(block_site.block_target().is_none());
 
@@ -73,7 +73,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
     assert!(matches!(
         requires_hover.facts(),
         [SemanticFact::Clause {
-            kind: recite_compiler::ClauseKind::Requires
+            kind: recite_compiler::authoring::ClauseKind::Requires
         }]
     ));
     assert_eq!(requires_hover.location().span().start.column(), 28);
@@ -93,7 +93,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
     assert!(matches!(
         if_hover.facts(),
         [SemanticFact::Clause {
-            kind: recite_compiler::ClauseKind::If
+            kind: recite_compiler::authoring::ClauseKind::If
         }]
     ));
     assert_eq!(if_hover.location().span().start.column(), 1);
@@ -137,7 +137,10 @@ fn typed_condition_sites_follow_parser_marker_boundaries() {
         let site = snapshot
             .completion_site(&document, position(line, column))
             .expect("bare condition marker site");
-        assert_eq!(site.kind(), recite_compiler::CompletionSiteKind::Condition);
+        assert_eq!(
+            site.kind(),
+            recite_compiler::authoring::CompletionSiteKind::Condition
+        );
     }
 
     let tab_site = snapshot
@@ -159,7 +162,7 @@ fn typed_condition_sites_follow_parser_marker_boundaries() {
     assert!(matches!(
         marker_hover.facts(),
         [SemanticFact::Clause {
-            kind: recite_compiler::ClauseKind::If
+            kind: recite_compiler::authoring::ClauseKind::If
         }]
     ));
     assert_eq!(marker_hover.location().span().start.column(), 2);
@@ -210,7 +213,7 @@ fn malformed_reason_and_partial_reference_queries_remain_conservative() {
     ));
     assert!(matches!(
         snapshot.navigate(&document, position(3, 4)),
-        QueryResult::Ready(recite_compiler::NavigationResult::Missing)
+        QueryResult::Ready(recite_compiler::authoring::NavigationResult::Missing)
     ));
 }
 
@@ -231,7 +234,7 @@ fn partial_reference_queries_expose_incomplete_coverage() {
     assert!(matches!(
         kernel.snapshot().navigate(&document, position(2, 5)),
         QueryResult::Partial {
-            value: recite_compiler::NavigationResult::Unique(_),
+            value: recite_compiler::authoring::NavigationResult::Unique(_),
             ..
         }
     ));
@@ -239,7 +242,7 @@ fn partial_reference_queries_expose_incomplete_coverage() {
         kernel.snapshot().references(
             &document,
             position(2, 5),
-            recite_compiler::SymbolQueryOptions::default(),
+            recite_compiler::authoring::SymbolQueryOptions::default(),
         ),
         QueryResult::Partial { .. }
     ));

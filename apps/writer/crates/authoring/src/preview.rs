@@ -2,14 +2,22 @@ mod catalogue;
 mod setup;
 pub use setup::PreviewSetup;
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
+use recite_compiler::compile::{
+    CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema,
+};
 use recite_core::{
-    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, ProjectSchema, SchemaFingerprint,
-    SourceMapId,
+    ChoiceId,
+    compiled::{
+        CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint, SourceMapId,
+    },
+    schema::ProjectSchema,
 };
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, DialogueChoice, DialogueEffectMode, EffectAck, PreviewCommand,
-    PreviewConditionRequest, PreviewEvent, PreviewInputs, PreviewSession,
+    ConditionValue, DialogueChoice, DialogueEffectMode, EffectAck,
+    preview::{
+        ConditionAnswer, PreviewCommand, PreviewConditionRequest, PreviewEvent, PreviewInputs,
+        PreviewSession,
+    },
 };
 
 use crate::Document;
@@ -17,15 +25,15 @@ use crate::Document;
 #[derive(Debug, thiserror::Error)]
 pub enum PreviewError {
     #[error(transparent)]
-    Value(#[from] recite_core::CompiledValueError),
+    Value(#[from] recite_core::compiled::CompiledValueError),
     #[error(transparent)]
-    Compile(#[from] recite_compiler::CompileError),
+    Compile(#[from] recite_compiler::compile::CompileError),
     #[error(transparent)]
     Runtime(#[from] recite_runtime::DialogueError),
     #[error(transparent)]
-    Preview(#[from] recite_runtime::PreviewError),
+    Preview(#[from] recite_runtime::preview::PreviewError),
     #[error(transparent)]
-    Locale(#[from] recite_runtime::LocaleError),
+    Locale(#[from] recite_runtime::localisation::LocaleError),
     #[error("Repair the scene diagnostics before starting a new preview.")]
     InvalidSource,
     #[error("Preview needs condition input before it can continue.")]
@@ -47,7 +55,7 @@ pub struct Preview {
     session: OwnedPreview,
     revision: i64,
     catalogues: catalogue::TrialCatalogues,
-    values: recite_runtime::InterpolationValues,
+    values: recite_runtime::localisation::InterpolationValues,
 }
 
 self_cell::self_cell! {
@@ -108,7 +116,7 @@ impl Preview {
         })
     }
 
-    pub fn trace(&self) -> &recite_runtime::PreviewTrace {
+    pub fn trace(&self) -> &recite_runtime::preview::PreviewTrace {
         self.session.borrow_dependent().trace()
     }
 

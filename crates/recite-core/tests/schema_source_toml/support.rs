@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{Diagnostic, DiagnosticArgumentValue, SchemaSourceLoadReport};
+use recite_core::{Diagnostic, DiagnosticArgumentValue, schema::SchemaSourceLoadReport};
 
 pub(crate) fn string(value: &str) -> DiagnosticArgumentValue {
     DiagnosticArgumentValue::String(value.to_owned())

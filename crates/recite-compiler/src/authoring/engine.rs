@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use recite_core::{Diagnostic, ProjectSchema, SourceRecovery};
+use recite_core::{Diagnostic, SourceRecovery, schema::ProjectSchema};
 use recite_parser::parse;
 
 use super::AuthoringSummary;
@@ -12,7 +12,7 @@ use crate::validation::{
     incremental::{ProjectFacts, validate_local},
     project::sort_diagnostics_by_source,
 };
-use crate::{ValidationInput, ValidationParticipation};
+use crate::{validation::ValidationInput, validation::ValidationParticipation};
 
 use std::cell::Cell;
 
@@ -101,11 +101,11 @@ fn participation_for(recovery: SourceRecovery) -> ValidationParticipation {
         .with_inline_markup(completeness(recovery.inline_markup()))
 }
 
-fn completeness(is_complete: bool) -> crate::ValidationCompleteness {
+fn completeness(is_complete: bool) -> crate::validation::ValidationCompleteness {
     if is_complete {
-        crate::ValidationCompleteness::Complete
+        crate::validation::ValidationCompleteness::Complete
     } else {
-        crate::ValidationCompleteness::Incomplete
+        crate::validation::ValidationCompleteness::Incomplete
     }
 }
 

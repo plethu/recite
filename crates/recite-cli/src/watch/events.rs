@@ -4,7 +4,7 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use notify::{Event, EventKind};
-use recite_compiler::{BuildCoordinator, BuildGeneration, BuildGenerationError};
+use recite_compiler::authoring::{BuildCoordinator, BuildGeneration, BuildGenerationError};
 use recite_core::Diagnostic;
 
 use super::PROJECT_MANIFEST_FILE;

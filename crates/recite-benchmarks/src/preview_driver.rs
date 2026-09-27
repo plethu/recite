@@ -1,6 +1,6 @@
 use std::hint::black_box;
 
-use recite_runtime::{
+use recite_runtime::preview::{
     ConditionAnswer, PreviewEvent, PreviewOutput, PreviewPrompt, PreviewSession, PreviewStatus,
 };
 
@@ -206,7 +206,7 @@ impl PreviewProject {
 fn initial_output(
     preview: &mut PreviewSession<'_>,
     project: &PreviewProject,
-) -> BenchmarkResult<recite_runtime::PreviewOutput> {
+) -> BenchmarkResult<recite_runtime::preview::PreviewOutput> {
     match preview.state().status() {
         PreviewStatus::Ready => Ok(preview.step(project.inputs())),
         PreviewStatus::WaitingForChoice { prompt } => {
@@ -228,16 +228,16 @@ fn initial_output(
 
 fn answer_condition(
     preview: &mut PreviewSession<'_>,
-    request_id: recite_runtime::PreviewConditionRequestId,
+    request_id: recite_runtime::preview::PreviewConditionRequestId,
     answer: recite_runtime::ConditionValue,
     project: &PreviewProject,
-) -> BenchmarkResult<recite_runtime::PreviewOutput> {
+) -> BenchmarkResult<recite_runtime::preview::PreviewOutput> {
     Ok(preview.answer(request_id, ConditionAnswer::Value(answer), project.inputs()))
 }
 
 fn acknowledge_blocking(
     preview: &mut PreviewSession<'_>,
     effect_id: recite_core::EffectId,
-) -> BenchmarkResult<recite_runtime::PreviewOutput> {
+) -> BenchmarkResult<recite_runtime::preview::PreviewOutput> {
     Ok(preview.acknowledge(effect_id, recite_runtime::EffectAck::Completed))
 }

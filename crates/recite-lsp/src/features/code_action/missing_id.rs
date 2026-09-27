@@ -1,5 +1,7 @@
 use lsp_types::Range;
-use recite_compiler::{AuthoringEditError, AuthoringEditPlan, AuthoringSnapshot, SourceRange};
+use recite_compiler::authoring::{
+    AuthoringEditError, AuthoringEditPlan, AuthoringSnapshot, SourceRange,
+};
 
 use super::CodeActionDocument;
 use crate::edit_projection::{EditDocument, project_plan};

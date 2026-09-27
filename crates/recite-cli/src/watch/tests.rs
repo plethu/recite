@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use notify::event::{AccessKind, AccessMode};
 use notify::{Event, EventKind};
-use recite_compiler::BuildTelemetry;
-use recite_core::decode_compiled_dialogue_messagepack;
+use recite_compiler::authoring::BuildTelemetry;
+use recite_core::compiled::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
 use super::build::{BuildStatus, build_once as build_once_with_messages};

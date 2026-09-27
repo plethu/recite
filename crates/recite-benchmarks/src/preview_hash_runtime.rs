@@ -1,6 +1,6 @@
 use recite_runtime::{
-    ConditionValue, DialogueEffectArgument, DialogueEffectRequest, PreviewConditionArgument,
-    PreviewConditionResult,
+    ConditionValue, DialogueEffectArgument, DialogueEffectRequest,
+    preview::{PreviewConditionArgument, PreviewConditionResult},
 };
 
 use crate::preview_hash_dialogue::hash_optional_prompt;
@@ -10,7 +10,7 @@ use crate::preview_hash_primitives::{
 
 pub(super) fn hash_request(
     hasher: &mut blake3::Hasher,
-    request: &recite_runtime::PreviewConditionRequest,
+    request: &recite_runtime::preview::PreviewConditionRequest,
 ) {
     hash_u64(hasher, request.id().get());
     hash_text(hasher, request.block().as_str());
@@ -20,7 +20,7 @@ pub(super) fn hash_request(
 
 pub(super) fn hash_query(
     hasher: &mut blake3::Hasher,
-    query: &recite_runtime::PreviewConditionQuery,
+    query: &recite_runtime::preview::PreviewConditionQuery,
 ) {
     hash_text(hasher, query.function());
     hash_expected_type(hasher, query.expected_type());
@@ -111,7 +111,7 @@ pub(super) fn hash_effect(hasher: &mut blake3::Hasher, effect: &DialogueEffectRe
 
 pub(super) fn hash_revision(
     hasher: &mut blake3::Hasher,
-    revision: &recite_runtime::PreviewAssetRevision,
+    revision: &recite_runtime::preview::PreviewAssetRevision,
 ) {
     hash_text(hasher, revision.asset_id().as_str());
     hash_text(hasher, revision.payload_fingerprint().algorithm().as_str());

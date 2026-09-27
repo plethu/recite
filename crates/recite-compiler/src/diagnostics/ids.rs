@@ -1,5 +1,6 @@
 use recite_core::{
-    Choice, ChoiceId, Diagnostic, DiagnosticCode, Line, LineId, SourceId, SourceSpan,
+    ChoiceId, Diagnostic, DiagnosticCode, LineId, SourceId, SourceSpan,
+    ast::{Choice, Line},
 };
 
 use super::{compiler_diagnostic, diagnostic_contract, related_presentation, string_argument};

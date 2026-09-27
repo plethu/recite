@@ -1,4 +1,4 @@
-use recite_core::{CompiledDialogue, messagepack_array_len, messagepack_u16};
+use recite_core::compiled::{CompiledDialogue, messagepack_array_len, messagepack_u16};
 use serde::Deserialize;
 use std::io::Cursor;
 
@@ -53,7 +53,7 @@ fn reject_unsupported_messagepack_snapshot_format(bytes: &[u8]) -> Result<(), Di
         return Ok(());
     };
 
-    if snapshot_format_version == crate::CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION {
+    if snapshot_format_version == crate::snapshot::CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION {
         Ok(())
     } else {
         Err(DialogueError::UnsupportedSessionSnapshotFormat {

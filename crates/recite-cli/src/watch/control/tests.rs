@@ -2,7 +2,7 @@ use std::io::{self, Cursor, Read};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCandidate, BuildCheck, BuildControl, BuildCoordinator, BuildEngine, BuildFailure,
     BuildGeneration, BuildInput, BuildPreparedHandle, BuildPublisher, BuildRequest, BuildTarget,
     BuildTerminalStatus, FreshnessAssessment, PreparedPublishIdentity, PublishAbortReason,
@@ -68,7 +68,7 @@ fn valid_cancel_reaches_active_build_control() {
     ));
     assert!(matches!(
         control.cancellation(),
-        Some(recite_compiler::BuildCancellation::User)
+        Some(recite_compiler::authoring::BuildCancellation::User)
     ));
 }
 
@@ -121,7 +121,7 @@ impl BuildEngine for BlockingEngine {
         while control.cancellation().is_none() {
             if started.elapsed() > Duration::from_secs(5) {
                 return Err(BuildFailure::Engine {
-                    reason: recite_compiler::BuildFailureReason::Host,
+                    reason: recite_compiler::authoring::BuildFailureReason::Host,
                 });
             }
             std::thread::yield_now();

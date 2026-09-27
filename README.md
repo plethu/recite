@@ -90,7 +90,7 @@ The [Nix flake](nix/README.md) provides the CLI and Writer packages. The
 desktop previews.
 
 The [production spec](docs/recite-production-spec.md) is the detailed contract,
-and the [v1 roadmap](docs/roadmap.md) records what is still missing.
+and [GitHub milestones](https://github.com/plethu/recite/milestones) track what is still missing.
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the current contribution status and
 maintainer setup (`mise install`, then `mise exec -- just check`).
 

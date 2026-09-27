@@ -1,4 +1,4 @@
-use recite_core::{PoDocument, PoRefreshError};
+use recite_core::po::{PoDocument, PoRefreshError};
 
 #[test]
 fn refresh_preserves_translations_notes_unknown_fields_and_marks_source_changes() {

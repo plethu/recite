@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-use recite_core::{CompiledDialogue, decode_compiled_dialogue_messagepack};
+use recite_core::compiled::{CompiledDialogue, decode_compiled_dialogue_messagepack};
 
 use crate::buffer::checked_bytes;
 use crate::error::set_last_error;

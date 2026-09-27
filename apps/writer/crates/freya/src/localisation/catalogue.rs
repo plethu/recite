@@ -2,7 +2,7 @@
 mod preview;
 mod recovery;
 use super::messages::{MsgId, text as wording};
-use recite_core::{PoDocument, PoDocumentFingerprint, PoEdit, PoEntryId};
+use recite_core::po::{PoDocument, PoDocumentFingerprint, PoEdit, PoEntryId};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -150,7 +150,7 @@ impl Catalogue {
         if entry.is_plural() {
             let count = self
                 .plural_rule()
-                .and_then(|rule| recite_core::validate_plural_rule(rule).ok())
+                .and_then(|rule| recite_core::po::validate_plural_rule(rule).ok())
                 .ok_or_else(|| wording(MsgId::WriterEntryPluralInvalid))?;
             if draft.forms.len() != count {
                 return Err(wording(MsgId::WriterEntryPluralInvalid));

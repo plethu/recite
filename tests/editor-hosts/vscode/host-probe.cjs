@@ -163,8 +163,20 @@ async function runKeyboardProbe() {
 
   const valid = await vscode.workspace.openTextDocument(validUri);
   const editor = await vscode.window.showTextDocument(valid);
+  vscode.commands.registerCommand("reciteHostProbe.rename", async () => {
+    writeKeyboardMarker(process.env.RECITE_HOST_PROBE_KEYBOARD_RENAME_STARTED, { event: "rename-started" });
+    const result = await vscode.commands.executeCommand("recite.renameBlock");
+    writeKeyboardMarker(process.env.RECITE_HOST_PROBE_KEYBOARD_RENAME_COMMAND_RESULT, {
+      event: "rename-command-result", result,
+      activeDocument: vscode.window.activeTextEditor?.document.uri.fsPath,
+      textContainsRenamedBlock: valid.getText().includes(":: keyboard_done")
+    });
+  });
   const targetPosition = positionFor(valid.getText(), "-> work", 4);
   editor.selection = new vscode.Selection(targetPosition, targetPosition);
+  await vscode.commands.executeCommand(
+    "vscode.executeCompletionItemProvider", validUri, targetPosition
+  );
   writeKeyboardMarker(process.env.RECITE_HOST_PROBE_KEYBOARD_RENAME_READY, {
     event: "rename-ready",
     language: valid.languageId,

@@ -1,4 +1,4 @@
-use recite_core::{PoDocument, PoEntryId};
+use recite_core::po::{PoDocument, PoEntryId};
 
 #[test]
 fn review_preserves_unrelated_flags_comments_and_crlf() -> Result<(), Box<dyn std::error::Error>> {

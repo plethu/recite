@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 
 use recite_core::LocaleId;
-use recite_runtime::{LocaleProvider, TextDomain};
+use recite_runtime::localisation::{LocaleProvider, TextDomain};
 
 use crate::fixture_context::RuntimeFixture;
 use crate::project::BenchmarkProject;
@@ -39,7 +39,7 @@ impl LocaleProvider for CatalogProvider {
         _domain: TextDomain,
         _locale: &LocaleId,
         _variant: Option<&str>,
-    ) -> Result<Option<String>, recite_runtime::LocaleError> {
+    ) -> Result<Option<String>, recite_runtime::localisation::LocaleError> {
         Ok(self.entries.get(id).cloned())
     }
 
@@ -52,8 +52,11 @@ impl LocaleProvider for CatalogProvider {
         _domain: TextDomain,
         _locale: &LocaleId,
         _variant: Option<&str>,
-    ) -> Result<recite_runtime::PluralResolution, recite_runtime::LocaleError> {
-        Ok(recite_runtime::PluralResolution {
+    ) -> Result<
+        recite_runtime::localisation::PluralResolution,
+        recite_runtime::localisation::LocaleError,
+    > {
+        Ok(recite_runtime::localisation::PluralResolution {
             template: None,
             selected_arm: None,
             matched_locale: None,

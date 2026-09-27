@@ -1,6 +1,6 @@
 use crate::{
-    CompiledChoice, CompiledInterpolationBinding, CompiledInterpolationMode, CompiledLine,
-    SpeakerIndex,
+    compiled::CompiledChoice, compiled::CompiledInterpolationBinding,
+    compiled::CompiledInterpolationMode, compiled::CompiledLine, compiled::SpeakerIndex,
 };
 use serde::{Serialize, Serializer};
 
@@ -169,10 +169,10 @@ pub(super) struct MsgInterpolationBinding<'a>(&'a str, &'a str, &'static str);
 impl<'a> From<&'a CompiledInterpolationBinding> for MsgInterpolationBinding<'a> {
     fn from(binding: &'a CompiledInterpolationBinding) -> Self {
         let value_type = match binding.value_type {
-            crate::InterpolationType::String => "string",
-            crate::InterpolationType::Integer => "int",
-            crate::InterpolationType::Float => "float",
-            crate::InterpolationType::Boolean => "bool",
+            crate::ast::InterpolationType::String => "string",
+            crate::ast::InterpolationType::Integer => "int",
+            crate::ast::InterpolationType::Float => "float",
+            crate::ast::InterpolationType::Boolean => "bool",
         };
         Self(&binding.name, &binding.value, value_type)
     }

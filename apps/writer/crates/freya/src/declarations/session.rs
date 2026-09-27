@@ -1,6 +1,6 @@
 //! Explicit standalone source association; generated manifests are never edited.
 use crate::project::{FileError, read_regular, save::replace_checked};
-use recite_core::{ProjectSchema, SchemaSource};
+use recite_core::schema::{ProjectSchema, SchemaSource};
 use std::path::{Path, PathBuf};
 
 pub(crate) struct Session {
@@ -32,8 +32,10 @@ impl Session {
             .ok_or(FileError::NoSchema)?;
         let output = report.manifest().project_root().join(relative);
         let output_baseline = read_regular(&output)?;
-        let loaded =
-            recite_core::load_schema_manifest_str(output.to_string_lossy(), &output_baseline);
+        let loaded = recite_core::schema::load_schema_manifest_str(
+            output.to_string_lossy(),
+            &output_baseline,
+        );
         let schema = loaded
             .schema
             .ok_or(FileError::Validation(loaded.diagnostics))?;
@@ -74,8 +76,10 @@ impl Session {
         relative.is_some_and(|path| self.root.join(path) == self.output)
     }
     pub(crate) fn check_project_settings(&self, source: &str) -> Result<(), FileError> {
-        let loaded =
-            recite_core::ProjectManifest::load_str_with_spans("recite.project.toml", source);
+        let loaded = recite_core::project::ProjectManifest::load_str_with_spans(
+            "recite.project.toml",
+            source,
+        );
         let source = loaded
             .source
             .ok_or(FileError::Validation(loaded.diagnostics))?;
@@ -91,7 +95,8 @@ impl Session {
             return Err(FileError::UnsavedDocument);
         }
         let text = read_regular(&self.output)?;
-        let loaded = recite_core::load_schema_manifest_str(self.output.to_string_lossy(), &text);
+        let loaded =
+            recite_core::schema::load_schema_manifest_str(self.output.to_string_lossy(), &text);
         let schema = loaded
             .schema
             .ok_or(FileError::Validation(loaded.diagnostics))?;
@@ -225,7 +230,8 @@ impl Session {
         let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
         let disk = read_regular(&source.path)?;
         let output = read_regular(&self.output)?;
-        let loaded = recite_core::load_schema_manifest_str(self.output.to_string_lossy(), &output);
+        let loaded =
+            recite_core::schema::load_schema_manifest_str(self.output.to_string_lossy(), &output);
         if let Some(schema) = &loaded.schema {
             self.check_owner(schema)?;
         }
@@ -260,7 +266,7 @@ impl Session {
         self.source.as_ref().is_some_and(|s| {
             parse(&s.path, &s.draft).is_ok_and(|source| {
                 source.schema_fingerprint()
-                    == recite_core::canonical_schema_fingerprint(&self.schema)
+                    == recite_core::schema::canonical_schema_fingerprint(&self.schema)
             })
         })
     }

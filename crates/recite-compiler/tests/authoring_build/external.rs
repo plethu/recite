@@ -1,5 +1,5 @@
 use super::support::*;
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildAuthority, BuildAuthorityFence, BuildCandidate, BuildCheck, BuildControl,
     BuildCoordinator, BuildEngine, BuildFailure, BuildInput, BuildRequest, BuildTerminalStatus,
 };
@@ -56,7 +56,7 @@ fn external_supersession_before_a_permit_allows_only_b_to_publish() {
         })
     };
     entered.wait();
-    control_a.supersede(recite_compiler::BuildGeneration::new(2));
+    control_a.supersede(recite_compiler::authoring::BuildGeneration::new(2));
     let mut engine_b = FakeEngine::new([candidate("dialogue.recitec", b"B")]);
     let mut publisher_b = FakePublisher::new();
     let result_b = BuildCoordinator::with_fence(fence)
@@ -121,7 +121,7 @@ fn external_supersession_during_build_prevents_old_publication() {
         (result, publisher)
     });
     entered.wait();
-    control.supersede(recite_compiler::BuildGeneration::new(2));
+    control.supersede(recite_compiler::authoring::BuildGeneration::new(2));
     release.wait();
     let (result, publisher) = worker
         .join()
@@ -136,28 +136,33 @@ struct BlockingPreparePublisher {
     release: Arc<Barrier>,
     commit_calls: usize,
 }
-impl recite_compiler::BuildPublisher for BlockingPreparePublisher {
+impl recite_compiler::authoring::BuildPublisher for BlockingPreparePublisher {
     type Prepared = super::support::FakePrepared;
     fn prepare(
         &mut self,
         request: &BuildRequest,
         candidates: &[BuildCandidate],
         _: &BuildControl,
-    ) -> Result<Self::Prepared, recite_compiler::PublishFailure> {
+    ) -> Result<Self::Prepared, recite_compiler::authoring::PublishFailure> {
         self.entered.wait();
         self.release.wait();
         Ok(super::support::FakePrepared {
-            identity: recite_compiler::PreparedPublishIdentity::for_request(
+            identity: recite_compiler::authoring::PreparedPublishIdentity::for_request(
                 request,
                 candidates.to_vec(),
             ),
             candidates: candidates.to_vec(),
         })
     }
-    fn abort(&mut self, _: Option<Self::Prepared>, _: recite_compiler::PublishAbortReason) {}
-    fn commit(&mut self, _: Self::Prepared) -> recite_compiler::PublishOutcome {
+    fn abort(
+        &mut self,
+        _: Option<Self::Prepared>,
+        _: recite_compiler::authoring::PublishAbortReason,
+    ) {
+    }
+    fn commit(&mut self, _: Self::Prepared) -> recite_compiler::authoring::PublishOutcome {
         self.commit_calls += 1;
-        recite_compiler::PublishOutcome::Published {
+        recite_compiler::authoring::PublishOutcome::Published {
             targets: Vec::new(),
         }
     }
@@ -200,32 +205,37 @@ struct BlockingCommitPublisher {
     block: bool,
 }
 struct BlockingPrepared {
-    identity: recite_compiler::PreparedPublishIdentity,
+    identity: recite_compiler::authoring::PreparedPublishIdentity,
     candidates: Vec<BuildCandidate>,
 }
-impl recite_compiler::BuildPreparedHandle for BlockingPrepared {
-    fn identity(&self) -> recite_compiler::PreparedPublishIdentity {
+impl recite_compiler::authoring::BuildPreparedHandle for BlockingPrepared {
+    fn identity(&self) -> recite_compiler::authoring::PreparedPublishIdentity {
         self.identity.clone()
     }
 }
-impl recite_compiler::BuildPublisher for BlockingCommitPublisher {
+impl recite_compiler::authoring::BuildPublisher for BlockingCommitPublisher {
     type Prepared = BlockingPrepared;
     fn prepare(
         &mut self,
         request: &BuildRequest,
         candidates: &[BuildCandidate],
         _: &BuildControl,
-    ) -> Result<Self::Prepared, recite_compiler::PublishFailure> {
+    ) -> Result<Self::Prepared, recite_compiler::authoring::PublishFailure> {
         Ok(BlockingPrepared {
-            identity: recite_compiler::PreparedPublishIdentity::for_request(
+            identity: recite_compiler::authoring::PreparedPublishIdentity::for_request(
                 request,
                 candidates.to_vec(),
             ),
             candidates: candidates.to_vec(),
         })
     }
-    fn abort(&mut self, _: Option<Self::Prepared>, _: recite_compiler::PublishAbortReason) {}
-    fn commit(&mut self, prepared: Self::Prepared) -> recite_compiler::PublishOutcome {
+    fn abort(
+        &mut self,
+        _: Option<Self::Prepared>,
+        _: recite_compiler::authoring::PublishAbortReason,
+    ) {
+    }
+    fn commit(&mut self, prepared: Self::Prepared) -> recite_compiler::authoring::PublishOutcome {
         if self.block {
             self.entered.wait();
             self.release.wait();
@@ -237,7 +247,7 @@ impl recite_compiler::BuildPublisher for BlockingCommitPublisher {
                 .unwrap_or_else(|poisoned| poisoned.into_inner())
                 .insert(candidate.target().as_str().to_owned(), self.bytes.clone());
         }
-        recite_compiler::PublishOutcome::Published {
+        recite_compiler::authoring::PublishOutcome::Published {
             targets: prepared
                 .candidates
                 .iter()

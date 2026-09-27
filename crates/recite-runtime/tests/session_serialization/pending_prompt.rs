@@ -61,7 +61,7 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
 
 #[test]
 fn restores_pending_prompt_choice_availability_reasons() {
-    let schema = recite_core::load_schema_manifest_str(
+    let schema = recite_core::schema::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
     )

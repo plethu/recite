@@ -1,6 +1,8 @@
 use std::fs;
 
-use recite_core::{PoDiagnosticKind, PoDocument, PoEdit, PoEditError, PoEntryField, PoWriteError};
+use recite_core::po::{
+    PoDiagnosticKind, PoDocument, PoEdit, PoEditError, PoEntryField, PoWriteError,
+};
 use tempfile::TempDir;
 
 use super::REPRESENTATIVE;
@@ -10,8 +12,8 @@ fn plural_evaluator_rejects_unbounded_expression_growth() {
     let expression = format!("{}n", "n || ".repeat(512));
     let header = format!("nplurals=2; plural=({expression});");
     assert!(matches!(
-        recite_core::evaluate_plural_form(&header, 1),
-        Err(recite_core::PluralRuleError::InvalidHeader)
+        recite_core::po::evaluate_plural_form(&header, 1),
+        Err(recite_core::po::PluralRuleError::InvalidHeader)
     ));
 }
 

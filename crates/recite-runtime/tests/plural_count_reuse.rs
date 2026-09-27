@@ -1,18 +1,22 @@
 use std::cell::Cell;
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    CompiledAssetId, CompilerVersion, LocaleId, ScalarValue, SchemaFingerprint, SourceMapId,
+    LocaleId, ScalarValue,
+    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
 };
 use recite_runtime::{
     DialogueError, DialogueEvent, DialogueSessionOptions, DialogueTrace, EmptyDialogueContext,
-    InterpolationValueProvider, LocaleError, LocaleProvider, LocaleResolution, PluralResolution,
-    TextDomain, next_with, start_scene, start_scene_with_options,
+    LocaleResolution,
+    localisation::{
+        InterpolationValueProvider, LocaleError, LocaleProvider, PluralResolution, TextDomain,
+    },
+    next_with, start_scene, start_scene_with_options,
 };
 
 const PLURAL_ID: &str = "8843fd6f53f020a12b31";
 
-fn plural_asset() -> recite_core::CompiledDialogue {
+fn plural_asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
         "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining)\n",

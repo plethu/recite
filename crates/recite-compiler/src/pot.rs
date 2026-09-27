@@ -1,10 +1,15 @@
-use recite_core::{Block, Diagnostic, ProjectSchema, SourceFile, SourceSpan, SpeakerId, Statement};
+use recite_core::{
+    Diagnostic, SourceSpan, SpeakerId,
+    ast::{Block, SourceFile, Statement},
+    po::{PotDocument, PotEntry, PotReference},
+    schema::ProjectSchema,
+};
 use recite_parser::parse;
 
 use crate::compile::CompileInput;
 use crate::validation::{
     project::{sort_diagnostics_by_source, source_files_in_project_order},
-    validate_source_files, validate_source_files_with_schema,
+    validate_inputs, validate_source_files,
 };
 
 /// Result of extracting gettext POT entries from raw Recite inputs.
@@ -19,78 +24,6 @@ impl PotExtractionReport {
     pub fn is_ok(&self) -> bool {
         self.diagnostics.is_empty() && self.catalog.is_some()
     }
-}
-
-/// Deterministic gettext POT extraction output.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PotDocument {
-    pub entries: Vec<PotEntry>,
-}
-
-impl PotDocument {
-    #[must_use]
-    pub fn to_pot_string(&self) -> String {
-        let mut output = String::new();
-
-        for (index, entry) in self.entries.iter().enumerate() {
-            if index > 0 {
-                output.push('\n');
-            }
-
-            for comment in &entry.comments {
-                output.push_str("#. ");
-                push_po_comment_text(&mut output, comment);
-                output.push('\n');
-            }
-
-            if let Some(reference) = &entry.reference {
-                output.push_str("#: ");
-                push_po_reference_text(&mut output, &reference.file);
-                output.push(':');
-                output.push_str(&reference.line.to_string());
-                output.push(':');
-                output.push_str(&reference.column.to_string());
-                output.push('\n');
-            }
-
-            output.push_str("msgctxt ");
-            push_po_string(&mut output, &entry.context);
-            output.push('\n');
-            output.push_str("msgid ");
-            push_po_string(&mut output, &entry.source_text);
-            if let Some(plural_source_text) = &entry.plural_source_text {
-                output.push('\n');
-                output.push_str("msgid_plural ");
-                push_po_string(&mut output, plural_source_text);
-                output.push('\n');
-                output.push_str("msgstr[0] \"\"\n");
-                output.push_str("msgstr[1] \"\"\n");
-            } else {
-                output.push('\n');
-                output.push_str("msgstr \"\"\n");
-            }
-        }
-
-        output
-    }
-}
-
-/// One gettext entry extracted from Recite source or project schema content.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PotEntry {
-    pub context: String,
-    pub source_text: String,
-    pub plural_source_text: Option<String>,
-    pub comments: Vec<String>,
-    pub reference: Option<PotReference>,
-}
-
-/// Source location attached to a POT entry when available.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PotReference {
-    pub file: String,
-    pub line: u32,
-    pub column: u32,
 }
 
 /// Extract localisable line and choice entries from raw source inputs.
@@ -132,7 +65,13 @@ fn extract_pot_with_optional_schema(
     }
 
     let validation = if let Some(schema) = schema {
-        validate_source_files_with_schema(&source_files, schema)
+        validate_inputs(
+            source_files
+                .iter()
+                .map(crate::validation::ValidationInput::all_complete),
+            Some(schema),
+            crate::validation::ProjectCompleteness::Complete,
+        )
     } else {
         validate_source_files(&source_files)
     };
@@ -327,40 +266,5 @@ fn source_entry(input: PotEntryInput<'_>, context: PotEntryContext<'_>) -> PotEn
             line: context.span.start.line(),
             column: context.span.start.column(),
         }),
-    }
-}
-
-fn push_po_string(output: &mut String, value: &str) {
-    output.push('"');
-    for character in value.chars() {
-        match character {
-            '\\' => output.push_str("\\\\"),
-            '"' => output.push_str("\\\""),
-            '\n' => output.push_str("\\n"),
-            '\r' => output.push_str("\\r"),
-            '\t' => output.push_str("\\t"),
-            character => output.push(character),
-        }
-    }
-    output.push('"');
-}
-
-fn push_po_comment_text(output: &mut String, value: &str) {
-    for character in value.chars() {
-        match character {
-            '\n' | '\r' | '\t' => output.push(' '),
-            character if character.is_control() => output.push(' '),
-            character => output.push(character),
-        }
-    }
-}
-
-fn push_po_reference_text(output: &mut String, value: &str) {
-    for character in value.chars() {
-        match character {
-            '\n' | '\r' | '\t' | ':' => output.push('_'),
-            character if character.is_control() => output.push('_'),
-            character => output.push(character),
-        }
     }
 }

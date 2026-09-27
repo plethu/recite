@@ -12,7 +12,8 @@ mod tests;
 use recite_core::{
     Diagnostic, DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentation,
     DiagnosticPresentationContract, DiagnosticPresentationId, DiagnosticRelatedPresentation,
-    SchemaTypeRef, SourceSpan, auxiliary_contract_for, contract_for, explain_diagnostic_code,
+    SourceSpan, auxiliary_contract_for, contract_for, explain_diagnostic_code,
+    schema::SchemaTypeRef,
 };
 
 pub(crate) use asset::*;

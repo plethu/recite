@@ -1,6 +1,9 @@
 use recite_core::{
-    CompiledAssetId, CompiledDialogue, CompilerVersion, Diagnostic, ProjectSchema,
-    SchemaFingerprint, SourceMapId,
+    Diagnostic,
+    compiled::{
+        CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint, SourceMapId,
+    },
+    schema::ProjectSchema,
 };
 use recite_parser::parse;
 
@@ -8,7 +11,7 @@ use super::CompileError;
 use super::builder::build_dialogue;
 use super::lowered::LoweredInput;
 use crate::validation::{
-    project::sort_diagnostics_by_source, validate_source_files, validate_source_files_with_schema,
+    project::sort_diagnostics_by_source, validate_inputs, validate_source_files,
 };
 use crate::wire::{serialize_inspection_json, serialize_messagepack};
 
@@ -126,7 +129,13 @@ fn compile_inputs_with_optional_schema(
         .map(|input| input.source_file.clone())
         .collect::<Vec<_>>();
     let validation = if let Some(schema) = schema {
-        validate_source_files_with_schema(&source_files, schema)
+        validate_inputs(
+            source_files
+                .iter()
+                .map(crate::validation::ValidationInput::all_complete),
+            Some(schema),
+            crate::validation::ProjectCompleteness::Complete,
+        )
     } else {
         validate_source_files(&source_files)
     };

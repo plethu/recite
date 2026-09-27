@@ -1,9 +1,9 @@
-use recite_core::{
+use recite_core::compiled::{
     CompiledAssetEncodeError, CompiledAssetId, ContentFingerprint, FingerprintAlgorithm,
     FingerprintDigest,
 };
 
-use crate::{DialogueContentFingerprintSnapshot, PreviewError};
+use crate::{preview::PreviewError, snapshot::DialogueContentFingerprintSnapshot};
 
 /// The canonical build identity used to distinguish compiled payload revisions.
 ///
@@ -20,11 +20,13 @@ pub struct PreviewAssetRevision {
 
 impl PreviewAssetRevision {
     pub(crate) fn from_asset(
-        asset: &recite_core::CompiledDialogue,
+        asset: &recite_core::compiled::CompiledDialogue,
     ) -> Result<Self, CompiledAssetEncodeError> {
         Ok(Self {
             asset_id: asset.header.asset_id.clone(),
-            payload_fingerprint: recite_core::canonical_compiled_dialogue_fingerprint(asset)?,
+            payload_fingerprint: recite_core::compiled::canonical_compiled_dialogue_fingerprint(
+                asset,
+            )?,
         })
     }
 

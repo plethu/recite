@@ -1,6 +1,9 @@
 use recite_core::{
-    CompiledArgument, CompiledChoice, CompiledChoiceEcho, CompiledEffect, CompiledEffectMode,
-    CompiledMetadataEntry, LineIndex, LocaleId, MetadataRange, ScalarValue, SpeakerIndex,
+    LocaleId, ScalarValue,
+    compiled::{
+        CompiledArgument, CompiledChoice, CompiledChoiceEcho, CompiledEffect, CompiledEffectMode,
+        CompiledMetadataEntry, LineIndex, MetadataRange, SpeakerIndex,
+    },
 };
 
 use crate::DialogueError;

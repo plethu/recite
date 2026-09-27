@@ -1,4 +1,7 @@
-use recite_core::{Argument, ScalarValue, SourceMetadataScalar, SourceMetadataValue};
+use recite_core::{
+    ScalarValue,
+    ast::{Argument, SourceMetadataScalar, SourceMetadataValue},
+};
 
 pub(super) fn source_metadata_value_has_non_finite_float(value: &SourceMetadataValue) -> bool {
     match value {

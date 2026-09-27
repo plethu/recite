@@ -99,7 +99,7 @@ fn prose_revalidates_one_file_and_reuses_project_diagnostics() {
 #[test]
 fn local_markup_errors_change_without_rebuilding_project_indexes() {
     super::PROJECT_VALIDATION_COUNT.with(|count| count.set(0));
-    let mut kernel = AuthoringKernel::with_schema(recite_core::ProjectSchema::empty_v1());
+    let mut kernel = AuthoringKernel::with_schema(recite_core::schema::ProjectSchema::empty_v1());
     let a = ":: a default\n> line@11111111111111111111\n  Hello.\n-> END\n";
     let b = ":: b\n-> END\n";
     kernel

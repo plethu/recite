@@ -1,7 +1,7 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
+use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 
-pub(crate) fn asset(source: &str) -> recite_core::CompiledDialogue {
+pub(crate) fn asset(source: &str) -> recite_core::compiled::CompiledDialogue {
     let compiler_version = match CompilerVersion::new("0.0.1") {
         Ok(version) => version,
         Err(error) => panic!("compiler version: {error}"),

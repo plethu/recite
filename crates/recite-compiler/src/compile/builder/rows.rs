@@ -1,11 +1,17 @@
 use recite_core::{
-    BlockIndex, BlockLookupEntry, BlockLookupTable, Choice, ChoiceIndex, ChoiceLookupEntry,
-    ChoiceLookupTable, ChoiceRange, CompiledChoice, CompiledDivertTarget, CompiledEffect,
-    CompiledInterpolationMode, CompiledLine, CompiledMatchArm, CompiledMetadataEntry,
-    CompiledSourceMapEntry, CompiledSpeaker, DivertTarget, Effect, EffectIndex, Line, LineIndex,
-    LineLookupEntry, LineLookupTable, MatchArm, MatchArmIndex, MatchArmRange, MetadataIndex,
-    MetadataRange, ScalarValue, SourceFileIndex, SourceMapIndex, SourceMetadata,
-    SourceMetadataScalar, SourceMetadataValue, SourceSpan, SpeakerId, SpeakerIndex, Value,
+    ScalarValue, SourceSpan, SpeakerId, Value,
+    ast::{
+        Choice, DivertTarget, Effect, Line, MatchArm, SourceMetadata, SourceMetadataScalar,
+        SourceMetadataValue,
+    },
+    compiled::{
+        BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceIndex, ChoiceLookupEntry,
+        ChoiceLookupTable, ChoiceRange, CompiledChoice, CompiledDivertTarget, CompiledEffect,
+        CompiledInterpolationMode, CompiledLine, CompiledMatchArm, CompiledMetadataEntry,
+        CompiledSourceMapEntry, CompiledSpeaker, EffectIndex, LineIndex, LineLookupEntry,
+        LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange,
+        SourceFileIndex, SourceMapIndex, SpeakerIndex,
+    },
     decode_interpolation_text,
 };
 

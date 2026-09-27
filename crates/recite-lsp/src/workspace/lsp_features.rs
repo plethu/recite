@@ -2,7 +2,7 @@ use lsp_types::{
     CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
     Location, Position, PrepareRenameResponse, Uri, WorkspaceEdit,
 };
-use recite_compiler::DocumentLayer;
+use recite_compiler::authoring::DocumentLayer;
 use recite_core::DocumentKey;
 
 use super::{

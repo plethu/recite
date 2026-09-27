@@ -28,14 +28,17 @@ fn post_publish_rejected_source_is_stale_and_keeps_diagnostics() {
         "{stderr}"
     );
     let result = state.coordinator.state().result().expect("shared result");
-    assert_eq!(result.status(), recite_compiler::BuildTerminalStatus::Stale);
+    assert_eq!(
+        result.status(),
+        recite_compiler::authoring::BuildTerminalStatus::Stale
+    );
     assert_eq!(
         result.freshness().status(),
-        recite_compiler::FreshnessStatus::Stale
+        recite_compiler::authoring::FreshnessStatus::Stale
     );
     assert!(matches!(
         result.publish(),
-        recite_compiler::PublishOutcome::Published { .. }
+        recite_compiler::authoring::PublishOutcome::Published { .. }
     ));
     assert!(temp.path().join("compiled/dialogue.recitec").is_file());
 }
@@ -99,7 +102,7 @@ fn post_publish_recheck_error_updates_shared_state_and_keeps_localized_error() {
     let messages = alternate_messages(&[("watch-build-failed", "alt-error {$error}")]);
     let asset = temp.path().join("compiled/dialogue.recitec");
 
-    let control = recite_compiler::BuildControl::new();
+    let control = recite_compiler::authoring::BuildControl::new();
     let mut output = Vec::new();
     let result =
         build_once_with_post_publish_hook(&mut state, &mut output, &messages, &control, || {
@@ -118,18 +121,18 @@ fn post_publish_recheck_error_updates_shared_state_and_keeps_localized_error() {
     let result = state.coordinator.state().result().expect("shared result");
     assert_eq!(
         result.status(),
-        recite_compiler::BuildTerminalStatus::Failed
+        recite_compiler::authoring::BuildTerminalStatus::Failed
     );
     assert_eq!(
         result.freshness().status(),
-        recite_compiler::FreshnessStatus::Unknown
+        recite_compiler::authoring::FreshnessStatus::Unknown
     );
     assert!(matches!(
         result.failure(),
-        Some(recite_compiler::BuildResultFailure::Freshness { .. })
+        Some(recite_compiler::authoring::BuildResultFailure::Freshness { .. })
     ));
     assert!(matches!(
         result.publish(),
-        recite_compiler::PublishOutcome::Published { .. }
+        recite_compiler::authoring::PublishOutcome::Published { .. }
     ));
 }

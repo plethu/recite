@@ -8,8 +8,8 @@ use lsp_types::{
     DocumentChanges, OneOf, OptionalVersionedTextDocumentIdentifier, Position, Range,
     TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
 };
-use recite_compiler::AuthoringSnapshot;
-use recite_core::{SchemaSource, SchemaSourceEditPlan};
+use recite_compiler::authoring::AuthoringSnapshot;
+use recite_core::schema::{SchemaSource, SchemaSourceEditPlan};
 use recite_ui::{MsgId, UiCatalog};
 
 use crate::edit_projection::EditDocument;
@@ -23,7 +23,7 @@ pub(crate) struct CodeActionDocument<'a> {
 pub(crate) struct SchemaCodeActionDocument {
     pub(crate) uri: Uri,
     pub(crate) text: String,
-    pub(crate) summary: recite_compiler::SchemaSummary,
+    pub(crate) summary: recite_compiler::authoring::SchemaSummary,
     pub(crate) source: SchemaSource,
     pub(crate) version: i32,
 }
@@ -33,7 +33,7 @@ pub(crate) fn code_action(
     snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument>,
-    schema_summary: Option<&recite_compiler::SchemaSummary>,
+    schema_summary: Option<&recite_compiler::authoring::SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
     let document = documents
@@ -140,7 +140,9 @@ pub(crate) fn schema_workspace_edit(
     changes.extend(
         documents
             .iter()
-            .filter(|document| document.source.layer == recite_compiler::DocumentLayer::Open)
+            .filter(|document| {
+                document.source.layer == recite_compiler::authoring::DocumentLayer::Open
+            })
             .map(|document| TextDocumentEdit {
                 text_document: OptionalVersionedTextDocumentIdentifier {
                     uri: document.source.uri.clone(),

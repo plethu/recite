@@ -3,7 +3,10 @@ mod preview_support;
 
 use preview_support::asset;
 use recite_core::ScalarValue;
-use recite_runtime::{InterpolationValues, PreviewInputs, PreviewOptions, PreviewSession};
+use recite_runtime::{
+    localisation::InterpolationValues,
+    preview::{PreviewInputs, PreviewOptions, PreviewSession},
+};
 
 #[test]
 fn prompt_projection_mutations_are_refused_without_asset_wide_lookup() {
@@ -31,13 +34,14 @@ fn prompt_projection_mutations_are_refused_without_asset_wide_lookup() {
         ("plain", "rough"),
     ] {
         let mutated = replace_text(&encoded, original, replacement);
-        let snapshot = recite_runtime::PreviewSnapshot::decode(&mutated).expect("valid wire");
+        let snapshot =
+            recite_runtime::preview::PreviewSnapshot::decode(&mutated).expect("valid wire");
         let mut receiver =
             PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
         let before = receiver.session().clone();
         assert!(matches!(
             receiver.restore(snapshot),
-            Err(recite_runtime::PreviewError::SnapshotStateMismatch)
+            Err(recite_runtime::preview::PreviewError::SnapshotStateMismatch)
         ));
         assert_eq!(*receiver.session(), before);
     }
@@ -69,13 +73,13 @@ fn provider_rendered_projection_restores_without_provider_replay() {
     );
     let start = start.unwrap_or_default();
     wire[start..start + b"2 items.".len()].copy_from_slice(b"3 items.");
-    let snapshot = recite_runtime::PreviewSnapshot::decode(&wire).expect("decode");
+    let snapshot = recite_runtime::preview::PreviewSnapshot::decode(&wire).expect("decode");
     let mut receiver = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
     receiver
         .restore(snapshot)
         .expect("provider projection is authoritative");
     let rendered = match receiver.state().status() {
-        recite_runtime::PreviewStatus::WaitingForChoice { prompt } => {
+        recite_runtime::preview::PreviewStatus::WaitingForChoice { prompt } => {
             prompt.line().map(|line| line.text.as_str())
         }
         _ => None,
@@ -93,15 +97,16 @@ fn asset_derived_mismatch_rejects_even_with_a_consistent_projection() {
     let mut source = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("source");
     source.step(PreviewInputs::new());
     let snapshot = source.snapshot().expect("snapshot");
-    let mut changed = asset.clone();
+    let mut changed = asset.clone().into_payload();
     changed.lines[0].source_text = "Changed.".to_owned();
     changed.lines[0].authored_source_text = "Changed.".to_owned();
+    let changed = recite_core::compiled::CompiledDialogue::new(changed);
     let mut receiver =
         PreviewSession::new(&changed, None, PreviewOptions::new()).expect("receiver");
     let before = receiver.session().clone();
     assert!(matches!(
         receiver.restore(snapshot),
-        Err(recite_runtime::PreviewError::SnapshotStateMismatch)
+        Err(recite_runtime::preview::PreviewError::SnapshotStateMismatch)
     ));
     assert_eq!(*receiver.session(), before);
 }
@@ -120,15 +125,16 @@ fn stale_ready_snapshot_rejects_revision_change_without_restart_requirement() {
     let snapshot = source.snapshot().expect("snapshot");
     assert!(source.state().restart_required().is_none());
 
-    let mut changed = asset.clone();
+    let mut changed = asset.clone().into_payload();
     changed.lines[1].source_text = "Changed future.".to_owned();
     changed.lines[1].authored_source_text = "Changed future.".to_owned();
+    let changed = recite_core::compiled::CompiledDialogue::new(changed);
     let mut receiver =
         PreviewSession::new(&changed, None, PreviewOptions::new()).expect("receiver");
     let before = receiver.session().clone();
     assert!(matches!(
         receiver.restore(snapshot),
-        Err(recite_runtime::PreviewError::SnapshotStateMismatch)
+        Err(recite_runtime::preview::PreviewError::SnapshotStateMismatch)
     ));
     assert_eq!(*receiver.session(), before);
 }

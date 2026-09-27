@@ -2,7 +2,7 @@ use super::*;
 use std::io::{self, Cursor, Read};
 use std::path::Path;
 
-use recite_compiler::{CompileInput, compile_inputs};
+use recite_compiler::compile::{CompileInput, compile_inputs};
 
 use crate::fs::compile_options;
 

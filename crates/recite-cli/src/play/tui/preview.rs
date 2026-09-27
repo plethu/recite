@@ -1,7 +1,7 @@
-use recite_core::{ChoiceId, CompiledDialogue, EffectId};
+use recite_core::{ChoiceId, EffectId, compiled::CompiledDialogue};
 use recite_runtime::{
-    ConditionAnswer, ConditionExpectedType, ConditionValue, DialogueEffectRequest, DialogueLine,
-    PreviewConditionRequest, PreviewConditionResult, PreviewPrompt,
+    ConditionExpectedType, ConditionValue, DialogueEffectRequest, DialogueLine,
+    preview::{ConditionAnswer, PreviewConditionRequest, PreviewConditionResult, PreviewPrompt},
 };
 
 use crate::error::CliError;

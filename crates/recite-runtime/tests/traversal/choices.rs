@@ -274,8 +274,10 @@ fn malformed_choice_target_is_rejected_at_start_as_structured_error() {
             "    Ask about work.\n",
             "    -> END\n",
         ),
-    );
+    )
+    .into_payload();
     asset.choices[0].target = CompiledDivertTarget::Block(BlockIndex::new(99));
+    let asset = CompiledDialogue::new(asset);
     assert!(matches!(
         start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
@@ -284,7 +286,7 @@ fn malformed_choice_target_is_rejected_at_start_as_structured_error() {
 
 #[test]
 fn malformed_choice_target_after_start_is_structured_error_and_keeps_prompt_pending() {
-    let mut asset = compile_asset(
+    let asset = compile_asset(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -301,7 +303,10 @@ fn malformed_choice_target_after_start_is_structured_error_and_keeps_prompt_pend
     );
     let mut session = start_scene(&asset, None).expect("valid asset starts");
     next(&asset, &mut session).expect("emits prompt");
-    asset.blocks.truncate(1);
+    let original = asset.clone();
+    let mut payload = asset.into_payload();
+    payload.blocks.truncate(1);
+    let asset = CompiledDialogue::new(payload);
     let ask_work = ChoiceId::new("f0d4d54acca265cffc88").expect("valid choice ID");
 
     assert!(matches!(
@@ -309,7 +314,7 @@ fn malformed_choice_target_after_start_is_structured_error_and_keeps_prompt_pend
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
     assert_eq!(
-        next(&asset, &mut session),
+        next(&original, &mut session),
         Err(DialogueError::PromptPending {
             choices: vec![ask_work]
         })

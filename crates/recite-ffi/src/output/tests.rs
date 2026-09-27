@@ -1,14 +1,16 @@
 use std::error::Error as _;
 use std::io::{self, Write};
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    CompiledAssetId, CompilerVersion, LineId, ScalarValue, SchemaFingerprint, SourceMapId,
+    LineId, ScalarValue,
+    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
 };
 use recite_runtime::{
     DialogueEvent, DialogueLine, DialoguePlural, DialoguePluralResolution,
-    DialoguePluralResolutionOutcome, EmptyDialogueContext, InterpolationValues, LocaleResolution,
-    PluralResolutionAttempt, PluralResolutionOutcome, next_with, start_scene,
+    DialoguePluralResolutionOutcome, EmptyDialogueContext, LocaleResolution,
+    localisation::{InterpolationValues, PluralResolutionAttempt, PluralResolutionOutcome},
+    next_with, start_scene,
 };
 
 use super::encode::encode_batch_to_writer;

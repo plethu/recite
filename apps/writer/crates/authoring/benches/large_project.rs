@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 documents
                     .into_iter()
                     .map(|doc| {
-                        recite_compiler::SavedDocument::new(
+                        recite_compiler::authoring::SavedDocument::new(
                             doc.key().clone(),
                             doc.text()
                                 .replace("-> END", "-> scene_00000.recite::beat_0"),

@@ -1,5 +1,6 @@
-use recite_core::{BlockIndex, CompiledDialogue, StatementIndex};
+use recite_core::compiled::{BlockIndex, CompiledDialogue, StatementIndex};
 
+use crate::session::SessionPhase;
 use crate::session_snapshot::{
     CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueSessionSnapshot, statement_range,
 };
@@ -9,7 +10,9 @@ use crate::{DialogueError, DialogueSession};
 use super::identity::ensure_snapshot_matches_asset;
 use super::pending_effect::restore_pending_effect;
 use super::prompt::restore_pending_prompt;
-use super::references::{restore_choice_ids, restore_effects, restore_locale, snapshot_reference};
+use super::references::{
+    invalid_snapshot, restore_choice_ids, restore_effects, restore_locale, snapshot_reference,
+};
 use super::stack::{restore_frames, validate_range_stack, validate_statement_pointer};
 
 pub fn restore_session(
@@ -70,6 +73,13 @@ pub fn restore_session(
         next_statement,
         snapshot.trace_counter,
     )?;
+    let phase = match (pending_prompt, pending_effect, snapshot.ended) {
+        (None, None, false) => SessionPhase::Running,
+        (Some(prompt), None, false) => SessionPhase::AwaitingChoice(prompt),
+        (None, Some(effect), false) => SessionPhase::AwaitingEffect(effect),
+        (None, None, true) => SessionPhase::Ended,
+        _ => return Err(invalid_snapshot("session phase fields conflict")),
+    };
 
     Ok(DialogueSession {
         asset_id: asset.header.asset_id.clone(),
@@ -84,13 +94,11 @@ pub fn restore_session(
         current_range,
         next_statement,
         continuation_stack,
-        pending_prompt,
-        pending_effect,
+        phase,
         previous_prompt_choices,
         selected_choice_history,
         deferred_effects,
         locale,
         trace_counter: snapshot.trace_counter,
-        ended: snapshot.ended,
     })
 }

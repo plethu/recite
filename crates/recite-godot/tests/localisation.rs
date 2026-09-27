@@ -3,7 +3,7 @@ mod support;
 use recite_core::LocaleId;
 use recite_core::ScalarValue;
 use recite_godot::{ReciteDialogueCatalog, ReciteDialogueDriver, ReciteOutput};
-use recite_runtime::{InterpolationValues, LocaleProvider, TextDomain};
+use recite_runtime::localisation::{InterpolationValues, LocaleProvider, TextDomain};
 
 use support::{assert_effect, assert_line, compile_asset, must_ok, must_ok_unit, output_kinds};
 
@@ -118,11 +118,11 @@ fn catalog_translates_line_plural_choice_and_restore() {
     );
     assert_eq!(
         plural.resolution.attempts[0].outcome,
-        recite_runtime::PluralResolutionOutcome::MissingPluralForms
+        recite_runtime::localisation::PluralResolutionOutcome::MissingPluralForms
     );
     assert_eq!(
         plural.resolution.attempts[1].outcome,
-        recite_runtime::PluralResolutionOutcome::Matched
+        recite_runtime::localisation::PluralResolutionOutcome::Matched
     );
     let ReciteOutput::Prompt { choices, .. } = &outputs[2] else {
         panic!("expected prompt output");

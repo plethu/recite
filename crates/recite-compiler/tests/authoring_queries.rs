@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringKernel, AuthoringRequest, MetadataScalar, MetadataValue, QueryResult, SavedDocument,
     SemanticFact, SnapshotGeneration, SymbolIdentity, SymbolKind, SymbolQueryOptions, SymbolRole,
 };
@@ -85,7 +85,7 @@ fn summaries_and_queries_preserve_typed_values_spans_and_navigation() {
     else {
         panic!("qualified target navigation is ready");
     };
-    let recite_compiler::NavigationResult::Unique(declaration) = navigation else {
+    let recite_compiler::authoring::NavigationResult::Unique(declaration) = navigation else {
         panic!("qualified target has one declaration");
     };
     assert_eq!(declaration.document().as_str(), "dialogue/target.recite");
@@ -146,6 +146,6 @@ fn summaries_and_queries_preserve_typed_values_spans_and_navigation() {
     };
     assert!(matches!(
         unsupported,
-        recite_compiler::NavigationResult::Unsupported
+        recite_compiler::authoring::NavigationResult::Unsupported
     ));
 }

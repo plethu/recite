@@ -1,4 +1,6 @@
-use recite_core::{DiagnosticCode, DiagnosticPresentationId, contract_for, load_schema_source_str};
+use recite_core::{
+    DiagnosticCode, DiagnosticPresentationId, contract_for, schema::load_schema_source_str,
+};
 
 #[test]
 fn source_contract_family_is_registered() {

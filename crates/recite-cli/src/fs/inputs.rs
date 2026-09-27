@@ -2,10 +2,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use recite_compiler::{
-    CompileInput, CompileOptions, validate_source_files, validate_source_files_with_schema,
+    compile::{CompileInput, CompileOptions},
+    validation::validate_source_files,
 };
 use recite_core::{
-    CompiledAssetId, CompilerVersion, ProjectSchema, SchemaFingerprint, SourceMapId,
+    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
+    schema::ProjectSchema,
 };
 use recite_parser::parse;
 
@@ -30,7 +32,13 @@ pub(crate) fn validate_inputs(
 
     let validation_diagnostics = if parse_diagnostics.is_empty() {
         if let Some(schema) = schema {
-            validate_source_files_with_schema(&source_files, schema)
+            recite_compiler::validation::validate_inputs(
+                source_files
+                    .iter()
+                    .map(recite_compiler::validation::ValidationInput::all_complete),
+                Some(schema),
+                recite_compiler::validation::ProjectCompleteness::Complete,
+            )
         } else {
             validate_source_files(&source_files)
         }

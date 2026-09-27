@@ -5,7 +5,9 @@ mod items;
 use std::path::Path;
 
 use lsp_types::Uri;
-use recite_compiler::{DocumentSnapshot, FunctionReferenceKind as AuthoringFunctionReferenceKind};
+use recite_compiler::authoring::{
+    DocumentSnapshot, FunctionReferenceKind as AuthoringFunctionReferenceKind,
+};
 
 #[cfg(any(test, feature = "bench-support"))]
 use recite_core::Diagnostic;
@@ -92,7 +94,7 @@ impl FileSummary {
 }
 
 fn function_reference(
-    function: &recite_compiler::FunctionReferenceSummary,
+    function: &recite_compiler::authoring::FunctionReferenceSummary,
 ) -> Option<FunctionReferenceSummary> {
     Some(FunctionReferenceSummary {
         name: function.name().to_owned(),

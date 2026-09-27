@@ -118,14 +118,14 @@ pub(super) fn hash_expected_type(
 
 pub(super) fn hash_schema_fingerprint(
     hasher: &mut blake3::Hasher,
-    value: &recite_runtime::DialogueSchemaFingerprintSnapshot,
+    value: &recite_runtime::snapshot::DialogueSchemaFingerprintSnapshot,
 ) {
     match value {
-        recite_runtime::DialogueSchemaFingerprintSnapshot::Fingerprint(fingerprint) => {
+        recite_runtime::snapshot::DialogueSchemaFingerprintSnapshot::Fingerprint(fingerprint) => {
             tag(hasher, 0);
             hash_text(hasher, &fingerprint.algorithm);
             hash_bytes(hasher, &fingerprint.digest);
         }
-        recite_runtime::DialogueSchemaFingerprintSnapshot::NoSchema => tag(hasher, 1),
+        recite_runtime::snapshot::DialogueSchemaFingerprintSnapshot::NoSchema => tag(hasher, 1),
     }
 }

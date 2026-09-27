@@ -1,0 +1,24 @@
+[package]
+name = "recite-build"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Saved-project build preparation and publication for Recite clients."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+atomic-write-file.workspace = true
+recite-compiler.workspace = true
+recite-config.workspace = true
+recite-core.workspace = true
+thiserror.workspace = true
+unicase.workspace = true
+unicode-normalization.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

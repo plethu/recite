@@ -9,7 +9,7 @@ use crate::{
     editing::{Pane, Writer},
 };
 use freya::prelude::*;
-use recite_core::{PoCommentKind, PoEntry};
+use recite_core::po::{PoCommentKind, PoEntry};
 #[derive(Clone)]
 pub(super) struct EntryContext {
     pub writer: Writer,
@@ -101,7 +101,7 @@ impl Component for EntryContext {
                 .and_then(|m| m.document().extract_catalogue().catalog)
             {
                 // PO serialization uses the same extracted metadata as source refresh.
-                if let Ok(template) = recite_core::PoDocument::parse(template.to_pot_string()) {
+                if let Ok(template) = recite_core::po::PoDocument::parse(template.to_pot_string()) {
                     for source in Nearby::new(&template).for_entry(entry) {
                         body = body
                             .child(label().text(source).font_size(t::prose_size()).prose_font());

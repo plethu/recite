@@ -1,6 +1,8 @@
 use self::builder::{field_name, header_message, integer, plural_message, string};
 use super::types::{PoDiagnosticKind, PoFieldTarget};
-use crate::{DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, PluralRuleError};
+use crate::{
+    DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, po::PluralRuleError,
+};
 
 mod builder;
 mod markup;

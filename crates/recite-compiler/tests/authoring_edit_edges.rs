@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringEditError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument,
     QueryClass, SavedDocument, SnapshotGeneration, SourceFingerprint,
 };
@@ -92,7 +92,7 @@ fn invalid_qualified_stub_target_never_falls_back_to_source_document() {
     };
     assert!(matches!(
         site.block_target_resolution(),
-        Some(recite_compiler::BlockTarget::InvalidQualified { target })
+        Some(recite_compiler::authoring::BlockTarget::InvalidQualified { target })
             if target == "../target.recite"
     ));
     assert!(matches!(

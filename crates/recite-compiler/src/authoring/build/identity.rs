@@ -1,4 +1,4 @@
-use recite_core::{ContentFingerprint, DocumentKey, ProjectSchema};
+use recite_core::{DocumentKey, compiled::ContentFingerprint, schema::ProjectSchema};
 
 /// Build generations are independent from authoring snapshot generations.
 #[non_exhaustive]
@@ -111,7 +111,9 @@ impl BuildInput {
     ) -> Self {
         let payload = payload.into();
         let fingerprint = match &payload {
-            BuildInputPayload::Text(content) => recite_core::canonical_source_fingerprint(content),
+            BuildInputPayload::Text(content) => {
+                recite_core::compiled::canonical_source_fingerprint(content)
+            }
             BuildInputPayload::Schema(model) => model.canonical_content_fingerprint(),
         };
         Self {

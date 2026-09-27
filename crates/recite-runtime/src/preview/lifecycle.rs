@@ -1,4 +1,4 @@
-use recite_core::{BlockId, CompiledDialogue, EffectId};
+use recite_core::{BlockId, EffectId, compiled::CompiledDialogue};
 
 use super::PreviewSession;
 use super::model::{
@@ -6,8 +6,8 @@ use super::model::{
     PreviewState,
 };
 use crate::{
-    DialogueError, DialogueSessionOptions, EffectAck, PreviewError, PreviewPromptIdentity,
-    PreviewStatus, acknowledge_effect, start_scene_with_options,
+    DialogueError, DialogueSessionOptions, EffectAck, acknowledge_effect, preview::PreviewError,
+    preview::PreviewPromptIdentity, preview::PreviewStatus, start_scene_with_options,
 };
 
 impl<'asset> PreviewSession<'asset> {
@@ -138,7 +138,9 @@ impl<'asset> PreviewSession<'asset> {
             .asset
             .statements
             .get(session.next_statement_index().as_u32() as usize)?;
-        let recite_core::CompiledStatementKind::Prompt { line, choices } = &statement.kind else {
+        let recite_core::compiled::CompiledStatementKind::Prompt { line, choices } =
+            &statement.kind
+        else {
             return None;
         };
         let start = choices.start.as_u32() as usize;

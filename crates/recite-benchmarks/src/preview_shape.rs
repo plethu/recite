@@ -1,5 +1,6 @@
 use recite_runtime::{
-    DialogueChoice, DialogueEffectRequest, DialogueLine, PreviewEvent, PreviewPrompt, PreviewTrace,
+    DialogueChoice, DialogueEffectRequest, DialogueLine,
+    preview::{PreviewEvent, PreviewPrompt, PreviewTrace},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]

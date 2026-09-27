@@ -210,11 +210,11 @@ impl Workbench {
         self.page = Some(preview.acknowledge(id, ack)?);
         Ok(())
     }
-    pub fn preview_trace(&self) -> Option<&recite_runtime::PreviewTrace> {
+    pub fn preview_trace(&self) -> Option<&recite_runtime::preview::PreviewTrace> {
         self.preview.as_ref().map(Preview::trace)
     }
 
-    pub fn preview_events(&self) -> &[recite_runtime::PreviewEvent] {
+    pub fn preview_events(&self) -> &[recite_runtime::preview::PreviewEvent] {
         self.preview.as_ref().map_or(&[], Preview::events)
     }
 

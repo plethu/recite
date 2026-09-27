@@ -1,9 +1,13 @@
 #![cfg(test)]
 
-use recite_compiler::{
-    CatalogCoverageSummary, CatalogIdentity, CatalogInput, PotDocument, PotEntry, TranslationStatus,
+use recite_compiler::authoring::{
+    CatalogCoverageSummary, CatalogIdentity, CatalogInput, TranslationStatus,
 };
-use recite_core::{LocaleId, PoDocument};
+use recite_core::{
+    LocaleId,
+    po::PoDocument,
+    po::{PotDocument, PotEntry},
+};
 
 fn locale(value: &str) -> LocaleId {
     LocaleId::new(value).expect("test locale")
@@ -50,7 +54,7 @@ fn locale_truncation_precedes_default_and_named_variant_is_major() {
         "msgctxt \"11111111111111111111&formal\"\n",
         "msgid \"Hello\"\nmsgstr \"Olá, formal\"\n",
     );
-    let policy = recite_compiler::CatalogResolutionPolicy::new(Some(locale("PT_br")))
+    let policy = recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("PT_br")))
         .with_default_locale(locale("de"))
         .with_variant("formal")
         .expect("variant policy");
@@ -92,7 +96,7 @@ fn locale_identity_is_canonical_and_po_language_must_match() {
     let summary = CatalogCoverageSummary::build(
         &expected(),
         [canonical],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr-fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr-fr"))),
     )
     .expect("canonical summary");
     assert_eq!(summary.catalogs()[0].locale().as_str(), "fr-FR");
@@ -100,15 +104,15 @@ fn locale_identity_is_canonical_and_po_language_must_match() {
     let mislabeled = CatalogCoverageSummary::build(
         &expected(),
         [input("de", "de", &translated_po("fr"))],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("de"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("de"))),
     );
     assert!(matches!(
         mislabeled,
-        Err(recite_compiler::CatalogSummaryError::CatalogLocaleMismatch { .. })
+        Err(recite_compiler::authoring::CatalogSummaryError::CatalogLocaleMismatch { .. })
     ));
     assert!(matches!(
         CatalogIdentity::new("invalid", locale("not a locale")),
-        Err(recite_compiler::CatalogSummaryError::InvalidLocale { .. })
+        Err(recite_compiler::authoring::CatalogSummaryError::InvalidLocale { .. })
     ));
 }
 
@@ -137,7 +141,7 @@ fn same_locale_resolution_searches_later_catalogue_sources() {
                 "msgctxt \"33333333333333333333\"\nmsgid \"Later source\"\nmsgstr \"Plus tard\"\n",
             ),
         ],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
     )
     .expect("later same-locale catalogue resolves");
 
@@ -163,11 +167,11 @@ fn same_locale_catalogues_reject_conflicting_plural_forms() {
     let result = CatalogCoverageSummary::build(
         &expected(),
         [first, second],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
     );
     assert!(matches!(
         result,
-        Err(recite_compiler::CatalogSummaryError::CatalogPluralFormsConflict {
+        Err(recite_compiler::authoring::CatalogSummaryError::CatalogPluralFormsConflict {
             locale,
             ..
         }) if locale.as_str() == "fr"
@@ -192,7 +196,7 @@ fn stale_fuzzy_and_obsolete_plural_records_remain_in_lossless_inventory() {
     let summary = CatalogCoverageSummary::build(
         &expected(),
         [input("fr", "fr", source)],
-        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+        recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
     )
     .expect("summary");
     let catalog = &summary.catalogs()[0];

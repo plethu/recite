@@ -1,6 +1,6 @@
 use recite_core::LocaleId;
 
-use crate::{InterpolationValueProvider, LocaleProvider};
+use crate::{localisation::InterpolationValueProvider, localisation::LocaleProvider};
 
 use super::ids::PreviewInputRevision;
 

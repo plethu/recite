@@ -101,7 +101,7 @@ fn adding_an_existing_error_cannot_hide_behind_its_original_diagnostic() -> Test
         recite_core::DocumentKey::new("test.recite")?,
         SOURCE,
         recite_writer_model::ProjectContext {
-            schema: Some(recite_core::ProjectSchema::empty_v1()),
+            schema: Some(recite_core::schema::ProjectSchema::empty_v1()),
             documents: vec![],
         },
     )?;
@@ -129,8 +129,9 @@ fn other_branch_statements_prevent_effect_reordering() -> TestResult {
 #[test]
 fn schema_choices_additions_and_delivery_are_validated() -> TestResult {
     use recite_core::{
-        ConditionDefinition, ConditionReturnType, DocumentKey, EffectDefinition, EffectMode,
-        ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaTypeRef,
+        DocumentKey, ast::EffectMode, schema::ConditionDefinition, schema::ConditionReturnType,
+        schema::EffectDefinition, schema::ParameterDefinition, schema::ProjectSchema,
+        schema::RegistryDefinition, schema::SchemaTypeRef,
     };
     let mut schema = ProjectSchema::empty_v1();
     schema.registries.insert(

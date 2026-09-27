@@ -169,10 +169,10 @@ pub(super) fn hash_dialogue_error(
 
 fn hash_snapshot_conversion_error(
     hasher: &mut blake3::Hasher,
-    error: &recite_runtime::DialogueSessionSnapshotConversionError,
+    error: &recite_runtime::snapshot::DialogueSessionSnapshotConversionError,
 ) {
     match error {
-        recite_runtime::DialogueSessionSnapshotConversionError::InvalidAvailabilityReasonId {
+        recite_runtime::snapshot::DialogueSessionSnapshotConversionError::InvalidAvailabilityReasonId {
             id,
             source,
         } => {

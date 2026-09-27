@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use recite_core::CompiledSourceFile;
+use recite_core::compiled::CompiledSourceFile;
 
 use crate::error::CliError;
 

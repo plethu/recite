@@ -3,8 +3,10 @@ use std::ffi::{CStr, c_char};
 use std::sync::{Mutex, OnceLock};
 use std::thread::{self, ThreadId};
 
-use recite_core::CompiledDialogue;
-use recite_runtime::{DialogueError, DialogueSession, DialogueSessionOptions, InterpolationValues};
+use recite_core::compiled::CompiledDialogue;
+use recite_runtime::{
+    DialogueError, DialogueSession, DialogueSessionOptions, localisation::InterpolationValues,
+};
 
 use crate::condition::ConditionEntry;
 use crate::error::{ReciteStatus, set_last_error};

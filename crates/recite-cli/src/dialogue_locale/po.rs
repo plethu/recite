@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use recite_core::{PoDiagnosticKind, PoDocument, PoParseError};
+use recite_core::po::{PoDiagnosticKind, PoDocument, PoParseError};
 
 use super::DialogueCatalogMalformedReason;
 use crate::error::CliError;

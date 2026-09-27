@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringEditError, AuthoringKernel, AuthoringRequest, QueryClass, SavedDocument,
     SnapshotGeneration,
 };

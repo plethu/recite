@@ -1,10 +1,12 @@
 #![allow(dead_code, reason = "shared wire fixtures are selectively reused")]
 #![cfg(test)]
 
+use recite_core::compiled;
+
 mod wire_rows;
 pub(crate) use wire_rows::*;
 
-use recite_core::{
+use compiled::{
     BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
     CompiledAssetDecodeError, decode_compiled_dialogue_messagepack,
 };
@@ -73,12 +75,12 @@ pub(crate) fn valid_header() -> WireHeader<'static> {
     WireHeader {
         format_version: COMPILED_ASSET_FORMAT_VERSION_V0,
         compiler_compatibility_version: COMPILER_COMPATIBILITY_VERSION_V0,
-        primary_encoding: Tagged::<u8>::nil(recite_core::V0_ASSET_ENCODING_MESSAGEPACK),
-        inspection_encoding: Tagged::<u8>::nil(recite_core::V0_INSPECTION_ENCODING_COMPACT_JSON),
+        primary_encoding: Tagged::<u8>::nil(compiled::V0_ASSET_ENCODING_MESSAGEPACK),
+        inspection_encoding: Tagged::<u8>::nil(compiled::V0_INSPECTION_ENCODING_COMPACT_JSON),
         compiler_version: "0.0.1",
         asset_id: "dialogue/main.recitec",
         source_map_id: "dialogue/main.recitec.map",
-        schema_fingerprint: Tagged::nil(recite_core::V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA),
+        schema_fingerprint: Tagged::nil(compiled::V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA),
     }
 }
 
@@ -292,9 +294,9 @@ impl Serialize for WireStatementKind {
         S: serde::Serializer,
     {
         match self {
-            Self::End => Tagged::<u8>::nil(recite_core::V0_STATEMENT_TAG_END).serialize(serializer),
+            Self::End => Tagged::<u8>::nil(compiled::V0_STATEMENT_TAG_END).serialize(serializer),
             Self::Prompt { line, choices } => {
-                Tagged::payload(recite_core::V0_STATEMENT_TAG_PROMPT, (*line, *choices))
+                Tagged::payload(compiled::V0_STATEMENT_TAG_PROMPT, (*line, *choices))
                     .serialize(serializer)
             }
             Self::Unknown(tag) => Tagged::<u8>::nil(*tag).serialize(serializer),
@@ -409,13 +411,11 @@ impl Serialize for WireConditionExpression<'_> {
     {
         match self {
             Self::Call(call) => {
-                Tagged::payload(recite_core::V0_CONDITION_TAG_CALL, call).serialize(serializer)
+                Tagged::payload(compiled::V0_CONDITION_TAG_CALL, call).serialize(serializer)
             }
-            Self::EmptyAnd => {
-                Tagged::payload(recite_core::V0_CONDITION_TAG_AND, Vec::<Self>::new())
-                    .serialize(serializer)
-            }
-            Self::EmptyOr => Tagged::payload(recite_core::V0_CONDITION_TAG_OR, Vec::<Self>::new())
+            Self::EmptyAnd => Tagged::payload(compiled::V0_CONDITION_TAG_AND, Vec::<Self>::new())
+                .serialize(serializer),
+            Self::EmptyOr => Tagged::payload(compiled::V0_CONDITION_TAG_OR, Vec::<Self>::new())
                 .serialize(serializer),
             Self::Unknown(tag) => Tagged::<u8>::nil(*tag).serialize(serializer),
         }

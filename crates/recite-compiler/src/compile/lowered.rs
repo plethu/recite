@@ -1,4 +1,4 @@
-use recite_core::SourceFile;
+use recite_core::ast::SourceFile;
 
 #[derive(Clone, Debug)]
 pub(super) struct LoweredInput {

@@ -1,6 +1,6 @@
 use crate::{
-    DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, MarkupUnbalancedKind,
-    PoDiagnosticKind,
+    DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId,
+    markup::MarkupUnbalancedKind, po::PoDiagnosticKind,
 };
 
 use super::builder::string;

@@ -1,4 +1,4 @@
-use recite_core::{MetadataContextSelector, MetadataTarget};
+use recite_core::schema::{MetadataContextSelector, MetadataTarget};
 
 pub(super) enum SelectorResolution<'a> {
     Missing,

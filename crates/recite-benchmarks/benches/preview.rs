@@ -4,7 +4,7 @@ use std::time::Duration;
 use criterion::{BatchSize, BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use recite_benchmarks::preview::PreviewProject;
 use recite_benchmarks::{BenchmarkFixture, BenchmarkResult};
-use recite_runtime::PreviewSnapshot;
+use recite_runtime::preview::PreviewSnapshot;
 
 fn preview_benchmarks(criterion: &mut Criterion) {
     for fixture in load_preview_projects() {
@@ -176,7 +176,7 @@ fn must<T>(result: BenchmarkResult<T>) -> T {
     }
 }
 
-fn must_preview<T>(result: Result<T, recite_runtime::PreviewError>) -> T {
+fn must_preview<T>(result: Result<T, recite_runtime::preview::PreviewError>) -> T {
     match result {
         Ok(value) => value,
         Err(error) => panic!("preview benchmark setup failed: {error}"),

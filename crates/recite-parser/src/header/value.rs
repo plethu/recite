@@ -1,4 +1,4 @@
-use recite_core::{SourceMetadataScalar, SourceMetadataValue};
+use recite_core::ast::{SourceMetadataScalar, SourceMetadataValue};
 
 pub(crate) fn parse_value(value: &str) -> Result<SourceMetadataValue, ()> {
     if value.starts_with('[') {

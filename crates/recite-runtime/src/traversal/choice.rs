@@ -1,8 +1,11 @@
-use recite_core::{ChoiceId, ChoiceRange, CompiledDialogue, CompiledDivertTarget};
+use recite_core::{
+    ChoiceId,
+    compiled::{ChoiceRange, CompiledDialogue, CompiledDivertTarget},
+};
 
 use crate::context::DialogueContext;
 use crate::event::{DialogueChoice, DialogueEvent};
-use crate::session::PendingPromptChoice;
+use crate::session::{PendingPromptChoice, SessionPhase};
 use crate::{DialogueError, DialogueSession};
 
 use super::AssetView;
@@ -52,14 +55,16 @@ fn choose_with_locale(
     let asset_view = AssetView::new(asset)?;
     asset_view.ensure_session_matches(session)?;
 
-    if let Some(effect) = &session.pending_effect {
-        return Err(DialogueError::EffectPending {
-            effect: effect.request.id.clone(),
-        });
-    }
-
-    let Some(prompt) = &session.pending_prompt else {
-        return Err(DialogueError::NoPromptPending { choice: choice_id });
+    let prompt = match &session.phase {
+        SessionPhase::AwaitingChoice(prompt) => prompt,
+        SessionPhase::AwaitingEffect(effect) => {
+            return Err(DialogueError::EffectPending {
+                effect: effect.request.id.clone(),
+            });
+        }
+        SessionPhase::Running | SessionPhase::Ended => {
+            return Err(DialogueError::NoPromptPending { choice: choice_id });
+        }
     };
     let Some(choice) = prompt
         .choices
@@ -88,7 +93,7 @@ fn choose_with_locale(
         CompiledDivertTarget::End => None,
     };
 
-    session.pending_prompt = None;
+    session.phase = SessionPhase::Running;
     session.selected_choice_history.push(choice.id);
 
     if let Some((block_index, statement_index)) = next_location {

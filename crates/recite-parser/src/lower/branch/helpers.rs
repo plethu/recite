@@ -1,4 +1,7 @@
-use recite_core::{ConditionCall, ConditionExpression, Diagnostic, SourceSpan};
+use recite_core::{
+    Diagnostic, SourceSpan,
+    ast::{ConditionCall, ConditionExpression},
+};
 
 use crate::condition::{parse_condition_call, parse_condition_expression};
 use crate::diagnostics::malformed_condition;

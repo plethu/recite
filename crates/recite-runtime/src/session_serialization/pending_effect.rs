@@ -1,4 +1,6 @@
-use recite_core::{CompiledEffectMode, CompiledStatementKind, StatementIndex, StatementRange};
+use recite_core::compiled::{
+    CompiledEffectMode, CompiledStatementKind, StatementIndex, StatementRange,
+};
 
 use crate::DialogueError;
 use crate::session::PendingEffect;

@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringEditError, AuthoringEditPlan, AuthoringKernel, AuthoringRequest, DocumentVersion,
     OpenDocument, SavedDocument, SnapshotGeneration, SourceEdit, SourceRange,
 };
@@ -155,8 +155,8 @@ fn stable_id_plans_are_deterministic_and_preserve_source_bytes() {
         .iter()
         .flat_map(|block| block.statements.iter())
         .filter_map(|statement| match statement {
-            recite_core::Statement::Line(line) => Some(&line.source_id),
-            recite_core::Statement::Choice(choice) => Some(&choice.source_id),
+            recite_core::ast::Statement::Line(line) => Some(&line.source_id),
+            recite_core::ast::Statement::Choice(choice) => Some(&choice.source_id),
             _ => None,
         })
         .collect::<Vec<_>>();
@@ -292,7 +292,7 @@ fn block_stub_plan_preserves_target_crlf_and_reports_provenance() {
     assert_eq!(plan.edits()[0].document(), &key("target.recite"));
     assert!(matches!(
         plan.operation(),
-        recite_compiler::AuthoringEditOperation::CreateBlockStub {
+        recite_compiler::authoring::AuthoringEditOperation::CreateBlockStub {
             source,
             target,
             block,

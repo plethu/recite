@@ -1,4 +1,4 @@
-use recite_core::{ContentFingerprint, ProducerIdentity};
+use recite_core::{compiled::ContentFingerprint, schema::ProducerIdentity};
 
 use super::evidence::{ProducerActionEvidence, ProducerRetryGuidance};
 use super::request::ProducerActionOperation;
@@ -27,9 +27,9 @@ impl ProducerActionRequestIdentity {
         write_evidence(&mut bytes, expected);
         write_identity(&mut bytes, launch.producer());
         write_scopes(&mut bytes, launch.input_fingerprints());
-        Self(recite_core::canonical_source_fingerprint(&bytes_to_hex(
-            &bytes,
-        )))
+        Self(recite_core::compiled::canonical_source_fingerprint(
+            &bytes_to_hex(&bytes),
+        ))
     }
 }
 
@@ -61,8 +61,8 @@ fn write_operation(bytes: &mut Vec<u8>, operation: &ProducerActionOperation) {
 fn write_evidence(bytes: &mut Vec<u8>, evidence: &ProducerActionEvidence) {
     write_identity(bytes, evidence.producer());
     match evidence.schema_fingerprint() {
-        recite_core::SchemaFingerprint::NoSchema => bytes.push(0),
-        recite_core::SchemaFingerprint::Fingerprint(fingerprint) => {
+        recite_core::compiled::SchemaFingerprint::NoSchema => bytes.push(0),
+        recite_core::compiled::SchemaFingerprint::Fingerprint(fingerprint) => {
             bytes.push(1);
             write_fingerprint(bytes, fingerprint);
         }
@@ -92,7 +92,10 @@ fn write_scopes(bytes: &mut Vec<u8>, scopes: &super::scopes::ProducerFingerprint
     }
 }
 
-fn write_fingerprints(bytes: &mut Vec<u8>, fingerprints: &[recite_core::ProducerFingerprint]) {
+fn write_fingerprints(
+    bytes: &mut Vec<u8>,
+    fingerprints: &[recite_core::schema::ProducerFingerprint],
+) {
     write_len(bytes, fingerprints.len());
     for fingerprint in fingerprints {
         write_string(bytes, &fingerprint.kind);

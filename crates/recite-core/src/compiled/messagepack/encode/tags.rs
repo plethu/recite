@@ -8,15 +8,16 @@
 //! policy in `docs/recite-production-spec.md` §12.2.
 
 use crate::{
-    CompiledArgument, CompiledAssetEncoding, CompiledChoiceEcho, CompiledConditionCall,
-    CompiledConditionExpression, CompiledDivertTarget, CompiledEffectMode,
-    CompiledInspectionEncoding, CompiledMatchPattern, CompiledStatementKind, ScalarValue,
-    SchemaFingerprint, SourceSpan, Value,
+    ScalarValue, SourceSpan, Value, compiled::CompiledArgument, compiled::CompiledAssetEncoding,
+    compiled::CompiledChoiceEcho, compiled::CompiledConditionCall,
+    compiled::CompiledConditionExpression, compiled::CompiledDivertTarget,
+    compiled::CompiledEffectMode, compiled::CompiledInspectionEncoding,
+    compiled::CompiledMatchPattern, compiled::CompiledStatementKind, compiled::SchemaFingerprint,
 };
 pub(super) struct MsgAssetEncoding(pub(super) CompiledAssetEncoding);
 pub(super) struct MsgInspectionEncoding(pub(super) CompiledInspectionEncoding);
 pub(super) struct MsgSchemaFingerprint<'a>(pub(super) &'a SchemaFingerprint);
-pub(super) struct MsgFingerprint<'a>(pub(super) &'a crate::ContentFingerprint);
+pub(super) struct MsgFingerprint<'a>(pub(super) &'a crate::compiled::ContentFingerprint);
 pub(super) struct MsgStatementKind<'a>(pub(super) &'a CompiledStatementKind);
 pub(super) struct MsgMatchPattern<'a>(pub(super) &'a CompiledMatchPattern);
 pub(crate) struct MsgDivertTarget<'a>(pub(crate) &'a CompiledDivertTarget);
@@ -31,7 +32,8 @@ pub(super) struct MsgSourceSpan<'a>(pub(super) &'a SourceSpan);
 
 macro_rules! serialize_tagged {
     ($serializer:expr, $tag:expr, $payload:expr) => {{
-        let mut tuple = $serializer.serialize_tuple(crate::V0_TAGGED_VALUE_FIELDS as usize)?;
+        let mut tuple =
+            $serializer.serialize_tuple(crate::compiled::V0_TAGGED_VALUE_FIELDS as usize)?;
         tuple.serialize_element(&$tag)?;
         tuple.serialize_element(&$payload)?;
         tuple.end()

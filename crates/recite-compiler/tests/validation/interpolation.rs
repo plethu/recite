@@ -48,16 +48,19 @@ fn unsupported_interpolation_type_aliases_are_rejected_before_compilation() {
         let source = format!(
             ":: start default\n> hello_001@8843fd6f53f020a12b31 bind=(name:{value_type}=$display)\n  Hello, {{name}}.\n-> END\n"
         );
-        let report = recite_compiler::compile_inputs(
-            [recite_compiler::CompileInput::new(
+        let report = recite_compiler::compile::compile_inputs(
+            [recite_compiler::compile::CompileInput::new(
                 "dialogue/interpolation.recite",
                 source,
             )],
-            recite_compiler::CompileOptions::new(
-                recite_core::CompilerVersion::new("0.0.1").expect("valid compiler version"),
-                recite_core::CompiledAssetId::new("interpolation").expect("valid asset id"),
-                recite_core::SourceMapId::new("interpolation-map").expect("valid source map id"),
-                recite_core::SchemaFingerprint::NoSchema,
+            recite_compiler::compile::CompileOptions::new(
+                recite_core::compiled::CompilerVersion::new("0.0.1")
+                    .expect("valid compiler version"),
+                recite_core::compiled::CompiledAssetId::new("interpolation")
+                    .expect("valid asset id"),
+                recite_core::compiled::SourceMapId::new("interpolation-map")
+                    .expect("valid source map id"),
+                recite_core::compiled::SchemaFingerprint::NoSchema,
             ),
         )
         .expect("compilation reports source diagnostics");

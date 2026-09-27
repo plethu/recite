@@ -5,7 +5,7 @@ use crate::{
     editing::Writer,
 };
 use freya::prelude::*;
-use recite_core::EffectMode;
+use recite_core::ast::EffectMode;
 use recite_writer_model::RuleEffect;
 #[derive(Clone)]
 pub(super) struct EffectControl {

@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 
 use recite_core::ChoiceId;
-use recite_runtime::{DialogueChoice, PreviewPrompt};
+use recite_runtime::{DialogueChoice, preview::PreviewPrompt};
 
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};

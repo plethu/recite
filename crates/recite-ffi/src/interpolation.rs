@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
 
 use recite_core::ScalarValue;
-use recite_runtime::InterpolationValues;
+use recite_runtime::localisation::InterpolationValues;
 
 /// Scalar type carried by one caller-provided interpolation value.
 ///

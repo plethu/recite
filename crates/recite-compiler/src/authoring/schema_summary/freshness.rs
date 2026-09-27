@@ -1,9 +1,11 @@
 use std::collections::BTreeMap;
 
 use recite_core::{
-    ContentFingerprint, MetadataDomainDefinition, ProducerFingerprint, ProducerIdentity,
-    ProjectSchema, SchemaFingerprint, SchemaProducerFreshness,
-    compare_schema_producer_freshness_detailed,
+    compiled::{ContentFingerprint, SchemaFingerprint},
+    schema::{
+        MetadataDomainDefinition, ProducerFingerprint, ProducerIdentity, ProjectSchema,
+        SchemaProducerFreshness, compare_schema_producer_freshness_detailed,
+    },
 };
 
 use super::errors::{FreshnessSnapshotSide, SchemaSummaryEvidenceError};

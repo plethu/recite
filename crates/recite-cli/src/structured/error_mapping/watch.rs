@@ -98,6 +98,14 @@ pub(super) fn preparation<'a>(
             None,
             Some(ErrorDetails::Watch { kind: "target" }),
         ),
+        _ => (
+            ErrorCategory::Project,
+            ErrorCode::WatchPreparation,
+            "prepare_project",
+            fallback_path,
+            None,
+            Some(ErrorDetails::Watch { kind: "unknown" }),
+        ),
     }
 }
 
@@ -107,7 +115,19 @@ pub(super) fn publisher<'a>(
 ) -> ErrorParts<'a> {
     use crate::watch::{ProjectBuildPublisherError, TargetMapError};
 
-    let ProjectBuildPublisherError::Targets(source) = source;
+    let source = match source {
+        ProjectBuildPublisherError::Targets(source) => source,
+        _ => {
+            return (
+                ErrorCategory::Project,
+                ErrorCode::WatchPublisher,
+                "prepare_publisher",
+                fallback_path,
+                None,
+                Some(ErrorDetails::Watch { kind: "unknown" }),
+            );
+        }
+    };
     match source {
         TargetMapError::NoTargets => (
             ErrorCategory::Input,
@@ -159,6 +179,14 @@ pub(super) fn publisher<'a>(
                 kind: "duplicate_destination",
             }),
         ),
+        _ => (
+            ErrorCategory::Project,
+            ErrorCode::WatchPublisher,
+            "prepare_publisher",
+            fallback_path,
+            None,
+            Some(ErrorDetails::Watch { kind: "unknown" }),
+        ),
     }
 }
 
@@ -175,5 +203,6 @@ fn target_reason(reason: &crate::watch::TargetPathError) -> &'static str {
         TargetPathError::NonDirectoryComponent => "non_directory_component",
         TargetPathError::SymlinkComponent => "symlink_component",
         TargetPathError::Inspection(_) => "inspection",
+        _ => "unknown",
     }
 }

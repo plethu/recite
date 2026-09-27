@@ -1,4 +1,4 @@
-use recite_runtime::{PreviewEvent, PreviewOutput, PreviewState, PreviewStatus};
+use recite_runtime::preview::{PreviewEvent, PreviewOutput, PreviewState, PreviewStatus};
 
 use crate::preview_hash_dialogue::{hash_identity, hash_line, hash_prompt};
 use crate::preview_hash_errors::hash_preview_error;

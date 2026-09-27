@@ -90,7 +90,7 @@ fn choice_conditions_mark_unavailable_choices_without_hiding_them() {
 
 #[test]
 fn unavailable_choice_exposes_primary_reason_and_reason_tree() {
-    let schema = recite_core::load_schema_manifest_str(
+    let schema = recite_core::schema::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
     )
@@ -179,7 +179,7 @@ fn unavailable_choice_exposes_primary_reason_and_reason_tree() {
 
 #[test]
 fn and_reason_tree_contains_only_failed_children() {
-    let mut schema = recite_core::load_schema_manifest_str(
+    let mut schema = recite_core::schema::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
     )
@@ -238,7 +238,7 @@ fn and_reason_tree_contains_only_failed_children() {
 
 #[test]
 fn or_requirement_short_circuits_after_passing_child() {
-    let mut schema = recite_core::load_schema_manifest_str(
+    let mut schema = recite_core::schema::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
     )
@@ -286,7 +286,7 @@ fn or_requirement_short_circuits_after_passing_child() {
 
 #[test]
 fn negated_requirement_does_not_synthesize_automatic_reason_tree() {
-    let schema = recite_core::load_schema_manifest_str(
+    let schema = recite_core::schema::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
     )

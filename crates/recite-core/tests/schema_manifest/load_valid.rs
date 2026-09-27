@@ -1,9 +1,12 @@
 use recite_core::{
-    AvailabilityReasonArgBinding, ConditionReturnType, EffectMode, MetadataContextSelector,
-    MetadataDomainDefinition, MetadataOccurrence, MetadataTarget, MissingMetadataContextPolicy,
-    ProducerFingerprint, ProducerOrigin, ProjectionInputRef, ProjectionOutputTarget,
-    SchemaLiteralValue, SchemaProjectionInputSource, SchemaProjectionSelector,
-    SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str,
+    ast::EffectMode,
+    schema::{
+        AvailabilityReasonArgBinding, ConditionReturnType, MetadataContextSelector,
+        MetadataDomainDefinition, MetadataOccurrence, MetadataTarget, MissingMetadataContextPolicy,
+        ProducerFingerprint, ProducerOrigin, ProjectionInputRef, ProjectionOutputTarget,
+        SchemaLiteralValue, SchemaProjectionInputSource, SchemaProjectionSelector,
+        SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str,
+    },
 };
 
 use crate::diagnostic_codes;
@@ -93,13 +96,13 @@ fn full_generated_manifest_loads_producer_metadata_and_projection_features() {
     let schema = report.schema.expect("full schema manifest");
     assert_eq!(
         schema.producer_metadata,
-        Some(recite_core::ProducerMetadata {
+        Some(recite_core::schema::ProducerMetadata {
             producer: Some(
-                recite_core::ProducerIdentity::new("adapter", "example")
+                recite_core::schema::ProducerIdentity::new("adapter", "example")
                     .expect("valid producer identity"),
             ),
             content_fingerprint: Some(
-                recite_core::producer_content_fingerprint(
+                recite_core::schema::producer_content_fingerprint(
                     "blake3",
                     "0000000000000000000000000000000000000000000000000000000000000000",
                 )
@@ -129,7 +132,7 @@ fn full_generated_manifest_loads_producer_metadata_and_projection_features() {
             .as_ref()
             .expect("registry provenance")
             .extensions["engine:resource_kind"],
-        recite_core::ProducerMetadataValue::String("item".to_owned())
+        recite_core::schema::ProducerMetadataValue::String("item".to_owned())
     );
     let MetadataDomainDefinition::Flat(domain) = &schema.metadata_domains["tone"] else {
         panic!("tone is a flat domain");

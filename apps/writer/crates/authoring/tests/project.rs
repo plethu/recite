@@ -1,4 +1,4 @@
-use recite_compiler::SavedDocument;
+use recite_compiler::authoring::SavedDocument;
 use recite_core::DocumentKey;
 use recite_writer_model::{Document, ProjectContext, View, Workbench};
 
@@ -73,7 +73,7 @@ fn schema_refresh_retains_drafts_and_undo_but_invalidates_preview()
     workbench.apply()?;
     workbench.start_preview()?;
     workbench.set_draft("A field draft.".into());
-    let report = recite_core::load_schema_manifest_str(
+    let report = recite_core::schema::load_schema_manifest_str(
         "schema.json",
         include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
     );

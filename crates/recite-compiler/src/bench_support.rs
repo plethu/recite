@@ -1,7 +1,10 @@
 //! Maintainer-only compiler phase probes for Criterion benchmarks.
 
 use recite_core::{
-    CompiledDialogue, Diagnostic, DivertTarget, ProjectSchema, SourceFile, Statement,
+    Diagnostic,
+    ast::{DivertTarget, SourceFile, Statement},
+    compiled::CompiledDialogue,
+    schema::ProjectSchema,
 };
 
 use crate::compile::CompileError;

@@ -1,4 +1,4 @@
-use recite_core::PoEntry;
+use recite_core::po::PoEntry;
 
 use super::coverage::{TranslationStatus, translation_status};
 

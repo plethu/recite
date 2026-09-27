@@ -2,7 +2,7 @@
 mod preview_support;
 
 use preview_support::asset;
-use recite_runtime::{PreviewEvent, PreviewOptions, PreviewSession};
+use recite_runtime::preview::{PreviewEvent, PreviewOptions, PreviewSession};
 
 #[test]
 fn same_id_revisions_clear_when_the_active_payload_returns() {
@@ -41,7 +41,7 @@ fn snapshot_between_same_id_replacements_can_return_to_active_payload() {
         .expect("snapshot")
         .encode()
         .expect("encode");
-    let decoded = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let decoded = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut restored = PreviewSession::new(&active, None, PreviewOptions::new()).expect("restore");
     restored.restore(decoded).expect("restore snapshot");
 
@@ -71,7 +71,7 @@ fn same_id_candidate_revision_updates_and_round_trips() {
         .expect("snapshot")
         .encode()
         .expect("encode");
-    let decoded = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let decoded = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut restored = PreviewSession::new(&active, None, PreviewOptions::new()).expect("restore");
     restored.restore(decoded).expect("restore snapshot");
     assert_eq!(restored.state().restart_required(), Some(&second));
@@ -85,11 +85,12 @@ fn a_new_session_on_replacement_is_a_new_active_revision() {
     assert_eq!(preview.state().asset_id(), &replacement.header.asset_id);
 }
 
-fn revision_asset(source_revision: &str, line: &str) -> recite_core::CompiledDialogue {
+fn revision_asset(source_revision: &str, line: &str) -> recite_core::compiled::CompiledDialogue {
     let mut asset = asset(&format!(
         ":: start default\n> line@12345678901234567890\n  {line}\n-> END\n"
-    ));
+    ))
+    .into_payload();
     asset.lines[0].source_text = format!("{line} {source_revision}");
     asset.lines[0].authored_source_text = format!("{line} {source_revision}");
-    asset
+    recite_core::compiled::CompiledDialogue::new(asset)
 }

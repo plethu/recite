@@ -1,7 +1,7 @@
 #[test]
 fn validates_flat_and_contextual_metadata_domains() {
     let schema = metadata_domain_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default speaker=hazel\n",
@@ -14,7 +14,13 @@ fn validates_flat_and_contextual_metadata_domains() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert!(
         report.is_ok(),
@@ -25,7 +31,7 @@ fn validates_flat_and_contextual_metadata_domains() {
 #[test]
 fn contextual_value_names_are_resolved_by_context_and_fallback_policy() {
     let schema = metadata_domain_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: contextual default speaker=hazel\n",
@@ -39,7 +45,13 @@ fn contextual_value_names_are_resolved_by_context_and_fallback_policy() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE031"]);
     assert_spans(&report, [(4, 62)]);
@@ -48,7 +60,7 @@ fn contextual_value_names_are_resolved_by_context_and_fallback_policy() {
 #[test]
 fn reports_invalid_metadata_domain_values_on_value_spans() {
     let schema = metadata_domain_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default speaker=rhea\n",
@@ -57,7 +69,13 @@ fn reports_invalid_metadata_domain_values_on_value_spans() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE031", "RECITE_VALIDATE031"]);
     assert_spans(&report, [(2, 46), (2, 59)]);
@@ -66,21 +84,33 @@ fn reports_invalid_metadata_domain_values_on_value_spans() {
 #[test]
 fn reports_missing_and_malformed_metadata_domain_context() {
     let schema = metadata_domain_schema();
-    let missing = vec![lower(
+    let missing = [lower(
         "dialogue/start.recite",
         ":: start default\n> intro@11111111111111111111 emotion=calm\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&missing, &schema);
+    let report = validate_inputs(
+        missing
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
     assert_codes(&report, ["RECITE_VALIDATE032"]);
     assert_spans(&report, [(2, 38)]);
 
-    let malformed = vec![lower(
+    let malformed = [lower(
         "dialogue/start.recite",
         ":: start default\n> intro@11111111111111111111 subject=\"rhea\" emotion=calm\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&malformed, &schema);
+    let report = validate_inputs(
+        malformed
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
     assert_codes(&report, ["RECITE_VALIDATE029", "RECITE_VALIDATE033"]);
     assert_spans(&report, [(2, 38), (2, 38)]);
 }
@@ -88,12 +118,18 @@ fn reports_missing_and_malformed_metadata_domain_context() {
 #[test]
 fn block_metadata_does_not_use_default_speaker_as_field_speaker_context() {
     let schema = metadata_domain_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         ":: start default speaker=hazel block_context=flat\n> intro@11111111111111111111\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE032"]);
     assert_spans(&report, [(1, 46)]);
@@ -102,12 +138,18 @@ fn block_metadata_does_not_use_default_speaker_as_field_speaker_context() {
 #[test]
 fn repeated_metadata_selector_reports_selector_span() {
     let schema = metadata_domain_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         ":: start default\n> intro@11111111111111111111 subject=rhea subject=hazel emotion=calm\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE033"]);
     assert_spans(&report, [(2, 43)]);
@@ -116,12 +158,18 @@ fn repeated_metadata_selector_reports_selector_span() {
 #[test]
 fn reports_mixed_array_metadata_type_mismatch_before_domain_validation() {
     let schema = metadata_domain_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         ":: start default\n> intro@11111111111111111111 tags=[flat, \"neutral\"]\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE029"]);
     assert_spans(&report, [(2, 35)]);

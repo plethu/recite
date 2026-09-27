@@ -1,14 +1,18 @@
 #![cfg(test)]
 
-use recite_core::{ChoiceId, CompiledDialogue, EffectId, LocaleId};
+use recite_core::{ChoiceId, EffectId, LocaleId, compiled::CompiledDialogue};
 use recite_runtime::{
-    DialogueChoiceAvailabilityReasonOriginSnapshot, DialogueChoiceAvailabilityReasonSnapshot,
-    DialogueChoiceAvailabilityReasonTreeSnapshot, DialogueChoiceAvailabilityReasonValueSnapshot,
-    DialogueDeferredEffectSnapshot, DialogueEffectArgument, DialogueEffectRequest, DialogueError,
-    DialogueEvent, DialogueSessionOptions, DialogueSessionPendingEffectSnapshot,
-    DialogueSessionSnapshot, DialogueSessionSnapshotConversionError, EffectAck, acknowledge_effect,
-    decode_session_messagepack, encode_session_messagepack, next as runtime_next, restore_session,
-    snapshot_session, start_scene, start_scene_with_options,
+    DialogueEffectArgument, DialogueEffectRequest, DialogueError, DialogueEvent,
+    DialogueSessionOptions, EffectAck, acknowledge_effect, next as runtime_next,
+    snapshot::{
+        DialogueChoiceAvailabilityReasonOriginSnapshot, DialogueChoiceAvailabilityReasonSnapshot,
+        DialogueChoiceAvailabilityReasonTreeSnapshot,
+        DialogueChoiceAvailabilityReasonValueSnapshot, DialogueDeferredEffectSnapshot,
+        DialogueSessionPendingEffectSnapshot, DialogueSessionSnapshot,
+        DialogueSessionSnapshotConversionError, decode_session_messagepack,
+        encode_session_messagepack, restore_session, snapshot_session,
+    },
+    start_scene, start_scene_with_options,
 };
 
 #[path = "session_serialization/asset_identity.rs"]

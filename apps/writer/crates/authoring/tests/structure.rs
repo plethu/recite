@@ -120,7 +120,7 @@ fn linear_continuation_can_connect_a_new_beat_without_a_choice()
 #[test]
 fn generated_beat_names_respect_other_project_documents() -> Result<(), Box<dyn std::error::Error>>
 {
-    use recite_compiler::SavedDocument;
+    use recite_compiler::authoring::SavedDocument;
     use recite_core::DocumentKey;
     use recite_writer_model::{Document, ProjectContext, Workbench};
 
@@ -153,7 +153,7 @@ fn generated_beat_names_respect_other_project_documents() -> Result<(), Box<dyn 
 
 #[test]
 fn inserted_anchor_avoids_ids_in_other_documents() -> Result<(), Box<dyn std::error::Error>> {
-    use recite_compiler::SavedDocument;
+    use recite_compiler::authoring::SavedDocument;
     use recite_core::DocumentKey;
     use recite_writer_model::{Document, ProjectContext};
     let mut document = Document::open(

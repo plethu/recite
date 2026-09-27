@@ -1,11 +1,11 @@
-use recite_core::{BlockId, ChoiceId, CompiledAssetId, EffectId, LocaleId};
+use recite_core::{BlockId, ChoiceId, EffectId, LocaleId, compiled::CompiledAssetId};
 
 use crate::{DialogueEffectRequest, DialogueLine, EffectAck};
 
 use super::{ConditionAnswer, PreviewConditionResult, PreviewEvent, PreviewPrompt};
 
 /// User-facing transcript projection. Condition control traffic, tentative
-/// choice acceptance, and runtime errors remain in [`crate::PreviewTrace`]
+/// choice acceptance, and runtime errors remain in [`crate::preview::PreviewTrace`]
 /// rather than being duplicated here.
 #[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq)]

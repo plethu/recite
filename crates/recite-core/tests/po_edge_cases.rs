@@ -1,4 +1,4 @@
-use recite_core::{PoDiagnosticKind, PoDocument};
+use recite_core::po::{PoDiagnosticKind, PoDocument};
 
 #[test]
 fn adjacent_obsolete_comments_remain_with_the_obsolete_record() {

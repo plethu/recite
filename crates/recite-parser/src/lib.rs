@@ -126,7 +126,7 @@ pub fn metadata_assignment_at(line: &str, byte_index: usize) -> Option<MetadataA
 /// Parses one metadata value with the same scalar and array rules used by
 /// source lowering.
 #[must_use]
-pub fn parse_metadata_value(value: &str) -> Option<recite_core::SourceMetadataValue> {
+pub fn parse_metadata_value(value: &str) -> Option<recite_core::ast::SourceMetadataValue> {
     header::parse_value(value).ok()
 }
 
@@ -138,8 +138,8 @@ pub fn parse_metadata_value(value: &str) -> Option<recite_core::SourceMetadataVa
 pub fn is_metadata_symbol(value: &str) -> bool {
     matches!(
         parse_metadata_value(value),
-        Some(recite_core::SourceMetadataValue::Scalar(
-            recite_core::SourceMetadataScalar::Symbol(_)
+        Some(recite_core::ast::SourceMetadataValue::Scalar(
+            recite_core::ast::SourceMetadataScalar::Symbol(_)
         ))
     )
 }

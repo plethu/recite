@@ -1,4 +1,7 @@
-use recite_core::{ChoiceEcho, LineId, SourceMetadataEntry, SourceSpan};
+use recite_core::{
+    LineId, SourceSpan,
+    ast::{ChoiceEcho, SourceMetadataEntry},
+};
 
 use crate::header::HeaderKeyValue;
 

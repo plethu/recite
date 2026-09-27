@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use lsp_types::{Position, Uri};
-use recite_compiler::DocumentSnapshot;
+use recite_compiler::authoring::DocumentSnapshot;
 
 use crate::position::span_to_range;
 use crate::summary::FileSummary;

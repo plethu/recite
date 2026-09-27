@@ -23,10 +23,14 @@ def selected(*paths):
 
 class ScopeTests(unittest.TestCase):
     def test_documentation_avoids_builds(self):
-        for path in ("docs/roadmap.md", "README.md", "apps/writer/acceptance.md",
+        for path in ("docs/recite-production-spec.md", "README.md", "apps/writer/acceptance.md",
                      "apps/writer/packaging/README.md", "docs-site/src/content/docs/index.md"):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs"})
+
+    def test_maintainability_exceptions_select_policy_and_docs(self):
+        self.assertEqual(selected("scripts/maintainability/exceptions.toml"),
+                         {"docs", "maintainability"})
 
     def test_core_changes_keep_windows_and_benchmarks(self):
         self.assertEqual(selected("crates/recite-runtime/src/lib.rs"), {
@@ -59,7 +63,7 @@ class ScopeTests(unittest.TestCase):
 
     def test_unknown_inputs_are_conservative_and_changes_union(self):
         self.assertEqual(selected("new-build-system/config.json"), scope.LANES)
-        self.assertEqual(selected("docs/roadmap.md", "crates/recite-cli/src/lib.rs"),
+        self.assertEqual(selected("docs/recite-production-spec.md", "crates/recite-cli/src/lib.rs"),
                          {"docs"} | scope.RUST)
         self.assertEqual(selected(), set())
 

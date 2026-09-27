@@ -1,4 +1,7 @@
-use recite_core::{Diagnostic, DiagnosticCode, MetadataTarget, SchemaTypeRef, SourceSpan};
+use recite_core::{
+    Diagnostic, DiagnosticCode, SourceSpan,
+    schema::{MetadataTarget, SchemaTypeRef},
+};
 
 use super::{compiler_diagnostic, diagnostic_contract, string_argument};
 

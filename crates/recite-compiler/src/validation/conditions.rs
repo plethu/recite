@@ -1,6 +1,7 @@
 use recite_core::{
-    Argument, Choice, ConditionCall, ConditionDefinition, ConditionExpression, ConditionReturnType,
-    ScalarValue, SchemaTypeDefinition, SchemaTypeRef, SourceSpan,
+    ScalarValue, SourceSpan,
+    ast::{Argument, Choice, ConditionCall, ConditionExpression},
+    schema::{ConditionDefinition, ConditionReturnType, SchemaTypeDefinition, SchemaTypeRef},
 };
 
 use super::state::Validator;

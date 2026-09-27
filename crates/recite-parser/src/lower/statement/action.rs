@@ -1,4 +1,7 @@
-use recite_core::{Divert, Effect, SourceRecoveryClass};
+use recite_core::{
+    SourceRecoveryClass,
+    ast::{Divert, Effect},
+};
 
 use crate::condition::parse_condition_call;
 use crate::diagnostics::{

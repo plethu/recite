@@ -14,7 +14,7 @@ mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/crates/recite-lsp/tests" \
   "$fixture_repo/crates/recite-cli/tests" \
   "$fixture_repo/crates/recite-compiler/tests/authoring_build"
-mkdir -p "$fixture_repo/docs/evidence/editor-hosts" "$fixture_repo/tests/editor-hosts/neovim" \
+mkdir -p "$fixture_repo/tests/editor-hosts/neovim" \
   "$fixture_repo/tests/editor-hosts/zed"
 cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
@@ -28,9 +28,6 @@ cp -R "$repo_root/scripts/editor_parity" "$fixture_repo/scripts/"
 cp "$repo_root/editors/recite-tree-sitter/grammar.js" "$fixture_repo/editors/recite-tree-sitter/"
 cp -R "$repo_root/editors/recite-neovim/." "$fixture_repo/editors/recite-neovim/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
-cp "$repo_root/docs/evidence/editor-hosts/neovim-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
-cp "$repo_root/docs/evidence/editor-hosts/vscode-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
-cp "$repo_root/docs/evidence/editor-hosts/zed-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
 cp "$repo_root/fixtures/editor-parity/contract.json" "$fixture_repo/fixtures/editor-parity/"
 cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$fixture_repo/fixtures/recite/valid/"
 cp "$repo_root/fixtures/recite/valid/locale_fallback_fr.po" "$fixture_repo/fixtures/recite/valid/"

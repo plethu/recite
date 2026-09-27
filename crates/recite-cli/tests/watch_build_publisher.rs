@@ -6,7 +6,7 @@ use recite_cli::watch::{
     ProjectBuildPreparation, ProjectBuildPublisher, ProjectBuildRecoveryReason,
     ProjectBuildRequest, ProjectBuildTarget,
 };
-use recite_compiler::{
+use recite_compiler::authoring::{
     BuildCandidate, BuildControl, BuildPreparedHandle, BuildPublisher, BuildTarget,
     PublishAbortReason, PublishOutcome,
 };
@@ -43,7 +43,7 @@ fn request(root: &Path, assets: &str) -> ProjectBuildRequest {
         ProjectBuildPreparation::Rejected { diagnostics } => {
             panic!("unexpected diagnostics: {diagnostics:?}")
         }
-        _ => panic!("unknown preparation outcome"),
+        _ => panic!("unexpected preparation outcome"),
     }
 }
 
@@ -132,8 +132,8 @@ fn publisher_binds_the_exact_request_and_orders_candidates() {
     let foreign = match require(
         ProjectBuildRequest::prepare_with_generations(
             temp.path(),
-            recite_compiler::BuildGeneration::new(2),
-            recite_compiler::SnapshotGeneration::initial(),
+            recite_compiler::authoring::BuildGeneration::new(2),
+            recite_compiler::authoring::SnapshotGeneration::initial(),
         ),
         "foreign preparation",
     ) {

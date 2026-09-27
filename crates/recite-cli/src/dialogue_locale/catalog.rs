@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use recite_core::LocaleId;
-use recite_runtime::{
+use recite_runtime::localisation::{
     LocaleProvider, PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
 };
 
@@ -110,7 +110,7 @@ impl LocaleProvider for DialogueCatalogProvider {
         domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Result<Option<String>, recite_runtime::LocaleError> {
+    ) -> Result<Option<String>, recite_runtime::localisation::LocaleError> {
         let context = gettext_context(id, domain);
         let locales = locale_fallbacks(locale.as_str());
         for candidate_context in gettext_contexts(&context, variant) {
@@ -134,7 +134,7 @@ impl LocaleProvider for DialogueCatalogProvider {
         domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Result<PluralResolution, recite_runtime::LocaleError> {
+    ) -> Result<PluralResolution, recite_runtime::localisation::LocaleError> {
         let context = gettext_context(id, domain);
         let mut attempts = Vec::new();
         let locales = locale_fallbacks(locale.as_str());
@@ -150,8 +150,10 @@ impl LocaleProvider for DialogueCatalogProvider {
                     });
                     continue;
                 };
-                let arm = recite_core::evaluate_plural_form(header, count)
-                    .map_err(|error| recite_runtime::LocaleError::new(error.to_string()))?;
+                let arm =
+                    recite_core::po::evaluate_plural_form(header, count).map_err(|error| {
+                        recite_runtime::localisation::LocaleError::new(error.to_string())
+                    })?;
                 let Some(entry) = self.plural_entry(
                     candidate,
                     &candidate_context,
@@ -218,16 +220,18 @@ impl LocaleProvider for DialogueCatalogProvider {
     fn validated_plural_arm_count(
         &self,
         resolution: &PluralResolution,
-    ) -> Result<Option<usize>, recite_runtime::LocaleError> {
+    ) -> Result<Option<usize>, recite_runtime::localisation::LocaleError> {
         let Some(locale) = resolution.matched_locale.as_deref() else {
             return Ok(None);
         };
         self.plural_forms
             .get(locale)
             .map(|header| {
-                recite_core::validate_plural_rule(header)
+                recite_core::po::validate_plural_rule(header)
                     .map(Some)
-                    .map_err(|error| recite_runtime::LocaleError::new(error.to_string()))
+                    .map_err(|error| {
+                        recite_runtime::localisation::LocaleError::new(error.to_string())
+                    })
             })
             .unwrap_or(Ok(None))
     }

@@ -1,4 +1,4 @@
-use recite_core::PoDocumentFingerprint;
+use recite_core::po::PoDocumentFingerprint;
 
 use super::resolution::{CatalogEntryResolution, CatalogResolution};
 use super::types::CatalogSummary;
@@ -13,9 +13,6 @@ pub struct CatalogCoverageSummary {
     pub(super) resolution: CatalogResolution,
     pub(super) entries: Vec<CatalogEntryResolution>,
 }
-
-/// Dialogue-oriented name for [`CatalogCoverageSummary`].
-pub type DialogueCatalogSummary = CatalogCoverageSummary;
 
 impl CatalogCoverageSummary {
     #[must_use]

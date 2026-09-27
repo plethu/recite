@@ -8,7 +8,8 @@ mod metadata_context;
 mod projection;
 
 use recite_core::{
-    DocumentKey, MetadataDomainDefinition, MetadataTarget, ProjectSchema, SourceSpan,
+    DocumentKey, SourceSpan,
+    schema::{MetadataDomainDefinition, MetadataTarget, ProjectSchema},
 };
 
 use super::super::snapshot::{AuthoringSnapshot, DocumentSnapshot};
@@ -137,7 +138,7 @@ fn candidate_kind_rank(kind: CompletionCandidateKind) -> u8 {
 }
 
 pub(super) fn explicit_projection_candidates(
-    schema: &recite_core::ProjectSchema,
+    schema: &recite_core::schema::ProjectSchema,
     projector: &str,
     span: &SourceSpan,
 ) -> Vec<CompletionCandidate> {

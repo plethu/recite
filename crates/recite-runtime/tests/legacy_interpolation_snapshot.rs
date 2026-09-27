@@ -1,12 +1,14 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
+use recite_core::compiled::{
     CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId,
     decode_compiled_dialogue_messagepack,
 };
 use recite_runtime::{
-    DialogueEvent, DialogueSessionOptions, EmptyDialogueContext, LocaleError, LocaleProvider,
-    LocaleResolution, PluralResolution, TextDomain, choose, next_with, restore_session,
-    snapshot_session, start_scene_with_options,
+    DialogueEvent, DialogueSessionOptions, EmptyDialogueContext, LocaleResolution, choose,
+    localisation::{LocaleError, LocaleProvider, PluralResolution, TextDomain},
+    next_with,
+    snapshot::{restore_session, snapshot_session},
+    start_scene_with_options,
 };
 
 struct LegacyLocaleProvider;

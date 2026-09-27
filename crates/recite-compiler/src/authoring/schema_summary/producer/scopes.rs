@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use recite_core::{MetadataDomainDefinition, ProducerFingerprint, ProducerIdentity, ProjectSchema};
+use recite_core::schema::{
+    MetadataDomainDefinition, ProducerFingerprint, ProducerIdentity, ProjectSchema,
+};
 
 /// Producer fingerprints partitioned by the scope in which they were observed.
 #[derive(Clone, Debug, Eq, PartialEq)]

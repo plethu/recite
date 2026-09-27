@@ -249,15 +249,15 @@ fn restore_schema_fingerprint_mismatch_returns_schema_mismatch_status() {
     );
     let first_bytes = compile_to_bytes_with_schema(
         source,
-        recite_core::SchemaFingerprint::Fingerprint(recite_core::canonical_source_fingerprint(
-            "schema-a",
-        )),
+        recite_core::compiled::SchemaFingerprint::Fingerprint(
+            recite_core::compiled::canonical_source_fingerprint("schema-a"),
+        ),
     );
     let second_bytes = compile_to_bytes_with_schema_and_compiler(
         source,
-        recite_core::SchemaFingerprint::Fingerprint(recite_core::canonical_source_fingerprint(
-            "schema-b",
-        )),
+        recite_core::compiled::SchemaFingerprint::Fingerprint(
+            recite_core::compiled::canonical_source_fingerprint("schema-b"),
+        ),
         "0.0.2",
     );
 
@@ -341,7 +341,7 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
             "  First.\n",
             "-> END\n",
         ),
-        recite_core::SchemaFingerprint::NoSchema,
+        recite_core::compiled::SchemaFingerprint::NoSchema,
     );
     let second_bytes = compile_to_bytes_with_schema(
         concat!(
@@ -350,7 +350,7 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
             "  Changed.\n",
             "-> END\n",
         ),
-        recite_core::SchemaFingerprint::NoSchema,
+        recite_core::compiled::SchemaFingerprint::NoSchema,
     );
     let mut first_asset = 0;
     let mut second_asset = 0;

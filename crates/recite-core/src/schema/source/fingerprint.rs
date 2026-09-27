@@ -1,4 +1,4 @@
-use crate::{ContentFingerprint, ProducerFingerprint, ProjectSchema};
+use crate::{compiled::ContentFingerprint, schema::ProducerFingerprint, schema::ProjectSchema};
 
 /// Compute the source-owned fingerprint: canonical semantic content plus the
 /// stable producer identity. Formatting, comments, and map insertion order do

@@ -11,8 +11,8 @@ fn integer(value: i64) -> recite_core::DiagnosticArgumentValue {
     recite_core::DiagnosticArgumentValue::Integer(value)
 }
 use recite_core::{
-    CompiledSourceFile, ContentFingerprint, ProjectFreshnessInput, SchemaFingerprint,
-    validate_project_freshness_source,
+    compiled::{CompiledSourceFile, ContentFingerprint, SchemaFingerprint},
+    project::{ProjectFreshnessInput, validate_project_freshness_source},
 };
 
 #[test]

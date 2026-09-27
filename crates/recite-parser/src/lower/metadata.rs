@@ -1,6 +1,9 @@
 use recite_core::{
-    BlockId, BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
-    InterpolationType, SourceMetadata, SourceMetadataEntry, SourceRecoveryClass, SpeakerId,
+    BlockId, SourceRecoveryClass, SpeakerId,
+    ast::{
+        BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
+        InterpolationType, SourceMetadata, SourceMetadataEntry,
+    },
 };
 
 use crate::diagnostics::{malformed_divert_target, malformed_header};
@@ -178,7 +181,7 @@ impl Lowerer<'_, '_> {
     }
 
     pub(super) fn divert_target(&mut self, field: HeaderField<'_>) -> Option<DivertTarget> {
-        if field.text == recite_core::END_DIVERT_TARGET {
+        if field.text == recite_core::ast::END_DIVERT_TARGET {
             return Some(DivertTarget::End);
         }
 

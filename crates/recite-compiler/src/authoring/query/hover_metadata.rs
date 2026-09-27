@@ -21,7 +21,10 @@ impl AuthoringSnapshot {
                 target,
                 ..
             } => (metadata_key, target),
-            context::Site::Speakers(_) => ("speaker".to_owned(), recite_core::MetadataTarget::Line),
+            context::Site::Speakers(_) => (
+                "speaker".to_owned(),
+                recite_core::schema::MetadataTarget::Line,
+            ),
             _ => return None,
         };
         if metadata_key != metadata.key() {
@@ -61,10 +64,10 @@ impl AuthoringSnapshot {
                     }),
                 },
                 CompletionCandidateDetail::SchemaType(
-                    type_ref @ recite_core::SchemaTypeRef::Registry(_),
+                    type_ref @ recite_core::schema::SchemaTypeRef::Registry(_),
                 ) => MetadataValueDetail::Registry(type_ref.clone()),
                 CompletionCandidateDetail::SchemaType(
-                    type_ref @ recite_core::SchemaTypeRef::Enum(_),
+                    type_ref @ recite_core::schema::SchemaTypeRef::Enum(_),
                 ) => MetadataValueDetail::Enum(type_ref.clone()),
                 _ => return None,
             },
@@ -90,12 +93,12 @@ impl AuthoringSnapshot {
         };
         let parsed_value = recite_parser::parse_metadata_value(&raw_value)?;
         let parsed_symbol = match parsed_value {
-            recite_core::SourceMetadataValue::Scalar(
-                recite_core::SourceMetadataScalar::Symbol(value),
+            recite_core::ast::SourceMetadataValue::Scalar(
+                recite_core::ast::SourceMetadataScalar::Symbol(value),
             ) if value == candidate.name() => value,
-            recite_core::SourceMetadataValue::Array(values)
+            recite_core::ast::SourceMetadataValue::Array(values)
                 if values.iter().any(|value| {
-                    matches!(value, recite_core::SourceMetadataScalar::Symbol(value) if value == candidate.name())
+                    matches!(value, recite_core::ast::SourceMetadataScalar::Symbol(value) if value == candidate.name())
                 }) => candidate.name().to_owned(),
             _ => return None,
         };
@@ -117,10 +120,10 @@ impl AuthoringSnapshot {
                 }),
             },
             CompletionCandidateDetail::SchemaType(
-                type_ref @ recite_core::SchemaTypeRef::Registry(_),
+                type_ref @ recite_core::schema::SchemaTypeRef::Registry(_),
             ) => MetadataValueDetail::Registry(type_ref.clone()),
             CompletionCandidateDetail::SchemaType(
-                type_ref @ recite_core::SchemaTypeRef::Enum(_),
+                type_ref @ recite_core::schema::SchemaTypeRef::Enum(_),
             ) => MetadataValueDetail::Enum(type_ref.clone()),
             _ => return None,
         };

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{MarkupDefinition, ProjectSchema};
+use recite_core::schema::{MarkupDefinition, ProjectSchema};
 
 use super::*;
 
@@ -46,7 +46,7 @@ fn markup_schema() -> ProjectSchema {
 #[test]
 fn accepts_schema_declared_inline_markup_on_lines_and_choices() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -58,7 +58,13 @@ fn accepts_schema_declared_inline_markup_on_lines_and_choices() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert!(report.is_ok(), "valid markup should pass: {report:?}");
 }
@@ -66,7 +72,7 @@ fn accepts_schema_declared_inline_markup_on_lines_and_choices() {
 #[test]
 fn reports_unknown_inline_markup_tags_on_tag_names() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -75,7 +81,13 @@ fn reports_unknown_inline_markup_tags_on_tag_names() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE022", "RECITE_VALIDATE022"]);
     assert_spans(&report, [(3, 4), (3, 17)]);
@@ -84,7 +96,7 @@ fn reports_unknown_inline_markup_tags_on_tag_names() {
 #[test]
 fn reports_multiline_inline_markup_spans_at_author_visible_columns() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -94,7 +106,13 @@ fn reports_multiline_inline_markup_spans_at_author_visible_columns() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE022"]);
     assert_spans(&report, [(4, 4)]);
@@ -103,7 +121,7 @@ fn reports_multiline_inline_markup_spans_at_author_visible_columns() {
 #[test]
 fn reports_missing_required_inline_markup_closing_tag_on_opening_name() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -112,7 +130,13 @@ fn reports_missing_required_inline_markup_closing_tag_on_opening_name() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE024"]);
     assert_spans(&report, [(3, 4)]);
@@ -121,7 +145,7 @@ fn reports_missing_required_inline_markup_closing_tag_on_opening_name() {
 #[test]
 fn reports_unexpected_inline_markup_closing_tag_on_closing_name() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -130,7 +154,13 @@ fn reports_unexpected_inline_markup_closing_tag_on_closing_name() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE023"]);
     assert_spans(&report, [(3, 10)]);
@@ -139,7 +169,7 @@ fn reports_unexpected_inline_markup_closing_tag_on_closing_name() {
 #[test]
 fn reports_mismatched_inline_markup_closing_tag_on_closing_name() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -148,7 +178,13 @@ fn reports_mismatched_inline_markup_closing_tag_on_closing_name() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE023"]);
     assert_spans(&report, [(3, 16)]);
@@ -157,7 +193,7 @@ fn reports_mismatched_inline_markup_closing_tag_on_closing_name() {
 #[test]
 fn reports_nested_inline_markup_inside_non_nesting_tag() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -166,7 +202,13 @@ fn reports_nested_inline_markup_inside_non_nesting_tag() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE025"]);
     assert_spans(&report, [(3, 17)]);
@@ -175,7 +217,7 @@ fn reports_nested_inline_markup_inside_non_nesting_tag() {
 #[test]
 fn reports_closing_tag_for_standalone_inline_markup() {
     let schema = markup_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -184,7 +226,13 @@ fn reports_closing_tag_for_standalone_inline_markup() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE023"]);
     assert_spans(&report, [(3, 16)]);
@@ -192,7 +240,7 @@ fn reports_closing_tag_for_standalone_inline_markup() {
 
 #[test]
 fn skips_inline_markup_validation_without_schema_definitions() {
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -209,7 +257,7 @@ fn skips_inline_markup_validation_without_schema_definitions() {
 #[test]
 fn explicit_schema_without_markup_definitions_reports_unknown_tags() {
     let schema = ProjectSchema::empty_v1();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -218,7 +266,13 @@ fn explicit_schema_without_markup_definitions_reports_unknown_tags() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE022", "RECITE_VALIDATE022"]);
     assert_spans(&report, [(3, 4), (3, 17)]);

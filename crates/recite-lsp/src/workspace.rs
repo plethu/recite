@@ -122,7 +122,7 @@ impl LspWorkspace {
     }
 
     #[cfg(feature = "bench-support")]
-    pub(crate) fn compiler_documents(&self) -> Vec<&recite_compiler::DocumentSnapshot> {
+    pub(crate) fn compiler_documents(&self) -> Vec<&recite_compiler::authoring::DocumentSnapshot> {
         self.partitions
             .values()
             .flat_map(|partition| partition.kernel.snapshot().documents())
@@ -133,7 +133,7 @@ impl LspWorkspace {
     pub(crate) fn compiler_document_for_summary(
         &self,
         summary: &crate::summary::FileSummary,
-    ) -> Option<&recite_compiler::DocumentSnapshot> {
+    ) -> Option<&recite_compiler::authoring::DocumentSnapshot> {
         let partition = self.partition_id_for_uri(summary.uri())?;
         let key = document_key_for_identity(&summary.identity)?;
         self.partition(&partition)?.kernel.snapshot().document(&key)
@@ -156,7 +156,7 @@ impl LspWorkspace {
         &mut self,
         saved: SavedProjectIndex,
         documents: OpenDocumentStore,
-    ) -> Result<(), recite_compiler::AuthoringError> {
+    ) -> Result<(), recite_compiler::authoring::AuthoringError> {
         let retired = self
             .partitions
             .iter()

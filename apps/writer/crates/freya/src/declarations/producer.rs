@@ -1,6 +1,6 @@
 //! Explicit producer processes write staged output; only validated results reach publication.
 use recite_config::{ProducerCommand, ProducerRegistration};
-use recite_core::ProjectSchema;
+use recite_core::schema::ProjectSchema;
 use std::{
     io::Read,
     path::{Path, PathBuf},
@@ -162,7 +162,7 @@ fn generate(
     }
     let text = crate::project::read_regular(&output)
         .map_err(|e| format!("Producer did not supply a regular schema output: {e}"))?;
-    let loaded = recite_core::load_schema_manifest_str("producer output", &text);
+    let loaded = recite_core::schema::load_schema_manifest_str("producer output", &text);
     let schema = loaded
         .schema
         .ok_or_else(|| crate::project_context::diagnostic_messages(&loaded.diagnostics))?;

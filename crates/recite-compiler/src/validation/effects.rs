@@ -1,5 +1,7 @@
 use recite_core::{
-    Argument, Effect, EffectDefinition, ScalarValue, SchemaTypeRef, SourceFile, SourceSpan,
+    ScalarValue, SourceSpan,
+    ast::{Argument, Effect, SourceFile},
+    schema::{EffectDefinition, SchemaTypeRef},
 };
 
 use super::state::Validator;
@@ -98,7 +100,7 @@ impl<'a> Validator<'a> {
                     self.wrong_effect_argument_type(effect, index, type_ref, argument, span);
                     return;
                 };
-                let recite_core::SchemaTypeDefinition::Enum(definition) = definition;
+                let recite_core::schema::SchemaTypeDefinition::Enum(definition) = definition;
                 if !definition.values.contains(value) {
                     self.invalid_effect_argument_value(effect, index, type_ref, value, span);
                 }

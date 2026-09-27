@@ -4,8 +4,8 @@ use crate::i18n::{Messages, UiLocale};
 use crate::play::preview::run_preview;
 use crate::tui::{Keymap, PromptMode, TextBuffer, TuiInteractionState};
 use ratatui::{Terminal, backend::TestBackend};
-use recite_compiler::{CompileInput, compile_inputs};
-use recite_core::CompiledDialogue;
+use recite_compiler::compile::{CompileInput, compile_inputs};
+use recite_core::compiled::CompiledDialogue;
 use recite_runtime::ConditionExpectedType;
 
 use super::TuiPlayUi;

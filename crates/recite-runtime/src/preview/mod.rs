@@ -15,7 +15,7 @@ mod snapshot_codec;
 mod snapshot_validation;
 mod trial;
 
-use recite_core::CompiledDialogue;
+use recite_core::compiled::CompiledDialogue;
 
 use self::condition::PendingOperation;
 use crate::DialogueSession;

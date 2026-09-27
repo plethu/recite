@@ -1,4 +1,7 @@
-use recite_core::{Line, SourceId, SourceText};
+use recite_core::{
+    SourceId,
+    ast::{Line, SourceText},
+};
 
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;

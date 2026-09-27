@@ -1,6 +1,7 @@
 use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range};
 use recite_core::{
-    ConditionDefinition, ConditionReturnType, EffectDefinition, EffectMode, SchemaSourceEdit,
+    ast::EffectMode,
+    schema::{ConditionDefinition, ConditionReturnType, EffectDefinition, SchemaSourceEdit},
 };
 use recite_ui::{MsgId, UiCatalog};
 
@@ -16,13 +17,12 @@ pub(super) fn actions(
     schema: &SchemaCodeActionDocument,
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
-    if !schema
-        .summary
-        .capability()
-        .actions()
-        .iter()
-        .any(|action| matches!(action, recite_compiler::SchemaAction::EditStandaloneSource))
-    {
+    if !schema.summary.capability().actions().iter().any(|action| {
+        matches!(
+            action,
+            recite_compiler::authoring::SchemaAction::EditStandaloneSource
+        )
+    }) {
         return Vec::new();
     }
     if documents.iter().any(|document| {
@@ -204,7 +204,7 @@ fn schema_code_action(
     params: &CodeActionParams,
     schema: &SchemaCodeActionDocument,
     documents: &[CodeActionDocument<'_>],
-    plan: &recite_core::SchemaSourceEditPlan,
+    plan: &recite_core::schema::SchemaSourceEditPlan,
     title: String,
 ) -> Option<CodeActionOrCommand> {
     Some(CodeActionOrCommand::CodeAction(CodeAction {

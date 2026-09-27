@@ -1,8 +1,12 @@
 use recite_core::{
-    Argument, Choice, ChoiceEcho, ChoiceId, CompiledArgument, CompiledChoiceEcho,
-    CompiledConditionCall, CompiledConditionExpression, CompiledEffectMode,
-    CompiledInterpolationBinding, CompiledMatchPattern, Effect, EffectId, EffectMode,
-    InterpolationBinding, Line, LineId, MatchPattern,
+    ChoiceId, EffectId, LineId,
+    ast::{
+        Argument, Choice, ChoiceEcho, Effect, EffectMode, InterpolationBinding, Line, MatchPattern,
+    },
+    compiled::{
+        CompiledArgument, CompiledChoiceEcho, CompiledConditionCall, CompiledConditionExpression,
+        CompiledEffectMode, CompiledInterpolationBinding, CompiledMatchPattern,
+    },
 };
 
 use super::CompileError;
@@ -56,37 +60,37 @@ pub(in crate::compile) fn compile_match_pattern(pattern: &MatchPattern) -> Compi
 }
 
 pub(in crate::compile) fn compile_condition_expression(
-    condition: &recite_core::ConditionExpression,
+    condition: &recite_core::ast::ConditionExpression,
 ) -> CompiledConditionExpression {
     match condition {
-        recite_core::ConditionExpression::Call(call) => {
+        recite_core::ast::ConditionExpression::Call(call) => {
             CompiledConditionExpression::Call(compile_condition_call(call))
         }
-        recite_core::ConditionExpression::And(group) => CompiledConditionExpression::And(
+        recite_core::ast::ConditionExpression::And(group) => CompiledConditionExpression::And(
             group
                 .expressions
                 .iter()
                 .map(compile_condition_expression)
                 .collect(),
         ),
-        recite_core::ConditionExpression::Or(group) => CompiledConditionExpression::Or(
+        recite_core::ast::ConditionExpression::Or(group) => CompiledConditionExpression::Or(
             group
                 .expressions
                 .iter()
                 .map(compile_condition_expression)
                 .collect(),
         ),
-        recite_core::ConditionExpression::Not(unary) => CompiledConditionExpression::Not(Box::new(
-            compile_condition_expression(&unary.expression),
-        )),
-        recite_core::ConditionExpression::Grouped(unary) => {
+        recite_core::ast::ConditionExpression::Not(unary) => CompiledConditionExpression::Not(
+            Box::new(compile_condition_expression(&unary.expression)),
+        ),
+        recite_core::ast::ConditionExpression::Grouped(unary) => {
             compile_condition_expression(&unary.expression)
         }
     }
 }
 
 pub(in crate::compile) fn compile_condition_call(
-    call: &recite_core::ConditionCall,
+    call: &recite_core::ast::ConditionCall,
 ) -> CompiledConditionCall {
     CompiledConditionCall {
         function: call.function.clone(),

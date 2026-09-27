@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_core::{
+use recite_core::schema::{
     EnumTypeDefinition, ProducerOrigin, RegistryDefinition, SchemaTypeDefinition, SpeakerDefinition,
 };
 

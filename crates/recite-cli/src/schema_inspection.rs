@@ -63,7 +63,7 @@ pub(crate) fn run(
     let machine_path = machine_path(&args.schema);
     let loaded = match format {
         InputFormat::StandaloneToml => {
-            let report = recite_core::SchemaSource::load_str(file.clone(), &source);
+            let report = recite_core::schema::SchemaSource::load_str(file.clone(), &source);
             if !report.diagnostics.is_empty() {
                 report_diagnostics(stderr, messages, report.diagnostics.iter())?;
                 return Err(CliError::SchemaInspection(
@@ -84,7 +84,7 @@ pub(crate) fn run(
             SchemaInspectionProjection::from_source(&source, machine_path.clone())
         }
         InputFormat::GeneratedJson => {
-            let report = recite_core::load_schema_manifest_str(file.clone(), &source);
+            let report = recite_core::schema::load_schema_manifest_str(file.clone(), &source);
             if !report.diagnostics.is_empty() {
                 report_diagnostics(stderr, messages, report.diagnostics.iter())?;
                 return Err(CliError::SchemaInspection(

@@ -1,4 +1,4 @@
-use recite_runtime::{PreviewSession, PreviewSnapshot};
+use recite_runtime::preview::{PreviewSession, PreviewSnapshot};
 
 use crate::preview_shape::{PreviewTraceShape, trace_shape};
 use crate::{BenchmarkResult, error};
@@ -33,7 +33,7 @@ pub(crate) fn build_report(
     })
 }
 
-fn preview_error(preview: recite_runtime::PreviewError) -> crate::BenchmarkError {
+fn preview_error(preview: recite_runtime::preview::PreviewError) -> crate::BenchmarkError {
     error(format!("preview operation failed: {preview}"))
 }
 

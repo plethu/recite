@@ -1,7 +1,9 @@
 use recite_core::{
-    Block, BlockId, BlockReference, Choice, ConditionCall, ConditionExpression, DivertTarget,
-    Effect, EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, SourceSpan,
-    Statement,
+    BlockId, SourceSpan,
+    ast::{
+        Block, BlockReference, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect,
+        EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, Statement,
+    },
 };
 
 #[path = "types.rs"]

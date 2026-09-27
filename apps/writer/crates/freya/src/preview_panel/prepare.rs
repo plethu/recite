@@ -2,8 +2,8 @@ use crate::{
     editing::Writer,
     messages::{MsgId, text},
 };
-use recite_compiler::{CatalogInput, CatalogResolutionPolicy};
-use recite_core::{InterpolationType, LocaleId, ScalarValue};
+use recite_compiler::authoring::{CatalogInput, CatalogResolutionPolicy};
+use recite_core::{LocaleId, ScalarValue, ast::InterpolationType};
 use recite_writer_model::PreviewSetup;
 use std::collections::BTreeMap;
 pub(super) fn prepare(

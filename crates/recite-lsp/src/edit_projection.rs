@@ -2,7 +2,9 @@ use lsp_types::{
     DocumentChanges, OneOf, OptionalVersionedTextDocumentIdentifier, TextDocumentEdit, TextEdit,
     Uri, WorkspaceEdit,
 };
-use recite_compiler::{AuthoringEditPlan, AuthoringSnapshot, DocumentLayer, DocumentVersion};
+use recite_compiler::authoring::{
+    AuthoringEditPlan, AuthoringSnapshot, DocumentLayer, DocumentVersion,
+};
 use recite_core::DocumentKey;
 
 use crate::position::source_range_to_lsp;
@@ -134,7 +136,7 @@ fn protocol_version(document: &EditDocument<'_>) -> Option<Option<i32>> {
 
 fn precondition_matches(
     snapshot: &AuthoringSnapshot,
-    precondition: &recite_compiler::EditPrecondition,
+    precondition: &recite_compiler::authoring::EditPrecondition,
     document: &EditDocument<'_>,
 ) -> Option<()> {
     let current = snapshot.document(document.key)?;

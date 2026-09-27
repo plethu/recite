@@ -1,8 +1,10 @@
 use std::fs;
 use std::path::Path;
 
-use recite_compiler::PotEntry;
-use recite_core::{Diagnostic, DiagnosticRecord};
+use recite_core::{
+    Diagnostic, DiagnosticRecord,
+    po::{PotEntry, PotReference},
+};
 use serde::Serialize;
 
 use super::errors::StructuredError;
@@ -190,8 +192,8 @@ pub(super) struct CatalogReference {
     pub(super) column: u32,
 }
 
-impl From<&recite_compiler::PotReference> for CatalogReference {
-    fn from(reference: &recite_compiler::PotReference) -> Self {
+impl From<&PotReference> for CatalogReference {
+    fn from(reference: &PotReference) -> Self {
         Self {
             file: reference.file.clone(),
             line: reference.line,

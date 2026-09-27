@@ -1,7 +1,7 @@
-use recite_core::{BlockId, ChoiceId, CompiledAssetId, LocaleId};
+use recite_core::{BlockId, ChoiceId, LocaleId, compiled::CompiledAssetId};
 
 use super::revision::PreviewAssetRevision;
-use crate::{DialogueEffectRequest, DialogueSession, DialogueSessionSnapshot};
+use crate::{DialogueEffectRequest, DialogueSession, snapshot::DialogueSessionSnapshot};
 
 use super::api::PreviewConditionRequest;
 use super::events::PreviewPrompt;
@@ -111,7 +111,7 @@ impl PreviewState {
     }
 
     pub(crate) fn new(
-        asset: &recite_core::CompiledDialogue,
+        asset: &recite_core::compiled::CompiledDialogue,
         session: &DialogueSession,
         status: PreviewStatus,
     ) -> Self {

@@ -1,0 +1,43 @@
+# Exact, bounded exceptions to the changed-file size policy.
+
+[[exceptions]]
+path = "crates/recite-core/src/compiled/messagepack/wire.rs"
+max_lines = 663
+issue = "#89"
+reason = "#89: retain the explicit decoder boundary while the v0 wire contract is synchronized"
+
+[[exceptions]]
+path = "crates/recite-runtime/src/traversal/interpolation.rs"
+max_lines = 445
+issue = "#179"
+reason = "#179/#180/#191: typed interpolation and plural localisation retain the provider arm-boundary handoff"
+
+[[exceptions]]
+path = "crates/recite-runtime/tests/adapter_conformance/driver.rs"
+max_lines = 1188
+issue = "#171"
+reason = "#171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split"
+
+[[exceptions]]
+path = "crates/recite-core/tests/schema_manifest/fingerprint.rs"
+max_lines = 647
+issue = "#176"
+reason = "#176: retain the canonical fingerprint fixture while typed provenance constructors migrate; producer-specific assertions are split into a dedicated test"
+
+[[exceptions]]
+path = "crates/recite-compiler/tests/asset.rs"
+max_lines = 646
+issue = "#89"
+reason = "#89: retain the shared compiled-asset fixture entry point for the wire contract guard"
+
+[[exceptions]]
+path = "scripts/check-vscode-host.sh"
+max_lines = 793
+issue = "#51"
+reason = "#51/#202: pinned VS Code/VSCodium acquisition, VSIX setup, API/keyboard probes, and process cleanup share one Linux host acceptance runner; split acquisition and provisioning from host phases before adding another capability/acquisition family"
+
+[[exceptions]]
+path = "scripts/check-zed-host.sh"
+max_lines = 861
+issue = "#192"
+reason = "#192: pinned Zed package setup, extension inspection, LSP/input probes, and process cleanup share one Linux host acceptance runner; split package setup from host phases before adding another capability/acquisition family"

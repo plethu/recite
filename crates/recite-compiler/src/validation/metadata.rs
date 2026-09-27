@@ -1,8 +1,11 @@
 use std::collections::BTreeSet;
 
 use recite_core::{
-    MetadataDefinition, MetadataTarget, SchemaTypeDefinition, SchemaTypeRef, SourceFile,
-    SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue, SourceSpan,
+    SourceSpan,
+    ast::{
+        SourceFile, SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue,
+    },
+    schema::{MetadataDefinition, MetadataTarget, SchemaTypeDefinition, SchemaTypeRef},
 };
 
 use super::project;

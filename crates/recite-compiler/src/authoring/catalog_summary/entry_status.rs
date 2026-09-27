@@ -1,4 +1,4 @@
-use recite_core::{PoDocument, PoEntry};
+use recite_core::po::{PoDocument, PoEntry};
 
 use super::entry::CatalogEntryKey;
 

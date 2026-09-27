@@ -1,4 +1,4 @@
-use recite_core::{DiagnosticArgumentValue, load_schema_manifest_str};
+use recite_core::{DiagnosticArgumentValue, schema::load_schema_manifest_str};
 
 use crate::diagnostic_codes;
 

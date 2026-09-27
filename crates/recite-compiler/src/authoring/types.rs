@@ -1,4 +1,7 @@
-use recite_core::{BlockId, SourceId, SourceMetadataScalar, SourceMetadataValue, SourceSpan};
+use recite_core::{
+    BlockId, SourceId, SourceSpan,
+    ast::{SourceMetadataScalar, SourceMetadataValue},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]

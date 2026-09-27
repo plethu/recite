@@ -4,8 +4,8 @@ use super::tags::{
     MsgAssetEncoding, MsgFingerprint, MsgInspectionEncoding, MsgMatchPattern, MsgSchemaFingerprint,
     MsgStatementKind,
 };
-use crate::CompiledDialogue;
-use crate::SpeakerIndex;
+use crate::compiled::CompiledDialogue;
+use crate::compiled::SpeakerIndex;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -112,8 +112,8 @@ impl<'a> From<&'a CompiledDialogue> for MsgHeader<'a> {
 #[derive(Serialize)]
 struct MsgSourceFile<'a>(&'a str, MsgFingerprint<'a>);
 
-impl<'a> From<&'a crate::CompiledSourceFile> for MsgSourceFile<'a> {
-    fn from(source: &'a crate::CompiledSourceFile) -> Self {
+impl<'a> From<&'a crate::compiled::CompiledSourceFile> for MsgSourceFile<'a> {
+    fn from(source: &'a crate::compiled::CompiledSourceFile) -> Self {
         Self(source.path.as_str(), MsgFingerprint(&source.fingerprint))
     }
 }
@@ -121,8 +121,8 @@ impl<'a> From<&'a crate::CompiledSourceFile> for MsgSourceFile<'a> {
 #[derive(Serialize)]
 struct MsgBlock<'a>(&'a str, u32, MsgRange, MsgRange, Option<u32>, u32);
 
-impl<'a> From<&'a crate::CompiledBlock> for MsgBlock<'a> {
-    fn from(block: &'a crate::CompiledBlock) -> Self {
+impl<'a> From<&'a crate::compiled::CompiledBlock> for MsgBlock<'a> {
+    fn from(block: &'a crate::compiled::CompiledBlock) -> Self {
         Self(
             block.id.as_str(),
             block.source_file.as_u32(),
@@ -137,8 +137,8 @@ impl<'a> From<&'a crate::CompiledBlock> for MsgBlock<'a> {
 #[derive(Serialize)]
 struct MsgStatement<'a>(MsgStatementKind<'a>, u32);
 
-impl<'a> From<&'a crate::CompiledStatement> for MsgStatement<'a> {
-    fn from(statement: &'a crate::CompiledStatement) -> Self {
+impl<'a> From<&'a crate::compiled::CompiledStatement> for MsgStatement<'a> {
+    fn from(statement: &'a crate::compiled::CompiledStatement) -> Self {
         Self(
             MsgStatementKind(&statement.kind),
             statement.source_map.as_u32(),
@@ -149,8 +149,8 @@ impl<'a> From<&'a crate::CompiledStatement> for MsgStatement<'a> {
 #[derive(Serialize)]
 struct MsgMatchArm<'a>(MsgMatchPattern<'a>, MsgRange, u32);
 
-impl<'a> From<&'a crate::CompiledMatchArm> for MsgMatchArm<'a> {
-    fn from(arm: &'a crate::CompiledMatchArm) -> Self {
+impl<'a> From<&'a crate::compiled::CompiledMatchArm> for MsgMatchArm<'a> {
+    fn from(arm: &'a crate::compiled::CompiledMatchArm) -> Self {
         Self(
             MsgMatchPattern(&arm.pattern),
             statement_range(arm.statements),

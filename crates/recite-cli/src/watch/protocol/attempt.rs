@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 use std::sync::mpsc::Receiver;
 
-use recite_compiler::{BuildControl, BuildStatusProjection};
+use recite_compiler::authoring::{BuildControl, BuildStatusProjection};
 
 use crate::error::CliError;
 use crate::structured::error_mapping::structured_error;

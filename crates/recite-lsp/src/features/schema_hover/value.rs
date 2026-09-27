@@ -1,4 +1,4 @@
-use recite_core::SpeakerDefinition;
+use recite_core::schema::SpeakerDefinition;
 use recite_ui::{MsgId, UiCatalog};
 
 pub(crate) fn speaker_hover_text(

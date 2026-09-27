@@ -1,4 +1,6 @@
-use recite_core::{MetadataDomainDefinition, ProducerFingerprint, ProducerOrigin, ProjectSchema};
+use recite_core::schema::{
+    MetadataDomainDefinition, ProducerFingerprint, ProducerOrigin, ProjectSchema,
+};
 
 use super::evidence::{ProducerCapabilityStatus, SchemaSummaryEvidence};
 use super::identity::{

@@ -1,4 +1,4 @@
-use recite_core::{PoDiagnosticKind, PoDocument};
+use recite_core::po::{PoDiagnosticKind, PoDocument};
 
 fn catalogue(source_text: &str, translation: &str) -> String {
     format!("msgctxt \"11111111111111111111\"\nmsgid \"{source_text}\"\nmsgstr \"{translation}\"\n")

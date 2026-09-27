@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 
-use recite_core::{BlockId, ChoiceId, CompiledDialogue, CompiledStatementKind, StatementRange};
-use recite_runtime::PreviewPrompt;
+use recite_core::{
+    BlockId, ChoiceId,
+    compiled::{CompiledDialogue, CompiledStatementKind, StatementRange},
+};
+use recite_runtime::preview::PreviewPrompt;
 use recite_ui::UiArg;
 
 use super::fixture::{FixtureChoice, RuntimeFixture};

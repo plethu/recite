@@ -245,9 +245,6 @@ def main() -> int:
     elif mutation == "keyboard-host-scenario-mismatch":
         set_keyboard_host_evidence(contract)
         record(contract, "scenarios", "keyboard-workflow")["status"] = "planned"
-    elif mutation == "keyboard-host-doc-missing":
-        set_keyboard_host_evidence(contract)
-        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["record"] = "docs/evidence/editor-hosts/neovim-linux-missing.md"
     elif mutation == "keyboard-host-key-sequence":
         set_keyboard_host_evidence(contract)
         record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"].pop("key_sequence")
@@ -395,14 +392,12 @@ def set_dual_client_host_evidence(contract: dict) -> None:
         generic_host_record(
             client="vscode",
             runner="scripts/check-vscode-host.sh",
-            document="docs/evidence/editor-hosts/vscode-linux.md",
             product="VS Code",
             version="1.136.1",
         ),
         generic_host_record(
             client="vscodium",
             runner="scripts/check-vscode-host.sh",
-            document="docs/evidence/editor-hosts/vscode-linux.md",
             product="VSCodium",
             version="1.126.04524",
         ),
@@ -445,7 +440,6 @@ def generic_host_record(
     *,
     client: str = "neovim",
     runner: str = "scripts/check-neovim-host.sh",
-    document: str = "docs/evidence/editor-hosts/neovim-linux.md",
     product: str = "Neovim",
     version: str = "0.12.5",
 ) -> dict:
@@ -453,7 +447,6 @@ def generic_host_record(
         "client": client,
         "platform": "linux",
         "runner": runner,
-        "record": document,
         "product": product,
         "version": version,
         "architecture": "x86_64",

@@ -1,7 +1,10 @@
 use std::path::Path;
 
-use recite_compiler::{PotExtractionReport, compile_inputs, compile_inputs_with_schema};
-use recite_core::ProjectSchema;
+use recite_compiler::{
+    compile::{compile_inputs, compile_inputs_with_schema},
+    pot::PotExtractionReport,
+};
+use recite_core::schema::ProjectSchema;
 
 use crate::args::{Command, CompileArgs, ExtractArgs, RuntimeArgs, ValidateArgs};
 use crate::error::CliError;
@@ -157,8 +160,8 @@ fn extract(args: ExtractArgs) -> Result<StructuredOutcome, CliError> {
         }
     };
     let report = match schema.as_deref() {
-        Some(schema) => recite_compiler::extract_pot_with_schema(inputs, schema),
-        None => recite_compiler::extract_pot(inputs),
+        Some(schema) => recite_compiler::pot::extract_pot_with_schema(inputs, schema),
+        None => recite_compiler::pot::extract_pot(inputs),
     };
     extract_report(report, args.output.as_deref())
 }

@@ -1,4 +1,4 @@
-use recite_core::ProducerIdentity;
+use recite_core::schema::ProducerIdentity;
 
 #[test]
 fn producer_identity_has_one_validated_constructor_and_wire_shape() {
@@ -35,7 +35,7 @@ fn producer_identity_rejects_unknown_wire_fields() {
 
 #[test]
 fn manifest_lowering_rejects_whitespace_identity_components() {
-    let report = recite_core::load_schema_manifest_str(
+    let report = recite_core::schema::load_schema_manifest_str(
         "whitespace-producer.json",
         r#"{"schema_version":1,"producer":{"kind":" \t ","id":"valid"}}"#,
     );

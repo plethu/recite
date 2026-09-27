@@ -1,6 +1,6 @@
 use super::edit::new_declaration;
 use super::toml::{SchemaSourceEdit, SchemaSourceEditError};
-use crate::EffectMode;
+use crate::ast::EffectMode;
 use crate::schema::{
     AvailabilityReasonDefinition, ConditionDefinition, ConditionReturnType, EffectDefinition,
     ParameterDefinition, SchemaTypeRef, is_json_number_lexeme, is_namespaced_extension_key,
@@ -44,11 +44,11 @@ fn add_condition(
         for (name, binding) in &mapping.args {
             let mut value = toml_edit::InlineTable::new();
             match binding {
-                crate::AvailabilityReasonArgBinding::ConditionParam(param) => {
+                crate::schema::AvailabilityReasonArgBinding::ConditionParam(param) => {
                     value.insert("kind", toml_edit::Value::from("binding"));
                     value.insert("name", toml_edit::Value::from(param.as_str()));
                 }
-                crate::AvailabilityReasonArgBinding::Literal(literal) => {
+                crate::schema::AvailabilityReasonArgBinding::Literal(literal) => {
                     value.insert("kind", toml_edit::Value::from("literal"));
                     value.insert("value", literal_value(literal)?);
                 }
@@ -147,31 +147,33 @@ fn type_ref_name(type_ref: &SchemaTypeRef) -> String {
 }
 
 fn literal_value(
-    literal: &crate::SchemaLiteralValue,
+    literal: &crate::schema::SchemaLiteralValue,
 ) -> Result<toml_edit::Value, SchemaSourceEditError> {
     match literal {
-        crate::SchemaLiteralValue::String(value) => Ok(toml_edit::Value::from(value.as_str())),
-        crate::SchemaLiteralValue::Int(value) => Ok(toml_edit::Value::from(*value)),
-        crate::SchemaLiteralValue::Float(value) => {
+        crate::schema::SchemaLiteralValue::String(value) => {
+            Ok(toml_edit::Value::from(value.as_str()))
+        }
+        crate::schema::SchemaLiteralValue::Int(value) => Ok(toml_edit::Value::from(*value)),
+        crate::schema::SchemaLiteralValue::Float(value) => {
             value.parse::<toml_edit::Value>().map_err(|_| {
                 SchemaSourceEditError::InvalidArgument(
                     "float literal is not finite TOML".to_owned(),
                 )
             })
         }
-        crate::SchemaLiteralValue::Bool(value) => Ok(toml_edit::Value::from(*value)),
+        crate::schema::SchemaLiteralValue::Bool(value) => Ok(toml_edit::Value::from(*value)),
     }
 }
 
 fn producer_value(
-    value: &crate::ProducerMetadataValue,
+    value: &crate::schema::ProducerMetadataValue,
 ) -> Result<toml_edit::Value, SchemaSourceEditError> {
     match value {
-        crate::ProducerMetadataValue::Null => Err(SchemaSourceEditError::InvalidArgument(
+        crate::schema::ProducerMetadataValue::Null => Err(SchemaSourceEditError::InvalidArgument(
             "origin null values cannot be represented in TOML".to_owned(),
         )),
-        crate::ProducerMetadataValue::Bool(value) => Ok(toml_edit::Value::from(*value)),
-        crate::ProducerMetadataValue::Number(value) => {
+        crate::schema::ProducerMetadataValue::Bool(value) => Ok(toml_edit::Value::from(*value)),
+        crate::schema::ProducerMetadataValue::Number(value) => {
             if !is_json_number_lexeme(value) {
                 return Err(SchemaSourceEditError::InvalidArgument(
                     "origin number must use a canonical JSON number lexeme".to_owned(),
@@ -181,15 +183,17 @@ fn producer_value(
                 SchemaSourceEditError::InvalidArgument("origin number is not valid TOML".to_owned())
             })
         }
-        crate::ProducerMetadataValue::String(value) => Ok(toml_edit::Value::from(value.as_str())),
-        crate::ProducerMetadataValue::Array(values) => {
+        crate::schema::ProducerMetadataValue::String(value) => {
+            Ok(toml_edit::Value::from(value.as_str()))
+        }
+        crate::schema::ProducerMetadataValue::Array(values) => {
             let mut array = toml_edit::Array::new();
             for value in values {
                 array.push(producer_value(value)?);
             }
             Ok(array.into())
         }
-        crate::ProducerMetadataValue::Object(values) => {
+        crate::schema::ProducerMetadataValue::Object(values) => {
             let mut table = toml_edit::InlineTable::new();
             for (key, value) in values {
                 table.insert(key, producer_value(value)?);

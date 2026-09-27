@@ -3,8 +3,11 @@ mod preview_support;
 
 use preview_support::asset;
 use recite_runtime::{
-    DialogueEffectMode, EffectAck, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions,
-    PreviewSession, PreviewStatus, PreviewTranscriptEvent,
+    DialogueEffectMode, EffectAck,
+    preview::{
+        PreviewError, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, PreviewStatus,
+        PreviewTranscriptEvent,
+    },
 };
 
 #[test]
@@ -25,7 +28,7 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
     let snapshot = preview.snapshot().expect("prompt snapshot");
     let encoded = snapshot.encode().expect("encode prompt snapshot");
     let decoded =
-        recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode prompt snapshot");
+        recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode prompt snapshot");
     assert!(matches!(prompt.events(), [PreviewEvent::Prompt(_)]));
     let choice = match &prompt.events()[0] {
         PreviewEvent::Prompt(prompt) => prompt.identity().choices()[0].clone(),
@@ -126,7 +129,7 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
 
 #[test]
 fn malformed_preview_snapshot_is_a_structured_decode_error() {
-    let error = recite_runtime::PreviewSnapshot::decode(&[
+    let error = recite_runtime::preview::PreviewSnapshot::decode(&[
         0x81, 0xa7, b'v', b'e', b'r', b's', b'i', b'o', b'n', 1,
     ])
     .expect_err("incomplete snapshot");

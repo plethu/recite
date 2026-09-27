@@ -1,9 +1,9 @@
-use recite_compiler::{
+use recite_compiler::authoring::{
     ProducerActionEvidence, ProducerActionRequest, ProducerActionResult, ProducerCapabilityStatus,
     ProducerFailureEvidence, ProducerLaunchSnapshot, ProducerRetryGuidance, SchemaSummary,
     SchemaSummaryEvidence,
 };
-use recite_core::load_schema_manifest_str;
+use recite_core::schema::load_schema_manifest_str;
 
 use super::from_summary;
 use crate::schema_inspection::path::machine_path;

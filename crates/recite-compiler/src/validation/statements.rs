@@ -1,6 +1,8 @@
 use recite_core::{
-    Block, Choice, Divert, Effect, IfBranch, Line, MatchArm, MatchBranch, MetadataTarget,
-    SourceFile, Statement,
+    ast::{
+        Block, Choice, Divert, Effect, IfBranch, Line, MatchArm, MatchBranch, SourceFile, Statement,
+    },
+    schema::MetadataTarget,
 };
 
 use super::metadata::MetadataValidationContext;

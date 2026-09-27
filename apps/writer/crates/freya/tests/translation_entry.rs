@@ -52,7 +52,7 @@ fn plural_entry_keeps_variant_drafts_and_submits_all_forms()
         },
     });
     test.poll_n(std::time::Duration::from_millis(16), 8);
-    let saved = recite_core::PoDocument::parse(std::fs::read_to_string(&path)?)?;
+    let saved = recite_core::po::PoDocument::parse(std::fs::read_to_string(&path)?)?;
     let entry = saved
         .entries()
         .iter()

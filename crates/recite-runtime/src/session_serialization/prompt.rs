@@ -1,4 +1,7 @@
-use recite_core::{ChoiceId, CompiledStatementKind, StatementIndex, StatementRange};
+use recite_core::{
+    ChoiceId,
+    compiled::{CompiledStatementKind, StatementIndex, StatementRange},
+};
 
 use crate::DialogueError;
 use crate::session::{PendingPrompt, PendingPromptChoice};

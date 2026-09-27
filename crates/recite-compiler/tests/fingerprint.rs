@@ -1,14 +1,17 @@
-use recite_compiler::{
+use recite_compiler::compile::{
     CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs, compile_inputs_with_schema,
 };
 use recite_core::{
-    AvailabilityReasonId, CompiledArgument, CompiledEffectMode, CompiledStatementKind, ScalarValue,
-    Value,
+    AvailabilityReasonId, ScalarValue, Value,
+    compiled::{CompiledArgument, CompiledEffectMode, CompiledStatementKind},
 };
 use recite_core::{
-    CompiledAssetId, CompilerVersion, ProjectSchema, SchemaFingerprint, SourceMapId,
-    canonical_compiled_dialogue_fingerprint, encode_compiled_dialogue_messagepack,
-    load_schema_manifest_str,
+    compiled::{
+        CompiledAssetId, CompiledDialogue, CompiledDialoguePayload, CompilerVersion,
+        ContentFingerprint, SchemaFingerprint, SourceMapId,
+        canonical_compiled_dialogue_fingerprint, encode_compiled_dialogue_messagepack,
+    },
+    schema::{ProjectSchema, load_schema_manifest_str},
 };
 use std::path::PathBuf;
 
@@ -51,7 +54,7 @@ fn schema() -> Result<ProjectSchema, String> {
 fn compile_with_schema(
     input: CompileInput,
     schema: &ProjectSchema,
-) -> Result<recite_compiler::CompiledAssetOutput, String> {
+) -> Result<recite_compiler::compile::CompiledAssetOutput, String> {
     let report = compile_inputs_with_schema(
         [input],
         CompileOptions::new(
@@ -83,57 +86,68 @@ fn full_payload_fingerprint_changes_for_representative_compiled_tables() -> Resu
     let original = canonical_compiled_dialogue_fingerprint(&asset.dialogue)
         .map_err(|error| error.to_string())?;
 
-    let mut line = asset.dialogue.clone();
-    line.lines[0].source_text.push('!');
-    line.lines[0].authored_source_text.push('!');
     assert_ne!(
         original,
-        canonical_compiled_dialogue_fingerprint(&line).map_err(|error| error.to_string())?
+        fingerprint_after_edit(&asset.dialogue, |line| {
+            line.lines[0].source_text.push('!');
+            line.lines[0].authored_source_text.push('!');
+        })?
     );
 
-    let mut choice = asset.dialogue.clone();
-    choice.choices[0].source_text.push('!');
-    choice.choices[0].authored_source_text.push('!');
     assert_ne!(
         original,
-        canonical_compiled_dialogue_fingerprint(&choice).map_err(|error| error.to_string())?
+        fingerprint_after_edit(&asset.dialogue, |choice| {
+            choice.choices[0].source_text.push('!');
+            choice.choices[0].authored_source_text.push('!');
+        })?
     );
 
-    let mut statement = asset.dialogue.clone();
-    statement.statements[0].kind = CompiledStatementKind::Line(recite_core::LineIndex::new(0));
     assert_ne!(
         original,
-        canonical_compiled_dialogue_fingerprint(&statement).map_err(|error| error.to_string())?
+        fingerprint_after_edit(&asset.dialogue, |statement| {
+            statement.statements[0].kind =
+                CompiledStatementKind::Line(recite_core::compiled::LineIndex::new(0));
+        })?
     );
 
-    let mut effect = asset.dialogue.clone();
-    effect.effects[0].function.push('D');
     assert_ne!(
         original,
-        canonical_compiled_dialogue_fingerprint(&effect).map_err(|error| error.to_string())?
+        fingerprint_after_edit(&asset.dialogue, |effect| effect.effects[0]
+            .function
+            .push('D'))?
     );
 
-    let mut metadata = asset.dialogue.clone();
-    metadata.metadata[0].value = Value::Scalar(ScalarValue::Boolean(true));
     assert_ne!(
         original,
-        canonical_compiled_dialogue_fingerprint(&metadata).map_err(|error| error.to_string())?
+        fingerprint_after_edit(&asset.dialogue, |metadata| {
+            metadata.metadata[0].value = Value::Scalar(ScalarValue::Boolean(true));
+        })?
     );
 
-    let mut argument = asset.dialogue.clone();
-    argument.effects[0].args[0] = CompiledArgument::Value(ScalarValue::Integer(7));
     assert_ne!(
         original,
-        canonical_compiled_dialogue_fingerprint(&argument).map_err(|error| error.to_string())?
+        fingerprint_after_edit(&asset.dialogue, |argument| {
+            argument.effects[0].args[0] = CompiledArgument::Value(ScalarValue::Integer(7));
+        })?
     );
 
-    let mut mode = asset.dialogue.clone();
-    mode.effects[0].mode = CompiledEffectMode::Immediate;
     assert_ne!(
         original,
-        canonical_compiled_dialogue_fingerprint(&mode).map_err(|error| error.to_string())?
+        fingerprint_after_edit(&asset.dialogue, |mode| {
+            mode.effects[0].mode = CompiledEffectMode::Immediate;
+        })?
     );
     Ok(())
+}
+
+fn fingerprint_after_edit(
+    asset: &CompiledDialogue,
+    edit: impl FnOnce(&mut CompiledDialoguePayload),
+) -> Result<ContentFingerprint, String> {
+    let mut payload = asset.clone().into_payload();
+    edit(&mut payload);
+    canonical_compiled_dialogue_fingerprint(&CompiledDialogue::new(payload))
+        .map_err(|error| error.to_string())
 }
 
 fn compile_fixture(path: &str) -> Result<CompiledAssetOutput, String> {

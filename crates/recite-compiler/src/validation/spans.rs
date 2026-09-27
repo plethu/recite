@@ -1,6 +1,8 @@
 use recite_core::{
-    Argument, ConditionCall, ConditionExpression, SourceFile, SourceMetadataEntry, SourceSpan,
-    SourceText,
+    SourceSpan,
+    ast::{
+        Argument, ConditionCall, ConditionExpression, SourceFile, SourceMetadataEntry, SourceText,
+    },
 };
 
 use super::metadata::MetadataValidationContext;

@@ -1,7 +1,7 @@
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument,
 };
-use recite_core::{CoreValueError, Diagnostic, DocumentKey, ProjectSchema};
+use recite_core::{CoreValueError, Diagnostic, DocumentKey, schema::ProjectSchema};
 
 use crate::{DOCUMENT_NAME, Passage};
 
@@ -14,7 +14,7 @@ pub enum EditError {
     #[error(transparent)]
     Authoring(#[from] AuthoringError),
     #[error(transparent)]
-    Plan(#[from] recite_compiler::AuthoringEditError),
+    Plan(#[from] recite_compiler::authoring::AuthoringEditError),
     #[error(
         "This document changed after the editing field was opened. Reload the field before applying it."
     )]

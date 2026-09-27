@@ -1,5 +1,8 @@
-use recite_compiler::{ProducerFingerprintScopes, SchemaSummary};
-use recite_core::{ContentFingerprint, ProducerFingerprint, SchemaFingerprint};
+use recite_compiler::authoring::{ProducerFingerprintScopes, SchemaSummary};
+use recite_core::{
+    compiled::{ContentFingerprint, SchemaFingerprint},
+    schema::ProducerFingerprint,
+};
 
 use crate::error::CliError;
 
@@ -11,7 +14,7 @@ use super::model::{
 
 pub(super) fn fingerprints_json(
     summary: &SchemaSummary,
-    schema: &recite_core::ProjectSchema,
+    schema: &recite_core::schema::ProjectSchema,
 ) -> Result<FingerprintsProjection, CliError> {
     let scopes = ProducerFingerprintScopes::from_schema(schema).map_err(|error| {
         CliError::SchemaInspection(SchemaInspectionError::InvalidSummary {

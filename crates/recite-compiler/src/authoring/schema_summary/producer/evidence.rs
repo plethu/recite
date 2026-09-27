@@ -1,4 +1,7 @@
-use recite_core::{ContentFingerprint, ProducerIdentity, ProjectSchema, SchemaFingerprint};
+use recite_core::{
+    compiled::{ContentFingerprint, SchemaFingerprint},
+    schema::{ProducerIdentity, ProjectSchema},
+};
 
 use super::scopes::{
     ProducerFingerprintScopes, ProducerFingerprintScopesError, ProducerLaunchSnapshot,

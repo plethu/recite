@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    Block, BlockReference, Choice, ChoiceEcho, DivertTarget, SourceFile, SourceSpan, Statement,
+    SourceSpan,
+    ast::{Block, BlockReference, Choice, ChoiceEcho, DivertTarget, SourceFile, Statement},
 };
 
 use super::incremental::ValidationPhase;

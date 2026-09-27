@@ -11,12 +11,10 @@ Line counts are review triggers, not automatic split rules:
   production and tooling: scrutiny >250, follow-up >400
   test/support: scrutiny >350, follow-up >500
 
-Unchanged oversized files are reported as legacy debt and pass. New or newly
-triggered files must be recorded in docs/maintainability-baseline.md. A file
-that crosses or grows above its follow-up threshold fails unless its baseline
-row explicitly uses the local `exception` disposition with an issue and
-reason. Baseline rows and oversized-file coverage are validated against the
-checked-out head on every run; use --full for a repository-wide trigger report.
+Unchanged or shrinking oversized files pass. A file crossing or growing above
+its follow-up threshold requires an exact, bounded, issue-linked exception in
+scripts/maintainability/exceptions.toml. File sizes are read from the checked
+out head; use --full for a repository-wide trigger report.
 EOF
 }
 
@@ -36,8 +34,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # added while keeping the policy executable and fixture-testable.
 # shellcheck source=scripts/maintainability/paths.sh
 source "$script_dir/maintainability/paths.sh"
-# shellcheck source=scripts/maintainability/baseline.sh
-source "$script_dir/maintainability/baseline.sh"
+# shellcheck source=scripts/maintainability/exceptions.sh
+source "$script_dir/maintainability/exceptions.sh"
 # shellcheck source=scripts/maintainability/diff.sh
 source "$script_dir/maintainability/diff.sh"
 
@@ -75,16 +73,15 @@ if (( ! full_scan )); then
   fi
 fi
 
-baseline_file="$repo_root/docs/maintainability-baseline.md"
-if [[ ! -f "$baseline_file" ]]; then
-  echo "missing maintainability baseline: $baseline_file" >&2
+exceptions_file="$repo_root/scripts/maintainability/exceptions.toml"
+if [[ ! -f "$exceptions_file" ]]; then
+  echo "missing maintainability exceptions: $exceptions_file" >&2
   exit 2
 fi
 
-declare -A baseline_seen=()
-declare -A baseline_dispositions=()
-if ! maintainability_validate_baseline; then
-  echo "maintainability baseline validation failed" >&2
+declare -A exception_maximum=()
+if ! maintainability_validate_exceptions; then
+  echo "maintainability exception validation failed" >&2
   exit 1
 fi
 
@@ -110,21 +107,11 @@ fi
 failures=0
 triggered=0
 
-# Every oversized source file must have a truthful current inventory row,
-# including unchanged debt.  This makes the baseline an ownership map rather
-# than a list that only happens to mention files touched by the current diff.
 for path in "${all_paths[@]}"; do
   kind="$(maintainability_classify_path "$path" || true)"
   [[ -n "$kind" ]] || continue
   if ! maintainability_is_regular_file_at "$repo_root" "$head_sha" "$path"; then
     echo "eligible maintainability source is not a regular file: $path" >&2
-    failures=$((failures + 1))
-    continue
-  fi
-  scrutiny="$(maintainability_scrutiny_threshold "$kind")"
-  head_lines="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
-  if (( head_lines > scrutiny )) && [[ -z "${baseline_seen["$path"]+present}" ]]; then
-    echo "missing baseline row for $path ($kind, $head_lines lines; scrutiny threshold $scrutiny)" >&2
     failures=$((failures + 1))
   fi
 done
@@ -178,7 +165,7 @@ for path in "${paths[@]}"; do
   fi
 
   if (( head_lines > follow_up && (base_lines <= follow_up || head_lines > base_lines) )); then
-    if [[ "${baseline_dispositions["$path"]-}" == exception ]]; then
+    if [[ -n "${exception_maximum["$path"]+present}" ]]; then
       echo "documented exception: $path"
     else
       echo "follow-up threshold exceeded by new or growing $kind file: $path ($head_lines > $follow_up)" >&2

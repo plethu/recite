@@ -37,7 +37,7 @@ impl LocaleProvider for RecordingLocaleProvider {
         domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Result<Option<String>, recite_runtime::LocaleError> {
+    ) -> Result<Option<String>, recite_runtime::localisation::LocaleError> {
         self.calls.borrow_mut().push(LocaleCall {
             id: id.to_owned(),
             source_text: source_text.to_owned(),
@@ -70,8 +70,11 @@ impl LocaleProvider for RecordingLocaleProvider {
         _domain: TextDomain,
         _locale: &LocaleId,
         _variant: Option<&str>,
-    ) -> Result<recite_runtime::PluralResolution, recite_runtime::LocaleError> {
-        Ok(recite_runtime::PluralResolution {
+    ) -> Result<
+        recite_runtime::localisation::PluralResolution,
+        recite_runtime::localisation::LocaleError,
+    > {
+        Ok(recite_runtime::localisation::PluralResolution {
             template: None,
             selected_arm: None,
             matched_locale: None,
@@ -290,7 +293,7 @@ fn prompt_line_and_choices_are_localised_with_distinct_domains() {
 
 #[test]
 fn availability_reasons_are_localised_and_rendered_with_args() {
-    let schema = recite_core::load_schema_manifest_str(
+    let schema = recite_core::schema::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
     )

@@ -1,4 +1,4 @@
-use recite_core::{
+use recite_core::schema::{
     ProducerFreshness, compare_schema_producer_freshness, load_schema_manifest_str,
     load_schema_source_str,
 };

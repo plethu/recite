@@ -1,6 +1,8 @@
 use crate::EditError;
 use recite_core::{
-    Argument, ParameterDefinition, ProjectSchema, ScalarValue, SchemaTypeDefinition, SchemaTypeRef,
+    ScalarValue,
+    ast::Argument,
+    schema::{ParameterDefinition, ProjectSchema, SchemaTypeDefinition, SchemaTypeRef},
 };
 
 #[derive(Clone, Debug, PartialEq)]

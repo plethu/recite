@@ -2,7 +2,7 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 
-use recite_compiler::BuildControl;
+use recite_compiler::authoring::BuildControl;
 use serde::Deserialize;
 
 /// A process-scoped control message received on structured watch stdin.

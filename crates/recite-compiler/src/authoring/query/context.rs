@@ -1,4 +1,4 @@
-use recite_core::{DocumentKey, MetadataTarget, SourcePosition, SourceSpan};
+use recite_core::{DocumentKey, SourcePosition, SourceSpan, schema::MetadataTarget};
 
 use super::types::{BlockTarget, ClauseKind};
 

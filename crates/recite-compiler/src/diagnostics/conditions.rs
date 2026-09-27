@@ -1,4 +1,7 @@
-use recite_core::{ConditionReturnType, Diagnostic, DiagnosticCode, SchemaTypeRef, SourceSpan};
+use recite_core::{
+    Diagnostic, DiagnosticCode, SourceSpan,
+    schema::{ConditionReturnType, SchemaTypeRef},
+};
 
 use super::{compiler_diagnostic, diagnostic_contract, integer_argument, string_argument};
 

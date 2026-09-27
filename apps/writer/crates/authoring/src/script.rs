@@ -1,6 +1,9 @@
 //! Structural reading view derived from the parser, never a second dialogue grammar.
 use crate::{Document, EditError, Passage};
-use recite_core::{DivertTarget, SourceId, Statement};
+use recite_core::{
+    SourceId,
+    ast::{DivertTarget, Statement},
+};
 use recite_parser::parse;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

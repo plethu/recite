@@ -1,5 +1,5 @@
-use recite_compiler::{CatalogInput, CatalogResolutionPolicy};
-use recite_core::{LocaleId, PoDocument, ScalarValue};
+use recite_compiler::authoring::{CatalogInput, CatalogResolutionPolicy};
+use recite_core::{LocaleId, ScalarValue, po::PoDocument};
 use recite_writer_model::{Document, Preview, PreviewSetup};
 
 #[test]
@@ -37,7 +37,7 @@ fn trial_uses_fixed_plural_values_and_records_variant_locale_fallback()
     );
     assert_eq!(trace.matched_arm, Some(1));
     assert_eq!(trace.attempts.len(), 4);
-    use recite_runtime::PluralResolutionOutcome;
+    use recite_runtime::localisation::PluralResolutionOutcome;
     for attempt in &trace.attempts[..3] {
         assert_eq!(attempt.outcome, PluralResolutionOutcome::MissingEntry);
     }

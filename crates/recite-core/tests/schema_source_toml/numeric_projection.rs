@@ -1,9 +1,9 @@
-use recite_core::{
+use recite_core::schema::{
     PresentationAffordanceFieldSource, SchemaLiteralValue, SchemaProjectionInputSource,
     canonical_schema_fingerprint, load_schema_manifest_str, load_schema_source_str,
 };
 
-fn toml_projection_schema_for(token: &str) -> recite_core::SchemaSource {
+fn toml_projection_schema_for(token: &str) -> recite_core::schema::SchemaSource {
     let source = format!(
         r#"schema_version = 1
 
@@ -33,7 +33,7 @@ type = "float"
         .unwrap_or_else(|| panic!("projection source should load: {token}"))
 }
 
-fn json_projection_schema_for(token: &str) -> recite_core::ProjectSchema {
+fn json_projection_schema_for(token: &str) -> recite_core::schema::ProjectSchema {
     let source = format!(
         r#"{{
   "schema_version": 1,

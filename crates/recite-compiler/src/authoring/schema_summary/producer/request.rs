@@ -1,4 +1,4 @@
-use recite_core::ProducerIdentity;
+use recite_core::schema::ProducerIdentity;
 
 use super::super::evidence::ProducerFailureEvidence;
 use super::evidence::ProducerActionEvidence;

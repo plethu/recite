@@ -1,16 +1,15 @@
-use recite_compiler::{
-    ValidationCompleteness, ValidationInput, ValidationParticipation, validate_source_files,
-    validate_source_files_with_incomplete_project, validate_source_files_with_participation,
-    validate_source_files_with_participation_with_schema, validate_source_files_with_schema,
+use recite_compiler::validation::{
+    ProjectCompleteness, ValidationCompleteness, ValidationInput, ValidationParticipation,
+    validate_inputs, validate_source_files,
 };
-use recite_core::{ProjectSchema, load_schema_manifest_str};
+use recite_core::schema::{ProjectSchema, load_schema_manifest_str};
 use recite_parser::parse;
 
-fn participated<'a>(source_file: &'a recite_core::SourceFile) -> ValidationInput<'a> {
+fn participated<'a>(source_file: &'a recite_core::ast::SourceFile) -> ValidationInput<'a> {
     ValidationInput::all_complete(source_file)
 }
 
-fn lower_clean(path: &str, source: &str) -> recite_core::SourceFile {
+fn lower_clean(path: &str, source: &str) -> recite_core::ast::SourceFile {
     let lowered = parse(path, source).lower_source_file();
     assert!(
         lowered.diagnostics.is_empty(),
@@ -29,7 +28,7 @@ fn generated_manifest_schema() -> ProjectSchema {
     .expect("valid generated manifest fixture")
 }
 
-fn codes(report: &recite_compiler::ValidationReport) -> Vec<&str> {
+fn codes(report: &recite_compiler::validation::ValidationReport) -> Vec<&str> {
     report
         .diagnostics
         .iter()
@@ -54,11 +53,15 @@ fn all_complete_participation_preserves_schema_and_schema_free_reports() {
 
     assert_eq!(
         validate_source_files(&files),
-        validate_source_files_with_participation(&inputs)
+        validate_inputs(&inputs, None, ProjectCompleteness::Complete)
     );
     assert_eq!(
-        validate_source_files_with_schema(&files, &schema),
-        validate_source_files_with_participation_with_schema(&inputs, &schema)
+        validate_inputs(
+            files.iter().map(ValidationInput::all_complete),
+            Some(&schema),
+            ProjectCompleteness::Complete
+        ),
+        validate_inputs(&inputs, Some(&schema), ProjectCompleteness::Complete)
     );
 }
 
@@ -87,11 +90,15 @@ fn all_complete_participation_preserves_ordering_for_reversed_inputs() {
 
     assert_eq!(
         validate_source_files(&files),
-        validate_source_files_with_participation(&forward)
+        validate_inputs(&forward, None, ProjectCompleteness::Complete)
     );
     assert_eq!(
-        validate_source_files_with_schema(&files, &schema),
-        validate_source_files_with_participation_with_schema(&reversed, &schema)
+        validate_inputs(
+            files.iter().map(ValidationInput::all_complete),
+            Some(&schema),
+            ProjectCompleteness::Complete
+        ),
+        validate_inputs(&reversed, Some(&schema), ProjectCompleteness::Complete)
     );
 }
 
@@ -111,7 +118,7 @@ fn incomplete_target_definitions_make_reference_lookup_indeterminate() {
     ];
 
     assert!(
-        validate_source_files_with_participation(&inputs)
+        validate_inputs(&inputs, None, ProjectCompleteness::Complete)
             .diagnostics
             .iter()
             .all(|diagnostic| diagnostic.code.as_str() != "RECITE_VALIDATE007")
@@ -121,7 +128,7 @@ fn incomplete_target_definitions_make_reference_lookup_indeterminate() {
         ValidationInput::all_complete(&files[0]),
         ValidationInput::all_complete(&files[1]),
     ];
-    let report = validate_source_files_with_participation(&complete);
+    let report = validate_inputs(&complete, None, ProjectCompleteness::Complete);
     assert_eq!(codes(&report), ["RECITE_VALIDATE007"]);
 }
 
@@ -146,8 +153,10 @@ fn same_path_incomplete_definitions_are_indeterminate_in_both_input_orders() {
         ValidationInput::all_complete(&complete_target),
     ];
 
-    let complete_first_report = validate_source_files_with_participation(&complete_first);
-    let incomplete_first_report = validate_source_files_with_participation(&incomplete_first);
+    let complete_first_report =
+        validate_inputs(&complete_first, None, ProjectCompleteness::Complete);
+    let incomplete_first_report =
+        validate_inputs(&incomplete_first, None, ProjectCompleteness::Complete);
     assert_eq!(complete_first_report, incomplete_first_report);
     assert!(codes(&complete_first_report).contains(&"RECITE_VALIDATE010"));
     assert!(!codes(&complete_first_report).contains(&"RECITE_VALIDATE007"));
@@ -190,8 +199,11 @@ fn incomplete_classes_do_not_suppress_unrelated_clean_file_diagnostics() {
         ValidationInput::new(&files[1], incomplete),
     ];
 
-    let report =
-        validate_source_files_with_participation_with_schema(&inputs, &ProjectSchema::empty_v1());
+    let report = validate_inputs(
+        &inputs,
+        Some(&ProjectSchema::empty_v1()),
+        ProjectCompleteness::Complete,
+    );
     assert_eq!(
         codes(&report),
         [
@@ -215,7 +227,11 @@ fn incomplete_ast_structure_suppresses_interpolation_diagnostics() {
     );
     let complete = [participated(&source)];
     assert_eq!(
-        codes(&validate_source_files_with_participation(&complete)),
+        codes(&validate_inputs(
+            &complete,
+            None,
+            ProjectCompleteness::Complete
+        )),
         ["RECITE_VALIDATE045"]
     );
 
@@ -223,7 +239,7 @@ fn incomplete_ast_structure_suppresses_interpolation_diagnostics() {
         .with_ast_structure(ValidationCompleteness::Incomplete);
     let input = [ValidationInput::new(&source, incomplete)];
     assert!(
-        validate_source_files_with_participation(&input)
+        validate_inputs(&input, None, ProjectCompleteness::Complete)
             .diagnostics
             .is_empty()
     );
@@ -247,14 +263,14 @@ fn incomplete_stable_ids_do_not_contribute_duplicate_or_echo_evidence() {
         ValidationInput::new(&files[1], incomplete),
     ];
 
-    let report = validate_source_files_with_participation(&inputs);
+    let report = validate_inputs(&inputs, None, ProjectCompleteness::Complete);
     assert!(
         codes(&report).is_empty(),
         "unexpected diagnostics: {report:?}"
     );
 
     let complete = [participated(&files[0]), participated(&files[1])];
-    let report = validate_source_files_with_participation(&complete);
+    let report = validate_inputs(&complete, None, ProjectCompleteness::Complete);
     assert_eq!(codes(&report), ["RECITE_ID003"]);
 }
 
@@ -284,7 +300,7 @@ fn incomplete_project_keeps_same_file_id_duplicates_but_not_cross_file_duplicate
     );
     let files = [first, second];
     let incomplete = [participated(&files[0]), participated(&files[1])];
-    let incomplete_report = validate_source_files_with_incomplete_project(&incomplete);
+    let incomplete_report = validate_inputs(&incomplete, None, ProjectCompleteness::Incomplete);
     assert!(
         incomplete_report.diagnostics.is_empty(),
         "cross-file IDs should be indeterminate: {incomplete_report:?}"
@@ -306,10 +322,14 @@ fn incomplete_project_keeps_same_file_id_duplicates_but_not_cross_file_duplicate
             "  -> END\n",
         ),
     );
-    let local_report = validate_source_files_with_incomplete_project(&[participated(&local)]);
+    let local_report = validate_inputs(
+        &[participated(&local)],
+        None,
+        ProjectCompleteness::Incomplete,
+    );
     assert_eq!(codes(&local_report), ["RECITE_ID003", "RECITE_ID004"]);
 
-    let complete_report = validate_source_files_with_participation(&incomplete);
+    let complete_report = validate_inputs(&incomplete, None, ProjectCompleteness::Complete);
     assert_eq!(codes(&complete_report), ["RECITE_ID003", "RECITE_ID004"]);
 }
 
@@ -337,8 +357,10 @@ fn same_path_incomplete_stable_ids_suppress_duplicate_evidence_in_both_input_ord
         ValidationInput::all_complete(&complete_source),
     ];
 
-    let complete_first_report = validate_source_files_with_participation(&complete_first);
-    let incomplete_first_report = validate_source_files_with_participation(&incomplete_first);
+    let complete_first_report =
+        validate_inputs(&complete_first, None, ProjectCompleteness::Complete);
+    let incomplete_first_report =
+        validate_inputs(&incomplete_first, None, ProjectCompleteness::Complete);
     assert_eq!(complete_first_report, incomplete_first_report);
     assert_eq!(codes(&complete_first_report), ["RECITE_VALIDATE010"]);
 }
@@ -361,14 +383,14 @@ fn incomplete_block_definitions_do_not_contribute_duplicate_evidence() {
         ValidationInput::new(&files[1], incomplete),
     ];
 
-    let report = validate_source_files_with_participation(&inputs);
+    let report = validate_inputs(&inputs, None, ProjectCompleteness::Complete);
     assert!(
         codes(&report).is_empty(),
         "unexpected diagnostics: {report:?}"
     );
 
     let complete = [participated(&files[0]), participated(&files[1])];
-    let report = validate_source_files_with_participation(&complete);
+    let report = validate_inputs(&complete, None, ProjectCompleteness::Complete);
     assert_eq!(codes(&report), ["RECITE_VALIDATE011"]);
     assert_eq!(
         report.diagnostics[0].related_presentations[0].span.file,
@@ -383,10 +405,10 @@ fn incomplete_definitions_suppress_missing_default_but_complete_defaults_conflic
         .with_block_definitions(ValidationCompleteness::Incomplete);
     let files = [source];
     let inputs = [ValidationInput::new(&files[0], incomplete)];
-    assert!(validate_source_files_with_participation(&inputs).is_ok());
+    assert!(validate_inputs(&inputs, None, ProjectCompleteness::Complete).is_ok());
 
     let complete = [participated(&files[0])];
-    let report = validate_source_files_with_participation(&complete);
+    let report = validate_inputs(&complete, None, ProjectCompleteness::Complete);
     assert_eq!(validate_source_files(&files), report);
     assert_eq!(codes(&report), ["RECITE_VALIDATE005"]);
 }
@@ -412,13 +434,13 @@ fn unknown_choice_echo_is_indeterminate_until_all_stable_ids_are_complete() {
         participated(&files[0]),
         ValidationInput::new(&files[1], incomplete),
     ];
-    let report = validate_source_files_with_participation(&inputs);
+    let report = validate_inputs(&inputs, None, ProjectCompleteness::Complete);
     assert!(
         codes(&report).is_empty(),
         "unexpected diagnostics: {report:?}"
     );
 
     let complete = [participated(&files[0]), participated(&files[1])];
-    let report = validate_source_files_with_participation(&complete);
+    let report = validate_inputs(&complete, None, ProjectCompleteness::Complete);
     assert_eq!(codes(&report), ["RECITE_VALIDATE015"]);
 }

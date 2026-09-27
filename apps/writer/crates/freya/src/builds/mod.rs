@@ -11,7 +11,7 @@ pub(crate) struct Builds {
     targets: Vec<(String, Vec<String>)>,
     selected: Option<String>,
     job: Option<job::Job>,
-    result: Option<Result<String, String>>,
+    result: Option<job::Outcome>,
 }
 impl Builds {
     pub(crate) fn cancel(&self) {
@@ -242,9 +242,7 @@ impl Component for BuildScreen {
             body = body.child(
                 paragraph()
                     .width(Size::fill())
-                    .span(Span::new(match result {
-                        Ok(s) | Err(s) => s.clone(),
-                    })),
+                    .span(Span::new(result.message())),
             );
         }
         rect().width(Size::fill()).height(Size::fill()).child(
@@ -277,9 +275,14 @@ impl Component for BuildPoll {
                 .and_then(|f| f.builds.job.as_ref())
                 .and_then(job::Job::poll);
             if let Some(result) = result {
+                let message = result.message();
                 writer.message.report(
-                    result.clone().map(|_| ()),
-                    result.as_ref().cloned().unwrap_or_default(),
+                    if result.is_success() {
+                        Ok(())
+                    } else {
+                        Err(message.clone())
+                    },
+                    message,
                 );
                 if let Some(project) = writer.files.write().as_mut() {
                     project.builds.job = None;
@@ -288,5 +291,44 @@ impl Component for BuildPoll {
             }
         }
         rect()
+    }
+}
+
+impl job::Outcome {
+    fn is_success(&self) -> bool {
+        matches!(self, Self::Completed { result, .. } if matches!(
+            result.status(),
+            recite_compiler::authoring::BuildTerminalStatus::Succeeded | recite_compiler::authoring::BuildTerminalStatus::Cancelled
+        ))
+    }
+
+    fn message(&self) -> String {
+        use recite_compiler::authoring::BuildTerminalStatus;
+        match self {
+            Self::Completed { result, recovery, assets, inputs_changed } => match result.status() {
+                BuildTerminalStatus::Succeeded if *inputs_changed => "Build finished, but project inputs changed during the build. Build again to include them.".into(),
+                BuildTerminalStatus::Succeeded => format!("Built {}", assets.join(", ")),
+                BuildTerminalStatus::Cancelled => "Build cancelled. Previous outputs remain available.".into(),
+                _ => format!(
+                    "Build did not complete.\n{}\n{}\n{}",
+                    crate::project_context::diagnostic_messages(result.diagnostics()),
+                    result.failure().map(ToString::to_string).unwrap_or_default(),
+                    recovery.iter().map(|entry| format!("Recovery record: {}", entry.marker().display())).collect::<Vec<_>>().join("\n")
+                ),
+            },
+            Self::Failed(failure) => match failure {
+                job::Failure::Preparation(error) => error.to_string(),
+                job::Failure::Diagnostics(diagnostics) => crate::project_context::diagnostic_messages(diagnostics),
+                job::Failure::AssetRetired => "The selected output is no longer declared by the manifest. Reopen Build scenes.".into(),
+                job::Failure::NoTargets => "Declare a scene and output in recite.project.toml before building.".into(),
+                job::Failure::Publisher(error) => error.to_string(),
+                job::Failure::Coordinator { error, recovery } => format!(
+                    "{}\n{}",
+                    error,
+                    recovery.iter().map(|entry| format!("Recovery record: {}", entry.marker().display())).collect::<Vec<_>>().join("\n")
+                ),
+                job::Failure::WorkerStopped => "Build worker stopped unexpectedly.".into(),
+            },
+        }
     }
 }

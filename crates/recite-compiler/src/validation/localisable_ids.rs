@@ -1,7 +1,10 @@
 //! Frozen identity shape is local; collisions belong to project validation.
 use super::{incremental::ValidationPhase, state::Validator};
 use crate::diagnostics;
-use recite_core::{Choice, Line, SourceId};
+use recite_core::{
+    SourceId,
+    ast::{Choice, Line},
+};
 
 impl<'a> Validator<'a> {
     pub(crate) fn validate_line_localisable_id(&mut self, line: &'a Line) {

@@ -1,4 +1,4 @@
-use recite_core::{StatementIndex, StatementRange};
+use recite_core::compiled::{StatementIndex, StatementRange};
 
 use crate::DialogueError;
 

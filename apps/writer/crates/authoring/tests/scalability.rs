@@ -1,4 +1,4 @@
-use recite_compiler::SavedDocument;
+use recite_compiler::authoring::SavedDocument;
 use recite_core::DocumentKey;
 use recite_writer_model::{Document, SearchIndex};
 

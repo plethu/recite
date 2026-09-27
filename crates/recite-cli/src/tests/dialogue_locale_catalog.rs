@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use recite_core::LocaleId;
-use recite_runtime::{LocaleProvider, PluralResolutionOutcome, TextDomain};
+use recite_runtime::localisation::{LocaleProvider, PluralResolutionOutcome, TextDomain};
 use tempfile::TempDir;
 
 use crate::dialogue_locale::{DialogueCatalogProvider, DialogueCatalogSource};

@@ -2,7 +2,7 @@ mod basic;
 mod projection;
 mod provenance;
 
-use crate::ProjectSchema;
+use crate::schema::ProjectSchema;
 
 /// Emit deterministic generated JSON from the canonical schema.
 ///

@@ -1,9 +1,13 @@
 use std::collections::BTreeSet;
 
 use lsp_types::{CodeActionParams, CodeActionResponse, CompletionResponse, Hover, Position};
-use recite_compiler::AuthoringSnapshot;
-use recite_compiler::SchemaSummary;
-use recite_core::{ConditionReturnType, DocumentKey, EffectMode, SchemaTypeRef};
+use recite_compiler::authoring::AuthoringSnapshot;
+use recite_compiler::authoring::SchemaSummary;
+use recite_core::{
+    DocumentKey,
+    ast::EffectMode,
+    schema::{ConditionReturnType, SchemaTypeRef},
+};
 use recite_ui::UiCatalog;
 
 pub(crate) mod code_action;
@@ -30,7 +34,7 @@ pub(crate) fn code_action(
     snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument>,
-    schema_summary: Option<&recite_compiler::SchemaSummary>,
+    schema_summary: Option<&recite_compiler::authoring::SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
     code_action::code_action(params, snapshot, documents, schema, schema_summary, catalog)

@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 use std::time::Instant;
 
-use recite_core::CompiledDialogue;
-use recite_runtime::{
+use recite_core::compiled::CompiledDialogue;
+use recite_runtime::preview::{
     ConditionAnswer, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
 };
 
@@ -188,13 +188,13 @@ pub(crate) fn execute_runtime_fixture(
     })
 }
 
-fn preview_failure(error: recite_runtime::PreviewError) -> CliError {
+fn preview_failure(error: recite_runtime::preview::PreviewError) -> CliError {
     match error {
-        recite_runtime::PreviewError::Runtime(
+        recite_runtime::preview::PreviewError::Runtime(
             recite_runtime::DialogueError::MalformedCompiledAsset { reason },
         ) => CliError::MalformedCompiledAsset { reason },
-        recite_runtime::PreviewError::Runtime(error) => CliError::Runtime(error),
-        recite_runtime::PreviewError::ConditionResultTypeMismatch {
+        recite_runtime::preview::PreviewError::Runtime(error) => CliError::Runtime(error),
+        recite_runtime::preview::PreviewError::ConditionResultTypeMismatch {
             function,
             expected,
             actual,
@@ -203,7 +203,7 @@ fn preview_failure(error: recite_runtime::PreviewError) -> CliError {
             expected,
             actual,
         }),
-        recite_runtime::PreviewError::AssetRevisionFailed { reason } => {
+        recite_runtime::preview::PreviewError::AssetRevisionFailed { reason } => {
             CliError::MalformedCompiledAsset { reason }
         }
         error => CliError::Preview(error),

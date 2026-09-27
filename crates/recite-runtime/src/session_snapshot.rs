@@ -1,12 +1,14 @@
 use recite_core::{
-    ChoiceId, CompiledSourceFile, ContentFingerprint, LocaleId, SchemaFingerprint, StatementIndex,
-    StatementRange,
+    ChoiceId, LocaleId,
+    compiled::{
+        CompiledSourceFile, ContentFingerprint, SchemaFingerprint, StatementIndex, StatementRange,
+    },
 };
 use serde::{Deserialize, Serialize};
 
 use crate::DialogueSession;
 use crate::event::DialogueEffectRequest;
-use crate::session::{PendingEffect, PendingPrompt, StatementFrame};
+use crate::session::{PendingEffect, PendingPrompt, SessionPhase, StatementFrame};
 
 pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = 1;
 
@@ -192,8 +194,14 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
             .iter()
             .map(frame_snapshot)
             .collect(),
-        pending_prompt: session.pending_prompt.as_ref().map(pending_prompt_snapshot),
-        pending_effect: session.pending_effect.as_ref().map(pending_effect_snapshot),
+        pending_prompt: match &session.phase {
+            SessionPhase::AwaitingChoice(prompt) => Some(pending_prompt_snapshot(prompt)),
+            _ => None,
+        },
+        pending_effect: match &session.phase {
+            SessionPhase::AwaitingEffect(effect) => Some(pending_effect_snapshot(effect)),
+            _ => None,
+        },
         previous_prompt_choices: choice_ids_snapshot(&session.previous_prompt_choices),
         selected_choice_history: choice_ids_snapshot(&session.selected_choice_history),
         deferred_effects: session
@@ -207,7 +215,7 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
             .map(LocaleId::as_str)
             .map(str::to_owned),
         trace_counter: session.trace_counter,
-        ended: session.ended,
+        ended: matches!(session.phase, SessionPhase::Ended),
     }
 }
 

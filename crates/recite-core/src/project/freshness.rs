@@ -7,8 +7,9 @@ use super::{
     diagnostics::project_diagnostic, spans::scene_key_span,
 };
 use crate::{
-    COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, Diagnostic,
-    DiagnosticArgumentValue, canonical_source_fingerprint, toml_spans::TomlSpanIndex,
+    Diagnostic, DiagnosticArgumentValue, compiled::COMPILED_ASSET_FORMAT_VERSION_V0,
+    compiled::COMPILER_COMPATIBILITY_VERSION_V0, compiled::canonical_source_fingerprint,
+    toml_spans::TomlSpanIndex,
 };
 
 /// Validate one decoded asset against the project scene and current source/schema state.

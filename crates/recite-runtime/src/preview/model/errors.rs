@@ -1,4 +1,4 @@
-use recite_core::CompiledAssetId;
+use recite_core::compiled::CompiledAssetId;
 
 use crate::{ConditionExpectedType, DialogueError};
 

@@ -1,11 +1,14 @@
 use recite_compiler::{
-    CompileInput, CompileOptions, CompiledAssetOutput, PotDocument, ValidationReport,
-    bench_support, compile_inputs_with_schema, extract_pot_with_schema, validate_source_files,
-    validate_source_files_with_schema,
+    bench_support,
+    compile::{CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs_with_schema},
+    pot::extract_pot_with_schema,
+    validation::{ValidationReport, validate_inputs, validate_source_files},
 };
 use recite_core::{
-    CompiledAssetId, CompilerVersion, ProjectSchema, SourceFile, SourceMapId,
-    load_schema_manifest_str,
+    ast::SourceFile,
+    compiled::{CompiledAssetId, CompilerVersion, SourceMapId},
+    po::PotDocument,
+    schema::{ProjectSchema, load_schema_manifest_str},
 };
 use recite_parser::parse;
 
@@ -130,7 +133,13 @@ pub fn validate_with_schema(
     source_files: &[SourceFile],
     schema: &ProjectSchema,
 ) -> ValidationReport {
-    validate_source_files_with_schema(source_files, schema)
+    validate_inputs(
+        source_files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    )
 }
 
 pub fn resolve_block_references(source_files: &[SourceFile]) -> bench_support::CompilerPhaseProbe {

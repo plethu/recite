@@ -5,7 +5,7 @@ use crate::{
     messages::{MsgId, text},
 };
 use freya::prelude::*;
-use recite_core::InterpolationType;
+use recite_core::ast::InterpolationType;
 use std::collections::BTreeMap;
 
 #[derive(Clone)]

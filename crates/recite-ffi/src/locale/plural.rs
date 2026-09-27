@@ -25,7 +25,7 @@ pub unsafe extern "C" fn recite_locale_validate_plural_rule(
             return ReciteStatus::Validation;
         }
     };
-    match recite_core::validate_plural_rule(header) {
+    match recite_core::po::validate_plural_rule(header) {
         Ok(nplurals) => {
             unsafe { *nplurals_out = nplurals };
             ReciteStatus::Ok
@@ -61,7 +61,7 @@ pub unsafe extern "C" fn recite_locale_evaluate_plural_rule(
             return ReciteStatus::Validation;
         }
     };
-    match recite_core::evaluate_plural_form(header, count) {
+    match recite_core::po::evaluate_plural_form(header, count) {
         Ok(arm) => {
             unsafe { *arm_out = arm };
             ReciteStatus::Ok

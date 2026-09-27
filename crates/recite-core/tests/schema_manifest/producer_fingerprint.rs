@@ -1,11 +1,11 @@
-use recite_core::{
+use recite_core::schema::{
     ContentFingerprintFreshness, MetadataDomainDefinition, ProducerFingerprint, ProducerFreshness,
     ProducerMetadata, ProducerOrigin, canonical_schema_fingerprint, compare_producer_fingerprints,
     compare_schema_producer_freshness, compare_schema_producer_freshness_detailed,
     load_schema_manifest_str,
 };
 
-fn full_manifest_schema() -> recite_core::ProjectSchema {
+fn full_manifest_schema() -> recite_core::schema::ProjectSchema {
     load_schema_manifest_str(
         "fixtures/schema/valid/full_manifest.json",
         include_str!("../../../../fixtures/schema/valid/full_manifest.json"),
@@ -61,11 +61,11 @@ fn producer_metadata_does_not_change_semantic_schema_fingerprint() {
     let mut changed = base.clone();
     changed.producer_metadata = Some(ProducerMetadata {
         producer: Some(
-            recite_core::ProducerIdentity::new("changed", "producer")
+            recite_core::schema::ProducerIdentity::new("changed", "producer")
                 .expect("valid producer identity"),
         ),
         content_fingerprint: Some(
-            recite_core::producer_content_fingerprint(
+            recite_core::schema::producer_content_fingerprint(
                 "blake3",
                 "1111111111111111111111111111111111111111111111111111111111111111",
             )
@@ -216,7 +216,7 @@ fn legacy_schema_freshness_comparator_keeps_content_mismatch_stale() {
         .as_mut()
         .expect("producer metadata")
         .content_fingerprint = Some(
-        recite_core::producer_content_fingerprint(
+        recite_core::schema::producer_content_fingerprint(
             "blake3",
             "1111111111111111111111111111111111111111111111111111111111111111",
         )
@@ -241,7 +241,8 @@ fn freshness_loader_retains_duplicate_fingerprints_but_ordinary_loader_rejects_t
 }"#;
     let strict = load_schema_manifest_str("strict.json", source);
     assert!(strict.schema.is_none());
-    let freshness = recite_core::load_schema_manifest_for_freshness_str("freshness.json", source);
+    let freshness =
+        recite_core::schema::load_schema_manifest_for_freshness_str("freshness.json", source);
     let schema = freshness
         .schema
         .expect("freshness loader should retain duplicates");

@@ -1,7 +1,12 @@
-use recite_core::{CompiledAssetId, CompilerVersion, ScalarValue, SchemaFingerprint, SourceMapId};
+use recite_core::{
+    ScalarValue,
+    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
+};
 use recite_runtime::{
-    InterpolationValues, LocaleError, LocaleProvider, PluralResolution, PreviewEvent,
-    PreviewInputs, PreviewOptions, PreviewPrompt, PreviewSession, TextDomain,
+    localisation::{
+        InterpolationValues, LocaleError, LocaleProvider, PluralResolution, TextDomain,
+    },
+    preview::{PreviewEvent, PreviewInputs, PreviewOptions, PreviewPrompt, PreviewSession},
 };
 
 use super::digest;
@@ -50,9 +55,9 @@ impl LocaleProvider for PluralArmCountProvider {
     }
 }
 
-fn plural_prompt_asset() -> recite_core::CompiledDialogue {
-    let report = recite_compiler::compile_inputs(
-        [recite_compiler::CompileInput::new(
+fn plural_prompt_asset() -> recite_core::compiled::CompiledDialogue {
+    let report = recite_compiler::compile::compile_inputs(
+        [recite_compiler::compile::CompileInput::new(
             "prompt.recite",
             concat!(
                 ":: start default\n",
@@ -64,7 +69,7 @@ fn plural_prompt_asset() -> recite_core::CompiledDialogue {
                 "    -> END\n",
             ),
         )],
-        recite_compiler::CompileOptions::new(
+        recite_compiler::compile::CompileOptions::new(
             CompilerVersion::new("0.0.1").expect("test compiler version is valid"),
             CompiledAssetId::new("dialogue/preview-prompt-hash.recitec")
                 .expect("test asset ID is valid"),
@@ -83,7 +88,7 @@ fn plural_prompt_asset() -> recite_core::CompiledDialogue {
 }
 
 fn prompt_with_plural_arm_count(
-    asset: &recite_core::CompiledDialogue,
+    asset: &recite_core::compiled::CompiledDialogue,
     arm_count: usize,
 ) -> PreviewPrompt {
     let mut values = InterpolationValues::new();

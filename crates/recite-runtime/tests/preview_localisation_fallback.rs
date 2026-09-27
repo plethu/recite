@@ -6,10 +6,12 @@ mod preview_support;
 use preview_support::asset;
 use recite_core::{LocaleId, ScalarValue};
 use recite_runtime::{
-    InterpolationValues, LocaleError, LocaleLookupAttempt, LocaleLookupOutcome,
-    LocaleLookupProvenance, LocaleProvider, PluralResolution, PluralResolutionAttempt,
-    PluralResolutionOutcome, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions,
-    PreviewSession, TextDomain,
+    localisation::{
+        InterpolationValues, LocaleError, LocaleLookupAttempt, LocaleLookupOutcome,
+        LocaleLookupProvenance, LocaleProvider, PluralResolution, PluralResolutionAttempt,
+        PluralResolutionOutcome, TextDomain,
+    },
+    preview::{PreviewError, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession},
 };
 
 struct FallbackProvider {
@@ -159,7 +161,7 @@ fn plural_source_fallback_preserves_repeated_attempt_occurrences() {
                 .with_interpolation_values(&values),
         );
         preview.dispatch(
-            recite_runtime::PreviewCommand::Restart,
+            recite_runtime::preview::PreviewCommand::Restart,
             PreviewInputs::new(),
         );
     }

@@ -1,9 +1,10 @@
 #![cfg(test)]
 
-use recite_core::{
+use recite_core::compiled::{
     BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
-    CompiledAssetDecodeError, CompiledAssetEncodeError, canonical_compiled_dialogue_fingerprint,
-    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack, messagepack_u16,
+    CompiledAssetDecodeError, CompiledAssetEncodeError, CompiledDialogue,
+    canonical_compiled_dialogue_fingerprint, decode_compiled_dialogue_messagepack,
+    encode_compiled_dialogue_messagepack, messagepack_u16,
 };
 
 mod support;
@@ -72,11 +73,12 @@ fn version_probe_reports_unsupported_wider_encoded_versions_before_body_decode()
 #[test]
 fn encode_rejects_unsupported_headers_and_invalid_dialogues() {
     let bytes = rmp_serde::to_vec(&valid_wire_asset()).expect("test wire encodes");
-    let mut unsupported =
-        decode_compiled_dialogue_messagepack(&bytes).expect("valid asset decodes");
+    let mut unsupported = decode_compiled_dialogue_messagepack(&bytes)
+        .expect("valid asset decodes")
+        .into_payload();
     unsupported.header.format_version = COMPILED_ASSET_FORMAT_VERSION_V0 + 1;
     assert!(matches!(
-        encode_compiled_dialogue_messagepack(&unsupported),
+        encode_compiled_dialogue_messagepack(&CompiledDialogue::new(unsupported.clone())),
         Err(CompiledAssetEncodeError::UnsupportedFormat {
             format_version,
             compiler_compatibility_version
@@ -87,7 +89,7 @@ fn encode_rejects_unsupported_headers_and_invalid_dialogues() {
     unsupported.header.format_version = COMPILED_ASSET_FORMAT_VERSION_V0;
     unsupported.header.compiler_compatibility_version = COMPILER_COMPATIBILITY_VERSION_V0 + 1;
     assert!(matches!(
-        encode_compiled_dialogue_messagepack(&unsupported),
+        encode_compiled_dialogue_messagepack(&CompiledDialogue::new(unsupported)),
         Err(CompiledAssetEncodeError::UnsupportedFormat {
             format_version,
             compiler_compatibility_version
@@ -95,8 +97,11 @@ fn encode_rejects_unsupported_headers_and_invalid_dialogues() {
             && compiler_compatibility_version == COMPILER_COMPATIBILITY_VERSION_V0 + 1
     ));
 
-    let mut invalid = decode_compiled_dialogue_messagepack(&bytes).expect("valid asset decodes");
+    let mut invalid = decode_compiled_dialogue_messagepack(&bytes)
+        .expect("valid asset decodes")
+        .into_payload();
     invalid.default_block = BlockIndex::new(1);
+    let invalid = CompiledDialogue::new(invalid);
     assert!(matches!(
         encode_compiled_dialogue_messagepack(&invalid),
         Err(CompiledAssetEncodeError::InvalidDialogue(reason))
@@ -140,7 +145,7 @@ fn decode_rejects_unknown_wire_tags() {
         availability_requirement_source_text: None,
         availability_reason_override: None,
         target: Tagged::nil(99),
-        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        echo: Tagged::nil(recite_core::compiled::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
     });
     asset.availability_reasons.push(WireAvailabilityReason {
@@ -165,7 +170,7 @@ fn decode_rejects_unknown_wire_tags() {
         availability_requirement: None,
         availability_requirement_source_text: None,
         availability_reason_override: None,
-        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
+        target: Tagged::nil(recite_core::compiled::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(99),
         source_map: 0,
     });
@@ -197,8 +202,8 @@ fn decode_rejects_unknown_wire_tags() {
         availability_requirement: Some(WireConditionExpression::Unknown(99)),
         availability_requirement_source_text: None,
         availability_reason_override: None,
-        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
-        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        target: Tagged::nil(recite_core::compiled::V0_DIVERT_TARGET_TAG_END),
+        echo: Tagged::nil(recite_core::compiled::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
     });
     asset.availability_reasons.push(WireAvailabilityReason {
@@ -214,7 +219,7 @@ fn decode_rejects_unknown_wire_tags() {
     let mut asset = valid_wire_asset();
     asset.effects.push(WireEffect {
         id: "effect:dialogue/main.recite:1:1",
-        mode: Tagged::nil(recite_core::V0_EFFECT_MODE_TAG_DEFERRED),
+        mode: Tagged::nil(recite_core::compiled::V0_EFFECT_MODE_TAG_DEFERRED),
         function: "advance_thread",
         args: vec![Tagged::nil(99)],
         source_map: 0,
@@ -232,7 +237,10 @@ fn decode_rejects_unknown_wire_tags() {
     let mut asset = valid_wire_asset();
     asset.metadata.push(WireMetadataEntry {
         key: "score",
-        value: Tagged::payload(recite_core::V0_VALUE_TAG_SCALAR, Tagged::payload(99, 1.0)),
+        value: Tagged::payload(
+            recite_core::compiled::V0_VALUE_TAG_SCALAR,
+            Tagged::payload(99, 1.0),
+        ),
         source_map: None,
     });
     assert_malformed_asset_contains(asset, "unknown scalar value tag 99");
@@ -252,8 +260,8 @@ fn decode_rejects_invalid_availability_reason_references_and_duplicates() {
         availability_requirement: None,
         availability_requirement_source_text: None,
         availability_reason_override: Some("missing_reason"),
-        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
-        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        target: Tagged::nil(recite_core::compiled::V0_DIVERT_TARGET_TAG_END),
+        echo: Tagged::nil(recite_core::compiled::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
     });
     missing_override.choice_lookup.push(WireLookupEntry {

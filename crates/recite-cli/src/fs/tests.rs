@@ -1,9 +1,10 @@
 use std::{collections::BTreeMap, fs};
 
-use recite_compiler::{CompileInput, compile_inputs};
+use recite_compiler::compile::{CompileInput, compile_inputs};
 use recite_core::{
-    Diagnostic, DiagnosticArgumentValue, DiagnosticSeverity, ProjectManifest, SchemaFingerprint,
-    SourcePosition, SourceSpan, decode_compiled_dialogue_messagepack,
+    Diagnostic, DiagnosticArgumentValue, DiagnosticSeverity, SourcePosition, SourceSpan,
+    compiled::{SchemaFingerprint, decode_compiled_dialogue_messagepack},
+    project::ProjectManifest,
     project::{
         MALFORMED_COMPILED_ASSET, MISSING_COMPILED_ASSET, STALE_COMPILER_COMPATIBILITY,
         UNSUPPORTED_ASSET_VERSION,
@@ -34,7 +35,7 @@ fn assert_recordable(
     diagnostic.record().expect("structured diagnostic record");
 }
 
-fn manifest_source(asset: &str) -> recite_core::ProjectManifestSource {
+fn manifest_source(asset: &str) -> recite_core::project::ProjectManifestSource {
     let source = format!(
         "[[scenes]]\nid = \"scene.start\"\nasset = \"{asset}\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n"
     );

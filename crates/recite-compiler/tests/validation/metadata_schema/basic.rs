@@ -1,7 +1,7 @@
 #[test]
 fn accepts_schema_declared_metadata_on_supported_targets() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default block_tag=room\n",
@@ -13,19 +13,31 @@ fn accepts_schema_declared_metadata_on_supported_targets() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert!(report.is_ok(), "valid metadata should pass: {report:?}");
 }
 #[test]
 fn reports_unknown_metadata_key_on_key_span() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         ":: start default\n> intro@11111111111111111111 speaker=hazel mystery=flat\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE026"]);
     assert_spans(&report, [(2, 44)]);
@@ -34,12 +46,18 @@ fn reports_unknown_metadata_key_on_key_span() {
 #[test]
 fn reports_invalid_metadata_target_on_key_span() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         ":: start default portrait=\"neutral\"\n> intro@11111111111111111111 speaker=hazel\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE027"]);
     assert_spans(&report, [(1, 18)]);
@@ -48,12 +66,18 @@ fn reports_invalid_metadata_target_on_key_span() {
 #[test]
 fn reports_non_repeatable_duplicate_metadata_on_duplicate_key_span() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         ":: start default\n> intro@11111111111111111111 speaker=hazel portrait=\"neutral\" portrait=\"flat\"\n  Hello.\n",
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE028"]);
     assert_spans(&report, [(2, 63)]);
@@ -62,7 +86,7 @@ fn reports_non_repeatable_duplicate_metadata_on_duplicate_key_span() {
 #[test]
 fn reports_scalar_metadata_type_mismatches_on_value_spans() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -71,7 +95,13 @@ fn reports_scalar_metadata_type_mismatches_on_value_spans() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,
@@ -89,7 +119,7 @@ fn reports_scalar_metadata_type_mismatches_on_value_spans() {
 #[test]
 fn reports_quoted_reference_and_symbol_metadata_type_mismatches_on_value_spans() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default block_tag=\"room\"\n",
@@ -98,7 +128,13 @@ fn reports_quoted_reference_and_symbol_metadata_type_mismatches_on_value_spans()
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,
@@ -116,7 +152,7 @@ fn reports_quoted_reference_and_symbol_metadata_type_mismatches_on_value_spans()
 #[test]
 fn reports_invalid_speaker_enum_and_registry_metadata_values_on_value_spans() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -125,7 +161,13 @@ fn reports_invalid_speaker_enum_and_registry_metadata_values_on_value_spans() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,
@@ -140,7 +182,7 @@ fn reports_invalid_speaker_enum_and_registry_metadata_values_on_value_spans() {
 
 #[test]
 fn skips_metadata_schema_validation_without_schema() {
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default portrait=neutral\n",
@@ -160,7 +202,7 @@ fn skips_metadata_schema_validation_without_schema() {
 #[test]
 fn accepts_metadata_only_symbol_type_on_line_metadata() {
     let schema = metadata_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -169,7 +211,13 @@ fn accepts_metadata_only_symbol_type_on_line_metadata() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert!(report.is_ok(), "symbol metadata should pass: {report:?}");
 }

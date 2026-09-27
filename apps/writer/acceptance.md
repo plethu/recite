@@ -1,8 +1,7 @@
 # Writer acceptance
 
-Writer is a preview. #54 records the framework decision and #123 defines the
-conformance contract. Keep #170 open until native authoring and accessibility
-requirements have evidence; installed-package acceptance belongs to #79.
+Writer is a preview. Native authoring, accessibility, and installed-package
+acceptance still need host evidence.
 Automated tests and captured renders do not establish physical input,
 screen-reader usability, GPU performance, or cross-platform support.
 
@@ -38,8 +37,8 @@ and component tests live beside their private implementation modules.
 
 ## Known limits
 
-- On September 23, the Linux AT-SPI probe found the named button but could not
-  focus or invoke it. Freya 0.5.0-rc.7 ignores native `ActionRequested` events.
+- The Linux AT-SPI probe finds the named button but cannot focus or invoke it.
+  Freya 0.5.0-rc.7 ignores native `ActionRequested` events.
   The probe reports `limited`; `--require-actions` fails until focus and
   invocation affect the application. This is a known blocker, not a skipped test.
 - The pinned CodeEditor exposes an unnamed inner TextInput and does not display

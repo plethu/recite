@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{Diagnostic, DiagnosticArgumentValue, load_schema_manifest_str};
+use recite_core::{Diagnostic, DiagnosticArgumentValue, schema::load_schema_manifest_str};
 
 use crate::diagnostic_codes;
 

@@ -1,9 +1,9 @@
 use lsp_types::Hover;
-use recite_compiler::{
+use recite_compiler::authoring::{
     CompletionCandidateDetail, CompletionCandidateKind, HoverInfo, MetadataValueDetail,
     SchemaSummary, SemanticFact,
 };
-use recite_core::SchemaTypeRef;
+use recite_core::schema::SchemaTypeRef;
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 use super::position::hover_response;

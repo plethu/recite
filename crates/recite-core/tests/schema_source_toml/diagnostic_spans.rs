@@ -1,4 +1,4 @@
-use recite_core::load_schema_source_str;
+use recite_core::schema::load_schema_source_str;
 
 use crate::assert_recordable_diagnostics;
 

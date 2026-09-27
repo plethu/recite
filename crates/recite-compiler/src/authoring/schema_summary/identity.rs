@@ -1,6 +1,6 @@
 use recite_core::{
-    ContentFingerprint, ProducerFingerprint, ProducerIdentity, ProducerOrigin, SchemaFingerprint,
-    SchemaProducerFreshness,
+    compiled::{ContentFingerprint, SchemaFingerprint},
+    schema::{ProducerFingerprint, ProducerIdentity, ProducerOrigin, SchemaProducerFreshness},
 };
 
 use super::producer::ProducerActionDescriptor;

@@ -2,8 +2,8 @@ use godot::builtin::{VarArray, VarDictionary, Variant};
 use godot::prelude::ToGodot;
 
 use recite_runtime::{
-    DialoguePlural, DialoguePluralResolutionOutcome, PluralResolutionAttempt,
-    PluralResolutionOutcome,
+    DialoguePlural, DialoguePluralResolutionOutcome,
+    localisation::{PluralResolutionAttempt, PluralResolutionOutcome},
 };
 
 use super::core::set_variant;

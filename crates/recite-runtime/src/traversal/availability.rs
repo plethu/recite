@@ -1,6 +1,9 @@
 use recite_core::{
-    CompiledArgument, CompiledAvailabilityReasonArgValue, CompiledConditionCall,
-    CompiledConditionExpression, ScalarValue,
+    ScalarValue,
+    compiled::{
+        CompiledArgument, CompiledAvailabilityReasonArgValue, CompiledConditionCall,
+        CompiledConditionExpression,
+    },
 };
 
 use crate::DialogueError;

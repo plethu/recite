@@ -1,4 +1,4 @@
-use recite_core::{Diagnostic, DiagnosticCode, EffectMode, SchemaTypeRef, SourceSpan};
+use recite_core::{Diagnostic, DiagnosticCode, SourceSpan, ast::EffectMode, schema::SchemaTypeRef};
 
 use super::{compiler_diagnostic, diagnostic_contract, integer_argument, string_argument};
 

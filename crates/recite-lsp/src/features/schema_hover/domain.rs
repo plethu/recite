@@ -1,5 +1,5 @@
-use recite_compiler::SchemaSummary;
-use recite_core::{MetadataDomainDefinition, MissingMetadataContextPolicy};
+use recite_compiler::authoring::SchemaSummary;
+use recite_core::schema::{MetadataDomainDefinition, MissingMetadataContextPolicy};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 /// Renders a compiler-resolved metadata domain value.  Context selection and
@@ -98,7 +98,7 @@ fn domain_value_text(
     word: &str,
     domain_name: &str,
     context: String,
-    origin: Option<&recite_core::ProducerOrigin>,
+    origin: Option<&recite_core::schema::ProducerOrigin>,
 ) -> String {
     catalog.format_args(
         MsgId::LspHoverDomainValue,

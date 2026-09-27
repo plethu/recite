@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_core::*;
+use recite_core::{ast::*, *};
 
 #[test]
 fn source_ast_represents_dialogue_constructs_with_spans() {

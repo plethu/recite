@@ -3,7 +3,7 @@ use super::{
     catalogue::Catalogue,
     messages::{MsgId, text},
 };
-use recite_core::PoEntryId;
+use recite_core::po::PoEntryId;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum TranslationStatus {

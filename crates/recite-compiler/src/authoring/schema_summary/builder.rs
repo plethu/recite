@@ -1,4 +1,7 @@
-use recite_core::{ContentFingerprint, ProjectSchema, SchemaSource};
+use recite_core::{
+    compiled::ContentFingerprint,
+    schema::{ProjectSchema, SchemaSource},
+};
 
 use super::dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
 use super::evidence::SchemaSummaryEvidence;

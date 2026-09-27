@@ -1,7 +1,12 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
+use recite_compiler::compile::{
+    CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema,
+};
 use recite_core::{
-    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, ProjectSchema, SchemaFingerprint,
-    SourceMapId,
+    ChoiceId,
+    compiled::{
+        CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint, SourceMapId,
+    },
+    schema::ProjectSchema,
 };
 use recite_runtime::{
     DialogueEffectRequest, DialogueError, DialogueEvent, EmptyDialogueContext,

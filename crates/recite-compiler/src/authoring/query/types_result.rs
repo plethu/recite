@@ -1,7 +1,10 @@
 use super::super::super::summary::{FunctionReferenceKind, MetadataValue};
 use super::completion::{CompletionCandidateDetail, CompletionCandidateKind};
 use super::symbols::SymbolLocation;
-use recite_core::{DocumentKey, ProjectionOutputTarget, SchemaTypeRef, SourceSpan};
+use recite_core::{
+    DocumentKey, SourceSpan,
+    schema::{ProjectionOutputTarget, SchemaTypeRef},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]

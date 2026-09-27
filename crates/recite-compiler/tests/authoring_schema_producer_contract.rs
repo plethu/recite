@@ -1,13 +1,13 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     ProducerActionEvidence, ProducerActionOperation, ProducerActionRequest,
     ProducerActionRequestError, ProducerActionResult, ProducerActionStatus,
     ProducerCapabilityStatus, ProducerFailureEvidence, ProducerFingerprintScopes,
     ProducerLaunchSnapshot, ProducerRetryGuidance, SchemaAction, SchemaSummary,
     SchemaSummaryEvidence,
 };
-use recite_core::{
+use recite_core::schema::{
     ProducerFingerprint, ProducerIdentity, ProjectSchema, SpeakerDefinition,
     load_schema_manifest_str,
 };
@@ -130,7 +130,7 @@ fn previous_output_and_current_launch_are_independent_and_success_uses_current_o
     assert!(stale.observed_stale_snapshot().is_some());
     assert!(matches!(
         ProducerActionResult::stale(&request, request.launch_snapshot().clone()),
-        Err(recite_compiler::ProducerActionResultError::StaleWithoutChangedInputs)
+        Err(recite_compiler::authoring::ProducerActionResultError::StaleWithoutChangedInputs)
     ));
 }
 

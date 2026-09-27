@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use recite_compiler::BuildStatusProjection;
+use recite_compiler::authoring::BuildStatusProjection;
 
 use crate::structured::data::diagnostic_records;
 use crate::structured::errors::StructuredError;

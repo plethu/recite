@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use recite_core::CompiledDialogue;
+use recite_core::compiled::CompiledDialogue;
 
 use crate::dialogue_locale::DialogueTraversalPreview;
 use crate::error::CliError;

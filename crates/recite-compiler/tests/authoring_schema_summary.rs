@@ -2,13 +2,16 @@
 
 use std::collections::BTreeSet;
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     SchemaAction, SchemaCapabilityUnavailableReason, SchemaFreshness,
     SchemaFreshnessUnavailableReason, SchemaOwnership, SchemaSummary,
 };
 use recite_core::{
-    ConditionReturnType, EffectMode, MetadataContextSelector, MissingMetadataContextPolicy,
-    SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str, load_schema_source_str,
+    ast::EffectMode,
+    schema::{
+        ConditionReturnType, MetadataContextSelector, MissingMetadataContextPolicy,
+        SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str, load_schema_source_str,
+    },
 };
 
 const STANDALONE: &str = include_str!("../../../fixtures/schema/valid/standalone.toml");
@@ -198,7 +201,7 @@ fn generated_fixture_is_typed_producer_evidence_and_read_only() {
 
 #[test]
 fn missing_producer_is_explicitly_unavailable_and_malformed_schema_stays_core_owned() {
-    let summary = SchemaSummary::from_schema(&recite_core::ProjectSchema::empty_v1());
+    let summary = SchemaSummary::from_schema(&recite_core::schema::ProjectSchema::empty_v1());
     assert!(matches!(summary.ownership(), SchemaOwnership::Unavailable));
     assert!(matches!(
         summary.capability().actions(),

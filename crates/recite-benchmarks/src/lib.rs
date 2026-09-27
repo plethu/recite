@@ -63,9 +63,9 @@ pub enum BenchmarkError {
     #[error(transparent)]
     Core(#[from] recite_core::CoreValueError),
     #[error(transparent)]
-    CompiledValue(#[from] recite_core::CompiledValueError),
+    CompiledValue(#[from] recite_core::compiled::CompiledValueError),
     #[error(transparent)]
-    Compile(#[from] recite_compiler::CompileError),
+    Compile(#[from] recite_compiler::compile::CompileError),
     #[error(transparent)]
     Runtime(#[from] recite_runtime::DialogueError),
     #[error(transparent)]

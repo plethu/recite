@@ -1,4 +1,4 @@
-use recite_core::TableRange;
+use recite_core::compiled::TableRange;
 
 pub(in crate::wire) fn range_to_u32<I: Copy>(
     range: TableRange<I>,

@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use recite_compiler::{
+use recite_compiler::authoring::{
     AuthoringKernel, AuthoringRequest, QueryClass, SavedDocument, SnapshotGeneration,
     SymbolQueryOptions,
 };
@@ -10,7 +10,7 @@ fn key() -> DocumentKey {
     DocumentKey::new("recovery.recite").expect("valid key")
 }
 
-fn recovery_for(source: &str) -> recite_compiler::ValidationParticipation {
+fn recovery_for(source: &str) -> recite_compiler::validation::ValidationParticipation {
     let mut kernel = AuthoringKernel::new();
     kernel
         .apply(AuthoringRequest::new(
@@ -217,7 +217,7 @@ fn symbol_readiness_reports_the_actual_incomplete_classes() {
         assert!(
             result
                 .unavailable_reasons()
-                .contains(&recite_compiler::QueryUnavailableReason::Incomplete(class))
+                .contains(&recite_compiler::authoring::QueryUnavailableReason::Incomplete(class))
         );
         let project_result = kernel
             .snapshot()
@@ -225,7 +225,7 @@ fn symbol_readiness_reports_the_actual_incomplete_classes() {
         assert!(
             project_result
                 .unavailable_reasons()
-                .contains(&recite_compiler::QueryUnavailableReason::Incomplete(class))
+                .contains(&recite_compiler::authoring::QueryUnavailableReason::Incomplete(class))
         );
     }
 
@@ -240,7 +240,9 @@ fn symbol_readiness_reports_the_actual_incomplete_classes() {
     let options = SymbolQueryOptions::new(false);
     let local = kernel.snapshot().symbols(&key(), options);
     let project = kernel.snapshot().project_symbols(options);
-    let reason = recite_compiler::QueryUnavailableReason::Incomplete(QueryClass::BlockDefinitions);
+    let reason = recite_compiler::authoring::QueryUnavailableReason::Incomplete(
+        QueryClass::BlockDefinitions,
+    );
     assert!(!local.unavailable_reasons().contains(&reason));
     assert!(!project.unavailable_reasons().contains(&reason));
 }

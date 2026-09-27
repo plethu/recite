@@ -1,4 +1,4 @@
-use recite_runtime::{DialogueEffectMode, encode_session_messagepack};
+use recite_runtime::{DialogueEffectMode, snapshot::encode_session_messagepack};
 
 use crate::error::CliError;
 

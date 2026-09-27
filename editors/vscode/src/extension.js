@@ -5,10 +5,9 @@ let activeController;
 
 export async function activateWithVscode(vscode, context) {
   const userInterface = createUserInterface(vscode);
-  const diagnostics = vscode.languages.createDiagnosticCollection("recite");
-  const controller = new ExtensionController(vscode, userInterface, diagnostics);
+  const controller = new ExtensionController(vscode, userInterface);
   activeController = controller;
-  context.subscriptions.push(userInterface, diagnostics, controller);
+  context.subscriptions.push(userInterface, controller);
   const outcome = await controller.start().catch((error) => controller.handleUnexpectedStartFailure(error));
   if (outcome) controller.handleStartOutcome(outcome);
 }

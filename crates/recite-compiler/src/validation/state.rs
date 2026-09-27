@@ -1,6 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_core::{Block, Diagnostic, ProjectSchema, SourceFile, SourceSpan};
+use recite_core::{
+    Diagnostic, SourceSpan,
+    ast::{Block, SourceFile},
+    schema::ProjectSchema,
+};
 
 use super::ids::collect_line_ids;
 use super::incremental::ValidationPhase;

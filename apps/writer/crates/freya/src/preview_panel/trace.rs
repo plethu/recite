@@ -5,8 +5,12 @@ use crate::{
 };
 use freya::prelude::*;
 use recite_runtime::{
-    ConditionValue, LocaleLookupOutcome, PluralResolutionOutcome, PreviewConditionArgument,
-    PreviewConditionQuery, PreviewConditionResult, PreviewEvent, PreviewTrace,
+    ConditionValue,
+    localisation::{LocaleLookupOutcome, PluralResolutionOutcome},
+    preview::{
+        PreviewConditionArgument, PreviewConditionQuery, PreviewConditionResult, PreviewEvent,
+        PreviewTrace,
+    },
 };
 
 pub(super) fn render(trace: &PreviewTrace) -> Element {

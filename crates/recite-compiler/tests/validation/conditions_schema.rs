@@ -1,4 +1,4 @@
-use recite_core::{ProjectSchema, load_schema_manifest_str};
+use recite_core::schema::{ProjectSchema, load_schema_manifest_str};
 
 use super::*;
 
@@ -14,7 +14,7 @@ fn generated_manifest_schema() -> ProjectSchema {
 #[test]
 fn validates_choice_requires_and_reason_against_generated_manifest_schema() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -24,7 +24,13 @@ fn validates_choice_requires_and_reason_against_generated_manifest_schema() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert!(report.is_ok(), "valid availability should pass: {report:?}");
 }
@@ -32,7 +38,7 @@ fn validates_choice_requires_and_reason_against_generated_manifest_schema() {
 #[test]
 fn reports_unknown_condition_function_on_function_span() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -42,7 +48,13 @@ fn reports_unknown_condition_function_on_function_span() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(&report, ["RECITE_VALIDATE034"]);
     assert_spans(&report, [(2, 43)]);
@@ -51,7 +63,7 @@ fn reports_unknown_condition_function_on_function_span() {
 #[test]
 fn reports_condition_arity_type_and_value_errors_on_argument_spans() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -67,7 +79,13 @@ fn reports_condition_arity_type_and_value_errors_on_argument_spans() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,
@@ -83,7 +101,7 @@ fn reports_condition_arity_type_and_value_errors_on_argument_spans() {
 #[test]
 fn reports_non_bool_conditions_for_if_and_requires_and_bool_scrutinee_for_match() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -100,7 +118,13 @@ fn reports_non_bool_conditions_for_if_and_requires_and_bool_scrutinee_for_match(
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,
@@ -116,7 +140,7 @@ fn reports_non_bool_conditions_for_if_and_requires_and_bool_scrutinee_for_match(
 #[test]
 fn reports_availability_reason_override_errors() {
     let schema = generated_manifest_schema();
-    let files = vec![lower(
+    let files = [lower(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -135,7 +159,13 @@ fn reports_availability_reason_override_errors() {
         ),
     )];
 
-    let report = validate_source_files_with_schema(&files, &schema);
+    let report = validate_inputs(
+        files
+            .iter()
+            .map(recite_compiler::validation::ValidationInput::all_complete),
+        Some(&schema),
+        recite_compiler::validation::ProjectCompleteness::Complete,
+    );
 
     assert_codes(
         &report,

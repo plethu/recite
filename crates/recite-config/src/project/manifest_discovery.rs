@@ -28,7 +28,7 @@ pub(in crate::project) fn discover_source(
     manifest_path: PathBuf,
     source_text: &str,
 ) -> Result<ProjectDiscoveryReport, ProjectDiscoveryError> {
-    let loaded = recite_core::ProjectManifest::load_str_with_spans(
+    let loaded = recite_core::project::ProjectManifest::load_str_with_spans(
         manifest_path.to_string_lossy().into_owned(),
         source_text,
     );

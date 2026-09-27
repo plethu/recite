@@ -1,6 +1,6 @@
-use recite_core::PoEntry;
+use recite_core::po::PoEntry;
 
-use crate::PotEntry;
+use recite_core::po::PotEntry;
 
 /// The expected identity of a localisable gettext entry.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

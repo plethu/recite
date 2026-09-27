@@ -1,5 +1,5 @@
 use super::{AuthoringError, AuthoringKernel, SnapshotGeneration};
-use crate::{AuthoringRequest, SavedDocument};
+use crate::{authoring::AuthoringRequest, authoring::SavedDocument};
 use recite_core::DocumentKey;
 
 #[test]

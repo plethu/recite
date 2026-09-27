@@ -1,6 +1,6 @@
 //! Explicit host inputs are consumed at restart and remain fixed for the trial.
-use recite_compiler::{CatalogInput, CatalogResolutionPolicy};
-use recite_runtime::{InterpolationValues, PreviewOptions};
+use recite_compiler::authoring::{CatalogInput, CatalogResolutionPolicy};
+use recite_runtime::{localisation::InterpolationValues, preview::PreviewOptions};
 
 #[derive(Clone)]
 pub struct PreviewSetup {
@@ -32,7 +32,7 @@ impl PreviewSetup {
 
 impl crate::Document {
     /// Caller-owned variables used by interpolation across the current project snapshot.
-    pub fn preview_bindings(&self) -> Vec<recite_core::InterpolationBinding> {
+    pub fn preview_bindings(&self) -> Vec<recite_core::ast::InterpolationBinding> {
         let mut bindings = std::collections::BTreeMap::new();
         for document in self.kernel().snapshot().documents() {
             let parsed = recite_parser::parse(document.key().as_str(), document.source_text())
@@ -41,8 +41,10 @@ impl crate::Document {
                 .source_file
                 .visit_statements_depth_first(&mut |statement| {
                     let values = match statement {
-                        recite_core::Statement::Line(line) => &line.interpolation_bindings,
-                        recite_core::Statement::Choice(choice) => &choice.interpolation_bindings,
+                        recite_core::ast::Statement::Line(line) => &line.interpolation_bindings,
+                        recite_core::ast::Statement::Choice(choice) => {
+                            &choice.interpolation_bindings
+                        }
                         _ => return,
                     };
                     for binding in values {

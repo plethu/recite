@@ -4,9 +4,14 @@ mod preview_support;
 use preview_support::asset;
 use recite_core::{LocaleId, ScalarValue};
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, DialogueError, InterpolationValues, LocaleError,
-    LocaleProvider, PluralResolution, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions,
-    PreviewSession, PreviewStatus, TextDomain,
+    ConditionValue, DialogueError,
+    localisation::{
+        InterpolationValues, LocaleError, LocaleProvider, PluralResolution, TextDomain,
+    },
+    preview::{
+        ConditionAnswer, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
+        PreviewStatus,
+    },
 };
 
 #[test]
@@ -32,7 +37,7 @@ fn encoded_snapshot_restores_options_block_and_condition_counter() {
         .map(|byte| format!("{byte:02x}"))
         .collect::<String>();
     assert_eq!(encoded_hex, GOLDEN_HEX);
-    let decoded = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let decoded = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut restored = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
     restored.restore(decoded).expect("restore");
     assert_eq!(
@@ -41,7 +46,7 @@ fn encoded_snapshot_restores_options_block_and_condition_counter() {
     );
     assert_eq!(restored.trace().variant(), Some("formal"));
     let restarted = restored.dispatch(
-        recite_runtime::PreviewCommand::Restart,
+        recite_runtime::preview::PreviewCommand::Restart,
         PreviewInputs::new(),
     );
     assert!(matches!(
@@ -90,16 +95,16 @@ fn preview_snapshot_codec_rejects_trailing_unknown_and_unsupported_data() {
     let mut trailing = encoded.clone();
     trailing.push(0);
     assert!(matches!(
-        recite_runtime::PreviewSnapshot::decode(&trailing),
-        Err(recite_runtime::PreviewError::SnapshotDecodeFailed { .. })
+        recite_runtime::preview::PreviewSnapshot::decode(&trailing),
+        Err(recite_runtime::preview::PreviewError::SnapshotDecodeFailed { .. })
     ));
 
     let mut unknown = encoded.clone();
     unknown[0] = 0x88;
     unknown.extend_from_slice(&[0xa7, b'u', b'n', b'k', b'n', b'o', b'w', b'n', 0xc0]);
     assert!(matches!(
-        recite_runtime::PreviewSnapshot::decode(&unknown),
-        Err(recite_runtime::PreviewError::SnapshotDecodeFailed { .. })
+        recite_runtime::preview::PreviewSnapshot::decode(&unknown),
+        Err(recite_runtime::preview::PreviewError::SnapshotDecodeFailed { .. })
     ));
 
     let marker = [0xa7, b'v', b'e', b'r', b's', b'i', b'o', b'n', 1];
@@ -112,10 +117,12 @@ fn preview_snapshot_codec_rejects_trailing_unknown_and_unsupported_data() {
         - 1;
     versioned[marker_start] = 2;
     assert!(matches!(
-        recite_runtime::PreviewSnapshot::decode(&versioned),
-        Err(recite_runtime::PreviewError::UnsupportedSnapshotFormat {
-            snapshot_format_version: 2
-        })
+        recite_runtime::preview::PreviewSnapshot::decode(&versioned),
+        Err(
+            recite_runtime::preview::PreviewError::UnsupportedSnapshotFormat {
+                snapshot_format_version: 2
+            }
+        )
     ));
 }
 
@@ -137,7 +144,7 @@ fn plural_prompt_snapshot_restores_selected_source_projection() {
     let state = source.state().clone();
     let snapshot = source.snapshot().expect("snapshot");
     let encoded = snapshot.encode().expect("encode");
-    let decoded = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let decoded = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut restored = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
     restored.restore(decoded).expect("restore");
     assert_eq!(restored.state(), &state);
@@ -167,9 +174,10 @@ fn rich_snapshot_golden_covers_prompt_effect_restart_and_plural_provenance() {
         event,
         PreviewEvent::Prompt(prompt) if prompt.line().is_some_and(|line| line.plural.is_some())
     )));
-    let mut replacement = asset.clone();
+    let mut replacement = asset.clone().into_payload();
     replacement.lines[0].source_text.push('!');
     replacement.lines[0].authored_source_text.push('!');
+    let replacement = recite_core::compiled::CompiledDialogue::new(replacement);
     preview.assess_asset(&replacement).expect("assess");
     let encoded = preview
         .snapshot()
@@ -221,7 +229,7 @@ impl LocaleProvider for LegacyTranslatedProvider {
     }
 }
 
-fn translated_plural_asset() -> recite_core::CompiledDialogue {
+fn translated_plural_asset() -> recite_core::compiled::CompiledDialogue {
     asset(concat!(
         ":: start default\n",
         "> prompt@12345678901234567890 bind=(count:int=$count)\n",
@@ -342,7 +350,7 @@ fn translated_plural_arm_beyond_source_pair_restores() {
         .expect("snapshot")
         .encode()
         .expect("encode");
-    let snapshot = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let snapshot = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut receiver = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
     receiver.restore(snapshot).expect("three-arm restore");
 }
@@ -390,11 +398,11 @@ fn translated_plural_arm_out_of_range_is_rejected() {
         + matched_marker.len();
     assert_eq!(encoded[matched_start], 2);
     encoded[matched_start] = 3;
-    let snapshot = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let snapshot = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut receiver = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
     assert!(matches!(
         receiver.restore(snapshot),
-        Err(recite_runtime::PreviewError::SnapshotStateMismatch)
+        Err(recite_runtime::preview::PreviewError::SnapshotStateMismatch)
     ));
 }
 
@@ -427,11 +435,11 @@ fn source_fallback_plural_arm_indices_are_bounded() {
         assert_eq!(encoded[start], 1);
         encoded[start] = 2;
     }
-    let snapshot = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let snapshot = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut receiver = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
     assert!(matches!(
         receiver.restore(snapshot),
-        Err(recite_runtime::PreviewError::SnapshotStateMismatch)
+        Err(recite_runtime::preview::PreviewError::SnapshotStateMismatch)
     ));
 }
 
@@ -470,12 +478,12 @@ fn translated_plural_arm_count_must_be_positive_and_bound_selected_arm() {
             + marker.len();
         assert_eq!(encoded[start], 3);
         encoded[start] = replacement;
-        let snapshot = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+        let snapshot = recite_runtime::preview::PreviewSnapshot::decode(&encoded).expect("decode");
         let mut receiver =
             PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
         assert!(matches!(
             receiver.restore(snapshot),
-            Err(recite_runtime::PreviewError::SnapshotStateMismatch)
+            Err(recite_runtime::preview::PreviewError::SnapshotStateMismatch)
         ));
     }
 }

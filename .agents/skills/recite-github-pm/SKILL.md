@@ -123,8 +123,8 @@ Use the milestone tracking issue in the PR title. The final integration PR may
 contain multiple valid `[REC-N]` issue codes; its title code identifies the
 milestone tracking issue, and its body must explicitly close that issue with a
 `Closes`, `Fixes`, or `Resolves #N` token. The protected GitHub checks and review
-gate apply to this PR. After it merges, verify live GitHub state and refresh
-`docs/roadmap.md` on `main`.
+gate apply to this PR. After it merges, verify linked issue and milestone state
+on GitHub.
 
 ## Review and protected merge
 
@@ -156,6 +156,4 @@ see the [official Codex GitHub review documentation](https://learn.chatgpt.com/d
 For review details, read `references/github-merge-details.md`. Do not parse
 custom review comments, bot usernames, or marker blocks.
 
-After merging, verify the linked issue/PR and refresh `docs/roadmap.md` against
-live GitHub state. If the merge closed, unblocked, or superseded a roadmap item,
-update the roadmap on `main` and complete its own policy-checked follow-up.
+After merging, verify the linked issue, PR, and milestone state on GitHub.

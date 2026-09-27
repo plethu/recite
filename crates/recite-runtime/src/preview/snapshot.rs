@@ -6,7 +6,7 @@ use super::model::{
     PreviewSnapshot, PreviewStatus,
 };
 use super::snapshot_validation::state_matches_session;
-use crate::{restore_session, snapshot_session};
+use crate::{snapshot::restore_session, snapshot::snapshot_session};
 
 impl<'asset> PreviewSession<'asset> {
     /// Captures stable runtime state. Trace and transcript are diagnostic
