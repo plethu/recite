@@ -1,7 +1,7 @@
 use recite_core::LocaleId;
 use recite_runtime::localisation::{
-    LocaleError, LocaleProvider, PluralResolution, PluralResolutionAttempt,
-    PluralResolutionOutcome, TextDomain,
+    LocaleError, LocaleLookupAttempt, LocaleLookupOutcome, LocaleLookupProvenance, LocaleProvider,
+    PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
 };
 
 use super::{CatalogKey, ReciteDialogueCatalog, contexts, gettext_context, valid_locale};
@@ -15,18 +15,45 @@ impl LocaleProvider for ReciteDialogueCatalog {
         locale: &LocaleId,
         variant: Option<&str>,
     ) -> Result<Option<String>, LocaleError> {
+        self.lookup_with_provenance(id, source_text, domain, locale, variant)
+            .map(|resolved| resolved.template)
+    }
+
+    fn lookup_with_provenance(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Result<LocaleLookupProvenance, LocaleError> {
         let context = gettext_context(id, domain);
         let fallbacks = locale_fallbacks(locale)?;
+        let mut attempts = Vec::new();
         for candidate_context in contexts(&context, variant) {
             for candidate_locale in &fallbacks {
                 if let Some(text) =
                     self.lookup_context_for(candidate_locale, &candidate_context, source_text)
                 {
-                    return Ok(Some(text));
+                    attempts.push(LocaleLookupAttempt::new(
+                        candidate_locale,
+                        &candidate_context,
+                        id,
+                        LocaleLookupOutcome::Matched,
+                    ));
+                    return Ok(LocaleLookupProvenance::new(Some(text))
+                        .with_match(candidate_locale, candidate_context, id)
+                        .with_attempts(attempts));
                 }
+                attempts.push(LocaleLookupAttempt::new(
+                    candidate_locale,
+                    &candidate_context,
+                    id,
+                    LocaleLookupOutcome::MissingEntry,
+                ));
             }
         }
-        Ok(None)
+        Ok(LocaleLookupProvenance::new(None).with_attempts(attempts))
     }
 
     fn resolve_plural(

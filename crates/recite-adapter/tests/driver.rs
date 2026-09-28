@@ -1,7 +1,10 @@
-use recite_adapter::{AdapterErrorKind, DriverError, LoadedDialogue, SessionDriver, StartRequest};
+use recite_adapter::{
+    AdapterErrorKind, DriverError, LoadedDialogue, ReciteDialogueCatalog, SessionDriver,
+    StartRequest,
+};
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    ChoiceId,
+    ChoiceId, LocaleId,
     compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
 };
 use recite_runtime::{
@@ -31,6 +34,26 @@ fn request(asset: &LoadedDialogue) -> StartRequest<'_> {
         block_id: None,
         options: DialogueSessionOptions::new(),
     }
+}
+
+#[test]
+fn missing_catalogue_entry_delivers_authored_source_text() -> Result<(), Box<dyn std::error::Error>>
+{
+    let asset =
+        asset(":: start default\n> intro@11111111111111111111\n  Authored source.\n-> END\n")?;
+    let catalogue = ReciteDialogueCatalog::new();
+    let mut driver = SessionDriver::new();
+    let events = driver.start(
+        StartRequest {
+            asset: &asset,
+            block_id: None,
+            options: DialogueSessionOptions::new().with_locale(LocaleId::new("fr-CA")?),
+        },
+        &EmptyDialogueContext,
+        LocaleResolution::new().with_provider(&catalogue),
+    )?;
+    assert!(matches!(&events[0], DialogueEvent::Line(line) if line.text == "Authored source."));
+    Ok(())
 }
 
 #[test]
