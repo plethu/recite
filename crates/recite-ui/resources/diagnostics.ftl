@@ -911,9 +911,9 @@ diagnostic-validate-049-meaning = A PO translation omits an inline markup tag re
 diagnostic-validate-049-cause-001 = Translated markup must preserve every source tag occurrence, even when prose is reordered.
 diagnostic-validate-049-remediation-001 = Restore the missing tag occurrence in the translated value.
 
-diagnostic-import-001 = Invalid import input: { $detail }
-diagnostic-import-002 = Unsupported import construct: { $detail }
-diagnostic-import-003 = Import conversion needs review: { $detail }
+diagnostic-import-001 = Invalid import input: {$detail}
+diagnostic-import-002 = Unsupported import construct: {$detail}
+diagnostic-import-003 = Import conversion needs review: {$detail}
 diagnostic-import-001-meaning = Input or mapping errors prevent a usable migration result.
 diagnostic-import-001-cause-001 = The input is malformed, mapped fields are missing or ambiguous, or no supported blocks remain.
 diagnostic-import-001-remediation-001 = Correct the input or field mapping and inspect the report again.

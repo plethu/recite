@@ -244,5 +244,8 @@ export default Object.freeze({
   "diagnostic-schema-004-unknown-projection-reason": {"template":"projector '{$projector}' references unknown availability reason '{$reason}'","arguments":[{"name":"projector","type":"string"},{"name":"reason","type":"string"}]},
   "diagnostic-schema-001-projection-selector-target": {"template":"presentation projector uses unsupported metadata target '{$target}'","arguments":[{"name":"target","type":"string"}]},
   "diagnostic-schema-004-unknown-metadata-key": {"template":"projector '{$projector}' references unknown metadata key '{$key}'","arguments":[{"name":"key","type":"string"},{"name":"projector","type":"string"}]},
-  "diagnostic-schema-001-projection-metadata-target": {"template":"projector '{$projector}' references metadata key '{$key}' on unsupported target '{$target}'","arguments":[{"name":"key","type":"string"},{"name":"projector","type":"string"},{"name":"target","type":"string"}]}
+  "diagnostic-schema-001-projection-metadata-target": {"template":"projector '{$projector}' references metadata key '{$key}' on unsupported target '{$target}'","arguments":[{"name":"key","type":"string"},{"name":"projector","type":"string"},{"name":"target","type":"string"}]},
+  "diagnostic-import-001": {"template":"Invalid import input: {$detail}","arguments":[{"name":"detail","type":"string"}]},
+  "diagnostic-import-002": {"template":"Unsupported import construct: {$detail}","arguments":[{"name":"detail","type":"string"}]},
+  "diagnostic-import-003": {"template":"Import conversion needs review: {$detail}","arguments":[{"name":"detail","type":"string"}]}
 });
