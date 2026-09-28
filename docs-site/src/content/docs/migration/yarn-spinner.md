@@ -1,90 +1,41 @@
 ---
-title: Yarn Spinner
-description: Migration notes for Yarn Spinner projects.
+title: Yarn Spinner imports
+description: Inspect Yarn source and convert plain nodes, line IDs and static jumps.
 ---
 
-Yarn Spinner scripts are organized into nodes containing lines, options, commands, variables, flow control, tags, and metadata. Recite maps well from explicit nodes and options, but it is stricter about IDs, host effects, and schema validation.
+```sh
+recite import fixtures/import/nodes.yarn --from yarn
+```
 
-Terminology checked against current official Yarn Spinner docs for [nodes and lines](https://docs.yarnspinner.dev/write-yarn-scripts/scripting-fundamentals/lines-nodes-and-options), [flow control](https://docs.yarnspinner.dev/write-yarn-scripts/scripting-fundamentals/flow-control), [commands](https://docs.yarnspinner.dev/write-yarn-scripts/scripting-fundamentals/commands), [tags and metadata](https://docs.yarnspinner.dev/write-yarn-scripts/advanced-scripting/tags-metadata), [line groups](https://docs.yarnspinner.dev/write-yarn-scripts/scripting-fundamentals/line-groups), [node groups](https://docs.yarnspinner.dev/write-yarn-scripts/advanced-scripting/node-groups), [saliency](https://docs.yarnspinner.dev/write-yarn-scripts/advanced-scripting/saliency), [once](https://docs.yarnspinner.dev/write-yarn-scripts/scripting-fundamentals/once), and [functions](https://docs.yarnspinner.dev/write-yarn-scripts/scripting-fundamentals/functions).
-
-## Concept map
-
-| Yarn Spinner | Recite |
-| --- | --- |
-| Node title | Block ID |
-| Line | Line body with stable line ID |
-| Character prefix | Structured `speaker=` field |
-| Option | Choice with stable choice ID |
-| Jump or detour target | Target block |
-| Command | Typed effect request |
-| Variable condition | Pure condition call |
-| Tags and line metadata | Ordered metadata |
-| Line group or node group selection | Manual design or host selection policy |
-
-## Clean migrations
-
-- Node titles map to blocks.
-- Basic lines and options map to lines and choices.
-- Tags such as line IDs, speaker hints, portrait hints, and barks can become metadata.
-- Commands that mean "tell the game to do something" can become effects.
-
-## Lossy migrations
-
-- Yarn variables and expressions do not automatically become Recite state.
-- Line groups, node groups, saliency strategies, detours, `once`, and visit-tracking behavior need explicit design.
-- Built-in command timing may differ after conversion.
-
-## Manual work
-
-- Decide whether Yarn line tags remain metadata, become Recite IDs, or are preserved as source provenance.
-- Replace custom commands with effect declarations.
-- Replace variable reads with schema-declared condition functions.
-- Review every branch that depends on `once`, `visited()`, visit counts, or saliency selection.
-
-## Not imported or replaced
-
-- Yarn Spinner runtime, variable storage, Dialogue Runner setup, Unity/Godot presenters, command registration code, and editor extensions.
-- Automatic compatibility for saliency, line groups, node groups, `once`, or visit-tracking logic.
-
-## Before
+The checked subset accepts `title: Name`, `---`, plain body lines and a closing
+`===`. A body may finish with a static `<<jump Target>>`. An identifier followed
+by `: ` becomes the speaker. A trailing `#line:ID` is retained or mapped according
+to the [import ID rules](/migration/importer-boundaries/).
 
 ```text
-title: Dock
+title: Start
 ---
-HarborMaster: Boat leaves at dawn. #mood:busy
--> Ask about cargo
-    <<log_cargo_question>>
-    <<jump Cargo>>
+Operator: The station is quiet. #line:11111111111111111111
+<<jump End>>
 ===
 ```
 
-## After
+Write the node delimiters and body at the start of each line. The checked fixture contains a
+complete two-node document with the target present. Plain `//` comment lines are
+ignored.
 
-```text
-:: dock default
-> dock_001@e2e84156252e1c9c83bd speaker=harbor_master mood=busy
-  Boat leaves at dawn.
-? dock_ask_cargo@345edf5b882f580e0b9f
-  Ask about cargo.
-  -> cargo
+Options, indented bodies, expressions, commands other than static jumps, general
+tags, custom headers, saliency, detours and once/visit behavior require manual
+migration. The reader holds back the affected node and reports its lines; it
+does not remove a conditional command and import its body unconditionally.
+Incomplete nodes are invalid. A jump into a held-back or missing node fails
+native validation.
 
-:: cargo
-! immediate log_cargo_question()
-> cargo_001@5ced604f5a4aaf151e50 speaker=harbor_master
-  Crates first, passengers second.
--> END
-```
+Map game commands to schema-checked effects and state reads to conditions after
+review. Yarn variable storage, presenters, localisation databases and save data
+are not imported. The source reader does not execute Yarn commands.
 
-Next workflow:
-
-```bash
-recite validate dialogue/dock.recite
-recite compile --output build/dialogue.recitec dialogue/dock.recite
-```
-
-## Related docs
-
-- [Importer Boundaries](/migration/importer-boundaries/)
-- [Source Format](/reference/source-format/)
-- [Production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)
-- [CLI](/reference/cli/)
+References: Yarn Spinner's [nodes and lines](https://docs.yarnspinner.dev/2.2/getting-started/writing-in-yarn/lines-nodes-and-options)
+and [tags and metadata](https://docs.yarnspinner.dev/write-yarn-scripts/advanced-scripting/tags-metadata).
+These references explain syntax; the supported input contract is the bounded
+fixture above.

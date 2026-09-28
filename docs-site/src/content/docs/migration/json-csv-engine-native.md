@@ -1,93 +1,40 @@
 ---
-title: JSON, CSV, and Engine-Native Formats
-description: Migration notes for custom dialogue data, spreadsheets, and engine-specific resources.
+title: JSON and CSV imports
+description: Map explicit fields from flat records to validated Recite source.
 ---
 
-Custom formats usually encode project decisions rather than a standard dialogue language. Treat the migration as data modeling first: identify text, speakers, choices, branch targets, conditions, effects, metadata, and localisation IDs before writing conversion code.
-
-This page covers internal JSON, CSV, spreadsheets, ScriptableObjects, Godot resources, Unreal data assets, and similar engine-native content. Use official engine or tool docs for the source format parser, then keep the Recite mapping explicit and project-owned.
-
-## Concept map
-
-| Custom field | Recite |
-| --- | --- |
-| Row ID, node ID, asset name | Block ID, line ID, choice ID, or source metadata |
-| Text column | Line or choice body |
-| Speaker column | `speaker=` field |
-| Portrait, emotion, camera, audio, category | Metadata or typed effect |
-| Next node column | Target |
-| Condition expression column | Pure condition function |
-| Action column | Typed effect request |
-| Localisation key | Stable Recite ID or source metadata |
-
-## Clean migrations
-
-- Tables with one row per line map cleanly if IDs and branch targets are stable.
-- JSON nodes with explicit choices and targets map cleanly to blocks and choices.
-- Engine resource references can be preserved as metadata when they are descriptive IDs.
-- Localisation keys can become Recite IDs if they already follow a stable identity policy.
-
-## Lossy migrations
-
-- Free-form script snippets need manual review.
-- Columns with overloaded meanings should be split into metadata, conditions, and effects.
-- Engine object references may not be portable outside the source engine.
-- Spreadsheet formulas, comments, colors, and hidden columns are easy to miss.
-
-## Manual work
-
-- Define a source schema before conversion.
-- Reject or report rows with missing IDs, duplicate IDs, dangling targets, or ambiguous action fields.
-- Decide which columns are canonical Recite data and which are source provenance metadata.
-- Write fixture tests for at least one simple branch, one conditional choice, one effect, and one localisation row.
-
-## Not imported or replaced
-
-- Engine scenes, editor-only assets, spreadsheet formatting, custom runtime code, object references, and save data.
-- Automatically inferred behavior from column names.
-- Compatibility with every historical version of a project-specific data format.
-
-## Before
+The JSON reader accepts an array of flat objects. The CSV reader accepts a header
+row followed by records. Both require a JSON mapping file; names are exact and
+case-sensitive. This mapping matches the checked examples:
 
 ```json
-{
-  "id": "market_01",
-  "speaker": "seller",
-  "text": "Fresh pears.",
-  "choices": [
-    { "id": "buy", "text": "Buy one", "next": "market_buy", "action": "coins:-1" }
-  ]
-}
+{"block":"node","text":"text","id":"id","speaker":"speaker","target":"next"}
 ```
 
-## After
+Only `block` and `text` mappings are required. Omit optional mappings when your
+input lacks those fields. Every configured field must occur in each record and
+contain a string. Empty optional values mean no ID, speaker or jump.
 
-```text
-:: market_01 default
-> market_001@b78d4fb08772db37e008 speaker=seller source_id=market_01
-  Fresh pears.
-? market_buy_one@f3fef3a9609f2191ce0e
-  Buy one.
-  -> market_buy
-
-:: market_buy
-! blocking spend_currency(coins, 1)
-! blocking grant_item(pear)
-> market_002@4ccc3fb8501a3fe3017d speaker=seller
-  Here you go.
--> END
+```sh
+recite import fixtures/import/lines.json --from json --mapping fixtures/import/mapping.json
+recite import fixtures/import/lines.csv --from csv --mapping fixtures/import/mapping.json
 ```
 
-Next workflow:
+Each row/object emits a plain dialogue line. Consecutive records with the same
+block belong together. A nonempty target ends that block with a static jump;
+`END` means termination. A block cannot be reopened later in the input. Speakers
+must be native identifiers. Native validation catches duplicate anchors and
+missing targets; `--schema` also checks the game's declarations.
 
-```bash
-recite validate dialogue/market.recite
-recite compile --output build/dialogue.recitec dialogue/market.recite
-```
+Unmapped fields are reported, including their JSON Pointer or CSV column/header.
+Repeated JSON keys, repeated CSV headers, multiple mappings to one field,
+missing fields and non-string mapped values are rejected. Embedded scripts,
+nested choice arrays, conditions, effects, metadata, multiline text, markup and
+interpolation need manual migration. Quoted CSV commas are supported by the CSV
+parser. The report distinguishes record locations from physical text lines.
 
-## Related docs
-
-- [Importer Boundaries](/migration/importer-boundaries/)
-- [Production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)
-- [CLI](/reference/cli/)
-- [First Scene](/getting-started/first-scene/)
+Use the [inspection and write workflow](/migration/importer-boundaries/) to review
+a partial result. Neither reader infers semantics from familiar-looking names.
+Engine-native resources, spreadsheet formatting/formulas, scenes and runtime
+save files are outside this input shape. Export a bounded table explicitly or
+migrate those parts manually.

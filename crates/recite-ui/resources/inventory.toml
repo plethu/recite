@@ -349,6 +349,8 @@ resource_ids = [
 "cli-help-command-export-schema",
 "cli-help-command-explain",
 "cli-help-command-watch",
+"cli-import-summary",
+"cli-help-command-import",
 "cli-help-command-run",
 "cli-help-command-trace",
 "cli-help-command-play",

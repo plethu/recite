@@ -1,9 +1,11 @@
 format_version = 1
 
 [project]
-name = "realistic-v1-pack"
+content_set = "realistic-v1-pack"
 schema = "schema/realistic.schema.json"
 
-[locales]
-default = "en-US"
-catalogs = ["locales/en-US.po"]
+[[scenes]]
+id = "workflow"
+asset = "build/dialogue.recitec"
+block = "arrival"
+participants = ["narrator", "operator", "lacuna"]

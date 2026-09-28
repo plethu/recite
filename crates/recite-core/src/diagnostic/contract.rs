@@ -6,6 +6,7 @@ use crate::diagnostic_presentation_record::DiagnosticPresentation;
 mod compiler;
 mod config;
 mod freshness;
+mod import;
 mod parser;
 mod po;
 mod project;

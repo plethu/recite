@@ -910,3 +910,7 @@ diagnostic-validate-048-remediation-001 = Remove the introduced tag or add the t
 diagnostic-validate-049-meaning = A PO translation omits an inline markup tag required by the source value.
 diagnostic-validate-049-cause-001 = Translated markup must preserve every source tag occurrence, even when prose is reordered.
 diagnostic-validate-049-remediation-001 = Restore the missing tag occurrence in the translated value.
+
+diagnostic-import-001 = Invalid import input: { $detail }
+diagnostic-import-002 = Unsupported import construct: { $detail }
+diagnostic-import-003 = Import conversion needs review: { $detail }

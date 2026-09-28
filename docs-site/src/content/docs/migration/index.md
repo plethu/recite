@@ -7,6 +7,11 @@ These guides help teams inventory existing dialogue content, decide what maps cl
 
 Recite is useful when the goal is deterministic runtime traversal, structured outputs, schema-checked effects, stable line and choice IDs, and validation outside the game engine. A migration should preserve author intent first, then reshape source into Recite's native model.
 
+The executable import paths are JSON/CSV, Twee, Ink and Yarn, each with a
+documented subset. Start with [import inspection](/migration/importer-boundaries/)
+to see source mappings and unsupported constructs. Dialogic, Dialogue Manager,
+Dialogue System for Unity and Clyde have manual guidance only.
+
 ## Start here
 
 1. Pick the closest source-tool guide.
@@ -29,6 +34,8 @@ recite compile --output build/dialogue.recitec dialogue/migrated/*.recite
 - [Dialogic](/migration/dialogic/)
 - [Yarn Spinner](/migration/yarn-spinner/)
 - [Ink](/migration/ink/)
+- [Twee/Twine](/migration/twee/)
+- [Clyde (manual)](/migration/clyde/)
 - [JSON, CSV, and engine-native formats](/migration/json-csv-engine-native/)
 - [Importer boundaries](/migration/importer-boundaries/)
 

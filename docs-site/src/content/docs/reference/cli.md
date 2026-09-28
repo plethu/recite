@@ -156,3 +156,13 @@ recite compile dialogue/ -o build/scenes.recitec --schema schema/recite.schema.j
 recite check-fresh .
 recite trace build/scenes.recitec --block main --fixture tests/golden.toml
 ```
+
+## Migration inspection
+
+`recite import INPUT --from json|csv|twee|ink|yarn` prints a versioned JSON
+report and candidate source. JSON/CSV requires `--mapping mapping.json`. Use
+`--schema manifest.json` to validate against game declarations. Writing requires
+`--output-dir NEW_DIRECTORY`; partial results additionally require
+`--accept-partial`. Existing destinations are never overwritten. See
+[import inspection](/migration/importer-boundaries/) for result states, exit
+behavior and the supported format subsets.

@@ -10,6 +10,7 @@ use crate::CoreValueError;
 pub enum DiagnosticCategory {
     Freshness,
     Identifier,
+    Import,
     Markup,
     Metadata,
     Parse,
@@ -25,6 +26,7 @@ impl DiagnosticCategory {
         match self {
             Self::Freshness => "freshness",
             Self::Identifier => "identifier",
+            Self::Import => "import",
             Self::Markup => "markup",
             Self::Metadata => "metadata",
             Self::Parse => "parse",
@@ -161,6 +163,8 @@ const fn is_namespaced_diagnostic_code_const(value: &str) -> bool {
 const fn diagnostic_category(value: &[u8]) -> DiagnosticCategory {
     if starts_with(value, b"RECITE_ID") {
         DiagnosticCategory::Identifier
+    } else if starts_with(value, b"RECITE_IMPORT") {
+        DiagnosticCategory::Import
     } else if starts_with(value, b"RECITE_PARSE") {
         DiagnosticCategory::Parse
     } else if starts_with(value, b"RECITE_PROJECT") {

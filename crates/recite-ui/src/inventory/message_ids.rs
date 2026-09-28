@@ -264,7 +264,7 @@ message_ids! {
     CliHelpAbout, CliHelpUsageHeading, CliHelpCommandsHeading, CliHelpArgumentsHeading, CliHelpOptionsHeading,
     CliHelpCommandValidate, CliHelpCommandCompile, CliHelpCommandExtract, CliHelpCommandCheckIds, CliHelpCommandCheckMarkup,
     CliHelpCommandCheckMetadata, CliHelpCommandValidateProject, CliHelpCommandCheckFresh, CliHelpCommandInspectSchema, CliHelpCommandExportSchema, CliHelpCommandExplain, CliHelpCommandWatch,
-    CliHelpCommandRun, CliHelpCommandTrace, CliHelpCommandPlay, CliHelpCommandBench, CliHelpArgPaths,
+    CliImportSummary, CliHelpCommandImport, CliHelpCommandRun, CliHelpCommandTrace, CliHelpCommandPlay, CliHelpCommandBench, CliHelpArgPaths,
     CliHelpArgSchema, CliHelpArgSchemaInspection, CliHelpArgProjectRoot, CliHelpArgDiagnosticCode, CliHelpArgOutputCompile, CliHelpArgOutputExtract, CliHelpArgOutputSchema, CliHelpArgProducerKind, CliHelpArgProducerId,
     CliHelpArgAssetRun, CliHelpArgAssetPlay, CliHelpArgBlock, CliHelpArgFixture, CliHelpArgUi,
     CliHelpArgKeymap, CliHelpArgDialogueLocale, CliHelpArgDialogueCatalog, CliHelpArgBenchScale, CliHelpArgBenchGroup,

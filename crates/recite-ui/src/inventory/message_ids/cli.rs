@@ -3,6 +3,8 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         return Some(key);
     }
     match id {
+        super::MsgId::CliImportSummary => Some("cli-import-summary"),
+        super::MsgId::CliHelpCommandImport => Some("cli-help-command-import"),
         super::MsgId::CliHelpAbout => Some("cli-help-about"),
         super::MsgId::CliHelpUsageHeading => Some("cli-help-usage-heading"),
         super::MsgId::CliHelpCommandsHeading => Some("cli-help-commands-heading"),

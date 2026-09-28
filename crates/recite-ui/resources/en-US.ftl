@@ -970,3 +970,6 @@ writer-workspace-presentation = Reading and layout
 
 writer-workspace-menu = Workspace
 writer-rules-actions = Condition actions
+
+cli-import-summary = { $records } generated records; { $issues } items need review.
+cli-help-command-import = Inspect migration input and optionally write validated Recite source

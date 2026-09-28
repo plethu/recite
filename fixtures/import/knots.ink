@@ -1,0 +1,6 @@
+=== Start ===
+The station is quiet.
++ [Listen] -> End
+=== End ===
+The signal returns.
+-> END

@@ -54,6 +54,7 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
         .arg(help_arg(messages));
 
     match command.get_name() {
+        "import" => set_about(command, messages.text(MsgId::CliHelpCommandImport)),
         "validate" => {
             set_about(command, messages.text(MsgId::CliHelpCommandValidate));
             localise_paths(command, messages);

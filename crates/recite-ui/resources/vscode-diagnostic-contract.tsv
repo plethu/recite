@@ -423,6 +423,9 @@ diagnostic-schema-004-unknown-metadata-key	projector	string
 diagnostic-schema-001-projection-metadata-target	key	string
 diagnostic-schema-001-projection-metadata-target	projector	string
 diagnostic-schema-001-projection-metadata-target	target	string
+diagnostic-import-001	detail	string
+diagnostic-import-002	detail	string
+diagnostic-import-003	detail	string
 diagnostic-validate-012-help
 diagnostic-validate-013-related
 diagnostic-validate-013-help

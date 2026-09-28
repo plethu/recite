@@ -23,6 +23,8 @@ pub(crate) fn structured_error(
     fallback_path: Option<&Path>,
 ) -> StructuredError {
     let parts: ErrorParts<'_> = match error {
+        CliError::Import(_) => input(ErrorCode::Import, fallback_operation, fallback_path),
+        CliError::ImportJson(_) => input(ErrorCode::ImportJson, fallback_operation, fallback_path),
         CliError::Core(_) if matches!(fallback_operation, "run" | "trace") => generic(
             ErrorCategory::Fixture,
             ErrorCode::CoreValue,

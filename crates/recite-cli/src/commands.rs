@@ -97,6 +97,7 @@ pub(crate) fn run_command(
         Command::Trace(args) => trace_command(args, stdout, messages),
         Command::Play(args) => run_play_command(args, stdout, stderr),
         Command::Bench(args) => bench_command(args, stdout),
+        Command::Import(args) => crate::migration::run(args, stdout, stderr, messages),
     }
 }
 
