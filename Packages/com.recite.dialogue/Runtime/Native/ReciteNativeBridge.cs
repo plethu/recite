@@ -9,7 +9,7 @@ namespace Recite.Unity.Native
     internal static class ReciteNativeBridge
     {
         internal const uint AbiMajor = 0;
-        internal const uint AbiMinor = 5;
+        internal const uint AbiMinor = 6;
         internal const uint AbiPatch = 0;
         private const string LibraryName = "recite_ffi";
 
@@ -195,8 +195,28 @@ namespace Recite.Unity.Native
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_asset_load")]
         internal static extern ReciteStatus AssetLoad(byte[] bytes, UIntPtr len, out ulong assetHandle);
 
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_asset_info")]
+        internal static extern ReciteStatus AssetInfo(ulong assetHandle, out ReciteBuffer info);
+
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_asset_free")]
         internal static extern void AssetFree(ulong assetHandle);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_catalog_create")]
+        internal static extern ReciteStatus CatalogCreate(out ulong catalogHandle);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_catalog_add_po")]
+        internal static extern ReciteStatus CatalogAddPo(ulong catalogHandle, byte[] locale, byte[] poBytes, UIntPtr poLen);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_catalog_free")]
+        internal static extern void CatalogFree(ulong catalogHandle);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_set_catalog")]
+        internal static extern ReciteStatus SessionSetCatalog(ulong sessionHandle, ulong catalogHandle);
+
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_restore_with_catalog")]
+        internal static extern ReciteStatus SessionRestoreWithCatalog(ulong assetHandle, byte[] snapshotBytes,
+            UIntPtr snapshotLen, IntPtr values, UIntPtr valuesLen, ulong catalogHandle, byte[] localeVariant,
+            out ulong sessionHandle, out ReciteBuffer batch);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_create")]
         internal static extern ReciteStatus SessionCreate(ulong assetHandle, byte[] startBlock, byte[] locale, out ulong sessionHandle);

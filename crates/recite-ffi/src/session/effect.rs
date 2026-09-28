@@ -1,10 +1,11 @@
 use crate::buffer::ReciteBuffer;
 use crate::condition::FfiContext;
-use crate::error::{ReciteStatus, clear_condition_status, set_last_error};
+use crate::error::{ReciteStatus, set_last_error};
+use crate::output::{encode_batch, encode_batch_output};
 
-use recite_runtime::{EffectAck, acknowledge_effect};
+use recite_runtime::EffectAck;
 
-use super::drain_to_batch;
+use super::{driver_failure, locale_resolution};
 
 /// Acknowledges the currently pending blocking effect.
 ///
@@ -74,33 +75,25 @@ pub unsafe extern "C" fn recite_session_acknowledge_effect(
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
-    let session_checkpoint = ffi_session.session.clone();
-    clear_condition_status();
-    let result = match acknowledge_effect(&mut ffi_session.session, effect_id, ack) {
-        Ok(()) => drain_to_batch(
-            &ffi_session.dialogue,
-            &mut ffi_session.session,
-            &context,
-            &ffi_session.interpolation_values,
-            ffi_session.locale_provider.as_ref(),
-            ffi_session.locale_variant.as_deref(),
-        ),
-        Err(error) => {
-            set_last_error(&error.to_string());
-            Err((ReciteStatus::from(error), String::new()))
-        }
-    };
-
-    match result {
+    let resolution = locale_resolution(
+        &ffi_session.interpolation_values,
+        ffi_session.locale_source.provider(),
+        ffi_session.locale_variant.as_deref(),
+    );
+    match ffi_session.driver.acknowledge_effect_with(
+        effect_id,
+        ack,
+        &context,
+        resolution,
+        |events| encode_batch_output(events, encode_batch),
+    ) {
         Ok(batch) => {
             unsafe { *batch_out = batch };
             ReciteStatus::Ok
         }
-        Err((status, message)) => {
-            ffi_session.session = session_checkpoint;
-            if !message.is_empty() {
-                set_last_error(&message);
-            }
+        Err(error) => {
+            let (status, message) = driver_failure(error);
+            set_last_error(&message);
             status
         }
     }

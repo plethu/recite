@@ -146,3 +146,28 @@ impl ReciteAdapterError {
             .unwrap_or_default()
     }
 }
+
+/// Explicit failure returned by a Godot condition callable.
+/// Boolean and enum string results retain their existing meaning.
+#[derive(GodotClass)]
+#[class(init, base=RefCounted)]
+pub struct ReciteConditionFailure {
+    base: Base<RefCounted>,
+    #[var]
+    message: GString,
+}
+
+#[godot_api]
+impl IRefCounted for ReciteConditionFailure {}
+
+#[godot_api]
+impl ReciteConditionFailure {
+    pub(crate) fn reason(&self) -> String {
+        let reason = self.message.to_string();
+        if reason.is_empty() {
+            "condition callable reported failure".to_owned()
+        } else {
+            reason
+        }
+    }
+}

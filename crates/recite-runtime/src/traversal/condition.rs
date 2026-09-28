@@ -107,5 +107,6 @@ fn evaluate_condition_value(
         .map_err(|error| DialogueError::ConditionEvaluationFailed {
             function: call.function.clone(),
             reason: error.reason().to_owned(),
+            kind: error.kind(),
         })
 }

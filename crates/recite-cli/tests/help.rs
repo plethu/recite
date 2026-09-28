@@ -19,6 +19,7 @@ fn help_covers_issue_25_commands_and_options() {
         "validate-project",
         "check-fresh",
         "inspect-schema",
+        "export-schema",
         "explain",
         "watch",
         "run",
@@ -55,6 +56,12 @@ fn help_covers_issue_25_commands_and_options() {
     inspect.assert_success().assert_stderr("");
     inspect.assert_stdout_contains("Usage: recite inspect-schema <SCHEMA>");
     inspect.assert_stdout_contains("deterministic machine-readable JSON");
+
+    let export = run(recite().arg("export-schema").arg("--help"));
+    export.assert_success().assert_stderr("");
+    export.assert_stdout_contains("--schema <SCHEMA>");
+    export.assert_stdout_contains("--output <OUTPUT>");
+    export.assert_stdout_contains("validated canonical schema manifest");
 
     let explain = run(recite().arg("explain").arg("--help"));
     explain.assert_success().assert_stderr("");

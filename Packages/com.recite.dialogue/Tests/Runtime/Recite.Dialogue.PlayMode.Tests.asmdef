@@ -1,0 +1,5 @@
+{
+  "name": "Recite.Dialogue.PlayMode.Tests",
+  "references": ["Recite.Dialogue"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

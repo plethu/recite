@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -6,10 +7,12 @@ namespace Recite.Unity.GameObjects
 {
     public sealed class ReciteDialogueRunner : MonoBehaviour
     {
-        private readonly ReciteDialogueService service = new ReciteDialogueService();
+        private ReciteDialogueService service;
+        private readonly Queue<ReciteOutputBatch> pendingOutput = new Queue<ReciteOutputBatch>();
+        private bool emitting;
 
         [SerializeField]
-        private TextAsset compiledAsset;
+        private ReciteCompiledAsset compiledAsset;
 
         [SerializeField]
         private string startBlock;
@@ -21,12 +24,22 @@ namespace Recite.Unity.GameObjects
         private string localeVariant;
 
         [SerializeField]
-        private ReciteOutputEvent output;
+        private ReciteOutputEvent output = new ReciteOutputEvent();
 
         [SerializeField]
-        private ReciteErrorEvent error;
+        private ReciteErrorEvent error = new ReciteErrorEvent();
 
-        public ReciteDialogueService Service => service;
+        public ReciteDialogueService Service => service ?? throw new InvalidOperationException("ReciteDialogueRunner is not awake yet");
+        public ReciteOutputEvent Output => output;
+        public ReciteErrorEvent Error => error;
+
+        private void Awake()
+        {
+            // NativeSession captures the creating thread; Unity field initializers
+            // can run on a loading thread during scene deserialization.
+            if (service == null) service = new ReciteDialogueService();
+        }
+        public ReciteCompiledAsset CompiledAsset { get => compiledAsset; set => compiledAsset = value; }
 
         public void StartDialogue()
         {
@@ -38,8 +51,8 @@ namespace Recite.Unity.GameObjects
 
             try
             {
-                var asset = new ReciteDialogueAsset(compiledAsset.bytes, compiledAsset.name, compiledAsset.name);
-                Emit(service.Start(asset, string.IsNullOrEmpty(startBlock) ? null : startBlock, string.IsNullOrEmpty(locale) ? null : locale, string.IsNullOrEmpty(localeVariant) ? null : localeVariant));
+                var asset = compiledAsset.ToDialogueAsset();
+                Emit(Service.Start(asset, string.IsNullOrEmpty(startBlock) ? null : startBlock, string.IsNullOrEmpty(locale) ? null : locale, string.IsNullOrEmpty(localeVariant) ? null : localeVariant));
             }
             catch (ReciteAdapterException ex)
             {
@@ -51,7 +64,7 @@ namespace Recite.Unity.GameObjects
         {
             try
             {
-                Emit(service.SelectChoice(choiceId));
+                Emit(Service.SelectChoice(choiceId));
             }
             catch (ReciteAdapterException ex)
             {
@@ -63,7 +76,7 @@ namespace Recite.Unity.GameObjects
         {
             try
             {
-                Emit(service.AcknowledgeEffect(effectRequestId));
+                Emit(Service.AcknowledgeEffect(effectRequestId));
             }
             catch (ReciteAdapterException ex)
             {
@@ -75,7 +88,7 @@ namespace Recite.Unity.GameObjects
         {
             try
             {
-                Emit(service.AcknowledgeEffect(effectRequestId, false, failureReason));
+                Emit(Service.AcknowledgeEffect(effectRequestId, false, failureReason));
             }
             catch (ReciteAdapterException ex)
             {
@@ -85,7 +98,7 @@ namespace Recite.Unity.GameObjects
 
         public ReciteSessionSnapshot Snapshot()
         {
-            return service.Snapshot();
+            return Service.Snapshot();
         }
 
         public void Restore(ReciteSessionSnapshot snapshot)
@@ -98,8 +111,8 @@ namespace Recite.Unity.GameObjects
 
             try
             {
-                var asset = new ReciteDialogueAsset(compiledAsset.bytes, compiledAsset.name, compiledAsset.name);
-                Emit(service.Restore(asset, snapshot, string.IsNullOrEmpty(localeVariant) ? null : localeVariant));
+                var asset = compiledAsset.ToDialogueAsset();
+                Emit(Service.Restore(asset, snapshot, string.IsNullOrEmpty(localeVariant) ? null : localeVariant));
             }
             catch (ReciteAdapterException ex)
             {
@@ -107,16 +120,38 @@ namespace Recite.Unity.GameObjects
             }
         }
 
+        // Unity calls OnDisable on scene exit and before script/domain reload.
+        private void OnDisable()
+        {
+            pendingOutput.Clear();
+            service?.End();
+        }
+
         private void OnDestroy()
         {
-            service.Dispose();
+            pendingOutput.Clear();
+            service?.Dispose();
         }
 
         private void Emit(ReciteOutputBatch batch)
         {
-            foreach (var item in batch.Events)
+            pendingOutput.Enqueue(batch);
+            if (emitting) return;
+            emitting = true;
+            try
             {
-                output.Invoke(item);
+                while (pendingOutput.Count != 0)
+                {
+                    foreach (var item in pendingOutput.Dequeue().Events)
+                        output.Invoke(item);
+                }
+            }
+            finally
+            {
+                // A throwing UnityEvent listener aborts this delivery. Do not
+                // replay stale output during a later operation.
+                pendingOutput.Clear();
+                emitting = false;
             }
         }
 

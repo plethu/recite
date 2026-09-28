@@ -74,6 +74,10 @@ pub(super) enum SuccessData {
         diagnostics: Vec<DiagnosticRecord>,
         artifact: ArtifactMetadata,
     },
+    ExportSchema {
+        diagnostics: Vec<DiagnosticRecord>,
+        artifact: ArtifactMetadata,
+    },
     ExtractArtifact {
         diagnostics: Vec<DiagnosticRecord>,
         artifact: ArtifactMetadata,
@@ -94,6 +98,7 @@ pub(super) enum SuccessData {
 pub(super) enum ContentDiagnosticData {
     Validate { diagnostics: Vec<DiagnosticRecord> },
     Compile { diagnostics: Vec<DiagnosticRecord> },
+    ExportSchema { diagnostics: Vec<DiagnosticRecord> },
     Extract { diagnostics: Vec<DiagnosticRecord> },
 }
 

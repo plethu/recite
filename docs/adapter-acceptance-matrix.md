@@ -9,6 +9,11 @@ fixtures remain normative for machine-checkable semantics; this document states
 what each v1 engine adapter must document, expose, and test before it is treated
 as production-quality.
 
+The [authoring workflow evidence](engine-authoring-workflows.md) records the
+current engine versions, package checks, refresh behavior, and known limits.
+The [public walkthrough](../docs-site/src/content/docs/adapters/authoring.md)
+gives a small project to try in each engine.
+
 ## Applicability
 
 | Field | Requirement |
@@ -136,6 +141,14 @@ but the minimum evidence must stay small enough to review.
 | ADP-CONF-04 | Editor/import UX that cannot reasonably be automated may be manually checked, but the host-independent semantic trace must remain automated. |
 | ADP-PERF-01 | The adapter must report asset loading/conversion overhead, event emission overhead, active-session update overhead, condition dispatch overhead, and typed effect conversion overhead where applicable. |
 | ADP-PERF-02 | The adapter should add negligible frame or tick cost when no dialogue session is active. |
+
+Conformance evidence must state its observation mode. Follow the
+[fixture observation rules](../fixtures/adapter-conformance/README.md#observation-modes)
+when adapting individual reference advances to transactional output batches.
+Report executed scenarios, structural invariant checks, non-applicable
+capabilities or policies, and unavailable host checks separately. Earlier error
+timing in a drained operation does not excuse a different error category or a
+partially committed failed operation.
 
 ## Review Use
 

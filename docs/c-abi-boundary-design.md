@@ -31,7 +31,7 @@ for how those requirements cross the language boundary.
 
 ## Why a C ABI
 
-Bevy and Godot adapters link `recite-runtime` directly as a Rust crate. No FFI
+Bevy and Godot adapters link the Rust `recite-adapter`/`recite-runtime` crates. No FFI
 is needed because both are Rust (or use a Rust-first bridge like gdext). Unity
 gameplay code is C# on Mono or IL2CPP and can only call native code through
 P/Invoke, which requires a stable C ABI (`extern "C"` functions in a `cdylib`
@@ -41,10 +41,10 @@ language with a C FFI layer.
 
 ## Crate Shape
 
-The new crate is named `recite-ffi`. It is a thin `extern "C"` wrapper over
-`recite-runtime` and `recite-core` — exactly the crates the Godot adapter
-consumes (`crates/recite-godot/src/adapter.rs`). It has no other Recite
-workspace dependencies.
+`recite-ffi` is a thin `extern "C"` wrapper over `recite-adapter`,
+`recite-runtime`, and `recite-core`. The shared driver owns session lifecycle
+and transactional draining; FFI owns handles, buffers, callbacks, and status
+numbers.
 
 ```toml
 [lib]
@@ -57,8 +57,8 @@ integration. Both expose the same `extern "C"` surface; only the link mode
 differs.
 
 The crate must not re-implement traversal, session ownership semantics, or error
-categories. All of those live in `recite-runtime` and `recite-core`; the FFI
-crate is plumbing.
+categories. Runtime owns traversal; `recite-adapter` owns shared session and
+error-category behaviour. The FFI crate owns the C ABI plumbing.
 
 ## Handle Model
 
@@ -136,6 +136,35 @@ adapter does (`adapter.rs` — it drains until a host-observable boundary). The
 host does not need to call `next` in a loop; `recite-ffi` does it internally.
 This is the behaviour documented per contract §4.
 
+## Asset Metadata
+
+`recite_asset_info` is an additive 0.6.0 entrypoint for importer identity checks.
+It returns a separate named MessagePack map with `asset_info_format_version = 0`.
+The map carries `asset_id`, `content_fingerprint` (`algorithm` string and binary
+`digest`), nullable `schema_fingerprint` of the same shape, numeric
+`format_version` and `compiler_compatibility_version`, `compiler_version`, and
+`source_map_id`. Metadata inspection does not replace runtime compatibility
+validation. The caller frees the returned buffer with `recite_buffer_free`.
+
+## Owned Gettext Catalogue
+
+`recite_catalog_add_po` uses the core lossless PO parser and atomically merges a
+file into an owned catalogue. Identical duplicate entries are accepted;
+conflicting translations or plural rules return `RECITE_ERR_LOCALISATION`
+without changing the handle. Fuzzy and obsolete entries are ignored. Bare
+gettext contexts serve both line and choice domains; prefixed availability
+reason and presentation label contexts retain their distinct domains.
+
+`recite_session_set_catalog` explicitly switches a session from callback mode
+to an owned catalogue revision; installing a callback switches back. A session
+retains its attached revision after the handle changes or is freed. Refreshing
+catalogues therefore builds a new candidate handle from all configured PO
+files, then attaches it after every import succeeds. The additive
+`recite_session_restore_with_catalog` takes asset, snapshot bytes/length,
+interpolation values/length, catalogue handle, optional locale variant, and
+session/batch outputs. It attaches the catalogue before restore traversal, so
+the first returned batch is localized.
+
 ## Session Lifecycle Functions
 
 Each `extern "C"` function maps to runtime free functions. All functions return
@@ -148,7 +177,15 @@ ReciteStatus recite_asset_load(
     const uint8_t *bytes, uintptr_t len,
     uint64_t *asset_handle_out
 );
+ReciteStatus recite_asset_info(uint64_t asset_handle, ReciteBuffer *info_out);
 void recite_asset_free(uint64_t asset_handle);
+
+// Owned gettext catalogues
+ReciteStatus recite_catalog_create(uint64_t *catalog_handle_out);
+ReciteStatus recite_catalog_add_po(uint64_t catalog_handle, const char *locale,
+                                   const uint8_t *po_bytes, uintptr_t po_len);
+void recite_catalog_free(uint64_t catalog_handle);
+ReciteStatus recite_session_set_catalog(uint64_t session_handle, uint64_t catalog_handle);
 
 // Session lifecycle — two-step form (use when conditions appear in opening block)
 ReciteStatus recite_session_create(
@@ -542,7 +579,8 @@ by `ReciteInterpolationValue` and the `*_with_values` entrypoints is version
 result/attempt records, and provider-aware start/restore operations) is version
 `0.2.0`. The additive grammatical-variant entrypoints and complete
 plural-rule validator are version `0.3.0`. The additive native plural
-evaluator and placeholder-preservation validator are version `0.5.0`; hosts
+evaluator and placeholder-preservation validator are version `0.5.0`;
+asset metadata and owned gettext catalogue handles are version `0.6.0`; hosts
 can inspect the three constants before using those symbols.
 
 ## Error Codes
@@ -612,7 +650,7 @@ that do not expose presentation projection never emit them (contract §12).
 | `NoPromptPending` | `RECITE_ERR_STALE_CHOICE` |
 | `InvalidChoice` | `RECITE_ERR_INVALID_CHOICE` |
 | `UnavailableChoice` | `RECITE_ERR_UNAVAILABLE_CHOICE` |
-| `ConditionEvaluationFailed` | `RECITE_ERR_CONDITION_EVALUATION` (or decoded category; see Conditions) |
+| `ConditionEvaluationFailed` | `RECITE_ERR_MISSING_CONDITION_HANDLER`, `RECITE_ERR_CONDITION_EVALUATION`, or `RECITE_ERR_INVALID_CONDITION_RESULT` by structured kind |
 | `ConditionResultTypeMismatch` | `RECITE_ERR_INVALID_CONDITION_RESULT` |
 | `ConditionDepthLimitExceeded` | `RECITE_ERR_CONDITION_EVALUATION` |
 | `UnsupportedSessionSnapshotFormat` | `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY` |
@@ -622,12 +660,10 @@ that do not expose presentation projection never emit them (contract §12).
 | `SessionEnded` | `RECITE_ERR_NO_ACTIVE_SESSION` |
 | `TraversalLimitExceeded` | `RECITE_ERR_DIALOGUE_FAULT` |
 
-This mapping is based on the `From<DialogueError> for AdapterError` implementation
-in the Godot adapter (`crates/recite-godot/src/adapter_error.rs:140`), which
-was the first exercise of all error variants against the contract §12 categories.
-The FFI layer re-uses the same logic; it must not diverge. If a new `DialogueError`
-variant is added, both the Godot `From` impl and this table must be updated
-together.
+The `recite-adapter` `From<DialogueError> for AdapterError` implementation owns
+semantic categories. FFI maps those categories to stable numeric statuses.
+Condition failures carry a structured runtime kind, so callback categories do
+not depend on a thread-local side channel.
 
 `recite_session_restore` applies the operation-specific override described in
 Save and Load Handoff: `AssetMismatch` and `AssetContentMismatch` become

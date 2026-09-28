@@ -53,9 +53,9 @@ fn status_codes_match_c_abi_design() {
 }
 
 #[test]
-fn locale_provider_api_has_distinguishable_abi_version() {
+fn additive_adapter_api_has_distinguishable_abi_version() {
     assert_eq!(recite_ffi::RECITE_FFI_VERSION_MAJOR, 0);
-    assert_eq!(recite_ffi::RECITE_FFI_VERSION_MINOR, 5);
+    assert_eq!(recite_ffi::RECITE_FFI_VERSION_MINOR, 6);
     assert_eq!(recite_ffi::RECITE_FFI_VERSION_PATCH, 0);
 }
 

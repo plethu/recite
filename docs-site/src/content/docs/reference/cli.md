@@ -49,6 +49,18 @@ projection as each declaration. `source.path` is an exact tagged machine path:
 UTF-8 text where representable, raw Unix bytes as lowercase hex otherwise, and
 WTF-16 units on Windows when UTF-16 text is not representable.
 
+### `recite export-schema --schema <SCHEMA> --output <OUTPUT>`
+
+Engine authoring tools can add paired `--producer-kind <KIND> --producer-id <STABLE-ID>` flags. The canonical export then records the engine resource as its producer, with a fingerprint derived from that identity and validated schema content. The default export preserves the standalone source producer.
+
+Exports standalone schema TOML or a generated manifest JSON as validated,
+canonical manifest JSON. Engine schema producers can use the public
+`recite_core::schema::export_schema_manifest_json` function for typed Rust
+declarations and the same canonical serializer. The command rejects an output
+path that aliases its input and replaces the output only after validation.
+`--output-format structured` reports versioned command records with diagnostics
+or artifact metadata for authoring tools.
+
 ## Building
 
 ### `recite compile --output <OUTPUT> [--schema <SCHEMA>] <PATHS>...`

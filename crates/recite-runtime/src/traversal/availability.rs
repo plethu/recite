@@ -181,6 +181,7 @@ fn evaluate_availability_call(
         .map_err(|error| DialogueError::ConditionEvaluationFailed {
             function: call.function.clone(),
             reason: error.reason().to_owned(),
+            kind: error.kind(),
         })? {
         ConditionValue::Bool(value) => value,
         value => {

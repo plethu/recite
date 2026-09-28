@@ -30,6 +30,8 @@ nvim.log
 \#*\#
 .\#*
 *~
+!Packages/com.recite.dialogue/Tests~/
+!Packages/com.recite.dialogue/Samples~/
 
 # Local/private agent overlays
 .claude/settings.local.json

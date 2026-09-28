@@ -7,7 +7,7 @@ use crate::{compiled::ContentFingerprint, schema::ProducerFingerprint, schema::P
     clippy::expect_used,
     reason = "this helper owns the BLAKE3 digest-to-fingerprint invariant"
 )]
-pub(super) fn source_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
+pub(crate) fn source_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
     let mut bytes = Vec::from(b"recite-schema-source-fingerprint-v1\0".as_slice());
     if let Some(metadata) = &schema.producer_metadata
         && let Some(producer) = &metadata.producer
@@ -22,7 +22,7 @@ pub(super) fn source_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
         .expect("BLAKE3 always produces a valid content fingerprint")
 }
 
-pub(super) fn source_producer_fingerprint(
+pub(crate) fn source_producer_fingerprint(
     schema: &ProjectSchema,
     source_fingerprint: &ContentFingerprint,
 ) -> Option<ProducerFingerprint> {

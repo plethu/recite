@@ -10,13 +10,9 @@ public sealed class BasicDialogueDriver : MonoBehaviour
     private bool hasRelayKey;
     private ReciteSessionSnapshot savedSnapshot;
 
-    private void Awake()
-    {
-        runner.Service.RegisterCondition("has_key", args => hasRelayKey);
-    }
-
     private void Start()
     {
+        runner.Service.RegisterCondition("has_key", args => hasRelayKey);
         StartDialogue();
     }
 

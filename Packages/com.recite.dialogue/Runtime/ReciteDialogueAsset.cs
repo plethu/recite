@@ -2,19 +2,20 @@ using System;
 
 namespace Recite.Unity
 {
+    // A revision of compiled bytes. Public callers cannot mutate a loaded revision.
     public sealed class ReciteDialogueAsset
     {
-        public ReciteDialogueAsset(byte[] compiledBytes, string assetId = "", string compatibilityIdentity = "")
+        private readonly byte[] compiledBytes;
+
+        public ReciteDialogueAsset(byte[] compiledBytes)
         {
-            CompiledBytes = compiledBytes != null ? (byte[])compiledBytes.Clone() : throw new ArgumentNullException(nameof(compiledBytes));
-            AssetId = assetId ?? string.Empty;
-            CompatibilityIdentity = compatibilityIdentity ?? string.Empty;
+            this.compiledBytes = compiledBytes != null
+                ? (byte[])compiledBytes.Clone()
+                : throw new ArgumentNullException(nameof(compiledBytes));
         }
 
-        public byte[] CompiledBytes { get; }
+        public byte[] CompiledBytes => (byte[])compiledBytes.Clone();
 
-        public string AssetId { get; }
-
-        public string CompatibilityIdentity { get; }
+        internal byte[] BytesForNative => compiledBytes;
     }
 }

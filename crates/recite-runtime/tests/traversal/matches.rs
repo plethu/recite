@@ -227,6 +227,7 @@ fn match_condition_failure_keeps_session_position() {
         Err(DialogueError::ConditionEvaluationFailed {
             function: "mood".to_owned(),
             reason: "mood service unavailable".to_owned(),
+            kind: recite_runtime::ConditionEvaluationErrorKind::EvaluationFailed,
         })
     );
     assert_line(

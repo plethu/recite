@@ -12,16 +12,22 @@ mod adapter_surface;
 mod binding_types;
 mod bindings;
 mod catalog;
+mod catalog_persistence;
+mod catalog_po_resource;
 mod catalog_resource;
 mod convert;
+mod dialogue_resource;
 
 pub use adapter::{ConditionHandlerResult, ReciteDialogueDriver};
 pub use adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
 pub use adapter_surface::{AdapterValue, ConditionCall, ReciteDialogueAsset, ReciteOutput};
-pub use binding_types::{ReciteAdapterError, ReciteOperationResult, ReciteOutputObject};
-pub use bindings::{ReciteDialogueNode, ReciteDialogueResource};
+pub use binding_types::{
+    ReciteAdapterError, ReciteConditionFailure, ReciteOperationResult, ReciteOutputObject,
+};
+pub use bindings::ReciteDialogueNode;
 pub use catalog::ReciteDialogueCatalog;
 pub use catalog_resource::ReciteDialogueCatalogResource;
+pub use dialogue_resource::ReciteDialogueResource;
 
 struct ReciteGodotExtension;
 

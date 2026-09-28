@@ -5,6 +5,7 @@
 
 mod asset;
 mod buffer;
+mod catalog;
 mod condition;
 mod condition_codec;
 mod error;
@@ -13,8 +14,11 @@ mod locale;
 mod output;
 mod session;
 
-pub use asset::{recite_asset_free, recite_asset_load};
+pub use asset::{recite_asset_free, recite_asset_info, recite_asset_load};
 pub use buffer::{ReciteBuffer, recite_buffer_free};
+pub use catalog::{
+    recite_catalog_add_po, recite_catalog_create, recite_catalog_free, recite_session_set_catalog,
+};
 pub use condition::{ReciteConditionFn, ReciteConditionQuery, ReciteConditionResult};
 pub use error::{ReciteStatus, recite_last_error_message};
 pub use interpolation::{ReciteInterpolationValue, ReciteInterpolationValueKind};
@@ -32,7 +36,8 @@ pub use session::{
     recite_session_acknowledge_effect, recite_session_begin, recite_session_choose,
     recite_session_clear_locale_provider, recite_session_create, recite_session_create_with_values,
     recite_session_free, recite_session_register_condition, recite_session_restore,
-    recite_session_restore_with_values, recite_session_restore_with_values_and_locale_provider,
+    recite_session_restore_with_catalog, recite_session_restore_with_values,
+    recite_session_restore_with_values_and_locale_provider,
     recite_session_restore_with_values_and_locale_provider_and_variant,
     recite_session_set_interpolation_values, recite_session_set_locale_provider,
     recite_session_set_locale_variant, recite_session_snapshot, recite_session_start,
@@ -47,6 +52,6 @@ pub use session::{
 /// Increment this for breaking C ABI changes.
 pub const RECITE_FFI_VERSION_MAJOR: u32 = 0;
 /// ABI minor version for additive, backwards-compatible C ABI changes.
-pub const RECITE_FFI_VERSION_MINOR: u32 = 5;
+pub const RECITE_FFI_VERSION_MINOR: u32 = 6;
 /// ABI patch version for documentation-only or implementation-only releases.
 pub const RECITE_FFI_VERSION_PATCH: u32 = 0;

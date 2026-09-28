@@ -14,8 +14,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 godot = { version = "0.5.3", features = ["api-4-6"] }
 recite-core.workspace = true
+recite-adapter.workspace = true
 recite-runtime.workspace = true
-thiserror.workspace = true
 
 [dev-dependencies]
 recite-compiler.workspace = true

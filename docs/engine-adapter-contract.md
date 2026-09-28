@@ -4,10 +4,9 @@ This document defines the host-agnostic contract that Godot, Bevy, Unity, and
 future Recite engine adapters must preserve. It is normative unless a section is
 explicitly marked as illustrative.
 
-This is a contract document, not an implementation plan. It does not add a
-public Rust API, generated bindings, a shared `recite-adapter` crate, or a new
-dependency. Adapters may call `recite-core` and `recite-runtime` directly until
-real adapter MVPs prove which helper types deserve to be shared.
+This contract is independent of the host API shape. The `recite-adapter` crate
+now owns the shared immutable asset, session driver, error categories, and owned
+catalogue used by the Rust engine companions and the C ABI wrapper.
 
 ## 1. Contract Goals
 
@@ -1056,15 +1055,11 @@ public sealed class ReciteDialogueService
 
 ## 16. Shared Crate Boundary
 
-The contract does not require a shared adapter crate for v1 design work.
-Adapters may initially depend on `recite-core` and `recite-runtime` directly.
-
-A future shared helper crate may be justified if Godot, Bevy, and Unity adapter
-MVPs repeat the same stable concepts, such as compiled asset identity,
-freshness checks, adapter error categories, changed-asset policy names, or
-session snapshot handoff helpers. That decision belongs in follow-up adapter
-implementation work, not [#45 Adapter: design engine-adapter contract and crate
-boundaries](https://github.com/plethu/recite/issues/45).
+`recite-adapter` owns reusable host-independent integration behaviour: validated
+immutable loaded assets, one-owner session lifecycle, transactional traversal
+batches, stable error categories, and owned dialogue catalogue lookup. Engine
+companions still own asset import, callbacks, native events, and UI projection.
+`recite-runtime` remains the sole authority for traversal and snapshot bytes.
 
 ## 17. Follow-up Prerequisites
 

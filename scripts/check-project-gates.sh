@@ -16,12 +16,13 @@ scripts/verify.sh or `mise run verify`):
   6. scripts/check-lint-suppressions.sh
   7. scripts/generate-ffi-header.sh
   8. scripts/check-ffi-header.sh
-  9. scripts/check-unity-adapter.sh
- 10. just test-godot
- 11. cargo fmt --check
- 12. just test and just test-doc
- 13. just clippy
- 14. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
+  9. scripts/check-unity-adapter.sh (managed/native; Unity Editor only with UNITY_EDITOR)
+ 10. just test-godot (clean addon and native host)
+ 11. cargo fetch --locked; scripts/check-bevy-package.sh (offline clean consumer)
+ 12. cargo fmt --check
+ 13. just test and just test-doc
+ 14. just clippy
+ 15. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 EOF
 }
 
@@ -83,10 +84,12 @@ if [[ ! -x "$repo_root/scripts/check-ffi-header.sh" ]]; then
   exit 2
 fi
 
-if [[ -e "$repo_root/scripts/check-unity-adapter.sh" && ! -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
-  echo "non-executable gate: $repo_root/scripts/check-unity-adapter.sh" >&2
-  exit 2
-fi
+for gate in check-unity-adapter.sh check-godot-host.sh package-godot-addon.sh check-bevy-package.sh; do
+  if [[ ! -x "$repo_root/scripts/$gate" ]]; then
+    echo "missing executable adapter gate: $repo_root/scripts/$gate" >&2
+    exit 2
+  fi
+done
 
 echo "== test organization =="
 "$repo_root/scripts/check-test-organization.sh" "$repo_root"
@@ -122,18 +125,24 @@ echo
 echo "== ffi header C/C++ probes =="
 "$repo_root/scripts/check-ffi-header.sh" "$repo_root"
 
-if [[ -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
-  echo
-  echo "== unity adapter package =="
-  "$repo_root/scripts/check-unity-adapter.sh" "$repo_root"
-fi
+echo
+echo "== Unity managed/native adapter package =="
+"$repo_root/scripts/check-unity-adapter.sh" "$repo_root"
 
 echo
-echo "== Godot persistence and signal conformance =="
+echo "== Godot clean addon and native host =="
 (
   cd "$repo_root"
   just test-godot
 )
+
+echo
+echo "== Bevy real App and clean package consumer =="
+(
+  cd "$repo_root"
+  cargo fetch --locked
+)
+"$repo_root/scripts/check-bevy-package.sh"
 
 echo
 echo "== cargo fmt --check =="

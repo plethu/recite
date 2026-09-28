@@ -14,6 +14,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandValidateProject
         | MsgId::CliHelpCommandCheckFresh
         | MsgId::CliHelpCommandInspectSchema
+        | MsgId::CliHelpCommandExportSchema
         | MsgId::CliHelpCommandExplain
         | MsgId::CliHelpCommandWatch
         | MsgId::CliHelpCommandRun
@@ -27,6 +28,9 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpArgDiagnosticCode
         | MsgId::CliHelpArgOutputCompile
         | MsgId::CliHelpArgOutputExtract
+        | MsgId::CliHelpArgOutputSchema
+        | MsgId::CliHelpArgProducerKind
+        | MsgId::CliHelpArgProducerId
         | MsgId::CliHelpArgAssetRun
         | MsgId::CliHelpArgAssetPlay
         | MsgId::CliHelpArgBlock

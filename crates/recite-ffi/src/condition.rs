@@ -1,10 +1,13 @@
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char, c_void};
 
-use recite_runtime::{ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext};
+use recite_runtime::{
+    ConditionEvaluationError, ConditionEvaluationErrorKind, ConditionQuery, ConditionValue,
+    DialogueContext,
+};
 
 use crate::condition_codec::{decode_condition_value, encode_condition_args};
-use crate::error::{ReciteStatus, set_condition_status};
+use crate::error::ReciteStatus;
 
 /// Query passed to a `ReciteConditionFn` callback.
 ///
@@ -166,6 +169,10 @@ impl DialogueContext for FfiContext<'_> {
 }
 
 fn condition_error(status: ReciteStatus, message: impl Into<String>) -> ConditionEvaluationError {
-    set_condition_status(status);
-    ConditionEvaluationError::new(message)
+    let kind = match status {
+        ReciteStatus::MissingConditionHandler => ConditionEvaluationErrorKind::MissingHandler,
+        ReciteStatus::InvalidConditionResult => ConditionEvaluationErrorKind::InvalidResult,
+        _ => ConditionEvaluationErrorKind::EvaluationFailed,
+    };
+    ConditionEvaluationError::with_kind(kind, message)
 }

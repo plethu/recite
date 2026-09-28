@@ -1,0 +1,4 @@
+{
+  "name": "Recite.PlayerTestResult",
+  "optionalUnityReferences": ["TestAssemblies"]
+}

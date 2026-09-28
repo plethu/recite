@@ -15,7 +15,7 @@ pub(crate) fn reject_output_input_alias(
         let Ok(input_canonical) = fs::canonicalize(input) else {
             continue;
         };
-        if output == input_canonical {
+        if output == input_canonical || same_file::is_same_file(&output, input).unwrap_or(false) {
             return Err(CliError::OutputOverwritesInput {
                 output: output.clone(),
                 input: input.clone(),

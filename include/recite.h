@@ -45,7 +45,7 @@
 /**
  * ABI minor version for additive, backwards-compatible C ABI changes.
  */
-#define RECITE_FFI_VERSION_MINOR 5
+#define RECITE_FFI_VERSION_MINOR 6
 
 /**
  * ABI patch version for documentation-only or implementation-only releases.
@@ -419,6 +419,18 @@ extern "C" {
 void recite_asset_free(uint64_t asset_handle);
 
 /**
+ * Returns versioned metadata for an already validated compiled asset.
+ *
+ * The fingerprint fields report the existing canonical payload identity;
+ * runtime session compatibility remains authoritative. On success, `info_out`
+ * owns a MessagePack named-map buffer and must be freed with `recite_buffer_free`.
+ *
+ * # Safety
+ * `info_out` must be a valid non-null pointer.
+ */
+ReciteStatus recite_asset_info(uint64_t asset_handle, ReciteBuffer *info_out);
+
+/**
  * Loads and decodes a compiled Recite asset from a byte slice.
  *
  * On success writes a non-zero handle to `*asset_handle_out` and returns
@@ -443,6 +455,32 @@ ReciteStatus recite_asset_load(const uint8_t *bytes, size_t len, uint64_t *asset
  * been freed already.
  */
 void recite_buffer_free(ReciteBuffer *buf);
+
+/**
+ * Atomically merges one writer-owned gettext PO document into a catalogue.
+ * Existing sessions retain their attached catalogue revision.
+ *
+ * # Safety
+ * `locale` must point to a valid NUL-terminated UTF-8 string. `po_bytes`
+ * must be valid for `po_len` bytes when non-null and within `isize::MAX`.
+ */
+ReciteStatus recite_catalog_add_po(uint64_t catalog_handle,
+                                   const char *locale,
+                                   const uint8_t *po_bytes,
+                                   size_t po_len);
+
+/**
+ * Creates an empty owned dialogue catalogue handle.
+ *
+ * # Safety
+ * `catalog_handle_out` must be a valid non-null pointer.
+ */
+ReciteStatus recite_catalog_create(uint64_t *catalog_handle_out);
+
+/**
+ * Releases a catalogue handle. Sessions retain their attached revision.
+ */
+void recite_catalog_free(uint64_t catalog_handle);
 
 /**
  * Returns a pointer to the last error message set on the current thread.
@@ -631,6 +669,25 @@ ReciteStatus recite_session_restore(uint64_t asset_handle,
                                     ReciteBuffer *batch_out);
 
 /**
+ * Restores with an owned catalogue attached before the first traversal drain.
+ * The new session keeps this catalogue revision if its handle is later freed
+ * or updated. An absent locale in the saved session still emits source text.
+ *
+ * # Safety
+ * All non-null pointers must be valid for the duration of the call. The
+ * snapshot and value pointers obey their existing restore entrypoint contracts.
+ */
+ReciteStatus recite_session_restore_with_catalog(uint64_t asset_handle,
+                                                 const uint8_t *snapshot_bytes,
+                                                 size_t snapshot_len,
+                                                 const ReciteInterpolationValue *values,
+                                                 size_t values_len,
+                                                 uint64_t catalog_handle,
+                                                 const char *locale_variant,
+                                                 uint64_t *session_handle_out,
+                                                 ReciteBuffer *batch_out);
+
+/**
  * Restores a session and supplies typed interpolation values for its first
  * resumption drain.
  *
@@ -711,6 +768,12 @@ ReciteStatus recite_session_restore_with_values_and_locale_provider_and_variant(
                                                                                 void *userdata,
                                                                                 uint64_t *session_handle_out,
                                                                                 ReciteBuffer *batch_out);
+
+/**
+ * Attaches one owned catalogue revision to a session, replacing its locale
+ * callback. An absent session locale still uses authored source text.
+ */
+ReciteStatus recite_session_set_catalog(uint64_t session_handle, uint64_t catalog_handle);
 
 /**
  * Replaces the typed interpolation values attached to a session.

@@ -90,6 +90,7 @@ pub(crate) fn run_command(
         Command::InspectSchema(args) => {
             crate::schema_inspection::run(args, stdout, stderr, messages)
         }
+        Command::ExportSchema(args) => crate::schema_export::run(args, stdout, stderr, messages),
         Command::Explain(args) => explain_command(args, stdout, messages),
         Command::Watch(args) => run_watch_command(args, stderr, messages),
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout, messages),

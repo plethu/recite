@@ -1,24 +1,19 @@
 use std::path::Path;
-use std::sync::Arc;
 
-use recite_core::compiled::{CompiledDialogue, decode_compiled_dialogue_messagepack};
-use recite_runtime::{
-    ConditionArgument, ConditionExpectedType, ConditionQuery, DialogueChoice,
-    DialogueEffectRequest, DialogueEvent, DialogueLine,
-};
+use recite_core::compiled::CompiledDialogue;
+use recite_runtime::{ConditionArgument, ConditionExpectedType, ConditionQuery};
 
 use crate::adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
 
 #[derive(Clone, Debug)]
 pub struct ReciteDialogueAsset {
-    dialogue: Arc<CompiledDialogue>,
+    dialogue: recite_adapter::LoadedDialogue,
 }
 
 impl ReciteDialogueAsset {
     pub fn load_from_bytes(bytes: &[u8]) -> AdapterResult<Self> {
-        let dialogue = decode_compiled_dialogue_messagepack(bytes).map_err(AdapterError::from)?;
         Ok(Self {
-            dialogue: Arc::new(dialogue),
+            dialogue: recite_adapter::LoadedDialogue::from_bytes(bytes)?,
         })
     }
 
@@ -35,17 +30,20 @@ impl ReciteDialogueAsset {
 
     #[must_use]
     pub fn dialogue(&self) -> &CompiledDialogue {
-        &self.dialogue
-    }
-
-    #[must_use]
-    pub fn shared_dialogue(&self) -> Arc<CompiledDialogue> {
-        Arc::clone(&self.dialogue)
+        self.dialogue.dialogue()
     }
 
     #[must_use]
     pub fn asset_id(&self) -> &str {
-        self.dialogue.header.asset_id.as_str()
+        self.dialogue.asset_id()
+    }
+
+    pub fn content_identity(&self) -> AdapterResult<String> {
+        self.dialogue.content_identity()
+    }
+
+    pub(crate) fn loaded(&self) -> &recite_adapter::LoadedDialogue {
+        &self.dialogue
     }
 }
 
@@ -92,27 +90,4 @@ impl From<ConditionArgument<'_>> for AdapterValue {
     }
 }
 
-#[non_exhaustive]
-#[derive(Clone, Debug, PartialEq)]
-pub enum ReciteOutput {
-    Line(DialogueLine),
-    Prompt {
-        line: Option<DialogueLine>,
-        choices: Vec<DialogueChoice>,
-    },
-    Effect(DialogueEffectRequest),
-    End {
-        deferred_effects: Vec<DialogueEffectRequest>,
-    },
-}
-
-impl From<DialogueEvent> for ReciteOutput {
-    fn from(event: DialogueEvent) -> Self {
-        match event {
-            DialogueEvent::Line(line) => Self::Line(line),
-            DialogueEvent::Prompt { line, choices } => Self::Prompt { line, choices },
-            DialogueEvent::Effect(effect) => Self::Effect(effect),
-            DialogueEvent::End { deferred_effects } => Self::End { deferred_effects },
-        }
-    }
-}
+pub use recite_runtime::DialogueEvent as ReciteOutput;

@@ -1,0 +1,7 @@
+{
+  "name": "Recite.Dialogue.Editor",
+  "rootNamespace": "Recite.Unity.Editor",
+  "references": ["Recite.Dialogue"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

@@ -4,12 +4,14 @@ use std::thread;
 use crate::asset::{alloc_handle, lock_assets};
 use crate::buffer::{ReciteBuffer, checked_bytes};
 use crate::condition::FfiContext;
-use crate::error::{ReciteStatus, clear_condition_status, restore_status, set_last_error};
+use crate::error::{ReciteStatus, set_last_error};
 use crate::interpolation::{ReciteInterpolationValue, parse_interpolation_values};
 use crate::locale::FfiLocaleProvider;
+use crate::output::{encode_batch, encode_batch_output};
+use recite_adapter::{LoadedDialogue, SessionDriver};
 
-use super::FfiSession;
-use super::drain_restored;
+use super::{FfiLocaleSource, FfiSession};
+use super::{driver_failure, locale_resolution};
 
 struct RestoreRequest {
     asset_handle: u64,
@@ -17,7 +19,7 @@ struct RestoreRequest {
     snapshot_len: usize,
     values: *const ReciteInterpolationValue,
     values_len: usize,
-    locale_provider: Option<FfiLocaleProvider>,
+    locale_source: FfiLocaleSource,
     locale_variant: Option<String>,
 }
 
@@ -96,7 +98,7 @@ pub unsafe extern "C" fn recite_session_restore_with_values(
                 snapshot_len,
                 values,
                 values_len,
-                locale_provider: None,
+                locale_source: FfiLocaleSource::None,
                 locale_variant: None,
             },
             RestoreOutputs {
@@ -152,7 +154,9 @@ pub unsafe extern "C" fn recite_session_restore_with_values_and_locale_provider(
                 snapshot_len,
                 values,
                 values_len,
-                locale_provider: Some(FfiLocaleProvider::new(callback, userdata)),
+                locale_source: FfiLocaleSource::Callback(FfiLocaleProvider::new(
+                    callback, userdata,
+                )),
                 locale_variant: None,
             },
             RestoreOutputs {
@@ -214,7 +218,56 @@ pub unsafe extern "C" fn recite_session_restore_with_values_and_locale_provider_
                 snapshot_len,
                 values,
                 values_len,
-                locale_provider: Some(FfiLocaleProvider::new(callback, userdata)),
+                locale_source: FfiLocaleSource::Callback(FfiLocaleProvider::new(
+                    callback, userdata,
+                )),
+                locale_variant,
+            },
+            RestoreOutputs {
+                session_handle_out,
+                batch_out,
+            },
+        )
+    }
+}
+
+/// Restores with an owned catalogue attached before the first traversal drain.
+/// The new session keeps this catalogue revision if its handle is later freed
+/// or updated. An absent locale in the saved session still emits source text.
+///
+/// # Safety
+/// All non-null pointers must be valid for the duration of the call. The
+/// snapshot and value pointers obey their existing restore entrypoint contracts.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn recite_session_restore_with_catalog(
+    asset_handle: u64,
+    snapshot_bytes: *const u8,
+    snapshot_len: usize,
+    values: *const ReciteInterpolationValue,
+    values_len: usize,
+    catalog_handle: u64,
+    locale_variant: *const std::ffi::c_char,
+    session_handle_out: *mut u64,
+    batch_out: *mut ReciteBuffer,
+) -> ReciteStatus {
+    let catalog = match crate::catalog::catalog_for_handle(catalog_handle) {
+        Ok(catalog) => catalog,
+        Err(status) => return status,
+    };
+    let locale_variant =
+        match unsafe { super::parse_optional_session_string(locale_variant, "locale variant") } {
+            Ok(variant) => variant,
+            Err(status) => return status,
+        };
+    unsafe {
+        restore_impl(
+            RestoreRequest {
+                asset_handle,
+                snapshot_bytes,
+                snapshot_len,
+                values,
+                values_len,
+                locale_source: FfiLocaleSource::Catalog(catalog),
                 locale_variant,
             },
             RestoreOutputs {
@@ -256,11 +309,11 @@ unsafe fn restore_impl(request: RestoreRequest, outputs: RestoreOutputs) -> Reci
             return ReciteStatus::Validation;
         }
     };
-    let mut session = match recite_runtime::snapshot::decode_session_messagepack(&dialogue, bytes) {
-        Ok(session) => session,
+    let loaded = match LoadedDialogue::from_shared(dialogue) {
+        Ok(loaded) => loaded,
         Err(error) => {
             set_last_error(&error.to_string());
-            return restore_status(&error);
+            return ReciteStatus::from(error);
         }
     };
 
@@ -272,20 +325,22 @@ unsafe fn restore_impl(request: RestoreRequest, outputs: RestoreOutputs) -> Reci
                 return ReciteStatus::Validation;
             }
         };
+    let handlers = BTreeMap::new();
     let context = FfiContext {
-        handlers: &BTreeMap::new(),
+        handlers: &handlers,
     };
-    clear_condition_status();
-    let batch = match drain_restored(
-        &dialogue,
-        &mut session,
-        &context,
+    let resolution = locale_resolution(
         &interpolation_values,
-        request.locale_provider.as_ref(),
+        request.locale_source.provider(),
         request.locale_variant.as_deref(),
-    ) {
+    );
+    let mut driver = SessionDriver::new();
+    let batch = match driver.restore_with(&loaded, bytes, &context, resolution, |events| {
+        encode_batch_output(events, encode_batch)
+    }) {
         Ok(batch) => batch,
-        Err((status, message)) => {
+        Err(error) => {
+            let (status, message) = driver_failure(error);
             set_last_error(&message);
             return status;
         }
@@ -295,14 +350,12 @@ unsafe fn restore_impl(request: RestoreRequest, outputs: RestoreOutputs) -> Reci
     super::lock_sessions().insert(
         handle,
         FfiSession {
-            dialogue,
-            session,
-            handlers: BTreeMap::new(),
+            driver,
+            handlers,
             interpolation_values,
-            locale_provider: request.locale_provider,
+            locale_source: request.locale_source,
             locale_variant: request.locale_variant,
             owner_thread: thread::current().id(),
-            begun: true,
         },
     );
     unsafe { *outputs.session_handle_out = handle };
