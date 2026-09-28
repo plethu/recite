@@ -153,6 +153,17 @@ run_godot() {
   wait "$process_id"
 }
 
+retain_editor_log() {
+  local label="$1"
+  local log_file="$2"
+  local diagnostics_root="$cargo_target_dir/godot-host-diagnostics"
+  mkdir -p "$diagnostics_root"
+  local diagnostics_dir
+  diagnostics_dir="$(mktemp -d "$diagnostics_root/run.XXXXXX")"
+  cp "$log_file" "$diagnostics_dir/$label.log"
+  echo "Godot $label log retained at $diagnostics_dir/$label.log" >&2
+}
+
 run_editor_scan() {
   local label="$1"
   local project_dir="$2"
@@ -168,13 +179,8 @@ run_editor_scan() {
     status=$?
   fi
 
-  local diagnostics_root="$cargo_target_dir/godot-host-diagnostics"
-  mkdir -p "$diagnostics_root"
-  local diagnostics_dir
-  diagnostics_dir="$(mktemp -d "$diagnostics_root/run.XXXXXX")"
-  cp "$log_file" "$diagnostics_dir/$label.log"
+  retain_editor_log "$label" "$log_file"
   echo "Godot $label editor scan failed (exit $status)." >&2
-  echo "Failed scan log retained at $diagnostics_dir/$label.log" >&2
   cat "$log_file" >&2
   return 1
 }
@@ -205,13 +211,28 @@ cat "$tmpdir/runtime.log"
 
 echo "== reject changed compiled import and check last-good cache ==" >&2
 printf '\001\002\003' > "$tmpdir/dialogue/basic.recitec"
-if ! run_godot "$tmpdir/reject-editor.log" timeout 30s "${godot_env[@]}" "$godot_bin" \
-  --headless --editor --path "$tmpdir" --quit-after 10; then
+# This project has completed its first editor scan. Godot's --import waits for
+# the changed asset's import to finish before exiting; --quit-after counts
+# frames and can stop the scan early on a slower host.
+if run_godot "$tmpdir/reject-editor.log" timeout 30s "${godot_env[@]}" "$godot_bin" \
+  --headless --import --path "$tmpdir"; then
+  :
+else
+  import_status=$?
+  retain_editor_log "reject-import" "$tmpdir/reject-editor.log"
+  echo "Godot rejected import scan failed (exit $import_status)." >&2
   cat "$tmpdir/reject-editor.log" >&2
   exit 1
 fi
 if ! grep -Fq "Recite import" "$tmpdir/reject-editor.log"; then
+  retain_editor_log "reject-import" "$tmpdir/reject-editor.log"
   echo "Godot editor did not report the rejected compiled candidate." >&2
+  cat "$tmpdir/reject-editor.log" >&2
+  exit 1
+fi
+if grep -Fq "Scan thread aborted" "$tmpdir/reject-editor.log"; then
+  retain_editor_log "reject-import" "$tmpdir/reject-editor.log"
+  echo "Godot changed-asset import scan aborted." >&2
   cat "$tmpdir/reject-editor.log" >&2
   exit 1
 fi

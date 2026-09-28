@@ -17,6 +17,10 @@ consistent with [Godot issue #111645](https://github.com/godotengine/godot/issue
 but cannot identify the exact engine function. The host gate does not retry a
 failed scan; it retains that scan's log under
 `$CARGO_TARGET_DIR/godot-host-diagnostics` for diagnosis.
+The later changed-asset check uses Godot's `--import` after that first scan:
+it waits for import completion before exit, so a slower host cannot end the
+scan merely by reaching a frame count. The gate still requires the rejected
+import diagnostic and the last-good Resource check to pass on that attempt.
 
 | Manifest scenario ID | Godot evidence |
 | --- | --- |
