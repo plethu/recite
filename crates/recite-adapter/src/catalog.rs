@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use language_tags::LanguageTag;
 use recite_core::LocaleId;
 use recite_runtime::localisation::TextDomain;
 
@@ -47,7 +48,7 @@ impl ReciteDialogueCatalog {
         translation: impl Into<String>,
         variant: Option<&str>,
     ) -> AdapterResult<()> {
-        self.validate_entry(locale, id, source_text, variant)?;
+        let locale = self.validate_entry(locale, id, source_text, variant)?;
         let translation = translation.into();
         validate_catalog_text(&translation, "translation")?;
         if !translation.is_empty() {
@@ -60,7 +61,7 @@ impl ReciteDialogueCatalog {
                 },
             )?;
         }
-        let key = CatalogKey::singular(locale, domain, id, source_text, variant);
+        let key = CatalogKey::singular(locale.as_str(), domain, id, source_text, variant);
         self.insert_value(key, CatalogValue::singular(translation))
     }
 
@@ -75,14 +76,13 @@ impl ReciteDialogueCatalog {
         translations: Vec<String>,
         variant: Option<&str>,
     ) -> AdapterResult<()> {
-        self.validate_entry(locale, id, source_singular, variant)?;
+        let locale = self.validate_entry(locale, id, source_singular, variant)?;
         if source_plural.is_empty() || translations.is_empty() {
             return Err(AdapterError::with_detail(
                 AdapterErrorKind::Localisation,
                 "plural entries require a source plural form and at least one arm",
             ));
         }
-        let locale = valid_locale(locale)?;
         let Some(header) = self.plural_forms.get(locale.as_str()) else {
             return Err(AdapterError::with_detail(
                 AdapterErrorKind::Localisation,
@@ -166,8 +166,8 @@ impl ReciteDialogueCatalog {
         id: &str,
         source_text: &str,
         variant: Option<&str>,
-    ) -> AdapterResult<()> {
-        valid_locale(locale)?;
+    ) -> AdapterResult<LocaleId> {
+        let locale = valid_locale(locale)?;
         if id.is_empty() || source_text.is_empty() {
             return Err(AdapterError::with_detail(
                 AdapterErrorKind::Localisation,
@@ -185,7 +185,7 @@ impl ReciteDialogueCatalog {
         if let Some(variant) = variant {
             validate_catalog_text(variant, "catalogue variant")?;
         }
-        Ok(())
+        Ok(locale)
     }
 
     fn insert_value(&mut self, key: CatalogKey, value: CatalogValue) -> AdapterResult<()> {
@@ -228,7 +228,16 @@ fn validate_catalog_text(value: &str, label: &str) -> AdapterResult<()> {
 }
 
 fn valid_locale(value: &str) -> AdapterResult<LocaleId> {
-    LocaleId::new(value).map_err(|error| {
+    let parsed = value
+        .replace('_', "-")
+        .parse::<LanguageTag>()
+        .map_err(|_| {
+            AdapterError::with_detail(
+                AdapterErrorKind::Localisation,
+                format!("invalid locale `{value}`; expected a BCP-47 language tag"),
+            )
+        })?;
+    LocaleId::new(parsed.to_string()).map_err(|error| {
         AdapterError::with_detail(
             AdapterErrorKind::Localisation,
             format!("invalid locale: {error}"),
