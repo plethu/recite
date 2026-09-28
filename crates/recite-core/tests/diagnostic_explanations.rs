@@ -173,6 +173,7 @@ fn diagnostic_explanations_cover_emitted_codes() -> io::Result<()> {
         "crates/recite-core/src",
         "crates/recite-parser/src",
         "crates/recite-compiler/src",
+        "crates/recite-import/src",
         "crates/recite-lsp/src",
     ] {
         collect_codes_in_dir(&workspace.join(crate_path), &mut emitted)?;
