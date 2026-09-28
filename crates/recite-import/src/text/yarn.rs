@@ -129,7 +129,7 @@ fn emit(node: Node<'_>, builder: &mut Builder) -> Result<(), ImportError> {
         if let Some(target) = jump(text) {
             builder.jump(Target::Block(target), provenance)?;
         } else {
-            let (text, id) = line_id(text);
+            let (text, id) = line_id(line.text);
             let (speaker, text) = speaker_prefix(text);
             builder.line(text, speaker, id, provenance)?;
         }
@@ -149,6 +149,7 @@ fn jump(text: &str) -> Option<&str> {
 
 fn line_id(text: &str) -> (&str, Option<&str>) {
     text.rsplit_once(" #line:")
+        .map(|(text, id)| (text, id.trim_end()))
         .filter(|(_, id)| !id.is_empty() && !id.contains(char::is_whitespace))
         .map_or((text, None), |(text, id)| (text, Some(id)))
 }

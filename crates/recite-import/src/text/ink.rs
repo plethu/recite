@@ -109,7 +109,7 @@ fn emit(node: Node<'_>, builder: &mut Builder) -> Result<(), ImportError> {
                 provenance,
             )?;
         } else {
-            builder.line(text, None, None, provenance)?;
+            builder.line(line.text, None, None, provenance)?;
         }
     }
     Ok(())

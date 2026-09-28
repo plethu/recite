@@ -139,6 +139,7 @@ impl Builder {
         if !self.accept_text(text, &provenance)? {
             return Ok(());
         }
+        let text = text.trim();
         if speaker.is_some_and(|value| !speaker_value(value)) {
             return self.issue(
                 INVALID,
@@ -172,6 +173,7 @@ impl Builder {
         if !self.accept_text(text, &provenance)? {
             return Ok(());
         }
+        let text = text.trim();
         if !self.prompt {
             return self.issue(
                 UNSUPPORTED,
@@ -226,7 +228,7 @@ impl Builder {
                 LOSS,
                 provenance.clone(),
                 "whitespace",
-                "Leading or trailing whitespace may be normalized by native source parsing.",
+                "Leading or trailing whitespace was removed when generating native source.",
             )?;
         }
         Ok(true)

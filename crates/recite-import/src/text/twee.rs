@@ -79,7 +79,7 @@ fn emit(node: Node<'_>, builder: &mut Builder) -> Result<(), ImportError> {
         if let Some((label, target)) = link(text) {
             builder.choice(label, Target::Block(target), provenance)?;
         } else {
-            builder.line(text, None, None, provenance)?;
+            builder.line(line.text, None, None, provenance)?;
         }
     }
     Ok(())
@@ -100,5 +100,5 @@ fn link(text: &str) -> Option<(&str, &str)> {
     if !plain(label.trim()) || target.contains(['|', '<', '>']) || target.trim().is_empty() {
         return None;
     }
-    Some((label.trim(), target.trim()))
+    Some((label, target.trim()))
 }

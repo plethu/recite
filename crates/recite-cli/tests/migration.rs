@@ -12,6 +12,39 @@ fn fixture(root: &std::path::Path, source: &str) -> std::path::PathBuf {
 }
 
 #[test]
+fn whitespace_loss_requires_explicit_partial_write_acceptance() {
+    for (family, source) in [
+        ("twee", ":: Start\n  Hello.  \n"),
+        ("ink", "=== Start ===\n  Hello.  \n-> END\n"),
+        ("yarn", "title: Start\n---\nÉlodie: Hello.  \n===\n"),
+    ] {
+        let temp = TempDir::new().expect("tempdir");
+        let input = write_file(temp.path(), &format!("input.{family}"), source);
+        let destination = temp.path().join("converted");
+        let output = run(recite()
+            .arg("import")
+            .arg(&input)
+            .args(["--from", family, "--output-dir"])
+            .arg(&destination));
+        output.assert_failure();
+        let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("report");
+        assert_eq!(report["status"], "partial");
+        assert!(!destination.exists());
+        run(recite()
+            .arg("import")
+            .arg(&input)
+            .args(["--from", family, "--accept-partial", "--output-dir"])
+            .arg(&destination))
+        .assert_success();
+        run(recite()
+            .arg("validate")
+            .arg(destination.join("imported.recite")))
+        .assert_success();
+        assert_eq!(fs::read_to_string(&input).expect("original source"), source);
+    }
+}
+
+#[test]
 fn inspection_is_read_only_and_complete_import_produces_native_source() {
     let temp = TempDir::new().expect("tempdir");
     let input = fixture(temp.path(), ":: Start\nHello.\n");

@@ -41,6 +41,10 @@ and follow-up. `RECITE_IMPORT001` rejects bad input or mappings;
 conversion. Native diagnostics retain their usual codes and point into
 `imported.recite`; use the generated-line mappings to relate them to the input.
 
+Leading or trailing whitespace in dialogue and choice labels is reported as a
+loss before normalization. These conversions are partial and require review
+before writing, even when the normalized text passes native validation.
+
 Inspection exits successfully for complete or partial results. Invalid results
 exit 1. A write request for partial output without `--accept-partial` also exits 1.
 Operational failures, including unreadable files or malformed mapping JSON,

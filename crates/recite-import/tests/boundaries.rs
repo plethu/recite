@@ -3,6 +3,61 @@
 use recite_import::{FieldMapping, ImportRequest, ImportStatus, SourceFamily, import};
 
 #[test]
+fn text_whitespace_loss_keeps_provenance_and_requires_review() {
+    for (family, source, row) in [
+        (SourceFamily::Twee, ":: Start\n  Hello.  \n", 2),
+        (SourceFamily::Ink, "=== Start ===\n  Hello.  \n-> END\n", 2),
+        (SourceFamily::Yarn, "title: Start\n---\nHello.  \n===\n", 3),
+        (
+            SourceFamily::Yarn,
+            "title: Start\n---\nÉlodie: Hello.  \n===\n",
+            3,
+        ),
+        (
+            SourceFamily::Yarn,
+            "title: Start\n---\nÉlodie: Hello.   #line:11111111111111111111  \n===\n",
+            3,
+        ),
+        (
+            SourceFamily::Twee,
+            ":: Start\nHello.\n[[ Again ->Start]]\n",
+            3,
+        ),
+        (
+            SourceFamily::Ink,
+            "=== Start ===\nHello.\n+ [ Again ] -> Start\n",
+            3,
+        ),
+    ] {
+        let report = import(ImportRequest {
+            family,
+            file: "whitespace",
+            source,
+            mapping: None,
+            schema: None,
+        })
+        .expect("report");
+        assert_eq!(
+            report.status,
+            ImportStatus::Partial,
+            "{source}: {report:#?}"
+        );
+        assert_eq!(report.items.len(), 1, "{source}: {report:#?}");
+        let item = &report.items[0];
+        assert_eq!(item.action, recite_import::Action::ConvertedWithLoss);
+        let item = serde_json::to_value(item).expect("item");
+        assert_eq!(item["diagnostic"]["code"], "RECITE_IMPORT003");
+        assert_eq!(item["provenance"]["file"], "whitespace");
+        assert_eq!(item["provenance"]["location"]["span"]["start"]["line"], row);
+        assert!(report.native_diagnostics.is_empty());
+        assert!(report.source.contains("\n  Hello.\n"));
+        if source.contains("#line:") {
+            assert!(report.source.contains("@11111111111111111111"));
+        }
+    }
+}
+
+#[test]
 fn speaker_ids_survive_yarn_and_record_imports_as_structured_data() {
     let mapping: FieldMapping =
         serde_json::from_str(r#"{"block":"node","text":"text","speaker":"speaker"}"#)
