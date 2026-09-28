@@ -20,6 +20,7 @@ pub(super) struct Builder {
     block: Option<String>,
     terminal: bool,
     prompt: bool,
+    source_lines: usize,
 }
 
 pub(super) enum Target<'a> {
@@ -53,6 +54,7 @@ impl Builder {
             block: None,
             terminal: false,
             prompt: false,
+            source_lines: 0,
         }
     }
 
@@ -117,9 +119,7 @@ impl Builder {
             ""
         };
         self.record(&provenance, "block", Some(name), &target);
-        self.report
-            .source
-            .push_str(&format!(":: {target}{default}\n"));
+        self.append(&format!(":: {target}{default}\n"));
         self.block = Some(name.to_owned());
         Ok(())
     }
@@ -157,9 +157,7 @@ impl Builder {
         let stable = self.stable_id(id, &provenance);
         let speaker = speaker.map_or(String::new(), |value| format!(" speaker={value}"));
         self.record(&provenance, "line", id, &stable);
-        self.report
-            .source
-            .push_str(&format!("> {stable}{speaker}\n  {text}\n"));
+        self.append(&format!("> {stable}{speaker}\n  {text}\n"));
         self.prompt = true;
         Ok(())
     }
@@ -183,7 +181,7 @@ impl Builder {
         }
         let stable = self.stable_id(None, &provenance);
         self.record(&provenance, "choice", None, &stable);
-        self.report.source.push_str(&format!(
+        self.append(&format!(
             "  ? {stable}\n    {text}\n    -> {}\n",
             target.source()
         ));
@@ -206,7 +204,7 @@ impl Builder {
         }
         let target = target.source();
         self.record(&provenance, "jump", None, &target);
-        self.report.source.push_str(&format!("-> {target}\n"));
+        self.append(&format!("-> {target}\n"));
         self.terminal = true;
         self.prompt = false;
         Ok(())
@@ -267,13 +265,18 @@ impl Builder {
             construct: construct.to_owned(),
             original_id: original.map(str::to_owned),
             generated_id: generated.to_owned(),
-            generated_line: self.report.source.lines().count() + 1,
+            generated_line: self.source_lines + 1,
         });
+    }
+
+    fn append(&mut self, source: &str) {
+        self.source_lines += source.bytes().filter(|byte| *byte == b'\n').count();
+        self.report.source.push_str(source);
     }
 
     fn close_block(&mut self) {
         if self.block.is_some() && !self.terminal {
-            self.report.source.push_str("-> END\n");
+            self.append("-> END\n");
         }
     }
 

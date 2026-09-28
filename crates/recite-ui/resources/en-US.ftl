@@ -973,3 +973,8 @@ writer-rules-actions = Condition actions
 
 cli-import-summary = { $records } generated records; { $issues } items need review.
 cli-help-command-import = Inspect migration input and optionally write validated Recite source
+cli-help-arg-import-input = Input document to inspect; the original file is never edited
+cli-help-arg-import-from = Explicit source family: json, csv, twee, ink or yarn
+cli-help-arg-import-mapping = JSON field mapping file, required for JSON and CSV inputs
+cli-help-arg-import-output-dir = New directory for the report and validated source; omit to inspect only
+cli-help-arg-import-accept-partial = Allow writing a partial conversion after reviewing its skipped or lossy items

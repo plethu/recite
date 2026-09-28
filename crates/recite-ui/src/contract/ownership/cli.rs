@@ -20,6 +20,11 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandRun
         | MsgId::CliHelpCommandTrace
         | MsgId::CliHelpCommandPlay
+        | MsgId::CliHelpArgImportInput
+        | MsgId::CliHelpArgImportFrom
+        | MsgId::CliHelpArgImportMapping
+        | MsgId::CliHelpArgImportOutputDir
+        | MsgId::CliHelpArgImportAcceptPartial
         | MsgId::CliImportSummary
         | MsgId::CliHelpCommandImport
         | MsgId::CliHelpCommandBench

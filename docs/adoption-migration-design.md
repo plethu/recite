@@ -52,8 +52,10 @@ The source builder is above the 250-line review trigger. It remains one cohesive
 owner for generated block/session shape, source IDs, source mappings and the
 native validation gate; the independent format readers and diagnostic contract
 are separate modules. Splitting its small state transitions across files would
-make that invariant harder to inspect. The pre-existing CLI dispatcher remains
-above the trigger; migration is a separate module and adds only a dispatch arm.
+make that invariant harder to inspect. The CLI dispatcher crossed the 400-line follow-up threshold with its new
+arm, so benchmark commands moved to their own cohesive module. The argument,
+help, error and structured-error inventories remain cohesive declarative
+command contracts; migration adds entries without new policy branches.
 
 The realistic project manifest now uses the current `content_set` field and
 declares its scene. Its obsolete `[locales]` table was removed; catalogue
