@@ -56,10 +56,13 @@ fn unsupported_node(
 }
 
 fn plain(text: &str) -> bool {
-    !text.is_empty()
-        && !text.contains("''")
-        && !text.contains([
-            '{', '}', '[', ']', '\\', '<', '>', '#', '$', '\t', '*', '_', '~', '@', '/', '^', '%',
-            '|', '&', '`',
-        ])
+    !text.is_empty() && !text.contains("''") && text.chars().all(plain_character)
+}
+
+fn plain_character(character: char) -> bool {
+    ![
+        '{', '}', '[', ']', '\\', '<', '>', '#', '$', '\t', '*', '_', '~', '@', '/', '^', '%', '|',
+        '&', '`',
+    ]
+    .contains(&character)
 }

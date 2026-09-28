@@ -5,7 +5,8 @@ use recite_compiler::compile::{
 };
 use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 use recite_core::{
-    DiagnosticCode, SourceAnchor, SourceId, SourcePosition, SourceSpan, schema::ProjectSchema,
+    DiagnosticCode, SourceAnchor, SourceId, SourcePosition, SourceSpan, SpeakerId,
+    schema::ProjectSchema,
 };
 
 use crate::diagnostics::{INVALID, LOSS, UNSUPPORTED, item};
@@ -138,12 +139,12 @@ impl Builder {
         if !self.accept_text(text, &provenance)? {
             return Ok(());
         }
-        if speaker.is_some_and(|value| !identifier(value)) {
+        if speaker.is_some_and(|value| !speaker_value(value)) {
             return self.issue(
                 INVALID,
                 provenance,
                 "speaker",
-                "Speaker must be a native identifier.",
+                "Speaker must be a nonempty ID that fits one bare native header value.",
             );
         }
         if self.block.is_none() || self.terminal {
@@ -337,6 +338,17 @@ pub(super) fn identifier(value: &str) -> bool {
         .next()
         .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+pub(super) fn speaker_value(value: &str) -> bool {
+    // SpeakerId permits Unicode. Keep the ID verbatim in one bare header field;
+    // quoting and bracket/parenthesis grouping belong to native header syntax.
+    SpeakerId::new(value).is_ok()
+        && !value.chars().any(|character| {
+            character.is_whitespace()
+                || character.is_control()
+                || matches!(character, '"' | '\\' | '[' | ']' | '(' | ')')
+        })
 }
 
 pub(super) fn block_name(name: &str) -> String {

@@ -8,8 +8,11 @@ recite import fixtures/import/nodes.yarn --from yarn
 ```
 
 The checked subset accepts `title: Name`, `---`, plain body lines and a closing
-`===`. A body may finish with a static `<<jump Target>>`. An identifier followed
-by `: ` becomes the speaker. A trailing `#line:ID` is retained or mapped according
+`===`. A body may finish with a static `<<jump Target>>`. A speaker ID followed
+by `: ` becomes the structured speaker, including Unicode names such as `Élodie`.
+IDs must fit one bare native header value; whitespace, control characters,
+quotes, backslashes, brackets and parentheses require manual migration.
+A trailing `#line:ID` is retained or mapped according
 to the [import ID rules](/migration/importer-boundaries/).
 
 ```text

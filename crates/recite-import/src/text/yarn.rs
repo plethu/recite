@@ -1,9 +1,9 @@
 use crate::builder::Target;
 
-use super::{Line, Node, plain, unsupported_node};
+use super::{Line, Node, plain, plain_character, unsupported_node};
 use crate::{
     ImportError,
-    builder::{Builder, identifier},
+    builder::{Builder, identifier, speaker_value},
     diagnostics::INVALID,
 };
 
@@ -98,7 +98,13 @@ fn emit(node: Node<'_>, builder: &mut Builder) -> Result<(), ImportError> {
                 return false;
             }
             let (text, _) = line_id(text);
-            !plain(text)
+            let (speaker, body) = speaker_prefix(text);
+            !plain(body)
+                || speaker.is_some_and(|speaker| {
+                    !speaker_value(speaker)
+                        || speaker.contains("''")
+                        || !speaker.chars().all(|c| c == '_' || plain_character(c))
+                })
                 || line.text.starts_with(char::is_whitespace)
                 || text.starts_with("->")
                 || text.contains("//")
@@ -124,14 +130,16 @@ fn emit(node: Node<'_>, builder: &mut Builder) -> Result<(), ImportError> {
             builder.jump(Target::Block(target), provenance)?;
         } else {
             let (text, id) = line_id(text);
-            let (speaker, text) = text
-                .split_once(": ")
-                .filter(|(speaker, _)| identifier(speaker))
-                .map_or((None, text), |(speaker, text)| (Some(speaker), text));
+            let (speaker, text) = speaker_prefix(text);
             builder.line(text, speaker, id, provenance)?;
         }
     }
     Ok(())
+}
+
+fn speaker_prefix(text: &str) -> (Option<&str>, &str) {
+    text.split_once(": ")
+        .map_or((None, text), |(speaker, text)| (Some(speaker), text))
 }
 
 fn jump(text: &str) -> Option<&str> {

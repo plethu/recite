@@ -3,6 +3,74 @@
 use recite_import::{FieldMapping, ImportRequest, ImportStatus, SourceFamily, import};
 
 #[test]
+fn speaker_ids_survive_yarn_and_record_imports_as_structured_data() {
+    let mapping: FieldMapping =
+        serde_json::from_str(r#"{"block":"node","text":"text","speaker":"speaker"}"#)
+            .expect("mapping");
+    for speaker in ["Élodie", "张伟", "E\u{301}lodie", "élodie_2", "Jean-Luc"] {
+        for (family, source, mapping) in [
+            (
+                SourceFamily::Yarn,
+                format!("title: Start\n---\n{speaker}: Bonjour.\n===\n"),
+                None,
+            ),
+            (
+                SourceFamily::Json,
+                serde_json::json!([{"node":"Start","text":"Bonjour.","speaker":speaker}])
+                    .to_string(),
+                Some(&mapping),
+            ),
+            (
+                SourceFamily::Csv,
+                format!("node,text,speaker\nStart,Bonjour.,{speaker}\n"),
+                Some(&mapping),
+            ),
+        ] {
+            let report = import(ImportRequest {
+                family,
+                file: "input",
+                source: &source,
+                mapping,
+                schema: None,
+            })
+            .expect("report");
+            assert_eq!(report.status, ImportStatus::Complete, "{report:#?}");
+            assert!(report.source.contains(&format!(" speaker={speaker}\n")));
+            assert!(report.source.contains("\n  Bonjour.\n"));
+            assert!(!report.source.contains(&format!("{speaker}: Bonjour.")));
+            assert!(report.native_diagnostics.is_empty());
+        }
+    }
+}
+
+#[test]
+fn unsafe_speaker_prefixes_are_reported_instead_of_imported_as_prose() {
+    for speaker in [
+        "Élodie portrait=angry",
+        "Élodie\"",
+        "Élodie[",
+        "Élodie(",
+        "#tag",
+        "-> Élodie",
+        "Élodie//tag",
+        "Élodie*",
+    ] {
+        let source = format!("title: Start\n---\n{speaker}: Bonjour.\n===\n");
+        let report = import(ImportRequest {
+            family: SourceFamily::Yarn,
+            file: "input.yarn",
+            source: &source,
+            mapping: None,
+            schema: None,
+        })
+        .expect("report");
+        assert_eq!(report.status, ImportStatus::Invalid, "{speaker}");
+        assert!(!report.source.contains("Bonjour."));
+        assert!(!report.items.is_empty());
+    }
+}
+
+#[test]
 fn end_is_a_real_node_name_in_twee_and_yarn() {
     for (family, source) in [
         (
