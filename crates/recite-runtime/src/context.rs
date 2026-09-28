@@ -200,15 +200,36 @@ impl<'a> From<&'a CompiledArgument> for ConditionArgument<'a> {
 /// Error returned by the caller-provided condition context.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConditionEvaluationError {
+    kind: ConditionEvaluationErrorKind,
     reason: String,
+}
+
+/// Host-side condition failure category carried through runtime traversal.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ConditionEvaluationErrorKind {
+    MissingHandler,
+    EvaluationFailed,
+    InvalidResult,
 }
 
 impl ConditionEvaluationError {
     #[must_use]
     pub fn new(reason: impl Into<String>) -> Self {
+        Self::with_kind(ConditionEvaluationErrorKind::EvaluationFailed, reason)
+    }
+
+    #[must_use]
+    pub fn with_kind(kind: ConditionEvaluationErrorKind, reason: impl Into<String>) -> Self {
         Self {
+            kind,
             reason: reason.into(),
         }
+    }
+
+    #[must_use]
+    pub fn kind(&self) -> ConditionEvaluationErrorKind {
+        self.kind
     }
 
     #[must_use]

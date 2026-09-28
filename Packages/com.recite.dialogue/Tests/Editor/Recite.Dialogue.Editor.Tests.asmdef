@@ -1,0 +1,6 @@
+{
+  "name": "Recite.Dialogue.Editor.Tests",
+  "references": ["Recite.Dialogue", "Recite.Dialogue.Editor"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

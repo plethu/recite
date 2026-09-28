@@ -33,6 +33,16 @@ export default defineConfig({
           ],
         },
         {
+          label: "Engine adapters",
+          items: [
+            { label: "Overview", slug: "adapters" },
+            { label: "Edit and refresh", slug: "adapters/authoring" },
+            { label: "Bevy", slug: "adapters/bevy" },
+            { label: "Godot", slug: "adapters/godot" },
+            { label: "Unity", slug: "adapters/unity" },
+          ],
+        },
+        {
           label: "Migration",
           items: [
             { label: "Overview", slug: "migration" },

@@ -1,10 +1,9 @@
 use crate::buffer::ReciteBuffer;
 use crate::condition::FfiContext;
-use crate::error::{ReciteStatus, clear_condition_status, set_last_error};
+use crate::error::{ReciteStatus, set_last_error};
+use crate::output::{encode_batch, encode_batch_output};
 
-use recite_runtime::{LocaleResolution, choose_with};
-
-use super::drain_after_event;
+use super::{driver_failure, locale_resolution};
 
 /// Selects a pending prompt choice.
 ///
@@ -53,49 +52,23 @@ pub unsafe extern "C" fn recite_session_choose(
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
-    let session_checkpoint = ffi_session.session.clone();
-    clear_condition_status();
-    let resolution = LocaleResolution::new().with_values(&ffi_session.interpolation_values);
-    let resolution = ffi_session
-        .locale_provider
-        .as_ref()
-        .map_or(resolution, |provider| resolution.with_provider(provider));
-    let resolution = ffi_session
-        .locale_variant
-        .as_deref()
-        .map_or(resolution, |variant| resolution.with_variant(variant));
-    let result = match choose_with(
-        &ffi_session.dialogue,
-        &mut ffi_session.session,
-        choice_id,
-        &context,
-        resolution,
-    ) {
-        Ok(first_event) => drain_after_event(
-            &ffi_session.dialogue,
-            &mut ffi_session.session,
-            &context,
-            first_event,
-            &ffi_session.interpolation_values,
-            ffi_session.locale_provider.as_ref(),
-            ffi_session.locale_variant.as_deref(),
-        ),
-        Err(error) => {
-            set_last_error(&error.to_string());
-            Err((ReciteStatus::from(error), String::new()))
-        }
-    };
-
-    match result {
+    let resolution = locale_resolution(
+        &ffi_session.interpolation_values,
+        ffi_session.locale_source.provider(),
+        ffi_session.locale_variant.as_deref(),
+    );
+    match ffi_session
+        .driver
+        .select_choice_with(choice_id, &context, resolution, |events| {
+            encode_batch_output(events, encode_batch)
+        }) {
         Ok(batch) => {
             unsafe { *batch_out = batch };
             ReciteStatus::Ok
         }
-        Err((status, message)) => {
-            ffi_session.session = session_checkpoint;
-            if !message.is_empty() {
-                set_last_error(&message);
-            }
+        Err(error) => {
+            let (status, message) = driver_failure(error);
+            set_last_error(&message);
             status
         }
     }

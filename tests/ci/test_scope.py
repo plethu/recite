@@ -50,6 +50,32 @@ class ScopeTests(unittest.TestCase):
         self.assertTrue({"docs", "rust", "editor"} <= selected("fixtures/schema/valid/test.json"))
         self.assertIn("rust", selected("fixtures/recite/markdown-input.md"))
 
+    def test_engine_companions_select_the_rust_adapter_gate(self):
+        for path in (
+            "crates/recite-adapter/src/lib.rs",
+            "crates/recite-bevy/src/lib.rs",
+            "crates/recite-godot/src/lib.rs",
+            "addons/com.recite.dialogue/plugin.cfg",
+            "Packages/com.recite.dialogue/Runtime/ReciteDialogueService.cs",
+            "examples/godot/basic-dialogue/project.godot",
+            "tests/godot-host/run_tests.gd",
+            "tests/unity-project/Packages/manifest.json",
+            "scripts/check-godot-host.sh",
+            "scripts/package-godot-addon.sh",
+            "scripts/check-unity-adapter.sh",
+            "scripts/check-bevy-package.sh",
+            "scripts/unity/build-upm.sh",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), scope.RUST)
+        for path in (
+            "addons/recite/README.md",
+            "Packages/com.recite.dialogue/README.md",
+            "examples/godot/basic-dialogue/README.md",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), scope.RUST | {"docs"})
+
     def test_packaging_and_shared_build_inputs(self):
         for path in (
             "flake.nix", "apps/writer/packaging/flatpak/manifest.json",

@@ -1,7 +1,7 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::ffi::CString;
 
-use recite_runtime::DialogueError;
+use recite_adapter::{AdapterError, AdapterErrorKind};
 
 /// Stable C error codes. Matches the category table in docs/c-abi-boundary-design.md.
 ///
@@ -67,76 +67,40 @@ impl TryFrom<i32> for ReciteStatus {
     }
 }
 
-/// Maps `DialogueError` to a `ReciteStatus`.
-///
-/// Mirrors the `From<DialogueError> for AdapterErrorKind` impl in
-/// `recite-godot/src/adapter_error.rs`. If a new `DialogueError` variant is
-/// added, both that impl and this function must be updated together.
-impl From<DialogueError> for ReciteStatus {
-    fn from(error: DialogueError) -> Self {
-        match error {
-            DialogueError::UnknownBlock { .. } => Self::UnknownStartBlock,
-            DialogueError::UnsupportedCompiledFormat { .. }
-            | DialogueError::AssetMismatch { .. }
-            | DialogueError::AssetContentMismatch { .. } => Self::StaleOrIncompatible,
-            DialogueError::SchemaMismatch { .. } => Self::SchemaMismatch,
-            DialogueError::MalformedCompiledAsset { .. } => Self::AssetLoadOrDecode,
-            DialogueError::EffectPending { .. }
-            | DialogueError::NoEffectPending { .. }
-            | DialogueError::WrongEffectAcknowledgement { .. } => Self::EffectAcknowledgement,
-            DialogueError::PromptPending { .. } | DialogueError::NoPromptPending { .. } => {
-                Self::StaleChoice
-            }
-            DialogueError::InvalidChoice { .. } => Self::InvalidChoice,
-            DialogueError::UnavailableChoice { .. } => Self::UnavailableChoice,
-            DialogueError::ConditionEvaluationFailed { .. } => {
-                take_condition_status().unwrap_or(Self::ConditionEvaluation)
-            }
-            DialogueError::ConditionResultTypeMismatch { .. } => Self::InvalidConditionResult,
-            DialogueError::ConditionDepthLimitExceeded { .. } => Self::ConditionEvaluation,
-            DialogueError::InterpolationValueFailed { .. }
-            | DialogueError::MissingInterpolationValue { .. }
-            | DialogueError::InvalidInterpolationSyntax { .. }
-            | DialogueError::InvalidPluralCount { .. }
-            | DialogueError::LocaleLookupFailed { .. } => Self::Localisation,
-            DialogueError::UnsupportedSessionSnapshotFormat { .. }
-            | DialogueError::SessionSnapshotEncodeFailed { .. }
-            | DialogueError::SessionSnapshotDecodeFailed { .. }
-            | DialogueError::InvalidSessionSnapshot { .. } => Self::SaveLoadIncompatibility,
-            DialogueError::SessionEnded => Self::NoActiveSession,
-            DialogueError::TraversalLimitExceeded { .. } => Self::DialogueFault,
+impl From<AdapterErrorKind> for ReciteStatus {
+    fn from(kind: AdapterErrorKind) -> Self {
+        match kind {
+            AdapterErrorKind::Validation => Self::Validation,
+            AdapterErrorKind::AssetLoadOrDecode => Self::AssetLoadOrDecode,
+            AdapterErrorKind::StaleOrIncompatibleAsset => Self::StaleOrIncompatible,
+            AdapterErrorKind::SchemaMismatch => Self::SchemaMismatch,
+            AdapterErrorKind::NoActiveSession => Self::NoActiveSession,
+            AdapterErrorKind::SessionAlreadyActive => Self::SessionAlreadyActive,
+            AdapterErrorKind::UnknownStartBlock => Self::UnknownStartBlock,
+            AdapterErrorKind::InvalidChoice => Self::InvalidChoice,
+            AdapterErrorKind::StaleChoice => Self::StaleChoice,
+            AdapterErrorKind::UnavailableChoice => Self::UnavailableChoice,
+            AdapterErrorKind::MissingConditionHandler => Self::MissingConditionHandler,
+            AdapterErrorKind::ConditionEvaluationFailed => Self::ConditionEvaluation,
+            AdapterErrorKind::InvalidConditionResult => Self::InvalidConditionResult,
+            AdapterErrorKind::EffectAcknowledgement => Self::EffectAcknowledgement,
+            AdapterErrorKind::SaveLoadIncompatibility => Self::SaveLoadIncompatibility,
+            AdapterErrorKind::RejectedChangedAssetRefresh => Self::RejectedRefresh,
+            AdapterErrorKind::Localisation => Self::Localisation,
+            AdapterErrorKind::DialogueFault => Self::DialogueFault,
+            _ => Self::DialogueFault,
         }
     }
 }
 
-/// Maps a runtime restore error to the save/load operation's status vocabulary.
-///
-/// Asset identity/content mismatches are stale-asset faults in ordinary runtime
-/// traversal, but a restore operation reports them as an incompatible save.
-pub(crate) fn restore_status(error: &DialogueError) -> ReciteStatus {
-    match error {
-        DialogueError::AssetMismatch { .. } | DialogueError::AssetContentMismatch { .. } => {
-            ReciteStatus::SaveLoadIncompatibility
-        }
-        _ => ReciteStatus::from(error.clone()),
+impl From<AdapterError> for ReciteStatus {
+    fn from(error: AdapterError) -> Self {
+        Self::from(error.kind())
     }
 }
 
 thread_local! {
-    static CONDITION_STATUS: Cell<Option<ReciteStatus>> = const { Cell::new(None) };
     static LAST_ERROR: RefCell<Option<CString>> = const { RefCell::new(None) };
-}
-
-pub(crate) fn clear_condition_status() {
-    CONDITION_STATUS.with(|cell| cell.set(None));
-}
-
-pub(crate) fn set_condition_status(status: ReciteStatus) {
-    CONDITION_STATUS.with(|cell| cell.set(Some(status)));
-}
-
-fn take_condition_status() -> Option<ReciteStatus> {
-    CONDITION_STATUS.with(Cell::take)
 }
 
 /// Sets the thread-local error message. The stored `CString` is valid until the

@@ -1,0 +1,6 @@
+:: start default
+> prompt@a0000000000000000001
+  Choose a route.
+  ? continue@a0000000000000000002
+    Continue.
+    -> END

@@ -60,6 +60,11 @@ test-godot:
     mise -E godot install
     mise -E godot exec -- scripts/check-godot-host.sh
 
+# Focused Bevy App tests and a consumer built from local Cargo packages.
+test-bevy:
+    cargo nextest run --locked -p recite-bevy
+    scripts/check-bevy-package.sh
+
 test-editor-host client *args:
     case "$1" in neovim|vscode|zed) scripts/check-"$1"-host.sh "${@:2}" ;; *) echo 'Expected neovim, vscode, or zed' >&2; exit 2 ;; esac
 

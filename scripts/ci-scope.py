@@ -18,6 +18,12 @@ PACKAGING_PREFIXES = (
     "scripts/package-writer", "scripts/check-writer-package",
     "scripts/check-writer-flatpak", "tests/writer-packaging/", "tests/writer-flatpak/",
 )
+ENGINE_COMPANION_PREFIXES = (
+    "addons/", "Packages/com.recite.dialogue/", "examples/godot/",
+    "tests/godot-host/", "tests/unity-project/", "scripts/unity/",
+    "scripts/check-godot-host.sh", "scripts/package-godot-addon.sh",
+    "scripts/check-unity-adapter.sh", "scripts/check-bevy-package.sh",
+)
 
 
 def lanes_for_path(path):
@@ -30,6 +36,8 @@ def lanes_for_path(path):
         return LANES
     if path == "scripts/maintainability/exceptions.toml":
         return frozenset({"docs", "maintainability"})
+    if path.startswith(ENGINE_COMPANION_PREFIXES):
+        return RUST | ({"docs"} if path.endswith(".md") else set())
     if path.startswith("docs/") or (
         path.endswith(".md") and not path.startswith(("fixtures/", "tests/"))
     ):

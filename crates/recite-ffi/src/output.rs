@@ -4,7 +4,7 @@ mod model;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use encode::{encode_batch, should_continue};
+pub(crate) use encode::encode_batch;
 pub(crate) use model::FfiOutputEncodeError;
 
 use crate::buffer::ReciteBuffer;

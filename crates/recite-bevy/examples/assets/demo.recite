@@ -1,0 +1,17 @@
+:: start default
+> welcome@11111111111111111111
+  Welcome.
+! immediate play_chime()
+? enter@22222222222222222222 requires=(has_clearance())
+  Enter.
+  -> work
+? leave@33333333333333333333
+  Leave.
+  -> END
+
+:: work
+! deferred mark_seen()
+! blocking grant_key()
+> result@44444444444444444444
+  The key is yours.
+-> END

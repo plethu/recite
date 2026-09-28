@@ -34,6 +34,7 @@ mod i18n;
 mod play;
 mod runtime_fixture;
 mod runtime_format;
+mod schema_export;
 mod schema_freshness;
 mod schema_inspection;
 mod structured;

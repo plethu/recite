@@ -90,6 +90,12 @@ impl DialogueSession {
         &self.selected_choice_history
     }
 
+    /// IDs in the latest emitted prompt, retained in session snapshots.
+    #[must_use]
+    pub fn previous_prompt_choices(&self) -> &[ChoiceId] {
+        &self.previous_prompt_choices
+    }
+
     #[must_use]
     pub fn deferred_effects(&self) -> &[DialogueEffectRequest] {
         &self.deferred_effects

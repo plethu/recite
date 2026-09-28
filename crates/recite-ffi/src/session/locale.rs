@@ -1,5 +1,6 @@
 use std::ffi::c_void;
 
+use super::FfiLocaleSource;
 use crate::error::{ReciteStatus, set_last_error};
 use crate::locale::FfiLocaleProvider;
 
@@ -39,7 +40,7 @@ pub unsafe extern "C" fn recite_session_set_locale_provider(
     if let Err(status) = super::ensure_session_thread(session) {
         return status;
     }
-    session.locale_provider = Some(FfiLocaleProvider::new(callback, userdata));
+    session.locale_source = FfiLocaleSource::Callback(FfiLocaleProvider::new(callback, userdata));
     ReciteStatus::Ok
 }
 
@@ -58,7 +59,7 @@ pub unsafe extern "C" fn recite_session_clear_locale_provider(session_handle: u6
     if let Err(status) = super::ensure_session_thread(session) {
         return status;
     }
-    session.locale_provider = None;
+    session.locale_source = FfiLocaleSource::None;
     ReciteStatus::Ok
 }
 

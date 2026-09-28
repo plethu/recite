@@ -77,8 +77,8 @@ pub mod snapshot;
 mod traversal;
 
 pub use context::{
-    ConditionArgument, ConditionArguments, ConditionEvaluationError, ConditionExpectedType,
-    ConditionQuery, ConditionValue, DialogueContext, EmptyDialogueContext,
+    ConditionArgument, ConditionArguments, ConditionEvaluationError, ConditionEvaluationErrorKind,
+    ConditionExpectedType, ConditionQuery, ConditionValue, DialogueContext, EmptyDialogueContext,
 };
 pub use error::DialogueError;
 pub use event::{

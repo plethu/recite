@@ -17,6 +17,8 @@ mod spans;
 mod toml;
 mod types;
 
+pub(crate) use export::export_json;
+pub(crate) use fingerprint::{source_fingerprint, source_producer_fingerprint};
 pub use plan::SchemaSourceEditPlan;
 pub use toml::{
     SchemaDeclarationKind, SchemaSource, SchemaSourceEdit, SchemaSourceEditError,

@@ -27,6 +27,7 @@ recite-runtime.workspace = true
 recite-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+same-file = "1.0.6"
 toml.workspace = true
 unic-langid.workspace = true
 language-tags.workspace = true

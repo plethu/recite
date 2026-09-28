@@ -1,96 +1,26 @@
-use godot::builtin::{Callable, GString, PackedByteArray, VarDictionary};
-use godot::classes::{FileAccess, INode, IResource, Node, Resource};
+use godot::builtin::{Callable, GString, PackedByteArray, VarDictionary, Variant};
+use godot::classes::{INode, Node};
 use godot::prelude::*;
 use recite_runtime::{ConditionExpectedType, ConditionValue};
 
 use crate::adapter::{
-    AdapterError, AdapterErrorKind, AdapterResult, ConditionCall, ReciteDialogueAsset,
-    ReciteDialogueDriver, ReciteOutput as AdapterOutput,
+    AdapterError, AdapterErrorKind, AdapterResult, ConditionCall, ReciteDialogueDriver,
+    ReciteOutput as AdapterOutput,
 };
-use crate::binding_types::{ReciteAdapterError, ReciteOperationResult, ReciteOutputObject};
+use crate::binding_types::{
+    ReciteAdapterError, ReciteConditionFailure, ReciteOperationResult, ReciteOutputObject,
+};
 use crate::catalog_resource::ReciteDialogueCatalogResource;
 use crate::convert::{error_dictionary, interpolation_values, output_dictionary};
-
-#[derive(GodotClass)]
-#[class(init, base=Resource)]
-pub struct ReciteDialogueResource {
-    base: Base<Resource>,
-    asset: Option<ReciteDialogueAsset>,
-    last_error: VarDictionary,
-}
-
-#[godot_api]
-impl IResource for ReciteDialogueResource {}
-
-#[godot_api]
-impl ReciteDialogueResource {
-    #[func]
-    fn load_from_path(&mut self, path: GString) -> Gd<ReciteOperationResult> {
-        let bytes = FileAccess::get_file_as_bytes(&path);
-        if bytes.is_empty() {
-            let error = AdapterError::with_detail(
-                AdapterErrorKind::AssetLoadOrDecode,
-                format!("failed to read `{path}` through Godot FileAccess"),
-            );
-            self.last_error = error_dictionary(&error);
-            return ReciteOperationResult::failure(error);
-        }
-
-        self.load_from_rust_bytes(bytes.as_slice())
-    }
-
-    #[func]
-    fn load_from_bytes(&mut self, bytes: PackedByteArray) -> Gd<ReciteOperationResult> {
-        self.load_from_rust_bytes(bytes.as_slice())
-    }
-
-    #[func]
-    fn asset_id(&self) -> GString {
-        self.asset
-            .as_ref()
-            .map_or_else(GString::new, |asset| GString::from(asset.asset_id()))
-    }
-
-    #[func]
-    fn is_loaded(&self) -> bool {
-        self.asset.is_some()
-    }
-
-    #[func]
-    fn last_error(&self) -> VarDictionary {
-        self.last_error.clone()
-    }
-
-    fn load_from_rust_bytes(&mut self, bytes: &[u8]) -> Gd<ReciteOperationResult> {
-        match ReciteDialogueAsset::load_from_bytes(bytes) {
-            Ok(asset) => {
-                self.asset = Some(asset);
-                self.last_error = VarDictionary::new();
-                ReciteOperationResult::success(Vec::new())
-            }
-            Err(error) => {
-                self.asset = None;
-                self.last_error = error_dictionary(&error);
-                ReciteOperationResult::failure(error)
-            }
-        }
-    }
-
-    pub(crate) fn cloned_asset(&self) -> AdapterResult<ReciteDialogueAsset> {
-        self.asset.as_ref().cloned().ok_or_else(|| {
-            AdapterError::with_detail(
-                AdapterErrorKind::AssetLoadOrDecode,
-                "ReciteDialogueResource has no loaded asset",
-            )
-        })
-    }
-}
+use crate::dialogue_resource::ReciteDialogueResource;
 
 #[derive(GodotClass)]
 #[class(init, base=Node)]
 pub struct ReciteDialogueNode {
     base: Base<Node>,
     driver: ReciteDialogueDriver,
+    pending_outputs: VecDeque<AdapterOutput>,
+    emitting_outputs: bool,
 }
 
 #[godot_api]
@@ -245,6 +175,56 @@ impl ReciteDialogueNode {
     }
 
     #[func]
+    fn active_asset_id(&self) -> GString {
+        self.driver
+            .active_asset_id()
+            .map_or_else(GString::new, GString::from)
+    }
+
+    #[func]
+    fn active_content_identity(&self) -> GString {
+        self.driver
+            .active_content_identity()
+            .ok()
+            .flatten()
+            .map_or_else(GString::new, |identity| GString::from(&identity))
+    }
+
+    #[func]
+    fn changed_asset_policy(&self) -> GString {
+        GString::from("reload_for_next_session_only")
+    }
+
+    #[func]
+    fn asset_state(&self, asset: Gd<ReciteDialogueResource>) -> VarDictionary {
+        let available = asset.bind().revision_info();
+        let mut state = VarDictionary::new();
+        state.set("available", &available.to_variant());
+        let mut active = VarDictionary::new();
+        if let Some(asset_id) = self.driver.active_asset_id() {
+            active.set("asset_id", asset_id);
+            match self.driver.active_content_identity() {
+                Ok(Some(identity)) => active.set("content_identity", identity),
+                Ok(None) => {}
+                Err(error) => active.set("identity_error", &error_dictionary(&error).to_variant()),
+            }
+            state.set("active", &active.to_variant());
+        } else {
+            state.set("active", &Variant::nil());
+        }
+        let active_identity = active.get("content_identity");
+        let available_identity = available.get("content_identity");
+        state.set(
+            "active_differs_from_available",
+            active_identity.is_some()
+                && available_identity.is_some()
+                && active_identity != available_identity,
+        );
+        state.set("changed_asset_policy", "reload_for_next_session_only");
+        state
+    }
+
+    #[func]
     fn register_condition(&mut self, name: GString, callable: Callable) {
         let name = name.to_string();
         self.driver.register_condition(name, move |call| {
@@ -274,19 +254,25 @@ impl ReciteDialogueNode {
     ) -> Gd<ReciteOperationResult> {
         match result {
             Ok(outputs) => {
-                for output in &outputs {
-                    self.emit_output(output);
-                }
+                self.pending_outputs.extend(outputs.iter().cloned());
+                self.drain_outputs();
                 ReciteOperationResult::success(outputs)
             }
             Err(error) => self.emit_error_result(error),
         }
     }
 
-    fn emit_output(&mut self, output: &AdapterOutput) {
-        let output = ReciteOutputObject::new(output_dictionary(output));
-        self.base_mut()
-            .emit_signal("output", &[output.clone().to_variant()]);
+    fn drain_outputs(&mut self) {
+        if self.emitting_outputs {
+            return;
+        }
+        self.emitting_outputs = true;
+        while let Some(output) = self.pending_outputs.pop_front() {
+            let output = ReciteOutputObject::new(output_dictionary(&output));
+            self.base_mut()
+                .emit_signal("output", &[output.to_variant()]);
+        }
+        self.emitting_outputs = false;
     }
 
     fn emit_error_result(&mut self, error: AdapterError) -> Gd<ReciteOperationResult> {
@@ -319,6 +305,12 @@ fn evaluate_callable_condition(
 
     let query = condition_query_dictionary(call);
     let result = callable.call(&[query.to_variant()]);
+    if let Ok(failure) = result.try_to::<Gd<ReciteConditionFailure>>() {
+        return Err(AdapterError::with_detail(
+            AdapterErrorKind::ConditionEvaluationFailed,
+            failure.bind().reason(),
+        ));
+    }
     match call.expected_type() {
         ConditionExpectedType::Bool => result.try_to::<bool>().map(ConditionValue::Bool),
         ConditionExpectedType::Enum => result
@@ -351,3 +343,4 @@ fn condition_query_dictionary(call: ConditionCall<'_>) -> VarDictionary {
     dictionary.set("args", &args.to_variant());
     dictionary
 }
+use std::collections::VecDeque;

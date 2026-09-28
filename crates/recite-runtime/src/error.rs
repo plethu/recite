@@ -2,7 +2,7 @@ use recite_core::{ChoiceId, EffectId};
 
 use crate::session_snapshot::DialogueSessionSnapshotConversionError;
 use crate::{
-    ChoiceAvailability, ConditionExpectedType, DialogueEffectMode,
+    ChoiceAvailability, ConditionEvaluationErrorKind, ConditionExpectedType, DialogueEffectMode,
     snapshot::DialogueSchemaFingerprintSnapshot,
 };
 
@@ -65,7 +65,11 @@ pub enum DialogueError {
         availability: Box<ChoiceAvailability>,
     },
     #[error("condition `{function}` failed: {reason}")]
-    ConditionEvaluationFailed { function: String, reason: String },
+    ConditionEvaluationFailed {
+        function: String,
+        reason: String,
+        kind: ConditionEvaluationErrorKind,
+    },
     #[error("condition `{function}` returned {actual} but runtime expected {expected}")]
     ConditionResultTypeMismatch {
         function: String,

@@ -1,0 +1,20 @@
+[package]
+name = "recite-adapter"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+language-tags = { workspace = true }
+recite-core = { workspace = true }
+recite-runtime = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+recite-compiler = { workspace = true }

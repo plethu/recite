@@ -1,153 +1,156 @@
-# Recite Unity Adapter
+# Recite Dialogue for Unity
 
-This package is the Unity GameObject/OO MVP for Recite. It targets Unity
-2022.3 LTS and wraps the `recite-ffi` native library through P/Invoke.
+This Unity Package Manager package declares Unity 2022.3 as its minimum for
+best-effort compatibility. **Unity 6.7+ is the primary development and runtime
+modernization target**, with a deliberately small Linux x86_64 host test
+matrix. Mono remains a best-effort backend for the pinned 2022.3 lane. The
+current bundle contains a Linux x86_64 native plugin for the Editor and
+standalone player. Other platforms need a matching `recite-ffi`
+build and PluginImporter configuration. The base package has no Entities
+dependency; a DOTS facade is not included.
 
-## Native Plugin
+| Host lane | Scripting back ends and purpose | Evidence status |
+| --- | --- | --- |
+| Unity 6.7.0b2, Linux x86_64 | Primary Editor import, EditMode/PlayMode (Editor Mono), IL2CPP player; separate experimental CoreCLR probe | Editor EditMode 3/3 and PlayMode 3/3; IL2CPP player 1/1; experimental CoreCLR player 1/1 passed |
+| Unity 2022.3.62f3, Linux x86_64 | Older minimum, best-effort Editor import, EditMode/PlayMode, and Mono player | Editor EditMode 3/3 and PlayMode 3/3; Mono player 1/1 passed |
 
-Build `crates/recite-ffi` for the Unity editor/player platform and place the
-native library under the Unity project's plugin folder, for example:
+Unity's [6.7 scripting documentation](https://docs.unity.com/en-us/engine/6000.7/manual/scripting/compilation-and-code-reload/script-compilation/backends/coreclr)
+states that the Editor still runs Mono and the desktop CoreCLR player is an
+**experimental technical preview**, unsuitable for production. CoreCLR
+experiments are separate from the IL2CPP production-backend check above. Unity's
+[June 2026 update](https://discussions.unity.com/t/coreclr-scripting-and-serialization-update-june-2026/1723299)
+targets supported CoreCLR Editor/player delivery in Unity 7.0; that roadmap
+is not a current support claim for this package.
 
-```text
-Assets/Plugins/recite_ffi.dll
-Assets/Plugins/librecite_ffi.so
-Assets/Plugins/librecite_ffi.dylib
-```
+## Install and build
 
-The managed declarations in `Runtime/Native/ReciteNativeBridge.cs` are checked
-against the generated `include/recite.h` header by
-`scripts/check-unity-adapter.sh`.
-
-## Runtime Flow
-
-Use `ReciteDialogueService` as the semantic owner for one active Recite session:
-
-1. Construct a `ReciteDialogueAsset` from compiled Recite bytes.
-2. Register pure C# condition handlers with `RegisterCondition`, or use the
-   additive `RegisterTypedCondition` API when identifier and string arguments
-   must remain distinct. Typed callbacks receive `ReciteConditionArgument`
-   values for all five ABI kinds: identifier, string, integer, float, and
-   boolean. The original `IReadOnlyList<object>` API remains available.
-3. Call `SetInterpolationValues` with typed `ReciteInterpolationValue` records
-   before `Start` when the dialogue uses line or choice bindings. Values are
-   copied at the native boundary and may be replaced between traversal calls.
-4. Install a `ReciteLocaleCatalog` with `SetLocaleCatalog` when translated
-   lines, choices, availability reasons, or presentation labels are wanted.
-   Catalog entries are keyed by source ID/text and optional grammatical
-   variant; missing entries deliberately fall back to authored source text.
-   Call `Start` with an optional start block, locale, and variant.
-5. Present the returned `ReciteOutputBatch` values in the game's UI.
-6. Call `SelectChoice` with the stable choice ID from the current prompt.
-7. For blocking effects, perform game-side work and call `AcknowledgeEffect`
-   with the exact effect request ID.
-8. Store `Snapshot()` bytes beside game save data, and pass them back to
-   `Restore` with the same compiled asset identity and variant when needed. If the snapshot contains a
-   pending blocking effect, restore may emit that effect again with the same
-   request ID; reconcile the game-side operation idempotently before calling
-   `AcknowledgeEffect`.
-
-`ReciteDialogueRunner` is a `MonoBehaviour` facade for inspector-wired scenes.
-It emits structured `ReciteOutput` and `ReciteAdapterException` values through
-UnityEvents; it does not implement traversal itself.
-
-## Localisation example
-
-The catalog is an owned, deterministic input. Install a complete gettext rule
-before its plural entries; the native Recite core validates every reachable arm
-and selects the arm at lookup time:
-
-```csharp
-var catalog = new ReciteLocaleCatalog();
-catalog.SetPluralRule("fr", "nplurals=2; plural=(n != 1);");
-catalog.AddTranslation("fr", "greeting", "Hello {name}.", "Bonjour {name}.",
-    ReciteLocaleTextDomain.Line, "formal");
-catalog.AddPluralTranslation("fr", "letters", "One letter.", "{count} letters.",
-    new[] { "Une lettre.", "{count} lettres." }, "formal");
-catalog.AddChoiceTranslation("fr", "continue", "Continue", "Continuer");
-
-var service = new ReciteDialogueService();
-service.SetLocaleCatalog(catalog);
-service.SetInterpolationValues(new[] {
-    ReciteInterpolationValue.Integer("count", 2),
-    ReciteInterpolationValue.String("name", "Ada")
-});
-var first = service.Start(asset, locale: "fr-CA", variant: "formal");
-var snapshot = service.Snapshot();
-service.End();
-var resumed = service.Restore(asset, snapshot, variant: "formal");
-```
-
-Lookup uses explicit variant context, unqualified context, locale fallback,
-and finally authored source text. Empty translations deliberately take that
-source fallback. Catalogs, typed interpolation values, and the selected
-variant are re-supplied on restore because they are host-owned inputs; the
-runtime snapshot stores locale/session state only. Add/install operations
-reject malformed rules, missing rules, wrong arm counts, conflicting entries,
-and placeholder mismatches before traversal. Public strings reject embedded
-NUL and unpaired UTF-16 surrogates.
-
-## Sample
-
-Import the `Basic Dialogue` sample from Package Manager. Add
-`ReciteDialogueRunner` and `BasicDialogueDriver` to a scene, assign a compiled
-Recite `TextAsset` to the runner, and wire the runner's output/error UnityEvents
-to the driver methods. The sample driver demonstrates start, choice selection,
-blocking-effect acknowledgement, snapshot, and restore calls.
-
-## Checks
-
-Repository checks:
+From the Recite checkout, build a reproducible package archive:
 
 ```bash
-scripts/check-unity-adapter.sh
-scripts/check-project-gates.sh
+CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/unity/build-upm.sh
 ```
 
-The repository's headless package check builds and loads `librecite_ffi` and
-exercises raw native session create/begin, locale callbacks, variant restore,
-choice/acknowledgement traversal, and buffer ownership; it does not exercise
-the managed service's `GCHandle` callback path or claim Unity editor/player or
-IL2CPP integration.
+The script prints `com.recite.dialogue-0.1.0-linux-x86_64.tgz`. Add that archive
+with Unity Package Manager's **Add package from tarball** action. The archive
+contains `Runtime/Plugins/x86_64/librecite_ffi.so`, the runtime/editor assembly
+definitions, tests, and the Basic Dialogue sample. The native plugin exports
+Recite FFI 0.6.0. Source-tree installs of `Packages/com.recite.dialogue` require
+the same native library under that package's `Runtime/Plugins/x86_64` folder.
 
-Manual Unity checks for this MVP:
+Import the Basic Dialogue sample from Package Manager, then run **Tools >
+Recite > Migrate Legacy Compiled Asset References** to bind its scene to the
+imported `.recitec` object's actual Unity local ID. Its scene uses
+`ReciteDialogueRunner` and an imported `.recitec` asset. Register conditions
+from a component's `Start` or later, after the runner's `Awake` has created its
+thread-affine service. The runner ends a session on disable and disposes it on
+destruction; re-enabling permits another start. Calls and disposal must occur
+on the service's owner thread. UnityEvents expose structured output and errors.
+A listener may call another runner operation; the runner delivers the current
+batch fully before a nested operation's output.
 
-- Package imports in Unity 2022.3 LTS.
-- A scene with `ReciteDialogueRunner` loads a compiled Recite asset.
-- Start/select/blocking-effect acknowledge emits ordered structured output.
-- Registered C# conditions are called synchronously and missing handlers report
-  `ReciteStatus.MissingConditionHandler`.
-- `Snapshot` and `Restore` preserve a pending prompt or pending blocking effect;
-  a restored blocking request may be re-emitted with its original stable ID.
+## Runtime
 
-## Localisation boundary
+`ReciteDialogueService` is a plain C# one-session owner. Its `Start`,
+`SelectChoice`, `AcknowledgeEffect`, `Snapshot`, and `Restore` methods use native
+Recite traversal. Conditions are synchronous queries. Effects are requests for
+the game to perform and acknowledge, never game mutations inside Recite. Pass
+stable choice/effect IDs from structured output. Save the opaque snapshot beside
+game state. A restored pending blocking effect may be emitted with the same
+request ID, so hosts should reconcile their game operation before acknowledging.
 
-`ReciteLocaleCatalog.SetPluralRule` takes only the declared gettext
-`Plural-Forms` header. The shared native Recite contract validates the complete
-header and supplies plural-arm selection; managed callers cannot replace that
-authority with an arbitrary delegate. A plural entry must contain exactly the
-validated `nplurals` arms, with empty arms reserved for source fallback.
+```csharp
+using var service = new ReciteDialogueService();
+service.RegisterCondition("has_key", args => inventory.Has((string)args[0]));
+service.SetInterpolationValues(new[] { ReciteInterpolationValue.String("name", "Ada") });
+service.SetPoCatalog(new[] { new RecitePoDocument("fr", File.ReadAllBytes("fr.po")) });
+var first = service.Start(compiledAsset.ToDialogueAsset(), locale: "fr-CA");
+```
 
-Catalogs are cloned on install. Locale callback strings, plural attempt arrays,
-and error strings remain owned by the service until the enclosing native
-`Start`, `SelectChoice`, `AcknowledgeEffect`, or `Restore` call returns; only
-then are they released (with `End`/`Dispose` also acting as cleanup for
-rollback and direct callback tests). Embedded NULs and unpaired UTF-16
-surrogates are rejected for all public block, locale, variant, choice, effect,
-condition, and catalog strings. Managed callback exceptions are caught and
-returned as localisation failures. Native C/C++ callbacks must enforce the
-strict non-null, synchronous, no-throw/no-panic/no-unwind contract. C++ callers
-should use an `extern "C"` wrapper that catches C++ exceptions before entering
-Recite; a Rust panic in an `extern "C"` callback aborts before Recite can catch
-it.
+`SetPoCatalog` accepts all PO files for a revision, including multiple files
+per locale. The native parser validates gettext plural rules, entries,
+conflicts, and placeholders. A failed candidate leaves the previous catalogue
+in place. A successful refresh applies to the current session's next traversal;
+previously returned output is unchanged. `SetPoCatalog(null)` removes the
+provider for the active and later sessions. Source text is used where no
+translation matches. `SetLocaleVariant` can change the active grammatical
+variant. Restore passes the owned catalogue before the first output drain.
+The C ABI still offers callbacks for non-C# hosts; this package's built-in
+localisation path is PO only.
 
-Reverse P/Invoke callbacks are static and route to the service through an
-owned `GCHandle`; Unity builds annotate them with `AOT.MonoPInvokeCallback`.
-The headless check loads the native validators and exercises native start,
-restore, choice, and acknowledgement traversal through the raw bridge, but it
-does not prove the service's GCHandle callback path or an IL2CPP player build.
-It also cannot prove a Godot-hosted Resource serialization round trip. Validate
-those engine-hosted paths in target players before release.
+`ActiveAssetInfo` reports the native-validated revision retained by an active
+session. The imported resource reports the latest available revision and
+whether it came from the last-valid cache. Compare their canonical content
+fingerprints to show an active/available difference after reimport; equal asset
+names alone do not establish equal content. Native start/restore enforce
+compatibility. Editor import of `.recitec` has no source/project/schema inputs,
+so it does **not** assert source freshness.
 
-Editor import/refresh tooling, schema export, native binary distribution, DOTS,
-and package-manager release automation are tracked separately from this runtime
-MVP.
+## Schema and authoring
+
+Create a `ReciteSchemaRegistration` asset with game-owned condition/effect
+signatures and any referenced enum, registry, or speaker declarations. Set its
+output to an `Assets/*.json` path, then use **Tools > Recite > Export Schema**.
+The editor lowers declarations to a temporary TOML transport and runs
+`recite export-schema` with the asset's stable Unity GUID as producer ID.
+Recite's core validates and writes the canonical manifest and fingerprint;
+Unity does not implement schema semantics or hashing. A malformed export
+retains the prior manifest and logs structured CLI diagnostics. The CLI must
+be available as `recite` or at the registration's configured executable path.
+Advanced schema domains can be authored as a standalone Recite schema source.
+
+Build dialogue with the CLI or `recite watch`, then let Unity import the
+resulting `.recitec`. The `ScriptedImporter` validates compiled bytes through
+native Recite before publishing `ReciteCompiledAsset`. It stores a last-valid
+copy under `Library/Recite/CompiledCache/<asset GUID>.recitec`. A failed
+candidate logs an import error and republishes the validated last-good bytes
+with `IsUsingRetainedRevision`, `ImportStatus`, and `ImportMessage` exposed.
+An existing active session keeps its original revision; the next start uses
+the latest valid available revision. A successful reimport clears retained
+status. This cache is derived local state: deleting `Library` loses last-good
+fallback and requires a valid source rebuild. Cache write failure fails import
+rather than claiming a durable last-good revision.
+
+## Upgrading old scenes
+
+Before this importer, `.recitec` was a `TextAsset` with local file ID `4900000`.
+Existing scene and prefab references need migration to the imported
+`ReciteCompiledAsset`. Keep the original `.recitec.meta` GUID, import the file,
+then run **Tools > Recite > Migrate Legacy Compiled Asset References**. The
+command updates only resolvable `ReciteDialogueRunner` references and saves
+original YAML under `Library/Recite/MigrationBackups`. Commit scenes and meta
+files together after inspecting the result. A sample scene and EditMode fixture
+exercise this path.
+
+## Verification
+
+```bash
+CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/check-unity-adapter.sh
+CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/unity/perf-probe.sh
+UNITY_EDITOR=/path/to/Unity scripts/unity/run-unity-tests.sh
+UNITY_EDITOR=/path/to/Unity RECITE_UNITY_PLAYER_MODE=mono scripts/unity/run-unity-tests.sh
+UNITY_EDITOR=/path/to/Unity RECITE_UNITY_PLAYER_MODE=il2cpp scripts/unity/run-unity-tests.sh
+UNITY_EDITOR=/path/to/Unity-6.7 RECITE_UNITY_PLAYER_MODE=coreclr scripts/unity/run-unity-tests.sh
+```
+
+The first check builds the native library and CLI, tests the managed service
+through real FFI, and checks schema export. The informational `.NET 8` probe
+prints iteration counts and total time for native load/metadata decode,
+managed line/effect conversion, condition traversal, and inactive service
+access; it has no pass threshold. With Unity Editor installed, the host runner
+extracts the built UPM archive into a temporary clean consumer project and
+executes EditMode and PlayMode tests. The optional Linux standalone player
+modes use Unity Test Framework's `testSettingsFile` to select Mono or IL2CPP;
+the matching Linux build support and IL2CPP module must be installed. The
+CoreCLR mode separately probes whether the Editor offers that enum, selects
+it explicitly, and runs an experimental player test; it is not a production
+backend claim. Linux desktop test players run with `-batchmode -nographics`
+and a 90-second runtime limit after launch. Set
+`TMPDIR=/var/tmp` to place the clean consumer project and default result
+directory there when the host requires a different temporary-file location.
+Set `RECITE_UNITY_UPM_BUNDLE` to test a specific archive and
+`RECITE_UNITY_TEST_RESULTS` to retain logs/XML at a chosen location. Headless .NET
+results alone are not evidence of Mono, IL2CPP, ScriptedImporter,
+serialization, or Unity scene behavior. In clean Linux x86_64 consumers, both
+Editor suites passed 3 EditMode and 3 PlayMode tests. The 2022.3.62f3 Mono
+player and 6.7.0b2 IL2CPP player each passed the imported-resource PlayMode
+test (1/1); the 6.7.0b2 CoreCLR preview player also passed that test (1/1).

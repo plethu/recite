@@ -1,6 +1,8 @@
 [workspace]
 members = [
+    "crates/recite-adapter",
     "crates/recite-benchmarks",
+    "crates/recite-bevy",
     "crates/recite-build",
     "crates/recite-cli",
     "crates/recite-compiler",
@@ -35,9 +37,14 @@ todo = "warn"
 unimplemented = "warn"
 
 [workspace.dependencies]
+bevy_app = { version = "=0.19.1", default-features = false, features = ["std"] }
+bevy_asset = { version = "=0.19.1", default-features = false }
+bevy_ecs = { version = "=0.19.1", default-features = false, features = ["std"] }
+bevy_reflect = { version = "=0.19.1", default-features = false, features = ["std"] }
+recite-adapter = { version = "0.1.0", path = "crates/recite-adapter" }
 recite-core = { version = "0.1.0", path = "crates/recite-core" }
 recite-build = { version = "0.1.0", path = "crates/recite-build" }
-recite-ffi = { version = "0.5.0", path = "crates/recite-ffi" }
+recite-ffi = { version = "0.6.0", path = "crates/recite-ffi" }
 recite-parser = { version = "0.1.0", path = "crates/recite-parser" }
 recite-compiler = { version = "0.1.0", path = "crates/recite-compiler" }
 recite-config = { version = "0.1.0", path = "crates/recite-config" }

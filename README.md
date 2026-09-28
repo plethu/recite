@@ -69,6 +69,14 @@ running game imports or refreshes those assets. In CI, the CLI can validate and
 compile without an engine, then run scenes against repeatable fixtures. You do
 not need to start the game to find a malformed scene.
 
+The [Bevy companion](crates/recite-bevy/README.md),
+[Godot addon](addons/recite/README.md), and
+[Unity package](Packages/com.recite.dialogue/README.md) share session,
+localisation, and error handling through `recite-adapter`. Their setup guides
+describe local package builds, host targets, and verification limits. The
+[companion architecture](docs/engine-companions-design.md) records module
+ownership and the remaining host verification requirements.
+
 ## Try it
 
 Install the current CLI and language server from a checkout:

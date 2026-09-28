@@ -1,4 +1,4 @@
-:: start default
+:: start default speaker=narrator
 > intro@10000000000000000001
   The signal clears.
 > prompt@10000000000000000002

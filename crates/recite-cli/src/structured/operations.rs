@@ -6,7 +6,7 @@ use recite_compiler::{
 };
 use recite_core::schema::ProjectSchema;
 
-use crate::args::{Command, CompileArgs, ExtractArgs, RuntimeArgs, ValidateArgs};
+use crate::args::{Command, CompileArgs, ExportSchemaArgs, ExtractArgs, RuntimeArgs, ValidateArgs};
 use crate::error::CliError;
 use crate::fs::{
     collect_input_files, compile_options, load_schema, read_compile_inputs_for_output,
@@ -48,6 +48,10 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
             let path = Some(args.output.clone());
             compile(args).map_err(|error| CommandFailure::new(error, "compile", path))
         }
+        Command::ExportSchema(args) => {
+            let path = Some(args.output.clone());
+            export_schema(args).map_err(|error| CommandFailure::new(error, "export_schema", path))
+        }
         Command::Extract(args) => {
             let path = args.output.clone().or_else(|| args.paths.first().cloned());
             extract(args).map_err(|error| CommandFailure::new(error, "extract", path))
@@ -81,6 +85,24 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
             "dispatch",
             None,
         )),
+    }
+}
+
+fn export_schema(args: ExportSchemaArgs) -> Result<StructuredOutcome, CliError> {
+    match crate::schema_export::prepare(&args)? {
+        crate::schema_export::PreparedExport::Ready(json) => {
+            crate::schema_export::write(&args.output, &json)?;
+            let artifact = artifact_metadata(&args.output)?;
+            Ok(StructuredOutcome::success(SuccessData::ExportSchema {
+                diagnostics: Vec::new(),
+                artifact,
+            }))
+        }
+        crate::schema_export::PreparedExport::Diagnostics(diagnostics) => Ok(
+            StructuredOutcome::content_diagnostics(ContentDiagnosticData::ExportSchema {
+                diagnostics: diagnostic_records(&diagnostics)?,
+            }),
+        ),
     }
 }
 

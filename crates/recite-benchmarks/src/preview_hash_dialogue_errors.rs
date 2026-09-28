@@ -93,7 +93,9 @@ pub(super) fn hash_dialogue_error(
             hash_text(hasher, choice.as_str());
             hash_availability(hasher, availability);
         }
-        DialogueError::ConditionEvaluationFailed { function, reason } => {
+        DialogueError::ConditionEvaluationFailed {
+            function, reason, ..
+        } => {
             tag(hasher, 13);
             hash_text(hasher, function);
             hash_text(hasher, reason);

@@ -1,8 +1,9 @@
 use crate::buffer::ReciteBuffer;
 use crate::condition::{ConditionEntry, FfiContext, SendPtr};
-use crate::error::{ReciteStatus, clear_condition_status, set_last_error};
+use crate::error::{ReciteStatus, set_last_error};
+use crate::output::{encode_batch, encode_batch_output};
 
-use super::drain_to_batch;
+use super::{driver_failure, locale_resolution};
 
 /// Runs the initial traversal drain for a session created with
 /// `recite_session_create`.
@@ -35,30 +36,25 @@ pub unsafe extern "C" fn recite_session_begin(
         return status;
     }
 
-    if ffi_session.begun {
-        set_last_error("recite_session_begin called twice on the same handle");
-        return ReciteStatus::SessionAlreadyActive;
-    }
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
-    let session_checkpoint = ffi_session.session.clone();
-    clear_condition_status();
-    match drain_to_batch(
-        &ffi_session.dialogue,
-        &mut ffi_session.session,
-        &context,
+    let resolution = locale_resolution(
         &ffi_session.interpolation_values,
-        ffi_session.locale_provider.as_ref(),
+        ffi_session.locale_source.provider(),
         ffi_session.locale_variant.as_deref(),
-    ) {
+    );
+    match ffi_session
+        .driver
+        .begin_with(&context, resolution, |events| {
+            encode_batch_output(events, encode_batch)
+        }) {
         Ok(batch) => {
-            ffi_session.begun = true;
             unsafe { *batch_out = batch };
             ReciteStatus::Ok
         }
-        Err((status, message)) => {
-            ffi_session.session = session_checkpoint;
+        Err(error) => {
+            let (status, message) = driver_failure(error);
             set_last_error(&message);
             status
         }

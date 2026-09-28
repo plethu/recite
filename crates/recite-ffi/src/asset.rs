@@ -83,3 +83,86 @@ pub unsafe extern "C" fn recite_asset_load(
 pub extern "C" fn recite_asset_free(asset_handle: u64) {
     lock_assets().remove(&asset_handle);
 }
+
+#[derive(serde::Serialize)]
+struct FingerprintInfo<'a> {
+    algorithm: &'a str,
+    digest: &'a serde_bytes::Bytes,
+}
+
+impl<'a> From<&'a recite_core::compiled::ContentFingerprint> for FingerprintInfo<'a> {
+    fn from(value: &'a recite_core::compiled::ContentFingerprint) -> Self {
+        Self {
+            algorithm: value.algorithm().as_str(),
+            digest: serde_bytes::Bytes::new(value.digest().as_bytes()),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+struct AssetInfo<'a> {
+    asset_info_format_version: u16,
+    asset_id: &'a str,
+    content_fingerprint: FingerprintInfo<'a>,
+    schema_fingerprint: Option<FingerprintInfo<'a>>,
+    format_version: u16,
+    compiler_compatibility_version: u16,
+    compiler_version: &'a str,
+    source_map_id: &'a str,
+}
+
+/// Returns versioned metadata for an already validated compiled asset.
+///
+/// The fingerprint fields report the existing canonical payload identity;
+/// runtime session compatibility remains authoritative. On success, `info_out`
+/// owns a MessagePack named-map buffer and must be freed with `recite_buffer_free`.
+///
+/// # Safety
+/// `info_out` must be a valid non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn recite_asset_info(
+    asset_handle: u64,
+    info_out: *mut crate::buffer::ReciteBuffer,
+) -> crate::ReciteStatus {
+    if info_out.is_null() {
+        set_last_error("null pointer argument");
+        return crate::ReciteStatus::Validation;
+    }
+    let guard = lock_assets();
+    let Some(dialogue) = guard.get(&asset_handle) else {
+        set_last_error("unknown asset handle");
+        return crate::ReciteStatus::InvalidHandle;
+    };
+    let fingerprint = match dialogue.content_fingerprint() {
+        Ok(value) => value,
+        Err(error) => {
+            set_last_error(&error.to_string());
+            return crate::ReciteStatus::AssetLoadOrDecode;
+        }
+    };
+    let header = &dialogue.header;
+    let schema_fingerprint = match &header.schema_fingerprint {
+        recite_core::compiled::SchemaFingerprint::Fingerprint(value) => Some(value.into()),
+        recite_core::compiled::SchemaFingerprint::NoSchema => None,
+    };
+    let info = AssetInfo {
+        asset_info_format_version: 0,
+        asset_id: header.asset_id.as_str(),
+        content_fingerprint: fingerprint.into(),
+        schema_fingerprint,
+        format_version: header.format_version,
+        compiler_compatibility_version: header.compiler_compatibility_version,
+        compiler_version: header.compiler_version.as_str(),
+        source_map_id: header.source_map_id.as_str(),
+    };
+    match rmp_serde::to_vec_named(&info) {
+        Ok(bytes) => {
+            unsafe { *info_out = crate::buffer::ReciteBuffer::from_bytes(bytes) };
+            crate::ReciteStatus::Ok
+        }
+        Err(error) => {
+            set_last_error(&format!("failed to encode asset info: {error}"));
+            crate::ReciteStatus::DialogueFault
+        }
+    }
+}

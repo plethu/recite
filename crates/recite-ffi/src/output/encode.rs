@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use recite_runtime::{DialogueEffectMode, DialogueEffectRequest, DialogueEvent};
+use recite_runtime::DialogueEvent;
 
 use super::convert::ffi_event;
 use super::model::{FfiOutputBatch, FfiOutputEncodeError};
@@ -21,16 +21,4 @@ pub(crate) fn encode_batch_to_writer<W: Write + ?Sized>(
         events: ffi_events,
     };
     rmp_serde::encode::write_named(writer, &batch).map_err(|source| FfiOutputEncodeError { source })
-}
-
-/// Returns true for events that do not stop the drain loop.
-pub(crate) fn should_continue(event: &DialogueEvent) -> bool {
-    matches!(
-        event,
-        DialogueEvent::Line(_)
-            | DialogueEvent::Effect(DialogueEffectRequest {
-                mode: DialogueEffectMode::Immediate,
-                ..
-            })
-    )
 }

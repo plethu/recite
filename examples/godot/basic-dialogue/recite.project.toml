@@ -1,0 +1,7 @@
+format_version = 1
+
+[[scenes]]
+id = "basic_dialogue"
+asset = "dialogue/basic.recitec"
+block = "start"
+participants = ["narrator"]

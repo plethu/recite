@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Recite.Unity;
@@ -7,10 +8,15 @@ using Recite.Unity.Native;
 
 internal static class ReciteUnityHeadless
 {
-    private static int Main()
+    private static int Main(string[] args)
     {
         try
         {
+            if (args.Length == 1 && args[0] == "--perf")
+            {
+                RunPerfProbe();
+                return 0;
+            }
             DecodeV0Batch();
             RejectUnknownBatchVersion();
             PreserveTypedConditionArguments();
@@ -21,10 +27,10 @@ internal static class ReciteUnityHeadless
             PreserveRestoredBlockingRequestId();
             RejectInvalidConditionPointers();
             PreserveTypedInterpolationValues();
-            PreserveLocaleCatalogFallbacks();
             NativeTraversalThroughRawBridge();
+            ManagedTraversalAndRestore();
+            ReciteUnityNativeCases.Run();
             RejectInvalidLocaleStringsAndPluralCounts();
-            EndFreesLocaleCallbackAllocations();
             PreservePluralOutputTrace();
             PreserveLegacyNonPluralLine();
             RegisterTypedConditionApi();
@@ -38,6 +44,52 @@ internal static class ReciteUnityHeadless
             Console.Error.WriteLine(error);
             return 1;
         }
+    }
+
+    private static void RunPerfProbe()
+    {
+        const int loadIterations = 200;
+        const int conversionIterations = 2000;
+        const int traversalIterations = 200;
+        const int inactiveIterations = 100000;
+        var bytes = File.ReadAllBytes(Environment.GetEnvironmentVariable("RECITE_UNITY_SAMPLE_ASSET"));
+        var asset = new ReciteDialogueAsset(bytes);
+        Measure("native asset load and metadata decode", loadIterations,
+            () => { if (ReciteAssetInfo.Inspect(asset) == null) throw new InvalidOperationException(); });
+
+        var line = BuildBatch(writer =>
+        {
+            WriteLine(writer);
+            writer.WriteString("metadata");
+            writer.WriteArrayHeader(0);
+        });
+        var effect = BuildBatch(WriteBlockingEffect);
+        Measure("managed line output conversion", conversionIterations,
+            () => ReciteDialogueService.DecodeBatchBytes(line));
+        Measure("managed effect output conversion", conversionIterations,
+            () => ReciteDialogueService.DecodeBatchBytes(effect));
+
+        using (var service = new ReciteDialogueService())
+        {
+            service.RegisterCondition("has_key", _ => false);
+            Measure("native traversal and condition dispatch", traversalIterations, () =>
+            {
+                service.Start(asset);
+                service.End();
+            });
+            Measure("inactive service HasActiveSession", inactiveIterations,
+                () => { if (service.HasActiveSession) throw new InvalidOperationException(); });
+        }
+    }
+
+    private static void Measure(string name, int iterations, Action action)
+    {
+        action(); // JIT/warmup outside the measured window.
+        var watch = Stopwatch.StartNew();
+        for (var i = 0; i < iterations; i++) action();
+        watch.Stop();
+        Console.WriteLine("Unity managed headless .NET 8 | " + name + " | " +
+            iterations + " iterations | " + watch.Elapsed.TotalMilliseconds.ToString("F3") + " ms total");
     }
 
     private static void DecodeV0Batch()
@@ -220,7 +272,7 @@ internal static class ReciteUnityHeadless
     private static void PreserveTypedInterpolationValues()
     {
         Assert(ReciteNativeBridge.AbiMajor == 0, "FFI ABI major version changed");
-        Assert(ReciteNativeBridge.AbiMinor == 5, "locale provider ABI minor version changed");
+        Assert(ReciteNativeBridge.AbiMinor == 6, "FFI ABI minor version changed");
         Assert(ReciteNativeBridge.AbiPatch == 0, "FFI ABI patch version changed");
 
         var values = new List<ReciteInterpolationValue>
@@ -252,62 +304,6 @@ internal static class ReciteUnityHeadless
             "embedded NUL in interpolation string value");
     }
 
-    private static void PreserveLocaleCatalogFallbacks()
-    {
-        var catalog = new ReciteLocaleCatalog();
-        catalog.SetPluralRule("fr", "nplurals=2; plural=(n != 1);");
-        catalog.AddTranslation("fr", "line-id", "Hello {name}.", "Bonjour {name}.");
-        catalog.AddChoiceTranslation("fr", "choice-id", "Choose this.", "Choisir ceci.");
-        catalog.AddPluralTranslation(
-            "fr",
-            "letters-id",
-            "You have one letter.",
-            "You have {count} letters.",
-            new[] { "Vous avez une lettre.", "Vous avez {count} lettres." });
-
-        Assert(
-            catalog.Lookup("line-id", "Hello {name}.", ReciteLocaleTextDomain.Line, "fr-CA", null) == "Bonjour {name}.",
-            "locale fallback did not use the language catalogue");
-        Assert(
-            catalog.Lookup("choice-id", "Choose this.", ReciteLocaleTextDomain.Choice, "fr-CA", null) == "Choisir ceci.",
-            "choice catalogue translation was not preserved");
-        var plural = catalog.ResolvePlural(
-            "letters-id",
-            "You have one letter.",
-            "You have {count} letters.",
-            2,
-            ReciteLocaleTextDomain.Line,
-            "fr-CA",
-            null);
-        Assert(plural.Text == "Vous avez {count} lettres." && plural.SelectedArm == 1, "plural locale fallback changed the selected arm");
-        Assert(catalog.Lookup("missing", "Source.", ReciteLocaleTextDomain.Line, "fr-CA", null) == null, "missing translation did not request source fallback");
-        catalog.AddTranslation(" fr ", "preserved-locale", "Source.", "Conserve.");
-        Assert(
-            catalog.Lookup("preserved-locale", "Source.", ReciteLocaleTextDomain.Line, " fr ", null) == "Conserve.",
-            "valid locale was trimmed into a different catalogue key");
-
-        ExpectArgumentException(
-            () => catalog.AddTranslation("fr", "bad\0id", "Source.", "Translation."),
-            "locale catalogue embedded NUL");
-        ExpectArgumentException(
-            () => catalog.AddTranslation(" \t", "blank-locale", "Source.", "Translation."),
-            "locale catalogue whitespace-only locale");
-        ExpectArgumentException(
-            () => catalog.SetPluralRule("\u2003", "nplurals=2; plural=(n != 1);"),
-            "locale catalogue whitespace-only plural rule locale");
-        catalog.AddTranslation("fr", "conflict-id", "Source.", "Traduction.");
-        ExpectArgumentException(
-            () => catalog.AddTranslation("fr", "conflict-id", "Source.", "Autre traduction."),
-            "conflicting locale catalogue entry");
-
-        using (var service = new ReciteDialogueService())
-        {
-            ExpectArgumentException(
-                () => service.Start(new ReciteDialogueAsset(Array.Empty<byte>()), locale: " \t"),
-                "dialogue start whitespace-only locale");
-        }
-    }
-
     private static readonly ReciteNativeBridge.ReciteLocaleFn NativeFallbackLocaleCallback = NativeFallbackLocale;
     private static readonly ReciteNativeBridge.ReciteConditionFn NativeFalseConditionCallback = NativeFalseCondition;
     private static int nativeLocaleCallbackCalls;
@@ -331,6 +327,69 @@ internal static class ReciteUnityHeadless
             Ok = 1,
             SelectedArm = -1
         };
+    }
+
+    internal static ReciteLine FindLine(ReciteOutputBatch batch)
+    {
+        foreach (var item in batch.Events)
+            if (item is ReciteLineOutput line) return line.Line;
+        throw new InvalidOperationException("expected line output");
+    }
+
+    private static void ManagedTraversalAndRestore()
+    {
+        var sourceBytes = File.ReadAllBytes(Environment.GetEnvironmentVariable("RECITE_UNITY_SAMPLE_ASSET"));
+        var asset = new ReciteDialogueAsset(sourceBytes);
+        sourceBytes[0] ^= 0xff;
+        var callerCopy = asset.CompiledBytes;
+        callerCopy[0] ^= 0xff;
+        using (var service = new ReciteDialogueService())
+        {
+            service.RegisterCondition("has_key", _ => false);
+            var initial = service.Start(asset);
+            Assert(service.HasActiveSession, "managed start did not retain session");
+            var prompt = FindPrompt(initial);
+            Assert(prompt != null && prompt.Choices.Count == 2, "managed traversal lost prompt choices");
+            Assert(!prompt.Choices[1].Availability.IsAvailable, "condition availability changed");
+            ExpectStatus(() => service.Start(asset), ReciteStatus.SessionAlreadyActive);
+            ExpectStatus(() => service.SelectChoice(prompt.Choices[1].Id), ReciteStatus.UnavailableChoice);
+            var snapshot = service.Snapshot();
+            service.End();
+            Assert(!service.HasActiveSession, "End retained native session");
+            var resume = service.Restore(asset, snapshot);
+            Assert(resume.Events.Count == 0, "pending prompt restore emitted unexpected output");
+            var chosen = service.SelectChoice(prompt.Choices[0].Id);
+            var effect = FindEffect(chosen).Effect;
+            Assert(effect.Mode == "blocking", "managed choice did not yield blocking effect");
+            var pending = service.Snapshot();
+            service.End();
+            var replay = service.Restore(asset, pending);
+            Assert(FindEffect(replay).Effect.Id == effect.Id, "managed restore changed pending effect ID");
+            ExpectStatus(() => service.AcknowledgeEffect("wrong"), ReciteStatus.EffectAcknowledgement);
+            var complete = service.AcknowledgeEffect(effect.Id);
+            Assert(complete.Events.Count > 0, "acknowledgement did not resume managed traversal");
+        }
+    }
+
+    internal static RecitePromptOutput FindPrompt(ReciteOutputBatch batch)
+    {
+        foreach (var item in batch.Events)
+            if (item is RecitePromptOutput prompt) return prompt;
+        return null;
+    }
+
+    internal static ReciteEffectOutput FindEffect(ReciteOutputBatch batch)
+    {
+        foreach (var item in batch.Events)
+            if (item is ReciteEffectOutput effect) return effect;
+        throw new InvalidOperationException("expected effect output");
+    }
+
+    internal static void ExpectStatus(Action action, ReciteStatus status)
+    {
+        try { action(); }
+        catch (ReciteAdapterException error) when (error.Status == status) { return; }
+        throw new InvalidOperationException("expected Recite status " + status);
     }
 
     private static void NativeTraversalThroughRawBridge()
@@ -469,67 +528,21 @@ internal static class ReciteUnityHeadless
             () => ReciteNativeBridge.ToUtf8NullTerminated("bad\ud800value"),
             "native unpaired surrogate");
 
-        var catalog = new ReciteLocaleCatalog();
         ExpectArgumentException(
-            () => catalog.AddTranslation("fr", "id", "Source", "bad\udffftranslation"),
-            "catalogue unpaired surrogate");
-        try
+            () => new RecitePoDocument(" \t", new byte[] { 1 }),
+            "PO document whitespace-only locale");
+        ExpectArgumentException(
+            () => new RecitePoDocument("fr\0CA", new byte[] { 1 }),
+            "PO document embedded NUL locale");
+        using (var service = new ReciteDialogueService())
         {
-            catalog.SetPluralRule("fr", "nplurals=2; plural=(n == 42 ? 2 : 0);");
-        }
-        catch (ReciteAdapterException)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException("reachable invalid plural arm was accepted");
-    }
-
-    private static void EndFreesLocaleCallbackAllocations()
-    {
-        var service = new ReciteDialogueService();
-        var catalog = new ReciteLocaleCatalog();
-        catalog.AddTranslation("fr", "line-id", "Source.", "Traduction.");
-        var catalogField = typeof(ReciteDialogueService).GetField(
-            "localeCatalog",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        catalogField.SetValue(service, catalog);
-
-        var id = Marshal.StringToCoTaskMemUTF8("line-id");
-        var source = Marshal.StringToCoTaskMemUTF8("Source.");
-        var locale = Marshal.StringToCoTaskMemUTF8("fr");
-        var query = Marshal.AllocHGlobal(Marshal.SizeOf<ReciteNativeBridge.ReciteLocaleQuery>());
-        try
-        {
-            Marshal.StructureToPtr(new ReciteNativeBridge.ReciteLocaleQuery
-            {
-                Kind = 0,
-                Id = id,
-                SourceText = source,
-                PluralSourceText = IntPtr.Zero,
-                Count = -1,
-                Domain = 0,
-                Locale = locale,
-                Variant = IntPtr.Zero
-            }, query, false);
-            service.EvaluateLocale(query, IntPtr.Zero);
-            var count = (int)typeof(ReciteDialogueService)
-                .GetProperty("LocaleCallbackAllocationCount", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                .GetValue(service);
-            Assert(count > 0, "locale callback did not allocate a result");
-            service.End();
-            count = (int)typeof(ReciteDialogueService)
-                .GetProperty("LocaleCallbackAllocationCount", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                .GetValue(service);
-            Assert(count == 0, "End did not free locale callback allocations");
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(query);
-            Marshal.FreeCoTaskMem(id);
-            Marshal.FreeCoTaskMem(source);
-            Marshal.FreeCoTaskMem(locale);
-            service.Dispose();
+            ExpectStatus(() => service.SetPoCatalog(new[] {
+                new RecitePoDocument("fr", System.Text.Encoding.UTF8.GetBytes(
+                    "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=2; plural=(n == 42 ? 2 : 0);\\n\"\n"))
+            }), ReciteStatus.Localisation);
+            ExpectArgumentException(
+                () => service.Start(new ReciteDialogueAsset(Array.Empty<byte>()), locale: " \t"),
+                "dialogue start whitespace-only locale");
         }
     }
 
@@ -843,7 +856,7 @@ internal static class ReciteUnityHeadless
         }
     }
 
-    private static void Assert(bool condition, string message)
+    internal static void Assert(bool condition, string message)
     {
         if (!condition)
         {

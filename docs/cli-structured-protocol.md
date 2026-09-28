@@ -7,6 +7,7 @@ boundary:
 recite validate --output-format structured [--invocation-id ID] PATHS...
 recite compile --output OUTPUT --output-format structured [--invocation-id ID] PATHS...
 recite extract --output-format structured [--output OUTPUT] [--invocation-id ID] PATHS...
+recite export-schema --schema SCHEMA --output OUTPUT [--producer-kind KIND --producer-id ID] --output-format structured [--invocation-id ID]
 recite run --output-format structured [--invocation-id ID] ASSET --block BLOCK --fixture FIXTURE
 recite trace --output-format structured [--invocation-id ID] ASSET --block BLOCK --fixture FIXTURE
 recite watch --output-format structured [--invocation-id ID] PROJECT-ROOT
@@ -47,7 +48,10 @@ status. A successful `validate` contains typed `diagnostics`. A successful
 with content diagnostics contains diagnostics and no artifact. A successful
 `extract` contains diagnostics and exactly one of artifact metadata (when
 `--output` is supplied) or typed `entries`; an extract with content diagnostics
-contains diagnostics only. `run` and `trace` return the deterministic runtime
+contains diagnostics only. A successful `export-schema` contains diagnostics
+and required `artifact` metadata; invalid schema input returns content
+diagnostics without an artifact and preserves any existing output. `run` and
+`trace` return the deterministic runtime
 `trace` model; they do not return localized human run lines. The protocol does
 not add redundant `valid`, `compiled`, or `extracted` booleans: `status` and
 the command-specific data shape identify the outcome phase.

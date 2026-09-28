@@ -1,5 +1,8 @@
 # Godot adapter localisation
 
+For addon installation, native compiled imports, schema declarations, and the
+current host workflow, see [`addons/recite/README.md`](../addons/recite/README.md).
+
 `ReciteDialogueCatalogResource` is the Godot-facing owner for translated
 dialogue. Add it as a Resource, install a complete gettext plural rule before
 its plural entries, and assign it to `ReciteDialogueNode`:

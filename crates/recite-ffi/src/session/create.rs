@@ -5,7 +5,8 @@ use crate::asset::{alloc_handle, lock_assets};
 use crate::error::{ReciteStatus, set_last_error};
 use crate::interpolation::{ReciteInterpolationValue, parse_interpolation_values};
 
-use super::{FfiSession, parse_session_params};
+use super::{FfiLocaleSource, FfiSession, parse_session_params};
+use recite_adapter::{LoadedDialogue, SessionDriver, StartRequest};
 
 /// Creates a session handle without running any traversal.
 ///
@@ -89,27 +90,33 @@ pub unsafe extern "C" fn recite_session_create_with_values(
         }
     };
 
-    let session =
-        match recite_runtime::start_scene_with_options(&dialogue, block.as_deref(), options) {
-            Ok(session) => session,
-            Err(error) => {
-                set_last_error(&error.to_string());
-                return ReciteStatus::from(error);
-            }
-        };
+    let loaded = match LoadedDialogue::from_shared(dialogue) {
+        Ok(loaded) => loaded,
+        Err(error) => {
+            set_last_error(&error.to_string());
+            return ReciteStatus::from(error);
+        }
+    };
+    let mut driver = SessionDriver::new();
+    if let Err(error) = driver.prepare(StartRequest {
+        asset: &loaded,
+        block_id: block.as_deref(),
+        options,
+    }) {
+        set_last_error(&error.to_string());
+        return ReciteStatus::from(error);
+    }
 
     let handle = alloc_handle();
     super::lock_sessions().insert(
         handle,
         FfiSession {
-            dialogue,
-            session,
+            driver,
             handlers: BTreeMap::new(),
             interpolation_values,
-            locale_provider: None,
+            locale_source: FfiLocaleSource::None,
             locale_variant: None,
             owner_thread: thread::current().id(),
-            begun: false,
         },
     );
     unsafe { *session_handle_out = handle };

@@ -28,6 +28,8 @@ pub(crate) enum Command {
     CheckSchemaProducerFreshness(ProducerFreshnessArgs),
     #[command(name = "inspect-schema")]
     InspectSchema(InspectSchemaArgs),
+    #[command(name = "export-schema")]
+    ExportSchema(ExportSchemaArgs),
     Explain(ExplainArgs),
     Watch(WatchArgs),
     Run(RuntimeArgs),
@@ -95,6 +97,28 @@ pub(crate) struct ProducerFreshnessArgs {
 pub(crate) struct InspectSchemaArgs {
     /// Standalone Recite TOML or generated schema manifest JSON.
     pub(crate) schema: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct ExportSchemaArgs {
+    /// Standalone Recite TOML or generated schema manifest JSON.
+    #[arg(long)]
+    pub(crate) schema: PathBuf,
+    /// Canonical generated schema manifest JSON destination.
+    #[arg(long)]
+    pub(crate) output: PathBuf,
+    /// Engine producer kind that owns the generated manifest.
+    #[arg(long, requires = "producer_id")]
+    pub(crate) producer_kind: Option<String>,
+    /// Stable engine registration or resource ID, independent of file path.
+    #[arg(long, requires = "producer_kind")]
+    pub(crate) producer_id: Option<String>,
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -231,6 +255,7 @@ impl Command {
             Self::Validate(args) => ("validate", args.output_format, &args.invocation_id),
             Self::Compile(args) => ("compile", args.output_format, &args.invocation_id),
             Self::Extract(args) => ("extract", args.output_format, &args.invocation_id),
+            Self::ExportSchema(args) => ("export-schema", args.output_format, &args.invocation_id),
             Self::Watch(args) => ("watch", args.output_format, &args.invocation_id),
             Self::Run(args) => ("run", args.output_format, &args.invocation_id),
             Self::Trace(args) => (

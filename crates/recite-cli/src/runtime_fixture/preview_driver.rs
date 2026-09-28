@@ -89,6 +89,8 @@ pub(crate) fn execute_runtime_fixture(
                             recite_runtime::DialogueError::ConditionEvaluationFailed {
                                 function: request.query().function().to_owned(),
                                 reason: reason.clone(),
+                                kind:
+                                    recite_runtime::ConditionEvaluationErrorKind::EvaluationFailed,
                             },
                         ));
                     }

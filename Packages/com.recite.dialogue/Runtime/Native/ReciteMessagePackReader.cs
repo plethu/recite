@@ -78,6 +78,12 @@ namespace Recite.Unity.Native
                     return false;
                 case 0xc3:
                     return true;
+                case 0xc4:
+                    return ReadBytes(ReadByte());
+                case 0xc5:
+                    return ReadBytes(ReadUInt16());
+                case 0xc6:
+                    return ReadBytes(checked((int)ReadUInt32()));
                 case 0xca:
                     return ReadSingle();
                 case 0xcb:
@@ -171,6 +177,15 @@ namespace Recite.Unity.Native
         private double ReadDouble()
         {
             return BitConverter.ToDouble(ReadBigEndian(sizeof(double)), 0);
+        }
+
+        private byte[] ReadBytes(int len)
+        {
+            Ensure(len);
+            var value = new byte[len];
+            Buffer.BlockCopy(bytes, offset, value, 0, len);
+            offset += len;
+            return value;
         }
 
         private byte[] ReadBigEndian(int len)

@@ -21,6 +21,7 @@ fn condition_failure_is_structured_and_keeps_session_position() {
         Err(DialogueError::ConditionEvaluationFailed {
             function: "trusts".to_owned(),
             reason: "condition is unavailable".to_owned(),
+            kind: recite_runtime::ConditionEvaluationErrorKind::EvaluationFailed,
         })
     );
     assert_line(

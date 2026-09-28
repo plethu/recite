@@ -1,10 +1,10 @@
 use recite_core::LocaleId;
 use recite_runtime::localisation::{
-    LocaleError, LocaleProvider, PluralResolution, PluralResolutionAttempt,
-    PluralResolutionOutcome, TextDomain,
+    LocaleError, LocaleLookupAttempt, LocaleLookupOutcome, LocaleLookupProvenance, LocaleProvider,
+    PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
 };
 
-use super::{CatalogKey, ReciteDialogueCatalog, contexts, gettext_context};
+use super::{CatalogKey, ReciteDialogueCatalog, contexts, gettext_context, valid_locale};
 
 impl LocaleProvider for ReciteDialogueCatalog {
     fn lookup(
@@ -15,20 +15,45 @@ impl LocaleProvider for ReciteDialogueCatalog {
         locale: &LocaleId,
         variant: Option<&str>,
     ) -> Result<Option<String>, LocaleError> {
+        self.lookup_with_provenance(id, source_text, domain, locale, variant)
+            .map(|resolved| resolved.template)
+    }
+
+    fn lookup_with_provenance(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Result<LocaleLookupProvenance, LocaleError> {
         let context = gettext_context(id, domain);
+        let fallbacks = locale_fallbacks(locale)?;
+        let mut attempts = Vec::new();
         for candidate_context in contexts(&context, variant) {
-            for candidate_locale in locale_fallbacks(locale.as_str()) {
-                if let Some(text) = self.lookup_context_for(
-                    &candidate_locale,
-                    domain,
-                    &candidate_context,
-                    source_text,
-                ) {
-                    return Ok(Some(text));
+            for candidate_locale in &fallbacks {
+                if let Some(text) =
+                    self.lookup_context_for(candidate_locale, &candidate_context, source_text)
+                {
+                    attempts.push(LocaleLookupAttempt::new(
+                        candidate_locale,
+                        &candidate_context,
+                        id,
+                        LocaleLookupOutcome::Matched,
+                    ));
+                    return Ok(LocaleLookupProvenance::new(Some(text))
+                        .with_match(candidate_locale, candidate_context, id)
+                        .with_attempts(attempts));
                 }
+                attempts.push(LocaleLookupAttempt::new(
+                    candidate_locale,
+                    &candidate_context,
+                    id,
+                    LocaleLookupOutcome::MissingEntry,
+                ));
             }
         }
-        Ok(None)
+        Ok(LocaleLookupProvenance::new(None).with_attempts(attempts))
     }
 
     fn resolve_plural(
@@ -42,12 +67,13 @@ impl LocaleProvider for ReciteDialogueCatalog {
         variant: Option<&str>,
     ) -> Result<PluralResolution, LocaleError> {
         let context = gettext_context(id, domain);
+        let fallbacks = locale_fallbacks(locale)?;
         let mut attempts = Vec::new();
         for candidate_context in contexts(&context, variant) {
-            for candidate_locale in locale_fallbacks(locale.as_str()) {
-                let Some(header) = self.plural_forms.get(&candidate_locale) else {
+            for candidate_locale in &fallbacks {
+                let Some(header) = self.plural_forms.get(candidate_locale) else {
                     attempts.push(attempt(
-                        &candidate_locale,
+                        candidate_locale,
                         &candidate_context,
                         id,
                         None,
@@ -58,14 +84,13 @@ impl LocaleProvider for ReciteDialogueCatalog {
                 let arm = recite_core::po::evaluate_plural_form(header, count)
                     .map_err(|error| LocaleError::new(error.to_string()))?;
                 let Some(entry) = self.plural_entry(
-                    &candidate_locale,
-                    domain,
+                    candidate_locale,
                     &candidate_context,
                     source_singular,
                     source_plural,
                 ) else {
                     attempts.push(attempt(
-                        &candidate_locale,
+                        candidate_locale,
                         &candidate_context,
                         id,
                         Some(arm),
@@ -75,7 +100,7 @@ impl LocaleProvider for ReciteDialogueCatalog {
                 };
                 let Some(text) = entry.translations.get(arm).filter(|text| !text.is_empty()) else {
                     attempts.push(attempt(
-                        &candidate_locale,
+                        candidate_locale,
                         &candidate_context,
                         id,
                         Some(arm),
@@ -84,7 +109,7 @@ impl LocaleProvider for ReciteDialogueCatalog {
                     continue;
                 };
                 attempts.push(attempt(
-                    &candidate_locale,
+                    candidate_locale,
                     &candidate_context,
                     id,
                     Some(arm),
@@ -93,7 +118,7 @@ impl LocaleProvider for ReciteDialogueCatalog {
                 return Ok(PluralResolution {
                     template: Some(text.clone()),
                     selected_arm: Some(arm),
-                    matched_locale: Some(candidate_locale),
+                    matched_locale: Some(candidate_locale.clone()),
                     matched_context: Some(candidate_context),
                     matched_key: Some(id.to_owned()),
                     attempts,
@@ -129,17 +154,10 @@ impl LocaleProvider for ReciteDialogueCatalog {
 }
 
 impl ReciteDialogueCatalog {
-    fn lookup_context_for(
-        &self,
-        locale: &str,
-        domain: TextDomain,
-        context: &str,
-        source_text: &str,
-    ) -> Option<String> {
+    fn lookup_context_for(&self, locale: &str, context: &str, source_text: &str) -> Option<String> {
         self.translations
             .get(&CatalogKey {
                 locale: locale.to_owned(),
-                domain,
                 context: context.to_owned(),
                 source_text: source_text.to_owned(),
                 plural_source_text: None,
@@ -150,17 +168,20 @@ impl ReciteDialogueCatalog {
     }
 }
 
-fn locale_fallbacks(locale: &str) -> Vec<String> {
-    let mut fallbacks = vec![locale.to_owned()];
-    let mut current = locale;
+fn locale_fallbacks(locale: &LocaleId) -> Result<Vec<String>, LocaleError> {
+    let canonical =
+        valid_locale(locale.as_str()).map_err(|error| LocaleError::new(error.to_string()))?;
+    let mut fallbacks = vec![canonical.as_str().to_owned()];
+    let mut current = canonical.as_str();
     while let Some((parent, _)) = current.rsplit_once('-') {
-        if parent.is_empty() {
-            break;
+        if let Ok(parent) = valid_locale(parent)
+            && !fallbacks.iter().any(|fallback| fallback == parent.as_str())
+        {
+            fallbacks.push(parent.as_str().to_owned());
         }
-        fallbacks.push(parent.to_owned());
         current = parent;
     }
-    fallbacks
+    Ok(fallbacks)
 }
 
 fn attempt(

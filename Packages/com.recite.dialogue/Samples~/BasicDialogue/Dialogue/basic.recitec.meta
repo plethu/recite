@@ -1,7 +1,9 @@
 fileFormatVersion: 2
 guid: 9bde5e8e5ec74888a78b0c1827a94dcf
-TextScriptImporter:
+ScriptedImporter:
   externalObjects: {}
+  scriptedImporterVersion: 1
+  script: {fileID: 11500000, guid: 652691a4d126539b9c7e8819853e44d0, type: 3}
   userData:
   assetBundleName:
   assetBundleVariant:

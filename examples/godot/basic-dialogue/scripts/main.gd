@@ -29,10 +29,12 @@ func _ready() -> void:
 	status = Label.new()
 	root.add_child(status)
 
-	asset = ReciteDialogueResource.new()
-	var loaded := asset.load_from_path("res://dialogue/basic.recitec")
-	if not loaded.is_ok():
-		_show_error(loaded.error())
+	asset = ResourceLoader.load("res://dialogue/basic.recitec") as ReciteDialogueResource
+	if asset == null:
+		status.text = "Compiled dialogue import is unavailable"
+		return
+	if not asset.last_error().is_empty():
+		_show_error(asset.last_error())
 		return
 
 	var started := recite.start(asset, "start", "en-GB")
@@ -43,7 +45,7 @@ func _on_recite_output(output: ReciteOutput) -> void:
 	var data := output.data()
 	match data.get("kind", ""):
 		"line":
-			var line := data["line"]
+			var line: Dictionary = data["line"]
 			transcript.append_text(line["text"] + "\n")
 		"prompt":
 			var line = data["line"]
@@ -51,7 +53,7 @@ func _on_recite_output(output: ReciteOutput) -> void:
 				transcript.append_text(line["text"] + "\n")
 			_render_choices(data["choices"])
 		"effect":
-			var effect := data["effect"]
+			var effect: Dictionary = data["effect"]
 			transcript.append_text("[color=gray]effect: %s[/color]\n" % effect["function"])
 			if effect["mode"] == "blocking":
 				pending_effect_id = effect["id"]

@@ -10,6 +10,8 @@ fi
 
 package_dir="$repo_root/Packages/com.recite.dialogue"
 runtime_dir="$package_dir/Runtime"
+target_dir="${CARGO_TARGET_DIR:-$repo_root/target/companions-unity}"
+export CARGO_TARGET_DIR="$target_dir"
 bridge="$runtime_dir/Native/ReciteNativeBridge.cs"
 header="$repo_root/include/recite.h"
 headless_test="$package_dir/Tests~/Headless/ReciteUnityHeadless.cs"
@@ -113,17 +115,12 @@ if [[ -f "$bridge" && -f "$header" ]]; then
   done < <(grep -E '^[[:space:]]*RECITE_STATUS_[A-Z_]+ = -?[0-9]+,' "$header")
 fi
 
-service="$runtime_dir/ReciteDialogueService.cs"
-for pattern in \
-  "private static readonly ReciteNativeBridge.ReciteConditionFn conditionCallback" \
-  "private static readonly ReciteNativeBridge.ReciteLocaleFn localeCallback" \
-  "GCHandleType.Normal" \
-  "ConditionCallbackEntry" \
-  "LocaleCallbackEntry" \
-  "MonoPInvokeCallback"; do
-  if [[ ! -f "$service" ]] || ! grep -qF "$pattern" "$service"; then
-    fail "Unity callbacks are missing IL2CPP-safe static/context pattern: $pattern"
-  fi
+for file in "$runtime_dir/ConditionCallbacks.cs"; do
+  for pattern in "GCHandleType.Normal" "MonoPInvokeCallback"; do
+    if [[ ! -f "$file" ]] || ! grep -qF "$pattern" "$file"; then
+      fail "$file is missing IL2CPP-safe callback ownership: $pattern"
+    fi
+  done
 done
 
 while IFS= read -r file; do
@@ -137,16 +134,16 @@ sample_dir="$package_dir/Samples~/BasicDialogue"
 [[ -f "$sample_dir/BasicDialogueDriver.cs" ]] || fail "Unity package is missing the BasicDialogue sample driver"
 [[ -f "$sample_dir/Dialogue/basic.recite" ]] || fail "Unity package is missing sample source dialogue"
 [[ -f "$sample_dir/Dialogue/basic.recitec" ]] || fail "Unity package is missing compiled sample dialogue"
-[[ -f "$sample_dir/Dialogue/basic.recitec.meta" ]] || fail "Unity package is missing compiled sample TextAsset metadata"
+[[ -f "$sample_dir/Dialogue/basic.recitec.meta" ]] || fail "Unity package is missing compiled sample importer metadata"
 if [[ -f "$sample_dir/BasicDialogue.unity" ]]; then
-  grep -q 'compiledAsset:' "$sample_dir/BasicDialogue.unity" || fail "sample scene does not wire a compiled Recite TextAsset"
+  grep -q 'compiledAsset:' "$sample_dir/BasicDialogue.unity" || fail "sample scene does not wire a compiled Recite asset"
   grep -q 'runner:' "$sample_dir/BasicDialogue.unity" || fail "sample scene does not wire BasicDialogueDriver to ReciteDialogueRunner"
   grep -q 'm_MethodName: OnReciteOutput' "$sample_dir/BasicDialogue.unity" || fail "sample scene does not route Recite output to BasicDialogueDriver"
   grep -q 'm_MethodName: OnReciteError' "$sample_dir/BasicDialogue.unity" || fail "sample scene does not route Recite errors to BasicDialogueDriver"
 fi
 
 if command -v dotnet >/dev/null 2>&1; then
-  if ! cargo build -p recite-ffi --quiet; then
+  if ! cargo build -p recite-ffi -p recite-cli --quiet; then
     fail "recite-ffi native library build failed"
   fi
   tmpdir="$(mktemp -d /tmp/recite-unity-check.XXXXXX)"
@@ -159,35 +156,83 @@ if command -v dotnet >/dev/null 2>&1; then
     printf '%s\n' '    <OutputType>Exe</OutputType>'
     printf '%s\n' '  </PropertyGroup>'
     printf '%s\n' '  <ItemGroup>'
-    find "$runtime_dir" -path "$runtime_dir/GameObjects" -prune -o -name '*.cs' -type f -print | sort | while IFS= read -r file; do
+    find "$runtime_dir" -path "$runtime_dir/GameObjects" -prune -o -name 'ReciteCompiledAsset.cs' -prune -o -name '*.cs' -type f -print | sort | while IFS= read -r file; do
       printf '    <Compile Include="%s" />\n' "$file"
     done
     printf '    <Compile Include="%s" />\n' "$headless_test"
+    printf '    <Compile Include="%s" />\n' "$package_dir/Tests~/Headless/ReciteUnityNativeCases.cs"
     printf '%s\n' '  </ItemGroup>'
     printf '%s\n' '</Project>'
   } > "$tmpdir/UnityRuntimeSubset.csproj"
 
+  printf '%s\n' '{"sdk":{"version":"8.0.421"}}' > "$tmpdir/global.json"
+  printf '%s\n' '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><clear /></packageSources></configuration>' > "$tmpdir/NuGet.Config"
+
+  cp "$sample_dir/Dialogue/basic.recite" "$tmpdir/basic.recite"
+  if "$target_dir/debug/recite" compile -o "$tmpdir/revision.recitec" "$tmpdir/basic.recite"; then
+    cp "$tmpdir/revision.recitec" "$tmpdir/old.recitec"
+    sed -i 's/The relay wakes./The relay stirs./' "$tmpdir/basic.recite"
+    "$target_dir/debug/recite" compile -o "$tmpdir/revision.recitec" "$tmpdir/basic.recite" || fail "Unity revision fixture failed to compile"
+  else
+    fail "Unity baseline revision fixture failed to compile"
+  fi
+
+  "$target_dir/debug/recite" compile -o "$tmpdir/plural.recitec" \
+    "$repo_root/fixtures/recite/valid/adapter_conformance/plural_runtime.recite" || fail "Unity plural fixture failed to compile"
+  "$target_dir/debug/recite" compile -o "$tmpdir/conformance.recitec" \
+    "$repo_root/fixtures/recite/valid/adapter_conformance/runtime_surface.recite" || fail "Unity conformance fixture failed to compile"
+
+  cat > "$tmpdir/schema-restore.recite" <<'RECITE'
+:: start default
+> save_prompt@91000000000000000001
+  Save here.
+  ? continue@91000000000000000002
+    Continue.
+    -> END
+RECITE
+  for schema in a b; do
+    cat > "$tmpdir/schema-$schema.toml" <<TOML
+schema_version = 1
+[producer]
+id = "unity-schema-restore"
+[speakers.test]
+display_name = "$schema"
+TOML
+    "$target_dir/debug/recite" export-schema --schema "$tmpdir/schema-$schema.toml" \
+      --output "$tmpdir/schema-$schema.json" || fail "Unity schema $schema fixture failed to export"
+    "$target_dir/debug/recite" compile --schema "$tmpdir/schema-$schema.json" \
+      -o "$tmpdir/schema-shared.recitec" "$tmpdir/schema-restore.recite" || fail "Unity schema $schema fixture failed to compile"
+    cp "$tmpdir/schema-shared.recitec" "$tmpdir/schema-$schema.recitec"
+  done
+
   if [[ ! -f "$headless_test" ]]; then
     fail "missing Unity headless package test"
-  elif ! DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet build "$tmpdir/UnityRuntimeSubset.csproj" --nologo -v:minimal >/tmp/recite-unity-dotnet-build.log 2>&1; then
+  elif ! (cd "$tmpdir" && DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet build "$tmpdir/UnityRuntimeSubset.csproj" --configfile "$tmpdir/NuGet.Config" --nologo -v:minimal >/tmp/recite-unity-dotnet-build.log 2>&1); then
     cat /tmp/recite-unity-dotnet-build.log >&2
     fail "Unity runtime subset dotnet build failed"
-  elif ! RECITE_UNITY_SAMPLE_ASSET="$sample_dir/Dialogue/basic.recitec" DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 LD_LIBRARY_PATH="$repo_root/target/debug${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore >/tmp/recite-unity-headless-test.log 2>&1; then
+  elif ! (cd "$tmpdir" && RECITE_UNITY_SAMPLE_ASSET="$sample_dir/Dialogue/basic.recitec" RECITE_UNITY_REVISION_OLD="$tmpdir/old.recitec" RECITE_UNITY_REVISION_NEW="$tmpdir/revision.recitec" RECITE_UNITY_PLURAL_ASSET="$tmpdir/plural.recitec" RECITE_UNITY_CONFORMANCE_ASSET="$tmpdir/conformance.recitec" RECITE_UNITY_SCHEMA_A="$tmpdir/schema-a.recitec" RECITE_UNITY_SCHEMA_B="$tmpdir/schema-b.recitec" DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 LD_LIBRARY_PATH="$target_dir/debug${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore >/tmp/recite-unity-headless-test.log 2>&1); then
     cat /tmp/recite-unity-headless-test.log >&2
     fail "Unity headless package test failed"
+  fi
+  if [[ "${RECITE_UNITY_PERF:-}" == 1 ]]; then
+    (cd "$tmpdir" && RECITE_UNITY_SAMPLE_ASSET="$sample_dir/Dialogue/basic.recitec" DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 LD_LIBRARY_PATH="$target_dir/debug${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore -- --perf) || fail "Unity managed performance probe failed"
+  fi
+  if ! RECITE_UNITY_CLI="$target_dir/debug/recite" "$repo_root/scripts/unity/check-schema-export.sh" "$repo_root"; then
+    fail "Unity schema export check failed"
   fi
 else
   fail "dotnet is required for the Unity runtime subset build"
 fi
 
-runner="$runtime_dir/GameObjects/ReciteDialogueRunner.cs"
-if [[ -f "$runner" ]] && ! grep -q 'service.Restore(asset, snapshot, string.IsNullOrEmpty(localeVariant) ? null : localeVariant)' "$runner"; then
-  fail "Unity runner restore does not re-supply its configured locale variant"
-fi
-
 if (( failures > 0 )); then
   echo "Found ${failures} Unity adapter check failure(s)." >&2
   exit 1
+fi
+
+if [[ -n "${UNITY_EDITOR:-}" ]]; then
+  "$repo_root/scripts/unity/run-unity-tests.sh" "$repo_root"
+else
+  echo "Unity Editor unavailable; EditMode and PlayMode suites were not run."
 fi
 
 echo "Unity adapter package check passed."

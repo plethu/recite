@@ -13,7 +13,7 @@ use crate::schema::ProjectSchema;
     clippy::expect_used,
     reason = "this exporter owns the canonical schema JSON serialization invariant"
 )]
-pub(super) fn export_json(schema: &ProjectSchema) -> String {
+pub(crate) fn export_json(schema: &ProjectSchema) -> String {
     let mut root = serde_json::Map::new();
     root.insert(
         "schema_version".to_owned(),

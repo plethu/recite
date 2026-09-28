@@ -1,21 +1,21 @@
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, ThreadId};
 
-use recite_core::compiled::CompiledDialogue;
 use recite_runtime::{
-    DialogueError, DialogueSession, DialogueSessionOptions, localisation::InterpolationValues,
+    DialogueSessionOptions, LocaleResolution,
+    localisation::{InterpolationValues, LocaleProvider},
 };
 
 use crate::condition::ConditionEntry;
 use crate::error::{ReciteStatus, set_last_error};
 use crate::locale::FfiLocaleProvider;
+use recite_adapter::{DriverError, ReciteDialogueCatalog, SessionDriver};
 
 mod begin;
 mod choice;
 mod create;
-mod drain;
 mod effect;
 mod locale;
 mod restore;
@@ -26,7 +26,6 @@ mod values;
 pub use begin::{recite_session_begin, recite_session_register_condition};
 pub use choice::recite_session_choose;
 pub use create::{recite_session_create, recite_session_create_with_values};
-pub(crate) use drain::{drain_after_event, drain_restored, drain_to_batch};
 pub use effect::recite_session_acknowledge_effect;
 pub(crate) use locale::set_locale_variant_value;
 pub use locale::{
@@ -35,7 +34,9 @@ pub use locale::{
 };
 pub use restore::recite_session_restore_with_values_and_locale_provider;
 pub use restore::recite_session_restore_with_values_and_locale_provider_and_variant;
-pub use restore::{recite_session_restore, recite_session_restore_with_values};
+pub use restore::{
+    recite_session_restore, recite_session_restore_with_catalog, recite_session_restore_with_values,
+};
 pub use snapshot::recite_session_snapshot;
 pub use start::{
     recite_session_start, recite_session_start_with_locale_provider,
@@ -61,17 +62,28 @@ pub(crate) fn lock_sessions() -> std::sync::MutexGuard<'static, BTreeMap<u64, Ff
 }
 
 pub(crate) struct FfiSession {
-    pub(crate) dialogue: std::sync::Arc<CompiledDialogue>,
-    pub(crate) session: DialogueSession,
+    pub(crate) driver: SessionDriver,
     pub(crate) handlers: BTreeMap<String, ConditionEntry>,
     pub(crate) interpolation_values: InterpolationValues,
-    pub(crate) locale_provider: Option<FfiLocaleProvider>,
+    pub(crate) locale_source: FfiLocaleSource,
     pub(crate) locale_variant: Option<String>,
     pub(crate) owner_thread: ThreadId,
-    /// False until `recite_session_begin` (or the `recite_session_start` shorthand) runs the
-    /// initial drain. Guards against double-begin on a session created with
-    /// `recite_session_create`.
-    pub(crate) begun: bool,
+}
+
+pub(crate) enum FfiLocaleSource {
+    None,
+    Callback(FfiLocaleProvider),
+    Catalog(Arc<ReciteDialogueCatalog>),
+}
+
+impl FfiLocaleSource {
+    pub(crate) fn provider(&self) -> Option<&dyn LocaleProvider> {
+        match self {
+            Self::None => None,
+            Self::Callback(provider) => Some(provider),
+            Self::Catalog(catalog) => Some(catalog.as_ref()),
+        }
+    }
 }
 
 /// Parses an optional UTF-8 NUL-terminated session string. Empty strings are
@@ -152,9 +164,23 @@ pub(crate) fn ensure_session_thread(ffi_session: &FfiSession) -> Result<(), Reci
     Err(ReciteStatus::Validation)
 }
 
-pub(crate) fn is_boundary_error(error: &DialogueError) -> bool {
-    matches!(
-        error,
-        DialogueError::PromptPending { .. } | DialogueError::EffectPending { .. }
-    )
+pub(crate) fn locale_resolution<'a>(
+    values: &'a InterpolationValues,
+    provider: Option<&'a dyn LocaleProvider>,
+    variant: Option<&'a str>,
+) -> LocaleResolution<'a> {
+    let resolution = LocaleResolution::new().with_values(values);
+    let resolution = provider.map_or(resolution, |provider| resolution.with_provider(provider));
+    variant.map_or(resolution, |variant| resolution.with_variant(variant))
+}
+
+pub(crate) fn driver_failure(error: DriverError<(ReciteStatus, String)>) -> (ReciteStatus, String) {
+    match error {
+        DriverError::Adapter(error) => (ReciteStatus::from(error.kind()), error.to_string()),
+        DriverError::Output(error) => error,
+        _ => (
+            ReciteStatus::DialogueFault,
+            "unknown adapter driver error".to_owned(),
+        ),
+    }
 }

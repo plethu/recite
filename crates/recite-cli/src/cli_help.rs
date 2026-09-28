@@ -121,6 +121,33 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
+        "export-schema" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandExportSchema));
+            set_arg_help(
+                command,
+                "schema",
+                messages.text(MsgId::CliHelpArgSchemaInspection),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "output",
+                messages.text(MsgId::CliHelpArgOutputSchema),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "producer_kind",
+                messages.text(MsgId::CliHelpArgProducerKind),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "producer_id",
+                messages.text(MsgId::CliHelpArgProducerId),
+                messages,
+            );
+        }
         "explain" => {
             set_about(command, messages.text(MsgId::CliHelpCommandExplain));
             set_arg_help(
