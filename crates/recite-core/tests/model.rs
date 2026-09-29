@@ -107,6 +107,7 @@ fn diagnostic_codes_classify_stable_categories() {
         ("RECITE_VALIDATE034", DiagnosticCategory::Validation),
         ("RECITE_VALIDATEABC", DiagnosticCategory::Validation),
         ("RECITE_OTHER001", DiagnosticCategory::Unknown),
+        ("RECITE_IMPORT001", DiagnosticCategory::Import),
     ];
 
     for (code, category) in cases {

@@ -31,6 +31,7 @@ mod dialogue_locale;
 mod error;
 mod fs;
 mod i18n;
+mod migration;
 mod play;
 mod runtime_fixture;
 mod runtime_format;

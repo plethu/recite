@@ -11,6 +11,7 @@ members = [
     "crates/recite-ffi",
     "crates/recite-fixturegen",
     "crates/recite-godot",
+    "crates/recite-import",
     "crates/recite-lsp",
     "crates/recite-parser",
     "crates/recite-runtime",
@@ -50,6 +51,7 @@ recite-compiler = { version = "0.1.0", path = "crates/recite-compiler" }
 recite-config = { version = "0.1.0", path = "crates/recite-config" }
 recite-fixturegen = { version = "0.1.0", path = "crates/recite-fixturegen" }
 recite-godot = { version = "0.1.0", path = "crates/recite-godot" }
+recite-import = { version = "0.1.0", path = "crates/recite-import" }
 recite-lsp = { version = "0.1.0", path = "crates/recite-lsp" }
 recite-runtime = { version = "0.1.0", path = "crates/recite-runtime" }
 recite-ui = { version = "0.1.0", path = "crates/recite-ui" }

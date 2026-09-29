@@ -1,71 +1,95 @@
 ---
-title: Importer Boundaries
-description: What a Recite migration importer may preserve, flag, or leave to manual review.
+title: Inspecting an import
+description: Inspect source mappings and losses before writing editable Recite source.
 ---
 
-Recite migration support is a boundary, not a compatibility promise. An importer may help inventory existing content and produce a first Recite draft, but the native Recite model remains blocks, structured line and choice IDs, pure conditions, schema-checked effects, metadata, localisation, and deterministic traversal.
+`recite import` reads one document and prints a JSON report. It does not write
+files unless you supply `--output-dir`. The input family is explicit:
+`json`, `csv`, `twee`, `ink` or `yarn`.
 
-Use this page when a transition guide says "importer boundary" or "migration report".
+From the Recite checkout, after building the CLI:
 
-## Boundary model
-
-| Existing content | Recite boundary |
-| --- | --- |
-| Dialogue text | Line bodies with stable line IDs |
-| Branch choices | Choice records with stable choice IDs and targets |
-| Node, cue, knot, timeline, or conversation names | Block IDs or metadata, depending on authoring intent |
-| Tags, fields, portraits, mood labels, and line annotations | Ordered metadata with schema validation |
-| External commands, mutations, sequencer commands, signals, and scripted actions | Typed effects emitted to the host |
-| Variables and conditions | Pure condition calls declared in schema |
-| Visual editor layout, engine scene links, and UI setup | Manual adapter or host-game work |
-
-## Importer outputs
-
-A useful importer should produce three artifacts:
-
-- Draft Recite source for clean structural content.
-- A migration report listing lossy or manual constructs with source locations.
-- A schema todo list for condition functions, effect functions, speakers, registries, and metadata keys.
-
-The importer should not silently guess semantics for host-game state, execute external code, or hide unsupported constructs.
-
-## Tiny Recite target
-
-```text
-:: pier_intro default
-> pier_001@4bc426982eed8fc98cee speaker=guide mood=calm
-  The tide is coming in.
-
-? pier_ask_boat@1fdd852a770b04574d58
-  Ask about the boat.
-  -> boat
-
-! deferred mark_thread(pier_intro, seen)
--> END
-
-:: boat
-> pier_002@96a6b05cd8fb673bdc50 speaker=guide
-  It is tied below the old signal lamp.
--> END
+```sh
+recite import fixtures/import/passages.twee --from twee
+recite import fixtures/import/passages.twee --from twee --output-dir migrated
 ```
 
-Next workflow:
+The destination must not exist. A successful write creates `report.json` and
+`imported.recite`; it never replaces existing source. A failed write can leave
+a new, incomplete directory, which you should inspect before retrying elsewhere.
+Reports also remain on stdout, so redirect them if you want to retain an
+inspection without writing generated source.
 
-```bash
-recite validate dialogue/pier_intro.recite
-recite compile --output build/dialogue.recitec dialogue/pier_intro.recite
-```
+## Read the result
 
-## Not imported by default
+The report has a version, source family and file, generated source, mappings,
+import items and native validation diagnostics. Each mapping names the generated
+record and line, its original ID when present, and its source location. Locations
+use text spans, JSON Pointer paths, or CSV record row/column/header fields. CSV
+row numbers count records, including the header; quoted multiline records do not
+turn subsequent record numbers into physical line numbers.
 
-- Runtime save files from the source tool.
-- Editor graph positions, visual-node layout, and plugin UI configuration.
-- Engine-specific scene objects, animations, signals, MonoBehaviours, nodes, prefabs, or resources.
-- Undeclared script side effects.
-- Tool-specific localisation database formats unless a project-specific converter maps them explicitly.
+| Status | Meaning | Writing |
+| --- | --- | --- |
+| `complete` | All encountered constructs in the documented subset converted and native validation passed. | Allowed into a new directory. |
+| `partial` | Native validation passed, but the report records skipped or lossy constructs. | Requires `--accept-partial` as well as `--output-dir`. |
+| `invalid` | Input/mapping errors, no supported blocks, or native validation failure. | Refused, including with `--accept-partial`. |
 
-## Related docs
+Import items carry the shared diagnostic record, provenance, construct, action
+and follow-up. `RECITE_IMPORT001` rejects bad input or mappings;
+`RECITE_IMPORT002` reports skipped constructs; `RECITE_IMPORT003` marks a lossy
+conversion. Native diagnostics retain their usual codes and point into
+`imported.recite`; use the generated-line mappings to relate them to the input.
 
-- [Source Format](/reference/source-format/)
-- [Production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)
-- [CLI](/reference/cli/)
+Leading or trailing whitespace in dialogue and choice labels is reported as a
+loss before normalization. These conversions are partial and require review
+before writing, even when the normalized text passes native validation.
+
+Inspection exits successfully for complete or partial results. Invalid results
+exit 1. A write request for partial output without `--accept-partial` also exits 1.
+Operational failures, including unreadable files or malformed mapping JSON,
+are reported on stderr and may occur before a report exists.
+
+## Review before adopting source
+
+Read every skipped/lossy item against the original. Text readers hold back an
+entire affected block when they encounter unsupported control flow, rather than
+lifting its dialogue out of a condition. References to a held-back block fail
+native target validation. The report retains candidate source even when it
+cannot be written.
+
+Existing valid Recite `label@anchor` IDs are retained; bare valid anchors are
+retained with a generated label. Other IDs receive deterministic generated IDs
+and an old-to-new mapping. Generation depends on the supplied input path and
+record identity/location, so same-named files in different directories receive
+different generated IDs. Use a stable project-relative path when invoking the
+CLI, or pass `--source-id story/scene/input.twee` to keep the same IDs when the
+checkout moves. The report's `file` and provenance use that source identity.
+Renaming or rearranging an input can change generated IDs.
+
+For a multi-file project, choose one import to keep its default block and
+pass `--no-default` for every other file. Generated block IDs and their
+references also use the source identity, so equal passage names in separate
+files stay distinct. For a jump to a block defined in another file, pass
+`--target-source End=story/south/input.twee::dialogue/south.recite` on the
+referring import. Use `--source-id story/south/input.twee` for the defining
+import, then place its generated source at `dialogue/south.recite` in the
+project. Without the mapping, a missing local target stays invalid. Inspection
+uses temporary blocks for declared cross-file targets and for a missing local
+default; compile or validate the assembled project to check those declarations
+against the real blocks and its single default.
+After adopting the source, edit that source and keep its anchors; import is not
+an incremental synchronization command.
+
+Pass `--schema path/to/schema.json` when checking against your game's schema.
+Generated source goes through the native parser, compiler validation and compiler.
+A complete report establishes the documented conversion, not compatibility with
+another tool's runtime, save data or localisation database.
+
+The readers deliberately exclude arbitrary scripts, runtime emulation and
+implicit command mappings. Migrate conditions and effects manually into your
+schema. No importer executes source-language commands.
+
+The checked examples and expected reports live in
+[`fixtures/import`](https://github.com/plethu/recite/tree/main/fixtures/import)
+and the [import tests](https://github.com/plethu/recite/tree/main/crates/recite-import/tests).

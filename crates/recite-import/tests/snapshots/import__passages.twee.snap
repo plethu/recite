@@ -1,0 +1,135 @@
+---
+source: crates/recite-import/tests/import.rs
+expression: report
+---
+{
+  "format_version": 1,
+  "family": "twee",
+  "file": "passages.twee",
+  "status": "complete",
+  "source": ":: block_70f412f31d88097ea1e5 default\n> imported_57fdc0944279c48fe34b@57fdc0944279c48fe34b\n  The station is quiet.\n  ? imported_b192a22386ecc821bd42@b192a22386ecc821bd42\n    Listen\n    -> block_2ba9548142754b276e94\n:: block_2ba9548142754b276e94\n> imported_d09eb8bd7f57ec55394e@d09eb8bd7f57ec55394e\n  The signal returns.\n-> END\n",
+  "mappings": [
+    {
+      "provenance": {
+        "file": "passages.twee",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "passages.twee",
+            "start": {
+              "line": 1,
+              "column": 1
+            },
+            "end": {
+              "line": 1,
+              "column": 9
+            }
+          }
+        },
+        "record_key": "1"
+      },
+      "construct": "block",
+      "original_id": "Start",
+      "generated_id": "block_70f412f31d88097ea1e5",
+      "generated_line": 1
+    },
+    {
+      "provenance": {
+        "file": "passages.twee",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "passages.twee",
+            "start": {
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "line": 2,
+              "column": 22
+            }
+          }
+        },
+        "record_key": "2"
+      },
+      "construct": "line",
+      "original_id": null,
+      "generated_id": "imported_57fdc0944279c48fe34b@57fdc0944279c48fe34b",
+      "generated_line": 2
+    },
+    {
+      "provenance": {
+        "file": "passages.twee",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "passages.twee",
+            "start": {
+              "line": 3,
+              "column": 1
+            },
+            "end": {
+              "line": 3,
+              "column": 16
+            }
+          }
+        },
+        "record_key": "3"
+      },
+      "construct": "choice",
+      "original_id": null,
+      "generated_id": "imported_b192a22386ecc821bd42@b192a22386ecc821bd42",
+      "generated_line": 4
+    },
+    {
+      "provenance": {
+        "file": "passages.twee",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "passages.twee",
+            "start": {
+              "line": 4,
+              "column": 1
+            },
+            "end": {
+              "line": 4,
+              "column": 7
+            }
+          }
+        },
+        "record_key": "4"
+      },
+      "construct": "block",
+      "original_id": "End",
+      "generated_id": "block_2ba9548142754b276e94",
+      "generated_line": 7
+    },
+    {
+      "provenance": {
+        "file": "passages.twee",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "passages.twee",
+            "start": {
+              "line": 5,
+              "column": 1
+            },
+            "end": {
+              "line": 5,
+              "column": 20
+            }
+          }
+        },
+        "record_key": "5"
+      },
+      "construct": "line",
+      "original_id": null,
+      "generated_id": "imported_d09eb8bd7f57ec55394e@d09eb8bd7f57ec55394e",
+      "generated_line": 8
+    }
+  ],
+  "items": [],
+  "native_diagnostics": []
+}

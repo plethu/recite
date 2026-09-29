@@ -23,6 +23,8 @@ pub(crate) enum ErrorCategory {
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum ErrorCode {
+    Import,
+    ImportJson,
     CoreValue,
     Compile,
     CompiledValue,

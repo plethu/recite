@@ -1,0 +1,99 @@
+---
+source: crates/recite-import/tests/import.rs
+expression: report
+---
+{
+  "format_version": 1,
+  "family": "json",
+  "file": "lines.json",
+  "status": "complete",
+  "source": ":: block_0630ab8f8f91a863d14b default\n> arrival@11111111111111111111 speaker=operator\n  The station is quiet.\n-> block_e2092c200fb89dca6b25\n:: block_e2092c200fb89dca6b25\n> reply@11111111111111111112 speaker=operator\n  The signal returns.\n-> END\n",
+  "mappings": [
+    {
+      "provenance": {
+        "file": "lines.json",
+        "location": {
+          "kind": "json",
+          "pointer": "/0/node"
+        },
+        "record_key": "0"
+      },
+      "construct": "block",
+      "original_id": "Start",
+      "generated_id": "block_0630ab8f8f91a863d14b",
+      "generated_line": 1
+    },
+    {
+      "provenance": {
+        "file": "lines.json",
+        "location": {
+          "kind": "json",
+          "pointer": "/0/text"
+        },
+        "record_key": "0"
+      },
+      "construct": "line",
+      "original_id": "arrival@11111111111111111111",
+      "generated_id": "arrival@11111111111111111111",
+      "generated_line": 2
+    },
+    {
+      "provenance": {
+        "file": "lines.json",
+        "location": {
+          "kind": "json",
+          "pointer": "/0/next"
+        },
+        "record_key": "0"
+      },
+      "construct": "jump",
+      "original_id": null,
+      "generated_id": "block_e2092c200fb89dca6b25",
+      "generated_line": 4
+    },
+    {
+      "provenance": {
+        "file": "lines.json",
+        "location": {
+          "kind": "json",
+          "pointer": "/1/node"
+        },
+        "record_key": "1"
+      },
+      "construct": "block",
+      "original_id": "End",
+      "generated_id": "block_e2092c200fb89dca6b25",
+      "generated_line": 5
+    },
+    {
+      "provenance": {
+        "file": "lines.json",
+        "location": {
+          "kind": "json",
+          "pointer": "/1/text"
+        },
+        "record_key": "1"
+      },
+      "construct": "line",
+      "original_id": "reply@11111111111111111112",
+      "generated_id": "reply@11111111111111111112",
+      "generated_line": 6
+    },
+    {
+      "provenance": {
+        "file": "lines.json",
+        "location": {
+          "kind": "json",
+          "pointer": "/1/next"
+        },
+        "record_key": "1"
+      },
+      "construct": "jump",
+      "original_id": null,
+      "generated_id": "END",
+      "generated_line": 8
+    }
+  ],
+  "items": [],
+  "native_diagnostics": []
+}

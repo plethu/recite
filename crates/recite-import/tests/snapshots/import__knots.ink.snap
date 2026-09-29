@@ -1,0 +1,159 @@
+---
+source: crates/recite-import/tests/import.rs
+expression: report
+---
+{
+  "format_version": 1,
+  "family": "ink",
+  "file": "knots.ink",
+  "status": "complete",
+  "source": ":: block_d119f72b7d4f50a8462e default\n> imported_742ecaf6f647910b0605@742ecaf6f647910b0605\n  The station is quiet.\n  ? imported_9c3db916846d755aad77@9c3db916846d755aad77\n    Listen\n    -> block_2c708e7d566eb8252dca\n:: block_2c708e7d566eb8252dca\n> imported_300269303006580e317b@300269303006580e317b\n  The signal returns.\n-> END\n",
+  "mappings": [
+    {
+      "provenance": {
+        "file": "knots.ink",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "knots.ink",
+            "start": {
+              "line": 1,
+              "column": 1
+            },
+            "end": {
+              "line": 1,
+              "column": 14
+            }
+          }
+        },
+        "record_key": "1"
+      },
+      "construct": "block",
+      "original_id": "Start",
+      "generated_id": "block_d119f72b7d4f50a8462e",
+      "generated_line": 1
+    },
+    {
+      "provenance": {
+        "file": "knots.ink",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "knots.ink",
+            "start": {
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "line": 2,
+              "column": 22
+            }
+          }
+        },
+        "record_key": "2"
+      },
+      "construct": "line",
+      "original_id": null,
+      "generated_id": "imported_742ecaf6f647910b0605@742ecaf6f647910b0605",
+      "generated_line": 2
+    },
+    {
+      "provenance": {
+        "file": "knots.ink",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "knots.ink",
+            "start": {
+              "line": 3,
+              "column": 1
+            },
+            "end": {
+              "line": 3,
+              "column": 18
+            }
+          }
+        },
+        "record_key": "3"
+      },
+      "construct": "choice",
+      "original_id": null,
+      "generated_id": "imported_9c3db916846d755aad77@9c3db916846d755aad77",
+      "generated_line": 4
+    },
+    {
+      "provenance": {
+        "file": "knots.ink",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "knots.ink",
+            "start": {
+              "line": 4,
+              "column": 1
+            },
+            "end": {
+              "line": 4,
+              "column": 12
+            }
+          }
+        },
+        "record_key": "4"
+      },
+      "construct": "block",
+      "original_id": "End",
+      "generated_id": "block_2c708e7d566eb8252dca",
+      "generated_line": 7
+    },
+    {
+      "provenance": {
+        "file": "knots.ink",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "knots.ink",
+            "start": {
+              "line": 5,
+              "column": 1
+            },
+            "end": {
+              "line": 5,
+              "column": 20
+            }
+          }
+        },
+        "record_key": "5"
+      },
+      "construct": "line",
+      "original_id": null,
+      "generated_id": "imported_300269303006580e317b@300269303006580e317b",
+      "generated_line": 8
+    },
+    {
+      "provenance": {
+        "file": "knots.ink",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "knots.ink",
+            "start": {
+              "line": 6,
+              "column": 1
+            },
+            "end": {
+              "line": 6,
+              "column": 7
+            }
+          }
+        },
+        "record_key": "6"
+      },
+      "construct": "jump",
+      "original_id": null,
+      "generated_id": "END",
+      "generated_line": 10
+    }
+  ],
+  "items": [],
+  "native_diagnostics": []
+}

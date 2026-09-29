@@ -1,0 +1,272 @@
+---
+source: crates/recite-import/tests/import.rs
+expression: report
+---
+{
+  "format_version": 1,
+  "family": "twee",
+  "file": "input",
+  "status": "partial",
+  "source": ":: block_a04d85288af0982a4cec default\n> imported_0c42a6e664fd26b4bd5a@0c42a6e664fd26b4bd5a\n  Hello.\n-> END\n",
+  "mappings": [
+    {
+      "provenance": {
+        "file": "input",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "input",
+            "start": {
+              "line": 1,
+              "column": 1
+            },
+            "end": {
+              "line": 1,
+              "column": 8
+            }
+          }
+        },
+        "record_key": "1"
+      },
+      "construct": "block",
+      "original_id": "safe",
+      "generated_id": "block_a04d85288af0982a4cec",
+      "generated_line": 1
+    },
+    {
+      "provenance": {
+        "file": "input",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "input",
+            "start": {
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "line": 2,
+              "column": 7
+            }
+          }
+        },
+        "record_key": "2"
+      },
+      "construct": "line",
+      "original_id": null,
+      "generated_id": "imported_0c42a6e664fd26b4bd5a@0c42a6e664fd26b4bd5a",
+      "generated_line": 2
+    }
+  ],
+  "items": [
+    {
+      "diagnostic": {
+        "version": 1,
+        "code": "RECITE_IMPORT002",
+        "severity": "warning",
+        "span": {
+          "file": "input",
+          "start": {
+            "line": 3,
+            "column": 1
+          },
+          "end": {
+            "line": 3,
+            "column": 10
+          }
+        },
+        "presentation": {
+          "id": "diagnostic-import-002",
+          "arguments": {
+            "detail": {
+              "type": "string",
+              "value": "Only plain passages followed by standalone static links are supported; story data, tags, macros and formatting need manual migration."
+            }
+          }
+        },
+        "related": [],
+        "help": null,
+        "explanation": null,
+        "compatibility_message": "Only plain passages followed by standalone static links are supported; story data, tags, macros and formatting need manual migration."
+      },
+      "provenance": {
+        "file": "input",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "input",
+            "start": {
+              "line": 3,
+              "column": 1
+            },
+            "end": {
+              "line": 3,
+              "column": 10
+            }
+          }
+        },
+        "record_key": "3"
+      },
+      "construct": "block",
+      "action": "skipped",
+      "follow_up": "Migrate this construct manually before using the generated source."
+    },
+    {
+      "diagnostic": {
+        "version": 1,
+        "code": "RECITE_IMPORT002",
+        "severity": "warning",
+        "span": {
+          "file": "input",
+          "start": {
+            "line": 4,
+            "column": 1
+          },
+          "end": {
+            "line": 4,
+            "column": 13
+          }
+        },
+        "presentation": {
+          "id": "diagnostic-import-002",
+          "arguments": {
+            "detail": {
+              "type": "string",
+              "value": "Block contains unsupported syntax; migrate it as a whole to preserve control flow."
+            }
+          }
+        },
+        "related": [],
+        "help": null,
+        "explanation": null,
+        "compatibility_message": "Block contains unsupported syntax; migrate it as a whole to preserve control flow."
+      },
+      "provenance": {
+        "file": "input",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "input",
+            "start": {
+              "line": 4,
+              "column": 1
+            },
+            "end": {
+              "line": 4,
+              "column": 13
+            }
+          }
+        },
+        "record_key": "4"
+      },
+      "construct": "held_back",
+      "action": "skipped",
+      "follow_up": "Migrate this construct manually before using the generated source."
+    },
+    {
+      "diagnostic": {
+        "version": 1,
+        "code": "RECITE_IMPORT002",
+        "severity": "warning",
+        "span": {
+          "file": "input",
+          "start": {
+            "line": 5,
+            "column": 1
+          },
+          "end": {
+            "line": 5,
+            "column": 8
+          }
+        },
+        "presentation": {
+          "id": "diagnostic-import-002",
+          "arguments": {
+            "detail": {
+              "type": "string",
+              "value": "Block contains unsupported syntax; migrate it as a whole to preserve control flow."
+            }
+          }
+        },
+        "related": [],
+        "help": null,
+        "explanation": null,
+        "compatibility_message": "Block contains unsupported syntax; migrate it as a whole to preserve control flow."
+      },
+      "provenance": {
+        "file": "input",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "input",
+            "start": {
+              "line": 5,
+              "column": 1
+            },
+            "end": {
+              "line": 5,
+              "column": 8
+            }
+          }
+        },
+        "record_key": "5"
+      },
+      "construct": "held_back",
+      "action": "skipped",
+      "follow_up": "Migrate this construct manually before using the generated source."
+    },
+    {
+      "diagnostic": {
+        "version": 1,
+        "code": "RECITE_IMPORT002",
+        "severity": "warning",
+        "span": {
+          "file": "input",
+          "start": {
+            "line": 6,
+            "column": 1
+          },
+          "end": {
+            "line": 6,
+            "column": 8
+          }
+        },
+        "presentation": {
+          "id": "diagnostic-import-002",
+          "arguments": {
+            "detail": {
+              "type": "string",
+              "value": "Block contains unsupported syntax; migrate it as a whole to preserve control flow."
+            }
+          }
+        },
+        "related": [],
+        "help": null,
+        "explanation": null,
+        "compatibility_message": "Block contains unsupported syntax; migrate it as a whole to preserve control flow."
+      },
+      "provenance": {
+        "file": "input",
+        "location": {
+          "kind": "text",
+          "span": {
+            "file": "input",
+            "start": {
+              "line": 6,
+              "column": 1
+            },
+            "end": {
+              "line": 6,
+              "column": 8
+            }
+          }
+        },
+        "record_key": "6"
+      },
+      "construct": "held_back",
+      "action": "skipped",
+      "follow_up": "Migrate this construct manually before using the generated source."
+    }
+  ],
+  "native_diagnostics": []
+}

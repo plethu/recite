@@ -33,6 +33,12 @@ test *args:
 test-doc *args:
     cargo test --workspace --locked --doc "$@"
 
+# Run the copyable project through CLI commands and the Bevy companion.
+test-workflow:
+    cargo build --locked -p recite-cli
+    python3 scripts/check-workflow.py --recite target/debug/recite
+    cargo test --locked -p recite-bevy --test workflow_project
+
 test-zed *args:
     cargo nextest run --locked --manifest-path editors/zed/Cargo.toml "$@"
 

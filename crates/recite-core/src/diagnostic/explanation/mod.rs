@@ -5,6 +5,7 @@ use crate::{
 
 mod freshness;
 mod identifiers;
+mod import;
 mod parse;
 mod project;
 mod schema;
@@ -147,6 +148,7 @@ fn detail_presentation_id(
 const GROUPS: &[&[DiagnosticExplanation]] = &[
     freshness::EXPLANATIONS,
     identifiers::EXPLANATIONS,
+    import::EXPLANATIONS,
     parse::EXPLANATIONS,
     project::EXPLANATIONS,
     schema::EXPLANATIONS,

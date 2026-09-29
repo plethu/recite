@@ -423,6 +423,9 @@ diagnostic-schema-004-unknown-metadata-key	projector	string
 diagnostic-schema-001-projection-metadata-target	key	string
 diagnostic-schema-001-projection-metadata-target	projector	string
 diagnostic-schema-001-projection-metadata-target	target	string
+diagnostic-import-001	detail	string
+diagnostic-import-002	detail	string
+diagnostic-import-003	detail	string
 diagnostic-validate-012-help
 diagnostic-validate-013-related
 diagnostic-validate-013-help
@@ -513,6 +516,15 @@ diagnostic-id-034-remediation-001
 diagnostic-id-035-meaning
 diagnostic-id-035-cause-001
 diagnostic-id-035-remediation-001
+diagnostic-import-001-meaning
+diagnostic-import-001-cause-001
+diagnostic-import-001-remediation-001
+diagnostic-import-002-meaning
+diagnostic-import-002-cause-001
+diagnostic-import-002-remediation-001
+diagnostic-import-003-meaning
+diagnostic-import-003-cause-001
+diagnostic-import-003-remediation-001
 diagnostic-parse-001-meaning
 diagnostic-parse-001-cause-001
 diagnostic-parse-001-remediation-001

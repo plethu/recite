@@ -1,0 +1,24 @@
+[package]
+name = "recite-import"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Bounded migration assistants for editable Recite source."
+readme = "README.md"
+
+[dependencies]
+recite-core.workspace = true
+recite-compiler.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+blake3.workspace = true
+thiserror.workspace = true
+csv = "1.4.0"
+
+[dev-dependencies]
+insta = { workspace = true, features = ["json"] }
+
+[lints]
+workspace = true

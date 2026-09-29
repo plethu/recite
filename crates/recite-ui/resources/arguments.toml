@@ -454,3 +454,7 @@ detail = "string"
 detail = "string"
 [arguments."vscode-command-rename-request-failed"]
 detail = "string"
+
+[arguments."cli-import-summary"]
+records = "string"
+issues = "string"

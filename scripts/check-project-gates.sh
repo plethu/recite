@@ -155,6 +155,7 @@ echo
 echo "== cargo test =="
 (
   cd "$repo_root"
+  just test-workflow
   just test
   just test-doc
 )

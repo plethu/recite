@@ -8,6 +8,8 @@ mod user_message;
 
 #[derive(Debug)]
 pub(crate) enum CliError {
+    Import(recite_import::ImportError),
+    ImportJson(serde_json::Error),
     Core(recite_core::CoreValueError),
     Compile(recite_compiler::compile::CompileError),
     CompiledValue(recite_core::compiled::CompiledValueError),
@@ -151,6 +153,8 @@ pub(crate) enum CliError {
 impl std::fmt::Display for CliError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Import(error) => write!(formatter, "{error}"),
+            Self::ImportJson(error) => write!(formatter, "migration JSON: {error}"),
             Self::Core(error) => write!(formatter, "{error}"),
             Self::Compile(error) => write!(formatter, "{error}"),
             Self::CompiledValue(error) => write!(formatter, "{error}"),

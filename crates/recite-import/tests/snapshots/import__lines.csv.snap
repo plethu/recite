@@ -1,0 +1,111 @@
+---
+source: crates/recite-import/tests/import.rs
+expression: report
+---
+{
+  "format_version": 1,
+  "family": "csv",
+  "file": "lines.csv",
+  "status": "complete",
+  "source": ":: block_735d094e4ec521057045 default\n> arrival@11111111111111111111 speaker=operator\n  The station is quiet, for now.\n-> block_68c0bd2075636c0cb582\n:: block_68c0bd2075636c0cb582\n> reply@11111111111111111112 speaker=operator\n  The signal returns.\n-> END\n",
+  "mappings": [
+    {
+      "provenance": {
+        "file": "lines.csv",
+        "location": {
+          "kind": "csv",
+          "row": 2,
+          "column": 1,
+          "header": "node"
+        },
+        "record_key": "2"
+      },
+      "construct": "block",
+      "original_id": "Start",
+      "generated_id": "block_735d094e4ec521057045",
+      "generated_line": 1
+    },
+    {
+      "provenance": {
+        "file": "lines.csv",
+        "location": {
+          "kind": "csv",
+          "row": 2,
+          "column": 2,
+          "header": "text"
+        },
+        "record_key": "2"
+      },
+      "construct": "line",
+      "original_id": "arrival@11111111111111111111",
+      "generated_id": "arrival@11111111111111111111",
+      "generated_line": 2
+    },
+    {
+      "provenance": {
+        "file": "lines.csv",
+        "location": {
+          "kind": "csv",
+          "row": 2,
+          "column": 5,
+          "header": "next"
+        },
+        "record_key": "2"
+      },
+      "construct": "jump",
+      "original_id": null,
+      "generated_id": "block_68c0bd2075636c0cb582",
+      "generated_line": 4
+    },
+    {
+      "provenance": {
+        "file": "lines.csv",
+        "location": {
+          "kind": "csv",
+          "row": 3,
+          "column": 1,
+          "header": "node"
+        },
+        "record_key": "3"
+      },
+      "construct": "block",
+      "original_id": "End",
+      "generated_id": "block_68c0bd2075636c0cb582",
+      "generated_line": 5
+    },
+    {
+      "provenance": {
+        "file": "lines.csv",
+        "location": {
+          "kind": "csv",
+          "row": 3,
+          "column": 2,
+          "header": "text"
+        },
+        "record_key": "3"
+      },
+      "construct": "line",
+      "original_id": "reply@11111111111111111112",
+      "generated_id": "reply@11111111111111111112",
+      "generated_line": 6
+    },
+    {
+      "provenance": {
+        "file": "lines.csv",
+        "location": {
+          "kind": "csv",
+          "row": 3,
+          "column": 5,
+          "header": "next"
+        },
+        "record_key": "3"
+      },
+      "construct": "jump",
+      "original_id": null,
+      "generated_id": "END",
+      "generated_line": 8
+    }
+  ],
+  "items": [],
+  "native_diagnostics": []
+}

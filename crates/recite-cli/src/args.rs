@@ -36,6 +36,8 @@ pub(crate) enum Command {
     Trace(TraceArgs),
     Play(PlayArgs),
     Bench(BenchArgs),
+    /// Inspect a bounded migration; write only with --output-dir.
+    Import(crate::migration::ImportArgs),
 }
 
 #[derive(Debug, Args)]

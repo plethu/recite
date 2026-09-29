@@ -1,0 +1,82 @@
+//! Bounded migration to ordinary Recite source, with inspectable provenance.
+//!
+//! This crate performs no filesystem writes and executes no source-language
+//! scripts. Callers own inspection, author review and publication of results.
+
+use std::collections::BTreeMap;
+
+mod builder;
+mod diagnostics;
+mod ids;
+mod model;
+mod records;
+mod text;
+
+pub use model::{
+    Action, FieldMapping, ImportCounts, ImportItem, ImportReport, ImportStatus, Location,
+    Provenance, SourceFamily, SourceMapping,
+};
+
+use recite_core::schema::ProjectSchema;
+
+/// Destination of a block reference defined in another imported file.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TargetSource {
+    pub source_id: String,
+    pub recite_path: String,
+}
+
+/// Inputs shared by library and CLI callers.
+pub struct ImportRequest<'a> {
+    pub family: SourceFamily,
+    /// Stable source identity used in provenance and generated IDs.
+    pub file: &'a str,
+    pub source: &'a str,
+    pub mapping: Option<&'a FieldMapping>,
+    pub schema: Option<&'a ProjectSchema>,
+    /// Mark the first generated block as the project's default block. When
+    /// false, inspection validates beside a temporary default; callers must
+    /// validate the assembled project after adopting the source.
+    pub default_block: bool,
+    /// Target block name to defining source and final project-relative Recite
+    /// path. The defining import must use the same source identity in `file`.
+    pub target_sources: Option<&'a BTreeMap<String, TargetSource>>,
+}
+
+/// Internal/native contract failures, distinct from reported bad input.
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum ImportError {
+    #[error(transparent)]
+    Core(#[from] recite_core::CoreValueError),
+    #[error(transparent)]
+    Presentation(#[from] recite_core::DiagnosticPresentationError),
+    #[error(transparent)]
+    Record(#[from] recite_core::DiagnosticRecordError),
+    #[error("missing diagnostic contract: {0}")]
+    MissingContract(&'static str),
+    #[error("source position exceeds the supported range")]
+    PositionOverflow,
+    #[error(transparent)]
+    Compile(#[from] recite_compiler::compile::CompileError),
+    #[error(transparent)]
+    CompiledValue(#[from] recite_core::compiled::CompiledValueError),
+}
+
+/// Inspect a bounded input and validate its generated source using the native
+/// parser and compiler validators. Invalid input is represented in the report.
+pub fn import(request: ImportRequest<'_>) -> Result<ImportReport, ImportError> {
+    let mut builder = builder::Builder::new(
+        request.family,
+        request.file,
+        request.default_block,
+        request.target_sources,
+    );
+    match request.family {
+        SourceFamily::Json | SourceFamily::Csv => records::read(&request, &mut builder)?,
+        SourceFamily::Twee | SourceFamily::Ink | SourceFamily::Yarn => {
+            text::read(&request, &mut builder)?;
+        }
+    }
+    builder.finish(request.schema)
+}

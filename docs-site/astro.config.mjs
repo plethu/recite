@@ -43,6 +43,16 @@ export default defineConfig({
           ],
         },
         {
+          label: "Guides and examples",
+          items: [
+            { label: "Complete CLI workflow", slug: "examples/headless-cli" },
+            { label: "Authoring dialogue", slug: "guides/authoring-loop" },
+            { label: "Localisation", slug: "guides/localisation" },
+            { label: "Testing dialogue", slug: "guides/testing-dialogue" },
+            { label: "Package preparation", slug: "guides/distribution" },
+          ],
+        },
+        {
           label: "Migration",
           items: [
             { label: "Overview", slug: "migration" },
@@ -55,6 +65,8 @@ export default defineConfig({
             { label: "Dialogic", slug: "migration/dialogic" },
             { label: "Yarn Spinner", slug: "migration/yarn-spinner" },
             { label: "Ink", slug: "migration/ink" },
+            { label: "Twee/Twine", slug: "migration/twee" },
+            { label: "Clyde (manual)", slug: "migration/clyde" },
             {
               label: "JSON, CSV, and Engine-Native",
               slug: "migration/json-csv-engine-native",

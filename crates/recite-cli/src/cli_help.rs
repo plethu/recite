@@ -54,6 +54,24 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
         .arg(help_arg(messages));
 
     match command.get_name() {
+        "import" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandImport));
+            set_positional_arg_help(
+                command,
+                "input",
+                messages.text(MsgId::CliHelpArgImportInput),
+                messages,
+            );
+            localise_schema(command, messages);
+            for (id, message) in [
+                ("from", MsgId::CliHelpArgImportFrom),
+                ("mapping", MsgId::CliHelpArgImportMapping),
+                ("output_dir", MsgId::CliHelpArgImportOutputDir),
+                ("accept_partial", MsgId::CliHelpArgImportAcceptPartial),
+            ] {
+                set_arg_help(command, id, messages.text(message), messages);
+            }
+        }
         "validate" => {
             set_about(command, messages.text(MsgId::CliHelpCommandValidate));
             localise_paths(command, messages);
