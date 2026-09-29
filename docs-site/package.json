@@ -6,7 +6,7 @@
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
     "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview --host 127.0.0.1",
-    "check": "pnpm exec vp check && ASTRO_TELEMETRY_DISABLED=1 astro check && svelte-check --tsgo --tsconfig ./tsconfig.json --fail-on-warnings && pnpm run lint:css",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro sync && pnpm exec vp check && ASTRO_TELEMETRY_DISABLED=1 astro check && svelte-check --tsgo --tsconfig ./tsconfig.json --fail-on-warnings && pnpm run lint:css",
     "test:browser": "playwright test",
     "fmt": "vp fmt",
     "lint:css": "stylelint \"src/**/*.css\" --max-warnings 0"
