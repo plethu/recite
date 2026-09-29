@@ -32,6 +32,7 @@ jobs:
       rust: ${{ steps.scope.outputs.rust }}
       windows-publisher: ${{ steps.scope.outputs.windows-publisher }}
       docs: ${{ steps.scope.outputs.docs }}
+      site: ${{ steps.scope.outputs.site }}
       editor: ${{ steps.scope.outputs.editor }}
       benchmark-smoke: ${{ steps.scope.outputs.benchmark-smoke }}
       maintainability: ${{ steps.scope.outputs.maintainability }}
@@ -180,6 +181,23 @@ jobs:
       - name: Verify documentation
         run: scripts/check-docs.sh
 
+  site:
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    name: Documentation browsers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install repository toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: node pnpm
+
       - name: Verify documentation in browsers
         run: docs-site/check-browser.sh
 
@@ -301,6 +319,7 @@ jobs:
       - git-policy
       - rust
       - docs
+      - site
       - benchmark-smoke
       - maintainability
       - windows-publisher

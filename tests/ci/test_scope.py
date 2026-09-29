@@ -24,9 +24,23 @@ def selected(*paths):
 class ScopeTests(unittest.TestCase):
     def test_documentation_avoids_builds(self):
         for path in ("docs/recite-production-spec.md", "README.md", "apps/writer/acceptance.md",
-                     "apps/writer/packaging/README.md", "docs-site/src/content/docs/index.md"):
+                     "apps/writer/packaging/README.md"):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs"})
+
+    def test_site_and_shared_javascript_do_not_select_native_builds(self):
+        self.assertEqual(selected("docs-site/src/content/docs/index.mdx"), {"docs", "site"})
+        self.assertEqual(selected("docs-site/src/content/docs/reference/index.md"),
+                         {"docs", "site"})
+        self.assertEqual(selected("docs-site/README.md"), {"docs"})
+        for path in ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
+                     "scripts/install-js-dependencies.sh"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), scope.JS)
+        self.assertEqual(selected("scripts/check-site-links.py"), {"docs", "site"})
+        self.assertEqual(selected(".gitignore"), set())
+        self.assertNotIn("site", selected("crates/recite-runtime/src/lib.rs"))
+        self.assertNotIn("docs", selected("crates/recite-runtime/src/lib.rs"))
 
     def test_maintainability_exceptions_select_policy_and_docs(self):
         self.assertEqual(selected("scripts/maintainability/exceptions.toml"),
@@ -92,6 +106,26 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(selected("docs/recite-production-spec.md", "crates/recite-cli/src/lib.rs"),
                          {"docs"} | scope.RUST)
         self.assertEqual(selected(), set())
+
+    def test_shared_config_changes_select_the_affected_surface(self):
+        cases = (
+            (".mise.toml", b'[tools]\nrust = "1.96"\nnode = "22"\n',
+             b'[tools]\nrust = "1.96"\nnode = "24"\n', scope.JS),
+            (".mise.toml", b'[tools]\nrust = "1.95"\n',
+             b'[tools]\nrust = "1.96"\n', scope.LANES),
+            ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
+             b'set shell := ["bash"]\n\n# Site tests.\ntest-docs-browser:\n    docs-site/check-browser.sh\n\nfmt:\n    cargo fmt\n', {"site"}),
+            ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
+             b'set shell := ["bash"]\n\nfmt:\n    cargo fmt --all\n', scope.LANES),
+            (".github/workflows/ci.yml", b'name: CI\n\njobs:\n  docs:\n    old\n  rust:\n    same\n',
+             b'name: CI\n\njobs:\n  docs:\n    new\n  rust:\n    same\n', {"docs", "site"}),
+            (".github/workflows/ci.yml", b'name: CI\n\njobs:\n  rust:\n    old\n',
+             b'name: CI\n\njobs:\n  rust:\n    new\n', {"rust"}),
+        )
+        for path, old, new, expected in cases:
+            with self.subTest(path=path, new=new):
+                with patch.object(scope, "file_at", side_effect=[old, new]):
+                    self.assertEqual(scope.shared_config_lanes(path, "base", "head"), expected)
 
     def test_full_events_and_initial_push(self):
         for event in ("schedule", "workflow_dispatch"):

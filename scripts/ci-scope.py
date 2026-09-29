@@ -5,14 +5,17 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
+import tomllib
 
 
 LANES = frozenset({
-    "rust", "windows-publisher", "docs", "editor", "benchmark-smoke",
+    "rust", "windows-publisher", "docs", "site", "editor", "benchmark-smoke",
     "maintainability", "packages",
 })
 RUST = frozenset({"rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability"})
+JS = frozenset({"docs", "site", "editor"})
 PACKAGING_PREFIXES = (
     "apps/writer/packaging/", "assets/identity/", "nix/",
     "scripts/package-writer", "scripts/check-writer-package",
@@ -26,18 +29,98 @@ ENGINE_COMPANION_PREFIXES = (
 )
 
 
-def lanes_for_path(path):
+def file_at(revision, path):
+    result = subprocess.run(
+        ["git", "show", f"{revision}:{path}"], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
+def changed_sections(before, after, pattern):
+    """Compare named, top-level blocks in the repo's simple workflow/just files."""
+    def sections(source):
+        matches = list(re.finditer(pattern, source, re.M))
+        preamble = source[:matches[0].start()] if matches else source
+        blocks = {match.group(1): source[match.start():
+                  matches[index + 1].start() if index + 1 < len(matches) else len(source)]
+                  for index, match in enumerate(matches)}
+        return preamble, blocks
+
+    old_preamble, previous = sections(before)
+    new_preamble, current = sections(after)
+    changed = {key for key in previous.keys() | current.keys()
+               if previous.get(key) != current.get(key)}
+    if old_preamble != new_preamble:
+        changed.add("__preamble__")
+    return changed
+
+
+def shared_config_lanes(path, base, head):
+    before, after = file_at(base, path), file_at(head, path)
+    if before is None or after is None:
+        return LANES
+    if path == ".mise.toml":
+        old, new = tomllib.loads(before.decode()), tomllib.loads(after.decode())
+        changed = {key for key in old["tools"].keys() | new["tools"].keys()
+                   if old["tools"].get(key) != new["tools"].get(key)}
+        if {key: value for key, value in old.items() if key != "tools"} != {
+            key: value for key, value in new.items() if key != "tools"
+        }:
+            return LANES
+        if changed <= {"node", "pnpm"}:
+            return JS
+        return LANES
+    if path == "justfile":
+        # Recipes start at column zero; unknown or changed shared recipes run all.
+        pattern = r"^([a-z][a-z0-9-]*)(?:[ \t][^\n]*)?:[ \t]*$"
+        without_comments = lambda source: "\n".join(
+            line for line in source.splitlines() if not line.lstrip().startswith("#")
+        )
+        changed = changed_sections(without_comments(before.decode()),
+                                   without_comments(after.decode()), pattern)
+        if changed <= {"test-docs-browser"}:
+            return frozenset({"site"})
+        return LANES
+    if path == ".github/workflows/ci.yml":
+        old, new = before.decode(), after.decode()
+        prefix = lambda source: source.split("\njobs:\n", 1)[0]
+        if prefix(old) != prefix(new) or "\njobs:\n" not in old or "\njobs:\n" not in new:
+            return LANES
+        changed = changed_sections(
+            old.split("\njobs:\n", 1)[1], new.split("\njobs:\n", 1)[1],
+            r"^  ([a-z][a-z0-9-]*):\s*$",
+        )
+        if changed & {"changes", "git-policy", "required-check"}:
+            return LANES
+        job_lanes = {"rust": {"rust"}, "windows-publisher": {"windows-publisher"},
+                     "docs": {"docs", "site"}, "site": {"site"},
+                     "editor": {"editor"}, "benchmark-smoke": {"benchmark-smoke"},
+                     "maintainability": {"maintainability"}, "packages": {"packages"}}
+        if changed - job_lanes.keys():
+            return LANES
+        return frozenset().union(*(job_lanes[job] for job in changed))
+    return LANES
+
+
+def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
     if name in {"Cargo.toml", "Cargo.lock"} or path in {
-        ".mise.toml", "mise.maintainability.toml", "mise.godot.toml", "justfile",
-        ".github/workflows/ci.yml", "scripts/ci-scope.py", "scripts/check-ci-results.py",
+        "mise.maintainability.toml", "mise.godot.toml", "scripts/ci-scope.py",
+        "scripts/check-ci-results.py",
     } or path.startswith((".cargo/", "tests/ci/")):
         return LANES
+    if path in {".mise.toml", "justfile", ".github/workflows/ci.yml"}:
+        return shared_config_lanes(path, base, head) if base and head else LANES
+    if path == ".gitignore":
+        return frozenset()
     if path == "scripts/maintainability/exceptions.toml":
         return frozenset({"docs", "maintainability"})
     if path.startswith(ENGINE_COMPANION_PREFIXES):
         return RUST | ({"docs"} if path.endswith(".md") else set())
+    if path.startswith("docs-site/"):
+        return frozenset({"docs"} if path == "docs-site/README.md" else {"docs", "site"})
     if path.startswith("docs/") or (
         path.endswith(".md") and not path.startswith(("fixtures/", "tests/"))
     ):
@@ -47,8 +130,6 @@ def lanes_for_path(path):
         "scripts/check-writer-desktop-links.py",
     }:
         return frozenset({"packages", "maintainability", "docs"})
-    if path.startswith("docs-site/"):
-        return frozenset({"docs", "maintainability"})
     if path.startswith("crates/"):
         return RUST
     if path.startswith("apps/writer/") or path in {
@@ -65,9 +146,10 @@ def lanes_for_path(path):
         return RUST
     if path in {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
                 "scripts/install-js-dependencies.sh"}:
-        return frozenset({"rust", "docs", "editor", "maintainability"})
-    if path in {"scripts/check-docs.sh", "scripts/check-schema-manifest.mjs"}:
-        return frozenset({"docs", "maintainability"})
+        return JS
+    if path in {"scripts/check-docs.sh", "scripts/check-schema-manifest.mjs",
+                "scripts/check-site-links.py"}:
+        return frozenset({"docs", "site"})
     if path in {"scripts/check-vscode.sh", "scripts/check-helix.sh"}:
         return frozenset({"editor", "maintainability"})
     if path == "scripts/benchmark-smoke.sh":
@@ -77,10 +159,10 @@ def lanes_for_path(path):
     return LANES
 
 
-def select_lanes(paths):
+def select_lanes(paths, *, base=None, head=None):
     selected = set()
     for path in paths:
-        selected.update(lanes_for_path(path))
+        selected.update(lanes_for_path(path, base=base, head=head))
     return {lane: lane in selected for lane in sorted(LANES)}
 
 
@@ -109,7 +191,8 @@ def event_scope(event_name, event):
         raise ValueError(f"unsupported CI event: {event_name}")
     if not base or not head:
         raise ValueError("CI diff requires both commit references")
-    return select_lanes(changed_paths(base, head, pull_request=event_name == "pull_request"))
+    return select_lanes(changed_paths(base, head, pull_request=event_name == "pull_request"),
+                        base=base, head=head)
 
 
 def main():
@@ -118,7 +201,8 @@ def main():
     parser.add_argument("--head", default="HEAD")
     args = parser.parse_args()
     if args.base:
-        scope = select_lanes(changed_paths(args.base, args.head, pull_request=True))
+        scope = select_lanes(changed_paths(args.base, args.head, pull_request=True),
+                             base=args.base, head=args.head)
     else:
         event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
         scope = event_scope(os.environ["GITHUB_EVENT_NAME"], event)
