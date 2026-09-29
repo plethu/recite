@@ -75,6 +75,13 @@ to Codex by commenting:
 @codex review
 ```
 
+Disable automatic review for Recite in Codex settings so a completed review
+follows a deliberate request. The request can arrive after the initial polling
+run; the scheduled reconciler updates the required status without a second
+manual command. A clean reaction or resolved thread has no GitHub workflow
+event, so allow roughly fifteen minutes for that reconciliation; GitHub may
+delay scheduled runs.
+
 Do not post that comment from GitHub Actions: its bot account is not connected
 to Codex. The base-owned `codex-review-gate.yml` observes review completion and
 unresolved findings, then writes `codex-review-ready` on the PR head. `main`
@@ -99,9 +106,9 @@ findings to the owning implementer, and resolve each thread after the correction
 pass. The upstream readiness action can accept an older clean reaction after an
 eight-minute grace period when no unresolved findings remain; a green status is
 not proof that Codex reviewed every commit. Re-request review when a material
-change needs fresh assessment. If the status does not update after thread
-resolution, run `gh workflow run codex-review-gate.yml --repo plethu/recite` to
-reconcile open PRs. An unavailable review service leaves the required status
+change needs fresh assessment. If the scheduled status does not update after
+thread resolution, run `gh workflow run codex-review-gate.yml --repo plethu/recite`
+to reconcile open PRs. An unavailable review service leaves the required status
 unmet; do not bypass it with custom comment parsing.
 
 The gate blocks failed or errored reported checks when any are present; if

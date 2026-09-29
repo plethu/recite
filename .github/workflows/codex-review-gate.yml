@@ -4,6 +4,9 @@ on:
   pull_request_target:
     branches: [main]
     types: [opened, reopened, synchronize, ready_for_review, edited]
+  # GitHub emits no workflow event for a clean-review reaction or thread resolution.
+  schedule:
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -29,6 +32,6 @@ jobs:
           github-token: ${{ github.token }}
           ignore-outdated: 'false'
           status-context: codex-review-ready
-          poll-seconds: ${{ github.event_name == 'workflow_dispatch' && '0' || '1800' }}
+          poll-seconds: ${{ github.event_name == 'pull_request_target' && '1800' || '0' }}
           poll-interval-seconds: '30'
-          timeout-state: ${{ github.event_name == 'workflow_dispatch' && 'pending' || 'failure' }}
+          timeout-state: ${{ github.event_name == 'pull_request_target' && 'failure' || 'pending' }}
