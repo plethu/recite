@@ -7,7 +7,7 @@ expression: report
   "family": "ink",
   "file": "knots.ink",
   "status": "complete",
-  "source": ":: block_251f784003e99ce41e11 default\n> imported_742ecaf6f647910b0605@742ecaf6f647910b0605\n  The station is quiet.\n  ? imported_9c3db916846d755aad77@9c3db916846d755aad77\n    Listen\n    -> block_d52f95899b0f3232aa1b\n:: block_d52f95899b0f3232aa1b\n> imported_300269303006580e317b@300269303006580e317b\n  The signal returns.\n-> END\n",
+  "source": ":: block_d119f72b7d4f50a8462e default\n> imported_742ecaf6f647910b0605@742ecaf6f647910b0605\n  The station is quiet.\n  ? imported_9c3db916846d755aad77@9c3db916846d755aad77\n    Listen\n    -> block_2c708e7d566eb8252dca\n:: block_2c708e7d566eb8252dca\n> imported_300269303006580e317b@300269303006580e317b\n  The signal returns.\n-> END\n",
   "mappings": [
     {
       "provenance": {
@@ -30,7 +30,7 @@ expression: report
       },
       "construct": "block",
       "original_id": "Start",
-      "generated_id": "block_251f784003e99ce41e11",
+      "generated_id": "block_d119f72b7d4f50a8462e",
       "generated_line": 1
     },
     {
@@ -102,7 +102,7 @@ expression: report
       },
       "construct": "block",
       "original_id": "End",
-      "generated_id": "block_d52f95899b0f3232aa1b",
+      "generated_id": "block_2c708e7d566eb8252dca",
       "generated_line": 7
     },
     {

@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
+use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 use recite_import::{
     FieldMapping, ImportReport, ImportRequest, ImportStatus, SourceFamily, import,
 };
@@ -16,6 +18,7 @@ fn run(
         source,
         mapping,
         schema: None,
+        default_block: true,
     })
     .expect("import contract")
 }
@@ -64,6 +67,70 @@ fn complete_fixtures_have_deterministic_source_and_provenance() {
         );
         insta::assert_json_snapshot!(name, report);
     }
+}
+
+#[test]
+fn same_named_blocks_in_separate_imports_compile_with_one_default() {
+    let source = ":: Start\nHello.\n[[Go->End]]\n:: End\nBye.\n";
+    let first = import(ImportRequest {
+        family: SourceFamily::Twee,
+        file: "story/north/input.twee",
+        source,
+        mapping: None,
+        schema: None,
+        default_block: true,
+    })
+    .expect("first import");
+    let second = import(ImportRequest {
+        family: SourceFamily::Twee,
+        file: "story/south/input.twee",
+        source,
+        mapping: None,
+        schema: None,
+        default_block: false,
+    })
+    .expect("second import");
+    assert_eq!(first.status, ImportStatus::Complete);
+    assert_eq!(second.status, ImportStatus::Complete);
+    assert_eq!(first.source.matches(" default\n").count(), 1);
+    assert_eq!(second.source.matches(" default\n").count(), 0);
+    let first_blocks: Vec<_> = first
+        .mappings
+        .iter()
+        .filter(|mapping| mapping.construct == "block")
+        .map(|mapping| mapping.generated_id.as_str())
+        .collect();
+    let second_blocks: Vec<_> = second
+        .mappings
+        .iter()
+        .filter(|mapping| mapping.construct == "block")
+        .map(|mapping| mapping.generated_id.as_str())
+        .collect();
+    assert!(first_blocks.iter().all(|id| !second_blocks.contains(id)));
+    for report in [&first, &second] {
+        let end = report
+            .mappings
+            .iter()
+            .find(|mapping| {
+                mapping.construct == "block" && mapping.original_id.as_deref() == Some("End")
+            })
+            .expect("End block");
+        assert!(report.source.contains(&format!("-> {}", end.generated_id)));
+    }
+    let compiled = compile_inputs(
+        [
+            CompileInput::new("north.recite", &first.source),
+            CompileInput::new("south.recite", &second.source),
+        ],
+        CompileOptions::new(
+            CompilerVersion::new("test").expect("version"),
+            CompiledAssetId::new("migration-test").expect("asset"),
+            SourceMapId::new("migration-test.map").expect("source map"),
+            SchemaFingerprint::NoSchema,
+        ),
+    )
+    .expect("native compile");
+    assert!(compiled.is_ok(), "{:#?}", compiled.diagnostics);
 }
 
 #[test]

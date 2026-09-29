@@ -66,6 +66,13 @@ different generated IDs. Use a stable project-relative path when invoking the
 CLI, or pass `--source-id story/scene/input.twee` to keep the same IDs when the
 checkout moves. The report's `file` and provenance use that source identity.
 Renaming or rearranging an input can change generated IDs.
+
+For a multi-file project, choose one import to keep its default block and
+pass `--no-default` for every other file. Generated block IDs and their
+references also use the source identity, so equal passage names in separate
+files stay distinct. A non-default import is checked alongside a temporary
+default block during inspection; compile or validate the assembled project to
+check its actual single default and cross-file references.
 After adopting the source, edit that source and keep its anchors; import is not
 an incremental synchronization command.
 

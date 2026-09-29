@@ -22,6 +22,7 @@ pub(super) struct Builder {
     terminal: bool,
     prompt: bool,
     source_lines: usize,
+    default_block: bool,
 }
 
 pub(super) enum Target<'a> {
@@ -30,16 +31,16 @@ pub(super) enum Target<'a> {
 }
 
 impl Target<'_> {
-    fn source(&self) -> String {
+    fn source(&self, file: &str) -> String {
         match self {
-            Self::Block(name) => block_name(name),
+            Self::Block(name) => block_name(file, name),
             Self::End => "END".to_owned(),
         }
     }
 }
 
 impl Builder {
-    pub(super) fn new(family: SourceFamily, file: &str) -> Self {
+    pub(super) fn new(family: SourceFamily, file: &str, default_block: bool) -> Self {
         Self {
             report: ImportReport {
                 format_version: 1,
@@ -56,6 +57,7 @@ impl Builder {
             terminal: false,
             prompt: false,
             source_lines: 0,
+            default_block,
         }
     }
 
@@ -113,8 +115,8 @@ impl Builder {
                 format!("Empty or repeated block: {name}"),
             );
         }
-        let target = block_name(name);
-        let default = if self.blocks.len() == 1 {
+        let target = block_name(&self.report.file, name);
+        let default = if self.default_block && self.blocks.len() == 1 {
             " default"
         } else {
             ""
@@ -186,7 +188,7 @@ impl Builder {
         self.record(&provenance, "choice", None, &stable);
         self.append(&format!(
             "  ? {stable}\n    {text}\n    -> {}\n",
-            target.source()
+            target.source(&self.report.file)
         ));
         self.terminal = true;
         Ok(())
@@ -205,7 +207,7 @@ impl Builder {
                 "Jump outside a block, after a terminal statement, or without a target.",
             );
         }
-        let target = target.source();
+        let target = target.source(&self.report.file);
         self.record(&provenance, "jump", None, &target);
         self.append(&format!("-> {target}\n"));
         self.terminal = true;
@@ -305,7 +307,15 @@ impl Builder {
                 ProjectSchema::canonical_fingerprint,
             ),
         );
-        let inputs = [CompileInput::new("imported.recite", &self.report.source)];
+        let mut inputs = vec![CompileInput::new("imported.recite", &self.report.source)];
+        if !self.default_block {
+            // Native projects require one default. Validate this file beside a
+            // temporary default so its generated source stays unchanged.
+            inputs.push(CompileInput::new(
+                "import-validation.recite",
+                ":: import_validation_default default\n-> END\n",
+            ));
+        }
         let compiled = if let Some(schema) = schema {
             compile_inputs_with_schema(inputs, options, schema)?
         } else {
@@ -353,8 +363,12 @@ pub(super) fn speaker_value(value: &str) -> bool {
         })
 }
 
-pub(super) fn block_name(name: &str) -> String {
-    // Always namespace generated blocks: an authored name cannot collide with
-    // a generated fallback or Recite's END target.
-    format!("block_{}", &blake3::hash(name.as_bytes()).to_hex()[..20])
+pub(super) fn block_name(file: &str, name: &str) -> String {
+    // Source identity keeps same-named blocks distinct across imported files.
+    let mut hasher = blake3::Hasher::new();
+    for value in [file, name] {
+        hasher.update(&(value.len() as u64).to_le_bytes());
+        hasher.update(value.as_bytes());
+    }
+    format!("block_{}", &hasher.finalize().to_hex()[..20])
 }

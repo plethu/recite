@@ -19,10 +19,15 @@ use recite_core::schema::ProjectSchema;
 /// Inputs shared by library and CLI callers.
 pub struct ImportRequest<'a> {
     pub family: SourceFamily,
+    /// Stable source identity used in provenance and generated IDs.
     pub file: &'a str,
     pub source: &'a str,
     pub mapping: Option<&'a FieldMapping>,
     pub schema: Option<&'a ProjectSchema>,
+    /// Mark the first generated block as the project's default block. When
+    /// false, inspection validates beside a temporary default; callers must
+    /// validate the assembled project after adopting the source.
+    pub default_block: bool,
 }
 
 /// Internal/native contract failures, distinct from reported bad input.
@@ -48,7 +53,7 @@ pub enum ImportError {
 /// Inspect a bounded input and validate its generated source using the native
 /// parser and compiler validators. Invalid input is represented in the report.
 pub fn import(request: ImportRequest<'_>) -> Result<ImportReport, ImportError> {
-    let mut builder = builder::Builder::new(request.family, request.file);
+    let mut builder = builder::Builder::new(request.family, request.file, request.default_block);
     match request.family {
         SourceFamily::Json | SourceFamily::Csv => records::read(&request, &mut builder)?,
         SourceFamily::Twee | SourceFamily::Ink | SourceFamily::Yarn => {

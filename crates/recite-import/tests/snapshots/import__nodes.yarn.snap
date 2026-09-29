@@ -7,7 +7,7 @@ expression: report
   "family": "yarn",
   "file": "nodes.yarn",
   "status": "complete",
-  "source": ":: block_251f784003e99ce41e11 default\n> imported_11111111111111111111@11111111111111111111 speaker=Operator\n  The station is quiet.\n-> block_d52f95899b0f3232aa1b\n:: block_d52f95899b0f3232aa1b\n> imported_b0768775af1954b32bad@b0768775af1954b32bad speaker=Operator\n  The signal returns.\n-> END\n",
+  "source": ":: block_8a6a5e4aa00b3e0e8a22 default\n> imported_11111111111111111111@11111111111111111111 speaker=Operator\n  The station is quiet.\n-> block_84c6cba86edbf7cfebe3\n:: block_84c6cba86edbf7cfebe3\n> imported_b0768775af1954b32bad@b0768775af1954b32bad speaker=Operator\n  The signal returns.\n-> END\n",
   "mappings": [
     {
       "provenance": {
@@ -30,7 +30,7 @@ expression: report
       },
       "construct": "block",
       "original_id": "Start",
-      "generated_id": "block_251f784003e99ce41e11",
+      "generated_id": "block_8a6a5e4aa00b3e0e8a22",
       "generated_line": 1
     },
     {
@@ -78,7 +78,7 @@ expression: report
       },
       "construct": "jump",
       "original_id": null,
-      "generated_id": "block_d52f95899b0f3232aa1b",
+      "generated_id": "block_84c6cba86edbf7cfebe3",
       "generated_line": 4
     },
     {
@@ -102,7 +102,7 @@ expression: report
       },
       "construct": "block",
       "original_id": "End",
-      "generated_id": "block_d52f95899b0f3232aa1b",
+      "generated_id": "block_84c6cba86edbf7cfebe3",
       "generated_line": 5
     },
     {

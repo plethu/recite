@@ -19,11 +19,23 @@ fn same_named_inputs_get_distinct_ids_and_explicit_source_ids_survive_relocation
         let root = temp.path().join(directory);
         fs::create_dir(&root).expect("input directory");
         let input = fixture(&root, &format!(":: {block}\nHello.\n"));
-        let output = run(recite().arg("import").arg(&input).args(["--from", "twee"]));
+        let mut command = recite();
+        command.arg("import").arg(&input).args(["--from", "twee"]);
+        if directory == "south" {
+            command.arg("--no-default");
+        }
+        let output = run(&mut command);
         output.assert_success();
         let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("report");
         assert_eq!(report["status"], "complete");
         assert_eq!(report["file"], input.to_str().expect("UTF-8 path"));
+        assert_eq!(
+            report["source"]
+                .as_str()
+                .expect("source")
+                .contains(" default\n"),
+            directory == "north"
+        );
         reports.push(report);
     }
     let line_id = |report: &serde_json::Value| {

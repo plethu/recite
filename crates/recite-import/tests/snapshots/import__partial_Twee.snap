@@ -7,7 +7,7 @@ expression: report
   "family": "twee",
   "file": "input",
   "status": "partial",
-  "source": ":: block_e6cdd9a80e72bcd4a540 default\n> imported_0c42a6e664fd26b4bd5a@0c42a6e664fd26b4bd5a\n  Hello.\n-> END\n",
+  "source": ":: block_a04d85288af0982a4cec default\n> imported_0c42a6e664fd26b4bd5a@0c42a6e664fd26b4bd5a\n  Hello.\n-> END\n",
   "mappings": [
     {
       "provenance": {
@@ -30,7 +30,7 @@ expression: report
       },
       "construct": "block",
       "original_id": "safe",
-      "generated_id": "block_e6cdd9a80e72bcd4a540",
+      "generated_id": "block_a04d85288af0982a4cec",
       "generated_line": 1
     },
     {

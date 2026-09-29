@@ -42,6 +42,9 @@ pub(crate) struct ImportArgs {
     /// Stable source path used in provenance and generated IDs (defaults to input path).
     #[arg(long, value_parser = clap::builder::NonEmptyStringValueParser::new())]
     pub(crate) source_id: Option<String>,
+    /// Omit the default block marker when importing another file into a project.
+    #[arg(long)]
+    pub(crate) no_default: bool,
     /// JSON file naming the source fields; required for JSON and CSV input.
     #[arg(long)]
     pub(crate) mapping: Option<PathBuf>,
@@ -83,6 +86,7 @@ pub(crate) fn run(
         source: &source,
         mapping: mapping.as_ref(),
         schema: schema.as_ref(),
+        default_block: !args.no_default,
     })
     .map_err(CliError::Import)?;
     let mut encoded = serde_json::to_vec_pretty(&report).map_err(CliError::ImportJson)?;
