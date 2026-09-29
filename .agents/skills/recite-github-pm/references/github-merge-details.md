@@ -68,30 +68,41 @@ current head SHA.
 
 ## Codex Code Review
 
-When Codex cloud Code Review is enabled for the repository, request a review in
-the pull request by commenting:
+Request Codex Code Review in the pull request from a GitHub account connected
+to Codex by commenting:
 
 ```
 @codex review
 ```
 
-Repository owners may enable automatic reviews in Codex settings instead. Codex
-posts a standard GitHub review; inspect its findings against the current diff,
-then resolve or explicitly reject each review thread. The local gate does not
-parse review-comment payloads or rely on a bot username. Codex findings are
-advisory and do not replace human maintainer approval, branch protection,
-required checks, or tests. See the [official Codex GitHub review
-documentation](https://learn.chatgpt.com/docs/third-party/github) for current
-setup and availability details.
+Do not post that comment from GitHub Actions: its bot account is not connected
+to Codex. The base-owned `codex-review-gate.yml` observes review completion and
+unresolved findings, then writes `codex-review-ready` on the PR head. `main`
+requires that status in addition to the existing CI and trusted-policy checks;
+`.github/required-status-checks.json` records the expected status contexts.
+After the workflow is installed on `main`, an administrator can apply only the
+status-check portion of protection with:
 
-Treat the review as an optional asynchronous signal. Continue useful local or
-disjoint work; do not make waiting for it a critical path. When a
-standard review is available, inspect it against the exact current head SHA,
-return actionable findings to the owning implementer, resolve or explicitly
-reject each thread, and run the gate again after the correction pass. If the
-head changes, treat an earlier review as stale. Fall back to the normal
-human/manual review path when the optional service is unavailable; never revive
-custom comment parsing.
+```bash
+gh api -X PATCH repos/plethu/recite/branches/main/protection/required_status_checks \
+  --input .github/required-status-checks.json
+```
+
+Codex findings inform review but do not replace human maintainer approval or
+tests. The local gate does not parse Codex comments or rely on a bot username.
+See the [official Codex GitHub review documentation](https://learn.chatgpt.com/docs/third-party/github)
+for setup and availability details.
+
+Request review when the PR is ready for that pass, then continue useful disjoint
+work while it runs. Inspect findings against the current diff, return actionable
+findings to the owning implementer, and resolve each thread after the correction
+pass. The upstream readiness action can accept an older clean reaction after an
+eight-minute grace period when no unresolved findings remain; a green status is
+not proof that Codex reviewed every commit. Re-request review when a material
+change needs fresh assessment. If the status does not update after thread
+resolution, run `gh workflow run codex-review-gate.yml --repo plethu/recite` to
+reconcile open PRs. An unavailable review service leaves the required status
+unmet; do not bypass it with custom comment parsing.
 
 The gate blocks failed or errored reported checks when any are present; if
 checks have not reported yet, risk-appropriate local checks remain mandatory.
