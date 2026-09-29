@@ -3,8 +3,11 @@
 //! This crate performs no filesystem writes and executes no source-language
 //! scripts. Callers own inspection, author review and publication of results.
 
+use std::collections::BTreeMap;
+
 mod builder;
 mod diagnostics;
+mod ids;
 mod model;
 mod records;
 mod text;
@@ -15,6 +18,13 @@ pub use model::{
 };
 
 use recite_core::schema::ProjectSchema;
+
+/// Destination of a block reference defined in another imported file.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TargetSource {
+    pub source_id: String,
+    pub recite_path: String,
+}
 
 /// Inputs shared by library and CLI callers.
 pub struct ImportRequest<'a> {
@@ -28,6 +38,9 @@ pub struct ImportRequest<'a> {
     /// false, inspection validates beside a temporary default; callers must
     /// validate the assembled project after adopting the source.
     pub default_block: bool,
+    /// Target block name to defining source and final project-relative Recite
+    /// path. The defining import must use the same source identity in `file`.
+    pub target_sources: Option<&'a BTreeMap<String, TargetSource>>,
 }
 
 /// Internal/native contract failures, distinct from reported bad input.
@@ -53,7 +66,12 @@ pub enum ImportError {
 /// Inspect a bounded input and validate its generated source using the native
 /// parser and compiler validators. Invalid input is represented in the report.
 pub fn import(request: ImportRequest<'_>) -> Result<ImportReport, ImportError> {
-    let mut builder = builder::Builder::new(request.family, request.file, request.default_block);
+    let mut builder = builder::Builder::new(
+        request.family,
+        request.file,
+        request.default_block,
+        request.target_sources,
+    );
     match request.family {
         SourceFamily::Json | SourceFamily::Csv => records::read(&request, &mut builder)?,
         SourceFamily::Twee | SourceFamily::Ink | SourceFamily::Yarn => {

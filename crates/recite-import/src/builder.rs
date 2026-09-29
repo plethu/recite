@@ -1,18 +1,16 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use recite_compiler::compile::{
     CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema,
 };
 use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
-use recite_core::{
-    DiagnosticCode, SourceAnchor, SourceId, SourcePosition, SourceSpan, SpeakerId,
-    schema::ProjectSchema,
-};
+use recite_core::{DiagnosticCode, SourcePosition, SourceSpan, SpeakerId, schema::ProjectSchema};
 
 use crate::diagnostics::{INVALID, LOSS, UNSUPPORTED, item};
+use crate::ids::{block_name, stable_id};
 use crate::{
     Action, ImportError, ImportReport, ImportStatus, Location, Provenance, SourceFamily,
-    SourceMapping,
+    SourceMapping, TargetSource,
 };
 
 pub(super) struct Builder {
@@ -23,6 +21,8 @@ pub(super) struct Builder {
     prompt: bool,
     source_lines: usize,
     default_block: bool,
+    target_sources: BTreeMap<String, TargetSource>,
+    external_blocks: BTreeMap<String, BTreeSet<String>>,
 }
 
 pub(super) enum Target<'a> {
@@ -30,17 +30,13 @@ pub(super) enum Target<'a> {
     End,
 }
 
-impl Target<'_> {
-    fn source(&self, file: &str) -> String {
-        match self {
-            Self::Block(name) => block_name(file, name),
-            Self::End => "END".to_owned(),
-        }
-    }
-}
-
 impl Builder {
-    pub(super) fn new(family: SourceFamily, file: &str, default_block: bool) -> Self {
+    pub(super) fn new(
+        family: SourceFamily,
+        file: &str,
+        default_block: bool,
+        target_sources: Option<&BTreeMap<String, TargetSource>>,
+    ) -> Self {
         Self {
             report: ImportReport {
                 format_version: 1,
@@ -58,6 +54,8 @@ impl Builder {
             prompt: false,
             source_lines: 0,
             default_block,
+            target_sources: target_sources.cloned().unwrap_or_default(),
+            external_blocks: BTreeMap::new(),
         }
     }
 
@@ -158,7 +156,7 @@ impl Builder {
                 "Text outside a block or after a terminal jump/choice group.",
             );
         }
-        let stable = self.stable_id(id, &provenance);
+        let stable = stable_id(&self.report.file, id, &provenance);
         let speaker = speaker.map_or(String::new(), |value| format!(" speaker={value}"));
         self.record(&provenance, "line", id, &stable);
         self.append(&format!("> {stable}{speaker}\n  {text}\n"));
@@ -184,12 +182,10 @@ impl Builder {
                 "Choice needs a preceding dialogue line and a static target.",
             );
         }
-        let stable = self.stable_id(None, &provenance);
+        let stable = stable_id(&self.report.file, None, &provenance);
+        let target = self.target_id(target);
         self.record(&provenance, "choice", None, &stable);
-        self.append(&format!(
-            "  ? {stable}\n    {text}\n    -> {}\n",
-            target.source(&self.report.file)
-        ));
+        self.append(&format!("  ? {stable}\n    {text}\n    -> {}\n", target));
         self.terminal = true;
         Ok(())
     }
@@ -207,12 +203,30 @@ impl Builder {
                 "Jump outside a block, after a terminal statement, or without a target.",
             );
         }
-        let target = target.source(&self.report.file);
+        let target = self.target_id(target);
         self.record(&provenance, "jump", None, &target);
         self.append(&format!("-> {target}\n"));
         self.terminal = true;
         self.prompt = false;
         Ok(())
+    }
+
+    fn target_id(&mut self, target: Target<'_>) -> String {
+        match target {
+            Target::End => "END".to_owned(),
+            Target::Block(name) => {
+                if let Some(target) = self.target_sources.get(name) {
+                    let id = block_name(&target.source_id, name);
+                    self.external_blocks
+                        .entry(target.recite_path.clone())
+                        .or_default()
+                        .insert(id.clone());
+                    format!("{}::{id}", target.recite_path)
+                } else {
+                    block_name(&self.report.file, name)
+                }
+            }
+        }
     }
 
     fn accept_text(&mut self, text: &str, provenance: &Provenance) -> Result<bool, ImportError> {
@@ -234,28 +248,6 @@ impl Builder {
             )?;
         }
         Ok(true)
-    }
-
-    fn stable_id(&self, original: Option<&str>, provenance: &Provenance) -> String {
-        if let Some(id) = original {
-            if matches!(SourceId::parse(Some(id)), SourceId::Frozen { .. }) {
-                return id.to_owned();
-            }
-            if SourceAnchor::new(id).is_ok() {
-                return format!("imported_{id}@{id}");
-            }
-        }
-        let mut hasher = blake3::Hasher::new();
-        for value in [
-            &self.report.file,
-            &provenance.record_key,
-            original.unwrap_or(""),
-        ] {
-            hasher.update(&(value.len() as u64).to_le_bytes());
-            hasher.update(value.as_bytes());
-        }
-        let anchor = &hasher.finalize().to_hex()[..20];
-        format!("imported_{anchor}@{anchor}")
     }
 
     fn record(
@@ -307,14 +299,31 @@ impl Builder {
                 ProjectSchema::canonical_fingerprint,
             ),
         );
-        let mut inputs = vec![CompileInput::new("imported.recite", &self.report.source)];
+        let mut validation_source = String::new();
         if !self.default_block {
             // Native projects require one default. Validate this file beside a
             // temporary default so its generated source stays unchanged.
+            validation_source.push_str(":: import_validation_default default\n-> END\n");
+        }
+        let mut external_sources = Vec::new();
+        for (path, ids) in &self.external_blocks {
+            // Explicitly mapped cross-file targets are checked in the final
+            // project; stubs let this file pass its own native validation.
+            let mut source = String::new();
+            for id in ids {
+                source.push_str(&format!(":: {id}\n-> END\n"));
+            }
+            external_sources.push((path, source));
+        }
+        let mut inputs = vec![CompileInput::new("imported.recite", &self.report.source)];
+        if !validation_source.is_empty() {
             inputs.push(CompileInput::new(
                 "import-validation.recite",
-                ":: import_validation_default default\n-> END\n",
+                &validation_source,
             ));
+        }
+        for (path, source) in &external_sources {
+            inputs.push(CompileInput::new(*path, source));
         }
         let compiled = if let Some(schema) = schema {
             compile_inputs_with_schema(inputs, options, schema)?
@@ -361,14 +370,4 @@ pub(super) fn speaker_value(value: &str) -> bool {
                 || character.is_control()
                 || matches!(character, '"' | '\\' | '[' | ']' | '(' | ')')
         })
-}
-
-pub(super) fn block_name(file: &str, name: &str) -> String {
-    // Source identity keeps same-named blocks distinct across imported files.
-    let mut hasher = blake3::Hasher::new();
-    for value in [file, name] {
-        hasher.update(&(value.len() as u64).to_le_bytes());
-        hasher.update(value.as_bytes());
-    }
-    format!("block_{}", &hasher.finalize().to_hex()[..20])
 }

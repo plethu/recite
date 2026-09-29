@@ -70,9 +70,14 @@ Renaming or rearranging an input can change generated IDs.
 For a multi-file project, choose one import to keep its default block and
 pass `--no-default` for every other file. Generated block IDs and their
 references also use the source identity, so equal passage names in separate
-files stay distinct. A non-default import is checked alongside a temporary
-default block during inspection; compile or validate the assembled project to
-check its actual single default and cross-file references.
+files stay distinct. For a jump to a block defined in another file, pass
+`--target-source End=story/south/input.twee::dialogue/south.recite` on the
+referring import. Use `--source-id story/south/input.twee` for the defining
+import, then place its generated source at `dialogue/south.recite` in the
+project. Without the mapping, a missing local target stays invalid. Inspection
+uses temporary blocks for declared cross-file targets and for a missing local
+default; compile or validate the assembled project to check those declarations
+against the real blocks and its single default.
 After adopting the source, edit that source and keep its anchors; import is not
 an incremental synchronization command.
 

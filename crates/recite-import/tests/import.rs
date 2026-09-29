@@ -1,9 +1,11 @@
 #![cfg(test)]
 
+use std::collections::BTreeMap;
+
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 use recite_import::{
-    FieldMapping, ImportReport, ImportRequest, ImportStatus, SourceFamily, import,
+    FieldMapping, ImportReport, ImportRequest, ImportStatus, SourceFamily, TargetSource, import,
 };
 
 fn run(
@@ -19,6 +21,7 @@ fn run(
         mapping,
         schema: None,
         default_block: true,
+        target_sources: None,
     })
     .expect("import contract")
 }
@@ -70,24 +73,45 @@ fn complete_fixtures_have_deterministic_source_and_provenance() {
 }
 
 #[test]
-fn same_named_blocks_in_separate_imports_compile_with_one_default() {
-    let source = ":: Start\nHello.\n[[Go->End]]\n:: End\nBye.\n";
-    let first = import(ImportRequest {
+fn same_named_blocks_and_cross_file_targets_compile_with_one_default() {
+    let first_source = ":: Start\nHello.\n[[Go->End]]\n";
+    let second_source = ":: Start\nHi.\n:: End\nBye.\n";
+    let target_sources = BTreeMap::from([(
+        "End".to_owned(),
+        TargetSource {
+            source_id: "story/south/input.twee".to_owned(),
+            recite_path: "south.recite".to_owned(),
+        },
+    )]);
+    let unmapped = import(ImportRequest {
         family: SourceFamily::Twee,
         file: "story/north/input.twee",
-        source,
+        source: first_source,
         mapping: None,
         schema: None,
         default_block: true,
+        target_sources: None,
+    })
+    .expect("unmapped import report");
+    assert_eq!(unmapped.status, ImportStatus::Invalid);
+    let first = import(ImportRequest {
+        family: SourceFamily::Twee,
+        file: "story/north/input.twee",
+        source: first_source,
+        mapping: None,
+        schema: None,
+        default_block: true,
+        target_sources: Some(&target_sources),
     })
     .expect("first import");
     let second = import(ImportRequest {
         family: SourceFamily::Twee,
         file: "story/south/input.twee",
-        source,
+        source: second_source,
         mapping: None,
         schema: None,
         default_block: false,
+        target_sources: None,
     })
     .expect("second import");
     assert_eq!(first.status, ImportStatus::Complete);
@@ -107,16 +131,18 @@ fn same_named_blocks_in_separate_imports_compile_with_one_default() {
         .map(|mapping| mapping.generated_id.as_str())
         .collect();
     assert!(first_blocks.iter().all(|id| !second_blocks.contains(id)));
-    for report in [&first, &second] {
-        let end = report
-            .mappings
-            .iter()
-            .find(|mapping| {
-                mapping.construct == "block" && mapping.original_id.as_deref() == Some("End")
-            })
-            .expect("End block");
-        assert!(report.source.contains(&format!("-> {}", end.generated_id)));
-    }
+    let end = second
+        .mappings
+        .iter()
+        .find(|mapping| {
+            mapping.construct == "block" && mapping.original_id.as_deref() == Some("End")
+        })
+        .expect("End block");
+    assert!(
+        first
+            .source
+            .contains(&format!("-> south.recite::{}", end.generated_id))
+    );
     let compiled = compile_inputs(
         [
             CompileInput::new("north.recite", &first.source),

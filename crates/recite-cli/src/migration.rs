@@ -1,11 +1,12 @@
 use std::{
+    collections::BTreeMap,
     fs,
     io::Write,
     path::{Path, PathBuf},
 };
 
 use clap::{Args, ValueEnum};
-use recite_import::{FieldMapping, ImportRequest, ImportStatus, SourceFamily};
+use recite_import::{FieldMapping, ImportRequest, ImportStatus, SourceFamily, TargetSource};
 
 use crate::{
     error::CliError,
@@ -45,6 +46,9 @@ pub(crate) struct ImportArgs {
     /// Omit the default block marker when importing another file into a project.
     #[arg(long)]
     pub(crate) no_default: bool,
+    /// Map a target block to its source ID and final Recite path: BLOCK=SOURCE_ID::RECITE_PATH.
+    #[arg(long = "target-source", value_parser = parse_target_source)]
+    pub(crate) target_sources: Vec<(String, TargetSource)>,
     /// JSON file naming the source fields; required for JSON and CSV input.
     #[arg(long)]
     pub(crate) mapping: Option<PathBuf>,
@@ -80,6 +84,19 @@ pub(crate) fn run(
             )
         })?,
     };
+    let mut target_sources = BTreeMap::new();
+    for (block, target) in &args.target_sources {
+        if target_sources
+            .insert(block.clone(), target.clone())
+            .is_some()
+        {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("duplicate target source for block {block}"),
+            )
+            .into());
+        }
+    }
     let report = recite_import::import(ImportRequest {
         family: args.from.into(),
         file,
@@ -87,6 +104,7 @@ pub(crate) fn run(
         mapping: mapping.as_ref(),
         schema: schema.as_ref(),
         default_block: !args.no_default,
+        target_sources: (!target_sources.is_empty()).then_some(&target_sources),
     })
     .map_err(CliError::Import)?;
     let mut encoded = serde_json::to_vec_pretty(&report).map_err(CliError::ImportJson)?;
@@ -118,6 +136,25 @@ pub(crate) fn run(
         return Err(CliError::Diagnostics);
     }
     Ok(())
+}
+
+fn parse_target_source(value: &str) -> Result<(String, TargetSource), String> {
+    let (block, target) = value
+        .split_once('=')
+        .ok_or("expected BLOCK=SOURCE_ID::RECITE_PATH")?;
+    let (source_id, recite_path) = target
+        .split_once("::")
+        .ok_or("expected BLOCK=SOURCE_ID::RECITE_PATH")?;
+    if block.is_empty() || source_id.is_empty() || recite_path.is_empty() {
+        return Err("block, source ID and Recite path must be nonempty".to_owned());
+    }
+    Ok((
+        block.to_owned(),
+        TargetSource {
+            source_id: source_id.to_owned(),
+            recite_path: recite_path.to_owned(),
+        },
+    ))
 }
 
 fn read(path: &Path) -> Result<String, CliError> {

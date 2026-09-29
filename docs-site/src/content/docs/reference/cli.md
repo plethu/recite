@@ -164,7 +164,10 @@ report and candidate source. JSON/CSV requires `--mapping mapping.json`. Use
 `--schema manifest.json` to validate against game declarations. Writing requires
 `--output-dir NEW_DIRECTORY`; partial results additionally require
 `--accept-partial`. Use `--source-id PATH` for a stable import namespace and
-`--no-default` on additional files in one project. Existing destinations are
+`--no-default` on additional files in one project. Map cross-file jumps with
+`--target-source BLOCK=SOURCE_ID::RECITE_PATH`, where `SOURCE_ID` matches the
+defining file's `--source-id` and `RECITE_PATH` is its final project-relative
+source path. Existing destinations are
 never overwritten. See
 [import inspection](/migration/importer-boundaries/) for result states, exit
 behavior and the supported format subsets.

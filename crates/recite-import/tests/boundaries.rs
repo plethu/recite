@@ -36,6 +36,7 @@ fn text_whitespace_loss_keeps_provenance_and_requires_review() {
             mapping: None,
             schema: None,
             default_block: true,
+            target_sources: None,
         })
         .expect("report");
         assert_eq!(
@@ -89,6 +90,7 @@ fn speaker_ids_survive_yarn_and_record_imports_as_structured_data() {
                 mapping,
                 schema: None,
                 default_block: true,
+                target_sources: None,
             })
             .expect("report");
             assert_eq!(report.status, ImportStatus::Complete, "{report:#?}");
@@ -120,6 +122,7 @@ fn unsafe_speaker_prefixes_are_reported_instead_of_imported_as_prose() {
             mapping: None,
             schema: None,
             default_block: true,
+            target_sources: None,
         })
         .expect("report");
         assert_eq!(report.status, ImportStatus::Invalid, "{speaker}");
@@ -147,6 +150,7 @@ fn end_is_a_real_node_name_in_twee_and_yarn() {
             mapping: None,
             schema: None,
             default_block: true,
+            target_sources: None,
         })
         .expect("report");
         assert_eq!(report.status, ImportStatus::Complete);
@@ -179,6 +183,7 @@ fn story_format_markup_and_repeated_control_flow_do_not_pass_as_plain_text() {
             mapping: None,
             schema: None,
             default_block: true,
+            target_sources: None,
         })
         .expect("report");
         assert_eq!(report.status, ImportStatus::Invalid, "{body}");
@@ -204,6 +209,7 @@ fn schema_backed_import_preserves_native_speaker_policy() {
         mapping: Some(&mapping),
         schema: Some(&schema),
         default_block: true,
+        target_sources: None,
     })
     .expect("report");
     // Native line speakers are not constrained to the schema's speaker registry;
@@ -225,6 +231,7 @@ fn accepted_source_ids_are_preserved_and_other_ids_have_explicit_mappings() {
         mapping: Some(&mapping),
         schema: None,
         default_block: true,
+        target_sources: None,
     })
     .expect("report");
     assert_eq!(report.status, ImportStatus::Complete);

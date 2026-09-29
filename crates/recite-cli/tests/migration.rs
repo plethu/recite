@@ -69,6 +69,54 @@ fn same_named_inputs_get_distinct_ids_and_explicit_source_ids_survive_relocation
 }
 
 #[test]
+fn explicit_target_source_resolves_a_block_in_another_import() {
+    let temp = TempDir::new().expect("tempdir");
+    let north = write_file(
+        temp.path(),
+        "north/input.twee",
+        ":: North\nHello.\n[[Go->South]]\n",
+    );
+    let south = write_file(temp.path(), "south/input.twee", ":: South\nHi.\n");
+    run(recite().arg("import").arg(&north).args([
+        "--from",
+        "twee",
+        "--source-id",
+        "story/north/input.twee",
+    ]))
+    .assert_failure();
+    let north_output = run(recite().arg("import").arg(&north).args([
+        "--from",
+        "twee",
+        "--source-id",
+        "story/north/input.twee",
+        "--target-source",
+        "South=story/south/input.twee::south.recite",
+    ]));
+    north_output.assert_success();
+    let south_output = run(recite().arg("import").arg(&south).args([
+        "--from",
+        "twee",
+        "--source-id",
+        "story/south/input.twee",
+        "--no-default",
+    ]));
+    south_output.assert_success();
+    let north_report: serde_json::Value =
+        serde_json::from_slice(&north_output.stdout).expect("north report");
+    let south_report: serde_json::Value =
+        serde_json::from_slice(&south_output.stdout).expect("south report");
+    let south_id = south_report["mappings"][0]["generated_id"]
+        .as_str()
+        .expect("South block ID");
+    assert!(
+        north_report["source"]
+            .as_str()
+            .expect("north source")
+            .contains(&format!("-> south.recite::{south_id}"))
+    );
+}
+
+#[test]
 fn whitespace_loss_requires_explicit_partial_write_acceptance() {
     for (family, source) in [
         ("twee", ":: Start\n  Hello.  \n"),
