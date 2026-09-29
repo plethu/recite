@@ -16,6 +16,7 @@ LANES = frozenset({
 })
 RUST = frozenset({"rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability"})
 JS = frozenset({"docs", "site", "editor"})
+RUST_BUILD = RUST | {"packages"}
 PACKAGING_PREFIXES = (
     "apps/writer/packaging/", "assets/identity/", "nix/",
     "scripts/package-writer", "scripts/check-writer-package",
@@ -70,6 +71,9 @@ def shared_config_lanes(path, base, head):
             return LANES
         if changed <= {"node", "pnpm"}:
             return JS
+        if changed <= {"rust", "cargo:cbindgen", "cargo:cargo-deny",
+                       "cargo:cargo-machete", "cargo:cargo-nextest", "taplo"}:
+            return RUST_BUILD
         return LANES
     if path == "justfile":
         # Recipes start at column zero; unknown or changed shared recipes run all.
@@ -106,10 +110,11 @@ def shared_config_lanes(path, base, head):
 def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
-    if name in {"Cargo.toml", "Cargo.lock"} or path in {
-        "mise.maintainability.toml", "mise.godot.toml", "scripts/ci-scope.py",
-        "scripts/check-ci-results.py",
-    } or path.startswith((".cargo/", "tests/ci/")):
+    if name in {"Cargo.toml", "Cargo.lock"} or path.startswith(".cargo/"):
+        return RUST_BUILD
+    if path in {"mise.maintainability.toml", "mise.godot.toml"}:
+        return RUST
+    if path in {"scripts/ci-scope.py", "scripts/check-ci-results.py"} or path.startswith("tests/ci/"):
         return LANES
     if path in {".mise.toml", "justfile", ".github/workflows/ci.yml"}:
         return shared_config_lanes(path, base, head) if base and head else LANES

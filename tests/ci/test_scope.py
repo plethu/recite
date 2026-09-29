@@ -41,6 +41,10 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(selected(".gitignore"), set())
         self.assertNotIn("site", selected("crates/recite-runtime/src/lib.rs"))
         self.assertNotIn("docs", selected("crates/recite-runtime/src/lib.rs"))
+        for path in ("Cargo.toml", "Cargo.lock", "crates/recite-core/Cargo.toml",
+                     "apps/writer/Cargo.lock", ".cargo/config.toml"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), scope.RUST_BUILD)
 
     def test_maintainability_exceptions_select_policy_and_docs(self):
         self.assertEqual(selected("scripts/maintainability/exceptions.toml"),
@@ -98,7 +102,7 @@ class ScopeTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertIn("packages", selected(path))
-        for path in ("Cargo.lock", ".mise.toml", "justfile", ".github/workflows/ci.yml"):
+        for path in (".mise.toml", "justfile", ".github/workflows/ci.yml"):
             self.assertEqual(selected(path), scope.LANES)
 
     def test_unknown_inputs_are_conservative_and_changes_union(self):
@@ -112,7 +116,7 @@ class ScopeTests(unittest.TestCase):
             (".mise.toml", b'[tools]\nrust = "1.96"\nnode = "22"\n',
              b'[tools]\nrust = "1.96"\nnode = "24"\n', scope.JS),
             (".mise.toml", b'[tools]\nrust = "1.95"\n',
-             b'[tools]\nrust = "1.96"\n', scope.LANES),
+             b'[tools]\nrust = "1.96"\n', scope.RUST_BUILD),
             ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
              b'set shell := ["bash"]\n\n# Site tests.\ntest-docs-browser:\n    docs-site/check-browser.sh\n\nfmt:\n    cargo fmt\n', {"site"}),
             ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
