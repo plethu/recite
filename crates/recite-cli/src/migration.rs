@@ -39,6 +39,9 @@ pub(crate) struct ImportArgs {
     pub(crate) input: PathBuf,
     #[arg(long, value_enum)]
     pub(crate) from: Family,
+    /// Stable source path used in provenance and generated IDs (defaults to input path).
+    #[arg(long, value_parser = clap::builder::NonEmptyStringValueParser::new())]
+    pub(crate) source_id: Option<String>,
     /// JSON file naming the source fields; required for JSON and CSV input.
     #[arg(long)]
     pub(crate) mapping: Option<PathBuf>,
@@ -65,17 +68,15 @@ pub(crate) fn run(
         .map(|path| serde_json::from_str(&read(path)?).map_err(CliError::ImportJson))
         .transpose()?;
     let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
-    // The basename, not the checkout's absolute path, participates in ID generation.
-    let file = args
-        .input
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| {
+    let file = match args.source_id.as_deref() {
+        Some(id) => id,
+        None => args.input.to_str().ok_or_else(|| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                "migration input needs a UTF-8 filename",
+                "migration input needs a UTF-8 path or --source-id",
             )
-        })?;
+        })?,
+    };
     let report = recite_import::import(ImportRequest {
         family: args.from.into(),
         file,

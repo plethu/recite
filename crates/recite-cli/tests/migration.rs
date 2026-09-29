@@ -12,6 +12,51 @@ fn fixture(root: &std::path::Path, source: &str) -> std::path::PathBuf {
 }
 
 #[test]
+fn same_named_inputs_get_distinct_ids_and_explicit_source_ids_survive_relocation() {
+    let temp = TempDir::new().expect("tempdir");
+    let mut reports = Vec::new();
+    for (directory, block) in [("north", "North"), ("south", "South")] {
+        let root = temp.path().join(directory);
+        fs::create_dir(&root).expect("input directory");
+        let input = fixture(&root, &format!(":: {block}\nHello.\n"));
+        let output = run(recite().arg("import").arg(&input).args(["--from", "twee"]));
+        output.assert_success();
+        let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("report");
+        assert_eq!(report["status"], "complete");
+        assert_eq!(report["file"], input.to_str().expect("UTF-8 path"));
+        reports.push(report);
+    }
+    let line_id = |report: &serde_json::Value| {
+        report["mappings"]
+            .as_array()
+            .expect("mappings")
+            .iter()
+            .find(|mapping| mapping["construct"] == "line")
+            .expect("line mapping")["generated_id"]
+            .as_str()
+            .expect("generated ID")
+            .to_owned()
+    };
+    assert_ne!(line_id(&reports[0]), line_id(&reports[1]));
+
+    let mut explicit_ids = Vec::new();
+    for directory in ["north", "south"] {
+        let input = temp.path().join(directory).join("input.twee");
+        let output = run(recite().arg("import").arg(&input).args([
+            "--from",
+            "twee",
+            "--source-id",
+            "story/scene/input.twee",
+        ]));
+        output.assert_success();
+        let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("report");
+        assert_eq!(report["file"], "story/scene/input.twee");
+        explicit_ids.push(line_id(&report));
+    }
+    assert_eq!(explicit_ids[0], explicit_ids[1]);
+}
+
+#[test]
 fn whitespace_loss_requires_explicit_partial_write_acceptance() {
     for (family, source) in [
         ("twee", ":: Start\n  Hello.  \n"),

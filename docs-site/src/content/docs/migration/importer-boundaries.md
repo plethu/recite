@@ -60,8 +60,12 @@ cannot be written.
 
 Existing valid Recite `label@anchor` IDs are retained; bare valid anchors are
 retained with a generated label. Other IDs receive deterministic generated IDs
-and an old-to-new mapping. Generation depends on the input filename and record
-identity/location. Renaming or rearranging an input can change generated IDs.
+and an old-to-new mapping. Generation depends on the supplied input path and
+record identity/location, so same-named files in different directories receive
+different generated IDs. Use a stable project-relative path when invoking the
+CLI, or pass `--source-id story/scene/input.twee` to keep the same IDs when the
+checkout moves. The report's `file` and provenance use that source identity.
+Renaming or rearranging an input can change generated IDs.
 After adopting the source, edit that source and keep its anchors; import is not
 an incremental synchronization command.
 
