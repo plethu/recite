@@ -8,6 +8,10 @@ default:
 setup:
     scripts/install-js-dependencies.sh
 
+# Build the docs site and test it in Chromium, Firefox, and WebKit through Compose.
+test-docs-browser *args:
+    docs-site/check-browser.sh "$@"
+
 fmt:
     cargo fmt --all
     cargo fmt --manifest-path editors/zed/Cargo.toml

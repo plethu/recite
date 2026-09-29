@@ -1,0 +1,34 @@
+import { defineConfig, devices } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./tests/browser",
+  outputDir: "./.browser-artifacts/test-results",
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: ".browser-artifacts/playwright-report" }],
+  ],
+  fullyParallel: true,
+  forbidOnly: Boolean(process.env.CI),
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 2 : undefined,
+  use: { baseURL: "http://127.0.0.1:4173", trace: "retain-on-failure" },
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+      testIgnore: "**/accessibility.spec.ts",
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+      testIgnore: "**/accessibility.spec.ts",
+    },
+  ],
+  webServer: {
+    command: "pnpm exec astro preview --host 127.0.0.1 --port 4173",
+    url: "http://127.0.0.1:4173/",
+    reuseExistingServer: false,
+    timeout: 30_000,
+  },
+});

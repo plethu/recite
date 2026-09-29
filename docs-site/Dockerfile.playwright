@@ -1,0 +1,24 @@
+FROM mcr.microsoft.com/playwright:v1.63.0-noble
+
+ENV CI=1 \
+    ASTRO_TELEMETRY_DISABLED=1 \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+RUN npm install --global pnpm@11.8.0
+
+WORKDIR /workspace
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY docs-site/package.json ./docs-site/package.json
+COPY editors/vscode/package.json ./editors/vscode/package.json
+RUN pnpm install --filter @recite/docs-site... --frozen-lockfile
+
+COPY docs-site/ ./docs-site/
+COPY assets/identity/ ./assets/identity/
+RUN pnpm -C docs-site build
+
+ARG LOCAL_UID=1000
+ARG LOCAL_GID=1000
+RUN chown -R "${LOCAL_UID}:${LOCAL_GID}" /workspace/docs-site/.astro
+
+WORKDIR /workspace/docs-site
+CMD ["pnpm", "test:browser"]

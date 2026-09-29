@@ -51,4 +51,8 @@ echo "== documentation verification =="
 )
 
 echo
+echo "== built site links =="
+python3 "$repo_root/scripts/check-site-links.py" "$repo_root/docs-site/dist"
+
+echo
 echo "Recite documentation checks passed."

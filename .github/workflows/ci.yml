@@ -165,7 +165,7 @@ jobs:
     if: needs.changes.outputs.docs == 'true'
     name: Documentation
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -179,6 +179,18 @@ jobs:
 
       - name: Verify documentation
         run: scripts/check-docs.sh
+
+      - name: Verify documentation in browsers
+        run: docs-site/check-browser.sh
+
+      - name: Upload browser test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: documentation-browser-results
+          path: docs-site/.browser-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
 
   editor:
     needs: changes

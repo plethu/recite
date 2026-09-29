@@ -1,0 +1,79 @@
+import { expect, test } from "@playwright/test";
+
+test("landing page leads into the manual", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("A dialogue language for games");
+  await expect(page.getByRole("heading", { level: 2, name: "At the junction" })).toBeVisible();
+  await expect(page.getByText("N-2 is marked as a cable shaft.")).toBeVisible();
+  await page.getByRole("link", { name: "Write a first scene" }).click();
+  await expect(page).toHaveURL(/\/getting-started\/first-scene\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("First Scene");
+});
+
+test("landing page offers a bounded comparison of dialogue tools", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Choosing dialogue tools" }).click();
+  await expect(page).toHaveURL(/\/guides\/alternatives\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Choosing dialogue tools");
+  await expect(page.getByText("qualitative assessments", { exact: false })).toBeVisible();
+});
+
+test("landing page reflows and records visual evidence", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.locator(".scene-script")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(1);
+    if (width !== 768) {
+      await testInfo.attach(`landing-${width}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+    }
+  }
+});
+
+test("alternatives guide remains readable on a narrow screen", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/guides/alternatives/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Choosing dialogue tools");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await testInfo.attach("alternatives-390", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+});
+
+test("source and manual remain available without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(page.getByText("Choose a door.")).toBeVisible();
+    await page.getByRole("link", { name: "Read the source format" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Source Format");
+  } finally {
+    await context.close();
+  }
+});
+
+test("long manual code blocks can be scrolled with a keyboard", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/getting-started/first-scene/");
+  const blocks = page.locator(".expressive-code pre");
+  const index = await blocks.evaluateAll((items) =>
+    items.findIndex((item) => item.scrollWidth > item.clientWidth),
+  );
+  expect(index).toBeGreaterThanOrEqual(0);
+  const block = blocks.nth(index);
+  await expect(block).toHaveAttribute("tabindex", "0");
+  await block.focus();
+  await expect(block).toBeFocused();
+  const before = await block.evaluate((item) => item.scrollLeft);
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(() => block.evaluate((item) => item.scrollLeft)).toBeGreaterThan(before);
+});

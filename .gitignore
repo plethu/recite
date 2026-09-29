@@ -5,7 +5,11 @@
 
 node_modules/
 docs-site/.astro/
+docs-site/.svelte-check/
 docs-site/dist/
+docs-site/.browser-artifacts/
+docs-site/playwright-report/
+docs-site/test-results/
 editors/vscode/dist/
 editors/vscode/*.vsix
 
