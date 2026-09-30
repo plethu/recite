@@ -63,8 +63,11 @@ def shared_config_lanes(path, base, head):
         return LANES
     if path == ".mise.toml":
         old, new = tomllib.loads(before.decode()), tomllib.loads(after.decode())
-        changed = {key for key in old["tools"].keys() | new["tools"].keys()
-                   if old["tools"].get(key) != new["tools"].get(key)}
+        old_tools, new_tools = old.get("tools"), new.get("tools")
+        if not isinstance(old_tools, dict) or not isinstance(new_tools, dict):
+            return LANES
+        changed = {key for key in old_tools.keys() | new_tools.keys()
+                   if old_tools.get(key) != new_tools.get(key)}
         if {key: value for key, value in old.items() if key != "tools"} != {
             key: value for key, value in new.items() if key != "tools"
         }:
@@ -125,7 +128,12 @@ def lanes_for_path(path, *, base=None, head=None):
     if path.startswith(ENGINE_COMPANION_PREFIXES):
         return RUST | ({"docs"} if path.endswith(".md") else set())
     if path.startswith("docs-site/"):
-        return frozenset({"docs"} if path == "docs-site/README.md" else {"docs", "site"})
+        if path == "docs-site/README.md":
+            return frozenset({"docs"})
+        lanes = {"docs", "site"}
+        if path.endswith((".js", ".mjs", ".cjs", ".py", ".sh")):
+            lanes.add("maintainability")
+        return frozenset(lanes)
     if path.startswith("docs/") or (
         path.endswith(".md") and not path.startswith(("fixtures/", "tests/"))
     ):
@@ -152,9 +160,10 @@ def lanes_for_path(path, *, base=None, head=None):
         return LANES - {"packages"}
     if path.startswith(("examples/", "include/", "Packages/")):
         return RUST
-    if path in {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
-                "scripts/install-js-dependencies.sh"}:
+    if path in {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"}:
         return JS
+    if path == "scripts/install-js-dependencies.sh":
+        return JS | {"maintainability"}
     if path in {"scripts/check-docs.sh", "scripts/check-schema-manifest.mjs",
                 "scripts/check-site-links.py"}:
         return frozenset({"docs", "site", "maintainability"})

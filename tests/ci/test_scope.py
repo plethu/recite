@@ -33,10 +33,14 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(selected("docs-site/src/content/docs/reference/index.md"),
                          {"docs", "site"})
         self.assertEqual(selected("docs-site/README.md"), {"docs"})
-        for path in ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
-                     "scripts/install-js-dependencies.sh"):
+        for path in ("docs-site/astro.config.mjs", "docs-site/check-browser.sh"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), {"docs", "site", "maintainability"})
+        for path in ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), scope.JS)
+        self.assertEqual(selected("scripts/install-js-dependencies.sh"),
+                         scope.JS | {"maintainability"})
         for path in ("scripts/check-docs.sh", "scripts/check-schema-manifest.mjs",
                      "scripts/check-site-links.py"):
             with self.subTest(path=path):
@@ -128,6 +132,8 @@ class ScopeTests(unittest.TestCase):
              b'[tools]\nrust = "1.96"\nnode = "24"\n', scope.JS),
             (".mise.toml", b'[tools]\nrust = "1.95"\n',
              b'[tools]\nrust = "1.96"\n', scope.RUST_BUILD),
+            (".mise.toml", b'[tools]\nnode = "22"\n',
+             b'[settings]\nexperimental = true\n', scope.LANES),
             ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
              b'set shell := ["bash"]\n\n# Site tests.\ntest-docs-browser:\n    docs-site/check-browser.sh\n\nfmt:\n    cargo fmt\n', {"site"}),
             ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
