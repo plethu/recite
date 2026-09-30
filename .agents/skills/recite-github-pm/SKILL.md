@@ -144,9 +144,9 @@ gh pr merge <pr> --repo plethu/recite --squash --delete-branch
 ```
 
 Human maintainer approval remains authoritative. Request Codex Code Review
-manually from a connected GitHub account; the protected `codex-review-ready`
-status must pass before merge. Codex findings inform review but do not replace
-human approval or tests. The current solo-maintainer policy permits the
+manually from a connected GitHub account when available; it is advisory and
+does not replace human approval or tests. Inspect and resolve any findings it
+reports. The current solo-maintainer policy permits the
 allowlisted maintainer's self-review; once another human maintainer exists,
 require their independent standard GitHub approval. The gate requires the exact
 current head SHA and no unresolved review threads.

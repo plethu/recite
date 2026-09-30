@@ -2,7 +2,6 @@
   "strict": true,
   "checks": [
     { "context": "required-check", "app_id": 15368 },
-    { "context": "Trusted Git workflow policy", "app_id": 15368 },
-    { "context": "codex-review-ready", "app_id": 15368 }
+    { "context": "Trusted Git workflow policy", "app_id": 15368 }
   ]
 }

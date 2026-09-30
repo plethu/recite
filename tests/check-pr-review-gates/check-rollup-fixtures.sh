@@ -78,6 +78,7 @@ run_dispatch_fixture() {
 
 run_fixture 0 "$fixture_root/superseded-success.json"
 run_fixture 0 "$fixture_root/mixed-status-context.json"
+run_fixture 0 "$fixture_root/retired-codex-gate.json"
 run_fixture 1 "$fixture_root/newest-failure.json"
 run_fixture 1 "$fixture_root/newest-pending.json"
 run_fixture 1 "$fixture_root/ambiguous-newest-tie.json"
