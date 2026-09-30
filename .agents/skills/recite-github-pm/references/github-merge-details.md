@@ -76,11 +76,12 @@ to Codex by commenting:
 ```
 
 Disable automatic review for Recite in Codex settings so a completed review
-follows a deliberate request. The request can arrive after the initial polling
-run; the scheduled reconciler updates the required status without a second
-manual command. A clean reaction or resolved thread has no GitHub workflow
-event, so allow roughly fifteen minutes for that reconciliation; GitHub may
-delay scheduled runs.
+follows a deliberate request. The `@codex review` comment starts a fresh
+bounded reconciliation run when posted by the allowlisted maintainer on an open
+PR targeting `main`, even after the initial PR-event poll has timed out.
+The scheduled reconciler remains a fallback for clean reactions and resolved
+threads, which have no GitHub workflow event. Scheduled Actions can be delayed;
+dispatch the workflow manually if that fallback is needed promptly.
 
 Do not post that comment from GitHub Actions: its bot account is not connected
 to Codex. The base-owned `codex-review-gate.yml` observes review completion and
