@@ -1,0 +1,22 @@
+[
+  {
+    "__typename": "CheckRun",
+    "name": "required-check",
+    "status": "COMPLETED",
+    "conclusion": "SUCCESS",
+    "startedAt": "2026-09-30T12:00:00Z"
+  },
+  {
+    "__typename": "CheckRun",
+    "name": "Reconcile Codex review",
+    "workflowName": "Codex Review Gate",
+    "status": "IN_PROGRESS",
+    "startedAt": "2026-09-30T12:01:00Z"
+  },
+  {
+    "__typename": "StatusContext",
+    "context": "codex-review-ready",
+    "state": "FAILURE",
+    "startedAt": "2026-09-30T12:02:00Z"
+  }
+]

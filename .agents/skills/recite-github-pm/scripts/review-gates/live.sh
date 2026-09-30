@@ -68,7 +68,10 @@ run_live_review_gate() {
   fi
   [[ "$mergeable" == "MERGEABLE" ]] || fail "PR mergeability is ${mergeable:-missing}, expected MERGEABLE"
   if [[ -n "$merge_state_status" ]]; then
-    [[ "$merge_state_status" == "CLEAN" ]] || fail "PR merge state is $merge_state_status, expected CLEAN"
+    # A retired Codex result can leave GitHub's aggregate state UNSTABLE;
+    # required protection and the filtered check rollup are verified below.
+    [[ "$merge_state_status" == "CLEAN" || "$merge_state_status" == "UNSTABLE" ]] || \
+      fail "PR merge state is $merge_state_status, expected CLEAN or UNSTABLE"
   fi
   [[ -n "$head_sha" ]] || fail "PR head SHA is missing"
   [[ "$review_decision" != "CHANGES_REQUESTED" ]] || fail "GitHub reports blocking requested changes"
@@ -184,7 +187,8 @@ run_live_review_gate() {
     [[ "$latest_state" == "OPEN" ]] || fail "PR state changed to ${latest_state:-missing}, expected OPEN"
     [[ "$latest_mergeable" == "MERGEABLE" ]] || fail "PR mergeability changed to ${latest_mergeable:-missing}, expected MERGEABLE"
     if [[ -n "$latest_merge_state_status" ]]; then
-      [[ "$latest_merge_state_status" == "CLEAN" ]] || fail "PR merge state changed to $latest_merge_state_status, expected CLEAN"
+      [[ "$latest_merge_state_status" == "CLEAN" || "$latest_merge_state_status" == "UNSTABLE" ]] || \
+        fail "PR merge state changed to $latest_merge_state_status, expected CLEAN or UNSTABLE"
     fi
     [[ "$latest_review_decision" != "CHANGES_REQUESTED" ]] || fail "GitHub reports newly requested changes"
 

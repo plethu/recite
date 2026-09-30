@@ -9,6 +9,10 @@ reduce_check_rollup() {
     if type != "array" then
       error("expected a statusCheckRollup array")
     else
+      # Old PR heads retain these results after the required Codex gate is removed.
+      map(select((.context // .name // "") != "codex-review-ready"
+                 and (.workflowName // "") != "Codex Review Gate"))
+      |
       map(
         . as $check
         | ($check.name // $check.context // "") as $identity
