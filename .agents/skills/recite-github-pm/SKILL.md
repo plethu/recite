@@ -143,15 +143,15 @@ are reviewed and integrated without issue-slice PRs. Then pass:
 gh pr merge <pr> --repo plethu/recite --squash --delete-branch
 ```
 
-Human maintainer approval remains authoritative. Codex Code Review is advisory
-and asynchronous:
-it does not replace human approval, branch protection, required checks, or
-tests. The current solo-maintainer policy permits the allowlisted maintainer's
-self-review; once another human maintainer exists, require their independent
-standard GitHub approval. The gate requires the exact current head SHA and no
-unresolved review threads.
+Human maintainer approval remains authoritative. Request Codex Code Review
+manually from a connected GitHub account; the protected `codex-review-ready`
+status must pass before merge. Codex findings inform review but do not replace
+human approval or tests. The current solo-maintainer policy permits the
+allowlisted maintainer's self-review; once another human maintainer exists,
+require their independent standard GitHub approval. The gate requires the exact
+current head SHA and no unresolved review threads.
 
-For the official Codex GitHub integration, including automatic review setup,
+For the official Codex GitHub integration and manual review request,
 see the [official Codex GitHub review documentation](https://learn.chatgpt.com/docs/third-party/github).
 For review details, read `references/github-merge-details.md`. Do not parse
 custom review comments, bot usernames, or marker blocks.

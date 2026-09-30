@@ -1,0 +1,37 @@
+name: Codex Review Gate
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+  # GitHub emits no workflow event for a clean-review reaction or thread resolution.
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  ready:
+    name: Reconcile Codex review
+    if: github.event.action != 'edited' || github.event.changes.base
+    concurrency:
+      group: codex-review-ready-${{ github.event.pull_request.number || 'recovery' }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      # pull_request_target uses the base-owned workflow. Do not check out or
+      # execute pull-request files with this status-writing token.
+      - uses: heurema/repo-governance/actions/codex-review-ready@58c1878e1e16c4139e35594aab6d1cb00f1c1018 # v0.5.0
+        with:
+          github-token: ${{ github.token }}
+          ignore-outdated: 'false'
+          status-context: codex-review-ready
+          poll-seconds: ${{ github.event_name == 'pull_request_target' && '1800' || '0' }}
+          poll-interval-seconds: '30'
+          timeout-state: ${{ github.event_name == 'pull_request_target' && 'failure' || 'pending' }}
