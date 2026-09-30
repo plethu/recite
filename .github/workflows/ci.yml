@@ -199,7 +199,7 @@ jobs:
           install_args: node pnpm just
 
       - name: Verify documentation in browsers
-        run: just test-docs-browser
+        run: just web-test-browser
 
       - name: Upload browser test results
         if: always()

@@ -5,13 +5,19 @@ is installed for a future demo backed by a compiled Recite fixture. The current
 landing scene is an excerpt, not a browser implementation of the dialogue
 runtime.
 
-From the repository root, run `mise install`, `pnpm install --frozen-lockfile`,
-and `pnpm docs:verify` for local checks and the production build. Run
-`just test-docs-browser` for the browser suite. This builds the pinned
+From the repository root, run `mise install` and `just web-setup`, then
+`just web-dev` for the local server. `just web-check` checks formatting, types,
+components, and CSS without building; `just web-verify` also builds the site
+and checks its links. Use `just web-build` and `just web-preview` to inspect
+the production output, or `just web-fmt` to apply formatting. These commands
+appear together under the `web` group in `just --list`.
+
+Run `just web-test-browser` for the browser suite. It builds the pinned
 Playwright image with Chromium, Firefox, and WebKit, serves the production
 build inside the container, and writes reports to `docs-site/.browser-artifacts/`.
-Pass Playwright filters after the recipe name,
-for example `just test-docs-browser --project=webkit`.
+Pass Playwright filters after the recipe name, for example
+`just web-test-browser --project=webkit`. The older `test-docs-browser` name
+remains an alias.
 
 ## Internationalisation
 

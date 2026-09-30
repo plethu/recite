@@ -8,9 +8,47 @@ default:
 setup:
     scripts/install-js-dependencies.sh
 
-# Build the docs site and test it in Chromium, Firefox, and WebKit through Compose.
-test-docs-browser *args:
+# Install the locked JavaScript workspace dependencies.
+[group('web')]
+web-setup: setup
+
+# Run the documentation site with hot reload.
+[group('web')]
+web-dev *args:
+    pnpm docs:dev "$@"
+
+# Check site formatting, types, components, and CSS without building.
+[group('web')]
+web-check:
+    pnpm docs:check
+
+# Build the static documentation site.
+[group('web')]
+web-build:
+    pnpm docs:build
+
+# Run the full documentation gate, including built links.
+[group('web')]
+web-verify:
+    scripts/check-docs.sh
+
+# Serve the production build locally.
+[group('web')]
+web-preview *args:
+    pnpm -C docs-site preview "$@"
+
+# Format the site source.
+[group('web')]
+web-fmt *args:
+    pnpm -C docs-site fmt "$@"
+
+# Test the production site in Chromium, Firefox, and WebKit through Compose.
+[group('web')]
+web-test-browser *args:
     docs-site/check-browser.sh "$@"
+
+[private]
+alias test-docs-browser := web-test-browser
 
 fmt:
     cargo fmt --all
