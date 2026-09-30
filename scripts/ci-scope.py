@@ -115,6 +115,14 @@ def lanes_for_path(path, *, base=None, head=None):
         return shared_config_lanes(path, base, head) if base and head else LANES
     if path == ".gitignore":
         return frozenset()
+    if path == "engines.just":
+        return frozenset({"rust", "maintainability"})
+    if path == "stress.just":
+        return frozenset({"benchmark-smoke", "maintainability"})
+    if path in {"scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"}:
+        return frozenset({"rust", "maintainability"})
+    if path == "scripts/check-zed.sh":
+        return frozenset({"rust", "editor", "maintainability"})
     if path == "scripts/maintainability/exceptions.toml":
         return frozenset({"docs", "maintainability"})
     if path.startswith(ENGINE_COMPANION_PREFIXES):

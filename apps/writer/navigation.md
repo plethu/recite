@@ -21,7 +21,7 @@ inside the current project are relative to its root.
 Open a link on startup, with the corresponding project:
 
 ```sh
-mise exec -- just writer --project /path/to/project --route 'recite://writer/translations?catalogue=locale/fr.po&q=hello'
+mise exec -- just writer run --project /path/to/project --route 'recite://writer/translations?catalogue=locale/fr.po&q=hello'
 ```
 
 Links copied from a saved project include its path and can be passed directly as

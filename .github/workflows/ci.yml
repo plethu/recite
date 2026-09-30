@@ -122,7 +122,7 @@ jobs:
       - name: Probe the Linux native accessibility bridge
         # Records current native limitations; --require-actions remains a
         # separate acceptance gate until the pinned host implements actions.
-        run: xvfb-run -a just probe-writer-native-accessibility
+        run: xvfb-run -a just writer probe-accessibility
 
   windows-publisher:
     needs: changes

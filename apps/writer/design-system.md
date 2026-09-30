@@ -9,7 +9,7 @@ packaged app icon; the runtime wordmark uses the current text colour.
 Inspect the production controls without opening a project:
 
 ```sh
-mise exec -- just writer --design-system
+mise exec -- just writer run --design-system
 ```
 
 The specimen's appearance and reduced-motion settings affect only that window.
@@ -78,7 +78,7 @@ Reduced motion makes these changes immediate.
 
 ## Verification
 
-`mise exec -- just check-writer` includes colour ownership linting, contrast,
+`mise exec -- just writer check` includes colour ownership linting, contrast,
 component and interaction tests. Use `RECITE_WRITER_CAPTURE_DIR` with the
 `design_system` or `scene` integration tests to capture actual rendered controls.
 Review light, dark and monochrome, long labels, disabled/pressed/focused states,

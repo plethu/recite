@@ -1,0 +1,15 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+set positional-arguments
+set default-list := true
+
+fmt:
+    cargo fmt --manifest-path Cargo.toml
+
+fmt-check:
+    cargo fmt --manifest-path Cargo.toml -- --check
+
+clippy:
+    cargo clippy --locked --manifest-path Cargo.toml --all-targets -- -D warnings
+
+test *args:
+    cargo nextest run --locked --manifest-path Cargo.toml "$@"

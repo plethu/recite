@@ -17,7 +17,7 @@ scripts/verify.sh or `mise run verify`):
   7. scripts/generate-ffi-header.sh
   8. scripts/check-ffi-header.sh
   9. scripts/check-unity-adapter.sh (managed/native; Unity Editor only with UNITY_EDITOR)
- 10. just test-godot (clean addon and native host)
+ 10. just engines godot (clean addon and native host)
  11. cargo fetch --locked; scripts/check-bevy-package.sh (offline clean consumer)
  12. cargo fmt --check
  13. just test and just test-doc
@@ -133,7 +133,7 @@ echo
 echo "== Godot clean addon and native host =="
 (
   cd "$repo_root"
-  just test-godot
+  just engines godot
 )
 
 echo
@@ -155,7 +155,7 @@ echo
 echo "== cargo test =="
 (
   cd "$repo_root"
-  just test-workflow
+  just engines workflow
   just test
   just test-doc
 )
@@ -175,6 +175,6 @@ echo "== cargo doc =="
 )
 
 echo
-(cd "$repo_root" && just check-writer)
+(cd "$repo_root" && just writer check)
 
 echo "Recite project gates passed."

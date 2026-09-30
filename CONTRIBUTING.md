@@ -19,7 +19,11 @@ mise exec -- just check
 lockfile before using them. It checks Rust, editor packages, adapters, docs,
 dependency policy, spelling, and benchmark smoke. `just verify` and
 `mise run verify` run that same gate. With mise activated in your shell, the
-`mise exec --` prefix is unnecessary. Run `just` to list the commands.
+`mise exec --` prefix is unnecessary. Run `just` to list the cross-project
+commands and modules, or `just web`, `just writer`, `just editor`,
+`just engines`, or `just stress` to list one area's commands. Each module is
+also callable from its own directory without the area name, for example
+`cd apps/writer && just run --project /path/to/project`.
 
 For a focused change:
 
@@ -28,7 +32,7 @@ just fmt
 just clippy
 just test -p recite-runtime -E 'test(restore)'
 just test-doc -p recite-runtime
-just test-zed
+just editor zed test
 just supply-chain
 ```
 
@@ -56,12 +60,12 @@ That host lane currently requires Linux x86_64. Other platform-host and expensiv
 stress evidence have explicit commands:
 
 ```sh
-just test-stress --nocapture
-just test-watch-stress --nocapture
-just test-godot
-just test-editor-host neovim
-just test-editor-host vscode
-just test-editor-host zed
+just stress scale --nocapture
+just stress watch --nocapture
+just engines godot
+just editor host neovim
+just editor host vscode
+just editor host zed
 ```
 
 Host commands fail when their prerequisites are absent. The VS Code/VSCodium

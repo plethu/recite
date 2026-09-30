@@ -47,6 +47,12 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
         self.assertEqual(selected(".gitignore"), set())
+        self.assertEqual(selected("engines.just"), {"rust", "maintainability"})
+        self.assertEqual(selected("stress.just"), {"benchmark-smoke", "maintainability"})
+        for path in ("scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"):
+            self.assertEqual(selected(path), {"rust", "maintainability"})
+        self.assertEqual(selected("scripts/check-zed.sh"),
+                         {"rust", "editor", "maintainability"})
         self.assertNotIn("site", selected("crates/recite-runtime/src/lib.rs"))
         self.assertNotIn("docs", selected("crates/recite-runtime/src/lib.rs"))
         for path in ("Cargo.toml", "Cargo.lock", "crates/recite-core/Cargo.toml",
