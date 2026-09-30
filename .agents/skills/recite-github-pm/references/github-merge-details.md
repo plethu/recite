@@ -76,43 +76,22 @@ to Codex by commenting:
 ```
 
 Disable automatic review for Recite in Codex settings so a completed review
-follows a deliberate request. The `@codex review` comment starts a fresh
-bounded reconciliation run when posted by the allowlisted maintainer on an open
-PR targeting `main`, even after the initial PR-event poll has timed out.
-The scheduled reconciler remains a fallback for clean reactions and resolved
-threads, which have no GitHub workflow event. Scheduled Actions can be delayed;
-dispatch the workflow manually if that fallback is needed promptly.
-
-Do not post that comment from GitHub Actions: its bot account is not connected
-to Codex. The base-owned `codex-review-gate.yml` observes review completion and
-unresolved findings, then writes `codex-review-ready` on the PR head. `main`
-requires that status in addition to the existing CI and trusted-policy checks;
-`.github/required-status-checks.json` records the expected status contexts.
-After the workflow is installed on `main`, an administrator can apply only the
-status-check portion of protection with:
-
-```bash
-gh api -X PATCH repos/plethu/recite/branches/main/protection/required_status_checks \
-  --input .github/required-status-checks.json
-```
-
-Codex findings inform review but do not replace human maintainer approval or
-tests. The local gate does not parse Codex comments or rely on a bot username.
+follows a deliberate request. Do not post that comment from GitHub Actions:
+its bot account is not connected to Codex. Codex review is advisory; its
+availability does not control the merge gate. Human maintainer approval,
+required CI, and resolved review threads remain mandatory. Inspect Codex
+findings when they arrive, address actionable comments, and resolve the threads.
 See the [official Codex GitHub review documentation](https://learn.chatgpt.com/docs/third-party/github)
 for setup and availability details.
 
-Request review when the PR is ready for that pass, then continue useful disjoint
-work while it runs. Inspect findings against the current diff, return actionable
-findings to the owning implementer, and resolve each thread after the correction
-pass. The upstream readiness action can accept an older clean reaction after an
-eight-minute grace period when no unresolved findings remain; a green status is
-not proof that Codex reviewed every commit. Re-request review when a material
-change needs fresh assessment. If the scheduled status does not update after
-thread resolution, run `gh workflow run codex-review-gate.yml --repo plethu/recite`
-to reconcile open PRs. An unavailable review service leaves the required status
-unmet; do not bypass it with custom comment parsing.
+Request review when the PR is ready for that pass, then continue useful work
+while it runs. Re-request review when a material change needs fresh assessment.
+If the service is unavailable, report that limitation with the merge handoff;
+do not present an older review or reaction as coverage of the current head.
 
-The gate blocks failed or errored reported checks when any are present; if
-checks have not reported yet, risk-appropriate local checks remain mandatory.
+The local merge helper blocks failed or errored active checks when any are
+present; it ignores only the retired Codex workflow and status on older PR
+heads. If checks have not reported yet, risk-appropriate local checks remain
+mandatory.
 
 Do not use direct pushes to `main` or bypass the protected pull-request path.

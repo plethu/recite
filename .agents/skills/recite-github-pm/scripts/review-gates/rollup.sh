@@ -73,6 +73,9 @@ evaluate_check_rollup() {
   blocking_checks="$(printf '%s\n' "$checks_json" | jq -r '
     .[]
     | . as $check
+    # Old PR heads retain these results after the required Codex gate is removed.
+    | select(($check.context // "") != "codex-review-ready")
+    | select(($check.workflowName // "") != "Codex Review Gate")
     | (($check.conclusion // $check.state // $check.status // "") | ascii_downcase) as $result
     | select(($result | IN("success", "neutral", "skipped")) | not)
     | "\($check.name // $check.context // "<unnamed>"): \($result)"

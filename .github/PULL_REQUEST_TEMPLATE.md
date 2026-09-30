@@ -37,5 +37,5 @@ body sentence, and no `Co-Authored-By:` or other agent-attribution trailer.
 ## Checks
 
 <!-- e.g. mise run verify -->
-<!-- When ready for review, request @codex review from a connected GitHub
-     account and wait for codex-review-ready before merging. -->
+<!-- When available, request @codex review from a connected GitHub account.
+     Inspect and resolve any findings; the review is advisory. -->
