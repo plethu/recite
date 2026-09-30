@@ -91,7 +91,8 @@ do not present an older review or reaction as coverage of the current head.
 
 The local merge helper blocks failed or errored active checks when any are
 present; it ignores only the retired Codex workflow and status on older PR
-heads. If checks have not reported yet, risk-appropriate local checks remain
-mandatory.
+heads. GitHub may report `UNSTABLE` for such a head; the helper accepts it only
+when branch protection, the active check rollup, and all other gates pass. If
+checks have not reported yet, risk-appropriate local checks remain mandatory.
 
 Do not use direct pushes to `main` or bypass the protected pull-request path.
