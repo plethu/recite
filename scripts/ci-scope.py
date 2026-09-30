@@ -130,6 +130,9 @@ def lanes_for_path(path, *, base=None, head=None):
         path.endswith(".md") and not path.startswith(("fixtures/", "tests/"))
     ):
         return frozenset({"docs"})
+    if path in {"assets/identity/recite-wordmark.svg",
+                "assets/identity/recite-wordmark-reversed.svg"}:
+        return frozenset({"packages", "maintainability", "docs", "site"})
     if path.startswith(PACKAGING_PREFIXES) or name.startswith("LICENSE") or path in {
         "flake.nix", "flake.lock", ".github/workflows/writer-packages.yml",
         "scripts/check-writer-desktop-links.py",
@@ -154,7 +157,7 @@ def lanes_for_path(path, *, base=None, head=None):
         return JS
     if path in {"scripts/check-docs.sh", "scripts/check-schema-manifest.mjs",
                 "scripts/check-site-links.py"}:
-        return frozenset({"docs", "site"})
+        return frozenset({"docs", "site", "maintainability"})
     if path in {"scripts/check-vscode.sh", "scripts/check-helix.sh"}:
         return frozenset({"editor", "maintainability"})
     if path == "scripts/benchmark-smoke.sh":

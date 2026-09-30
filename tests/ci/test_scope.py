@@ -37,7 +37,10 @@ class ScopeTests(unittest.TestCase):
                      "scripts/install-js-dependencies.sh"):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), scope.JS)
-        self.assertEqual(selected("scripts/check-site-links.py"), {"docs", "site"})
+        for path in ("scripts/check-docs.sh", "scripts/check-schema-manifest.mjs",
+                     "scripts/check-site-links.py"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), {"docs", "site", "maintainability"})
         self.assertEqual(selected(".gitignore"), set())
         self.assertNotIn("site", selected("crates/recite-runtime/src/lib.rs"))
         self.assertNotIn("docs", selected("crates/recite-runtime/src/lib.rs"))
@@ -104,6 +107,14 @@ class ScopeTests(unittest.TestCase):
                 self.assertIn("packages", selected(path))
         for path in (".mise.toml", "justfile", ".github/workflows/ci.yml"):
             self.assertEqual(selected(path), scope.LANES)
+
+    def test_shared_wordmarks_select_site_browser_checks(self):
+        for path in ("assets/identity/recite-wordmark.svg",
+                     "assets/identity/recite-wordmark-reversed.svg"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), {"packages", "maintainability", "docs", "site"})
+        self.assertEqual(selected("assets/identity/recite.png"),
+                         {"packages", "maintainability", "docs"})
 
     def test_unknown_inputs_are_conservative_and_changes_union(self):
         self.assertEqual(selected("new-build-system/config.json"), scope.LANES)
