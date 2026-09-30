@@ -39,7 +39,7 @@ def file_at(revision, path):
 
 
 def changed_sections(before, after, pattern):
-    """Compare named, top-level blocks in the repo's simple workflow/just files."""
+    """Compare named, top-level blocks in the CI workflow."""
     def sections(source):
         matches = list(re.finditer(pattern, source, re.M))
         preamble = source[:matches[0].start()] if matches else source
@@ -55,47 +55,6 @@ def changed_sections(before, after, pattern):
     if old_preamble != new_preamble:
         changed.add("__preamble__")
     return changed
-
-
-def changed_justfile_sections(before, after):
-    """Attach attributes and aliases to their recipe before comparing blocks."""
-    pattern = r"^([a-z][a-z0-9-]*)(?:[ \t][^:\n]*)?:(?!=)[^\n]*$"
-
-    def normalize(source):
-        lines, attributes = [], []
-        seen_recipe = False
-        for line in source.splitlines():
-            if not line.strip() or line.lstrip().startswith("#"):
-                continue
-            if re.fullmatch(r"\[[^]]+\]", line):
-                attributes.append(line)
-                continue
-            alias = re.fullmatch(r"alias ([a-z][a-z0-9-]*) := (.+)", line)
-            recipe = re.fullmatch(pattern, line)
-            if alias:
-                seen_recipe = True
-                lines.append(f"{alias.group(1)}:")
-                lines.extend(f"    {attribute}" for attribute in attributes)
-                lines.append(f"    alias := {alias.group(2)}")
-                attributes.clear()
-                continue
-            if recipe:
-                seen_recipe = True
-                lines.append(line)
-                lines.extend(f"    {attribute}" for attribute in attributes)
-                attributes.clear()
-                continue
-            if attributes or (line.startswith("set ") and seen_recipe) or (
-                line and not line[0].isspace() and not line.startswith("set ")
-            ):
-                return None
-            lines.append(line)
-        return None if attributes else "\n".join(lines)
-
-    old, new = normalize(before), normalize(after)
-    if old is None or new is None:
-        return {"__invalid__"}
-    return changed_sections(old, new, pattern)
 
 
 def shared_config_lanes(path, base, head):
@@ -120,14 +79,7 @@ def shared_config_lanes(path, base, head):
             return RUST_BUILD
         return LANES
     if path == "justfile":
-        # Recipes start at column zero; unknown or changed shared recipes run all.
-        changed = changed_justfile_sections(before.decode(), after.decode())
-        if changed <= {"test-docs-browser"}:
-            return frozenset({"site"})
-        if changed <= {"test-docs-browser", "web-setup", "web-dev", "web-check",
-                       "web-build", "web-verify", "web-preview", "web-fmt",
-                       "web-test-browser"}:
-            return frozenset({"docs", "site"})
+        # Root recipes are shared; module recipes have their own path coverage.
         return LANES
     if path == ".github/workflows/ci.yml":
         old, new = before.decode(), after.decode()

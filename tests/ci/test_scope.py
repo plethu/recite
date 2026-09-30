@@ -33,6 +33,7 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(selected("docs-site/src/content/docs/reference/index.md"),
                          {"docs", "site"})
         self.assertEqual(selected("docs-site/README.md"), {"docs"})
+        self.assertEqual(selected("docs-site/justfile"), {"docs", "site"})
         for path in ("docs-site/astro.config.mjs", "docs-site/check-browser.sh"):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
@@ -135,15 +136,7 @@ class ScopeTests(unittest.TestCase):
             (".mise.toml", b'[tools]\nnode = "22"\n',
              b'[settings]\nexperimental = true\n', scope.LANES),
             ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
-             b'set shell := ["bash"]\n\n# Site tests.\ntest-docs-browser:\n    docs-site/check-browser.sh\n\nfmt:\n    cargo fmt\n', {"site"}),
-            ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
              b'set shell := ["bash"]\n\nfmt:\n    cargo fmt --all\n', scope.LANES),
-            ("justfile", b'set shell := ["bash"]\n\nsetup:\n    pnpm install\n\nfmt:\n    cargo fmt\n',
-             b'set shell := ["bash"]\n\nsetup:\n    pnpm install\n\n'
-             b"[group('web')]\nweb-dev *args:\n    pnpm docs:dev \"$@\"\n\n"
-             b"[group('web')]\nweb-test-browser *args:\n    docs-site/check-browser.sh \"$@\"\n\n"
-             b'[private]\nalias test-docs-browser := web-test-browser\n\n'
-             b'fmt:\n    cargo fmt\n', {"docs", "site"}),
             (".github/workflows/ci.yml", b'name: CI\n\njobs:\n  docs:\n    old\n  rust:\n    same\n',
              b'name: CI\n\njobs:\n  docs:\n    new\n  rust:\n    same\n', {"docs", "site"}),
             (".github/workflows/ci.yml", b'name: CI\n\njobs:\n  rust:\n    old\n',

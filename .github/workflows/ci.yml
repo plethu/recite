@@ -179,7 +179,7 @@ jobs:
           install_args: node pnpm just
 
       - name: Verify documentation
-        run: just web-verify
+        run: just web verify
 
   site:
     needs: changes
@@ -200,8 +200,8 @@ jobs:
 
       - name: Verify documentation in browsers
         run: |
-          just --dry-run test-docs-browser
-          just web-test-browser
+          just --dry-run web test-browser
+          just web test-browser
 
       - name: Upload browser test results
         if: always()

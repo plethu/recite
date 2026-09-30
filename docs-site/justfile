@@ -1,0 +1,35 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+set positional-arguments
+set default-list := true
+
+# Install the locked JavaScript workspace dependencies.
+setup:
+    ../scripts/install-js-dependencies.sh
+
+# Run the site with hot reload.
+dev *args:
+    pnpm dev "$@"
+
+# Check formatting, types, components, and CSS without building.
+check:
+    pnpm check
+
+# Build the static site.
+build:
+    pnpm build
+
+# Run the full documentation gate, including built links.
+verify:
+    ../scripts/check-docs.sh
+
+# Serve the production build locally.
+preview *args:
+    pnpm preview "$@"
+
+# Format the site source.
+fmt *args:
+    pnpm fmt "$@"
+
+# Test the production site in Chromium, Firefox, and WebKit through Compose.
+test-browser *args:
+    ./check-browser.sh "$@"
