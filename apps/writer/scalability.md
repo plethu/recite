@@ -49,12 +49,12 @@ establish native GUI readiness.
 Run from the repository root:
 
 ```sh
-mise exec -- just bench-writer --passages 10000 --output /tmp/writer-10k.json
-mise exec -- just bench-writer --passages 100000 --output /tmp/writer-100k.json
-mise exec -- just bench-writer --passages 1000000 --output /tmp/writer-1m.json
-mise exec -- just bench-writer-ui 1000
-mise exec -- just bench-writer-ui 10000
-mise exec -- just bench-writer-recovery
+mise exec -- just writer bench --passages 10000 --output /tmp/writer-10k.json
+mise exec -- just writer bench --passages 100000 --output /tmp/writer-100k.json
+mise exec -- just writer bench --passages 1000000 --output /tmp/writer-1m.json
+mise exec -- just writer bench-ui 1000
+mise exec -- just writer bench-ui 10000
+mise exec -- just writer bench-recovery
 ```
 
 The project workload defaults to 500 passages per document and five passages per
@@ -90,10 +90,10 @@ all documents. Schema changes create a new kernel. The uncached batch validator
 remains the differential oracle, including related diagnostic locations.
 
 ```sh
-mise exec -- just profile-writer cpu 100000 /tmp/writer-cpu
-mise exec -- just profile-writer heap 10000 /tmp/writer-heap
-mise exec -- just check-writer-heap
-mise exec -- just bench-writer --passages 1000000 --linked --output /tmp/writer-linked.json
+mise exec -- just writer profile cpu 100000 /tmp/writer-cpu
+mise exec -- just writer profile heap 10000 /tmp/writer-heap
+mise exec -- just writer heap
+mise exec -- just writer bench --passages 1000000 --linked --output /tmp/writer-linked.json
 ```
 
 The profiler builds the existing optimized benchmark with line debug information,
@@ -104,7 +104,7 @@ under `heap-profile`; production allocation is unchanged. Instrumented reports
 include per-operation allocation counts/bytes and live/peak heap bytes. Their
 latencies and RSS are not compared with uninstrumented runs.
 
-`check-writer` (and therefore `just check`) runs both independent and shared-target
+`just writer check` (and therefore `just check`) runs both independent and shared-target
 10,000-passage heap checks. Bounds are 20 MB peak live heap, 55 MB allocated for
 indexing, 3.2 MB for cold script projection, and 4 MB allocated per
 wording/undo/redo/multiline/ID edit, using 500 passages per document. These are fixed

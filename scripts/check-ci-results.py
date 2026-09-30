@@ -7,7 +7,7 @@ import sys
 
 
 LANES = {
-    "rust", "windows-publisher", "docs", "editor", "benchmark-smoke",
+    "rust", "windows-publisher", "docs", "site", "editor", "benchmark-smoke",
     "maintainability", "packages",
 }
 

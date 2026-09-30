@@ -91,7 +91,7 @@ def probe(binary, require_actions):
     # The enclosing command creates this bus; do not toggle the desktop user's
     # accessibility settings or connect to their registry.
     if os.environ.get("RECITE_PRIVATE_A11Y_BUS") != "1":
-        raise RuntimeError("Use the check-writer-native-accessibility just recipe")
+        raise RuntimeError("Use the just writer probe-accessibility recipe")
     session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     status = ("org.a11y.Bus", "/org/a11y/bus")
     call(session, status, "org.freedesktop.DBus.Properties", "Set",

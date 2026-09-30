@@ -69,8 +69,8 @@ else
   cargo_target_dir="${CARGO_TARGET_DIR:-$repo_root/target}"
 fi
 export CARGO_TARGET_DIR="$cargo_target_dir"
-tmpdir="$(mktemp -d /tmp/recite-godot-host.XXXXXX)"
-package_tmpdir="$(mktemp -d /tmp/recite-godot-package-check.XXXXXX)"
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/recite-godot-host.XXXXXX")"
+package_tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/recite-godot-package-check.XXXXXX")"
 trap 'rm -rf "$tmpdir" "$package_tmpdir"' EXIT
 
 mkdir -p "$tmpdir/dialogue" "$tmpdir/home" "$tmpdir/cache" "$tmpdir/config" "$tmpdir/data"

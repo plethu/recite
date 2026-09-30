@@ -1,6 +1,17 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
 
+# Site development and documentation.
+mod web 'docs-site/justfile'
+# Native writer development and performance.
+mod writer 'apps/writer/justfile'
+# Editor extensions and installed-host checks.
+mod editor 'editors/justfile'
+# Engine companion and end-to-end workflow checks.
+mod engines 'engines.just'
+# Expensive CLI stress checks.
+mod stress 'stress.just'
+
 default:
     @just --list
 
@@ -10,37 +21,24 @@ setup:
 
 fmt:
     cargo fmt --all
-    cargo fmt --manifest-path editors/zed/Cargo.toml
+    just editor zed fmt
     taplo fmt
 
-fmt-check: fmt-zed-check
+fmt-check:
     cargo fmt --all -- --check
+    just editor zed fmt-check
     taplo fmt --check
     taplo lint
 
-fmt-zed-check:
-    cargo fmt --manifest-path editors/zed/Cargo.toml -- --check
-
-clippy: clippy-zed
+clippy:
+    just editor zed clippy
     cargo clippy --workspace --locked --all-targets --all-features -- -D warnings
-
-clippy-zed:
-    cargo clippy --locked --manifest-path editors/zed/Cargo.toml --all-targets -- -D warnings
 
 test *args:
     cargo nextest run --workspace --locked "$@"
 
 test-doc *args:
     cargo test --workspace --locked --doc "$@"
-
-# Run the copyable project through CLI commands and the Bevy companion.
-test-workflow:
-    cargo build --locked -p recite-cli
-    python3 scripts/check-workflow.py --recite target/debug/recite
-    cargo test --locked -p recite-bevy --test workflow_project
-
-test-zed *args:
-    cargo nextest run --locked --manifest-path editors/zed/Cargo.toml "$@"
 
 supply-chain:
     scripts/check-dependencies.sh
@@ -55,73 +53,3 @@ check:
     mise -E maintainability exec -- scripts/verify.sh
 
 verify: check
-
-test-stress *args:
-    cargo test --locked -p recite-cli --test scale_stress -- --ignored "$@"
-
-test-watch-stress *args:
-    cargo test --locked -p recite-cli --test watch_stress -- --ignored "$@"
-
-test-godot:
-    mise -E godot install
-    mise -E godot exec -- scripts/check-godot-host.sh
-
-# Focused Bevy App tests and a consumer built from local Cargo packages.
-test-bevy:
-    cargo nextest run --locked -p recite-bevy
-    scripts/check-bevy-package.sh
-
-test-editor-host client *args:
-    case "$1" in neovim|vscode|zed) scripts/check-"$1"-host.sh "${@:2}" ;; *) echo 'Expected neovim, vscode, or zed' >&2; exit 2 ;; esac
-
-# Launch the native writer, optionally with --project PATH.
-writer *args:
-    cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer -- "$@"
-
-# Verify the maintained native application and its source-editing model.
-check-writer:
-    python3 scripts/check-writer-colors.py
-    just check-writer-packaging
-    cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
-    cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
-    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings
-    just check-writer-heap
-
-# Platform-independent package metadata and runtime dependency checks.
-check-writer-packaging:
-    python3 tests/writer-packaging/check.py
-    python3 scripts/package-writer.py --check-config > /dev/null
-    python3 scripts/check-writer-flatpak.py
-
-# Repeatable keyboard, accessibility metadata, scaling and contrast checks.
-check-writer-accessibility:
-    python3 scripts/check-writer-colors.py
-    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test accessibility --test commands --test keybindings --test options --test picker --test text_input --test writing_workspace
-    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib design::
-    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib feedback::
-
-# Linux AT-SPI bridge; needs python3-gi, dbus-run-session and a display or Xvfb.
-probe-writer-native-accessibility *args:
-    cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
-    /usr/bin/python3 scripts/check-writer-native-accessibility.py apps/writer/target/debug/recite-writer "$@"
-
-# Fixed-corpus allocation regression checks; no wall-clock budget.
-check-writer-heap:
-    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features heap-profile --bench large_project -- --passages 10000 --check-heap
-    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features heap-profile --bench large_project -- --passages 10000 --check-heap --linked
-
-# perf (Linux CPU) or DHAT (heap), using the optimized benchmark with debug lines.
-profile-writer mode="cpu" passages="10000" output="/tmp/recite-writer-profile":
-    scripts/profile-writer.sh "$1" "$2" "$3"
-
-# Generated saved-project workload; accepts --passages, --per-document and --output.
-bench-writer *args:
-    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features benchmarks --bench large_project -- "$@"
-
-# Headless large-conversation mounting and navigation timings (not native FPS).
-bench-writer-ui beats="1000":
-    RECITE_BENCH_BEATS="$1" cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test scale -- --ignored --nocapture
-
-# Background draft queue, durable flush and reopen timings.
-bench-writer-recovery:
-    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib recovery::tests::background_recovery_timing -- --ignored --nocapture

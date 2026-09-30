@@ -72,7 +72,7 @@ covers editor diagnostics and [engine refresh](/adapters/authoring/).
 From the repository root:
 
 ```sh
-mise exec -- just test-workflow
+mise exec -- just engines workflow
 ```
 
 This copies the fixture, runs the commands above, compares two traces and

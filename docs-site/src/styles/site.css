@@ -1,0 +1,246 @@
+:root {
+  --sl-color-accent-low: #eee2eb;
+  --sl-color-accent: #683e62;
+  --sl-color-accent-high: #3c2439;
+  --sl-color-white: #241f27;
+  --sl-color-gray-1: #3b333e;
+  --sl-color-gray-2: #514954;
+  --sl-color-gray-3: #6f6671;
+  --sl-color-gray-4: #978e98;
+  --sl-color-gray-5: #cfc4ce;
+  --sl-color-gray-6: #e9e2e9;
+  --sl-color-black: #fbf8f3;
+  --sl-color-bg: #fbf8f3;
+  --sl-color-bg-nav: #fbf8f3;
+  --sl-color-bg-sidebar: #fbf8f3;
+  --sl-font: system-ui, sans-serif;
+  --sl-font-mono: ui-monospace, "Cascadia Code", monospace;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #3c2439;
+  --sl-color-accent: #e5b9d9;
+  --sl-color-accent-high: #f6e4f1;
+  --sl-color-white: #f3e9df;
+  --sl-color-gray-1: #e1d5dd;
+  --sl-color-gray-2: #c9bec8;
+  --sl-color-gray-3: #a89ca8;
+  --sl-color-gray-4: #7f7480;
+  --sl-color-gray-5: #514753;
+  --sl-color-gray-6: #342d38;
+  --sl-color-black: #241f27;
+  --sl-color-bg: #241f27;
+  --sl-color-bg-nav: #241f27;
+  --sl-color-bg-sidebar: #241f27;
+}
+
+.sl-markdown-content .landing-intro,
+.sl-markdown-content .landing-scene,
+.sl-markdown-content .landing-paths,
+.sl-markdown-content .landing-end,
+.sl-markdown-content .landing-licence {
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+main:has(.landing-intro) > .content-panel:first-child {
+  padding-block: clamp(3rem, 8vw, 8rem) 0;
+}
+
+main:has(.landing-intro) > .content-panel + .content-panel {
+  border-top: 0;
+}
+
+.landing-title,
+.sl-markdown-content .landing-intro {
+  max-width: 58rem;
+  margin-inline: auto;
+}
+
+.sl-markdown-content .landing-intro {
+  padding-block: 0 clamp(4rem, 9vw, 8rem);
+}
+
+.sl-markdown-content .landing-release {
+  max-width: 68ch;
+  margin-top: 2rem;
+  color: var(--sl-color-gray-2);
+}
+
+.sl-markdown-content .landing-release-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.landing-title > p,
+.sl-markdown-content .landing-kicker {
+  color: var(--sl-color-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.landing-title h1 {
+  max-width: 13ch;
+  font-size: clamp(2.8rem, 7vw, 6.5rem);
+  font-weight: 560;
+  letter-spacing: -0.06em;
+  line-height: 1.02;
+}
+
+.sl-markdown-content .landing-lead {
+  max-width: 62ch;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  line-height: 1.6;
+}
+
+.sl-markdown-content .landing-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.1rem 1.7rem;
+}
+
+.sl-markdown-content .landing-actions a,
+.sl-markdown-content .landing-release-links a,
+.sl-markdown-content .landing-path-grid a,
+.sl-markdown-content .landing-copy a,
+.sl-markdown-content .landing-end a {
+  text-underline-offset: 0.22em;
+}
+
+.sl-markdown-content .landing-actions .landing-primary {
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  background: var(--sl-color-accent);
+  color: var(--sl-color-bg);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.sl-markdown-content .landing-actions .landing-primary:hover {
+  background: var(--sl-color-accent-high);
+  color: var(--sl-color-bg);
+}
+
+.sl-markdown-content .landing-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.sl-markdown-content .landing-section-heading h2 {
+  margin-top: 0.35rem;
+  font-size: clamp(1.8rem, 4vw, 3.25rem);
+  letter-spacing: -0.04em;
+}
+
+.sl-markdown-content .landing-section-heading > p {
+  max-width: 34ch;
+  color: var(--sl-color-gray-2);
+}
+
+.sl-markdown-content .landing-scene,
+.sl-markdown-content .landing-paths,
+.sl-markdown-content .landing-copy {
+  padding-block: clamp(3rem, 6vw, 6rem);
+  border-top: 1px solid var(--sl-color-gray-5);
+}
+
+.sl-markdown-content .landing-copy {
+  max-width: 58rem;
+  margin-inline: auto;
+}
+
+.sl-markdown-content .landing-copy h2 {
+  font-size: clamp(1.8rem, 4vw, 3.25rem);
+  letter-spacing: -0.04em;
+}
+
+.sl-markdown-content .landing-copy p {
+  max-width: 70ch;
+}
+
+.sl-markdown-content .landing-path-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 4rem);
+}
+
+.sl-markdown-content .landing-path-grid h3 {
+  font-size: 1.2rem;
+}
+
+.sl-markdown-content .landing-path-grid p {
+  color: var(--sl-color-gray-2);
+}
+
+.sl-markdown-content .landing-end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding-block: 2rem 1rem;
+  border-top: 1px solid var(--sl-color-gray-5);
+}
+
+.sl-markdown-content .landing-licence {
+  padding-bottom: 5rem;
+  color: var(--sl-color-gray-2);
+  font-size: 0.9rem;
+}
+
+.scene {
+  margin: 0;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  background: var(--sl-color-gray-6);
+}
+
+.scene-script {
+  max-width: 64ch;
+  line-height: 1.7;
+}
+
+.sl-markdown-content .scene-script p + p {
+  margin-top: 1.15rem;
+}
+
+.scene-speaker {
+  display: block;
+  color: var(--sl-color-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scene-action {
+  font-weight: 700;
+}
+
+.scene-direction {
+  color: var(--sl-color-gray-2);
+  font-style: italic;
+}
+
+.sl-markdown-content .landing-actions a:focus-visible,
+.sl-markdown-content .landing-release-links a:focus-visible,
+.sl-markdown-content .landing-path-grid a:focus-visible,
+.sl-markdown-content .landing-copy a:focus-visible,
+.sl-markdown-content .landing-end a:focus-visible {
+  outline: 3px solid var(--sl-color-accent);
+  outline-offset: 3px;
+}
+
+@media (width <= 48rem) {
+  .sl-markdown-content .landing-section-heading {
+    display: block;
+  }
+
+  .sl-markdown-content .landing-path-grid {
+    grid-template-columns: 1fr;
+  }
+}

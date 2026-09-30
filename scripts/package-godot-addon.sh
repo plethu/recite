@@ -24,7 +24,7 @@ fi
 
 cargo build --locked -p recite-godot --manifest-path "$repo_root/Cargo.toml" "${cargo_profile[@]}"
 
-stage="$(mktemp -d /tmp/recite-godot-package.XXXXXX)"
+stage="$(mktemp -d "${TMPDIR:-/tmp}/recite-godot-package.XXXXXX")"
 trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/addons/recite/bin" "$stage/examples/basic-dialogue"
 cp -R "$repo_root/addons/recite/." "$stage/addons/recite/"

@@ -3,7 +3,7 @@ set -euo pipefail
 repo_root="${1:-$(git rev-parse --show-toplevel)}"
 cli="${RECITE_UNITY_CLI:-${CARGO_TARGET_DIR:-$repo_root/target}/debug/recite}"
 [[ -x "$cli" ]] || { echo "missing recite CLI: $cli" >&2; exit 1; }
-check_dir="$(mktemp -d /tmp/recite-unity-schema.XXXXXX)"
+check_dir="$(mktemp -d "${TMPDIR:-/tmp}/recite-unity-schema.XXXXXX")"
 trap 'rm -rf "$check_dir"' EXIT
 cat > "$check_dir/global.json" <<'JSON'
 {"sdk":{"version":"8.0.421"}}

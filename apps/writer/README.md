@@ -14,11 +14,11 @@ or beat (Ctrl/Cmd+P) searches the open project or temporary examples.
 From the repository root:
 
 ```sh
-mise exec -- just writer
-mise exec -- just writer --project /path/to/project
-mise exec -- just writer --examples
-mise exec -- just check-writer
-mise exec -- just check-writer-accessibility
+mise exec -- just writer run
+mise exec -- just writer run --project /path/to/project
+mise exec -- just writer run --examples
+mise exec -- just writer check
+mise exec -- just writer accessibility
 ```
 
 The default opens the project welcome screen. `--examples` opens three original

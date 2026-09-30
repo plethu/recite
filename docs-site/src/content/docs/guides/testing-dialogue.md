@@ -36,12 +36,12 @@ blocking boundary and refresh behavior using the same source project.
 From the Recite checkout:
 
 ```sh
-mise exec -- just test-workflow
+mise exec -- just engines workflow
 cargo test --locked -p recite-import
 cargo test --locked -p recite-cli --test migration
 ```
 
-`test-workflow` creates a fresh copy and verifies source/schema checks, extraction,
+`just engines workflow` creates a fresh copy and verifies source/schema checks, extraction,
 run/trace, stale-build recovery and Bevy save/refresh. The repository's normal
 project gate includes it. A project's own CI can run the documented `recite`
 commands after building the CLI at a pinned revision.

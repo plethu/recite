@@ -16,7 +16,7 @@ CARGO_TARGET_DIR="$target_dir" cargo build --manifest-path "$repo_root/Cargo.tom
 native="$target_dir/release/$library"
 [[ -f "$native" ]] || { echo "missing built native library: $native" >&2; exit 1; }
 nm -D "$native" | rg -q ' recite_asset_info$' || { echo 'native library lacks asset-info ABI' >&2; exit 1; }
-work="$(mktemp -d /tmp/recite-unity-bundle.XXXXXX)"
+work="$(mktemp -d "${TMPDIR:-/tmp}/recite-unity-bundle.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/package/Runtime/Plugins/x86_64"
 cp -a "$package_dir/." "$work/package/"

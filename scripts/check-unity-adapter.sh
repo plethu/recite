@@ -146,7 +146,7 @@ if command -v dotnet >/dev/null 2>&1; then
   if ! cargo build -p recite-ffi -p recite-cli --quiet; then
     fail "recite-ffi native library build failed"
   fi
-  tmpdir="$(mktemp -d /tmp/recite-unity-check.XXXXXX)"
+  tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/recite-unity-check.XXXXXX")"
   {
     printf '%s\n' '<Project Sdk="Microsoft.NET.Sdk">'
     printf '%s\n' '  <PropertyGroup>'

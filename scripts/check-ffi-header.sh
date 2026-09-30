@@ -32,7 +32,7 @@ fi
 export CARGO_TARGET_DIR="$cargo_target_dir"
 target_debug="$cargo_target_dir/debug"
 
-tmpdir="$(mktemp -d /tmp/recite-ffi-header.XXXXXX)"
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/recite-ffi-header.XXXXXX")"
 trap 'rm -rf "$tmpdir"' EXIT
 lifetime_source_copy="$tmpdir/locale_lifetime.recite"
 cp "$lifetime_source" "$lifetime_source_copy"

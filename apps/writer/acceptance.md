@@ -10,9 +10,9 @@ screen-reader usability, GPU performance, or cross-platform support.
 Run from the repository root:
 
 ```sh
-mise exec -- just check-writer
-mise exec -- just check-writer-accessibility
-mise exec -- just probe-writer-native-accessibility
+mise exec -- just writer check
+mise exec -- just writer accessibility
+mise exec -- just writer probe-accessibility
 ```
 
 The focused accessibility checks also run in the full Writer gate. They cover
@@ -64,7 +64,7 @@ inspection installs the app or changes the user's desktop associations.
 ## Start here: a real writing session
 
 Use a copy of a real project. Launch from the repository with
-`mise exec -- just writer`, then open that project.
+`mise exec -- just writer run`, then open that project.
 
 Spend 30–45 minutes doing ordinary work:
 

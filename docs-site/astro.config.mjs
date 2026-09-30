@@ -1,16 +1,23 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import svelte from "@astrojs/svelte";
 
 export default defineConfig({
+  output: "static",
   integrations: [
     starlight({
       title: "Recite",
+      // English stays at the root; translated pages can be added under their locale.
+      locales: { root: { label: "English", lang: "en" } },
+      customCss: ["./src/styles/site.css"],
+      components: { PageTitle: "./src/components/PageTitle.astro" },
       logo: {
         light: "../assets/identity/recite-wordmark.svg",
         dark: "../assets/identity/recite-wordmark-reversed.svg",
         replacesTitle: true,
       },
       favicon: "/favicon.svg",
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/plethu/recite" }],
       sidebar: [
         {
           label: "Getting Started",
@@ -49,6 +56,7 @@ export default defineConfig({
             { label: "Authoring dialogue", slug: "guides/authoring-loop" },
             { label: "Localisation", slug: "guides/localisation" },
             { label: "Testing dialogue", slug: "guides/testing-dialogue" },
+            { label: "Choosing dialogue tools", slug: "guides/alternatives" },
             { label: "Package preparation", slug: "guides/distribution" },
           ],
         },
@@ -75,5 +83,6 @@ export default defineConfig({
         },
       ],
     }),
+    svelte(),
   ],
 });

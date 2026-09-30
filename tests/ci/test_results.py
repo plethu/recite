@@ -39,6 +39,12 @@ class ResultsTests(unittest.TestCase):
             with self.subTest(result=result):
                 self.assertTrue(results.failures(needs))
 
+    def test_site_browser_failure_blocks_without_native_jobs(self):
+        needs = fixture()
+        needs["site"]["result"] = "failure"
+        needs["changes"]["outputs"]["site"] = "true"
+        self.assertEqual(results.failures(needs), ["site: expected success, got failure"])
+
     def test_unselected_failure_is_not_hidden(self):
         for result in ("failure", "cancelled", "success"):
             needs = fixture()

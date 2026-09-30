@@ -1,0 +1,16 @@
+services:
+  browsers:
+    build:
+      context: ..
+      dockerfile: docs-site/Dockerfile.playwright
+      args:
+        LOCAL_UID: "${LOCAL_UID:-1000}"
+        LOCAL_GID: "${LOCAL_GID:-1000}"
+    init: true
+    ipc: host
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      CI: "1"
+      HOME: /tmp
+    volumes:
+      - ./.browser-artifacts:/workspace/docs-site/.browser-artifacts

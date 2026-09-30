@@ -21,7 +21,7 @@ the result before writing native source.
 Run the focused checks from the repository root:
 
 ```sh
-mise exec -- just test-workflow
+mise exec -- just engines workflow
 cargo test --locked -p recite-import
 cargo test --locked -p recite-cli --test migration
 ```
