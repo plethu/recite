@@ -1,0 +1,79 @@
+name: Codex Review Gate
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+  issue_comment:
+    types: [created]
+  # GitHub emits no workflow event for a clean-review reaction or thread resolution.
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  ready:
+    name: Reconcile Codex review
+    # Keep the comment requester aligned with the current solo-maintainer policy.
+    if: >-
+      (github.event_name != 'issue_comment' ||
+       (github.event.issue.pull_request &&
+        github.event.comment.body == '@codex review' &&
+        github.event.comment.user.login == 'plethu')) &&
+      (github.event.action != 'edited' || github.event.changes.base)
+    concurrency:
+      group: codex-review-ready-${{ github.event.pull_request.number || github.event.issue.number || 'recovery' }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      # GitHub reserves GITHUB_EVENT_PATH, so the comment path runs the same
+      # pinned reconciler with a synthetic, minimal PR event in one shell step.
+      - name: Fetch pinned reconciler for comment events
+        if: github.event_name == 'issue_comment'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: heurema/repo-governance
+          ref: 58c1878e1e16c4139e35594aab6d1cb00f1c1018 # v0.5.0
+          path: .repo-governance
+          persist-credentials: false
+      - name: Reconcile manual review request
+        if: github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$RUNNER_TEMP/current-pr.json"
+          if ! jq -e '.state == "open" and .base.ref == "main"' "$RUNNER_TEMP/current-pr.json" >/dev/null; then
+            echo "PR is closed or does not target main; no status written" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          jq --arg repo "$GITHUB_REPOSITORY" \
+            '{repository: {full_name: $repo}, pull_request: {number, state, head: {sha: .head.sha}, updated_at}}' \
+            "$RUNNER_TEMP/current-pr.json" > "$RUNNER_TEMP/codex-review-event.json"
+          GITHUB_EVENT_PATH="$RUNNER_TEMP/codex-review-event.json" \
+            python3 .repo-governance/actions/codex-review-ready/codex_review_ready.py \
+              --ignore-outdated false \
+              --status-context codex-review-ready \
+              --poll-seconds 1800 \
+              --poll-interval-seconds 30 \
+              --timeout-state failure
+      # Both PR and comment events use the base-owned workflow. Do not check
+      # out or execute pull-request files with this status-writing token.
+      - uses: heurema/repo-governance/actions/codex-review-ready@58c1878e1e16c4139e35594aab6d1cb00f1c1018 # v0.5.0
+        if: github.event_name != 'issue_comment'
+        with:
+          github-token: ${{ github.token }}
+          ignore-outdated: 'false'
+          status-context: codex-review-ready
+          poll-seconds: ${{ github.event_name == 'pull_request_target' && '1800' || '0' }}
+          poll-interval-seconds: '30'
+          timeout-state: ${{ github.event_name == 'pull_request_target' && 'failure' || 'pending' }}
