@@ -57,6 +57,47 @@ def changed_sections(before, after, pattern):
     return changed
 
 
+def changed_justfile_sections(before, after):
+    """Attach attributes and aliases to their recipe before comparing blocks."""
+    pattern = r"^([a-z][a-z0-9-]*)(?:[ \t][^:\n]*)?:(?!=)[^\n]*$"
+
+    def normalize(source):
+        lines, attributes = [], []
+        seen_recipe = False
+        for line in source.splitlines():
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            if re.fullmatch(r"\[[^]]+\]", line):
+                attributes.append(line)
+                continue
+            alias = re.fullmatch(r"alias ([a-z][a-z0-9-]*) := (.+)", line)
+            recipe = re.fullmatch(pattern, line)
+            if alias:
+                seen_recipe = True
+                lines.append(f"{alias.group(1)}:")
+                lines.extend(f"    {attribute}" for attribute in attributes)
+                lines.append(f"    alias := {alias.group(2)}")
+                attributes.clear()
+                continue
+            if recipe:
+                seen_recipe = True
+                lines.append(line)
+                lines.extend(f"    {attribute}" for attribute in attributes)
+                attributes.clear()
+                continue
+            if attributes or (line.startswith("set ") and seen_recipe) or (
+                line and not line[0].isspace() and not line.startswith("set ")
+            ):
+                return None
+            lines.append(line)
+        return None if attributes else "\n".join(lines)
+
+    old, new = normalize(before), normalize(after)
+    if old is None or new is None:
+        return {"__invalid__"}
+    return changed_sections(old, new, pattern)
+
+
 def shared_config_lanes(path, base, head):
     before, after = file_at(base, path), file_at(head, path)
     if before is None or after is None:
@@ -80,14 +121,13 @@ def shared_config_lanes(path, base, head):
         return LANES
     if path == "justfile":
         # Recipes start at column zero; unknown or changed shared recipes run all.
-        pattern = r"^([a-z][a-z0-9-]*)(?:[ \t][^\n]*)?:[ \t]*$"
-        without_comments = lambda source: "\n".join(
-            line for line in source.splitlines() if not line.lstrip().startswith("#")
-        )
-        changed = changed_sections(without_comments(before.decode()),
-                                   without_comments(after.decode()), pattern)
+        changed = changed_justfile_sections(before.decode(), after.decode())
         if changed <= {"test-docs-browser"}:
             return frozenset({"site"})
+        if changed <= {"test-docs-browser", "web-setup", "web-dev", "web-check",
+                       "web-build", "web-verify", "web-preview", "web-fmt",
+                       "web-test-browser"}:
+            return frozenset({"docs", "site"})
         return LANES
     if path == ".github/workflows/ci.yml":
         old, new = before.decode(), after.decode()
