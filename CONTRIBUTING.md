@@ -119,7 +119,8 @@ or replace the release benchmark baseline.
 `scripts/ci-scope.py` selects checks using the complete Git diff, including
 deleted paths and both sides of renames. Pull requests use their merge base;
 pushes compare the previous and current commit. Unknown paths and shared Cargo
-or toolchain inputs select the complete suite. A missing comparison revision
+manifests or locks select the complete suite; known toolchain edits select their
+consumers. A missing comparison revision
 fails the required check instead of silently skipping coverage.
 
 | Changed surface | Selected checks, in addition to policy, spelling, workflow validation and CI fixtures |
@@ -128,9 +129,12 @@ fails the required check instead of silently skipping coverage.
 | Core Rust | Rust, adapters, writer UI/accessibility, Windows contracts, editor clients, benchmark smoke, maintainability |
 | Writer source | Rust, adapters, writer UI/accessibility, maintainability |
 | VS Code or Helix | Editor clients and maintainability |
+| Just recipe layout | Maintainability recipe checks; changed code or scripts select their own lanes |
+| Engine companion scripts | Rust adapter gate and maintainability |
+| CI routing contracts | Unconditional policy fixtures and maintainability |
 | Schema and shared fixtures | Rust, Windows, docs, editor clients, benchmark smoke, maintainability |
 | Packaging definitions or assets | Native, Nix and Flatpak packages, docs, maintainability |
-| Cargo manifests/locks, shared toolchain, CI routing, unknown inputs | Complete suite, including packages |
+| Cargo manifests/locks, broad shared toolchain edits, unknown inputs | Complete suite, including packages |
 
 The Rust lane retains the existing writer tests and Linux native accessibility
 probe. Source changes can still reveal platform-specific packaging failures in

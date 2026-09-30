@@ -47,12 +47,19 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
         self.assertEqual(selected(".gitignore"), set())
-        self.assertEqual(selected("engines.just"), {"rust", "maintainability"})
-        self.assertEqual(selected("stress.just"), {"benchmark-smoke", "maintainability"})
+        for path in ("apps/writer/justfile", "editors/justfile",
+                     "editors/zed/justfile", "engines.just", "stress.just"):
+            self.assertEqual(selected(path), scope.JUST)
         for path in ("scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"):
             self.assertEqual(selected(path), {"rust", "maintainability"})
         self.assertEqual(selected("scripts/check-zed.sh"),
                          {"rust", "editor", "maintainability"})
+        self.assertEqual(selected("justfile"), scope.JUST)
+        self.assertNotIn("packages", selected("justfile"))
+        self.assertNotIn("windows-publisher", selected("justfile"))
+        self.assertEqual(selected("docs-site/src/content/docs/index.mdx", "justfile",
+                                  "apps/writer/justfile"),
+                         {"docs", "site", "maintainability"})
         self.assertNotIn("site", selected("crates/recite-runtime/src/lib.rs"))
         self.assertNotIn("docs", selected("crates/recite-runtime/src/lib.rs"))
         for path in ("Cargo.toml", "Cargo.lock", "crates/recite-core/Cargo.toml",
@@ -83,10 +90,11 @@ class ScopeTests(unittest.TestCase):
         self.assertIn("rust", selected("fixtures/recite/markdown-input.md"))
 
     def test_engine_companions_select_the_rust_adapter_gate(self):
+        for path in ("crates/recite-adapter/src/lib.rs", "crates/recite-bevy/src/lib.rs",
+                     "crates/recite-godot/src/lib.rs"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), scope.RUST)
         for path in (
-            "crates/recite-adapter/src/lib.rs",
-            "crates/recite-bevy/src/lib.rs",
-            "crates/recite-godot/src/lib.rs",
             "addons/com.recite.dialogue/plugin.cfg",
             "Packages/com.recite.dialogue/Runtime/ReciteDialogueService.cs",
             "examples/godot/basic-dialogue/project.godot",
@@ -99,14 +107,14 @@ class ScopeTests(unittest.TestCase):
             "scripts/unity/build-upm.sh",
         ):
             with self.subTest(path=path):
-                self.assertEqual(selected(path), scope.RUST)
+                self.assertEqual(selected(path), scope.ENGINE)
         for path in (
             "addons/recite/README.md",
             "Packages/com.recite.dialogue/README.md",
             "examples/godot/basic-dialogue/README.md",
         ):
             with self.subTest(path=path):
-                self.assertEqual(selected(path), scope.RUST | {"docs"})
+                self.assertEqual(selected(path), scope.ENGINE | {"docs"})
 
     def test_packaging_and_shared_build_inputs(self):
         for path in (
@@ -116,8 +124,14 @@ class ScopeTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertIn("packages", selected(path))
-        for path in (".mise.toml", "justfile", ".github/workflows/ci.yml"):
+        for path in (".mise.toml", ".github/workflows/ci.yml"):
             self.assertEqual(selected(path), scope.LANES)
+
+    def test_ci_policy_changes_use_unconditional_contract_checks(self):
+        for path in ("scripts/ci-scope.py", "scripts/check-ci-results.py",
+                     "tests/ci/test_scope.py"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), {"maintainability"})
 
     def test_shared_wordmarks_select_site_browser_checks(self):
         for path in ("assets/identity/recite-wordmark.svg",
@@ -142,11 +156,30 @@ class ScopeTests(unittest.TestCase):
             (".mise.toml", b'[tools]\nnode = "22"\n',
              b'[settings]\nexperimental = true\n', scope.LANES),
             ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
-             b'set shell := ["bash"]\n\nfmt:\n    cargo fmt --all\n', scope.LANES),
+             b'set shell := ["bash"]\n\nfmt:\n    cargo fmt --all\n', scope.JUST),
+            ("justfile", b'set shell := ["bash"]\n\nclippy:\n    cargo clippy\n',
+             b'set shell := ["bash"]\n\nclippy:\n    cargo clippy --all\n',
+             {"rust", "maintainability"}),
+            ("justfile", b'set shell := ["bash"]\n\ncheck:\n    scripts/verify.sh\n',
+             b'set shell := ["bash"]\n\ncheck:\n    scripts/verify.sh --all\n',
+             scope.JUST_QUALITY),
+            ("justfile", b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
+             b'set shell := ["zsh"]\n\nfmt:\n    cargo fmt\n',
+             scope.JUST_QUALITY),
             (".github/workflows/ci.yml", b'name: CI\n\njobs:\n  docs:\n    old\n  rust:\n    same\n',
              b'name: CI\n\njobs:\n  docs:\n    new\n  rust:\n    same\n', {"docs", "site"}),
             (".github/workflows/ci.yml", b'name: CI\n\njobs:\n  rust:\n    old\n',
              b'name: CI\n\njobs:\n  rust:\n    new\n', {"rust"}),
+            (".github/workflows/ci.yml",
+             b'name: CI\n\njobs:\n  changes:\n    outputs:\n      rust: ${{ steps.scope.outputs.rust }}\n'
+             b'  docs:\n    same\n  required-check:\n    needs:\n      - changes\n      - git-policy\n      - rust\n',
+             b'name: CI\n\njobs:\n  changes:\n    outputs:\n      rust: ${{ steps.scope.outputs.rust }}\n'
+             b'      site: ${{ steps.scope.outputs.site }}\n'
+             b'  docs:\n    same\n  site:\n    new\n  required-check:\n    needs:\n      - changes\n      - git-policy\n      - rust\n      - site\n', {"site"}),
+            (".github/workflows/ci.yml",
+             b'name: CI\n\njobs:\n  changes:\n    steps:\n      - run: python3 scripts/ci-scope.py\n',
+             b'name: CI\n\njobs:\n  changes:\n    steps:\n      - run: echo skip checks\n',
+             scope.LANES),
         )
         for path, old, new, expected in cases:
             with self.subTest(path=path, new=new):

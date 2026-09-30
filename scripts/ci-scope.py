@@ -17,6 +17,9 @@ LANES = frozenset({
 RUST = frozenset({"rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability"})
 JS = frozenset({"docs", "site", "editor"})
 RUST_BUILD = RUST | {"packages"}
+JUST = frozenset({"maintainability"})
+JUST_QUALITY = LANES - {"windows-publisher", "packages"}
+ENGINE = frozenset({"rust", "maintainability"})
 PACKAGING_PREFIXES = (
     "apps/writer/packaging/", "assets/identity/", "nix/",
     "scripts/package-writer", "scripts/check-writer-package",
@@ -40,21 +43,71 @@ def file_at(revision, path):
 
 def changed_sections(before, after, pattern):
     """Compare named, top-level blocks in the CI workflow."""
-    def sections(source):
-        matches = list(re.finditer(pattern, source, re.M))
-        preamble = source[:matches[0].start()] if matches else source
-        blocks = {match.group(1): source[match.start():
-                  matches[index + 1].start() if index + 1 < len(matches) else len(source)]
-                  for index, match in enumerate(matches)}
-        return preamble, blocks
-
-    old_preamble, previous = sections(before)
-    new_preamble, current = sections(after)
+    old_preamble, previous = sections(before, pattern)
+    new_preamble, current = sections(after, pattern)
     changed = {key for key in previous.keys() | current.keys()
                if previous.get(key) != current.get(key)}
     if old_preamble != new_preamble:
         changed.add("__preamble__")
     return changed
+
+
+def sections(source, pattern):
+    matches = list(re.finditer(pattern, source, re.M))
+    preamble = source[:matches[0].start()] if matches else source
+    blocks = {match.group(1): source[match.start():
+              matches[index + 1].start() if index + 1 < len(matches) else len(source)]
+              for index, match in enumerate(matches)}
+    return preamble, blocks
+
+
+def lane_wiring_changes(before, after, pattern, fixed):
+    """Recognize only exact lane output/needs entries; other edits run every lane."""
+    regex = re.compile(pattern)
+
+    def split(source):
+        lines = source.splitlines(keepends=True)
+        entries = [match.group(1) for line in lines if (match := regex.fullmatch(line.rstrip("\n")))]
+        remainder = "".join(line for line in lines if not regex.fullmatch(line.rstrip("\n")))
+        return entries, remainder
+
+    old_entries, old_remainder = split(before)
+    new_entries, new_remainder = split(after)
+    if (old_remainder != new_remainder or len(old_entries) != len(set(old_entries))
+            or len(new_entries) != len(set(new_entries))):
+        return None
+    changed = set(old_entries) ^ set(new_entries)
+    if changed & fixed or changed - LANES:
+        return None
+    return frozenset(changed)
+
+
+def justfile_lanes(before, after):
+    pattern = r"^([a-z][a-z0-9-]*)(?: [^:\n]*)?:(?!=)[^\n]*$"
+
+    def without_comments(source):
+        return "\n".join(line for line in source.splitlines() if line.strip()
+                         and not line.lstrip().startswith("#")) + "\n"
+
+    before, after = without_comments(before), without_comments(after)
+    old_preamble, _ = sections(before, pattern)
+    new_preamble, _ = sections(after, pattern)
+
+    def shared_preamble(source):
+        return [line for line in source.splitlines() if line.strip()
+                and not line.startswith("mod ")]
+
+    if shared_preamble(old_preamble) != shared_preamble(new_preamble):
+        return JUST_QUALITY
+    changed = changed_sections(before, after, pattern) - {"__preamble__"}
+    if changed & {"check", "verify"}:
+        return JUST_QUALITY
+    lanes = set(JUST)
+    if changed & {"test", "test-doc", "clippy"}:
+        lanes.add("rust")
+    if "setup" in changed:
+        lanes.update(JS)
+    return frozenset(lanes)
 
 
 def shared_config_lanes(path, base, head):
@@ -79,18 +132,37 @@ def shared_config_lanes(path, base, head):
             return RUST_BUILD
         return LANES
     if path == "justfile":
-        # Root recipes are shared; module recipes have their own path coverage.
-        return LANES
+        return justfile_lanes(before.decode(), after.decode())
     if path == ".github/workflows/ci.yml":
         old, new = before.decode(), after.decode()
         prefix = lambda source: source.split("\njobs:\n", 1)[0]
         if prefix(old) != prefix(new) or "\njobs:\n" not in old or "\njobs:\n" not in new:
             return LANES
-        changed = changed_sections(
-            old.split("\njobs:\n", 1)[1], new.split("\njobs:\n", 1)[1],
-            r"^  ([a-z][a-z0-9-]*):\s*$",
-        )
-        if changed & {"changes", "git-policy", "required-check"}:
+        pattern = r"^  ([a-z][a-z0-9-]*):\s*$"
+        old_jobs = sections(old.split("\njobs:\n", 1)[1], pattern)[1]
+        new_jobs = sections(new.split("\njobs:\n", 1)[1], pattern)[1]
+        changed = changed_sections(old.split("\njobs:\n", 1)[1],
+                                   new.split("\njobs:\n", 1)[1], pattern)
+        wiring = set()
+        if "changes" in changed:
+            lanes = lane_wiring_changes(
+                old_jobs.get("changes", ""), new_jobs.get("changes", ""),
+                r"^      ([a-z][a-z0-9-]*): \$\{\{ steps\.scope\.outputs\.\1 \}\}$", set(),
+            )
+            if lanes is None:
+                return LANES
+            wiring.update(lanes)
+            changed.remove("changes")
+        if "required-check" in changed:
+            lanes = lane_wiring_changes(
+                old_jobs.get("required-check", ""), new_jobs.get("required-check", ""),
+                r"^      - ([a-z][a-z0-9-]*)$", {"changes", "git-policy"},
+            )
+            if lanes is None:
+                return LANES
+            wiring.update(lanes)
+            changed.remove("required-check")
+        if "git-policy" in changed:
             return LANES
         job_lanes = {"rust": {"rust"}, "windows-publisher": {"windows-publisher"},
                      "docs": {"docs", "site"}, "site": {"site"},
@@ -98,7 +170,7 @@ def shared_config_lanes(path, base, head):
                      "maintainability": {"maintainability"}, "packages": {"packages"}}
         if changed - job_lanes.keys():
             return LANES
-        return frozenset().union(*(job_lanes[job] for job in changed))
+        return frozenset(wiring).union(*(job_lanes[job] for job in changed))
     return LANES
 
 
@@ -110,15 +182,17 @@ def lanes_for_path(path, *, base=None, head=None):
     if path in {"mise.maintainability.toml", "mise.godot.toml"}:
         return RUST
     if path in {"scripts/ci-scope.py", "scripts/check-ci-results.py"} or path.startswith("tests/ci/"):
-        return LANES
+        # The unconditional git-policy job runs these contracts on every PR.
+        return frozenset({"maintainability"})
     if path in {".mise.toml", "justfile", ".github/workflows/ci.yml"}:
-        return shared_config_lanes(path, base, head) if base and head else LANES
+        return shared_config_lanes(path, base, head) if base and head else (
+            JUST if path == "justfile" else LANES
+        )
     if path == ".gitignore":
         return frozenset()
-    if path == "engines.just":
-        return frozenset({"rust", "maintainability"})
-    if path == "stress.just":
-        return frozenset({"benchmark-smoke", "maintainability"})
+    if path in {"apps/writer/justfile", "editors/justfile", "editors/zed/justfile",
+                "engines.just", "stress.just"}:
+        return JUST
     if path in {"scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"}:
         return frozenset({"rust", "maintainability"})
     if path == "scripts/check-zed.sh":
@@ -126,7 +200,7 @@ def lanes_for_path(path, *, base=None, head=None):
     if path == "scripts/maintainability/exceptions.toml":
         return frozenset({"docs", "maintainability"})
     if path.startswith(ENGINE_COMPANION_PREFIXES):
-        return RUST | ({"docs"} if path.endswith(".md") else set())
+        return ENGINE | ({"docs"} if path.endswith(".md") else set())
     if path.startswith("docs-site/"):
         if path == "docs-site/README.md":
             return frozenset({"docs"})

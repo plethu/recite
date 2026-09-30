@@ -296,6 +296,15 @@ jobs:
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
 
+      - name: Check Just command layout
+        run: |
+          just --list
+          just --dry-run web verify
+          just --dry-run writer check
+          just --dry-run editor zed fmt-check
+          just --dry-run engines godot
+          just --dry-run stress scale
+
       - name: Run maintainability checks
         run: |
           tests/maintainability/check.sh
