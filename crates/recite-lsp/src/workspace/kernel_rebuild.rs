@@ -12,12 +12,23 @@ use crate::documents::OpenDocumentStore;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct PartitionInputFingerprint {
-    saved: Vec<(String, Arc<str>)>,
-    open: Vec<(String, String, i32, Arc<str>)>,
+    saved: Vec<(String, InputText)>,
+    open: Vec<(String, String, i32, InputText)>,
     schema: SchemaIndex,
     retired: BTreeSet<String>,
     retired_targets: BTreeSet<String>,
     project_complete: bool,
+}
+
+/// Immutable text identity is a sufficient equality proof. `Arc<str>` itself
+/// may still scan bytes on the supported toolchain, so make this explicit.
+#[derive(Clone, Debug, Eq)]
+struct InputText(Arc<str>);
+
+impl PartialEq for InputText {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0) || self.0 == other.0
+    }
 }
 
 impl LspWorkspace {
@@ -297,7 +308,7 @@ fn partition_input_fingerprint(
         .map(|document| {
             (
                 document.identity.project_relative_path.clone(),
-                document.text.clone(),
+                InputText(Arc::clone(&document.text)),
             )
         })
         .collect();
@@ -312,7 +323,7 @@ fn partition_input_fingerprint(
                 key.as_str().to_owned(),
                 document.identity().uri.as_str().to_owned(),
                 document.version(),
-                document.shared_text(),
+                InputText(document.shared_text()),
             ))
         })
         .collect();
@@ -325,3 +336,7 @@ fn partition_input_fingerprint(
         project_complete: false,
     }
 }
+
+#[path = "kernel_rebuild/tests.rs"]
+#[cfg(test)]
+mod tests;

@@ -36,3 +36,77 @@ writer peak live allocation fell from 15.70 MB to 14.98 MB. The newline/index
 and allocation savings do not justify the roughly 19% stable-ID latency
 regression and added ownership plumbing. Keep the current simpler composition
 until a more compact representation proves a broader benefit.
+
+## B: Shared text identity equality — retained
+
+The comment profile showed repeated comparisons of unchanged project text in
+partition fingerprints, saved-input maps and changed-key detection. On the
+pinned Rust 1.96 toolchain, `Arc<str>` equality scans bytes even for the same
+allocation: the pointer shortcut depends on `MarkerEq`, whose blanket
+implementation is sized. This is visible in the local toolchain's
+`alloc/src/sync.rs` (`ArcEqIdent`) and `alloc/src/rc.rs` (`MarkerEq`).
+
+Saved/open compiler inputs and the private LSP fingerprint now explicitly use
+`Arc::ptr_eq` before exact text equality. This retains value equality for
+independently allocated inputs. Keys and versions still participate; immutable
+shared text is sufficient proof only for the text field. No hashes, cache
+invalidation rules or retained data were added. The manual compiler equality
+implementations destructure every field so adding a field requires updating
+the comparison.
+
+All three alternating pairs below ran on battery, balanced platform profile,
+with the powersave governor. Compare within this table, not against experiment
+A's AC timings. Each cell combines 63 samples from three fresh processes on
+the 10.36 MB large project, editing its 518 KB first source file.
+
+| Workload | Control median / p95 | Retained median / p95 |
+| --- | ---: | ---: |
+| Comment | 6.09 / 7.49 ms | 3.56 / 4.66 ms |
+| Prose | 5.83 / 7.51 ms | 3.59 / 4.46 ms |
+| Newline | 11.40 / 13.11 ms | 8.93 / 11.24 ms |
+| Stable-ID label | 8.32 / 9.97 ms | 6.07 / 7.52 ms |
+| New block | 17.56 / 20.76 ms | 17.11 / 19.76 ms |
+| Recovery transition | 27.77 / 29.65 ms | 27.02 / 28.89 ms |
+
+`identity-edit-paired.json` retains raw timings, per-run power state, source and
+binary hashes, and diagnostic hashes. All diagnostic hashes matched; valid
+edits stayed diagnostic-free. The roughly 39% prose and 22% newline reductions
+justify keeping this small change. The smaller new-block/recovery differences
+are not strong evidence of an improvement.
+
+Separate CPU profiles (`identity-profiles.json`) support the explanation:
+fingerprint equality accounted for 14.43% of inclusive comment cycles in the
+control, and saved-document equality also appeared prominently. Neither appears
+above the 1% report threshold afterward. The estimated total sampled user
+cycles for 500 comment edits fell from 7.53 billion to 4.14 billion. Inclusive
+shares overlap, and sampled call chains are incomplete; do not add them.
+
+The three-process interactive probes in `identity-interactive-control.json`
+and `identity-interactive.json` retained identical request-result hashes across
+all eight query/action kinds. All 21 candidate cancellations returned `-32800`
+with no edit, with a 0.53 ms median and 1.04 ms maximum. Each three-edit burst
+published only version 19. These sequential probes verify behavior and record
+timings; the alternating edit study above is the stronger latency comparison.
+
+Validation: compiler/LSP tests, all 1,558 workspace tests (three existing skips),
+workspace Clippy with all targets/features, formatting, test organization,
+changed-source structural/lint checks, and Git policy passed. Both unchanged
+writer heap budgets passed (`identity-heap.json`). The complete repository gate
+already passed for the preceding cancellation/region checkpoint; this equality
+change was checked through the affected Rust workspace and writer heap lanes.
+
+## Next bounded opportunities
+
+After B, comment samples attribute about 18% of inclusive cycles to region
+assembly, 14% to stable path identity and 10% to schema loading. These are
+investigation priorities, not promised additive savings.
+
+- Reuse a parsed schema when newly read disk bytes are unchanged. Keep the disk
+  read and overlay/close/error behavior so edits still observe schema changes
+  without depending on a watcher notification. Compare schema-heavy projects
+  and test replacement, deletion and overlay closure before retaining it.
+- Resolve each distinct path once within an analysis transaction. Keep refresh
+  boundaries and alias-retargeting checks; test nested projects and symlinks.
+- For newline cost, profile compact span relocation and summary assembly.
+  Experiment A demonstrates that merely moving arrays can worsen other edits;
+  require wins across prose, stable IDs and structural edits as well.

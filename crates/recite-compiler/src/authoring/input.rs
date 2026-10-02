@@ -1,7 +1,9 @@
 use recite_core::DocumentKey;
 
+mod equality;
+
 /// A caller-owned saved logical document.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq)]
 pub struct SavedDocument {
     key: DocumentKey,
     text: std::sync::Arc<str>,
@@ -41,7 +43,7 @@ impl SavedDocument {
 }
 
 /// An open editor overlay over a logical document.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq)]
 pub struct OpenDocument {
     key: DocumentKey,
     version: DocumentVersion,
