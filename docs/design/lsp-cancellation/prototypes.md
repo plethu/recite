@@ -143,3 +143,34 @@ replacement, unchanged invalid input, deletion, recovery, overlay closure and
 identical invalid bytes behind a retargeted symlink. `schema_index.rs` remains
 cohesive at 258 lines: it owns schema construction and overlay/base selection;
 the existing sidecars own diagnostics and lifecycle publication.
+
+## D: Resolve partition paths once per rebuild — rejected
+
+Control: `4c2421c2`. The disposable `PartitionPaths` grouped saved documents by
+partition and resolved each open path's partition and retirement target once.
+Fingerprinting and request assembly shared those results. Nothing survived a
+rebuild, preserving later filesystem refreshes. The exact patch is
+`paths-prototype.patch`; production code was restored after measurement.
+
+Three alternating pairs per study, on battery; medians in milliseconds:
+
+| Workload | Large control / candidate | Large repeat | 80-file control / candidate |
+| --- | ---: | ---: | ---: |
+| Comment | 3.40 / 3.15 | 3.00 / 2.58 | 3.13 / 2.89 |
+| Prose | 3.11 / 2.84 | 2.87 / 3.03 | 2.81 / 2.90 |
+| Newline | 8.19 / 8.51 | 7.84 / 8.39 | 3.88 / 4.07 |
+| Stable-ID label | 5.10 / 5.55 | 5.81 / 5.37 | 3.70 / 3.35 |
+| New block | 16.93 / 16.90 | 16.91 / 16.26 | 6.58 / 6.45 |
+| Recovery | 26.58 / 26.29 | 26.81 / 26.70 | 9.17 / 9.20 |
+
+Raw data: `paths-edit-paired.json`, `paths-repeat-paired.json` and
+`paths-wide-paired.json`. The wide fixture has the same 5,000 blocks in 80 files,
+with a 131 KB edited source instead of 518 KB. Exact diagnostic hashes matched
+in every pair. The LSP suite, including nested discovery, alias replacement,
+retirement and symlink tests, and all-target/all-feature Clippy passed.
+
+Comment gains repeat, but prose gains do not and newline edits consistently
+slow by roughly 4–7%. The added allocation/grouping layer does not earn its
+complexity. This rejects this implementation, not all filesystem optimization:
+schema matching, manifest path checks and snapshot construction still resolve
+paths outside this grouped-input layer.

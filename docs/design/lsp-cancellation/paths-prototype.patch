@@ -1,0 +1,241 @@
+diff --git i/crates/recite-lsp/src/workspace.rs w/crates/recite-lsp/src/workspace.rs
+index 6c100646..4fb48f34 100644
+--- i/crates/recite-lsp/src/workspace.rs
++++ w/crates/recite-lsp/src/workspace.rs
+@@ -7,6 +7,7 @@ mod kernel_rebuild;
+ #[path = "workspace/kernel_standalone.rs"]
+ mod kernel_standalone;
+ mod lsp_features;
++mod partition_paths;
+ mod partition_rollback;
+ mod project_index;
+ #[path = "project_refresh.rs"]
+diff --git i/crates/recite-lsp/src/workspace/kernel.rs w/crates/recite-lsp/src/workspace/kernel.rs
+index d4ffa227..f32d2c2d 100644
+--- i/crates/recite-lsp/src/workspace/kernel.rs
++++ w/crates/recite-lsp/src/workspace/kernel.rs
+@@ -5,7 +5,8 @@ use recite_compiler::authoring::{
+ };
+ use recite_core::DocumentKey;
+
+-use super::project_index::{SavedDocument, SavedProjectIndex};
++use super::partition_paths::PartitionPaths;
++use super::project_index::SavedDocument;
+ use super::schema_index::SchemaIndex;
+ use super::{DiagnosticRefresh, LspWorkspace};
+ use super::{document_key_for_open, document_key_for_saved};
+@@ -110,7 +111,7 @@ impl LspWorkspace {
+ }
+
+ pub(super) fn effective_open_documents<'a>(
+-    saved: &SavedProjectIndex,
++    paths: &PartitionPaths<'_>,
+     documents: &'a OpenDocumentStore,
+     schema: &SchemaIndex,
+     partition: &str,
+@@ -128,7 +129,7 @@ pub(super) fn effective_open_documents<'a>(
+                 .documents()
+                 .filter(|document| retired.contains(document.identity().uri.as_str()))
+                 .filter_map(|document| document.identity().saved_path.as_deref())
+-                .map(crate::paths::stable_path_identity),
++                .filter_map(|path| paths.target(path).map(str::to_owned)),
+         )
+         .collect::<BTreeSet<_>>();
+     for document in documents.documents() {
+@@ -136,14 +137,14 @@ pub(super) fn effective_open_documents<'a>(
+             .identity()
+             .saved_path
+             .as_deref()
+-            .and_then(|path| saved.partition_for_open_path(path))
+-            .unwrap_or_else(|| "standalone".to_owned());
++            .and_then(|path| paths.partition(path))
++            .unwrap_or("standalone");
+         let retired_target = document
+             .identity()
+             .saved_path
+             .as_deref()
+-            .map(crate::paths::stable_path_identity)
+-            .is_some_and(|target| retired_targets.contains(&target));
++            .and_then(|path| paths.target(path))
++            .is_some_and(|target| retired_targets.contains(target));
+         if schema.matches_uri(&document.identity().uri)
+             || retired.contains(document.identity().uri.as_str())
+             || retired_target
+@@ -162,20 +163,12 @@ pub(super) fn effective_open_documents<'a>(
+ }
+
+ pub(super) fn authoring_request(
+-    saved_index: &SavedProjectIndex,
++    saved_documents: &[&SavedDocument],
+     open_documents: &BTreeMap<DocumentKey, &OpenDocument>,
+-    partition: &str,
+     expected_generation: recite_compiler::authoring::SnapshotGeneration,
+ ) -> AuthoringRequest {
+-    let saved = saved_index
+-        .documents
+-        .values()
+-        .filter(|document| {
+-            saved_index
+-                .partition_for_path(&document.identity.canonical_path)
+-                .as_deref()
+-                == Some(partition)
+-        })
++    let saved = saved_documents
++        .iter()
+         .filter_map(|document| {
+             Some(recite_compiler::authoring::SavedDocument::from_shared(
+                 document_key_for_saved(document)?,
+@@ -185,15 +178,6 @@ pub(super) fn authoring_request(
+         .collect::<Vec<_>>();
+     let open = open_documents
+         .iter()
+-        .filter(|(_, document)| {
+-            document
+-                .identity()
+-                .saved_path
+-                .as_deref()
+-                .and_then(|path| saved_index.partition_for_open_path(path))
+-                .unwrap_or_else(|| "standalone".to_owned())
+-                == partition
+-        })
+         .map(|(key, document)| {
+             KernelOpenDocument::from_shared(
+                 key.clone(),
+diff --git i/crates/recite-lsp/src/workspace/kernel_rebuild.rs w/crates/recite-lsp/src/workspace/kernel_rebuild.rs
+index e2767263..81825528 100644
+--- i/crates/recite-lsp/src/workspace/kernel_rebuild.rs
++++ w/crates/recite-lsp/src/workspace/kernel_rebuild.rs
+@@ -4,6 +4,7 @@ use std::sync::Arc;
+ use recite_compiler::authoring::AuthoringKernel;
+
+ use super::kernel::{KernelPartition, effective_open_documents};
++use super::partition_paths::PartitionPaths;
+ use super::partition_rollback::take_old_partitions;
+ use super::project_index::SavedProjectIndex;
+ use super::schema_index::SchemaIndex;
+@@ -154,6 +155,7 @@ impl LspWorkspace {
+                 retired_all.insert(document.identity().uri.as_str().to_owned());
+             }
+         }
++        let paths = PartitionPaths::new(&saved, &documents);
+         let mut partitions = BTreeMap::new();
+         for id in ids {
+             self.control
+@@ -176,8 +178,9 @@ impl LspWorkspace {
+                         .flatten()
+                 })
+                 .unwrap_or_else(|| base_schema.base());
++            let saved_documents = paths.saved(&id);
+             let open = effective_open_documents(
+-                &saved,
++                &paths,
+                 &documents,
+                 &schema,
+                 &id,
+@@ -189,9 +192,8 @@ impl LspWorkspace {
+                 .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
+                 .collect();
+             let mut input_fingerprint = partition_input_fingerprint(
+-                &saved,
++                saved_documents,
+                 &documents,
+-                &id,
+                 &schema,
+                 &owners,
+                 &retired_all,
+@@ -245,9 +247,8 @@ impl LspWorkspace {
+                     &fresh
+                 };
+                 let request = super::kernel::authoring_request(
+-                    &saved,
++                    saved_documents,
+                     &open,
+-                    &id,
+                     base.snapshot().generation(),
+                 )
+                 .with_project_completeness(saved.partition_is_complete(&id));
+@@ -288,23 +289,15 @@ impl LspWorkspace {
+ }
+
+ fn partition_input_fingerprint(
+-    saved: &SavedProjectIndex,
++    saved: &[&super::project_index::SavedDocument],
+     documents: &OpenDocumentStore,
+-    partition: &str,
+     schema: &SchemaIndex,
+     owners: &BTreeMap<recite_core::DocumentKey, lsp_types::Uri>,
+     retired: &BTreeSet<String>,
+     retired_targets: &BTreeSet<String>,
+ ) -> PartitionInputFingerprint {
+     let saved = saved
+-        .documents
+-        .values()
+-        .filter(|document| {
+-            saved
+-                .partition_for_path(&document.identity.canonical_path)
+-                .as_deref()
+-                == Some(partition)
+-        })
++        .iter()
+         .map(|document| {
+             (
+                 document.identity.project_relative_path.clone(),
+diff --git 1/crates/recite-lsp/src/workspace/partition_paths.rs 2/crates/recite-lsp/src/workspace/partition_paths.rs
+new file mode 100644
+index 00000000..122ac392
+--- /dev/null
++++ 2/crates/recite-lsp/src/workspace/partition_paths.rs
+@@ -0,0 +1,53 @@
++//! Filesystem identities resolved once for one partition rebuild, never retained
++//! across edits or discovery refreshes.
++use std::{collections::BTreeMap, path::Path};
++
++use super::project_index::{SavedDocument, SavedProjectIndex};
++use crate::{documents::OpenDocumentStore, paths::stable_path_identity};
++
++pub(super) struct PartitionPaths<'a> {
++    saved: BTreeMap<String, Vec<&'a SavedDocument>>,
++    open: BTreeMap<&'a Path, OpenPath>,
++}
++
++struct OpenPath {
++    partition: String,
++    target: String,
++}
++
++impl<'a> PartitionPaths<'a> {
++    pub(super) fn new(saved: &'a SavedProjectIndex, documents: &'a OpenDocumentStore) -> Self {
++        let mut result = Self {
++            saved: BTreeMap::new(),
++            open: BTreeMap::new(),
++        };
++        for document in saved.documents.values() {
++            if let Some(partition) = saved.partition_for_path(&document.identity.canonical_path) {
++                result.saved.entry(partition).or_default().push(document);
++            }
++        }
++        for document in documents.documents() {
++            if let Some(path) = document.identity().saved_path.as_deref() {
++                result.open.entry(path).or_insert_with(|| OpenPath {
++                    partition: saved
++                        .partition_for_open_path(path)
++                        .unwrap_or_else(|| "standalone".to_owned()),
++                    target: stable_path_identity(path),
++                });
++            }
++        }
++        result
++    }
++
++    pub(super) fn saved(&self, partition: &str) -> &[&'a SavedDocument] {
++        self.saved.get(partition).map_or(&[], Vec::as_slice)
++    }
++
++    pub(super) fn partition(&self, path: &Path) -> Option<&str> {
++        self.open.get(path).map(|entry| entry.partition.as_str())
++    }
++
++    pub(super) fn target(&self, path: &Path) -> Option<&str> {
++        self.open.get(path).map(|entry| entry.target.as_str())
++    }
++}
