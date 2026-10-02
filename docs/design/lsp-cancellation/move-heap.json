@@ -1,0 +1,2914 @@
+{
+  "before": [
+    {
+      "os": "linux",
+      "arch": "x86_64",
+      "profile": "bench",
+      "heap_instrumented": true,
+      "shared_destination": false,
+      "passages": 10000,
+      "documents": 20,
+      "source_bytes": 1208812,
+      "diagnostic_count": 0,
+      "history_bytes": 676,
+      "process_peak_rss": "VmHWM:\t   32936 kB",
+      "samples": [
+        {
+          "operation": "generate",
+          "milliseconds": 18.92408,
+          "allocated_bytes": 5679140,
+          "allocations": 14244,
+          "live_bytes": 1211000,
+          "peak_live_bytes": 1277048
+        },
+        {
+          "operation": "index",
+          "milliseconds": 613.4531589999999,
+          "allocated_bytes": 50146076,
+          "allocations": 405128,
+          "live_bytes": 5691200,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.077073,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5692804,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.027582000000000002,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5694220,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.025377,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5694672,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.021009,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5696376,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.025117,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5696816,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.024295,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5698232,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.025047,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5698672,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020759,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5700664,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.024566,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5701104,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.021179,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5702520,
+          "peak_live_bytes": 6623049
+        },
+        {
+          "operation": "open_project_document",
+          "milliseconds": 956.684816,
+          "allocated_bytes": 97971106,
+          "allocations": 634047,
+          "live_bytes": 14250982,
+          "peak_live_bytes": 14937434
+        },
+        {
+          "operation": "project_script",
+          "milliseconds": 35.739982,
+          "allocated_bytes": 3050251,
+          "allocations": 19931,
+          "live_bytes": 14609368,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 8e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14610307,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14611233,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14612175,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14614269,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14615211,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 1.163669,
+          "allocated_bytes": 382519,
+          "allocations": 370,
+          "live_bytes": 14466083,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.7531439999999999,
+          "allocated_bytes": 382303,
+          "allocations": 369,
+          "live_bytes": 14467010,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.728127,
+          "allocated_bytes": 382311,
+          "allocations": 369,
+          "live_bytes": 14467947,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.72432,
+          "allocated_bytes": 382319,
+          "allocations": 369,
+          "live_bytes": 14468874,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.717878,
+          "allocated_bytes": 382799,
+          "allocations": 370,
+          "live_bytes": 14470040,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.727266,
+          "allocated_bytes": 382359,
+          "allocations": 369,
+          "live_bytes": 14470967,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.72466,
+          "allocated_bytes": 382367,
+          "allocations": 369,
+          "live_bytes": 14471894,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.723338,
+          "allocated_bytes": 382375,
+          "allocations": 369,
+          "live_bytes": 14472820,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.7190099999999999,
+          "allocated_bytes": 383303,
+          "allocations": 370,
+          "live_bytes": 14474211,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.723419,
+          "allocated_bytes": 382415,
+          "allocations": 369,
+          "live_bytes": 14475148,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.707318,
+          "allocated_bytes": 441713,
+          "allocations": 370,
+          "live_bytes": 14476297,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.708711,
+          "allocated_bytes": 441455,
+          "allocations": 369,
+          "live_bytes": 14477206,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.705294,
+          "allocated_bytes": 441445,
+          "allocations": 369,
+          "live_bytes": 14478131,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.707078,
+          "allocated_bytes": 441435,
+          "allocations": 369,
+          "live_bytes": 14479056,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.7022280000000001,
+          "allocated_bytes": 441873,
+          "allocations": 370,
+          "live_bytes": 14482509,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.704774,
+          "allocated_bytes": 441391,
+          "allocations": 369,
+          "live_bytes": 14483428,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.70316,
+          "allocated_bytes": 441381,
+          "allocations": 369,
+          "live_bytes": 14484353,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.7047340000000001,
+          "allocated_bytes": 441371,
+          "allocations": 369,
+          "live_bytes": 14485277,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.704083,
+          "allocated_bytes": 442257,
+          "allocations": 370,
+          "live_bytes": 14486660,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.70262,
+          "allocated_bytes": 441327,
+          "allocations": 369,
+          "live_bytes": 14487569,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.7250610000000001,
+          "allocated_bytes": 559485,
+          "allocations": 370,
+          "live_bytes": 14488509,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.728157,
+          "allocated_bytes": 559499,
+          "allocations": 370,
+          "live_bytes": 14489444,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.723919,
+          "allocated_bytes": 559513,
+          "allocations": 370,
+          "live_bytes": 14490369,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.716225,
+          "allocated_bytes": 559527,
+          "allocations": 370,
+          "live_bytes": 14491294,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.717437,
+          "allocated_bytes": 559565,
+          "allocations": 370,
+          "live_bytes": 14492235,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.712919,
+          "allocated_bytes": 559579,
+          "allocations": 370,
+          "live_bytes": 14493160,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.716024,
+          "allocated_bytes": 559593,
+          "allocations": 370,
+          "live_bytes": 14494085,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.717297,
+          "allocated_bytes": 559607,
+          "allocations": 370,
+          "live_bytes": 14495010,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.725231,
+          "allocated_bytes": 559645,
+          "allocations": 370,
+          "live_bytes": 14495951,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.7160839999999999,
+          "allocated_bytes": 559659,
+          "allocations": 370,
+          "live_bytes": 14496876,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.9557,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14497865,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 12.995671,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14498761,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.654873,
+          "allocated_bytes": 1996417,
+          "allocations": 12268,
+          "live_bytes": 14499783,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.965798,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14500715,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.473441,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14501661,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.185195,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14502559,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.138911,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14503523,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.689053,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14504455,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.523825,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14505401,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.305437999999999,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14506299,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.133972,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14507272,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.766567000000002,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14508204,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.01678,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14509159,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 12.974843,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14510056,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.877023,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14511020,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 19.418692,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14511952,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.573438,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14517506,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 12.461545,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14518404,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.614253,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14519368,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.740768000000003,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14520300,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 12.790098,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14521255,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.124601,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14522153,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.555984000000002,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14523117,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 19.000533,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14524058,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 12.88241,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14525004,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.58003,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14525901,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.359362,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14526864,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 23.46809,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14527796,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 12.409008,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14528741,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 12.815164000000001,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14529639,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.457892,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14530612,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.774351000000003,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14531544,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.468733,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14532499,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.103161,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14533397,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.921806,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14534361,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.70391,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14535293,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.234035,
+          "allocated_bytes": 1314084,
+          "allocations": 8599,
+          "live_bytes": 14536238,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 12.837055,
+          "allocated_bytes": 1372949,
+          "allocations": 8596,
+          "live_bytes": 14537136,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.53067,
+          "allocated_bytes": 1995801,
+          "allocations": 12257,
+          "live_bytes": 14538100,
+          "peak_live_bytes": 15693066
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.908752,
+          "allocated_bytes": 2054845,
+          "allocations": 12256,
+          "live_bytes": 14539031,
+          "peak_live_bytes": 15693066
+        }
+      ]
+    },
+    {
+      "os": "linux",
+      "arch": "x86_64",
+      "profile": "bench",
+      "heap_instrumented": true,
+      "shared_destination": true,
+      "passages": 10000,
+      "documents": 20,
+      "source_bytes": 1209272,
+      "diagnostic_count": 0,
+      "history_bytes": 676,
+      "process_peak_rss": "VmHWM:\t   32904 kB",
+      "samples": [
+        {
+          "operation": "generate",
+          "milliseconds": 20.320022,
+          "allocated_bytes": 10515600,
+          "allocations": 14324,
+          "live_bytes": 1211304,
+          "peak_live_bytes": 1393428
+        },
+        {
+          "operation": "index",
+          "milliseconds": 601.0311969999999,
+          "allocated_bytes": 50148216,
+          "allocations": 405208,
+          "live_bytes": 5691506,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.04825,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5693110,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.023453,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5694525,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.024666,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5694965,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020709,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5696669,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.024295,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5697109,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020478,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5698525,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.024145,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5698965,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020007,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5700957,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.023985000000000003,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5701397,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020759,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5702825,
+          "peak_live_bytes": 6623456
+        },
+        {
+          "operation": "open_project_document",
+          "milliseconds": 1046.61784,
+          "allocated_bytes": 110946866,
+          "allocations": 695812,
+          "live_bytes": 14254103,
+          "peak_live_bytes": 15623722
+        },
+        {
+          "operation": "project_script",
+          "milliseconds": 33.829190000000004,
+          "allocated_bytes": 3050409,
+          "allocations": 19936,
+          "live_bytes": 14612523,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 0.000191,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14613471,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14614398,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14615340,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14617434,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 14618376,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 1.224231,
+          "allocated_bytes": 382590,
+          "allocations": 370,
+          "live_bytes": 14469264,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.78368,
+          "allocated_bytes": 382374,
+          "allocations": 369,
+          "live_bytes": 14470191,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.726373,
+          "allocated_bytes": 382382,
+          "allocations": 369,
+          "live_bytes": 14471117,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.710033,
+          "allocated_bytes": 382390,
+          "allocations": 369,
+          "live_bytes": 14472044,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.7086399999999999,
+          "allocated_bytes": 382870,
+          "allocations": 370,
+          "live_bytes": 14473211,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.699875,
+          "allocated_bytes": 382430,
+          "allocations": 369,
+          "live_bytes": 14474148,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.704353,
+          "allocated_bytes": 382438,
+          "allocations": 369,
+          "live_bytes": 14475075,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.702469,
+          "allocated_bytes": 382446,
+          "allocations": 369,
+          "live_bytes": 14476002,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.709963,
+          "allocated_bytes": 383374,
+          "allocations": 370,
+          "live_bytes": 14477393,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.7164050000000001,
+          "allocated_bytes": 382486,
+          "allocations": 369,
+          "live_bytes": 14478320,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.710855,
+          "allocated_bytes": 441807,
+          "allocations": 370,
+          "live_bytes": 14479479,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.707318,
+          "allocated_bytes": 441549,
+          "allocations": 369,
+          "live_bytes": 14480388,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.694845,
+          "allocated_bytes": 441539,
+          "allocations": 369,
+          "live_bytes": 14481313,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.771188,
+          "allocated_bytes": 441529,
+          "allocations": 369,
+          "live_bytes": 14482238,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.71393,
+          "allocated_bytes": 441967,
+          "allocations": 370,
+          "live_bytes": 14485691,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.701578,
+          "allocated_bytes": 441485,
+          "allocations": 369,
+          "live_bytes": 14486599,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.699724,
+          "allocated_bytes": 441475,
+          "allocations": 369,
+          "live_bytes": 14487524,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.695436,
+          "allocated_bytes": 441465,
+          "allocations": 369,
+          "live_bytes": 14488449,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.7276560000000001,
+          "allocated_bytes": 442351,
+          "allocations": 370,
+          "live_bytes": 14489822,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.722566,
+          "allocated_bytes": 441421,
+          "allocations": 369,
+          "live_bytes": 14490741,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.7396879999999999,
+          "allocated_bytes": 559625,
+          "allocations": 370,
+          "live_bytes": 14491682,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.732074,
+          "allocated_bytes": 559639,
+          "allocations": 370,
+          "live_bytes": 14492617,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.731975,
+          "allocated_bytes": 559653,
+          "allocations": 370,
+          "live_bytes": 14493542,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.73509,
+          "allocated_bytes": 559667,
+          "allocations": 370,
+          "live_bytes": 14494467,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.729089,
+          "allocated_bytes": 559705,
+          "allocations": 370,
+          "live_bytes": 14495407,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.7204419999999999,
+          "allocated_bytes": 559719,
+          "allocations": 370,
+          "live_bytes": 14496332,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.722356,
+          "allocated_bytes": 559733,
+          "allocations": 370,
+          "live_bytes": 14497267,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.717847,
+          "allocated_bytes": 559747,
+          "allocations": 370,
+          "live_bytes": 14498192,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.716426,
+          "allocated_bytes": 559785,
+          "allocations": 370,
+          "live_bytes": 14499133,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.7260730000000001,
+          "allocated_bytes": 559799,
+          "allocations": 370,
+          "live_bytes": 14500058,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 14.632812,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14501047,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.740229,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14501945,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.526162,
+          "allocated_bytes": 1996740,
+          "allocations": 12282,
+          "live_bytes": 14502967,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 19.190517,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14503899,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.42975,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14504845,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.383524000000001,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14505742,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.069139999999997,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14506715,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.967251,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14507656,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.538442,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14508602,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.188870999999999,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14509500,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.039024,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14510473,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.6554,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14511405,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.556626,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14512349,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.245838,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14513247,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.26738,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14514211,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.640912999999998,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14515142,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.652275,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14520705,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.090107,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14521603,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.088245999999998,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14522567,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.95078,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14523508,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.936795,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14524453,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.496034,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14525351,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.808669000000002,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14526315,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.935682,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14527256,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.68157,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14528202,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 14.117101,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14529099,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 20.172435999999998,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14530063,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 19.496928,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14531004,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.881312,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14531950,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.485684,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14532848,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.52467,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14533812,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.86502,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14534743,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 14.893407000000002,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14535688,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.293777,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14536595,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.640686000000002,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14537559,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.605014999999998,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14538500,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 13.468493,
+          "allocated_bytes": 1314575,
+          "allocations": 8614,
+          "live_bytes": 14539455,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 13.050854000000001,
+          "allocated_bytes": 1373463,
+          "allocations": 8611,
+          "live_bytes": 14540353,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.270776,
+          "allocated_bytes": 1996124,
+          "allocations": 12271,
+          "live_bytes": 14541326,
+          "peak_live_bytes": 15696322
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 19.101571,
+          "allocated_bytes": 2055191,
+          "allocations": 12270,
+          "live_bytes": 14542258,
+          "peak_live_bytes": 15696322
+        }
+      ]
+    }
+  ],
+  "prototype": [
+    {
+      "os": "linux",
+      "arch": "x86_64",
+      "profile": "bench",
+      "heap_instrumented": true,
+      "shared_destination": false,
+      "passages": 10000,
+      "documents": 20,
+      "source_bytes": 1208812,
+      "diagnostic_count": 0,
+      "history_bytes": 676,
+      "process_peak_rss": "VmHWM:\t   32204 kB",
+      "samples": [
+        {
+          "operation": "generate",
+          "milliseconds": 18.474745000000002,
+          "allocated_bytes": 5679140,
+          "allocations": 14244,
+          "live_bytes": 1211000,
+          "peak_live_bytes": 1277048
+        },
+        {
+          "operation": "index",
+          "milliseconds": 570.7186509999999,
+          "allocated_bytes": 50146076,
+          "allocations": 405128,
+          "live_bytes": 5691210,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.05388,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5692814,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.022722,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5694229,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.023684,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5694669,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.019617,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5696373,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.023734,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5696813,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.019537,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5698229,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.023464000000000002,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5698669,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.019416,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5700673,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.023383,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5701113,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020117,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5702529,
+          "peak_live_bytes": 6623059
+        },
+        {
+          "operation": "open_project_document",
+          "milliseconds": 808.773057,
+          "allocated_bytes": 89475456,
+          "allocations": 559327,
+          "live_bytes": 13535311,
+          "peak_live_bytes": 14221763
+        },
+        {
+          "operation": "project_script",
+          "milliseconds": 32.972018999999996,
+          "allocated_bytes": 3050251,
+          "allocations": 19931,
+          "live_bytes": 13893697,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 0.00019,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13894645,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13895571,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13896497,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13898575,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13899517,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 1.190955,
+          "allocated_bytes": 400119,
+          "allocations": 368,
+          "live_bytes": 13750389,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.687479,
+          "allocated_bytes": 399903,
+          "allocations": 367,
+          "live_bytes": 13751316,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.668093,
+          "allocated_bytes": 399911,
+          "allocations": 367,
+          "live_bytes": 13752243,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.658956,
+          "allocated_bytes": 399919,
+          "allocations": 367,
+          "live_bytes": 13753170,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.661801,
+          "allocated_bytes": 400399,
+          "allocations": 368,
+          "live_bytes": 13754337,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.664897,
+          "allocated_bytes": 399959,
+          "allocations": 367,
+          "live_bytes": 13755264,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.659778,
+          "allocated_bytes": 399967,
+          "allocations": 367,
+          "live_bytes": 13756191,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.888633,
+          "allocated_bytes": 399975,
+          "allocations": 367,
+          "live_bytes": 13757118,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.69932,
+          "allocated_bytes": 400903,
+          "allocations": 368,
+          "live_bytes": 13758509,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.7074860000000001,
+          "allocated_bytes": 400015,
+          "allocations": 367,
+          "live_bytes": 13759435,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.668533,
+          "allocated_bytes": 459313,
+          "allocations": 368,
+          "live_bytes": 13760594,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.6627430000000001,
+          "allocated_bytes": 459055,
+          "allocations": 367,
+          "live_bytes": 13761503,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.659838,
+          "allocated_bytes": 459045,
+          "allocations": 367,
+          "live_bytes": 13762438,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.660078,
+          "allocated_bytes": 459035,
+          "allocations": 367,
+          "live_bytes": 13763363,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.657143,
+          "allocated_bytes": 459473,
+          "allocations": 368,
+          "live_bytes": 13766816,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.6543869999999999,
+          "allocated_bytes": 458991,
+          "allocations": 367,
+          "live_bytes": 13767725,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.653165,
+          "allocated_bytes": 458981,
+          "allocations": 367,
+          "live_bytes": 13768660,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.649848,
+          "allocated_bytes": 458971,
+          "allocations": 367,
+          "live_bytes": 13769585,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.651211,
+          "allocated_bytes": 459857,
+          "allocations": 368,
+          "live_bytes": 13770958,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.670588,
+          "allocated_bytes": 458927,
+          "allocations": 367,
+          "live_bytes": 13771867,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.673933,
+          "allocated_bytes": 577085,
+          "allocations": 368,
+          "live_bytes": 13772808,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.6711389999999999,
+          "allocated_bytes": 577099,
+          "allocations": 368,
+          "live_bytes": 13773733,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.672691,
+          "allocated_bytes": 577113,
+          "allocations": 368,
+          "live_bytes": 13774668,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.675386,
+          "allocated_bytes": 577127,
+          "allocations": 368,
+          "live_bytes": 13775593,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.678021,
+          "allocated_bytes": 577165,
+          "allocations": 368,
+          "live_bytes": 13776534,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.6856460000000001,
+          "allocated_bytes": 577179,
+          "allocations": 368,
+          "live_bytes": 13777459,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.677821,
+          "allocated_bytes": 577193,
+          "allocations": 368,
+          "live_bytes": 13778394,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.676809,
+          "allocated_bytes": 577207,
+          "allocations": 368,
+          "live_bytes": 13779319,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.6788430000000001,
+          "allocated_bytes": 577245,
+          "allocations": 368,
+          "live_bytes": 13780260,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.67724,
+          "allocated_bytes": 577259,
+          "allocations": 368,
+          "live_bytes": 13781195,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.8462749999999994,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13782173,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.579268,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13783079,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.590419999999998,
+          "allocated_bytes": 1634009,
+          "allocations": 12192,
+          "live_bytes": 13784099,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.606058,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13785040,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.27403,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13785986,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.131165,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13786881,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.080741,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13787843,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.412899,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13788775,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.416295,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13789721,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.604575,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13790617,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.218868,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13791579,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.831498,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13792511,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.55368,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13793457,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.1783719999999995,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13794352,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.173934,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13795324,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.235029,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13796256,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.684724,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13801810,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.2297270000000005,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13802706,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.244246,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13803678,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.139431000000002,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13804610,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.041898000000001,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13805565,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.174545,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13806470,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.789459,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13807432,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.050424999999997,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13808364,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.531429,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13809319,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.22024,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13810215,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 17.861363,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13811176,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.054242000000002,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13812108,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.134920999999999,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13813063,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.207196,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13813968,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.682641,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13814930,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.006113,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13815862,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.613091,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13816808,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.277346,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13817704,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.219509,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13818666,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.532532,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13819598,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.199362,
+          "allocated_bytes": 889856,
+          "allocations": 4863,
+          "live_bytes": 13820544,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.269753000000001,
+          "allocated_bytes": 948721,
+          "allocations": 4860,
+          "live_bytes": 13821440,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.078106000000002,
+          "allocated_bytes": 1633393,
+          "allocations": 12181,
+          "live_bytes": 13822411,
+          "peak_live_bytes": 14977395
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.802343,
+          "allocated_bytes": 1692437,
+          "allocations": 12180,
+          "live_bytes": 13823352,
+          "peak_live_bytes": 14977395
+        }
+      ]
+    },
+    {
+      "os": "linux",
+      "arch": "x86_64",
+      "profile": "bench",
+      "heap_instrumented": true,
+      "shared_destination": true,
+      "passages": 10000,
+      "documents": 20,
+      "source_bytes": 1209272,
+      "diagnostic_count": 0,
+      "history_bytes": 676,
+      "process_peak_rss": "VmHWM:\t   32224 kB",
+      "samples": [
+        {
+          "operation": "generate",
+          "milliseconds": 23.297895999999998,
+          "allocated_bytes": 10515600,
+          "allocations": 14324,
+          "live_bytes": 1211304,
+          "peak_live_bytes": 1393428
+        },
+        {
+          "operation": "index",
+          "milliseconds": 581.180412,
+          "allocated_bytes": 50148216,
+          "allocations": 405208,
+          "live_bytes": 5691515,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.056876,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5693112,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.024435,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5694528,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.025247000000000002,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5694968,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020779,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5696684,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.024335,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5697124,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020208,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5698540,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.024165,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5698980,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.020197,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5700972,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "search",
+          "milliseconds": 0.024104,
+          "allocated_bytes": 2302,
+          "allocations": 23,
+          "live_bytes": 5701412,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "clone_saved_inputs",
+          "milliseconds": 0.021149,
+          "allocated_bytes": 1160,
+          "allocations": 21,
+          "live_bytes": 5702828,
+          "peak_live_bytes": 6623465
+        },
+        {
+          "operation": "open_project_document",
+          "milliseconds": 921.753901,
+          "allocated_bytes": 102452056,
+          "allocations": 620952,
+          "live_bytes": 13541786,
+          "peak_live_bytes": 14911405
+        },
+        {
+          "operation": "project_script",
+          "milliseconds": 34.292907,
+          "allocated_bytes": 3050409,
+          "allocations": 19936,
+          "live_bytes": 13900206,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 0.00017999999999999998,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13901145,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13902086,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13903028,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13905106,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "cached_script",
+          "milliseconds": 2.9999999999999997e-05,
+          "allocated_bytes": 0,
+          "allocations": 0,
+          "live_bytes": 13906048,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 1.191546,
+          "allocated_bytes": 400190,
+          "allocations": 368,
+          "live_bytes": 13756936,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.7640210000000001,
+          "allocated_bytes": 399974,
+          "allocations": 367,
+          "live_bytes": 13757863,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.709239,
+          "allocated_bytes": 399982,
+          "allocations": 367,
+          "live_bytes": 13758800,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.690885,
+          "allocated_bytes": 399990,
+          "allocations": 367,
+          "live_bytes": 13759727,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.687659,
+          "allocated_bytes": 400470,
+          "allocations": 368,
+          "live_bytes": 13760894,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.690795,
+          "allocated_bytes": 400030,
+          "allocations": 367,
+          "live_bytes": 13761821,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.692208,
+          "allocated_bytes": 400038,
+          "allocations": 367,
+          "live_bytes": 13762748,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.695073,
+          "allocated_bytes": 400046,
+          "allocations": 367,
+          "live_bytes": 13763675,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.700052,
+          "allocated_bytes": 400974,
+          "allocations": 368,
+          "live_bytes": 13765066,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "edit",
+          "milliseconds": 0.704821,
+          "allocated_bytes": 400086,
+          "allocations": 367,
+          "live_bytes": 13765993,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.702026,
+          "allocated_bytes": 459407,
+          "allocations": 368,
+          "live_bytes": 13767142,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.699682,
+          "allocated_bytes": 459149,
+          "allocations": 367,
+          "live_bytes": 13768051,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.69394,
+          "allocated_bytes": 459139,
+          "allocations": 367,
+          "live_bytes": 13768976,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.692528,
+          "allocated_bytes": 459129,
+          "allocations": 367,
+          "live_bytes": 13769900,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.691366,
+          "allocated_bytes": 459567,
+          "allocations": 368,
+          "live_bytes": 13773353,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.6959540000000001,
+          "allocated_bytes": 459085,
+          "allocations": 367,
+          "live_bytes": 13774262,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.707997,
+          "allocated_bytes": 459075,
+          "allocations": 367,
+          "live_bytes": 13775197,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.6908949999999999,
+          "allocated_bytes": 459065,
+          "allocations": 367,
+          "live_bytes": 13776122,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.682299,
+          "allocated_bytes": 459951,
+          "allocations": 368,
+          "live_bytes": 13777505,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "undo",
+          "milliseconds": 0.7381930000000001,
+          "allocated_bytes": 459021,
+          "allocations": 367,
+          "live_bytes": 13778414,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.70431,
+          "allocated_bytes": 577225,
+          "allocations": 368,
+          "live_bytes": 13779365,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.6993309999999999,
+          "allocated_bytes": 577239,
+          "allocations": 368,
+          "live_bytes": 13780289,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.699601,
+          "allocated_bytes": 577253,
+          "allocations": 368,
+          "live_bytes": 13781224,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.692558,
+          "allocated_bytes": 577267,
+          "allocations": 368,
+          "live_bytes": 13782149,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.696516,
+          "allocated_bytes": 577305,
+          "allocations": 368,
+          "live_bytes": 13783090,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.6946819999999999,
+          "allocated_bytes": 577319,
+          "allocations": 368,
+          "live_bytes": 13784015,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.696616,
+          "allocated_bytes": 577333,
+          "allocations": 368,
+          "live_bytes": 13784950,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.706755,
+          "allocated_bytes": 577347,
+          "allocations": 368,
+          "live_bytes": 13785875,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.7062839999999999,
+          "allocated_bytes": 577385,
+          "allocations": 368,
+          "live_bytes": 13786816,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "redo",
+          "milliseconds": 0.7037789999999999,
+          "allocated_bytes": 577399,
+          "allocations": 368,
+          "live_bytes": 13787751,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.882682,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13788740,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.233685,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13789636,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.273139,
+          "allocated_bytes": 1634500,
+          "allocations": 12206,
+          "live_bytes": 13790656,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 17.894233999999997,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13791588,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.2910520000000005,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13792543,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.2460379999999995,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13793449,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.00446,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13794421,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.021491,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13795352,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.1984900000000005,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13796298,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.1620420000000005,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13797204,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.409993999999998,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13798176,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.086182,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13799117,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.4464809999999995,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13800063,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.184474,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13800969,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.152054,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13801931,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.218969,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13802863,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.233024,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13808417,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.0856,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13809313,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.481157000000003,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13810273,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.169356,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13811214,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.477629,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13812160,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.009788,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13813056,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 17.788878,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13814018,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.458083,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13814950,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.4404900000000005,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13815896,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.065613,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13816802,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.026419999999998,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13817764,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.183943,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13818705,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.74716,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13819651,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.242762,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13820546,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 18.254113999999998,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13821508,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.547649999999997,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13822449,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 7.2805420000000005,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13823404,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 7.288577,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13824310,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 19.062056000000002,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13825272,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.407449,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13826213,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_edit",
+          "milliseconds": 8.147615,
+          "allocated_bytes": 890389,
+          "allocations": 4871,
+          "live_bytes": 13827159,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "multiline_undo",
+          "milliseconds": 6.726291,
+          "allocated_bytes": 949277,
+          "allocations": 4868,
+          "live_bytes": 13828055,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_edit",
+          "milliseconds": 17.505442,
+          "allocated_bytes": 1633884,
+          "allocations": 12195,
+          "live_bytes": 13829017,
+          "peak_live_bytes": 14984005
+        },
+        {
+          "operation": "id_undo",
+          "milliseconds": 18.055183999999997,
+          "allocated_bytes": 1692951,
+          "allocations": 12194,
+          "live_bytes": 13829949,
+          "peak_live_bytes": 14984005
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,269 @@
+diff --git i/crates/recite-compiler/src/authoring/engine/regions.rs w/crates/recite-compiler/src/authoring/engine/regions.rs
+index 55bfcb80..48665453 100644
+--- i/crates/recite-compiler/src/authoring/engine/regions.rs
++++ w/crates/recite-compiler/src/authoring/engine/regions.rs
+@@ -142,7 +142,7 @@ pub(super) fn analyze(
+         document,
+         previous,
+         participation,
+-        &analyses,
++        analyses,
+         regions,
+     ))
+ }
+diff --git i/crates/recite-compiler/src/authoring/engine/regions/assembly.rs w/crates/recite-compiler/src/authoring/engine/regions/assembly.rs
+index 81448f12..84067d18 100644
+--- i/crates/recite-compiler/src/authoring/engine/regions/assembly.rs
++++ w/crates/recite-compiler/src/authoring/engine/regions/assembly.rs
+@@ -1,4 +1,5 @@
+ use super::*;
++use std::borrow::Cow;
+
+ impl RegionAnalysis<'_> {
+     pub(super) fn summary(&self) -> (&AuthoringSummary, SummaryRanges) {
+@@ -31,25 +32,45 @@ pub(super) fn assemble(
+     document: &EffectiveDocument<'_>,
+     previous: Option<&DocumentAnalysis>,
+     participation: ValidationParticipation,
+-    analyses: &[RegionAnalysis<'_>],
++    analyses: Vec<RegionAnalysis<'_>>,
+     mut regions: Vec<CachedRegion>,
+ ) -> DocumentAnalysis {
+-    let summaries: Vec<_> = analyses.iter().map(RegionAnalysis::summary).collect();
+-    let facts: Vec<_> = analyses.iter().map(RegionAnalysis::facts).collect();
+-    let summary = AuthoringSummary::join_regions(
+-        &summaries
+-            .iter()
+-            .map(|(part, range)| (*part, range))
+-            .collect::<Vec<_>>(),
+-        previous.map(|old| &old.summary),
+-    );
++    let mut summaries = Vec::with_capacity(analyses.len());
++    let mut facts = Vec::with_capacity(analyses.len());
++    let mut parse_diagnostics = Vec::new();
++    let mut local_diagnostics = Vec::new();
++    for analysis in analyses {
++        match analysis {
++            RegionAnalysis::Reused(old, region) => {
++                summaries.push((Cow::Borrowed(old.summary.as_ref()), region.summary.clone()));
++                facts.push((
++                    Cow::Borrowed(old.project_facts.as_ref()),
++                    region.facts.clone(),
++                ));
++                parse_diagnostics.extend_from_slice(&old.parse_diagnostics[region.parse.clone()]);
++                local_diagnostics.extend_from_slice(&old.local_diagnostics[region.local.clone()]);
++            }
++            RegionAnalysis::Fresh(fresh) => {
++                let FreshAnalysis {
++                    summary,
++                    facts: fresh_facts,
++                    parse,
++                    local,
++                } = *fresh;
++                let summary_ranges = summary.region_ranges();
++                let fact_ranges = fresh_facts.region_ranges();
++                summaries.push((Cow::Owned(summary), summary_ranges));
++                facts.push((Cow::Owned(fresh_facts), fact_ranges));
++                parse_diagnostics.extend(parse);
++                local_diagnostics.extend(local);
++            }
++        }
++    }
++    let summary = AuthoringSummary::join_regions(summaries, previous.map(|old| &old.summary));
+     let project_facts = ProjectFacts::join_regions(
+         document.key.as_str(),
+         participation,
+-        &facts
+-            .iter()
+-            .map(|(part, range)| (*part, range))
+-            .collect::<Vec<_>>(),
++        facts,
+         previous.map(|old| &old.project_facts),
+     );
+     let mut summary_offset = [0; 6];
+@@ -73,14 +94,8 @@ pub(super) fn assemble(
+         participation,
+         source: Arc::new(recite_core::SourceLineIndex::new(Arc::clone(document.text))),
+         source_fingerprint: crate::authoring::SourceFingerprint::for_source(document.text),
+-        parse_diagnostics: analyses
+-            .iter()
+-            .flat_map(|part| part.parse().iter().cloned())
+-            .collect(),
+-        local_diagnostics: analyses
+-            .iter()
+-            .flat_map(|part| part.local().iter().cloned())
+-            .collect(),
++        parse_diagnostics: parse_diagnostics.into(),
++        local_diagnostics: local_diagnostics.into(),
+         byte_len: document.text.len(),
+         line_count: document.text.lines().count(),
+     }
+diff --git i/crates/recite-compiler/src/authoring/summary/regions.rs w/crates/recite-compiler/src/authoring/summary/regions.rs
+index 8f0d92cb..0d58d0af 100644
+--- i/crates/recite-compiler/src/authoring/summary/regions.rs
++++ w/crates/recite-compiler/src/authoring/summary/regions.rs
+@@ -1,6 +1,6 @@
+ //! Compact offsets into a document summary; cached regions do not duplicate it.
+ use super::AuthoringSummary;
+-use std::{ops::Range, sync::Arc};
++use std::{borrow::Cow, ops::Range, sync::Arc};
+
+ pub(crate) type SummaryRanges = [Range<usize>; 6];
+
+@@ -17,7 +17,7 @@ impl AuthoringSummary {
+     }
+
+     pub(crate) fn join_regions(
+-        parts: &[(&Self, &SummaryRanges)],
++        parts: Vec<(Cow<'_, Self>, SummaryRanges)>,
+         previous: Option<&Arc<Self>>,
+     ) -> Arc<Self> {
+         if let Some(previous) = previous
+@@ -60,34 +60,53 @@ impl AuthoringSummary {
+         {
+             return Arc::clone(previous);
+         }
+-        Arc::new(Self {
+-            blocks: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.blocks[ranges[0].clone()].iter().cloned())
+-                .collect(),
+-            block_references: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.block_references[ranges[1].clone()].iter().cloned())
+-                .collect(),
+-            stable_ids: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.stable_ids[ranges[2].clone()].iter().cloned())
+-                .collect(),
+-            metadata: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.metadata[ranges[3].clone()].iter().cloned())
+-                .collect(),
+-            condition_functions: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| {
+-                    part.condition_functions[ranges[4].clone()].iter().cloned()
+-                })
+-                .collect(),
+-            effect_functions: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.effect_functions[ranges[5].clone()].iter().cloned())
+-                .collect(),
+-        })
++        let mut result = Self {
++            blocks: Vec::with_capacity(parts.iter().map(|(_, ranges)| ranges[0].len()).sum()),
++            block_references: Vec::with_capacity(
++                parts.iter().map(|(_, ranges)| ranges[1].len()).sum(),
++            ),
++            stable_ids: Vec::with_capacity(parts.iter().map(|(_, ranges)| ranges[2].len()).sum()),
++            metadata: Vec::with_capacity(parts.iter().map(|(_, ranges)| ranges[3].len()).sum()),
++            condition_functions: Vec::with_capacity(
++                parts.iter().map(|(_, ranges)| ranges[4].len()).sum(),
++            ),
++            effect_functions: Vec::with_capacity(
++                parts.iter().map(|(_, ranges)| ranges[5].len()).sum(),
++            ),
++        };
++        for (part, ranges) in parts {
++            match part {
++                Cow::Borrowed(part) => {
++                    result
++                        .blocks
++                        .extend_from_slice(&part.blocks[ranges[0].clone()]);
++                    result
++                        .block_references
++                        .extend_from_slice(&part.block_references[ranges[1].clone()]);
++                    result
++                        .stable_ids
++                        .extend_from_slice(&part.stable_ids[ranges[2].clone()]);
++                    result
++                        .metadata
++                        .extend_from_slice(&part.metadata[ranges[3].clone()]);
++                    result
++                        .condition_functions
++                        .extend_from_slice(&part.condition_functions[ranges[4].clone()]);
++                    result
++                        .effect_functions
++                        .extend_from_slice(&part.effect_functions[ranges[5].clone()]);
++                }
++                Cow::Owned(part) => {
++                    result.blocks.extend(part.blocks);
++                    result.block_references.extend(part.block_references);
++                    result.stable_ids.extend(part.stable_ids);
++                    result.metadata.extend(part.metadata);
++                    result.condition_functions.extend(part.condition_functions);
++                    result.effect_functions.extend(part.effect_functions);
++                }
++            }
++        }
++        Arc::new(result)
+     }
+ }
+
+diff --git i/crates/recite-compiler/src/validation/incremental/facts/regions.rs w/crates/recite-compiler/src/validation/incremental/facts/regions.rs
+index f3e44a0b..cab7e7ab 100644
+--- i/crates/recite-compiler/src/validation/incremental/facts/regions.rs
++++ w/crates/recite-compiler/src/validation/incremental/facts/regions.rs
+@@ -1,7 +1,7 @@
+ //! Composition of region facts without retaining duplicate per-region arrays.
+ use super::ProjectFacts;
+ use crate::validation::ValidationParticipation;
+-use std::{ops::Range, sync::Arc};
++use std::{borrow::Cow, ops::Range, sync::Arc};
+
+ pub(crate) type FactRanges = [Range<usize>; 3];
+ impl ProjectFacts {
+@@ -15,7 +15,7 @@ impl ProjectFacts {
+     pub(crate) fn join_regions(
+         path: &str,
+         participation: ValidationParticipation,
+-        parts: &[(&Self, &FactRanges)],
++        parts: Vec<(Cow<'_, Self>, FactRanges)>,
+         previous: Option<&Arc<Self>>,
+     ) -> Arc<Self> {
+         if let Some(previous) = previous
+@@ -41,21 +41,31 @@ impl ProjectFacts {
+         {
+             return Arc::clone(previous);
+         }
++        let mut blocks = Vec::with_capacity(parts.iter().map(|(_, ranges)| ranges[0].len()).sum());
++        let mut passages =
++            Vec::with_capacity(parts.iter().map(|(_, ranges)| ranges[1].len()).sum());
++        let mut references =
++            Vec::with_capacity(parts.iter().map(|(_, ranges)| ranges[2].len()).sum());
++        for (part, ranges) in parts {
++            match part {
++                Cow::Borrowed(part) => {
++                    blocks.extend_from_slice(&part.blocks[ranges[0].clone()]);
++                    passages.extend_from_slice(&part.passages[ranges[1].clone()]);
++                    references.extend_from_slice(&part.references[ranges[2].clone()]);
++                }
++                Cow::Owned(part) => {
++                    blocks.extend(part.blocks.into_vec());
++                    passages.extend(part.passages.into_vec());
++                    references.extend(part.references.into_vec());
++                }
++            }
++        }
+         Arc::new(Self {
+             path: path.into(),
+             participation,
+-            blocks: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.blocks[ranges[0].clone()].iter().cloned())
+-                .collect(),
+-            passages: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.passages[ranges[1].clone()].iter().cloned())
+-                .collect(),
+-            references: parts
+-                .iter()
+-                .flat_map(|(part, ranges)| part.references[ranges[2].clone()].iter().cloned())
+-                .collect(),
++            blocks: blocks.into(),
++            passages: passages.into(),
++            references: references.into(),
+         })
+     }
+ }
