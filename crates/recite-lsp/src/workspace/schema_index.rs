@@ -55,6 +55,10 @@ impl SchemaIndex {
     }
 
     pub(super) fn load(path: Option<PathBuf>) -> Self {
+        Self::load_reusing(path, None)
+    }
+
+    fn load_reusing(path: Option<PathBuf>, previous: Option<&Self>) -> Self {
         let Some(path) = path else {
             return Self {
                 uri: None,
@@ -95,6 +99,21 @@ impl SchemaIndex {
             }
         };
 
+        // Always resolve and read again: disk edits and retargeted aliases must
+        // remain visible even without a watcher notification. Reuse only the
+        // parse of identical bytes at the same source identity.
+        if let Some(previous) = previous.filter(|previous| {
+            previous.active_version.is_none()
+                && previous.path.as_ref() == Some(&path)
+                && previous.configured_path.as_ref() == Some(&declared_path)
+                && previous.kind == kind
+                && previous.text.as_deref() == Some(text.as_str())
+        }) {
+            let mut index = previous.clone();
+            index.uri = uri;
+            index.configured_uri = configured_uri;
+            return index;
+        }
         let mut index = Self::from_text(path.clone(), kind, &text);
         index.uri = uri;
         index.configured_uri = configured_uri;
@@ -202,7 +221,7 @@ impl SchemaIndex {
     }
 
     pub(crate) fn base(&self) -> Self {
-        Self::load(self.configured_path.clone())
+        Self::load_reusing(self.configured_path.clone(), Some(self))
     }
 
     pub(crate) fn summary(&self) -> Option<&SchemaSummary> {
@@ -234,3 +253,6 @@ impl SchemaIndex {
         })
     }
 }
+
+#[cfg(test)]
+mod tests;

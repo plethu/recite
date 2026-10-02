@@ -95,7 +95,7 @@ writer heap budgets passed (`identity-heap.json`). The complete repository gate
 already passed for the preceding cancellation/region checkpoint; this equality
 change was checked through the affected Rust workspace and writer heap lanes.
 
-## Next bounded opportunities
+## Candidates selected for follow-up
 
 After B, comment samples attribute about 18% of inclusive cycles to region
 assembly, 14% to stable path identity and 10% to schema loading. These are
@@ -110,3 +110,36 @@ investigation priorities, not promised additive savings.
 - For newline cost, profile compact span relocation and summary assembly.
   Experiment A demonstrates that merely moving arrays can worsen other edits;
   require wins across prose, stable IDs and structural edits as well.
+
+## C: Reuse unchanged schema parses — retained
+
+Control: `7f64d268`. The saved schema still resolves its configured path and
+reads disk on every refresh. Only parsing is reused, after exact bytes, resolved
+path, configured path and format match; live overlays are not saved-state cache
+entries. This also reuses parse diagnostics for unchanged invalid files while
+preserving fresh I/O errors and diagnostic paths after alias retargeting.
+
+Three alternating pairs on battery, 21 samples per workload per process:
+
+| Workload | Standard control / candidate | Schema-heavy control / candidate |
+| --- | ---: | ---: |
+| Comment | 3.21 / 2.82 ms | 179.13 / 4.57 ms |
+| Prose | 3.38 / 2.96 ms | 179.21 / 4.67 ms |
+| Newline | 8.39 / 8.49 ms | 185.12 / 10.13 ms |
+| Stable-ID label | 5.76 / 5.53 ms | 181.88 / 6.95 ms |
+| New block | 18.48 / 16.12 ms | 194.77 / 17.80 ms |
+| Recovery | 26.87 / 26.31 ms | 201.88 / 27.99 ms |
+
+Values are medians, not latency budgets. The schema-heavy fixture copies the
+large project and replaces its schema with `schema-heavy-fixture.json`, adding
+1,000 unused speaker declarations. Its large benefit exposes schema-size
+sensitivity that the ordinary fixture misses; it is not a claim about every
+project. Raw observations and exact diagnostic hashes are in
+`schema-edit-paired.json` and `schema-heavy-paired.json`; all hashes matched.
+
+Validation: the LSP library and integration suite, all-target/all-feature LSP
+Clippy, formatting and test organization passed. New differential tests cover
+replacement, unchanged invalid input, deletion, recovery, overlay closure and
+identical invalid bytes behind a retargeted symlink. `schema_index.rs` remains
+cohesive at 258 lines: it owns schema construction and overlay/base selection;
+the existing sidecars own diagnostics and lifecycle publication.
