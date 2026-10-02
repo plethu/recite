@@ -1,6 +1,26 @@
 use super::*;
 
 #[test]
+fn assembling_shifted_regions_preserves_previously_published_snapshots() {
+    let source = ":: a default\r\n> a@11111111111111111111\r\n  Café 🦀\r\n:: b\r\n> b@22222222222222222222\r\n  Middle\r\n:: c\r\n-> missing\r\n";
+    let mut kernel = AuthoringKernel::new();
+    compare(&mut kernel, &[("a.recite", source)], None, true);
+    let published = kernel.snapshot().clone();
+    let original = published.documents().to_vec();
+    for padding in ["\r\n  More", "\r\n  More\r\n  Again", ""] {
+        let edited = source.replace("Café 🦀", &format!("Café 🦀{padding}"));
+        compare(&mut kernel, &[("a.recite", &edited)], None, true);
+        let mut cold = AuthoringKernel::new();
+        compare(&mut cold, &[("a.recite", &edited)], None, true);
+        let warm = &kernel.snapshot().documents()[0];
+        let fresh = &cold.snapshot().documents()[0];
+        assert_eq!(warm.summary(), fresh.summary());
+        assert_eq!(warm.diagnostics(), fresh.diagnostics());
+        assert_eq!(published.documents(), original);
+    }
+}
+
+#[test]
 fn region_edits_and_global_recovery_match_batch_validation() {
     let a =
         "# preamble\n:: a default\n> a@11111111111111111111\n  Café 🦀\n-> other.recite::target\n";

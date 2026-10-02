@@ -33,7 +33,14 @@ pub(super) fn assemble(
     participation: ValidationParticipation,
     analyses: &[RegionAnalysis<'_>],
     mut regions: Vec<CachedRegion>,
-) -> DocumentAnalysis {
+    control: &dyn WorkControl,
+) -> Result<Option<DocumentAnalysis>, Interrupted> {
+    let relocated = analyses.iter().zip(&regions).any(|(part, region)| {
+        matches!(part, RegionAnalysis::Reused(_, cached) if cached.first_line != region.first_line)
+    });
+    // Shifted output needs a fresh allocation even if the unshifted slices
+    // compare equal. Never mutate an earlier immutable snapshot.
+    let previous = previous.filter(|_| !relocated);
     let summaries: Vec<_> = analyses.iter().map(RegionAnalysis::summary).collect();
     let facts: Vec<_> = analyses.iter().map(RegionAnalysis::facts).collect();
     let summary = AuthoringSummary::join_regions(
@@ -66,7 +73,7 @@ pub(super) fn assemble(
         advance(&mut region.parse, &mut parse_offset);
         advance(&mut region.local, &mut local_offset);
     }
-    DocumentAnalysis {
+    let mut analysis = DocumentAnalysis {
         regions: regions.into(),
         summary,
         project_facts,
@@ -83,7 +90,11 @@ pub(super) fn assemble(
             .collect(),
         byte_len: document.text.len(),
         line_count: document.text.lines().count(),
+    };
+    if relocated && !relocation::apply(&mut analysis, analyses, document.key.as_str(), control)? {
+        return Ok(None);
     }
+    Ok(Some(analysis))
 }
 
 fn advance(range: &mut Range<usize>, offset: &mut usize) {

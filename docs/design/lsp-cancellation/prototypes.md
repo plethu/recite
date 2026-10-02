@@ -174,3 +174,54 @@ slow by roughly 4–7%. The added allocation/grouping layer does not earn its
 complexity. This rejects this implementation, not all filesystem optimization:
 schema matching, manifest path checks and snapshot construction still resolve
 paths outside this grouped-input layer.
+
+## E: Relocate spans in final assembled output — retained
+
+Control: `4c2421c2` (the intervening D checkpoint contains evidence only).
+Previously, every shifted cached region cloned its summary, facts and local
+diagnostics into temporary arrays; assembly then cloned those arrays again.
+The retained implementation assembles once and shifts each region's ranges in
+that final output. It keeps immutable snapshot ownership and the existing exact
+reuse comparisons for edits that do not move regions. Checked coordinate failure
+discards the candidate and falls back to fresh analysis. Relocation checks
+cancellation between regions.
+
+Three alternating pairs per study, on battery; medians in milliseconds:
+
+| Workload | Large control / candidate | Large repeat | 2 MB source control / candidate |
+| --- | ---: | ---: | ---: |
+| Comment | 2.85 / 3.09 | 3.29 / 3.12 | 8.89 / 8.33 |
+| Prose | 2.86 / 2.81 | 3.05 / 3.23 | 8.88 / 8.72 |
+| Newline | 8.25 / 5.80 | 8.20 / 6.31 | 28.04 / 18.83 |
+| Stable-ID label | 5.59 / 5.17 | 5.45 / 5.58 | 16.69 / 17.06 |
+| New block | 17.16 / 17.39 | 16.55 / 16.38 | 57.55 / 58.52 |
+| Recovery | 26.66 / 26.66 | 26.95 / 26.73 | 101.24 / 101.85 |
+
+Raw data: `relocation-edit-paired.json`, `relocation-repeat-paired.json` and
+`relocation-narrow-paired.json`. The narrow fixture retains 5,000 blocks in five
+files; its edited source is 2,072,808 bytes. All paired diagnostic hashes match.
+The newline reduction repeats at roughly 23–33%; other workloads have smaller,
+mixed changes and do not support a broad speedup claim.
+
+`experiments-profiles.json` records the final CPU samples: 500 comments, 300
+newline edits, 200 malformed-indentation edits and 80 recovery transitions.
+There were no lost samples in the three symbol reports. Incomplete call chains
+and unsymbolized libc frames limit attribution. Path resolution remains visible
+in comment work; newline work includes line scanning, cloning and allocation.
+Schema loading no longer appears above the 1% report threshold.
+
+The final interactive probe (`experiments-interactive.json`) matches all eight
+request/action result hashes from checkpoint B. All 21 cancellations returned
+`-32800` without an edit: median 0.51 ms, maximum 0.93 ms. Every burst ended at
+version 19; one also published version 17. This harness sends full documents
+sequentially and allows an early edit to finish before later edits arrive; the
+controlled stdio tests check stale-result fencing explicitly.
+
+The compiler suite and new tests for preserved published snapshots and invalid
+cached-coordinate fallback passed. The full `mise exec -- just check` gate
+passed for the combined retained changes: 1,563 workspace tests (three existing
+skips), writer tests and both unchanged heap budgets, Clippy, editor/engine
+integration, documentation and benchmark smoke. `experiments-heap.json` retains
+the writer allocation measurements. The working-tree structural scan added no
+lint permissions. All touched relocation/composition modules remain below the
+production size scrutiny threshold.

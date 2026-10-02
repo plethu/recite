@@ -97,17 +97,7 @@ pub(super) fn analyze(
         let region_participation = region.syntax.participation();
         let reused = match (previous, &region.syntax) {
             (Some(old), RegionSyntax::Cached(cached)) if old.participation == participation => {
-                if cached.first_line == region.source.first_line() {
-                    Some(RegionAnalysis::Reused(old, cached))
-                } else {
-                    relocation::reuse(
-                        old,
-                        cached,
-                        region.source.first_line(),
-                        document.key.as_str(),
-                    )
-                    .map(|fresh| RegionAnalysis::Fresh(Box::new(fresh)))
-                }
+                Some(RegionAnalysis::Reused(old, cached))
             }
             _ => None,
         };
@@ -138,13 +128,19 @@ pub(super) fn analyze(
         analyses.push(analysis);
     }
     control.checkpoint()?;
-    Ok(assembly::assemble(
+    match assembly::assemble(
         document,
         previous,
         participation,
         &analyses,
         regions,
-    ))
+        control,
+    )? {
+        Some(analysis) => Ok(analysis),
+        // An invalid relocated coordinate must never enter a candidate. A
+        // cold pass has no relocations and preserves ordinary parser recovery.
+        None => analyze(document, None, schema, control),
+    }
 }
 
 #[cfg(test)]

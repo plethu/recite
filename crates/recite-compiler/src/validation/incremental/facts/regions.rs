@@ -61,31 +61,23 @@ impl ProjectFacts {
 }
 
 impl ProjectFacts {
-    pub(crate) fn relocated_region(
-        &self,
+    pub(crate) fn relocate_region(
+        &mut self,
         ranges: &FactRanges,
         mut shift: impl FnMut(&mut recite_core::SourceSpan),
-    ) -> Self {
-        let mut result = Self {
-            path: self.path.clone(),
-            participation: self.participation,
-            blocks: self.blocks[ranges[0].clone()].into(),
-            passages: self.passages[ranges[1].clone()].into(),
-            references: self.references[ranges[2].clone()].into(),
-        };
-        for item in &mut result.blocks {
+    ) {
+        for item in &mut self.blocks[ranges[0].clone()] {
             shift(&mut item.span);
         }
-        for item in &mut result.passages {
+        for item in &mut self.passages[ranges[1].clone()] {
             shift(&mut item.span);
         }
-        for item in &mut result.references {
+        for item in &mut self.references[ranges[2].clone()] {
             shift(&mut item.span);
             if let recite_core::ast::DivertTarget::Block(target) = &mut item.target {
                 target.file_span.iter_mut().for_each(&mut shift);
                 target.block_id_span.iter_mut().for_each(&mut shift);
             }
         }
-        result
     }
 }

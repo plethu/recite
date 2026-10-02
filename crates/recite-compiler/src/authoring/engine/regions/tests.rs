@@ -17,6 +17,40 @@ fn request(kernel: &AuthoringKernel, source: &str) -> AuthoringRequest {
 }
 
 #[test]
+fn invalid_cached_coordinates_fall_back_to_cold_analysis() {
+    use super::EffectiveDocument;
+    use crate::authoring::{CancellationToken, DocumentLayer};
+    use std::sync::Arc;
+
+    let key = DocumentKey::new("a.recite").unwrap();
+    let text: Arc<str> = Arc::from(":: a default\n-> END\n:: b\n-> missing\n");
+    let control = CancellationToken::new();
+    let document = EffectiveDocument {
+        key: &key,
+        text: &text,
+        layer: DocumentLayer::Saved,
+        version: None,
+    };
+    let mut old = super::analyze(&document, None, None, &control).unwrap();
+    let ranges = old.summary.region_ranges();
+    Arc::make_mut(&mut old.summary).relocate_region(&ranges, |span| {
+        span.start = recite_core::SourcePosition::new(u32::MAX, 1).unwrap();
+        span.end = None;
+    });
+    let edited: Arc<str> = Arc::from(format!("\n{text}"));
+    let next = EffectiveDocument {
+        text: &edited,
+        ..document
+    };
+    let warm = super::analyze(&next, Some(&old), None, &control).unwrap();
+    let cold = super::analyze(&next, None, None, &control).unwrap();
+    assert_eq!(warm.summary, cold.summary);
+    assert_eq!(warm.project_facts, cold.project_facts);
+    assert_eq!(warm.parse_diagnostics, cold.parse_diagnostics);
+    assert_eq!(warm.local_diagnostics, cold.local_diagnostics);
+}
+
+#[test]
 fn typing_and_line_insertion_parse_only_the_changed_region() {
     let source = ":: a default\n> a@11111111111111111111\n  Hello.\n:: b\n> b@22222222222222222222\n  Later.\n:: c\n-> END\n";
     let mut kernel = AuthoringKernel::new();

@@ -446,7 +446,10 @@ Recovery participation is combined across the entire file before local
 validation. A change in that participation reruns local analysis even in
 unchanged regions. Otherwise, line insertions/deletions relocate compact outputs
 and all local diagnostic locations, including structured related presentations.
-Checked position conversion falls back to parsing if relocation is unavailable.
+Relocation runs on the final assembled arrays, avoiding temporary copies of each
+shifted region. These arrays are separate from earlier immutable snapshots.
+Checked position conversion falls back to a fresh file analysis if relocation
+is unavailable.
 Cancellation is checked between region operations, and candidates remain
 unpublished until the existing transaction commits.
 
@@ -481,6 +484,12 @@ syntax facade. Project-index membership and its guarded diagnostic relocation
 have separate modules. The existing authoring validation tests now put region
 revision cases in a dedicated test module. Diagnostic publication remains one
 cohesive wire-projection boundary, with line conversion owned by `position`.
+
+Saved schema refreshes still resolve aliases and read disk on each rebuild.
+Matching bytes, source identity and format permit reuse of the parsed schema;
+overlay closure restores disk authority. The subsequent bounded schema, path
+and relocation experiments are recorded in
+[the experiment report](design/lsp-cancellation/prototypes.md).
 
 The final same-condition large-project comparison measured **13.47 → 3.95 ms**
 median edit-to-diagnostics in the mixed workflow. The alternating edit study

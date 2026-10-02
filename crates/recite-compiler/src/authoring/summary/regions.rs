@@ -92,46 +92,36 @@ impl AuthoringSummary {
 }
 
 impl AuthoringSummary {
-    pub(crate) fn relocated_region(
-        &self,
+    pub(crate) fn relocate_region(
+        &mut self,
         ranges: &SummaryRanges,
         mut shift: impl FnMut(&mut recite_core::SourceSpan),
-    ) -> Self {
-        let mut result = Self {
-            blocks: self.blocks[ranges[0].clone()].to_vec(),
-            block_references: self.block_references[ranges[1].clone()].to_vec(),
-            stable_ids: self.stable_ids[ranges[2].clone()].to_vec(),
-            metadata: self.metadata[ranges[3].clone()].to_vec(),
-            condition_functions: self.condition_functions[ranges[4].clone()].to_vec(),
-            effect_functions: self.effect_functions[ranges[5].clone()].to_vec(),
-        };
-        for item in &mut result.blocks {
+    ) {
+        for item in &mut self.blocks[ranges[0].clone()] {
             shift(&mut item.span);
             item.id_span.iter_mut().for_each(&mut shift);
         }
-        for item in &mut result.block_references {
+        for item in &mut self.block_references[ranges[1].clone()] {
             shift(&mut item.span);
             item.file_span.iter_mut().for_each(&mut shift);
             item.block_id_span.iter_mut().for_each(&mut shift);
         }
-        for item in &mut result.stable_ids {
+        for item in &mut self.stable_ids[ranges[2].clone()] {
             shift(&mut item.span);
             item.source_id_span.iter_mut().for_each(&mut shift);
             item.insertion_span.iter_mut().for_each(&mut shift);
         }
-        for item in &mut result.metadata {
+        for item in &mut self.metadata[ranges[3].clone()] {
             item.source_span.iter_mut().for_each(&mut shift);
             item.key_span.iter_mut().for_each(&mut shift);
             item.value_span.iter_mut().for_each(&mut shift);
             item.value_element_spans.iter_mut().for_each(&mut shift);
         }
-        for item in result
-            .condition_functions
+        for item in self.condition_functions[ranges[4].clone()]
             .iter_mut()
-            .chain(&mut result.effect_functions)
+            .chain(&mut self.effect_functions[ranges[5].clone()])
         {
             shift(&mut item.span);
         }
-        result
     }
 }
