@@ -166,10 +166,10 @@ def main() -> int:
             raise SystemExit(f"{capability_id} must retain its positive Zed host assertion")
 
     cancellation = capabilities["lsp.cancellation"]
-    if cancellation.get("implementation_status") != "unsupported":
-        raise SystemExit("lsp.cancellation implementation status must remain unsupported until #206")
-    if cancellation.get("expected_evidence", {}).get("status") != "unsupported":
-        raise SystemExit("lsp.cancellation evidence status must remain unsupported until #206")
+    if cancellation.get("implementation_status") != "partial":
+        raise SystemExit("lsp.cancellation implementation status must retain shared-server partial evidence")
+    if cancellation.get("expected_evidence", {}).get("status") != "partial":
+        raise SystemExit("lsp.cancellation evidence status must retain shared-server partial evidence")
     if cancellation.get("follow_up") != "#206":
         raise SystemExit("lsp.cancellation must retain current follow-up #206")
     if set(cancellation.get("client_status", {}).values()) - {"planned", "unsupported"}:

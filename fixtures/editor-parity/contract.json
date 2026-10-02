@@ -234,18 +234,60 @@
     {
       "id": "lsp.cancellation",
       "scenario": "stale-overlay",
-      "authority": ["recite-lsp"],
+      "authority": [
+        "recite-lsp"
+      ],
       "protocol": "lsp",
-      "expected": {"kind": "documented-limitation", "assertions": ["$/cancelRequest is not implemented", "clients must not infer cancellation from timeout"]},
-      "edge_cases": ["request arrives while synchronous refresh is running", "client sends cancellation notification"],
-      "known_limitation": "The server has no $/cancelRequest or asynchronous cancellation contract; cooperative LSP request cancellation remains a serious-v1 scheduler/performance capability owned by #206, not M4 command/watch work.",
-      "implementation_status": "unsupported",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "unsupported", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
-      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "unsupported", "command": null, "assertions": ["limitation, historical evidence issue, and current follow-up are written down"], "artifact": null},
-      "evidence_issues": ["#53"],
+      "expected": {
+        "kind": "json-rpc-response",
+        "assertions": [
+          "observed cancellation returns RequestCancelled (-32800) exactly once",
+          "superseded results are never published as current success",
+          "clients must not infer cancellation from timeout"
+        ]
+      },
+      "edge_cases": [
+        "request arrives while synchronous refresh is running",
+        "client sends cancellation notification"
+      ],
+      "known_limitation": "Shared server cancellation is exercised over stdio and deterministic coordinator checkpoints. Installed editor cancellation and non-Linux evidence remain unclaimed. Issue #206 owns this serious-v1 scheduler/performance work, not M4 command/watch work.",
+      "implementation_status": "partial",
+      "client_status": {
+        "vscode": "planned",
+        "vscodium": "planned",
+        "neovim": "planned",
+        "zed": "planned"
+      },
+      "platform_status": {
+        "linux": "partial",
+        "macos": "planned",
+        "windows": "planned"
+      },
+      "artifact_status": {
+        "vscode-vsix": "partial",
+        "tree-sitter-grammar": "partial",
+        "neovim-runtimepath": "implemented",
+        "zed-extension": "partial"
+      },
+      "distribution_status": {
+        "vs-marketplace": "planned",
+        "open-vsx": "planned",
+        "neovim-distribution": "planned",
+        "zed-distribution": "planned"
+      },
+      "expected_evidence": {
+        "status": "partial",
+        "command": "cargo test --locked -p recite-lsp --test stdio_cancellation cancellation_settles_once_and_preserves_following_requests",
+        "assertions": [
+          "RequestCancelled response without partial edits",
+          "subsequent requests succeed",
+          "unknown and late cancellation has no response"
+        ],
+        "artifact": null
+      },
+      "evidence_issues": [
+        "#53"
+      ],
       "follow_up": "#206"
     },
     {

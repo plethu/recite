@@ -68,13 +68,18 @@ contract. Clients must not apply an edit against a document version they no
 longer have. A result that is stale, unavailable, or cancelled is not silently
 presented as current success.
 
-The current server handles stale versions synchronously and does not yet
-implement `$/cancelRequest` or an asynchronous request scheduler. Cancellation
-is therefore an explicit unsupported/planned capability in this contract;
-clients must not claim cancellation support or infer it from a request timeout.
-The historical #53 command/watch evidence covers that lifecycle. Issue #206
-owns future LSP request cancellation as a serious-v1 scheduler/performance
-capability, not M4 command/watch work.
+The shared server handles `$/cancelRequest` while analysis and queries run on
+separate workers. An observed cancellation returns `RequestCancelled` (-32800)
+exactly once, with no partial edit result. Superseded requests return
+`RequestFailed` (-32803) with `data.reason = "stale_snapshot"`; saturated query
+capacity uses `"server_busy"`. Results are checked again at transport handoff.
+Clients must not infer cancellation from a request timeout.
+
+Shared stdio and deterministic coordinator tests cover this contract. Installed
+editor cancellation and non-Linux proof remain unclaimed. Issue #206 owns this
+serious-v1 scheduler/performance capability, not M4 command/watch work; #53
+retains the historical command/watch evidence. See the
+[cancellation design and measurements](lsp-cancellation-design.md).
 
 ## Evidence input boundary
 
@@ -159,7 +164,7 @@ distribution require an implemented primary artifact.
 
 The accepted issue references `#51`, `#53`, `#98`, `#192`, and `#202` are
 historical evidence trackers, not outstanding owners. The current fixture's
-only `follow_up` is `#206`, which tracks future cooperative LSP cancellation;
+only `follow_up` is `#206`, which tracks delivery of cooperative LSP cancellation;
 an issue cannot appear in both fields. Every capability with an installed Zed
 host record carries historical `#192`, alongside any shared or workflow
 evidence tracker such as `#51`, `#53`, or `#202`. Historical #192 owns the
@@ -172,7 +177,7 @@ LSP, task/lifecycle, keyboard, and clean-shutdown acceptance.
 - `lsp.utf16.positions`: preserve ranges across CRLF and non-BMP source text; the installed-host record includes the Zed client-generated post-emoji UTF-16 request, while response-range conversion remains unclaimed.
 - `lsp.overlay.recovery`: accept an incomplete overlay, then refresh it when a newer complete overlay arrives; installed VS Code/VSCodium recovery is recorded.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
-- `lsp.cancellation`: document the current unsupported cancellation surface, its historical evidence issue, and its outstanding `#206` follow-up rather than claiming a timeout is cancellation.
+- `lsp.cancellation`: exercise the shared stdio cancellation response and subsequent successful requests; retain deterministic scheduler tests and the outstanding `#206` delivery owner. Installed-client cancellation remains unclaimed.
 - `command.structured.results`: project typed/versioned finite CLI command records through the shared VS Code/VSCodium and Neovim adapters; no human stderr/output parsing is permitted.
 - `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath, VS Code/VSCodium package, and Zed language package projections; installed Linux activation is recorded for each client.
 - `editor.vscode.syntax-projection`: project the checked-in syntax-only TextMate grammar and deterministic VSIX for VS Code/VSCodium; installed activation is covered but rendered syntax and non-Linux platforms remain untested.
@@ -326,8 +331,10 @@ platform claim.
   cancellation controller, or ship built-in run/trace tasks because their
   asset, block, and fixture inputs are explicit. Those are documented client
   limits, not missing M4 evidence.
-- LSP request cancellation remains unsupported and belongs to #206 as a
-  serious-v1 scheduler/performance capability, not M4 command/watch work.
+- LSP request cancellation now has shared-server stdio and deterministic
+  coordinator evidence. Installed-client cancellation remains unclaimed.
+  Delivery belongs to #206 as a serious-v1 scheduler/performance capability,
+  not M4 command/watch work.
 - #192 package, activation, grammar, installed LSP, keyboard, and task
   acceptance is covered on Zed 1.18.1 Linux x86_64. The host sent the
   client-generated post-emoji UTF-16 request, applied the canonical missing-ID

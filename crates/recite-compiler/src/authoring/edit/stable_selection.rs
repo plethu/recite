@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use recite_core::{SourceId, SourceIdKind, is_valid_source_label};
 
-use super::super::{AuthoringSnapshot, StableIdKind, StableIdSummary};
+use super::super::{AuthoringQuery, StableIdKind, StableIdSummary};
 
 #[derive(Clone, Copy)]
 pub(super) enum InsertionKind {
@@ -41,18 +41,19 @@ pub(super) fn insertion_label(stable: &StableIdSummary, ordinal: u32) -> String 
     }
 }
 
-pub(super) fn occupied_anchors(snapshot: &AuthoringSnapshot) -> BTreeSet<String> {
-    snapshot
-        .documents()
-        .iter()
-        .flat_map(|document| document.summary().stable_ids())
-        .filter_map(|stable| {
-            stable
-                .source_id()
-                .anchor()
-                .map(|anchor| anchor.as_str().to_owned())
-        })
-        .collect()
+pub(super) fn occupied_anchors(
+    snapshot: &AuthoringQuery<'_>,
+) -> Result<BTreeSet<String>, crate::authoring::Interrupted> {
+    let mut occupied = BTreeSet::new();
+    for document in snapshot.documents() {
+        snapshot.checkpoint()?;
+        for stable in document.summary().stable_ids() {
+            if let Some(anchor) = stable.source_id().anchor() {
+                occupied.insert(anchor.as_str().to_owned());
+            }
+        }
+    }
+    Ok(occupied)
 }
 
 pub(super) fn generated_anchor(

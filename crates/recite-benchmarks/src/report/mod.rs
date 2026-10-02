@@ -1,6 +1,8 @@
+mod lsp;
+mod timing;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -247,20 +249,31 @@ pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<Bench
     })
 }
 
-#[allow(
-    clippy::disallowed_methods,
-    reason = "benchmark timing is intentionally outside deterministic runtime measurements"
-)]
 pub(crate) fn timed_operation(
     group: BenchGroup,
     operation: &'static str,
     samples: usize,
     mut measure: impl FnMut() -> BenchmarkResult<()>,
 ) -> BenchmarkResult<BenchOperationReport> {
+    timed_operation_with_setup(group, operation, samples, || (), |()| measure())
+}
+
+#[allow(
+    clippy::disallowed_methods,
+    reason = "benchmark timing is intentionally outside deterministic runtime measurements"
+)]
+pub(crate) fn timed_operation_with_setup<T>(
+    group: BenchGroup,
+    operation: &'static str,
+    samples: usize,
+    mut setup: impl FnMut() -> T,
+    mut measure: impl FnMut(T) -> BenchmarkResult<()>,
+) -> BenchmarkResult<BenchOperationReport> {
     let mut timings = Vec::with_capacity(samples);
     for _ in 0..samples {
+        let input = setup();
         let started = Instant::now();
-        measure()?;
+        measure(input)?;
         timings.push(started.elapsed());
     }
     Ok(BenchOperationReport {
@@ -269,42 +282,6 @@ pub(crate) fn timed_operation(
         summary: TimingSummary::from_durations(timings),
         baseline: None,
     })
-}
-
-impl TimingSummary {
-    fn from_durations(durations: Vec<Duration>) -> Self {
-        let mut samples_ns = durations
-            .into_iter()
-            .map(|duration| duration.as_nanos())
-            .collect::<Vec<_>>();
-        samples_ns.sort_unstable();
-        Self::from_sorted_samples(samples_ns)
-    }
-
-    #[must_use]
-    pub fn from_samples(mut samples_ns: Vec<u128>) -> Self {
-        samples_ns.sort_unstable();
-        Self::from_sorted_samples(samples_ns)
-    }
-
-    fn from_sorted_samples(samples_ns: Vec<u128>) -> Self {
-        let len = samples_ns.len();
-        let min_ns = samples_ns.first().copied().unwrap_or(0);
-        let max_ns = samples_ns.last().copied().unwrap_or(0);
-        let median_ns = samples_ns.get(len / 2).copied().unwrap_or(0);
-        let mean_ns = if len == 0 {
-            0
-        } else {
-            samples_ns.iter().sum::<u128>() / len as u128
-        };
-        Self {
-            samples_ns,
-            min_ns,
-            median_ns,
-            mean_ns,
-            max_ns,
-        }
-    }
 }
 
 fn selected_groups(groups: &[BenchGroup]) -> Vec<BenchGroup> {

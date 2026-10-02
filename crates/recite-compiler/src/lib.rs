@@ -55,6 +55,7 @@ pub mod authoring;
 pub mod compile;
 mod diagnostics;
 pub mod pot;
+mod region_outputs;
 pub mod validation;
 mod wire;
 

@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use lsp_types::{CodeActionParams, CodeActionResponse, CompletionResponse, Hover, Position};
-use recite_compiler::authoring::AuthoringSnapshot;
+use recite_compiler::authoring::AuthoringQuery;
 use recite_compiler::authoring::SchemaSummary;
 use recite_core::{
     DocumentKey,
@@ -20,7 +20,7 @@ pub(crate) fn completion(
     text: &str,
     position: Position,
     key: Option<&DocumentKey>,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
@@ -31,7 +31,7 @@ pub(crate) use code_action::{CodeActionDocument, SchemaCodeActionDocument};
 
 pub(crate) fn code_action(
     params: &CodeActionParams,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument>,
     schema_summary: Option<&recite_compiler::authoring::SchemaSummary>,
@@ -46,7 +46,7 @@ pub(crate) fn hover(
     text: &str,
     position: Position,
     key: &DocumentKey,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<Hover> {

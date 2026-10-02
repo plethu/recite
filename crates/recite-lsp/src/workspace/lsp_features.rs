@@ -2,6 +2,7 @@ use lsp_types::{
     CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
     Location, Position, PrepareRenameResponse, Uri, WorkspaceEdit,
 };
+use recite_compiler::authoring::CancellationToken;
 use recite_compiler::authoring::DocumentLayer;
 use recite_core::DocumentKey;
 
@@ -15,16 +16,22 @@ use crate::position::lsp_position_to_source;
 use crate::summary::FileSummary;
 
 impl LspWorkspace {
-    pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
+    pub(crate) fn completion_with_control(
+        &self,
+        uri: &Uri,
+        position: Position,
+        control: &CancellationToken,
+    ) -> Option<CompletionResponse> {
+        control.checkpoint().ok()?;
         let document = self.documents.document(uri)?;
         let key = document_key_for_open(document);
         let partition = self.partition_id_for_open(document)?;
-        let kernel = self.partition(&partition)?.kernel.snapshot();
+        let kernel = self.partition(&partition)?.kernel.snapshot().query(control);
         features::completion(
             document.text(),
             position,
             key.as_ref(),
-            kernel,
+            &kernel,
             self.effective_schema_for_partition(&partition)
                 .as_ref()
                 .and_then(|schema| schema.summary()),
@@ -32,16 +39,22 @@ impl LspWorkspace {
         )
     }
 
-    pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
+    pub(crate) fn hover_with_control(
+        &self,
+        uri: &Uri,
+        position: Position,
+        control: &CancellationToken,
+    ) -> Option<Hover> {
+        control.checkpoint().ok()?;
         let document = self.documents.document(uri)?;
         let key = document_key_for_open(document)?;
         let partition = self.partition_id_for_open(document)?;
-        let kernel = self.partition(&partition)?.kernel.snapshot();
+        let kernel = self.partition(&partition)?.kernel.snapshot().query(control);
         features::hover(
             document.text(),
             position,
             &key,
-            kernel,
+            &kernel,
             self.effective_schema_for_partition(&partition)
                 .as_ref()
                 .and_then(|schema| schema.summary()),
@@ -49,11 +62,13 @@ impl LspWorkspace {
         )
     }
 
-    pub(crate) fn definition(
+    pub(crate) fn definition_with_control(
         &self,
         uri: &Uri,
         position: Position,
+        control: &CancellationToken,
     ) -> Option<GotoDefinitionResponse> {
+        control.checkpoint().ok()?;
         let (partition, key, text) = self.source_document(uri)?;
         let position = lsp_position_to_source(text, position)?;
         let partition_state = self.partition(&partition)?;
@@ -61,17 +76,19 @@ impl LspWorkspace {
         features::definition(
             &key,
             position,
-            partition_state.kernel.snapshot(),
+            &partition_state.kernel.snapshot().query(control),
             &documents,
         )
     }
 
-    pub(crate) fn references(
+    pub(crate) fn references_with_control(
         &self,
         uri: &Uri,
         position: Position,
         include_declaration: bool,
+        control: &CancellationToken,
     ) -> Option<Vec<Location>> {
+        control.checkpoint().ok()?;
         let (partition, key, text) = self.source_document(uri)?;
         let position = lsp_position_to_source(text, position)?;
         let partition_state = self.partition(&partition)?;
@@ -80,31 +97,35 @@ impl LspWorkspace {
             &key,
             position,
             include_declaration,
-            partition_state.kernel.snapshot(),
+            &partition_state.kernel.snapshot().query(control),
             &documents,
         )
     }
 
-    pub(crate) fn prepare_rename(
+    pub(crate) fn prepare_rename_with_control(
         &self,
         uri: &Uri,
         position: Position,
+        control: &CancellationToken,
     ) -> Option<PrepareRenameResponse> {
+        control.checkpoint().ok()?;
         let (partition, key, text) = self.source_document(uri)?;
         let position = lsp_position_to_source(text, position)?;
         features::prepare_rename(
             &key,
             position,
-            self.partition(&partition)?.kernel.snapshot(),
+            &self.partition(&partition)?.kernel.snapshot().query(control),
         )
     }
 
-    pub(crate) fn rename(
+    pub(crate) fn rename_with_control(
         &self,
         uri: &Uri,
         position: Position,
         new_name: &str,
+        control: &CancellationToken,
     ) -> Option<WorkspaceEdit> {
+        control.checkpoint().ok()?;
         let (partition, key, text) = self.source_document(uri)?;
         let position = lsp_position_to_source(text, position)?;
         let partition_state = self.partition(&partition)?;
@@ -113,13 +134,18 @@ impl LspWorkspace {
             &key,
             position,
             new_name,
-            partition_state.kernel.snapshot(),
+            &partition_state.kernel.snapshot().query(control),
             &documents,
         )
     }
 
-    pub(crate) fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
-        let partition = self.partition_id_for_uri(&params.text_document.uri)?;
+    pub(crate) fn code_action_with_control(
+        &self,
+        params: &CodeActionParams,
+        control: &CancellationToken,
+    ) -> Option<CodeActionResponse> {
+        control.checkpoint().ok()?;
+        let partition = self.query_partition_for_uri(&params.text_document.uri)?;
         let partition_state = self.partition(&partition)?;
         let documents = self.code_action_documents(&partition);
         // Schema edits are only safe against an unambiguous, versioned open
@@ -131,7 +157,7 @@ impl LspWorkspace {
             .and_then(|schema| schema.code_action_document());
         features::code_action(
             params,
-            partition_state.kernel.snapshot(),
+            &partition_state.kernel.snapshot().query(control),
             &documents,
             schema_document,
             schema_summary,
@@ -145,7 +171,7 @@ impl LspWorkspace {
     ) -> Vec<super::DiagnosticRefresh> {
         self.documents
             .documents()
-            .filter(|document| !self.is_schema_document_uri(&document.identity().uri))
+            .filter(|document| !self.query_is_schema(&document.identity().uri))
             .filter(|document| match exclude {
                 Some(uri) => document.identity().uri != *uri,
                 None => true,
@@ -182,11 +208,11 @@ impl LspWorkspace {
                 document.text(),
             ));
         }
-        let document = self.saved.document_by_uri(uri)?;
+        let document = self.query_saved_document(uri)?;
         Some((
             self.partition_id_for_saved(document)?,
             document_key_for_saved(document)?,
-            document.text.as_str(),
+            document.text.as_ref(),
         ))
     }
 
@@ -194,15 +220,7 @@ impl LspWorkspace {
         let document = self.partition(partition)?.kernel.snapshot().document(key)?;
         match document.layer() {
             DocumentLayer::Open => self.partition(partition)?.open_owners.get(key),
-            DocumentLayer::Saved => self
-                .saved
-                .documents
-                .values()
-                .find(|document| {
-                    self.partition_id_for_saved(document).as_deref() == Some(partition)
-                        && document_key_for_saved(document).as_ref() == Some(key)
-                })
-                .map(|document| &document.identity.uri),
+            DocumentLayer::Saved => self.query_saved_uri(partition, key),
             _ => None,
         }
     }
@@ -215,8 +233,8 @@ impl LspWorkspace {
             .summaries()
             .iter()
             .filter_map(|summary| {
-                if self.partition_id_for_uri(summary.uri()).as_deref() != Some(partition)
-                    || self.is_schema_document_uri(summary.uri())
+                if self.query_partition_for_uri(summary.uri()).as_deref() != Some(partition)
+                    || self.query_is_schema(summary.uri())
                 {
                     return None;
                 }
@@ -245,9 +263,8 @@ impl LspWorkspace {
             .document(summary.uri())
             .map(OpenDocument::text)
             .or_else(|| {
-                self.saved
-                    .document_by_uri(summary.uri())
-                    .map(|document| document.text.as_str())
+                self.query_saved_document(summary.uri())
+                    .map(|document| document.text.as_ref())
             })
     }
 }

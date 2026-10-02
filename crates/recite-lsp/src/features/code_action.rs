@@ -8,7 +8,7 @@ use lsp_types::{
     DocumentChanges, OneOf, OptionalVersionedTextDocumentIdentifier, Position, Range,
     TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
 };
-use recite_compiler::authoring::AuthoringSnapshot;
+use recite_compiler::authoring::AuthoringQuery;
 use recite_core::schema::{SchemaSource, SchemaSourceEditPlan};
 use recite_ui::{MsgId, UiCatalog};
 
@@ -30,7 +30,7 @@ pub(crate) struct SchemaCodeActionDocument {
 
 pub(crate) fn code_action(
     params: &CodeActionParams,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument>,
     schema_summary: Option<&recite_compiler::authoring::SchemaSummary>,

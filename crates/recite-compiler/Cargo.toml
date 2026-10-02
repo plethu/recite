@@ -16,6 +16,7 @@ bench-support = []
 recite-core.workspace = true
 recite-parser.workspace = true
 rmp-serde.workspace = true
+rpds.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 language-tags.workspace = true

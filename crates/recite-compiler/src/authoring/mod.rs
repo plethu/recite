@@ -1,5 +1,6 @@
 mod build;
 mod catalog_summary;
+mod control;
 mod edit;
 mod engine;
 mod input;
@@ -71,3 +72,7 @@ pub use summary::{
     FunctionReferenceSummary, MetadataScalar, MetadataSummary, MetadataValue, MetadataValueKind,
     StableIdKind, StableIdSummary,
 };
+
+pub use control::{CancellationToken, Interrupted, WorkControl};
+
+pub use query::AuthoringQuery;

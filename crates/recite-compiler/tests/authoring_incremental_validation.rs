@@ -311,3 +311,6 @@ fn context_only_diagnostics_are_never_published() {
         );
     }
 }
+
+#[path = "authoring_incremental_validation/regions.rs"]
+mod regions;

@@ -84,8 +84,6 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn change_file(&mut self, probe: &LspDocumentProbe) -> usize {
-        self.workspace
-            .open_refreshes(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
         match self.workspace.change(
             probe.uri.clone(),
             2,

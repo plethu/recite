@@ -255,7 +255,7 @@ impl SavedProjectIndex {
         self.documents.insert(
             document.path().to_owned(),
             SavedDocument {
-                text: document.text().to_owned(),
+                text: document.text().into(),
                 identity,
                 source_paths,
             },
@@ -286,9 +286,18 @@ impl SavedProjectIndex {
 
 #[derive(Clone, Debug)]
 pub(crate) struct SavedDocument {
-    pub(super) text: String,
+    pub(super) text: std::sync::Arc<str>,
     pub(super) identity: SavedFileIdentity,
     source_paths: BTreeSet<PathBuf>,
+}
+impl SavedDocument {
+    pub(super) fn query_uris(&self) -> impl Iterator<Item = Uri> + '_ {
+        std::iter::once(self.identity.uri.clone()).chain(
+            self.source_paths
+                .iter()
+                .filter_map(|path| crate::paths::file_path_to_uri(path)),
+        )
+    }
 }
 
 fn common_project_root(roots: &[PathBuf]) -> PathBuf {

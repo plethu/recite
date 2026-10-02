@@ -7,6 +7,8 @@ use super::super::{DocumentVersion, QueryClass, SnapshotGeneration};
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum AuthoringEditError {
+    #[error(transparent)]
+    Interrupted(#[from] crate::authoring::Interrupted),
     #[error("document {document} is not present in the authoring snapshot")]
     UnknownDocument { document: DocumentKey },
     #[error("authoring data for {document} is incomplete for {class:?}")]

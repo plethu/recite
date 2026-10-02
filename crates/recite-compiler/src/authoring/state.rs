@@ -1,13 +1,12 @@
+use crate::authoring::CancellationToken;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use super::AuthoringSummary;
-use super::engine::{build_delta, build_documents, rebuild_analyses};
 use super::input::{AuthoringRequest, OpenDocument, SavedDocument};
-use super::input_state::{
-    changed_keys, effective_documents, unique_open, unique_saved, validate_overlay_versions,
-};
 use super::snapshot::{AnalysisDelta, AuthoringSnapshot};
+use super::{AuthoringSummary, Interrupted, WorkControl};
+
+mod preparation;
 use crate::validation::ValidationParticipation;
 use crate::validation::incremental::{ProjectFacts, ProjectIndex};
 use recite_core::{Diagnostic, DocumentKey, schema::ProjectSchema};
@@ -52,6 +51,8 @@ impl std::fmt::Display for SnapshotGeneration {
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum AuthoringError {
+    #[error(transparent)]
+    Interrupted(#[from] Interrupted),
     #[error("expected snapshot generation {expected}, but current generation is {actual}")]
     GenerationMismatch {
         expected: SnapshotGeneration,
@@ -82,8 +83,8 @@ pub struct AuthoringKernel {
     open: BTreeMap<DocumentKey, OpenDocument>,
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
-    project_diagnostics: BTreeMap<DocumentKey, Vec<Diagnostic>>,
-    project_index: ProjectIndex,
+    project_diagnostics: Arc<BTreeMap<DocumentKey, Vec<Diagnostic>>>,
+    project_index: Arc<ProjectIndex>,
     schema: Option<Arc<ProjectSchema>>,
     project_complete: bool,
 }
@@ -103,8 +104,8 @@ impl AuthoringKernel {
             saved: BTreeMap::new(),
             open: BTreeMap::new(),
             analyses: BTreeMap::new(),
-            project_diagnostics: BTreeMap::new(),
-            project_index: ProjectIndex::default(),
+            project_diagnostics: Arc::default(),
+            project_index: Arc::default(),
             snapshot: AuthoringSnapshot::new(generation, Vec::new(), None, true),
             schema: None,
             project_complete: true,
@@ -153,85 +154,42 @@ impl AuthoringKernel {
         self.apply_request(request.with_project_completeness(false))
     }
 
+    /// Prepare an independent candidate, sharing unchanged document analyses.
+    /// The receiver is unchanged on success, interruption, or invalid input.
+    pub fn updated(
+        &self,
+        request: AuthoringRequest,
+        control: &dyn WorkControl,
+    ) -> Result<Self, AuthoringError> {
+        self.prepare(request, control).map(|(kernel, _)| kernel)
+    }
+
+    /// Atomically install a completed analysis; interruption retains all state.
+    pub fn apply_with_control(
+        &mut self,
+        request: AuthoringRequest,
+        control: &dyn WorkControl,
+    ) -> Result<AnalysisDelta, AuthoringError> {
+        let (candidate, delta) = self.prepare(request, control)?;
+        control.checkpoint()?;
+        *self = candidate;
+        Ok(delta)
+    }
+
     fn apply_request(
         &mut self,
         request: AuthoringRequest,
     ) -> Result<AnalysisDelta, AuthoringError> {
-        let (expected_generation, saved_documents, open_documents, project_complete) =
-            request.into_parts();
-        if expected_generation != self.snapshot.generation() {
-            return Err(AuthoringError::GenerationMismatch {
-                expected: expected_generation,
-                actual: self.snapshot.generation(),
-            });
-        }
-
-        let saved = unique_saved(saved_documents)?;
-        let open = unique_open(open_documents)?;
-        validate_overlay_versions(&self.open, &open)?;
-        if saved == self.saved && open == self.open && project_complete == self.project_complete {
-            return Ok(AnalysisDelta::empty(
-                self.snapshot.generation(),
-                self.snapshot.generation(),
-            ));
-        }
-        let generation = SnapshotGeneration(self.snapshot.generation().0.checked_add(1).ok_or(
-            AuthoringError::GenerationExhausted {
-                current: self.snapshot.generation(),
-            },
-        )?);
-
-        let old_effective = effective_documents(&self.saved, &self.open);
-        let new_effective = effective_documents(&saved, &open);
-        let mut changed_inputs = changed_keys(&self.saved, &self.open, &saved, &open);
-        if project_complete != self.project_complete {
-            changed_inputs.extend(old_effective.keys().map(|key| (*key).clone()));
-            changed_inputs.extend(new_effective.keys().map(|key| (*key).clone()));
-        }
-        let (analyses, project_changed) = rebuild_analyses(
-            std::mem::take(&mut self.analyses),
-            &old_effective,
-            &new_effective,
-            self.schema.as_deref(),
-        );
-        if cfg!(test) && (!project_changed.is_empty() || project_complete != self.project_complete)
-        {
-            super::engine::PROJECT_VALIDATION_COUNT.with(|count| count.set(count.get() + 1));
-        }
-        let project_changed = self.project_index.update(
-            project_changed.into_iter().map(|key| {
-                let facts = analyses
-                    .get(&key)
-                    .map(|analysis| Arc::clone(&analysis.project_facts));
-                (key, facts)
-            }),
-            project_complete,
-            &mut self.project_diagnostics,
-        );
-        let documents = build_documents(
-            &new_effective,
-            &analyses,
-            &self.project_diagnostics,
-            &self.snapshot,
-            &project_changed,
-        );
-        let (changed, removed) = build_delta(changed_inputs, &self.snapshot, &documents);
-        let delta = AnalysisDelta::new(self.snapshot.generation(), generation, changed, removed);
-
-        self.saved = saved;
-        self.open = open;
-        self.analyses = analyses;
-        self.project_complete = project_complete;
-        self.snapshot =
-            AuthoringSnapshot::new(generation, documents, self.schema.clone(), project_complete);
-        Ok(delta)
+        self.apply_with_control(request, &CancellationToken::new())
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DocumentAnalysis {
+    pub(crate) regions: Arc<[super::engine::CachedRegion]>,
     pub(crate) project_facts: Arc<ProjectFacts>,
-    pub(crate) source_text: Arc<str>,
+    pub(crate) source: Arc<recite_core::SourceLineIndex>,
+    pub(crate) source_fingerprint: super::SourceFingerprint,
     pub(crate) parse_diagnostics: Arc<[Diagnostic]>,
     pub(crate) local_diagnostics: Arc<[Diagnostic]>,
     pub(crate) summary: Arc<AuthoringSummary>,

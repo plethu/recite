@@ -62,3 +62,8 @@ fn change_for_unopened_document_is_ignored() {
 fn crlf_and_non_bmp_text_use_utf16_ranges() {
     super::position::crlf_and_non_bmp_text_use_utf16_ranges();
 }
+
+#[test]
+fn indexed_edit_ranges_preserve_crlf_and_utf16_boundaries() {
+    super::position::indexed_edit_ranges_preserve_crlf_and_utf16_boundaries();
+}

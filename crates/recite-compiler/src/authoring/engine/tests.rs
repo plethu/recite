@@ -199,8 +199,8 @@ fn shared_destination_does_not_revalidate_unrelated_callers() {
         .unwrap();
     assert_eq!(
         VALIDATED_DOCUMENTS.with(Cell::get),
-        1,
-        "moving the destination must not invalidate callers"
+        0,
+        "moving the destination preserves project meaning and diagnostic locations"
     );
     saved[0] = SavedDocument::new(
         key("scene000.recite"),

@@ -1,6 +1,7 @@
 //! Incremental document dependencies, with the batch validator as policy owner.
 //! Only changed documents and consumers/colliders of their exports are checked.
 use super::{ProjectFacts, facts::Symbol, validate_context};
+use crate::authoring::{Interrupted, WorkControl};
 use crate::validation::project::first_source_span;
 use recite_core::{Diagnostic, DocumentKey, ast::SourceFile};
 use std::{
@@ -8,9 +9,12 @@ use std::{
     sync::Arc,
 };
 
-type Membership = BTreeMap<Symbol, Vec<Arc<DocumentKey>>>;
+mod relocation;
 
-#[derive(Debug, Default)]
+// Candidates share symbol keys and memberships; only affected entries copy.
+type Membership = rpds::RedBlackTreeMapSync<Symbol, Vec<Arc<DocumentKey>>>;
+
+#[derive(Clone, Debug, Default)]
 pub(crate) struct ProjectIndex {
     documents: BTreeMap<DocumentKey, Arc<ProjectFacts>>,
     definitions: Membership,
@@ -24,10 +28,16 @@ impl ProjectIndex {
         changes: impl IntoIterator<Item = (DocumentKey, Option<Arc<ProjectFacts>>)>,
         complete: bool,
         diagnostics: &mut BTreeMap<DocumentKey, Vec<Diagnostic>>,
-    ) -> BTreeSet<DocumentKey> {
+        control: &dyn WorkControl,
+    ) -> Result<BTreeSet<DocumentKey>, Interrupted> {
         let changes: Vec<_> = changes.into_iter().collect();
         if changes.is_empty() && self.complete == complete {
-            return BTreeSet::new();
+            return Ok(BTreeSet::new());
+        }
+        if self.complete == complete
+            && let Some(affected) = self.relocate_only(&changes, diagnostics, control)?
+        {
+            return Ok(affected);
         }
         let changed_targets: BTreeSet<_> = changes
             .iter()
@@ -44,29 +54,47 @@ impl ProjectIndex {
         // Capture old dependencies before removing exports, including deleted
         // targets and diagnostics whose related span came from the old revision.
         for (key, _) in &changes {
+            control.checkpoint()?;
             self.affect_dependents(key, changed_targets.contains(key), &mut affected);
         }
         for (key, next) in &changes {
-            if let Some(old) = self.documents.remove(key) {
-                remove(&mut self.definitions, old.exports(), key);
-                remove(&mut self.dependents, old.dependencies(), key);
-            }
+            control.checkpoint()?;
+            let old = self.documents.remove(key);
+            replace_membership(
+                &mut self.definitions,
+                old.iter().flat_map(|facts| facts.exports()),
+                next.iter().flat_map(|facts| facts.exports()),
+                key,
+            );
+            replace_membership(
+                &mut self.dependents,
+                old.iter().flat_map(|facts| facts.dependencies()),
+                next.iter().flat_map(|facts| facts.dependencies()),
+                key,
+            );
             if let Some(next) = next {
-                let member = Arc::new(key.clone());
-                insert(&mut self.definitions, next.exports(), &member);
-                insert(&mut self.dependents, next.dependencies(), &member);
                 self.documents.insert(key.clone(), Arc::clone(next));
             }
         }
         for (key, _) in &changes {
+            control.checkpoint()?;
             self.affect_dependents(key, changed_targets.contains(key), &mut affected);
         }
         let stable_complete = self
             .documents
             .values()
             .all(|facts| facts.participation.stable_ids().is_complete());
-        if self.complete != complete || self.stable_complete != stable_complete {
+        if self.complete != complete {
             affected.extend(self.documents.keys().cloned());
+        } else if self.stable_complete != stable_complete {
+            // The project-wide stable-ID gate belongs to choice-echo lookup.
+            // Other documents cannot change diagnostics solely from this gate.
+            affected.extend(
+                self.documents
+                    .iter()
+                    .filter(|(_, facts)| facts.depends_on_stable_completeness())
+                    .map(|(key, _)| key.clone()),
+            );
         }
         self.complete = complete;
         self.stable_complete = stable_complete;
@@ -74,6 +102,7 @@ impl ProjectIndex {
             affected.insert(key);
         }
         for key in &affected {
+            control.checkpoint()?;
             diagnostics.remove(key);
             let Some(target) = self.documents.get(key) else {
                 continue;
@@ -99,7 +128,7 @@ impl ProjectIndex {
         if let Some((key, diagnostic)) = self.missing_default() {
             diagnostics.entry(key).or_default().push(diagnostic);
         }
-        affected
+        Ok(affected)
     }
 
     fn affect_dependents(
@@ -151,23 +180,31 @@ fn extend_members(members: &Membership, symbol: &Symbol, documents: &mut BTreeSe
         documents.extend(members.iter().map(|key| key.as_ref().clone()));
     }
 }
-fn remove(members: &mut Membership, symbols: impl Iterator<Item = Symbol>, key: &DocumentKey) {
-    for symbol in symbols {
-        if let Some(entries) = members.get_mut(&symbol) {
+fn replace_membership(
+    members: &mut Membership,
+    old: impl Iterator<Item = Symbol>,
+    next: impl Iterator<Item = Symbol>,
+    key: &DocumentKey,
+) {
+    let old: BTreeSet<_> = old.collect();
+    let next: BTreeSet<_> = next.collect();
+    if old == next {
+        return;
+    }
+    for symbol in old.difference(&next) {
+        if let Some(entries) = members.get_mut(symbol) {
             entries.retain(|member| member.as_ref() != key);
             if entries.is_empty() {
-                members.remove(&symbol);
+                members.remove_mut(symbol);
             }
         }
     }
-}
-fn insert(members: &mut Membership, symbols: impl Iterator<Item = Symbol>, key: &Arc<DocumentKey>) {
-    for symbol in symbols {
-        let entries = members
-            .entry(symbol)
-            .or_insert_with(|| vec![Arc::clone(key)]);
-        if !entries.contains(key) {
-            entries.push(Arc::clone(key));
+    let key = Arc::new(key.clone());
+    for symbol in next.difference(&old) {
+        if let Some(entries) = members.get_mut(symbol) {
+            entries.push(Arc::clone(&key));
+        } else {
+            members.insert_mut(symbol.clone(), vec![Arc::clone(&key)]);
         }
     }
 }

@@ -17,6 +17,7 @@ default = []
 bench-support = []
 
 [dependencies]
+crossbeam-channel = "0.5.15"
 recite-core.workspace = true
 recite-parser.workspace = true
 recite-compiler.workspace = true

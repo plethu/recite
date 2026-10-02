@@ -1,6 +1,16 @@
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ServerError {
+    #[error("LSP worker terminated unexpectedly")]
+    WorkerPanic,
+    #[error("LSP output capacity exhausted; client is not consuming messages")]
+    OutputCapacity,
+    #[error("LSP update capacity exhausted")]
+    InputCapacity,
+    #[error("LSP sequence space exhausted")]
+    SequenceExhausted,
+    #[error("client reused an active request ID")]
+    DuplicateRequest,
     #[error("LSP protocol error: {0}")]
     Protocol(#[from] lsp_server::ProtocolError),
     #[error("LSP transport disconnected")]

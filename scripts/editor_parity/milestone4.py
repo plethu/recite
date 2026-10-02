@@ -184,14 +184,17 @@ def validate_cancellation_contract(ctx: Context, capabilities: dict) -> None:
     if not isinstance(capability, dict):
         return
     ctx.require(
-        capability.get("implementation_status") == "unsupported",
-        f"{CANCELLATION_CAPABILITY_ID} implementation_status must remain unsupported until {CANCELLATION_FOLLOW_UP}",
+        capability.get("implementation_status") == "partial",
+        f"{CANCELLATION_CAPABILITY_ID} implementation_status must retain shared-server partial evidence",
     )
     evidence = capability.get("expected_evidence")
     ctx.require(
-        isinstance(evidence, dict) and evidence.get("status") == "unsupported",
-        f"{CANCELLATION_CAPABILITY_ID} expected_evidence.status must remain unsupported until {CANCELLATION_FOLLOW_UP}",
+        isinstance(evidence, dict) and evidence.get("status") == "partial",
+        f"{CANCELLATION_CAPABILITY_ID} expected_evidence.status must retain shared-server partial evidence",
     )
+    client_status = capability.get("client_status", {})
+    ctx.require(isinstance(client_status, dict) and all(value in {"planned", "unsupported"} for value in client_status.values()), f"{CANCELLATION_CAPABILITY_ID} must not claim installed-client cancellation without host evidence")
+    ctx.require(isinstance(evidence, dict) and evidence.get("command") == "cargo test --locked -p recite-lsp --test stdio_cancellation cancellation_settles_once_and_preserves_following_requests", f"{CANCELLATION_CAPABILITY_ID} must name its stdio cancellation evidence")
     follow_up = capability.get("follow_up")
     ctx.require(
         follow_up == CANCELLATION_FOLLOW_UP,

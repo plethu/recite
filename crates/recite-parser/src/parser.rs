@@ -17,6 +17,7 @@ pub struct Parse {
     green: GreenNode,
     diagnostics: Vec<Diagnostic>,
     recovery: SourceRecovery,
+    first_line: u32,
 }
 
 impl Parse {
@@ -36,18 +37,26 @@ impl Parse {
     /// reported as parser-boundary diagnostics until their lowering slices land.
     #[must_use]
     pub fn lower_source_file(&self) -> LoweredSourceFile {
-        lower_source_file(&self.path, &self.source, &self.diagnostics, self.recovery)
+        lower_source_file(
+            &self.path,
+            &self.source,
+            &self.diagnostics,
+            self.recovery,
+            self.first_line,
+        )
     }
 }
 
 #[must_use]
 pub fn parse(path: impl Into<String>, source: impl Into<String>) -> Parse {
-    let path = path.into();
-    let source = source.into();
+    parse_region(path.into(), source.into(), 1)
+}
+
+pub(crate) fn parse_region(path: String, source: String, first_line: u32) -> Parse {
     let mut builder = GreenNodeBuilder::new();
     let mut diagnostics = Vec::new();
     let mut recovery = SourceRecovery::complete();
-    let lines = LogicalLines::new(&source).collect::<Vec<_>>();
+    let lines = LogicalLines::starting_at(&source, first_line).collect::<Vec<_>>();
 
     builder.start_node(ReciteSyntaxKind::Root.into());
     for logical_line in lines.iter().copied() {
@@ -66,6 +75,7 @@ pub fn parse(path: impl Into<String>, source: impl Into<String>) -> Parse {
         path,
         source,
         green: builder.finish(),
+        first_line,
         diagnostics,
         recovery,
     }

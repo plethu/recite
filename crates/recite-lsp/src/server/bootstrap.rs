@@ -9,7 +9,6 @@ use recite_ui::{UiCatalog, UiLocale};
 
 use super::{Server, ServerError};
 use crate::capabilities::initialize_result;
-use crate::workspace::WorkspaceConfig;
 
 pub fn run_stdio() -> Result<(), ServerError> {
     let default_catalog = default_ui_catalog();
@@ -80,11 +79,7 @@ fn run_connection_with_startup(
         .unwrap_or_else(|_| InitializeParams::default());
     let initialize_result = initialize_result(&initialize_params);
     connection.initialize_finish(initialize_id, serde_json::to_value(initialize_result)?)?;
-    let mut server = Server::new(
-        connection,
-        WorkspaceConfig::from_initialize_params(&initialize_params),
-        startup.catalog,
-    )?;
+    let mut server = Server::new(connection, initialize_params.clone(), startup.catalog);
     if initialize_params
         .capabilities
         .workspace
@@ -93,16 +88,15 @@ fn run_connection_with_startup(
         .and_then(|capability| capability.dynamic_registration)
         .unwrap_or(false)
     {
-        register_watched_files(&server)?;
+        register_watched_files(&mut server)?;
     }
     if let Some(warning) = startup.warning {
         server.publish_startup_warning(warning)?;
     }
-    server.publish_schema_diagnostics()?;
     server.run()
 }
 
-fn register_watched_files(server: &Server) -> Result<(), ServerError> {
+fn register_watched_files(server: &mut Server) -> Result<(), ServerError> {
     let options = lsp_types::DidChangeWatchedFilesRegistrationOptions {
         watchers: vec![lsp_types::FileSystemWatcher {
             glob_pattern: lsp_types::GlobPattern::String("**/*".to_owned()),

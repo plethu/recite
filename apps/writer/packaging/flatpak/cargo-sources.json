@@ -350,6 +350,19 @@
   {
     "type": "archive",
     "archive-type": "tar-gzip",
+    "url": "https://static.crates.io/crates/archery/archery-1.2.3.crate",
+    "sha256": "33ca55ee147b1926dbea904f50fe4902494e97bc742205abbbf10c709e43815f",
+    "dest": "cargo/vendor/archery-1.2.3"
+  },
+  {
+    "type": "inline",
+    "contents": "{\"package\": \"33ca55ee147b1926dbea904f50fe4902494e97bc742205abbbf10c709e43815f\", \"files\": {}}",
+    "dest": "cargo/vendor/archery-1.2.3",
+    "dest-filename": ".cargo-checksum.json"
+  },
+  {
+    "type": "archive",
+    "archive-type": "tar-gzip",
     "url": "https://static.crates.io/crates/arg_enum_proc_macro/arg_enum_proc_macro-0.3.4.crate",
     "sha256": "0ae92a5119aa49cdbcf6b9f893fe4e1d98b04ccbf82ee0584ad948a44a734dea",
     "dest": "cargo/vendor/arg_enum_proc_macro-0.3.4"
@@ -5624,6 +5637,19 @@
   {
     "type": "archive",
     "archive-type": "tar-gzip",
+    "url": "https://static.crates.io/crates/rpds/rpds-1.2.1.crate",
+    "sha256": "e025feb26210bc196b908e72deb063b1b4000754304341cbc168a1e72c857ebc",
+    "dest": "cargo/vendor/rpds-1.2.1"
+  },
+  {
+    "type": "inline",
+    "contents": "{\"package\": \"e025feb26210bc196b908e72deb063b1b4000754304341cbc168a1e72c857ebc\", \"files\": {}}",
+    "dest": "cargo/vendor/rpds-1.2.1",
+    "dest-filename": ".cargo-checksum.json"
+  },
+  {
+    "type": "archive",
+    "archive-type": "tar-gzip",
     "url": "https://static.crates.io/crates/rustc-demangle/rustc-demangle-0.1.28.crate",
     "sha256": "b74b56ffa8bb2830709a538c2cbcae9aa062db0d2a42563bfb09bdaae44020eb",
     "dest": "cargo/vendor/rustc-demangle-0.1.28"
@@ -6691,6 +6717,19 @@
     "type": "inline",
     "contents": "{\"package\": \"ca0d1bf6fdd806e43ae5198f82f527056d359def39e54e67a0f478ac09dac081\", \"files\": {}}",
     "dest": "cargo/vendor/tree-sitter-language-0.1.8",
+    "dest-filename": ".cargo-checksum.json"
+  },
+  {
+    "type": "archive",
+    "archive-type": "tar-gzip",
+    "url": "https://static.crates.io/crates/triomphe/triomphe-0.1.16.crate",
+    "sha256": "b40688ea6389c8171614b25491f71d4a27946e0c7ce2da1c6de27e25abf1a0ae",
+    "dest": "cargo/vendor/triomphe-0.1.16"
+  },
+  {
+    "type": "inline",
+    "contents": "{\"package\": \"b40688ea6389c8171614b25491f71d4a27946e0c7ce2da1c6de27e25abf1a0ae\", \"files\": {}}",
+    "dest": "cargo/vendor/triomphe-0.1.16",
     "dest-filename": ".cargo-checksum.json"
   },
   {

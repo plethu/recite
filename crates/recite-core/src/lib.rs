@@ -90,6 +90,7 @@ mod document_key;
 mod error;
 mod ids;
 mod source_id;
+mod source_line_index;
 mod source_location;
 mod source_recovery;
 mod text;
@@ -123,6 +124,7 @@ pub use source_id::{
     SOURCE_ID_ANCHOR_HEX_LEN, SourceAnchor, SourceId, SourceIdKind, is_valid_source_anchor,
     is_valid_source_label,
 };
+pub use source_line_index::SourceLineIndex;
 pub use source_location::{SourcePosition, SourceSpan, byte_offset_for_position};
 pub use source_recovery::{SourceRecovery, SourceRecoveryClass};
 pub use text::{

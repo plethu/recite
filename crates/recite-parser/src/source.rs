@@ -33,10 +33,14 @@ pub(crate) struct LogicalLines<'a> {
 
 impl<'a> LogicalLines<'a> {
     pub(crate) fn new(source: &'a str) -> Self {
+        Self::starting_at(source, 1)
+    }
+
+    pub(crate) fn starting_at(source: &'a str, number: u32) -> Self {
         Self {
             source,
             offset: 0,
-            number: 1,
+            number,
         }
     }
 }

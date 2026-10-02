@@ -1,6 +1,6 @@
 use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams};
 use recite_compiler::authoring::{
-    AuthoringEditOperation, AuthoringEditPlan, AuthoringSnapshot, SourceRange,
+    AuthoringEditOperation, AuthoringEditPlan, AuthoringQuery, SourceRange,
 };
 use recite_ui::{MsgId, UiCatalog};
 
@@ -11,7 +11,7 @@ use crate::position::lsp_position_to_source;
 pub(super) fn actions(
     params: &CodeActionParams,
     document: &CodeActionDocument<'_>,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[EditDocument<'_>],
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
@@ -37,7 +37,7 @@ pub(super) fn actions(
 }
 
 fn plan_for_range(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     document: &CodeActionDocument<'_>,
     range: lsp_types::Range,
 ) -> Option<AuthoringEditPlan> {

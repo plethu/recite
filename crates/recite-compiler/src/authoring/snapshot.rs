@@ -149,13 +149,6 @@ impl AnalysisDelta {
         }
     }
 
-    pub(crate) fn empty(
-        previous_generation: super::SnapshotGeneration,
-        generation: super::SnapshotGeneration,
-    ) -> Self {
-        Self::new(previous_generation, generation, Vec::new(), Vec::new())
-    }
-
     #[must_use]
     pub const fn previous_generation(&self) -> super::SnapshotGeneration {
         self.previous_generation

@@ -170,7 +170,12 @@ fn assert_navigation(
     assert_eq!(definition.uri, *target, "{phase}: definition target");
 
     let references = workspace
-        .references(target, Position::new(0, 4), true)
+        .references_with_control(
+            target,
+            Position::new(0, 4),
+            true,
+            &recite_compiler::authoring::CancellationToken::new(),
+        )
         .unwrap_or_else(|| panic!("{phase}: cross-file references should resolve"));
     assert!(
         references.iter().any(|location| location

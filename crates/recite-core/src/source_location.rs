@@ -94,7 +94,7 @@ pub fn byte_offset_for_position(source: &str, position: SourcePosition) -> Optio
         .flatten()
 }
 
-fn scalar_offset(line: &str, scalar: usize) -> Option<usize> {
+pub(super) fn scalar_offset(line: &str, scalar: usize) -> Option<usize> {
     line.char_indices()
         .nth(scalar)
         .map(|(offset, _)| offset)

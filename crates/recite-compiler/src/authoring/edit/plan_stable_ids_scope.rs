@@ -3,17 +3,18 @@ use recite_core::SourcePosition;
 use super::helpers::document;
 use super::plan_stable_ids::plan_insert;
 use super::{AuthoringEditError, AuthoringEditPlan};
-use crate::authoring::{AuthoringSnapshot, StableIdSummary};
+use crate::authoring::{AuthoringQuery, StableIdSummary};
 
 /// Plans insertion of every missing or draft stable ID in one document.
 ///
 /// The edits stay file-scoped, while the plan retains project-wide
 /// preconditions so generated anchors and namespace collision checks remain
 /// conditional on the complete snapshot used to plan them.
-pub fn plan_insert_missing_ids_for_document(
-    snapshot: &AuthoringSnapshot,
+pub(super) fn plan_insert_missing_ids_for_document(
+    snapshot: &AuthoringQuery<'_>,
     key: &recite_core::DocumentKey,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     document(snapshot, key)?;
     plan_insert(snapshot, |candidate, _| candidate == key)
 }
@@ -21,11 +22,12 @@ pub fn plan_insert_missing_ids_for_document(
 /// Plans insertion of stable IDs intersecting one source range in one
 /// document. Candidate selection is summary-backed and does not walk source
 /// characters; the resulting plan still validates the complete project.
-pub fn plan_insert_missing_ids_in_range(
-    snapshot: &AuthoringSnapshot,
+pub(super) fn plan_insert_missing_ids_in_range(
+    snapshot: &AuthoringQuery<'_>,
     key: &recite_core::DocumentKey,
     range: super::SourceRange,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     document(snapshot, key)?;
     if range.start() > range.end() {
         return Err(AuthoringEditError::UnmappableRange {
@@ -37,7 +39,7 @@ pub fn plan_insert_missing_ids_in_range(
     })
 }
 
-impl AuthoringSnapshot {
+impl AuthoringQuery<'_> {
     /// Plans insertion of all missing stable IDs in one document.
     pub fn plan_insert_missing_ids_for_document(
         &self,

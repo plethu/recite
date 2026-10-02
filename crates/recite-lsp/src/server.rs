@@ -1,217 +1,163 @@
-use lsp_server::{Connection, ErrorCode, Message, Notification, Request, Response};
-use lsp_types::notification::{LogMessage, Notification as LspNotification, PublishDiagnostics};
-use lsp_types::request::{
-    CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
-    Rename, Request as LspRequest, Shutdown,
-};
-use lsp_types::{
-    CodeActionParams, CompletionParams, GotoDefinitionParams, HoverParams, LogMessageParams,
-    MessageType, ReferenceParams, RenameParams, TextDocumentPositionParams,
-};
-
-use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
-use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig};
+use crate::workspace::LspWorkspace;
+use crossbeam_channel::{never, select_biased};
+use lsp_server::{Connection, Message, Notification};
+use lsp_types::notification::{LogMessage, Notification as _};
+use lsp_types::{InitializeParams, LogMessageParams, MessageType, Uri};
+use recite_compiler::authoring::CancellationToken;
 use recite_ui::UiCatalog;
+use std::{
+    collections::{BTreeMap, VecDeque},
+    sync::Arc,
+};
 
 mod bootstrap;
 mod error;
+mod freshness;
 mod notifications;
+mod query;
+mod requests;
+mod scheduling;
+mod updates;
+mod workers;
 #[allow(unused_imports, reason = "test harness reexports protocol seams")]
 pub(crate) use bootstrap::run_connection_with_user_config;
 #[allow(unused_imports, reason = "test harness reexports protocol seams")]
 pub(crate) use bootstrap::{run_connection, run_connection_with_catalog};
 pub use bootstrap::{run_stdio, run_stdio_with_catalog, run_stdio_with_locale};
 pub use error::ServerError;
+use freshness::{Epochs, Fence, Versions};
+use requests::Requests;
+use updates::Update;
+use workers::Workers;
 
 struct Server {
     connection: Connection,
-    workspace: LspWorkspace,
+    workers: Workers,
+    workspace: Option<Arc<LspWorkspace>>,
+    scopes: BTreeMap<String, String>,
+    epochs: Epochs,
+    analyzed_epochs: Epochs,
+    versions: Versions,
+    updates: VecDeque<(u64, Arc<Update>)>,
+    revision: u64,
+    analyzed_revision: Option<u64>,
+    analyzing: Option<CancellationToken>,
+    analysis_partition: Option<String>,
+    querying: Option<(u64, CancellationToken)>,
+    requests: Requests,
+    serial: u64,
+    output: VecDeque<Publication>,
+    dirty_diagnostics: Vec<Uri>,
     shutdown_requested: bool,
+    exit_received: bool,
+}
+struct Publication {
+    message: Message,
+    fence: Option<Fence>,
 }
 
 impl Server {
-    fn new(
-        connection: Connection,
-        workspace_config: WorkspaceConfig,
-        catalog: UiCatalog,
-    ) -> Result<Self, ServerError> {
-        Ok(Self {
+    fn new(connection: Connection, params: InitializeParams, catalog: UiCatalog) -> Self {
+        Self {
             connection,
-            workspace: LspWorkspace::with_ui_catalog(workspace_config, catalog)
-                .map_err(|error| ServerError::Authoring(error.to_string()))?,
+            workers: Workers::start(params, catalog),
+            workspace: None,
+            scopes: BTreeMap::new(),
+            epochs: Epochs::default(),
+            analyzed_epochs: Epochs::default(),
+            versions: Versions::default(),
+            updates: VecDeque::new(),
+            revision: 0,
+            analyzed_revision: None,
+            analyzing: None,
+            analysis_partition: None,
+            querying: None,
+            requests: Requests::new(),
+            serial: 0,
+            output: VecDeque::new(),
+            dirty_diagnostics: Vec::new(),
             shutdown_requested: false,
-        })
+            exit_received: false,
+        }
     }
-
-    fn run(&mut self) -> Result<(), ServerError> {
-        while let Ok(message) = self.connection.receiver.recv() {
-            match message {
-                Message::Request(request) => {
-                    if self.handle_request(request)? {
-                        return Ok(());
-                    }
+    fn run(mut self) -> Result<(), ServerError> {
+        let result = self.event_loop();
+        if let Some(control) = self.analyzing {
+            control.interrupt();
+        }
+        if let Some((_, control)) = self.querying {
+            control.interrupt();
+        }
+        let joined = self.workers.join();
+        result.and(joined)
+    }
+    fn event_loop(&mut self) -> Result<(), ServerError> {
+        loop {
+            // Bound ingress work so an active editor cannot indefinitely starve
+            // worker completions or a ready writer. Publication follows the last
+            // processed input, never a request's original dispatch decision.
+            for _ in 0..32 {
+                if !self.can_receive() {
+                    break;
                 }
-                Message::Notification(notification) => {
-                    if self.handle_notification(notification)? {
-                        return Ok(());
-                    }
+                let Ok(message) = self.connection.receiver.try_recv() else {
+                    break;
+                };
+                self.receive(message)?;
+            }
+            self.prune_publications();
+            self.schedule()?;
+            if self.exit_received && self.requests.is_empty() && self.output.is_empty() {
+                return Ok(());
+            }
+            // Materialize the response immediately before a nonblocking handoff.
+            // Cancellation processed in the ingress batch replaces queued success.
+            let ready = self.requests.iter().find_map(|(id, pending)| {
+                if self.output.is_empty()
+                    || matches!(pending.state, requests::RequestState::Stopped(_))
+                {
+                    pending.response(id).map(|response| (id.clone(), response))
+                } else {
+                    None
                 }
-                Message::Response(_) => {}
+            });
+            let message = ready
+                .as_ref()
+                .map(|(_, response)| Message::Response(response.clone()))
+                .or_else(|| self.output.front().map(|p| p.message.clone()));
+            let (idle_sender, _idle_receiver) = crossbeam_channel::bounded(0);
+            let sender = if message.is_some() {
+                &self.connection.sender
+            } else {
+                &idle_sender
+            };
+            let input = if !self.can_receive() {
+                never()
+            } else {
+                self.connection.receiver.clone()
+            };
+            select_biased! {
+                send(sender, message.unwrap_or_else(|| Notification::new("$/unused".to_owned(), ()).into())) -> result => {
+                    result.map_err(|_| ServerError::Send)?;
+                    if let Some((id, _)) = ready { self.requests.remove(&id); } else { self.output.pop_front(); }
+                },
+                recv(self.workers.analyzed) -> result => self.analysis_finished(result.map_err(|_| ServerError::WorkerPanic)?)?,
+                recv(self.workers.queried) -> result => self.query_finished(result.map_err(|_| ServerError::WorkerPanic)?),
+                recv(input) -> message => match message {
+                    Ok(message) => self.receive(message)?,
+                    Err(_) => return if self.shutdown_requested { Ok(()) } else { Err(ServerError::Disconnected) },
+                },
             }
         }
-
-        if self.shutdown_requested {
-            Ok(())
-        } else {
-            Err(ServerError::Disconnected)
+    }
+    fn receive(&mut self, message: Message) -> Result<(), ServerError> {
+        match message {
+            Message::Request(request) => self.request(request),
+            Message::Notification(notification) => self.notification(notification),
+            Message::Response(_) => Ok(()),
         }
     }
-
-    fn handle_request(&mut self, request: Request) -> Result<bool, ServerError> {
-        if request.method == Shutdown::METHOD {
-            let response = Response::new_ok(request.id, ());
-            self.send(response.into())?;
-            self.shutdown_requested = true;
-            return Ok(false);
-        }
-        if request.method == Completion::METHOD {
-            let id = request.id.clone();
-            let result = match request.extract::<CompletionParams>(Completion::METHOD) {
-                Ok((_, params)) => self.workspace.completion(
-                    &params.text_document_position.text_document.uri,
-                    params.text_document_position.position,
-                ),
-                Err(error) => {
-                    let response =
-                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
-                    self.send(response.into())?;
-                    return Ok(false);
-                }
-            };
-            self.send(Response::new_ok(id, result).into())?;
-            return Ok(false);
-        }
-        if request.method == CodeActionRequest::METHOD {
-            let id = request.id.clone();
-            let result = match request.extract::<CodeActionParams>(CodeActionRequest::METHOD) {
-                Ok((_, params)) => self.workspace.code_action(&params),
-                Err(error) => {
-                    let response =
-                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
-                    self.send(response.into())?;
-                    return Ok(false);
-                }
-            };
-            self.send(Response::new_ok(id, result).into())?;
-            return Ok(false);
-        }
-        if request.method == HoverRequest::METHOD {
-            let id = request.id.clone();
-            let result = match request.extract::<HoverParams>(HoverRequest::METHOD) {
-                Ok((_, params)) => self.workspace.hover(
-                    &params.text_document_position_params.text_document.uri,
-                    params.text_document_position_params.position,
-                ),
-                Err(error) => {
-                    let response =
-                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
-                    self.send(response.into())?;
-                    return Ok(false);
-                }
-            };
-            self.send(Response::new_ok(id, result).into())?;
-            return Ok(false);
-        }
-        if request.method == GotoDefinition::METHOD {
-            let id = request.id.clone();
-            let result = match request.extract::<GotoDefinitionParams>(GotoDefinition::METHOD) {
-                Ok((_, params)) => self.workspace.definition(
-                    &params.text_document_position_params.text_document.uri,
-                    params.text_document_position_params.position,
-                ),
-                Err(error) => {
-                    let response =
-                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
-                    self.send(response.into())?;
-                    return Ok(false);
-                }
-            };
-            self.send(Response::new_ok(id, result).into())?;
-            return Ok(false);
-        }
-        if request.method == References::METHOD {
-            let id = request.id.clone();
-            let result = match request.extract::<ReferenceParams>(References::METHOD) {
-                Ok((_, params)) => self.workspace.references(
-                    &params.text_document_position.text_document.uri,
-                    params.text_document_position.position,
-                    params.context.include_declaration,
-                ),
-                Err(error) => {
-                    let response =
-                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
-                    self.send(response.into())?;
-                    return Ok(false);
-                }
-            };
-            self.send(Response::new_ok(id, result).into())?;
-            return Ok(false);
-        }
-        if request.method == PrepareRenameRequest::METHOD {
-            let id = request.id.clone();
-            let result = match request
-                .extract::<TextDocumentPositionParams>(PrepareRenameRequest::METHOD)
-            {
-                Ok((_, params)) => self
-                    .workspace
-                    .prepare_rename(&params.text_document.uri, params.position),
-                Err(error) => {
-                    let response =
-                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
-                    self.send(response.into())?;
-                    return Ok(false);
-                }
-            };
-            self.send(Response::new_ok(id, result).into())?;
-            return Ok(false);
-        }
-        if request.method == Rename::METHOD {
-            let id = request.id.clone();
-            let result = match request.extract::<RenameParams>(Rename::METHOD) {
-                Ok((_, params)) => self.workspace.rename(
-                    &params.text_document_position.text_document.uri,
-                    params.text_document_position.position,
-                    &params.new_name,
-                ),
-                Err(error) => {
-                    let response =
-                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
-                    self.send(response.into())?;
-                    return Ok(false);
-                }
-            };
-            self.send(Response::new_ok(id, result).into())?;
-            return Ok(false);
-        }
-        let response = Response::new_err(
-            request.id,
-            ErrorCode::MethodNotFound as i32,
-            format!("unsupported request method {}", request.method),
-        );
-        self.send(response.into())?;
-        Ok(false)
-    }
-    fn publish_schema_diagnostics(&mut self) -> Result<(), ServerError> {
-        for refresh in self.workspace.project_diagnostics_all() {
-            self.publish_refresh(refresh)?;
-        }
-        for refresh in self.workspace.schema_diagnostics_all() {
-            self.publish_refresh(refresh)?;
-        }
-
-        Ok(())
-    }
-    fn publish_startup_warning(&self, message: String) -> Result<(), ServerError> {
+    fn publish_startup_warning(&mut self, message: String) -> Result<(), ServerError> {
         self.send(
             Notification::new(
                 LogMessage::METHOD.to_owned(),
@@ -223,57 +169,37 @@ impl Server {
             .into(),
         )
     }
-    fn publish_refresh(&self, refresh: DiagnosticRefresh) -> Result<(), ServerError> {
-        if !self.workspace.is_current_generation(refresh.generation()) {
-            return Ok(());
-        }
-
-        match refresh {
-            DiagnosticRefresh::Publish(diagnostics) => {
-                let crate::workspace::DocumentDiagnostics {
-                    uri,
-                    text,
-                    version,
-                    diagnostics,
-                    ..
-                } = diagnostics;
-                let sources = self.workspace.diagnostic_sources_for_uri(&uri);
-                let publish_params = publish_diagnostics(
-                    uri,
-                    text.as_str(),
-                    version,
-                    &diagnostics,
-                    &self.workspace.ui_catalog,
-                    &sources,
-                )
-                .map_err(|error| ServerError::Diagnostics(error.to_string()))?;
-                self.send(
-                    Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),
-                )
-            }
-            DiagnosticRefresh::Clear { uri, version, .. } => self.send(
-                Notification::new(
-                    PublishDiagnostics::METHOD.to_owned(),
-                    clear_diagnostics(uri, version),
-                )
-                .into(),
-            ),
-        }
+    fn send(&mut self, message: Message) -> Result<(), ServerError> {
+        self.enqueue(Publication {
+            message,
+            fence: None,
+        })
     }
-    fn publish_open_document_refreshes(
-        &self,
-        exclude: Option<&lsp_types::Uri>,
-    ) -> Result<(), ServerError> {
-        for refresh in self.workspace.open_document_diagnostics_except(exclude) {
-            self.publish_refresh(refresh)?;
+    fn can_receive(&self) -> bool {
+        !self.exit_received && self.updates.len() < 256 && self.has_control_capacity()
+    }
+    fn has_control_capacity(&self) -> bool {
+        // Pause ingress before accepting another message that may need an error
+        // reply. A consuming client drains the queue without losing responses.
+        self.output.len() < 256
+            || self
+                .output
+                .iter()
+                .filter(|item| item.fence.is_none())
+                .take(256)
+                .count()
+                < 256
+    }
+    fn enqueue(&mut self, publication: Publication) -> Result<(), ServerError> {
+        // Diagnostic output is one completed analysis batch, bounded by the
+        // accepted workspace. Only miscellaneous protocol messages use this cap.
+        if publication.fence.is_none() && !self.has_control_capacity() {
+            return Err(ServerError::OutputCapacity);
         }
-
+        self.output.push_back(publication);
         Ok(())
     }
-    fn send(&self, message: Message) -> Result<(), ServerError> {
-        self.connection
-            .sender
-            .send(message)
-            .map_err(|_| ServerError::Send)
-    }
 }
+
+#[cfg(test)]
+mod tests;

@@ -14,8 +14,9 @@ use crate::documents::{OpenDocument, OpenDocumentStore};
 #[cfg(test)]
 mod tests;
 
+#[derive(Clone)]
 pub(crate) struct KernelPartition {
-    pub(super) kernel: AuthoringKernel,
+    pub(super) kernel: std::sync::Arc<AuthoringKernel>,
     pub(super) build_id: u64,
     pub(super) schema: SchemaIndex,
     pub(super) open_owners: BTreeMap<DocumentKey, lsp_types::Uri>,
@@ -64,22 +65,8 @@ impl LspWorkspace {
         self.partitions.get(id)
     }
 
-    pub(crate) fn effective_schema_for_partition(&self, id: &str) -> Option<SchemaIndex> {
-        let partition = self.partitions.get(id)?;
-        if let Some(schema) =
-            partition
-                .schema
-                .overlay_for_documents_in_partition(&self.documents, &self.saved, id)
-        {
-            return Some(schema);
-        }
-        if partition
-            .schema
-            .has_open_match_in_partition(&self.documents, &self.saved, id)
-        {
-            return None;
-        }
-        Some(partition.schema.clone())
+    pub(crate) fn effective_schema_for_partition(&self, id: &str) -> Option<&SchemaIndex> {
+        self.partitions.get(id).map(|partition| &partition.schema)
     }
 
     pub(crate) fn publish_open_document(&self, document: &OpenDocument) -> DiagnosticRefresh {
@@ -190,9 +177,9 @@ pub(super) fn authoring_request(
                 == Some(partition)
         })
         .filter_map(|document| {
-            Some(recite_compiler::authoring::SavedDocument::new(
+            Some(recite_compiler::authoring::SavedDocument::from_shared(
                 document_key_for_saved(document)?,
-                document.text.clone(),
+                std::sync::Arc::clone(&document.text),
             ))
         })
         .collect::<Vec<_>>();
@@ -208,10 +195,10 @@ pub(super) fn authoring_request(
                 == partition
         })
         .map(|(key, document)| {
-            KernelOpenDocument::new(
+            KernelOpenDocument::from_shared(
                 key.clone(),
                 recite_compiler::authoring::DocumentVersion::new(i64::from(document.version())),
-                document.text().to_owned(),
+                document.shared_text(),
             )
         })
         .collect::<Vec<_>>();

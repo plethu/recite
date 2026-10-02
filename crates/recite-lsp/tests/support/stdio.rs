@@ -18,6 +18,7 @@ pub(crate) struct StdioHarness {
     pending: VecDeque<Value>,
     initialize: Value,
     next_id: u64,
+    read_timeout: Duration,
 }
 
 #[allow(
@@ -72,10 +73,15 @@ impl StdioHarness {
             pending: VecDeque::new(),
             initialize: Value::Null,
             next_id: 1,
+            read_timeout: READ_TIMEOUT,
         };
         let initialize_id = harness.request("initialize", params);
         harness.initialize = harness.expect_response(initialize_id);
         harness
+    }
+
+    pub(crate) fn set_read_timeout(&mut self, timeout: Duration) {
+        self.read_timeout = timeout;
     }
 
     pub(crate) fn initialize(&self) -> &Value {
@@ -181,6 +187,10 @@ impl StdioHarness {
             .unwrap_or_else(|error| panic!("flush JSON-RPC message: {error}"));
     }
 
+    pub(crate) fn response_message(&mut self, id: u64) -> Value {
+        self.next_message_matching(|message| message.get("id") == Some(&json!(id)))
+    }
+
     fn expect_response(&mut self, id: u64) -> Value {
         let message = self.next_message_matching(|message| message.get("id") == Some(&json!(id)));
         assert!(
@@ -221,7 +231,7 @@ impl StdioHarness {
 
     fn receive(&self) -> Value {
         self.messages
-            .recv_timeout(READ_TIMEOUT)
+            .recv_timeout(self.read_timeout)
             .unwrap_or_else(|error| panic!("stdio message within timeout: {error}"))
             .unwrap_or_else(|error| panic!("stdio message is valid JSON-RPC: {error}"))
     }

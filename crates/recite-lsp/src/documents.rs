@@ -8,7 +8,7 @@ use crate::summary::OpenFileIdentity;
 pub(crate) struct OpenDocument {
     identity: OpenFileIdentity,
     version: i32,
-    text: String,
+    text: std::sync::Arc<str>,
 }
 
 impl OpenDocument {
@@ -18,6 +18,10 @@ impl OpenDocument {
 
     pub(crate) fn version(&self) -> i32 {
         self.version
+    }
+
+    pub(crate) fn shared_text(&self) -> std::sync::Arc<str> {
+        std::sync::Arc::clone(&self.text)
     }
 
     pub(crate) fn text(&self) -> &str {
@@ -77,7 +81,11 @@ impl OpenDocumentStore {
             });
         }
 
-        let document = parse_document(identity.clone(), existing.version, existing.text.clone());
+        let document = OpenDocument {
+            identity: identity.clone(),
+            version: existing.version,
+            text: existing.shared_text(),
+        };
         self.documents
             .insert(identity.uri.clone(), document.clone());
         Some(OpenDocumentIdentityRefresh {
@@ -121,7 +129,7 @@ fn parse_document(identity: OpenFileIdentity, version: i32, text: String) -> Ope
     OpenDocument {
         identity,
         version,
-        text,
+        text: text.into(),
     }
 }
 

@@ -1,7 +1,7 @@
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
 use recite_compiler::authoring::{
-    AuthoringSnapshot, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
-    CompletionSiteKind, QueryResult, SchemaSummary, SymbolIdentity, SymbolQueryOptions, SymbolRole,
+    AuthoringQuery, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
+    CompletionSiteKind, QueryResult, SchemaSummary, SymbolIdentity, SymbolRole,
 };
 use recite_core::DocumentKey;
 use recite_ui::{MsgId, UiCatalog};
@@ -12,7 +12,7 @@ pub(super) fn completion(
     text: &str,
     position: Position,
     key: Option<&DocumentKey>,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
@@ -27,10 +27,13 @@ pub(super) fn completion(
         QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
         _ => return None,
     };
-    let mut items = candidates
-        .iter()
-        .filter_map(|candidate| completion_item(candidate, text, schema, catalog))
-        .collect::<Vec<_>>();
+    let mut items = Vec::new();
+    for candidate in &candidates {
+        snapshot.checkpoint().ok()?;
+        if let Some(item) = completion_item(candidate, text, schema, catalog) {
+            items.push(item);
+        }
+    }
     let unqualified_block_site =
         snapshot
             .completion_site(key, source_position)
@@ -38,7 +41,7 @@ pub(super) fn completion(
                 site.kind() == CompletionSiteKind::Block && site.block_target().is_none()
             });
     if unqualified_block_site {
-        extend_project_block_items(snapshot, &mut items, catalog);
+        extend_project_block_items(snapshot, &mut items, catalog)?;
     }
     items.sort_by(|left, right| left.label.cmp(&right.label));
     items.dedup_by(|left, right| left.label == right.label);
@@ -46,26 +49,30 @@ pub(super) fn completion(
 }
 
 fn extend_project_block_items(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     items: &mut Vec<CompletionItem>,
     catalog: &UiCatalog,
-) {
-    let result = snapshot.project_symbols(SymbolQueryOptions::new(true));
+) -> Option<()> {
+    let result = snapshot.project_block_symbols();
     let symbols = match result {
         QueryResult::Ready(symbols) | QueryResult::Partial { value: symbols, .. } => symbols,
-        QueryResult::NoMatch | QueryResult::Unavailable(_) | _ => return,
+        QueryResult::NoMatch | QueryResult::Unavailable(_) | _ => return Some(()),
     };
-    items.extend(symbols.into_iter().filter_map(|symbol| {
+    for symbol in symbols {
+        snapshot.checkpoint().ok()?;
         let SymbolIdentity::Block(name) = symbol.identity() else {
-            return None;
+            continue;
         };
-        (symbol.role() == SymbolRole::Definition).then(|| CompletionItem {
-            label: name.as_str().to_owned(),
-            kind: Some(CompletionItemKind::REFERENCE),
-            detail: Some(catalog.text(MsgId::LspCompletionBlock)),
-            ..CompletionItem::default()
-        })
-    }));
+        if symbol.role() == SymbolRole::Definition {
+            items.push(CompletionItem {
+                label: name.as_str().to_owned(),
+                kind: Some(CompletionItemKind::REFERENCE),
+                detail: Some(catalog.text(MsgId::LspCompletionBlock)),
+                ..CompletionItem::default()
+            });
+        }
+    }
+    Some(())
 }
 
 fn completion_item(

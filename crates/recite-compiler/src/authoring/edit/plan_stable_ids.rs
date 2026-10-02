@@ -8,22 +8,24 @@ use super::stable_selection::{
     source_id_kind,
 };
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
-use crate::authoring::{AuthoringSnapshot, StableIdKind, StableIdSummary};
+use crate::authoring::{AuthoringQuery, StableIdKind, StableIdSummary};
 
 /// Plans deterministic insertion of every missing or draft stable ID in the
 /// effective project snapshot.
-pub fn plan_insert_missing_ids(
-    snapshot: &AuthoringSnapshot,
+pub(super) fn plan_insert_missing_ids(
+    snapshot: &AuthoringQuery<'_>,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     plan_insert(snapshot, |_, _| true)
 }
 
 /// Plans insertion for the one stable-ID header at a source position.
-pub fn plan_insert_missing_id(
-    snapshot: &AuthoringSnapshot,
+pub(super) fn plan_insert_missing_id(
+    snapshot: &AuthoringQuery<'_>,
     key: &recite_core::DocumentKey,
     position: SourcePosition,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     let document = document(snapshot, key)?;
     let matches = document
         .summary()
@@ -48,7 +50,7 @@ pub fn plan_insert_missing_id(
     }
 }
 
-impl AuthoringSnapshot {
+impl AuthoringQuery<'_> {
     /// Plans deterministic insertion of all missing stable IDs.
     pub fn plan_insert_missing_ids(&self) -> Result<AuthoringEditPlan, AuthoringEditError> {
         plan_insert_missing_ids(self)
@@ -65,15 +67,17 @@ impl AuthoringSnapshot {
 }
 
 pub(super) fn plan_insert(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     select: impl Fn(&recite_core::DocumentKey, &StableIdSummary) -> bool,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     let all_keys = snapshot
         .documents()
         .iter()
         .map(|document| document.key().clone())
         .collect::<Vec<_>>();
     for key in &all_keys {
+        snapshot.checkpoint()?;
         let document = document(snapshot, key)?;
         if !document.participation().ast_structure().is_complete() {
             return Err(AuthoringEditError::Incomplete {
@@ -95,11 +99,13 @@ pub(super) fn plan_insert(
         }
     }
 
-    let mut occupied = occupied_anchors(snapshot);
+    let mut occupied = occupied_anchors(snapshot)?;
     let mut ordinals = BTreeMap::<(DocumentKey, String, StableIdKind), u32>::new();
     let mut candidates = Vec::new();
     for document in snapshot.documents() {
+        snapshot.checkpoint()?;
         for stable in document.summary().stable_ids() {
+            snapshot.checkpoint()?;
             let insertion = match insertion_kind(stable) {
                 Ok(Some(insertion)) => insertion,
                 Ok(None) => continue,
@@ -125,6 +131,7 @@ pub(super) fn plan_insert(
 
     let mut edits = Vec::new();
     for (document, stable, insertion, ordinal) in candidates {
+        snapshot.checkpoint()?;
         let Some(span) = stable.insertion_span() else {
             return Err(AuthoringEditError::MissingSpan {
                 document: document.key().clone(),

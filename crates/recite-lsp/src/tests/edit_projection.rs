@@ -45,8 +45,22 @@ pub(super) fn projector_refuses_mismatched_precondition_documents() {
             version: None,
         },
     ];
-    assert!(project_plan(&plan, snapshot, &documents[..1]).is_none());
-    assert!(project_plan(&plan, snapshot, &documents).is_none());
+    assert!(
+        project_plan(
+            &plan,
+            &snapshot.query(&recite_compiler::authoring::CancellationToken::new()),
+            &documents[..1]
+        )
+        .is_none()
+    );
+    assert!(
+        project_plan(
+            &plan,
+            &snapshot.query(&recite_compiler::authoring::CancellationToken::new()),
+            &documents
+        )
+        .is_none()
+    );
 
     let duplicate_uri_documents = [
         documents[0],
@@ -58,7 +72,14 @@ pub(super) fn projector_refuses_mismatched_precondition_documents() {
             version: None,
         },
     ];
-    assert!(project_plan(&plan, snapshot, &duplicate_uri_documents).is_none());
+    assert!(
+        project_plan(
+            &plan,
+            &snapshot.query(&recite_compiler::authoring::CancellationToken::new()),
+            &duplicate_uri_documents
+        )
+        .is_none()
+    );
 }
 
 fn key(value: &str) -> DocumentKey {

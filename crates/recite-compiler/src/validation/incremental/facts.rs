@@ -1,4 +1,7 @@
-//! Compact project inputs. Prose and local schema syntax do not survive analysis.
+mod positions;
+mod regions;
+pub(crate) use regions::FactRanges;
+// Compact project inputs. Prose and local schema syntax do not survive analysis.
 use crate::{validation::ValidationInput, validation::ValidationParticipation};
 use recite_core::{
     BlockId, ChoiceId, LineId, SourceId, SourceSpan,
@@ -7,7 +10,7 @@ use recite_core::{
     },
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ProjectFacts {
     pub(super) path: String,
     pub(super) participation: ValidationParticipation,
@@ -15,19 +18,19 @@ pub(crate) struct ProjectFacts {
     pub(super) passages: Box<[PassageFact]>,
     pub(super) references: Box<[Divert]>,
 }
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(super) struct BlockFact {
     pub(super) id: BlockId,
     pub(super) default: bool,
     pub(super) span: SourceSpan,
 }
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(super) struct PassageFact {
     pub(super) identity: Identity,
     pub(super) frozen: bool,
     pub(super) span: SourceSpan,
 }
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(super) enum Identity {
     Line(Option<LineId>),
     Choice(Option<ChoiceId>, ChoiceEcho),
@@ -175,4 +178,17 @@ pub(super) enum Symbol {
     Block(BlockId),
     Document(String),
     Default,
+}
+
+impl ProjectFacts {
+    /// Only choice-echo lookup depends on stable-ID completeness in other files.
+    /// Local ID checks and membership invalidation have their own dependencies.
+    pub(crate) fn depends_on_stable_completeness(&self) -> bool {
+        self.passages.iter().any(|passage| {
+            matches!(
+                passage.identity,
+                Identity::Choice(_, recite_core::ast::ChoiceEcho::Line(_))
+            )
+        })
+    }
 }
