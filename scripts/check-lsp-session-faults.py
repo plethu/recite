@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import threading
 import time
 
 from lsp_session_health import assess, resources
@@ -15,9 +16,15 @@ def child():
     retained = []
     handles = []
     for index, _ in enumerate(sys.stdin):
-        retained.append(bytearray(4 * 1024**2))
+        allocation = bytearray(4 * 1024**2)
+        for offset in range(0, len(allocation), 4096):
+            allocation[offset] = 1
+        retained.append(allocation)
         handles.append(open(__file__, "rb"))
-        time.sleep(index * 0.003)
+        threading.Thread(target=threading.Event().wait, daemon=True).start()
+        # Quadratic delay dominates platform-specific allocation overhead, so
+        # the injected slowdown actually crosses the unchanged 2x threshold.
+        time.sleep(index * index * 0.001)
         print("ready", flush=True)
 
 
@@ -37,14 +44,16 @@ def main():
                 elapsed = (time.perf_counter_ns() - started) / 1e6
                 rows.append({**resources(process.pid), "completion_ms": elapsed, "definition_ms": elapsed})
             health = assess(rows)
-            assert {"rss_bytes", "handles", "completion_ms", "definition_ms"} <= set(health["failures"]), health
+            expected = {"rss_bytes", "threads", "handles", "completion_ms", "definition_ms"}
+            detected = expected <= set(health["failures"])
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps({"expected_failure_detected": True, "checkpoints": rows,
+            args.output.write_text(json.dumps({"expected_failure_detected": detected, "checkpoints": rows,
                                                "health": health}, indent=2) + "\n")
+            assert detected, health
         finally:
             process.stdin.close()
             process.wait(timeout=10)
-    print("Live memory, handle and latency faults were detected.")
+    print("Live memory, thread, handle and latency faults were detected.")
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ class Session:
         self.sources = sorted((root / "src").glob("*.recite"))[:4]
         self.originals = {path: path.read_text() for path in self.sources}
         self.documents = {}
+        self.errors = {}
         self.main = self.sources[0]
         self.reference = probe.position(self.originals[self.main], r"-> src/[^\n]+::(scene_\d+_\d+)")
         self.completion = probe.position(self.originals[self.main], r"-> (END)")
@@ -43,8 +44,9 @@ class Session:
     def change(self, path, text, wait=True):
         version, previous = self.documents[path]
         self.documents[path] = (version + 1, text)
-        self.send("textDocument/didChange", {"textDocument": {"uri": path.as_uri(), "version": version + 1},
-                                            "contentChanges": [change_event(previous, text, True)]})
+        _, self.last_edit_started = self.send("textDocument/didChange", {
+            "textDocument": {"uri": path.as_uri(), "version": version + 1},
+            "contentChanges": [change_event(previous, text, True)]})
         if wait:
             return self.wait(path)
 
@@ -55,8 +57,18 @@ class Session:
                           if item.get("method") == "textDocument/publishDiagnostics"
                           and item["params"].get("uri") == path.as_uri()
                           and item["params"].get("version") == version)
-        self.client.notifications.clear()
+        self.collect_diagnostics()
         return diagnostic
+
+    def collect_diagnostics(self):
+        for message in self.client.notifications:
+            if message.get("method") == "textDocument/publishDiagnostics":
+                params = message["params"]
+                if params["diagnostics"]:
+                    self.errors[params["uri"]] = params["diagnostics"]
+                else:
+                    self.errors.pop(params["uri"], None)
+        self.client.notifications.clear()
 
     def close(self, path):
         self.send("textDocument/didClose", {"textDocument": {"uri": path.as_uri()}})
@@ -91,7 +103,9 @@ class Session:
             results[label] = result
         encoded = json.dumps(results, sort_keys=True).encode()
         values["result_sha256"] = hashlib.sha256(encoded).hexdigest()
-        self.client.notifications.clear()
+        self.collect_diagnostics()
+        assert not self.errors, f"settled project retains diagnostics: {self.errors}"
+        values["diagnostics"] = self.errors.copy()
         return values
 
     def cycle(self, cycle, churn, edits, random):
@@ -114,8 +128,11 @@ class Session:
                 pending[request_id] = True
                 self.send("$/cancelRequest", {"id": request_id})
             time.sleep(0.005)
+        started = self.last_edit_started
         while pending:
-            item = self.client.messages.get(timeout=10)
+            remaining = 0.5 - (time.perf_counter_ns() - started) / 1e9
+            assert remaining > 0, "burst requests failed to drain within 500 ms"
+            item = self.client.messages.get(timeout=remaining)
             if isinstance(item, Exception):
                 raise item
             _, message = item
@@ -125,11 +142,11 @@ class Session:
             cancelled = pending.pop(message["id"])
             error = message.get("error")
             if error:
+                assert "result" not in message, message
                 assert (cancelled and error["code"] == -32800) or (
                     error["code"] == -32803 and error.get("data", {}).get("reason") == "stale_snapshot"), message
             else:
                 assert message.get("result"), message
-        started = time.perf_counter_ns()
         assert not self.change(path, original)
         request_id, _ = self.send("textDocument/rename", {"textDocument": {"uri": self.main.as_uri()},
             "position": self.declaration, "newName": "session_rename"}, request=True)

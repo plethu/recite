@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: '3.12'
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        # The Windows cache action stalled before producing cache diagnostics;
+        # compile directly there so cache availability cannot block the tests.
+        if: runner.os != 'Windows'
       - name: Build release server and fixture generator
         run: cargo build --locked --release -p recite-lsp -p recite-fixturegen
       - name: Check incremental protocol transactions

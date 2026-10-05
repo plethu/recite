@@ -36,13 +36,14 @@ peak is not classified as sustained growth.
 
 These are major-degradation tripwires, not proof against arbitrarily small leaks.
 Resident memory is measured by pinned `psutil` on each platform, not compared
-between operating systems. Recovery is bounded at 500 ms; request/diagnostic waits
+between operating systems. Recovery from the final burst edit, including draining
+outstanding requests, is bounded at 500 ms; request/diagnostic waits
 have deadlines, and each workload has a ten-minute cycle budget. The CI job also
 has a 30-minute outer timeout including builds and the editor host.
 
-`check-lsp-session-faults.py` drives a real child that retains memory and open files
-and progressively delays its replies. The same sampler and decision function must
-detect all three faults on every OS. Unit tests cover warming caches, one-time
+`check-lsp-session-faults.py` drives a real child that retains touched memory,
+threads and open files and progressively delays its replies. The same sampler and
+decision function must detect all four faults on every OS. Unit tests cover warming caches, one-time
 steps, isolated peaks, incomplete observations, and growing metrics.
 
 ## Running it
