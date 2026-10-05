@@ -18,12 +18,13 @@ import time
 
 
 class Client:
-    def __init__(self, binary, config_root):
+    def __init__(self, binary, config_root, *, server_env=None):
         self.stderr = tempfile.TemporaryFile()
         self.process = subprocess.Popen(
             [str(binary)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=self.stderr, env={**os.environ, "XDG_CONFIG_HOME": str(config_root),
-                                     "APPDATA": str(config_root), "LOCALAPPDATA": str(config_root)},
+                                     "APPDATA": str(config_root), "LOCALAPPDATA": str(config_root),
+                                     **(server_env or {})},
         )
         self.messages = queue.Queue()
         self.next_id = 0

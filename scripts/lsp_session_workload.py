@@ -10,8 +10,8 @@ from lsp_session_timing import Timing
 
 
 class Session:
-    def __init__(self, probe, binary, root, config, trace):
-        self.client = probe.Client(binary, config)
+    def __init__(self, probe, binary, root, config, trace, *, server_env=None):
+        self.client = probe.Client(binary, config, server_env=server_env)
         self.timing = Timing(self.client.process.pid)
         self.root, self.trace = root, trace
         self.sources = sorted((root / "src").glob("*.recite"))[:4]

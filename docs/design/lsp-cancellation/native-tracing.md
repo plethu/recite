@@ -19,8 +19,11 @@ async runtime or replacement stdio transport.
 | [tracing-subscriber](https://docs.rs/crate/tracing-subscriber/0.3.23) | Structured events, filtering, JSON formatting and monotonic timestamps | Adopt. MIT licensed; documented Rust 1.65 minimum is below this workspace's toolchain. No Tokio runtime is needed. |
 | [async-lsp](https://docs.rs/async-lsp/0.2.4/async_lsp/) | Tower middleware for lifecycle, routing, concurrency limits, cancellation and tracing | Strongest alternative if we replace more protocol orchestration. Keep as a migration candidate, not a demonstrated latency improvement. Recite's snapshot and publication rules still need an owner. |
 | [tower-lsp-server](https://github.com/tower-lsp-community/tower-lsp-server) | Typed asynchronous handlers, transport and request cancellation | Viable framework alternative. Its transport documents that concurrency one disables cancellation; adopting it still requires deliberate ordering and CPU-work offloading. No migration in this experiment. |
+| [lsp-textdocument](https://docs.rs/lsp-textdocument/0.5.0/lsp_textdocument/) | Document storage and position conversion using our current lsp-types generation | Not a direct replacement for our transaction boundary: source inspection shows surrogate-interior positions rounding down and updates applied sequentially, with an assertion for reversed ranges. Recite rejects malformed batches atomically. Adopting it would still require that validation layer. |
 | [Salsa](https://salsa-rs.github.io/salsa/overview.html) | Dependency tracking and incremental query recomputation | Relevant if manual dependency invalidation becomes the measured bottleneck or maintenance burden. It does not replace protocol transport, and these recovery tails do not establish that need. |
 | [rust-analyzer thread intent](https://rust-lang.github.io/rust-analyzer/src/stdx/thread/intent.rs.html) | Platform scheduling policies for worker and latency-sensitive threads | Useful prior art, not a justification for raising priorities without attribution. No QoS override is retained. |
+
+The document-manager assessment used its [update and position-conversion source](https://docs.rs/lsp-textdocument/0.5.0/src/lsp_textdocument/text_document.rs.html), checked on 6 October 2026.
 
 These are source/documentation assessments, not comparative benchmark claims
 about alternative frameworks. The stop condition for custom infrastructure is a
@@ -76,3 +79,33 @@ its disturbance; native boundaries locate waits, but traced timings are not
 substitutes for ordinary user-facing timings. In particular, logging can alter
 thread scheduling. No scheduler or channel-buffering change is bundled into the
 attribution experiment.
+
+## macOS yield-path diagnostic
+
+The first trace locates roughly 10 ms tails at worker wakeup and writer handoff,
+while completion execution p95 remains below 0.2 ms. This motivates a process-only
+causal probe, not a change to Recite's scheduling policy.
+
+[Crossbeam's backoff](https://github.com/crossbeam-rs/crossbeam/blob/crossbeam-utils-0.8.21/crossbeam-utils/src/backoff.rs)
+calls `thread::yield_now`, which
+[Rust 1.96 implements through sched_yield](https://github.com/rust-lang/rust/blob/1.96.0/library/std/src/sys/thread/unix.rs).
+[Apple's libpthread source](https://github.com/apple-oss-distributions/libpthread/blob/main/src/pthread.c)
+selects a priority-depressing yield by default, and reads `PTHREAD_YIELD_TO_ZERO`
+at process startup. Setting it to `0` selects the alternate non-depressing yield
+path. That implementation switch is not treated as a supported product API.
+
+The session driver accepts `--server-yield-to-zero 0` solely for diagnosis. It
+passes the setting to server children, including fresh oracles; it does not
+change Python's environment or the shipped editor launcher. Reports record the
+child override. To compare against the unchanged driver on the same binary:
+
+```sh
+gh workflow run ci.yml --repo plethu/recite --ref BRANCH \
+  -f lsp_sessions_only=true -f lsp_native_trace=true \
+  -f lsp_macos_yield_probe=true -f lsp_driver_control_ref=c7fba9a6
+```
+
+The override applies only to the macOS candidate workloads. All ordinary CI and
+product launches retain their existing environment. The baseline remains the
+historical driver with default server settings; tracing-enabled candidates
+separately show whether the implicated boundaries change.

@@ -23,16 +23,17 @@ probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
 
 
-def run(binary, root, output, cycles, edits, seed, churn):
+def run(binary, root, output, cycles, edits, seed, churn, server_env):
     report = {"provenance": provenance(binary, root), "cycles": cycles, "edits_per_cycle": edits,
               "seed": seed, "churn": churn, "checkpoints": [], "status": "incomplete",
               "driver": {"python": platform.python_version(), "switch_interval_ms": sys.getswitchinterval() * 1000,
-                         "native_trace": bool(os.environ.get("RECITE_LSP_TRACE_DIR"))}}
+                         "native_trace": bool(os.environ.get("RECITE_LSP_TRACE_DIR")),
+                         "server_environment": server_env}}
     generator = random.Random(seed)
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="recite-session-config-") as config:
         with output.with_suffix(".jsonl").open("w") as trace:
-            session = Session(probe, binary, root, Path(config), trace)
+            session = Session(probe, binary, root, Path(config), trace, server_env=server_env)
             report["server_pid"] = session.client.process.pid
             try:
                 session.start()
@@ -45,7 +46,7 @@ def run(binary, root, output, cycles, edits, seed, churn):
                     assert checkpoint["result_sha256"] == baseline, "persistent results drifted"
                     if cycle % 10 == 0 or cycle == cycles - 1:
                         with tempfile.TemporaryDirectory(prefix="recite-session-oracle-") as oracle_config:
-                            oracle = Session(probe, binary, root, Path(oracle_config), trace)
+                            oracle = Session(probe, binary, root, Path(oracle_config), trace, server_env=server_env)
                             try:
                                 oracle.start()
                                 assert oracle.checkpoint()["result_sha256"] == baseline, "fresh server disagrees"
@@ -79,6 +80,8 @@ def main():
     parser.add_argument("--edits", type=int, default=50)
     parser.add_argument("--seed", type=int, default=7203)
     parser.add_argument("--churn", action="store_true")
+    parser.add_argument("--server-yield-to-zero", choices=("0", "1"),
+                        help="Diagnostic macOS libpthread setting applied only to server children")
     parser.add_argument("--driver-switch-ms", type=float, default=None,
                         help="Override Python driver thread-switch interval for experiments (default: interpreter setting)")
     args = parser.parse_args()
@@ -92,7 +95,9 @@ def main():
     with tempfile.TemporaryDirectory(prefix="recite-endurance-") as directory:
         root = Path(directory).resolve()
         generate(root, documents=40, blocks=20, lines=20, shared_destinations=10)
-        passed = run(args.binary.resolve(), root, args.output, args.cycles, args.edits, args.seed, args.churn)
+        server_env = ({"PTHREAD_YIELD_TO_ZERO": args.server_yield_to_zero}
+                      if args.server_yield_to_zero is not None else {})
+        passed = run(args.binary.resolve(), root, args.output, args.cycles, args.edits, args.seed, args.churn, server_env)
     raise SystemExit(0 if passed else 1)
 
 
