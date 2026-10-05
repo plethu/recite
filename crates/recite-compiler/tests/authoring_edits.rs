@@ -385,3 +385,6 @@ fn edit_plans_refuse_stale_generation_collisions_and_partial_recovery() {
         Err(AuthoringEditError::UnsupportedStableId { .. })
     ));
 }
+
+#[path = "authoring_edits/noop.rs"]
+mod noop;

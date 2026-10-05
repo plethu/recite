@@ -40,7 +40,7 @@ pub(super) fn stale_versions_do_not_publish_or_overwrite_newer_text() {
     harness.finish();
 }
 
-pub(super) fn non_full_or_malformed_changes_are_ignored() {
+pub(super) fn malformed_changes_are_ignored() {
     let harness = Harness::start();
     let uri = uri("file:///workspace/dialogue/non-full.recite");
 
@@ -65,15 +65,11 @@ pub(super) fn non_full_or_malformed_changes_are_ignored() {
                     character: 0,
                 },
             }),
-            range_length: None,
+            range_length: Some(1),
             text: "oops".to_owned(),
         }],
     );
-    harness.did_change(
-        uri.clone(),
-        3,
-        vec![full_change("oops"), full_change("\n:: tavern\n")],
-    );
+    harness.did_change(uri.clone(), 3, vec![]);
     harness.did_change(
         uri.clone(),
         4,

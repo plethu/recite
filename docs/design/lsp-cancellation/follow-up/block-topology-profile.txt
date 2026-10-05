@@ -1,0 +1,26 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 6K of event 'cycles:u'
+# Event count (approx.): 21367449469
+#
+# Overhead  Command          Shared Object     Symbol
+# ........  ...............  ................  .....................................................................................................................................................................................................................................................
+#
+    18.90%  control-lsp      control-lsp       [.] rpds::map::red_black_tree_map::RedBlackTreeMap<K,V,P>::get
+     6.48%  control-lsp      libc.so.6         [.] 0x00000000000bdbfc
+     6.00%  control-lsp      libc.so.6         [.] 0x00000000000bc70d
+     5.97%  control-lsp      libc.so.6         [.] 0x00000000000be0b3
+     5.45%  control-lsp      control-lsp       [.] recite_compiler::validation::localisable_ids::<impl recite_compiler::validation::state::Validator>::validate_line_localisable_id
+     5.14%  control-lsp      libc.so.6         [.] 0x00000000001ae49e
+     3.40%  control-lsp      libc.so.6         [.] 0x00000000001ae4a5
+     3.12%  control-lsp      control-lsp       [.] recite_core::ast::source::statement::Statement::visit_depth_first
+     2.88%  control-lsp      libc.so.6         [.] 0x00000000001ae484
+     2.14%  control-lsp      control-lsp       [.] core::iter::adapters::chain::and_then_or_clear
+
+
+#
+# (Tip: To see callchains in a more compact form: perf report -g folded)
+#

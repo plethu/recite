@@ -57,8 +57,8 @@ class Client:
         self.process.stdin.flush()
         return message.get("id"), started
 
-    def response(self, request_id):
-        deadline = time.monotonic() + 120
+    def response(self, request_id, timeout=120):
+        deadline = time.monotonic() + timeout
         while True:
             item = self.messages.get(timeout=max(0.001, deadline - time.monotonic()))
             if isinstance(item, Exception):
@@ -70,9 +70,9 @@ class Client:
                 raise RuntimeError(f"unexpected server request or response: {message}")
             self.notifications.append(message)
 
-    def request(self, method, params):
+    def request(self, method, params, timeout=120):
         request_id, started = self.send(method, params, request=True)
-        received, message = self.response(request_id)
+        received, message = self.response(request_id, timeout)
         return (received - started) / 1e6, message
 
     def diagnostics(self, uri, version):
@@ -111,6 +111,16 @@ class Client:
             self.process.stdout.close()
             self.reader.join(timeout=1)
             self.stderr.close()
+
+    def abort(self):
+        """Clean up an owned server without masking a failed probe's exception."""
+        if self.process.poll() is None:
+            self.process.kill()
+        self.process.wait()
+        self.process.stdin.close()
+        self.process.stdout.close()
+        self.reader.join(timeout=1)
+        self.stderr.close()
 
 
 def position(text, pattern, end=False):

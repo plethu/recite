@@ -1,6 +1,6 @@
 #[test]
-fn initialize_advertises_full_sync_save_and_utf16() {
-    super::lifecycle::initialize_advertises_full_sync_save_and_utf16();
+fn initialize_advertises_incremental_sync_save_and_utf16() {
+    super::lifecycle::initialize_advertises_incremental_sync_save_and_utf16();
 }
 
 #[test]
@@ -49,8 +49,8 @@ fn stale_versions_do_not_publish_or_overwrite_newer_text() {
 }
 
 #[test]
-fn non_full_or_malformed_changes_are_ignored() {
-    super::sync::non_full_or_malformed_changes_are_ignored();
+fn malformed_changes_are_ignored() {
+    super::sync::malformed_changes_are_ignored();
 }
 
 #[test]

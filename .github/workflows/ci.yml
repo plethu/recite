@@ -247,15 +247,15 @@ jobs:
   benchmark-smoke:
     needs: changes
     if: needs.changes.outputs.benchmark-smoke == 'true'
-    # This checks that the tiny benchmark targets build and execute. It does
-    # not compare timings or enforce the performance thresholds in §19.8.
-    name: Benchmark smoke
+    # Tiny benchmark execution plus a paired, confirmed LSP latency comparison.
+    name: Benchmarks and LSP regression
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install repository toolchain
@@ -268,6 +268,26 @@ jobs:
 
       - name: Run benchmark smoke
         run: scripts/benchmark-smoke.sh
+
+      - name: Compare LSP performance against the change base
+        env:
+          EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -z "$EVENT_BASE" || "$EVENT_BASE" =~ ^0+$ ]]; then
+            base="$(git rev-parse HEAD^)"
+          else
+            base="$(git merge-base "$EVENT_BASE" HEAD)"
+          fi
+          bash scripts/check-lsp-performance.sh "$base"
+
+      - name: Retain LSP measurement evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lsp-performance
+          path: target/lsp-performance/*.json
+          if-no-files-found: warn
+          retention-days: 30
 
   maintainability:
     needs: changes

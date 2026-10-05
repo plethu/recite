@@ -128,7 +128,7 @@ local function new(options)
       root_dir = root,
       recite_owned = true,
     }
-    for _, key in ipairs({ "capabilities", "init_options", "on_attach", "settings" }) do
+    for _, key in ipairs({ "capabilities", "init_options", "on_attach", "settings", "flags" }) do
       if lsp[key] ~= nil then
         client_config[key] = vim.deepcopy(lsp[key])
       end
@@ -182,6 +182,7 @@ local function new(options)
       root_markers = vim.deepcopy(lsp.root_markers),
       cmd = vim.deepcopy(client_config.cmd),
       settings = vim.deepcopy(client_config.settings),
+      flags = vim.deepcopy(client_config.flags),
       init_options = vim.deepcopy(client_config.init_options),
       capabilities = vim.deepcopy(client_config.capabilities),
       on_attach = client_config.on_attach,

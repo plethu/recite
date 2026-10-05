@@ -12,6 +12,8 @@ import statistics
 import tempfile
 import time
 
+from lsp_measurement import change_event
+
 spec = importlib.util.spec_from_file_location(
     "latency_probe", Path(__file__).with_name("measure-lsp-latency.py")
 )
@@ -19,7 +21,10 @@ probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
 
 
-def measure(binary, root, samples):
+WORKLOADS = ("comment", "prose", "line_insert", "stable_id", "block_topology", "recovery")
+
+
+def measure(binary, root, samples, ranged=False, workloads=WORKLOADS):
     sources = sorted((root / "src").glob("*.recite"))
     source = sources[0]
     text, uri = source.read_text(), source.as_uri()
@@ -29,14 +34,19 @@ def measure(binary, root, samples):
     with tempfile.TemporaryDirectory(prefix="recite-edit-workloads-") as config:
         client = probe.Client(binary, Path(config))
         try:
-            client.request("initialize", {"processId": None, "rootUri": root.as_uri(), "capabilities": {}})
+            _, initialized = client.request("initialize", {"processId": None, "rootUri": root.as_uri(), "capabilities": {}})
+            if ranged is None:
+                sync = initialized["result"]["capabilities"]["textDocumentSync"]
+                ranged = (sync.get("change") if isinstance(sync, dict) else sync) == 2
+            result["sync_mode"] = "ranged" if ranged else "full"
             client.send("initialized", {})
             client.send("textDocument/didOpen", {"textDocument": {
                 "uri": uri, "languageId": "recite", "version": 1, "text": text,
             }})
             client.diagnostics(uri, 1)
             version = 1
-            for kind in ("comment", "prose", "line_insert", "stable_id", "block_topology", "recovery"):
+            previous = text
+            for kind in workloads:
                 values, diagnostics = [], []
                 for index in range(samples + 2):
                     version += 1
@@ -53,9 +63,11 @@ def measure(binary, root, samples):
                     else:
                         overlay = text + f"\n:: measured_{version}\n-> END\n"
                     assert overlay != text
+                    event = change_event(previous, overlay, ranged)
+                    previous = overlay
                     _, started = client.send("textDocument/didChange", {
                         "textDocument": {"uri": uri, "version": version},
-                        "contentChanges": [{"text": overlay}],
+                        "contentChanges": [event],
                     })
                     client.diagnostics(uri, version)
                     elapsed = (time.perf_counter_ns() - started) / 1e6
@@ -81,12 +93,16 @@ def main():
     parser.add_argument("roots", type=Path, nargs="+")
     parser.add_argument("--binary", type=Path, default=Path("target/release/recite-lsp"))
     parser.add_argument("--samples", type=int, default=21)
+    parser.add_argument("--ranged", action="store_true", help="requires an incremental-sync server")
+    parser.add_argument("--workload", choices=WORKLOADS, action="append")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.samples < 1:
+        parser.error("samples must be positive")
     binary = args.binary.resolve()
     runs = []
     for root in args.roots:
-        result = measure(binary, root.resolve(), args.samples)
+        result = measure(binary, root.resolve(), args.samples, args.ranged, args.workload or WORKLOADS)
         runs.append(result)
         print(root.name, result["source_bytes"],
               {kind: round(statistics.median(values), 3) for kind, values in result["workloads"].items()},

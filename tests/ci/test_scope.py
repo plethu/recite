@@ -76,6 +76,13 @@ class ScopeTests(unittest.TestCase):
             "rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability",
         })
 
+    def test_lsp_measurement_changes_select_benchmark_lane(self):
+        for path in ("scripts/check-lsp-performance.py", "scripts/check-lsp-performance.sh",
+                     "scripts/measure-lsp-session.py", "scripts/lsp_regression.py",
+                     "scripts/lsp-performance-policy.json"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), {"benchmark-smoke", "maintainability"})
+
     def test_writer_keeps_ui_and_accessibility_without_packaging(self):
         self.assertEqual(selected("apps/writer/crates/freya/src/app.rs"), {
             "rust", "maintainability",
@@ -85,6 +92,8 @@ class ScopeTests(unittest.TestCase):
     def test_editor_and_schema_consumers(self):
         self.assertIn("editor", selected("crates/recite-lsp/src/lib.rs"))
         self.assertEqual(selected("editors/vscode/src/extension.ts"), {"editor", "maintainability"})
+        self.assertEqual(selected("tests/editor-hosts/vscode/latency-probe.cjs"),
+                         {"editor", "maintainability"})
         self.assertTrue({"docs", "rust", "editor"} <= selected("schemas/manifest.json"))
         self.assertTrue({"docs", "rust", "editor"} <= selected("fixtures/schema/valid/test.json"))
         self.assertIn("rust", selected("fixtures/recite/markdown-input.md"))

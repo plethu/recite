@@ -2879,6 +2879,14 @@ promoted into planned work.
 
 The LSP must be excellent enough that text authoring feels safe.
 
+The server advertises incremental UTF-16 document synchronization. Full replacements
+remain accepted. Ranged changes in one notification apply sequentially and atomically;
+invalid batches and stale versions leave the accepted text and version unchanged.
+Protocol text advances before cancellable analysis, and queued updates contain full
+snapshots so coalescing cannot discard a ranged edit's dependency. Positions inside
+surrogate pairs and nonexistent lines are rejected; overlong character offsets clamp
+to the line end. CRLF, LF and CR are recognized as protocol line endings.
+
 Required capabilities:
 
 - syntax diagnostics;
@@ -3635,22 +3643,44 @@ complete CI run. Documentation-only changes do not require benchmark builds.
 A fuller benchmark suite belongs on release branches or scheduled jobs. The
 pull-request smoke suite must use the existing `crates/recite-benchmarks`
 Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit
-compiler/runtime/preview bench target commands. It proves that the tiny
-compiler, runtime, and preview benchmarks build and execute quickly; it does
+compiler/runtime/preview/LSP bench target commands. It proves that the tiny
+compiler, runtime, preview, and LSP benchmarks build and execute quickly; it does
 not compare timings or enforce regression thresholds.
 
-The current pull-request and main-branch workflow owns only that fast smoke
-check. Issue #109 owns the named release/scheduled benchmark baseline and fuller
+The benchmark lane additionally compares release LSP binaries against the change
+base on the same Ubuntu 24.04 runner. The current harness and generated large
+fixture drive both binaries. Three alternating pairs measure six real edit kinds
+in full and negotiated sync modes, eight query/action kinds, shared-destination
+invalidation, fresh-process indexing/opening and peak RSS. Each has two warmups
+and 21 recorded samples with exact output fingerprints. Warm latency regressions
+must exceed both 20% and 2 ms, occur in at least two pairs, and recur in a second
+three-pair round. Fresh-process readiness uses 30% plus 50 ms; document opening
+uses 30% plus 10 ms; peak RSS through indexing/opening uses 20% plus 16 MiB.
+The shared-destination fixture has 100 files, 2,000 blocks and 20,000 dialogue
+lines with references to ten shared files. Fresh-process samples use a warm
+filesystem, not cold storage.
+
+Incomplete or inconsistent evidence fails the check rather than reporting
+success. The checked-in policy is `scripts/lsp-performance-policy.json`; raw
+samples and revision/binary identities are retained as CI artifacts. Full and
+ranged sustained sessions check settlement and continued service. A burst probe
+sends 25 edits at 5 ms intervals separated by 150 ms pauses; diagnostics and
+successful completion, definition, rename and fix-all responses must recover
+within 500 ms of the last edit. Freshness checks remain mandatory under overload.
+
+This gate protects the measured Linux process workloads. It does not establish
+cross-platform editor rendering or long-lived memory budgets.
+Issue #109 still owns the named release/scheduled benchmark baseline and fuller
 regression suite; issue #77 owns the evidence ledger and release-gate decision
-that consume its results. The fuller suite must not be implied by the PR smoke
-check before those release owners publish the runner, fixture, profile,
-threshold, and rerun policy.
+that consume its results. Those broader guarantees must not be inferred from
+the smoke or paired LSP comparison.
 
 Regression thresholds must be explicit and reviewable. They become blocking
 only when measured against an agreed baseline and execution profile, such as a
 stable Linux runner or documented release-measurement profile. Before those
 baselines exist, exceeding a threshold is a review trigger rather than an
-automatic failure.
+automatic failure. The paired LSP gate above supplies an explicit comparative
+baseline and rerun policy for its covered operations.
 
 Initial regression review thresholds:
 

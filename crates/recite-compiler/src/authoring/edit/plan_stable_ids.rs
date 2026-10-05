@@ -99,7 +99,6 @@ pub(super) fn plan_insert(
         }
     }
 
-    let mut occupied = occupied_anchors(snapshot)?;
     let mut ordinals = BTreeMap::<(DocumentKey, String, StableIdKind), u32>::new();
     let mut candidates = Vec::new();
     for document in snapshot.documents() {
@@ -129,6 +128,12 @@ pub(super) fn plan_insert(
         }
     }
 
+    if candidates.is_empty() {
+        return Err(AuthoringEditError::NoEdits);
+    }
+    // Namespace construction is needed only when an anchor will be generated.
+    // Keep all completeness/ambiguity checks above even for a no-op request.
+    let mut occupied = occupied_anchors(snapshot)?;
     let mut edits = Vec::new();
     for (document, stable, insertion, ordinal) in candidates {
         snapshot.checkpoint()?;
@@ -178,9 +183,6 @@ pub(super) fn plan_insert(
             point_range(insertion_position),
             replacement,
         ));
-    }
-    if edits.is_empty() {
-        return Err(AuthoringEditError::NoEdits);
     }
     make_plan(
         snapshot,

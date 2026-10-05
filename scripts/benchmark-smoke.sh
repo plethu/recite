@@ -10,8 +10,9 @@ Runs Recite's fast, non-comparative benchmark smoke:
   1. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench compiler -- 'compiler/.*/tiny' --test
   2. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench runtime -- 'runtime/.*/tiny' --test
   3. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench preview -- 'preview/.*/tiny' --test
+  4. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench lsp -- 'lsp/.*/tiny' --test
 
-The smoke only proves that the tiny compiler, runtime, and preview Criterion
+The smoke only proves that the tiny compiler, runtime, preview, and LSP Criterion
 benchmarks build and execute. It does not compare timings or enforce regression
 thresholds.
 EOF
@@ -62,6 +63,7 @@ run_smoke_target() {
 run_smoke_target compiler 'compiler/.*/tiny'
 run_smoke_target runtime 'runtime/.*/tiny'
 run_smoke_target preview 'preview/.*/tiny'
+run_smoke_target lsp 'lsp/.*/tiny'
 
 echo
 echo "Recite benchmark smoke passed."

@@ -28,9 +28,10 @@ pub(super) fn completion(
         _ => return None,
     };
     let mut items = Vec::new();
+    let block_detail = catalog.text(MsgId::LspCompletionBlock);
     for candidate in &candidates {
         snapshot.checkpoint().ok()?;
-        if let Some(item) = completion_item(candidate, text, schema, catalog) {
+        if let Some(item) = completion_item(candidate, &block_detail, schema, catalog) {
             items.push(item);
         }
     }
@@ -41,7 +42,7 @@ pub(super) fn completion(
                 site.kind() == CompletionSiteKind::Block && site.block_target().is_none()
             });
     if unqualified_block_site {
-        extend_project_block_items(snapshot, &mut items, catalog)?;
+        extend_project_block_items(snapshot, &mut items, &block_detail)?;
     }
     items.sort_by(|left, right| left.label.cmp(&right.label));
     items.dedup_by(|left, right| left.label == right.label);
@@ -51,7 +52,7 @@ pub(super) fn completion(
 fn extend_project_block_items(
     snapshot: &AuthoringQuery<'_>,
     items: &mut Vec<CompletionItem>,
-    catalog: &UiCatalog,
+    block_detail: &str,
 ) -> Option<()> {
     let result = snapshot.project_block_symbols();
     let symbols = match result {
@@ -67,7 +68,7 @@ fn extend_project_block_items(
             items.push(CompletionItem {
                 label: name.as_str().to_owned(),
                 kind: Some(CompletionItemKind::REFERENCE),
-                detail: Some(catalog.text(MsgId::LspCompletionBlock)),
+                detail: Some(block_detail.to_owned()),
                 ..CompletionItem::default()
             });
         }
@@ -77,7 +78,7 @@ fn extend_project_block_items(
 
 fn completion_item(
     candidate: &CompletionCandidate,
-    _text: &str,
+    block_detail: &str,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CompletionItem> {
@@ -88,7 +89,7 @@ fn completion_item(
     };
     match candidate.kind() {
         CompletionCandidateKind::Block => {
-            item.detail = Some(catalog.text(MsgId::LspCompletionBlock));
+            item.detail = Some(block_detail.to_owned());
         }
         CompletionCandidateKind::Speaker => {
             item.detail = Some(catalog.text(MsgId::LspCompletionSpeaker));

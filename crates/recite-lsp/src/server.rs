@@ -17,6 +17,7 @@ mod notifications;
 mod query;
 mod requests;
 mod scheduling;
+mod text_sync;
 mod updates;
 mod workers;
 #[allow(unused_imports, reason = "test harness reexports protocol seams")]
@@ -25,8 +26,9 @@ pub(crate) use bootstrap::run_connection_with_user_config;
 pub(crate) use bootstrap::{run_connection, run_connection_with_catalog};
 pub use bootstrap::{run_stdio, run_stdio_with_catalog, run_stdio_with_locale};
 pub use error::ServerError;
-use freshness::{Epochs, Fence, Versions};
+use freshness::{Epochs, Fence};
 use requests::Requests;
+use text_sync::Documents;
 use updates::Update;
 use workers::Workers;
 
@@ -37,7 +39,7 @@ struct Server {
     scopes: BTreeMap<String, String>,
     epochs: Epochs,
     analyzed_epochs: Epochs,
-    versions: Versions,
+    documents: Documents,
     updates: VecDeque<(u64, Arc<Update>)>,
     revision: u64,
     analyzed_revision: Option<u64>,
@@ -65,7 +67,7 @@ impl Server {
             scopes: BTreeMap::new(),
             epochs: Epochs::default(),
             analyzed_epochs: Epochs::default(),
-            versions: Versions::default(),
+            documents: Documents::default(),
             updates: VecDeque::new(),
             revision: 0,
             analyzed_revision: None,

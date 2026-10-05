@@ -87,7 +87,7 @@ def main() -> int:
         raise AssertionError("no Recite initialize response was captured")
     capabilities = initialize["result"]["capabilities"]
     assert capabilities["positionEncoding"] == "utf-16"
-    assert capabilities["textDocumentSync"] == {"change": 1, "openClose": True, "save": {}}
+    assert capabilities["textDocumentSync"] == {"change": 2, "openClose": True, "save": {}}
     for capability in ("completionProvider", "hoverProvider", "definitionProvider", "referencesProvider"):
         assert capabilities.get(capability), f"missing initialize capability: {capability}"
     assert capabilities["renameProvider"]["prepareProvider"] is True

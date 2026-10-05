@@ -1,6 +1,6 @@
 //! Incremental document dependencies, with the batch validator as policy owner.
 //! Only changed documents and consumers/colliders of their exports are checked.
-use super::{ProjectFacts, facts::Symbol, validate_context};
+use super::{ProjectFacts, facts::Symbol};
 use crate::authoring::{Interrupted, WorkControl};
 use crate::validation::project::first_source_span;
 use recite_core::{Diagnostic, DocumentKey, ast::SourceFile};
@@ -10,9 +10,10 @@ use std::{
 };
 
 mod relocation;
+mod validation;
 
 // Candidates share symbol keys and memberships; only affected entries copy.
-type Membership = rpds::RedBlackTreeMapSync<Symbol, Vec<Arc<DocumentKey>>>;
+type Membership = rpds::HashTrieMapSync<Symbol, Vec<Arc<DocumentKey>>>;
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct ProjectIndex {
@@ -101,30 +102,7 @@ impl ProjectIndex {
         if let Some(key) = self.first_document() {
             affected.insert(key);
         }
-        for key in &affected {
-            control.checkpoint()?;
-            diagnostics.remove(key);
-            let Some(target) = self.documents.get(key) else {
-                continue;
-            };
-            let mut context = BTreeSet::from([key.clone()]);
-            for symbol in target.exports().chain(target.dependencies()) {
-                extend_members(&self.definitions, &symbol, &mut context);
-            }
-            let facts: Vec<_> = context
-                .iter()
-                .filter_map(|key| self.documents.get(key).map(Arc::as_ref))
-                .collect();
-            // Context providers need not have all of their own dependencies in
-            // this projection. Only the target's diagnostics may be published.
-            let report: Vec<_> = validate_context(&facts, complete, stable_complete)
-                .into_iter()
-                .filter(|diagnostic| diagnostic.span.file == key.as_str())
-                .collect();
-            if !report.is_empty() {
-                diagnostics.insert(key.clone(), report);
-            }
-        }
+        self.revalidate(&affected, diagnostics, control)?;
         if let Some((key, diagnostic)) = self.missing_default() {
             diagnostics.entry(key).or_default().push(diagnostic);
         }

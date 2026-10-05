@@ -21,10 +21,10 @@ impl Server {
         if self.shutdown_requested {
             return Ok(());
         }
-        let Some(update) = Update::parse(notification) else {
+        let Some(mut update) = Update::parse(notification) else {
             return Ok(());
         };
-        if !self.versions.accept(&update) {
+        if !self.documents.accept(&mut update) {
             return Ok(());
         }
         let scope = update

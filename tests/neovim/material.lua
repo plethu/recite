@@ -54,7 +54,16 @@ wait_for(function()
   return #clients > 0 and clients[1].initialized
 end, "the default Recite client did not initialize")
 local default_id = clients[1].id
+assert_true(clients[1].flags.debounce_text_changes == 50, "default debounce was not applied")
 assert_true(recite.start() == default_id, "an identical default start did not reuse its client")
+
+local flags_id = recite.start(0, { flags = { debounce_text_changes = 200 } })
+assert_true(flags_id ~= default_id, "changed flags silently reused the default client")
+local flags_client = wait_initialized(flags_id, "flags override client")
+assert_true(flags_client.flags.debounce_text_changes == 200, "flags override was not applied")
+assert_true(recite.start(0, { flags = { debounce_text_changes = 200 } }) == flags_id,
+  "identical flags did not reuse their client")
+stop_probe(recite, flags_id, "flags override client")
 
 local settings_id = recite.start(0, { settings = { material_probe = { enabled = true } } })
 assert_true(settings_id ~= default_id, "changed settings silently reused the default client")
@@ -90,6 +99,7 @@ local material_overrides = {
   settings = { material_recovery = { enabled = true } },
   init_options = { material_recovery = { enabled = true } },
   capabilities = { workspace = { configuration = true } },
+  flags = { debounce_text_changes = 200 },
   on_attach = function() attach_calls = attach_calls + 1 end,
   on_init = function() init_calls = init_calls + 1 end,
   on_exit = function() exit_calls = exit_calls + 1 end,
@@ -110,6 +120,7 @@ assert_true(recovered.config.root_dir == material_root, "recovered root override
 assert_true(recovered.config.settings.material_recovery.enabled == true, "recovered settings were lost")
 assert_true(recovered.config.init_options.material_recovery.enabled == true, "recovered init_options were lost")
 assert_true(recovered.config.capabilities.workspace.configuration == true, "recovered capabilities were lost")
+assert_true(recovered.flags.debounce_text_changes == 200, "recovered debounce override was lost")
 assert_true(init_calls >= 2 and exit_calls >= 1 and attach_calls >= 2,
   "recovered callbacks were not preserved")
 assert_true(recite.start(0, material_overrides) == recovered.id,

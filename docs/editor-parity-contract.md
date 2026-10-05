@@ -50,11 +50,11 @@ and a non-BMP scalar consumes two code units. Clients must send the encoding
 advertised by `initialize`; the conformance fixture includes CRLF and a non-BMP
 scalar rather than relying on ASCII-only tests.
 
-Open documents are overlays. An accepted full-document `didChange` replaces
+Open documents are overlays. Accepted full-document or sequential UTF-16 ranged `didChange` events update
 the overlay and produces diagnostics for that version. A change whose version
 is not greater than the current open version is stale and is refused without
-replacing text or publishing a result. A malformed or ranged change is refused
-under the current full-sync contract. A partial or incomplete buffer is still
+replacing text or publishing a result. Malformed batches are refused atomically without consuming the version.
+The server advertises incremental synchronization and accepts full replacements. A partial or incomplete buffer is still
 an editor input: the server may publish parser diagnostics and the client keeps
 editing; it must not turn a temporary parse failure into a different language.
 

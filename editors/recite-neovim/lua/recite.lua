@@ -5,6 +5,7 @@ local defaults = {
   lsp = {
     autostart = true,
     cmd = { "recite-lsp" },
+    flags = { debounce_text_changes = 50 },
     root_markers = { "recite.project.toml" },
   },
   treesitter = {

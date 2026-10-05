@@ -1,5 +1,8 @@
 # Bounded LSP latency experiments
 
+Later sustained-load, text-sync, installed-editor and CI experiments are recorded
+in the [experience follow-up](follow-up.md).
+
 The verified cancellation and region-cache checkpoint is `6abcb759`. Experiments
 below are local Linux stdio measurements, not editor frame timings. No builds,
 tests or samplers ran during normal-release timing comparisons. Each edit study

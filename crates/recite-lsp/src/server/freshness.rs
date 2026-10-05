@@ -1,4 +1,3 @@
-use lsp_types::Uri;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Default)]
@@ -38,42 +37,5 @@ impl Epochs {
         };
         *epoch = epoch.checked_add(1)?;
         Some(())
-    }
-}
-#[derive(Default)]
-pub(super) struct Versions(BTreeMap<Uri, i32>);
-impl Versions {
-    /// Validate full-sync input before it can invalidate requests or displace accepted text.
-    pub(super) fn accept(&mut self, update: &super::updates::Update) -> bool {
-        use super::updates::Update;
-        match update {
-            Update::Open(p) => {
-                if self.0.contains_key(&p.text_document.uri) {
-                    return false;
-                }
-                self.0
-                    .insert(p.text_document.uri.clone(), p.text_document.version);
-            }
-            Update::Change(p) => {
-                let Some(version) = self.0.get_mut(&p.text_document.uri) else {
-                    return false;
-                };
-                let [change] = p.content_changes.as_slice() else {
-                    return false;
-                };
-                if p.text_document.version <= *version
-                    || change.range.is_some()
-                    || change.range_length.is_some()
-                {
-                    return false;
-                }
-                *version = p.text_document.version;
-            }
-            Update::Close(p) => {
-                return self.0.remove(&p.text_document.uri).is_some();
-            }
-            _ => {}
-        }
-        true
     }
 }

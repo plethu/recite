@@ -226,7 +226,8 @@ def lanes_for_path(path, *, base=None, head=None):
         "scripts/check-writer-colors.py", "scripts/check-writer-native-accessibility.py",
     }:
         return frozenset({"rust", "maintainability"})
-    if path.startswith(("editors/vscode/", "editors/helix/", "tests/editor-hosts/helix/")):
+    if path.startswith(("editors/vscode/", "editors/helix/", "tests/editor-hosts/helix/",
+                        "tests/editor-hosts/vscode/")):
         return frozenset({"editor", "maintainability"})
     if path.startswith("editors/"):
         return frozenset({"rust", "editor", "maintainability"})
@@ -243,7 +244,10 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"docs", "site", "maintainability"})
     if path in {"scripts/check-vscode.sh", "scripts/check-helix.sh"}:
         return frozenset({"editor", "maintainability"})
-    if path == "scripts/benchmark-smoke.sh":
+    if path == "scripts/benchmark-smoke.sh" or path.startswith((
+        "scripts/check-lsp-performance.", "scripts/measure-lsp-", "scripts/lsp_",
+        "scripts/lsp-performance-",
+    )):
         return frozenset({"benchmark-smoke", "maintainability"})
     if path in {"_typos.toml", "taplo.toml", "clippy.toml", "deny.toml"}:
         return frozenset({"rust", "maintainability"})

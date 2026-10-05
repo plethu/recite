@@ -6,6 +6,9 @@ The local implementation follows the measured ownership boundaries below. Requir
 the [production spec](recite-production-spec.md), sections 14, 19.5 and 23,
 and the [editor parity contract](editor-parity-contract.md).
 
+The subsequent [experience and CI experiments](design/lsp-cancellation/follow-up.md)
+cover sustained load, ranged sync, installed-client debounce and regression gates.
+
 Keep protocol reception and publication on one coordinator thread. Give
 analysis and queries one worker each, with immutable query snapshots and
 cooperative cancellation through the synchronous compiler. Retain incremental
@@ -229,8 +232,10 @@ and is now a direct dependency for bounded channels and selection.
 ## Scheduling and freshness
 
 Accepted inputs and completed analysis are separate states. The coordinator
-validates full-sync shape and strictly increasing open-document versions before
-an update invalidates any work. Every request captures a unique internal job
+validates sequential UTF-16 edits and strictly increasing open-document versions before
+an update invalidates any work. It retains protocol text separately from analysis
+and normalizes each accepted transaction to a full snapshot before coalescing.
+Every request captures a unique internal job
 serial and an input fence. It waits until a completed snapshot satisfies that
 fence; positions are never silently reinterpreted against newer text.
 
@@ -320,13 +325,19 @@ compare both the old snapshot and a subsequent successful update with an
 uninterrupted candidate.
 
 Symbol membership uses
-[`rpds::RedBlackTreeMapSync`](https://docs.rs/rpds/1.2.1/rpds/type.RedBlackTreeMapSync.html),
-a persistent ordered map.
+[`rpds::HashTrieMapSync`](https://docs.rs/rpds/1.2.1/rpds/type.HashTrieMapSync.html),
+a persistent hash trie. Membership is lookup-only; sorted document sets and
+diagnostic ordering retain deterministic observable results.
 The writer's existing allocation gate exposed the cost of cloning a standard
-map for an ID edit. The persistent map shares unchanged tree nodes, while
+map for an ID edit. The persistent map shares unchanged trie nodes, while
 membership updates apply only added and removed symbols. Span-only changes keep
 the membership map intact. This adds the MIT-licensed `rpds` dependency and its
 `archery`/`triomphe` support crates; no collection implementation is owned here.
+
+Project validation shares overlapping dependency contexts in batches. A 3,072
+passage budget bounds the temporary AST materialization added by batching; a
+single target's required context is never truncated. The batch validator remains
+the policy owner and only affected target diagnostics are published.
 
 The LSP retains kernels across ordinary source edits. It rebuilds when schema
 semantics change or an alias switches the effective owner of an already-open

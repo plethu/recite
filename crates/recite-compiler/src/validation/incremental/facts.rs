@@ -172,7 +172,7 @@ impl ProjectFacts {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub(super) enum Symbol {
     Id(String),
     Block(BlockId),

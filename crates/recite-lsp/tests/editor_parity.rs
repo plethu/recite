@@ -25,7 +25,7 @@ fn initialize_and_project_features_use_shared_stdio_contract() {
 
     let capabilities = &harness.initialize()["capabilities"];
     assert_eq!(capabilities["positionEncoding"], "utf-16");
-    assert_eq!(capabilities["textDocumentSync"]["change"], 1);
+    assert_eq!(capabilities["textDocumentSync"]["change"], 2);
     assert_eq!(capabilities["textDocumentSync"]["openClose"], true);
     assert!(capabilities["textDocumentSync"]["save"].is_object());
     assert!(capabilities["completionProvider"].is_object());

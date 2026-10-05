@@ -92,9 +92,12 @@ requested from that server without Lua-side semantic fallbacks. Rename and
 code-action responses are inspected as structured workspace edits; a refused
 operation is left unapplied. Re-running `setup` with changed LSP-owned options
 stops and reattaches Recite clients while retaining caller-supplied
-`capabilities`, `init_options`, `settings`, `on_init`, and `on_exit`.
+`capabilities`, `init_options`, `settings`, `flags`, `on_init`, and `on_exit`.
+Recite defaults `lsp.flags.debounce_text_changes` to 50 ms. Set a larger value
+to coalesce more typing before sending a full document, for example
+`lsp = { flags = { debounce_text_changes = 150 } }`.
 Direct `start` overrides are compared against the effective owned-client
-configuration: command, settings, initialization options, capabilities, and
+configuration: command, settings, flags, initialization options, capabilities, and
 callbacks must match before a client is reused. This keeps compatible repeated
 starts cheap without silently applying an incompatible override to an existing
 client.
