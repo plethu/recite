@@ -76,14 +76,15 @@ def main():
     parser.add_argument("--edits", type=int, default=50)
     parser.add_argument("--seed", type=int, default=7203)
     parser.add_argument("--churn", action="store_true")
-    parser.add_argument("--driver-switch-ms", type=float, default=1.0,
-                        help="Python driver thread-switch interval; never changes the server")
+    parser.add_argument("--driver-switch-ms", type=float, default=None,
+                        help="Override Python driver thread-switch interval for experiments (default: interpreter setting)")
     args = parser.parse_args()
     if args.cycles < 20 or args.edits < 1:
         parser.error("require >=20 cycles and positive edits per cycle")
-    if not math.isfinite(args.driver_switch_ms) or args.driver_switch_ms <= 0:
-        parser.error("driver switch interval must be positive and finite")
-    sys.setswitchinterval(args.driver_switch_ms / 1000)
+    if args.driver_switch_ms is not None:
+        if not math.isfinite(args.driver_switch_ms) or args.driver_switch_ms <= 0:
+            parser.error("driver switch interval must be positive and finite")
+        sys.setswitchinterval(args.driver_switch_ms / 1000)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="recite-endurance-") as directory:
         root = Path(directory).resolve()

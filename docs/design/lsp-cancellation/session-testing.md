@@ -6,7 +6,7 @@ The generated project has 40 documents, 800 blocks, 16,000 stable-ID lines and t
 shared destinations. No user project is edited.
 
 Each cycle opens a document, introduces and repairs a broken reference, sends
-5 ms edit bursts with competing completion and cancelled rename requests, saves,
+edits scheduled at 5 ms intervals with competing completion and cancelled rename requests, saves,
 closes/reopens, restores the saved source, creates and deletes a temporary saved
 document, and changes/restores the manifest content-set configuration. The fixed
 workload reuses the temporary document identity; churn uses a new identity each
@@ -41,6 +41,14 @@ outstanding requests, is bounded at 500 ms; request/diagnostic waits
 have deadlines, and each workload has a ten-minute cycle budget. The CI job also
 has a 30-minute outer timeout including builds and the editor host.
 
+CI repeats each workload three times. After five warmup cycles, the nearest-rank
+p95 recovery must stay within 20 ms on Ubuntu 24.04, 40 ms on Windows Server 2025,
+and 75 ms on macOS 15. Exceeding the platform limit in at least two repetitions
+fails the job. A single repetition above this tail limit is recorded; the 500 ms
+per-cycle limit remains unconditional. Missing, truncated or incomparable reports
+fail closed. See [recovery calibration](recovery-calibration.md) for the measured
+driver correction and the rationale for these hosted-runner budgets.
+
 `check-lsp-session-faults.py` drives a real child that retains touched memory,
 threads and open files and progressively delays its replies. The same sampler and
 decision function must detect all four faults on every OS (latency exercises both
@@ -58,14 +66,19 @@ Neither depends on a person keeping an editor open for hours.
 python3 -m venv target/lsp-matrix-env
 target/lsp-matrix-env/bin/python -m pip install -r scripts/lsp-session-requirements.txt
 mise exec -- cargo build --locked --release -p recite-lsp -p recite-fixturegen
-target/lsp-matrix-env/bin/python scripts/measure-lsp-endurance.py \
-  --binary target/release/recite-lsp --output target/lsp-sessions/fixed.json
-target/lsp-matrix-env/bin/python scripts/measure-lsp-endurance.py \
-  --binary target/release/recite-lsp --output target/lsp-sessions/churn.json --churn
+for round in 1 2 3; do
+  target/lsp-matrix-env/bin/python scripts/measure-lsp-endurance.py \
+    --binary target/release/recite-lsp --output "target/lsp-sessions/fixed-$round.json"
+  target/lsp-matrix-env/bin/python scripts/measure-lsp-endurance.py \
+    --binary target/release/recite-lsp --output "target/lsp-sessions/churn-$round.json" --churn
+done
+target/lsp-matrix-env/bin/python scripts/check-lsp-session-recovery.py \
+  --reports target/lsp-sessions --budget-ms 20 --output target/lsp-sessions/recovery.json
 ```
 
 On Windows, use the virtual environment's `Scripts/python.exe` and the server's
-`.exe` suffix. Defaults are 40 cycles with 50 edits each. The initial extended
+`.exe` suffix; choose the corresponding platform budget above. Defaults are 40
+cycles with 50 edits each per invocation. The initial extended
 Linux check used 60 cycles with 100 edits each: 12,000 edits across both workloads
 in about 100 seconds, stable resource counts, and matching fresh-server results.
 The local VS Code probe also passed 20 document lifecycle cycles and 21 rendered
@@ -95,7 +108,10 @@ Each OS retains checkpoint reports, operation traces, and rendered frames as
 one host/run; physical display timing and human usability are left to real-world
 feedback after release.
 
-## Results, 5 October 2026
+## Initial results, 5 October 2026
+
+These measurements predate the [driver pacing correction](recovery-calibration.md).
+They remain historical evidence of the original session gate.
 
 [Actions run 37351523403](https://github.com/plethu/recite/actions/runs/37351523403)
 tested revision `4034c3f2`. All three platforms passed both 40-cycle workloads

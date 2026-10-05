@@ -78,6 +78,7 @@ class Client:
         return (received - started) / 1e6, message
 
     def diagnostics(self, uri, version, timeout=120):
+        """Return the reader timestamp for newly received diagnostics, else None."""
         def matches(message):
             return (message.get("method") == "textDocument/publishDiagnostics"
                     and message["params"]["uri"] == uri

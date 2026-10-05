@@ -1,0 +1,897 @@
+{
+  "percentile_method": "nearest rank",
+  "experiments": {
+    "pacing": {
+      "run_url": "https://github.com/plethu/recite/actions/runs/37377620058",
+      "platforms": {
+        "linux": {
+          "control": {
+            "harness_revision": "a201f97da83c26b4e4ba53875b4ae23d4295992b",
+            "binary_sha256": "eab3b74b114b72e70f5840b374651408dc85e822f3e9f7bf0434bba4259c79e5",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 199.0386824939999,
+            "recovery_median_ms": 11.6811525,
+            "recovery_p95_ms": {
+              "fixed": [
+                12.618083,
+                12.017032,
+                11.841604
+              ],
+              "churn": [
+                12.693711,
+                12.912396,
+                11.95398
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 253.94251099999997,
+                "p95": 254.78995200000006
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 5.127091999999999,
+                "p95": 5.162633
+              },
+              "drain_ms": {
+                "median": 0.7014885,
+                "p95": 0.810295
+              },
+              "repair_diagnostics_ms": {
+                "median": 5.273394,
+                "p95": 5.598261
+              },
+              "cancelled_rename_ms": {
+                "median": 0.2478935,
+                "p95": 0.300491
+              },
+              "recovery_completion_ms": {
+                "median": 0.3414745,
+                "p95": 0.44859
+              },
+              "cycle_ms": {
+                "median": 771.5432659999999,
+                "p95": 801.949055
+              },
+              "driver_cpu_ms": {
+                "median": 196.91657400000008,
+                "p95": 204.44657100000006
+              },
+              "server_cpu_ms": {
+                "median": 490.0000000000002,
+                "p95": 520.0000000000014
+              }
+            }
+          },
+          "candidate": {
+            "harness_revision": "4460a99810f81c56d3ba339a5f5e0883dbbc8ae9",
+            "binary_sha256": "eab3b74b114b72e70f5840b374651408dc85e822f3e9f7bf0434bba4259c79e5",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 162.42796314099996,
+            "recovery_median_ms": 6.678827,
+            "recovery_p95_ms": {
+              "fixed": [
+                8.126334,
+                8.056013,
+                8.142407
+              ],
+              "churn": [
+                8.261489,
+                8.699,
+                8.002261
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 96.8595235,
+                "p95": 103.65332000000001
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.0832615,
+                "p95": 0.162806
+              },
+              "drain_ms": {
+                "median": 0.6920489999999999,
+                "p95": 1.081031
+              },
+              "repair_diagnostics_ms": {
+                "median": 5.270064,
+                "p95": 6.399917
+              },
+              "cancelled_rename_ms": {
+                "median": 0.2495595,
+                "p95": 0.309031
+              },
+              "recovery_completion_ms": {
+                "median": 0.33720000000000006,
+                "p95": 0.449804
+              },
+              "cycle_ms": {
+                "median": 618.726536,
+                "p95": 651.222708
+              },
+              "driver_cpu_ms": {
+                "median": 204.15047549999986,
+                "p95": 216.60988400000036
+              },
+              "server_cpu_ms": {
+                "median": 490.0000000000002,
+                "p95": 530.0000000000011
+              },
+              "burst_send_span_ms": {
+                "median": 244.9832755,
+                "p95": 246.683315
+              }
+            },
+            "edit_interval_ms": {
+              "median": 4.9914135,
+              "p95": 5.944741,
+              "max": 12.235917
+            }
+          },
+          "editor_lifecycle_cycles": 20,
+          "rendered_observations": 21
+        },
+        "macos": {
+          "control": {
+            "harness_revision": "a201f97da83c26b4e4ba53875b4ae23d4295992b",
+            "binary_sha256": "10009ed941d4e8d82cd7b9c1fa609e9cf89a9e11cd501012a39147d1916cb225",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 458.200933375,
+            "recovery_median_ms": 36.7723955,
+            "recovery_p95_ms": {
+              "fixed": [
+                68.643834,
+                79.303417,
+                67.413666
+              ],
+              "churn": [
+                66.610708,
+                55.943916,
+                74.114459
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 1326.7478350000006,
+                "p95": 1559.706626
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 23.7371455,
+                "p95": 45.253792
+              },
+              "drain_ms": {
+                "median": 0.31643750000000004,
+                "p95": 0.946459
+              },
+              "repair_diagnostics_ms": {
+                "median": 6.6428125,
+                "p95": 16.4865
+              },
+              "cancelled_rename_ms": {
+                "median": 0.2321875,
+                "p95": 20.064375
+              },
+              "recovery_completion_ms": {
+                "median": 0.219583,
+                "p95": 0.635417
+              },
+              "cycle_ms": {
+                "median": 1843.0200835,
+                "p95": 2126.833791
+              },
+              "driver_cpu_ms": {
+                "median": 180.79349999999982,
+                "p95": 246.79200000000012
+              },
+              "server_cpu_ms": {
+                "median": 562.0531199999996,
+                "p95": 761.281536000002
+              }
+            }
+          },
+          "candidate": {
+            "harness_revision": "4460a99810f81c56d3ba339a5f5e0883dbbc8ae9",
+            "binary_sha256": "10009ed941d4e8d82cd7b9c1fa609e9cf89a9e11cd501012a39147d1916cb225",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 154.23208937599964,
+            "recovery_median_ms": 9.758395499999999,
+            "recovery_p95_ms": {
+              "fixed": [
+                48.950667,
+                46.201333,
+                16.434375
+              ],
+              "churn": [
+                56.471625,
+                66.91825,
+                11.839625
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 146.362438,
+                "p95": 163.84420899999998
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.0547295,
+                "p95": 0.183958
+              },
+              "drain_ms": {
+                "median": 0.091229,
+                "p95": 0.324375
+              },
+              "repair_diagnostics_ms": {
+                "median": 7.8726255,
+                "p95": 23.847125
+              },
+              "cancelled_rename_ms": {
+                "median": 0.33975,
+                "p95": 20.055417
+              },
+              "recovery_completion_ms": {
+                "median": 0.2742915,
+                "p95": 10.33375
+              },
+              "cycle_ms": {
+                "median": 589.743125,
+                "p95": 679.081875
+              },
+              "driver_cpu_ms": {
+                "median": 138.40050000000002,
+                "p95": 190.29200000000034
+              },
+              "server_cpu_ms": {
+                "median": 375.4012160000002,
+                "p95": 545.0963199999999
+              },
+              "burst_send_span_ms": {
+                "median": 252.085396,
+                "p95": 264.902792
+              }
+            },
+            "edit_interval_ms": {
+              "median": 2.047084,
+              "p95": 20.19925,
+              "max": 41.2885
+            }
+          },
+          "editor_lifecycle_cycles": 20,
+          "rendered_observations": 21
+        },
+        "windows": {
+          "control": {
+            "harness_revision": "a201f97da83c26b4e4ba53875b4ae23d4295992b",
+            "binary_sha256": "456159d7c758a9a3f26f275f8eed9ee264f611b599dacdda96b1c93438d3c9ef",
+            "fixture_sha256": "d4c9a9df48c0a1298074bc15ba5e0925bfd397ac10080d358e6cc8662712b3e3",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 227.7660000000002,
+            "recovery_median_ms": 17.32985,
+            "recovery_p95_ms": {
+              "fixed": [
+                20.5765,
+                20.0453,
+                23.1699
+              ],
+              "churn": [
+                21.5952,
+                21.7487,
+                22.46
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 262.85305,
+                "p95": 265.47009999999995
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 5.216900000000001,
+                "p95": 5.7378
+              },
+              "drain_ms": {
+                "median": 0.14329999999999998,
+                "p95": 0.3242
+              },
+              "repair_diagnostics_ms": {
+                "median": 11.09245,
+                "p95": 15.6675
+              },
+              "cancelled_rename_ms": {
+                "median": 0.20735,
+                "p95": 0.2687
+              },
+              "recovery_completion_ms": {
+                "median": 0.28959999999999997,
+                "p95": 0.3487
+              },
+              "cycle_ms": {
+                "median": 857.5834500000001,
+                "p95": 956.0348
+              },
+              "driver_cpu_ms": {
+                "median": 156.25,
+                "p95": 250.0
+              },
+              "server_cpu_ms": {
+                "median": 828.125,
+                "p95": 921.875
+              }
+            }
+          },
+          "candidate": {
+            "harness_revision": "4460a99810f81c56d3ba339a5f5e0883dbbc8ae9",
+            "binary_sha256": "456159d7c758a9a3f26f275f8eed9ee264f611b599dacdda96b1c93438d3c9ef",
+            "fixture_sha256": "d4c9a9df48c0a1298074bc15ba5e0925bfd397ac10080d358e6cc8662712b3e3",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 191.64099999999996,
+            "recovery_median_ms": 10.42555,
+            "recovery_p95_ms": {
+              "fixed": [
+                12.8975,
+                12.908,
+                14.1943
+              ],
+              "churn": [
+                12.6454,
+                11.9613,
+                14.0124
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 133.96204999999998,
+                "p95": 140.6515
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.06634999999999999,
+                "p95": 0.1074
+              },
+              "drain_ms": {
+                "median": 0.05445,
+                "p95": 0.0839
+              },
+              "repair_diagnostics_ms": {
+                "median": 9.7882,
+                "p95": 12.2524
+              },
+              "cancelled_rename_ms": {
+                "median": 0.1946,
+                "p95": 0.2757
+              },
+              "recovery_completion_ms": {
+                "median": 0.2905,
+                "p95": 0.3493
+              },
+              "cycle_ms": {
+                "median": 721.9309,
+                "p95": 749.0694
+              },
+              "driver_cpu_ms": {
+                "median": 156.25,
+                "p95": 187.5
+              },
+              "server_cpu_ms": {
+                "median": 718.75,
+                "p95": 750.0
+              },
+              "burst_send_span_ms": {
+                "median": 245.31830000000002,
+                "p95": 246.7666
+              }
+            },
+            "edit_interval_ms": {
+              "median": 5.1299,
+              "p95": 5.9712,
+              "max": 10.7766
+            }
+          },
+          "editor_lifecycle_cycles": 20,
+          "rendered_observations": 21
+        }
+      }
+    },
+    "thread_switch": {
+      "run_url": "https://github.com/plethu/recite/actions/runs/37380032116",
+      "platforms": {
+        "linux": {
+          "control": {
+            "harness_revision": "4460a99810f81c56d3ba339a5f5e0883dbbc8ae9",
+            "binary_sha256": "eab3b74b114b72e70f5840b374651408dc85e822f3e9f7bf0434bba4259c79e5",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 161.912325881,
+            "recovery_median_ms": 6.516357,
+            "recovery_p95_ms": {
+              "fixed": [
+                8.545996,
+                7.843664,
+                7.821351
+              ],
+              "churn": [
+                7.905339,
+                7.766158,
+                7.905043
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 99.57157049999999,
+                "p95": 106.23489500000001
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.072696,
+                "p95": 0.135644
+              },
+              "drain_ms": {
+                "median": 0.6658655,
+                "p95": 1.035365
+              },
+              "repair_diagnostics_ms": {
+                "median": 5.1995819999999995,
+                "p95": 6.311661
+              },
+              "cancelled_rename_ms": {
+                "median": 0.24696400000000002,
+                "p95": 0.286405
+              },
+              "recovery_completion_ms": {
+                "median": 0.323854,
+                "p95": 0.402112
+              },
+              "cycle_ms": {
+                "median": 616.5725395,
+                "p95": 649.903996
+              },
+              "driver_cpu_ms": {
+                "median": 201.61733349999977,
+                "p95": 212.75153399999968
+              },
+              "server_cpu_ms": {
+                "median": 480.00000000000045,
+                "p95": 520.0000000000014
+              },
+              "burst_send_span_ms": {
+                "median": 244.840446,
+                "p95": 245.725674
+              }
+            },
+            "edit_interval_ms": {
+              "median": 4.9930515,
+              "p95": 5.947082,
+              "max": 9.152437
+            }
+          },
+          "candidate": {
+            "harness_revision": "08ce3f7a62783299f8bb75a4e22a002989928e8a",
+            "binary_sha256": "eab3b74b114b72e70f5840b374651408dc85e822f3e9f7bf0434bba4259c79e5",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": {
+              "python": "3.12.14",
+              "switch_interval_ms": 1.0
+            },
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 160.9504297960001,
+            "recovery_median_ms": 6.3966435,
+            "recovery_p95_ms": {
+              "fixed": [
+                7.997295,
+                7.960423,
+                7.950669
+              ],
+              "churn": [
+                8.070343,
+                7.916397,
+                8.265252
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 99.73626949999999,
+                "p95": 105.55917100000002
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.052623500000000004,
+                "p95": 0.078208
+              },
+              "drain_ms": {
+                "median": 0.658362,
+                "p95": 1.034912
+              },
+              "repair_diagnostics_ms": {
+                "median": 5.1343309999999995,
+                "p95": 6.383915
+              },
+              "cancelled_rename_ms": {
+                "median": 0.2415505,
+                "p95": 0.280123
+              },
+              "recovery_completion_ms": {
+                "median": 0.325156,
+                "p95": 0.398512
+              },
+              "cycle_ms": {
+                "median": 615.7320645,
+                "p95": 641.953319
+              },
+              "driver_cpu_ms": {
+                "median": 198.30616600000008,
+                "p95": 209.81925199999995
+              },
+              "server_cpu_ms": {
+                "median": 480.00000000000045,
+                "p95": 510.0000000000016
+              },
+              "burst_send_span_ms": {
+                "median": 244.83014350000002,
+                "p95": 245.946096
+              },
+              "repair_main_resume_ms": {
+                "median": 0.1444695,
+                "p95": 0.187565
+              },
+              "rename_main_resume_ms": {
+                "median": 0.041156,
+                "p95": 0.052224
+              },
+              "completion_main_resume_ms": {
+                "median": 0.050672499999999995,
+                "p95": 0.062343
+              }
+            },
+            "edit_interval_ms": {
+              "median": 4.9939675,
+              "p95": 5.937516,
+              "max": 9.666545
+            }
+          },
+          "editor_lifecycle_cycles": 20,
+          "rendered_observations": 21
+        },
+        "macos": {
+          "control": {
+            "harness_revision": "4460a99810f81c56d3ba339a5f5e0883dbbc8ae9",
+            "binary_sha256": "10009ed941d4e8d82cd7b9c1fa609e9cf89a9e11cd501012a39147d1916cb225",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 171.5517294999999,
+            "recovery_median_ms": 20.297187,
+            "recovery_p95_ms": {
+              "fixed": [
+                57.689291,
+                55.230416,
+                51.86625
+              ],
+              "churn": [
+                46.363667,
+                54.017792,
+                46.367375
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 123.4816855,
+                "p95": 154.745831
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.06297900000000001,
+                "p95": 0.224334
+              },
+              "drain_ms": {
+                "median": 0.0572705,
+                "p95": 0.254208
+              },
+              "repair_diagnostics_ms": {
+                "median": 12.8066875,
+                "p95": 28.841208
+              },
+              "cancelled_rename_ms": {
+                "median": 2.6866665,
+                "p95": 20.153334
+              },
+              "recovery_completion_ms": {
+                "median": 0.34656299999999995,
+                "p95": 10.368208
+              },
+              "cycle_ms": {
+                "median": 655.869458,
+                "p95": 763.320333
+              },
+              "driver_cpu_ms": {
+                "median": 169.14899999999977,
+                "p95": 202.839
+              },
+              "server_cpu_ms": {
+                "median": 417.7636159999998,
+                "p95": 526.404736
+              },
+              "burst_send_span_ms": {
+                "median": 250.822104,
+                "p95": 265.829916
+              }
+            },
+            "edit_interval_ms": {
+              "median": 2.4305624999999997,
+              "p95": 19.500375,
+              "max": 36.808541
+            }
+          },
+          "candidate": {
+            "harness_revision": "08ce3f7a62783299f8bb75a4e22a002989928e8a",
+            "binary_sha256": "10009ed941d4e8d82cd7b9c1fa609e9cf89a9e11cd501012a39147d1916cb225",
+            "fixture_sha256": "4ebc93c8240a6205da85c62a8bb6ecb705242a7b99ca506285df070f0419cf84",
+            "driver": {
+              "python": "3.12.10",
+              "switch_interval_ms": 1.0
+            },
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 183.56538812500003,
+            "recovery_median_ms": 30.8451875,
+            "recovery_p95_ms": {
+              "fixed": [
+                60.747959,
+                53.288042,
+                52.624833
+              ],
+              "churn": [
+                52.255625,
+                51.83525,
+                53.438333
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 115.464687,
+                "p95": 141.49933700000003
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.0683955,
+                "p95": 0.224167
+              },
+              "drain_ms": {
+                "median": 0.050312,
+                "p95": 0.218292
+              },
+              "repair_diagnostics_ms": {
+                "median": 17.343146,
+                "p95": 30.604083
+              },
+              "cancelled_rename_ms": {
+                "median": 7.6883545,
+                "p95": 20.18675
+              },
+              "recovery_completion_ms": {
+                "median": 0.3706035,
+                "p95": 10.457792
+              },
+              "cycle_ms": {
+                "median": 689.5635625,
+                "p95": 797.886666
+              },
+              "driver_cpu_ms": {
+                "median": 176.81250000000003,
+                "p95": 208.8069999999993
+              },
+              "server_cpu_ms": {
+                "median": 428.369408,
+                "p95": 530.023936000001
+              },
+              "burst_send_span_ms": {
+                "median": 250.6668335,
+                "p95": 262.438458
+              },
+              "repair_main_resume_ms": {
+                "median": 0.099104,
+                "p95": 0.221542
+              },
+              "rename_main_resume_ms": {
+                "median": 0.054479,
+                "p95": 0.132333
+              },
+              "completion_main_resume_ms": {
+                "median": 0.034021,
+                "p95": 0.136625
+              }
+            },
+            "edit_interval_ms": {
+              "median": 2.7169165,
+              "p95": 18.942167,
+              "max": 58.935292
+            }
+          },
+          "editor_lifecycle_cycles": 20,
+          "rendered_observations": 21
+        },
+        "windows": {
+          "control": {
+            "harness_revision": "4460a99810f81c56d3ba339a5f5e0883dbbc8ae9",
+            "binary_sha256": "f7f8b39cd8e9d757d11533161795b209540aa52dc186e3bbbb0a8b7197f908ae",
+            "fixture_sha256": "d4c9a9df48c0a1298074bc15ba5e0925bfd397ac10080d358e6cc8662712b3e3",
+            "driver": "interpreter default",
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 178.09299999999996,
+            "recovery_median_ms": 10.1068,
+            "recovery_p95_ms": {
+              "fixed": [
+                18.615,
+                12.4114,
+                14.4209
+              ],
+              "churn": [
+                15.2915,
+                14.9299,
+                12.6182
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 167.30194999999998,
+                "p95": 174.1546
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.0619,
+                "p95": 0.1416
+              },
+              "drain_ms": {
+                "median": 0.0592,
+                "p95": 0.1445
+              },
+              "repair_diagnostics_ms": {
+                "median": 9.51995,
+                "p95": 13.4811
+              },
+              "cancelled_rename_ms": {
+                "median": 0.19140000000000001,
+                "p95": 0.2375
+              },
+              "recovery_completion_ms": {
+                "median": 0.27890000000000004,
+                "p95": 0.3338
+              },
+              "cycle_ms": {
+                "median": 665.81485,
+                "p95": 737.9259
+              },
+              "driver_cpu_ms": {
+                "median": 109.375,
+                "p95": 171.875
+              },
+              "server_cpu_ms": {
+                "median": 656.25,
+                "p95": 734.375
+              },
+              "burst_send_span_ms": {
+                "median": 245.33625,
+                "p95": 246.8475
+              }
+            },
+            "edit_interval_ms": {
+              "median": 5.0126,
+              "p95": 5.9228,
+              "max": 30.9437
+            }
+          },
+          "candidate": {
+            "harness_revision": "08ce3f7a62783299f8bb75a4e22a002989928e8a",
+            "binary_sha256": "f7f8b39cd8e9d757d11533161795b209540aa52dc186e3bbbb0a8b7197f908ae",
+            "fixture_sha256": "d4c9a9df48c0a1298074bc15ba5e0925bfd397ac10080d358e6cc8662712b3e3",
+            "driver": {
+              "python": "3.12.10",
+              "switch_interval_ms": 1.0
+            },
+            "cycles": 240,
+            "burst_edits": 12000,
+            "warmup_cycles_per_run": 5,
+            "total_workload_seconds": 176.515,
+            "recovery_median_ms": 9.98475,
+            "recovery_p95_ms": {
+              "fixed": [
+                14.355,
+                12.4309,
+                15.8036
+              ],
+              "churn": [
+                14.3628,
+                12.1541,
+                13.2352
+              ]
+            },
+            "stages": {
+              "driver_sleep_ms": {
+                "median": 168.06670000000003,
+                "p95": 175.76620000000005
+              },
+              "final_edit_to_drain_start_ms": {
+                "median": 0.061,
+                "p95": 0.0943
+              },
+              "drain_ms": {
+                "median": 0.05815,
+                "p95": 0.1811
+              },
+              "repair_diagnostics_ms": {
+                "median": 9.405999999999999,
+                "p95": 12.6883
+              },
+              "cancelled_rename_ms": {
+                "median": 0.1892,
+                "p95": 0.232
+              },
+              "recovery_completion_ms": {
+                "median": 0.27925,
+                "p95": 0.3176
+              },
+              "cycle_ms": {
+                "median": 658.50515,
+                "p95": 705.7823
+              },
+              "driver_cpu_ms": {
+                "median": 109.375,
+                "p95": 156.25
+              },
+              "server_cpu_ms": {
+                "median": 640.625,
+                "p95": 703.125
+              },
+              "burst_send_span_ms": {
+                "median": 245.34815,
+                "p95": 246.5595
+              },
+              "repair_main_resume_ms": {
+                "median": 0.1022,
+                "p95": 0.1396
+              },
+              "rename_main_resume_ms": {
+                "median": 0.0283,
+                "p95": 0.0377
+              },
+              "completion_main_resume_ms": {
+                "median": 0.03635,
+                "p95": 0.0463
+              }
+            },
+            "edit_interval_ms": {
+              "median": 5.0111,
+              "p95": 5.8681,
+              "max": 11.8104
+            }
+          },
+          "editor_lifecycle_cycles": 20,
+          "rendered_observations": 21
+        }
+      }
+    }
+  }
+}
