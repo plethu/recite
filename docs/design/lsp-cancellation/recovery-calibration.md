@@ -109,9 +109,28 @@ Unit tests prove repeated overruns fail and an isolated bad repetition does not.
 A CLI negative control against real Linux reports with a 5 ms budget exited 1.
 All three hosted jobs in run 37380032116 passed the new gate, live resource fault
 controls, incremental protocol tests and the rendered editor lifecycle probe.
-The final default-interval validation is recorded below when complete.
+The final default-interval validation is recorded below.
 
 [Retained measurement summary](recovery-results.json) records both paired
 experiments, revisions, binary and fixture identities, phase timings and editor
 probe counts. Raw reports and traces remain in the linked Actions artifacts for
 30 days.
+
+
+## Final validation
+
+[Run 37381950696](https://github.com/plethu/recite/actions/runs/37381950696)
+tested revision `069d1a37` with the default Python interval restored. All three
+platform jobs and `required-check` passed. Each platform completed six workloads
+(240 cycles and 12,000 burst edits), incremental protocol checks, live fault
+controls, and the rendered VS Code lifecycle check.
+
+| Host | Recovery median | Range of six workload p95s | CI p95 budget |
+| --- | ---: | ---: | ---: |
+| Linux | 6.60 ms | 7.90–8.44 ms | 20 ms |
+| macOS | 12.82 ms | 15.23–56.01 ms | 75 ms |
+| Windows | 15.55 ms | 18.72–22.27 ms | 40 ms |
+
+No repetition exceeded its platform budget. This final run is independent of the
+paired experiments above and should not be used as a same-host before/after
+comparison. Production Rust code remained unchanged during this refinement.
