@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import platform
 import queue
@@ -21,7 +22,8 @@ class Client:
         self.stderr = tempfile.TemporaryFile()
         self.process = subprocess.Popen(
             [str(binary)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=self.stderr, env={"XDG_CONFIG_HOME": str(config_root)},
+            stderr=self.stderr, env={**os.environ, "XDG_CONFIG_HOME": str(config_root),
+                                     "APPDATA": str(config_root), "LOCALAPPDATA": str(config_root)},
         )
         self.messages = queue.Queue()
         self.next_id = 0
@@ -75,14 +77,14 @@ class Client:
         received, message = self.response(request_id, timeout)
         return (received - started) / 1e6, message
 
-    def diagnostics(self, uri, version):
+    def diagnostics(self, uri, version, timeout=120):
         def matches(message):
             return (message.get("method") == "textDocument/publishDiagnostics"
                     and message["params"]["uri"] == uri
                     and message["params"].get("version") == version)
         if any(matches(message) for message in self.notifications):
             return
-        deadline = time.monotonic() + 120
+        deadline = time.monotonic() + timeout
         while True:
             item = self.messages.get(timeout=max(0.001, deadline - time.monotonic()))
             if isinstance(item, Exception):

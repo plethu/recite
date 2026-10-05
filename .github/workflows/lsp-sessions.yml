@@ -1,0 +1,67 @@
+name: LSP sessions
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sessions:
+    name: LSP and editor sessions (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust node pnpm
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Build release server and fixture generator
+        run: cargo build --locked --release -p recite-lsp -p recite-fixturegen
+      - name: Check incremental protocol transactions
+        run: cargo test --locked --release -p recite-lsp --test stdio_incremental_sync
+      - name: Prepare session and editor dependencies
+        run: |
+          python -m pip install -r scripts/lsp-session-requirements.txt
+          pnpm install --frozen-lockfile
+          pnpm --filter recite-vscode run build
+      - name: Install Linux display dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libasound2t64 libnss3 libgbm1 libgtk-3-0
+      - name: Exercise live resource and latency faults
+        run: python scripts/check-lsp-session-faults.py --output target/lsp-sessions/faults.json
+      - name: Exercise fixed working set and document churn
+        run: |
+          suffix=""
+          if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
+          python scripts/measure-lsp-endurance.py --binary "target/release/recite-lsp$suffix" --output target/lsp-sessions/fixed.json
+          python scripts/measure-lsp-endurance.py --binary "target/release/recite-lsp$suffix" --output target/lsp-sessions/churn.json --churn
+      - name: Exercise rendered VS Code and document lifecycle
+        run: |
+          suffix=""
+          if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
+          "target/release/recite-fixturegen$suffix" --profile large --output target/lsp-editor-project --summaries target/lsp-sessions/fixture.json
+          command=(node tests/editor-hosts/vscode/run-matrix.mjs target/lsp-editor-project "target/release/recite-lsp$suffix" target/lsp-sessions/editor.json)
+          if [[ "$RUNNER_OS" == Linux ]]; then xvfb-run -a "${command[@]}"; else "${command[@]}"; fi
+      - name: Retain checkpoint reports, traces and rendered frames
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lsp-sessions-${{ matrix.os }}
+          path: target/lsp-sessions/
+          if-no-files-found: error
+          retention-days: 30

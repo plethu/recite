@@ -12,11 +12,11 @@ import tomllib
 
 LANES = frozenset({
     "rust", "windows-publisher", "docs", "site", "editor", "benchmark-smoke",
-    "maintainability", "packages",
+    "maintainability", "packages", "lsp-sessions",
 })
 RUST = frozenset({"rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability"})
-JS = frozenset({"docs", "site", "editor"})
-RUST_BUILD = RUST | {"packages"}
+JS = frozenset({"docs", "site", "editor", "lsp-sessions"})
+RUST_BUILD = RUST | {"packages", "lsp-sessions"}
 JUST = frozenset({"maintainability"})
 JUST_QUALITY = LANES - {"windows-publisher", "packages"}
 ENGINE = frozenset({"rust", "maintainability"})
@@ -167,7 +167,8 @@ def shared_config_lanes(path, base, head):
         job_lanes = {"rust": {"rust"}, "windows-publisher": {"windows-publisher"},
                      "docs": {"docs", "site"}, "site": {"site"},
                      "editor": {"editor"}, "benchmark-smoke": {"benchmark-smoke"},
-                     "maintainability": {"maintainability"}, "packages": {"packages"}}
+                     "maintainability": {"maintainability"}, "packages": {"packages"},
+                     "lsp-sessions": {"lsp-sessions"}}
         if changed - job_lanes.keys():
             return LANES
         return frozenset(wiring).union(*(job_lanes[job] for job in changed))
@@ -177,6 +178,13 @@ def shared_config_lanes(path, base, head):
 def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
+    if path == ".github/workflows/lsp-sessions.yml" or path.startswith((
+        "scripts/lsp_session", "scripts/lsp-session-", "scripts/measure-lsp-endurance",
+        "scripts/check-lsp-session-",
+    )):
+        return frozenset({"lsp-sessions", "maintainability"})
+    if path in {"scripts/measure-lsp-latency.py", "scripts/lsp_measurement.py", "scripts/lsp_fanout.py"}:
+        return frozenset({"lsp-sessions", "benchmark-smoke", "maintainability"})
     if name in {"Cargo.toml", "Cargo.lock"} or path.startswith(".cargo/"):
         return RUST_BUILD
     if path in {"mise.maintainability.toml", "mise.godot.toml"}:
@@ -220,14 +228,19 @@ def lanes_for_path(path, *, base=None, head=None):
         "scripts/check-writer-desktop-links.py",
     }:
         return frozenset({"packages", "maintainability", "docs"})
+    if path.startswith(tuple(f"crates/recite-{crate}/" for crate in (
+        "lsp", "compiler", "parser", "core", "config", "schema", "ui", "fixturegen",
+    ))):
+        return RUST | {"lsp-sessions"}
     if path.startswith("crates/"):
         return RUST
     if path.startswith("apps/writer/") or path in {
         "scripts/check-writer-colors.py", "scripts/check-writer-native-accessibility.py",
     }:
         return frozenset({"rust", "maintainability"})
-    if path.startswith(("editors/vscode/", "editors/helix/", "tests/editor-hosts/helix/",
-                        "tests/editor-hosts/vscode/")):
+    if path.startswith(("editors/vscode/", "tests/editor-hosts/vscode/")):
+        return frozenset({"editor", "lsp-sessions", "maintainability"})
+    if path.startswith(("editors/helix/", "tests/editor-hosts/helix/")):
         return frozenset({"editor", "maintainability"})
     if path.startswith("editors/"):
         return frozenset({"rust", "editor", "maintainability"})
@@ -273,6 +286,8 @@ def changed_paths(base, head, *, pull_request):
 
 
 def event_scope(event_name, event):
+    if event_name == "workflow_dispatch" and event.get("inputs", {}).get("lsp_sessions_only") in (True, "true"):
+        return {lane: lane == "lsp-sessions" for lane in sorted(LANES)}
     if event_name in {"workflow_dispatch", "schedule"}:
         return {lane: True for lane in sorted(LANES)}
     if event_name == "pull_request":

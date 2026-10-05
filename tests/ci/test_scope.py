@@ -83,6 +83,23 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"benchmark-smoke", "maintainability"})
 
+    def test_session_matrix_is_scoped_and_cannot_disable_pr_coverage(self):
+        for path in ("scripts/measure-lsp-endurance.py", "scripts/lsp_session_health.py",
+                     "scripts/check-lsp-session-faults.py", "scripts/lsp-session-requirements.txt",
+                     ".github/workflows/lsp-sessions.yml"):
+            self.assertEqual(selected(path), {"lsp-sessions", "maintainability"})
+        for path in ("crates/recite-lsp/src/server.rs", "crates/recite-compiler/src/lib.rs"):
+            self.assertIn("lsp-sessions", selected(path))
+        self.assertEqual({lane for lane, value in scope.event_scope(
+            "workflow_dispatch", {"inputs": {"lsp_sessions_only": "true"}}).items() if value}, {"lsp-sessions"})
+        self.assertTrue(all(scope.event_scope("schedule", {"inputs": {"lsp_sessions_only": "true"}}).values()))
+        with patch.object(scope, "changed_paths", return_value=["crates/recite-lsp/src/server.rs"]):
+            selection = scope.event_scope("pull_request", {
+                "inputs": {"lsp_sessions_only": "true"},
+                "pull_request": {"base": {"sha": "base"}, "head": {"sha": "head"}},
+            })
+        self.assertTrue(selection["rust"] and selection["lsp-sessions"])
+
     def test_writer_keeps_ui_and_accessibility_without_packaging(self):
         self.assertEqual(selected("apps/writer/crates/freya/src/app.rs"), {
             "rust", "maintainability",
@@ -91,9 +108,9 @@ class ScopeTests(unittest.TestCase):
 
     def test_editor_and_schema_consumers(self):
         self.assertIn("editor", selected("crates/recite-lsp/src/lib.rs"))
-        self.assertEqual(selected("editors/vscode/src/extension.ts"), {"editor", "maintainability"})
+        self.assertEqual(selected("editors/vscode/src/extension.ts"), {"editor", "maintainability", "lsp-sessions"})
         self.assertEqual(selected("tests/editor-hosts/vscode/latency-probe.cjs"),
-                         {"editor", "maintainability"})
+                         {"editor", "maintainability", "lsp-sessions"})
         self.assertTrue({"docs", "rust", "editor"} <= selected("schemas/manifest.json"))
         self.assertTrue({"docs", "rust", "editor"} <= selected("fixtures/schema/valid/test.json"))
         self.assertIn("rust", selected("fixtures/recite/markdown-input.md"))

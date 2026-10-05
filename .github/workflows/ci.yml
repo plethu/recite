@@ -13,6 +13,11 @@ on:
       - reopened
 
   workflow_dispatch:
+    inputs:
+      lsp_sessions_only:
+        description: Run the cross-platform LSP session matrix and CI policy checks
+        type: boolean
+        default: false
   schedule:
     - cron: "23 5 * * 1"
 
@@ -37,6 +42,7 @@ jobs:
       benchmark-smoke: ${{ steps.scope.outputs.benchmark-smoke }}
       maintainability: ${{ steps.scope.outputs.maintainability }}
       packages: ${{ steps.scope.outputs.packages }}
+      lsp-sessions: ${{ steps.scope.outputs.lsp-sessions }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -342,6 +348,11 @@ jobs:
     if: needs.changes.outputs.packages == 'true'
     uses: ./.github/workflows/writer-packages.yml
 
+  lsp-sessions:
+    needs: changes
+    if: needs.changes.outputs.lsp-sessions == 'true'
+    uses: ./.github/workflows/lsp-sessions.yml
+
   required-check:
     name: required-check
     if: always()
@@ -356,6 +367,7 @@ jobs:
       - windows-publisher
       - editor
       - packages
+      - lsp-sessions
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

@@ -1,5 +1,8 @@
 # LSP validation, overload recovery, and rendered-editor follow-through
 
+The subsequent [bounded session and platform checks](session-testing.md) exercise
+accumulated state and run the protocol/editor probes across hosted operating systems.
+
 This continues the [initial follow-up](follow-up.md). The changes and measurements
 are local to `feat/lsp-cancellation`; no commit, push, hosted CI result, or
 cross-platform acceptance is implied.

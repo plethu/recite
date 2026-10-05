@@ -78,6 +78,9 @@ async function measure() {
     if (index >= 2) report.completionProviderMs.push(performance.now() - queryStarted);
   }
   renderer?.close();
+  if (process.env.RECITE_PERF_SESSION_CYCLES) {
+    report.sessionCycles = await require("./session-probe.cjs").run(root, Number(process.env.RECITE_PERF_SESSION_CYCLES));
+  }
   assert.equal(fs.readFileSync(document.uri.fsPath, "utf8"), original, "probe changed a saved source");
   fs.writeFileSync(process.env.RECITE_PERF_OUTPUT, `${JSON.stringify(report, null, 2)}\n`);
 }
