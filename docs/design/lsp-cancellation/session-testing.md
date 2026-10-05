@@ -43,8 +43,14 @@ has a 30-minute outer timeout including builds and the editor host.
 
 `check-lsp-session-faults.py` drives a real child that retains touched memory,
 threads and open files and progressively delays its replies. The same sampler and
-decision function must detect all four faults on every OS. Unit tests cover warming caches, one-time
-steps, isolated peaks, incomplete observations, and growing metrics.
+decision function must detect all four faults on every OS (latency exercises both
+query metrics). Unit tests cover warming caches, one-time steps, isolated peaks,
+incomplete observations, and growing metrics.
+
+This complements the paired base-versus-candidate performance gate described in
+[the optimisation report](continuation.md). Session checks detect degradation as
+work accumulates; the paired gate detects a candidate that starts out slower.
+Neither depends on a person keeping an editor open for hours.
 
 ## Running it
 
@@ -63,7 +69,7 @@ On Windows, use the virtual environment's `Scripts/python.exe` and the server's
 Linux check used 60 cycles with 100 edits each: 12,000 edits across both workloads
 in about 100 seconds, stable resource counts, and matching fresh-server results.
 The local VS Code probe also passed 20 document lifecycle cycles and 21 rendered
-error/clear measurements. Hosted results are recorded separately after execution.
+error/clear measurements. Hosted results follow below.
 
 ## Hosted matrix
 
@@ -88,3 +94,32 @@ Each OS retains checkpoint reports, operation traces, and rendered frames as
 30-day Actions artifacts, including on failure. Timing comparisons are within
 one host/run; physical display timing and human usability are left to real-world
 feedback after release.
+
+## Results, 5 October 2026
+
+[Actions run 37351523403](https://github.com/plethu/recite/actions/runs/37351523403)
+tested revision `4034c3f2`. All three platforms passed both 40-cycle workloads
+(4,000 burst edits per OS), five fresh-server comparisons per workload, the live
+fault control, and the incremental stdio contract test. Each VS Code host passed
+20 document lifecycle cycles and 21 rendered diagnostic observations.
+
+| Host | Both LSP workloads | Worst burst recovery | Median visible diagnostic frame |
+| --- | ---: | ---: | ---: |
+| Ubuntu 24.04, x64 | 55.7 s | 12.6 ms | 95.8 ms |
+| macOS 15, arm64 | 154.2 s | 77.8 ms | 111.2 ms |
+| Windows Server 2025, x64 | 87.8 s | 27.3 ms | 116.9 ms |
+
+All workloads stayed within the resource-growth budgets and returned the same
+completion/definition results as fresh servers. Timings describe these hosted
+runs; different runner hardware prevents treating this table as an OS ranking.
+[The retained summary](session-results.json) includes resource windows, binary
+hashes, workload settings and fault outcomes. Raw checkpoints, traces and frames
+are available in the linked run's artifacts for 30 days.
+
+The matrix exposed two Windows tooling defects that were fixed before this run:
+Mise implicitly installed unrelated repository tools when Cargo was invoked, and
+Git's CRLF conversion made generated editor projections fail their byte-for-byte
+freshness checks. The lane now disables implicit tool installation; Git attributes
+preserve LF in those generated files. A simulated CRLF checkout also passed the
+extension build locally. The macOS fault control needed a stronger injected
+delay to cross the existing relative threshold; acceptance limits were unchanged.
