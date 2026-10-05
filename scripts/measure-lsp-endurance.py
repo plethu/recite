@@ -33,7 +33,7 @@ def run(binary, root, output, cycles, edits, seed, churn):
                 for cycle in range(cycles):
                     assert time.monotonic() - started < 600, "session exceeded ten-minute budget"
                     recovery = session.cycle(cycle, churn, edits, generator)
-                    checkpoint = {"cycle": cycle, "recovery_ms": recovery, **session.checkpoint(),
+                    checkpoint = {"cycle": cycle, **recovery, **session.checkpoint(),
                                   **resources(session.client.process.pid)}
                     assert checkpoint["result_sha256"] == baseline, "persistent results drifted"
                     if cycle % 10 == 0 or cycle == cycles - 1:

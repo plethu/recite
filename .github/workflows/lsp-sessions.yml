@@ -51,8 +51,10 @@ jobs:
         run: |
           suffix=""
           if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
-          python scripts/measure-lsp-endurance.py --binary "target/release/recite-lsp$suffix" --output target/lsp-sessions/fixed.json
-          python scripts/measure-lsp-endurance.py --binary "target/release/recite-lsp$suffix" --output target/lsp-sessions/churn.json --churn
+          for round in 1 2 3; do
+            python scripts/measure-lsp-endurance.py --binary "target/release/recite-lsp$suffix" --output "target/lsp-sessions/fixed-$round.json"
+            python scripts/measure-lsp-endurance.py --binary "target/release/recite-lsp$suffix" --output "target/lsp-sessions/churn-$round.json" --churn
+          done
       - name: Exercise rendered VS Code and document lifecycle
         run: |
           suffix=""

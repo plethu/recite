@@ -6,11 +6,13 @@ import statistics
 import time
 
 from lsp_measurement import change_event
+from lsp_session_timing import Timing
 
 
 class Session:
     def __init__(self, probe, binary, root, config, trace):
         self.client = probe.Client(binary, config)
+        self.timing = Timing(self.client.process.pid)
         self.root, self.trace = root, trace
         self.sources = sorted((root / "src").glob("*.recite"))[:4]
         self.originals = {path: path.read_text() for path in self.sources}
@@ -28,10 +30,12 @@ class Session:
         self.open(self.main)
 
     def send(self, method, params, request=False):
-        result = self.client.send(method, params, request)
-        self.trace.write(json.dumps({"pid": self.client.process.pid, "id": result[0],
-                                     "method": method, "params": params, "request": request}) + "\n")
-        self.trace.flush()
+        with self.timing.measure("driver_send_ms"):
+            result = self.client.send(method, params, request)
+        with self.timing.measure("driver_trace_ms"):
+            self.trace.write(json.dumps({"pid": self.client.process.pid, "id": result[0],
+                                         "method": method, "params": params, "request": request}) + "\n")
+            self.trace.flush()
         return result
 
     def open(self, path):
@@ -44,9 +48,11 @@ class Session:
     def change(self, path, text, wait=True):
         version, previous = self.documents[path]
         self.documents[path] = (version + 1, text)
+        with self.timing.measure("driver_edit_build_ms"):
+            edit = change_event(previous, text, True)
         _, self.last_edit_started = self.send("textDocument/didChange", {
             "textDocument": {"uri": path.as_uri(), "version": version + 1},
-            "contentChanges": [change_event(previous, text, True)]})
+            "contentChanges": [edit]})
         if wait:
             return self.wait(path)
 
@@ -109,12 +115,14 @@ class Session:
         return values
 
     def cycle(self, cycle, churn, edits, random):
+        self.timing.reset()
         path = self.sources[1 + cycle % (len(self.sources) - 1)]
         self.open(path)
         original = self.originals[path]
         broken = original + f"\n:: session_broken\n-> missing_{cycle}\n"
         assert self.change(path, broken), "broken reference produced no diagnostic"
         assert not self.change(path, original), "repair failed to clear diagnostics"
+        self.timing.stage("open_break_repair_ms")
         # Keep actual 5 ms edit bursts and recovery timing; skip human think time.
         pending = {}
         for index in range(edits):
@@ -127,8 +135,11 @@ class Session:
                     "position": self.declaration, "newName": "session_cancelled"}, request=True)
                 pending[request_id] = True
                 self.send("$/cancelRequest", {"id": request_id})
-            time.sleep(0.005)
+            with self.timing.measure("driver_sleep_ms"):
+                time.sleep(0.005)
+        self.timing.stage("burst_ms")
         started = self.last_edit_started
+        self.timing.parts["final_edit_to_drain_start_ms"] = (time.perf_counter_ns() - started) / 1e6
         while pending:
             remaining = 0.5 - (time.perf_counter_ns() - started) / 1e9
             assert remaining > 0, "burst requests failed to drain within 500 ms"
@@ -147,14 +158,18 @@ class Session:
                     error["code"] == -32803 and error.get("data", {}).get("reason") == "stale_snapshot"), message
             else:
                 assert message.get("result"), message
+        self.timing.stage("drain_ms")
         assert not self.change(path, original)
+        self.timing.stage("repair_diagnostics_ms")
         request_id, _ = self.send("textDocument/rename", {"textDocument": {"uri": self.main.as_uri()},
             "position": self.declaration, "newName": "session_rename"}, request=True)
         self.send("$/cancelRequest", {"id": request_id})
         _, response = self.client.response(request_id, timeout=10)
         # Cancellation can lose the race to a correct response; never accept stale success.
         assert response.get("error", {}).get("code") == -32800 or response.get("result"), response
+        self.timing.stage("cancelled_rename_ms")
         self.query("textDocument/completion", self.reference)
+        self.timing.stage("recovery_completion_ms")
         recovery = (time.perf_counter_ns() - started) / 1e6
         assert recovery < 500, f"recovery exceeded 500 ms: {recovery}"
         saved = original + "\n# saved session edit\n"
@@ -168,6 +183,7 @@ class Session:
         assert not self.change(path, original)
         self.send("textDocument/didSave", {"textDocument": {"uri": path.as_uri()}})
         self.close(path)
+        self.timing.stage("save_close_reopen_ms")
         temporary = self.root / "src" / f"session-{cycle if churn else 0}.recite"
         temporary.write_text(f":: session_temporary_{cycle if churn else 0}\n-> END\n", newline="\n")
         self.watched(temporary, 1)
@@ -175,6 +191,7 @@ class Session:
         self.close(temporary)
         temporary.unlink()
         self.watched(temporary, 3)
+        self.timing.stage("temporary_document_ms")
         manifest = self.root / "recite.project.toml"
         configuration = manifest.read_text()
         manifest.write_text(configuration.replace('content_set = "lsp-fanout"',
@@ -182,6 +199,7 @@ class Session:
         self.watched(manifest)
         manifest.write_text(configuration, newline="\n")
         self.watched(manifest)
+        self.timing.stage("configuration_ms")
         assert list(self.documents) == [self.main]
         assert all(path.read_text() == text for path, text in self.originals.items())
-        return recovery
+        return {"recovery_ms": recovery, "timing": self.timing.finish()}
