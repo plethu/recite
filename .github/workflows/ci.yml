@@ -22,6 +22,10 @@ on:
         description: Optional historical harness revision for the LSP session experiment
         type: string
         default: ''
+      lsp_native_trace:
+        description: Compare native tracing enabled and disabled on each session runner
+        type: boolean
+        default: false
   schedule:
     - cron: "23 5 * * 1"
 
@@ -358,6 +362,7 @@ jobs:
     uses: ./.github/workflows/lsp-sessions.yml
     with:
       driver_control_ref: ${{ inputs.lsp_driver_control_ref || '' }}
+      native_trace: ${{ inputs.lsp_native_trace || false }}
 
   required-check:
     name: required-check

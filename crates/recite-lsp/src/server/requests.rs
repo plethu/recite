@@ -63,6 +63,7 @@ impl Server {
             .checked_add(1)
             .ok_or(ServerError::SequenceExhausted)?;
         let fence = self.epochs.fence(self.known_scope(query.uri()));
+        tracing::trace!(phase = "queued", id = %id, serial = self.serial);
         self.requests.insert(
             id,
             Pending {

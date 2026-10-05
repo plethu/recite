@@ -34,9 +34,14 @@ class Session:
             result = self.client.send(method, params, request)
         with self.timing.measure("driver_trace_ms"):
             self.trace.write(json.dumps({"pid": self.client.process.pid, "id": result[0],
+                                         "event": "send", "started_ns": result[1],
                                          "method": method, "params": params, "request": request}) + "\n")
             self.trace.flush()
         return result
+
+    def received(self, received, response):
+        self.trace.write(json.dumps({"event": "response", "pid": self.client.process.pid,
+                                     "id": response["id"], "received_ns": received}) + "\n")
 
     def open(self, path):
         text = path.read_text()
@@ -94,6 +99,8 @@ class Session:
                                                 "position": position}, request=True)
         received, response = self.client.response(request_id, timeout=10)
         self.last_query_resume_ms = (time.perf_counter_ns() - received) / 1e6
+        self.received(received, response)
+        self.last_query_id = request_id
         assert "result" in response and "error" not in response, response
         assert response["result"], response
         return (received - started) / 1e6, response["result"]
@@ -156,11 +163,12 @@ class Session:
             item = self.client.messages.get(timeout=remaining)
             if isinstance(item, Exception):
                 raise item
-            _, message = item
+            received, message = item
             if "id" not in message:
                 self.client.notifications.append(message)
                 continue
             cancelled = pending.pop(message["id"])
+            self.received(received, message)
             error = message.get("error")
             if error:
                 assert "result" not in message, message
@@ -178,6 +186,7 @@ class Session:
         self.send("$/cancelRequest", {"id": request_id})
         received, response = self.client.response(request_id, timeout=10)
         self.timing.parts["rename_main_resume_ms"] = (time.perf_counter_ns() - received) / 1e6
+        self.received(received, response)
         # Cancellation can lose the race to a correct response; never accept stale success.
         assert response.get("error", {}).get("code") == -32800 or response.get("result"), response
         self.timing.stage("cancelled_rename_ms")
@@ -216,4 +225,5 @@ class Session:
         self.timing.stage("configuration_ms")
         assert list(self.documents) == [self.main]
         assert all(path.read_text() == text for path, text in self.originals.items())
-        return {"recovery_ms": recovery, "timing": self.timing.finish()}
+        return {"recovery_ms": recovery, "timing": self.timing.finish(),
+                "recovery_requests": {"rename": request_id, "completion": self.last_query_id}}

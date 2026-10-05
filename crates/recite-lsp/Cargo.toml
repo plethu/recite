@@ -29,6 +29,8 @@ url = "2.5.8"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tracing = { version = "0.1.44", default-features = false, features = ["std"] }
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json"] }
 
 [dev-dependencies]
 tempfile.workspace = true

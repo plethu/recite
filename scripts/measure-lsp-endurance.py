@@ -5,6 +5,7 @@ import argparse
 import importlib.util
 import json
 import math
+import os
 import platform
 import sys
 from pathlib import Path
@@ -25,12 +26,14 @@ spec.loader.exec_module(probe)
 def run(binary, root, output, cycles, edits, seed, churn):
     report = {"provenance": provenance(binary, root), "cycles": cycles, "edits_per_cycle": edits,
               "seed": seed, "churn": churn, "checkpoints": [], "status": "incomplete",
-              "driver": {"python": platform.python_version(), "switch_interval_ms": sys.getswitchinterval() * 1000}}
+              "driver": {"python": platform.python_version(), "switch_interval_ms": sys.getswitchinterval() * 1000,
+                         "native_trace": bool(os.environ.get("RECITE_LSP_TRACE_DIR"))}}
     generator = random.Random(seed)
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="recite-session-config-") as config:
         with output.with_suffix(".jsonl").open("w") as trace:
             session = Session(probe, binary, root, Path(config), trace)
+            report["server_pid"] = session.client.process.pid
             try:
                 session.start()
                 baseline = session.checkpoint()["result_sha256"]

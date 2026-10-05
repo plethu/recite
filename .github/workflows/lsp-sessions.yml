@@ -6,12 +6,19 @@ on:
       driver_control_ref:
         type: string
         default: ''
+      native_trace:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       driver_control_ref:
         description: Optional historical harness revision for alternating driver comparisons
         type: string
         default: ''
+      native_trace:
+        description: Compare native tracing enabled and disabled
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -58,7 +65,7 @@ jobs:
       - name: Build release server and fixture generator
         run: cargo build --locked --release -p recite-lsp -p recite-fixturegen
       - name: Check incremental protocol transactions
-        run: cargo test --locked --release -p recite-lsp --test stdio_incremental_sync
+        run: cargo test --locked --release -p recite-lsp --test stdio_incremental_sync --test stdio_trace
       - name: Prepare session and editor dependencies
         run: |
           python -m pip install -r scripts/lsp-session-requirements.txt
@@ -72,6 +79,7 @@ jobs:
       - name: Exercise fixed working set and document churn
         env:
           DRIVER_CONTROL_REF: ${{ inputs.driver_control_ref }}
+          NATIVE_TRACE: ${{ inputs.native_trace }}
         run: |
           suffix=""
           if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
@@ -82,12 +90,27 @@ jobs:
               python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/fixed-$round.json"
               python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/churn-$round.json" --churn)
           }
+          run_traced() {
+            for mode in fixed churn; do
+              trace_dir="$reports/native/$mode-$round"
+              mkdir -p "$trace_dir"
+              extra=()
+              if [[ "$mode" == churn ]]; then extra+=(--churn); fi
+              RECITE_LSP_TRACE_DIR="$trace_dir" python scripts/measure-lsp-endurance.py \
+                --binary "$binary" --output "$reports/native/$mode-$round.json" "${extra[@]}"
+            done
+          }
           for round in 1 2 3; do
+            if [[ "$NATIVE_TRACE" == true && $((round % 2)) == 1 ]]; then run_traced; fi
             if [[ -n "$DRIVER_CONTROL_REF" && $((round % 2)) == 1 ]]; then run_control; fi
             python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/fixed-$round.json"
             python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/churn-$round.json" --churn
             if [[ -n "$DRIVER_CONTROL_REF" && $((round % 2)) == 0 ]]; then run_control; fi
+            if [[ "$NATIVE_TRACE" == true && $((round % 2)) == 0 ]]; then run_traced; fi
           done
+      - name: Attribute native request boundaries
+        if: inputs.native_trace
+        run: python scripts/summarize-lsp-native-trace.py --reports target/lsp-sessions --output target/lsp-sessions/native-summary.json
       - name: Enforce repeated p95 recovery budget
         run: >-
           python scripts/check-lsp-session-recovery.py

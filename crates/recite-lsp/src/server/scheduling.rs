@@ -66,6 +66,7 @@ impl Server {
         {
             self.analysis_partition = self.exclusive_update_partition();
             let control = CancellationToken::new();
+            tracing::trace!(phase = "analysis_dispatch", revision = self.revision);
             self.workers
                 .analysis
                 .try_send(AnalysisJob {
@@ -96,6 +97,7 @@ impl Server {
             if let Some(pending) = next
                 && let Some(query) = pending.dispatch()
             {
+                tracing::trace!(phase = "query_dispatch", serial = pending.serial);
                 self.workers
                     .query
                     .try_send(QueryJob {
@@ -111,6 +113,7 @@ impl Server {
         Ok(())
     }
     pub(super) fn analysis_finished(&mut self, result: AnalysisResult) -> Result<(), ServerError> {
+        tracing::trace!(phase = "analysis_observed", revision = result.through);
         self.analyzing = None;
         self.analysis_partition = None;
         let Some(snapshot) = result.result.map_err(ServerError::Authoring)? else {
@@ -144,6 +147,7 @@ impl Server {
         Ok(())
     }
     pub(super) fn query_finished(&mut self, result: QueryResult) {
+        tracing::trace!(phase = "query_observed", serial = result.serial);
         if self
             .querying
             .as_ref()

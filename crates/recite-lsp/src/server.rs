@@ -18,6 +18,7 @@ mod query;
 mod requests;
 mod scheduling;
 mod text_sync;
+mod trace;
 mod updates;
 mod workers;
 #[allow(unused_imports, reason = "test harness reexports protocol seams")]
@@ -127,6 +128,9 @@ impl Server {
                 .as_ref()
                 .map(|(_, response)| Message::Response(response.clone()))
                 .or_else(|| self.output.front().map(|p| p.message.clone()));
+            if let Some(message) = &message {
+                trace::message("output_ready", message);
+            }
             let (idle_sender, _idle_receiver) = crossbeam_channel::bounded(0);
             let sender = if message.is_some() {
                 &self.connection.sender
@@ -141,6 +145,11 @@ impl Server {
             select_biased! {
                 send(sender, message.unwrap_or_else(|| Notification::new("$/unused".to_owned(), ()).into())) -> result => {
                     result.map_err(|_| ServerError::Send)?;
+                    if let Some((_, response)) = &ready {
+                        tracing::trace!(phase = "handoff", id = %response.id);
+                    } else if let Some(publication) = self.output.front() {
+                        trace::message("handoff", &publication.message);
+                    }
                     if let Some((id, _)) = ready { self.requests.remove(&id); } else { self.output.pop_front(); }
                 },
                 recv(self.workers.analyzed) -> result => self.analysis_finished(result.map_err(|_| ServerError::WorkerPanic)?)?,
@@ -153,6 +162,7 @@ impl Server {
         }
     }
     fn receive(&mut self, message: Message) -> Result<(), ServerError> {
+        trace::message("ingress", &message);
         match message {
             Message::Request(request) => self.request(request),
             Message::Notification(notification) => self.notification(notification),

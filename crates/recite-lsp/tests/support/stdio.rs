@@ -34,8 +34,16 @@ impl StdioHarness {
     }
 
     pub(crate) fn start_uninitialized(params: Value) -> Self {
+        Self::start_uninitialized_with_env(params, &[])
+    }
+
+    pub(crate) fn start_uninitialized_with_env(
+        params: Value,
+        environment: &[(&str, &std::ffi::OsStr)],
+    ) -> Self {
         let mut child = Command::new(env!("CARGO_BIN_EXE_recite-lsp"))
             .env_clear()
+            .envs(environment.iter().copied())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

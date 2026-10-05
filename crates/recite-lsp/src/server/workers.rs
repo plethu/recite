@@ -57,7 +57,9 @@ impl Workers {
             let catalog = Arc::new(catalog);
             let mut cached: Option<Arc<LspWorkspace>> = None;
             while let Ok(job) = inputs.recv() {
+                tracing::trace!(phase = "analysis_start", revision = job.through);
                 let result = analyze(&params, &catalog, cached.as_deref(), &job);
+                tracing::trace!(phase = "analysis_end", revision = job.through);
                 if let Ok(Some(snapshot)) = &result {
                     cached = Some(Arc::clone(&snapshot.workspace));
                 }
@@ -77,7 +79,9 @@ impl Workers {
         let (outputs, queried) = bounded(1);
         let query_thread = thread::spawn(move || {
             while let Ok(job) = inputs.recv() {
+                tracing::trace!(phase = "query_start", serial = job.serial);
                 let result = job.query.execute(&job.workspace, &job.control);
+                tracing::trace!(phase = "query_end", serial = job.serial);
                 if outputs
                     .send(QueryResult {
                         serial: job.serial,
