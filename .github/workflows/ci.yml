@@ -18,6 +18,10 @@ on:
         description: Run the cross-platform LSP session matrix and CI policy checks
         type: boolean
         default: false
+      lsp_driver_control_ref:
+        description: Optional historical harness revision for the LSP session experiment
+        type: string
+        default: ''
   schedule:
     - cron: "23 5 * * 1"
 
@@ -352,6 +356,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.lsp-sessions == 'true'
     uses: ./.github/workflows/lsp-sessions.yml
+    with:
+      driver_control_ref: ${{ inputs.lsp_driver_control_ref || '' }}
 
   required-check:
     name: required-check

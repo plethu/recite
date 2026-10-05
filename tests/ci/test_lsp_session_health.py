@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-from lsp_session_health import assess
+from lsp_session_health import assess, recovery_tail
 
 
 def rows():
@@ -14,6 +14,25 @@ def rows():
 
 
 class SessionHealthTests(unittest.TestCase):
+    def test_tail_budget_requires_repeated_slowdown(self):
+        normal = [10.0] * 35
+        slow_tail = [10.0] * 30 + [80.0] * 5
+        self.assertEqual(recovery_tail([normal, slow_tail, normal], 50)["status"], "pass")
+        result = recovery_tail([slow_tail, normal, slow_tail], 50)
+        self.assertEqual(result["status"], "regression")
+        self.assertEqual(result["p95_ms"], [80.0, 10.0, 80.0])
+        isolated = normal[:-1] + [100.0]
+        self.assertEqual(recovery_tail([isolated] * 3, 50)["status"], "pass")
+
+    def test_tail_budget_rejects_missing_or_invalid_evidence(self):
+        for samples in ([], [1.0] * 14, [float("nan")] * 35, [-1.0] * 35):
+            with self.assertRaises(ValueError):
+                recovery_tail([samples] * 3, 50)
+        with self.assertRaises(ValueError):
+            recovery_tail([[10.0] * 35] * 2, 50)
+        with self.assertRaises(ValueError):
+            recovery_tail([[10.0] * 35] * 3, float("inf"))
+
     def test_flat_and_warming_caches_pass(self):
         sample = rows()
         for index, row in enumerate(sample):

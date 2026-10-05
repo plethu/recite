@@ -123,10 +123,18 @@ class Session:
         assert self.change(path, broken), "broken reference produced no diagnostic"
         assert not self.change(path, original), "repair failed to clear diagnostics"
         self.timing.stage("open_break_repair_ms")
-        # Keep actual 5 ms edit bursts and recovery timing; skip human think time.
+        # Use deadlines so an oversleep does not shift every subsequent edit.
+        # Record actual send intervals: hosted timers cannot promise 5 ms wakeups.
         pending = {}
+        burst_started = time.perf_counter_ns()
+        sent_at = []
         for index in range(edits):
+            remaining = (burst_started + index * 5_000_000 - time.perf_counter_ns()) / 1e9
+            if remaining > 0:
+                with self.timing.measure("driver_sleep_ms"):
+                    time.sleep(remaining)
             self.change(path, original + f"\n# cycle {cycle} edit {index} seed {random.randrange(1_000_000)}\n", wait=False)
+            sent_at.append(self.last_edit_started)
             if index % 10 == 0:
                 request_id, _ = self.send("textDocument/completion", {"textDocument": {"uri": self.main.as_uri()},
                     "position": self.completion}, request=True)
@@ -135,9 +143,10 @@ class Session:
                     "position": self.declaration, "newName": "session_cancelled"}, request=True)
                 pending[request_id] = True
                 self.send("$/cancelRequest", {"id": request_id})
-            with self.timing.measure("driver_sleep_ms"):
-                time.sleep(0.005)
         self.timing.stage("burst_ms")
+        intervals = [(right - left) / 1e6 for left, right in zip(sent_at, sent_at[1:])]
+        self.timing.parts["edit_intervals_ms"] = intervals
+        self.timing.parts["burst_send_span_ms"] = (sent_at[-1] - sent_at[0]) / 1e6
         started = self.last_edit_started
         self.timing.parts["final_edit_to_drain_start_ms"] = (time.perf_counter_ns() - started) / 1e6
         while pending:

@@ -13,6 +13,21 @@ def resources(pid):
                 "handles": process.num_handles() if hasattr(process, "num_handles") else process.num_fds()}
 
 
+def recovery_tail(repetitions, budget_ms):
+    """A tail regression must recur in two of three complete repetitions."""
+    if len(repetitions) != 3 or not math.isfinite(budget_ms) or budget_ms <= 0:
+        raise ValueError("require three repetitions and a positive finite budget")
+    percentiles = []
+    for samples in repetitions:
+        if len(samples) < 15 or any(not math.isfinite(x) or x < 0 for x in samples):
+            raise ValueError("require at least 15 valid recovery samples per repetition")
+        ordered = sorted(samples)
+        percentiles.append(ordered[math.ceil(len(ordered) * 0.95) - 1])
+    exceeded = sum(value > budget_ms for value in percentiles)
+    return {"status": "regression" if exceeded >= 2 else "pass", "budget_ms": budget_ms,
+            "p95_ms": percentiles, "exceeding_repetitions": exceeded}
+
+
 def assess(rows, warmup=5):
     """Require sustained growth across three windows, not a single cache step."""
     samples = rows[warmup:]
