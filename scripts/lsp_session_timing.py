@@ -13,6 +13,7 @@ class Timing:
 
     def reset(self):
         self.parts = defaultdict(float)
+        self.parts["driver_sleep_ms"] = 0.0
         self.started = self.marked = time.perf_counter_ns()
         self.driver_cpu = time.process_time()
         self.server_cpu = self.cpu_seconds()

@@ -58,7 +58,7 @@ class Session:
 
     def wait(self, path):
         version, _ = self.documents[path]
-        self.client.diagnostics(path.as_uri(), version, timeout=10)
+        self.last_diagnostic_received = self.client.diagnostics(path.as_uri(), version, timeout=10)
         diagnostic = next(item["params"]["diagnostics"] for item in reversed(self.client.notifications)
                           if item.get("method") == "textDocument/publishDiagnostics"
                           and item["params"].get("uri") == path.as_uri()
@@ -93,6 +93,7 @@ class Session:
         request_id, started = self.send(method, {"textDocument": {"uri": self.main.as_uri()},
                                                 "position": position}, request=True)
         received, response = self.client.response(request_id, timeout=10)
+        self.last_query_resume_ms = (time.perf_counter_ns() - received) / 1e6
         assert "result" in response and "error" not in response, response
         assert response["result"], response
         return (received - started) / 1e6, response["result"]
@@ -169,15 +170,19 @@ class Session:
                 assert message.get("result"), message
         self.timing.stage("drain_ms")
         assert not self.change(path, original)
+        assert self.last_diagnostic_received is not None
+        self.timing.parts["repair_main_resume_ms"] = (time.perf_counter_ns() - self.last_diagnostic_received) / 1e6
         self.timing.stage("repair_diagnostics_ms")
         request_id, _ = self.send("textDocument/rename", {"textDocument": {"uri": self.main.as_uri()},
             "position": self.declaration, "newName": "session_rename"}, request=True)
         self.send("$/cancelRequest", {"id": request_id})
-        _, response = self.client.response(request_id, timeout=10)
+        received, response = self.client.response(request_id, timeout=10)
+        self.timing.parts["rename_main_resume_ms"] = (time.perf_counter_ns() - received) / 1e6
         # Cancellation can lose the race to a correct response; never accept stale success.
         assert response.get("error", {}).get("code") == -32800 or response.get("result"), response
         self.timing.stage("cancelled_rename_ms")
         self.query("textDocument/completion", self.reference)
+        self.timing.parts["completion_main_resume_ms"] = self.last_query_resume_ms
         self.timing.stage("recovery_completion_ms")
         recovery = (time.perf_counter_ns() - started) / 1e6
         assert recovery < 500, f"recovery exceeded 500 ms: {recovery}"

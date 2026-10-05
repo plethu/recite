@@ -1,0 +1,52 @@
+"""Incomplete or incomparable session reports must not pass the tail gate."""
+
+import importlib.util
+import json
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+
+scripts = Path(__file__).resolve().parents[2] / "scripts"
+sys.path.insert(0, str(scripts))
+spec = importlib.util.spec_from_file_location("session_recovery", scripts / "check-lsp-session-recovery.py")
+recovery = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(recovery)
+
+
+class SessionReportsTests(unittest.TestCase):
+    def test_missing_truncated_and_mismatched_reports_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with self.assertRaises(FileNotFoundError):
+                recovery.evaluate(root, 25)
+            for mode in ("fixed", "churn"):
+                for repetition in range(1, 4):
+                    report = {"status": "pass", "health": {"status": "pass"}, "cycles": 40,
+                              "edits_per_cycle": 50, "churn": mode == "churn", "seed": 7203,
+                              "provenance": {"binary_sha256": "binary", "harness_revision": "harness",
+                                             "files": {"source": "text"}},
+                              "checkpoints": [{"cycle": index, "recovery_ms": 10.0} for index in range(40)]}
+                    (root / f"{mode}-{repetition}.json").write_text(json.dumps(report))
+            self.assertEqual(recovery.evaluate(root, 25)["status"], "pass")
+            path = root / "churn-3.json"
+            original = path.read_text()
+            for corruption in ("truncated", "binary", "harness", "seed", "driver", "nan", "failed"):
+                report = json.loads(original)
+                if corruption == "truncated":
+                    report["checkpoints"].pop()
+                elif corruption == "binary":
+                    report["provenance"]["binary_sha256"] = "other"
+                elif corruption == "harness":
+                    report["provenance"]["harness_revision"] = "other"
+                elif corruption == "seed":
+                    report["seed"] += 1
+                elif corruption == "driver":
+                    report["driver"] = {"switch_interval_ms": 2}
+                elif corruption == "nan":
+                    report["checkpoints"][-1]["recovery_ms"] = float("nan")
+                else:
+                    report["status"] = "regression"
+                path.write_text(json.dumps(report))
+                with self.subTest(corruption=corruption), self.assertRaises(ValueError):
+                    recovery.evaluate(root, 25)

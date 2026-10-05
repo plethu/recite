@@ -22,7 +22,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2025, macos-15]
+        include:
+          - os: ubuntu-24.04
+            recovery_budget_ms: 20
+          - os: windows-2025
+            recovery_budget_ms: 40
+          - os: macos-15
+            recovery_budget_ms: 75
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -35,13 +41,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Check out optional control harness
-        if: inputs.driver_control_ref != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.driver_control_ref }}
-          path: target/lsp-session-control
-          persist-credentials: false
       - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
           install_args: rust node pnpm
@@ -49,6 +48,13 @@ jobs:
         with:
           python-version: '3.12'
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Check out optional control harness
+        if: inputs.driver_control_ref != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.driver_control_ref }}
+          path: .lsp-session-control
+          persist-credentials: false
       - name: Build release server and fixture generator
         run: cargo build --locked --release -p recite-lsp -p recite-fixturegen
       - name: Check incremental protocol transactions
@@ -72,7 +78,7 @@ jobs:
           binary="$PWD/target/release/recite-lsp$suffix"
           reports="$PWD/target/lsp-sessions"
           run_control() {
-            (cd target/lsp-session-control
+            (cd .lsp-session-control
               python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/fixed-$round.json"
               python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/churn-$round.json" --churn)
           }
@@ -82,6 +88,12 @@ jobs:
             python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/churn-$round.json" --churn
             if [[ -n "$DRIVER_CONTROL_REF" && $((round % 2)) == 0 ]]; then run_control; fi
           done
+      - name: Enforce repeated p95 recovery budget
+        run: >-
+          python scripts/check-lsp-session-recovery.py
+          --reports target/lsp-sessions
+          --budget-ms ${{ matrix.recovery_budget_ms }}
+          --output target/lsp-sessions/recovery.json
       - name: Exercise rendered VS Code and document lifecycle
         run: |
           suffix=""

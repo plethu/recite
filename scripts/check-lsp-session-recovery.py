@@ -20,9 +20,10 @@ def evaluate(directory, budget_ms):
                     or len(report["checkpoints"]) != 40
                     or [row["cycle"] for row in report["checkpoints"]] != list(range(40))):
                 raise ValueError("recovery calibration requires complete 40-cycle, 50-edit workloads")
-            observed = (report["provenance"]["binary_sha256"], report["provenance"]["files"], report["seed"])
+            observed = (report["provenance"]["binary_sha256"], report["provenance"]["harness_revision"],
+                        report["provenance"]["files"], report["seed"], report.get("driver"))
             if identity is not None and observed != identity:
-                raise ValueError("recovery repetitions have inconsistent binary, fixture or seed")
+                raise ValueError("recovery repetitions have inconsistent binary, harness, fixture, seed or driver")
             identity = observed
             repetitions.append([row["recovery_ms"] for row in report["checkpoints"][5:]])
         results[mode] = recovery_tail(repetitions, budget_ms)

@@ -16,6 +16,7 @@ editors/vscode/*.vsix
 # Generated Python imports and downloaded extension test hosts
 __pycache__/
 /.vscode-test/
+/.lsp-session-control/
 
 .DS_Store
 .direnv/

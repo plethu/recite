@@ -89,12 +89,12 @@ class Client:
             item = self.messages.get(timeout=max(0.001, deadline - time.monotonic()))
             if isinstance(item, Exception):
                 raise item
-            _, message = item
+            received, message = item
             if "id" in message:
                 raise RuntimeError(f"unexpected response while waiting for diagnostics: {message}")
             self.notifications.append(message)
             if matches(message):
-                return
+                return received
 
     def close(self):
         try:

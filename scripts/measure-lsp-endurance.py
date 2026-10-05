@@ -4,6 +4,9 @@
 import argparse
 import importlib.util
 import json
+import math
+import platform
+import sys
 from pathlib import Path
 import random
 import tempfile
@@ -21,7 +24,8 @@ spec.loader.exec_module(probe)
 
 def run(binary, root, output, cycles, edits, seed, churn):
     report = {"provenance": provenance(binary, root), "cycles": cycles, "edits_per_cycle": edits,
-              "seed": seed, "churn": churn, "checkpoints": [], "status": "incomplete"}
+              "seed": seed, "churn": churn, "checkpoints": [], "status": "incomplete",
+              "driver": {"python": platform.python_version(), "switch_interval_ms": sys.getswitchinterval() * 1000}}
     generator = random.Random(seed)
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="recite-session-config-") as config:
@@ -72,9 +76,14 @@ def main():
     parser.add_argument("--edits", type=int, default=50)
     parser.add_argument("--seed", type=int, default=7203)
     parser.add_argument("--churn", action="store_true")
+    parser.add_argument("--driver-switch-ms", type=float, default=1.0,
+                        help="Python driver thread-switch interval; never changes the server")
     args = parser.parse_args()
     if args.cycles < 20 or args.edits < 1:
         parser.error("require >=20 cycles and positive edits per cycle")
+    if not math.isfinite(args.driver_switch_ms) or args.driver_switch_ms <= 0:
+        parser.error("driver switch interval must be positive and finite")
+    sys.setswitchinterval(args.driver_switch_ms / 1000)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="recite-endurance-") as directory:
         root = Path(directory).resolve()
