@@ -1,0 +1,3 @@
+# Generated editor projections are verified byte-for-byte against LF output.
+/editors/vscode/src/*.generated.js text eol=lf
+/editors/vscode/package.nls.json text eol=lf
