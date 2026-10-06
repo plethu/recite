@@ -1,0 +1,5468 @@
+{
+  "initial_probe": {
+    "run_url": "https://github.com/plethu/recite/actions/runs/37508244379",
+    "revision": "1f9c19a37e3088477809c6baa2c433cc3db5348f",
+    "hosts": {
+      "linux": {
+        "identity": {
+          "binary_sha256": "275b9e24d179b0108c36353ac617aa4b170c8d7b71cbae0751de5dd95fbff7bf",
+          "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+          "machine": "x86_64",
+          "cpu_count": 4
+        },
+        "cases": [
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0241315,
+                "p95": 0.041483,
+                "max": 0.071507
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.016595,
+                "p95": 0.021126,
+                "max": 0.050466000000000004
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0410865,
+                "p95": 0.061974,
+                "max": 0.115914
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0068105,
+                "p95": 0.008012,
+                "max": 0.032187999999999994
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.006259,
+                "p95": 0.007260999999999999,
+                "max": 0.041743
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.0,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 359.285264,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0219385,
+                    "p95": 0.024898,
+                    "max": 0.043476
+                  },
+                  "reply_ms": {
+                    "median": 0.014467,
+                    "p95": 0.017767,
+                    "max": 0.050466000000000004
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.036610000000000004,
+                    "p95": 0.042724,
+                    "max": 0.075784
+                  },
+                  "input_send_ms": {
+                    "median": 0.0070555,
+                    "p95": 0.008403,
+                    "max": 0.010315
+                  },
+                  "output_send_ms": {
+                    "median": 0.0043415,
+                    "p95": 0.0065,
+                    "max": 0.041743
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 362.08342500000003,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.038467999999999995,
+                    "p95": 0.043255,
+                    "max": 0.071507
+                  },
+                  "reply_ms": {
+                    "median": 0.0183325,
+                    "p95": 0.021551999999999998,
+                    "max": 0.043976
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.057146,
+                    "p95": 0.064327,
+                    "max": 0.115914
+                  },
+                  "input_send_ms": {
+                    "median": 0.006744999999999999,
+                    "p95": 0.008092,
+                    "max": 0.032187999999999994
+                  },
+                  "output_send_ms": {
+                    "median": 0.00696,
+                    "p95": 0.007371,
+                    "max": 0.023866000000000002
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 362.09439599999996,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.038383,
+                    "p95": 0.041127000000000004,
+                    "max": 0.060996999999999996
+                  },
+                  "reply_ms": {
+                    "median": 0.018042,
+                    "p95": 0.021617,
+                    "max": 0.04632
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.056675500000000004,
+                    "p95": 0.062234,
+                    "max": 0.082564
+                  },
+                  "input_send_ms": {
+                    "median": 0.0067504999999999996,
+                    "p95": 0.007542,
+                    "max": 0.025438
+                  },
+                  "output_send_ms": {
+                    "median": 0.0069955,
+                    "p95": 0.007241,
+                    "max": 0.038007
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.039039,
+                "p95": 0.042494,
+                "max": 0.082995
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.018328,
+                "p95": 0.021743,
+                "max": 0.06865299999999999
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.057626500000000004,
+                "p95": 0.063646,
+                "max": 0.12222399999999999
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0067399999999999995,
+                "p95": 0.007621,
+                "max": 0.028393
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.007031,
+                "p95": 0.007412,
+                "max": 0.042344
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.0,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 362.383073,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.039039,
+                    "p95": 0.041703,
+                    "max": 0.082995
+                  },
+                  "reply_ms": {
+                    "median": 0.018303,
+                    "p95": 0.021693,
+                    "max": 0.038998000000000005
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.057687,
+                    "p95": 0.063495,
+                    "max": 0.12222399999999999
+                  },
+                  "input_send_ms": {
+                    "median": 0.00666,
+                    "p95": 0.007331,
+                    "max": 0.028393
+                  },
+                  "output_send_ms": {
+                    "median": 0.006991,
+                    "p95": 0.007281,
+                    "max": 0.011987999999999999
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 362.092759,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.039144,
+                    "p95": 0.043304999999999996,
+                    "max": 0.049404
+                  },
+                  "reply_ms": {
+                    "median": 0.0182125,
+                    "p95": 0.021903,
+                    "max": 0.06865299999999999
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.057561,
+                    "p95": 0.065169,
+                    "max": 0.107291
+                  },
+                  "input_send_ms": {
+                    "median": 0.006771,
+                    "p95": 0.007912,
+                    "max": 0.022494
+                  },
+                  "output_send_ms": {
+                    "median": 0.007031,
+                    "p95": 0.0076809999999999995,
+                    "max": 0.042344
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 363.07540500000005,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0389765,
+                    "p95": 0.041468,
+                    "max": 0.054773
+                  },
+                  "reply_ms": {
+                    "median": 0.0184205,
+                    "p95": 0.021743,
+                    "max": 0.045223
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0576015,
+                    "p95": 0.06319499999999999,
+                    "max": 0.084217
+                  },
+                  "input_send_ms": {
+                    "median": 0.00677,
+                    "p95": 0.007801999999999999,
+                    "max": 0.026479
+                  },
+                  "output_send_ms": {
+                    "median": 0.007061,
+                    "p95": 0.007351,
+                    "max": 0.036284
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0319085,
+                "p95": 0.037356,
+                "max": 0.066705
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.014100999999999999,
+                "p95": 0.016,
+                "max": 0.039775
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.248029,
+                "p95": 0.25392299999999995,
+                "max": 0.28197500000000003
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.003496,
+                "p95": 0.005749000000000001,
+                "max": 0.018216999999999997
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0058685000000000005,
+                "p95": 0.007461000000000001,
+                "max": 0.030286
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.19607843137254902,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 392.578152,
+                "yield_to_zero": "default",
+                "cpu_ms": 40.0,
+                "cpu_ms_per_exchange_including_warmup": 0.23529411764705882,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.035533,
+                    "p95": 0.037085,
+                    "max": 0.059178999999999995
+                  },
+                  "reply_ms": {
+                    "median": 0.015262999999999999,
+                    "p95": 0.016054,
+                    "max": 0.0269
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.251008,
+                    "p95": 0.256046,
+                    "max": 0.273953
+                  },
+                  "input_send_ms": {
+                    "median": 0.003245,
+                    "p95": 0.003926,
+                    "max": 0.004287
+                  },
+                  "output_send_ms": {
+                    "median": 0.00705,
+                    "p95": 0.007481,
+                    "max": 0.027712
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 391.53706,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0189305,
+                    "p95": 0.038413,
+                    "max": 0.066705
+                  },
+                  "reply_ms": {
+                    "median": 0.014084,
+                    "p95": 0.016009,
+                    "max": 0.038098
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2360605,
+                    "p95": 0.254604,
+                    "max": 0.28197500000000003
+                  },
+                  "input_send_ms": {
+                    "median": 0.00353,
+                    "p95": 0.0056289999999999995,
+                    "max": 0.018216999999999997
+                  },
+                  "output_send_ms": {
+                    "median": 0.0058790000000000005,
+                    "p95": 0.007461000000000001,
+                    "max": 0.007961999999999999
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 390.421578,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0135555,
+                    "p95": 0.036661,
+                    "max": 0.045554
+                  },
+                  "reply_ms": {
+                    "median": 0.013425,
+                    "p95": 0.015728,
+                    "max": 0.039775
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.226992,
+                    "p95": 0.25240100000000004,
+                    "max": 0.276277
+                  },
+                  "input_send_ms": {
+                    "median": 0.003761,
+                    "p95": 0.00618,
+                    "max": 0.010396
+                  },
+                  "output_send_ms": {
+                    "median": 0.004352,
+                    "p95": 0.007461000000000001,
+                    "max": 0.030286
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.036557,
+                "p95": 0.040581000000000006,
+                "max": 0.055244
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.015203,
+                "p95": 0.01638,
+                "max": 0.037977
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.2518995,
+                "p95": 0.258961,
+                "max": 0.282721
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0033805,
+                "p95": 0.004096000000000001,
+                "max": 0.023906
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.007216,
+                "p95": 0.007882,
+                "max": 0.030146
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 392.396052,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.036124,
+                    "p95": 0.040154999999999996,
+                    "max": 0.045804
+                  },
+                  "reply_ms": {
+                    "median": 0.0152335,
+                    "p95": 0.01621,
+                    "max": 0.028118
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.251639,
+                    "p95": 0.25799900000000003,
+                    "max": 0.273372
+                  },
+                  "input_send_ms": {
+                    "median": 0.0033,
+                    "p95": 0.003986,
+                    "max": 0.004397000000000001
+                  },
+                  "output_send_ms": {
+                    "median": 0.0071255,
+                    "p95": 0.007742,
+                    "max": 0.0198
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 393.030779,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.036986000000000005,
+                    "p95": 0.041913,
+                    "max": 0.048584
+                  },
+                  "reply_ms": {
+                    "median": 0.015248,
+                    "p95": 0.016575,
+                    "max": 0.037977
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2524705,
+                    "p95": 0.261464,
+                    "max": 0.27501400000000004
+                  },
+                  "input_send_ms": {
+                    "median": 0.003415,
+                    "p95": 0.004157,
+                    "max": 0.004627
+                  },
+                  "output_send_ms": {
+                    "median": 0.007281,
+                    "p95": 0.008253,
+                    "max": 0.030146
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 392.79531000000003,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.036611,
+                    "p95": 0.038522999999999995,
+                    "max": 0.055244
+                  },
+                  "reply_ms": {
+                    "median": 0.015115,
+                    "p95": 0.0166,
+                    "max": 0.033221
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2519145,
+                    "p95": 0.254985,
+                    "max": 0.282721
+                  },
+                  "input_send_ms": {
+                    "median": 0.0034105000000000003,
+                    "p95": 0.0041659999999999996,
+                    "max": 0.023906
+                  },
+                  "output_send_ms": {
+                    "median": 0.007221,
+                    "p95": 0.007762,
+                    "max": 0.02622
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0369355,
+                "p95": 0.041242,
+                "max": 0.07349
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.016205,
+                "p95": 0.021398,
+                "max": 0.044376000000000006
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0527695,
+                "p95": 0.06156300000000001,
+                "max": 0.11312
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0068850000000000005,
+                "p95": 0.007912,
+                "max": 0.030676000000000002
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.00717,
+                "p95": 0.007542,
+                "max": 0.0332
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.0,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 360.174599,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.023134500000000002,
+                    "p95": 0.039981,
+                    "max": 0.049625
+                  },
+                  "reply_ms": {
+                    "median": 0.015293000000000001,
+                    "p95": 0.019519,
+                    "max": 0.042994000000000004
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0386185,
+                    "p95": 0.05929,
+                    "max": 0.071067
+                  },
+                  "input_send_ms": {
+                    "median": 0.007211,
+                    "p95": 0.008353,
+                    "max": 0.030676000000000002
+                  },
+                  "output_send_ms": {
+                    "median": 0.004612,
+                    "p95": 0.007411,
+                    "max": 0.0332
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 361.859688,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.038317500000000004,
+                    "p95": 0.041242,
+                    "max": 0.07349
+                  },
+                  "reply_ms": {
+                    "median": 0.018432999999999998,
+                    "p95": 0.022093,
+                    "max": 0.044376000000000006
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.057126,
+                    "p95": 0.061792999999999994,
+                    "max": 0.11312
+                  },
+                  "input_send_ms": {
+                    "median": 0.006875,
+                    "p95": 0.0077919999999999994,
+                    "max": 0.009704
+                  },
+                  "output_send_ms": {
+                    "median": 0.007241,
+                    "p95": 0.007502,
+                    "max": 0.008502
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 360.47098500000004,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.038082,
+                    "p95": 0.041958,
+                    "max": 0.047346
+                  },
+                  "reply_ms": {
+                    "median": 0.016781,
+                    "p95": 0.021688,
+                    "max": 0.039134
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.055864,
+                    "p95": 0.062164,
+                    "max": 0.067222
+                  },
+                  "input_send_ms": {
+                    "median": 0.005213000000000001,
+                    "p95": 0.007692,
+                    "max": 0.009655
+                  },
+                  "output_send_ms": {
+                    "median": 0.007251,
+                    "p95": 0.007621,
+                    "max": 0.031127000000000002
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.024156,
+                "p95": 0.043436,
+                "max": 0.118825
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.016495000000000003,
+                "p95": 0.022387999999999998,
+                "max": 0.19409700000000002
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.041703000000000004,
+                "p95": 0.065028,
+                "max": 0.24285600000000002
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0069960000000000005,
+                "p95": 0.008493,
+                "max": 0.031818
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.004928,
+                "p95": 0.007712,
+                "max": 0.091058
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.0,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 360.710196,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.02347,
+                    "p95": 0.044406999999999995,
+                    "max": 0.053651
+                  },
+                  "reply_ms": {
+                    "median": 0.015823999999999998,
+                    "p95": 0.020831000000000002,
+                    "max": 0.026889999999999997
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.040571,
+                    "p95": 0.063075,
+                    "max": 0.071909
+                  },
+                  "input_send_ms": {
+                    "median": 0.007356,
+                    "p95": 0.010036,
+                    "max": 0.031818
+                  },
+                  "output_send_ms": {
+                    "median": 0.004702,
+                    "p95": 0.007561,
+                    "max": 0.008313
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 359.972304,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.013641,
+                    "p95": 0.041829000000000005,
+                    "max": 0.118825
+                  },
+                  "reply_ms": {
+                    "median": 0.011952500000000001,
+                    "p95": 0.086926,
+                    "max": 0.19409700000000002
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.025583500000000002,
+                    "p95": 0.14024099999999998,
+                    "max": 0.24285600000000002
+                  },
+                  "input_send_ms": {
+                    "median": 0.0036699999999999997,
+                    "p95": 0.007481,
+                    "max": 0.007751999999999999
+                  },
+                  "output_send_ms": {
+                    "median": 0.0033,
+                    "p95": 0.008192000000000001,
+                    "max": 0.091058
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 363.197494,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.039474499999999996,
+                    "p95": 0.041849,
+                    "max": 0.047677
+                  },
+                  "reply_ms": {
+                    "median": 0.018458000000000002,
+                    "p95": 0.021858,
+                    "max": 0.070341
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.058208,
+                    "p95": 0.06277400000000001,
+                    "max": 0.109655
+                  },
+                  "input_send_ms": {
+                    "median": 0.0071105000000000005,
+                    "p95": 0.007751999999999999,
+                    "max": 0.009104
+                  },
+                  "output_send_ms": {
+                    "median": 0.007331,
+                    "p95": 0.007671,
+                    "max": 0.024376
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.036565,
+                "p95": 0.041222,
+                "max": 0.06017
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.014527,
+                "p95": 0.016345000000000002,
+                "max": 0.040481
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.25162399999999996,
+                "p95": 0.25859,
+                "max": 0.280362
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.003525,
+                "p95": 0.0057280000000000005,
+                "max": 0.020010999999999998
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0064095,
+                "p95": 0.007882,
+                "max": 0.032729
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.19607843137254902,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 392.727243,
+                "yield_to_zero": "default",
+                "cpu_ms": 40.0,
+                "cpu_ms_per_exchange_including_warmup": 0.23529411764705882,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.037592,
+                    "p95": 0.043635,
+                    "max": 0.06017
+                  },
+                  "reply_ms": {
+                    "median": 0.015393,
+                    "p95": 0.016786000000000002,
+                    "max": 0.040481
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.25307650000000004,
+                    "p95": 0.263047,
+                    "max": 0.280362
+                  },
+                  "input_send_ms": {
+                    "median": 0.0034999999999999996,
+                    "p95": 0.004126,
+                    "max": 0.0049570000000000005
+                  },
+                  "output_send_ms": {
+                    "median": 0.007291,
+                    "p95": 0.008272,
+                    "max": 0.032729
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 392.483836,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.036795,
+                    "p95": 0.038809,
+                    "max": 0.057517
+                  },
+                  "reply_ms": {
+                    "median": 0.015123000000000001,
+                    "p95": 0.016255,
+                    "max": 0.018188
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.25212450000000003,
+                    "p95": 0.259591,
+                    "max": 0.273642
+                  },
+                  "input_send_ms": {
+                    "median": 0.003385,
+                    "p95": 0.004297,
+                    "max": 0.015753999999999997
+                  },
+                  "output_send_ms": {
+                    "median": 0.007281,
+                    "p95": 0.007892,
+                    "max": 0.01302
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 390.338359,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.014341,
+                    "p95": 0.037627,
+                    "max": 0.044777000000000004
+                  },
+                  "reply_ms": {
+                    "median": 0.01282,
+                    "p95": 0.015874,
+                    "max": 0.039645
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22722750000000003,
+                    "p95": 0.253292,
+                    "max": 0.261614
+                  },
+                  "input_send_ms": {
+                    "median": 0.003791,
+                    "p95": 0.006169,
+                    "max": 0.020010999999999998
+                  },
+                  "output_send_ms": {
+                    "median": 0.004961999999999999,
+                    "p95": 0.007501,
+                    "max": 0.029053000000000002
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.035759,
+                "p95": 0.038662999999999996,
+                "max": 0.062237999999999995
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.014214,
+                "p95": 0.016465,
+                "max": 0.174102
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.2504825,
+                "p95": 0.255635,
+                "max": 0.388395
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.003435,
+                "p95": 0.004386999999999999,
+                "max": 0.007401
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0060090000000000005,
+                "p95": 0.007832,
+                "max": 0.064688
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 392.439849,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0362995,
+                    "p95": 0.039504,
+                    "max": 0.062237999999999995
+                  },
+                  "reply_ms": {
+                    "median": 0.014783000000000001,
+                    "p95": 0.016560000000000002,
+                    "max": 0.026926
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.251799,
+                    "p95": 0.255725,
+                    "max": 0.276546
+                  },
+                  "input_send_ms": {
+                    "median": 0.0033450000000000003,
+                    "p95": 0.003926,
+                    "max": 0.005809
+                  },
+                  "output_send_ms": {
+                    "median": 0.007321,
+                    "p95": 0.007951999999999999,
+                    "max": 0.008312
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 391.363717,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.030350500000000002,
+                    "p95": 0.037366,
+                    "max": 0.050837
+                  },
+                  "reply_ms": {
+                    "median": 0.01359,
+                    "p95": 0.016465,
+                    "max": 0.037156
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.24339650000000002,
+                    "p95": 0.254143,
+                    "max": 0.274073
+                  },
+                  "input_send_ms": {
+                    "median": 0.0034205,
+                    "p95": 0.0041470000000000005,
+                    "max": 0.004807
+                  },
+                  "output_send_ms": {
+                    "median": 0.005368,
+                    "p95": 0.0077009999999999995,
+                    "max": 0.008413
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 391.38512399999996,
+                "yield_to_zero": "default",
+                "cpu_ms": 30.0,
+                "cpu_ms_per_exchange_including_warmup": 0.17647058823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.014516,
+                    "p95": 0.038528,
+                    "max": 0.044397
+                  },
+                  "reply_ms": {
+                    "median": 0.013641,
+                    "p95": 0.015975,
+                    "max": 0.174102
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.228263,
+                    "p95": 0.257607,
+                    "max": 0.388395
+                  },
+                  "input_send_ms": {
+                    "median": 0.0035155,
+                    "p95": 0.005539,
+                    "max": 0.007401
+                  },
+                  "output_send_ms": {
+                    "median": 0.004717,
+                    "p95": 0.007832,
+                    "max": 0.064688
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          }
+        ]
+      },
+      "macos": {
+        "identity": {
+          "binary_sha256": "0146eb3222b062e3c28696744c2b4c76b50dd1f97dc309229f41d2693290bed0",
+          "platform": "macOS-15.7.9-arm64-arm-64bit",
+          "machine": "arm64",
+          "cpu_count": 3
+        },
+        "cases": [
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.019896,
+                "p95": 0.066167,
+                "max": 0.930625
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.007375,
+                "p95": 0.030040999999999998,
+                "max": 0.549458
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0310625,
+                "p95": 0.101333,
+                "max": 0.965417
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0095,
+                "p95": 0.022708,
+                "max": 0.205209
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0033125,
+                "p95": 0.010709,
+                "max": 0.039458
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.0781525294117647,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2910.818875,
+                "yield_to_zero": "0",
+                "cpu_ms": 15.391583,
+                "cpu_ms_per_exchange_including_warmup": 0.09053872352941177,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.021083,
+                    "p95": 0.043665999999999996,
+                    "max": 0.216917
+                  },
+                  "reply_ms": {
+                    "median": 0.011604,
+                    "p95": 0.022833,
+                    "max": 0.142792
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0340415,
+                    "p95": 0.06579099999999999,
+                    "max": 0.223334
+                  },
+                  "input_send_ms": {
+                    "median": 0.010979,
+                    "p95": 0.026250000000000002,
+                    "max": 0.205209
+                  },
+                  "output_send_ms": {
+                    "median": 0.005395500000000001,
+                    "p95": 0.01175,
+                    "max": 0.030957999999999996
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2222.330625,
+                "yield_to_zero": "0",
+                "cpu_ms": 12.198582,
+                "cpu_ms_per_exchange_including_warmup": 0.07175636470588236,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.017708500000000002,
+                    "p95": 0.049375,
+                    "max": 0.162209
+                  },
+                  "reply_ms": {
+                    "median": 0.0063545,
+                    "p95": 0.034499999999999996,
+                    "max": 0.210458
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.024313,
+                    "p95": 0.095042,
+                    "max": 0.367584
+                  },
+                  "input_send_ms": {
+                    "median": 0.0087705,
+                    "p95": 0.020208,
+                    "max": 0.13362500000000002
+                  },
+                  "output_send_ms": {
+                    "median": 0.0031665,
+                    "p95": 0.010084000000000001,
+                    "max": 0.039458
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2142.9096250000002,
+                "yield_to_zero": "0",
+                "cpu_ms": 12.267625,
+                "cpu_ms_per_exchange_including_warmup": 0.0721625,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.020896,
+                    "p95": 0.187542,
+                    "max": 0.930625
+                  },
+                  "reply_ms": {
+                    "median": 0.006542,
+                    "p95": 0.025457999999999998,
+                    "max": 0.549458
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0283955,
+                    "p95": 0.209417,
+                    "max": 0.965417
+                  },
+                  "input_send_ms": {
+                    "median": 0.0088335,
+                    "p95": 0.019959,
+                    "max": 0.062375
+                  },
+                  "output_send_ms": {
+                    "median": 0.002875,
+                    "p95": 0.011292,
+                    "max": 0.036042
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0218955,
+                "p95": 0.049333999999999996,
+                "max": 9.451667
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0091665,
+                "p95": 0.032292,
+                "max": 1.216958
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.032979,
+                "p95": 0.084875,
+                "max": 9.465708
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.010645499999999999,
+                "p95": 0.021291,
+                "max": 0.214875
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.004,
+                "p95": 0.014208,
+                "max": 0.43687499999999996
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.08682908235294118,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2407.8484590000003,
+                "yield_to_zero": "default",
+                "cpu_ms": 14.971833,
+                "cpu_ms_per_exchange_including_warmup": 0.08806960588235294,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.022458,
+                    "p95": 0.04825,
+                    "max": 0.23816700000000002
+                  },
+                  "reply_ms": {
+                    "median": 0.009333500000000002,
+                    "p95": 0.032292,
+                    "max": 0.089458
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0331875,
+                    "p95": 0.083125,
+                    "max": 0.24729199999999998
+                  },
+                  "input_send_ms": {
+                    "median": 0.010667,
+                    "p95": 0.02875,
+                    "max": 0.214875
+                  },
+                  "output_send_ms": {
+                    "median": 0.004291,
+                    "p95": 0.013415999999999999,
+                    "max": 0.044208000000000004
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2673.7734579999997,
+                "yield_to_zero": "default",
+                "cpu_ms": 13.384791,
+                "cpu_ms_per_exchange_including_warmup": 0.07873406470588236,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0181665,
+                    "p95": 0.04725,
+                    "max": 0.232208
+                  },
+                  "reply_ms": {
+                    "median": 0.0066879999999999995,
+                    "p95": 0.025125,
+                    "max": 1.216958
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.025562500000000002,
+                    "p95": 0.07275000000000001,
+                    "max": 1.449333
+                  },
+                  "input_send_ms": {
+                    "median": 0.009375,
+                    "p95": 0.018208,
+                    "max": 0.18504099999999998
+                  },
+                  "output_send_ms": {
+                    "median": 0.003625,
+                    "p95": 0.012833,
+                    "max": 0.055458
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2868.1539159999998,
+                "yield_to_zero": "default",
+                "cpu_ms": 15.926208,
+                "cpu_ms_per_exchange_including_warmup": 0.09368357647058824,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0242505,
+                    "p95": 0.083458,
+                    "max": 9.451667
+                  },
+                  "reply_ms": {
+                    "median": 0.0100205,
+                    "p95": 0.035125,
+                    "max": 0.431
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0375625,
+                    "p95": 0.14400000000000002,
+                    "max": 9.465708
+                  },
+                  "input_send_ms": {
+                    "median": 0.012062,
+                    "p95": 0.022709,
+                    "max": 0.052291
+                  },
+                  "output_send_ms": {
+                    "median": 0.0045835,
+                    "p95": 0.020041999999999997,
+                    "max": 0.43687499999999996
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.021479,
+                "p95": 0.054334,
+                "max": 0.213542
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0087285,
+                "p95": 0.024457999999999997,
+                "max": 5.141541
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0332085,
+                "p95": 0.07291700000000001,
+                "max": 5.355208
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.010208499999999999,
+                "p95": 0.020999999999999998,
+                "max": 0.129667
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.003916,
+                "p95": 0.011708999999999999,
+                "max": 0.0775
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.08954893333333333,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2760.452042,
+                "yield_to_zero": "0",
+                "cpu_ms": 18.775541,
+                "cpu_ms_per_exchange_including_warmup": 0.11044435882352942,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.02175,
+                    "p95": 0.042125,
+                    "max": 0.149875
+                  },
+                  "reply_ms": {
+                    "median": 0.010771,
+                    "p95": 0.022916,
+                    "max": 0.138917
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.035083500000000004,
+                    "p95": 0.061,
+                    "max": 0.289084
+                  },
+                  "input_send_ms": {
+                    "median": 0.010353999999999999,
+                    "p95": 0.029249999999999998,
+                    "max": 0.111167
+                  },
+                  "output_send_ms": {
+                    "median": 0.0055414999999999996,
+                    "p95": 0.011875,
+                    "max": 0.0775
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2672.746375,
+                "yield_to_zero": "0",
+                "cpu_ms": 13.630707,
+                "cpu_ms_per_exchange_including_warmup": 0.0801806294117647,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.020229,
+                    "p95": 0.048708,
+                    "max": 0.102792
+                  },
+                  "reply_ms": {
+                    "median": 0.0065835,
+                    "p95": 0.022041,
+                    "max": 0.036959000000000006
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.028021,
+                    "p95": 0.073625,
+                    "max": 0.134042
+                  },
+                  "input_send_ms": {
+                    "median": 0.010083,
+                    "p95": 0.017207999999999998,
+                    "max": 0.056958
+                  },
+                  "output_send_ms": {
+                    "median": 0.0034584999999999998,
+                    "p95": 0.008208,
+                    "max": 0.027958
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2706.073,
+                "yield_to_zero": "0",
+                "cpu_ms": 13.263708000000001,
+                "cpu_ms_per_exchange_including_warmup": 0.07802181176470589,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0226665,
+                    "p95": 0.05775,
+                    "max": 0.213542
+                  },
+                  "reply_ms": {
+                    "median": 0.007375,
+                    "p95": 0.036333,
+                    "max": 5.141541
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.034812499999999996,
+                    "p95": 0.08904100000000001,
+                    "max": 5.355208
+                  },
+                  "input_send_ms": {
+                    "median": 0.010374999999999999,
+                    "p95": 0.019667,
+                    "max": 0.129667
+                  },
+                  "output_send_ms": {
+                    "median": 0.003625,
+                    "p95": 0.012374999999999999,
+                    "max": 0.036458000000000004
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.025521,
+                "p95": 0.054542,
+                "max": 22.508167
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.010125,
+                "p95": 0.023708,
+                "max": 0.448708
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.03725,
+                "p95": 0.0775,
+                "max": 22.924833
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.010834,
+                "p95": 0.02525,
+                "max": 1.108667
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.004791,
+                "p95": 0.011375,
+                "max": 0.453583
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.10631413137254903,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2523.821292,
+                "yield_to_zero": "default",
+                "cpu_ms": 20.672916,
+                "cpu_ms_per_exchange_including_warmup": 0.12160538823529413,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.023458,
+                    "p95": 0.037667,
+                    "max": 1.1197920000000001
+                  },
+                  "reply_ms": {
+                    "median": 0.011646,
+                    "p95": 0.028374999999999997,
+                    "max": 0.448708
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.037291500000000005,
+                    "p95": 0.058542000000000004,
+                    "max": 1.123792
+                  },
+                  "input_send_ms": {
+                    "median": 0.010417000000000001,
+                    "p95": 0.018792,
+                    "max": 1.108667
+                  },
+                  "output_send_ms": {
+                    "median": 0.0059165,
+                    "p95": 0.012374999999999999,
+                    "max": 0.453583
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2441.5905000000002,
+                "yield_to_zero": "default",
+                "cpu_ms": 12.2735,
+                "cpu_ms_per_exchange_including_warmup": 0.07219705882352942,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0192915,
+                    "p95": 0.041916999999999996,
+                    "max": 0.14358400000000002
+                  },
+                  "reply_ms": {
+                    "median": 0.006375,
+                    "p95": 0.021709,
+                    "max": 0.04075
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.025833000000000002,
+                    "p95": 0.0575,
+                    "max": 0.158334
+                  },
+                  "input_send_ms": {
+                    "median": 0.009312,
+                    "p95": 0.01825,
+                    "max": 0.05525
+                  },
+                  "output_send_ms": {
+                    "median": 0.0034165000000000003,
+                    "p95": 0.009583,
+                    "max": 0.024
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2874.9151250000004,
+                "yield_to_zero": "default",
+                "cpu_ms": 21.273791,
+                "cpu_ms_per_exchange_including_warmup": 0.12513994705882353,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.033313,
+                    "p95": 0.089417,
+                    "max": 22.508167
+                  },
+                  "reply_ms": {
+                    "median": 0.010437499999999999,
+                    "p95": 0.024749999999999998,
+                    "max": 0.41612499999999997
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.044729000000000005,
+                    "p95": 0.11570799999999999,
+                    "max": 22.924833
+                  },
+                  "input_send_ms": {
+                    "median": 0.014666499999999999,
+                    "p95": 0.027959,
+                    "max": 0.101875
+                  },
+                  "output_send_ms": {
+                    "median": 0.005270499999999999,
+                    "p95": 0.011,
+                    "max": 0.04875
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0195415,
+                "p95": 0.046958,
+                "max": 1.545417
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0100205,
+                "p95": 0.029375,
+                "max": 1.093958
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.23339549999999998,
+                "p95": 0.274625,
+                "max": 2.051292
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.009625,
+                "p95": 0.022084,
+                "max": 0.079833
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.005083000000000001,
+                "p95": 0.014459,
+                "max": 0.14266600000000002
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.2900174019607843,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2519.2515000000003,
+                "yield_to_zero": "0",
+                "cpu_ms": 53.554292000000004,
+                "cpu_ms_per_exchange_including_warmup": 0.31502524705882357,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0245205,
+                    "p95": 0.08795900000000001,
+                    "max": 1.545417
+                  },
+                  "reply_ms": {
+                    "median": 0.011729,
+                    "p95": 0.029375,
+                    "max": 0.583209
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.237875,
+                    "p95": 0.450791,
+                    "max": 2.051292
+                  },
+                  "input_send_ms": {
+                    "median": 0.01175,
+                    "p95": 0.0295,
+                    "max": 0.079833
+                  },
+                  "output_send_ms": {
+                    "median": 0.006042,
+                    "p95": 0.015375000000000002,
+                    "max": 0.14266600000000002
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2530.0606669999997,
+                "yield_to_zero": "0",
+                "cpu_ms": 47.263082,
+                "cpu_ms_per_exchange_including_warmup": 0.2780181294117647,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0176455,
+                    "p95": 0.036833,
+                    "max": 0.076208
+                  },
+                  "reply_ms": {
+                    "median": 0.0086665,
+                    "p95": 0.028042,
+                    "max": 1.093958
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.228312,
+                    "p95": 0.257959,
+                    "max": 1.393
+                  },
+                  "input_send_ms": {
+                    "median": 0.009104,
+                    "p95": 0.019042000000000003,
+                    "max": 0.05025
+                  },
+                  "output_send_ms": {
+                    "median": 0.004479500000000001,
+                    "p95": 0.015541,
+                    "max": 0.030333
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2333.882542,
+                "yield_to_zero": "0",
+                "cpu_ms": 47.091501,
+                "cpu_ms_per_exchange_including_warmup": 0.2770088294117647,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.017313,
+                    "p95": 0.036958,
+                    "max": 0.064417
+                  },
+                  "reply_ms": {
+                    "median": 0.008167,
+                    "p95": 0.036375000000000005,
+                    "max": 0.111958
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2283755,
+                    "p95": 0.266584,
+                    "max": 0.32937500000000003
+                  },
+                  "input_send_ms": {
+                    "median": 0.008458,
+                    "p95": 0.017291,
+                    "max": 0.0445
+                  },
+                  "output_send_ms": {
+                    "median": 0.00425,
+                    "p95": 0.012125,
+                    "max": 0.035792
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.018229,
+                "p95": 0.039208999999999994,
+                "max": 0.837959
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.008917000000000001,
+                "p95": 0.025958000000000002,
+                "max": 0.110167
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.2299585,
+                "p95": 0.263666,
+                "max": 1.0495420000000002
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0091875,
+                "p95": 0.016708999999999998,
+                "max": 0.285125
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0043545,
+                "p95": 0.011042,
+                "max": 0.048291999999999995
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.2815654470588235,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2532.5200419999996,
+                "yield_to_zero": "default",
+                "cpu_ms": 48.848377,
+                "cpu_ms_per_exchange_including_warmup": 0.28734339411764703,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0199165,
+                    "p95": 0.052292,
+                    "max": 0.837959
+                  },
+                  "reply_ms": {
+                    "median": 0.012750000000000001,
+                    "p95": 0.034083,
+                    "max": 0.110167
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.234646,
+                    "p95": 0.278333,
+                    "max": 1.0495420000000002
+                  },
+                  "input_send_ms": {
+                    "median": 0.010083,
+                    "p95": 0.016541999999999998,
+                    "max": 0.285125
+                  },
+                  "output_send_ms": {
+                    "median": 0.0056875,
+                    "p95": 0.010499999999999999,
+                    "max": 0.048291999999999995
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2749.1658340000004,
+                "yield_to_zero": "default",
+                "cpu_ms": 46.352626,
+                "cpu_ms_per_exchange_including_warmup": 0.27266250588235297,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0169375,
+                    "p95": 0.037291,
+                    "max": 0.106625
+                  },
+                  "reply_ms": {
+                    "median": 0.006833,
+                    "p95": 0.017750000000000002,
+                    "max": 0.063041
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.224375,
+                    "p95": 0.258583,
+                    "max": 0.32283399999999995
+                  },
+                  "input_send_ms": {
+                    "median": 0.008708500000000001,
+                    "p95": 0.018083,
+                    "max": 0.036209
+                  },
+                  "output_send_ms": {
+                    "median": 0.0035,
+                    "p95": 0.00925,
+                    "max": 0.047333
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2659.204167,
+                "yield_to_zero": "default",
+                "cpu_ms": 48.397375,
+                "cpu_ms_per_exchange_including_warmup": 0.2846904411764706,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.017708500000000002,
+                    "p95": 0.032709,
+                    "max": 0.084833
+                  },
+                  "reply_ms": {
+                    "median": 0.008021,
+                    "p95": 0.024749999999999998,
+                    "max": 0.034416999999999996
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2262085,
+                    "p95": 0.25791699999999995,
+                    "max": 0.30987499999999996
+                  },
+                  "input_send_ms": {
+                    "median": 0.009062500000000001,
+                    "p95": 0.015125,
+                    "max": 0.016875
+                  },
+                  "output_send_ms": {
+                    "median": 0.004229500000000001,
+                    "p95": 0.012333,
+                    "max": 0.025542
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.026062500000000002,
+                "p95": 0.045875,
+                "max": 0.443417
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.010667,
+                "p95": 0.029124999999999998,
+                "max": 0.18512499999999998
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.238917,
+                "p95": 0.274792,
+                "max": 0.709042
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0114585,
+                "p95": 0.02275,
+                "max": 0.111625
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0055625,
+                "p95": 0.01175,
+                "max": 0.106834
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.2885008117647059,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2824.8872499999998,
+                "yield_to_zero": "0",
+                "cpu_ms": 52.039458999999994,
+                "cpu_ms_per_exchange_including_warmup": 0.3061144647058823,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.030896,
+                    "p95": 0.06241699999999999,
+                    "max": 0.115125
+                  },
+                  "reply_ms": {
+                    "median": 0.013646,
+                    "p95": 0.038291000000000006,
+                    "max": 0.18512499999999998
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.246917,
+                    "p95": 0.29520799999999997,
+                    "max": 0.500333
+                  },
+                  "input_send_ms": {
+                    "median": 0.014,
+                    "p95": 0.026375,
+                    "max": 0.100833
+                  },
+                  "output_send_ms": {
+                    "median": 0.0072295,
+                    "p95": 0.0155,
+                    "max": 0.106834
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2641.651459,
+                "yield_to_zero": "0",
+                "cpu_ms": 46.50937400000001,
+                "cpu_ms_per_exchange_including_warmup": 0.2735845529411765,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.019104,
+                    "p95": 0.038417,
+                    "max": 0.443417
+                  },
+                  "reply_ms": {
+                    "median": 0.008104499999999999,
+                    "p95": 0.023125,
+                    "max": 0.065375
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.229583,
+                    "p95": 0.255292,
+                    "max": 0.709042
+                  },
+                  "input_send_ms": {
+                    "median": 0.00925,
+                    "p95": 0.017709,
+                    "max": 0.105417
+                  },
+                  "output_send_ms": {
+                    "median": 0.0040835,
+                    "p95": 0.009290999999999999,
+                    "max": 0.01475
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2747.250792,
+                "yield_to_zero": "0",
+                "cpu_ms": 48.586581,
+                "cpu_ms_per_exchange_including_warmup": 0.28580341764705885,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.023896,
+                    "p95": 0.045875,
+                    "max": 0.31262500000000004
+                  },
+                  "reply_ms": {
+                    "median": 0.0097085,
+                    "p95": 0.025875,
+                    "max": 0.082042
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.235917,
+                    "p95": 0.266,
+                    "max": 0.594875
+                  },
+                  "input_send_ms": {
+                    "median": 0.010229,
+                    "p95": 0.019458,
+                    "max": 0.111625
+                  },
+                  "output_send_ms": {
+                    "median": 0.0047505,
+                    "p95": 0.01,
+                    "max": 0.017542
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0214795,
+                "p95": 0.05025,
+                "max": 2.213959
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.009833499999999998,
+                "p95": 0.030625,
+                "max": 0.334708
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.23481249999999998,
+                "p95": 0.297792,
+                "max": 2.542875
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.009854499999999999,
+                "p95": 0.024958,
+                "max": 1.4025
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.004875,
+                "p95": 0.01475,
+                "max": 0.31604099999999996
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.28068463921568626,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2393.440708,
+                "yield_to_zero": "default",
+                "cpu_ms": 49.700415,
+                "cpu_ms_per_exchange_including_warmup": 0.2923553823529412,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.024375,
+                    "p95": 0.064625,
+                    "max": 0.11479199999999999
+                  },
+                  "reply_ms": {
+                    "median": 0.013584,
+                    "p95": 0.032958,
+                    "max": 0.063542
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.24133300000000002,
+                    "p95": 0.28370799999999996,
+                    "max": 0.330042
+                  },
+                  "input_send_ms": {
+                    "median": 0.0119795,
+                    "p95": 0.029667,
+                    "max": 0.0465
+                  },
+                  "output_send_ms": {
+                    "median": 0.006771,
+                    "p95": 0.015583,
+                    "max": 0.040834
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2415.2041249999997,
+                "yield_to_zero": "default",
+                "cpu_ms": 46.038126,
+                "cpu_ms_per_exchange_including_warmup": 0.27081250588235295,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0184375,
+                    "p95": 0.048584,
+                    "max": 0.15975
+                  },
+                  "reply_ms": {
+                    "median": 0.007938,
+                    "p95": 0.048,
+                    "max": 0.334708
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.226812,
+                    "p95": 0.30975,
+                    "max": 0.6074999999999999
+                  },
+                  "input_send_ms": {
+                    "median": 0.0083335,
+                    "p95": 0.017499999999999998,
+                    "max": 0.06825
+                  },
+                  "output_send_ms": {
+                    "median": 0.0040835,
+                    "p95": 0.011791,
+                    "max": 0.31604099999999996
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2697.8752090000003,
+                "yield_to_zero": "default",
+                "cpu_ms": 47.410624999999996,
+                "cpu_ms_per_exchange_including_warmup": 0.27888602941176466,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0194585,
+                    "p95": 0.047625,
+                    "max": 2.213959
+                  },
+                  "reply_ms": {
+                    "median": 0.007979,
+                    "p95": 0.022500000000000003,
+                    "max": 0.245042
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22875,
+                    "p95": 0.302042,
+                    "max": 2.542875
+                  },
+                  "input_send_ms": {
+                    "median": 0.009458,
+                    "p95": 0.018917,
+                    "max": 1.4025
+                  },
+                  "output_send_ms": {
+                    "median": 0.0040625,
+                    "p95": 0.01175,
+                    "max": 0.056749999999999995
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.022479,
+                "p95": 0.069417,
+                "max": 0.977375
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.011271,
+                "p95": 0.032334,
+                "max": 4.18875
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.035749500000000003,
+                "p95": 0.102709,
+                "max": 5.166375
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.010792,
+                "p95": 0.021625000000000002,
+                "max": 0.381417
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0035835,
+                "p95": 0.010125,
+                "max": 0.08795900000000001
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.12390931176470588,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2685.761375,
+                "yield_to_zero": "0",
+                "cpu_ms": 19.752499999999998,
+                "cpu_ms_per_exchange_including_warmup": 0.11619117647058823,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.021020999999999998,
+                    "p95": 0.048374999999999994,
+                    "max": 0.369917
+                  },
+                  "reply_ms": {
+                    "median": 0.010583500000000001,
+                    "p95": 0.040042,
+                    "max": 0.101333
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0338755,
+                    "p95": 0.094458,
+                    "max": 0.47141700000000003
+                  },
+                  "input_send_ms": {
+                    "median": 0.010667,
+                    "p95": 0.019333,
+                    "max": 0.381417
+                  },
+                  "output_send_ms": {
+                    "median": 0.003583,
+                    "p95": 0.010125,
+                    "max": 0.08112499999999999
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2661.851834,
+                "yield_to_zero": "0",
+                "cpu_ms": 22.921291,
+                "cpu_ms_per_exchange_including_warmup": 0.13483112352941176,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.026167,
+                    "p95": 0.051334,
+                    "max": 0.421417
+                  },
+                  "reply_ms": {
+                    "median": 0.013083000000000001,
+                    "p95": 0.036292,
+                    "max": 0.319625
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.040854,
+                    "p95": 0.09112500000000001,
+                    "max": 0.6776669999999999
+                  },
+                  "input_send_ms": {
+                    "median": 0.013458000000000001,
+                    "p95": 0.024290999999999997,
+                    "max": 0.154167
+                  },
+                  "output_send_ms": {
+                    "median": 0.0045000000000000005,
+                    "p95": 0.010959,
+                    "max": 0.08795900000000001
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2392.347875,
+                "yield_to_zero": "0",
+                "cpu_ms": 20.519958,
+                "cpu_ms_per_exchange_including_warmup": 0.12070563529411764,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.019875,
+                    "p95": 0.10433300000000001,
+                    "max": 0.977375
+                  },
+                  "reply_ms": {
+                    "median": 0.0090215,
+                    "p95": 0.022458000000000002,
+                    "max": 4.18875
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.030292,
+                    "p95": 0.149167,
+                    "max": 5.166375
+                  },
+                  "input_send_ms": {
+                    "median": 0.0097085,
+                    "p95": 0.019458,
+                    "max": 0.139791
+                  },
+                  "output_send_ms": {
+                    "median": 0.003333,
+                    "p95": 0.009334,
+                    "max": 0.024542
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.023,
+                "p95": 3.781417,
+                "max": 10.26575
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.012374999999999999,
+                "p95": 0.02675,
+                "max": 0.2325
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0378955,
+                "p95": 3.800583,
+                "max": 10.280332999999999
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.010125,
+                "p95": 0.019167,
+                "max": 0.069125
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.003792,
+                "p95": 0.009833999999999999,
+                "max": 0.028915999999999997
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.1013394568627451,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2581.7978749999997,
+                "yield_to_zero": "default",
+                "cpu_ms": 18.827166,
+                "cpu_ms_per_exchange_including_warmup": 0.11074803529411764,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0263955,
+                    "p95": 10.017209,
+                    "max": 10.26575
+                  },
+                  "reply_ms": {
+                    "median": 0.0133335,
+                    "p95": 0.034249999999999996,
+                    "max": 0.2325
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.041624999999999995,
+                    "p95": 10.034084,
+                    "max": 10.280332999999999
+                  },
+                  "input_send_ms": {
+                    "median": 0.0095625,
+                    "p95": 0.019459,
+                    "max": 0.045125
+                  },
+                  "output_send_ms": {
+                    "median": 0.003813,
+                    "p95": 0.011667,
+                    "max": 0.016249999999999997
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2297.400834,
+                "yield_to_zero": "default",
+                "cpu_ms": 18.534708000000002,
+                "cpu_ms_per_exchange_including_warmup": 0.10902769411764707,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.024646,
+                    "p95": 0.0385,
+                    "max": 0.105708
+                  },
+                  "reply_ms": {
+                    "median": 0.0134585,
+                    "p95": 0.023417,
+                    "max": 0.041541
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.03975,
+                    "p95": 0.06475,
+                    "max": 0.122667
+                  },
+                  "input_send_ms": {
+                    "median": 0.012917,
+                    "p95": 0.021667000000000002,
+                    "max": 0.069125
+                  },
+                  "output_send_ms": {
+                    "median": 0.005,
+                    "p95": 0.009667,
+                    "max": 0.028915999999999997
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2444.2151249999997,
+                "yield_to_zero": "default",
+                "cpu_ms": 14.321249000000002,
+                "cpu_ms_per_exchange_including_warmup": 0.0842426411764706,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0184585,
+                    "p95": 0.036583,
+                    "max": 0.0605
+                  },
+                  "reply_ms": {
+                    "median": 0.009917,
+                    "p95": 0.021625000000000002,
+                    "max": 0.10354100000000001
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.028958499999999998,
+                    "p95": 0.052875,
+                    "max": 0.16441599999999998
+                  },
+                  "input_send_ms": {
+                    "median": 0.008917,
+                    "p95": 0.017292,
+                    "max": 0.05275
+                  },
+                  "output_send_ms": {
+                    "median": 0.003417,
+                    "p95": 0.007875,
+                    "max": 0.01325
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.019417,
+                "p95": 0.042667000000000004,
+                "max": 0.986125
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.005791,
+                "p95": 0.019334,
+                "max": 0.168625
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.026062500000000002,
+                "p95": 0.063208,
+                "max": 0.9975419999999999
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.009625,
+                "p95": 0.022583,
+                "max": 0.5515
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.003375,
+                "p95": 0.007917,
+                "max": 0.132292
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.08161927647058824,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2684.834375,
+                "yield_to_zero": "0",
+                "cpu_ms": 15.740291,
+                "cpu_ms_per_exchange_including_warmup": 0.09258994705882352,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0198125,
+                    "p95": 0.038833,
+                    "max": 0.287083
+                  },
+                  "reply_ms": {
+                    "median": 0.005854,
+                    "p95": 0.02175,
+                    "max": 0.168625
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.027917,
+                    "p95": 0.052084,
+                    "max": 0.292
+                  },
+                  "input_send_ms": {
+                    "median": 0.010333,
+                    "p95": 0.02,
+                    "max": 0.27775
+                  },
+                  "output_send_ms": {
+                    "median": 0.003333,
+                    "p95": 0.007917,
+                    "max": 0.07045799999999999
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2629.931208,
+                "yield_to_zero": "0",
+                "cpu_ms": 13.173666,
+                "cpu_ms_per_exchange_including_warmup": 0.07749215294117648,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0192915,
+                    "p95": 0.044375,
+                    "max": 0.986125
+                  },
+                  "reply_ms": {
+                    "median": 0.005979,
+                    "p95": 0.01575,
+                    "max": 0.149041
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.026250000000000002,
+                    "p95": 0.05725,
+                    "max": 0.9975419999999999
+                  },
+                  "input_send_ms": {
+                    "median": 0.00925,
+                    "p95": 0.030875,
+                    "max": 0.5515
+                  },
+                  "output_send_ms": {
+                    "median": 0.0034795,
+                    "p95": 0.007333,
+                    "max": 0.028541
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2410.065416,
+                "yield_to_zero": "0",
+                "cpu_ms": 12.711874000000002,
+                "cpu_ms_per_exchange_including_warmup": 0.07477572941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.018916500000000003,
+                    "p95": 0.04875,
+                    "max": 0.359375
+                  },
+                  "reply_ms": {
+                    "median": 0.0055414999999999996,
+                    "p95": 0.020707999999999997,
+                    "max": 0.13745900000000003
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0250835,
+                    "p95": 0.066875,
+                    "max": 0.410375
+                  },
+                  "input_send_ms": {
+                    "median": 0.00925,
+                    "p95": 0.018709,
+                    "max": 0.349833
+                  },
+                  "output_send_ms": {
+                    "median": 0.003209,
+                    "p95": 0.009125,
+                    "max": 0.132292
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0214165,
+                "p95": 0.06125,
+                "max": 4.526375
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.005917,
+                "p95": 0.022667000000000003,
+                "max": 0.212
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.028603999999999997,
+                "p95": 0.078083,
+                "max": 4.667417
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0097705,
+                "p95": 0.019916,
+                "max": 0.327167
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0033125,
+                "p95": 0.010292,
+                "max": 0.045834
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.0886016294117647,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2136.111458,
+                "yield_to_zero": "default",
+                "cpu_ms": 13.765499,
+                "cpu_ms_per_exchange_including_warmup": 0.08097352352941177,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.020916499999999998,
+                    "p95": 0.090792,
+                    "max": 4.526375
+                  },
+                  "reply_ms": {
+                    "median": 0.005771,
+                    "p95": 0.045625,
+                    "max": 0.212
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.026979,
+                    "p95": 0.12458400000000001,
+                    "max": 4.667417
+                  },
+                  "input_send_ms": {
+                    "median": 0.009187500000000001,
+                    "p95": 0.023,
+                    "max": 0.079958
+                  },
+                  "output_send_ms": {
+                    "median": 0.003229,
+                    "p95": 0.010750000000000001,
+                    "max": 0.043583
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 1976.5477090000002,
+                "yield_to_zero": "default",
+                "cpu_ms": 17.878832,
+                "cpu_ms_per_exchange_including_warmup": 0.1051696,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0235625,
+                    "p95": 0.057416,
+                    "max": 0.334708
+                  },
+                  "reply_ms": {
+                    "median": 0.007188,
+                    "p95": 0.023667,
+                    "max": 0.046291
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0322495,
+                    "p95": 0.076166,
+                    "max": 0.337333
+                  },
+                  "input_send_ms": {
+                    "median": 0.0102505,
+                    "p95": 0.019625,
+                    "max": 0.327167
+                  },
+                  "output_send_ms": {
+                    "median": 0.003292,
+                    "p95": 0.011125,
+                    "max": 0.026542
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2722.299458,
+                "yield_to_zero": "default",
+                "cpu_ms": 13.542499999999999,
+                "cpu_ms_per_exchange_including_warmup": 0.07966176470588235,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.019646,
+                    "p95": 0.045333,
+                    "max": 0.066875
+                  },
+                  "reply_ms": {
+                    "median": 0.005979,
+                    "p95": 0.019208,
+                    "max": 0.043459
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.026229000000000002,
+                    "p95": 0.059458,
+                    "max": 0.076792
+                  },
+                  "input_send_ms": {
+                    "median": 0.0099375,
+                    "p95": 0.019375,
+                    "max": 0.037417
+                  },
+                  "output_send_ms": {
+                    "median": 0.0033955,
+                    "p95": 0.008957999999999999,
+                    "max": 0.045834
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0234165,
+                "p95": 0.053917,
+                "max": 2.074
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.012666,
+                "p95": 0.028458999999999998,
+                "max": 0.5467920000000001
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.23981200000000003,
+                "p95": 0.28487500000000004,
+                "max": 2.2797080000000003
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0113125,
+                "p95": 0.026833,
+                "max": 1.923
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0053124999999999995,
+                "p95": 0.012125,
+                "max": 0.033374999999999995
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.29597760980392157,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2531.3285,
+                "yield_to_zero": "0",
+                "cpu_ms": 49.369874,
+                "cpu_ms_per_exchange_including_warmup": 0.2904110235294118,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0235835,
+                    "p95": 0.046,
+                    "max": 0.151916
+                  },
+                  "reply_ms": {
+                    "median": 0.012979000000000001,
+                    "p95": 0.028666,
+                    "max": 0.03375
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2405205,
+                    "p95": 0.274375,
+                    "max": 0.5483750000000001
+                  },
+                  "input_send_ms": {
+                    "median": 0.011792,
+                    "p95": 0.023916,
+                    "max": 0.13137500000000002
+                  },
+                  "output_send_ms": {
+                    "median": 0.0053545,
+                    "p95": 0.014457999999999999,
+                    "max": 0.024749999999999998
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2704.62475,
+                "yield_to_zero": "0",
+                "cpu_ms": 51.532125,
+                "cpu_ms_per_exchange_including_warmup": 0.3031301470588235,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.023687,
+                    "p95": 0.054625,
+                    "max": 0.12812500000000002
+                  },
+                  "reply_ms": {
+                    "median": 0.0127705,
+                    "p95": 0.027708,
+                    "max": 0.081833
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.24087499999999998,
+                    "p95": 0.296625,
+                    "max": 0.5740419999999999
+                  },
+                  "input_send_ms": {
+                    "median": 0.011167,
+                    "p95": 0.030542,
+                    "max": 0.099917
+                  },
+                  "output_send_ms": {
+                    "median": 0.0055625,
+                    "p95": 0.012166,
+                    "max": 0.033374999999999995
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2790.4095,
+                "yield_to_zero": "0",
+                "cpu_ms": 50.046582,
+                "cpu_ms_per_exchange_including_warmup": 0.2943916588235294,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.022125,
+                    "p95": 0.048042,
+                    "max": 2.074
+                  },
+                  "reply_ms": {
+                    "median": 0.0117295,
+                    "p95": 0.027792,
+                    "max": 0.5467920000000001
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2374165,
+                    "p95": 0.275833,
+                    "max": 2.2797080000000003
+                  },
+                  "input_send_ms": {
+                    "median": 0.011375,
+                    "p95": 0.027667,
+                    "max": 1.923
+                  },
+                  "output_send_ms": {
+                    "median": 0.004354,
+                    "p95": 0.010459,
+                    "max": 0.025791
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.025333500000000002,
+                "p95": 5.4343330000000005,
+                "max": 14.43375
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.014521000000000001,
+                "p95": 0.037666000000000005,
+                "max": 0.815208
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.243625,
+                "p95": 5.654792,
+                "max": 15.449417
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0113125,
+                "p95": 0.025,
+                "max": 0.309083
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.006,
+                "p95": 0.017042,
+                "max": 0.17733300000000002
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.306175568627451,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2538.483875,
+                "yield_to_zero": "default",
+                "cpu_ms": 51.591001,
+                "cpu_ms_per_exchange_including_warmup": 0.30347647647058823,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0256245,
+                    "p95": 9.410791999999999,
+                    "max": 14.43375
+                  },
+                  "reply_ms": {
+                    "median": 0.015937,
+                    "p95": 0.051291,
+                    "max": 0.815208
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.247083,
+                    "p95": 9.643542,
+                    "max": 15.449417
+                  },
+                  "input_send_ms": {
+                    "median": 0.0099585,
+                    "p95": 0.021124999999999998,
+                    "max": 0.06595799999999999
+                  },
+                  "output_send_ms": {
+                    "median": 0.006458,
+                    "p95": 0.017249999999999998,
+                    "max": 0.17733300000000002
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2306.541292,
+                "yield_to_zero": "default",
+                "cpu_ms": 53.745371999999996,
+                "cpu_ms_per_exchange_including_warmup": 0.3161492470588235,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0274375,
+                    "p95": 0.100208,
+                    "max": 10.089917
+                  },
+                  "reply_ms": {
+                    "median": 0.015042,
+                    "p95": 0.034542,
+                    "max": 0.22175
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.24475,
+                    "p95": 0.351292,
+                    "max": 10.320792
+                  },
+                  "input_send_ms": {
+                    "median": 0.0134585,
+                    "p95": 0.024583,
+                    "max": 0.12141600000000001
+                  },
+                  "output_send_ms": {
+                    "median": 0.006292,
+                    "p95": 0.021542000000000002,
+                    "max": 0.085375
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2313.918667,
+                "yield_to_zero": "default",
+                "cpu_ms": 50.813167,
+                "cpu_ms_per_exchange_including_warmup": 0.29890098235294116,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.020229,
+                    "p95": 0.124167,
+                    "max": 10.026542
+                  },
+                  "reply_ms": {
+                    "median": 0.012687499999999999,
+                    "p95": 0.034375,
+                    "max": 0.076375
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2382505,
+                    "p95": 0.534417,
+                    "max": 10.255875
+                  },
+                  "input_send_ms": {
+                    "median": 0.010354,
+                    "p95": 0.026250000000000002,
+                    "max": 0.309083
+                  },
+                  "output_send_ms": {
+                    "median": 0.0051459999999999995,
+                    "p95": 0.014791,
+                    "max": 0.069375
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "0",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.024146,
+                "p95": 0.053667,
+                "max": 0.232958
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.009125,
+                "p95": 0.027666,
+                "max": 0.204959
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.2364995,
+                "p95": 0.285,
+                "max": 0.664458
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.011250000000000001,
+                "p95": 0.023,
+                "max": 0.219583
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.004958,
+                "p95": 0.012125,
+                "max": 0.065084
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.29226069803921567,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2685.444917,
+                "yield_to_zero": "0",
+                "cpu_ms": 46.238915,
+                "cpu_ms_per_exchange_including_warmup": 0.2719936176470588,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0219585,
+                    "p95": 0.052042,
+                    "max": 0.232958
+                  },
+                  "reply_ms": {
+                    "median": 0.0072505,
+                    "p95": 0.021916,
+                    "max": 0.129667
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.229896,
+                    "p95": 0.273167,
+                    "max": 0.442333
+                  },
+                  "input_send_ms": {
+                    "median": 0.0115205,
+                    "p95": 0.020583,
+                    "max": 0.219583
+                  },
+                  "output_send_ms": {
+                    "median": 0.004,
+                    "p95": 0.009833999999999999,
+                    "max": 0.046625
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2641.2212090000003,
+                "yield_to_zero": "0",
+                "cpu_ms": 53.958251,
+                "cpu_ms_per_exchange_including_warmup": 0.3174014764705882,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.028853499999999997,
+                    "p95": 0.060458000000000005,
+                    "max": 0.195458
+                  },
+                  "reply_ms": {
+                    "median": 0.0112085,
+                    "p95": 0.030292,
+                    "max": 0.204959
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.241625,
+                    "p95": 0.289166,
+                    "max": 0.466625
+                  },
+                  "input_send_ms": {
+                    "median": 0.013021,
+                    "p95": 0.036167,
+                    "max": 0.071083
+                  },
+                  "output_send_ms": {
+                    "median": 0.006396,
+                    "p95": 0.013166,
+                    "max": 0.065084
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2044.586709,
+                "yield_to_zero": "0",
+                "cpu_ms": 48.85579,
+                "cpu_ms_per_exchange_including_warmup": 0.287387,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.019000000000000003,
+                    "p95": 0.048333,
+                    "max": 0.1225
+                  },
+                  "reply_ms": {
+                    "median": 0.0080625,
+                    "p95": 0.03225,
+                    "max": 0.054791
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.228875,
+                    "p95": 0.28391700000000003,
+                    "max": 0.664458
+                  },
+                  "input_send_ms": {
+                    "median": 0.0083955,
+                    "p95": 0.017292,
+                    "max": 0.062625
+                  },
+                  "output_send_ms": {
+                    "median": 0.0039995,
+                    "p95": 0.010166000000000001,
+                    "max": 0.029166
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0225205,
+                "p95": 0.064458,
+                "max": 1.4485
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.008812500000000001,
+                "p95": 0.037708,
+                "max": 3.685209
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.23825,
+                "p95": 0.30908399999999997,
+                "max": 5.663084
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.009979,
+                "p95": 0.022959,
+                "max": 0.5267499999999999
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.004625,
+                "p95": 0.013,
+                "max": 0.18945900000000002
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.28781193137254896,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2104.5425419999997,
+                "yield_to_zero": "default",
+                "cpu_ms": 51.307500999999995,
+                "cpu_ms_per_exchange_including_warmup": 0.3018088294117647,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.026562,
+                    "p95": 0.061416,
+                    "max": 0.157834
+                  },
+                  "reply_ms": {
+                    "median": 0.010499999999999999,
+                    "p95": 0.052,
+                    "max": 0.205209
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.24275,
+                    "p95": 0.332291,
+                    "max": 1.275042
+                  },
+                  "input_send_ms": {
+                    "median": 0.010771,
+                    "p95": 0.022291000000000002,
+                    "max": 0.051084
+                  },
+                  "output_send_ms": {
+                    "median": 0.0049794999999999996,
+                    "p95": 0.015625,
+                    "max": 0.18945900000000002
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2236.658,
+                "yield_to_zero": "default",
+                "cpu_ms": 49.13804299999999,
+                "cpu_ms_per_exchange_including_warmup": 0.2890473117647058,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.022042,
+                    "p95": 0.064458,
+                    "max": 0.196542
+                  },
+                  "reply_ms": {
+                    "median": 0.0094165,
+                    "p95": 0.036667,
+                    "max": 3.685209
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2380625,
+                    "p95": 0.28766600000000003,
+                    "max": 5.663084
+                  },
+                  "input_send_ms": {
+                    "median": 0.009771,
+                    "p95": 0.026875,
+                    "max": 0.116291
+                  },
+                  "output_send_ms": {
+                    "median": 0.0046245,
+                    "p95": 0.016458999999999998,
+                    "max": 0.035375
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 2788.609667,
+                "yield_to_zero": "default",
+                "cpu_ms": 46.338541,
+                "cpu_ms_per_exchange_including_warmup": 0.2725796529411765,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.021437499999999998,
+                    "p95": 0.08449999999999999,
+                    "max": 1.4485
+                  },
+                  "reply_ms": {
+                    "median": 0.0067085,
+                    "p95": 0.020916999999999998,
+                    "max": 0.64925
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22791650000000002,
+                    "p95": 0.311333,
+                    "max": 1.659208
+                  },
+                  "input_send_ms": {
+                    "median": 0.0097705,
+                    "p95": 0.021832999999999998,
+                    "max": 0.5267499999999999
+                  },
+                  "output_send_ms": {
+                    "median": 0.0039795,
+                    "p95": 0.010541,
+                    "max": 0.024333
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          }
+        ]
+      },
+      "windows": {
+        "identity": {
+          "binary_sha256": "18a0adcb15d765e0b372d9d32488deb0d99eecad6690e546305fdfae20ce89be",
+          "platform": "Windows-2025Server-10.0.26100-SP0",
+          "machine": "AMD64",
+          "cpu_count": 4
+        },
+        "cases": [
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.013,
+                "p95": 0.018099999999999998,
+                "max": 0.0859
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0103,
+                "p95": 0.0158,
+                "max": 0.0373
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0233,
+                "p95": 0.0347,
+                "max": 0.0995
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0076,
+                "p95": 0.0111,
+                "max": 0.0743
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0070999999999999995,
+                "p95": 0.0101,
+                "max": 0.0208
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.061274509803921566,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 434.43219999999997,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.0183,
+                    "max": 0.0859
+                  },
+                  "reply_ms": {
+                    "median": 0.0103,
+                    "p95": 0.0146,
+                    "max": 0.0301
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0233,
+                    "p95": 0.0334,
+                    "max": 0.0995
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0111,
+                    "max": 0.0743
+                  },
+                  "output_send_ms": {
+                    "median": 0.0070999999999999995,
+                    "p95": 0.0097,
+                    "max": 0.0193
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 434.0898,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.012799999999999999,
+                    "p95": 0.0177,
+                    "max": 0.025599999999999998
+                  },
+                  "reply_ms": {
+                    "median": 0.0103,
+                    "p95": 0.0162,
+                    "max": 0.0373
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.02325,
+                    "p95": 0.0371,
+                    "max": 0.050800000000000005
+                  },
+                  "input_send_ms": {
+                    "median": 0.007500000000000001,
+                    "p95": 0.0111,
+                    "max": 0.0167
+                  },
+                  "output_send_ms": {
+                    "median": 0.007,
+                    "p95": 0.01,
+                    "max": 0.0168
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 434.2879,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0131,
+                    "p95": 0.0172,
+                    "max": 0.0373
+                  },
+                  "reply_ms": {
+                    "median": 0.0103,
+                    "p95": 0.0165,
+                    "max": 0.0258
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.023350000000000003,
+                    "p95": 0.0356,
+                    "max": 0.053
+                  },
+                  "input_send_ms": {
+                    "median": 0.007500000000000001,
+                    "p95": 0.011,
+                    "max": 0.0294
+                  },
+                  "output_send_ms": {
+                    "median": 0.0072,
+                    "p95": 0.011,
+                    "max": 0.0208
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0133,
+                "p95": 0.0177,
+                "max": 0.0472
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0102,
+                "p95": 0.0149,
+                "max": 0.0329
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0234,
+                "p95": 0.0323,
+                "max": 0.0669
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.007500000000000001,
+                "p95": 0.011,
+                "max": 0.036399999999999995
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.0070999999999999995,
+                "p95": 0.0097,
+                "max": 0.0158
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.061274509803921566,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 435.062,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.01335,
+                    "p95": 0.0177,
+                    "max": 0.0297
+                  },
+                  "reply_ms": {
+                    "median": 0.0101,
+                    "p95": 0.0155,
+                    "max": 0.0329
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.023200000000000002,
+                    "p95": 0.031900000000000005,
+                    "max": 0.0479
+                  },
+                  "input_send_ms": {
+                    "median": 0.007700000000000001,
+                    "p95": 0.0112,
+                    "max": 0.018099999999999998
+                  },
+                  "output_send_ms": {
+                    "median": 0.007,
+                    "p95": 0.010499999999999999,
+                    "max": 0.012799999999999999
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 432.3236,
+                "yield_to_zero": "default",
+                "cpu_ms": 15.625,
+                "cpu_ms_per_exchange_including_warmup": 0.09191176470588236,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.0166,
+                    "max": 0.0282
+                  },
+                  "reply_ms": {
+                    "median": 0.0104,
+                    "p95": 0.0146,
+                    "max": 0.0312
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0235,
+                    "p95": 0.032799999999999996,
+                    "max": 0.0465
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.011,
+                    "max": 0.0134
+                  },
+                  "output_send_ms": {
+                    "median": 0.0070999999999999995,
+                    "p95": 0.008199999999999999,
+                    "max": 0.0158
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 434.56669999999997,
+                "yield_to_zero": "default",
+                "cpu_ms": 15.625,
+                "cpu_ms_per_exchange_including_warmup": 0.09191176470588236,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0133,
+                    "p95": 0.018099999999999998,
+                    "max": 0.0472
+                  },
+                  "reply_ms": {
+                    "median": 0.0101,
+                    "p95": 0.0148,
+                    "max": 0.0195
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0234,
+                    "p95": 0.032499999999999994,
+                    "max": 0.0669
+                  },
+                  "input_send_ms": {
+                    "median": 0.007500000000000001,
+                    "p95": 0.011,
+                    "max": 0.036399999999999995
+                  },
+                  "output_send_ms": {
+                    "median": 0.007,
+                    "p95": 0.0088,
+                    "max": 0.0132
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0132,
+                "p95": 0.019,
+                "max": 0.0671
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.013900000000000001,
+                "p95": 0.0178,
+                "max": 0.0304
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.2273,
+                "p95": 0.2379,
+                "max": 0.2808
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0076,
+                "p95": 0.0122,
+                "max": 0.023200000000000002
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.008199999999999999,
+                "p95": 0.011,
+                "max": 0.0214
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.24509803921568626,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 461.1789,
+                "yield_to_zero": "default",
+                "cpu_ms": 62.5,
+                "cpu_ms_per_exchange_including_warmup": 0.36764705882352944,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.0203,
+                    "max": 0.0671
+                  },
+                  "reply_ms": {
+                    "median": 0.014,
+                    "p95": 0.0167,
+                    "max": 0.0251
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2275,
+                    "p95": 0.2388,
+                    "max": 0.2808
+                  },
+                  "input_send_ms": {
+                    "median": 0.007500000000000001,
+                    "p95": 0.011899999999999999,
+                    "max": 0.023200000000000002
+                  },
+                  "output_send_ms": {
+                    "median": 0.008199999999999999,
+                    "p95": 0.0097,
+                    "max": 0.014199999999999999
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 458.6355,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.0172,
+                    "max": 0.0218
+                  },
+                  "reply_ms": {
+                    "median": 0.0138,
+                    "p95": 0.0165,
+                    "max": 0.0266
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22719999999999999,
+                    "p95": 0.2342,
+                    "max": 0.2397
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0115,
+                    "max": 0.013600000000000001
+                  },
+                  "output_send_ms": {
+                    "median": 0.008199999999999999,
+                    "p95": 0.0115,
+                    "max": 0.0214
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 457.4343,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0131,
+                    "p95": 0.0192,
+                    "max": 0.0285
+                  },
+                  "reply_ms": {
+                    "median": 0.013699999999999999,
+                    "p95": 0.0202,
+                    "max": 0.0304
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2271,
+                    "p95": 0.2384,
+                    "max": 0.24580000000000002
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0126,
+                    "max": 0.0204
+                  },
+                  "output_send_ms": {
+                    "median": 0.0081,
+                    "p95": 0.0104,
+                    "max": 0.0138
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 0,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0135,
+                "p95": 0.0213,
+                "max": 0.11359999999999999
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0138,
+                "p95": 0.017,
+                "max": 0.0299
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.22744999999999999,
+                "p95": 0.2389,
+                "max": 0.33080000000000004
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.007500000000000001,
+                "p95": 0.0117,
+                "max": 0.0487
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.008199999999999999,
+                "p95": 0.0118,
+                "max": 0.019899999999999998
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.21446078431372548,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 459.95200000000006,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.013699999999999999,
+                    "p95": 0.0214,
+                    "max": 0.11359999999999999
+                  },
+                  "reply_ms": {
+                    "median": 0.013850000000000001,
+                    "p95": 0.0167,
+                    "max": 0.0299
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22795,
+                    "p95": 0.2391,
+                    "max": 0.33080000000000004
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0129,
+                    "max": 0.0332
+                  },
+                  "output_send_ms": {
+                    "median": 0.0083,
+                    "p95": 0.01,
+                    "max": 0.019899999999999998
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 457.6226,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0135,
+                    "p95": 0.0231,
+                    "max": 0.0379
+                  },
+                  "reply_ms": {
+                    "median": 0.013699999999999999,
+                    "p95": 0.0185,
+                    "max": 0.022
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2273,
+                    "p95": 0.2411,
+                    "max": 0.2516
+                  },
+                  "input_send_ms": {
+                    "median": 0.007500000000000001,
+                    "p95": 0.012,
+                    "max": 0.0146
+                  },
+                  "output_send_ms": {
+                    "median": 0.0083,
+                    "p95": 0.012799999999999999,
+                    "max": 0.0172
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 0,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 458.0672,
+                "yield_to_zero": "default",
+                "cpu_ms": 46.875,
+                "cpu_ms_per_exchange_including_warmup": 0.2757352941176471,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.01335,
+                    "p95": 0.018199999999999997,
+                    "max": 0.0515
+                  },
+                  "reply_ms": {
+                    "median": 0.013749999999999998,
+                    "p95": 0.016,
+                    "max": 0.0191
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22719999999999999,
+                    "p95": 0.2354,
+                    "max": 0.268
+                  },
+                  "input_send_ms": {
+                    "median": 0.00745,
+                    "p95": 0.0112,
+                    "max": 0.0487
+                  },
+                  "output_send_ms": {
+                    "median": 0.008199999999999999,
+                    "p95": 0.011600000000000001,
+                    "max": 0.0143
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0132,
+                "p95": 0.0185,
+                "max": 0.0399
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0103,
+                "p95": 0.0159,
+                "max": 0.0344
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.023350000000000003,
+                "p95": 0.034499999999999996,
+                "max": 0.054400000000000004
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0076,
+                "p95": 0.012,
+                "max": 0.0304
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.007,
+                "p95": 0.0102,
+                "max": 0.0144
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.030637254901960783,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 432.0696,
+                "yield_to_zero": "default",
+                "cpu_ms": 15.625,
+                "cpu_ms_per_exchange_including_warmup": 0.09191176470588236,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.013600000000000001,
+                    "p95": 0.025,
+                    "max": 0.0399
+                  },
+                  "reply_ms": {
+                    "median": 0.0104,
+                    "p95": 0.0177,
+                    "max": 0.0344
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0236,
+                    "p95": 0.043000000000000003,
+                    "max": 0.054400000000000004
+                  },
+                  "input_send_ms": {
+                    "median": 0.0078,
+                    "p95": 0.013699999999999999,
+                    "max": 0.0304
+                  },
+                  "output_send_ms": {
+                    "median": 0.0070999999999999995,
+                    "p95": 0.0106,
+                    "max": 0.0126
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 432.6397,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.012799999999999999,
+                    "p95": 0.017499999999999998,
+                    "max": 0.0244
+                  },
+                  "reply_ms": {
+                    "median": 0.0102,
+                    "p95": 0.015099999999999999,
+                    "max": 0.022500000000000003
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0231,
+                    "p95": 0.033800000000000004,
+                    "max": 0.0416
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0117,
+                    "max": 0.0135
+                  },
+                  "output_send_ms": {
+                    "median": 0.0069,
+                    "p95": 0.01,
+                    "max": 0.011600000000000001
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 433.0625,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.017,
+                    "max": 0.0269
+                  },
+                  "reply_ms": {
+                    "median": 0.0104,
+                    "p95": 0.015099999999999999,
+                    "max": 0.0242
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.02345,
+                    "p95": 0.0317,
+                    "max": 0.043300000000000005
+                  },
+                  "input_send_ms": {
+                    "median": 0.00755,
+                    "p95": 0.011600000000000001,
+                    "max": 0.0211
+                  },
+                  "output_send_ms": {
+                    "median": 0.0070999999999999995,
+                    "p95": 0.0094,
+                    "max": 0.0144
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 0,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0135,
+                "p95": 0.0208,
+                "max": 0.0487
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0103,
+                "p95": 0.0159,
+                "max": 0.0536
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.0236,
+                "p95": 0.0371,
+                "max": 0.06899999999999999
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0076,
+                "p95": 0.012700000000000001,
+                "max": 0.043699999999999996
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.007,
+                "p95": 0.0108,
+                "max": 0.0488
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.15318627450980393,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 435.4596,
+                "yield_to_zero": "default",
+                "cpu_ms": 0.0,
+                "cpu_ms_per_exchange_including_warmup": 0.0,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.013699999999999999,
+                    "p95": 0.025,
+                    "max": 0.0487
+                  },
+                  "reply_ms": {
+                    "median": 0.01045,
+                    "p95": 0.017900000000000003,
+                    "max": 0.0285
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0241,
+                    "p95": 0.0387,
+                    "max": 0.0635
+                  },
+                  "input_send_ms": {
+                    "median": 0.0078,
+                    "p95": 0.013699999999999999,
+                    "max": 0.043699999999999996
+                  },
+                  "output_send_ms": {
+                    "median": 0.007,
+                    "p95": 0.0109,
+                    "max": 0.025400000000000002
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 430.3469,
+                "yield_to_zero": "default",
+                "cpu_ms": 46.875,
+                "cpu_ms_per_exchange_including_warmup": 0.2757352941176471,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.01355,
+                    "p95": 0.0208,
+                    "max": 0.0369
+                  },
+                  "reply_ms": {
+                    "median": 0.0103,
+                    "p95": 0.0157,
+                    "max": 0.0536
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.02375,
+                    "p95": 0.036699999999999997,
+                    "max": 0.06899999999999999
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0124,
+                    "max": 0.032799999999999996
+                  },
+                  "output_send_ms": {
+                    "median": 0.007,
+                    "p95": 0.0106,
+                    "max": 0.0488
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 0,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 432.82710000000003,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.0193,
+                    "max": 0.0388
+                  },
+                  "reply_ms": {
+                    "median": 0.0102,
+                    "p95": 0.015099999999999999,
+                    "max": 0.0237
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.0233,
+                    "p95": 0.034100000000000005,
+                    "max": 0.0531
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0118,
+                    "max": 0.019899999999999998
+                  },
+                  "output_send_ms": {
+                    "median": 0.0069,
+                    "p95": 0.0104,
+                    "max": 0.0153
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "blocking",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.01315,
+                "p95": 0.0177,
+                "max": 0.0324
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.0138,
+                "p95": 0.0178,
+                "max": 0.0348
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.2271,
+                "p95": 0.23550000000000001,
+                "max": 0.25070000000000003
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0076,
+                "p95": 0.0115,
+                "max": 0.0201
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.008199999999999999,
+                "p95": 0.011600000000000001,
+                "max": 0.027800000000000002
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.2757352941176471,
+            "repetitions": [
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 459.1766,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0131,
+                    "p95": 0.017499999999999998,
+                    "max": 0.0217
+                  },
+                  "reply_ms": {
+                    "median": 0.013900000000000001,
+                    "p95": 0.0178,
+                    "max": 0.0295
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2271,
+                    "p95": 0.235,
+                    "max": 0.24630000000000002
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.0115,
+                    "max": 0.0192
+                  },
+                  "output_send_ms": {
+                    "median": 0.008199999999999999,
+                    "p95": 0.0117,
+                    "max": 0.0131
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 455.63530000000003,
+                "yield_to_zero": "default",
+                "cpu_ms": 46.875,
+                "cpu_ms_per_exchange_including_warmup": 0.2757352941176471,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.017499999999999998,
+                    "max": 0.0324
+                  },
+                  "reply_ms": {
+                    "median": 0.013850000000000001,
+                    "p95": 0.0178,
+                    "max": 0.032499999999999994
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2271,
+                    "p95": 0.2346,
+                    "max": 0.25070000000000003
+                  },
+                  "input_send_ms": {
+                    "median": 0.007700000000000001,
+                    "p95": 0.011899999999999999,
+                    "max": 0.015099999999999999
+                  },
+                  "output_send_ms": {
+                    "median": 0.008199999999999999,
+                    "p95": 0.0118,
+                    "max": 0.027800000000000002
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "blocking",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 456.0198,
+                "yield_to_zero": "default",
+                "cpu_ms": 62.5,
+                "cpu_ms_per_exchange_including_warmup": 0.36764705882352944,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.01325,
+                    "p95": 0.0192,
+                    "max": 0.029
+                  },
+                  "reply_ms": {
+                    "median": 0.0138,
+                    "p95": 0.018099999999999998,
+                    "max": 0.0348
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2271,
+                    "p95": 0.23709999999999998,
+                    "max": 0.2505
+                  },
+                  "input_send_ms": {
+                    "median": 0.0076,
+                    "p95": 0.011300000000000001,
+                    "max": 0.0201
+                  },
+                  "output_send_ms": {
+                    "median": 0.008199999999999999,
+                    "p95": 0.0112,
+                    "max": 0.018199999999999997
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          },
+          {
+            "capacity": 1,
+            "work_us": 200,
+            "mode": "select",
+            "yield_to_zero": "default",
+            "pooled_ms": {
+              "dispatch_ms": {
+                "count": 450,
+                "median": 0.0133,
+                "p95": 0.018199999999999997,
+                "max": 0.057800000000000004
+              },
+              "reply_ms": {
+                "count": 450,
+                "median": 0.013699999999999999,
+                "p95": 0.017,
+                "max": 0.0354
+              },
+              "roundtrip_ms": {
+                "count": 450,
+                "median": 0.2271,
+                "p95": 0.2358,
+                "max": 0.279
+              },
+              "input_send_ms": {
+                "count": 450,
+                "median": 0.0076,
+                "p95": 0.011600000000000001,
+                "max": 0.0329
+              },
+              "output_send_ms": {
+                "count": 450,
+                "median": 0.008199999999999999,
+                "p95": 0.0115,
+                "max": 0.028900000000000002
+              }
+            },
+            "cpu_ms_per_exchange_including_warmup": 0.12254901960784313,
+            "repetitions": [
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 455.1829,
+                "yield_to_zero": "default",
+                "cpu_ms": 15.625,
+                "cpu_ms_per_exchange_including_warmup": 0.09191176470588236,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.01335,
+                    "p95": 0.0193,
+                    "max": 0.057800000000000004
+                  },
+                  "reply_ms": {
+                    "median": 0.013900000000000001,
+                    "p95": 0.0176,
+                    "max": 0.031099999999999996
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.2275,
+                    "p95": 0.2405,
+                    "max": 0.279
+                  },
+                  "input_send_ms": {
+                    "median": 0.007500000000000001,
+                    "p95": 0.0125,
+                    "max": 0.0249
+                  },
+                  "output_send_ms": {
+                    "median": 0.0083,
+                    "p95": 0.0115,
+                    "max": 0.0162
+                  }
+                },
+                "repetition": 1
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 457.9394,
+                "yield_to_zero": "default",
+                "cpu_ms": 31.25,
+                "cpu_ms_per_exchange_including_warmup": 0.18382352941176472,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0133,
+                    "p95": 0.018099999999999998,
+                    "max": 0.041100000000000005
+                  },
+                  "reply_ms": {
+                    "median": 0.01355,
+                    "p95": 0.0166,
+                    "max": 0.0347
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22699999999999998,
+                    "p95": 0.235,
+                    "max": 0.2601
+                  },
+                  "input_send_ms": {
+                    "median": 0.007700000000000001,
+                    "p95": 0.011600000000000001,
+                    "max": 0.0329
+                  },
+                  "output_send_ms": {
+                    "median": 0.008199999999999999,
+                    "p95": 0.011399999999999999,
+                    "max": 0.028900000000000002
+                  }
+                },
+                "repetition": 2
+              },
+              {
+                "mode": "select",
+                "capacity": 1,
+                "work_us": 200,
+                "pause_us": 2000,
+                "warmup": 20,
+                "elapsed_ms": 458.3473,
+                "yield_to_zero": "default",
+                "cpu_ms": 15.625,
+                "cpu_ms_per_exchange_including_warmup": 0.09191176470588236,
+                "summary_ms": {
+                  "dispatch_ms": {
+                    "median": 0.0132,
+                    "p95": 0.0167,
+                    "max": 0.0352
+                  },
+                  "reply_ms": {
+                    "median": 0.013600000000000001,
+                    "p95": 0.0156,
+                    "max": 0.0354
+                  },
+                  "roundtrip_ms": {
+                    "median": 0.22690000000000002,
+                    "p95": 0.2336,
+                    "max": 0.25
+                  },
+                  "input_send_ms": {
+                    "median": 0.007500000000000001,
+                    "p95": 0.011300000000000001,
+                    "max": 0.018199999999999997
+                  },
+                  "output_send_ms": {
+                    "median": 0.0081,
+                    "p95": 0.011600000000000001,
+                    "max": 0.0138
+                  }
+                },
+                "repetition": 3
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Raw reports are retained in the linked Actions artifacts.",
+    "CPU includes native threads, startup, warmup and report serialization; short Linux/Windows probes approach OS accounting resolution.",
+    "Initial probe records requested pause and total duration; refined probe additionally records actual pauses."
+  ],
+  "local_standard_gate": {
+    "status": "pass",
+    "control_revision": "1f9c19a37e3088477809c6baa2c433cc3db5348f",
+    "server_candidate_revision": "fb9d2f26159c8acfeccafabe38472ff288095715",
+    "harness_revision": "eb468a44f694ad02015443577dbe6275dbd0028a",
+    "control_binary_sha256": "425ced64b08a61861ff4c901db7f69a2fc80a65961af5da0516f41eca9125871",
+    "candidate_binary_sha256": "0c10e841b9d1a0251639946873935ab25bb5fc824374b0224ecf66319b5bfa6d",
+    "environment": {
+      "platform": "Linux-7.2.9-1-cachyos-x86_64-with-glibc2.44",
+      "cpu": "AMD Ryzen AI 7 350 w/ Radeon 860M",
+      "power": {
+        "/sys/firmware/acpi/platform_profile": "balanced",
+        "/sys/class/power_supply/ACAD/online": "1",
+        "/sys/class/power_supply/ucsi-source-psy-USBC000:001/online": "0",
+        "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor": "powersave"
+      }
+    },
+    "policy": {
+      "profile": "same-runner alternating release binaries; large seed-7203 project; warm filesystem",
+      "samples": 21,
+      "ratio": 1.2,
+      "absolute_ms": 2.0,
+      "workloads": [
+        "comment",
+        "prose",
+        "line_insert",
+        "stable_id",
+        "block_topology",
+        "recovery",
+        "query/completion",
+        "query/hover",
+        "query/definition",
+        "query/references",
+        "query/prepare_rename",
+        "query/rename",
+        "query/code_action",
+        "query/code_action_fix_all",
+        "negotiated/comment",
+        "negotiated/prose",
+        "negotiated/line_insert",
+        "negotiated/stable_id",
+        "negotiated/block_topology",
+        "negotiated/recovery",
+        "fanout/block_topology",
+        "lifecycle/index_ready",
+        "lifecycle/open",
+        "memory/peak_rss_kib"
+      ],
+      "fanout": {
+        "documents": 100,
+        "blocks": 20,
+        "lines": 10,
+        "shared_destinations": 10
+      },
+      "limits": {
+        "lifecycle/index_ready": {
+          "ratio": 1.3,
+          "absolute": 50,
+          "unit": "ms"
+        },
+        "lifecycle/open": {
+          "ratio": 1.3,
+          "absolute": 10,
+          "unit": "ms"
+        },
+        "memory/peak_rss_kib": {
+          "ratio": 1.2,
+          "absolute": 16384,
+          "unit": "KiB"
+        }
+      }
+    },
+    "rounds": [
+      {
+        "pairs": 3,
+        "regressions": []
+      }
+    ],
+    "workloads": {
+      "comment": {
+        "control": [
+          1.680526,
+          1.566614,
+          1.677921
+        ],
+        "candidate": [
+          2.406878,
+          1.740518,
+          2.48354
+        ]
+      },
+      "prose": {
+        "control": [
+          1.681258,
+          1.604715,
+          1.723677
+        ],
+        "candidate": [
+          1.653546,
+          1.834162,
+          1.561725
+        ]
+      },
+      "line_insert": {
+        "control": [
+          4.355071,
+          4.087504,
+          4.115747
+        ],
+        "candidate": [
+          3.657293,
+          3.331127,
+          3.804467
+        ]
+      },
+      "stable_id": {
+        "control": [
+          2.725099,
+          3.720581,
+          3.975886
+        ],
+        "candidate": [
+          3.689213,
+          2.905395,
+          3.48314
+        ]
+      },
+      "block_topology": {
+        "control": [
+          11.042181,
+          11.421587,
+          11.060586
+        ],
+        "candidate": [
+          10.772119,
+          11.398775,
+          11.141206
+        ]
+      },
+      "recovery": {
+        "control": [
+          18.370684,
+          18.413674,
+          18.180311
+        ],
+        "candidate": [
+          18.276319,
+          18.073972,
+          18.134314
+        ]
+      },
+      "negotiated/comment": {
+        "control": [
+          2.669336,
+          2.539424,
+          2.754835
+        ],
+        "candidate": [
+          2.727824,
+          2.250987,
+          2.958554
+        ]
+      },
+      "negotiated/prose": {
+        "control": [
+          2.07506,
+          2.050224,
+          1.627738
+        ],
+        "candidate": [
+          2.40248,
+          2.141605,
+          2.299097
+        ]
+      },
+      "negotiated/line_insert": {
+        "control": [
+          4.039034,
+          3.943836,
+          4.2628
+        ],
+        "candidate": [
+          4.345344,
+          3.572836,
+          4.356795
+        ]
+      },
+      "negotiated/stable_id": {
+        "control": [
+          3.356243,
+          3.642416,
+          3.690625
+        ],
+        "candidate": [
+          3.593003,
+          3.42445,
+          3.550915
+        ]
+      },
+      "negotiated/block_topology": {
+        "control": [
+          11.608495,
+          11.653188,
+          11.517836
+        ],
+        "candidate": [
+          11.376753,
+          11.942807,
+          11.760668
+        ]
+      },
+      "negotiated/recovery": {
+        "control": [
+          18.490327,
+          18.293561,
+          18.434193
+        ],
+        "candidate": [
+          18.688575,
+          18.26621,
+          18.192503
+        ]
+      },
+      "fanout/block_topology": {
+        "control": [
+          28.299174,
+          28.595606,
+          28.766514
+        ],
+        "candidate": [
+          28.475982,
+          28.7593,
+          28.699399
+        ]
+      },
+      "query/completion": {
+        "control": [
+          6.703711,
+          6.236832,
+          6.202208
+        ],
+        "candidate": [
+          6.695205,
+          6.126196,
+          6.586643
+        ]
+      },
+      "query/hover": {
+        "control": [
+          1.323142,
+          1.31645,
+          1.32742
+        ],
+        "candidate": [
+          1.323993,
+          1.378294,
+          1.35488
+        ]
+      },
+      "query/definition": {
+        "control": [
+          0.148847,
+          0.141403,
+          0.137826
+        ],
+        "candidate": [
+          0.141624,
+          0.161441,
+          0.139128
+        ]
+      },
+      "query/references": {
+        "control": [
+          0.340484,
+          0.35483,
+          0.385847
+        ],
+        "candidate": [
+          0.34923,
+          0.378925,
+          0.352296
+        ]
+      },
+      "query/prepare_rename": {
+        "control": [
+          1.355833,
+          1.375368,
+          1.445168
+        ],
+        "candidate": [
+          1.35439,
+          1.378575,
+          1.381289
+        ]
+      },
+      "query/rename": {
+        "control": [
+          0.092983,
+          0.084387,
+          0.116427
+        ],
+        "candidate": [
+          0.091731,
+          0.123319,
+          0.122007
+        ]
+      },
+      "query/code_action": {
+        "control": [
+          0.487387,
+          0.485684,
+          0.675707
+        ],
+        "candidate": [
+          0.507534,
+          0.513615,
+          0.539594
+        ]
+      },
+      "query/code_action_fix_all": {
+        "control": [
+          13.033085,
+          12.951573,
+          12.853531
+        ],
+        "candidate": [
+          12.457615,
+          12.678505,
+          12.521403
+        ]
+      },
+      "lifecycle/index_ready": {
+        "control": [
+          354.589749,
+          362.219002,
+          362.750902
+        ],
+        "candidate": [
+          355.369129,
+          358.084721,
+          360.285024
+        ]
+      },
+      "lifecycle/open": {
+        "control": [
+          3.37577,
+          3.367344,
+          3.116007
+        ],
+        "candidate": [
+          2.817281,
+          2.813804,
+          2.712286
+        ]
+      },
+      "memory/peak_rss_kib": {
+        "control": [
+          124008,
+          123956,
+          123840
+        ],
+        "candidate": [
+          123912,
+          123908,
+          123892
+        ]
+      }
+    }
+  }
+}

@@ -78,9 +78,9 @@ target/lsp-matrix-env/bin/python scripts/measure-lsp-channel-handoff.py \
   --output target/lsp-channel/handoff.json
 ```
 
-## Real-server candidate
+## Real-server candidates
 
-The candidate registers one selected receive per analysis/query worker and reuses
+The initial candidate registers one selected receive per analysis/query worker and reuses
 it for each job. Channel capacity, send path, snapshots and coordinator selection
 remain the same. `Select::select().recv()` is used explicitly; the single-arm
 macro would undo the intended distinction. All 195 LSP tests passed locally,
@@ -103,3 +103,69 @@ gh workflow run ci.yml --repo plethu/recite --ref feat/lsp-cancellation \
 ```
 
 Results and the retain/reject decision follow once measured.
+
+## Initial isolated results
+
+[Run 37508244379](https://github.com/plethu/recite/actions/runs/37508244379)
+tested `1f9c19a3`. All three session jobs and `required-check` passed. The
+[retained summary](channel-results.json) includes all cases, repetitions, CPU
+measurements and binary identities; raw samples remain in Actions artifacts.
+
+The table pools 450 measured exchanges per case, using default yield policy,
+capacity one and 200 microseconds of synthetic query work:
+
+| Host | Worker dispatch p95, blocking → selected | CPU per exchange, blocking → selected |
+| --- | ---: | ---: |
+| Linux | 0.041 → 0.039 ms | 0.196 → 0.176 ms |
+| macOS | 5.434 → 0.065 ms | 0.306 → 0.288 ms |
+| Windows | 0.018 → 0.018 ms | 0.276 → 0.123 ms |
+
+Short Linux/Windows probes approach the OS CPU-accounting resolution; these CPU
+numbers are not precise efficiency ratios. The real-server cycles supply the
+more useful CPU comparison.
+
+On macOS, the alternate-yield diagnostic also removed the capacity-one blocking
+tail (pooled dispatch p95 0.054 ms with synthetic work). Selection kept all six
+default-path capacity-one repetition p95s below 0.1 ms, but blocking's pooled
+tail was dominated by the first repetition: individual p95s ranged from 0.04 to
+10.02 ms without work and 0.10 to 9.41 ms with work. This supports the receive
+backoff hypothesis while preserving its scheduling variability. The refined
+probe records actual pauses to investigate that variability.
+
+The bare rendezvous cases did not reproduce the earlier writer-handoff tail:
+macOS default-path pooled dispatch p95s stayed below 0.06 ms in both receive
+modes. They omit stdio flushing, message destruction and server contention. This
+experiment therefore supports a bounded-worker change; it does not establish a
+transport replacement or a universal Crossbeam defect.
+
+Local `mise exec -- just check` passed at the worker prototype: 1,572 workspace
+tests, three existing skips, writer/editor/engine checks, Clippy, dependency
+policy, docs and benchmark smoke. The timer-field refinement additionally passed
+targeted benchmark Clippy and workflow checks. The 43 CI unit tests passed,
+including portable target identity and failed comparison evidence.
+
+The existing `check-lsp-performance.py` gate passed locally against the exact
+control/candidate release binaries in three alternating pairs, with 21 samples
+per operation and matching output fingerprints. It covered all full/negotiated
+edit and query/action cases, shared-file invalidation, startup/opening and RSS.
+No workload crossed its regression policy, so no confirmation round was needed.
+Binary identities, policy and per-pair workload medians are retained in the
+summary. This is local Linux evidence; the hosted matrix supplies the platform
+session comparison.
+
+## Narrowing the worker change
+
+The macOS job in [paired run 37510297571](https://github.com/plethu/recite/actions/runs/37510297571)
+tested `eb468a44` against `1f9c19a3`. Untraced recovery median/p95 fell from
+12.17/52.35 ms to 10.40/33.52 ms, but median server CPU per cycle rose from
+456.12 to 519.60 ms (14%). Five of six workload p95s improved; one low-tail
+repetition rose from 13.38 to 13.95 ms. The native trace puts completion worker
+wakeup p95 at 0.040 ms and completion response p95 at 0.504 ms. Cancelled rename
+still has a 9.84 ms writer-handoff p95, confirming that this change does not
+remove the whole transport tail. Tracing still perturbs scheduling and CPU.
+
+That result motivates a narrower candidate: use selected receives only for the
+short query worker. Leave analysis's receive path at the control implementation
+and measure whether the request gain survives with less analysis CPU. All 195
+LSP tests and targeted Clippy passed for this variant; it remains an experiment
+until the paired platform results decide which candidate to retain.
