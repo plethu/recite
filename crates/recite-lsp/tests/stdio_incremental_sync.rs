@@ -3,6 +3,68 @@ use serde_json::json;
 use support::stdio::StdioHarness;
 
 #[test]
+fn malformed_wire_changes_preserve_text_and_version() {
+    let range = json!({
+        "start": {"line": 0, "character": 0},
+        "end": {"line": 0, "character": 1}
+    });
+    let malformed = [
+        json!({"range": true, "text": "replacement"}),
+        json!({"range": {"start": {"line": 0, "character": 0}}, "text": "replacement"}),
+        json!({"range": {"start": {"line": 0, "character": -1}, "end": {"line": 0, "character": 1}}, "text": "replacement"}),
+        json!({"range": range, "rangeLength": -1, "text": "replacement"}),
+        json!({"rangeLength": "invalid", "text": "replacement"}),
+        json!({"rangeLength": 1, "text": "replacement"}),
+    ];
+    for change in malformed {
+        let mut server = StdioHarness::start(json!({"capabilities": {}}));
+        let uri = "file:///workspace/wire-changes.recite";
+        server.did_open(uri, 1, ":: start\n-> target\n\n:: target\n-> END\n");
+        assert!(
+            server.diagnostics(uri)["diagnostics"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        server.notify(
+            "textDocument/didChange",
+            json!({
+                "textDocument": {"uri": uri, "version": 2},
+                "contentChanges": [
+                    {"text": ":: poisoned\n-> END\n"},
+                    change
+                ]
+            }),
+        );
+        let definition = server.request_result(
+            "textDocument/definition",
+            json!({
+                "textDocument": {"uri": uri}, "position": {"line": 1, "character": 4}
+            }),
+        );
+        assert_eq!(
+            definition["uri"], uri,
+            "rejected batch changed accepted text: {change}"
+        );
+        assert_eq!(definition["range"]["start"]["line"], 3);
+
+        // A valid edit at the rejected version must still be accepted. Unknown
+        // extension fields remain legal; validation must preserve that freedom.
+        server.notify(
+            "textDocument/didChange",
+            json!({
+                "textDocument": {"uri": uri, "version": 2},
+                "contentChanges": [{"text": ":: start\n-> missing\n", "extension": true}]
+            }),
+        );
+        let diagnostics = server.diagnostics(uri);
+        assert_eq!(diagnostics["version"], 2);
+        assert!(!diagnostics["diagnostics"].as_array().unwrap().is_empty());
+        server.finish();
+    }
+}
+
+#[test]
 fn dependent_changes_survive_coalescing_cancellation_and_reopen() {
     let mut server = StdioHarness::start(json!({"capabilities": {}}));
     assert_eq!(
