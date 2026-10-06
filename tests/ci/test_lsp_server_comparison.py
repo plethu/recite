@@ -54,7 +54,7 @@ class ServerComparisonTests(unittest.TestCase):
             self.assertEqual(comparison.summarize(root)["changes"]["recovery_ms"]["median"]["percent"], 0)
             path = root / "fixed-1.json"
             original = path.read_text()
-            for corruption in ("parity", "oracle", "driver", "version", "cpu", "incomplete"):
+            for corruption in ("parity", "oracle", "driver", "pacing", "version", "cpu", "incomplete"):
                 report = json.loads(original)
                 if corruption == "parity":
                     report["checkpoints"][6]["result_sha256"] = "different"
@@ -62,6 +62,8 @@ class ServerComparisonTests(unittest.TestCase):
                     report["checkpoints"][-1]["fresh_oracle_matched"] = False
                 elif corruption == "driver":
                     report["driver"]["native_trace"] = True
+                elif corruption == "pacing":
+                    report["driver"]["edit_interval_ms"] = 250
                 elif corruption == "version":
                     report["result_fingerprint_version"] = 1
                 elif corruption == "cpu":
@@ -71,3 +73,15 @@ class ServerComparisonTests(unittest.TestCase):
                 path.write_text(json.dumps(report))
                 with self.subTest(corruption=corruption), self.assertRaises(ValueError):
                     comparison.summarize(root)
+            path.write_text(original)
+            for report_path in root.rglob("*.json"):
+                report = json.loads(report_path.read_text())
+                report["cycles"] = 20
+                report["edits_per_cycle"] = 10
+                report["driver"]["edit_interval_ms"] = 100
+                report["checkpoints"] = report["checkpoints"][:20]
+                report_path.write_text(json.dumps(report))
+            # An experimental profile cannot silently satisfy the default CI contract.
+            with self.assertRaises(ValueError):
+                comparison.summarize(root)
+            self.assertEqual(comparison.summarize(root, cycles=20, edits=10)["changes"]["recovery_ms"]["median"]["percent"], 0)

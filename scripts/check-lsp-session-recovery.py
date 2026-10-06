@@ -8,7 +8,7 @@ from pathlib import Path
 from lsp_session_health import recovery_tail
 
 
-def evaluate(directory, budget_ms, completion_budget_ms=None):
+def evaluate(directory, budget_ms, completion_budget_ms=None, *, cycles=40, edits=50):
     results, completion_results, identity = {}, {}, None
     for mode in ("fixed", "churn"):
         repetitions = []
@@ -16,11 +16,11 @@ def evaluate(directory, budget_ms, completion_budget_ms=None):
         for round_number in range(1, 4):
             report = json.loads((directory / f"{mode}-{round_number}.json").read_text())
             if (report["status"] != "pass" or report["health"]["status"] != "pass"
-                    or report["cycles"] != 40 or report["edits_per_cycle"] != 50
+                    or report["cycles"] != cycles or report["edits_per_cycle"] != edits
                     or report["churn"] != (mode == "churn")
-                    or len(report["checkpoints"]) != 40
-                    or [row["cycle"] for row in report["checkpoints"]] != list(range(40))):
-                raise ValueError("recovery calibration requires complete 40-cycle, 50-edit workloads")
+                    or len(report["checkpoints"]) != cycles
+                    or [row["cycle"] for row in report["checkpoints"]] != list(range(cycles))):
+                raise ValueError("recovery calibration requires complete workloads with the requested cycle and edit counts")
             observed = (report["provenance"]["binary_sha256"], report["provenance"]["harness_revision"],
                         report["provenance"]["files"], report["seed"], report.get("driver"))
             if identity is not None and observed != identity:

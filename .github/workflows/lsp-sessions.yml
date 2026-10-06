@@ -3,6 +3,9 @@ name: LSP sessions
 on:
   workflow_call:
     inputs:
+      resource_probe:
+        type: boolean
+        default: false
       channel_probe:
         type: boolean
         default: false
@@ -20,6 +23,10 @@ on:
         default: false
   workflow_dispatch:
     inputs:
+      resource_probe:
+        description: Compare paced editing CPU and upstream stdio transport
+        type: boolean
+        default: false
       channel_probe:
         description: Compare isolated Crossbeam blocking and selected receives
         type: boolean
@@ -56,7 +63,7 @@ jobs:
             && '[{"os":"macos-15","recovery_budget_ms":75}]'
             || '[{"os":"ubuntu-24.04","recovery_budget_ms":20},{"os":"windows-2025","recovery_budget_ms":40},{"os":"macos-15","recovery_budget_ms":75}]') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       # Only the explicitly installed Rust, Node and pnpm tools belong to this lane.
       MISE_AUTO_INSTALL: 'false'
@@ -106,6 +113,37 @@ jobs:
           cargo bench --locked -p recite-benchmarks --bench channel_handoff --no-run --message-format=json > target/channel-build.jsonl
           python -c 'import json, pathlib; artifacts = [json.loads(line) for line in pathlib.Path("target/channel-build.jsonl").read_text().splitlines()]; binary = next(item["executable"] for item in artifacts if item.get("target", {}).get("name") == "channel_handoff" and item.get("executable")); pathlib.Path("target/channel-binary.txt").write_text(binary)'
           python scripts/measure-lsp-channel-handoff.py --binary "$(cat target/channel-binary.txt)" --output target/lsp-sessions/channel-handoff.json
+      - name: Measure actual upstream stdio transport
+        if: inputs.resource_probe
+        run: |
+          cargo bench --locked -p recite-benchmarks --bench stdio_transport --no-run --message-format=json > target/stdio-build.jsonl
+          python -c 'import json, pathlib; artifacts = [json.loads(line) for line in pathlib.Path("target/stdio-build.jsonl").read_text().splitlines()]; binary = next(item["executable"] for item in artifacts if item.get("target", {}).get("name") == "stdio_transport" and item.get("executable")); pathlib.Path("target/stdio-binary.txt").write_text(binary)'
+          python scripts/measure-lsp-stdio-transport.py --binary "$(cat target/stdio-binary.txt)" --output target/lsp-sessions/stdio-transport.json
+      - name: Compare paced editing resource costs
+        if: inputs.resource_probe && inputs.server_control_ref != ''
+        run: |
+          suffix=""
+          if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
+          for interval in 100 250; do
+            reports="$PWD/target/lsp-sessions/paced-$interval"
+            run_paced() {
+              side="$1"
+              binary="$PWD/target/release/recite-lsp$suffix"
+              output="$reports"
+              if [[ "$side" == control ]]; then
+                binary="$PWD/target/lsp-session-control-build/release/recite-lsp$suffix"
+                output="$reports/control"
+              fi
+              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/fixed-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval"
+              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/churn-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval" --churn
+            }
+            for round in 1 2 3; do
+              if [[ $((round % 2)) == 1 ]]; then run_paced control; fi
+              run_paced candidate
+              if [[ $((round % 2)) == 0 ]]; then run_paced control; fi
+            done
+            python scripts/summarize-lsp-server-comparison.py --reports "$reports" --cycles 20 --edits 10 --output "$reports/server-comparison.json"
+          done
       - name: Install Linux display dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libasound2t64 libnss3 libgbm1 libgtk-3-0

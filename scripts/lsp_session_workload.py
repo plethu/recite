@@ -124,7 +124,7 @@ class Session:
         values["diagnostics"] = self.errors.copy()
         return values
 
-    def cycle(self, cycle, churn, edits, random):
+    def cycle(self, cycle, churn, edits, random, *, edit_interval_ms=5):
         self.timing.reset()
         path = self.sources[1 + cycle % (len(self.sources) - 1)]
         self.open(path)
@@ -136,10 +136,11 @@ class Session:
         # Use deadlines so an oversleep does not shift every subsequent edit.
         # Record actual send intervals: hosted timers cannot promise 5 ms wakeups.
         pending = {}
+        burst_cpu = self.timing.cpu_seconds()
         burst_started = time.perf_counter_ns()
         sent_at = []
         for index in range(edits):
-            remaining = (burst_started + index * 5_000_000 - time.perf_counter_ns()) / 1e9
+            remaining = (burst_started + index * edit_interval_ms * 1_000_000 - time.perf_counter_ns()) / 1e9
             if remaining > 0:
                 with self.timing.measure("driver_sleep_ms"):
                     time.sleep(remaining)
@@ -183,6 +184,7 @@ class Session:
         assert self.last_diagnostic_received is not None
         self.timing.parts["repair_main_resume_ms"] = (time.perf_counter_ns() - self.last_diagnostic_received) / 1e6
         self.timing.stage("repair_diagnostics_ms")
+        self.timing.parts["editing_server_cpu_ms"] = (self.timing.cpu_seconds() - burst_cpu) * 1000
         request_id, _ = self.send("textDocument/rename", {"textDocument": {"uri": self.main.as_uri()},
             "position": self.declaration, "newName": "session_rename"}, request=True)
         self.send("$/cancelRequest", {"id": request_id})

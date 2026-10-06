@@ -23,13 +23,13 @@ probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
 
 
-def run(binary, root, output, cycles, edits, seed, churn, server_env):
+def run(binary, root, output, cycles, edits, seed, churn, server_env, edit_interval_ms=5):
     report = {"provenance": provenance(binary, root), "result_fingerprint_version": 2,
               "cycles": cycles, "edits_per_cycle": edits,
               "seed": seed, "churn": churn, "checkpoints": [], "status": "incomplete",
               "driver": {"python": platform.python_version(), "switch_interval_ms": sys.getswitchinterval() * 1000,
                          "native_trace": bool(os.environ.get("RECITE_LSP_TRACE_DIR")),
-                         "server_environment": server_env}}
+                         "server_environment": server_env, "edit_interval_ms": edit_interval_ms}}
     generator = random.Random(seed)
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="recite-session-config-") as config:
@@ -39,9 +39,14 @@ def run(binary, root, output, cycles, edits, seed, churn, server_env):
             try:
                 session.start()
                 baseline = session.checkpoint()["result_sha256"]
+                idle_cpu = session.timing.cpu_seconds()
+                idle_started = time.perf_counter()
+                time.sleep(3)
+                report["settled_idle"] = {"elapsed_ms": (time.perf_counter() - idle_started) * 1000,
+                                          "server_cpu_ms": (session.timing.cpu_seconds() - idle_cpu) * 1000}
                 for cycle in range(cycles):
                     assert time.monotonic() - started < 600, "session exceeded ten-minute budget"
-                    recovery = session.cycle(cycle, churn, edits, generator)
+                    recovery = session.cycle(cycle, churn, edits, generator, edit_interval_ms=edit_interval_ms)
                     checkpoint = {"cycle": cycle, **recovery, **session.checkpoint(),
                                   **resources(session.client.process.pid)}
                     assert checkpoint["result_sha256"] == baseline, "persistent results drifted"
@@ -79,6 +84,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--cycles", type=int, default=40)
     parser.add_argument("--edits", type=int, default=50)
+    parser.add_argument("--edit-interval-ms", type=float, default=5, help="Pacing between burst edits; default remains the calibrated 200 Hz workload")
     parser.add_argument("--seed", type=int, default=7203)
     parser.add_argument("--churn", action="store_true")
     parser.add_argument("--server-yield-to-zero", choices=("0", "1"),
@@ -88,6 +94,8 @@ def main():
     args = parser.parse_args()
     if args.cycles < 20 or args.edits < 1:
         parser.error("require >=20 cycles and positive edits per cycle")
+    if not math.isfinite(args.edit_interval_ms) or not 1 <= args.edit_interval_ms <= 1000:
+        parser.error("edit interval must be finite and between 1 and 1000 ms")
     if args.driver_switch_ms is not None:
         if not math.isfinite(args.driver_switch_ms) or args.driver_switch_ms <= 0:
             parser.error("driver switch interval must be positive and finite")
@@ -98,7 +106,7 @@ def main():
         generate(root, documents=40, blocks=20, lines=20, shared_destinations=10)
         server_env = ({"PTHREAD_YIELD_TO_ZERO": args.server_yield_to_zero}
                       if args.server_yield_to_zero is not None else {})
-        passed = run(args.binary.resolve(), root, args.output, args.cycles, args.edits, args.seed, args.churn, server_env)
+        passed = run(args.binary.resolve(), root, args.output, args.cycles, args.edits, args.seed, args.churn, server_env, args.edit_interval_ms)
     raise SystemExit(0 if passed else 1)
 
 
