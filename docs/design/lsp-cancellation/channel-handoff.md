@@ -16,6 +16,15 @@ not evidence of a latency improvement. A one-arm `select!` macro is optimized
 back to `recv`; the experiment deliberately uses the public `Select` object.
 Rendezvous channels can still yield while completing their paired packet.
 
+An existing [upstream proposal, Crossbeam #1251](https://github.com/crossbeam-rs/crossbeam/pull/1251),
+checked on 6 October 2026, would add the same backoff to committed selection.
+It remains open and unmerged. Its author's workload measures high-frequency
+throughput and wakeup overhead, rather than this paced interactive latency. This
+is a real tradeoff, and the current parking behaviour is an implementation
+property of our pinned dependency, not a promise of the public API. Re-run these
+measurements when updating Crossbeam; do not assume that selecting a receive
+will always bypass yielding in future releases.
+
 The probe is retained benchmark tooling, outside deterministic language code.
 Its item-scoped clock exception follows the repository's benchmark suppression
 policy. The proposed production slice changes only worker receives, preserves
@@ -30,8 +39,9 @@ channel result is insufficient to retain a production change.
 threads. It checks every reply and records worker dispatch, reply receipt,
 roundtrip and both send-call durations using one monotonic clock. There is a
 requested 2 ms pause before each exchange, outside the measured latency. This
-allows a worker to enter its idle receive path; actual wall time includes host
-timer oversleep. Work is either zero or 200 microseconds of CPU spinning to
+allows a worker to enter its idle receive path; actual pauses are recorded
+separately because timer oversleep can let a yield depression expire before the
+next request. Work is either zero or 200 microseconds of CPU spinning to
 represent a short query. This bounded synthetic work is not a language benchmark.
 
 The driver alternates blocking/selected ordering over three repetitions at

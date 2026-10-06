@@ -42,6 +42,7 @@ struct Reply {
 #[derive(Serialize)]
 struct Sample {
     serial: usize,
+    pause_ms: f64,
     dispatch_ms: f64,
     reply_ms: f64,
     roundtrip_ms: f64,
@@ -117,8 +118,10 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     });
     let mut measured = Vec::with_capacity(samples);
     for serial in 0..samples + warmup {
+        let pause_started = Instant::now();
         thread::sleep(Duration::from_micros(pause_us));
         let sent = Instant::now();
+        let pause_ms = milliseconds(sent.duration_since(pause_started));
         inputs.send(Request { serial, sent })?;
         let input_send_ms = milliseconds(sent.elapsed());
         // The production coordinator already receives results through select.
@@ -130,6 +133,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         if serial >= warmup {
             measured.push(Sample {
                 serial,
+                pause_ms,
                 dispatch_ms: reply.dispatch_ms,
                 reply_ms: milliseconds(received.duration_since(reply.sent)),
                 roundtrip_ms: milliseconds(received.duration_since(sent)),

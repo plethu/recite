@@ -54,7 +54,7 @@ def probe(binary, mode, capacity, work_us, samples, alternate_yield):
     report["cpu_ms_per_exchange_including_warmup"] = report["cpu_ms"] / (samples + 20)
     report["summary_ms"] = {
         metric: distribution([sample[metric] for sample in report["samples"]])
-        for metric in ("dispatch_ms", "reply_ms", "roundtrip_ms", "input_send_ms", "output_send_ms")
+        for metric in ("pause_ms", "dispatch_ms", "reply_ms", "roundtrip_ms", "input_send_ms", "output_send_ms")
     }
     return report
 
