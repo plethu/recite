@@ -34,6 +34,10 @@ on:
         description: Diagnostic alternate libpthread yield path on macOS server children only
         type: boolean
         default: false
+      lsp_driver_accounting_probe:
+        description: Isolate optional CPU sampling with one control server on macOS
+        type: boolean
+        default: false
       lsp_resource_probe:
         description: Compare paced editing CPU and upstream stdio transport
         type: boolean
@@ -377,6 +381,7 @@ jobs:
     if: needs.changes.outputs.lsp-sessions == 'true'
     uses: ./.github/workflows/lsp-sessions.yml
     with:
+      driver_accounting_probe: ${{ inputs.lsp_driver_accounting_probe || false }}
       resource_probe: ${{ inputs.lsp_resource_probe || false }}
       channel_probe: ${{ inputs.lsp_channel_probe || false }}
       driver_control_ref: ${{ inputs.lsp_driver_control_ref || '' }}

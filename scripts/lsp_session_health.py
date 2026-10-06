@@ -28,6 +28,20 @@ def recovery_tail(repetitions, budget_ms):
             "p95_ms": percentiles, "exceeding_repetitions": exceeded}
 
 
+def idle_cpu_budget(intervals, budget_ms):
+    """Reject repeated process work while an initialized server has no requests."""
+    if len(intervals) != 3 or not math.isfinite(budget_ms) or budget_ms <= 0:
+        raise ValueError("require three idle intervals and a positive finite CPU budget")
+    for row in intervals:
+        if (not math.isfinite(row["elapsed_ms"]) or row["elapsed_ms"] < 2500
+                or not math.isfinite(row["server_cpu_ms"]) or row["server_cpu_ms"] < 0):
+            raise ValueError("require valid CPU accounting over at least 2.5 settled seconds")
+    samples = [row["server_cpu_ms"] for row in intervals]
+    exceeded = sum(value > budget_ms for value in samples)
+    return {"status": "regression" if exceeded >= 2 else "pass", "budget_ms": budget_ms,
+            "server_cpu_ms": samples, "exceeding_repetitions": exceeded}
+
+
 def assess(rows, warmup=5):
     """Require sustained growth across three windows, not a single cache step."""
     samples = rows[warmup:]

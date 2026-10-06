@@ -3,6 +3,9 @@ name: LSP sessions
 on:
   workflow_call:
     inputs:
+      driver_accounting_probe:
+        type: boolean
+        default: false
       resource_probe:
         type: boolean
         default: false
@@ -23,6 +26,10 @@ on:
         default: false
   workflow_dispatch:
     inputs:
+      driver_accounting_probe:
+        description: Isolate optional CPU sampling with one control server on macOS
+        type: boolean
+        default: false
       resource_probe:
         description: Compare paced editing CPU and upstream stdio transport
         type: boolean
@@ -52,7 +59,52 @@ permissions:
   contents: read
 
 jobs:
+  driver-accounting:
+    name: LSP driver accounting audit (macos-15)
+    if: inputs.driver_accounting_probe
+    runs-on: macos-15
+    timeout-minutes: 25
+    env:
+      MISE_AUTO_INSTALL: 'false'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require an explicit control revision
+        env:
+          CONTROL_REF: ${{ inputs.server_control_ref }}
+        run: test -n "$CONTROL_REF"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.server_control_ref }}
+          path: .lsp-session-control
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Build one exact control server
+        run: CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
+      - name: Alternate CPU accounting with identical startup idle
+        run: |
+          python -m pip install -r scripts/lsp-session-requirements.txt
+          python scripts/measure-lsp-driver-accounting.py --binary target/lsp-session-control-build/release/recite-lsp --output target/lsp-driver-accounting
+      - name: Retain accounting comparison
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lsp-driver-accounting-macos
+          path: target/lsp-driver-accounting/
+          if-no-files-found: error
+          retention-days: 30
   sessions:
+    if: ${{ !inputs.driver_accounting_probe }}
     name: LSP and editor sessions (${{ matrix.os }})
     strategy:
       fail-fast: false
@@ -63,7 +115,7 @@ jobs:
             && '[{"os":"macos-15","recovery_budget_ms":75}]'
             || '[{"os":"ubuntu-24.04","recovery_budget_ms":20},{"os":"windows-2025","recovery_budget_ms":40},{"os":"macos-15","recovery_budget_ms":75}]') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ inputs.resource_probe && inputs.native_trace && 60 || 45 }}
     env:
       # Only the explicitly installed Rust, Node and pnpm tools belong to this lane.
       MISE_AUTO_INSTALL: 'false'
@@ -134,8 +186,8 @@ jobs:
                 binary="$PWD/target/lsp-session-control-build/release/recite-lsp$suffix"
                 output="$reports/control"
               fi
-              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/fixed-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval"
-              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/churn-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval" --churn
+              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/fixed-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval" --editing-cpu-accounting
+              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/churn-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval" --editing-cpu-accounting --churn
             }
             for round in 1 2 3; do
               if [[ $((round % 2)) == 1 ]]; then run_paced control; fi
@@ -205,6 +257,7 @@ jobs:
           --reports target/lsp-sessions
           --budget-ms ${{ matrix.recovery_budget_ms }}
           --completion-budget-ms 5
+          --idle-cpu-budget-ms 100
           --output target/lsp-sessions/recovery.json
       - name: Exercise rendered VS Code and document lifecycle
         run: |

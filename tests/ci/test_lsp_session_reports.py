@@ -15,6 +15,20 @@ spec.loader.exec_module(recovery)
 
 
 class SessionReportsTests(unittest.TestCase):
+    def test_idle_cpu_rejects_repeated_spinning_and_invalid_accounting(self):
+        intervals = [{"elapsed_ms": 3000, "server_cpu_ms": value} for value in (150, 150, 0)]
+        self.assertEqual(recovery.idle_cpu_budget(intervals, 100)["status"], "regression")
+        intervals[1]["server_cpu_ms"] = 0
+        self.assertEqual(recovery.idle_cpu_budget(intervals, 100)["status"], "pass")
+        for key, value in (("elapsed_ms", 0), ("elapsed_ms", float("nan")),
+                           ("server_cpu_ms", -1), ("server_cpu_ms", float("inf"))):
+            invalid = [dict(row) for row in intervals]
+            invalid[0][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                recovery.idle_cpu_budget(invalid, 100)
+        with self.assertRaises(ValueError):
+            recovery.idle_cpu_budget(intervals[:2], 100)
+
     def test_completion_tail_cannot_hide_inside_the_total_recovery_budget(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -124,7 +124,7 @@ class Session:
         values["diagnostics"] = self.errors.copy()
         return values
 
-    def cycle(self, cycle, churn, edits, random, *, edit_interval_ms=5):
+    def cycle(self, cycle, churn, edits, random, *, edit_interval_ms=5, editing_cpu_accounting=False):
         self.timing.reset()
         path = self.sources[1 + cycle % (len(self.sources) - 1)]
         self.open(path)
@@ -136,7 +136,7 @@ class Session:
         # Use deadlines so an oversleep does not shift every subsequent edit.
         # Record actual send intervals: hosted timers cannot promise 5 ms wakeups.
         pending = {}
-        burst_cpu = self.timing.cpu_seconds()
+        burst_cpu = self.timing.cpu_seconds() if editing_cpu_accounting else None
         burst_started = time.perf_counter_ns()
         sent_at = []
         for index in range(edits):
@@ -182,10 +182,12 @@ class Session:
         self.timing.stage("drain_ms")
         assert not self.change(path, original)
         assert self.last_diagnostic_received is not None
+        repair_received = self.last_diagnostic_received
         self.timing.parts["repair_main_resume_ms"] = (time.perf_counter_ns() - self.last_diagnostic_received) / 1e6
         self.timing.stage("repair_diagnostics_ms")
-        self.timing.parts["editing_server_cpu_ms"] = (self.timing.cpu_seconds() - burst_cpu) * 1000
-        request_id, _ = self.send("textDocument/rename", {"textDocument": {"uri": self.main.as_uri()},
+        if editing_cpu_accounting:
+            self.timing.parts["editing_server_cpu_ms"] = (self.timing.cpu_seconds() - burst_cpu) * 1000
+        request_id, rename_started = self.send("textDocument/rename", {"textDocument": {"uri": self.main.as_uri()},
             "position": self.declaration, "newName": "session_rename"}, request=True)
         self.send("$/cancelRequest", {"id": request_id})
         received, response = self.client.response(request_id, timeout=10)
@@ -229,5 +231,6 @@ class Session:
         self.timing.stage("configuration_ms")
         assert list(self.documents) == [self.main]
         assert all(path.read_text() == text for path, text in self.originals.items())
+        self.timing.parts["repair_to_rename_send_ms"] = (rename_started - repair_received) / 1e6
         return {"recovery_ms": recovery, "timing": self.timing.finish(),
                 "recovery_requests": {"rename": request_id, "completion": self.last_query_id}}

@@ -15,9 +15,11 @@ The optional `lsp_resource_probe` input on the existing CI workflow runs:
   health checks. These are chosen pacing profiles, not a claim about all human
   editing. The default CI contract remains 40 cycles and 50 edits at 5 ms.
 - A three-second settled idle interval in every session, sampled with process
-  CPU accounting. CPU during the editing/drain/repair stage is reported
-  separately from CPU during the full lifecycle cycle. Accounting resolution
-  and host scheduling still limit interpretation of small differences.
+  CPU accounting after the timed cycles. CPU during the editing/drain/repair
+  stage is opt-in for resource experiments, separately from CPU during the full
+  lifecycle cycle. Whole-process CPU also includes initialization and checkpoint
+  queries. Accounting resolution and host scheduling limit small differences;
+  use totals/means as well as medians, especially on Linux and Windows.
 - A native benchmark using the pinned `lsp-server` stdio transport unchanged,
   with real Content-Length framing, diagnostics immediately before a small
   response, and zero, 128 or 4096 diagnostic entries. A direct single-threaded
@@ -105,3 +107,44 @@ Compare standard inputs against the deferred-payload checkpoint so the two
 effects remain separable. Retain them only with semantic/hash parity, equivalent
 resource behaviour and passing completion/recovery tails on all three hosts.
 Neither this experiment nor the ownership change changes protocol queue bounds.
+
+## Measurement audit and idle regression gate
+
+The first resource study, [run 37522227256](https://github.com/plethu/recite/actions/runs/37522227256),
+passed all three hosts. On macOS, cycle CPU totals changed by -4.45% for stress,
+-10.87% at 100 ms and +6.07% at 250 ms. Individual workload pairs were mixed;
+this is not evidence of a universal CPU penalty or its disappearance. The
+blocking control's completion p95 was also fast (0.417 ms), despite matching
+the exact binary hash from the earlier slow run. OS/Python identities match,
+but physical hosts and scheduling conditions are not proven identical.
+
+That study inserted two extra CPU reads around editing and a startup idle
+interval. The second read sat between repair receipt and cancelled rename send,
+so it could change scheduling at the measured transition. Default latency CI
+now disables those reads and measures idle after the timed cycles. Resource
+profiles explicitly opt into editing CPU accounting; driver identity records
+sampling, idle duration and idle location. Missing stage CPU remains absent.
+
+The optional `lsp_driver_accounting_probe` runs only the exact supplied control
+binary on macOS, with three alternating enabled/disabled fixed-workload pairs.
+It holds startup idle at three seconds in both arms, disables native tracing,
+and requires a clean committed driver, equal results, fresh-server checks and
+one fixture/environment/binary identity. Wire timings come from joined client
+send/receive timestamps; report stage timings and repair-to-rename gaps
+separately. Do not attribute earlier differences to accounting unless the
+within-job audit reproduces that effect.
+
+Every ordinary cross-platform session gate additionally rejects more than
+100 ms of process CPU during a three-second settled interval in two of three
+repetitions of either working set. This conservative bound catches sustained
+idle work above about 3.3% of one core. All 18 candidate intervals in the first
+normal matrix reported zero CPU; the largest control value across its paced
+and stress profiles was below 0.04 ms on macOS, with coarse zero readings on
+Linux/Windows. Missing/invalid accounting and intervals shorter than 2.5 seconds
+fail closed. The gate protects idle CPU, not active-work CPU or energy use.
+
+The actual upstream stdio probe did not reproduce the small-message 10 ms stall:
+macOS native response handoff p95 stayed below 0.131 ms for empty diagnostics and
+below 0.289 ms for 128 entries. At 4096 entries, native handoff reached 3.25 ms,
+but native/direct wire tails were similar (about 26.5–29.3 ms), including Python
+JSON consumption. These results do not justify a custom production transport.
