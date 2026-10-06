@@ -24,7 +24,8 @@ spec.loader.exec_module(probe)
 
 
 def run(binary, root, output, cycles, edits, seed, churn, server_env):
-    report = {"provenance": provenance(binary, root), "cycles": cycles, "edits_per_cycle": edits,
+    report = {"provenance": provenance(binary, root), "result_fingerprint_version": 2,
+              "cycles": cycles, "edits_per_cycle": edits,
               "seed": seed, "churn": churn, "checkpoints": [], "status": "incomplete",
               "driver": {"python": platform.python_version(), "switch_interval_ms": sys.getswitchinterval() * 1000,
                          "native_trace": bool(os.environ.get("RECITE_LSP_TRACE_DIR")),

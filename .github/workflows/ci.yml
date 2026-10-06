@@ -22,6 +22,10 @@ on:
         description: Optional historical harness revision for the LSP session experiment
         type: string
         default: ''
+      lsp_server_control_ref:
+        description: Optional historical server revision for alternating binary comparisons
+        type: string
+        default: ''
       lsp_native_trace:
         description: Compare native tracing enabled and disabled on each session runner
         type: boolean
@@ -371,6 +375,7 @@ jobs:
     with:
       channel_probe: ${{ inputs.lsp_channel_probe || false }}
       driver_control_ref: ${{ inputs.lsp_driver_control_ref || '' }}
+      server_control_ref: ${{ inputs.lsp_server_control_ref || '' }}
       native_trace: ${{ inputs.lsp_native_trace || false }}
       macos_yield_probe: ${{ inputs.lsp_macos_yield_probe || false }}
 

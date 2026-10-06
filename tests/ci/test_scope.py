@@ -86,6 +86,7 @@ class ScopeTests(unittest.TestCase):
     def test_session_matrix_is_scoped_and_cannot_disable_pr_coverage(self):
         for path in ("scripts/measure-lsp-endurance.py", "scripts/lsp_session_health.py",
                      "scripts/check-lsp-session-faults.py", "scripts/lsp-session-requirements.txt",
+                     "scripts/measure-lsp-channel-handoff.py", "scripts/summarize-lsp-server-comparison.py",
                      ".github/workflows/lsp-sessions.yml"):
             self.assertEqual(selected(path), {"lsp-sessions", "maintainability"})
         for path in ("crates/recite-lsp/src/server.rs", "crates/recite-compiler/src/lib.rs"):

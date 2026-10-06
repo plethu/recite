@@ -181,6 +181,7 @@ def lanes_for_path(path, *, base=None, head=None):
     if path == ".github/workflows/lsp-sessions.yml" or path.startswith((
         "scripts/lsp_session", "scripts/lsp-session-", "scripts/measure-lsp-endurance",
         "scripts/check-lsp-session-", "scripts/summarize-lsp-native-trace",
+        "scripts/measure-lsp-channel-handoff", "scripts/summarize-lsp-server-comparison",
     )):
         return frozenset({"lsp-sessions", "maintainability"})
     if path in {"scripts/measure-lsp-latency.py", "scripts/lsp_measurement.py", "scripts/lsp_fanout.py"}:

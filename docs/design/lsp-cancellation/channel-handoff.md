@@ -68,4 +68,28 @@ target/lsp-matrix-env/bin/python scripts/measure-lsp-channel-handoff.py \
   --output target/lsp-channel/handoff.json
 ```
 
-Results and the real-session decision are recorded below once measured.
+## Real-server candidate
+
+The candidate registers one selected receive per analysis/query worker and reuses
+it for each job. Channel capacity, send path, snapshots and coordinator selection
+remain the same. `Select::select().recv()` is used explicitly; the single-arm
+macro would undo the intended distinction. All 195 LSP tests passed locally,
+including cancellation, shutdown, bounded queues and blocked-writer cases.
+
+The optional server-control mode builds both revisions before any sampling and
+drives both with the current harness. It alternates three fixed/churn repetitions
+per binary, retains 210 post-warmup cycles each, and validates resource health,
+fresh-server comparisons and portable completion/definition hashes. Historical
+session hashes included temporary absolute URIs; the new fingerprint version
+normalizes only the project URI prefix so target identity remains visible across
+invocations. Comparison rejects older fingerprints and differing results,
+drivers, fixtures or host settings. CPU measurements describe complete server
+cycles, including analysis, rather than just channel overhead.
+
+```sh
+gh workflow run ci.yml --repo plethu/recite --ref feat/lsp-cancellation \
+  -f lsp_sessions_only=true \
+  -f lsp_server_control_ref=1f9c19a37e3088477809c6baa2c433cc3db5348f
+```
+
+Results and the retain/reject decision follow once measured.

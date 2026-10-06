@@ -9,6 +9,9 @@ on:
       driver_control_ref:
         type: string
         default: ''
+      server_control_ref:
+        type: string
+        default: ''
       native_trace:
         type: boolean
         default: false
@@ -23,6 +26,10 @@ on:
         default: false
       driver_control_ref:
         description: Optional historical harness revision for alternating driver comparisons
+        type: string
+        default: ''
+      server_control_ref:
+        description: Optional historical server revision for alternating binary comparisons
         type: string
         default: ''
       native_trace:
@@ -67,15 +74,25 @@ jobs:
         with:
           python-version: '3.12'
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - name: Check out optional control harness
-        if: inputs.driver_control_ref != ''
+      - name: Check out optional control
+        if: inputs.driver_control_ref != '' || inputs.server_control_ref != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.driver_control_ref }}
+          ref: ${{ inputs.server_control_ref || inputs.driver_control_ref }}
           path: .lsp-session-control
           persist-credentials: false
       - name: Build release server and fixture generator
         run: cargo build --locked --release -p recite-lsp -p recite-fixturegen
+      - name: Build optional control server
+        if: inputs.server_control_ref != ''
+        env:
+          DRIVER_CONTROL_REF: ${{ inputs.driver_control_ref }}
+        run: |
+          if [[ -n "$DRIVER_CONTROL_REF" ]]; then
+            echo "Choose either a server control or a historical driver control" >&2
+            exit 1
+          fi
+          CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
       - name: Check incremental protocol transactions
         run: cargo test --locked --release -p recite-lsp --test stdio_incremental_sync --test stdio_trace
       - name: Prepare session and editor dependencies
@@ -97,21 +114,28 @@ jobs:
       - name: Exercise fixed working set and document churn
         env:
           DRIVER_CONTROL_REF: ${{ inputs.driver_control_ref }}
+          SERVER_CONTROL_REF: ${{ inputs.server_control_ref }}
           NATIVE_TRACE: ${{ inputs.native_trace }}
           MACOS_YIELD_PROBE: ${{ inputs.macos_yield_probe }}
         run: |
           suffix=""
           if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
           binary="$PWD/target/release/recite-lsp$suffix"
+          control_binary="$PWD/target/lsp-session-control-build/release/recite-lsp$suffix"
           reports="$PWD/target/lsp-sessions"
           server_options=()
           if [[ "$RUNNER_OS" == macOS && "$MACOS_YIELD_PROBE" == true ]]; then
             server_options+=(--server-yield-to-zero 0)
           fi
           run_control() {
-            (cd .lsp-session-control
-              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/fixed-$round.json"
-              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/churn-$round.json" --churn)
+            if [[ -n "$SERVER_CONTROL_REF" ]]; then
+              python scripts/measure-lsp-endurance.py --binary "$control_binary" --output "$reports/control/fixed-$round.json"
+              python scripts/measure-lsp-endurance.py --binary "$control_binary" --output "$reports/control/churn-$round.json" --churn
+            else
+              (cd .lsp-session-control
+                python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/fixed-$round.json"
+                python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/churn-$round.json" --churn)
+            fi
           }
           run_traced() {
             for mode in fixed churn; do
@@ -125,15 +149,18 @@ jobs:
           }
           for round in 1 2 3; do
             if [[ "$NATIVE_TRACE" == true && $((round % 2)) == 1 ]]; then run_traced; fi
-            if [[ -n "$DRIVER_CONTROL_REF" && $((round % 2)) == 1 ]]; then run_control; fi
+            if [[ -n "$DRIVER_CONTROL_REF$SERVER_CONTROL_REF" && $((round % 2)) == 1 ]]; then run_control; fi
             python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/fixed-$round.json" "${server_options[@]}"
             python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/churn-$round.json" --churn "${server_options[@]}"
-            if [[ -n "$DRIVER_CONTROL_REF" && $((round % 2)) == 0 ]]; then run_control; fi
+            if [[ -n "$DRIVER_CONTROL_REF$SERVER_CONTROL_REF" && $((round % 2)) == 0 ]]; then run_control; fi
             if [[ "$NATIVE_TRACE" == true && $((round % 2)) == 0 ]]; then run_traced; fi
           done
       - name: Attribute native request boundaries
         if: inputs.native_trace
         run: python scripts/summarize-lsp-native-trace.py --reports target/lsp-sessions --output target/lsp-sessions/native-summary.json
+      - name: Compare server recovery and CPU
+        if: inputs.server_control_ref != ''
+        run: python scripts/summarize-lsp-server-comparison.py --reports target/lsp-sessions --output target/lsp-sessions/server-comparison.json
       - name: Enforce repeated p95 recovery budget
         run: >-
           python scripts/check-lsp-session-recovery.py

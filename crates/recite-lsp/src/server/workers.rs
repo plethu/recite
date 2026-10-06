@@ -3,7 +3,7 @@ use crate::{
     diagnostics::{clear_diagnostics, publish_diagnostics},
     workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig},
 };
-use crossbeam_channel::{Receiver, Sender, bounded};
+use crossbeam_channel::{Receiver, Select, Sender, bounded};
 use lsp_types::{InitializeParams, PublishDiagnosticsParams, Uri};
 use recite_compiler::authoring::CancellationToken;
 use recite_ui::UiCatalog;
@@ -56,7 +56,11 @@ impl Workers {
         let analysis_thread = thread::spawn(move || {
             let catalog = Arc::new(catalog);
             let mut cached: Option<Arc<LspWorkspace>> = None;
-            while let Ok(job) = inputs.recv() {
+            // Committed selection parks directly instead of yielding while an
+            // empty bounded receiver backs off. Keep the same queue capacity.
+            let mut selection = Select::new_biased();
+            selection.recv(&inputs);
+            while let Ok(job) = selection.select().recv(&inputs) {
                 tracing::trace!(phase = "analysis_start", revision = job.through);
                 let result = analyze(&params, &catalog, cached.as_deref(), &job);
                 tracing::trace!(phase = "analysis_end", revision = job.through);
@@ -78,7 +82,9 @@ impl Workers {
         let (query, inputs) = bounded::<QueryJob>(1);
         let (outputs, queried) = bounded(1);
         let query_thread = thread::spawn(move || {
-            while let Ok(job) = inputs.recv() {
+            let mut selection = Select::new_biased();
+            selection.recv(&inputs);
+            while let Ok(job) = selection.select().recv(&inputs) {
                 tracing::trace!(phase = "query_start", serial = job.serial);
                 let result = job.query.execute(&job.workspace, &job.control);
                 tracing::trace!(phase = "query_end", serial = job.serial);

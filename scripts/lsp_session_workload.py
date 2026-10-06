@@ -115,7 +115,9 @@ class Session:
             values[label + "_ms"] = statistics.median(samples)
             values[label + "_samples_ms"] = samples
             results[label] = result
-        encoded = json.dumps(results, sort_keys=True).encode()
+        # Separate invocations use fresh temporary roots. Keep relative target
+        # identity while making fingerprints comparable across server binaries.
+        encoded = json.dumps(results, sort_keys=True).replace(self.root.as_uri(), "$PROJECT").encode()
         values["result_sha256"] = hashlib.sha256(encoded).hexdigest()
         self.collect_diagnostics()
         assert not self.errors, f"settled project retains diagnostics: {self.errors}"
