@@ -56,7 +56,11 @@ impl Workers {
         let analysis_thread = thread::spawn(move || {
             let catalog = Arc::new(catalog);
             let mut cached: Option<Arc<LspWorkspace>> = None;
-            while let Ok(job) = inputs.recv() {
+            // Committed selection parks directly instead of yielding while an
+            // empty bounded receiver backs off. Keep the same queue capacity.
+            let mut selection = Select::new_biased();
+            selection.recv(&inputs);
+            while let Ok(job) = selection.select().recv(&inputs) {
                 tracing::trace!(phase = "analysis_start", revision = job.through);
                 let result = analyze(&params, &catalog, cached.as_deref(), &job);
                 tracing::trace!(phase = "analysis_end", revision = job.through);
@@ -78,8 +82,6 @@ impl Workers {
         let (query, inputs) = bounded::<QueryJob>(1);
         let (outputs, queried) = bounded(1);
         let query_thread = thread::spawn(move || {
-            // Committed selection parks directly instead of yielding while an
-            // empty bounded receiver backs off. Keep the same queue capacity.
             let mut selection = Select::new_biased();
             selection.recv(&inputs);
             while let Ok(job) = selection.select().recv(&inputs) {

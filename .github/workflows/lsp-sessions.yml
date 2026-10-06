@@ -161,11 +161,12 @@ jobs:
       - name: Compare server recovery and CPU
         if: inputs.server_control_ref != ''
         run: python scripts/summarize-lsp-server-comparison.py --reports target/lsp-sessions --output target/lsp-sessions/server-comparison.json
-      - name: Enforce repeated p95 recovery budget
+      - name: Enforce repeated recovery and completion budgets
         run: >-
           python scripts/check-lsp-session-recovery.py
           --reports target/lsp-sessions
           --budget-ms ${{ matrix.recovery_budget_ms }}
+          --completion-budget-ms 5
           --output target/lsp-sessions/recovery.json
       - name: Exercise rendered VS Code and document lifecycle
         run: |

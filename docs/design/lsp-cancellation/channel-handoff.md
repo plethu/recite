@@ -102,7 +102,7 @@ gh workflow run ci.yml --repo plethu/recite --ref feat/lsp-cancellation \
   -f lsp_server_control_ref=1f9c19a37e3088477809c6baa2c433cc3db5348f
 ```
 
-Results and the retain/reject decision follow once measured.
+The final decision and comparisons are recorded below.
 
 ## Initial isolated results
 
@@ -155,7 +155,9 @@ session comparison.
 
 ## Narrowing the worker change
 
-The macOS job in [paired run 37510297571](https://github.com/plethu/recite/actions/runs/37510297571)
+All three jobs and `required-check` passed in
+[paired run 37510297571](https://github.com/plethu/recite/actions/runs/37510297571).
+The macOS job
 tested `eb468a44` against `1f9c19a3`. Untraced recovery median/p95 fell from
 12.17/52.35 ms to 10.40/33.52 ms, but median server CPU per cycle rose from
 456.12 to 519.60 ms (14%). Five of six workload p95s improved; one low-tail
@@ -167,5 +169,69 @@ remove the whole transport tail. Tracing still perturbs scheduling and CPU.
 That result motivates a narrower candidate: use selected receives only for the
 short query worker. Leave analysis's receive path at the control implementation
 and measure whether the request gain survives with less analysis CPU. All 195
-LSP tests and targeted Clippy passed for this variant; it remains an experiment
-until the paired platform results decide which candidate to retain.
+LSP tests and targeted Clippy passed for this variant.
+
+[Run 37513738763](https://github.com/plethu/recite/actions/runs/37513738763)
+tested the query-only variant `341e1939`. All three hosts and `required-check`
+passed, including the rendered editor and resource/fresh-server checks.
+On macOS it removed the short completion tail (10.30 → 0.69 ms pooled p95), with
+essentially unchanged median CPU (447.70 → 446.49 ms). Total recovery remained
+variable: median rose from 14.61 to 19.44 ms, pooled p95 fell only from 50.59 to
+48.19 ms, and individual workload medians/p95s changed in both directions.
+Linux/Windows remained close to their controls. The preserved results support
+the targeted request benefit but do not establish a consistent overall gain.
+These two candidate experiments used different hosted runs; their absolute
+values must not be treated as a direct comparison between variants.
+
+## Decision, 6 October 2026
+
+Retain selected receives for **both** workers. This restores the exact worker
+implementation tested in `eb468a44`, whose paired recovery evidence was stronger.
+The query-only variant is rejected as the production choice because its overall
+recovery result was mixed. Its code and measurements remain in `341e1939` and
+the retained summary.
+
+| Host, both-worker comparison | Recovery median, control → candidate | Recovery p95, control → candidate | Median server CPU/cycle, control → candidate |
+| --- | ---: | ---: | ---: |
+| Linux | 6.61 → 6.72 ms | 8.08 → 8.10 ms | 490 → 500 ms |
+| macOS | 12.17 → 10.40 ms | 52.35 → 33.52 ms | 456.12 → 519.60 ms |
+| Windows | 16.06 → 16.05 ms | 21.51 → 19.76 ms | 890.63 → 890.63 ms |
+
+The retained macOS result is a latency/CPU tradeoff: 36% lower pooled recovery
+p95 and 14% more median and total measured server CPU during this burst workload.
+The default yield policy is preserved. No busy wait, thread-priority override,
+transport buffer change or new production dependency is introduced. Energy and
+CPU under ordinary human-paced editing were not measured. The experiment does
+not establish a complete macOS scheduling fix or a ranking against other LSPs.
+
+The refined channel probe confirms substantial timer oversleep on macOS: a
+requested 2 ms pause commonly became 13–18 ms. That can change whether a request
+arrives during backoff or after the worker has parked: a plausible explanation
+for the variability, rather than direct timing of individual yield calls.
+Selected capacity-one receives kept repetition p95s below 0.1 ms, with occasional
+larger isolated outliers. Real-server timing, rather than synthetic throughput or
+requested pause duration, decides the production change.
+
+CI now separately bounds the **post-cancellation completion stage** at 5 ms p95
+on all three hosts. As with total recovery, an overrun must recur in two of three
+repetitions for each fixed/churn workload. The retained candidate repetition p95s
+were 0.37–1.10 ms; the unchanged macOS control exceeded 10 ms in two repetitions
+of each workload. Replaying those actual reports through the new CLI passes all
+candidate hosts and exits 1 for the control. Missing, negative or non-finite
+measurements fail closed; unit tests also preserve tolerance of one isolated
+overrun. The 20/40/75 ms overall budgets and 500 ms hard bound remain in force.
+This prevents a future Crossbeam backoff change from hiding the request tail
+inside the larger macOS total-recovery envelope.
+
+The full local verification gate also passed for the narrower variant and new
+guard: 1,572 tests and three existing skips, with all standard writer, editor,
+engine, dependency, documentation and benchmark checks. After restoring the exact
+retained worker code, all 195 LSP tests and targeted Clippy passed again. The
+44 CI unit tests pass. `ci-scope.py` remains a cohesive 333-line lane-selection
+module; its single added routing line passed the maintainability review trigger.
+
+The remaining native hotspot is the cancelled-rename writer handoff and time
+outside the instrumented server, each around 10 ms at p95. The bare rendezvous
+probe did not reproduce that tail, so a realistic stdio/framing/destruction probe
+would be the next justified investigation before changing transport or adopting
+a different framework. No upstream report was published.

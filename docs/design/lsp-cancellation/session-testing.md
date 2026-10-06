@@ -49,6 +49,16 @@ per-cycle limit remains unconditional. Missing, truncated or incomparable report
 fail closed. See [recovery calibration](recovery-calibration.md) for the measured
 driver correction and the rationale for these hosted-runner budgets.
 
+The post-cancellation completion stage has a separate 5 ms repeated-p95 budget
+on every platform, with the same two-of-three rule. It measures the short
+completion request after the burst repair and cancelled rename, including driver
+send/receive/resumption. This protects the query-worker scheduling improvement
+from being hidden inside macOS's larger total-recovery budget. The calibrated
+candidate repetition p95s were below 1.1 ms; the unchanged macOS control exceeded
+10 ms in two repetitions of each workload and is rejected by this gate.
+See the [channel experiment](channel-handoff.md) for the comparison and CPU
+tradeoff. Missing or invalid completion-stage measurements fail closed.
+
 `check-lsp-session-faults.py` drives a real child that retains touched memory,
 threads and open files and progressively delays its replies. The same sampler and
 decision function must detect all four faults on every OS (latency exercises both
@@ -73,7 +83,8 @@ for round in 1 2 3; do
     --binary target/release/recite-lsp --output "target/lsp-sessions/churn-$round.json" --churn
 done
 target/lsp-matrix-env/bin/python scripts/check-lsp-session-recovery.py \
-  --reports target/lsp-sessions --budget-ms 20 --output target/lsp-sessions/recovery.json
+  --reports target/lsp-sessions --budget-ms 20 --completion-budget-ms 5 \
+  --output target/lsp-sessions/recovery.json
 ```
 
 On Windows, use the virtual environment's `Scripts/python.exe` and the server's
