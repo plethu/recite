@@ -1,9 +1,10 @@
 # Worker scheduling resource tradeoff
 
-The both-worker receive change currently exchanges lower macOS recovery tails
-for approximately 14% more process CPU in the 200 Hz burst session. That result
-does not establish an everyday editing or energy cost. Keep the production
-choice provisional while measuring the narrower resource question.
+The initial selected-worker change exchanged lower macOS recovery tails for
+approximately 14% more process CPU in one 200 Hz burst session. Later paced
+comparisons show mixed CPU costs. The current refinement uses standard bounded
+worker inputs and moves ready JSON once into the response and writer handoff.
+No everyday energy claim follows from these workload measurements.
 
 ## Bounded experiments
 
@@ -185,6 +186,17 @@ rename outcomes, alongside CPU and recovery. A fast control makes the original
 selected-worker concern inconclusive. Retain this placement
 only if the repeated cluster improves without undoing large-response gains.
 If it does not, stop packet-placement tweaks and require writer-side evidence.
+
+The [completed placement study](https://github.com/plethu/recite/actions/runs/37532570495)
+exercised cancelled responses in all 210 measured requests per binary, with no
+successful rename races. Counts above 10 ms changed from 7/0/7 fixed and 7/0/0
+churn to 1/6/0 and 3/7/0 respectively: 21 to 17 in total, but tails remained in
+three of six workloads for each variant. Two pairs became substantially worse.
+Cycle CPU increased 0.66% and whole-session CPU 1.93%; recovery median increased
+8.27% while pooled p95 decreased 12.90%. Reject the prebuild as a production
+optimization: the repetition evidence is mixed and the cluster did not disappear.
+The frozen checkpoint and outcome-aware probe remain reproducible. Stop further
+packet-placement experiments; no custom transport is justified by this result.
 
 Every ordinary cross-platform session gate additionally rejects more than
 100 ms of process CPU during a three-second settled interval in two of three
