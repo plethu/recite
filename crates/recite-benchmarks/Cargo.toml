@@ -28,8 +28,13 @@ harness = false
 name = "lsp"
 harness = false
 
+[[bench]]
+name = "channel_handoff"
+harness = false
+
 [dependencies]
 blake3.workspace = true
+crossbeam-channel = "0.5.15"
 recite-compiler = { workspace = true, features = ["bench-support"] }
 recite-core.workspace = true
 recite-fixturegen.workspace = true
