@@ -27,7 +27,7 @@ pub(super) fn completion(
         QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
         _ => return None,
     };
-    let mut items = Vec::new();
+    let mut items = Vec::with_capacity(candidates.len());
     let block_detail = catalog.text(MsgId::LspCompletionBlock);
     for candidate in &candidates {
         snapshot.checkpoint().ok()?;
@@ -59,6 +59,7 @@ fn extend_project_block_items(
         QueryResult::Ready(symbols) | QueryResult::Partial { value: symbols, .. } => symbols,
         QueryResult::NoMatch | QueryResult::Unavailable(_) | _ => return Some(()),
     };
+    items.reserve(symbols.len());
     for symbol in symbols {
         snapshot.checkpoint().ok()?;
         let SymbolIdentity::Block(name) = symbol.identity() else {

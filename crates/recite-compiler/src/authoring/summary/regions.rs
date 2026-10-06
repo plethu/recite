@@ -1,5 +1,6 @@
 //! Compact offsets into a document summary; cached regions do not duplicate it.
 use super::AuthoringSummary;
+use crate::region_outputs;
 use std::{ops::Range, sync::Arc};
 
 pub(crate) type SummaryRanges = [Range<usize>; 6];
@@ -21,37 +22,37 @@ impl AuthoringSummary {
         previous: Option<&Arc<Self>>,
     ) -> Arc<Self> {
         if let Some(previous) = previous
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
                 &previous.blocks,
             )
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.block_references[ranges[1].clone()]),
                 &previous.block_references,
             )
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
                 &previous.stable_ids,
             )
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.metadata[ranges[3].clone()]),
                 &previous.metadata,
             )
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.condition_functions[ranges[4].clone()]),
                 &previous.condition_functions,
             )
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.effect_functions[ranges[5].clone()]),
@@ -61,32 +62,36 @@ impl AuthoringSummary {
             return Arc::clone(previous);
         }
         Arc::new(Self {
-            blocks: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.blocks[ranges[0].clone()].iter().cloned())
-                .collect(),
-            block_references: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.block_references[ranges[1].clone()].iter().cloned())
-                .collect(),
-            stable_ids: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.stable_ids[ranges[2].clone()].iter().cloned())
-                .collect(),
-            metadata: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.metadata[ranges[3].clone()].iter().cloned())
-                .collect(),
-            condition_functions: parts
-                .iter()
-                .flat_map(|(part, ranges)| {
-                    part.condition_functions[ranges[4].clone()].iter().cloned()
-                })
-                .collect(),
-            effect_functions: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.effect_functions[ranges[5].clone()].iter().cloned())
-                .collect(),
+            blocks: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
+            ),
+            block_references: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.block_references[ranges[1].clone()]),
+            ),
+            stable_ids: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
+            ),
+            metadata: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.metadata[ranges[3].clone()]),
+            ),
+            condition_functions: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.condition_functions[ranges[4].clone()]),
+            ),
+            effect_functions: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.effect_functions[ranges[5].clone()]),
+            ),
         })
     }
 }

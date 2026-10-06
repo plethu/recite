@@ -1,5 +1,6 @@
 //! Composition of region facts without retaining duplicate per-region arrays.
 use super::ProjectFacts;
+use crate::region_outputs;
 use crate::validation::ValidationParticipation;
 use std::{ops::Range, sync::Arc};
 
@@ -20,19 +21,19 @@ impl ProjectFacts {
     ) -> Arc<Self> {
         if let Some(previous) = previous
             && previous.participation == participation
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
                 &previous.blocks,
             )
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
                 &previous.passages,
             )
-            && crate::region_outputs::matches(
+            && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.references[ranges[2].clone()]),
@@ -44,18 +45,24 @@ impl ProjectFacts {
         Arc::new(Self {
             path: path.into(),
             participation,
-            blocks: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.blocks[ranges[0].clone()].iter().cloned())
-                .collect(),
-            passages: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.passages[ranges[1].clone()].iter().cloned())
-                .collect(),
-            references: parts
-                .iter()
-                .flat_map(|(part, ranges)| part.references[ranges[2].clone()].iter().cloned())
-                .collect(),
+            blocks: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
+            )
+            .into_boxed_slice(),
+            passages: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
+            )
+            .into_boxed_slice(),
+            references: region_outputs::collect(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.references[ranges[2].clone()]),
+            )
+            .into_boxed_slice(),
         })
     }
 }
