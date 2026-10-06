@@ -164,7 +164,13 @@ impl Server {
         };
         if matches!(pending.state, RequestState::Running) {
             pending.state = RequestState::Ready(match result.result {
-                Ok(value) => Response::new_ok(id.clone(), value),
+                // The worker already serialized this value; new_ok would
+                // traverse and allocate its JSON again before writer handoff.
+                Ok(value) => Response {
+                    id: id.clone(),
+                    result: Some(value),
+                    error: None,
+                },
                 Err(error) => Response::new_err(id.clone(), ErrorCode::InternalError as i32, error),
             });
         }

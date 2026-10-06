@@ -12033,7 +12033,7 @@
       }
     },
     "control_revision": "8e40a24e788811d5d40539a74b546062a217deaa",
-    "candidate_revision": "uncommitted prebuilt stopped responses",
+    "candidate_revision": "4d9a5cf6e91ba600cb0c0ae7a09d2c3bf91d1b5a",
     "control_binary_sha256": "874acb57764885968fb201dbc236cf534e0e5d7f80a83235c2d8bcbbc691c75f",
     "candidate_binary_sha256": "f13ed2438fb6b4cbb25c950eaeafea1e8a07019e58496c645b83e4b41c60c767",
     "pairs": [
@@ -12628,6 +12628,664 @@
           "memory/peak_rss_kib": {
             "median": 123932,
             "p95": 124044
+          }
+        }
+      }
+    ]
+  },
+  "owned_query_result_local": {
+    "status": "pass",
+    "policy": {
+      "profile": "same-runner alternating release binaries; large seed-7203 project; warm filesystem",
+      "samples": 21,
+      "ratio": 1.2,
+      "absolute_ms": 2.0,
+      "workloads": [
+        "comment",
+        "prose",
+        "line_insert",
+        "stable_id",
+        "block_topology",
+        "recovery",
+        "query/completion",
+        "query/hover",
+        "query/definition",
+        "query/references",
+        "query/prepare_rename",
+        "query/rename",
+        "query/code_action",
+        "query/code_action_fix_all",
+        "negotiated/comment",
+        "negotiated/prose",
+        "negotiated/line_insert",
+        "negotiated/stable_id",
+        "negotiated/block_topology",
+        "negotiated/recovery",
+        "fanout/block_topology",
+        "lifecycle/index_ready",
+        "lifecycle/open",
+        "memory/peak_rss_kib"
+      ],
+      "fanout": {
+        "documents": 100,
+        "blocks": 20,
+        "lines": 10,
+        "shared_destinations": 10
+      },
+      "limits": {
+        "lifecycle/index_ready": {
+          "ratio": 1.3,
+          "absolute": 50,
+          "unit": "ms"
+        },
+        "lifecycle/open": {
+          "ratio": 1.3,
+          "absolute": 10,
+          "unit": "ms"
+        },
+        "memory/peak_rss_kib": {
+          "ratio": 1.2,
+          "absolute": 16384,
+          "unit": "KiB"
+        }
+      }
+    },
+    "control_revision": "4d9a5cf6e91ba600cb0c0ae7a09d2c3bf91d1b5a",
+    "candidate_revision": "direct JSON result move",
+    "control_binary_sha256": "f13ed2438fb6b4cbb25c950eaeafea1e8a07019e58496c645b83e4b41c60c767",
+    "candidate_binary_sha256": "438c57c9ef1e6e987d57a978232b20fefda716f5b69546fa8d22ce2cf1bd2859",
+    "pairs": [
+      {
+        "control": {
+          "comment": {
+            "median": 4.024261,
+            "p95": 5.277371
+          },
+          "prose": {
+            "median": 3.896244,
+            "p95": 5.137961
+          },
+          "line_insert": {
+            "median": 5.500115,
+            "p95": 7.489263
+          },
+          "stable_id": {
+            "median": 5.346339,
+            "p95": 7.872555
+          },
+          "block_topology": {
+            "median": 16.080174,
+            "p95": 16.878979
+          },
+          "recovery": {
+            "median": 24.250954,
+            "p95": 25.874712
+          },
+          "negotiated/comment": {
+            "median": 3.431159,
+            "p95": 4.407794
+          },
+          "negotiated/prose": {
+            "median": 2.805335,
+            "p95": 3.59308
+          },
+          "negotiated/line_insert": {
+            "median": 5.76647,
+            "p95": 6.649712
+          },
+          "negotiated/stable_id": {
+            "median": 4.978525,
+            "p95": 6.21257
+          },
+          "negotiated/block_topology": {
+            "median": 17.4872,
+            "p95": 19.361565
+          },
+          "negotiated/recovery": {
+            "median": 25.049669,
+            "p95": 27.004593
+          },
+          "fanout/block_topology": {
+            "median": 39.185569,
+            "p95": 41.161012
+          },
+          "query/completion": {
+            "median": 6.575825,
+            "p95": 7.874449
+          },
+          "query/hover": {
+            "median": 1.840111,
+            "p95": 2.277373
+          },
+          "query/definition": {
+            "median": 0.218106,
+            "p95": 0.260744
+          },
+          "query/references": {
+            "median": 0.493538,
+            "p95": 0.510609
+          },
+          "query/prepare_rename": {
+            "median": 1.875777,
+            "p95": 2.405011
+          },
+          "query/rename": {
+            "median": 0.167121,
+            "p95": 0.235057
+          },
+          "query/code_action": {
+            "median": 0.680936,
+            "p95": 1.872351
+          },
+          "query/code_action_fix_all": {
+            "median": 15.559246,
+            "p95": 15.910379
+          },
+          "lifecycle/index_ready": {
+            "median": 503.668011,
+            "p95": 518.030552
+          },
+          "lifecycle/open": {
+            "median": 4.089373,
+            "p95": 5.75516
+          },
+          "memory/peak_rss_kib": {
+            "median": 123908,
+            "p95": 124128
+          }
+        },
+        "candidate": {
+          "comment": {
+            "median": 2.586589,
+            "p95": 3.84039
+          },
+          "prose": {
+            "median": 2.676687,
+            "p95": 3.513682
+          },
+          "line_insert": {
+            "median": 6.256121,
+            "p95": 8.056038
+          },
+          "stable_id": {
+            "median": 5.899208,
+            "p95": 7.170121
+          },
+          "block_topology": {
+            "median": 16.357933,
+            "p95": 17.848504
+          },
+          "recovery": {
+            "median": 24.530387,
+            "p95": 25.86051
+          },
+          "negotiated/comment": {
+            "median": 3.316276,
+            "p95": 4.408867
+          },
+          "negotiated/prose": {
+            "median": 2.462699,
+            "p95": 3.307108
+          },
+          "negotiated/line_insert": {
+            "median": 6.185961,
+            "p95": 7.27725
+          },
+          "negotiated/stable_id": {
+            "median": 4.98602,
+            "p95": 5.977273
+          },
+          "negotiated/block_topology": {
+            "median": 16.498985,
+            "p95": 17.767865
+          },
+          "negotiated/recovery": {
+            "median": 25.677851,
+            "p95": 28.301659
+          },
+          "fanout/block_topology": {
+            "median": 40.68884,
+            "p95": 42.522279
+          },
+          "query/completion": {
+            "median": 3.711951,
+            "p95": 4.277363
+          },
+          "query/hover": {
+            "median": 2.317909,
+            "p95": 2.699749
+          },
+          "query/definition": {
+            "median": 0.264512,
+            "p95": 0.451049
+          },
+          "query/references": {
+            "median": 1.030616,
+            "p95": 1.251778
+          },
+          "query/prepare_rename": {
+            "median": 2.177569,
+            "p95": 3.213665
+          },
+          "query/rename": {
+            "median": 0.177781,
+            "p95": 0.283217
+          },
+          "query/code_action": {
+            "median": 0.654197,
+            "p95": 2.602919
+          },
+          "query/code_action_fix_all": {
+            "median": 16.020366,
+            "p95": 16.353115
+          },
+          "lifecycle/index_ready": {
+            "median": 504.391856,
+            "p95": 514.395738
+          },
+          "lifecycle/open": {
+            "median": 4.081519,
+            "p95": 5.551893
+          },
+          "memory/peak_rss_kib": {
+            "median": 123888,
+            "p95": 124016
+          }
+        }
+      },
+      {
+        "control": {
+          "comment": {
+            "median": 3.086679,
+            "p95": 3.677899
+          },
+          "prose": {
+            "median": 3.143405,
+            "p95": 3.676126
+          },
+          "line_insert": {
+            "median": 6.333267,
+            "p95": 7.180422
+          },
+          "stable_id": {
+            "median": 4.606646,
+            "p95": 5.742227
+          },
+          "block_topology": {
+            "median": 16.178894,
+            "p95": 19.325345
+          },
+          "recovery": {
+            "median": 25.020375,
+            "p95": 27.708744
+          },
+          "negotiated/comment": {
+            "median": 3.01703,
+            "p95": 4.661969
+          },
+          "negotiated/prose": {
+            "median": 2.988146,
+            "p95": 4.57107
+          },
+          "negotiated/line_insert": {
+            "median": 5.941027,
+            "p95": 6.943061
+          },
+          "negotiated/stable_id": {
+            "median": 5.28082,
+            "p95": 7.16883
+          },
+          "negotiated/block_topology": {
+            "median": 17.735349,
+            "p95": 20.209881
+          },
+          "negotiated/recovery": {
+            "median": 26.113999,
+            "p95": 28.712321
+          },
+          "fanout/block_topology": {
+            "median": 42.092011,
+            "p95": 43.457019
+          },
+          "query/completion": {
+            "median": 7.940024,
+            "p95": 9.044899
+          },
+          "query/hover": {
+            "median": 1.859578,
+            "p95": 2.637825
+          },
+          "query/definition": {
+            "median": 0.51622,
+            "p95": 0.807091
+          },
+          "query/references": {
+            "median": 1.036848,
+            "p95": 1.33876
+          },
+          "query/prepare_rename": {
+            "median": 2.138096,
+            "p95": 3.153845
+          },
+          "query/rename": {
+            "median": 0.152584,
+            "p95": 0.208517
+          },
+          "query/code_action": {
+            "median": 0.919911,
+            "p95": 3.027149
+          },
+          "query/code_action_fix_all": {
+            "median": 15.801814,
+            "p95": 16.171541
+          },
+          "lifecycle/index_ready": {
+            "median": 506.885405,
+            "p95": 523.237499
+          },
+          "lifecycle/open": {
+            "median": 4.137584,
+            "p95": 5.953661
+          },
+          "memory/peak_rss_kib": {
+            "median": 123908,
+            "p95": 124020
+          }
+        },
+        "candidate": {
+          "comment": {
+            "median": 2.794606,
+            "p95": 4.214446
+          },
+          "prose": {
+            "median": 2.802742,
+            "p95": 4.24374
+          },
+          "line_insert": {
+            "median": 6.464089,
+            "p95": 8.451885
+          },
+          "stable_id": {
+            "median": 5.784385,
+            "p95": 7.452316
+          },
+          "block_topology": {
+            "median": 15.292093,
+            "p95": 18.013113
+          },
+          "recovery": {
+            "median": 24.141588,
+            "p95": 25.79976
+          },
+          "negotiated/comment": {
+            "median": 3.44205,
+            "p95": 4.462297
+          },
+          "negotiated/prose": {
+            "median": 2.820815,
+            "p95": 3.676355
+          },
+          "negotiated/line_insert": {
+            "median": 5.772113,
+            "p95": 7.468787
+          },
+          "negotiated/stable_id": {
+            "median": 4.993044,
+            "p95": 5.868331
+          },
+          "negotiated/block_topology": {
+            "median": 16.964483,
+            "p95": 19.068676
+          },
+          "negotiated/recovery": {
+            "median": 25.292057,
+            "p95": 26.499252
+          },
+          "fanout/block_topology": {
+            "median": 39.98626,
+            "p95": 41.293811
+          },
+          "query/completion": {
+            "median": 3.630861,
+            "p95": 4.873311
+          },
+          "query/hover": {
+            "median": 1.882721,
+            "p95": 2.489899
+          },
+          "query/definition": {
+            "median": 0.217405,
+            "p95": 0.479721
+          },
+          "query/references": {
+            "median": 0.545885,
+            "p95": 0.777536
+          },
+          "query/prepare_rename": {
+            "median": 1.920491,
+            "p95": 2.741137
+          },
+          "query/rename": {
+            "median": 0.161801,
+            "p95": 0.261366
+          },
+          "query/code_action": {
+            "median": 0.805388,
+            "p95": 2.573295
+          },
+          "query/code_action_fix_all": {
+            "median": 15.89753,
+            "p95": 16.315597
+          },
+          "lifecycle/index_ready": {
+            "median": 506.053728,
+            "p95": 527.929301
+          },
+          "lifecycle/open": {
+            "median": 4.312118,
+            "p95": 5.527087
+          },
+          "memory/peak_rss_kib": {
+            "median": 123908,
+            "p95": 124024
+          }
+        }
+      },
+      {
+        "control": {
+          "comment": {
+            "median": 2.870859,
+            "p95": 3.752287
+          },
+          "prose": {
+            "median": 3.124029,
+            "p95": 4.234635
+          },
+          "line_insert": {
+            "median": 6.477746,
+            "p95": 7.88325
+          },
+          "stable_id": {
+            "median": 5.600515,
+            "p95": 7.175293
+          },
+          "block_topology": {
+            "median": 15.778782,
+            "p95": 16.96078
+          },
+          "recovery": {
+            "median": 23.863897,
+            "p95": 25.492917
+          },
+          "negotiated/comment": {
+            "median": 3.400934,
+            "p95": 3.794497
+          },
+          "negotiated/prose": {
+            "median": 3.146372,
+            "p95": 4.476885
+          },
+          "negotiated/line_insert": {
+            "median": 5.60342,
+            "p95": 7.694479
+          },
+          "negotiated/stable_id": {
+            "median": 4.436059,
+            "p95": 5.539261
+          },
+          "negotiated/block_topology": {
+            "median": 17.06788,
+            "p95": 18.728117
+          },
+          "negotiated/recovery": {
+            "median": 24.578016,
+            "p95": 25.690695
+          },
+          "fanout/block_topology": {
+            "median": 38.833056,
+            "p95": 40.384722
+          },
+          "query/completion": {
+            "median": 6.477115,
+            "p95": 8.366369
+          },
+          "query/hover": {
+            "median": 1.843869,
+            "p95": 2.294707
+          },
+          "query/definition": {
+            "median": 0.278487,
+            "p95": 0.689582
+          },
+          "query/references": {
+            "median": 0.543691,
+            "p95": 0.590197
+          },
+          "query/prepare_rename": {
+            "median": 1.919469,
+            "p95": 2.944866
+          },
+          "query/rename": {
+            "median": 0.152304,
+            "p95": 0.359809
+          },
+          "query/code_action": {
+            "median": 1.124922,
+            "p95": 1.544272
+          },
+          "query/code_action_fix_all": {
+            "median": 15.682674,
+            "p95": 16.071147
+          },
+          "lifecycle/index_ready": {
+            "median": 491.272126,
+            "p95": 502.655014
+          },
+          "lifecycle/open": {
+            "median": 4.334761,
+            "p95": 5.033431
+          },
+          "memory/peak_rss_kib": {
+            "median": 123976,
+            "p95": 124040
+          }
+        },
+        "candidate": {
+          "comment": {
+            "median": 3.079918,
+            "p95": 4.020878
+          },
+          "prose": {
+            "median": 3.320946,
+            "p95": 4.233003
+          },
+          "line_insert": {
+            "median": 6.566352,
+            "p95": 7.618088
+          },
+          "stable_id": {
+            "median": 5.566933,
+            "p95": 6.703277
+          },
+          "block_topology": {
+            "median": 16.720596,
+            "p95": 18.159191
+          },
+          "recovery": {
+            "median": 24.442456,
+            "p95": 26.087106
+          },
+          "negotiated/comment": {
+            "median": 3.124381,
+            "p95": 4.142514
+          },
+          "negotiated/prose": {
+            "median": 2.709208,
+            "p95": 3.209979
+          },
+          "negotiated/line_insert": {
+            "median": 5.555803,
+            "p95": 6.38788
+          },
+          "negotiated/stable_id": {
+            "median": 4.876118,
+            "p95": 6.071751
+          },
+          "negotiated/block_topology": {
+            "median": 16.634155,
+            "p95": 17.7548
+          },
+          "negotiated/recovery": {
+            "median": 24.716366,
+            "p95": 28.272801
+          },
+          "fanout/block_topology": {
+            "median": 39.86516,
+            "p95": 42.877553
+          },
+          "query/completion": {
+            "median": 3.330564,
+            "p95": 5.450597
+          },
+          "query/hover": {
+            "median": 1.828942,
+            "p95": 2.765844
+          },
+          "query/definition": {
+            "median": 0.240717,
+            "p95": 0.331777
+          },
+          "query/references": {
+            "median": 0.472689,
+            "p95": 0.47902
+          },
+          "query/prepare_rename": {
+            "median": 1.91959,
+            "p95": 2.707665
+          },
+          "query/rename": {
+            "median": 0.158034,
+            "p95": 0.243513
+          },
+          "query/code_action": {
+            "median": 1.136643,
+            "p95": 1.420832
+          },
+          "query/code_action_fix_all": {
+            "median": 15.938422,
+            "p95": 16.288413
+          },
+          "lifecycle/index_ready": {
+            "median": 491.973255,
+            "p95": 501.825743
+          },
+          "lifecycle/open": {
+            "median": 3.905644,
+            "p95": 4.783005
+          },
+          "memory/peak_rss_kib": {
+            "median": 123892,
+            "p95": 124024
           }
         }
       }

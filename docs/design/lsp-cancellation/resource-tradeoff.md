@@ -86,6 +86,23 @@ in all pairs: 8.650 to 6.715 ms, 9.024 to 7.253 ms and 8.776 to 6.813 ms
 The compact per-pair evidence is in `resource-results.json`; this result alone
 does not establish cross-platform recovery or CPU behaviour.
 
+Completed queries already contain owned `serde_json::Value`. Pinned
+`lsp-server` 0.7.9's generic `Response::new_ok` converts its argument to JSON,
+traversing and reallocating an existing value. An independent refinement can
+put that value directly in `Response.result`. Keep `Some(Value::Null)` distinct
+from an absent result, preserve the ID and error fields, and retain the same
+Running/Ready acceptance and cancellation boundaries. Measure it separately
+from worker inputs and stopped-error preparation before retaining it.
+
+That isolated local comparison passed all standard workloads with matching
+result hashes and no suspected regression. Large completion medians changed
+from 6.576 to 3.712 ms, 7.940 to 3.631 ms and 6.477 to 3.331 ms (43.6–54.3%
+lower). Formatting, all LSP tests and targeted Clippy passed. The complete local
+gate passed for the preceding stopped-response checkpoint: 1,572 workspace
+tests, three existing skips, and all writer/editor/dependency/documentation and
+benchmark checks. The direct-result refinement still requires final integrated
+platform validation; these are local paired gains, not an OS ranking.
+
 ## Standard worker input prototype
 
 Each worker input has exactly one receiver and is never part of a coordinator

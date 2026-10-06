@@ -39,7 +39,8 @@ Resident memory is measured by pinned `psutil` on each platform, not compared
 between operating systems. Recovery from the final burst edit, including draining
 outstanding requests, is bounded at 500 ms; request/diagnostic waits
 have deadlines, and each workload has a ten-minute cycle budget. The CI job also
-has a 30-minute outer timeout including builds and the editor host.
+has a 45-minute outer timeout including builds and the editor host, extended to
+60 minutes when both resource and native-tracing comparisons are requested.
 
 CI repeats each workload three times. After five warmup cycles, the nearest-rank
 p95 recovery must stay within 20 ms on Ubuntu 24.04, 40 ms on Windows Server 2025,
@@ -58,6 +59,14 @@ candidate repetition p95s were below 1.1 ms; the unchanged macOS control exceede
 10 ms in two repetitions of each workload and is rejected by this gate.
 See the [channel experiment](channel-handoff.md) for the comparison and CPU
 tradeoff. Missing or invalid completion-stage measurements fail closed.
+
+After the timed cycles, each session measures process CPU during a three-second
+settled interval. More than 100 ms in two of three repetitions fails CI; missing
+or invalid CPU accounting and intervals shorter than 2.5 seconds fail closed.
+This catches sustained idle work, not active-work CPU or energy cost. The default
+latency driver leaves editing-stage CPU reads disabled; paced resource probes
+opt in and record that distinction. See the [resource study](resource-tradeoff.md)
+for calibration, the live spinning negative control and the sampling audit.
 
 `check-lsp-session-faults.py` drives a real child that retains touched memory,
 threads and open files and progressively delays its replies. The same sampler and
@@ -83,7 +92,7 @@ for round in 1 2 3; do
     --binary target/release/recite-lsp --output "target/lsp-sessions/churn-$round.json" --churn
 done
 target/lsp-matrix-env/bin/python scripts/check-lsp-session-recovery.py \
-  --reports target/lsp-sessions --budget-ms 20 --completion-budget-ms 5 \
+  --reports target/lsp-sessions --budget-ms 20 --completion-budget-ms 5 --idle-cpu-budget-ms 100 \
   --output target/lsp-sessions/recovery.json
 ```
 
