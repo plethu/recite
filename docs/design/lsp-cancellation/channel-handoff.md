@@ -1,5 +1,10 @@
 # Crossbeam handoff experiment
 
+This records the selected-worker checkpoint and its ablations. The subsequent
+[resource and ownership study](resource-tradeoff.md) retains standard bounded
+worker inputs, removes redundant JSON copies and records the current CPU
+tradeoff. The selected-input checkpoint remains its comparison baseline.
+
 ## Question and acceptance
 
 The native tracing and process-yield diagnostic identified macOS scheduling tails

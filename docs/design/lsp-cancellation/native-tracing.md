@@ -1,5 +1,10 @@
 # Native latency attribution and ecosystem choices
 
+The subsequent [resource and ownership study](resource-tradeoff.md) tests the
+actual pinned stdio topology, standard worker inputs and JSON ownership. It
+retains the existing protocol owner and transport; no framework migration or
+thread-priority override is earned by the measured results.
+
 ## Decision, 5 October 2026
 
 The job is responsive, correct editing of Recite projects on Linux, macOS and

@@ -101,8 +101,15 @@ from 6.576 to 3.712 ms, 7.940 to 3.631 ms and 6.477 to 3.331 ms (43.6–54.3%
 lower). Formatting, all LSP tests and targeted Clippy passed. The complete local
 gate passed for the preceding stopped-response checkpoint: 1,572 workspace
 tests, three existing skips, and all writer/editor/dependency/documentation and
-benchmark checks. The direct-result refinement still requires final integrated
-platform validation; these are local paired gains, not an OS ranking.
+benchmark checks. Final integrated validation also passed below; these are local
+paired gains, not an OS ranking.
+
+The final retained combination (`3c4dae15`, without stopped-error prebuilding)
+also passed the standard three-pair gate against the parked-worker checkpoint
+`47a20c79`, with matching results and no suspected regression across its 24
+workloads. Large completion medians changed from 8.995 to 3.733 ms, 9.127 to
+3.480 ms and 8.586 to 3.423 ms (58.5–61.9% lower). Hover, fix-all, lifecycle and
+memory workloads remained within the established regression policy.
 
 ## Standard worker input prototype
 
@@ -125,6 +132,28 @@ Compare standard inputs against the deferred-payload checkpoint so the two
 effects remain separable. Retain them only with semantic/hash parity, equivalent
 resource behaviour and passing completion/recovery tails on all three hosts.
 Neither this experiment nor the ownership change changes protocol queue bounds.
+
+Retain standard inputs as a single-consumer API simplification with mixed
+performance. The [same-job comparison](https://github.com/plethu/recite/actions/runs/37529023882)
+against deferred payloads passed all three platform jobs and the required
+rollup. It included protocol/editor checks, resource health, completion/idle
+budgets, paced profiles and enabled/disabled native tracing.
+
+| Host | Cycle CPU total at 5 ms | At 100 ms | At 250 ms | Stress recovery p95, control → standard inputs |
+| --- | ---: | ---: | ---: | ---: |
+| Linux | +1.49% | -1.59% | +3.47% | 8.14 → 8.07 ms |
+| macOS | -5.58% | +15.83% | +4.43% | 9.72 → 7.97 ms |
+| Windows | +0.87% | +0.25% | +3.17% | 18.19 → 18.34 ms |
+
+The macOS 100 ms increase remains material: whole-session CPU increased 16.68%,
+corroborating cycle accounting. Pair changes were +10.7/+73.5/-10.1% fixed and
++5.9/+26.2/-6.1% churn; most excess was concentrated in two repetitions. This
+is neither a universal CPU penalty nor evidence of no regression. Rename wire
+outliers over 10 ms fell from 13 to five of 90 samples, while pooled p95 stayed
+near 20 ms. At 250 ms they fell from four to zero; stress fell from two to zero
+of 210. All six ordinary macOS completion p95s were 0.23–0.42 ms and idle CPU
+was zero. These are whole-workload costs, not channel overhead or energy use.
+The final integration matrix cannot erase the unresolved paced CPU tradeoff.
 
 ## Measurement audit and idle regression gate
 
@@ -159,6 +188,15 @@ arms retained the tail. These CPU reads do not consistently remove the stall,
 and cannot explain the earlier fast run. Applying the actual 5 ms completion
 budget to the three disabled repetitions rejected all three (report-stage p95
 10.36–10.61 ms). Keep the default latency driver free of the optional reads.
+
+Every ordinary cross-platform session gate additionally rejects more than
+100 ms of process CPU during a three-second settled interval in two of three
+repetitions of either working set. This conservative bound catches sustained
+idle work above about 3.3% of one core. All 18 candidate intervals in the first
+normal matrix reported zero CPU; the largest control value across its paced
+and stress profiles was below 0.04 ms on macOS, with coarse zero readings on
+Linux/Windows. Missing/invalid accounting and intervals shorter than 2.5 seconds
+fail closed. The gate protects idle CPU, not active-work CPU or energy use.
 
 ## Stopped-response placement experiment
 
@@ -198,17 +236,39 @@ optimization: the repetition evidence is mixed and the cluster did not disappear
 The frozen checkpoint and outcome-aware probe remain reproducible. Stop further
 packet-placement experiments; no custom transport is justified by this result.
 
-Every ordinary cross-platform session gate additionally rejects more than
-100 ms of process CPU during a three-second settled interval in two of three
-repetitions of either working set. This conservative bound catches sustained
-idle work above about 3.3% of one core. All 18 candidate intervals in the first
-normal matrix reported zero CPU; the largest control value across its paced
-and stress profiles was below 0.04 ms on macOS, with coarse zero readings on
-Linux/Windows. Missing/invalid accounting and intervals shorter than 2.5 seconds
-fail closed. The gate protects idle CPU, not active-work CPU or energy use.
-
 The actual upstream stdio probe did not reproduce the small-message 10 ms stall:
 macOS native response handoff p95 stayed below 0.131 ms for empty diagnostics and
 below 0.289 ms for 128 entries. At 4096 entries, native handoff reached 3.25 ms,
 but native/direct wire tails were similar (about 26.5–29.3 ms), including Python
 JSON consumption. These results do not justify a custom production transport.
+
+## Final integration and stopping decision
+
+[Run 37534833894](https://github.com/plethu/recite/actions/runs/37534833894)
+tested the final code at `3c4dae15`. All Linux, macOS and Windows jobs and the
+required rollup passed. Each host completed six ordinary 40-cycle/50-edit
+workloads, fresh-server comparisons, protocol and live-fault checks, resource
+health and the rendered VS Code lifecycle probe. Native tracing and editing CPU
+reads were disabled; idle was measured after the timed cycles.
+
+| Host | Largest recovery repetition p95 | Largest completion repetition p95 | Settled idle CPU across six repetitions |
+| --- | ---: | ---: | ---: |
+| Linux | 7.67 ms | 0.23 ms | All reported 0 ms |
+| macOS | 45.02 ms | 0.64 ms | All reported 0 ms |
+| Windows | 23.85 ms | 0.47 ms | All reported 0 ms |
+
+The complete local gate passed for this final code: 1,572 workspace tests, three
+existing skips, all 48 CI contract tests, and standard writer, editor, engine,
+dependency, documentation and benchmark checks. Timing above establishes
+unpaired integration health; it does not rank hosts or erase the paced CPU cost.
+The durable summary retains source/binary/driver identities and actual gate,
+health, fault and editor results. Full traces and rendered frames remain in
+Actions artifacts for 30 days.
+
+Retain standard bounded worker inputs and both JSON ownership improvements.
+Reject stopped-error prebuilding and further speculative packet-placement work.
+Keep the existing transport, coordinator, queue bounds and freshness ownership;
+no new production dependency, QoS override or framework migration is earned.
+The remaining macOS scheduling variability and paced CPU tradeoff are explicit
+limits of this evidence. Continue from release feedback or a concrete reproduced
+regression, rather than an open-ended pursuit of a best-in-class claim.
