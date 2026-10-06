@@ -235,3 +235,15 @@ outside the instrumented server, each around 10 ms at p95. The bare rendezvous
 probe did not reproduce that tail, so a realistic stdio/framing/destruction probe
 would be the next justified investigation before changing transport or adopting
 a different framework. No upstream report was published.
+
+## Final integration
+
+[Run 37518009003](https://github.com/plethu/recite/actions/runs/37518009003)
+tested retained revision `bf003a2c`. All three platform jobs and `required-check`
+passed with the completion budget wired into ordinary CI. Each host completed
+six default-environment 40-cycle workloads, protocol and live-fault checks, fresh
+server comparisons, resource health and the rendered editor lifecycle probe.
+The retained summary includes the actual recovery/completion gate outputs and
+untraced distributions from this final run. This unpaired validation establishes
+integration health; its absolute timings are not a replacement for the earlier
+same-job control/candidate comparison.

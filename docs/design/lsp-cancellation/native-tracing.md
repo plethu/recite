@@ -185,12 +185,18 @@ was changed. Ordinary CI still uses default scheduling and enforces the existing
 20/40/75 ms repeated-p95 budgets on Linux/Windows/macOS, plus the 500 ms hard
 recovery assertion and resource-growth gates.
 
-The next useful experiment is a minimal Crossbeam rendezvous/worker reproduction
-on macOS, followed by a supported synchronization or thread-intent candidate.
-Require paired latency **and CPU** measurements before retaining it. This is a
-more focused next step than migrating the whole language server: `async-lsp`
-remains worth a bounded compatibility prototype if its runtime can remove the
-implicated orchestration while preserving notification order, cancellation,
-bounded work, and fresh diagnostics. Neither framework migration nor Salsa is
-justified as an immediate performance fix by these results. Do not ship the
-undocumented environment switch as the remedy.
+The [follow-up channel experiment](channel-handoff.md), completed on 6 October,
+reproduced the bounded-worker delay and retained Crossbeam's public committed
+selection API for both workers. Its same-job macOS comparison reduced recovery
+p95 from 52.35 to 33.52 ms and the post-cancellation completion stage from
+10.27 to 0.51 ms, at 14% more median server CPU per burst cycle. A query-only
+variant was measured and rejected for mixed overall recovery results. CI now
+also enforces a separate 5 ms repeated-p95 completion budget.
+
+The cancelled-rename writer handoff remains a measured hotspot. A realistic
+stdio/framing/destruction reproduction would be the next useful experiment;
+the bare rendezvous probe did not reproduce its tail. `async-lsp` remains a
+bounded compatibility candidate if its runtime can remove that orchestration
+while preserving notification order, cancellation, bounded work and fresh
+diagnostics. Neither framework migration nor Salsa is justified as an immediate
+performance fix. The undocumented environment switch remains diagnostic only.
