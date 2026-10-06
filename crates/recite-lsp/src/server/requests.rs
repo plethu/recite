@@ -109,6 +109,15 @@ impl Pending {
         }
         self.control.interrupt();
     }
+    pub(super) fn take_response(&mut self, id: &RequestId) -> Option<Response> {
+        match std::mem::replace(&mut self.state, RequestState::Running) {
+            RequestState::Ready(response) => Some(response),
+            state => {
+                self.state = state;
+                self.response(id)
+            }
+        }
+    }
     pub(super) fn response(&self, id: &RequestId) -> Option<Response> {
         match &self.state {
             RequestState::Queued(_) | RequestState::Running => None,

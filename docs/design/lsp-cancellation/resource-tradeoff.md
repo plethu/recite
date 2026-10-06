@@ -56,3 +56,23 @@ dependency in a temporary diagnostic build before proposing a custom transport.
 Stop scheduling experiments once the chosen paced profiles have acceptable CPU,
 idle CPU is negligible, and client-visible tails meet the existing budgets
 without an unexplained regression. No energy claim follows from process CPU.
+
+## Output ownership prototype
+
+The coordinator previously cloned ready response JSON twice and diagnostic JSON
+once before each selection, including iterations that handled ingress or worker
+completion instead of sending. The Crossbeam macro evaluates its send payload
+expression only after the send operation wins. Choose a request ID or queued
+publication first, then move its JSON inside that expression. This retains the
+same operation priorities and requires no new selection loop or transport.
+
+No input is accepted between selection and packet completion. Pending state
+therefore remains the authority for cancellation and freshness until the
+selected send consumes it. Keep that interval small: a rendezvous writer may
+already be waiting for the packet. Native tracing retains its metadata-only
+`output_ready` and send-return `handoff` boundaries; it does not claim to observe
+writer receive. A blocked-writer fixture now includes a large queued response.
+
+Measure this independently against the parked-worker checkpoint before
+combining it with any worker-channel experiment. Functional correctness and
+removing allocations do not by themselves establish a latency improvement.

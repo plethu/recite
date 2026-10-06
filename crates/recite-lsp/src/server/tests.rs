@@ -193,7 +193,10 @@ fn blocked_writer_does_not_prevent_cancellation_at_final_handoff()
         .requests
         .get_mut(&1.into())
         .unwrap_or_else(|| panic!("request"))
-        .state = RequestState::Ready(Response::new_ok(1.into(), json!(["candidate"])));
+        .state = RequestState::Ready(Response::new_ok(
+        1.into(),
+        json!(vec!["large queued candidate"; 10_000]),
+    ));
     client
         .sender
         .send(Notification::new("$/cancelRequest".to_owned(), json!({"id": 1})).into())?;

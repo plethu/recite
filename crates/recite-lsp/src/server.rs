@@ -113,26 +113,25 @@ impl Server {
             if self.exit_received && self.requests.is_empty() && self.output.is_empty() {
                 return Ok(());
             }
-            // Materialize the response immediately before a nonblocking handoff.
-            // Cancellation processed in the ingress batch replaces queued success.
+            // Choose metadata before selection. The macro evaluates its send
+            // expression only after that arm wins; until then cancellation and
+            // freshness still belong to the authoritative pending state.
             let ready = self.requests.iter().find_map(|(id, pending)| {
-                if self.output.is_empty()
-                    || matches!(pending.state, requests::RequestState::Stopped(_))
-                {
-                    pending.response(id).map(|response| (id.clone(), response))
-                } else {
-                    None
-                }
+                ((self.output.is_empty()
+                    || matches!(pending.state, requests::RequestState::Stopped(_)))
+                    && matches!(
+                        pending.state,
+                        requests::RequestState::Ready(_) | requests::RequestState::Stopped(_)
+                    ))
+                .then(|| id.clone())
             });
-            let message = ready
-                .as_ref()
-                .map(|(_, response)| Message::Response(response.clone()))
-                .or_else(|| self.output.front().map(|p| p.message.clone()));
-            if let Some(message) = &message {
-                trace::message("output_ready", message);
+            if let Some(id) = &ready {
+                tracing::trace!(phase = "output_ready", id = %id);
+            } else if let Some(publication) = self.output.front() {
+                trace::message("output_ready", &publication.message);
             }
             let (idle_sender, _idle_receiver) = crossbeam_channel::bounded(0);
-            let sender = if message.is_some() {
+            let sender = if ready.is_some() || !self.output.is_empty() {
                 &self.connection.sender
             } else {
                 &idle_sender
@@ -142,15 +141,27 @@ impl Server {
             } else {
                 self.connection.receiver.clone()
             };
+            let handed_off;
             select_biased! {
-                send(sender, message.unwrap_or_else(|| Notification::new("$/unused".to_owned(), ()).into())) -> result => {
+                send(sender, {
+                    let message = if let Some(id) = &ready {
+                        self.requests.get_mut(id).and_then(|pending| pending.take_response(id))
+                            .unwrap_or_else(|| unreachable!("selected response remains ready until handoff"))
+                            .into()
+                    } else {
+                        self.output.pop_front()
+                            .unwrap_or_else(|| unreachable!("selected publication remains queued until handoff"))
+                            .message
+                    };
+                    handed_off = tracing::enabled!(tracing::Level::TRACE)
+                        .then(|| trace::Identity::of(&message));
+                    message
+                }) -> result => {
                     result.map_err(|_| ServerError::Send)?;
-                    if let Some((_, response)) = &ready {
-                        tracing::trace!(phase = "handoff", id = %response.id);
-                    } else if let Some(publication) = self.output.front() {
-                        trace::message("handoff", &publication.message);
+                    if let Some(identity) = handed_off { identity.record("handoff"); }
+                    if let Some(id) = ready {
+                        self.requests.remove(&id);
                     }
-                    if let Some((id, _)) = ready { self.requests.remove(&id); } else { self.output.pop_front(); }
                 },
                 recv(self.workers.analyzed) -> result => self.analysis_finished(result.map_err(|_| ServerError::WorkerPanic)?)?,
                 recv(self.workers.queried) -> result => self.query_finished(result.map_err(|_| ServerError::WorkerPanic)?),
