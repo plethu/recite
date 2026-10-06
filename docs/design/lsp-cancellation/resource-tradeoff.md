@@ -134,6 +134,41 @@ send/receive timestamps; report stage timings and repair-to-rename gaps
 separately. Do not attribute earlier differences to accounting unless the
 within-job audit reproduces that effect.
 
+The completed [accounting audit](https://github.com/plethu/recite/actions/runs/37529046162)
+reproduced the slow control's completion wire p95 at 10.24–10.42 ms in all
+three disabled/enabled pairs. Median recovery differences were mixed; both
+arms retained the tail. These CPU reads do not consistently remove the stall,
+and cannot explain the earlier fast run. Applying the actual 5 ms completion
+budget to the three disabled repetitions rejected all three (report-stage p95
+10.36–10.61 ms). Keep the default latency driver free of the optional reads.
+
+## Stopped-response placement experiment
+
+The deferred-payload [comparison](https://github.com/plethu/recite/actions/runs/37524857541)
+completed measurements, protocol/editor checks and latency gates on all three
+hosts. The Windows job subsequently exceeded its 45-minute timeout while
+saving the Rust cache, after artifact upload; the overall run is cancelled.
+The measurements remain available, but this is not a green workflow result.
+
+At 100 ms pacing on macOS, deferred payloads exposed cancelled-rename wire
+tails in five of six workloads, versus one of six for the control: 11 versus
+four of 90 post-warmup samples exceeded 10 ms. Completion wire tails stayed
+below 2.3 ms. These samples justify an isolated placement test, not a claim
+that the rendezvous backoff caused every delay.
+
+The optional `lsp_stopped_response_probe` builds only small stopped/error
+responses before selection; large ready JSON still moves in the chosen arm.
+If another arm wins, the error is discarded and recomputed from authoritative
+pending state. It compares three alternating fixed/churn pairs at 100 ms,
+40 cycles and ten edits, holding editing CPU accounting and startup idle at
+the settings that exposed the concern. Both binaries use standard worker
+inputs, so placement is the only server difference. Report each repetition's
+actual wire tails and count over 10 ms, separately for cancelled and successful
+rename outcomes, alongside CPU and recovery. A fast control makes the original
+selected-worker concern inconclusive. Retain this placement
+only if the repeated cluster improves without undoing large-response gains.
+If it does not, stop packet-placement tweaks and require writer-side evidence.
+
 Every ordinary cross-platform session gate additionally rejects more than
 100 ms of process CPU during a three-second settled interval in two of three
 repetitions of either working set. This conservative bound catches sustained

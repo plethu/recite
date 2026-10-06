@@ -7,10 +7,33 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
-from lsp_session_native import intervals, native_requests
+from lsp_session_native import intervals, native_requests, recovery_wire_samples
 
 
 class NativeTimingTests(unittest.TestCase):
+    def test_wire_join_uses_server_identity_and_rejects_incomplete_or_reversed_intervals(self):
+        report = {"server_pid": 42, "checkpoints": [{}] * 5 + [
+            {"recovery_requests": {"rename": 7, "completion": 8}}]}
+        events = [
+            {"pid": 42, "id": 7, "event": "response", "received_ns": 3_000_000},
+            {"pid": 99, "id": 7, "event": "response", "received_ns": 90_000_000},
+            {"pid": 42, "id": 7, "event": "send", "started_ns": 1_000_000},
+            {"pid": 42, "id": 8, "event": "send", "started_ns": 4_000_000},
+            {"pid": 42, "id": 8, "event": "response", "received_ns": 4_500_000},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'trace.jsonl'
+            path.write_text('\n'.join(map(json.dumps, events)))
+            self.assertEqual(dict(recovery_wire_samples(report, path)),
+                             {"rename": [2.0], "completion": [0.5]})
+            path.write_text('\n'.join(map(json.dumps, events[:-1])))
+            with self.assertRaises(KeyError):
+                recovery_wire_samples(report, path)
+            events[-1]["received_ns"] = 3_000_000
+            path.write_text('\n'.join(map(json.dumps, events)))
+            with self.assertRaises(ValueError):
+                recovery_wire_samples(report, path)
+
     def test_serial_join_and_last_ready_time_survive_interleaved_file_writes(self):
         events = [
             (0.001, {"phase": "ingress", "id": "7"}),

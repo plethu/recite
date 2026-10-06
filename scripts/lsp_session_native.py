@@ -50,6 +50,26 @@ def intervals(native, wire_ms):
     return result
 
 
+def recovery_wire_samples(report, trace_path):
+    sends, received = {}, {}
+    for line in trace_path.read_text().splitlines():
+        event = json.loads(line)
+        if event["pid"] != report["server_pid"] or event.get("id") is None:
+            continue
+        if event["event"] == "send":
+            sends[event["id"]] = event["started_ns"]
+        elif event["event"] == "response":
+            received[event["id"]] = event["received_ns"]
+    samples = defaultdict(list)
+    for checkpoint in report["checkpoints"][5:]:
+        for operation, request_id in checkpoint["recovery_requests"].items():
+            elapsed = (received[request_id] - sends[request_id]) / 1e6
+            if not math.isfinite(elapsed) or elapsed < 0:
+                raise ValueError("invalid client wire interval")
+            samples[operation].append(elapsed)
+    return samples
+
+
 def recovery_samples(report_path):
     report = json.loads(report_path.read_text())
     if report["status"] != "pass" or len(report["checkpoints"]) != report["cycles"]:

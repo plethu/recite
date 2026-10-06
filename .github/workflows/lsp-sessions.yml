@@ -3,6 +3,9 @@ name: LSP sessions
 on:
   workflow_call:
     inputs:
+      stopped_response_probe:
+        type: boolean
+        default: false
       driver_accounting_probe:
         type: boolean
         default: false
@@ -26,6 +29,10 @@ on:
         default: false
   workflow_dispatch:
     inputs:
+      stopped_response_probe:
+        description: Compare prepared stopped responses at 100 ms pacing on macOS
+        type: boolean
+        default: false
       driver_accounting_probe:
         description: Isolate optional CPU sampling with one control server on macOS
         type: boolean
@@ -103,8 +110,54 @@ jobs:
           path: target/lsp-driver-accounting/
           if-no-files-found: error
           retention-days: 30
+  stopped-responses:
+    name: LSP stopped response comparison (macos-15)
+    if: inputs.stopped_response_probe
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      MISE_AUTO_INSTALL: 'false'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require an explicit control revision
+        env:
+          CONTROL_REF: ${{ inputs.server_control_ref }}
+        run: test -n "$CONTROL_REF"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.server_control_ref }}
+          path: .lsp-session-control
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Build both exact server binaries
+        run: |
+          cargo build --locked --release -p recite-lsp
+          CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
+      - name: Alternate prepared stopped responses with identical instrumentation
+        run: |
+          python -m pip install -r scripts/lsp-session-requirements.txt
+          python scripts/measure-lsp-stopped-responses.py --control target/lsp-session-control-build/release/recite-lsp --candidate target/release/recite-lsp --output target/lsp-stopped-responses
+      - name: Retain stopped response comparison
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lsp-stopped-responses-macos
+          path: target/lsp-stopped-responses/
+          if-no-files-found: error
+          retention-days: 30
   sessions:
-    if: ${{ !inputs.driver_accounting_probe }}
+    if: ${{ !inputs.driver_accounting_probe && !inputs.stopped_response_probe }}
     name: LSP and editor sessions (${{ matrix.os }})
     strategy:
       fail-fast: false

@@ -79,7 +79,7 @@ class SessionReportsTests(unittest.TestCase):
             self.assertEqual(recovery.evaluate(root, 25)["status"], "pass")
             path = root / "churn-3.json"
             original = path.read_text()
-            for corruption in ("truncated", "binary", "harness", "seed", "driver", "nan", "failed"):
+            for corruption in ("truncated", "binary", "harness", "seed", "driver", "nan", "error", "failed"):
                 report = json.loads(original)
                 if corruption == "truncated":
                     report["checkpoints"].pop()
@@ -93,6 +93,8 @@ class SessionReportsTests(unittest.TestCase):
                     report["driver"] = {"switch_interval_ms": 2}
                 elif corruption == "nan":
                     report["checkpoints"][-1]["recovery_ms"] = float("nan")
+                elif corruption == "error":
+                    report["error"] = "shutdown failed after the last checkpoint"
                 else:
                     report["status"] = "regression"
                 path.write_text(json.dumps(report))

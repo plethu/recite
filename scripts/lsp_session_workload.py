@@ -233,4 +233,5 @@ class Session:
         assert all(path.read_text() == text for path, text in self.originals.items())
         self.timing.parts["repair_to_rename_send_ms"] = (rename_started - repair_received) / 1e6
         return {"recovery_ms": recovery, "timing": self.timing.finish(),
-                "recovery_requests": {"rename": request_id, "completion": self.last_query_id}}
+                "recovery_requests": {"rename": request_id, "completion": self.last_query_id},
+                "recovery_outcomes": {"rename_error_code": response.get("error", {}).get("code")}}

@@ -116,16 +116,23 @@ impl Server {
             // Choose metadata before selection. The macro evaluates its send
             // expression only after that arm wins; until then cancellation and
             // freshness still belong to the authoritative pending state.
-            let ready = self.requests.iter().find_map(|(id, pending)| {
-                ((self.output.is_empty()
-                    || matches!(pending.state, requests::RequestState::Stopped(_)))
+            let mut ready = self.requests.iter().find_map(|(id, pending)| {
+                let stopped = matches!(pending.state, requests::RequestState::Stopped(_));
+                if (self.output.is_empty() || stopped)
                     && matches!(
                         pending.state,
                         requests::RequestState::Ready(_) | requests::RequestState::Stopped(_)
-                    ))
-                .then(|| id.clone())
+                    )
+                {
+                    // Error construction is small, but belongs before a
+                    // rendezvous writer can begin waiting for its packet.
+                    let prepared = if stopped { pending.response(id) } else { None };
+                    Some((id.clone(), prepared))
+                } else {
+                    None
+                }
             });
-            if let Some(id) = &ready {
+            if let Some((id, _)) = &ready {
                 tracing::trace!(phase = "output_ready", id = %id);
             } else if let Some(publication) = self.output.front() {
                 trace::message("output_ready", &publication.message);
@@ -144,8 +151,8 @@ impl Server {
             let handed_off;
             select_biased! {
                 send(sender, {
-                    let message = if let Some(id) = &ready {
-                        self.requests.get_mut(id).and_then(|pending| pending.take_response(id))
+                    let message = if let Some((id, prepared)) = &mut ready {
+                        prepared.take().or_else(|| self.requests.get_mut(id).and_then(|pending| pending.take_response(id)))
                             .unwrap_or_else(|| unreachable!("selected response remains ready until handoff"))
                             .into()
                     } else {
@@ -159,7 +166,7 @@ impl Server {
                 }) -> result => {
                     result.map_err(|_| ServerError::Send)?;
                     if let Some(identity) = handed_off { identity.record("handoff"); }
-                    if let Some(id) = ready {
+                    if let Some((id, _)) = ready {
                         self.requests.remove(&id);
                     }
                 },

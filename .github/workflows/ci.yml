@@ -34,6 +34,10 @@ on:
         description: Diagnostic alternate libpthread yield path on macOS server children only
         type: boolean
         default: false
+      lsp_stopped_response_probe:
+        description: Compare prepared stopped responses at 100 ms pacing on macOS
+        type: boolean
+        default: false
       lsp_driver_accounting_probe:
         description: Isolate optional CPU sampling with one control server on macOS
         type: boolean
@@ -381,6 +385,7 @@ jobs:
     if: needs.changes.outputs.lsp-sessions == 'true'
     uses: ./.github/workflows/lsp-sessions.yml
     with:
+      stopped_response_probe: ${{ inputs.lsp_stopped_response_probe || false }}
       driver_accounting_probe: ${{ inputs.lsp_driver_accounting_probe || false }}
       resource_probe: ${{ inputs.lsp_resource_probe || false }}
       channel_probe: ${{ inputs.lsp_channel_probe || false }}

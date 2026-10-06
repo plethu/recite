@@ -16,7 +16,7 @@ def evaluate(directory, budget_ms, completion_budget_ms=None, *, cycles=40, edit
         idle_intervals = []
         for round_number in range(1, 4):
             report = json.loads((directory / f"{mode}-{round_number}.json").read_text())
-            if (report["status"] != "pass" or report["health"]["status"] != "pass"
+            if ("error" in report or report["status"] != "pass" or report["health"]["status"] != "pass"
                     or report["cycles"] != cycles or report["edits_per_cycle"] != edits
                     or report["churn"] != (mode == "churn")
                     or len(report["checkpoints"]) != cycles

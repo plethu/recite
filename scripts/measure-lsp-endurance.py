@@ -84,6 +84,7 @@ def run(binary, root, output, cycles, edits, seed, churn, server_env, edit_inter
                 report["server_cpu_ms_total"] = session.timing.cpu_seconds() * 1000
                 session.client.close()
             except BaseException as error:
+                report["status"] = "error"
                 report["error"] = str(error)
                 session.client.abort()
                 raise
