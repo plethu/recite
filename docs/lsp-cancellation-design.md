@@ -13,6 +13,9 @@ The [dependency decisions](design/lsp-cancellation/dependency-decisions.md) pres
 framework and text-library spikes, reproducible evidence, and the
 [reevaluation plan](design/lsp-cancellation/dependency-decisions.md#reevaluation-plan).
 
+The [final resource investigation](design/lsp-cancellation/final-resource-profiling.md)
+records Criterion timings, CPU/allocation attribution, and retained capacity reductions.
+
 Keep protocol reception and publication on one coordinator thread. Give
 analysis and queries one worker each, with immutable query snapshots and
 cooperative cancellation through the synchronous compiler. Retain incremental

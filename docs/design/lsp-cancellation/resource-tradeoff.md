@@ -272,3 +272,7 @@ no new production dependency, QoS override or framework migration is earned.
 The remaining macOS scheduling variability and paced CPU tradeoff are explicit
 limits of this evidence. Continue from release feedback or a concrete reproduced
 regression, rather than an open-ended pursuit of a best-in-class claim.
+
+The subsequent [final resource investigation](final-resource-profiling.md) adds
+direct allocation attribution and retains exact-sized region composition and
+completion reservation. It preserves these scheduling and ownership decisions.
