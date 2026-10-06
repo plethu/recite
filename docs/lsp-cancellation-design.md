@@ -9,6 +9,10 @@ and the [editor parity contract](editor-parity-contract.md).
 The subsequent [experience and CI experiments](design/lsp-cancellation/follow-up.md)
 cover sustained load, ranged sync, installed-client debounce and regression gates.
 
+The [dependency decisions](design/lsp-cancellation/dependency-decisions.md) preserve
+framework and text-library spikes, reproducible evidence, and the
+[reevaluation plan](design/lsp-cancellation/dependency-decisions.md#reevaluation-plan).
+
 Keep protocol reception and publication on one coordinator thread. Give
 analysis and queries one worker each, with immutable query snapshots and
 cooperative cancellation through the synchronous compiler. Retain incremental

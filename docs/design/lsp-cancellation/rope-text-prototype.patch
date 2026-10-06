@@ -1,0 +1,278 @@
+diff --git a/Cargo.lock b/Cargo.lock
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3125,6 +3125,7 @@
+  "recite-core",
+  "recite-parser",
+  "recite-ui",
++ "ropey",
+  "serde",
+  "serde_json",
+  "tempfile",
+@@ -3253,6 +3254,16 @@
+ ]
+
+ [[package]]
++name = "ropey"
++version = "1.6.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "93411e420bcd1a75ddd1dc3caf18c23155eda2c090631a85af21ba19e97093b5"
++dependencies = [
++ "smallvec",
++ "str_indices",
++]
++
++[[package]]
+ name = "rowan"
+ version = "0.16.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -3590,6 +3601,12 @@
+ version = "0.1.10"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "5c0e04424e733e69714ca1bbb9204c1a57f09f5493439520f9f68c132ad25eec"
++
++[[package]]
++name = "str_indices"
++version = "0.4.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d08889ec5408683408db66ad89e0e1f93dff55c73a4ccc71c427d5b277ee47e6"
+
+ [[package]]
+ name = "strsim"
+diff --git a/crates/recite-lsp/Cargo.toml b/crates/recite-lsp/Cargo.toml
+--- a/crates/recite-lsp/Cargo.toml
++++ b/crates/recite-lsp/Cargo.toml
+@@ -17,6 +17,7 @@
+ bench-support = []
+
+ [dependencies]
++ropey = { version = "=1.6.1", default-features = false, features = ["cr_lines", "simd"] }
+ crossbeam-channel = "0.5.15"
+ recite-core.workspace = true
+ recite-parser.workspace = true
+diff --git a/crates/recite-lsp/src/server/text_sync.rs b/crates/recite-lsp/src/server/text_sync.rs
+--- a/crates/recite-lsp/src/server/text_sync.rs
++++ b/crates/recite-lsp/src/server/text_sync.rs
+@@ -2,11 +2,12 @@
+ //! accepted transaction before queueing so coalescing never drops a dependency.
+ use super::updates::Update;
+ use lsp_types::{Position, TextDocumentContentChangeEvent, Uri};
++use ropey::Rope;
+ use std::collections::BTreeMap;
+
+ struct Document {
+     version: i32,
+-    text: String,
++    text: Rope,
+ }
+
+ #[derive(Default)]
+@@ -25,7 +26,7 @@
+                     p.text_document.uri.clone(),
+                     Document {
+                         version: p.text_document.version,
+-                        text: p.text_document.text.clone(),
++                        text: Rope::from_str(&p.text_document.text),
+                     },
+                 );
+             }
+@@ -39,12 +40,12 @@
+                 let Some(text) = apply_changes(&document.text, &p.content_changes) else {
+                     return false;
+                 };
+-                document.text.clone_from(&text);
++                document.text = text.clone();
+                 document.version = p.text_document.version;
+                 p.content_changes = vec![TextDocumentContentChangeEvent {
+                     range: None,
+                     range_length: None,
+-                    text,
++                    text: text.to_string(),
+                 }];
+             }
+             Update::Close(p) => return self.0.remove(&p.text_document.uri).is_some(),
+@@ -54,16 +55,16 @@
+     }
+ }
+
+-fn apply_changes(original: &str, changes: &[TextDocumentContentChangeEvent]) -> Option<String> {
++fn apply_changes(original: &Rope, changes: &[TextDocumentContentChangeEvent]) -> Option<Rope> {
+     let (first, rest) = changes.split_first()?;
+     // Full replacements need not copy the previous document first.
+     let mut text = if first.range.is_none() {
+         if first.range_length.is_some() {
+             return None;
+         }
+-        first.text.clone()
++        Rope::from_str(&first.text)
+     } else {
+-        let mut text = original.to_owned();
++        let mut text = original.clone();
+         apply_change(&mut text, first)?;
+         text
+     };
+@@ -73,61 +74,47 @@
+     Some(text)
+ }
+
+-fn apply_change(text: &mut String, change: &TextDocumentContentChangeEvent) -> Option<()> {
++fn apply_change(text: &mut Rope, change: &TextDocumentContentChangeEvent) -> Option<()> {
+     if let Some(range) = change.range {
+         if range.start > range.end {
+             return None;
+         }
+-        let start = byte_offset(text, range.start)?;
+-        // Resolve the end from the already located start, avoiding a second
+-        // scan of the unchanged prefix for the usual small ranged edit.
+-        let relative_end = Position::new(
+-            range.end.line - range.start.line,
+-            if range.end.line == range.start.line {
+-                range.end.character - range.start.character
+-            } else {
+-                range.end.character
+-            },
+-        );
+-        let end = start + byte_offset(&text[start..], relative_end)?;
++        let start = char_offset(text, range.start)?;
++        let end = char_offset(text, range.end)?;
+         if let Some(length) = change.range_length
+-            && usize::try_from(length).ok()? != text[start..end].encode_utf16().count()
++            && usize::try_from(length).ok()? != text.slice(start..end).len_utf16_cu()
+         {
+             return None;
+         }
+-        text.replace_range(start..end, &change.text);
++        text.remove(start..end);
++        text.insert(start, &change.text);
+     } else {
+         if change.range_length.is_some() {
+             return None;
+         }
+-        text.clone_from(&change.text);
++        *text = Rope::from_str(&change.text);
+     }
+     Some(())
+ }
+
+ /// LSP lines recognize LF, CRLF and CR. Overlong characters clamp to line end;
+ /// a position inside a UTF-16 surrogate pair cannot identify a UTF-8 boundary.
+-fn byte_offset(text: &str, position: Position) -> Option<usize> {
+-    let mut start = 0;
+-    let bytes = text.as_bytes();
+-    for _ in 0..position.line {
+-        start += text[start..].find(['\r', '\n'])?;
+-        if bytes[start] == b'\r' && bytes.get(start + 1) == Some(&b'\n') {
+-            start += 1;
+-        }
+-        start += 1;
++fn char_offset(text: &Rope, position: Position) -> Option<usize> {
++    let line_index = usize::try_from(position.line).ok()?;
++    let line = text.get_line(line_index)?;
++    let mut end = line.len_chars();
++    while end > 0 && matches!(line.char(end - 1), '\r' | '\n') {
++        end -= 1;
+     }
+-    let mut units = 0;
+-    for (offset, ch) in text[start..].char_indices() {
+-        if units == position.character || ch == '\r' || ch == '\n' {
+-            return Some(start + offset);
+-        }
+-        units += u32::try_from(ch.len_utf16()).ok()?;
+-        if units > position.character {
+-            return None;
+-        }
++    let line = line.slice(..end);
++    let units = usize::try_from(position.character)
++        .ok()?
++        .min(line.len_utf16_cu());
++    let scalar = line.utf16_cu_to_char(units);
++    if line.char_to_utf16_cu(scalar) != units {
++        return None;
+     }
+-    Some(text.len())
++    Some(text.line_to_char(line_index) + scalar)
+ }
+
+ #[cfg(test)]
+diff --git a/crates/recite-lsp/src/server/text_sync/tests.rs b/crates/recite-lsp/src/server/text_sync/tests.rs
+--- a/crates/recite-lsp/src/server/text_sync/tests.rs
++++ b/crates/recite-lsp/src/server/text_sync/tests.rs
+@@ -30,25 +30,31 @@
+         (3, 99, Some(12)),
+         (4, 0, None),
+     ] {
+-        assert_eq!(byte_offset(text, Position::new(line, character)), expected);
++        assert_eq!(
++            rope_byte_offset(text, Position::new(line, character)),
++            expected
++        );
+     }
+-    assert_eq!(byte_offset("", Position::new(0, 99)), Some(0));
++    assert_eq!(rope_byte_offset("", Position::new(0, 99)), Some(0));
+ }
+
+ #[test]
+ fn sequential_changes_use_the_previous_result_and_validate_lengths() {
+     let changes = [edit((0, 1), (0, 3), "x\r\ny"), edit((1, 1), (1, 2), "z")];
+-    assert_eq!(apply_changes("a😀b", &changes).as_deref(), Some("ax\r\nyz"));
++    assert_eq!(
++        apply_rope_changes("a😀b", &changes).as_deref(),
++        Some("ax\r\nyz")
++    );
+     let mut emoji = edit((0, 1), (0, 3), "");
+     emoji.range_length = Some(2);
+     assert_eq!(
+-        apply_changes("a😀b", &[emoji.clone()]).as_deref(),
++        apply_rope_changes("a😀b", &[emoji.clone()]).as_deref(),
+         Some("ab")
+     );
+     emoji.range_length = Some(4);
+-    assert!(apply_changes("a😀b", &[emoji]).is_none());
+-    assert!(apply_changes("abc", &[edit((0, 2), (0, 1), "")]).is_none());
+-    assert!(apply_changes("abc", &[]).is_none());
++    assert!(apply_rope_changes("a😀b", &[emoji]).is_none());
++    assert!(apply_rope_changes("abc", &[edit((0, 2), (0, 1), "")]).is_none());
++    assert!(apply_rope_changes("abc", &[]).is_none());
+ }
+
+ #[test]
+@@ -85,11 +91,11 @@
+ #[test]
+ fn clamped_ranges_and_full_replacements_can_be_combined() {
+     assert_eq!(
+-        apply_changes("abc\r\ndef", &[edit((0, 99), (1, 1), "x")]).as_deref(),
++        apply_rope_changes("abc\r\ndef", &[edit((0, 99), (1, 1), "x")]).as_deref(),
+         Some("abcxef")
+     );
+     assert_eq!(
+-        apply_changes("abc", &[edit((0, 99), (0, 100), "x")]).as_deref(),
++        apply_rope_changes("abc", &[edit((0, 99), (0, 100), "x")]).as_deref(),
+         Some("abcx")
+     );
+     let full = TextDocumentContentChangeEvent {
+@@ -98,12 +104,23 @@
+         text: "😀\nabc".into(),
+     };
+     assert_eq!(
+-        apply_changes("old", &[full.clone(), edit((0, 2), (1, 1), "x")]).as_deref(),
++        apply_rope_changes("old", &[full.clone(), edit((0, 2), (1, 1), "x")]).as_deref(),
+         Some("😀xbc")
+     );
+     let invalid_full = TextDocumentContentChangeEvent {
+         range_length: Some(3),
+         ..full
+     };
+-    assert!(apply_changes("old", &[invalid_full]).is_none());
++    assert!(apply_rope_changes("old", &[invalid_full]).is_none());
+ }
++
++fn apply_rope_changes(
++    original: &str,
++    changes: &[TextDocumentContentChangeEvent],
++) -> Option<String> {
++    super::apply_changes(&Rope::from_str(original), changes).map(|text| text.to_string())
++}
++fn rope_byte_offset(text: &str, position: Position) -> Option<usize> {
++    let rope = Rope::from_str(text);
++    super::char_offset(&rope, position).map(|offset| rope.char_to_byte(offset))
++}

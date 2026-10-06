@@ -1,0 +1,122 @@
+diff --git a/Cargo.lock b/Cargo.lock
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3127,6 +3127,7 @@
+  "recite-ui",
+  "serde",
+  "serde_json",
++ "str_indices",
+  "tempfile",
+  "thiserror 2.0.18",
+  "tracing",
+@@ -3590,6 +3591,12 @@
+ version = "0.1.10"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "5c0e04424e733e69714ca1bbb9204c1a57f09f5493439520f9f68c132ad25eec"
++
++[[package]]
++name = "str_indices"
++version = "0.4.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d08889ec5408683408db66ad89e0e1f93dff55c73a4ccc71c427d5b277ee47e6"
+
+ [[package]]
+ name = "strsim"
+diff --git a/crates/recite-lsp/Cargo.toml b/crates/recite-lsp/Cargo.toml
+--- a/crates/recite-lsp/Cargo.toml
++++ b/crates/recite-lsp/Cargo.toml
+@@ -17,6 +17,7 @@
+ bench-support = []
+
+ [dependencies]
++str_indices = "=0.4.4"
+ crossbeam-channel = "0.5.15"
+ recite-core.workspace = true
+ recite-parser.workspace = true
+diff --git a/crates/recite-lsp/src/position.rs b/crates/recite-lsp/src/position.rs
+--- a/crates/recite-lsp/src/position.rs
++++ b/crates/recite-lsp/src/position.rs
+@@ -51,30 +51,21 @@
+ }
+
+ fn scalar_column_for_utf16(line: &str, character: u32) -> Option<u32> {
+-    let mut utf16 = 0_u32;
+-    let mut scalar = 1_u32;
+-    for value in line.chars() {
+-        if utf16 == character {
+-            return Some(scalar);
+-        }
+-        let next = utf16.saturating_add(u32::try_from(value.len_utf16()).ok()?);
+-        if character < next {
+-            return Some(scalar);
+-        }
+-        utf16 = next;
+-        scalar = scalar.saturating_add(1);
++    let offset = str_indices::utf16::to_byte_idx(line, usize::try_from(character).ok()?);
++    if offset == line.len()
++        && str_indices::utf16::from_byte_idx(line, offset) < usize::try_from(character).ok()?
++    {
++        return None;
+     }
+-    (utf16 == character).then_some(scalar)
++    u32::try_from(str_indices::chars::from_byte_idx(line, offset))
++        .ok()?
++        .checked_add(1)
+ }
+
+ fn utf16_offset_for_scalar_column(line: &str, column: u32) -> u32 {
+-    let scalar_prefix_len = usize::try_from(column.saturating_sub(1)).unwrap_or(usize::MAX);
+-    line.chars()
+-        .take(scalar_prefix_len)
+-        .map(char::len_utf16)
+-        .fold(0u32, |total, width| {
+-            total.saturating_add(u32::try_from(width).unwrap_or(u32::MAX))
+-        })
++    let scalar = usize::try_from(column.saturating_sub(1)).unwrap_or(usize::MAX);
++    let offset = str_indices::chars::to_byte_idx(line, scalar);
++    u32::try_from(str_indices::utf16::from_byte_idx(line, offset)).unwrap_or(u32::MAX)
+ }
+
+ pub(crate) struct DocumentLines<'a> {
+diff --git a/crates/recite-lsp/src/server/text_sync.rs b/crates/recite-lsp/src/server/text_sync.rs
+--- a/crates/recite-lsp/src/server/text_sync.rs
++++ b/crates/recite-lsp/src/server/text_sync.rs
+@@ -108,26 +108,20 @@
+ /// LSP lines recognize LF, CRLF and CR. Overlong characters clamp to line end;
+ /// a position inside a UTF-16 surrogate pair cannot identify a UTF-8 boundary.
+ fn byte_offset(text: &str, position: Position) -> Option<usize> {
+-    let mut start = 0;
+-    let bytes = text.as_bytes();
+-    for _ in 0..position.line {
+-        start += text[start..].find(['\r', '\n'])?;
+-        if bytes[start] == b'\r' && bytes.get(start + 1) == Some(&b'\n') {
+-            start += 1;
+-        }
+-        start += 1;
++    let start = str_indices::lines_crlf::to_byte_idx(text, usize::try_from(position.line).ok()?);
++    if str_indices::lines_crlf::from_byte_idx(text, start) != usize::try_from(position.line).ok()? {
++        return None;
+     }
+-    let mut units = 0;
+-    for (offset, ch) in text[start..].char_indices() {
+-        if units == position.character || ch == '\r' || ch == '\n' {
+-            return Some(start + offset);
+-        }
+-        units += u32::try_from(ch.len_utf16()).ok()?;
+-        if units > position.character {
+-            return None;
+-        }
++    let line = &text[start..];
++    let line = &line[..line.find(['\r', '\n']).unwrap_or(line.len())];
++    let offset = str_indices::utf16::to_byte_idx(line, usize::try_from(position.character).ok()?);
++    if offset < line.len()
++        && str_indices::utf16::from_byte_idx(line, offset)
++            != usize::try_from(position.character).ok()?
++    {
++        return None;
+     }
+-    Some(text.len())
++    Some(start + offset)
+ }
+
+ #[cfg(test)]

@@ -22,8 +22,8 @@ async runtime or replacement stdio transport.
 | --- | --- | --- |
 | [rust-analyzer's lsp-server](https://rust-lang.github.io/rust-analyzer/lsp_server/index.html) | Synchronous protocol framing, initialization and channel transport | Keep the existing dependency. Current upstream still uses zero-capacity reader/writer/dropper channels; a newer release is not an evidenced scheduling fix. |
 | [tracing-subscriber](https://docs.rs/crate/tracing-subscriber/0.3.23) | Structured events, filtering, JSON formatting and monotonic timestamps | Adopt. MIT licensed; documented Rust 1.65 minimum is below this workspace's toolchain. No Tokio runtime is needed. |
-| [async-lsp](https://docs.rs/async-lsp/0.2.4/async_lsp/) | Tower middleware for lifecycle, routing, concurrency limits, cancellation and tracing | Strongest alternative if we replace more protocol orchestration. Keep as a migration candidate, not a demonstrated latency improvement. Recite's snapshot and publication rules still need an owner. |
-| [tower-lsp-server](https://github.com/tower-lsp-community/tower-lsp-server) | Typed asynchronous handlers, transport and request cancellation | Viable framework alternative. Its transport documents that concurrency one disables cancellation; adopting it still requires deliberate ordering and CPU-work offloading. No migration in this experiment. |
+| [async-lsp](https://docs.rs/async-lsp/0.2.4/async_lsp/) | Tower middleware for lifecycle, routing, concurrency limits, cancellation and tracing | Deferred after released-version saturation probes; see [dependency decisions](dependency-decisions.md). Recite's snapshot and publication rules still need an owner. |
+| [tower-lsp-server](https://github.com/tower-lsp-community/tower-lsp-server) | Typed asynchronous handlers, transport and request cancellation | Deferred after ordering/cancellation probes and the deletion inventory; see [dependency decisions](dependency-decisions.md). No framework migration is retained. |
 | [lsp-textdocument](https://docs.rs/lsp-textdocument/0.5.0/lsp_textdocument/) | Document storage and position conversion using our current lsp-types generation | Not a direct replacement for our transaction boundary: source inspection shows surrogate-interior positions rounding down and updates applied sequentially, with an assertion for reversed ranges. Recite rejects malformed batches atomically. Adopting it would still require that validation layer. |
 | [Salsa](https://salsa-rs.github.io/salsa/overview.html) | Dependency tracking and incremental query recomputation | Relevant if manual dependency invalidation becomes the measured bottleneck or maintenance burden. It does not replace protocol transport, and these recovery tails do not establish that need. |
 | [rust-analyzer thread intent](https://rust-lang.github.io/rust-analyzer/src/stdx/thread/intent.rs.html) | Platform scheduling policies for worker and latency-sensitive threads | Useful prior art, not a justification for raising priorities without attribution. No QoS override is retained. |
@@ -200,8 +200,8 @@ also enforces a separate 5 ms repeated-p95 completion budget.
 
 The cancelled-rename writer handoff remains a measured hotspot. A realistic
 stdio/framing/destruction reproduction would be the next useful experiment;
-the bare rendezvous probe did not reproduce its tail. `async-lsp` remains a
-bounded compatibility candidate if its runtime can remove that orchestration
-while preserving notification order, cancellation, bounded work and fresh
-diagnostics. Neither framework migration nor Salsa is justified as an immediate
-performance fix. The undocumented environment switch remains diagnostic only.
+the bare rendezvous probe did not reproduce its tail. Later released-version
+[dependency probes](dependency-decisions.md) defer `async-lsp` after a saturation
+stall and defer Tower after the contract and deletion assessment. Neither
+framework migration nor Salsa is justified as an immediate performance fix.
+The undocumented environment switch remains diagnostic only.

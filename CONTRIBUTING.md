@@ -79,6 +79,8 @@ or replace the release benchmark baseline.
 - Recite is hosted on GitHub. Use `gh` with `--repo plethu/recite` for issue and pull-request operations.
 - Recite is dual-licensed public open source under MIT OR Apache-2.0. Do not submit proprietary content, copied private material, or dependency code that is incompatible with that distribution.
 - The production spec is in `docs/recite-production-spec.md`.
+- LSP dependency choices, experiments and reevaluation triggers are recorded in
+  [the dependency decision record](docs/design/lsp-cancellation/dependency-decisions.md).
 - The trusted pull-request policy in `.github/workflows/trusted-policy.yml`
   runs base-owned policy code with read-only permissions. It fetches proposed
   commits as Git objects for metadata checks and never checks out or executes

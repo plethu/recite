@@ -1,0 +1,26 @@
+valid full: old=true, strict=true, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+valid ranged: old=true, strict=true, generated=Ok(TextDocumentContentChangePartial(TextDocumentContentChangePartial { range: Range { start: Position { line: 0, character: 0 }, end: Position { line: 0, character: 1 } }, range_length: None, text: "r" }))
+range missing end: old=false, strict=false, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+range wrong type: old=false, strict=false, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+negative character: old=false, strict=false, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+rangeLength wrong type: old=false, strict=false, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+valid range bad length: old=false, strict=false, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+full with length: old=true, strict=true, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+range null: old=true, strict=true, generated=Ok(TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument { text: "replacement" }))
+malformed second change: old=false, generated=true, strict=false
+initialize input={"capabilities":{},"processId":null,"rootUri":null}
+old={"capabilities":{},"processId":null,"rootUri":null}
+generated={"capabilities":{},"processId":null,"rootUri":null}
+initialize input={"capabilities":{},"processId":null,"rootUri":null,"workspaceFolders":null}
+old={"capabilities":{},"processId":null,"rootUri":null}
+generated={"capabilities":{},"processId":null,"rootUri":null,"workspaceFolders":null}
+initialize input={"capabilities":{},"processId":null,"rootUri":null,"workspaceFolders":[]}
+old={"capabilities":{},"processId":null,"rootUri":null,"workspaceFolders":[]}
+generated={"capabilities":{},"processId":null,"rootUri":null,"workspaceFolders":[]}
+textdocument surrogate-interior byte offset=1 (rounded toscalarstart)
+textdocument invalid batch: panicked after mutation; content=changed, version=1
+tower concurrency4 notification order before release: ["first started", "second finished"]
+tower concurrency1 cancellation: no response within250ms
+tower completed response, cancellation accepted before writer release: {"id":2,"jsonrpc":"2.0","result":"answer"}
+async-lsp limit1: futures started=1, released=true, responses=Err(Elapsed(()))
+async-lsp limit2: futures started=2, released=true, responses=Ok([Object {"id": Number(1), "jsonrpc": String("2.0"), "result": String("ready")}, Object {"id": Number(2), "jsonrpc": String("2.0"), "result": String("ready")}])
