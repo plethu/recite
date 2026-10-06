@@ -3,13 +3,16 @@ use crate::{
     diagnostics::{clear_diagnostics, publish_diagnostics},
     workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig},
 };
-use crossbeam_channel::{Receiver, Select, Sender, bounded};
+use crossbeam_channel::{Receiver, bounded};
 use lsp_types::{InitializeParams, PublishDiagnosticsParams, Uri};
 use recite_compiler::authoring::CancellationToken;
 use recite_ui::UiCatalog;
 use std::{
     collections::BTreeMap,
-    sync::Arc,
+    sync::{
+        Arc,
+        mpsc::{SyncSender, sync_channel},
+    },
     thread::{self, JoinHandle},
 };
 
@@ -42,25 +45,23 @@ pub(super) struct QueryResult {
 }
 
 pub(super) struct Workers {
-    pub(super) analysis: Sender<AnalysisJob>,
+    pub(super) analysis: SyncSender<AnalysisJob>,
     pub(super) analyzed: Receiver<AnalysisResult>,
-    pub(super) query: Sender<QueryJob>,
+    pub(super) query: SyncSender<QueryJob>,
     pub(super) queried: Receiver<QueryResult>,
     analysis_thread: JoinHandle<()>,
     query_thread: JoinHandle<()>,
 }
 impl Workers {
     pub(super) fn start(params: InitializeParams, catalog: UiCatalog) -> Self {
-        let (analysis, inputs) = bounded::<AnalysisJob>(1);
+        let (analysis, inputs) = sync_channel::<AnalysisJob>(1);
         let (outputs, analyzed) = bounded(1);
         let analysis_thread = thread::spawn(move || {
             let catalog = Arc::new(catalog);
             let mut cached: Option<Arc<LspWorkspace>> = None;
-            // Committed selection parks directly instead of yielding while an
-            // empty bounded receiver backs off. Keep the same queue capacity.
-            let mut selection = Select::new_biased();
-            selection.recv(&inputs);
-            while let Ok(job) = selection.select().recv(&inputs) {
+            // Each input has one consumer. Keep capacity one and use the
+            // standard blocking receive; results remain selectable Crossbeam channels.
+            while let Ok(job) = inputs.recv() {
                 tracing::trace!(phase = "analysis_start", revision = job.through);
                 let result = analyze(&params, &catalog, cached.as_deref(), &job);
                 tracing::trace!(phase = "analysis_end", revision = job.through);
@@ -79,12 +80,10 @@ impl Workers {
                 }
             }
         });
-        let (query, inputs) = bounded::<QueryJob>(1);
+        let (query, inputs) = sync_channel::<QueryJob>(1);
         let (outputs, queried) = bounded(1);
         let query_thread = thread::spawn(move || {
-            let mut selection = Select::new_biased();
-            selection.recv(&inputs);
-            while let Ok(job) = selection.select().recv(&inputs) {
+            while let Ok(job) = inputs.recv() {
                 tracing::trace!(phase = "query_start", serial = job.serial);
                 let result = job.query.execute(&job.workspace, &job.control);
                 tracing::trace!(phase = "query_end", serial = job.serial);

@@ -3,6 +3,7 @@
 import argparse
 import importlib.util
 import json
+import math
 from pathlib import Path
 
 from lsp_session_native import distribution
@@ -52,10 +53,21 @@ def summarize(directory, *, cycles=40, edits=50):
             "server_cpu_ms": distribution([row["timing"]["server_cpu_ms"] for row in rows]),
             "workloads": tails,
         }
-        if all("editing_server_cpu_ms" in row["timing"] for row in rows):
+        editing_present = ["editing_server_cpu_ms" in row["timing"] for row in rows]
+        if any(editing_present) and not all(editing_present):
+            raise ValueError("editing CPU accounting must cover every measured cycle")
+        if all(editing_present):
             sides[side]["editing_server_cpu_ms"] = distribution([row["timing"]["editing_server_cpu_ms"] for row in rows])
         if idle:
+            if len(idle) != 6 or any(not math.isfinite(row[key]) or row[key] < 0
+                                     for row in idle for key in ("elapsed_ms", "server_cpu_ms")):
+                raise ValueError("idle CPU accounting requires six valid intervals")
+            if any(row["elapsed_ms"] <= 0 for row in idle):
+                raise ValueError("idle intervals must have positive elapsed time")
             sides[side]["settled_idle"] = idle
+    for metric in ("editing_server_cpu_ms", "settled_idle"):
+        if (metric in sides["control"]) != (metric in sides["candidate"]):
+            raise ValueError("candidate and control require the same CPU accounting")
     if (len(sides["control"]["result_sha256"]) != 1
             or sides["control"]["result_sha256"] != sides["candidate"]["result_sha256"]):
         raise ValueError("candidate and control result fingerprints differ")

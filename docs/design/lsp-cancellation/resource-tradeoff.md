@@ -76,3 +76,32 @@ writer receive. A blocked-writer fixture now includes a large queued response.
 Measure this independently against the parked-worker checkpoint before
 combining it with any worker-channel experiment. Functional correctness and
 removing allocations do not by themselves establish a latency improvement.
+
+The local standard gate passed three alternating pairs with matching result
+hashes and no suspected regression. Large-fixture completion medians improved
+in all pairs: 8.650 to 6.715 ms, 9.024 to 7.253 ms and 8.776 to 6.813 ms
+(19.6–22.4%). Other workloads remained within the established regression policy.
+The compact per-pair evidence is in `resource-results.json`; this result alone
+does not establish cross-platform recovery or CPU behaviour.
+
+## Standard worker input prototype
+
+Each worker input has exactly one receiver and is never part of a coordinator
+selection. A capacity-one `std::sync::mpsc::sync_channel` can therefore replace
+these two inputs while leaving selectable Crossbeam results and stdio channels
+intact. Disconnect and join ownership stay the same. This removes the special
+single-operation `Select` receive without adding a dependency.
+
+[Rust 1.96's bounded receive](https://github.com/rust-lang/rust/blob/1.96.0/library/std/src/sync/mpmc/array.rs)
+registers and parks after an empty attempt, whereas pinned Crossbeam bounded
+receive snoozes first. This is an implementation distinction, not a guarantee
+that every standard-channel operation is yield-free. Partial slot publication
+and rendezvous completion can still back off. The open
+[Crossbeam selection backoff proposal](https://github.com/crossbeam-rs/crossbeam/pull/1251)
+also illustrates why the existing selection workaround's scheduling behaviour
+must remain protected by measured completion budgets.
+
+Compare standard inputs against the deferred-payload checkpoint so the two
+effects remain separable. Retain them only with semantic/hash parity, equivalent
+resource behaviour and passing completion/recovery tails on all three hosts.
+Neither this experiment nor the ownership change changes protocol queue bounds.

@@ -54,7 +54,7 @@ class ServerComparisonTests(unittest.TestCase):
             self.assertEqual(comparison.summarize(root)["changes"]["recovery_ms"]["median"]["percent"], 0)
             path = root / "fixed-1.json"
             original = path.read_text()
-            for corruption in ("parity", "oracle", "driver", "pacing", "version", "cpu", "incomplete"):
+            for corruption in ("parity", "oracle", "driver", "pacing", "version", "cpu", "editing_partial", "idle_partial", "incomplete"):
                 report = json.loads(original)
                 if corruption == "parity":
                     report["checkpoints"][6]["result_sha256"] = "different"
@@ -68,6 +68,10 @@ class ServerComparisonTests(unittest.TestCase):
                     report["result_fingerprint_version"] = 1
                 elif corruption == "cpu":
                     report["checkpoints"][-1]["timing"]["server_cpu_ms"] = float("nan")
+                elif corruption == "editing_partial":
+                    report["checkpoints"][-1]["timing"]["editing_server_cpu_ms"] = 10
+                elif corruption == "idle_partial":
+                    report["settled_idle"] = {"elapsed_ms": 3000, "server_cpu_ms": 0}
                 else:
                     report["checkpoints"].pop()
                 path.write_text(json.dumps(report))
