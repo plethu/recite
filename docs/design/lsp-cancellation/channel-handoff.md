@@ -51,11 +51,12 @@ production timing budget is inferred from this synthetic probe.
 
 ## Reproduction
 
-The manual `LSP channel handoff experiment` workflow runs the exact same benchmark
-on Ubuntu 24.04, Windows Server 2025 and macOS 15:
+The optional channel step in the existing session workflow runs the exact same
+benchmark on Ubuntu 24.04, Windows Server 2025 and macOS 15:
 
 ```sh
-gh workflow run lsp-channel-probe.yml --repo plethu/recite --ref feat/lsp-cancellation
+gh workflow run ci.yml --repo plethu/recite --ref feat/lsp-cancellation \
+  -f lsp_sessions_only=true -f lsp_channel_probe=true
 ```
 
 To run locally, build with `cargo bench --locked -p recite-benchmarks --bench

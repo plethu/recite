@@ -3,6 +3,9 @@ name: LSP sessions
 on:
   workflow_call:
     inputs:
+      channel_probe:
+        type: boolean
+        default: false
       driver_control_ref:
         type: string
         default: ''
@@ -14,6 +17,10 @@ on:
         default: false
   workflow_dispatch:
     inputs:
+      channel_probe:
+        description: Compare isolated Crossbeam blocking and selected receives
+        type: boolean
+        default: false
       driver_control_ref:
         description: Optional historical harness revision for alternating driver comparisons
         type: string
@@ -76,6 +83,12 @@ jobs:
           python -m pip install -r scripts/lsp-session-requirements.txt
           pnpm install --frozen-lockfile
           pnpm --filter recite-vscode run build
+      - name: Build and measure isolated channel handoffs
+        if: inputs.channel_probe
+        run: |
+          cargo bench --locked -p recite-benchmarks --bench channel_handoff --no-run --message-format=json > target/channel-build.jsonl
+          python -c 'import json, pathlib; artifacts = [json.loads(line) for line in pathlib.Path("target/channel-build.jsonl").read_text().splitlines()]; binary = next(item["executable"] for item in artifacts if item.get("target", {}).get("name") == "channel_handoff" and item.get("executable")); pathlib.Path("target/channel-binary.txt").write_text(binary)'
+          python scripts/measure-lsp-channel-handoff.py --binary "$(cat target/channel-binary.txt)" --output target/lsp-sessions/channel-handoff.json
       - name: Install Linux display dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libasound2t64 libnss3 libgbm1 libgtk-3-0
