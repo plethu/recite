@@ -35,20 +35,19 @@ unmodified and review matching upstream views when updating an overridden templa
 ## Generator decision
 
 The 2026-10-07 investigation built 19 alternative configurations across 15 generators and an Astro
-7.3.5/Starlight 0.42.4 baseline. **Zola 0.23.6 with DevLab 0.8.0 and Astro remain finalists.** The
-documentation-focused screen favored DevLab; it does not establish a whole-site winner. Compare
-authored landing/showcase layouts, how-to discovery and the docs shell together before choosing. No
-recommendation has replaced production.
+7.3.5/Starlight 0.42.4 baseline, followed by matched complete-site prototypes. **Recommend Astro
+with Starlight for reference pages and authored layouts for the landing, how-tos and showcase.**
+Zola 0.23.6/DevLab 0.8.0 meets the site structure and remains the strongest native alternative, but
+its pinned highlighter cannot consume the required centralized OKLCH tokens. Production remains Hugo
+until the migration passes its own gates.
 
-Screens used three real pages, a wide table, offline requests, positive/negative/repeated-positive
-search, keyboard result activation, actual WASM execution, 390px reflow and sampled axe checks. Most
-screens borrowed playground assets; DevLab, Maudit and Astro separately proved native
-TypeScript/worker bundling. Finalists also exercised nested same-name pages, malformed frontmatter
-and recovery. Search was driven through each tool's native events and result widgets.
+Screens tested real content, tables, offline search, hit/miss/hit queries, keyboard activation, WASM
+execution, 390px reflow and sampled axe checks. DevLab, Maudit and Astro also proved native
+TypeScript/worker bundling; finalists tested same-name paths and malformed-content recovery.
 
 | Candidate                                                                    | Decision and concrete evidence                                                                                                                                      |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Zola + DevLab](https://codeberg.org/RiPetitor/devlab-theme), 0.23.6 / 0.8.0 | Docs finalist: working shell, search, runner and native preview. Small TOC override fixes nested interactive elements.                                              |
+| [Zola + DevLab](https://codeberg.org/RiPetitor/devlab-theme), 0.23.6 / 0.8.0 | Native reserve: complete-site layouts, search, runner and responsive preview work. Giallo blocks token-based syntax colors.                                         |
 | [Zensical](https://zensical.org/), 0.0.68                                    | Strong workflow, active Material maintainers; Rust/Python pipeline. Three critical search accessibility defects persist after initialization and interaction.       |
 | [docs-gen](https://github.com/yhirose/docs-gen), 0.7.0                       | Compact reserve: runner/search/routes/errors work. Young single-maintainer project; mobile table reflow and search semantics need repairs.                          |
 | [RustPress](https://github.com/ZenithInc/rust-press), 0.1.11                 | Reserve: runner/search/routes/reflow work. Search is JavaScript; WASM asset is a placeholder. MVP with contrast/scrolling gaps.                                     |
@@ -75,40 +74,64 @@ parts. They were not measured as complete searchable docs products.
 
 ## Tradeoffs and adoption gates
 
-DevLab built the existing 35 Markdown files and passed internal-link checks. First Scene passed
-sampled axe/reflow checks in both three-page and full-corpus builds. Mobile menu keyboard opening,
-Escape and focus restoration worked. This is not a corpus-wide accessibility audit.
+Both complete-site prototypes passed scene execution/recovery, repeated search and return navigation
+in Chromium, Firefox and WebKit. Five page types passed three widths in both themes; reading and
+native menus worked without JavaScript. Both preserved published routes, links and fragments and
+excluded three drafts. Showcase records were labelled internal fixtures.
+
+The 35-route audit found syntax-contrast failures on three Zola pages. Astro’s table-focus gap was
+repaired through its native Sätteri pipeline; keyboard scrolling and contrast of previously clipped
+cells passed follow-up checks. All supplied callout roles passed both themes. A shared-style repair
+restored active-sidebar contrast; axe had classified its 1:1 contrast as incomplete. Review those
+results too. These checks do not establish complete accessibility or visual acceptance.
+
+Both use small adapters and upstream search/theme/navigation. Zola’s responsive docs popover needed
+a few lines. Astro validates showcase fields through its content schema; Zola fails at template use
+and needs an HTTPS guard. Both rejected malformed records and recovered. Keep themes unmodified.
 
 Zola is established; MIT-licensed DevLab is younger and predominantly single-maintainer. Pin its
-revision and keep overrides small. Zola's EUPL build-tool license does not automatically license
-authored content. Native esbuild plus `zola serve` supplied preview without a custom watcher. Mise's
-Go backend installs esbuild; the resulting build needs neither Go nor Node at runtime. The existing
-pinned djLint **Tera profile** formatted/linted real HTML templates without changing component
-semantics. Generic HTML formatting mishandles Tera 2 typed attributes; configure the template
-profile explicitly. Production asset hashes changed correctly; static live reload serves new code
-without re-rendering the HTML hash.
+revision and keep overrides small. Zola’s EUPL build-tool license does not automatically license
+authored content.
 
-Astro has smoother component editing: about 95 ms versus DevLab's 1.35 s full reload here. Markdown
-updates were about 0.87/1.37 s. Different TypeScript observation methods prevent a latency ratio.
-Landing HTML plus initially requested JS/CSS was about 24/30 KB gzip respectively, excluding images,
-deferred search and shared WASM. DevLab simplifies build dependencies; it does not beat Astro's
-client payload or equal every aspect of its component DX.
+Authored CSS uses centralized OKLCH tokens, explicit layers, native scopes, logical sizing and
+reading measures such as `min(70ch, 44rem)`. Popover/dialog supply native interaction behavior;
+isolation needs a demonstrated stacking purpose. Astro’s Shiki CSS-variable theme uses those tokens
+and the existing Recite grammar. Zola 0.23.6 pins Giallo 0.5.2: disposable extra-theme builds
+accepted hex and rejected CSS variables and OKLCH. Do not rewrite numbered color classes or remove
+highlighting to conceal the gap. Vendor styles contain fallback literals; authored values and the
+selected palette follow the strict contract.
 
-Five alternating-order warm samples measured about 55 ms for DevLab with TypeScript bundling, 158 ms
-for Maudit with warm Cargo/Pagefind, and 1.39 s for Astro with bundling/indexing. Shared WASM
-compilation was excluded. These local build timings are neither browser latency nor CI budgets.
+Three alternating full-corpus preview rounds used native tools. Zola’s `serve --debounce 100` and
+esbuild CSS/TypeScript bundling gave about 275/329/365 ms Markdown/template/CSS feedback; Astro gave
+888/156/107 ms. Both retained source after CSS changes and ran after TypeScript reloads. This
+supersedes Zola’s earlier 1.35 s result with default debounce; no custom watcher was needed.
+
+Landing HTML plus initially requested JS/CSS was about 29 KB gzip for Zola and 50 KB for Astro.
+Astro’s stock idle-loaded search UI accounted for about 26.5 KB; images, search queries and shared
+lazy WASM were excluded. Zola also built the full corpus in about 110 ms versus Astro’s reported 1.5
+s. These local observations are neither browser latency nor CI budgets. Astro earns its added build
+dependency through native token support, typed content and component editing; static hosting needs
+no Node server or hydrated framework. Zola remains useful if those boundaries improve.
+
+Mise owns tool versions. Native esbuild/Zola builds need no Node/Go runtime; mise’s Go backend
+installs esbuild. Pinned djLint’s Tera profile handles Tera 2 templates; generic HTML formatting
+damages typed attributes. Astro uses dprint. CSS passed standard Stylelint rules plus exclusive
+OKLCH literals. Carry these versioned settings into migration checks.
 
 Before landing a migration, preserve routes, fragments, landing presentation, identity assets and
 playground limits. Pass the existing Chromium/Firefox/WebKit suite across all pages and both themes,
-including lifecycle recovery and JavaScript-disabled reading. Use pinned mise tools and versioned
+including lifecycle recovery, keyboard table scrolling and JavaScript-disabled reading. Exclude
+internal showcase/standards fixtures from publication. Use pinned mise tools and versioned
 format/lint configuration. Verify translated navigation/messages when adding another locale. Do not
-fork navigation/search to make the choice work.
+fork navigation/search to make the choice work. Keep page presentation schema-backed rather than
+inferred from URL exclusions; map the supplied callout roles to the same design tokens.
 
-Reevaluate Maudit after path-safe IDs, contextual errors and lossless formatting; docs-gen/RustPress
-after accessibility repairs and demonstrated maintenance; Guidebook after supported navigation and
-template extension seams; Goyo after its search fix. Reconsider Astro if interactive docs need
-richer composition or DevLab requires large behavior overrides.
+Reevaluate Maudit after safe paths, contextual errors and lossless formatting; docs-gen/RustPress
+after accessibility repairs and demonstrated maintenance; Guidebook after navigation/extension
+seams; Goyo after its search fix. Reevaluate Zola when highlighting supports semantic variables
+without color-class rewriting, or the palette requirement changes. No upstream issue was posted.
 
 Detailed inputs, configurations, revisions, harnesses and raw evidence are archived locally at
-`.git/branch-archives/rec-206/site-candidates-2026-10-07.tar.gz`. Experiments stay outside
-maintained source; this guide preserves the portable decision and its limits.
+`.git/branch-archives/rec-206/site-candidates-2026-10-07.tar.gz` and `site-whole-2026-10-07.tar.gz`
+in the same directory. Experiments stay outside maintained source; this guide preserves the portable
+decision and its limits.
