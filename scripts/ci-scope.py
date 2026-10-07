@@ -109,6 +109,7 @@ def lanes_for_path(path, *, base=None, head=None):
         in {
             "flake.nix",
             "flake.lock",
+            "mise.packaging.toml",
             ".github/workflows/writer-packages.yml",
             "scripts/check-writer-desktop-links.py",
         }

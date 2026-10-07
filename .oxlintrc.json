@@ -1,7 +1,6 @@
 {
   "ignorePatterns": [
     "docs-site/src/client/generated/**",
-    "docs/archive/**",
     "**/node_modules/**",
     "**/target/**",
     "docs-site/dist/**",

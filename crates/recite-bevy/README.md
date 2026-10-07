@@ -22,7 +22,7 @@ macro. Export native declarations with `ReciteSchema::export_json_with_producer`
 lower-level `export_json` emits an unowned canonical manifest.
 
 See [conformance](CONFORMANCE.md) for all 26 published scenario classifications and
-[performance](PERFORMANCE.md) for a reproducible headless probe.
+[performance](#performance) for a reproducible headless probe.
 
 ## Installing and upgrading
 
@@ -41,3 +41,16 @@ the host schema, rebuild the `.recitec` assets, and run `recite check-fresh <pro
 loading them. An active session keeps the compiled revision it started with; start a new session
 after an accepted import to use rebuilt content. Preserve authored line, choice, and effect IDs when
 editing source, and test restore from any save format your game intends to carry across the upgrade.
+
+## Performance
+
+Run `CARGO_TARGET_DIR=<disk-backed target> scripts/probe-bevy-performance.sh` from the repository
+root. The script builds the CPU-only Bevy example once, compiles the published runtime-surface
+fixture outside the measured commands, then times separate child processes with Python's external
+wall timer and `wait4` resource usage. There are no CI thresholds. The report is retained at
+`$CARGO_TARGET_DIR/recite-bevy-probe/performance.txt`.
+
+The
+[September 2026 observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#bevy-performance)
+record one host/profile. Rerun the probe for the candidate under investigation; those values are not
+a current baseline or regression budget.

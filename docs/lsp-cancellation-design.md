@@ -80,7 +80,7 @@ open-file live heap from about 90.1 to 83.9 MiB and per-operation completion all
 11.3 MiB. Peak RSS fell only about 0.5–0.6%; allocation savings do not imply equivalent resident
 memory savings. These are dated local observations, not release or cross-platform budgets. Raw
 profiles and identities remain in
-[`final-resource-evidence.json.gz`](archive/lsp-optimisation/final-resource-evidence.json.gz).
+[`final-resource-evidence.json.gz`](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/final-resource-evidence.json.gz).
 
 Reopen further optimisation when a practical profile shows:
 

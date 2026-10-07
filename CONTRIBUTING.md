@@ -140,8 +140,10 @@ extending the external harness's ownership. A replacement must reduce total main
 driver interference while preserving the gate. Expand Node only for a concrete editor/frontend need.
 
 Keep current ownership, commands, limits and reopening conditions in their existing guides.
-Concluded reports belong in Git or PR history; retain raw assets only when they support a decision
-or reproduction. Historical milestone counts and prose are not CI contracts.
+Concluded reports belong in Git or PR history. Raw captures, benchmark output and disposable probes
+belong under ignored `target/` or a local archive, rather than in the maintained source tree. Keep
+shared regression inputs in their fixture owner. Historical milestone counts and prose are not CI
+contracts.
 
 ## Project Notes
 

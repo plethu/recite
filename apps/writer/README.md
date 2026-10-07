@@ -48,8 +48,8 @@ Creating a dialogue PO catalogue from the Localise workspace requires GNU gettex
 `PATH`). Install gettext before running the writer's full test gate, which exercises real catalogue
 creation. Existing PO editing works without it. See [the localisation workflow](localisation.md).
 
-The writer uses Freya routing for workspace [history and links](navigation.md), including
-Back/Forward across scenes and the translation queue.
+The writer uses Freya routing for workspace [history and links](guide.md#navigation-and-links),
+including Back/Forward across scenes and the translation queue.
 
 Flatpak, Nix, and native preview package definitions and artifact checks are available; see
 [packaging](packaging.md) for build instructions, desktop-link support and the remaining platform

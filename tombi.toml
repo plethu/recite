@@ -6,7 +6,6 @@ toml-version = "v1.0.0"
 exclude = [
     "**/target/**",
     "**/node_modules/**",
-    "**/docs/archive/**",
     "**/fixtures/synthetic/tiny/**",
     "**/fixtures/realistic/v1-pack/**"
 ]

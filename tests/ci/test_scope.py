@@ -27,7 +27,7 @@ class ScopeTests(unittest.TestCase):
             "docs/recite-production-spec.md",
             "README.md",
             "apps/writer/acceptance.md",
-            "apps/writer/packaging/README.md",
+            "apps/writer/packaging.md",
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "maintainability"})
@@ -93,6 +93,9 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(
             selected("scripts/maintainability/exceptions.toml"), {"docs", "maintainability"}
         )
+
+    def test_optional_packager_environment_selects_native_packages(self):
+        self.assertEqual(selected("mise.packaging.toml"), {"packages", "maintainability", "docs"})
 
     def test_core_changes_keep_windows_and_benchmarks(self):
         self.assertEqual(

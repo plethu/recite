@@ -18,7 +18,6 @@
     "docs-site/src/client/generated/**",
     "**/__pycache__/**",
     ".venv/**",
-    "docs/archive/lsp-optimisation/**",
     "fixtures/schema/invalid/**",
     "fixtures/schema/valid/unsorted_manifest.json",
     "fixtures/synthetic/tiny/**",

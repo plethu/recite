@@ -1,4 +1,6 @@
 /target/
+# Disposable investigation reports are local artifacts; decisions belong in current guides.
+/docs/archive/
 /.flatpak-builder/
 /crates/recite-benchmarks/target/
 **/*.rs.bk

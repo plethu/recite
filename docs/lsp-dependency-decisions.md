@@ -64,12 +64,13 @@ existing code is not evidence that Python is the best default for new tooling. C
 learning, setup, debugging, runtime interference, dependency footprint and the cost of replacing the
 whole owner. Cross-platform counters alone do not distinguish Python from Go.
 
-The [bounded language probes](archive/lsp-optimisation/tooling-language-evidence.json.gz) preserve
-source, dependency locks and Linux observations. Rust/sysinfo and Go/gopsutil matched deliberate
-memory/CPU/thread/descriptor growth. Node's existing JSON-RPC client and the Go client matched
-initialize, open/edit diagnostics and definition against the Python control. Go also sampled the
-live server, shut it down and rejected reads from the reaped child. These are critical seams, not
-complete ports or comparative end-to-end performance measurements.
+The
+[bounded language probes](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/tooling-language-evidence.json.gz)
+preserve source, dependency locks and Linux observations. Rust/sysinfo and Go/gopsutil matched
+deliberate memory/CPU/thread/descriptor growth. Node's existing JSON-RPC client and the Go client
+matched initialize, open/edit diagnostics and definition against the Python control. Go also sampled
+the live server, shut it down and rejected reads from the reaped child. These are critical seams,
+not complete ports or comparative end-to-end performance measurements.
 
 | Option                         | Benefit and remaining cost                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

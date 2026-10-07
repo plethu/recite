@@ -47,7 +47,7 @@ maintainability_is_supported_extension() {
 
 maintainability_is_excluded_path() {
   case "$1" in
-    target/* | docs/archive/* | include/recite.h | fixtures/generated/* | \
+    target/* | include/recite.h | fixtures/generated/* | \
       editors/vscode/src/messages.generated.js | \
       editors/recite-neovim/lua/recite_messages.lua | \
       editors/recite-neovim/lua/recite_diagnostics.lua | \

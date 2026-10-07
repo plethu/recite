@@ -129,11 +129,11 @@ jobs:
           python tests/writer-packaging/check.py
           python scripts/package-writer.py --platform '${{ matrix.platform }}' --check-config > /dev/null
 
-      - name: Install pinned cargo-packager
-        run: cargo install cargo-packager --version 0.11.8 --locked
+      - name: Install pinned native packager
+        run: mise -E packaging install cargo:cargo-packager
 
       - name: Build native package preview
-        run: python scripts/package-writer.py --platform '${{ matrix.platform }}'
+        run: mise -E packaging exec -- python scripts/package-writer.py --platform '${{ matrix.platform }}'
 
       - name: Inspect artifact and run installed CLI
         run: python scripts/check-writer-package.py --platform '${{ matrix.platform }}' --arch '${{ matrix.arch }}' target/writer-packages/${{ matrix.platform }}

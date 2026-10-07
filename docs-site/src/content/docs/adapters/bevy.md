@@ -112,7 +112,7 @@ for plural metadata and localisation errors directly, plus published error categ
 through a real App and native AssetServer refresh. Its
 [26-case conformance report](https://github.com/plethu/recite/blob/main/crates/recite-bevy/CONFORMANCE.md)
 distinguishes exact, equivalent, gated, and unrun scenarios. The
-[headless performance probe](https://github.com/plethu/recite/blob/main/crates/recite-bevy/PERFORMANCE.md)
+[headless performance probe](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#performance)
 records load, idle, active, and retained-revision observations without CI timing thresholds. See the
 [adapter contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md) and
 [acceptance matrix](https://github.com/plethu/recite/blob/main/docs/adapter-acceptance-matrix.md).

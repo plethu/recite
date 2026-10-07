@@ -81,7 +81,7 @@ selecting a different entry.
 Entries navigate within the current scene or across an open project using the extracted file/block
 comments. Unresolvable entries remain visible without a fabricated navigation target. Large beats
 retain the script's 32-entry paging; selection from the queue reveals the relevant page. See
-[navigation](navigation.md) for workspace history and links.
+[navigation](guide.md#navigation-and-links) for workspace history and links.
 
 ## Plurals, variants and preview
 

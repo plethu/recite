@@ -8,7 +8,6 @@
   "NoColor": false,
   "Exclude": [
     "^docs-site/src/client/generated/",
-    "^docs/archive/lsp-optimisation/",
     "^fixtures/",
     "^include/recite\\.h$",
     "^editors/recite-tree-sitter/src/",

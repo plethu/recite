@@ -5,7 +5,7 @@ set -euo pipefail
 files=()
 while IFS= read -r -d '' path; do
   case "$path" in
-    docs/archive/* | scripts/maintainability/*.sh | tests/editor-parity/hostile_cases.sh) continue ;;
+    scripts/maintainability/*.sh | tests/editor-parity/hostile_cases.sh) continue ;;
   esac
   files+=("$path")
 done < <(git ls-files -z '*.sh')
