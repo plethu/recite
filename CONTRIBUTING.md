@@ -161,16 +161,6 @@ milestone counts and prose are not CI contracts.
   repository's deterministic fixture gate also performs static workflow assertions. Pinned
   `actionlint` validates workflow syntax, expressions and reusable-workflow wiring in CI and the
   complete local gate.
-- Current development is issue-led and branch-based, using short-lived, purpose-first branches from
-  `main` under `feat/`, `fix/`, `refactor/`, `perf/`, `ci/`, `docs/`, `test/`, `build/`, `chore/`,
-  `spike/`, `release/`, `security/`, or `integration/`; do not prefix a branch with an issue number.
-  For milestone work, the coordinator creates one purpose-first `integration/<short-kebab-topic>`
-  branch from `main`. Bounded slices use isolated normal purpose-first branches or worktrees based
-  on it, do not open issue-slice pull requests, and are reviewed and mechanically integrated by the
-  coordinator. At a stable checkpoint, exactly one protected integration pull request targets
-  `main`; apply the `workflow/integration` label and use the milestone tracking issue in its title.
-  Commit subjects always begin with `[REC-N]` and a concise conventional-commit-style subject, with
-  at most one explanatory body sentence and no agent-attribution trailers.
 - The canonical local quality gate is `mise exec -- just check` (`scripts/verify.sh`). It loads the
   scoped `maintainability` mise environment for the pinned ast-grep check. GitHub Actions selects
   affected lanes on pushes to `main` and pull requests (`.github/workflows/ci.yml`), then validates
@@ -179,6 +169,41 @@ milestone counts and prose are not CI contracts.
   and branch protection remain authoritative for the final protected PR. Focused checks are
   acceptable for narrow documentation or instruction-only changes; run the full gate locally for
   broad or high-risk code changes.
+
+## Change and review workflow
+
+Start standalone work from `main` on a short-lived `<kind>/<short-kebab-topic>` branch. Supported
+kinds are `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`, `chore`, `spike`,
+`release`, `security` and `integration`. Never prefix a branch with an issue number.
+
+Commit subjects begin with `[REC-N] <type>(optional-scope): <subject>`, with at most one explanatory
+body sentence and no agent-attribution trailers. Run `scripts/check-git-policy.sh` locally.
+Standalone PR titles use the same issue code as every commit in their range; the body includes
+`Closes #N`, `Fixes #N` or `Resolves #N` matching that title.
+
+Milestone work uses a coordinator-owned `integration/<short-kebab-topic>` branch from `main`.
+Delegated slices use isolated purpose-first branches/worktrees at its stated base SHA, do not open
+slice PRs, and are reviewed before mechanical integration. The final PR targets `main`, carries
+`workflow/integration`, and uses the milestone tracking issue's code in its title and closing token.
+Its commits may address multiple issues; list accepted slices in the PR. Agent delegation procedures
+live in the [GitHub workflow skill](.agents/skills/recite-github-pm/SKILL.md#authorized-delegation).
+
+Protected `main` requires signed commits, required CI and resolved review threads. Maintainer
+approval remains authoritative; optional automated reviews are advisory. The
+[merge helper reference](.agents/skills/recite-github-pm/references/github-merge-details.md)
+explains the current-head checks and solo-maintainer approval path. Verify linked issue and
+milestone state after merging. Do not bypass this path with direct pushes to `main`.
+
+## Instructions and skills
+
+`AGENTS.md` routes agents to repository contracts and the four Recite-specific skills under
+`.agents/skills/`. Humans can use those procedures directly; no personal skill collection or
+machine-local instruction file is required. Contributor requirements belong here or in their owning
+contract, and enforceable rules belong in versioned configuration and checks.
+
+Maintainers may keep general skills, agent/model preferences and personal working agreements in
+their own agent configuration. Do not reference them as repository prerequisites, import a
+maintainer's home-directory instructions, or copy a general skill collection into this checkout.
 
 ## CI coverage
 

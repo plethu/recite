@@ -60,8 +60,8 @@ size is available; do not add caches, custom representations or dependencies wit
 the benefit justifies their maintenance cost. Performance and maintainability are joint acceptance
 criteria: a roughly 5% slowdown can be acceptable for a substantial net simplification, subject to
 relevant workload evidence and unchanged correctness. The
-[final LSP resource investigation](archive/lsp-optimisation/final-resource-profiling.md) shows
-allocation profiles finding avoidable vector growth after latency work.
+[final LSP resource investigation](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/final-resource-profiling.md)
+shows allocation profiles finding avoidable vector growth after latency work.
 
 Before closing a broad pass, refresh profiles on the final implementation where substantial changes
 could have moved the hotspots. Preserve commands, build and fixture identities, phase boundaries,

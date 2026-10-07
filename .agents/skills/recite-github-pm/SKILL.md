@@ -3,154 +3,56 @@ name: recite-github-pm
 description: "Use for Recite-specific GitHub project management: labels, milestones, issue shape, review gates, pull requests, and repo helper scripts."
 ---
 
-# Recite GitHub Project Management
+# Recite GitHub Workflow
 
-Use the GitHub CLI for Recite project management. Pass `--repo plethu/recite` to issue,
-pull-request, review, label, and milestone commands so a stale local remote cannot direct a mutation
-elsewhere. GitHub Projects commands use `--owner plethu` and the explicit project number instead.
-This skill contains only Recite's project shape and protected-merge requirements; use the global Git
-and review skills for general workflow guidance.
+[CONTRIBUTING.md](../../../CONTRIBUTING.md#change-and-review-workflow) owns branch, commit and
+pull-request requirements. Use `gh` with explicit `--repo plethu/recite`; GitHub Projects commands
+use `--owner plethu` and the explicit project number.
 
-## Preflight and verification
+## Planning and verification
 
-For single-issue work, run the lightweight checker and read the target issue:
+For single-issue work, run the lightweight checker and read the issue:
 
-```bash
+```sh
 .agents/skills/recite-github-pm/scripts/recite-pm-check.sh quick
 gh issue view 17 --repo plethu/recite --json number,title,state,milestone,labels,url
 ```
 
-Use `recite-pm-check.sh full` for broad planning or label/milestone audits, not before every
-mutation. After a single issue mutation, verify that issue:
+Use `recite-pm-check.sh full` for broad planning or label/milestone audits. After an issue mutation,
+verify it with `recite-pm-check.sh issue 17`. These helpers are read-only. Inspect current forge
+state before mutating it; keep mutations sequential and respect rate-limit retry windows.
 
-```bash
-.agents/skills/recite-github-pm/scripts/recite-pm-check.sh issue 17
-```
+Use existing labels and milestone names from `docs/spec/release.md` §22. Check the issue and serious
+v1 boundary (§23) before deferring adapter, editor or performance work. An implementation issue
+should name its goal, bounded scope, settled decisions, remaining questions, observable acceptance
+criteria, exclusions, check commands and affected contract sections. GitHub owns delivery state; do
+not maintain a second status ledger in Markdown.
 
-The helper scripts are read-only checks. Check current state before creating or editing remote
-objects, keep remote mutations sequential, and make broad mutations idempotent. Stop a mutation pass
-on a GitHub rate-limit or server failure and respect the server-provided retry window.
+## Authorized delegation
 
-## Recite project shape
+Ordinary work stays with the primary agent. Delegate only when the session authorizes it; do not
+request a fresh reviewer by default.
 
-Use these labels when useful:
+For milestone slices, use isolated branches/worktrees at the stated integration SHA. Keep the task
+packet to outcome, write scope, settled constraints, permitted decisions, stop-and-ask categories,
+acceptance evidence and authorized delivery stages. Local edits, commits, pushes and forge updates
+are distinct stages. The coordinator owns scope, product decisions, review and final acceptance.
 
-| Category | Values                                                                                                                                                                        |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status   | `status/ready`, `status/design-needed`, `status/in-progress`, `status/review`, `status/blocked`                                                                               |
-| Area     | `area/parser`, `area/ast`, `area/compiler`, `area/runtime`, `area/cli`, `area/lsp`, `area/localisation`, `area/schema`, `area/bevy`, `area/editor`, `area/tests`, `area/docs` |
-| Kind     | `kind/design`, `kind/implementation`, `kind/tests`, `kind/refactor`, `kind/docs`, `kind/bug`                                                                                  |
-| Size     | `size/s`, `size/m`, `size/l`                                                                                                                                                  |
-| Risk     | `risk/high`, `risk/cross-cutting`                                                                                                                                             |
+Reviewers remain read-only. Return findings to the implementing worker. Review each slice's diff and
+checks before mechanically cherry-picking accepted commits; only mechanical conflict resolution
+belongs in the coordinator's worktree. Use `--ff-only` for a direct fast-forward; avoid generated
+merge subjects that fail Git policy. Delegated slices do not open pull requests.
 
-Use milestone names from `docs/spec/release.md` §22. The serious v1 boundary is §23; do not
-automatically defer adapter, performance, or editor work without checking that section and the issue
-milestone.
+If implementation fails, retry once with the concrete error. On a second failure, use a fresh worker
+context and diagnose the environment or boundary rather than silently taking over.
 
-Implementation issues should state:
+## Protected delivery
 
-```markdown
-## Goal
+Follow the contributor workflow for the final standalone or milestone integration PR. Inspect its
+current head, reviews, unresolved threads and required checks; passing local checks does not replace
+GitHub branch protection.
 
-One concrete outcome.
-
-## Scope
-
-What behavior, crate, or surface is in bounds.
-
-## Known Decisions
-
-Decisions that should not be reopened in this issue.
-
-## Open Questions
-
-Questions that must be answered during co-work.
-
-## Acceptance Criteria
-
-- Observable result.
-- Required error behavior or invariant.
-- Required tests/checks.
-
-## Out of Scope
-
-Nearby work not included.
-
-## Test/Check Commands
-
-- List focused checks appropriate to the changed surface.
-- Use `mise run verify` for broad or high-risk code changes.
-
-## Spec References
-
-- The owning `docs/spec/<chapter>.md` §<section>
-```
-
-The primary agent handles ordinary work end to end. The delegation procedure below applies only when
-the session explicitly authorizes parallel workers; it is not a requirement to delegate or request a
-fresh review for every change.
-
-Recite issues are human-directed co-work. A delegated implementer may own a bounded issue or
-vertical slice through only the stages explicitly named in the authorized delivery target: local
-edits, commit, push, and PR updates are separate authorizations and must not be inferred from one
-another. Product direction, subjective decisions, integration review, and final acceptance remain
-with the coordinating maintainer. Keep task packets compact. Delegated slices use isolated
-purpose-first branches or worktrees and do not open issue-slice pull requests. The coordinator
-reviews each slice, returns findings to its implementer for correction, and mechanically integrates
-accepted commits; the coordinator does not patch implementer work except for mechanical conflict
-resolution.
-
-## Milestone integration workflow
-
-For a milestone pass, the coordinator creates one purpose-first `integration/<short-kebab-topic>`
-branch from `main`. Each bounded slice is assigned to an isolated normal purpose-first branch or
-worktree based on that integration branch. The packet names the slice, base revision, write scope,
-acceptance checks, stop-and-ask categories, and authorized delivery stages. A worker may commit or
-push only when those stages are explicitly authorized, but does not open a pull request for the
-slice.
-
-The coordinator reviews the slice diff and its focused checks. Findings go back to the owning
-implementer for a correction pass. Once accepted, the coordinator cherry-picks the worker's commits
-mechanically into the integration branch; use `--ff-only` only when the accepted branch is a direct
-fast-forward. Do not use a default non-fast-forward merge, which creates a `Merge branch ...` commit
-that fails the commit policy. If an exceptional merge commit is unavoidable, the coordinator must
-review it and give it an explicit policy-compliant `[REC-N] <type>: <subject>` message; prefer
-cherry-picking instead. Do not rewrite implementation work in the coordinator's worktree. Workers
-keep the normal `[REC-N]` conventional commit subject and attribution policy.
-
-At a stable checkpoint, the coordinator opens exactly one protected integration pull request from
-the integration branch to `main`. Apply the `workflow/integration` label and use an
-`integration/<short-kebab-topic>` head branch targeting `main`; CI requires all three before
-enabling integration mode. Use the milestone tracking issue in the PR title. The final integration
-PR may contain multiple valid `[REC-N]` issue codes; its title code identifies the milestone
-tracking issue, and its body must explicitly close it with a closing keyword followed by the issue
-number, for example `Closes #N`. The protected GitHub checks and review gate apply to this PR. After
-it merges, verify linked issue and milestone state on GitHub.
-
-## Review and protected merge
-
-Recite's protected `main` policy and the read-only helper are the repository sources of truth.
-Before merging, inspect the pull request's current head, standard GitHub reviews and threads,
-resolve or explicitly reject each review comment, and run checks appropriate to the changed surface.
-Use focused checks for documentation or instruction-only changes and `mise run verify` for broad or
-high-risk code changes. Required GitHub CI and branch protection remain authoritative at merge. The
-helper below is for a standalone PR or the one coordinator-owned integration PR targeting protected
-`main`; delegated slices are reviewed and integrated without issue-slice PRs. Then pass:
-
-```bash
-.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh <pr> <branch> main
-gh pr merge <pr> --repo plethu/recite --squash --delete-branch
-```
-
-Human maintainer approval remains authoritative. Request Codex Code Review manually from a connected
-GitHub account when available; it is advisory and does not replace human approval or tests. Inspect
-and resolve any findings it reports. The current solo-maintainer policy permits the allowlisted
-maintainer's self-review; once another human maintainer exists, require their independent standard
-GitHub approval. The gate requires the exact current head SHA and no unresolved review threads.
-
-For the official Codex GitHub integration and manual review request, see the
-[official Codex GitHub review documentation](https://learn.chatgpt.com/docs/third-party/github). For
-review details, read `references/github-merge-details.md`. Do not parse custom review comments, bot
-usernames, or marker blocks.
-
-After merging, verify the linked issue, PR, and milestone state on GitHub.
+The [merge reference](references/github-merge-details.md) describes the exact-head helper and
+maintainer approval rules. Run that helper before an authorized merge. Optional automated review is
+advisory and requested only when authorized. After merging, verify the linked issue, PR and
+milestone state.

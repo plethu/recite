@@ -5,9 +5,8 @@ description: Use for Recite Rust maintainability review: module boundaries, vali
 
 # Recite Rust Quality
 
-When available, load the global `rust-quality` skill for general Rust implementation and review.
-This overlay records the Recite-specific maintainability and compatibility checks required in any
-environment.
+This skill records Recite's maintainability and compatibility checks. Repository configurations and
+the documented quality gate supply the shared Rust baseline.
 
 For optimisation requests, read `docs/profiling-and-optimisation.md` before choosing probes or
 proposing added runtime complexity; it defines completion evidence for broad passes and focused

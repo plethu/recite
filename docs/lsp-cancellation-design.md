@@ -73,17 +73,29 @@ evidence boundaries live in [§19.8](spec/quality.md#198-regression-policy), not
 Those gates do not establish universal latency, arbitrary-session leak freedom or a best-in-class
 comparison. The final profile still attributes work to text position conversion, dependency lookups,
 AST construction and large response serialization. Further changes need a practical workload and a
-measured maintenance/performance benefit, as described in the
-[final resource investigation](archive/lsp-optimisation/final-resource-profiling.md#stopping-and-future-investigations).
+measured maintenance/performance benefit.
+
+The final Linux large-fixture investigation retained capacity reservation after reducing measured
+open-file live heap from about 90.1 to 83.9 MiB and per-operation completion allocation from 16.5 to
+11.3 MiB. Peak RSS fell only about 0.5–0.6%; allocation savings do not imply equivalent resident
+memory savings. These are dated local observations, not release or cross-platform budgets. Raw
+profiles and identities remain in
+[`final-resource-evidence.json.gz`](archive/lsp-optimisation/final-resource-evidence.json.gz).
+
+Reopen further optimisation when a practical profile shows:
+
+- ranged end-of-file position conversion dominating; test a narrow newline-search change against
+  CR/CRLF/LF and UTF-16 acceptance before revisiting a text-library migration;
+- structural/recovery dependency traversal dominating; profile it before adding another index or
+  analysis representation;
+- large response construction dominating; measure item construction and serialization separately
+  before replacing protocol machinery; or
+- excessive resident memory; separate allocator retention from live summaries, facts, sources and
+  temporary ASTs before choosing a fix.
 
 ## Evidence and concluded experiments
 
-Start with the dependency decisions and final resource investigation above. The
-[resource tradeoff](archive/lsp-optimisation/resource-tradeoff.md) records the retained worker/JSON
-decisions. The former chronological overview is preserved as
-[historical implementation evidence](archive/lsp-optimisation/history.md).
-
-Completed channel, driver-accounting, stopped-response and macOS yield probes are
-[retired experiments](archive/lsp-optimisation/retired-probes.md). Their named revision preserves
-the tools and workflow needed to reproduce them. They are not permanent CI modes or another
-maintained implementation.
+The [archive index](archive/README.md#lsp-investigation-history) identifies fixed Git revisions for
+the concluded reports and retired diagnostic tools. Read a named investigation when revisiting its
+decision; it is not another maintained implementation or permanent CI mode. Current dependency
+decisions and the profiling playbook own new investigations.

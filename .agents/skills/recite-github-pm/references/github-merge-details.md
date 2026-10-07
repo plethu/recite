@@ -1,86 +1,38 @@
-# GitHub Review And Merge Details
+# Protected Merge Checks
 
-Recite requires signed commits and explicit review gates. GitHub branch protection is the source of
-truth for repository-level merge policy; the local gate audits the pull request state and
-Recite-specific checks that protection cannot express. Recite is currently solo-maintained, so
-branch protection need not require an approving review until another human maintainer is added.
+[CONTRIBUTING.md](../../../../CONTRIBUTING.md#change-and-review-workflow) owns the delivery
+workflow. GitHub branch protection is authoritative; the local helper also checks Recite-specific
+requirements that protection cannot express.
 
-## Normal Helper Path
+From a clean worktree, after checks appropriate to the changed surface:
 
-```bash
+```sh
 .agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh 34 feat/workspace-split main
 gh pr merge 34 --repo plethu/recite --squash --delete-branch
 ```
 
-The gate reads the pull request's base/head, review decision, current head SHA, standard GitHub
-reviews, review threads, and reported checks. The merge command must be run from a clean worktree
-after checks appropriate to the changed surface and the gate pass: focused checks for documentation
-or instruction-only changes, and `mise run verify` for broad or high-risk code changes. Required
-GitHub CI and protected `main` remain authoritative for merge policy, aggregate status, linear
-history, and signed commits. The Git policy validates the full pull-request title before this step,
-so GitHub's squash merge inherits the validated title without a redundant subject override.
+Run the merge only when authorized. The helper reads the PR's base/head, current head SHA, standard
+GitHub reviews, unresolved threads and reported checks. Refresh the gate if the head changes. Git
+policy validates the PR title so the squash subject needs no separate override. Protected `main`
+requires the normal PR path; do not bypass it with a direct push.
 
-## Milestone integration path
+## Maintainer approval
 
-The coordinator creates one purpose-first `integration/<short-kebab-topic>` branch from `main` for a
-milestone. Bounded implementers work in isolated normal purpose-first branches or worktrees based on
-that branch. They do not open issue-slice pull requests. The coordinator reviews each slice, returns
-actionable findings to its owning implementer, and mechanically cherry-picks accepted commits. A
-direct fast-forward may use `--ff-only`; do not create default non-fast-forward merge commits
-because their generated subject fails Recite's commit policy. Any exceptional merge commit requires
-coordinator review and an explicit policy-compliant `[REC-N] <type>: <subject>` message. Only
-mechanical conflict resolution belongs in the coordinator's worktree.
+`RECITE_MAINTAINERS` explicitly allowlists maintainers, defaulting to `plethu`. Do not infer merge
+authority from every collaborator or automation account.
 
-At a stable checkpoint, open exactly one integration pull request to protected `main`, label it
-`workflow/integration`, and put the milestone tracking issue in its `[REC-N]` title. Integration
-mode allows multiple valid issue codes in the commit range while still requiring every commit's
-normal subject and no-attribution rules. Use this helper and the normal GitHub review path for that
-final PR. After the merge, verify linked issue and milestone state on GitHub.
+GitHub does not permit an author to approve their own PR. While Recite is solo-maintained, the
+helper permits the allowlisted maintainer's self-review path. With another human maintainer, it
+requires their standard GitHub approval for the exact current head and rejects stale approvals or
+outstanding requested changes. Approval must not be inferred from comments or reactions.
 
-## Maintainer Review
+## Check results
 
-Known maintainers come from the explicit `RECITE_MAINTAINERS` allowlist, defaulting to `plethu`. Do
-not infer merge authority from every repository collaborator: read-only contributors and automation
-accounts are not maintainers.
+Required GitHub checks and resolved review threads remain mandatory. Optional automated review does
+not replace them or maintainer approval. Request it only when authorized, assess findings and report
+any uncovered surfaces; do not treat an older review as coverage of the current head.
 
-When a second human maintainer exists, approval must be recorded as a GitHub pull-request review for
-the current head commit:
-
-```bash
-gh pr review 34 --repo plethu/recite --approve --body "Approved for merge."
-```
-
-GitHub does not permit an author to approve their own pull request. While Recite has one human
-maintainer, the helper permits the allowlisted maintainer's self-review path. Once another human
-maintainer is added, the helper requires their independent approval and rejects stale approvals or
-outstanding requested changes. Approval must be a standard GitHub pull-request review for the exact
-current head SHA.
-
-## Codex Code Review
-
-Request Codex Code Review in the pull request from a GitHub account connected to Codex by
-commenting:
-
-```text
-@codex review
-```
-
-Disable automatic review for Recite in Codex settings so a completed review follows a deliberate
-request. Do not post that comment from GitHub Actions: its bot account is not connected to Codex.
-Codex review is advisory; its availability does not control the merge gate. Human maintainer
-approval, required CI, and resolved review threads remain mandatory. Inspect Codex findings when
-they arrive, address actionable comments, and resolve the threads. See the
-[official Codex GitHub review documentation](https://learn.chatgpt.com/docs/third-party/github) for
-setup and availability details.
-
-Request review when the PR is ready for that pass, then continue useful work while it runs.
-Re-request review when a material change needs fresh assessment. If the service is unavailable,
-report that limitation with the merge handoff; do not present an older review or reaction as
-coverage of the current head.
-
-The local merge helper blocks failed or errored active checks when any are present; it ignores only
-the retired Codex workflow and status on older PR heads. GitHub may report `UNSTABLE` for such a
-head; the helper accepts it only when branch protection, the active check rollup, and all other
-gates pass. If checks have not reported yet, risk-appropriate local checks remain mandatory.
-
-Do not use direct pushes to `main` or bypass the protected pull-request path.
+The helper blocks failed or errored active checks and ignores only the retired Codex workflow/status
+on older heads. GitHub may report `UNSTABLE` for such a head; the helper accepts it only when branch
+protection, active check results and all other gates pass. If checks have not reported yet,
+risk-appropriate local verification remains required.

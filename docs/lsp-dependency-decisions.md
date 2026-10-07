@@ -1,9 +1,9 @@
 # Current LSP dependency decisions
 
 This is the maintained decision owner. The
-[October 2026 assessment](archive/lsp-optimisation/dependency-decisions.md) preserves candidate
-versions, maintainer/licensing sources, bounded controls and raw evidence. Results belong to those
-revisions and profiles, not every future release. Requirements remain in the
+[October 2026 assessment](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/dependency-decisions.md)
+preserves candidate versions, maintainer/licensing sources, bounded controls and raw evidence.
+Results belong to those revisions and profiles, not every future release. Requirements remain in the
 [tooling contract](spec/tooling.md#14-lsp).
 
 ## Retained choices
@@ -20,7 +20,7 @@ revisions and profiles, not every future release. Requirements remain in the
 The additional text/framework assessment retained String and the current coordinator. `str_indices`
 is the preferred narrow utility if a relevant hotspot earns it; `line-index`, Ropey, crop and lspf
 did not demonstrate sufficient net benefit for the current contracts. The
-[candidate experiments](archive/lsp-optimisation/dependency-decisions.md#additional-text-and-framework-spikes)
+[candidate experiments](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/dependency-decisions.md#additional-text-and-framework-spikes)
 record positive controls as well as rejection reasons. No disposable prototype is a maintained
 second implementation.
 

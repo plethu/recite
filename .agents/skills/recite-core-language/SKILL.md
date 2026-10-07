@@ -6,8 +6,8 @@ description: Use for Recite parser, AST, compiler, runtime, schema, effects, loc
 # Recite Core Language
 
 Use this overlay for changes to Recite's language and execution semantics. Load only the affected
-contract chapter and subsections before implementation; the chapter map is in `AGENTS.md`. When
-available, load the global `language-tooling` and `rust-quality` skills for general guidance.
+contract chapter and subsections before implementation; the
+[production specification](../../../docs/recite-production-spec.md) routes to their owners.
 
 ## Recite invariants
 

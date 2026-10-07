@@ -5,10 +5,10 @@ description: Use for Recite fixtures, snapshot-style tests, diagnostics, CLI val
 
 # Recite Testing and Diagnostics
 
-Load the affected contract chapter from the section map in `AGENTS.md`; `docs/spec/quality.md` owns
-testing and performance policy. This overlay records Recite's fixture, diagnostic, and test-layout
-conventions. Load the global `language-tooling` and `rust-quality` skills for general testing
-guidance when they are available.
+Read the affected chapter through the
+[production specification](../../../docs/recite-production-spec.md); `docs/spec/quality.md` owns
+testing and performance policy. This skill records Recite's fixture, diagnostic, and test-layout
+conventions.
 
 ## Test placement
 

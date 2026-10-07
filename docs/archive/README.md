@@ -1,23 +1,51 @@
 # Historical evidence
 
-This directory holds concluded investigations and delivery observations. It is
-not current workflow, implementation or release authority. Read current guides,
-contracts and code first; consult a named report when revisiting its decision.
-Dates, candidate versions, revisions and execution profiles bound each result.
+Current contracts, code and contributor guides own implementation and workflow. This directory keeps
+raw measurements and selected older designs; results apply only to their recorded revisions and
+execution profiles.
 
-| Evidence | Current owner |
-| --- | --- |
-| [LSP optimisation reports and raw assets](lsp-optimisation/history.md) | [LSP architecture](../lsp-cancellation-design.md), [dependency decisions](../lsp-dependency-decisions.md), [profiling procedure](../profiling-and-optimisation.md) |
-| [Original project-index design](lsp-project-index-design.md) | LSP architecture and the current workspace implementation; the original full-sync and issue-decomposition direction is superseded |
-| [Migration delivery](adoption-migration-design.md) | [Import crate](../../crates/recite-import/README.md) and the public migration guides |
-| [Package, engine, editor and performance observations](delivery-evidence.md) | Current guides, structured acceptance fixtures and their repeatable checks |
+| Current question                        | Maintained owner                                                                                                                                               |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LSP ownership and performance           | [Architecture](../lsp-cancellation-design.md), [dependency decisions](../lsp-dependency-decisions.md), [profiling procedure](../profiling-and-optimisation.md) |
+| Original project-index direction        | [Historical design](lsp-project-index-design.md); its full-sync and issue decomposition are superseded                                                         |
+| Migration delivery                      | [Import crate](../../crates/recite-import/README.md); [historical design](adoption-migration-design.md)                                                        |
+| Package, engine and editor observations | [Historical delivery evidence](delivery-evidence.md); current guides and repeatable acceptance checks own support claims                                       |
 
-Keep a concluded investigation's reports and raw assets together here. Carry
-retained ownership, limits and reopening conditions into their existing current
-owner; archive chronology and one-off counts. Do not leave a stub at every old
-path or make CI depend on historical report wording. Normative contracts and
-useful runbooks remain active regardless of their age or filename.
+## LSP investigation history
 
-Historical commands retain original paths and refer to the report's revision.
-The [retired LSP tools](lsp-optimisation/retired-probes.md) explain how to export
-their complete pre-cleanup revision. Moving evidence does not refresh its results.
+The concluded Markdown reports are preserved at `6e32b614bd8c91a6616f02ec2991b7e300808129` rather
+than repeated in the maintained checkout. Their raw assets remain under `lsp-optimisation/`. Use the
+exact revision when reading a report; its relative links and commands describe that revision.
+
+| Investigation                          | Historical report                                                                                                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation and baseline            | [history.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/history.md)                                   |
+| Editor experience and regression gates | [follow-up.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/follow-up.md)                               |
+| Incremental-analysis prototypes        | [prototypes.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/prototypes.md)                             |
+| CPU and allocation profiles            | [profiling.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/profiling.md)                               |
+| Session and platform testing           | [session-testing.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/session-testing.md)                   |
+| Recovery calibration                   | [recovery-calibration.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/recovery-calibration.md)         |
+| Native scheduling traces               | [native-tracing.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/native-tracing.md)                     |
+| Channel handoff controls               | [channel-handoff.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/channel-handoff.md)                   |
+| Worker and response ownership          | [resource-tradeoff.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/resource-tradeoff.md)               |
+| Dependency experiments                 | [dependency-decisions.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/dependency-decisions.md)         |
+| Transport and resource follow-up       | [continuation.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/continuation.md)                         |
+| Final capacity investigation           | [final-resource-profiling.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/final-resource-profiling.md) |
+| Retired tools and reproduction         | [retired-probes.md](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/retired-probes.md)                     |
+
+For example, read a report or export all reports and evidence outside the checkout:
+
+```sh
+git show 6e32b614:docs/archive/lsp-optimisation/final-resource-profiling.md
+mkdir /tmp/recite-lsp-evidence
+git archive 6e32b614 docs/archive/lsp-optimisation | tar -x -C /tmp/recite-lsp-evidence
+```
+
+Retired channel/stdio, driver-accounting, stopped-response and macOS-yield tools are preserved with
+their tests and workflow inputs at `1004de99594d`. Export that revision for their original commands;
+do not restore settled experiments to normal CI. For a changed contract or practical symptom, port
+the smallest necessary probe to the current harness.
+
+Keep useful decisions and reopening conditions in their current owner. Concluded narrative belongs
+in commit/PR history; retain raw evidence only when it supports a decision or reproduction. Do not
+create a report or stub for every retired path.
