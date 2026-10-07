@@ -5,7 +5,6 @@ use super::model::{
 
 pub(super) struct Trial<'a> {
     pub(super) operation: Operation,
-    pub(super) base: crate::DialogueSession,
     pub(super) answers: Vec<ConditionAnswer>,
     pub(super) requests: Vec<PreviewConditionRequest>,
     pub(super) inputs: PreviewInputs<'a>,

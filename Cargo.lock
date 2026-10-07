@@ -2934,6 +2934,7 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "criterion",
+ "recite-adapter",
  "recite-compiler",
  "recite-core",
  "recite-fixturegen",
@@ -3059,8 +3060,9 @@ dependencies = [
 
 [[package]]
 name = "recite-ffi"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
+ "criterion",
  "recite-adapter",
  "recite-compiler",
  "recite-core",
@@ -3069,6 +3071,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
+ "stats_alloc",
 ]
 
 [[package]]

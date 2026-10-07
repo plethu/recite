@@ -1,102 +1,95 @@
-use super::*;
+use std::{ops::Range, sync::Arc};
 
-impl RegionAnalysis<'_> {
-    pub(super) fn summary(&self) -> (&AuthoringSummary, SummaryRanges) {
-        match self {
-            Self::Reused(old, region) => (&old.summary, region.summary.clone()),
-            Self::Fresh(fresh) => (&fresh.summary, fresh.summary.region_ranges()),
-        }
-    }
-    pub(super) fn facts(&self) -> (&ProjectFacts, FactRanges) {
-        match self {
-            Self::Reused(old, region) => (&old.project_facts, region.facts.clone()),
-            Self::Fresh(fresh) => (&fresh.facts, fresh.facts.region_ranges()),
-        }
-    }
-    pub(super) fn parse(&self) -> &[Diagnostic] {
-        match self {
-            Self::Reused(old, region) => &old.parse_diagnostics[region.parse.clone()],
-            Self::Fresh(fresh) => &fresh.parse,
-        }
-    }
-    pub(super) fn local(&self) -> &[Diagnostic] {
-        match self {
-            Self::Reused(old, region) => &old.local_diagnostics[region.local.clone()],
-            Self::Fresh(fresh) => &fresh.local,
-        }
-    }
+use recite_core::{SourceLineIndex, source_lines};
+
+use super::{
+    AnalyzedRegion, AnalyzedRegions, AuthoringSummary, DocumentAnalysis, EffectiveDocument,
+    Interrupted, ProjectFacts, RegionAnalysis, WorkControl, relocation,
+};
+use crate::authoring::SourceFingerprint;
+
+pub(super) enum AssemblyOutcome {
+    Complete(DocumentAnalysis),
+    /// Cached coordinates cannot safely be relocated; parse the whole file.
+    NeedsFullAnalysis,
 }
 
 pub(super) fn assemble(
     document: &EffectiveDocument<'_>,
     previous: Option<&DocumentAnalysis>,
-    participation: ValidationParticipation,
-    analyses: &[RegionAnalysis<'_>],
-    mut regions: Vec<CachedRegion>,
+    analyzed: AnalyzedRegions<'_>,
     control: &dyn WorkControl,
-) -> Result<Option<DocumentAnalysis>, Interrupted> {
-    let relocated = analyses.iter().zip(&regions).any(|(part, region)| {
-        matches!(part, RegionAnalysis::Reused(_, cached) if cached.first_line != region.first_line)
+) -> Result<AssemblyOutcome, Interrupted> {
+    let AnalyzedRegions {
+        participation,
+        mut regions,
+    } = analyzed;
+    let relocated = regions.iter().any(|region| {
+        matches!(&region.output, RegionAnalysis::Reused(_, cached) if cached.first_line != region.cache.first_line)
     });
-    // Shifted output needs a fresh allocation even if the unshifted slices
-    // compare equal. Never mutate an earlier immutable snapshot.
+    // Shifted output needs a fresh allocation even when unshifted slices match.
+    // Never mutate an earlier immutable snapshot.
     let previous = previous.filter(|_| !relocated);
-    let summaries: Vec<_> = analyses.iter().map(RegionAnalysis::summary).collect();
-    let facts: Vec<_> = analyses.iter().map(RegionAnalysis::facts).collect();
-    let summary = AuthoringSummary::join_regions(
-        &summaries
-            .iter()
-            .map(|(part, range)| (*part, range))
-            .collect::<Vec<_>>(),
-        previous.map(|old| &old.summary),
-    );
+    let summaries: Vec<_> = regions
+        .iter()
+        .map(|region| (region.output.summary(), &region.cache.summary))
+        .collect();
+    let facts: Vec<_> = regions
+        .iter()
+        .map(|region| (region.output.facts(), &region.cache.facts))
+        .collect();
+    let summary = AuthoringSummary::join_regions(&summaries, previous.map(|old| &old.summary));
     let project_facts = ProjectFacts::join_regions(
         document.key.as_str(),
         participation,
-        &facts
-            .iter()
-            .map(|(part, range)| (*part, range))
-            .collect::<Vec<_>>(),
+        &facts,
         previous.map(|old| &old.project_facts),
     );
-    let mut summary_offset = [0; 6];
-    let mut facts_offset = [0; 3];
-    let mut parse_offset = 0;
-    let mut local_offset = 0;
-    for region in &mut regions {
-        for (range, offset) in region.summary.iter_mut().zip(&mut summary_offset) {
-            advance(range, offset);
-        }
-        for (range, offset) in region.facts.iter_mut().zip(&mut facts_offset) {
-            advance(range, offset);
-        }
-        advance(&mut region.parse, &mut parse_offset);
-        advance(&mut region.local, &mut local_offset);
-    }
+    rebase_ranges(&mut regions);
     let mut analysis = DocumentAnalysis {
-        regions: regions.into(),
+        regions: regions.iter().map(|region| region.cache.clone()).collect(),
         summary,
         project_facts,
         participation,
-        source: Arc::new(recite_core::SourceLineIndex::new(Arc::clone(document.text))),
-        source_fingerprint: crate::authoring::SourceFingerprint::for_source(document.text),
-        parse_diagnostics: analyses
+        source: Arc::new(SourceLineIndex::new(Arc::clone(document.text))),
+        source_fingerprint: SourceFingerprint::for_source(document.text),
+        parse_diagnostics: regions
             .iter()
-            .flat_map(|part| part.parse().iter().cloned())
+            .flat_map(|region| region.output.parse().iter().cloned())
             .collect(),
-        local_diagnostics: analyses
+        local_diagnostics: regions
             .iter()
-            .flat_map(|part| part.local().iter().cloned())
+            .flat_map(|region| region.output.local().iter().cloned())
             .collect(),
         byte_len: document.text.len(),
-        line_count: recite_core::source_lines(document.text)
+        line_count: source_lines(document.text)
             .filter(|(content, terminator)| !content.is_empty() || !terminator.is_empty())
             .count(),
     };
-    if relocated && !relocation::apply(&mut analysis, analyses, document.key.as_str(), control)? {
-        return Ok(None);
+    if relocated && !relocation::apply(&mut analysis, &regions, document.key.as_str(), control)? {
+        return Ok(AssemblyOutcome::NeedsFullAnalysis);
     }
-    Ok(Some(analysis))
+    Ok(AssemblyOutcome::Complete(analysis))
+}
+
+/// Convert each region's local slice lengths into offsets in joined outputs.
+fn rebase_ranges(regions: &mut [AnalyzedRegion<'_>]) {
+    let mut summary_offsets = std::array::from_fn(|_| 0);
+    let mut fact_offsets = std::array::from_fn(|_| 0);
+    let mut parse_offset = 0;
+    let mut local_offset = 0;
+    for region in regions {
+        rebase_group(&mut region.cache.summary, &mut summary_offsets);
+        rebase_group(&mut region.cache.facts, &mut fact_offsets);
+        advance(&mut region.cache.parse, &mut parse_offset);
+        advance(&mut region.cache.local, &mut local_offset);
+    }
+}
+
+fn rebase_group<const N: usize>(ranges: &mut [Range<usize>; N], offsets: &mut [usize; N]) {
+    for (range, offset) in ranges.iter_mut().zip(offsets) {
+        advance(range, offset);
+    }
 }
 
 fn advance(range: &mut Range<usize>, offset: &mut usize) {

@@ -1,7 +1,0 @@
-{
-  "title": "[REC-163] docs: close integration contract gaps",
-  "body": "Closes #163",
-  "labels": [{ "name": "workflow/integration" }],
-  "baseRefName": "main",
-  "headRefName": "integration/milestone-integration"
-}

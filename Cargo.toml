@@ -54,7 +54,7 @@ recite-build = { path = "crates/recite-build", version = "0.1.0" }
 recite-compiler = { path = "crates/recite-compiler", version = "0.1.0" }
 recite-config = { path = "crates/recite-config", version = "0.1.0" }
 recite-core = { path = "crates/recite-core", version = "0.1.0" }
-recite-ffi = { path = "crates/recite-ffi", version = "0.6.0" }
+recite-ffi = { path = "crates/recite-ffi", version = "0.7.0" }
 recite-fixturegen = { path = "crates/recite-fixturegen", version = "0.1.0" }
 recite-godot = { path = "crates/recite-godot", version = "0.1.0" }
 recite-import = { path = "crates/recite-import", version = "0.1.0" }

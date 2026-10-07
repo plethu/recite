@@ -29,10 +29,9 @@ impl Operation {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(super) struct PendingOperation {
     pub(super) operation: Operation,
-    pub(super) base: crate::DialogueSession,
     pub(super) answers: Vec<ConditionAnswer>,
     pub(super) requests: Vec<PreviewConditionRequest>,
     pub(super) prior_status: super::model::PreviewStatus,

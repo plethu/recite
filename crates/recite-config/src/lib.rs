@@ -26,9 +26,10 @@ pub use path::{
 };
 pub use project::{
     Coverage, DiscoveredDocument, DiscoveredRoot, DiscoveryDiagnostic, DocumentKey,
-    DocumentKeyError, PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION,
-    ProjectDiscoveryError, ProjectDiscoveryReport, ProjectManifest, ProjectSettings,
-    ProjectSettingsError, allows_unscoped_source_path, discover_project, discover_unscoped_sources,
+    DocumentKeyError, LoadedProjectSchema, PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION,
+    ProjectDiscoveryError, ProjectDiscoveryReport, ProjectManifest, ProjectSchemaError,
+    ProjectSettings, ProjectSettingsError, allows_unscoped_source_path, discover_project,
+    discover_unscoped_sources,
 };
 pub use user::{
     AuthorityValue, CONFIG_VERSION, ColorPolicy, ConfigAuthority, ConfigDiagnostic, ConfigError,

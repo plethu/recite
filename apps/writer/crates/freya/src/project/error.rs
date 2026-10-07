@@ -3,6 +3,8 @@ use std::io;
 pub enum FileError {
     #[error(transparent)]
     Discovery(#[from] recite_config::ProjectDiscoveryError),
+    #[error(transparent)]
+    Schema(#[from] recite_config::ProjectSchemaError),
     #[error(
         "Project discovery is incomplete. Repair the project's discovery diagnostics before opening it here."
     )]

@@ -75,16 +75,16 @@ fn typed_values_drive_lines_plural_and_choices() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_start_with_values(
-                asset,
-                std::ptr::null(),
-                std::ptr::null(),
-                values.as_ptr(),
-                values.len(),
-                &raw mut session,
-                &raw mut batch,
-            )
+            recite_session_create(asset, std::ptr::null(), std::ptr::null(), &raw mut session)
         },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe { recite_session_set_interpolation_values(session, values.as_ptr(), values.len()) },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe { recite_session_begin(session, &raw mut batch) },
         ReciteStatus::Ok
     );
 
@@ -140,19 +140,25 @@ fn missing_or_wrong_typed_values_project_as_localisation_errors() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_start_with_values(
-                asset,
-                std::ptr::null(),
-                std::ptr::null(),
+            recite_session_create(asset, std::ptr::null(), std::ptr::null(), &raw mut session)
+        },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe {
+            recite_session_set_interpolation_values(
+                session,
                 missing_ready.as_ptr(),
                 missing_ready.len(),
-                &raw mut session,
-                &raw mut batch,
             )
         },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe { recite_session_begin(session, &raw mut batch) },
         ReciteStatus::Localisation
     );
-    assert_eq!(session, 0);
+    assert_ne!(session, 0);
 
     let ready = cstr("ready");
     let wrong_ready = [ReciteInterpolationValue {
@@ -165,19 +171,19 @@ fn missing_or_wrong_typed_values_project_as_localisation_errors() {
     }];
     assert_eq!(
         unsafe {
-            recite_session_start_with_values(
-                asset,
-                std::ptr::null(),
-                std::ptr::null(),
+            recite_session_set_interpolation_values(
+                session,
                 wrong_ready.as_ptr(),
                 wrong_ready.len(),
-                &raw mut session,
-                &raw mut batch,
             )
         },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe { recite_session_begin(session, &raw mut batch) },
         ReciteStatus::Localisation
     );
-    assert_eq!(session, 0);
+    assert_ne!(session, 0);
 
     let unknown_kind = [ReciteInterpolationValue {
         name: name.as_ptr(),
@@ -189,20 +195,15 @@ fn missing_or_wrong_typed_values_project_as_localisation_errors() {
     }];
     assert_eq!(
         unsafe {
-            recite_session_start_with_values(
-                asset,
-                std::ptr::null(),
-                std::ptr::null(),
+            recite_session_set_interpolation_values(
+                session,
                 unknown_kind.as_ptr(),
                 unknown_kind.len(),
-                &raw mut session,
-                &raw mut batch,
             )
         },
         ReciteStatus::Validation
     );
-    assert_eq!(session, 0);
-
+    recite_session_free(session);
     recite_asset_free(asset);
 }
 
@@ -331,19 +332,20 @@ fn restore_with_values_drives_resumption_and_projects_errors() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_restore_with_values(
+            recite_session_prepare_restore(
                 asset,
                 snapshot_bytes.as_ptr(),
                 snapshot_bytes.len(),
-                std::ptr::null(),
-                0,
                 &raw mut restored,
-                &raw mut batch,
             )
         },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe { recite_session_begin(restored, &raw mut batch) },
         ReciteStatus::Localisation
     );
-    assert_eq!(restored, 0);
+    assert_ne!(restored, 0);
 
     let remaining = cstr("remaining");
     let wrong_value = cstr("two");
@@ -357,19 +359,15 @@ fn restore_with_values_drives_resumption_and_projects_errors() {
     }];
     assert_eq!(
         unsafe {
-            recite_session_restore_with_values(
-                asset,
-                snapshot_bytes.as_ptr(),
-                snapshot_bytes.len(),
-                wrong_type.as_ptr(),
-                wrong_type.len(),
-                &raw mut restored,
-                &raw mut batch,
-            )
+            recite_session_set_interpolation_values(restored, wrong_type.as_ptr(), wrong_type.len())
         },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe { recite_session_begin(restored, &raw mut batch) },
         ReciteStatus::Localisation
     );
-    assert_eq!(restored, 0);
+    assert_ne!(restored, 0);
 
     let valid = [ReciteInterpolationValue {
         name: remaining.as_ptr(),
@@ -380,17 +378,11 @@ fn restore_with_values_drives_resumption_and_projects_errors() {
         boolean_value: 0,
     }];
     assert_eq!(
-        unsafe {
-            recite_session_restore_with_values(
-                asset,
-                snapshot_bytes.as_ptr(),
-                snapshot_bytes.len(),
-                valid.as_ptr(),
-                valid.len(),
-                &raw mut restored,
-                &raw mut batch,
-            )
-        },
+        unsafe { recite_session_set_interpolation_values(restored, valid.as_ptr(), valid.len()) },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        unsafe { recite_session_begin(restored, &raw mut batch) },
         ReciteStatus::Ok
     );
     let restored_output = decode_batch(&batch);

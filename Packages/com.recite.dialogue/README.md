@@ -32,7 +32,7 @@ CARGO_TARGET_DIR=/path/on/disk/recite-target scripts/unity/build-upm.sh
 The script prints `com.recite.dialogue-0.1.0-linux-x86_64.tgz`. Add that archive with Unity Package
 Manager's **Add package from tarball** action. The archive contains
 `Runtime/Plugins/x86_64/librecite_ffi.so`, the runtime/editor assembly definitions, tests, and the
-Basic Dialogue sample. The native plugin exports Recite FFI 0.6.0. Source-tree installs of
+Basic Dialogue sample. The native plugin exports Recite FFI 0.7.0. Source-tree installs of
 `Packages/com.recite.dialogue` require the same native library under that package's
 `Runtime/Plugins/x86_64` folder.
 

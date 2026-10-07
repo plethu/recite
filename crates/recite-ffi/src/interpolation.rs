@@ -20,8 +20,7 @@ pub enum ReciteInterpolationValueKind {
 /// One caller-provided typed interpolation value.
 ///
 /// The record and any string it points to are borrowed only for the duration
-/// of the `recite_session_*_with_values` or
-/// `recite_session_set_interpolation_values` call. Recite copies every value
+/// of the `recite_session_set_interpolation_values` call. Recite copies every value
 /// into its session-owned [`InterpolationValues`] map before returning, so a
 /// host may release or reuse the input records afterwards.
 #[repr(C)]

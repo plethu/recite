@@ -299,6 +299,7 @@ function M.valid_error(value)
     schema_inspection = true,
     user_config = true,
     project_discovery = true,
+    project_schema = true,
     ui_catalog = true,
     watch = true,
     watch_coordinator = true,

@@ -19,7 +19,6 @@ static ReciteLocaleResult locale_callback(const ReciteLocaleQuery *query, void *
 int main(void) {
   uint64_t session = 0;
   ReciteBuffer batch = {0};
-  const char locale[] = "fr";
   const char condition_name[] = "ready";
   const uint8_t snapshot[] = {0};
 
@@ -38,14 +37,12 @@ int main(void) {
       RECITE_STATUS_INVALID_HANDLE) {
     return 4;
   }
-  if (recite_session_start_with_locale_provider(0, NULL, locale, NULL, NULL, &session, &batch) !=
-          RECITE_STATUS_VALIDATION ||
+  if (recite_session_prepare_restore(0, NULL, 0, &session) != RECITE_STATUS_VALIDATION ||
       session != 0) {
     return 5;
   }
-  if (recite_session_restore_with_values_and_locale_provider(0, snapshot, sizeof(snapshot), NULL, 0,
-                                                             NULL, NULL, &session,
-                                                             &batch) != RECITE_STATUS_VALIDATION ||
+  if (recite_session_restore(0, snapshot, sizeof(snapshot), &session, &batch) !=
+          RECITE_STATUS_INVALID_HANDLE ||
       session != 0) {
     return 6;
   }

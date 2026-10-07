@@ -1,0 +1,10 @@
+:: start default
+:if ready()
+  -> work
+:else
+  -> END
+
+:: work
+? continue@11111111111111111111
+  Continue.
+  -> start

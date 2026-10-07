@@ -272,7 +272,7 @@ internal static class ReciteUnityHeadless
     private static void PreserveTypedInterpolationValues()
     {
         Assert(ReciteNativeBridge.AbiMajor == 0, "FFI ABI major version changed");
-        Assert(ReciteNativeBridge.AbiMinor == 6, "FFI ABI minor version changed");
+        Assert(ReciteNativeBridge.AbiMinor == 7, "FFI ABI minor version changed");
         Assert(ReciteNativeBridge.AbiPatch == 0, "FFI ABI patch version changed");
 
         var values = new List<ReciteInterpolationValue>
@@ -454,18 +454,19 @@ internal static class ReciteUnityHeadless
             ReciteNativeBridge.SessionFree(sessionHandle);
             sessionHandle = 0;
 
-            status = ReciteNativeBridge.SessionRestoreWithValuesAndLocaleProviderAndVariant(
+            status = ReciteNativeBridge.SessionPrepareRestore(
                 assetHandle,
                 snapshot,
                 new UIntPtr((ulong)snapshot.Length),
-                IntPtr.Zero,
-                UIntPtr.Zero,
-                ReciteNativeBridge.ToUtf8NullTerminated("formal"),
-                NativeFallbackLocaleCallback,
-                IntPtr.Zero,
-                out sessionHandle,
-                out nativeBatch);
-            Assert(status == ReciteStatus.Ok, "native restore with locale provider failed");
+                out sessionHandle);
+            Assert(status == ReciteStatus.Ok, "native restore preparation failed");
+            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSetLocaleProvider(
+                sessionHandle, NativeFallbackLocaleCallback, IntPtr.Zero));
+            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSetLocaleVariant(
+                sessionHandle, ReciteNativeBridge.ToUtf8NullTerminated("formal")));
+            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionRegisterCondition(
+                sessionHandle, ReciteNativeBridge.ToUtf8NullTerminated("has_key"), NativeFalseConditionCallback, IntPtr.Zero));
+            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionBegin(sessionHandle, out nativeBatch));
             var restored = ReciteNativeBridge.CopyAndFree(ref nativeBatch);
             Assert(ReciteDialogueService.DecodeBatchBytes(restored).Events.Count == 0,
                 "native restore changed the pending prompt");

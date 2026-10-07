@@ -1,0 +1,11 @@
+:: start default
+:if ready()
+  -> work
+:else
+  -> END
+
+:: work
+! deferred progress()
+? continue@11111111111111111111
+  Continue.
+  -> start

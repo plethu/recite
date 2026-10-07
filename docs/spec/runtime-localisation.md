@@ -264,6 +264,12 @@ are explicitly read-only or import/export-only in v1; they must not be presented
 authoring surfaces. PO editing must remain separate from the Fluent resource contract for
 Recite-owned UI text.
 
+The current lossless PO editor retains its source representation. The bounded `polib` 0.3.0 and
+`rspolib` 0.1.2 writer probes normalized untouched catalogues, so they do not replace that owner.
+Reevaluate a dependency when it provides source-preserving edits and ranges, rather than maintaining
+both its parser and our lossless representation. CLDR plural categories also do not replace
+gettext's positional `Plural-Forms` expressions or their bounded validation.
+
 Localisable strings:
 
 - line text;

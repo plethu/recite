@@ -101,9 +101,6 @@ jobs:
       - name: Check integration-mode policy fixtures
         run: bash tests/git-policy/check-integration.sh
 
-      - name: Check pull-request rollup policy
-        run: tests/check-pr-review-gates/check-rollup-fixtures.sh
-
   rust:
     needs: changes
     if: needs.changes.outputs.rust == 'true'

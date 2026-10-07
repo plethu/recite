@@ -132,6 +132,10 @@ maintainability_line_count_at() {
 maintainability_is_format_only() (
   local repo_root="$1" base_sha="$2" head_sha="$3" base_path="$4" path="$5"
   [[ -f "$repo_root/dprint.json" ]] || return 1
+  # Resolve the pinned tool before entering a replay checkout or fixture that
+  # may not contain this repository's mise configuration.
+  local formatter
+  formatter="$(mise -E quality which dprint)" || return 1
   local temporary
   temporary="$(mktemp -d)" || return 1
   trap 'rm -rf "$temporary"' EXIT
@@ -139,14 +143,14 @@ maintainability_is_format_only() (
   git -C "$repo_root" show "$head_sha:$path" >"$temporary/head" || return 1
   (
     cd "$repo_root"
-    mise -E quality exec -- dprint fmt --stdin "$repo_root/$path" <"$temporary/base"
+    "$formatter" fmt --stdin "$repo_root/$path" <"$temporary/base"
   ) >"$temporary/formatted" 2>"$temporary/errors" || return 1
   cmp -s "$temporary/formatted" "$temporary/head" && return 0
   # StyLua can settle nested call/table layout on its second pass. Both passes
   # must still reproduce exact head bytes; substantive changes fail closed.
   (
     cd "$repo_root"
-    mise -E quality exec -- dprint fmt --stdin "$repo_root/$path" <"$temporary/formatted"
+    "$formatter" fmt --stdin "$repo_root/$path" <"$temporary/formatted"
   ) >"$temporary/settled" 2>"$temporary/errors" || return 1
   cmp -s "$temporary/settled" "$temporary/head"
 )

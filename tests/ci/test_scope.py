@@ -306,8 +306,8 @@ class ScopeTests(unittest.TestCase):
             ),
             (
                 "justfile",
-                b'set shell := ["bash"]\n\ncheck:\n    scripts/verify.sh\n',
-                b'set shell := ["bash"]\n\ncheck:\n    scripts/verify.sh --all\n',
+                b'set shell := ["bash"]\n\ncheck:\n    just quality lint\n',
+                b'set shell := ["bash"]\n\ncheck:\n    just quality lint\n    just test\n',
                 scope.JUST_QUALITY,
             ),
             (

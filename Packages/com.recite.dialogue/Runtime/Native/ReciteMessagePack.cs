@@ -232,7 +232,26 @@ namespace Recite.Unity.Native
                 RequiredString(map, "id"),
                 RequiredString(map, "source_text"),
                 RequiredString(map, "text"),
-                ReadList(map, "args", ReadReasonArg));
+                ReadList(map, "args", ReadReasonArg),
+                ReadReasonOrigin(map));
+        }
+
+        private static ReciteAvailabilityReasonOrigin ReadReasonOrigin(IReadOnlyDictionary<string, object> reason)
+        {
+            // Origin is an additive field in batch v0; older producers omit it.
+            if (!reason.TryGetValue("origin", out var origin) || origin == null) return null;
+            var map = RequiredMapValue(origin, "origin");
+            var kind = RequiredString(map, "kind");
+            switch (kind)
+            {
+                case "condition_call":
+                    return new ReciteConditionCallOrigin(RequiredString(map, "function"),
+                        ReadList(map, "args", value => ReadTaggedValue(value, false, true)));
+                case "requirement_expression":
+                    return new ReciteRequirementExpressionOrigin(RequiredString(map, "source_text"));
+                default:
+                    throw new FormatException("unknown Recite reason origin kind: " + kind);
+            }
         }
 
         private static ReciteReasonArg ReadReasonArg(IReadOnlyDictionary<string, object> map)

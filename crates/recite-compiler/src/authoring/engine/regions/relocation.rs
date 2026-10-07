@@ -1,21 +1,21 @@
 use recite_core::{Diagnostic, SourcePosition, SourceSpan};
 
-use super::{DocumentAnalysis, Interrupted, RegionAnalysis, WorkControl};
+use super::{AnalyzedRegion, DocumentAnalysis, Interrupted, RegionAnalysis, WorkControl};
 use std::sync::Arc;
 
 pub(super) fn apply(
     analysis: &mut DocumentAnalysis,
-    parts: &[RegionAnalysis<'_>],
+    regions: &[AnalyzedRegion<'_>],
     path: &str,
     control: &dyn WorkControl,
 ) -> Result<bool, Interrupted> {
     let mut valid = true;
-    for (part, region) in parts.iter().zip(analysis.regions.iter()) {
+    for region in regions {
         control.checkpoint()?;
-        let RegionAnalysis::Reused(_, cached) = part else {
+        let RegionAnalysis::Reused(_, cached) = &region.output else {
             continue;
         };
-        let delta = i64::from(region.first_line) - i64::from(cached.first_line);
+        let delta = i64::from(region.cache.first_line) - i64::from(cached.first_line);
         if delta == 0 {
             continue;
         }
@@ -36,14 +36,14 @@ pub(super) fn apply(
                 _ => valid = false,
             }
         };
-        Arc::make_mut(&mut analysis.summary).relocate_region(&region.summary, &mut shift);
-        Arc::make_mut(&mut analysis.project_facts).relocate_region(&region.facts, &mut shift);
+        Arc::make_mut(&mut analysis.summary).relocate_region(&region.cache.summary, &mut shift);
+        Arc::make_mut(&mut analysis.project_facts).relocate_region(&region.cache.facts, &mut shift);
         diagnostics(
-            &mut Arc::make_mut(&mut analysis.parse_diagnostics)[region.parse.clone()],
+            &mut Arc::make_mut(&mut analysis.parse_diagnostics)[region.cache.parse.clone()],
             &mut shift,
         );
         diagnostics(
-            &mut Arc::make_mut(&mut analysis.local_diagnostics)[region.local.clone()],
+            &mut Arc::make_mut(&mut analysis.local_diagnostics)[region.cache.local.clone()],
             &mut shift,
         );
     }

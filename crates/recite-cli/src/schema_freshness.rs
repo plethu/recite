@@ -65,7 +65,7 @@ fn freshness_json(evidence: &SchemaProducerFreshness) -> (&'static str, serde_js
     (status, details)
 }
 
-fn freshness_status(evidence: &SchemaProducerFreshness) -> &'static str {
+pub(crate) fn freshness_status(evidence: &SchemaProducerFreshness) -> &'static str {
     let mut invalid = false;
     let mut missing = false;
     let mut mismatch = false;

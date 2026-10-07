@@ -9,7 +9,7 @@ namespace Recite.Unity.Native
     internal static class ReciteNativeBridge
     {
         internal const uint AbiMajor = 0;
-        internal const uint AbiMinor = 6;
+        internal const uint AbiMinor = 7;
         internal const uint AbiPatch = 0;
         private const string LibraryName = "recite_ffi";
 
@@ -213,37 +213,18 @@ namespace Recite.Unity.Native
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_set_catalog")]
         internal static extern ReciteStatus SessionSetCatalog(ulong sessionHandle, ulong catalogHandle);
 
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_restore_with_catalog")]
-        internal static extern ReciteStatus SessionRestoreWithCatalog(ulong assetHandle, byte[] snapshotBytes,
-            UIntPtr snapshotLen, IntPtr values, UIntPtr valuesLen, ulong catalogHandle, byte[] localeVariant,
-            out ulong sessionHandle, out ReciteBuffer batch);
-
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_create")]
         internal static extern ReciteStatus SessionCreate(ulong assetHandle, byte[] startBlock, byte[] locale, out ulong sessionHandle);
 
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_create_with_values")]
-        internal static extern ReciteStatus SessionCreateWithValues(ulong assetHandle, byte[] startBlock, byte[] locale, IntPtr values, UIntPtr valuesLen, out ulong sessionHandle);
+        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_prepare_restore")]
+        internal static extern ReciteStatus SessionPrepareRestore(ulong assetHandle, byte[] snapshotBytes,
+            UIntPtr snapshotLen, out ulong sessionHandle);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_begin")]
         internal static extern ReciteStatus SessionBegin(ulong sessionHandle, out ReciteBuffer batch);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_start")]
         internal static extern ReciteStatus SessionStart(ulong assetHandle, byte[] startBlock, byte[] locale, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_start_with_values")]
-        internal static extern ReciteStatus SessionStartWithValues(ulong assetHandle, byte[] startBlock, byte[] locale, IntPtr values, UIntPtr valuesLen, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_start_with_locale_provider")]
-        internal static extern ReciteStatus SessionStartWithLocaleProvider(ulong assetHandle, byte[] startBlock, byte[] locale, ReciteLocaleFn callback, IntPtr userdata, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_start_with_locale_provider_and_variant")]
-        internal static extern ReciteStatus SessionStartWithLocaleProviderAndVariant(ulong assetHandle, byte[] startBlock, byte[] locale, byte[] localeVariant, ReciteLocaleFn callback, IntPtr userdata, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_start_with_values_and_locale_provider")]
-        internal static extern ReciteStatus SessionStartWithValuesAndLocaleProvider(ulong assetHandle, byte[] startBlock, byte[] locale, IntPtr values, UIntPtr valuesLen, ReciteLocaleFn callback, IntPtr userdata, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_start_with_values_and_locale_provider_and_variant")]
-        internal static extern ReciteStatus SessionStartWithValuesAndLocaleProviderAndVariant(ulong assetHandle, byte[] startBlock, byte[] locale, byte[] localeVariant, IntPtr values, UIntPtr valuesLen, ReciteLocaleFn callback, IntPtr userdata, out ulong sessionHandle, out ReciteBuffer batch);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_register_condition")]
         internal static extern ReciteStatus SessionRegisterCondition(ulong sessionHandle, byte[] name, ReciteConditionFn handler, IntPtr userdata);
@@ -259,15 +240,6 @@ namespace Recite.Unity.Native
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_restore")]
         internal static extern ReciteStatus SessionRestore(ulong assetHandle, byte[] snapshotBytes, UIntPtr snapshotLen, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_restore_with_values")]
-        internal static extern ReciteStatus SessionRestoreWithValues(ulong assetHandle, byte[] snapshotBytes, UIntPtr snapshotLen, IntPtr values, UIntPtr valuesLen, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_restore_with_values_and_locale_provider")]
-        internal static extern ReciteStatus SessionRestoreWithValuesAndLocaleProvider(ulong assetHandle, byte[] snapshotBytes, UIntPtr snapshotLen, IntPtr values, UIntPtr valuesLen, ReciteLocaleFn callback, IntPtr userdata, out ulong sessionHandle, out ReciteBuffer batch);
-
-        [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_restore_with_values_and_locale_provider_and_variant")]
-        internal static extern ReciteStatus SessionRestoreWithValuesAndLocaleProviderAndVariant(ulong assetHandle, byte[] snapshotBytes, UIntPtr snapshotLen, IntPtr values, UIntPtr valuesLen, byte[] localeVariant, ReciteLocaleFn callback, IntPtr userdata, out ulong sessionHandle, out ReciteBuffer batch);
 
         [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "recite_session_set_interpolation_values")]
         internal static extern ReciteStatus SessionSetInterpolationValues(ulong sessionHandle, IntPtr values, UIntPtr valuesLen);

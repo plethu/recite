@@ -3,12 +3,15 @@ use std::io::{self, Write};
 
 use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    LineId, ScalarValue,
+    AvailabilityReasonId, ChoiceId, LineId, ScalarValue,
     compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
 };
 use recite_runtime::{
-    DialogueEvent, DialogueLine, DialoguePlural, DialoguePluralResolution,
-    DialoguePluralResolutionOutcome, EmptyDialogueContext, LocaleResolution,
+    ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
+    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
+    ChoiceEchoMode, DialogueChoice, DialogueEvent, DialogueLine, DialoguePlural,
+    DialoguePluralResolution, DialoguePluralResolutionOutcome, EmptyDialogueContext,
+    LocaleResolution,
     localisation::{InterpolationValues, PluralResolutionAttempt, PluralResolutionOutcome},
     next_with, start_scene,
 };
@@ -18,6 +21,94 @@ use super::{FfiOutputEncodeError, encode_batch, encode_batch_output};
 use crate::ReciteStatus;
 
 struct FailingWriter;
+
+#[test]
+fn availability_origins_and_tagged_arguments_survive_output_projection() {
+    let arguments = vec![
+        ChoiceAvailabilityReasonValue::Identifier("player".to_owned()),
+        ChoiceAvailabilityReasonValue::String("hello".to_owned()),
+        ChoiceAvailabilityReasonValue::Integer(3),
+        ChoiceAvailabilityReasonValue::Float(1.5),
+        ChoiceAvailabilityReasonValue::Boolean(false),
+    ];
+    let expected = serde_json::json!([
+        {"kind":"identifier", "value":"player"},
+        {"kind":"string", "value":"hello"},
+        {"kind":"integer", "value":3},
+        {"kind":"float", "value":1.5},
+        {"kind":"boolean", "value":false},
+    ]);
+    for origin in [
+        None,
+        Some(ChoiceAvailabilityReasonOrigin::ConditionCall {
+            function: "trusts".to_owned(),
+            args: arguments.clone(),
+        }),
+        Some(ChoiceAvailabilityReasonOrigin::RequirementExpression {
+            source_text: "trusts(player) and ready()".to_owned(),
+        }),
+    ] {
+        let reason = ChoiceAvailabilityReason {
+            id: AvailabilityReasonId::new("trust_hint").expect("reason ID"),
+            source_text: "Trust required.".to_owned(),
+            text: "Trust required.".to_owned(),
+            origin: origin.clone(),
+            args: arguments
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(index, value)| ChoiceAvailabilityReasonArg {
+                    name: format!("arg{index}"),
+                    value,
+                })
+                .collect(),
+        };
+        let bytes = encode_batch(vec![DialogueEvent::Prompt {
+            line: None,
+            choices: vec![DialogueChoice {
+                id: ChoiceId::new("11111111111111111111").expect("choice ID"),
+                source_text: "Ask.".to_owned(),
+                text: "Ask.".to_owned(),
+                metadata: Vec::new(),
+                echo: ChoiceEchoMode::None,
+                availability: ChoiceAvailability::unavailable(
+                    Some(reason.clone()),
+                    Some(ChoiceAvailabilityReasonTree::Reason(reason)),
+                ),
+            }],
+        }])
+        .expect("reason batch encodes");
+        let batch: serde_json::Value = rmp_serde::from_slice(&bytes).expect("reason batch decodes");
+        let availability = &batch["events"][0]["choices"][0]["availability"];
+        let reason = &availability["primary_reason"];
+        assert_eq!(reason["origin"], availability["reason_tree"]["origin"]);
+        let values: Vec<_> = reason["args"]
+            .as_array()
+            .expect("args array")
+            .iter()
+            .map(|arg| arg["value"].clone())
+            .collect();
+        assert_eq!(serde_json::json!(values), expected);
+        match origin {
+            None => assert!(
+                reason.get("origin").is_none(),
+                "legacy reason shape is unchanged"
+            ),
+            Some(ChoiceAvailabilityReasonOrigin::ConditionCall { .. }) => {
+                assert_eq!(
+                    reason["origin"],
+                    serde_json::json!({"kind":"condition_call", "function":"trusts", "args": expected})
+                );
+            }
+            Some(ChoiceAvailabilityReasonOrigin::RequirementExpression { .. }) => {
+                assert_eq!(
+                    reason["origin"],
+                    serde_json::json!({"kind":"requirement_expression", "source_text":"trusts(player) and ready()"})
+                );
+            }
+        }
+    }
+}
 
 impl Write for FailingWriter {
     fn write(&mut self, _bytes: &[u8]) -> io::Result<usize> {

@@ -144,6 +144,68 @@ impl KeyExt for Button {
         &mut self.key
     }
 }
+impl Button {
+    fn background(&self, colors: &super::palette::Palette, hovered: bool, pressed: bool) -> Color {
+        let selected = self.selected == Some(true);
+        let filled = self.kind == Kind::Primary;
+        let segment = self.semantics == Semantics::Radio;
+        if !self.enabled {
+            if self.kind == Kind::Quiet {
+                Color::TRANSPARENT
+            } else {
+                colors.inset
+            }
+        } else if pressed {
+            if filled {
+                Color::lerp(colors.accent, colors.on_accent, 0.16)
+            } else {
+                colors.pressed
+            }
+        } else if segment {
+            if hovered && !selected {
+                colors.hover.with_a(100)
+            } else {
+                Color::TRANSPARENT
+            }
+        } else if selected {
+            colors.selection
+        } else if hovered {
+            if filled {
+                Color::lerp(colors.accent, colors.on_accent, 0.08)
+            } else {
+                colors.hover
+            }
+        } else {
+            match self.kind {
+                Kind::Quiet => Color::TRANSPARENT,
+                Kind::Secondary => colors.inset,
+                Kind::Primary => colors.accent,
+            }
+        }
+    }
+
+    fn border_color(&self, colors: &super::palette::Palette, focused: bool, down: bool) -> Color {
+        let selected = self.selected == Some(true);
+        let filled = self.kind == Kind::Primary;
+        let segment = self.semantics == Semantics::Radio;
+        if focused {
+            if filled {
+                colors.on_accent
+            } else {
+                colors.accent
+            }
+        } else if selected {
+            colors.accent
+        } else if down {
+            colors.boundary
+        } else if self.kind == Kind::Secondary && !segment {
+            colors.rule
+        } else {
+            Color::TRANSPARENT
+        }
+    }
+}
+
 impl Component for Button {
     fn render(&self) -> impl IntoElement {
         let colors = t::colors();
@@ -160,39 +222,7 @@ impl Component for Button {
         let selected = self.selected == Some(true);
         let filled = self.kind == Kind::Primary;
         let segment = self.semantics == Semantics::Radio;
-        let background = if !self.enabled {
-            if self.kind == Kind::Quiet {
-                Color::TRANSPARENT
-            } else {
-                colors.inset
-            }
-        } else if *pressed.read() {
-            if filled {
-                Color::lerp(colors.accent, colors.on_accent, 0.16)
-            } else {
-                colors.pressed
-            }
-        } else if segment {
-            if *hovered.read() && !selected {
-                colors.hover.with_a(100)
-            } else {
-                Color::TRANSPARENT
-            }
-        } else if selected {
-            colors.selection
-        } else if *hovered.read() {
-            if filled {
-                Color::lerp(colors.accent, colors.on_accent, 0.08)
-            } else {
-                colors.hover
-            }
-        } else {
-            match self.kind {
-                Kind::Quiet => Color::TRANSPARENT,
-                Kind::Secondary => colors.inset,
-                Kind::Primary => colors.accent,
-            }
-        };
+        let background = self.background(&colors, *hovered.read(), *pressed.read());
         let color = if filled && self.enabled {
             colors.on_accent
         } else {
@@ -205,34 +235,15 @@ impl Component for Button {
             if down { 0 } else { 80 },
             freya::animation::Function::Cubic,
         );
-        let role = if self.semantics == Semantics::Tab {
-            AccessibilityRole::Tab
-        } else if self.semantics == Semantics::MenuItem {
-            AccessibilityRole::MenuItem
-        } else if self.semantics == Semantics::Option {
-            AccessibilityRole::ListBoxOption
-        } else if self.semantics == Semantics::Radio {
-            AccessibilityRole::RadioButton
-        } else if self.checked.is_some() {
-            AccessibilityRole::CheckBox
-        } else {
-            AccessibilityRole::Button
+        let role = match self.semantics {
+            Semantics::Tab => AccessibilityRole::Tab,
+            Semantics::MenuItem => AccessibilityRole::MenuItem,
+            Semantics::Option => AccessibilityRole::ListBoxOption,
+            Semantics::Radio => AccessibilityRole::RadioButton,
+            Semantics::Button if self.checked.is_some() => AccessibilityRole::CheckBox,
+            Semantics::Button => AccessibilityRole::Button,
         };
-        let border_color = if focused {
-            if filled {
-                colors.on_accent
-            } else {
-                colors.accent
-            }
-        } else if selected {
-            colors.accent
-        } else if down {
-            colors.boundary
-        } else if self.kind == Kind::Secondary && !segment {
-            colors.rule
-        } else {
-            Color::TRANSPARENT
-        };
+        let border_color = self.border_color(&colors, focused, down);
         let mut control = rect()
             .horizontal()
             .on_sized(move |event: Event<SizedEventData>| area.set_if_modified(Some(event.area)))

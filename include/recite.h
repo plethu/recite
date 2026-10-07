@@ -38,14 +38,15 @@
 /**
  * ABI major version for the generated C header.
  *
- * Increment this for breaking C ABI changes.
+ * Stable ABI families use major bumps for breaking changes. The current
+ * unreleased 0.x family versions interface changes through its minor revision.
  */
 #define RECITE_FFI_VERSION_MAJOR 0
 
 /**
- * ABI minor version for additive, backwards-compatible C ABI changes.
+ * Pre-release ABI revision; hosts must ship matching headers and libraries.
  */
-#define RECITE_FFI_VERSION_MINOR 6
+#define RECITE_FFI_VERSION_MINOR 7
 
 /**
  * ABI patch version for documentation-only or implementation-only releases.
@@ -219,11 +220,61 @@ typedef struct {
 } ReciteBuffer;
 
 /**
+ * Result returned by a `ReciteConditionFn` callback.
+ *
+ * `ok` must be exactly 0 or 1. When `ok == 1`, `value_msgpack` must point to a
+ * complete msgpack-encoded `FfiConditionValue`. When `ok == 0`, `error_message`
+ * may be null (the runtime uses a stable fallback) or point to a UTF-8
+ * NUL-terminated string. Result storage must remain immutable and valid after
+ * callback return until the next condition callback for this session or the
+ * enclosing Recite operation returns, whichever happens first. Recite decodes
+ * each result before invoking another condition callback.
+ */
+typedef struct {
+    /**
+     * Exactly 1 = success, 0 = failure.
+     */
+    uint8_t ok;
+    /**
+     * Host-owned msgpack bytes encoding a `FfiConditionValue`. Borrowed by
+     * Recite after callback return under the result storage lifetime above;
+     * valid when `ok == 1`.
+     */
+    const uint8_t *value_msgpack;
+    size_t value_len;
+    /**
+     * Host-owned UTF-8 NUL-terminated error message. Borrowed by Recite only
+     * after callback return under the result storage lifetime above; valid
+     * when `ok == 0`.
+     */
+    const char *error_message;
+} ReciteConditionResult;
+
+/**
+ * Query passed to a `ReciteConditionFn` callback.
+ *
+ * All pointers are borrowed for the duration of the callback and must not be
+ * stored by the host.
+ */
+typedef struct {
+    /**
+     * Recite-owned UTF-8 NUL-terminated condition function name. Borrowed by
+     * the host only for the callback call.
+     */
+    const char *function_name;
+    /**
+     * Recite-owned msgpack-encoded array of tagged argument values. Borrowed
+     * by the host only for the callback call.
+     */
+    const uint8_t *args_msgpack;
+    size_t args_len;
+} ReciteConditionQuery;
+
+/**
  * One caller-provided typed interpolation value.
  *
  * The record and any string it points to are borrowed only for the duration
- * of the `recite_session_*_with_values` or
- * `recite_session_set_interpolation_values` call. Recite copies every value
+ * of the `recite_session_set_interpolation_values` call. Recite copies every value
  * into its session-owned [`InterpolationValues`] map before returning, so a
  * host may release or reuse the input records afterwards.
  */
@@ -256,53 +307,6 @@ typedef struct {
      */
     uint8_t boolean_value;
 } ReciteInterpolationValue;
-
-/**
- * Result returned by a `ReciteConditionFn` callback.
- *
- * `ok` must be exactly 0 or 1. When `ok == 1`, `value_msgpack` must point to a
- * complete msgpack-encoded `FfiConditionValue` valid for the duration of the
- * callback frame. When `ok == 0`, `error_message` may be null (the runtime
- * uses a stable fallback) or point to a UTF-8 NUL-terminated string valid for
- * the duration of the callback frame.
- */
-typedef struct {
-    /**
-     * Exactly 1 = success, 0 = failure.
-     */
-    uint8_t ok;
-    /**
-     * Host-owned msgpack bytes encoding a `FfiConditionValue`. Borrowed by
-     * Recite only until callback return; valid when `ok == 1`.
-     */
-    const uint8_t *value_msgpack;
-    size_t value_len;
-    /**
-     * Host-owned UTF-8 NUL-terminated error message. Borrowed by Recite only
-     * until callback return; valid when `ok == 0`.
-     */
-    const char *error_message;
-} ReciteConditionResult;
-
-/**
- * Query passed to a `ReciteConditionFn` callback.
- *
- * All pointers are borrowed for the duration of the callback and must not be
- * stored by the host.
- */
-typedef struct {
-    /**
-     * Recite-owned UTF-8 NUL-terminated condition function name. Borrowed by
-     * the host only for the callback call.
-     */
-    const char *function_name;
-    /**
-     * Recite-owned msgpack-encoded array of `FfiConditionArg` values. Borrowed
-     * by the host only for the callback call.
-     */
-    const uint8_t *args_msgpack;
-    size_t args_len;
-} ReciteConditionQuery;
 
 /**
  * One callback-provided plural candidate attempt.
@@ -542,11 +546,12 @@ ReciteStatus recite_session_acknowledge_effect(uint64_t session_handle,
 
 /**
  * Runs the initial traversal drain for a session created with
- * `recite_session_create`.
+ * `recite_session_create` or `recite_session_prepare_restore`.
  *
- * Must be called exactly once per session, after all condition handlers have
+ * Must succeed exactly once per session, after all condition handlers have
  * been registered with `recite_session_register_condition`. On success writes
- * the first output batch to `*batch_out`.
+ * the first output batch to `*batch_out`. Failure leaves the session prepared
+ * so the host can correct its configuration and retry.
  *
  * # Safety
  * `batch_out` must be a valid non-null pointer.
@@ -595,28 +600,27 @@ ReciteStatus recite_session_create(uint64_t asset_handle,
                                    uint64_t *session_handle_out);
 
 /**
- * Creates a session handle without running traversal and stores typed
- * interpolation values for the session.
- *
- * The input records are borrowed only for this call. Recite copies them into
- * session-owned storage before returning. Call
- * `recite_session_set_interpolation_values` to replace the values later.
- *
- * # Safety
- * All non-null pointer arguments, including each record's string pointers,
- * must be valid for the duration of the call.
- */
-ReciteStatus recite_session_create_with_values(uint64_t asset_handle,
-                                               const char *start_block,
-                                               const char *locale,
-                                               const ReciteInterpolationValue *values,
-                                               size_t values_len,
-                                               uint64_t *session_handle_out);
-
-/**
  * Frees a session handle. Does nothing if the handle is unknown.
  */
 void recite_session_free(uint64_t session_handle);
+
+/**
+ * Restores a checkpoint without running traversal.
+ *
+ * Configure condition handlers, interpolation values and locale providers on
+ * the returned handle, then call `recite_session_begin`. A pending prompt
+ * resumes with an empty batch; a pending blocking effect is re-emitted with
+ * its original ID. Failed preparation does not allocate a session handle.
+ *
+ * # Safety
+ * `session_handle_out` must be a valid non-null pointer. `snapshot_bytes`
+ * must be non-null and valid for `snapshot_len` bytes when the length fits
+ * Rust `isize`; larger lengths are rejected before reading the snapshot.
+ */
+ReciteStatus recite_session_prepare_restore(uint64_t asset_handle,
+                                            const uint8_t *snapshot_bytes,
+                                            size_t snapshot_len,
+                                            uint64_t *session_handle_out);
 
 /**
  * Registers a condition handler on an existing session handle.
@@ -643,131 +647,24 @@ ReciteStatus recite_session_register_condition(uint64_t session_handle,
                                                void *userdata);
 
 /**
- * Restores a session from a snapshot previously produced by
- * `recite_session_snapshot`.
+ * Restores and begins a checkpoint needing no host configuration.
+ * Use prepare_restore, the session setters, then begin when resumption needs
+ * condition handlers, interpolation values, a catalogue or locale provider.
  *
- * The snapshot must have been produced against the same compiled asset
- * identified by `asset_handle`. On success writes a new session handle to
- * `*session_handle_out` and a resumption output batch to `*batch_out`. The
- * batch is empty when the restored session is at a pending-prompt boundary.
- * A pending blocking effect is re-emitted once in the resumption batch with
- * the same request ID so the host can reconcile or re-present it.
- * If the snapshot encoded an ended session, `recite_session_restore` returns
- * `RECITE_ERR_NO_ACTIVE_SESSION`.
+ * Pending prompts return an empty batch; blocking effects are re-emitted
+ * with the original request ID. Ended checkpoints return NoActiveSession.
+ * Failure publishes neither a handle nor a batch.
  *
  * # Safety
- * All non-null pointer arguments must be valid for the duration of the call.
- * `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
- * maximum value representable by Rust `isize`, it must be valid for that many
- * bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
- * the snapshot is read.
+ * Both output pointers must be non-null and valid for the call. Snapshot
+ * bytes must be non-null and valid for snapshot_len bytes when the length
+ * fits Rust isize; larger lengths are rejected before reading.
  */
 ReciteStatus recite_session_restore(uint64_t asset_handle,
                                     const uint8_t *snapshot_bytes,
                                     size_t snapshot_len,
                                     uint64_t *session_handle_out,
                                     ReciteBuffer *batch_out);
-
-/**
- * Restores with an owned catalogue attached before the first traversal drain.
- * The new session keeps this catalogue revision if its handle is later freed
- * or updated. An absent locale in the saved session still emits source text.
- *
- * # Safety
- * All non-null pointers must be valid for the duration of the call. The
- * snapshot and value pointers obey their existing restore entrypoint contracts.
- */
-ReciteStatus recite_session_restore_with_catalog(uint64_t asset_handle,
-                                                 const uint8_t *snapshot_bytes,
-                                                 size_t snapshot_len,
-                                                 const ReciteInterpolationValue *values,
-                                                 size_t values_len,
-                                                 uint64_t catalog_handle,
-                                                 const char *locale_variant,
-                                                 uint64_t *session_handle_out,
-                                                 ReciteBuffer *batch_out);
-
-/**
- * Restores a session and supplies typed interpolation values for its first
- * resumption drain.
- *
- * Input records are borrowed only for this call and copied into the restored
- * session. Use `recite_session_set_interpolation_values` to replace them for a
- * later traversal operation.
- *
- * # Safety
- * All non-null pointer arguments, including each record's string pointers,
- * must be valid for the duration of the call. `snapshot_bytes` must be
- * non-null. When `snapshot_len` does not exceed the maximum value representable
- * by Rust `isize`, it must be valid for that many bytes. Larger lengths are
- * rejected with `RECITE_STATUS_VALIDATION` before the snapshot is read.
- */
-ReciteStatus recite_session_restore_with_values(uint64_t asset_handle,
-                                                const uint8_t *snapshot_bytes,
-                                                size_t snapshot_len,
-                                                const ReciteInterpolationValue *values,
-                                                size_t values_len,
-                                                uint64_t *session_handle_out,
-                                                ReciteBuffer *batch_out);
-
-/**
- * Restores a session and supplies both interpolation values and a typed
- * locale callback before the first resumption drain.
- *
- * The callback is copied into the new session. Its complete result pointer
- * tree must remain immutable and valid until this restore call returns;
- * Recite copies it before returning the resumption batch.
- *
- * # Safety
- * All non-null pointers must be valid for the duration of the call.
- * `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
- * maximum value representable by Rust `isize`, it must be valid for that many
- * bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
- * the snapshot is read. The
- * callback must be a valid non-null function pointer, and `userdata` must
- * remain valid for the restored session lifetime. Passing NULL as `callback`
- * returns `RECITE_STATUS_VALIDATION` before a session is created.
- */
-ReciteStatus recite_session_restore_with_values_and_locale_provider(uint64_t asset_handle,
-                                                                    const uint8_t *snapshot_bytes,
-                                                                    size_t snapshot_len,
-                                                                    const ReciteInterpolationValue *values,
-                                                                    size_t values_len,
-                                                                    ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
-                                                                                                   void*),
-                                                                    void *userdata,
-                                                                    uint64_t *session_handle_out,
-                                                                    ReciteBuffer *batch_out);
-
-/**
- * Restores a session with interpolation values, a locale callback, and an
- * explicit grammatical variant before the first resumption drain.
- *
- * The variant is copied into the restored session and is not part of the
- * serialized snapshot. Callers must supply it again whenever restoring a
- * snapshot that needs a variant-specific catalog entry.
- *
- * # Safety
- * All non-null pointers must be valid for the duration of the call.
- * `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
- * maximum value representable by Rust `isize`, it must be valid for that many
- * bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
- * the snapshot is read. The
- * callback must be a valid non-null function pointer, and `userdata` must
- * remain valid for the restored session lifetime. Passing NULL as `callback`
- * returns `RECITE_STATUS_VALIDATION` before a session is created.
- */
-ReciteStatus recite_session_restore_with_values_and_locale_provider_and_variant(uint64_t asset_handle,
-                                                                                const uint8_t *snapshot_bytes,
-                                                                                size_t snapshot_len,
-                                                                                const ReciteInterpolationValue *values,
-                                                                                size_t values_len,
-                                                                                const char *locale_variant,
-                                                                                ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
-                                                                                                               void*),
-                                                                                void *userdata,
-                                                                                uint64_t *session_handle_out,
-                                                                                ReciteBuffer *batch_out);
 
 /**
  * Attaches one owned catalogue revision to a session, replacing its locale
@@ -835,133 +732,22 @@ ReciteStatus recite_session_set_locale_variant(uint64_t session_handle, const ch
 ReciteStatus recite_session_snapshot(uint64_t session_handle, ReciteBuffer *snapshot_out);
 
 /**
- * Convenience that combines `recite_session_create` and `recite_session_begin`.
+ * Creates and begins a session that needs no host configuration before traversal.
+ * For conditions, interpolation values or locale providers, use create, the
+ * session setters, then begin instead.
  *
- * Use this when no conditions appear in the opening block of the scene. For
- * scenes that evaluate conditions at scene start, use `recite_session_create`
- * + `recite_session_register_condition` + `recite_session_begin` instead.
- *
- * `start_block` and `locale` are nullable UTF-8 NUL-terminated strings.
- * On success writes a non-zero handle to `*session_handle_out` and the initial
- * output batch to `*batch_out`.
+ * On success publishes a handle and the initial batch. Failure frees the
+ * prepared session and leaves both outputs unchanged.
  *
  * # Safety
- * All non-null pointer arguments must be valid for the duration of the call.
+ * Both output pointers must be non-null and valid for the call. Non-null
+ * start_block and locale pointers must be valid NUL-terminated UTF-8.
  */
 ReciteStatus recite_session_start(uint64_t asset_handle,
                                   const char *start_block,
                                   const char *locale,
                                   uint64_t *session_handle_out,
                                   ReciteBuffer *batch_out);
-
-/**
- * Convenience that creates a session, installs a locale callback, and runs
- * the initial traversal drain.
- *
- * The callback result is copied during the enclosing synchronous call. Every
- * result pointer must remain immutable and valid until that call returns; a
- * null locale still selects source-text-only mode and bypasses the callback.
- *
- * # Safety
- * All non-null pointers must be valid for the duration of the call. The
- * callback must be a valid non-null function pointer, and `userdata` must
- * remain valid for the session lifetime. Passing NULL as `callback` returns
- * `RECITE_STATUS_VALIDATION` before a session is created.
- */
-ReciteStatus recite_session_start_with_locale_provider(uint64_t asset_handle,
-                                                       const char *start_block,
-                                                       const char *locale,
-                                                       ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
-                                                                                      void*),
-                                                       void *userdata,
-                                                       uint64_t *session_handle_out,
-                                                       ReciteBuffer *batch_out);
-
-/**
- * Convenience that creates a session, installs a locale callback and
- * grammatical variant, and runs the initial traversal drain.
- *
- * The variant is copied into the session and is not part of serialized state.
- * It therefore has to be supplied again when restoring a snapshot.
- *
- * # Safety
- * All non-null pointers must be valid for the duration of the call. The
- * callback must be a valid non-null function pointer, and `userdata` must
- * remain valid for the session lifetime. Passing NULL as `callback` returns
- * `RECITE_STATUS_VALIDATION` before a session is created.
- */
-ReciteStatus recite_session_start_with_locale_provider_and_variant(uint64_t asset_handle,
-                                                                   const char *start_block,
-                                                                   const char *locale,
-                                                                   const char *locale_variant,
-                                                                   ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
-                                                                                                  void*),
-                                                                   void *userdata,
-                                                                   uint64_t *session_handle_out,
-                                                                   ReciteBuffer *batch_out);
-
-/**
- * Convenience that combines session creation and the initial traversal drain
- * while supplying typed interpolation values.
- *
- * Input records are borrowed only for this call and copied into session-owned
- * storage. Use `recite_session_set_interpolation_values` to replace them for a
- * later traversal operation.
- *
- * # Safety
- * All non-null pointer arguments, including each record's string pointers,
- * must be valid for the duration of the call.
- */
-ReciteStatus recite_session_start_with_values(uint64_t asset_handle,
-                                              const char *start_block,
-                                              const char *locale,
-                                              const ReciteInterpolationValue *values,
-                                              size_t values_len,
-                                              uint64_t *session_handle_out,
-                                              ReciteBuffer *batch_out);
-
-/**
- * Convenience that creates a session, installs a locale callback, stores
- * typed interpolation values, and runs the initial traversal drain.
- *
- * # Safety
- * All non-null pointers must be valid for the duration of the call. The
- * callback must be a valid non-null function pointer, and `userdata` must
- * remain valid for the session lifetime. Passing NULL as `callback` returns
- * `RECITE_STATUS_VALIDATION` before a session is created.
- */
-ReciteStatus recite_session_start_with_values_and_locale_provider(uint64_t asset_handle,
-                                                                  const char *start_block,
-                                                                  const char *locale,
-                                                                  const ReciteInterpolationValue *values,
-                                                                  size_t values_len,
-                                                                  ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
-                                                                                                 void*),
-                                                                  void *userdata,
-                                                                  uint64_t *session_handle_out,
-                                                                  ReciteBuffer *batch_out);
-
-/**
- * Convenience that creates a session, installs typed interpolation values,
- * a locale callback, and a grammatical variant before the initial drain.
- *
- * # Safety
- * All non-null pointers must be valid for the duration of the call. The
- * callback must be a valid non-null function pointer, and `userdata` must
- * remain valid for the session lifetime. Passing NULL as `callback` returns
- * `RECITE_STATUS_VALIDATION` before a session is created.
- */
-ReciteStatus recite_session_start_with_values_and_locale_provider_and_variant(uint64_t asset_handle,
-                                                                              const char *start_block,
-                                                                              const char *locale,
-                                                                              const char *locale_variant,
-                                                                              const ReciteInterpolationValue *values,
-                                                                              size_t values_len,
-                                                                              ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
-                                                                                                             void*),
-                                                                              void *userdata,
-                                                                              uint64_t *session_handle_out,
-                                                                              ReciteBuffer *batch_out);
 
 #ifdef __cplusplus
 }  // extern "C"

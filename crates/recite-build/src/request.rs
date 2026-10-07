@@ -191,6 +191,8 @@ pub enum ProjectBuildPreparationError {
     },
     #[error("schema input {path} loaded without a canonical model")]
     SchemaWithoutModel { path: PathBuf },
+    #[error("project schema could not be loaded: {message}")]
+    Schema { message: String },
     #[error("invalid project input key {key:?}: {reason}")]
     InvalidInputKey { key: String, reason: String },
     #[error("authoring validation could not be completed: {message}")]

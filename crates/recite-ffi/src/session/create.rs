@@ -1,11 +1,7 @@
-use std::collections::BTreeMap;
-use std::thread;
-
 use crate::asset::{alloc_handle, lock_assets};
 use crate::error::{ReciteStatus, set_last_error};
-use crate::interpolation::{ReciteInterpolationValue, parse_interpolation_values};
 
-use super::{FfiLocaleSource, FfiSession, parse_session_params};
+use super::{FfiSession, parse_session_params};
 use recite_adapter::{LoadedDialogue, SessionDriver, StartRequest};
 
 /// Creates a session handle without running any traversal.
@@ -27,37 +23,6 @@ pub unsafe extern "C" fn recite_session_create(
     locale: *const std::ffi::c_char,
     session_handle_out: *mut u64,
 ) -> ReciteStatus {
-    unsafe {
-        super::recite_session_create_with_values(
-            asset_handle,
-            start_block,
-            locale,
-            std::ptr::null(),
-            0,
-            session_handle_out,
-        )
-    }
-}
-
-/// Creates a session handle without running traversal and stores typed
-/// interpolation values for the session.
-///
-/// The input records are borrowed only for this call. Recite copies them into
-/// session-owned storage before returning. Call
-/// `recite_session_set_interpolation_values` to replace the values later.
-///
-/// # Safety
-/// All non-null pointer arguments, including each record's string pointers,
-/// must be valid for the duration of the call.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn recite_session_create_with_values(
-    asset_handle: u64,
-    start_block: *const std::ffi::c_char,
-    locale: *const std::ffi::c_char,
-    values: *const ReciteInterpolationValue,
-    values_len: usize,
-    session_handle_out: *mut u64,
-) -> ReciteStatus {
     if session_handle_out.is_null() {
         set_last_error("null pointer argument");
         return ReciteStatus::Validation;
@@ -71,14 +36,6 @@ pub unsafe extern "C" fn recite_session_create_with_values(
                 set_last_error("unknown asset handle");
                 return ReciteStatus::InvalidHandle;
             }
-        }
-    };
-
-    let interpolation_values = match unsafe { parse_interpolation_values(values, values_len) } {
-        Ok(values) => values,
-        Err(error) => {
-            set_last_error(&error);
-            return ReciteStatus::Validation;
         }
     };
 
@@ -108,17 +65,7 @@ pub unsafe extern "C" fn recite_session_create_with_values(
     }
 
     let handle = alloc_handle();
-    super::lock_sessions().insert(
-        handle,
-        FfiSession {
-            driver,
-            handlers: BTreeMap::new(),
-            interpolation_values,
-            locale_source: FfiLocaleSource::None,
-            locale_variant: None,
-            owner_thread: thread::current().id(),
-        },
-    );
+    super::lock_sessions().insert(handle, FfiSession::prepared(driver));
     unsafe { *session_handle_out = handle };
     ReciteStatus::Ok
 }

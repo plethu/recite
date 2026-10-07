@@ -74,10 +74,10 @@ impl<'asset> PreviewSession<'asset> {
                 effect_id: restored_id.clone(),
             });
         }
-        let mut trial = self.session.clone();
-        match acknowledge_effect(&mut trial, effect_id.clone(), ack.clone()) {
+        // Runtime acknowledgement validates phase and ID before its sole
+        // mutation; no growing-session rollback copy is needed here.
+        match acknowledge_effect(&mut self.session, effect_id.clone(), ack.clone()) {
             Ok(()) => {
-                self.session = trial;
                 self.restored_effect_reemit = None;
                 self.state.status = PreviewStatus::Ready;
                 self.append_events(vec![PreviewEvent::EffectAcknowledged { effect_id, ack }])

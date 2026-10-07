@@ -6,11 +6,12 @@ use crate::output::{encode_batch, encode_batch_output};
 use super::{driver_failure, locale_resolution};
 
 /// Runs the initial traversal drain for a session created with
-/// `recite_session_create`.
+/// `recite_session_create` or `recite_session_prepare_restore`.
 ///
-/// Must be called exactly once per session, after all condition handlers have
+/// Must succeed exactly once per session, after all condition handlers have
 /// been registered with `recite_session_register_condition`. On success writes
-/// the first output batch to `*batch_out`.
+/// the first output batch to `*batch_out`. Failure leaves the session prepared
+/// so the host can correct its configuration and retry.
 ///
 /// # Safety
 /// `batch_out` must be a valid non-null pointer.

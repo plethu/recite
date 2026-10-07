@@ -87,6 +87,21 @@ fn open(dir: &std::path::Path) -> Result<TestingRunner, Box<dyn std::error::Erro
     Ok(test)
 }
 #[test]
+fn clean_tab_close_keeps_inactive_orientation_and_switches_active_tabs_safely()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = fixture()?;
+    let mut test = open(dir.path())?;
+    support::click(&mut test, "B")?;
+    support::click(&mut test, "A")?;
+    support::click(&mut test, "Close b.recite")?;
+    assert!(has(&test, "Hello."));
+    support::click(&mut test, "B")?;
+    support::click(&mut test, "Close b.recite")?;
+    assert!(has(&test, "Hello."));
+    Ok(())
+}
+
+#[test]
 fn project_tools_keep_navigation_and_generated_output_read_only()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = fixture()?;

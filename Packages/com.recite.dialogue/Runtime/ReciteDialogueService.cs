@@ -113,25 +113,7 @@ namespace Recite.Unity
                 native.Load(asset);
                 ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionCreate(native.Asset, ReciteNativeBridge.ToUtf8NullTerminated(startBlock), ReciteNativeBridge.ToUtf8NullTerminated(locale), out var createdSession));
                 native.Attach(createdSession);
-                SetNativeInterpolationValues();
-                if (localeVariant != null)
-                {
-                    ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSetLocaleVariant(
-                        native.Session, ReciteNativeBridge.ToUtf8NullTerminated(localeVariant)));
-                }
-                conditions.Register(native.Session);
-                if (poCatalog != null)
-                    ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSetCatalog(native.Session, poCatalog.Handle));
-                ReciteNativeBridge.ReciteBuffer batch;
-                try
-                {
-                    ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionBegin(native.Session, out batch));
-                }
-                finally
-                {
-                    conditions.ReleaseBorrowedResults();
-                }
-                return OutputDecoder.DecodeBatch(ref batch);
+                return ConfigureAndBegin();
             }
             catch
             {
@@ -206,52 +188,43 @@ namespace Recite.Unity
             var requestedVariant = variant == null ? previousVariant :
                 ReciteStringValidation.Validate(variant, nameof(variant), allowEmpty: true);
             SetStoredVariant(string.IsNullOrEmpty(requestedVariant) ? null : requestedVariant);
-            ReciteNativeBridge.ReciteBuffer batch = default;
             try
             {
                 native.Load(asset);
-                using (var nativeValues = new ReciteNativeBridge.InterpolationValueBuffer(interpolationValues))
-                {
-                    ulong restoredSession;
-                    if (poCatalog != null)
-                    {
-                        ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionRestoreWithCatalog(
-                            native.Asset, snapshot.Bytes, new UIntPtr((ulong)snapshot.Bytes.Length),
-                            nativeValues.Pointer, nativeValues.Length, poCatalog.Handle,
-                            ReciteNativeBridge.ToUtf8NullTerminated(localeVariant),
-                            out restoredSession, out batch));
-                        native.Attach(restoredSession);
-                    }
-                    else
-                    {
-                        ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionRestoreWithValues(
-                            native.Asset,
-                            snapshot.Bytes,
-                            new UIntPtr((ulong)snapshot.Bytes.Length),
-                            nativeValues.Pointer,
-                            nativeValues.Length,
-                            out restoredSession,
-                            out batch));
-                        native.Attach(restoredSession);
-                        if (localeVariant != null)
-                        {
-                            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSetLocaleVariant(
-                                native.Session, ReciteNativeBridge.ToUtf8NullTerminated(localeVariant)));
-                        }
-                    }
-                    conditions.ReleaseBorrowedResults();
-                    conditions.Register(native.Session);
-                    return OutputDecoder.DecodeBatch(ref batch);
-                }
+                ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionPrepareRestore(
+                    native.Asset, snapshot.Bytes, new UIntPtr((ulong)snapshot.Bytes.Length), out var restoredSession));
+                native.Attach(restoredSession);
+                return ConfigureAndBegin();
             }
             catch
             {
-                conditions.ReleaseBorrowedResults();
-                ReciteNativeBridge.BufferFree(ref batch);
                 End();
                 SetStoredVariant(previousVariant);
                 throw;
             }
+        }
+
+        private ReciteOutputBatch ConfigureAndBegin()
+        {
+            SetNativeInterpolationValues();
+            if (localeVariant != null)
+            {
+                ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSetLocaleVariant(
+                    native.Session, ReciteNativeBridge.ToUtf8NullTerminated(localeVariant)));
+            }
+            conditions.Register(native.Session);
+            if (poCatalog != null)
+                ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSetCatalog(native.Session, poCatalog.Handle));
+            ReciteNativeBridge.ReciteBuffer batch;
+            try
+            {
+                ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionBegin(native.Session, out batch));
+            }
+            finally
+            {
+                conditions.ReleaseBorrowedResults();
+            }
+            return OutputDecoder.DecodeBatch(ref batch);
         }
 
         public void End()

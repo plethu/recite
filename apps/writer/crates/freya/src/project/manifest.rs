@@ -1,8 +1,11 @@
 //! The manifest draft participates in reviewed project edits and recovery.
-use super::{FileError, read_regular, save::replace_checked};
+use super::{
+    FileError, read_regular,
+    save::{replace_checked, sync_directory},
+};
 use std::{
     fs::{File, OpenOptions},
-    io::Write,
+    io::{self, Write},
     path::{Path, PathBuf},
 };
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -21,6 +24,13 @@ pub(super) struct ManifestDraft {
     recovery: PathBuf,
     _lease: File,
     draft: Draft,
+    state: PersistenceState,
+}
+
+#[derive(PartialEq, Eq)]
+enum PersistenceState {
+    Editable,
+    RecoveryCleanupPending,
 }
 impl ManifestDraft {
     pub fn open(root: &Path) -> Result<Self, FileError> {
@@ -33,7 +43,8 @@ impl ManifestDraft {
             .write(true)
             .open(root.join(".recite-manifest-draft.lock"))?;
         lease.try_lock().map_err(|_| FileError::RecoveryInUse)?;
-        let draft: Draft = if recovery.exists() {
+        let recovered = recovery.exists();
+        let draft: Draft = if recovered {
             serde_json::from_str(&read_regular(&recovery)?)?
         } else {
             let text = read_regular(&path)?;
@@ -53,13 +64,20 @@ impl ManifestDraft {
             recovery,
             _lease: lease,
             draft,
+            state: if recovered {
+                PersistenceState::RecoveryCleanupPending
+            } else {
+                PersistenceState::Editable
+            },
         })
     }
     pub fn text(&self) -> &str {
         &self.draft.text
     }
     pub fn dirty(&self) -> bool {
-        self.draft.text != self.draft.baseline || !self.draft.affected.is_empty()
+        self.draft.text != self.draft.baseline
+            || !self.draft.affected.is_empty()
+            || self.state == PersistenceState::RecoveryCleanupPending
     }
     pub fn affected(&self) -> &[String] {
         &self.draft.affected
@@ -88,10 +106,9 @@ impl ManifestDraft {
             text,
         };
         if draft.text == draft.baseline && draft.affected.is_empty() {
-            if self.recovery.exists() {
-                std::fs::remove_file(&self.recovery)?;
-            }
+            self.remove_recovery(sync_directory)?;
             self.draft = draft;
+            self.state = PersistenceState::Editable;
             return Ok(());
         }
         let mut file = atomic_write_file::AtomicWriteFile::open(&self.recovery)?;
@@ -100,6 +117,7 @@ impl ManifestDraft {
         #[cfg(unix)]
         File::open(self.path.parent().ok_or(FileError::Selection)?)?.sync_all()?;
         self.draft = draft;
+        self.state = PersistenceState::Editable;
         Ok(())
     }
     pub fn refresh(&mut self, text: String) {
@@ -114,13 +132,33 @@ impl ManifestDraft {
         }
     }
     pub fn save(&mut self) -> Result<(), FileError> {
+        self.save_with_cleanup_sync(sync_directory)
+    }
+
+    fn save_with_cleanup_sync(
+        &mut self,
+        sync: impl FnOnce(&Path) -> io::Result<()>,
+    ) -> Result<(), FileError> {
         replace_checked(&self.path, &self.draft.baseline, &self.draft.text)?;
         self.draft.baseline = self.draft.text.clone();
         self.draft.affected.clear();
         self.draft.documents.clear();
-        if self.recovery.exists() {
-            std::fs::remove_file(&self.recovery)?;
+        self.state = PersistenceState::RecoveryCleanupPending;
+        self.remove_recovery(sync)?;
+        self.state = PersistenceState::Editable;
+        Ok(())
+    }
+
+    fn remove_recovery(&self, sync: impl FnOnce(&Path) -> io::Result<()>) -> Result<(), FileError> {
+        match std::fs::remove_file(&self.recovery) {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
         }
+        sync(self.path.parent().ok_or(FileError::Selection)?)?;
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

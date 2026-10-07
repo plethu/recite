@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Recite.Unity;
+using Recite.Unity.Native;
 using static ReciteUnityHeadless;
 
 // Real managed/native asset, catalogue and contract cases used by the headless gate.
@@ -15,6 +16,7 @@ internal static class ReciteUnityNativeCases
         ManagedContractErrors();
         StaleChoiceAfterLaterPrompt();
         RestoreRejectsDifferentSchema();
+        RestoreRunningConditionsAndReasonOrigins();
     }
 
     private static void PreservePluralMetadataFromNativePo()
@@ -243,6 +245,43 @@ internal static class ReciteUnityNativeCases
             Assert(later != null && later.Choices.Count == 1, "conformance later prompt changed");
             ExpectStatus(() => service.SelectChoice(oldChoice), ReciteStatus.StaleChoice);
             ExpectStatus(() => service.SelectChoice("unknown"), ReciteStatus.InvalidChoice);
+        }
+    }
+
+    private static void RestoreRunningConditionsAndReasonOrigins()
+    {
+        var bytes = File.ReadAllBytes(Environment.GetEnvironmentVariable("RECITE_UNITY_REASONS_ASSET"));
+        var asset = new ReciteDialogueAsset(bytes);
+        ulong assetHandle = 0;
+        ulong sessionHandle = 0;
+        ReciteSessionSnapshot prepared;
+        try
+        {
+            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.AssetLoad(bytes, new UIntPtr((ulong)bytes.Length), out assetHandle));
+            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionCreate(assetHandle, null, null, out sessionHandle));
+            ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionSnapshot(sessionHandle, out var buffer));
+            prepared = new ReciteSessionSnapshot(ReciteNativeBridge.CopyAndFree(ref buffer));
+        }
+        finally
+        {
+            ReciteNativeBridge.SessionFree(sessionHandle);
+            ReciteNativeBridge.AssetFree(assetHandle);
+        }
+        using (var service = new ReciteDialogueService())
+        {
+            service.RegisterCondition("trust_gte", _ => false);
+            var prompt = FindPrompt(service.Restore(asset, prepared));
+            Assert(prompt != null && prompt.Choices.Count == 4, "running checkpoint did not restore its conditional prompt");
+            var availability = prompt.Choices[0].Availability;
+            Assert(!availability.IsAvailable, "restored condition result changed");
+            Assert(availability.PrimaryReason.Origin is ReciteRequirementExpressionOrigin expression &&
+                expression.SourceText == "requires=(trust_gte(hazel, rhea, 3))", "requirement origin was lost");
+            Assert(availability.ReasonTree.Reason.Origin is ReciteConditionCallOrigin call &&
+                call.Function == "trust_gte" && call.Args.Count == 3 &&
+                call.Args[0].Kind == "identifier" && (string)call.Args[0].Value == "hazel" &&
+                call.Args[1].Kind == "identifier" && (string)call.Args[1].Value == "rhea" &&
+                call.Args[2].Kind == "integer" && Convert.ToInt64(call.Args[2].Value) == 3,
+                "condition-call origin or typed arguments were lost");
         }
     }
 

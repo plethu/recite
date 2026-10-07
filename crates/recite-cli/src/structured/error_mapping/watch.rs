@@ -64,6 +64,14 @@ pub(super) fn preparation<'a>(
                 kind: "schema_without_model",
             }),
         ),
+        ProjectBuildPreparationError::Schema { .. } => (
+            ErrorCategory::Schema,
+            ErrorCode::WatchPreparation,
+            "load_schema",
+            fallback_path,
+            None,
+            Some(ErrorDetails::Watch { kind: "schema" }),
+        ),
         ProjectBuildPreparationError::InvalidInputKey { .. } => (
             ErrorCategory::Input,
             ErrorCode::WatchPreparation,

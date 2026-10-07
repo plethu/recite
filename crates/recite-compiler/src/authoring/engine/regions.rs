@@ -1,6 +1,6 @@
 //! Reuse syntax and local analysis at parser-owned restart boundaries.
 //! Only ranges into document-owned outputs survive a candidate commit.
-use std::{ops::Range, sync::Arc};
+use std::ops::Range;
 
 use recite_core::{Diagnostic, schema::ProjectSchema};
 use recite_parser::{LoweredSourceFile, SourceRegion, source_regions};
@@ -71,6 +71,66 @@ enum RegionAnalysis<'a> {
     Fresh(Box<FreshAnalysis>),
 }
 
+struct AnalyzedRegion<'a> {
+    output: RegionAnalysis<'a>,
+    cache: CachedRegion,
+}
+
+struct AnalyzedRegions<'a> {
+    participation: ValidationParticipation,
+    regions: Vec<AnalyzedRegion<'a>>,
+}
+
+impl RegionAnalysis<'_> {
+    fn summary(&self) -> &AuthoringSummary {
+        match self {
+            Self::Reused(old, _) => &old.summary,
+            Self::Fresh(fresh) => &fresh.summary,
+        }
+    }
+
+    fn facts(&self) -> &ProjectFacts {
+        match self {
+            Self::Reused(old, _) => &old.project_facts,
+            Self::Fresh(fresh) => &fresh.facts,
+        }
+    }
+
+    fn parse(&self) -> &[Diagnostic] {
+        match self {
+            Self::Reused(old, region) => &old.parse_diagnostics[region.parse.clone()],
+            Self::Fresh(fresh) => &fresh.parse,
+        }
+    }
+
+    fn local(&self) -> &[Diagnostic] {
+        match self {
+            Self::Reused(old, region) => &old.local_diagnostics[region.local.clone()],
+            Self::Fresh(fresh) => &fresh.local,
+        }
+    }
+
+    fn cache(
+        &self,
+        source: &SourceRegion<'_>,
+        participation: ValidationParticipation,
+    ) -> CachedRegion {
+        let (summary, facts) = match self {
+            Self::Reused(_, cached) => (cached.summary.clone(), cached.facts.clone()),
+            Self::Fresh(fresh) => (fresh.summary.region_ranges(), fresh.facts.region_ranges()),
+        };
+        CachedRegion {
+            bytes: source.byte_range(),
+            first_line: source.first_line(),
+            participation,
+            summary,
+            facts,
+            parse: 0..self.parse().len(),
+            local: 0..self.local().len(),
+        }
+    }
+}
+
 pub(super) fn analyze(
     document: &EffectiveDocument<'_>,
     previous: Option<&DocumentAnalysis>,
@@ -90,7 +150,6 @@ pub(super) fn analyze(
         participation = participation.merge(syntax.participation());
         pending.push(PendingRegion { source, syntax });
     }
-    let mut analyses = Vec::with_capacity(pending.len());
     let mut regions = Vec::with_capacity(pending.len());
     for region in pending {
         control.checkpoint()?;
@@ -116,30 +175,25 @@ pub(super) fn analyze(
                 local: validate_local(input, schema).diagnostics,
             }))
         });
-        regions.push(CachedRegion {
-            bytes: region.source.byte_range(),
-            first_line: region.source.first_line(),
-            participation: region_participation,
-            summary: analysis.summary().1,
-            facts: analysis.facts().1,
-            parse: 0..analysis.parse().len(),
-            local: 0..analysis.local().len(),
+        regions.push(AnalyzedRegion {
+            cache: analysis.cache(&region.source, region_participation),
+            output: analysis,
         });
-        analyses.push(analysis);
     }
     control.checkpoint()?;
     match assembly::assemble(
         document,
         previous,
-        participation,
-        &analyses,
-        regions,
+        AnalyzedRegions {
+            participation,
+            regions,
+        },
         control,
     )? {
-        Some(analysis) => Ok(analysis),
+        assembly::AssemblyOutcome::Complete(analysis) => Ok(analysis),
         // An invalid relocated coordinate must never enter a candidate. A
         // cold pass has no relocations and preserves ordinary parser recovery.
-        None => analyze(document, None, schema, control),
+        assembly::AssemblyOutcome::NeedsFullAnalysis => analyze(document, None, schema, control),
     }
 }
 

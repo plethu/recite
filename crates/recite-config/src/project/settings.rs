@@ -1,10 +1,7 @@
 //! Validated, conflict-checked project manifest editing for authoring clients.
 use crate::{ConfigWriteError, StateUpdateError, TextFileStore};
-use recite_core::{Diagnostic, project::ProjectManifest as CoreManifest};
-use std::{
-    io,
-    path::{Path, PathBuf},
-};
+use recite_core::Diagnostic;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -15,12 +12,8 @@ pub enum ProjectSettingsError {
     Discovery(#[from] super::ProjectDiscoveryError),
     #[error(transparent)]
     Storage(#[from] ConfigWriteError),
-    #[error("Could not read project schema {path}: {source}")]
-    SchemaIo {
-        path: PathBuf,
-        #[source]
-        source: io::Error,
-    },
+    #[error(transparent)]
+    Schema(#[from] super::schema::ProjectSchemaError),
     #[error("Project changes would remove an open document: {0}")]
     OpenDocument(PathBuf),
     #[error("The project manifest does not exist")]
@@ -103,21 +96,8 @@ fn validate(
                 .collect(),
         ));
     }
-    let loaded = CoreManifest::load_str_with_spans(path.to_string_lossy(), text);
-    if !loaded.diagnostics.is_empty() {
-        return Err(ProjectSettingsError::Validation(loaded.diagnostics));
-    }
-    let source = loaded.source.ok_or(ProjectSettingsError::Missing)?;
-    let schema = if let Some(relative) = &source.manifest().project.schema {
-        let root = path.parent().ok_or(ProjectSettingsError::Missing)?;
-        let schema_path = root.join(relative);
-        let text = std::fs::read_to_string(&schema_path).map_err(|source| {
-            ProjectSettingsError::SchemaIo {
-                path: schema_path,
-                source,
-            }
-        })?;
-        let loaded = recite_core::schema::load_schema_manifest_str(relative, &text);
+    let schema = if let Some(loaded) = report.manifest().load_schema()? {
+        let loaded = loaded.into_report();
         if !loaded.diagnostics.is_empty() {
             return Err(ProjectSettingsError::Validation(loaded.diagnostics));
         }
@@ -125,8 +105,10 @@ fn validate(
     } else {
         None
     };
-    let diagnostics =
-        recite_core::project::validate_project_manifest_source(&source, schema.as_ref());
+    let diagnostics = recite_core::project::validate_project_manifest_source(
+        report.manifest().source(),
+        schema.as_ref(),
+    );
     if !diagnostics.is_empty() {
         return Err(ProjectSettingsError::Validation(diagnostics));
     }

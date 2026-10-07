@@ -89,24 +89,47 @@ impl Document {
     }
 
     pub fn refresh_project(&mut self, context: ProjectContext) -> Result<(), EditError> {
+        let same_schema = self.context.schema == context.schema;
+        let same_inputs = self.context.documents.len() == context.documents.len()
+            && self
+                .context
+                .documents
+                .iter()
+                .zip(&context.documents)
+                .all(|(old, new)| old.key() == new.key() && (old.key() == &self.key || old == new));
+        // The open source shadows its saved slot. Saving it or switching tabs
+        // alone must not invalidate the preview or rebuild project analysis.
+        if same_schema && same_inputs {
+            self.context = context;
+            return Ok(());
+        }
         let version = self
             .version
             .checked_add(1)
             .ok_or(EditError::RevisionExhausted)?;
-        let mut kernel = context
-            .schema
-            .clone()
-            .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
-        kernel.apply(AuthoringRequest::new(
-            kernel.snapshot().generation(),
-            context.documents.clone(),
-            [OpenDocument::new(
-                self.key.clone(),
-                DocumentVersion::new(version),
-                self.source.to_string(),
-            )],
-        ))?;
-        self.kernel = kernel;
+        let open = OpenDocument::from_shared(
+            self.key.clone(),
+            DocumentVersion::new(version),
+            self.source_snapshot(),
+        );
+        if same_schema {
+            self.kernel.apply(AuthoringRequest::new(
+                self.kernel.snapshot().generation(),
+                context.documents.clone(),
+                [open],
+            ))?;
+        } else {
+            let mut kernel = context
+                .schema
+                .clone()
+                .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
+            kernel.apply(AuthoringRequest::new(
+                kernel.snapshot().generation(),
+                context.documents.clone(),
+                [open],
+            ))?;
+            self.kernel = kernel;
+        }
         self.context = context;
         self.version = version;
         Ok(())
@@ -140,6 +163,27 @@ impl Document {
             .filter(|document| document.key() == &self.key)
             .flat_map(|document| document.summary().blocks())
             .map(|block| block.id().as_str().to_owned())
+            .collect()
+    }
+
+    /// Project navigation uses the accepted compiler summaries, including this
+    /// document's open source, rather than reparsing the saved files.
+    pub fn project_sections(&self) -> Vec<(String, Vec<String>)> {
+        self.kernel
+            .snapshot()
+            .documents()
+            .iter()
+            .map(|document| {
+                (
+                    document.key().to_string(),
+                    document
+                        .summary()
+                        .blocks()
+                        .iter()
+                        .map(|block| block.id().as_str().to_owned())
+                        .collect(),
+                )
+            })
             .collect()
     }
 

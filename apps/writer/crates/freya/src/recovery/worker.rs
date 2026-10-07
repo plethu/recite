@@ -57,6 +57,10 @@ impl<T: Snapshot> SnapshotStore<T> {
             .error
             .clone()
     }
+    pub fn pending(&self) -> bool {
+        let state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
+        state.completed < self.sequence || state.error.is_some()
+    }
     pub fn snapshot(&self) -> Option<&T> {
         self.snapshot.as_ref()
     }

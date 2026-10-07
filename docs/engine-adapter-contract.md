@@ -99,6 +99,12 @@ output, prompt, immediate effect, blocking effect, end, or structured error. The
 document which shape it uses. If it drains synchronously, the returned or emitted output batch must
 preserve runtime order and must stop at a prompt or blocking effect.
 
+The shared Bevy, Godot and FFI driver limits each operation to 10,000 output events. Exceeding that
+bound produces a dialogue fault and rolls back the operation, including accumulated lines and
+immediate effects. This bounds loops that escape the runtime's per-advance step limit. FFI hosts can
+prepare a new or restored session, install conditions and locale configuration, then begin
+traversal; a failed begin leaves the prepared session available for correction.
+
 Selection by index may be exposed as an engine convenience, but it must lower to the stable
 `ChoiceId` from the current prompt. Selecting an unavailable, unknown, or stale choice must produce
 a structured error.

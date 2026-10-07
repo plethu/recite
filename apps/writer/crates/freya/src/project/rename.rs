@@ -18,6 +18,31 @@ pub(super) struct RenameUndo {
     expected_manifest: String,
 }
 impl ProjectFiles {
+    pub(super) fn project_edit_includes(&self, path: &std::path::Path) -> bool {
+        self.names
+            .get(path)
+            .is_some_and(|name| self.manifest.affected().contains(name))
+            || self
+                .rename_undo
+                .iter()
+                .chain(&self.rename_redo)
+                .any(|journal| journal.expected.contains_key(path))
+    }
+
+    pub(super) fn forget_rename_history(&mut self, path: &std::path::Path) {
+        // Project undo requires every affected session. Closing one ends that
+        // history as a unit, rather than leaving a stale, partially usable chain.
+        if self
+            .rename_undo
+            .iter()
+            .chain(&self.rename_redo)
+            .any(|journal| journal.expected.contains_key(path))
+        {
+            self.rename_undo.clear();
+            self.rename_redo.clear();
+        }
+    }
+
     pub fn project_edit_pending(&self, current: &Workbench) -> bool {
         self.manifest.dirty()
             || self
@@ -27,7 +52,8 @@ impl ProjectFiles {
                 .any(|journal| {
                     journal.expected.keys().any(|path| {
                         if path == &self.current {
-                            current.has_draft() || self.dirty(current.document().source())
+                            current.has_draft()
+                                || self.saved.as_ref() != current.document().source()
                         } else {
                             self.retained.get(path).is_some_and(|s| {
                                 s.model.has_draft()
@@ -248,7 +274,6 @@ impl ProjectFiles {
             journal
                 .expected
                 .insert(path.clone(), model.document().source().into());
-            self.closed_tabs.remove(path);
         }
         journal.manifest = previous_manifest;
         journal.expected_manifest = self.manifest.text().to_owned();

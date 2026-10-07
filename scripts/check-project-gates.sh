@@ -7,7 +7,7 @@ Usage:
   check-project-gates.sh [repo-root]
 
 Runs Recite's Rust and adapter project gates (the full local suite is
-scripts/verify.sh or `mise run verify`):
+`just check` or `mise run verify`):
   1. scripts/check-test-organization.sh
   2. scripts/check-tree-sitter.sh
   3. scripts/check-neovim.sh

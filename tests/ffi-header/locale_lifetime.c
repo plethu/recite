@@ -210,9 +210,10 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  if (!check_status(
-          recite_session_create_with_values(asset, NULL, locale, &value, 1, &unbegun_session),
-          RECITE_STATUS_OK, __LINE__) ||
+  if (!check_status(recite_session_create(asset, NULL, locale, &unbegun_session), RECITE_STATUS_OK,
+                    __LINE__) ||
+      !check_status(recite_session_set_interpolation_values(unbegun_session, &value, 1),
+                    RECITE_STATUS_OK, __LINE__) ||
       !check_status(recite_session_set_locale_provider(unbegun_session, locale_callback, &owner),
                     RECITE_STATUS_OK, __LINE__) ||
       !check_status(recite_session_snapshot(unbegun_session, &prompt_snapshot), RECITE_STATUS_OK,
@@ -224,9 +225,13 @@ int main(int argc, char **argv) {
   recite_session_free(unbegun_session);
 
   if (!begin_call(&owner) ||
-      !check_status(recite_session_start_with_values_and_locale_provider(
-                        asset, NULL, locale, &value, 1, locale_callback, &owner, &session, &batch),
+      !check_status(recite_session_create(asset, NULL, locale, &session), RECITE_STATUS_OK,
+                    __LINE__) ||
+      !check_status(recite_session_set_interpolation_values(session, &value, 1), RECITE_STATUS_OK,
+                    __LINE__) ||
+      !check_status(recite_session_set_locale_provider(session, locale_callback, &owner),
                     RECITE_STATUS_OK, __LINE__) ||
+      !check_status(recite_session_begin(session, &batch), RECITE_STATUS_OK, __LINE__) ||
       !contains(&batch, "Bonjour.") || !contains(&batch, "Deux lettres.") ||
       !contains(&batch, "Continuer.") || !end_call(&owner)) {
     return 4;
@@ -259,10 +264,14 @@ int main(int argc, char **argv) {
   session = 0;
 
   if (!begin_call(&owner) ||
-      !check_status(recite_session_restore_with_values_and_locale_provider(
-                        asset, prompt_snapshot.data, prompt_snapshot.len, &value, 1,
-                        locale_callback, &owner, &session, &batch),
+      !check_status(recite_session_prepare_restore(asset, prompt_snapshot.data, prompt_snapshot.len,
+                                                   &session),
                     RECITE_STATUS_OK, __LINE__) ||
+      !check_status(recite_session_set_interpolation_values(session, &value, 1), RECITE_STATUS_OK,
+                    __LINE__) ||
+      !check_status(recite_session_set_locale_provider(session, locale_callback, &owner),
+                    RECITE_STATUS_OK, __LINE__) ||
+      !check_status(recite_session_begin(session, &batch), RECITE_STATUS_OK, __LINE__) ||
       !contains(&batch, "Bonjour.") || !contains(&batch, "Deux lettres.") ||
       !contains(&batch, "Continuer.") || !end_call(&owner)) {
     return 8;

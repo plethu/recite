@@ -297,6 +297,17 @@ fn project_rename_reviews_references_and_undoes_every_file_together()
     assert!(files.rename_history(&mut model, true)?);
     assert!(model.document().source().contains(":: new"));
     assert_eq!(fs::read_to_string(second)?, reference);
+    assert!(matches!(
+        files.close_document(&mut model, &first),
+        Err(super::FileError::UnsavedDocument)
+    ));
+    files.save_current(&mut model)?;
+    files.close_document(&mut model, &first)?;
+    assert!(files.rename_undo.is_empty());
+    assert!(files.rename_redo.is_empty());
+    drop(crate::recovery::RecoveryStore::open(&first)?);
+    assert!(model.document().source().contains("scene.recite::new"));
+    assert!(!files.rename_history(&mut model, false)?);
     Ok(())
 }
 

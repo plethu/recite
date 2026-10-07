@@ -180,6 +180,10 @@ if command -v dotnet >/dev/null 2>&1; then
     "$repo_root/fixtures/recite/valid/adapter_conformance/plural_runtime.recite" || fail "Unity plural fixture failed to compile"
   "$target_dir/debug/recite" compile -o "$tmpdir/conformance.recitec" \
     "$repo_root/fixtures/recite/valid/adapter_conformance/runtime_surface.recite" || fail "Unity conformance fixture failed to compile"
+  "$target_dir/debug/recite" compile --schema "$repo_root/fixtures/schema/valid/generated_manifest.json" \
+    -o "$tmpdir/reasons.recitec" "$repo_root/fixtures/recite/valid/adapter_conformance/availability_reasons.recite" \
+    || fail "Unity availability fixture failed to compile"
+  export RECITE_UNITY_REASONS_ASSET="$tmpdir/reasons.recitec"
 
   cat >"$tmpdir/schema-restore.recite" <<'RECITE'
 :: start default

@@ -1,12 +1,103 @@
 use super::{FileError, ProjectFiles, read_regular};
 use atomic_write_file::AtomicWriteFile;
+use recite_writer_model::Workbench;
 use std::{
     fs::{self, OpenOptions},
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 impl ProjectFiles {
+    pub(crate) fn save_all(&mut self, current: &mut Workbench) -> Result<(), FileError> {
+        let outcome = (|| {
+            self.save_current(current)?;
+            self.save_retained()?;
+            if let Some(session) = &mut self.declarations
+                && session.dirty()
+            {
+                session.save_and_generate()?;
+                self.refresh(current)?;
+            }
+            Ok(())
+        })();
+        self.refresh_after_save(current, outcome)
+    }
+
+    /// Apply the active draft, save it durably and finish grouped project edits.
+    pub(crate) fn save_current(&mut self, current: &mut Workbench) -> Result<(), FileError> {
+        let outcome = (|| {
+            current.apply()?;
+            let grouped = self.project_edit_pending(current);
+            self.save(current.document().source())?;
+            self.checkpoint(current)?;
+            if grouped {
+                self.save_project_edit(current)?;
+            }
+            Ok(())
+        })();
+        self.refresh_after_save(current, outcome)
+    }
+
+    /// Saving another tab does not change the active scene or its editing state.
+    pub(crate) fn save_document(
+        &mut self,
+        current: &mut Workbench,
+        path: &Path,
+    ) -> Result<(), FileError> {
+        if path == self.current {
+            return self.save_current(current);
+        }
+        let outcome = (|| {
+            let grouped = self.project_edit_pending(current) && self.project_edit_includes(path);
+            let session = self.retained.get_mut(path).ok_or(FileError::Selection)?;
+            let outcome = session.save(path);
+            let source = session.baseline.clone();
+            let record = self.record_saved(path, &source);
+            outcome.and(record)?;
+            if grouped {
+                self.save_project_edit(current)?;
+            }
+            Ok(())
+        })();
+        self.refresh_after_save(current, outcome)
+    }
+
+    fn refresh_after_save(
+        &self,
+        current: &mut Workbench,
+        outcome: Result<(), FileError>,
+    ) -> Result<(), FileError> {
+        // Applying a draft or publishing earlier files can succeed before a later
+        // save fails. Refresh navigation/diagnostics even then; retain the save error.
+        let refresh = current
+            .refresh_project(self.retained_context(self.context.clone()))
+            .map_err(FileError::from);
+        outcome.and(refresh)
+    }
+
+    /// Finish the already-applied project transaction; unrelated field drafts
+    /// remain drafts, including the one in the active scene.
+    fn save_project_edit(&mut self, current: &Workbench) -> Result<(), FileError> {
+        if self.project_edit_includes(&self.current) {
+            self.save(current.document().source())?;
+            self.checkpoint(current)?;
+        }
+        let paths: Vec<_> = self
+            .retained
+            .keys()
+            .filter(|path| self.project_edit_includes(path))
+            .cloned()
+            .collect();
+        for path in paths {
+            let session = self.retained.get_mut(&path).ok_or(FileError::Selection)?;
+            let outcome = session.save_applied(&path);
+            let source = session.baseline.clone();
+            let record = self.record_saved(&path, &source);
+            outcome.and(record)?;
+        }
+        self.manifest.save()
+    }
+
     /// Cooperative lock + checked replacement. Each replacement retains a backup
     /// of the previous bytes. Non-cooperating writers can still race the final check.
     pub fn save(&mut self, source: &str) -> Result<(), FileError> {
@@ -18,10 +109,14 @@ impl ProjectFiles {
 
 impl ProjectFiles {
     pub(super) fn update_saved_context(&mut self) -> Result<(), FileError> {
-        let key = recite_core::DocumentKey::new(self.document_name()?)
+        self.record_saved(&self.current.clone(), &self.saved.clone())
+    }
+
+    pub(super) fn record_saved(&mut self, path: &Path, source: &str) -> Result<(), FileError> {
+        let key = recite_core::DocumentKey::new(self.names.get(path).ok_or(FileError::Selection)?)
             .map_err(recite_writer_model::EditError::from)
             .map_err(recite_writer_model::WorkbenchError::from)?;
-        let document = recite_compiler::authoring::SavedDocument::new(key, self.saved.to_string());
+        let document = recite_compiler::authoring::SavedDocument::new(key, source);
         if let Some(old) = self
             .context
             .documents
@@ -39,10 +134,15 @@ impl ProjectFiles {
 }
 
 /// Checked replacement shared by manuscript and standalone declaration sources.
-pub(crate) fn replace_checked(
-    path: &std::path::Path,
+pub(crate) fn replace_checked(path: &Path, baseline: &str, source: &str) -> Result<(), FileError> {
+    replace_checked_with_sync(path, baseline, source, sync_directory)
+}
+
+fn replace_checked_with_sync(
+    path: &Path,
     baseline: &str,
     source: &str,
+    sync: impl FnOnce(&Path) -> io::Result<()>,
 ) -> Result<(), FileError> {
     let parent = path.parent().ok_or(FileError::Selection)?;
     let mut lock_name = path.as_os_str().to_owned();
@@ -59,13 +159,14 @@ pub(crate) fn replace_checked(
         .try_lock()
         .map_err(|error| FileError::Locked(io::Error::other(error)))?;
     let old = read_regular(path)?;
+    // A prior replacement may be visible even though its directory sync failed.
+    // Converge under the same lock without rewriting or creating another backup.
+    if old == source {
+        sync(parent)?;
+        return Ok(());
+    }
     if old != baseline {
         return Err(FileError::Conflict);
-    }
-    if source == baseline {
-        #[cfg(unix)]
-        fs::File::open(parent)?.sync_all()?;
-        return Ok(());
     }
     let permissions = fs::metadata(path)?.permissions();
     if permissions.readonly() {
@@ -88,7 +189,17 @@ pub(crate) fn replace_checked(
     }
     backup.keep().map_err(|error| error.error)?;
     replacement.commit().map_err(FileError::Commit)?;
-    #[cfg(unix)]
-    fs::File::open(parent)?.sync_all()?;
+    sync(parent)?;
     Ok(())
 }
+
+pub(super) fn sync_directory(parent: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    fs::File::open(parent)?.sync_all()?;
+    #[cfg(not(unix))]
+    let _ = parent;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests;

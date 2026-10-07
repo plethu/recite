@@ -80,14 +80,11 @@ fn locale_callback_translates_start_choose_and_restore() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_create_with_values(
-                asset,
-                std::ptr::null(),
-                locale.as_ptr(),
-                values.as_ptr(),
-                values.len(),
-                &raw mut session,
-            )
+            assert_eq!(
+                recite_session_create(asset, std::ptr::null(), locale.as_ptr(), &raw mut session),
+                ReciteStatus::Ok
+            );
+            recite_session_set_interpolation_values(session, values.as_ptr(), values.len())
         },
         ReciteStatus::Ok
     );
@@ -131,17 +128,28 @@ fn locale_callback_translates_start_choose_and_restore() {
     let mut restored_batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_restore_with_values_and_locale_provider(
-                asset,
-                snapshot_bytes.as_ptr(),
-                snapshot_bytes.len(),
-                values.as_ptr(),
-                values.len(),
-                Some(locale_callback),
-                std::ptr::null_mut(),
-                &raw mut restored,
-                &raw mut restored_batch,
-            )
+            assert_eq!(
+                recite_session_prepare_restore(
+                    asset,
+                    snapshot_bytes.as_ptr(),
+                    snapshot_bytes.len(),
+                    &raw mut restored
+                ),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_interpolation_values(restored, values.as_ptr(), values.len()),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_locale_provider(
+                    restored,
+                    Some(locale_callback),
+                    std::ptr::null_mut()
+                ),
+                ReciteStatus::Ok
+            );
+            recite_session_begin(restored, &raw mut restored_batch)
         },
         ReciteStatus::Ok
     );
@@ -210,14 +218,11 @@ fn locale_callback_can_return_source_fallback_for_line_and_plural() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_create_with_values(
-                asset,
-                std::ptr::null(),
-                locale.as_ptr(),
-                values.as_ptr(),
-                values.len(),
-                &raw mut session,
-            )
+            assert_eq!(
+                recite_session_create(asset, std::ptr::null(), locale.as_ptr(), &raw mut session),
+                ReciteStatus::Ok
+            );
+            recite_session_set_interpolation_values(session, values.as_ptr(), values.len())
         },
         ReciteStatus::Ok
     );

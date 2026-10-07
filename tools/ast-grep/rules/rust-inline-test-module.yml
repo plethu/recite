@@ -1,6 +1,15 @@
 id: rust-inline-test-module
 language: Rust
 severity: error
+files:
+  - "crates/*/src/**/*.rs"
+  - "crates/*/benches/**/*.rs"
+  - "apps/writer/crates/*/src/**/*.rs"
+  - "editors/zed/src/**/*.rs"
+ignores:
+  - "**/src/tests.rs"
+  - "**/src/**/tests.rs"
+  - "**/src/tests/**"
 message: Private tests must live in a module-local tests.rs sidecar.
 note: |
   Keep #[cfg(test)] declarations as `mod tests;` in production modules. This

@@ -1,114 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-test_root="$(mktemp -d)"
-cleanup() {
-  rm -rf "$test_root"
+repo_root="$(git rev-parse --show-toplevel)"
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+mkdir -p "$scratch/tools"
+cp -R "$repo_root/tools/ast-grep" "$scratch/tools/"
+cd "$scratch"
+
+# A fresh file must be checked without Git metadata, across every Rust workspace.
+for scope in crates/demo/src apps/writer/crates/demo/src editors/zed/src; do
+  mkdir -p "$scope"
+  cat >"$scope/lib.rs" <<'RUST'
+fn classifier(value: usize) -> usize {
+    if value == 0 { 0 }
+    else if value == 1 { 1 }
+    else if value == 2 { 2 }
+    else if value == 3 { 3 }
+    else { 4 }
 }
-trap cleanup EXIT
-
-mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/scripts" "$test_root/repo/tools"
-cp "$repo_root/scripts/check-ast-grep.sh" "$test_root/repo/scripts/check-ast-grep.sh"
-cp -R "$repo_root/tools/ast-grep" "$test_root/repo/tools/"
-chmod +x "$test_root/repo/scripts/check-ast-grep.sh"
-printf '%s\n' 'fn production() {}' >"$test_root/repo/crates/demo/src/lib.rs"
-
-git -C "$test_root/repo" init -q -b main
-git -C "$test_root/repo" config user.name Fixture
-git -C "$test_root/repo" config user.email fixture@example.invalid
-git -C "$test_root/repo" config commit.gpgsign false
-git -C "$test_root/repo" add .
-git -C "$test_root/repo" commit -q -m initial
-
-zero_sha="0000000000000000000000000000000000000000"
-(
-  cd "$test_root/repo"
-  scripts/check-ast-grep.sh "$zero_sha" HEAD
-)
-
-echo "ast-grep zero-SHA fixture passed"
-
-# This literal intentionally contains a four-equality-branch chain.
-printf '%s\n' \
-  'fn sprawling_classifier(value: usize) -> usize {' \
-  '    if value == 0 {' \
-  '        0' \
-  '    } else if value == 1 {' \
-  '        1' \
-  '    } else if value == 2 {' \
-  '        2' \
-  '    } else if value == 3 {' \
-  '        3' \
-  '    } else {' \
-  '        4' \
-  '    }' \
-  '}' \
-  >"$test_root/repo/crates/demo/src/lib.rs"
-git -C "$test_root/repo" add crates/demo/src/lib.rs
-git -C "$test_root/repo" commit -q -m structural-rule
-
-if (
-  cd "$test_root/repo"
-  scripts/check-ast-grep.sh HEAD^ HEAD
-); then
-  echo "ast-grep structural fixture unexpectedly passed" >&2
-  exit 1
-fi
-
-echo "ast-grep structural positive fixture rejected"
-
-sed -i '2i\    // ast-grep-ignore: rust-elseif-cascade (ordered protocol precedence)' \
-  "$test_root/repo/crates/demo/src/lib.rs"
-git -C "$test_root/repo" add crates/demo/src/lib.rs
-git -C "$test_root/repo" commit -q -m structural-exemption
-
-(
-  cd "$test_root/repo"
-  scripts/check-ast-grep.sh HEAD^ HEAD
-)
-
-echo "ast-grep structural exemption fixture passed"
-
-check_single_cascade_diagnostic() {
-  local branch_count="$1"
-  local fixture="$test_root/repo/crates/demo/src/lib.rs"
-  local branch output result_code diagnostics
-
-  {
-    printf '%s\n' 'fn sprawling_classifier(value: usize) -> usize {'
-    for ((branch = 0; branch < branch_count; branch++)); do
-      if ((branch == 0)); then
-        printf '    if value == %d {\n' "$branch"
-      else
-        printf '    } else if value == %d {\n' "$branch"
-      fi
-      printf '        %d\n' "$branch"
-    done
-    printf '%s\n' '    } else {' '        99' '    }' '}'
-  } >"$fixture"
-  git -C "$test_root/repo" add crates/demo/src/lib.rs
-  git -C "$test_root/repo" commit -q -m "structural-${branch_count}-branch"
-
-  set +e
-  output="$(
-    cd "$test_root/repo"
-    scripts/check-ast-grep.sh HEAD^ HEAD 2>&1
-  )"
-  result_code=$?
-  set -e
-  if ((result_code == 0)); then
-    echo "ast-grep ${branch_count}-branch fixture unexpectedly passed" >&2
+RUST
+  if ast-grep scan --config tools/ast-grep/sgconfig.yml; then
+    echo "structural scan missed fresh source in $scope" >&2
     exit 1
   fi
-  diagnostics="$(printf '%s\n' "$output" | grep -c 'error\[rust-elseif-cascade\]' || true)"
-  if [[ "$diagnostics" -ne 1 ]]; then
-    echo "ast-grep ${branch_count}-branch fixture reported ${diagnostics} diagnostics" >&2
-    printf '%s\n' "$output" >&2
-    exit 1
-  fi
-  echo "ast-grep ${branch_count}-branch fixture reported one diagnostic"
-}
+  rm "$scope/lib.rs"
+done
 
-check_single_cascade_diagnostic 5
-check_single_cascade_diagnostic 6
+# Test bodies remain governed by test organization, not production complexity rules.
+mkdir -p crates/demo/src
+cat >crates/demo/src/tests.rs <<'RUST'
+fn fixture(value: usize) -> usize {
+    if value == 0 { 0 }
+    else if value == 1 { 1 }
+    else if value == 2 { 2 }
+    else if value == 3 { 3 }
+    else { 4 }
+}
+RUST
+ast-grep scan --config tools/ast-grep/sgconfig.yml
+echo "Complete Rust structural scan boundaries passed."

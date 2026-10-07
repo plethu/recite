@@ -25,7 +25,6 @@ pub struct ProjectFiles {
     rename_redo: Vec<rename::RenameUndo>,
     pub builds: crate::builds::Builds,
     pub declarations: Option<crate::declarations::Session>,
-    closed_tabs: std::collections::BTreeSet<PathBuf>,
     retained: std::collections::BTreeMap<PathBuf, sessions::Retained>,
     pub paths: Vec<PathBuf>,
     pub current: PathBuf,
@@ -83,7 +82,6 @@ impl ProjectFiles {
             rename_undo: Vec::new(),
             rename_redo: Vec::new(),
             declarations: None,
-            closed_tabs: Default::default(),
             retained: Default::default(),
             paths,
             current,
@@ -96,25 +94,6 @@ impl ProjectFiles {
         })
     }
 
-    pub fn navigation_targets(&self) -> Vec<(String, Vec<String>)> {
-        self.retained_context(self.context.clone())
-            .documents
-            .iter()
-            .map(|document| {
-                let parsed = recite_parser::parse(document.key().as_str(), document.text())
-                    .lower_source_file();
-                (
-                    document.key().to_string(),
-                    parsed
-                        .source_file
-                        .blocks
-                        .iter()
-                        .map(|block| block.id.to_string())
-                        .collect(),
-                )
-            })
-            .collect()
-    }
     pub fn search_index(&self) -> std::sync::Arc<recite_writer_model::SearchIndex> {
         self.search.clone()
     }
@@ -133,7 +112,7 @@ impl ProjectFiles {
     }
 
     pub fn dirty(&self, source: &str) -> bool {
-        self.saved.as_ref() != source
+        self.saved.as_ref() != source || self.recovery.pending()
     }
 
     pub fn workbench(&mut self) -> Result<Workbench, FileError> {
@@ -177,8 +156,9 @@ impl ProjectFiles {
     }
 
     pub fn checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
-        let recovery = (workbench.has_draft() || self.dirty(workbench.document().source()))
-            .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
+        let recovery = (workbench.has_draft()
+            || self.saved.as_ref() != workbench.document().source())
+        .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
         self.recovery.persist(recovery)
     }
 
@@ -191,8 +171,9 @@ impl ProjectFiles {
         })
     }
     pub fn queue_checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
-        let recovery = (workbench.has_draft() || self.dirty(workbench.document().source()))
-            .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
+        let recovery = (workbench.has_draft()
+            || self.saved.as_ref() != workbench.document().source())
+        .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
         self.recovery.queue(recovery)
     }
     /// Preserve the complete local session before accepting the disk version.

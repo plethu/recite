@@ -71,7 +71,15 @@ fi
 export CARGO_TARGET_DIR="$cargo_target_dir"
 tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/recite-godot-host.XXXXXX")"
 package_tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/recite-godot-package-check.XXXXXX")"
-trap 'rm -rf "$tmpdir" "$package_tmpdir"' EXIT
+watch_pid=""
+cleanup() {
+  if [[ -n "$watch_pid" ]]; then
+    kill "$watch_pid" 2>/dev/null || true
+    wait "$watch_pid" 2>/dev/null || true
+  fi
+  rm -rf "$tmpdir" "$package_tmpdir"
+}
+trap cleanup EXIT
 
 mkdir -p "$tmpdir/dialogue" "$tmpdir/home" "$tmpdir/cache" "$tmpdir/config" "$tmpdir/data"
 cp -R "$repo_root/tests/godot-host/." "$tmpdir/"
@@ -257,24 +265,26 @@ mkdir -p "$tmpdir/example/addons"
 cp -R "$package_tmpdir/extracted/examples/basic-dialogue/." "$tmpdir/example/"
 cp -R "$package_tmpdir/extracted/addons/recite" "$tmpdir/example/addons/"
 cp "$repo_root/tests/godot-host/check_example.gd" "$tmpdir/example/"
-if timeout 8s "$CARGO_TARGET_DIR/debug/recite" watch --output-format structured \
-  "$tmpdir/example" >"$tmpdir/example-watch.ndjson" 2>"$tmpdir/example-watch.stderr"; then
-  echo "Godot example watcher exited before its authoring loop could run." >&2
-  exit 1
-else
-  watch_status=$?
-fi
-if [[ "$watch_status" -ne 124 ]] \
-  || [[ ! -s "$tmpdir/example/dialogue/basic.recitec" ]] \
-  || ! python3 - "$tmpdir/example-watch.ndjson" <<'PY'
-import json
-import sys
-
-records = [json.loads(line) for line in open(sys.argv[1], encoding="utf-8")]
-builds = [record for record in records if record.get("event") == "watch.build.completed"]
-sys.exit(0 if builds and all(record["data"]["status"] == "succeeded" for record in builds) else 1)
-PY
-then
+# Wait for the protocol's completion event, rather than consuming a fixed sleep
+# window. Parse complete JSON before stopping the producer, so a partial record
+# cannot be mistaken for readiness. The final check validates terminal success.
+timeout 30s "$CARGO_TARGET_DIR/debug/recite" watch --output-format structured \
+  "$tmpdir/example" >"$tmpdir/example-watch.ndjson" 2>"$tmpdir/example-watch.stderr" &
+watch_pid=$!
+watch_deadline=$((SECONDS + 30))
+watch_ready=false
+while kill -0 "$watch_pid" 2>/dev/null && ((SECONDS < watch_deadline)); do
+  if jq -e -s 'any(.[]; .event == "watch.build.completed")' "$tmpdir/example-watch.ndjson" >/dev/null 2>&1; then
+    watch_ready=true
+    break
+  fi
+  sleep 0.1
+done
+kill "$watch_pid" 2>/dev/null || true
+wait "$watch_pid" 2>/dev/null || true
+watch_pid=""
+if [[ "$watch_ready" != true || ! -s "$tmpdir/example/dialogue/basic.recitec" ]] \
+  || ! jq -e -s 'map(select(.event == "watch.build.completed")) | length > 0 and all(.[]; .data.status == "succeeded")' "$tmpdir/example-watch.ndjson" >/dev/null; then
   echo "Packaged example watcher did not build its compiled dialogue." >&2
   cat "$tmpdir/example-watch.ndjson" >&2
   cat "$tmpdir/example-watch.stderr" >&2

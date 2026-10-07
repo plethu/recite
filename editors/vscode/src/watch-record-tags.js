@@ -137,6 +137,7 @@ export const errorCodes = new Set([
   "schema_inspection",
   "user_config",
   "project_discovery",
+  "project_schema",
   "ui_catalog",
   "watch",
   "watch_coordinator",

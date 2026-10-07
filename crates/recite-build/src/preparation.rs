@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::path::{Component, Path};
+use std::path::Path;
 
 use recite_compiler::authoring::{
     AuthoringKernel, AuthoringRequest, BuildGeneration, BuildInput, BuildInputAuthority,
@@ -7,8 +7,6 @@ use recite_compiler::authoring::{
 };
 use recite_config::{ProjectDiscoveryError, ProjectDiscoveryReport, discover_project};
 use recite_core::{Diagnostic, DiagnosticSeverity, DocumentKey, schema::ProjectSchema};
-
-use crate::{load_schema, resolve_project_path};
 
 use super::PROJECT_MANIFEST_FILE;
 use super::request::{
@@ -50,45 +48,23 @@ pub fn prepare_discovered(
         return Ok(ProjectBuildPreparation::Rejected { diagnostics });
     }
 
-    let (schema, schema_key) =
-        match manifest.manifest().project.schema.as_deref() {
-            Some(schema_path) => {
-                let declared_path = resolve_project_path(&project_root, schema_path);
-                let key = schema_document_key(&project_root, &declared_path).map_err(|reason| {
-                    ProjectBuildPreparationError::InvalidSchemaPath {
-                        path: declared_path.clone(),
-                        reason,
-                    }
-                })?;
-                let path = std::fs::canonicalize(&declared_path).map_err(|error| {
-                    ProjectBuildPreparationError::Read {
-                        path: declared_path.clone(),
-                        message: error.to_string(),
-                    }
-                })?;
-                if !path.starts_with(&project_root) {
-                    return Err(ProjectBuildPreparationError::SchemaOutsideProject {
-                        declared: declared_path,
-                        resolved: path,
-                    });
-                }
-                let loaded =
-                    load_schema(&path).map_err(|error| ProjectBuildPreparationError::Read {
-                        path: path.clone(),
-                        message: error.to_string(),
-                    })?;
-                if !loaded.diagnostics.is_empty() {
-                    diagnostics.extend(loaded.diagnostics);
-                    sort_diagnostics(&mut diagnostics);
-                    return Ok(ProjectBuildPreparation::Rejected { diagnostics });
-                }
-                let schema = loaded.schema.ok_or_else(|| {
-                    ProjectBuildPreparationError::SchemaWithoutModel { path: path.clone() }
-                })?;
-                (Some(schema), Some(key))
+    let (schema, schema_key) = match discovered.load_schema().map_err(schema_failure)? {
+        Some(loaded) => {
+            let key = loaded.key().clone();
+            let path = loaded.path().to_owned();
+            let loaded = loaded.into_report();
+            if !loaded.diagnostics.is_empty() {
+                diagnostics.extend(loaded.diagnostics);
+                sort_diagnostics(&mut diagnostics);
+                return Ok(ProjectBuildPreparation::Rejected { diagnostics });
             }
-            None => (None, None),
-        };
+            let schema = loaded
+                .schema
+                .ok_or(ProjectBuildPreparationError::SchemaWithoutModel { path })?;
+            (Some(schema), Some(key))
+        }
+        None => (None, None),
+    };
 
     diagnostics.extend(recite_core::project::validate_project_manifest_source(
         &manifest,
@@ -198,34 +174,30 @@ pub fn classify_discovery_error(
     }
 }
 
-pub fn schema_document_key(project_root: &Path, path: &Path) -> Result<DocumentKey, String> {
-    let relative = if path.is_absolute() {
-        path.strip_prefix(project_root)
-            .map_err(|_| "path resolves outside the project".to_owned())?
-    } else {
-        path
-    };
-    let mut components = Vec::new();
-    for component in relative.components() {
-        match component {
-            Component::Normal(value) => components.push(value.to_string_lossy().into_owned()),
-            Component::CurDir => {}
-            Component::ParentDir => return Err("path contains a parent component".to_owned()),
-            Component::RootDir | Component::Prefix(_) => {
-                return Err("path is absolute".to_owned());
-            }
-        }
-    }
-    if components.is_empty() {
-        return Err("path is empty".to_owned());
-    }
-    DocumentKey::new(components.join("/")).map_err(|error| error.to_string())
-}
-
 fn has_errors(diagnostics: &[Diagnostic]) -> bool {
     diagnostics
         .iter()
         .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
+}
+
+fn schema_failure(error: recite_config::ProjectSchemaError) -> ProjectBuildPreparationError {
+    match error {
+        recite_config::ProjectSchemaError::InvalidPath { path, reason } => {
+            ProjectBuildPreparationError::InvalidSchemaPath { path, reason }
+        }
+        recite_config::ProjectSchemaError::OutsideProject { declared, resolved } => {
+            ProjectBuildPreparationError::SchemaOutsideProject { declared, resolved }
+        }
+        recite_config::ProjectSchemaError::Read { path, source } => {
+            ProjectBuildPreparationError::Read {
+                path,
+                message: source.to_string(),
+            }
+        }
+        _ => ProjectBuildPreparationError::Schema {
+            message: error.to_string(),
+        },
+    }
 }
 
 fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {

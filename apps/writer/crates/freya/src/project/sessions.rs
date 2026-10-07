@@ -13,7 +13,7 @@ pub(super) struct Retained {
     pub(super) recovery: RecoveryStore,
 }
 impl ProjectFiles {
-    /// Include closed tabs: their sessions still own history and recovery state.
+    /// Every session still owns its history and recovery state until it closes.
     pub(crate) fn session_paths(&self) -> impl Iterator<Item = &PathBuf> {
         std::iter::once(&self.current).chain(self.retained.keys())
     }
@@ -47,21 +47,22 @@ impl ProjectFiles {
 
     /// The current document and every retained session, in project order.
     pub fn open_documents(&self, current: &Workbench) -> Vec<(PathBuf, bool)> {
+        let grouped = self.project_edit_pending(current);
         self.paths
             .iter()
-            .filter(|p| !self.closed_tabs.contains(*p))
             .filter_map(|path| {
                 if path == &self.current {
                     Some((
                         path.clone(),
-                        current.has_draft() || self.dirty(current.document().source()),
+                        current.has_draft()
+                            || self.dirty(current.document().source())
+                            || (grouped && self.project_edit_includes(path)),
                     ))
                 } else {
                     self.retained.get(path).map(|s| {
                         (
                             path.clone(),
-                            s.model.has_draft()
-                                || s.model.document().source() != s.baseline.as_ref(),
+                            s.dirty() || (grouped && self.project_edit_includes(path)),
                         )
                     })
                 }
@@ -77,11 +78,19 @@ impl ProjectFiles {
         path: &Path,
     ) -> Result<(), FileError> {
         let documents = self.open_documents(current);
-        let (_, dirty) = documents
+        documents
             .iter()
             .find(|(p, _)| p == path)
             .ok_or(FileError::Selection)?;
-        if *dirty {
+        let edits = if path == self.current {
+            current.has_draft() || self.saved.as_ref() != current.document().source()
+        } else {
+            self.retained
+                .get(path)
+                .ok_or(FileError::Selection)?
+                .has_edits()
+        };
+        if edits || (self.project_edit_pending(current) && self.project_edit_includes(path)) {
             return Err(FileError::UnsavedDocument);
         }
         if path == self.current {
@@ -89,18 +98,33 @@ impl ProjectFiles {
                 .iter()
                 .find(|(p, _)| p != path)
                 .ok_or(FileError::Selection)?;
+            // A cleanup error must leave the old document active: the widgets
+            // still contain its text until the caller receives a successful close.
+            self.recovery.persist(None)?;
             self.switch(current, &next.0, |_| Ok(()))?;
         }
-        self.closed_tabs.insert(path.to_owned());
+        // A clean closed tab has no draft to recover. Release its worker, lock,
+        // compiler caches and local undo history only after cleanup succeeds.
+        let session = self.retained.get_mut(path).ok_or(FileError::Selection)?;
+        session.recovery.persist(None)?;
+        self.forget_rename_history(path);
+        self.retained.remove(path);
         Ok(())
     }
 
     pub fn retained_dirty(&self) -> bool {
-        self.manifest.dirty()
-            || self
-                .retained
-                .values()
-                .any(|s| s.model.has_draft() || s.model.document().source() != s.baseline.as_ref())
+        self.manifest.dirty() || self.retained.values().any(Retained::dirty)
+    }
+
+    pub(crate) fn can_leave(&self, current: &Workbench) -> bool {
+        !current.has_draft()
+            && !self.dirty(current.document().source())
+            && !self.retained_dirty()
+            && !self.builds.busy()
+            && !self
+                .declarations
+                .as_ref()
+                .is_some_and(|s| s.dirty() || s.busy())
     }
 
     pub fn switch(
@@ -152,7 +176,6 @@ impl ProjectFiles {
         std::mem::swap(&mut self.saved, &mut next.baseline);
         std::mem::swap(&mut self.recovery, &mut next.recovery);
         let previous = std::mem::replace(&mut self.current, path.to_owned());
-        self.closed_tabs.remove(path);
         self.retained.insert(previous, next);
         Ok(())
     }
@@ -162,22 +185,11 @@ impl ProjectFiles {
     pub fn save_retained(&mut self) -> Result<(), FileError> {
         let paths: Vec<PathBuf> = self.retained.keys().cloned().collect();
         for path in paths {
-            let mut session = self.retained.remove(&path).ok_or(FileError::Selection)?;
-            let result = (|| {
-                session.model.apply()?;
-                let previous_path = std::mem::replace(&mut self.current, path.clone());
-                std::mem::swap(&mut self.saved, &mut session.baseline);
-                std::mem::swap(&mut self.recovery, &mut session.recovery);
-                let result = self
-                    .save(session.model.document().source())
-                    .and_then(|()| self.checkpoint(&session.model));
-                std::mem::swap(&mut self.saved, &mut session.baseline);
-                std::mem::swap(&mut self.recovery, &mut session.recovery);
-                self.current = previous_path;
-                result
-            })();
-            self.retained.insert(path, session);
-            result?;
+            let session = self.retained.get_mut(&path).ok_or(FileError::Selection)?;
+            let outcome = session.save(&path);
+            let source = session.baseline.clone();
+            let record = self.record_saved(&path, &source);
+            outcome.and(record)?;
         }
         if self.manifest.dirty() {
             self.manifest.save()?;
@@ -186,10 +198,35 @@ impl ProjectFiles {
     }
 }
 
+impl Retained {
+    fn has_edits(&self) -> bool {
+        self.model.has_draft() || self.model.document().source() != self.baseline.as_ref()
+    }
+
+    fn dirty(&self) -> bool {
+        self.has_edits() || self.recovery.pending()
+    }
+
+    pub(super) fn save(&mut self, path: &Path) -> Result<(), FileError> {
+        self.model.apply()?;
+        self.save_applied(path)
+    }
+
+    pub(super) fn save_applied(&mut self, path: &Path) -> Result<(), FileError> {
+        super::save::replace_checked(path, &self.baseline, self.model.document().source())?;
+        self.baseline = self.model.document().source_snapshot();
+        let recovery = self
+            .model
+            .has_draft()
+            .then(|| crate::recovery::Recovery::new(self.baseline.clone(), self.model.recovery()));
+        self.recovery.persist(recovery)
+    }
+}
+
 fn overlay(context: &mut recite_writer_model::ProjectContext, model: &Workbench) {
-    let saved = recite_compiler::authoring::SavedDocument::new(
+    let saved = recite_compiler::authoring::SavedDocument::from_shared(
         model.document().key().clone(),
-        model.document().source(),
+        model.document().source_snapshot(),
     );
     if let Some(slot) = context
         .documents

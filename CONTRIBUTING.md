@@ -163,14 +163,14 @@ contracts.
   repository's deterministic fixture gate also performs static workflow assertions. Pinned
   `actionlint` validates workflow syntax, expressions and reusable-workflow wiring in CI and the
   complete local gate.
-- The canonical local quality gate is `mise exec -- just check` (`scripts/verify.sh`). It loads the
-  scoped `maintainability` mise environment for the pinned ast-grep check. GitHub Actions selects
-  affected lanes on pushes to `main` and pull requests (`.github/workflows/ci.yml`), then validates
-  their results with the unconditional `required-check` rollup. The base-owned trusted policy lane
-  is a separate `pull_request_target` check (`.github/workflows/trusted-policy.yml`); required CI
-  and branch protection remain authoritative for the final protected PR. Focused checks are
-  acceptable for narrow documentation or instruction-only changes; run the full gate locally for
-  broad or high-risk code changes.
+- The canonical local quality gate is `mise exec -- just check`. It loads the scoped
+  `maintainability` mise environment for the pinned ast-grep check. GitHub Actions selects affected
+  lanes on pushes to `main` and pull requests (`.github/workflows/ci.yml`), then validates their
+  results with the unconditional `required-check` rollup. The base-owned trusted policy lane is a
+  separate `pull_request_target` check (`.github/workflows/trusted-policy.yml`); required CI and
+  branch protection remain authoritative for the final protected PR. Focused checks are acceptable
+  for narrow documentation or instruction-only changes; run the full gate locally for broad or
+  high-risk code changes.
 
 ## Change and review workflow
 
@@ -187,14 +187,20 @@ Milestone work uses a coordinator-owned `integration/<short-kebab-topic>` branch
 Delegated slices use isolated purpose-first branches/worktrees at its stated base SHA, do not open
 slice PRs, and are reviewed before mechanical integration. The final PR targets `main`, carries
 `workflow/integration`, and uses the milestone tracking issue's code in its title and closing token.
-Its commits may address multiple issues; list accepted slices in the PR. Agent delegation procedures
-live in the [GitHub workflow skill](.agents/skills/recite-github-pm/SKILL.md#authorized-delegation).
+Its commits may address multiple issues; list the included changes in the PR.
 
-Protected `main` requires signed commits, required CI and resolved review threads. Maintainer
-approval remains authoritative; optional automated reviews are advisory. The
-[merge helper reference](.agents/skills/recite-github-pm/references/github-merge-details.md)
-explains the current-head checks and solo-maintainer approval path. Verify linked issue and
-milestone state after merging. Do not bypass this path with direct pushes to `main`.
+Protected `main` requires signed commits, current required CI and resolved review threads. Inspect
+the final diff and address review findings before merging. Use native GitHub checks and protection:
+
+```sh
+gh pr view PR --repo plethu/recite
+gh pr checks PR --repo plethu/recite --required
+gh pr merge PR --repo plethu/recite --squash --delete-branch --match-head-commit REVIEWED_SHA
+```
+
+Merge only when authorized, against the reviewed head. Optional automated reviews are advisory; they
+do not replace maintainer approval or cover later changes. Verify linked issue and milestone state
+after merging. Do not bypass protection with direct pushes to `main`.
 
 ## Instructions and skills
 
@@ -209,43 +215,23 @@ maintainer's home-directory instructions, or copy a general skill collection int
 
 ## CI coverage
 
-`scripts/ci-scope.py` selects checks using the complete Git diff, including deleted paths and both
-sides of renames. Pull requests use their merge base; pushes compare the previous and current
-commit. Unknown paths and shared Cargo manifests or locks select the complete suite; known toolchain
-edits select their consumers. A missing comparison revision fails the required check instead of
-silently skipping coverage.
+[scripts/ci-scope.py](scripts/ci-scope.py) selects lanes from the complete diff, including deleted
+paths and both sides of renames. Pull requests use their merge base; pushes compare the previous and
+current commits. Unknown paths and shared Cargo manifests or locks select the complete suite. A
+missing revision fails selection.
 
-| Changed surface                                                     | Selected checks, in addition to policy, spelling, workflow validation and CI fixtures                        |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Markdown and documentation                                          | Documentation build, schema examples and maintainability                                                     |
-| Core Rust                                                           | Rust, adapters, writer UI/accessibility, Windows contracts, editor clients, benchmark smoke, maintainability |
-| Writer source                                                       | Rust, adapters, writer UI/accessibility, maintainability                                                     |
-| VS Code or Helix                                                    | Editor clients and maintainability                                                                           |
-| Just recipe layout                                                  | Maintainability recipe checks; changed code or scripts select their own lanes                                |
-| Engine companion scripts                                            | Rust adapter gate and maintainability                                                                        |
-| CI routing contracts                                                | Unconditional policy fixtures and maintainability                                                            |
-| Schema and shared fixtures                                          | Rust, Windows, docs, editor clients, benchmark smoke, maintainability                                        |
-| Packaging definitions or assets                                     | Native, Nix and Flatpak packages, docs, maintainability                                                      |
-| Cargo manifests/locks, broad shared toolchain edits, unknown inputs | Complete suite, including packages                                                                           |
-
-The Rust lane retains the existing writer tests and Linux native accessibility probe. Source changes
-can still reveal platform-specific packaging failures in the weekly run; run **Writer package
-previews** manually before a release or when changing platform-dependent source. All ten package
-jobs run for changed packaging/build inputs, on the Monday 05:23 UTC complete run, and on demand.
-The **CI** workflow also supports a manual complete run. These jobs build and inspect packages; they
-do not replace installed-package or manual accessibility acceptance.
-
-Title, body and label edits rerun only the trusted policy workflow. Its base-owned checks validate
-current metadata and the commit range; source CI is not restarted. Changes to source still cancel
-superseded runs.
-
-The required rollup accepts a skipped lane only when selection explicitly says it is unaffected. A
-failed selector, missing result, cancellation, or unexpected skip blocks the rollup. Package results
-are included through the reusable workflow, so package failures cannot leave the aggregate green.
-
-Inspect selection locally and run its regression tests with:
+Inspect the selector and its regression tests through the pinned toolchain:
 
 ```sh
-python3 scripts/ci-scope.py --base origin/main --head HEAD
-python3 -m unittest discover -s tests/ci -p 'test_*.py'
+just perf scope
+just perf check
 ```
+
+The unconditional `required-check` rollup rejects missing results, failures, cancellation and
+unexpected skips. Package results participate through the reusable Writer package workflow. The
+separate trusted policy workflow reads base-owned code and does not execute PR files.
+
+GitHub Actions supports manual complete CI and Writer package runs; scheduled runs exercise the full
+suite. Run package previews before a release or after platform-dependent packaging changes. Package
+builds and automated accessibility probes establish their tested contracts; installed package
+acceptance remains separate. Workflow definitions own the current lanes and schedules.

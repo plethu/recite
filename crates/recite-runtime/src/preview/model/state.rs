@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use recite_core::{BlockId, ChoiceId, LocaleId, compiled::CompiledAssetId};
 
 use super::revision::PreviewAssetRevision;
@@ -82,8 +84,8 @@ pub struct PreviewState {
     /// rendered prompt projection, including provider-derived text and
     /// provenance; restore treats that typed projection as authoritative.
     pub(crate) status: PreviewStatus,
-    pub(crate) selected_choice_history: Vec<ChoiceId>,
-    pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
+    pub(crate) selected_choice_history: Arc<[ChoiceId]>,
+    pub(crate) deferred_effects: Arc<[DialogueEffectRequest]>,
     pub(crate) restart_required: Option<PreviewRestartRequirement>,
 }
 
@@ -104,8 +106,8 @@ impl PreviewState {
             block,
             locale,
             status,
-            selected_choice_history,
-            deferred_effects,
+            selected_choice_history: selected_choice_history.into(),
+            deferred_effects: deferred_effects.into(),
             restart_required,
         }
     }
@@ -124,8 +126,8 @@ impl PreviewState {
             block,
             locale: session.locale().cloned(),
             status,
-            selected_choice_history: session.selected_choice_history().to_vec(),
-            deferred_effects: session.deferred_effects().to_vec(),
+            selected_choice_history: session.selected_choice_history().into(),
+            deferred_effects: session.deferred_effects().into(),
             restart_required: None,
         }
     }

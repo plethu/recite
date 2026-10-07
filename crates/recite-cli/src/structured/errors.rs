@@ -68,6 +68,7 @@ pub(crate) enum ErrorCode {
     SchemaInspection,
     UserConfig,
     ProjectDiscovery,
+    ProjectSchema,
     UiCatalog,
     Watch,
     WatchCoordinator,

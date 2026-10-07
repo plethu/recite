@@ -83,10 +83,7 @@ pub unsafe extern "C" fn recite_session_set_locale_variant(
     set_locale_variant_value(session_handle, variant)
 }
 
-pub(crate) fn set_locale_variant_value(
-    session_handle: u64,
-    variant: Option<String>,
-) -> ReciteStatus {
+fn set_locale_variant_value(session_handle: u64, variant: Option<String>) -> ReciteStatus {
     let mut guard = super::lock_sessions();
     let Some(session) = guard.get_mut(&session_handle) else {
         set_last_error("unknown session handle");

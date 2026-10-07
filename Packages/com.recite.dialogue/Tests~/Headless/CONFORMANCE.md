@@ -2,7 +2,7 @@
 
 The manifest is `fixtures/adapter-conformance/v1/scenarios.json` (26 IDs). The common reference
 driver executes its `reference_driver` scenarios; the Unity managed suite observes transactional
-drained batches through real `recite-ffi` 0.6.0. It does not claim byte-identical traces with the
+drained batches through real `recite-ffi` 0.7.0. It does not claim byte-identical traces with the
 reference driver's individual `advance` operations. These mappings identify actual Unity-side
 evidence and gaps. `scripts/check-unity-adapter.sh` runs the headless suite and CLI export;
 `scripts/unity/run-unity-tests.sh` runs host EditMode/PlayMode tests when an Editor is available.

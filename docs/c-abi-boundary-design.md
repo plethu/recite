@@ -73,16 +73,15 @@ Mapping to contract obligations:
 
 **Decision: MessagePack length-prefixed byte buffers.**
 
-After each session operation that drains traversal (`recite_session_start`,
-`recite_session_start_with_values`, the provider-aware start forms, `recite_session_begin`,
-`recite_session_choose`, `recite_session_acknowledge_effect`, and the restore forms) the crate
-writes a single serialized output batch into a caller-supplied buffer slot (see Buffer Ownership
-below). The batch has its own MessagePack envelope and encoder in `recite-ffi`; it is distinct from
-the runtime session snapshot codec. The current batch envelope has `batch_format_version = 0`.
-Condition callback payloads have no independent version field: their shape is fixed by this ABI v0
-contract and the major-version policy below. A future callback or batch format change requires an
-explicitly designed compatibility mechanism (an ABI-major reset, an additive versioned entrypoint,
-or a versioned envelope); there is no negotiation in the current ABI.
+After each session operation that drains traversal (`recite_session_start`, `recite_session_begin`,
+`recite_session_choose`, `recite_session_acknowledge_effect`, and `recite_session_restore`) the
+crate writes a single serialized output batch into a caller-supplied buffer slot (see Buffer
+Ownership below). The batch has its own MessagePack envelope and encoder in `recite-ffi`; it is
+distinct from the runtime session snapshot codec. The current batch envelope has
+`batch_format_version = 0`. Condition callback payloads have no independent version field: their
+shape is fixed by this ABI v0 contract and the major-version policy below. A future callback or
+batch format change requires an explicitly designed compatibility mechanism (an ABI-major reset, an
+additive versioned entrypoint, or a versioned envelope); there is no negotiation in the current ABI.
 
 **Why not C structs?** Contract §5 structured output is deeply nested: choice availability reason
 trees (`all` / `any` / leaf), projection affordances, deferred effect lists, inline markup.
@@ -94,12 +93,23 @@ Attempting to freeze this as a fixed-arity C struct layout would:
   widen with every new contract feature;
 - duplicate a serialization design that already exists and is already versioned.
 
-MessagePack adds one host-side dependency (a msgpack decoder), but every supported host language has
-a mature msgpack library, and the versioned payload means the ABI can evolve without breaking older
-host integrations.
+MessagePack has maintained host implementations; the versioned payload separates the byte ABI from
+the host's typed projection. Rust uses Serde rather than a handwritten tagged-map decoder.
+
+The Unity byte-codec probe with MessagePack-CSharp 3.1.11 preserved managed adapter conformance and
+reduced allocation. Adoption is deferred under the current self-contained UPM distribution: bundled
+assemblies conflict with a consumer's existing MessagePack installation, while upstream uses a
+[shared NuGet installation](https://github.com/MessagePack-CSharp/MessagePack-CSharp#unity-support).
+Reevaluate when Unity distribution chooses one shared dependency owner. Another timing run or
+hands-on session does not resolve that ownership tradeoff; keep the Recite-specific typed projection
+and strict malformed-input checks in either implementation.
 
 The batch output format is versioned with a `batch_format_version` field (u16) in the envelope.
 Adapters may reject batches with an unrecognised version and surface `validation_error`.
+
+Availability reasons optionally carry `origin`: either `condition_call` with `function` and tagged
+`args`, or `requirement_expression` with `source_text`. This is an additive batch-v0 field; its
+absence means provenance is unavailable. Hosts preserve both origins and reject unknown kinds.
 
 **Draining behaviour:** each session call drains traversal synchronously and returns one ordered
 output batch. The batch stops at the first prompt, blocking effect, end event, or structured error.
@@ -127,21 +137,20 @@ label contexts retain their distinct domains.
 `recite_session_set_catalog` explicitly switches a session from callback mode to an owned catalogue
 revision; installing a callback switches back. A session retains its attached revision after the
 handle changes or is freed. Refreshing catalogues therefore builds a new candidate handle from all
-configured PO files, then attaches it after every import succeeds. The additive
-`recite_session_restore_with_catalog` takes asset, snapshot bytes/length, interpolation
-values/length, catalogue handle, optional locale variant, and session/batch outputs. It attaches the
-catalogue before restore traversal, so the first returned batch is localized.
+configured PO files, then attaches it after every import succeeds. For restored sessions, attach the
+catalogue after preparation and before begin so the first batch is localized.
 
 ## Session Lifecycle Functions
 
 The generated [public C header](../include/recite.h) defines the exported functions and parameter
 types. The Rust implementation and FFI contract tests own their mappings to runtime operations.
 
-Create a session, install its callbacks and interpolation values, then begin traversal. The
-convenience start functions perform those steps in one call; failed starts remove the newly created
-session. Provider-aware restore installs values, locale callbacks, and the grammatical variant
-before its first drain; a failed restore never publishes a handle. The grammatical variant is not
-serialized and must be supplied again when restoring.
+Create a session or call `recite_session_prepare_restore`, install its condition handlers,
+interpolation values and locale configuration, then begin traversal. Failed preparation publishes no
+handle; failed begin retains the prepared checkpoint for correction and retry. The two convenience
+functions `start` and `restore` begin immediately and are suitable only when no host configuration
+is needed. Failures free their prepared session and leave output slots unchanged. The grammatical
+variant is not serialized and must be supplied again when restoring.
 
 Choosing a choice or acknowledging an effect drains the next output batch. Restoring a pending
 blocking effect re-emits it once; a pending prompt produces an empty resumption batch. Ended
@@ -285,16 +294,14 @@ Run `scripts/generate-ffi-header.sh --write` after changing the FFI surface. The
 `scripts/generate-ffi-header.sh` without `--write`, which fails if the committed header is stale.
 
 Header version constants (`RECITE_FFI_VERSION_MAJOR`, `RECITE_FFI_VERSION_MINOR`, and
-`RECITE_FFI_VERSION_PATCH`) match the `recite-ffi` crate version. A major version bump is required
-for breaking C ABI changes, including renumbering or removing stable `ReciteStatus` codes. Minor
-versions are for additive ABI-compatible symbols, and patch versions are for documentation or
-implementation-only changes. The value-capable ABI introduced by `ReciteInterpolationValue` and the
-`*_with_values` entrypoints is version `0.1.0`. The additive typed locale callback surface
-(`ReciteLocaleFn`, locale result/attempt records, and provider-aware start/restore operations) is
-version `0.2.0`. The additive grammatical-variant entrypoints and complete plural-rule validator are
-version `0.3.0`. The additive native plural evaluator and placeholder-preservation validator are
-version `0.5.0`; asset metadata and owned gettext catalogue handles are version `0.6.0`; hosts can
-inspect the three constants before using those symbols.
+`RECITE_FFI_VERSION_PATCH`) match the `recite-ffi` crate version. The ABI is currently unreleased
+and unstable: 0.x minor revisions may change the interface, and hosts must ship matching headers,
+bindings and native libraries. After stabilization, incompatible changes require a major bump; patch
+versions remain for documentation and implementation changes.
+
+ABI 0.7 uses prepared creation/restoration, setters and begin in place of the old option-combination
+entrypoints. Compiled assets, snapshots and condition payloads retain their existing v0 encodings;
+availability-reason origin is an optional addition to batch v0.
 
 ## Error Codes
 
@@ -398,9 +405,9 @@ typedef struct {
 
 typedef struct {
     uint8_t ok;                  // 1 = success, 0 = error
-    const uint8_t *value_msgpack;// host-owned; Recite-borrowed until callback return
+    const uint8_t *value_msgpack;// host-owned; valid after callback return (see below)
     uintptr_t value_len;         // valid when ok = 1
-    const char *error_message;   // host-owned borrow; valid until callback return when ok = 0
+    const char *error_message;   // same result lifetime when ok = 0
 } ReciteConditionResult;
 
 typedef ReciteConditionResult (*ReciteConditionFn)(
@@ -484,8 +491,10 @@ wrong field types, truncated payloads, and trailing bytes are rejected as
 `RECITE_ERR_INVALID_CONDITION_RESULT`.
 
 The native query bytes and function-name pointer are Rust-owned borrows valid only during the
-synchronous callback. Host result bytes and error strings are host-owned borrows valid only until
-callback return. Hosts must copy anything they retain, and callbacks must not re-enter `recite-ffi`.
+synchronous callback. Host result bytes and error strings must remain immutable and valid after
+callback return until the next condition callback for that session or the enclosing Recite operation
+returns, whichever happens first. Recite decodes the result before invoking the next callback, so a
+session-owned reusable buffer is sufficient. Callbacks must not re-enter `recite-ffi`.
 
 ## Threading and Reentrancy
 
