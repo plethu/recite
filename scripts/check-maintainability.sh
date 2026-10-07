@@ -6,7 +6,7 @@ usage() {
 Usage:
   check-maintainability.sh [base-ref [head-ref]] [--full]
 
-Checks changed handwritten Rust, JavaScript, Lua, Python, and shell source.
+Checks changed handwritten Rust, JavaScript/TypeScript, Lua, Python, and shell source.
 Line counts are review triggers, not automatic split rules:
   production and tooling: scrutiny >250, follow-up >400
   test/support: scrutiny >350, follow-up >500
@@ -14,7 +14,7 @@ Line counts are review triggers, not automatic split rules:
 Unchanged or shrinking oversized files pass. A file crossing or growing above
 its follow-up threshold requires an exact, bounded, issue-linked exception in
 scripts/maintainability/exceptions.toml. File sizes are read from the checked
-out head; use --full for a repository-wide trigger report.
+out commit, excluding uncommitted edits; use --full for a repository-wide trigger report.
 EOF
 }
 

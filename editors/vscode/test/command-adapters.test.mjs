@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import { accessSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
 import test from "node:test";
 import { CommandRegistry } from "../src/commands.js";
+import { FakeChild } from "./child.ts";
 const packageRoot = path.resolve(import.meta.dirname, "..");
 const cliBinary = process.env.RECITE_CLI_BIN
   ?? path.resolve(packageRoot, "../../target/debug/recite");
@@ -21,7 +21,6 @@ test("registered validate command resolves argv and cwd, maps diagnostics, and r
   const messages = [];
   const api = hostApi({
     trusted: true,
-    messages,
     document: savedDocument(),
     documents: [
       savedDocumentAt("/workspace/project/dialogue.recite"),
@@ -101,7 +100,7 @@ test("registered validate command resolves argv and cwd, maps diagnostics, and r
 });
 test("typed finite failures stay typed at the semantic UI boundary", async () => {
   const messages = [];
-  const api = hostApi({ trusted: true, messages, document: savedDocument() });
+  const api = hostApi({ trusted: true, document: savedDocument() });
   const registry = new CommandRegistry(api, userInterface(messages), {
     makeInvocationId: () => "failure-id",
     spawnProcess: () => {
@@ -142,7 +141,7 @@ test("typed finite failures stay typed at the semantic UI boundary", async () =>
 test("validate refuses a saved document outside the effective project root", async () => {
   const messages = [];
   const document = savedDocumentAt("/other/dialogue.recite");
-  const api = hostApi({ trusted: true, messages, document, documents: [document] });
+  const api = hostApi({ trusted: true, document, documents: [document] });
   let spawned = false;
   const registry = new CommandRegistry(api, userInterface(messages, document), {
     makeInvocationId: () => "outside-id",
@@ -161,7 +160,7 @@ test("compile revalidates the saved document after its output picker", async () 
   const messages = [];
   let resolveOutput;
   let spawned = false;
-  const api = hostApi({ trusted: true, messages, document: savedDocument() });
+  const api = hostApi({ trusted: true, document: savedDocument() });
   const ui = userInterface(messages, api.window.activeTextEditor.document);
   ui.chooseCompileOutputPath = () =>
     new Promise((resolve) => {
@@ -187,7 +186,7 @@ test("compile revalidates the saved document after its output picker", async () 
 
 test("extract picker cancellation does not launch the stdout form", async () => {
   const messages = [];
-  const api = hostApi({ trusted: true, messages, document: savedDocument() });
+  const api = hostApi({ trusted: true, document: savedDocument() });
   const ui = userInterface(messages, api.window.activeTextEditor.document);
   ui.chooseExtractOutputPath = async () => undefined;
   let spawned = false;
@@ -208,7 +207,7 @@ test("compile refuses a configuration authority change across an output picker",
   let resolveOutput;
   let projectRoot = "project";
   let call;
-  const api = hostApi({ trusted: true, messages, document: savedDocument() });
+  const api = hostApi({ trusted: true, document: savedDocument() });
   api.workspace.getConfiguration = () => ({
     get: (key, fallback) => ({
       "cli.path": "recite",
@@ -270,7 +269,7 @@ test("compile refuses a configuration authority change across an output picker",
 test("runtime picker trust loss is a quiet refusal before spawn", async () => {
   const messages = [];
   let resolveAsset;
-  const api = hostApi({ trusted: true, messages, document: savedDocument() });
+  const api = hostApi({ trusted: true, document: savedDocument() });
   const ui = userInterface(messages);
   ui.chooseAssetPath = () =>
     new Promise((resolve) => {
@@ -310,7 +309,6 @@ test("a built recite CLI speaks the finite protocol through the command adapter"
   };
   const api = hostApi({
     trusted: true,
-    messages,
     document,
     root,
     projectRoot: "",
@@ -331,34 +329,6 @@ test("a built recite CLI speaks the finite protocol through the command adapter"
   }
 });
 
-class FakeChild extends EventEmitter {
-  constructor() {
-    super();
-    this.stdout = new EventEmitter();
-    this.stderr = new EventEmitter();
-    this.stdin = new EventEmitter();
-    this.stdin.writable = true;
-    this.stdin.writes = [];
-    this.stdin.write = (value) => {
-      this.stdin.writes.push(JSON.parse(value));
-      return true;
-    };
-    this.stdin.end = () => {};
-    this.stdin.destroy = () => {
-      this.stdin.writable = false;
-    };
-    this.killed = false;
-  }
-
-  kill(signal) {
-    this.killed = true;
-    if (signal === "SIGKILL") queueMicrotask(() => this.close(1));
-  }
-  close(code) {
-    this.emit("close", code, null);
-  }
-}
-
 function savedDocument() {
   return savedDocumentAt("/workspace/project/dialogue.recite");
 }
@@ -377,7 +347,6 @@ function savedDocumentAt(fsPath) {
 function hostApi(
   {
     trusted,
-    _messages,
     document,
     documents = document ? [document] : [],
     root = "/workspace",

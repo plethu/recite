@@ -74,6 +74,7 @@ projection_paths=(
   editors/vscode/package.nls.json
   editors/vscode/src/diagnostics.generated.js
   editors/vscode/src/diagnostic-contract.generated.js
+  editors/vscode/src/error-vocabulary.generated.js
 )
 projection_hashes=()
 for relative in "${projection_paths[@]}"; do
@@ -116,6 +117,7 @@ echo "== VS Code/VSCodium package and live checks =="
   echo "== verify typed VS Code diagnostic contract export =="
   diff -u crates/recite-ui/resources/vscode-diagnostic-contract.tsv \
     <(cargo run --locked -q -p recite-ui --example export-vscode-diagnostic-contract)
+  cargo test --locked -q -p recite-cli --lib structured::tests::error_vocabulary_projections_are_current
   RECITE_LSP_BIN="$lsp_bin" RECITE_CLI_BIN="$cli_bin" pnpm editor:check
   pnpm editor:package
 )

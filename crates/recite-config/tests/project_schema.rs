@@ -51,7 +51,9 @@ fn schema_loading_distinguishes_absent_invalid_and_missing_inputs() -> Result {
         assert!(!loaded.diagnostics.is_empty());
         assert_eq!(
             loaded.diagnostics[0].span.file,
-            dir.path()
+            report
+                .manifest()
+                .project_root()
                 .join("schema.json")
                 .to_string_lossy()
                 .replace('\\', "/")
@@ -117,7 +119,8 @@ fn schema_aliases_keep_declared_keys_but_must_resolve_inside_the_project() -> Re
     );
     assert!(loaded.into_report().diagnostics.is_empty());
     fs::write(dir.path().join("actual.json"), "{ invalid")?;
-    let invalid = discover_project(dir.path())?
+    let report = discover_project(dir.path())?;
+    let invalid = report
         .manifest()
         .load_schema()?
         .ok_or("missing aliased schema")?
@@ -125,7 +128,9 @@ fn schema_aliases_keep_declared_keys_but_must_resolve_inside_the_project() -> Re
     assert!(invalid.schema.is_none());
     assert_eq!(
         invalid.diagnostics[0].span.file,
-        dir.path()
+        report
+            .manifest()
+            .project_root()
             .join("link.json")
             .to_string_lossy()
             .replace('\\', "/")

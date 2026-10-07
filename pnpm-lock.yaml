@@ -58,6 +58,9 @@ importers:
         specifier: 9.0.1
         version: 9.0.1
     devDependencies:
+      "@types/node":
+        specifier: 24.19.1
+        version: 24.19.1
       "@vscode/test-electron":
         specifier: 3.1.0
         version: 3.1.0
@@ -67,6 +70,9 @@ importers:
       fflate:
         specifier: 0.8.2
         version: 0.8.2
+      typescript:
+        specifier: npm:@typescript/typescript6@6.0.2
+        version: "@typescript/typescript6@6.0.2"
       vscode-oniguruma:
         specifier: 1.7.0
         version: 1.7.0

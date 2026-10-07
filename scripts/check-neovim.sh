@@ -58,6 +58,7 @@ for required_file in \
   "$plugin_root/lua/recite/command_json.lua" \
   "$plugin_root/lua/recite/command_protocol.lua" \
   "$plugin_root/lua/recite/error_protocol.lua" \
+  "$plugin_root/lua/recite_error_vocabulary.lua" \
   "$plugin_root/lua/recite/diagnostic_protocol.lua" \
   "$plugin_root/lua/recite/finite_protocol.lua" \
   "$plugin_root/lua/recite/command_process.lua" \
@@ -147,6 +148,10 @@ if [[ -z "$tree_sitter_bin" ]]; then
   echo "Neovim headless checks require tree-sitter; install the pinned tool or set TREE_SITTER=/path/to/tree-sitter" >&2
   exit 2
 fi
+(
+  cd "$repo_root"
+  "$cargo_bin" test --locked -q -p recite-cli --lib structured::tests::error_vocabulary_projections_are_current
+)
 nvim_version="$($nvim_bin --headless --version | sed -n '1s/^NVIM v//p')"
 if [[ -z "$nvim_version" ]]; then
   echo "unable to determine Neovim version from $nvim_bin" >&2

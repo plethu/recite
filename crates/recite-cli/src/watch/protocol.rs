@@ -1,3 +1,4 @@
+use crate::structured::errors::ErrorOperation;
 use std::io::{self, Write};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
@@ -33,7 +34,7 @@ pub(super) fn run(
     let mut protocol = WatchProtocol::new(stdout, invocation_id);
     match run_inner(args, &mut protocol) {
         Ok(exit_code) => Ok(exit_code),
-        Err(error) => stop_with_error(&mut protocol, error, "watch", None),
+        Err(error) => stop_with_error(&mut protocol, error, ErrorOperation::Watch, None),
     }
 }
 
@@ -47,18 +48,23 @@ fn run_inner(
             protocol.started(&args.project_root)?;
             let path = args.project_root;
             let error = CliError::InvalidProjectRoot(path.clone());
-            return stop_with_error(protocol, error, "resolve_path", Some(&path));
+            return stop_with_error(protocol, error, ErrorOperation::ResolvePath, Some(&path));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             protocol.started(&args.project_root)?;
             let path = args.project_root;
             let error = CliError::MissingPath(path.clone());
-            return stop_with_error(protocol, error, "resolve_path", Some(&path));
+            return stop_with_error(protocol, error, ErrorOperation::ResolvePath, Some(&path));
         }
         Err(error) => {
             protocol.started(&args.project_root)?;
             let path = args.project_root;
-            return stop_with_error(protocol, CliError::Io(error), "resolve_path", Some(&path));
+            return stop_with_error(
+                protocol,
+                CliError::Io(error),
+                ErrorOperation::ResolvePath,
+                Some(&path),
+            );
         }
     }
 
@@ -70,7 +76,12 @@ fn run_inner(
                 .map_or_else(|| args.project_root.clone(), std::path::Path::to_owned);
             let error = CliError::ProjectDiscovery { source };
             protocol.started(&args.project_root)?;
-            return stop_with_error(protocol, error, "discover_project", Some(&path));
+            return stop_with_error(
+                protocol,
+                error,
+                ErrorOperation::DiscoverProject,
+                Some(&path),
+            );
         }
     };
     let project_root = discovery.manifest().project_root().to_owned();
@@ -82,11 +93,21 @@ fn run_inner(
     }) {
         Ok(watcher) => watcher,
         Err(error) => {
-            return stop_with_error(protocol, watch_error(error), "start_watcher", None);
+            return stop_with_error(
+                protocol,
+                watch_error(error),
+                ErrorOperation::StartWatcher,
+                None,
+            );
         }
     };
     if let Err(error) = watcher.watch(&project_root, notify::RecursiveMode::Recursive) {
-        return stop_with_error(protocol, watch_error(error), "watch_project", None);
+        return stop_with_error(
+            protocol,
+            watch_error(error),
+            ErrorOperation::WatchProject,
+            None,
+        );
     }
 
     let (transport, control_receiver) =
@@ -293,7 +314,7 @@ fn stop_cancelled(protocol: &mut WatchProtocol<'_>) -> Result<std::process::Exit
 fn stop_with_error(
     protocol: &mut WatchProtocol<'_>,
     error: CliError,
-    operation: &'static str,
+    operation: ErrorOperation,
     path: Option<&std::path::Path>,
 ) -> Result<std::process::ExitCode, CliError> {
     let mapped = structured_error(&error, operation, path);

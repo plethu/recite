@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super::super::errors::{ErrorCategory, ErrorCode, ErrorDetails};
+use super::super::errors::{ErrorCategory, ErrorCode, ErrorDetails, ErrorOperation};
 use super::ErrorParts;
 
 pub(super) fn preparation<'a>(
@@ -13,7 +13,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::Discovery(source) => (
             ErrorCategory::Project,
             ErrorCode::ProjectDiscovery,
-            "discover_project",
+            ErrorOperation::DiscoverProject,
             source.manifest_path().or(fallback_path),
             None,
             Some(ErrorDetails::Watch { kind: "discovery" }),
@@ -21,7 +21,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::Read { path, .. } => (
             ErrorCategory::Io,
             ErrorCode::Read,
-            "read_project_input",
+            ErrorOperation::ReadProjectInput,
             Some(path),
             None,
             Some(ErrorDetails::Watch { kind: "read" }),
@@ -29,7 +29,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::NoInputs => (
             ErrorCategory::Input,
             ErrorCode::NoInputs,
-            "collect_inputs",
+            ErrorOperation::CollectInputs,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "no_inputs" }),
@@ -37,7 +37,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::InvalidSchemaPath { path, .. } => (
             ErrorCategory::Schema,
             ErrorCode::WatchPreparation,
-            "resolve_schema",
+            ErrorOperation::ResolveSchema,
             Some(path),
             None,
             Some(ErrorDetails::Watch {
@@ -47,7 +47,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::SchemaOutsideProject { declared, resolved } => (
             ErrorCategory::Schema,
             ErrorCode::WatchPreparation,
-            "resolve_schema",
+            ErrorOperation::ResolveSchema,
             Some(declared),
             Some(resolved),
             Some(ErrorDetails::Watch {
@@ -57,7 +57,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::SchemaWithoutModel { path } => (
             ErrorCategory::Schema,
             ErrorCode::WatchPreparation,
-            "load_schema",
+            ErrorOperation::LoadSchema,
             Some(path),
             None,
             Some(ErrorDetails::Watch {
@@ -67,7 +67,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::Schema { .. } => (
             ErrorCategory::Schema,
             ErrorCode::WatchPreparation,
-            "load_schema",
+            ErrorOperation::LoadSchema,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "schema" }),
@@ -75,7 +75,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::InvalidInputKey { .. } => (
             ErrorCategory::Input,
             ErrorCode::WatchPreparation,
-            "prepare_inputs",
+            ErrorOperation::PrepareInputs,
             fallback_path,
             None,
             Some(ErrorDetails::Watch {
@@ -85,7 +85,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::Authoring { .. } => (
             ErrorCategory::Compilation,
             ErrorCode::WatchPreparation,
-            "validate_project",
+            ErrorOperation::ValidateProject,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "authoring" }),
@@ -93,7 +93,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::Request(_) => (
             ErrorCategory::Compilation,
             ErrorCode::WatchPreparation,
-            "prepare_request",
+            ErrorOperation::PrepareRequest,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "request" }),
@@ -101,7 +101,7 @@ pub(super) fn preparation<'a>(
         ProjectBuildPreparationError::Target(_) => (
             ErrorCategory::Input,
             ErrorCode::WatchPreparation,
-            "prepare_targets",
+            ErrorOperation::PrepareTargets,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "target" }),
@@ -109,7 +109,7 @@ pub(super) fn preparation<'a>(
         _ => (
             ErrorCategory::Project,
             ErrorCode::WatchPreparation,
-            "prepare_project",
+            ErrorOperation::PrepareProject,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "unknown" }),
@@ -129,7 +129,7 @@ pub(super) fn publisher<'a>(
             return (
                 ErrorCategory::Project,
                 ErrorCode::WatchPublisher,
-                "prepare_publisher",
+                ErrorOperation::PreparePublisher,
                 fallback_path,
                 None,
                 Some(ErrorDetails::Watch { kind: "unknown" }),
@@ -140,7 +140,7 @@ pub(super) fn publisher<'a>(
         TargetMapError::NoTargets => (
             ErrorCategory::Input,
             ErrorCode::WatchPublisher,
-            "prepare_publisher",
+            ErrorOperation::PreparePublisher,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "no_targets" }),
@@ -148,7 +148,7 @@ pub(super) fn publisher<'a>(
         TargetMapError::ProjectRoot { path, .. } => (
             ErrorCategory::Io,
             ErrorCode::WatchPublisher,
-            "resolve_project_root",
+            ErrorOperation::ResolveProjectRoot,
             Some(path),
             None,
             Some(ErrorDetails::Watch {
@@ -158,7 +158,7 @@ pub(super) fn publisher<'a>(
         TargetMapError::InvalidTarget { target, reason } => (
             ErrorCategory::Input,
             ErrorCode::WatchPublisher,
-            "validate_target",
+            ErrorOperation::ValidateTarget,
             fallback_path,
             None,
             Some(ErrorDetails::WatchTarget {
@@ -169,7 +169,7 @@ pub(super) fn publisher<'a>(
         TargetMapError::AliasesInput { target, input } => (
             ErrorCategory::Input,
             ErrorCode::WatchPublisher,
-            "validate_target",
+            ErrorOperation::ValidateTarget,
             fallback_path,
             Some(input),
             Some(ErrorDetails::WatchTarget {
@@ -180,7 +180,7 @@ pub(super) fn publisher<'a>(
         TargetMapError::DuplicateDestination { path, .. } => (
             ErrorCategory::Input,
             ErrorCode::WatchPublisher,
-            "validate_target",
+            ErrorOperation::ValidateTarget,
             Some(path),
             None,
             Some(ErrorDetails::Watch {
@@ -190,7 +190,7 @@ pub(super) fn publisher<'a>(
         _ => (
             ErrorCategory::Project,
             ErrorCode::WatchPublisher,
-            "prepare_publisher",
+            ErrorOperation::PreparePublisher,
             fallback_path,
             None,
             Some(ErrorDetails::Watch { kind: "unknown" }),

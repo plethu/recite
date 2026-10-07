@@ -1,4 +1,4 @@
-use std::path::{Component, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use recite_core::{
     DocumentKey,
@@ -58,6 +58,14 @@ impl ProjectManifest {
             path: path.clone(),
             reason: reason.to_owned(),
         };
+        // Joining a verbatim Windows root normalizes dot components. Validate
+        // the declaration first so traversal is rejected on every platform.
+        if Path::new(declared)
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+        {
+            return Err(invalid("path contains a parent component"));
+        }
         let relative = path
             .strip_prefix(self.project_root())
             .map_err(|_| invalid("path resolves outside the project"))?;

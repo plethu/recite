@@ -1,4 +1,4 @@
-import { EventEmitter } from "node:events";
+export { FakeChild } from "./child.ts";
 import { CommandRegistry } from "../src/commands.js";
 
 export function watchRegistry(
@@ -118,26 +118,4 @@ export function completed(invocationId, sequence) {
 
 export function envelope(invocationId, sequence, event, data) {
   return { version: 1, sequence, event, command: "watch", invocation_id: invocationId, data };
-}
-
-export class FakeChild extends EventEmitter {
-  constructor() {
-    super();
-    this.stdout = new EventEmitter();
-    this.stderr = new EventEmitter();
-    this.stdin = { writable: true, writes: [], end() {}, destroy() {} };
-    this.stdin.write = (value) => {
-      this.stdin.writes.push(JSON.parse(value));
-      return true;
-    };
-    this.killed = false;
-  }
-
-  kill(signal) {
-    this.killed = true;
-    if (signal === "SIGKILL") queueMicrotask(() => this.close(1));
-  }
-  close(code) {
-    this.emit("close", code, null);
-  }
 }

@@ -36,6 +36,10 @@ pnpm --filter recite-vscode run package:check
 pnpm --filter recite-vscode run messages:update  # after changing the canonical Fluent resources
 ```
 
+Process fixtures and recovery tests use strict TypeScript and Node's test runner with mock timers.
+The remaining JavaScript tests are not yet typechecked. A bounded Vitest probe removed only the
+small timer-flushing helper; revisit that choice when it materially simplifies the suite.
+
 Build and verification never rewrite the checked-in message projections. Use the explicit update
 command when the canonical English Fluent resources change, then run the checks to review the
 resulting bytes.

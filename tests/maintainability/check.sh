@@ -138,6 +138,25 @@ lines crates/demo/tests/large.rs 502
 save
 assert_check fail 'growing test support file' "$(previous)"
 
+for path in apps/writer/crates/recite-writer/src/new.rs editors/vscode/src/new.ts editors/vscode/src/new.tsx; do
+  fixture
+  save
+  lines "$path" 401
+  save
+  assert_check fail "new oversized production file: $path" "$(previous)"
+done
+
+for path in apps/writer/crates/recite-writer/src/tests.rs apps/writer/crates/recite-writer/src/project/tests.rs apps/writer/crates/recite-writer/tests/new.rs apps/writer/crates/recite-writer/benches/new.rs editors/vscode/test/new.test.ts; do
+  fixture
+  save
+  lines "$path" 500
+  save
+  assert_check pass "test/support threshold: $path" "$(previous)"
+  lines "$path" 501
+  save
+  assert_check fail "growing test/support file: $path" "$(previous)"
+done
+
 fixture
 save
 lines crates/demo/src/large.rs 402

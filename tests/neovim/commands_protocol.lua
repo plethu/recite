@@ -1,3 +1,4 @@
+local vocabulary = require("recite_error_vocabulary")
 local protocol = require("recite.command_protocol")
 local finite = require("recite.finite_protocol")
 local watch_protocol = require("recite.watch_protocol")
@@ -87,59 +88,7 @@ assert_true(
   "deterministic placeholder collision was not excluded from the original inventory"
 )
 
-local wire_codes = {
-  "core_value",
-  "compile",
-  "compiled_value",
-  "decode_asset",
-  "diagnostics",
-  "diagnostic_rendering",
-  "dialogue_catalog_conflict",
-  "dialogue_catalog_plural_forms_conflict",
-  "dialogue_catalog_malformed",
-  "dialogue_catalog_missing_locale",
-  "dialogue_catalog_spec_invalid",
-  "dialogue_locale_invalid",
-  "diagnostic_code_malformed",
-  "diagnostic_code_unknown",
-  "fixture_choice_index_out_of_range",
-  "fixture_choice_not_in_prompt",
-  "ambiguous_fixture_choice",
-  "fixture_toml",
-  "asset_metadata",
-  "asset_not_file",
-  "io",
-  "malformed_compiled_asset",
-  "missing_path",
-  "invalid_project_root",
-  "missing_fixture_choice",
-  "no_inputs",
-  "output_overwrites_input",
-  "play_eof",
-  "play_invalid_input",
-  "play_interrupted",
-  "play_tui_requires_terminal",
-  "read",
-  "read_directory",
-  "runtime",
-  "preview",
-  "blocking_effect_needs_acknowledgement",
-  "bench",
-  "benchmark",
-  "bench_json",
-  "trace_json",
-  "schema_inspection",
-  "user_config",
-  "project_discovery",
-  "ui_catalog",
-  "watch",
-  "watch_coordinator",
-  "watch_recovery",
-  "write",
-  "watch_preparation",
-  "watch_publisher",
-}
-for _, code in ipairs(wire_codes) do
+for code in pairs(vocabulary.errorCodes) do
   assert_true(
     protocol.valid_error({ category = "input", code = code, operation = "validate" }),
     "authoritative error code was rejected: " .. code
@@ -150,45 +99,16 @@ assert_true(not protocol.valid_error({
   code = "structured_stderr",
   operation = "validate",
 }), "transport stderr error leaked into the authoritative error-code set")
-local wire_operations = {
-  "validate",
-  "compile",
-  "extract",
-  "run",
-  "trace",
-  "watch",
-  "load_asset",
-  "load_catalog",
-  "load_fixture",
-  "inspect_asset",
-  "collect_inputs",
-  "write_output",
-  "acknowledge_effect",
-  "resolve_path",
-  "discover_project",
-  "select_fixture_choice",
-  "start_watcher",
-  "watch_project",
-  "control",
-  "build",
-  "read",
-  "read_directory",
-  "write",
-  "load_schema",
-  "read_project_input",
-  "prepare_inputs",
-  "validate_project",
-  "prepare_request",
-  "prepare_targets",
-  "resolve_schema",
-  "prepare_publisher",
-  "resolve_project_root",
-  "validate_target",
-}
-for _, operation in ipairs(wire_operations) do
+for operation in pairs(vocabulary.operations) do
   assert_true(
     protocol.valid_error({ category = "input", code = "missing_path", operation = operation }),
     "authoritative operation was rejected: " .. operation
+  )
+end
+for _, operation in ipairs({ "control", "dispatch", "export_schema", "render" }) do
+  assert_true(
+    not protocol.valid_error({ category = "input", code = "missing_path", operation = operation }),
+    "non-wire operation was accepted: " .. operation
   )
 end
 assert_true(not protocol.valid_error({

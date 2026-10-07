@@ -34,6 +34,7 @@ toml.workspace = true
 unic-langid.workspace = true
 
 [dev-dependencies]
+strum = { version = "=0.28.0", features = ["derive"] }
 tempfile.workspace = true
 
 [lints]

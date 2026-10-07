@@ -36,7 +36,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "messages:update": "node scripts/message-projections.mjs --update",
-    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node scripts/check-grammar.mjs && node --test test/*.test.mjs",
+    "typecheck": "tsc6 --noEmit",
+    "check": "pnpm run typecheck && node scripts/build.mjs && node scripts/check-package.mjs && node scripts/check-grammar.mjs && node --test test/*.test.mjs test/*.test.ts",
     "package": "node scripts/package.mjs",
     "package:check": "node scripts/package.mjs --check"
   },
@@ -139,9 +140,11 @@
     "vscode-languageclient": "9.0.1"
   },
   "devDependencies": {
+    "@types/node": "24.19.1",
     "@vscode/test-electron": "3.1.0",
     "acorn": "8.15.0",
     "fflate": "0.8.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "vscode-oniguruma": "1.7.0",
     "vscode-textmate": "9.2.0"
   },

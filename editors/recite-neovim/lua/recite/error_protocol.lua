@@ -1,5 +1,6 @@
 -- Structured command errors share protocol primitives, without editor lifecycle state.
 local M = {}
+local vocabulary = require("recite_error_vocabulary")
 
 function M.valid(value, protocol)
   local object = protocol.object
@@ -7,116 +8,11 @@ function M.valid(value, protocol)
   local nonempty_string = protocol.nonempty_string
   local unique_strings = protocol.unique_strings
   local machine_path = protocol.machine_path
-  local categories = {
-    input = true,
-    io = true,
-    schema = true,
-    compilation = true,
-    asset = true,
-    fixture = true,
-    runtime = true,
-    localisation = true,
-    configuration = true,
-    serialization = true,
-    project = true,
-    watch = true,
-    benchmark = true,
-    unsupported = true,
-    internal = true,
-  }
-  local codes = {
-    core_value = true,
-    compile = true,
-    compiled_value = true,
-    decode_asset = true,
-    diagnostics = true,
-    diagnostic_rendering = true,
-    dialogue_catalog_conflict = true,
-    dialogue_catalog_plural_forms_conflict = true,
-    dialogue_catalog_malformed = true,
-    dialogue_catalog_missing_locale = true,
-    dialogue_catalog_spec_invalid = true,
-    dialogue_locale_invalid = true,
-    diagnostic_code_malformed = true,
-    diagnostic_code_unknown = true,
-    fixture_choice_index_out_of_range = true,
-    fixture_choice_not_in_prompt = true,
-    ambiguous_fixture_choice = true,
-    fixture_toml = true,
-    asset_metadata = true,
-    asset_not_file = true,
-    io = true,
-    malformed_compiled_asset = true,
-    missing_path = true,
-    invalid_project_root = true,
-    missing_fixture_choice = true,
-    no_inputs = true,
-    output_overwrites_input = true,
-    play_eof = true,
-    play_invalid_input = true,
-    play_interrupted = true,
-    play_tui_requires_terminal = true,
-    read = true,
-    read_directory = true,
-    runtime = true,
-    preview = true,
-    blocking_effect_needs_acknowledgement = true,
-    bench = true,
-    benchmark = true,
-    bench_json = true,
-    trace_json = true,
-    schema_inspection = true,
-    user_config = true,
-    project_discovery = true,
-    project_schema = true,
-    ui_catalog = true,
-    watch = true,
-    watch_coordinator = true,
-    watch_recovery = true,
-    write = true,
-    watch_preparation = true,
-    watch_publisher = true,
-  }
-  local operations = {
-    validate = true,
-    compile = true,
-    extract = true,
-    run = true,
-    trace = true,
-    watch = true,
-    load_asset = true,
-    load_catalog = true,
-    load_fixture = true,
-    inspect_asset = true,
-    collect_inputs = true,
-    write_output = true,
-    acknowledge_effect = true,
-    resolve_path = true,
-    discover_project = true,
-    select_fixture_choice = true,
-    start_watcher = true,
-    watch_project = true,
-    control = true,
-    build = true,
-    read = true,
-    read_directory = true,
-    write = true,
-    load_schema = true,
-    read_project_input = true,
-    prepare_inputs = true,
-    validate_project = true,
-    prepare_request = true,
-    prepare_targets = true,
-    resolve_schema = true,
-    prepare_publisher = true,
-    resolve_project_root = true,
-    validate_target = true,
-  }
   if
     not object(value)
-    or not categories[value.category]
-    or not codes[value.code]
-    or not operations[value.operation]
+    or not vocabulary.errorCategories[value.category]
+    or not vocabulary.errorCodes[value.code]
+    or not vocabulary.operations[value.operation]
     or not keys(value, { "category", "code", "operation" }, { "path", "related_path", "details" })
     or value.path ~= nil and not machine_path(value.path)
     or value.related_path ~= nil and not machine_path(value.related_path)

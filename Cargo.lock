@@ -3001,6 +3001,7 @@ dependencies = [
  "same-file",
  "serde",
  "serde_json",
+ "strum",
  "tempfile",
  "toml",
  "unic-langid",

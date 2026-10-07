@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 #[derive(Serialize)]
+#[cfg_attr(test, derive(strum::EnumIter))]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum ErrorCategory {
     Input,
@@ -21,6 +22,7 @@ pub(crate) enum ErrorCategory {
 }
 
 #[derive(Serialize)]
+#[cfg_attr(test, derive(strum::EnumIter))]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum ErrorCode {
     Import,
@@ -78,6 +80,47 @@ pub(crate) enum ErrorCode {
     WatchPublisher,
 }
 
+#[derive(Clone, Copy, Serialize)]
+#[cfg_attr(test, derive(strum::EnumIter))]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ErrorOperation {
+    Validate,
+    Compile,
+    Extract,
+    Run,
+    Trace,
+    Watch,
+    LoadAsset,
+    LoadCatalog,
+    LoadFixture,
+    InspectAsset,
+    ResolvePath,
+    CollectInputs,
+    WriteOutput,
+    Read,
+    ReadDirectory,
+    AcknowledgeEffect,
+    SelectFixtureChoice,
+    Write,
+    DiscoverProject,
+    StartWatcher,
+    WatchProject,
+    Build,
+    ReadProjectInput,
+    ResolveSchema,
+    LoadSchema,
+    PrepareInputs,
+    ValidateProject,
+    PrepareRequest,
+    PrepareTargets,
+    PrepareProject,
+    PreparePublisher,
+    ResolveProjectRoot,
+    ValidateTarget,
+    ExportSchema,
+    Dispatch,
+}
+
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(crate) enum ErrorDetails {
@@ -120,7 +163,7 @@ pub(crate) enum ErrorDetails {
 pub(crate) struct StructuredError {
     pub(crate) category: ErrorCategory,
     pub(crate) code: ErrorCode,
-    pub(crate) operation: &'static str,
+    pub(crate) operation: ErrorOperation,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) path: Option<crate::schema_inspection::MachinePathProjection>,
     #[serde(skip_serializing_if = "Option::is_none")]

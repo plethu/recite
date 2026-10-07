@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
 import { runFiniteCommand } from "../src/command-process.js";
+import { FakeChild } from "./child.ts";
 
 test("finite adapters accept content diagnostics and typed failures", async () => {
   const content = await runFinite("command.result", 1, {
@@ -43,7 +43,12 @@ test("asynchronous stdin failures are contained as process failures", async () =
   await assert.rejects(promise, /EPIPE/);
 });
 
-async function runFinite(event, exitCode, terminal, command = "validate") {
+async function runFinite(
+  event: "command.result" | "command.error",
+  exitCode: number,
+  terminal: Record<string, unknown>,
+  command = "validate",
+) {
   const child = new FakeChild();
   const promise = runFiniteWithChild(child, command);
   queueMicrotask(() => {
@@ -71,7 +76,7 @@ async function runFinite(event, exitCode, terminal, command = "validate") {
   return promise;
 }
 
-function runFiniteWithChild(child, command = "validate") {
+function runFiniteWithChild(child: FakeChild, command = "validate") {
   return runFiniteCommand({
     command: "recite",
     commandName: command,
@@ -80,23 +85,4 @@ function runFiniteWithChild(child, command = "validate") {
     invocationId: "id",
     spawnProcess: () => child,
   });
-}
-
-class FakeChild extends EventEmitter {
-  constructor() {
-    super();
-    this.stdout = new EventEmitter();
-    this.stderr = new EventEmitter();
-    this.stdin = new EventEmitter();
-    this.stdin.end = () => {};
-    this.stdin.destroy = () => {};
-    this.killed = false;
-  }
-
-  kill() {
-    this.killed = true;
-  }
-  close(code) {
-    this.emit("close", code, null);
-  }
 }

@@ -8,9 +8,10 @@ maintainability_is_test_path() {
   local path="$1"
   [[ "$path" == crates/*/tests/* ||
     "$path" == crates/*/benches/* ||
-    "$path" == crates/*/src/tests.rs ||
+    "$path" == apps/*/crates/*/tests/* ||
+    "$path" == apps/*/crates/*/benches/* ||
+    "$path" == */src/tests.rs ||
     "$path" == crates/*/src/tests/* ||
-    "$path" == editors/zed/src/tests.rs ||
     "$path" == */src/*/tests.rs ||
     "$path" == tests/* ||
     "$path" == editors/*/test/* ||
@@ -30,13 +31,16 @@ maintainability_is_rust_source_path() {
   local path="$1"
   [[ "$path" == crates/*/src/* || "$path" == crates/*/tests/* ||
     "$path" == crates/*/benches/* ||
+    "$path" == apps/*/crates/*/src/* ||
+    "$path" == apps/*/crates/*/tests/* ||
+    "$path" == apps/*/crates/*/benches/* ||
     "$path" == editors/zed/src/* ||
     "$path" == tests/* ]]
 }
 
 maintainability_is_supported_extension() {
   case "$1" in
-    *.rs | *.js | *.mjs | *.cjs | *.lua | *.py | *.sh)
+    *.rs | *.js | *.mjs | *.cjs | *.ts | *.tsx | *.lua | *.py | *.sh)
       return 0
       ;;
     *)
@@ -49,6 +53,8 @@ maintainability_is_excluded_path() {
   case "$1" in
     target/* | include/recite.h | fixtures/generated/* | \
       editors/vscode/src/messages.generated.js | \
+      editors/vscode/src/error-vocabulary.generated.js | \
+      editors/recite-neovim/lua/recite_error_vocabulary.lua | \
       editors/recite-neovim/lua/recite_messages.lua | \
       editors/recite-neovim/lua/recite_diagnostics.lua | \
       editors/recite-tree-sitter/src/parser.c | \

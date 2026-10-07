@@ -19,6 +19,9 @@ pub(crate) mod error_mapping;
 pub(crate) mod errors;
 mod operations;
 
+#[cfg(test)]
+mod tests;
+
 use emitter::ProtocolWriter;
 use error_mapping::structured_error;
 

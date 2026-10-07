@@ -1,3 +1,4 @@
+use crate::structured::errors::ErrorOperation;
 use std::io::{self, Write};
 use std::sync::mpsc::Receiver;
 
@@ -79,7 +80,8 @@ where
             match data {
                 Ok(data) => Ok(WatchAttempt { data }),
                 Err(error) => {
-                    let mapped = structured_error(&error, "build", Some(&state.project_root));
+                    let mapped =
+                        structured_error(&error, ErrorOperation::Build, Some(&state.project_root));
                     Ok(WatchAttempt {
                         data: BuildCompletedData::from_error(
                             generation,
@@ -91,7 +93,7 @@ where
             }
         }
         Err(error) => {
-            let mapped = structured_error(&error, "build", Some(&state.project_root));
+            let mapped = structured_error(&error, ErrorOperation::Build, Some(&state.project_root));
             let projection = BuildStatusProjection::from_state(state.coordinator.state());
             let recovery = error_recovery(&error);
             if projection.generation() == state.last_build_generation()
@@ -108,7 +110,7 @@ where
                 data: BuildCompletedData::from_error(
                     generation,
                     state.preparation_inputs(),
-                    structured_error(&error, "build", Some(&state.project_root)),
+                    structured_error(&error, ErrorOperation::Build, Some(&state.project_root)),
                 ),
             })
         }
