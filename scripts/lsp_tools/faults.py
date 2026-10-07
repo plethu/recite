@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -13,6 +14,9 @@ from .health import assess, resources
 
 
 def child():
+    # Windows virtualenv executables may redirect through a separate launcher.
+    # Report the worker PID so resource sampling always follows this process.
+    print(os.getpid(), flush=True)
     retained = []
     handles = []
     for index, _ in enumerate(sys.stdin):
@@ -43,6 +47,7 @@ def main(argv=None):
     ) as process:
         rows = []
         try:
+            worker_pid = int(process.stdout.readline().strip())
             for _ in range(35):
                 started = time.perf_counter_ns()
                 process.stdin.write("step\n")
@@ -50,7 +55,7 @@ def main(argv=None):
                 assert process.stdout.readline().strip() == "ready"
                 elapsed = (time.perf_counter_ns() - started) / 1e6
                 rows.append(
-                    {**resources(process.pid), "completion_ms": elapsed, "definition_ms": elapsed}
+                    {**resources(worker_pid), "completion_ms": elapsed, "definition_ms": elapsed}
                 )
             health = assess(rows)
             expected = {"rss_bytes", "threads", "handles", "completion_ms", "definition_ms"}
@@ -58,7 +63,13 @@ def main(argv=None):
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(
                 json.dumps(
-                    {"expected_failure_detected": detected, "checkpoints": rows, "health": health},
+                    {
+                        "expected_failure_detected": detected,
+                        "launcher_pid": process.pid,
+                        "worker_pid": worker_pid,
+                        "checkpoints": rows,
+                        "health": health,
+                    },
                     indent=2,
                 )
                 + "\n"

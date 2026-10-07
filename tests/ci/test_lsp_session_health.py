@@ -1,7 +1,14 @@
 """Session decisions must distinguish bounded caches from sustained growth."""
 
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from scripts.lsp_tools import faults
 from scripts.lsp_tools.health import assess, recovery_tail
 
 
@@ -19,6 +26,32 @@ def rows():
 
 
 class SessionHealthTests(unittest.TestCase):
+    def test_live_faults_sample_worker_behind_launcher(self):
+        start = subprocess.Popen
+
+        def launch(command, **kwargs):
+            return start(
+                [
+                    sys.executable,
+                    "-c",
+                    "import subprocess,sys; subprocess.run(sys.argv[1:], check=True)",
+                    *command,
+                ],
+                **kwargs,
+            )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "faults.json"
+            with patch.object(faults.subprocess, "Popen", side_effect=launch):
+                faults.main(["--output", str(output)])
+            report = json.loads(output.read_text())
+        self.assertNotEqual(report["worker_pid"], report["launcher_pid"])
+        self.assertTrue(report["expected_failure_detected"])
+        self.assertEqual(
+            set(report["health"]["failures"]),
+            {"rss_bytes", "threads", "handles", "completion_ms", "definition_ms"},
+        )
+
     def test_tail_budget_requires_repeated_slowdown(self):
         normal = [10.0] * 35
         slow_tail = [10.0] * 30 + [80.0] * 5
