@@ -5,7 +5,9 @@ test("landing page leads into the manual", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("A dialogue language for games");
   await expect(page.getByRole("heading", { level: 2, name: "At the junction" })).toBeVisible();
-  await expect(page.getByText("N-2 is marked as a cable shaft.")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Recite source" })).toContainText(
+    "N-2 is marked as a cable shaft.",
+  );
   await page.getByRole("link", { name: "Write a first scene" }).click();
   await expect(page).toHaveURL(/\/getting-started\/first-scene\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("First Scene");
@@ -53,7 +55,10 @@ test("source and manual remain available without JavaScript", async ({ browser }
   try {
     const page = await context.newPage();
     await page.goto("/");
-    await expect(page.getByText("Choose a door.")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Recite source" })).toContainText(
+      ":: junction default",
+    );
+    await expect(page.getByRole("button", { name: "Run scene" })).toBeHidden();
     await page.getByRole("link", { name: "Read the source format" }).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Source Format");
   } finally {

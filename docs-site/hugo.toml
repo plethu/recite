@@ -32,3 +32,11 @@ target = "static"
 [[module.mounts]]
 source = "../assets/identity"
 target = "static/identity"
+
+[[module.mounts]]
+source = "../fixtures/recite/valid/landing-junction.recite"
+target = "assets/examples/junction.recite"
+
+[[module.mounts]]
+source = "assets"
+target = "assets"

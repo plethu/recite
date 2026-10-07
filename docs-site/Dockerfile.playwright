@@ -21,6 +21,7 @@ RUN pnpm install --filter @recite/docs-site... --frozen-lockfile
 
 COPY docs-site/ ./docs-site/
 COPY assets/identity/ ./assets/identity/
+COPY fixtures/recite/valid/landing-junction.recite ./fixtures/recite/valid/landing-junction.recite
 RUN mise -E site exec hugo -- hugo --source docs-site --minify --panicOnWarning --destination dist
 
 ARG LOCAL_UID=1000

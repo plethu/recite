@@ -20,25 +20,7 @@
       <h2 id="scene-heading">{{ i18n "landing.scene.title" }}</h2>
     </div>
   </div>
-  <figure class="scene">
-    <div class="scene-script">
-      <p class="scene-direction">{{ i18n "landing.scene.opening" }}</p>
-      <p>
-        <span class="scene-speaker">{{ i18n "landing.scene.technician" }}</span>
-        {{ i18n "landing.scene.again" }}
-      </p>
-      <p>
-        <span class="scene-speaker">{{ i18n "landing.scene.recording" }}</span>
-        {{ i18n "landing.scene.directions" }}
-      </p>
-      <p class="scene-direction">{{ i18n "landing.scene.tape" }}</p>
-      <p><span class="scene-action">{{ i18n "landing.scene.power" }}</span></p>
-      <p class="scene-direction">{{ i18n "landing.scene.powerResult" }}</p>
-      <p><span class="scene-action">{{ i18n "landing.scene.plan" }}</span></p>
-      <p class="scene-direction">{{ i18n "landing.scene.planResult" }}</p>
-      <p class="scene-direction">{{ i18n "landing.scene.choose" }}</p>
-    </div>
-  </figure>
+  {{ partial "playground.html" . }}
 </section>
 <section class="landing-paths" aria-labelledby="paths-heading">
   <div class="landing-section-heading">

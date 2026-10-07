@@ -129,8 +129,10 @@ def lanes_for_path(path, *, base=None, head=None):
             )
         )
     ):
-        return RUST | {"lsp-sessions"}
+        return RUST | {"lsp-sessions", "docs", "site"}
     if path.startswith("crates/"):
+        if path.startswith(("crates/recite-playground/", "crates/recite-runtime/")):
+            return RUST | {"docs", "site"}
         return RUST
     if path.startswith("apps/writer/") or path in {
         "scripts/check-writer-colors.py",

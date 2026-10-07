@@ -64,3 +64,34 @@ test("dark static pages pass axe without site scripts", async ({ browser }) => {
     await context.close();
   }
 });
+
+test("playground prompts and compiler diagnostics pass axe", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Run scene", exact: true }).click();
+  for (let step = 0; step < 3; step += 1) {
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+  }
+  await expect(page.getByRole("status")).toHaveText("Choose a reply.");
+  expect(
+    (await new AxeBuilder({ page }).withTags([
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice",
+    ]).analyze()).violations,
+  ).toEqual([]);
+  await page.getByRole("textbox", { name: "Recite source" }).fill(":: start default\n-> missing\n");
+  await page.getByRole("button", { name: "Run scene", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("could not compile");
+  expect(
+    (await new AxeBuilder({ page }).withTags([
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice",
+    ]).analyze()).violations,
+  ).toEqual([]);
+});

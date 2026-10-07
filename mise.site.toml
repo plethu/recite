@@ -1,2 +1,6 @@
 [tools]
 hugo = "0.167.0"
+"github:wasm-bindgen/wasm-bindgen" = "0.2.128"
+rust = { version = "1.96.0", components = ["rustfmt", "clippy"], targets = [
+    "wasm32-unknown-unknown"
+] }

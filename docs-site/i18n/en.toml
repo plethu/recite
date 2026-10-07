@@ -25,39 +25,6 @@ other = "A scene"
 ["landing.scene.title"]
 other = "At the junction"
 
-["landing.scene.opening"]
-other = "[Junction. N-2 is stamped on the stair door behind you.]"
-
-["landing.scene.technician"]
-other = "Technician:"
-
-["landing.scene.again"]
-other = "Again."
-
-["landing.scene.recording"]
-other = "Recording:"
-
-["landing.scene.directions"]
-other = "Left at the junction. You’ll hear the fans before you reach the chamber."
-
-["landing.scene.tape"]
-other = "[A click. Tape hiss.]"
-
-["landing.scene.power"]
-other = "Restore auxiliary power:"
-
-["landing.scene.powerResult"]
-other = "[A contactor closes. The lights hold. Fans gather speed beyond the partition; through the grille between the doors comes a knock that misses every third turn.]"
-
-["landing.scene.plan"]
-other = "Unfold the survey plan:"
-
-["landing.scene.planResult"]
-other = "[The paper opens along an old repair. It shows a stair south of the junction. N-2 is marked as a cable shaft. Neither chamber has a name.]"
-
-["landing.scene.choose"]
-other = "[Choose a door.]"
-
 ["landing.path.kicker"]
 other = "The working path"
 
@@ -156,3 +123,84 @@ other = "Skip to content"
 
 ["ui.home"]
 other = "Recite home"
+
+["playground.description"]
+other = "Edit the source, then run it locally with Recite’s real compiler and runtime. This preview handles one file; game queries need a host, and effect requests are shown rather than executed."
+
+["playground.source"]
+other = "Recite source"
+
+["playground.run"]
+other = "Run scene"
+
+["playground.stop"]
+other = "Stop execution"
+
+["playground.reset"]
+other = "Reset example"
+
+["playground.download"]
+other = "Download example .recite"
+
+["playground.open"]
+other = "Open a .recite file"
+
+["playground.noJs"]
+other = "Enable JavaScript to run this source. You can still read or download it."
+
+["playground.output"]
+other = "Play through the scene"
+
+["playground.transcript"]
+other = "Dialogue transcript"
+
+["playground.ready"]
+other = "Run the source to start a new scene."
+
+["playground.loading"]
+other = "Running locally…"
+
+["playground.timeout"]
+other = "Execution took too long and was stopped. Edit the source or run again."
+
+["playground.failed"]
+other = "The browser runner could not load or execute. Your source is still here; run again to retry."
+
+["playground.tooLarge"]
+other = "This preview accepts one source file up to 64 KiB."
+
+["playground.changed"]
+other = "Source changed. Run again to start a new scene."
+
+["playground.stopped"]
+other = "Execution stopped. Run again to start a new scene."
+
+["playground.next"]
+other = "Continue"
+
+["playground.playing"]
+other = "Continue to the next line or choice."
+
+["playground.choose"]
+other = "Choose a reply."
+
+["playground.effect"]
+other = "Effect requested; no game action was performed:"
+
+["playground.acknowledge"]
+other = "Simulate effect completion"
+
+["playground.ended"]
+other = "Scene ended. Edit the source or run again."
+
+["playground.invalid"]
+other = "The source could not compile. Fix the diagnostics and run again."
+
+["playground.loadingCompiler"]
+other = "Loading compiler…"
+
+["playground.downloadTimeout"]
+other = "The compiler download took too long. Check your connection and run again."
+
+["playground.resourceLimit"]
+other = "The browser preview stopped during execution. Try reducing the scene or run another file."

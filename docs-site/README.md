@@ -1,8 +1,9 @@
 # Recite site
 
-Hugo and the pinned, unmodified Hugo Book theme build the static site. Site builds need no Node
-runtime or Go compiler. Playwright browser tests and CSS/type checks use the existing JavaScript
-toolchain; they are development dependencies.
+Hugo and the pinned, unmodified Hugo Book theme build the static site. The landing playground uses
+the actual Rust compiler and runtime through wasm-bindgen. Site builds need Rust and the mise-pinned
+WASM tools, but no Node runtime or Go compiler. Playwright browser tests and CSS/type checks use the
+existing JavaScript toolchain; they are development dependencies.
 
 From the repository root:
 
@@ -21,7 +22,21 @@ generator and initializes the exact theme revision. Browser checks use the versi
 Write ordinary Markdown in `content/`. Section pages use `_index.md`; frontmatter titles become
 visible headings. Keep existing URLs and fragments when moving content. Hugo's language
 configuration and `i18n/<locale>.toml` handle translated pages and whole interface messages. English
-remains at the root. The landing scene is an excerpt and does not run dialogue in the browser.
+remains at the root. The landing scene comes from `fixtures/recite/valid/landing-junction.recite`;
+visitors can edit it or open another single `.recite` file. Run lazily loads the real
+compiler/runtime in a worker. Source stays in the browser. Next and choice buttons step the runtime;
+effects are shown as requests, with explicit simulated completion for blocking effects. Game queries
+have no registered host, so their normal runtime errors are visible. This is a single-file preview,
+not an engine host; it compiles without a project schema.
+
+`just web wasm` generates bindings before site builds and browser-image assembly. Keep wasm-bindgen
+at the same version in `mise.site.toml` and the root Cargo dependencies. Generated bindings and
+binaries are ignored, and Hugo fingerprints the module, binary and worker. A 64 KiB source limit, 64
+MiB WASM linear-memory ceiling, 15-second execution watchdog, worker termination on Stop or edits,
+and a 100-entry transcript bound keep this small example runner responsive. Loading has its own
+60-second deadline. The linear-memory ceiling does not bound every allocation made by the browser.
+Native tests exercise the bridge; browser tests cover actual WASM execution, editing, choices and
+recovery.
 
 The few templates in `layouts/` supply the landing page, visible titles, keyboard-accessible mobile
 controls, and skip links. `assets/theme.js` adds a persistent light/dark/system preference.

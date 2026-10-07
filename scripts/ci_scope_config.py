@@ -19,7 +19,7 @@ LANES = frozenset(
 )
 RUST = frozenset({"rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability"})
 JS = frozenset({"docs", "site", "editor", "lsp-sessions"})
-RUST_BUILD = RUST | {"packages", "lsp-sessions"}
+RUST_BUILD = RUST | {"packages", "lsp-sessions", "docs", "site"}
 JUST = frozenset({"maintainability"})
 JUST_QUALITY = LANES - {"windows-publisher", "packages"}
 ENGINE = frozenset({"rust", "maintainability"})

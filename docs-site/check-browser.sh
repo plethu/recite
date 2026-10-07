@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 cd "$repo_root"
 just web setup
+just web wasm
 mkdir -p docs-site/.browser-artifacts
 
 LOCAL_UID="$(id -u)"

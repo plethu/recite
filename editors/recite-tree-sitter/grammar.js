@@ -31,6 +31,10 @@ module.exports = grammar({
   // without pretending that this grammar owns Recite's indentation semantics.
   extras: (_$) => [],
 
+  // Incomplete or prose-like brackets remain editable text; completed tags
+  // retain their name captures. The compiler owns markup validity.
+  conflicts: ($) => [[$.markup_tag, $.prose_start], [$.markup_tag, $.prose_content]],
+
   rules: {
     source_file: ($) => seq(repeat(sourceLines($)), finalLine($)),
 
@@ -212,11 +216,14 @@ module.exports = grammar({
       ),
 
     markup_tag: ($) =>
-      seq(
-        "[",
-        optional("/"),
-        field("name", $.markup_name),
-        "]",
+      prec.dynamic(
+        1,
+        seq(
+          "[",
+          optional(token(prec(1, "/"))),
+          field("name", $.markup_name),
+          "]",
+        ),
       ),
 
     interpolation: ($) =>
@@ -316,6 +323,8 @@ module.exports = grammar({
         new RegExp(String.raw`[^\r\n{}\[\]?#>!:|\\]+`),
         /\\/,
         /:/,
+        "[",
+        "]",
       ),
     // Consume a marker-like near-miss through the end of its physical line so
     // punctuation cannot become stranded as fake markup or interpolation.
@@ -339,6 +348,9 @@ module.exports = grammar({
       choice(
         new RegExp(String.raw`[^\r\n{}\[\]\\]+`),
         /\\/,
+        "[",
+        "]",
+        token(prec(1, "/")),
       ),
     indent: (_$) => /[ \t]+/,
     hspace: (_$) => /[ \t]+/,

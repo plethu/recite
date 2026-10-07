@@ -1,0 +1,28 @@
+:: junction default
+
+> opening@cbd81a23d91fceb42a20
+  [Junction. N-2 is stamped on the stair door behind you.]
+
+> again@cbd81a23d91fceb42a21 speaker=Technician
+  Again.
+
+> recording@cbd81a23d91fceb42a22 speaker=Recording
+  Left at the junction. You’ll hear the fans before you reach the chamber.
+
+? power@cbd81a23d91fceb42a23
+  Restore auxiliary power.
+  -> power
+
+? plan@cbd81a23d91fceb42a24
+  Unfold the survey plan.
+  -> plan
+
+:: power
+> fans@cbd81a23d91fceb42a25
+  [A contactor closes. The lights hold. Fans gather speed beyond the partition; through the grille between the doors comes a knock that misses every third turn.]
+-> END
+
+:: plan
+> shaft@cbd81a23d91fceb42a26
+  [The paper opens along an old repair. It shows a stair south of the junction. N-2 is marked as a cable shaft. Neither chamber has a name.]
+-> END

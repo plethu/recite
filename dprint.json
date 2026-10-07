@@ -16,6 +16,7 @@
     "docs-site/.astro/**",
     "docs-site/.browser-artifacts/**",
     "docs-site/themes/**",
+    "docs-site/assets/playground/generated/**",
     "**/__pycache__/**",
     ".venv/**",
     "docs/archive/**",

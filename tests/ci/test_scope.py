@@ -77,8 +77,8 @@ class ScopeTests(unittest.TestCase):
             selected("docs-site/content/_index.md", "justfile", "apps/writer/justfile"),
             {"docs", "site", "maintainability"},
         )
-        self.assertNotIn("site", selected("crates/recite-runtime/src/lib.rs"))
-        self.assertNotIn("docs", selected("crates/recite-runtime/src/lib.rs"))
+        self.assertIn("site", selected("crates/recite-runtime/src/lib.rs"))
+        self.assertIn("docs", selected("crates/recite-runtime/src/lib.rs"))
         for path in (
             "Cargo.toml",
             "Cargo.lock",
@@ -103,7 +103,14 @@ class ScopeTests(unittest.TestCase):
                 "benchmark-smoke",
                 "editor",
                 "maintainability",
+                "docs",
+                "site",
             },
+        )
+
+    def test_playground_bridge_changes_select_real_browser_checks(self):
+        self.assertEqual(
+            selected("crates/recite-playground/src/lib.rs"), scope.RUST | {"docs", "site"}
         )
 
     def test_lsp_tooling_package_and_environment_select_their_consumers(self):

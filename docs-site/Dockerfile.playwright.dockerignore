@@ -12,6 +12,10 @@
 !assets/
 !assets/identity/
 !assets/identity/**
+!fixtures/
+!fixtures/recite/
+!fixtures/recite/valid/
+!fixtures/recite/valid/landing-junction.recite
 docs-site/node_modules/
 docs-site/dist/
 docs-site/public/

@@ -7,6 +7,7 @@
   "SpacesAfterTabs": false,
   "NoColor": false,
   "Exclude": [
+    "^docs-site/assets/playground/generated/",
     "^docs/archive/",
     "^docs-site/themes/",
     "^fixtures/",
