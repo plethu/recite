@@ -3975,6 +3975,7 @@ dependencies = [
  "atomic-write-file",
  "blake3",
  "compact_str",
+ "memchr",
  "rmp-serde",
  "serde",
  "serde-value",

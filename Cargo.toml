@@ -45,6 +45,7 @@ fluent-bundle = "0.15.3"
 fluent-syntax = "0.11.1"
 insta = { version = "1.47.2", default-features = false }
 language-tags = "0.3.2"
+memchr = "2.8.0"
 notify = "8.2.0"
 rand_chacha = { version = "0.10.0", default-features = false }
 ratatui = "0.30.2"

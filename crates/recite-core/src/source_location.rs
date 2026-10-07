@@ -68,7 +68,8 @@ pub fn source_lines(source: &str) -> impl Iterator<Item = (&str, &str)> {
     let mut remaining = Some(source);
     std::iter::from_fn(move || {
         let text = remaining.take()?;
-        let Some(offset) = text.find(['\r', '\n']) else {
+        // CR and LF are ASCII, so matches always lie on UTF-8 boundaries.
+        let Some(offset) = memchr::memchr2(b'\r', b'\n', text.as_bytes()) else {
             return Some((text, ""));
         };
         let width = 1 + usize::from(
