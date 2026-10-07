@@ -87,7 +87,8 @@ reports named informational .NET 8 timings with iteration counts and no threshol
 `scripts/unity/build-upm.sh` builds and inspects the package tarball. EditMode/PlayMode runners
 exist at `scripts/unity/run-unity-tests.sh`; they require an installed Unity Editor. Headless .NET
 results do not establish Unity serialization, Mono/IL2CPP, ScriptedImporter or player behavior. The
-[named Linux host observations](archive/delivery-evidence.md#unity-adapter) are historical evidence.
-The maintained runner builds a desktop player and bounds its runtime to 90 seconds. Mono remains the
-best-effort 2022.3 backend; IL2CPP is the primary 6.7 backend. Experimental CoreCLR probes do not
-establish production support. Other platforms need their own native plugin and host checks.
+[named Linux host observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#unity-adapter)
+are historical evidence. The maintained runner builds a desktop player and bounds its runtime to 90
+seconds. Mono remains the best-effort 2022.3 backend; IL2CPP is the primary 6.7 backend.
+Experimental CoreCLR probes do not establish production support. Other platforms need their own
+native plugin and host checks.

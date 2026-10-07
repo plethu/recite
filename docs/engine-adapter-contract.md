@@ -879,8 +879,8 @@ and UI projection. `recite-runtime` remains the sole authority for traversal and
 
 The [engine companion milestone](https://github.com/plethu/recite/milestone/23) owns delivery and
 follow-up state. Completed prerequisite routing is
-[historical evidence](archive/delivery-evidence.md#adapter-prerequisites). Follow-up issues should
-reference this document when choosing:
+[historical evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#adapter-prerequisites).
+Follow-up issues should reference this document when choosing:
 
 - their host asset import and freshness behavior;
 - their active-session owner shape;

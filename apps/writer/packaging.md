@@ -47,8 +47,9 @@ offering them to other distributions. Package extraction and CLI launch do not e
 package-manager upgrade/uninstall, signing, notarisation, native accessibility or usability
 acceptance.
 
-The [September 2026 preview evidence](../../docs/archive/delivery-evidence.md#writer-packaging) is
-historical; rerun the maintained checks for a new candidate.
+The
+[September 2026 preview evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#writer-packaging)
+is historical; rerun the maintained checks for a new candidate.
 
 ## Required deep-link handling
 

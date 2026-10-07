@@ -19,8 +19,6 @@
     "**/__pycache__/**",
     ".venv/**",
     "docs/archive/lsp-optimisation/**",
-    "docs/archive/*-design.md",
-    "docs/archive/delivery-evidence.md",
     "fixtures/schema/invalid/**",
     "fixtures/schema/valid/unsorted_manifest.json",
     "fixtures/synthetic/tiny/**",

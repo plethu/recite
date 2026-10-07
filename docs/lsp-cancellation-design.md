@@ -95,7 +95,9 @@ Reopen further optimisation when a practical profile shows:
 
 ## Evidence and concluded experiments
 
-The [archive index](archive/README.md#lsp-investigation-history) identifies fixed Git revisions for
-the concluded reports and retired diagnostic tools. Read a named investigation when revisiting its
-decision; it is not another maintained implementation or permanent CI mode. Current dependency
-decisions and the profiling playbook own new investigations.
+Concluded reports are available at `6e32b614` through Git history; the
+[final resource investigation](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/final-resource-profiling.md)
+contains the capacity-change reproduction. Retired diagnostic tools and workflow inputs are
+preserved at `1004de99594d`. Export the named revision when reproducing an old command; do not
+restore settled experiments to normal CI. Current dependency decisions and the profiling playbook
+own new investigations.

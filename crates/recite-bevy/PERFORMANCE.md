@@ -6,6 +6,7 @@ fixture outside the measured commands, then times separate child processes with 
 wall timer and `wait4` resource usage. There are no CI thresholds. The report is retained at
 `$CARGO_TARGET_DIR/recite-bevy-probe/performance.txt`.
 
-The [September 2026 observations](../../docs/archive/delivery-evidence.md#bevy-performance) record
-one host/profile. Rerun the probe for the candidate under investigation; those values are not a
-current baseline or regression budget.
+The
+[September 2026 observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#bevy-performance)
+record one host/profile. Rerun the probe for the candidate under investigation; those values are not
+a current baseline or regression budget.

@@ -139,9 +139,9 @@ substantial new general tooling with a private Rust tool crate; evaluate Rust an
 extending the external harness's ownership. A replacement must reduce total maintenance or material
 driver interference while preserving the gate. Expand Node only for a concrete editor/frontend need.
 
-Concluded reports and raw assets live together in [the archive](docs/archive/README.md). Keep
-current ownership, commands, limits and reopening conditions in their existing guides. Historical
-milestone counts and prose are not CI contracts.
+Keep current ownership, commands, limits and reopening conditions in their existing guides.
+Concluded reports belong in Git or PR history; retain raw assets only when they support a decision
+or reproduction. Historical milestone counts and prose are not CI contracts.
 
 ## Project Notes
 

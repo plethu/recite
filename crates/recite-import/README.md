@@ -18,5 +18,5 @@ explicit action. Validation success does not establish source-runtime parity.
 Generated IDs are deterministic, and existing valid IDs are retained. After an author edits imported
 source, native IDs belong to that source; rerunning an importer is not incremental synchronization.
 The migration guide owns accepted formats and limitations.
-[Historical delivery evidence](../../docs/archive/adoption-migration-design.md) records the original
-implementation pass.
+[Historical delivery evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/adoption-migration-design.md)
+records the original implementation pass.

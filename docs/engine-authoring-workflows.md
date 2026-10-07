@@ -25,8 +25,9 @@ implemented by these companions.
 
 Run the maintained checks against the candidate and record the exact engine, platform, architecture
 and backend. The [adapter acceptance matrix](adapter-acceptance-matrix.md) defines the required
-coverage; [historical host observations](archive/delivery-evidence.md#engine-authoring) do not
-establish a fresh candidate's support.
+coverage;
+[historical host observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#engine-authoring)
+do not establish a fresh candidate's support.
 
 | Surface     | Maintained check                                                                                               | Evidence scope                                                                       |
 | ----------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -61,7 +62,7 @@ builds before the editor imports the generated asset. A second consumer replaces
 verifies that authored source and compiled bytes are unchanged, and starts the example again.
 
 Rerun the package checks for the candidate. The
-[recorded reproducibility observations](archive/delivery-evidence.md#engine-package-reproducibility)
+[recorded reproducibility observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#engine-package-reproducibility)
 do not establish identical native binaries across compilers or system libraries. Native compiler
 inputs must be pinned for a release build.
 

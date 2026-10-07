@@ -150,9 +150,10 @@ dependencies. The dialogue integration does not enable rendering or windowing by
 | Unity 2022.3.62f3, Linux x86_64                   | Best-effort minimum compatibility: import, EditMode/PlayMode, and Mono player                               |
 
 These are verification targets, not blanket support declarations. Named Linux host runs are
-preserved as [historical evidence](archive/delivery-evidence.md#engine-companions). Other platforms
-require native builds and host evidence. Experimental CoreCLR checks do not establish production
-support; the managed .NET fixture does not establish an engine host backend.
+preserved as
+[historical evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#engine-companions).
+Other platforms require native builds and host evidence. Experimental CoreCLR checks do not
+establish production support; the managed .NET fixture does not establish an engine host backend.
 
 Verification has three distinct layers:
 

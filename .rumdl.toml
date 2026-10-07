@@ -1,9 +1,6 @@
 [global]
 line-length = 100
 exclude = [
-    "docs/archive/lsp-optimisation/**",
-    "docs/archive/*-design.md",
-    "docs/archive/delivery-evidence.md",
     "**/node_modules/**",
     "**/target/**",
     "docs-site/dist/**",

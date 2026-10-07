@@ -559,7 +559,7 @@ does not need to know about those typed structs; they are a generation-time conc
 
 [Engine companion delivery](https://github.com/plethu/recite/milestone/23) owns platform and package
 acceptance. Completed ABI implementation issue routing is
-[historical evidence](archive/delivery-evidence.md#c-abi-delivery).
+[historical evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#c-abi-delivery).
 
 `pkg-config` or CMake find-module support remains outside v1 scope unless a downstream package needs
 it.

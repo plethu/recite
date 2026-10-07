@@ -55,5 +55,6 @@ through its own `recite watch` manifest with a successful structured completion 
 in a fresh Godot project. A replacement install then removes obsolete addon code, preserves authored
 dialogue source and compiled bytes, imports again, and starts the example in a new process.
 
-The [debug/release microtimings](../../docs/archive/delivery-evidence.md#godot-performance) are
-historical observations, not thresholds. Rerun the maintained probe for current measurements.
+The
+[debug/release microtimings](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#godot-performance)
+are historical observations, not thresholds. Rerun the maintained probe for current measurements.
