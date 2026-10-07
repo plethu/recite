@@ -28,8 +28,12 @@ Use the same sequence for compiler, runtime, LSP, watch, and memory work:
 
 A request to optimise a subsystem or investigate remaining performance wins
 requires bounded discovery, even when latency and CI checks are green. Start
-with actual Criterion measurements, then capture both CPU and allocation
-profiles for representative paths. Do not wait for a reported memory problem.
+by identifying the ownership that could be simplified or delegated to maintained
+ecosystem packages. Count replacement glue and tests alongside deleted code;
+for LSP work, consult the existing
+[dependency decisions](design/lsp-cancellation/dependency-decisions.md).
+Then collect actual Criterion measurements and both CPU and allocation profiles
+for representative paths. Do not wait for a reported memory problem.
 A narrowly scoped fix needs only the measurements relevant to its hypothesis;
 it does not require repeating a subsystem audit.
 
@@ -59,7 +63,10 @@ Inspect the attributed paths for simpler fixes first: known output sizes,
 collection growth, unnecessary clones, repeated conversions and repeated
 analysis. Reserve capacity only where a useful size is available; do not add
 caches, custom representations or dependencies without evidence that the
-benefit justifies their maintenance cost. The
+benefit justifies their maintenance cost. Performance and maintainability are
+joint acceptance criteria: a roughly 5% slowdown can be acceptable for a
+substantial net simplification, subject to relevant workload evidence and
+unchanged correctness. The
 [final LSP resource investigation](design/lsp-cancellation/final-resource-profiling.md)
 shows allocation profiles finding avoidable vector growth after latency work.
 
@@ -70,6 +77,10 @@ alternating control/candidate comparisons for retained changes. Name the
 remaining dominant costs, rejected experiments and concrete reevaluation
 triggers. Report missing profiler access or incomplete coverage as limitations;
 passing smoke or latency gates alone does not complete this investigation.
+Inspect the final code and callers for readable ownership and unnecessary
+indirection. Remove superseded implementations and retire concluded diagnostic
+tools or CI controls; retain their evidence and fixed-revision reproduction
+instead of maintaining every experiment indefinitely.
 
 Do not tune against a single laptop timing. Local runs are useful for finding a
 cause. Trend claims and release comparisons should come from one documented
@@ -90,7 +101,17 @@ Use two profiles deliberately:
   defines it, treat trend numbers as provisional.
 
 Criterion is the first timing surface. Prefer the existing benchmark targets
-before opening lower-level profilers:
+before opening lower-level profilers. Maintainer commands are exposed through
+`just perf`; its scoped `setup` installs the locked external-process harness:
+
+```bash
+just perf setup
+just perf bench lsp large,realistic:v1-pack 'lsp/change_refresh'
+just perf compare BASE_COMMIT
+just perf lsp --help
+```
+
+Use raw Cargo commands when a profiler needs an executable or a custom build:
 
 ```bash
 cargo bench -p recite-benchmarks --no-run

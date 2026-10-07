@@ -21,7 +21,7 @@ dependency policy, spelling, and benchmark smoke. `just verify` and
 `mise run verify` run that same gate. With mise activated in your shell, the
 `mise exec --` prefix is unnecessary. Run `just` to list the cross-project
 commands and modules, or `just web`, `just writer`, `just editor`,
-`just engines`, or `just stress` to list one area's commands. Each module is
+`just engines`, `just stress`, or `just perf` to list one area's commands. Each module is
 also callable from its own directory without the area name, for example
 `cd apps/writer && just run --project /path/to/project`.
 
@@ -74,11 +74,49 @@ downloads; see their `--help` output and `docs/editor-parity-contract.md` for
 the evidence boundaries. These runs do not establish other-platform support
 or replace the release benchmark baseline.
 
+## Performance tooling
+
+Criterion remains the Rust timing suite. Maintained external LSP probes live in
+`scripts/lsp_tools/`, with one CLI and a scoped, locked Python 3.12 environment.
+The pinned uv runner owns environment setup; psutil and Ruff are locked in
+`uv.lock`. Ordinary Rust work does not need that environment.
+
+```sh
+just perf setup
+just perf check
+just perf bench lsp large,realistic:v1-pack 'lsp/change_refresh'
+just perf compare BASE_COMMIT
+just perf build
+just perf lsp --help
+just maintainability
+```
+
+`perf check` enforces Python formatting/lints and the CI contract tests; the
+complete `just check` includes it. `perf fmt` deliberately formats the maintained
+LSP tools. The
+[current LSP overview](docs/lsp-cancellation-design.md) and
+[profiling playbook](docs/profiling-and-optimisation.md) explain ownership,
+measurement boundaries and the dependency/maintainability tradeoff.
+Completed diagnostic experiments are archived at named revisions rather than
+kept as permanent workflow modes. Bash launches tools and handles platform shell
+operations; Python owns structured external-process measurements and report
+checks. Reuse production Rust APIs for domain semantics instead of reproducing
+them in either language.
+
+Python is a deliberate choice for this harness's cross-platform process counters,
+not a general CI-language default. The
+[language assessment](docs/design/lsp-cancellation/dependency-decisions.md#maintainer-tooling-language)
+compares Rust and Node, records bounded probes, and includes the maintainer's
+additional language and learning costs. Revisit it when an alternative removes
+more ownership without weakening the measured contract.
+
 ## Project Notes
 
 - Recite is hosted on GitHub. Use `gh` with `--repo plethu/recite` for issue and pull-request operations.
 - Recite is dual-licensed public open source under MIT OR Apache-2.0. Do not submit proprietary content, copied private material, or dependency code that is incompatible with that distribution.
-- The production spec is in `docs/recite-production-spec.md`.
+- The [production specification](docs/recite-production-spec.md) routes to
+  subsystem contracts in `docs/spec/`. Read the affected chapter; GitHub owns
+  implementation task state, and historical measurements remain separate.
 - LSP dependency choices, experiments and reevaluation triggers are recorded in
   [the dependency decision record](docs/design/lsp-cancellation/dependency-decisions.md).
 - The trusted pull-request policy in `.github/workflows/trusted-policy.yml`

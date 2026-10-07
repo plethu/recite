@@ -114,7 +114,7 @@ bash "$repo_root/tests/git-policy/check-integration.sh" "$repo_root"
 
 echo
 echo "== CI selection and result contracts =="
-python3 -m unittest discover -s "$repo_root/tests/ci" -p 'test_*.py'
+(cd "$repo_root" && just perf setup && just perf check)
 
 echo
 echo "== maintainability fixtures and changed-surface check =="
@@ -122,10 +122,8 @@ echo "== maintainability fixtures and changed-surface check =="
   cd "$repo_root"
   tests/maintainability/check.sh
   tests/ast-grep/check.sh
-  scripts/check-maintainability.sh
-  scripts/check-ast-grep.sh
+  just maintainability
   tests/lint-suppressions/check.sh
-  scripts/check-lint-suppressions.sh
 )
 
 echo

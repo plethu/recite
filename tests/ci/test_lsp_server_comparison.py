@@ -1,18 +1,12 @@
 """Server comparisons must preserve results and reject incomparable evidence."""
-import importlib.util
+
 import json
-from pathlib import Path
-import sys
 import tempfile
 import unittest
+from pathlib import Path
 
-scripts = Path(__file__).resolve().parents[2] / "scripts"
-sys.path.insert(0, str(scripts))
-spec = importlib.util.spec_from_file_location("server_comparison", scripts / "summarize-lsp-server-comparison.py")
-comparison = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(comparison)
-
-from lsp_session_workload import Session
+from scripts.lsp_tools import comparison
+from scripts.lsp_tools.workload import Session
 
 
 class ServerComparisonTests(unittest.TestCase):
@@ -41,20 +35,48 @@ class ServerComparisonTests(unittest.TestCase):
                 for mode in ("fixed", "churn"):
                     for repetition in range(1, 4):
                         report = {
-                            "status": "pass", "health": {"status": "pass"}, "cycles": 40,
-                            "edits_per_cycle": 50, "churn": mode == "churn", "seed": 7203,
-                            "driver": {"native_trace": False}, "result_fingerprint_version": 2,
-                            "provenance": {"binary_sha256": str(side), "harness_revision": "harness",
-                                           "files": {"source": "text"}, "environment": {}},
-                            "checkpoints": [{"cycle": index, "recovery_ms": 10.0,
-                                             "timing": {"server_cpu_ms": 100}, "result_sha256": "result",
-                                             "fresh_oracle_matched": True} for index in range(40)],
+                            "status": "pass",
+                            "health": {"status": "pass"},
+                            "cycles": 40,
+                            "edits_per_cycle": 50,
+                            "churn": mode == "churn",
+                            "seed": 7203,
+                            "driver": {"native_trace": False},
+                            "result_fingerprint_version": 2,
+                            "provenance": {
+                                "binary_sha256": str(side),
+                                "harness_revision": "harness",
+                                "files": {"source": "text"},
+                                "environment": {},
+                            },
+                            "checkpoints": [
+                                {
+                                    "cycle": index,
+                                    "recovery_ms": 10.0,
+                                    "timing": {"server_cpu_ms": 100},
+                                    "result_sha256": "result",
+                                    "fresh_oracle_matched": True,
+                                }
+                                for index in range(40)
+                            ],
                         }
                         (side / f"{mode}-{repetition}.json").write_text(json.dumps(report))
-            self.assertEqual(comparison.summarize(root)["changes"]["recovery_ms"]["median"]["percent"], 0)
+            self.assertEqual(
+                comparison.summarize(root)["changes"]["recovery_ms"]["median"]["percent"], 0
+            )
             path = root / "fixed-1.json"
             original = path.read_text()
-            for corruption in ("parity", "oracle", "driver", "pacing", "version", "cpu", "editing_partial", "idle_partial", "incomplete"):
+            for corruption in (
+                "parity",
+                "oracle",
+                "driver",
+                "pacing",
+                "version",
+                "cpu",
+                "editing_partial",
+                "idle_partial",
+                "incomplete",
+            ):
                 report = json.loads(original)
                 if corruption == "parity":
                     report["checkpoints"][6]["result_sha256"] = "different"
@@ -88,4 +110,9 @@ class ServerComparisonTests(unittest.TestCase):
             # An experimental profile cannot silently satisfy the default CI contract.
             with self.assertRaises(ValueError):
                 comparison.summarize(root)
-            self.assertEqual(comparison.summarize(root, cycles=20, edits=10)["changes"]["recovery_ms"]["median"]["percent"], 0)
+            self.assertEqual(
+                comparison.summarize(root, cycles=20, edits=10)["changes"]["recovery_ms"]["median"][
+                    "percent"
+                ],
+                0,
+            )

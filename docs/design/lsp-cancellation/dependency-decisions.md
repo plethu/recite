@@ -244,6 +244,45 @@ Update this record when a decision changes. Keep old measurements tied to their
 versions and execution profile; record the new revision and superseding evidence
 instead of silently treating the October 2026 results as current.
 
+## Maintainer tooling language
+
+Reassessed 7 October 2026 after the maintainer challenged the extra language and
+learning cost. Retain Python for the external LSP measurement harness; this does
+not make it the default for new automation. Rust and Node already have project
+toolchains, so extending Python must earn its additional setup and maintenance.
+
+The [bounded spike evidence](tooling-language-evidence.json.gz) preserves source,
+an isolated Cargo lock and Linux observations. A cached released `sysinfo` 0.38.4
+sampler matched psutil's CPU, RSS, thread and descriptor counters for a child
+deliberately growing memory, threads and handles. A Node client using the already
+resolved `vscode-jsonrpc` 8.2.0 matched Python on initialization, edit diagnostics
+and definition. These prove viable components, not a complete port or a timing win.
+
+| Option | Fit and remaining cost |
+| --- | --- |
+| Python + psutil | Supplies the current CPU/RSS/thread/descriptor-or-handle contract on the three target platforms. Keep ordinary modules, one CLI, a locked environment and checks; count the extra language and learning cost explicitly. |
+| Rust + sysinfo | Linux sampler works. The current `tasks()` API remains Linux-only; preserving other-platform thread checks needs additional dependencies/adapters and verification. The safe libproc task API is a credible macOS extension, not a tested replacement. Use a private maintainer crate if revisiting; `recite-benchmarks` is also a shipped CLI dependency. |
+| Node/TypeScript | Protocol and report code can use the existing ecosystem. Inspected pidusage/systeminformation APIs do not supply all thread/handle counters, so moving the full harness still requires another platform-accounting solution. Splitting orchestration from a Python sampler adds a runtime/IPC boundary. |
+
+The decisive benefit today is delegating cross-platform process inspection to
+psutil while keeping one measurement owner. Do not reproduce its OS handling
+just to remove Python. Conversely, do not keep Python merely because it is
+already written. Reevaluate for a small maintained adapter covering all required
+counters, or measured driver interference that would materially improve evidence
+with another implementation. Preserve gates rather than silently dropping a metric.
+
+Any port must compare against the same server and preserve or explicitly
+recalibrate timing definitions. Our reader timestamps a complete body before JSON
+decoding; typical protocol-library callbacks happen after decoding. Serialization
+also precedes the send timer. No macOS/Windows alternative sampler or full
+alternative harness was executed in this assessment.
+
+References: [psutil process API](https://psutil.io/api/),
+[sysinfo tasks contract](https://docs.rs/sysinfo/latest/sysinfo/struct.Process.html#method.tasks),
+[libproc task inspection](https://docs.rs/libproc/0.14.11/libproc/proc_pid/fn.pidinfo.html),
+[pidusage contract](https://github.com/soyuka/pidusage),
+[systeminformation process API](https://systeminformation.io/processes.html).
+
 ## Primary maintenance and contract sources
 
 - [Generated types and generator](https://github.com/ribru17/gen-lsp-types),

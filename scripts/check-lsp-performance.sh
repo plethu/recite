@@ -28,13 +28,13 @@ Path(sys.argv[2]).write_text(json.dumps({"control": sys.argv[1],
 PY
 target/release/recite-fixturegen --profile large \
   --output "$output/large" --summaries "$output/fixture.json"
-python3 scripts/check-lsp-performance.py --control "$output/control-lsp" \
+mise -E lsp exec -- uv run --locked python scripts/lsp.py compare --control "$output/control-lsp" \
   --candidate "$output/candidate-lsp" --project "$output/large" \
   --output "$output/comparison.json"
-python3 scripts/measure-lsp-session.py "$output/large" --edits 300 \
+mise -E lsp exec -- uv run --locked python scripts/lsp.py session "$output/large" --edits 300 \
   --output "$output/session.json"
-python3 scripts/measure-lsp-session.py "$output/large" --edits 300 --ranged \
+mise -E lsp exec -- uv run --locked python scripts/lsp.py session "$output/large" --edits 300 --ranged \
   --output "$output/session-ranged.json"
-python3 scripts/measure-lsp-session.py "$output/large" --edits 300 --ranged \
+mise -E lsp exec -- uv run --locked python scripts/lsp.py session "$output/large" --edits 300 --ranged \
   --interval-ms 5 --burst-every 25 --pause-ms 150 --recovery-ms 500 \
   --output "$output/session-bursts.json"

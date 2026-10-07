@@ -45,7 +45,7 @@ Use these labels when useful:
 | Size | `size/s`, `size/m`, `size/l` |
 | Risk | `risk/high`, `risk/cross-cutting` |
 
-Use milestone names from `docs/recite-production-spec.md` §22. The serious v1
+Use milestone names from `docs/spec/release.md` §22. The serious v1
 boundary is §23; do not automatically defer adapter, performance, or editor
 work without checking that section and the issue milestone.
 
@@ -77,8 +77,12 @@ Nearby work not included.
 - Use `mise run verify` for broad or high-risk code changes.
 
 ## Spec References
-- `docs/recite-production-spec.md` §<section>
+- The owning `docs/spec/<chapter>.md` §<section>
 ```
+
+The primary agent handles ordinary work end to end. The delegation procedure
+below applies only when the session explicitly authorizes parallel workers;
+it is not a requirement to delegate or request a fresh review for every change.
 
 Recite issues are human-directed co-work. A delegated implementer may own a
 bounded issue or vertical slice through only the stages explicitly named in the

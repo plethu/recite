@@ -88,7 +88,7 @@ second codec and its migration surface.
 
 ## Unpublished format corrections
 
-For compiled assets only, [§12.2 of the production spec](recite-production-spec.md#122-compiled-format)
+For compiled assets only, [§12.2 of the production spec](spec/build-cli.md#122-compiled-format)
 permits an intentional v0 wire-shape correction before the first tagged
 release. It must update the model, writer, reader, validator, inspection
 projection, wire matrix, and focused fixtures together, with the byte change

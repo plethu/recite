@@ -1,19 +1,19 @@
 """Native timing must join request identity and preserve unmeasured intervals."""
 
 import json
-from pathlib import Path
-import sys
 import tempfile
 import unittest
+from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
-from lsp_session_native import intervals, native_requests, recovery_wire_samples
+from scripts.lsp_tools.native import intervals, native_requests, recovery_wire_samples
 
 
 class NativeTimingTests(unittest.TestCase):
     def test_wire_join_uses_server_identity_and_rejects_incomplete_or_reversed_intervals(self):
-        report = {"server_pid": 42, "checkpoints": [{}] * 5 + [
-            {"recovery_requests": {"rename": 7, "completion": 8}}]}
+        report = {
+            "server_pid": 42,
+            "checkpoints": [{}] * 5 + [{"recovery_requests": {"rename": 7, "completion": 8}}],
+        }
         events = [
             {"pid": 42, "id": 7, "event": "response", "received_ns": 3_000_000},
             {"pid": 99, "id": 7, "event": "response", "received_ns": 90_000_000},
@@ -22,15 +22,16 @@ class NativeTimingTests(unittest.TestCase):
             {"pid": 42, "id": 8, "event": "response", "received_ns": 4_500_000},
         ]
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'trace.jsonl'
-            path.write_text('\n'.join(map(json.dumps, events)))
-            self.assertEqual(dict(recovery_wire_samples(report, path)),
-                             {"rename": [2.0], "completion": [0.5]})
-            path.write_text('\n'.join(map(json.dumps, events[:-1])))
+            path = Path(directory) / "trace.jsonl"
+            path.write_text("\n".join(map(json.dumps, events)))
+            self.assertEqual(
+                dict(recovery_wire_samples(report, path)), {"rename": [2.0], "completion": [0.5]}
+            )
+            path.write_text("\n".join(map(json.dumps, events[:-1])))
             with self.assertRaises(KeyError):
                 recovery_wire_samples(report, path)
             events[-1]["received_ns"] = 3_000_000
-            path.write_text('\n'.join(map(json.dumps, events)))
+            path.write_text("\n".join(map(json.dumps, events)))
             with self.assertRaises(ValueError):
                 recovery_wire_samples(report, path)
 
@@ -48,20 +49,24 @@ class NativeTimingTests(unittest.TestCase):
             (0.004, {"phase": "query_start", "serial": 99}),
         ]
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'trace.jsonl'
-            path.write_text('\n'.join(json.dumps({"timestamp": f"{at}s", "fields": fields})
-                                      for at, fields in reversed(events)))
-            result = intervals(native_requests(path)['7'], 40)
-        self.assertAlmostEqual(result['worker_wake_ms'], 11)
-        self.assertAlmostEqual(result['result_wake_ms'], 11)
-        self.assertAlmostEqual(result['execution_ms'], 1)
-        self.assertAlmostEqual(result['server_ms'], 29)
-        self.assertAlmostEqual(result['outside_server_ms'], 11)
-        self.assertAlmostEqual(result['ready_handoff_ms'], 2)
+            path = Path(directory) / "trace.jsonl"
+            path.write_text(
+                "\n".join(
+                    json.dumps({"timestamp": f"{at}s", "fields": fields})
+                    for at, fields in reversed(events)
+                )
+            )
+            result = intervals(native_requests(path)["7"], 40)
+        self.assertAlmostEqual(result["worker_wake_ms"], 11)
+        self.assertAlmostEqual(result["result_wake_ms"], 11)
+        self.assertAlmostEqual(result["execution_ms"], 1)
+        self.assertAlmostEqual(result["server_ms"], 29)
+        self.assertAlmostEqual(result["outside_server_ms"], 11)
+        self.assertAlmostEqual(result["ready_handoff_ms"], 2)
 
     def test_cancelled_query_needs_no_worker_and_residual_stays_signed(self):
-        result = intervals({'ingress': 0, 'output_ready': 1, 'handoff': 3}, 2)
-        self.assertEqual(result['outside_server_ms'], -1)
-        self.assertNotIn('execution_ms', result)
+        result = intervals({"ingress": 0, "output_ready": 1, "handoff": 3}, 2)
+        self.assertEqual(result["outside_server_ms"], -1)
+        self.assertNotIn("execution_ms", result)
         with self.assertRaises(KeyError):
-            intervals({'ingress': 0, 'output_ready': 1}, 2)
+            intervals({"ingress": 0, "output_ready": 1}, 2)

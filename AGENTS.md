@@ -24,43 +24,18 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - For non-trivial Rust changes, use the relevant Recite overlay, especially
   `.agents/skills/recite-rust-quality/SKILL.md`, and load the global
   `rust-quality` skill when it is available.
-- The complete local gate is `mise exec -- just check` (`mise run verify` is
-  an alias); use a narrower documented check only when the changed surface
-  makes that sufficient.
+- The complete local gate is `just check` (`mise run verify` is an alias;
+  use `mise exec -- just check` without shell activation). Use a narrower
+  documented check only when the changed surface makes that sufficient.
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
 - Repo-local skills must be Recite-specific overlays or Recite domain guidance. Put reusable personal workflow skills in the global agent config instead.
-
-## Multi-Agent Execution Contract
-
-- The coordinating session owns scope, product direction, subjective decisions,
-  integration review, and final acceptance. A delegated implementer may own a
-  bounded slice only through explicitly authorized stages; local edits,
-  commits, pushes, and forge updates are separate authorizations. Slices do
-  not open pull requests. The coordinator returns slice findings to the owner
-  and mechanically integrates accepted commits; only mechanical conflict
-  resolution belongs in the coordinator's worktree.
-- Task packets stay compact: outcome, write scope, settled constraints, permitted decisions, stop-and-ask categories, acceptance evidence, and delivery target. Keep assumptions bounded: agents may choose reversible local details, but must stop for semantics, public compatibility, destructive changes, or scope expansion.
-- Parallel writable implementers, or workers with potentially conflicting
-  scopes, use isolated branches/worktrees at the stated base SHA. Read-only
-  workers and a lone worker with an available clean checkout may use it after
-  the same preflight for clean state, repository/remote, branch policy, and
-  required tools or GitHub access. Concurrent writable workers must have
-  disjoint scopes; never share a writable worktree.
-- If implementation fails, retry once with the concrete error. On a second failure, replace it with a fresh worker/context and diagnose the environment or boundary; do not silently take over the implementation.
-- Reviewers and auditors remain independent and read-only; return actionable
-  findings to the owning implementer rather than patching their work.
-- Verify in proportion to change: targeted checks in the inner loop, one
-  appropriate full gate for a coherent slice, and broader checks at milestone
-  or release boundaries. Codex review is advisory and requested manually from
-  a connected GitHub account when available; continue useful work while it runs.
-- A delivery handoff reports the resulting behaviour, the authorized delivery stages actually completed, checks and outcomes, and residual uncertainty. Report a commit SHA, pushed branch, or PR only when that stage was both authorized and completed. Treat temporary-worktree-only changes as incomplete only when the delivery target required a commit, push, or PR; local-edit-only tasks may complete without those stages.
 
 ## Agent Workflow Routing
 
 - Issue planning and milestone integration route through
   `.agents/skills/recite-github-pm/SKILL.md`.
-- Clean diff review uses the global `code-review` skill plus the relevant
-  Recite domain or language skill in a fresh reviewer context.
+- Requested code review uses the global `code-review` skill and the relevant
+  Recite skill. Follow session delegation rules; do not spawn reviews by default.
 - Final protected merges remain with the coordinating main session.
 
 ## Product Invariants
@@ -74,35 +49,27 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Validation should catch malformed project content without running a game engine.
 - Semantic changes should include tests unless the work is explicitly exploratory.
 
-## Code Review Rules
-
-- Preserve deterministic runtime traversal and keep game-side effects outside
-  runtime code; effects remain typed, schema-checked requests for the caller.
-- Treat serialisable runtime state, structured dialogue outputs, and
-  author-visible line and choice IDs as compatibility surfaces. Flag changes
-  that weaken those boundaries and identify the safe migration path.
-
 ## Spec Authority
 
-The production spec lives at `docs/recite-production-spec.md`. Route work to these sections:
+The [production specification](docs/recite-production-spec.md) is a routing hub.
+Read only the affected chapter and subsections before changing that contract:
 
-- Parser/source format: §5
-- Conditions: §6
-- Effects: §7
-- Runtime: §8
-- Localisation and stable IDs: §9
-- Schema: §10
-- Scene manifests/compiler: §11-12
-- CLI: §13
-- LSP/editor support: §14-15
-- Bevy adapter: §16
-- Tests and diagnostics: §17-18
-- Performance/benchmarks: §19
-- Milestones and serious v1 gate: §22-23
+| Surface | Contract |
+| --- | --- |
+| Product/invariants | `docs/spec/product.md` §1–4 |
+| Parser/source format | `docs/spec/source.md` §5 |
+| Conditions/effects | `docs/spec/conditions-effects.md` §6–7 |
+| Runtime/localisation/stable IDs | `docs/spec/runtime-localisation.md` §8–9 |
+| Schema | `docs/spec/schema.md` §10 |
+| Scene manifests/compiler/CLI | `docs/spec/build-cli.md` §11–13 |
+| LSP/editors/engine adapters | `docs/spec/tooling.md` §14–16 |
+| Tests/diagnostics/performance | `docs/spec/quality.md` §17–19 |
+| Migration/scope/release gates | `docs/spec/release.md` §20–24 |
 
-Verify section numbers against the committed spec before editing this table.
-
-Do not copy large sections of the spec into agent guidance. Read the relevant spec section before changing that subsystem.
+Read current design summaries for ownership; open historical experiment reports
+only for a decision being revisited. Do not load all skills, chapters or evidence
+as a preflight. GitHub owns outstanding tasks. Update the owning contract when
+behaviour changes instead of appending a second specification to a report.
 
 ## Repo-Local Skills
 

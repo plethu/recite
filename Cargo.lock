@@ -2934,8 +2934,6 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "criterion",
- "crossbeam-channel",
- "lsp-server",
  "recite-compiler",
  "recite-core",
  "recite-fixturegen",

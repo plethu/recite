@@ -1,33 +1,40 @@
 """Regression decisions must reject broken evidence and tolerate isolated noise."""
 
 import copy
-import importlib.util
-from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location("regression", ROOT / "scripts/lsp_regression.py")
-regression = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(regression)
-spec = importlib.util.spec_from_file_location("measurement", ROOT / "scripts/lsp_measurement.py")
-measurement = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(measurement)
+from scripts.lsp_tools import measurement, regression
 
 
 def pairs():
-    result = {"files": {"a.recite": "same"}, "workloads": {"prose": [10.0] * 21},
-              "diagnostics": {"prose": [{"count": 0, "sha256": "empty"}] * 21}}
-    return [{"control": copy.deepcopy(result), "candidate": copy.deepcopy(result)} for _ in range(3)]
+    result = {
+        "files": {"a.recite": "same"},
+        "workloads": {"prose": [10.0] * 21},
+        "diagnostics": {"prose": [{"count": 0, "sha256": "empty"}] * 21},
+    }
+    return [
+        {"control": copy.deepcopy(result), "candidate": copy.deepcopy(result)} for _ in range(3)
+    ]
 
 
 class RegressionTests(unittest.TestCase):
     def test_range_probe_preserves_unicode_and_line_endings(self):
         event = measurement.change_event("a\r\n💬x\r\n", "a\r\n💬z\r\n", True)
-        self.assertEqual(event, {"range": {"start": {"line": 1, "character": 2},
-                                          "end": {"line": 1, "character": 3}}, "text": "z"})
+        self.assertEqual(
+            event,
+            {
+                "range": {"start": {"line": 1, "character": 2}, "end": {"line": 1, "character": 3}},
+                "text": "z",
+            },
+        )
         event = measurement.change_event("a\r\nb", "a\nb", True)
-        self.assertEqual(event, {"range": {"start": {"line": 0, "character": 1},
-                                          "end": {"line": 1, "character": 0}}, "text": "\n"})
+        self.assertEqual(
+            event,
+            {
+                "range": {"start": {"line": 0, "character": 1}, "end": {"line": 1, "character": 0}},
+                "text": "\n",
+            },
+        )
         event = measurement.change_event("a\rb", "a\rc", True)
         self.assertEqual(event["range"]["start"], {"line": 1, "character": 0})
 
@@ -74,7 +81,9 @@ class RegressionTests(unittest.TestCase):
         observations = pairs()
         for pair in observations:
             pair["candidate"]["workloads"]["prose"] = [15.0] * 21
-        self.assertEqual(regression.regressions(observations, 1.2, 2, {"prose"})[0]["workload"], "prose")
+        self.assertEqual(
+            regression.regressions(observations, 1.2, 2, {"prose"})[0]["workload"], "prose"
+        )
 
     def test_one_noisy_pair_does_not_fail(self):
         observations = pairs()

@@ -7,7 +7,7 @@ Use the reference for exact syntax and behaviour. For a worked introduction, sta
 
 - [Source format](/reference/source-format/): blocks, lines, choices, conditions, effects, IDs, and metadata.
 - [CLI](/reference/cli/): commands for validating, compiling, running, tracing, and maintaining dialogue.
-- [Schema in the production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md#10-schema): the conditions, effects, and metadata a project makes available to writers.
+- [Schema in the production specification](https://github.com/plethu/recite/blob/main/docs/spec/schema.md#10-schema): the conditions, effects, and metadata a project makes available to writers.
 - [Rust API](/reference/rust-api/): crate documentation and integration entry points.
 - [Serialization compatibility](/reference/serialization-compatibility/): compiled assets, snapshots, and compatibility boundaries.
 - [Benchmarks](/reference/benchmarks/): commands, fixture scales, regression policy, and the evidence still needed for a release baseline.

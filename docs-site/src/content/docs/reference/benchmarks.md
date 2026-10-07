@@ -14,7 +14,7 @@ Use the smoke script for pull-request and CI checks that need to prove the
 benchmark targets still build and execute quickly:
 
 ```bash
-scripts/benchmark-smoke.sh
+just perf smoke
 ```
 
 The script runs only the checked-in tiny fixture data and never asks the fixture
@@ -34,7 +34,8 @@ enforce regression thresholds.
 The CI benchmark lane also runs a separate paired LSP regression check:
 
 ```bash
-mise exec -- bash scripts/check-lsp-performance.sh BASE_COMMIT
+just perf setup
+just perf compare BASE_COMMIT
 ```
 
 This builds both revisions before timing them on the same runner. The 24

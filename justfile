@@ -11,6 +11,8 @@ mod editor 'editors/justfile'
 mod engines 'engines.just'
 # Expensive CLI stress checks.
 mod stress 'stress.just'
+# Criterion, LSP process measurements and tooling checks.
+mod perf 'perf.just'
 
 default:
     @just --list
@@ -48,6 +50,12 @@ unused-deps:
 
 spelling:
     typos
+
+# Inspect changed source for size, structure and lint-suppression regressions.
+maintainability:
+    scripts/check-maintainability.sh
+    mise -E maintainability exec -- scripts/check-ast-grep.sh
+    scripts/check-lint-suppressions.sh
 
 check:
     mise -E maintainability exec -- scripts/verify.sh

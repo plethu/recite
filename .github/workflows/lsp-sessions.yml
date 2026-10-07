@@ -3,52 +3,14 @@ name: LSP sessions
 on:
   workflow_call:
     inputs:
-      stopped_response_probe:
-        type: boolean
-        default: false
-      driver_accounting_probe:
-        type: boolean
-        default: false
-      resource_probe:
-        type: boolean
-        default: false
-      channel_probe:
-        type: boolean
-        default: false
-      driver_control_ref:
-        type: string
-        default: ''
       server_control_ref:
         type: string
         default: ''
       native_trace:
         type: boolean
         default: false
-      macos_yield_probe:
-        type: boolean
-        default: false
   workflow_dispatch:
     inputs:
-      stopped_response_probe:
-        description: Compare prepared stopped responses at 100 ms pacing on macOS
-        type: boolean
-        default: false
-      driver_accounting_probe:
-        description: Isolate optional CPU sampling with one control server on macOS
-        type: boolean
-        default: false
-      resource_probe:
-        description: Compare paced editing CPU and upstream stdio transport
-        type: boolean
-        default: false
-      channel_probe:
-        description: Compare isolated Crossbeam blocking and selected receives
-        type: boolean
-        default: false
-      driver_control_ref:
-        description: Optional historical harness revision for alternating driver comparisons
-        type: string
-        default: ''
       server_control_ref:
         description: Optional historical server revision for alternating binary comparisons
         type: string
@@ -57,121 +19,29 @@ on:
         description: Compare native tracing enabled and disabled
         type: boolean
         default: false
-      macos_yield_probe:
-        description: Diagnostic alternate libpthread yield path on macOS server children only
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 jobs:
-  driver-accounting:
-    name: LSP driver accounting audit (macos-15)
-    if: inputs.driver_accounting_probe
-    runs-on: macos-15
-    timeout-minutes: 25
-    env:
-      MISE_AUTO_INSTALL: 'false'
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Require an explicit control revision
-        env:
-          CONTROL_REF: ${{ inputs.server_control_ref }}
-        run: test -n "$CONTROL_REF"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.server_control_ref }}
-          path: .lsp-session-control
-          persist-credentials: false
-      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
-        with:
-          install_args: rust
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with:
-          python-version: '3.12'
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - name: Build one exact control server
-        run: CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
-      - name: Alternate CPU accounting with identical startup idle
-        run: |
-          python -m pip install -r scripts/lsp-session-requirements.txt
-          python scripts/measure-lsp-driver-accounting.py --binary target/lsp-session-control-build/release/recite-lsp --output target/lsp-driver-accounting
-      - name: Retain accounting comparison
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: lsp-driver-accounting-macos
-          path: target/lsp-driver-accounting/
-          if-no-files-found: error
-          retention-days: 30
-  stopped-responses:
-    name: LSP stopped response comparison (macos-15)
-    if: inputs.stopped_response_probe
-    runs-on: macos-15
-    timeout-minutes: 35
-    env:
-      MISE_AUTO_INSTALL: 'false'
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Require an explicit control revision
-        env:
-          CONTROL_REF: ${{ inputs.server_control_ref }}
-        run: test -n "$CONTROL_REF"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.server_control_ref }}
-          path: .lsp-session-control
-          persist-credentials: false
-      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
-        with:
-          install_args: rust
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with:
-          python-version: '3.12'
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - name: Build both exact server binaries
-        run: |
-          cargo build --locked --release -p recite-lsp
-          CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
-      - name: Alternate prepared stopped responses with identical instrumentation
-        run: |
-          python -m pip install -r scripts/lsp-session-requirements.txt
-          python scripts/measure-lsp-stopped-responses.py --control target/lsp-session-control-build/release/recite-lsp --candidate target/release/recite-lsp --output target/lsp-stopped-responses
-      - name: Retain stopped response comparison
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: lsp-stopped-responses-macos
-          path: target/lsp-stopped-responses/
-          if-no-files-found: error
-          retention-days: 30
   sessions:
-    if: ${{ !inputs.driver_accounting_probe && !inputs.stopped_response_probe }}
     name: LSP and editor sessions (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        # The process-yield diagnostic is macOS-specific; ordinary CI keeps all three hosts.
-        include: >-
-          ${{ fromJSON(inputs.macos_yield_probe
-            && '[{"os":"macos-15","recovery_budget_ms":75}]'
-            || '[{"os":"ubuntu-24.04","recovery_budget_ms":20},{"os":"windows-2025","recovery_budget_ms":40},{"os":"macos-15","recovery_budget_ms":75}]') }}
+        include:
+          - os: ubuntu-24.04
+            recovery_budget_ms: 20
+          - os: windows-2025
+            recovery_budget_ms: 40
+          - os: macos-15
+            recovery_budget_ms: 75
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ inputs.resource_probe && inputs.native_trace && 60 || 45 }}
+    timeout-minutes: 45
     env:
-      # Only the explicitly installed Rust, Node and pnpm tools belong to this lane.
+      # Install only this lane's Rust, editor and locked Python tooling.
       MISE_AUTO_INSTALL: 'false'
+      MISE_ENV: lsp
     defaults:
       run:
         shell: bash
@@ -181,132 +51,58 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: rust node pnpm
+          install_args: rust node pnpm uv
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: '3.12'
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Check out optional control
-        if: inputs.driver_control_ref != '' || inputs.server_control_ref != ''
+        if: inputs.server_control_ref != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.server_control_ref || inputs.driver_control_ref }}
+          ref: ${{ inputs.server_control_ref }}
           path: .lsp-session-control
           persist-credentials: false
       - name: Build release server and fixture generator
         run: cargo build --locked --release -p recite-lsp -p recite-fixturegen
       - name: Build optional control server
         if: inputs.server_control_ref != ''
-        env:
-          DRIVER_CONTROL_REF: ${{ inputs.driver_control_ref }}
-        run: |
-          if [[ -n "$DRIVER_CONTROL_REF" ]]; then
-            echo "Choose either a server control or a historical driver control" >&2
-            exit 1
-          fi
-          CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
+        run: CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
       - name: Check incremental protocol transactions
         run: cargo test --locked --release -p recite-lsp --test stdio_incremental_sync --test stdio_trace
       - name: Prepare session and editor dependencies
         run: |
-          python -m pip install -r scripts/lsp-session-requirements.txt
+          uv sync --locked
           pnpm install --frozen-lockfile
           pnpm --filter recite-vscode run build
-      - name: Build and measure isolated channel handoffs
-        if: inputs.channel_probe
-        run: |
-          cargo bench --locked -p recite-benchmarks --bench channel_handoff --no-run --message-format=json > target/channel-build.jsonl
-          python -c 'import json, pathlib; artifacts = [json.loads(line) for line in pathlib.Path("target/channel-build.jsonl").read_text().splitlines()]; binary = next(item["executable"] for item in artifacts if item.get("target", {}).get("name") == "channel_handoff" and item.get("executable")); pathlib.Path("target/channel-binary.txt").write_text(binary)'
-          python scripts/measure-lsp-channel-handoff.py --binary "$(cat target/channel-binary.txt)" --output target/lsp-sessions/channel-handoff.json
-      - name: Measure actual upstream stdio transport
-        if: inputs.resource_probe
-        run: |
-          cargo bench --locked -p recite-benchmarks --bench stdio_transport --no-run --message-format=json > target/stdio-build.jsonl
-          python -c 'import json, pathlib; artifacts = [json.loads(line) for line in pathlib.Path("target/stdio-build.jsonl").read_text().splitlines()]; binary = next(item["executable"] for item in artifacts if item.get("target", {}).get("name") == "stdio_transport" and item.get("executable")); pathlib.Path("target/stdio-binary.txt").write_text(binary)'
-          python scripts/measure-lsp-stdio-transport.py --binary "$(cat target/stdio-binary.txt)" --output target/lsp-sessions/stdio-transport.json
-      - name: Compare paced editing resource costs
-        if: inputs.resource_probe && inputs.server_control_ref != ''
-        run: |
-          suffix=""
-          if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
-          for interval in 100 250; do
-            reports="$PWD/target/lsp-sessions/paced-$interval"
-            run_paced() {
-              side="$1"
-              binary="$PWD/target/release/recite-lsp$suffix"
-              output="$reports"
-              if [[ "$side" == control ]]; then
-                binary="$PWD/target/lsp-session-control-build/release/recite-lsp$suffix"
-                output="$reports/control"
-              fi
-              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/fixed-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval" --editing-cpu-accounting
-              python scripts/measure-lsp-endurance.py --binary "$binary" --output "$output/churn-$round.json" --cycles 20 --edits 10 --edit-interval-ms "$interval" --editing-cpu-accounting --churn
-            }
-            for round in 1 2 3; do
-              if [[ $((round % 2)) == 1 ]]; then run_paced control; fi
-              run_paced candidate
-              if [[ $((round % 2)) == 0 ]]; then run_paced control; fi
-            done
-            python scripts/summarize-lsp-server-comparison.py --reports "$reports" --cycles 20 --edits 10 --output "$reports/server-comparison.json"
-          done
       - name: Install Linux display dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb libasound2t64 libnss3 libgbm1 libgtk-3-0
       - name: Exercise live resource and latency faults
-        run: python scripts/check-lsp-session-faults.py --output target/lsp-sessions/faults.json
+        run: uv run --locked python scripts/lsp.py faults --output target/lsp-sessions/faults.json
       - name: Exercise fixed working set and document churn
         env:
-          DRIVER_CONTROL_REF: ${{ inputs.driver_control_ref }}
           SERVER_CONTROL_REF: ${{ inputs.server_control_ref }}
           NATIVE_TRACE: ${{ inputs.native_trace }}
-          MACOS_YIELD_PROBE: ${{ inputs.macos_yield_probe }}
         run: |
           suffix=""
           if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
           binary="$PWD/target/release/recite-lsp$suffix"
           control_binary="$PWD/target/lsp-session-control-build/release/recite-lsp$suffix"
           reports="$PWD/target/lsp-sessions"
-          server_options=()
-          if [[ "$RUNNER_OS" == macOS && "$MACOS_YIELD_PROBE" == true ]]; then
-            server_options+=(--server-yield-to-zero 0)
-          fi
-          run_control() {
-            if [[ -n "$SERVER_CONTROL_REF" ]]; then
-              python scripts/measure-lsp-endurance.py --binary "$control_binary" --output "$reports/control/fixed-$round.json"
-              python scripts/measure-lsp-endurance.py --binary "$control_binary" --output "$reports/control/churn-$round.json" --churn
-            else
-              (cd .lsp-session-control
-                python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/fixed-$round.json"
-                python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/control/churn-$round.json" --churn)
-            fi
-          }
-          run_traced() {
-            for mode in fixed churn; do
-              trace_dir="$reports/native/$mode-$round"
-              mkdir -p "$trace_dir"
-              extra=()
-              if [[ "$mode" == churn ]]; then extra+=(--churn); fi
-              RECITE_LSP_TRACE_DIR="$trace_dir" python scripts/measure-lsp-endurance.py \
-                --binary "$binary" --output "$reports/native/$mode-$round.json" "${extra[@]}" "${server_options[@]}"
-            done
-          }
-          for round in 1 2 3; do
-            if [[ "$NATIVE_TRACE" == true && $((round % 2)) == 1 ]]; then run_traced; fi
-            if [[ -n "$DRIVER_CONTROL_REF$SERVER_CONTROL_REF" && $((round % 2)) == 1 ]]; then run_control; fi
-            python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/fixed-$round.json" "${server_options[@]}"
-            python scripts/measure-lsp-endurance.py --binary "$binary" --output "$reports/churn-$round.json" --churn "${server_options[@]}"
-            if [[ -n "$DRIVER_CONTROL_REF$SERVER_CONTROL_REF" && $((round % 2)) == 0 ]]; then run_control; fi
-            if [[ "$NATIVE_TRACE" == true && $((round % 2)) == 0 ]]; then run_traced; fi
-          done
+          options=()
+          if [[ -n "$SERVER_CONTROL_REF" ]]; then options+=(--control "$control_binary"); fi
+          if [[ "$NATIVE_TRACE" == true ]]; then options+=(--native-trace); fi
+          uv run --locked python scripts/lsp.py matrix --binary "$binary" --output "$reports" "${options[@]}"
       - name: Attribute native request boundaries
         if: inputs.native_trace
-        run: python scripts/summarize-lsp-native-trace.py --reports target/lsp-sessions --output target/lsp-sessions/native-summary.json
+        run: uv run --locked python scripts/lsp.py native-summary --reports target/lsp-sessions --output target/lsp-sessions/native-summary.json
       - name: Compare server recovery and CPU
         if: inputs.server_control_ref != ''
-        run: python scripts/summarize-lsp-server-comparison.py --reports target/lsp-sessions --output target/lsp-sessions/server-comparison.json
+        run: uv run --locked python scripts/lsp.py server-comparison --reports target/lsp-sessions --output target/lsp-sessions/server-comparison.json
       - name: Enforce repeated recovery and completion budgets
         run: >-
-          python scripts/check-lsp-session-recovery.py
+          uv run --locked python scripts/lsp.py recovery
           --reports target/lsp-sessions
           --budget-ms ${{ matrix.recovery_budget_ms }}
           --completion-budget-ms 5

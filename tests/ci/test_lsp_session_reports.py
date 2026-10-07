@@ -1,17 +1,11 @@
 """Incomplete or incomparable session reports must not pass the tail gate."""
 
-import importlib.util
 import json
-from pathlib import Path
-import sys
 import tempfile
 import unittest
+from pathlib import Path
 
-scripts = Path(__file__).resolve().parents[2] / "scripts"
-sys.path.insert(0, str(scripts))
-spec = importlib.util.spec_from_file_location("session_recovery", scripts / "check-lsp-session-recovery.py")
-recovery = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(recovery)
+from scripts.lsp_tools import recovery
 
 
 class SessionReportsTests(unittest.TestCase):
@@ -20,8 +14,12 @@ class SessionReportsTests(unittest.TestCase):
         self.assertEqual(recovery.idle_cpu_budget(intervals, 100)["status"], "regression")
         intervals[1]["server_cpu_ms"] = 0
         self.assertEqual(recovery.idle_cpu_budget(intervals, 100)["status"], "pass")
-        for key, value in (("elapsed_ms", 0), ("elapsed_ms", float("nan")),
-                           ("server_cpu_ms", -1), ("server_cpu_ms", float("inf"))):
+        for key, value in (
+            ("elapsed_ms", 0),
+            ("elapsed_ms", float("nan")),
+            ("server_cpu_ms", -1),
+            ("server_cpu_ms", float("inf")),
+        ):
             invalid = [dict(row) for row in intervals]
             invalid[0][key] = value
             with self.subTest(key=key, value=value), self.assertRaises(ValueError):
@@ -34,13 +32,29 @@ class SessionReportsTests(unittest.TestCase):
             root = Path(temporary)
             for mode in ("fixed", "churn"):
                 for repetition in range(1, 4):
-                    report = {"status": "pass", "health": {"status": "pass"}, "cycles": 40,
-                              "edits_per_cycle": 50, "churn": mode == "churn", "seed": 7203,
-                              "provenance": {"binary_sha256": "binary", "harness_revision": "harness",
-                                             "files": {"source": "text"}},
-                              "checkpoints": [{"cycle": index, "recovery_ms": 20.0,
-                                               "timing": {"recovery_completion_ms": 10.0 if repetition < 3 else 0.5}}
-                                              for index in range(40)]}
+                    report = {
+                        "status": "pass",
+                        "health": {"status": "pass"},
+                        "cycles": 40,
+                        "edits_per_cycle": 50,
+                        "churn": mode == "churn",
+                        "seed": 7203,
+                        "provenance": {
+                            "binary_sha256": "binary",
+                            "harness_revision": "harness",
+                            "files": {"source": "text"},
+                        },
+                        "checkpoints": [
+                            {
+                                "cycle": index,
+                                "recovery_ms": 20.0,
+                                "timing": {
+                                    "recovery_completion_ms": 10.0 if repetition < 3 else 0.5
+                                },
+                            }
+                            for index in range(40)
+                        ],
+                    }
                     (root / f"{mode}-{repetition}.json").write_text(json.dumps(report))
             self.assertEqual(recovery.evaluate(root, 75)["status"], "pass")
             self.assertEqual(recovery.evaluate(root, 75, 5)["status"], "regression")
@@ -70,16 +84,36 @@ class SessionReportsTests(unittest.TestCase):
                 recovery.evaluate(root, 25)
             for mode in ("fixed", "churn"):
                 for repetition in range(1, 4):
-                    report = {"status": "pass", "health": {"status": "pass"}, "cycles": 40,
-                              "edits_per_cycle": 50, "churn": mode == "churn", "seed": 7203,
-                              "provenance": {"binary_sha256": "binary", "harness_revision": "harness",
-                                             "files": {"source": "text"}},
-                              "checkpoints": [{"cycle": index, "recovery_ms": 10.0} for index in range(40)]}
+                    report = {
+                        "status": "pass",
+                        "health": {"status": "pass"},
+                        "cycles": 40,
+                        "edits_per_cycle": 50,
+                        "churn": mode == "churn",
+                        "seed": 7203,
+                        "provenance": {
+                            "binary_sha256": "binary",
+                            "harness_revision": "harness",
+                            "files": {"source": "text"},
+                        },
+                        "checkpoints": [
+                            {"cycle": index, "recovery_ms": 10.0} for index in range(40)
+                        ],
+                    }
                     (root / f"{mode}-{repetition}.json").write_text(json.dumps(report))
             self.assertEqual(recovery.evaluate(root, 25)["status"], "pass")
             path = root / "churn-3.json"
             original = path.read_text()
-            for corruption in ("truncated", "binary", "harness", "seed", "driver", "nan", "error", "failed"):
+            for corruption in (
+                "truncated",
+                "binary",
+                "harness",
+                "seed",
+                "driver",
+                "nan",
+                "error",
+                "failed",
+            ):
                 report = json.loads(original)
                 if corruption == "truncated":
                     report["checkpoints"].pop()

@@ -18,36 +18,12 @@ on:
         description: Run the cross-platform LSP session matrix and CI policy checks
         type: boolean
         default: false
-      lsp_driver_control_ref:
-        description: Optional historical harness revision for the LSP session experiment
-        type: string
-        default: ''
       lsp_server_control_ref:
         description: Optional historical server revision for alternating binary comparisons
         type: string
         default: ''
       lsp_native_trace:
         description: Compare native tracing enabled and disabled on each session runner
-        type: boolean
-        default: false
-      lsp_macos_yield_probe:
-        description: Diagnostic alternate libpthread yield path on macOS server children only
-        type: boolean
-        default: false
-      lsp_stopped_response_probe:
-        description: Compare prepared stopped responses at 100 ms pacing on macOS
-        type: boolean
-        default: false
-      lsp_driver_accounting_probe:
-        description: Isolate optional CPU sampling with one control server on macOS
-        type: boolean
-        default: false
-      lsp_resource_probe:
-        description: Compare paced editing CPU and upstream stdio transport
-        type: boolean
-        default: false
-      lsp_channel_probe:
-        description: Compare isolated Crossbeam blocking and selected receives
         type: boolean
         default: false
   schedule:
@@ -316,7 +292,8 @@ jobs:
           else
             base="$(git merge-base "$EVENT_BASE" HEAD)"
           fi
-          bash scripts/check-lsp-performance.sh "$base"
+          just perf setup
+          just perf compare "$base"
 
       - name: Retain LSP measurement evidence
         if: always()
@@ -362,15 +339,17 @@ jobs:
           just --dry-run editor zed fmt-check
           just --dry-run engines godot
           just --dry-run stress scale
+          just --dry-run perf bench lsp
+          just --dry-run perf check
 
       - name: Run maintainability checks
         run: |
           tests/maintainability/check.sh
           tests/ast-grep/check.sh
           tests/lint-suppressions/check.sh
-          scripts/check-maintainability.sh
-          scripts/check-ast-grep.sh
-          scripts/check-lint-suppressions.sh
+          just maintainability
+          just perf setup
+          just perf check
           just fmt-check
           just unused-deps
           just supply-chain
@@ -385,14 +364,8 @@ jobs:
     if: needs.changes.outputs.lsp-sessions == 'true'
     uses: ./.github/workflows/lsp-sessions.yml
     with:
-      stopped_response_probe: ${{ inputs.lsp_stopped_response_probe || false }}
-      driver_accounting_probe: ${{ inputs.lsp_driver_accounting_probe || false }}
-      resource_probe: ${{ inputs.lsp_resource_probe || false }}
-      channel_probe: ${{ inputs.lsp_channel_probe || false }}
-      driver_control_ref: ${{ inputs.lsp_driver_control_ref || '' }}
       server_control_ref: ${{ inputs.lsp_server_control_ref || '' }}
       native_trace: ${{ inputs.lsp_native_trace || false }}
-      macos_yield_probe: ${{ inputs.lsp_macos_yield_probe || false }}
 
   required-check:
     name: required-check

@@ -63,9 +63,18 @@ patterns that make an ownership split difficult to assess.
   especially errors, events, and effect/condition kinds. Do not apply it to
   internal compiled-row enums, where same-crate exhaustive matching is
   intentional and wire compatibility is governed by format mapping/versioning.
-- Add a dependency only when it removes material local complexity, fits Recite's
-  determinism and MIT licensing constraints, and crosses a boundary the project
-  does not want to own.
+- Before substantial custom infrastructure or a broad optimisation pass,
+  compare maintained ecosystem alternatives against the code, adapters and
+  tests Recite would still own. Judge net maintenance cost, not dependency count
+  or fastest timing alone. A roughly 5% slowdown can be acceptable for a
+  substantial simplification; preserve correctness and verify relevant workloads.
+  Check maintenance, license and platform fit before adoption. For LSP work,
+  start with `docs/design/lsp-cancellation/dependency-decisions.md` and its
+  reopening conditions rather than repeating settled spikes.
+- Before expanding Recite's tooling language or runtime footprint, compare the
+  existing Rust and Node ecosystems and include setup, tests, debugging and the
+  maintainer's learning cost. "It is for CI" does not establish that another
+  language or a new collection of scripts is the best owner.
 
 ## FFI surface
 
@@ -82,3 +91,7 @@ patterns that make an ownership split difficult to assess.
 State the size-triggered files and their cohesion/split decision. Run the
 repository's documented gate (`mise run verify`) or name the focused checks and
 any blocker.
+
+Inspect the final code and callers for ownership, names, indirection and retained
+experiment scaffolding. Remove superseded code within scope before handoff;
+passing lints or satisfying file-size thresholds does not complete that review.

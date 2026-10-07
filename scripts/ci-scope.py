@@ -188,6 +188,8 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"lsp-sessions", "benchmark-smoke", "maintainability"})
     if name in {"Cargo.toml", "Cargo.lock"} or path.startswith(".cargo/"):
         return RUST_BUILD
+    if path in {"perf.just", "mise.lsp.toml", "pyproject.toml", "uv.lock", "scripts/lsp.py"} or path.startswith("scripts/lsp_tools/"):
+        return frozenset({"benchmark-smoke", "lsp-sessions", "maintainability"})
     if path in {"mise.maintainability.toml", "mise.godot.toml"}:
         return RUST
     if path in {"scripts/ci-scope.py", "scripts/check-ci-results.py"} or path.startswith("tests/ci/"):

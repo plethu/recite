@@ -76,6 +76,11 @@ class ScopeTests(unittest.TestCase):
             "rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability",
         })
 
+    def test_lsp_tooling_package_and_environment_select_their_consumers(self):
+        for path in ("scripts/lsp.py", "scripts/lsp_tools/client.py", "perf.just",
+                     "mise.lsp.toml", "pyproject.toml", "uv.lock"):
+            self.assertEqual(selected(path), {"benchmark-smoke", "lsp-sessions", "maintainability"})
+
     def test_lsp_measurement_changes_select_benchmark_lane(self):
         for path in ("scripts/check-lsp-performance.py", "scripts/check-lsp-performance.sh",
                      "scripts/measure-lsp-session.py", "scripts/lsp_regression.py",
