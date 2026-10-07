@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{SourcePosition, source_location::scalar_offset};
+use crate::{SourcePosition, source_lines, source_location::scalar_offset};
 
 /// Line boundaries bound to immutable source bytes. Clones share both.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -13,8 +13,12 @@ impl SourceLineIndex {
     #[must_use]
     pub fn new(source: impl Into<Arc<str>>) -> Self {
         let source = source.into();
-        let starts = std::iter::once(0)
-            .chain(source.match_indices('\n').map(|(offset, _)| offset + 1))
+        let starts = source_lines(&source)
+            .scan(0, |offset, (content, terminator)| {
+                let start = *offset;
+                *offset += content.len() + terminator.len();
+                Some(start)
+            })
             .collect();
         Self { source, starts }
     }
@@ -24,7 +28,8 @@ impl SourceLineIndex {
         &self.source
     }
 
-    /// Returns a zero-based line, excluding LF but retaining any CR.
+    /// Returns a zero-based line, excluding the final terminator byte.
+    /// A CRLF line retains its CR for compatibility with source-backed slices.
     #[must_use]
     pub fn line(&self, index: usize) -> Option<&str> {
         let start = *self.starts.get(index)?;

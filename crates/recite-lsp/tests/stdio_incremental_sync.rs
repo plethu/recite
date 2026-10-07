@@ -1,6 +1,104 @@
 mod support;
 use serde_json::json;
-use support::stdio::StdioHarness;
+use support::stdio::{StdioHarness, file_uri};
+
+#[test]
+fn line_endings_agree_across_edits_queries_and_diagnostics() {
+    for ending in ["\n", "\r\n", "\r"] {
+        let project = tempfile::tempdir().unwrap();
+        let source = [
+            ":: start default",
+            "-> target",
+            "",
+            ":: target",
+            "-> END",
+            "",
+        ]
+        .join(ending);
+        let path = project.path().join("line-endings.recite");
+        std::fs::write(&path, &source).unwrap();
+        let uri = file_uri(&path);
+        let mut server =
+            StdioHarness::start(json!({"capabilities": {}, "rootUri": file_uri(project.path())}));
+        server.did_open(&uri, 1, &source);
+        let initial_diagnostics = server.diagnostics(&uri);
+        assert!(
+            initial_diagnostics["diagnostics"]
+                .as_array()
+                .unwrap()
+                .is_empty(),
+            "{ending:?}: {initial_diagnostics}"
+        );
+        let definition = server.request_result(
+            "textDocument/definition",
+            json!({
+                "textDocument": {"uri": uri}, "position": {"line": 1, "character": 4}
+            }),
+        );
+        assert_eq!(definition["uri"], uri, "{ending:?}");
+        assert_eq!(definition["range"]["start"]["line"], 3, "{ending:?}");
+        let completion = server.request_result(
+            "textDocument/completion",
+            json!({"textDocument": {"uri": uri}, "position": {"line": 1, "character": 3}}),
+        );
+        assert!(
+            completion
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|item| item["label"] == "target"),
+            "{ending:?}"
+        );
+        let rename = server.request_result(
+            "textDocument/rename",
+            json!({"textDocument": {"uri": uri}, "position": {"line": 3, "character": 4}, "newName": "renamed"}),
+        );
+        assert_eq!(
+            rename["documentChanges"][0]["textDocument"]["uri"], uri,
+            "{ending:?}"
+        );
+        let edits = rename["documentChanges"][0]["edits"].as_array().unwrap();
+        assert_eq!(edits.len(), 2, "{ending:?}");
+        assert!(
+            edits
+                .iter()
+                .any(|edit| edit["range"]["start"]["line"] == 1 && edit["newText"] == "renamed"),
+            "{ending:?}"
+        );
+        assert!(
+            edits
+                .iter()
+                .any(|edit| edit["range"]["start"]["line"] == 3 && edit["newText"] == "renamed"),
+            "{ending:?}"
+        );
+        server.notify(
+            "textDocument/didChange",
+            json!({
+                "textDocument": {"uri": uri, "version": 2},
+                "contentChanges": [{"range": {
+                    "start": {"line": 1, "character": 3}, "end": {"line": 1, "character": 9}
+                }, "rangeLength": 6, "text": "missing"}]
+            }),
+        );
+        let diagnostics = server.diagnostics(&uri);
+        assert_eq!(diagnostics["version"], 2, "{ending:?}");
+        assert!(
+            diagnostics["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|diagnostic| {
+                    diagnostic["code"] == "RECITE_VALIDATE007"
+                        && diagnostic["range"]["start"]["line"] == 1
+                        && diagnostic["message"]
+                            .as_str()
+                            .is_some_and(|message| message.contains("missing"))
+                }),
+            "missing reference should be on line 1 for {ending:?}"
+        );
+        server.finish();
+    }
+}
 
 #[test]
 fn malformed_wire_changes_preserve_text_and_version() {

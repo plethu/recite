@@ -1,6 +1,6 @@
 use lsp_types::{Position, Range};
 use recite_compiler::authoring::SourceRange;
-use recite_core::{SourcePosition, SourceSpan};
+use recite_core::{SourcePosition, SourceSpan, source_lines};
 
 pub(crate) fn span_to_range(text: &str, span: &SourceSpan) -> Range {
     DocumentLines::new(text).span_to_range(span)
@@ -44,8 +44,7 @@ fn exact_source_position_to_lsp(
 /// matching the source spans produced by the parser.
 pub(crate) fn lsp_position_to_source(text: &str, position: Position) -> Option<SourcePosition> {
     let line_index = usize::try_from(position.line).ok()?;
-    let raw_line = text.split('\n').nth(line_index)?;
-    let line = raw_line.strip_suffix('\r').unwrap_or(raw_line);
+    let (line, _) = source_lines(text).nth(line_index)?;
     let column = scalar_column_for_utf16(line, position.character)?;
     SourcePosition::new(position.line.saturating_add(1), column).ok()
 }
@@ -83,11 +82,7 @@ pub(crate) struct DocumentLines<'a> {
 
 impl<'a> DocumentLines<'a> {
     pub(crate) fn new(text: &'a str) -> Self {
-        let lines = if text.is_empty() {
-            vec![""]
-        } else {
-            text.split('\n').collect::<Vec<_>>()
-        };
+        let lines = source_lines(text).map(|(content, _)| content).collect();
 
         Self { lines }
     }

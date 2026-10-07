@@ -14,7 +14,8 @@ stale versions leave the accepted text and version unchanged. Protocol text adva
 cancellable analysis, and queued updates contain full snapshots so coalescing cannot discard a
 ranged edit's dependency. Positions inside surrogate pairs and nonexistent lines are rejected;
 overlong character offsets clamp to the line end. CRLF, LF and CR are recognized as protocol line
-endings.
+endings. Parser, source indexes and query positions use the same boundaries while preserving
+authored bytes.
 
 Required capabilities:
 

@@ -89,7 +89,9 @@ pub(super) fn assemble(
             .flat_map(|part| part.local().iter().cloned())
             .collect(),
         byte_len: document.text.len(),
-        line_count: document.text.lines().count(),
+        line_count: recite_core::source_lines(document.text)
+            .filter(|(content, terminator)| !content.is_empty() || !terminator.is_empty())
+            .count(),
     };
     if relocated && !relocation::apply(&mut analysis, analyses, document.key.as_str(), control)? {
         return Ok(None);

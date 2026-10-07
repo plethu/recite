@@ -62,36 +62,39 @@ impl SourceSpan {
     }
 }
 
+/// Source lines as (content, terminator), recognizing LF, CRLF and CR.
+/// Retains each terminator and includes the final empty line after a terminator.
+pub fn source_lines(source: &str) -> impl Iterator<Item = (&str, &str)> {
+    let mut remaining = Some(source);
+    std::iter::from_fn(move || {
+        let text = remaining.take()?;
+        let Some(offset) = text.find(['\r', '\n']) else {
+            return Some((text, ""));
+        };
+        let width = 1 + usize::from(
+            text.as_bytes()[offset] == b'\r' && text.as_bytes().get(offset + 1) == Some(&b'\n'),
+        );
+        let end = offset + width;
+        remaining = Some(&text[end..]);
+        Some((&text[..offset], &text[offset..end]))
+    })
+}
+
 /// Return the byte boundary for a one-based line and Unicode scalar column.
-/// The end of a line is valid for an exclusive edit range; CRLF bytes are
+/// The end of a line is valid for an exclusive edit range; terminators are
 /// outside that line's editable columns.
 #[must_use]
 pub fn byte_offset_for_position(source: &str, position: SourcePosition) -> Option<usize> {
     let wanted_line = position.line();
     let wanted_scalar = usize::try_from(position.column().checked_sub(1)?).ok()?;
-    let bytes = source.as_bytes();
     let mut line_start = 0;
-    let mut line = 1;
-
-    for (index, byte) in bytes.iter().copied().enumerate() {
-        if byte != b'\n' {
-            continue;
+    for (index, (content, terminator)) in source_lines(source).enumerate() {
+        if u32::try_from(index).ok()?.checked_add(1)? == wanted_line {
+            return scalar_offset(content, wanted_scalar).map(|offset| line_start + offset);
         }
-        let line_end =
-            index.saturating_sub(usize::from(index > line_start && bytes[index - 1] == b'\r'));
-        if line == wanted_line {
-            return scalar_offset(&source[line_start..line_end], wanted_scalar)
-                .map(|offset| line_start + offset);
-        }
-        line_start = index + 1;
-        line = line.saturating_add(1);
+        line_start += content.len() + terminator.len();
     }
-
-    (line == wanted_line)
-        .then(|| {
-            scalar_offset(&source[line_start..], wanted_scalar).map(|offset| line_start + offset)
-        })
-        .flatten()
+    None
 }
 
 pub(super) fn scalar_offset(line: &str, scalar: usize) -> Option<usize> {
@@ -119,7 +122,9 @@ pub(crate) fn position_for_byte_offset(source: &str, offset: usize) -> SourcePos
         if index >= offset {
             break;
         }
-        if character == '\n' {
+        if character == '\n'
+            || (character == '\r' && source.as_bytes().get(index + 1) != Some(&b'\n'))
+        {
             line += 1;
             column = 1;
         } else {

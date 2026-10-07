@@ -93,6 +93,7 @@ fn restart_boundaries_preserve_recovery_and_nested_bodies() {
                 let source = format!("{left}{middle}{right}");
                 assert_equivalent(&source);
                 assert_equivalent(&source.replace('\n', "\r\n"));
+                assert_equivalent(&source.replace('\n', "\r"));
             }
         }
     }

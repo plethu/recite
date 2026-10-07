@@ -125,7 +125,7 @@ pub use source_id::{
     is_valid_source_label,
 };
 pub use source_line_index::SourceLineIndex;
-pub use source_location::{SourcePosition, SourceSpan, byte_offset_for_position};
+pub use source_location::{SourcePosition, SourceSpan, byte_offset_for_position, source_lines};
 pub use source_recovery::{SourceRecovery, SourceRecoveryClass};
 pub use text::{
     PlaceholderSyntaxError, PlaceholderSyntaxKind, PlaceholderValidationError,

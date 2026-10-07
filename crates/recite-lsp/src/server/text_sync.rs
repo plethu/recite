@@ -2,6 +2,7 @@
 //! accepted transaction before queueing so coalescing never drops a dependency.
 use super::updates::Update;
 use lsp_types::{Position, TextDocumentContentChangeEvent, Uri};
+use recite_core::source_lines;
 use std::collections::BTreeMap;
 
 struct Document {
@@ -109,17 +110,15 @@ fn apply_change(text: &mut String, change: &TextDocumentContentChangeEvent) -> O
 /// a position inside a UTF-16 surrogate pair cannot identify a UTF-8 boundary.
 fn byte_offset(text: &str, position: Position) -> Option<usize> {
     let mut start = 0;
-    let bytes = text.as_bytes();
+    let mut lines = source_lines(text);
     for _ in 0..position.line {
-        start += text[start..].find(['\r', '\n'])?;
-        if bytes[start] == b'\r' && bytes.get(start + 1) == Some(&b'\n') {
-            start += 1;
-        }
-        start += 1;
+        let (content, terminator) = lines.next()?;
+        start += content.len() + terminator.len();
     }
+    let (line, _) = lines.next()?;
     let mut units = 0;
-    for (offset, ch) in text[start..].char_indices() {
-        if units == position.character || ch == '\r' || ch == '\n' {
+    for (offset, ch) in line.char_indices() {
+        if units == position.character {
             return Some(start + offset);
         }
         units += u32::try_from(ch.len_utf16()).ok()?;
@@ -127,7 +126,7 @@ fn byte_offset(text: &str, position: Position) -> Option<usize> {
             return None;
         }
     }
-    Some(text.len())
+    Some(start + line.len())
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use recite_core::{SourcePosition, SourceSpan};
+use recite_core::{SourcePosition, SourceSpan, source_lines};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct LogicalLine<'a> {
@@ -54,25 +54,8 @@ impl<'a> Iterator for LogicalLines<'a> {
         }
 
         let remaining = &self.source[self.offset..];
-        let newline_offset = remaining.find('\n');
-        let (line_text, newline, advance) = match newline_offset {
-            Some(offset) => {
-                let line_end = self.offset + offset;
-                let newline_start =
-                    if line_end > 0 && self.source.as_bytes().get(line_end - 1) == Some(&b'\r') {
-                        line_end - 1
-                    } else {
-                        line_end
-                    };
-
-                (
-                    &self.source[self.offset..newline_start],
-                    &self.source[newline_start..=line_end],
-                    offset + 1,
-                )
-            }
-            None => (remaining, "", remaining.len()),
-        };
+        let (line_text, newline) = source_lines(remaining).next()?;
+        let advance = line_text.len() + newline.len();
 
         let line = LogicalLine {
             number: self.number,
