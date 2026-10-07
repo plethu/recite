@@ -79,21 +79,21 @@ other-platform support or replace the release benchmark baseline.
 Versioned configurations at the repository root define formatting and lint rules. `just fmt`, `just
 fmt-check` and `just lint` provide common commands; `just quality` lists the non-Rust lane.
 
-| Source                                                                 | Formatter                    | Lint or semantic gate                                      |
-| ---------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------- |
-| Rust                                                                   | rustfmt                      | Clippy, ast-grep, domain tests                             |
-| Markdown, JSON, YAML, JavaScript/TypeScript, CSS, SVG/XML, Dockerfiles | dprint                       | rumdl, Oxlint, type checks, Stylelint, schemas, actionlint |
-| TOML                                                                   | Tombi, offline               | Tombi syntax and owning domain checks                      |
-| Python                                                                 | Ruff                         | Ruff and harness tests                                     |
-| Shell                                                                  | shfmt                        | ShellCheck                                                 |
-| Lua                                                                    | StyLua                       | Lua language server and Neovim tests                       |
-| GDScript                                                               | gdformat                     | gdlint and Godot adapter tests                             |
-| C/C++                                                                  | clang-format                 | FFI compilation with warnings as errors                    |
-| C#                                                                     | dotnet format                | Headless Unity compilation/tests                           |
-| Nix                                                                    | Alejandra                    | Flake/package checks                                       |
-| PowerShell                                                             | PSScriptAnalyzer             | PSScriptAnalyzer                                           |
-| Hugo templates                                                         | djLint's Go template profile | djLint and site build/browser tests                        |
-| Just recipes                                                           | just's native formatter      | Recipe and workflow checks                                 |
+| Source                                                                 | Formatter               | Lint or semantic gate                                      |
+| ---------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| Rust                                                                   | rustfmt                 | Clippy, ast-grep, domain tests                             |
+| Markdown, JSON, YAML, JavaScript/TypeScript, CSS, SVG/XML, Dockerfiles | dprint                  | rumdl, Oxlint, type checks, Stylelint, schemas, actionlint |
+| TOML                                                                   | Tombi, offline          | Tombi syntax and owning domain checks                      |
+| Python                                                                 | Ruff                    | Ruff and harness tests                                     |
+| Shell                                                                  | shfmt                   | ShellCheck                                                 |
+| Lua                                                                    | StyLua                  | Lua language server and Neovim tests                       |
+| GDScript                                                               | gdformat                | gdlint and Godot adapter tests                             |
+| C/C++                                                                  | clang-format            | FFI compilation with warnings as errors                    |
+| C#                                                                     | dotnet format           | Headless Unity compilation/tests                           |
+| Nix                                                                    | Alejandra               | Flake/package checks                                       |
+| PowerShell                                                             | PSScriptAnalyzer        | PSScriptAnalyzer                                           |
+| Astro components                                                       | dprint                  | Astro type checks and site browser tests                   |
+| Just recipes                                                           | just's native formatter | Recipe and workflow checks                                 |
 
 Recite source, Fluent, gettext PO and Tree-sitter queries use their parser, typed-contract and
 fixture gates. They are validated, not automatically reformatted: whitespace and deliberately
@@ -101,9 +101,10 @@ incomplete inputs can be test data. Generated files and frozen historical eviden
 explicitly in the formatter configurations; their generators or owning tests check them. Do not edit
 dependency/theme sources to satisfy our style rules.
 
-The [site](docs-site/README.md) builds with mise-managed Hugo and a pinned upstream theme, without
-Node. Its browser, CSS and TypeScript development checks use the existing Node toolchain. Python
-wheels used to distribute formatters are tools, not new application modules.
+The [site](docs-site/README.md) uses Astro/Starlight with mise-managed Node/pnpm for builds and
+checks. Its output is static HTML, CSS and browser modules; hosting needs no Node server or UI
+framework runtime. Python wheels used to distribute formatters are tools, not new application
+modules.
 
 ## Performance tooling
 

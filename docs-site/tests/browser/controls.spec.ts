@@ -1,54 +1,69 @@
 import { expect, test } from "@playwright/test";
 
-test("skip link and mobile controls work with a keyboard", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 900 });
-  await page.goto("/getting-started/first-scene/");
+test("skip link and both mobile menus work with a keyboard", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/reference/source-format/");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.locator("#content")).toBeFocused();
+  await expect(page.locator("#_top")).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth))
+    .toBeLessThanOrEqual(1);
+  const menuBox = await page.getByRole("button", { name: "Site menu", exact: true }).boundingBox();
+  const headerBox = await page.getByRole("banner").boundingBox();
+  expect(menuBox).not.toBeNull();
+  expect(headerBox).not.toBeNull();
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(headerBox!.y + headerBox!.height + 1);
 
-  await page.goto("about:blank");
-  await page.goto("/getting-started/first-scene/");
+  const siteMenu = page.getByRole("button", { name: "Site menu", exact: true });
+  await siteMenu.focus();
+  await page.keyboard.press("Enter");
+  const links = page.locator("#global-menu").getByRole("link");
+  await expect(links.first()).toBeVisible();
   await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  const menu = page.getByRole("checkbox", { name: "Menu", exact: true });
-  await expect(menu).toBeFocused();
-  await page.keyboard.press("Space");
-  await expect(menu).toBeChecked();
-  await expect(page.locator("#book-search-input")).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.locator(".book-menu nav ul a").first()).toBeFocused();
+  await expect(links.first()).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(menu).not.toBeChecked();
-  await expect(menu).toBeFocused();
+  await expect(page.locator("#global-menu")).toBeHidden();
+  await expect(siteMenu).toBeFocused();
 
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  const contents = page.getByRole("checkbox", { name: "Table of Contents" });
-  await expect(contents).toBeFocused();
-  await page.keyboard.press("Space");
-  await expect(contents).toBeChecked();
-  await expect(page.locator("#TableOfContents")).toBeVisible();
+  const referenceMenu = page.getByRole("button", { name: "Reference menu", exact: true });
+  await referenceMenu.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#starlight__sidebar")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#starlight__sidebar")).toBeHidden();
+  await expect(referenceMenu).toBeFocused();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator("#starlight__sidebar")).toBeVisible();
 });
 
-test("search results lead to the manual", async ({ page }) => {
+test("search recovers after a miss and leads to the manual", async ({ page }) => {
   await page.goto("/");
-  await page.locator("#book-search-input").fill("first scene");
-  const result = page.locator("#book-search-results").getByRole("link", {
-    name: "First Scene",
-    exact: true,
-  });
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const input = dialog.getByRole("textbox", { name: "Search", exact: true });
+  const result = dialog.getByRole("link", { name: "First Scene", exact: true }).first();
+  await input.fill("first scene");
+  await expect(result).toBeVisible();
+  await input.fill("qzxvbnmplkjhgfdsa987654");
+  await expect(dialog.locator(".pagefind-ui__result-link")).toHaveCount(0);
+  await input.fill("first scene");
   await expect(result).toBeVisible();
   await result.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/getting-started\/first-scene\/$/);
+  // Full navigation must initialize a fresh controller when returning home.
+  await page.getByRole("link", { name: "Recite home", exact: true }).click();
+  await page.getByRole("button", { name: "Run scene", exact: true }).click();
+  await expect(page.getByRole("list", { name: "Dialogue transcript" })).toContainText(
+    "N-2 is stamped",
+  );
 });
 
 test("manual theme persists and system theme follows the OS", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const theme = page.getByRole("combobox", { name: "Theme", exact: true });
+  const theme = page.getByRole("combobox", { name: "Select theme", exact: true });
   await theme.selectOption("dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();

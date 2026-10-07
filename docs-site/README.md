@@ -3,11 +3,10 @@
 The public site needs an authored landing page, runnable examples, how-tos, a project showcase and
 reference documentation. It should not present every section as a documentation page.
 
-The pre-investigation site on `main` uses Astro/Starlight. This branch introduced Hugo and a pinned
-Hugo Book theme during the REC-206 tooling investigation; that is branch work, not an established
-production deployment. The comparison below recommends returning to Astro/Starlight with the tested
-improvements. The branch's landing runs the Rust compiler/runtime through wasm-bindgen. Node
-supports browser tests and CSS/type checks but is not required for its current Hugo build.
+Astro and Starlight build static HTML, CSS and browser modules. Authored Astro layouts supply the
+landing, how-tos and showcase; Starlight owns the reference shell, search and theme controls. The
+landing runs the Rust compiler/runtime through wasm-bindgen. Mise-managed Node/pnpm support builds
+and checks; hosting needs no Node server or hydrated UI framework. No deployment is configured.
 
 From the repository root:
 
@@ -20,18 +19,29 @@ just web test-browser
 ```
 
 Prefix commands with `mise exec --` when mise is not activated. `setup` installs the pinned tools
-and theme. Browser checks use the versioned Compose image; `just quality setup-browsers` installs
-matching browsers for direct Playwright runs.
+and frozen workspace packages. Browser checks use the versioned Compose image; `just quality
+setup-browsers` installs matching browsers for direct Playwright runs.
 
-Write Markdown in `content/`; `_index.md` defines a section. Preserve existing URLs and fragments.
-The scene fixture is `fixtures/recite/valid/landing-junction.recite`. `just web wasm` generates its
+Write Markdown in `src/content/docs/`; `index.md` defines a section. Preserve existing URLs and
+fragments. How-tos use `template: splash` for the reading layout; reference pages use the native
+sidebar. Page presentation is schema-backed, with public pages opting in through `PublicPage`. The
+scene fixture is `fixtures/recite/valid/landing-junction.recite`. `just web wasm` generates its
 bridge before builds. Keep wasm-bindgen versions aligned in `mise.site.toml` and Cargo dependencies.
 Generated bindings/binaries are ignored. Canonical identity assets come from `assets/identity`.
 
 The playground loads lazily in a worker and keeps source in the browser. Its resource limits and
-recovery behavior are covered by native and browser tests. The browser suite checks every generated
-page in light/dark themes, keyboard scrolling, and actual playground execution. Keep upstream themes
-unmodified and review matching upstream views when updating an overridden template.
+recovery behavior are covered by native and browser tests. The browser suite checks generated pages
+in both themes, keyboard scrolling and playground execution. Keep Starlight unmodified and review
+matching upstream components when updating an override. `just web check` also tests showcase
+metadata: title, summary, HTTPS `projectUrl`, and paired optional `image`/`imageAlt`. Add real
+records under `src/content/showcase/`; the empty state is intentional and investigation fixtures are
+excluded.
+
+Own colors in `src/styles/tokens.css`, using OKLCH exclusively. CSS uses explicit layers, native
+scopes and intrinsic sizing; Stylelint enforces the palette rule. English messages in
+`src/content/i18n/en.json` own custom interface keys. When adding a locale, configure Starlight,
+translate complete messages, and verify navigation, long labels and reading without JavaScript. Set
+`SITE_URL` to the intended public origin when preparing a deployment; local builds use localhost.
 
 ## Generator decision
 
@@ -39,8 +49,8 @@ The 2026-10-07 investigation built 19 alternative configurations across 15 gener
 7.3.5/Starlight 0.42.4 baseline, followed by matched complete-site prototypes. **Recommend Astro
 with Starlight for reference pages and authored layouts for the landing, how-tos and showcase.**
 Zola 0.23.6/DevLab 0.8.0 meets the site structure and remains the strongest native alternative, but
-its pinned highlighter cannot consume the required centralized OKLCH tokens. Consolidating the Astro
-implementation and publishing a site are separate steps; this comparison did neither.
+its pinned highlighter cannot consume the required centralized OKLCH tokens. The chosen Astro
+implementation is now consolidated on this branch; publication remains separate.
 
 Screens tested real content, tables, offline search, hit/miss/hit queries, keyboard activation, WASM
 execution, 390px reflow and sampled axe checks. DevLab, Maudit and Astro also proved native
@@ -115,18 +125,17 @@ dependency through native token support, typed content and component editing; st
 no Node server or hydrated framework. Zola remains useful if those boundaries improve.
 
 Mise owns tool versions. Native esbuild/Zola builds need no Node/Go runtime; mise’s Go backend
-installs esbuild. Pinned djLint’s Tera profile handles Tera 2 templates; generic HTML formatting
-damages typed attributes. Astro uses dprint. CSS passed standard Stylelint rules plus exclusive
-OKLCH literals. Carry these versioned settings into migration checks.
+installs esbuild. Pinned djLint’s Tera profile handled the discarded Tera prototypes; generic HTML
+formatting damaged typed attributes. Maintained Astro components use dprint. CSS uses standard
+Stylelint rules plus exclusive OKLCH literals in the repository's versioned quality gates.
 
-Before landing the consolidated Astro implementation, preserve routes, fragments, landing
-presentation, identity assets and playground limits. Pass the existing Chromium/Firefox/WebKit suite
-across all pages and both themes, including lifecycle recovery, keyboard table scrolling and
-JavaScript-disabled reading. Exclude internal showcase/standards fixtures from publication. Use
-pinned mise tools and versioned format/lint configuration. Verify translated navigation/messages
-when adding another locale. Do not fork navigation/search to make the choice work. Keep page
-presentation schema-backed rather than inferred from URL exclusions; map the supplied callout roles
-to the same design tokens.
+Preserve routes, fragments, landing presentation, identity assets and playground limits. Pass the
+Chromium/Firefox/WebKit suite across all pages and both themes, including lifecycle recovery,
+keyboard table scrolling and JavaScript-disabled reading. Exclude internal showcase/standards
+fixtures from publication. Use pinned mise tools and versioned format/lint configuration. Verify
+translated navigation/messages when adding another locale. Do not fork navigation/search to make the
+choice work. Keep page presentation schema-backed rather than inferred from URL exclusions; map the
+supplied callout roles to the same design tokens.
 
 Reevaluate Maudit after safe paths, contextual errors and lossless formatting; docs-gen/RustPress
 after accessibility repairs and demonstrated maintenance; Guidebook after navigation/extension

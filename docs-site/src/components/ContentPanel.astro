@@ -1,0 +1,8 @@
+---
+import Default from "@astrojs/starlight/components/ContentPanel.astro";
+const isContent = Astro.locals.starlightRoute.entry.data.presentation === "article";
+const isGuide = isContent && !Astro.locals.starlightRoute.hasSidebar;
+---
+{isGuide ? <div class="site-content"><div class="reading-panel"><slot /></div></div> : isContent ? (
+   <Default><slot /></Default>
+ ) : <slot />}

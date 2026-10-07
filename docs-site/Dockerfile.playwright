@@ -7,13 +7,14 @@ ENV CI=1 \
     MISE_CACHE_DIR=/tmp/mise-cache \
     MISE_TRUSTED_CONFIG_PATHS=/workspace \
     MISE_AUTO_INSTALL=false \
+    ASTRO_TELEMETRY_DISABLED=1 \
     PATH="/opt/mise/shims:${PATH}"
 
 COPY --from=mise-tool /usr/local/bin/mise /usr/local/bin/mise
 
 WORKDIR /workspace
-COPY .mise.toml mise.site.toml ./
-RUN mise -E site install node pnpm hugo
+COPY .mise.toml ./
+RUN mise install node pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY docs-site/package.json ./docs-site/package.json
 COPY editors/vscode/package.json ./editors/vscode/package.json
@@ -22,12 +23,12 @@ RUN pnpm install --filter @recite/docs-site... --frozen-lockfile
 COPY docs-site/ ./docs-site/
 COPY assets/identity/ ./assets/identity/
 COPY fixtures/recite/valid/landing-junction.recite ./fixtures/recite/valid/landing-junction.recite
-RUN mise -E site exec hugo -- hugo --source docs-site --minify --panicOnWarning --destination dist
+COPY editors/vscode/syntaxes/recite.tmLanguage.json ./editors/vscode/syntaxes/recite.tmLanguage.json
+RUN pnpm -C docs-site build
 
 ARG LOCAL_UID=1000
 ARG LOCAL_GID=1000
-RUN mkdir -p /workspace/docs-site/resources /workspace/docs-site/public \
-    && chown -R "${LOCAL_UID}:${LOCAL_GID}" /workspace/docs-site/resources /workspace/docs-site/public \
+RUN chown -R "${LOCAL_UID}:${LOCAL_GID}" /workspace/docs-site/.astro \
     && chmod -R a+rX /opt/mise
 
 WORKDIR /workspace/docs-site

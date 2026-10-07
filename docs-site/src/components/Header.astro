@@ -1,0 +1,40 @@
+---
+import Search from "@astrojs/starlight/components/Search.astro";
+import ThemeSelect from "@astrojs/starlight/components/ThemeSelect.astro";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import wordmark from "../../../assets/identity/recite-wordmark.svg?url";
+const t = Astro.locals.t;
+const url = (path: string) => getRelativeLocaleUrl(Astro.currentLocale ?? "en", path);
+const links = [
+  { href: url("getting-started"), title: t("navigation.learn") },
+  { href: url("showcase"), title: t("navigation.showcase") },
+  { href: url("reference"), title: t("navigation.reference") },
+];
+---
+<div class="recite-header">
+  <a
+    class="brand"
+    href={url("")}
+    aria-label={t("ui.home")}
+    style={`--wordmark: url("${wordmark}")`}
+  ><span>recite</span></a>
+  <nav class="desktop-nav" aria-label={t("navigation.label")}>
+    {links.map(({ href, title }) => <a href={href}>{title}</a>)}
+  </nav>
+  <Search />
+  <div class="desktop-theme"><ThemeSelect /></div>
+  <button
+    class="menu-toggle"
+    type="button"
+    popovertarget="global-menu"
+    aria-label={t("navigation.menu")}
+  >
+    {t("navigation.menu.label")}
+  </button>
+  <div id="global-menu" popover>
+    <nav aria-label={t("navigation.label")}>
+      {links.map(({ href, title }) => <a href={href}>{title}</a>)}
+    </nav>
+    <ThemeSelect />
+  </div>
+</div>

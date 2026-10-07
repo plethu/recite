@@ -97,12 +97,10 @@ ignore rule or force-add the file to Git. Force-added files are tracked inputs a
 The checker does not pretend to discover an arbitrary ignored Cargo input from a pre-compilation
 filesystem walk.
 
-The pinned `docs-site/themes/hugo-book` dependency is outside the Cargo compiler boundary and is
-excluded, including its gitlink. Other nested repositories and Git submodules are not accepted
-digest inputs. Git may enumerate an untracked nested repository as a directory or a staged submodule
-as a mode-160000 gitlink; either form fails closed with a controlled checker error. Remove the
-nested repository/submodule from the compiler tree or make its source files ordinary repository
-inputs before collecting evidence.
+Nested repositories and Git submodules are not accepted digest inputs. Git may enumerate an
+untracked nested repository as a directory or a staged submodule as a mode-160000 gitlink; either
+form fails closed with a controlled checker error. Remove the nested repository/submodule from the
+compiler tree or make its source files ordinary repository inputs before collecting evidence.
 
 ## Structured commands and watch
 

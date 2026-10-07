@@ -1,10 +1,6 @@
 {
-  "compilerOptions": {
-    "strict": true,
-    "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "types": ["node"]
-  },
-  "include": ["playwright.config.ts", "tests/**/*.ts", "assets/playground/*.ts"]
+  "extends": "astro/tsconfigs/strictest",
+  "compilerOptions": { "types": ["node"] },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist", "node_modules", "src/client/generated"]
 }

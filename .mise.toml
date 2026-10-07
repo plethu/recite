@@ -20,6 +20,7 @@ typos = "1.50.1"
 
 [env]
 RUST_BACKTRACE = "1"
+ASTRO_TELEMETRY_DISABLED = "1"
 
 [settings]
 dotnet.isolated = true

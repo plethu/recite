@@ -1,10 +1,10 @@
 # Engine authoring workflows
 
-The [authoring walkthrough](../docs-site/content/adapters/authoring.md) starts with a small dialogue
-and follows a source error, correction, rebuild, engine import, and new session. Engine setup is
-covered by the [Bevy](../docs-site/content/adapters/bevy.md),
-[Godot](../docs-site/content/adapters/godot.md), and [Unity](../docs-site/content/adapters/unity.md)
-guides.
+The [authoring walkthrough](../docs-site/src/content/docs/adapters/authoring.md) starts with a small
+dialogue and follows a source error, correction, rebuild, engine import, and new session. Engine
+setup is covered by the [Bevy](../docs-site/src/content/docs/adapters/bevy.md),
+[Godot](../docs-site/src/content/docs/adapters/godot.md), and
+[Unity](../docs-site/src/content/docs/adapters/unity.md) guides.
 
 ## Shared behavior
 

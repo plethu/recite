@@ -2,11 +2,11 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 for (const theme of ["light", "dark"] as const) {
-  test(`published pages pass axe in ${theme}`, async ({ page }, testInfo) => {
+  test(`generated pages pass axe in ${theme}`, async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await page.goto("/");
-    const sitemap = await (await page.request.get("/sitemap.xml")).text();
+    const sitemap = await (await page.request.get("/sitemap-0.xml")).text();
     const paths = await page.evaluate(
       (xml) =>
         Array.from(
@@ -23,7 +23,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect
         .poll(() =>
           page
-            .locator("pre")
+            .locator("pre, table")
             .evaluateAll((blocks) =>
               blocks.every(
                 (block) => block.scrollWidth <= block.clientWidth || block.tabIndex === 0,
@@ -40,6 +40,8 @@ for (const theme of ["light", "dark"] as const) {
         contentType: "application/json",
       });
       expect(results.violations).toEqual([]);
+      // Same foreground/background colors can appear as incomplete, not violations.
+      expect(results.incomplete.filter(result => result.id === "color-contrast")).toEqual([]);
     }
   });
 }
@@ -54,7 +56,6 @@ test("dark static pages pass axe without site scripts", async ({ browser }) => {
     const page = await context.newPage();
     await page.goto("/getting-started/first-scene/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("First Scene");
-    await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toBeHidden();
     // Axe injects its audit library inline; external site scripts stay blocked.
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])

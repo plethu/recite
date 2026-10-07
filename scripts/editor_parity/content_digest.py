@@ -81,7 +81,7 @@ def _digest_inputs(ctx: Context) -> list[_DigestInput]:
             ctx.require(False, f"workspace digest input escapes the repository: {relative}")
             continue
         path = ctx.repo_root / relative
-        if _is_repository_metadata(relative) or _is_site_theme(relative):
+        if _is_repository_metadata(relative):
             continue
         if path.is_symlink():
             require_no_symlink_components(ctx, path, "workspace digest input")
@@ -133,7 +133,7 @@ def _git_files(ctx: Context) -> list[tuple[bytes, bool, int | None]]:
                 False,
                 f"workspace digest input has unsupported Git mode {mode:o}: {os.fsdecode(raw_path)}",
             )
-        if mode == 0o160000 and not _is_site_theme(Path(os.fsdecode(raw_path))):
+        if mode == 0o160000:
             ctx.require(
                 False, f"workspace digest input must not be a gitlink: {os.fsdecode(raw_path)}"
             )
@@ -183,12 +183,6 @@ def _ignored(ctx: Context, relative_path: Path) -> bool:
 def _is_repository_metadata(relative_path: Path) -> bool:
     """Exclude only the checkout's known agent metadata symlink paths."""
     return relative_path == Path("CLAUDE.md") or relative_path.parts[:1] == (".claude",)
-
-
-def _is_site_theme(relative_path: Path) -> bool:
-    """The pinned site dependency is outside Cargo's compiler input boundary."""
-    theme = Path("docs-site/themes/hugo-book")
-    return relative_path == theme or theme in relative_path.parents
 
 
 def _target_relative(ctx: Context) -> Path | None:

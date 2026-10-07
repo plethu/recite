@@ -34,10 +34,10 @@ class ScopeTests(unittest.TestCase):
 
     def test_site_and_shared_javascript_do_not_select_native_builds(self):
         self.assertEqual(
-            selected("docs-site/content/_index.md"), {"docs", "site", "maintainability"}
+            selected("docs-site/src/content/docs/index.md"), {"docs", "site", "maintainability"}
         )
         self.assertEqual(
-            selected("docs-site/content/reference/_index.md"),
+            selected("docs-site/src/content/docs/reference/index.md"),
             {"docs", "site", "maintainability"},
         )
         self.assertEqual(selected("docs-site/README.md"), {"docs", "maintainability"})
@@ -74,7 +74,7 @@ class ScopeTests(unittest.TestCase):
         self.assertNotIn("packages", selected("justfile"))
         self.assertNotIn("windows-publisher", selected("justfile"))
         self.assertEqual(
-            selected("docs-site/content/_index.md", "justfile", "apps/writer/justfile"),
+            selected("docs-site/src/content/docs/index.md", "justfile", "apps/writer/justfile"),
             {"docs", "site", "maintainability"},
         )
         self.assertIn("site", selected("crates/recite-runtime/src/lib.rs"))

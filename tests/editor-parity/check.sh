@@ -190,7 +190,8 @@ before = selected_target_digest(context, "recite-lsp")
 # Generated documentation/editor output is ignored and must not invalidate the
 # evidence executable merely because a packaging or docs command touched it.
 ignored_outputs = [
-    repo / "docs-site/resources/cache.json",
+    repo / "docs-site/.astro/types.d.ts",
+    repo / "docs-site/src/client/generated/recite_playground.js",
     repo / "docs-site/dist/index.html",
     repo / "editors/vscode/dist/extension.js",
     repo / "editors/vscode/recite.vsix",
@@ -205,23 +206,6 @@ for output in ignored_outputs:
     output.write_bytes(b"rewritten generated output")
 if ignored_after_creation != selected_target_digest(context, "recite-lsp"):
     raise SystemExit("modifying ignored generated output changed the parity digest")
-
-# The site theme is a pinned dependency outside the compiler input boundary.
-# Other gitlinks/nested repositories are still rejected by the hostile cases.
-theme = repo / "docs-site/themes/hugo-book"
-theme.mkdir(parents=True)
-theme_source = theme / "theme.toml"
-theme_source.write_text('name = "site dependency"\n', encoding="utf-8")
-subprocess.run(["git", "-C", str(repo), "update-index", "--add", "--cacheinfo",
-                "160000," + subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
-                + ",docs-site/themes/hugo-book"], check=True)
-if selected_target_digest(context, "recite-lsp") != ignored_after_creation or context.errors:
-    raise SystemExit("site theme dependency changed or invalidated the compiler digest")
-theme_source.write_text('name = "updated site dependency"\n', encoding="utf-8")
-if selected_target_digest(context, "recite-lsp") != ignored_after_creation:
-    raise SystemExit("site theme source changed the compiler digest")
-subprocess.run(["git", "-C", str(repo), "update-index", "--force-remove", "docs-site/themes/hugo-book"], check=True)
-shutil.rmtree(theme)
 
 # A force-added path is tracked input even when its directory is ignored. This
 # is the explicit escape hatch for compiler-visible generated/source files.

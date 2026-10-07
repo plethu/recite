@@ -12,7 +12,7 @@ dialogue/basic.recite`. Wait for a successful watch rebuild, then let the Godot 
 `dialogue/basic.recitec`. End the current dialogue session and start another to see the accepted
 revision. A failed compile leaves the previous compiled file in place; a rejected import retains the
 last valid imported Resource. The shared
-[authoring walkthrough](https://github.com/plethu/recite/blob/main/docs-site/content/adapters/authoring.md)
+[authoring walkthrough](https://github.com/plethu/recite/blob/main/docs-site/src/content/docs/adapters/authoring.md)
 has a complete diagnostic, correction, and rebuild exercise.
 
 The refresh policy is `reload_for_next_session_only`: reimported compiled assets affect new

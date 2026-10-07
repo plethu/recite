@@ -1,0 +1,6 @@
+---
+const { entry } = Astro.locals.starlightRoute;
+---
+{entry.data.presentation === "article" && (
+  <h1 class="recite-title" id="_top" tabindex="-1">{entry.data.title}</h1>
+)}

@@ -144,7 +144,8 @@ fi
 echo "== corpus =="
 (
   cd "$grammar_dir"
-  tree-sitter test --overview-only
+  # Test the library built above, rather than a shared cache from another checkout.
+  tree-sitter test --lib-path "$scratch/recite-tree-sitter.so" --lang-name recite --overview-only
 )
 
 echo "== highlight query captures =="

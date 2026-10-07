@@ -7,9 +7,8 @@
   "SpacesAfterTabs": false,
   "NoColor": false,
   "Exclude": [
-    "^docs-site/assets/playground/generated/",
+    "^docs-site/src/client/generated/",
     "^docs/archive/",
-    "^docs-site/themes/",
     "^fixtures/",
     "^include/recite\\.h$",
     "^editors/recite-tree-sitter/src/",

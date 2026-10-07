@@ -14,7 +14,7 @@ test("real compiler/runtime load on Run and both branches are playable by keyboa
     const [choice, expected] of [
       ["Restore auxiliary power.", "A contactor closes."],
       ["Unfold the survey plan.", "The paper opens"],
-    ]
+    ] as const
   ) {
     await page.getByRole("button", { name: "Run scene", exact: true }).focus();
     await page.keyboard.press("Enter");

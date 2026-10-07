@@ -5,7 +5,7 @@ exclude = [
     "**/node_modules/**",
     "**/target/**",
     "docs-site/dist/**",
-    "docs-site/themes/**",
+    "docs-site/.astro/**",
 ]
 
 [MD013]

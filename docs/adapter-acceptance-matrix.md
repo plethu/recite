@@ -9,8 +9,8 @@ document, expose, and test before it is treated as production-quality.
 
 The [authoring workflow evidence](engine-authoring-workflows.md) records the current engine
 versions, package checks, refresh behavior, and known limits. The
-[public walkthrough](../docs-site/content/adapters/authoring.md) gives a small project to try in
-each engine.
+[public walkthrough](../docs-site/src/content/docs/adapters/authoring.md) gives a small project to
+try in each engine.
 
 ## Applicability
 

@@ -1,0 +1,8 @@
+---
+import Landing from "../components/Landing.astro";
+import PublicPage from "../components/PublicPage.astro";
+import english from "../content/i18n/en.json";
+---
+<PublicPage title={english["landing.title"]} description={english["landing.lead"]}>
+  <Landing />
+</PublicPage>

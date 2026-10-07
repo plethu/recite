@@ -1,0 +1,6 @@
+---
+import Default from "@astrojs/starlight/components/MarkdownContent.astro";
+---
+{Astro.locals.starlightRoute.entry.data.presentation === "article" ? <Default><slot /></Default> : (
+   <slot />
+ )}

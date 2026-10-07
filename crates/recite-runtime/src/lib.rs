@@ -15,7 +15,7 @@
 //! host-agnostic contract in `docs/engine-adapter-contract.md`.
 //! Game-developer workflow guides live in the [docs site][guides].
 //!
-//! [guides]: https://github.com/plethu/recite/tree/main/docs-site/content
+//! [guides]: https://github.com/plethu/recite/tree/main/docs-site/src/content/docs
 //!
 //! # Example: Start A Session And Handle Events
 //!

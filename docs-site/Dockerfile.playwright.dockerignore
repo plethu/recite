@@ -3,12 +3,13 @@
 !pnpm-lock.yaml
 !pnpm-workspace.yaml
 !.mise.toml
-!mise.site.toml
 !docs-site/
 !docs-site/**
 !editors/
 !editors/vscode/
 !editors/vscode/package.json
+!editors/vscode/syntaxes/
+!editors/vscode/syntaxes/recite.tmLanguage.json
 !assets/
 !assets/identity/
 !assets/identity/**
@@ -18,9 +19,7 @@
 !fixtures/recite/valid/landing-junction.recite
 docs-site/node_modules/
 docs-site/dist/
-docs-site/public/
-docs-site/resources/
-docs-site/.hugo_build.lock
+docs-site/.astro/
 docs-site/playwright-report/
 docs-site/test-results/
 docs-site/.browser-artifacts/

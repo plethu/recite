@@ -1,0 +1,85 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Playground from "./Playground.astro";
+const t = Astro.locals.t;
+const url = (path: string) => getRelativeLocaleUrl(Astro.currentLocale ?? "en", path);
+---
+<div class="recite-landing site-content">
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Recite · Dialogue for games</p>
+      <h1 id="_top" tabindex="-1">{t("landing.title")}</h1>
+      <p class="lead">{t("landing.lead")}</p>
+      <p class="actions">
+        <a class="primary" href="#scene-heading">{t("playground.run")}</a>
+        <a href={url("getting-started/first-scene")}>{t("landing.action.firstScene")}</a>
+        <a href={url("reference/source-format")}>{t("landing.action.sourceFormat")}</a>
+      </p>
+      <p class="release">{t("landing.release")}</p>
+      <p class="release-links">
+        <a href={url("getting-started/install")}>{t("landing.release.install")}</a>
+        <a href={url("guides/distribution")}>{t("landing.release.packages")}</a>
+      </p>
+    </div>
+    <figure class="scene-leaf">
+      <figcaption>Junction · One source file</figcaption>
+      <pre>:: junction default
+
+&gt; again@cbd81a23d91fceb42a21 speaker=Technician
+  Again.
+
+? plan@cbd81a23d91fceb42a24
+  Unfold the survey plan.
+  -&gt; plan</pre>
+    </figure>
+  </div>
+  <section aria-labelledby="scene-heading">
+    <p class="eyebrow">{t("landing.scene.kicker")}</p>
+    <h2 id="scene-heading">{t("landing.scene.title")}</h2>
+    <Playground />
+  </section>
+  <section aria-labelledby="paths-heading">
+    <p class="eyebrow">{t("landing.path.kicker")}</p>
+    <h2 id="paths-heading">{t("landing.path.title")}</h2>
+    <div class="workflow">
+      <div>
+        <h3>{t("landing.write.title")}</h3>
+        <p>{t("landing.write.body")}</p><a
+          href={url("guides/authoring-loop")}
+        >{t("landing.write.link")}</a>
+      </div>
+      <div>
+        <h3>{t("landing.check.title")}</h3>
+        <p>{t("landing.check.body")}</p><a
+          href={url("guides/testing-dialogue")}
+        >{t("landing.check.link")}</a>
+      </div>
+      <div>
+        <h3>{t("landing.integrate.title")}</h3>
+        <p>{t("landing.integrate.body")}</p><a
+          href={url("adapters")}
+        >{t("landing.integrate.link")}</a>
+      </div>
+    </div>
+  </section>
+  <section class="copy" aria-labelledby="localisation-heading">
+    <h2 id="localisation-heading">{t("landing.localisation.title")}</h2>
+    <p>{t("landing.localisation.body1")}</p>
+    <p>{t("landing.localisation.body2")}</p>
+    <a href={url("guides/localisation")}>{t("landing.localisation.link")}</a>
+  </section>
+  <section class="copy" aria-labelledby="fit-heading">
+    <h2 id="fit-heading">{t("landing.fit.title")}</h2>
+    <p>{t("landing.fit.body1")}</p>
+    <p>{t("landing.fit.body2")}</p>
+    <p>{t("landing.fit.body3")}</p>
+    <a href={url("guides/alternatives")}>{t("landing.fit.link")}</a>
+  </section>
+  <nav class="site-links" aria-label={t("landing.navigation.label")}>
+    <a href={url("getting-started")}>{t("landing.navigation.manual")}</a>
+    <a href={url("reference")}>{t("landing.navigation.reference")}</a>
+    <a href={url("migration")}>{t("landing.navigation.migration")}</a>
+    <a href={url("guides/distribution")}>{t("landing.navigation.packages")}</a>
+    <a href="https://github.com/plethu/recite">{t("landing.navigation.source")}</a>
+  </nav>
+</div>

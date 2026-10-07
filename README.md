@@ -83,9 +83,9 @@ cargo install --path crates/recite-cli
 cargo install --path crates/recite-lsp
 ```
 
-Start with the [first-scene guide](docs-site/content/getting-started/first-scene.md). The
-[install guide](docs-site/content/getting-started/install.md) also covers installing directly from
-Git.
+Start with the [first-scene guide](docs-site/src/content/docs/getting-started/first-scene.md). The
+[install guide](docs-site/src/content/docs/getting-started/install.md) also covers installing
+directly from Git.
 
 The [Nix flake](nix/README.md) provides the CLI and Writer packages. The
 [Writer packaging guide](apps/writer/packaging.md) covers Flatpak and native desktop previews.

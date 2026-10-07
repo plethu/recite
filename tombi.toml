@@ -7,7 +7,6 @@ exclude = [
     "**/target/**",
     "**/node_modules/**",
     "**/docs/archive/**",
-    "**/docs-site/themes/**",
     "**/fixtures/synthetic/tiny/**",
     "**/fixtures/realistic/v1-pack/**"
 ]

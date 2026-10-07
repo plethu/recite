@@ -20,7 +20,7 @@
 //! site; this Rustdoc is the library API reference and intentionally does not
 //! duplicate the full guide material.
 //!
-//! [guides]: https://github.com/plethu/recite/tree/main/docs-site/content
+//! [guides]: https://github.com/plethu/recite/tree/main/docs-site/src/content/docs
 //!
 //! # Example: Load A Schema Manifest
 //!

@@ -15,8 +15,7 @@
     "docs-site/dist/**",
     "docs-site/.astro/**",
     "docs-site/.browser-artifacts/**",
-    "docs-site/themes/**",
-    "docs-site/assets/playground/generated/**",
+    "docs-site/src/client/generated/**",
     "**/__pycache__/**",
     ".venv/**",
     "docs/archive/**",
@@ -37,18 +36,13 @@
   "typescript": { "quoteStyle": "alwaysDouble", "semiColons": "always" },
   "json": { "trailingCommas": "never" },
   "markdown": { "textWrap": "always", "emphasisKind": "asterisks", "strongKind": "asterisks" },
-  "markup": { "associations": ["**/*.{svg,xml}"] },
+  "markup": { "associations": ["**/*.{html,svg,xml}"] },
   "yaml": { "associations": ["**/gdlintrc", "**/.clang-format"] },
   "exec": {
-    "associations": ["**/*.{html,py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}"],
+    "associations": ["**/*.{py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}"],
     "cwd": "${configDir}",
     "cacheKey": "1",
     "commands": [
-      {
-        "command": "djlint --reformat --stdin-filename {{file_path}} -",
-        "exts": ["html"],
-        "cacheKeyFiles": ["pyproject.toml", "mise.quality.toml"]
-      },
       {
         "command": "ruff format --stdin-filename {{file_path}} -",
         "exts": ["py"],

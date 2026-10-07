@@ -35,7 +35,7 @@ example paths on later runs.
 
 For the packaged example, copy the archive's `addons/recite` into `examples/basic-dialogue`, compile
 its source as shown in that project's README, and open the project in Godot. The
-[authoring walkthrough](https://github.com/plethu/recite/blob/main/docs-site/content/adapters/authoring.md)
+[authoring walkthrough](https://github.com/plethu/recite/blob/main/docs-site/src/content/docs/adapters/authoring.md)
 shows the source edit, diagnostics, watcher, import, and next-session sequence.
 
 For schema authoring, create and save a `ReciteSchemaDeclarations` Resource. Give `producer_id` a

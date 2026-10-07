@@ -1,0 +1,35 @@
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+
+    --color-paper: light-dark(oklch(98% 0.008 80deg), oklch(24% 0.016 310deg));
+    --color-ink: light-dark(oklch(25% 0.018 310deg), oklch(94% 0.014 75deg));
+    --color-muted: light-dark(oklch(46% 0.02 310deg), oklch(79% 0.025 310deg));
+    --color-plum: light-dark(oklch(42% 0.078 332deg), oklch(82% 0.064 332deg));
+    --color-on-plum: light-dark(oklch(98% 0.008 80deg), oklch(24% 0.016 310deg));
+    --color-rule: light-dark(oklch(71% 0.026 310deg), oklch(55% 0.022 310deg));
+    --color-surface: light-dark(oklch(94% 0.013 80deg), oklch(29% 0.018 310deg));
+    --color-danger: light-dark(oklch(43% 0.15 25deg), oklch(82% 0.11 25deg));
+    --color-success: light-dark(oklch(40% 0.09 150deg), oklch(81% 0.08 150deg));
+    --color-warning: light-dark(oklch(43% 0.1 75deg), oklch(83% 0.09 75deg));
+    --color-shadow: oklch(0% 0 0deg / 14%);
+    --font-reading: system-ui, sans-serif;
+    --font-code: ui-monospace, "Cascadia Code", monospace;
+    --measure-reading: min(70ch, 44rem);
+    --measure-lead: min(52ch, 36rem);
+    --measure-site: min(100%, 76rem);
+    --space-step: clamp(1.5rem, 4vw, 4rem);
+    --space-section: clamp(3rem, 6vw, 6rem);
+    --target-min: 2.75rem;
+    --radius-control: 0.25rem;
+    --focus-ring: 2px solid var(--color-plum);
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+}

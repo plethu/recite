@@ -3,11 +3,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc6 --noEmit && pnpm run lint:css",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1",
+    "check": "astro sync && astro check --minimumFailingSeverity warning && pnpm run lint:css",
     "test:browser": "playwright test",
-    "lint:css": "stylelint \"assets/**/*.css\" --max-warnings 0"
+    "test:content": "node --test tests/content.test.ts",
+    "lint:css": "stylelint \"src/**/*.css\" --max-warnings 0"
+  },
+  "dependencies": {
+    "@astrojs/markdown-satteri": "0.4.2",
+    "@astrojs/starlight": "0.42.4",
+    "astro": "7.3.5",
+    "satteri": "0.10.5"
   },
   "devDependencies": {
+    "@astrojs/check": "0.9.10",
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
     "@types/node": "24.19.1",
@@ -15,5 +26,5 @@
     "stylelint-config-standard": "40.0.0",
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
-  "engines": { "node": ">=24 <25" }
+  "engines": { "node": ">=24" }
 }
