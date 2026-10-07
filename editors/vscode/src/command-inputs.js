@@ -17,16 +17,18 @@ export function savedSourceSnapshot(userInterface) {
     path: document.uri.fsPath,
     uri: document.uri.toString?.() ?? document.uri.fsPath,
     version: document.version,
-    document
+    document,
   };
 }
 
 export function assertSavedSource(userInterface, snapshot) {
   const document = snapshot.document;
-  if (!document || document.isUntitled || document.isDirty || document.version !== snapshot.version ||
-      document.uri?.scheme !== "file" || document.uri.toString?.() !== snapshot.uri ||
-      document.uri.fsPath !== snapshot.path ||
-      !userInterface.documentIsOpen(document)) {
+  if (
+    !document || document.isUntitled || document.isDirty || document.version !== snapshot.version
+    || document.uri?.scheme !== "file" || document.uri.toString?.() !== snapshot.uri
+    || document.uri.fsPath !== snapshot.path
+    || !userInterface.documentIsOpen(document)
+  ) {
     throw userInterface.commandDocumentChanged();
   }
   return { ...snapshot, document };
@@ -40,7 +42,11 @@ export async function requiredSavePath(provided, userInterface, defaultUri) {
 }
 
 export async function optionalSavePath(provided, userInterface, defaultUri) {
-  if (provided !== undefined) return provided === null ? null : commandPath(provided, userInterface);
+  if (provided !== undefined) {
+    return provided === null
+      ? null
+      : commandPath(provided, userInterface);
+  }
   const selected = await userInterface.chooseExtractOutputPath(defaultUri);
   return selected ? commandPath(selected, userInterface) : undefined;
 }

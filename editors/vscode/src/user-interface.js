@@ -4,7 +4,7 @@ import { clientMessage } from "./messages.js";
 // Callers receive semantic operations, never the channel or a generic writer.
 export function createUserInterface(api) {
   const output = api.window.createOutputChannel(
-    clientMessage(api, "lsp-client-display-name")
+    clientMessage(api, "lsp-client-display-name"),
   );
   return Object.freeze({
     serverTransportFailure(detail) {
@@ -91,7 +91,9 @@ export function createUserInterface(api) {
     },
     renameRequestFailed(detail) {
       output.appendLine(clientMessage(api, "vscode-command-rename-request-failed", detail));
-      api.window.showErrorMessage(clientMessage(api, "vscode-command-rename-request-failed", detail));
+      api.window.showErrorMessage(
+        clientMessage(api, "vscode-command-rename-request-failed", detail),
+      );
     },
     serverStderr(message) {
       output.append(message);
@@ -151,13 +153,13 @@ export function createUserInterface(api) {
     chooseCompileOutputPath(defaultUri) {
       return api.window.showSaveDialog({
         defaultUri,
-        title: clientMessage(api, "vscode-command-compile-output-title")
+        title: clientMessage(api, "vscode-command-compile-output-title"),
       });
     },
     chooseExtractOutputPath(defaultUri) {
       return api.window.showSaveDialog({
         defaultUri,
-        title: clientMessage(api, "vscode-command-extract-output-title")
+        title: clientMessage(api, "vscode-command-extract-output-title"),
       });
     },
     chooseAssetPath() {
@@ -166,21 +168,21 @@ export function createUserInterface(api) {
         filters: { [clientMessage(api, "vscode-command-asset-filter")]: ["recitec"] },
         canSelectFiles: true,
         canSelectFolders: false,
-        canSelectMany: false
+        canSelectMany: false,
       });
     },
     chooseBlock() {
       return api.window.showInputBox({
         title: clientMessage(api, "vscode-command-block-title"),
         prompt: clientMessage(api, "vscode-command-block-prompt"),
-        placeHolder: clientMessage(api, "vscode-command-block-placeholder")
+        placeHolder: clientMessage(api, "vscode-command-block-placeholder"),
       });
     },
     chooseRenameName(placeholder) {
       return api.window.showInputBox({
         title: clientMessage(api, "vscode-command-rename-title"),
         prompt: clientMessage(api, "vscode-command-rename-prompt"),
-        placeHolder: placeholder || clientMessage(api, "vscode-command-rename-placeholder")
+        placeHolder: placeholder || clientMessage(api, "vscode-command-rename-placeholder"),
       });
     },
     chooseFixturePath() {
@@ -189,7 +191,7 @@ export function createUserInterface(api) {
         filters: { [clientMessage(api, "vscode-command-fixture-filter")]: ["toml"] },
         canSelectFiles: true,
         canSelectFolders: false,
-        canSelectMany: false
+        canSelectMany: false,
       });
     },
     commandWatchRunning() {
@@ -223,6 +225,6 @@ export function createUserInterface(api) {
     },
     dispose() {
       output.dispose();
-    }
+    },
   });
 }

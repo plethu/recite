@@ -1,0 +1,33 @@
+{
+  "Version": "v4.0.2",
+  "Verbose": false,
+  "Format": "",
+  "Debug": false,
+  "IgnoreDefaults": false,
+  "SpacesAfterTabs": false,
+  "NoColor": false,
+  "Exclude": [
+    "^docs/archive/",
+    "^docs-site/themes/",
+    "^fixtures/",
+    "^include/recite\\.h$",
+    "^editors/recite-tree-sitter/src/",
+    "^editors/vscode/src/.*\\.generated\\.js$",
+    "^editors/vscode/package\\.nls\\.json$",
+    "^editors/recite-neovim/lua/recite_(messages|diagnostics)\\.lua$",
+    "\\.(snap|patch|lock|unity|tscn|meta|recite|recitec|po|png|ico|icns|gz)$",
+    "^editors/recite-tree-sitter/test/corpus/directive-boundaries\\.txt$",
+    "^apps/writer/packaging/flatpak/(cargo-sources\\.json|last_commit_position\\.h)$"
+  ],
+  "AllowedContentTypes": [],
+  "PassedFiles": [],
+  "Disable": {
+    "Charset": false,
+    "EndOfLine": false,
+    "Indentation": true,
+    "InsertFinalNewline": false,
+    "TrimTrailingWhitespace": false,
+    "IndentSize": false,
+    "MaxLineLength": false
+  }
+}

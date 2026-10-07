@@ -1,19 +1,21 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import test from "node:test";
 import { CommandRegistry } from "../src/commands.js";
 
 const cliBinary = process.env.RECITE_CLI_BIN;
 
 test("a real recite CLI watch starts, reports a build, and cooperatively stops", {
   skip: process.platform !== "linux" || cliBinary === undefined,
-  timeout: 15_000
+  timeout: 15_000,
 }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-watch-"));
   await mkdir(path.join(root, "dialogue"));
-  await writeFile(path.join(root, "recite.project.toml"), `format_version = 1
+  await writeFile(
+    path.join(root, "recite.project.toml"),
+    `format_version = 1
 
 [discovery]
 source_roots = ["dialogue"]
@@ -23,28 +25,37 @@ id = "scene.start"
 asset = "compiled/dialogue.recitec"
 block = "start"
 participants = ["hazel"]
-`);
-  await writeFile(path.join(root, "dialogue", "main.recite"),
-    ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n");
+`,
+  );
+  await writeFile(
+    path.join(root, "dialogue", "main.recite"),
+    ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+  );
 
   const messages = [];
   const api = hostApi(root, messages);
   const registry = new CommandRegistry(api, userInterface(messages), {
     makeInvocationId: () => "real-watch-id",
-    watchStopTimeoutMs: 5_000
+    watchStopTimeoutMs: 5_000,
   });
   registry.register([]);
   try {
     const started = await api.commands.executeCommand("recite.watch.start");
     assert.deepEqual(started, { invocationId: "real-watch-id" });
-    await waitFor(() => messages.some(([kind, value]) => kind === "watch" &&
-      JSON.parse(value).status === "succeeded"));
+    await waitFor(() =>
+      messages.some(([kind, value]) =>
+        kind === "watch"
+        && JSON.parse(value).status === "succeeded"
+      )
+    );
 
     const stopped = await api.commands.executeCommand("recite.watch.stop");
     assert.deepEqual(stopped, { stopped: true, exitCode: 0 });
     assert.equal(registry.watch.active, undefined);
-    assert.ok(messages.some(([kind, value]) => kind === "watch" &&
-      JSON.parse(value).reason?.type === "cancelled"));
+    assert.ok(messages.some(([kind, value]) =>
+      kind === "watch"
+      && JSON.parse(value).reason?.type === "cancelled"
+    ));
   } finally {
     await registry.dispose();
     await rm(root, { recursive: true, force: true });
@@ -59,7 +70,7 @@ async function waitFor(predicate) {
   }
 }
 
-function hostApi(root, messages) {
+function hostApi(root, _messages) {
   const commands = new Map();
   const entries = new Map();
   return {
@@ -67,36 +78,57 @@ function hostApi(root, messages) {
       isTrusted: true,
       workspaceFolders: [{ uri: { fsPath: root } }],
       textDocuments: [],
-      getConfiguration: () => ({ get: (key, fallback) => ({
-        "cli.path": cliBinary, "lsp.projectRoot": ""
-      }[key] ?? fallback) })
+      getConfiguration: () => ({
+        get: (key, fallback) => ({
+          "cli.path": cliBinary,
+          "lsp.projectRoot": "",
+        }[key] ?? fallback),
+      }),
     },
     window: {},
-    languages: { createDiagnosticCollection: () => ({
-      set: (batch) => {
-        entries.clear();
-        for (const [uri, values] of batch) entries.set(uri.toString(), values);
-      },
-      clear: () => entries.clear(), dispose() {}
-    }) },
+    languages: {
+      createDiagnosticCollection: () => ({
+        set: (batch) => {
+          entries.clear();
+          for (const [uri, values] of batch) entries.set(uri.toString(), values);
+        },
+        clear: () => entries.clear(),
+        dispose() {},
+      }),
+    },
     commands: {
       registerCommand: (id, callback) => {
         commands.set(id, callback);
         return { dispose: () => commands.delete(id) };
       },
-      executeCommand: (id, ...args) => commands.get(id)?.(...args)
+      executeCommand: (id, ...args) => commands.get(id)?.(...args),
     },
     Uri: { file: (fsPath) => ({ fsPath, toString: () => `file://${fsPath}` }) },
-    Position: class Position { constructor(line, character) { this.line = line; this.character = character; } },
-    Range: class Range { constructor(start, end) { this.start = start; this.end = end; } },
-    Diagnostic: class Diagnostic { constructor(range, message, severity) { Object.assign(this, { range, message, severity }); } },
-    DiagnosticSeverity: { Error: "error", Warning: "warning", Information: "info", Hint: "hint" }
+    Position: class Position {
+      constructor(line, character) {
+        this.line = line;
+        this.character = character;
+      }
+    },
+    Range: class Range {
+      constructor(start, end) {
+        this.start = start;
+        this.end = end;
+      }
+    },
+    Diagnostic: class Diagnostic {
+      constructor(range, message, severity) {
+        Object.assign(this, { range, message, severity });
+      }
+    },
+    DiagnosticSeverity: { Error: "error", Warning: "warning", Information: "info", Hint: "hint" },
   };
 }
 
 function userInterface(messages) {
   return {
-    activeDocument: () => undefined, documentIsOpen: () => true,
+    activeDocument: () => undefined,
+    documentIsOpen: () => true,
     commandNotTrusted() {},
     commandDocumentRequired: () => new Error("document"),
     commandDocumentUnsaved: () => new Error("unsaved"),
@@ -113,6 +145,6 @@ function userInterface(messages) {
     commandContentDiagnostics: (value) => messages.push(["diagnostics", value]),
     commandFailure: (value) => messages.push(["failure", value]),
     commandProtocolFailure: (value) => messages.push(["protocol", value]),
-    commandWatchStatus: (value) => messages.push(["watch", value])
+    commandWatchStatus: (value) => messages.push(["watch", value]),
   };
 }

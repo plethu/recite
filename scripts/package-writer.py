@@ -5,7 +5,6 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import shutil
@@ -13,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "apps/writer/packaging"
@@ -79,9 +78,7 @@ def load_config(target, target_dir, output_dir):
         resource["src"] = str(ROOT / resource["src"])
     config["icons"] = [str(ROOT / icon) for icon in config["icons"]]
     if "deb" in config:
-        config["deb"]["desktopTemplate"] = str(
-            ROOT / config["deb"]["desktopTemplate"]
-        )
+        config["deb"]["desktopTemplate"] = str(ROOT / config["deb"]["desktopTemplate"])
     config["binariesDir"] = str(target_dir / "release")
     config["outDir"] = str(output_dir)
     return config
@@ -103,7 +100,9 @@ def main():
     parser.add_argument("--platform", choices=("linux", "macos", "windows"))
     parser.add_argument("--target-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)
-    parser.add_argument("--binary", type=Path, help="stage an existing native binary for a local package smoke")
+    parser.add_argument(
+        "--binary", type=Path, help="stage an existing native binary for a local package smoke"
+    )
     parser.add_argument("--check-config", action="store_true")
     args = parser.parse_args()
     target = args.platform or host_platform()
@@ -138,14 +137,25 @@ def main():
     else:
         subprocess.run(
             [
-                "cargo", "build", "--locked", "--release", "--manifest-path",
-                str(ROOT / "apps/writer/Cargo.toml"), "-p", "recite-writer",
-                "--target-dir", str(target_dir),
+                "cargo",
+                "build",
+                "--locked",
+                "--release",
+                "--manifest-path",
+                str(ROOT / "apps/writer/Cargo.toml"),
+                "-p",
+                "recite-writer",
+                "--target-dir",
+                str(target_dir),
             ],
             cwd=ROOT,
             check=True,
         )
-        binary = target_dir / "release" / ("recite-writer.exe" if target == "windows" else "recite-writer")
+        binary = (
+            target_dir
+            / "release"
+            / ("recite-writer.exe" if target == "windows" else "recite-writer")
+        )
     if not binary.is_file():
         parser.error(f"missing built writer: {binary}")
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-
 COMMAND = "cargo test --locked -p recite-lsp --test module_shapes inline::nested::nested_test"
 TARGET_KEY = ("recite-lsp", "module_shapes")
 
@@ -42,9 +41,10 @@ def assert_single_error(context, expected: str) -> None:
 
 def probe_compilation_failure(repo: Path, cargo_evidence, evidence, Context) -> None:
     context = Context(repo, [], repo / "target")
-    with patch.object(cargo_evidence, "selected_target_digest", return_value="digest"), patch.object(
-        cargo_evidence.subprocess, "run", side_effect=compiler_failure
-    ) as run:
+    with (
+        patch.object(cargo_evidence, "selected_target_digest", return_value="digest"),
+        patch.object(cargo_evidence.subprocess, "run", side_effect=compiler_failure) as run,
+    ):
         evidence.validate_command(context, "editor.parity.diagnostics", COMMAND)
     if run.call_count != 1:
         raise SystemExit(f"compilation failure spawned {run.call_count} subprocesses")
@@ -53,7 +53,10 @@ def probe_compilation_failure(repo: Path, cargo_evidence, evidence, Context) -> 
     diagnostic = context.errors[0]
     if "cargo test-target compilation failed for recite-lsp/module_shapes" not in diagnostic:
         raise SystemExit(f"compiler failure was not surfaced: {diagnostic!r}")
-    if "editor parity compiler diagnostic fixture" not in diagnostic or "... [truncated]" not in diagnostic:
+    if (
+        "editor parity compiler diagnostic fixture" not in diagnostic
+        or "... [truncated]" not in diagnostic
+    ):
         raise SystemExit(f"compiler failure detail was not bounded: {diagnostic!r}")
 
 
@@ -64,7 +67,9 @@ def probe_harness_timeout(repo: Path, cargo_evidence, evidence, Context) -> None
         evidence.validate_command(context, "editor.parity.diagnostics", COMMAND)
     if run.call_count != 1:
         raise SystemExit(f"harness timeout spawned {run.call_count} subprocesses")
-    assert_single_error(context, "test harness discovery timed out after 120s for recite-lsp/module_shapes")
+    assert_single_error(
+        context, "test harness discovery timed out after 120s for recite-lsp/module_shapes"
+    )
 
 
 def probe_empty_discovery(repo: Path, cargo_evidence, evidence, Context) -> None:
@@ -88,18 +93,28 @@ def probe_exact_selection_states(repo: Path, cargo_evidence, evidence, Context) 
     context.cargo_test_executable_cache[TARGET_KEY] = repo / "missing-test"
     empty = subprocess.CompletedProcess(["missing-test", "--list"], 0, stdout="", stderr="")
     with patch.object(cargo_evidence.subprocess, "run", return_value=empty) as run:
-        selection = cargo_evidence.exact_test_selection(context, *TARGET_KEY, "inline::nested::nested_test")
+        selection = cargo_evidence.exact_test_selection(
+            context, *TARGET_KEY, "inline::nested::nested_test"
+        )
     if selection != set() or run.call_count != 1:
         raise SystemExit(f"successful empty exact selection was not preserved: {selection!r}")
 
     context = Context(repo, [], repo / "target")
     context.cargo_test_executable_cache[TARGET_KEY] = repo / "missing-test"
     with patch.object(cargo_evidence.subprocess, "run", side_effect=timeout) as run:
-        selection = cargo_evidence.exact_test_selection(context, *TARGET_KEY, "inline::nested::nested_test")
-        cached_selection = cargo_evidence.exact_test_selection(context, *TARGET_KEY, "inline::nested::nested_test")
+        selection = cargo_evidence.exact_test_selection(
+            context, *TARGET_KEY, "inline::nested::nested_test"
+        )
+        cached_selection = cargo_evidence.exact_test_selection(
+            context, *TARGET_KEY, "inline::nested::nested_test"
+        )
     if selection is not None or cached_selection is not None or run.call_count != 1:
-        raise SystemExit(f"failed exact selection was not cached explicitly: {selection!r}, {cached_selection!r}")
-    assert_single_error(context, "test harness discovery timed out after 120s for recite-lsp/module_shapes")
+        raise SystemExit(
+            f"failed exact selection was not cached explicitly: {selection!r}, {cached_selection!r}"
+        )
+    assert_single_error(
+        context, "test harness discovery timed out after 120s for recite-lsp/module_shapes"
+    )
 
 
 def main() -> int:

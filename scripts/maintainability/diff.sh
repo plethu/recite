@@ -10,7 +10,7 @@ maintainability_collect_paths() {
   local -n output_base_paths="$6"
   local -n output_renamed_paths="$7"
 
-  if (( empty_base )); then
+  if ((empty_base)); then
     diff_command=(git -C "$repo_root" diff --name-status -z -M --diff-filter=ACMR "$base_sha" "$head_sha" --)
     diff_range="$base_sha $head_sha"
   else
@@ -21,7 +21,7 @@ maintainability_collect_paths() {
 
   while IFS= read -r -d '' status; do
     case "$status" in
-      R*|C*)
+      R* | C*)
         if ! IFS= read -r -d '' base_path || ! IFS= read -r -d '' path; then
           echo "malformed changed-path record from git diff: $status" >&2
           return 2

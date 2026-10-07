@@ -5,7 +5,7 @@ on:
     inputs:
       server_control_ref:
         type: string
-        default: ''
+        default: ""
       native_trace:
         type: boolean
         default: false
@@ -14,7 +14,7 @@ on:
       server_control_ref:
         description: Optional historical server revision for alternating binary comparisons
         type: string
-        default: ''
+        default: ""
       native_trace:
         description: Compare native tracing enabled and disabled
         type: boolean
@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 45
     env:
       # Install only this lane's Rust, editor and locked Python tooling.
-      MISE_AUTO_INSTALL: 'false'
+      MISE_AUTO_INSTALL: "false"
       MISE_ENV: lsp
     defaults:
       run:
@@ -51,10 +51,7 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: rust node pnpm uv
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with:
-          python-version: '3.12'
+          install_args: rust node pnpm python uv
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Check out optional control
         if: inputs.server_control_ref != ''
@@ -72,7 +69,7 @@ jobs:
         run: cargo test --locked --release -p recite-lsp --test stdio_incremental_sync --test stdio_trace
       - name: Prepare session and editor dependencies
         run: |
-          uv sync --locked
+          uv sync --locked --python "$(mise which python)" --no-python-downloads
           pnpm install --frozen-lockfile
           pnpm --filter recite-vscode run build
       - name: Install Linux display dependencies

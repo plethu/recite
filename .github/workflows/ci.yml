@@ -21,7 +21,7 @@ on:
       lsp_server_control_ref:
         description: Optional historical server revision for alternating binary comparisons
         type: string
-        default: ''
+        default: ""
       lsp_native_trace:
         description: Compare native tracing enabled and disabled on each session runner
         type: boolean
@@ -56,6 +56,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Install pinned CI routing runtime
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: python
       - id: scope
         name: Inspect complete changed-file list
         run: python3 scripts/ci-scope.py
@@ -83,7 +87,7 @@ jobs:
       - name: Install lightweight checkers
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: typos aqua:rhysd/actionlint
+          install_args: python typos aqua:rhysd/actionlint
 
       - name: Check spelling
         run: typos
@@ -190,7 +194,7 @@ jobs:
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: node pnpm just
+          install_args: node pnpm python just
 
       - name: Verify documentation
         run: just web verify
@@ -241,7 +245,7 @@ jobs:
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: rust node pnpm aqua:BurntSushi/ripgrep
+          install_args: rust node pnpm python aqua:BurntSushi/ripgrep
 
       - name: Cache Rust dependencies and build output
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -275,7 +279,7 @@ jobs:
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: rust
+          install_args: rust python uv just
 
       - name: Cache Rust dependencies and build output
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -313,7 +317,7 @@ jobs:
     env:
       # Lanes running structural policy checks use this scoped environment,
       # which installs ast-grep.
-      MISE_ENV: maintainability
+      MISE_ENV: maintainability,quality
       RECITE_BASE_REF: >-
         ${{ github.event_name == 'pull_request' &&
             format('origin/{0}', github.base_ref) || github.event.before }}
@@ -344,13 +348,17 @@ jobs:
 
       - name: Run maintainability checks
         run: |
+          scripts/install-js-dependencies.sh
+          just quality setup
           tests/maintainability/check.sh
+          tests/maintainability/format-replay.sh
           tests/ast-grep/check.sh
           tests/lint-suppressions/check.sh
           just maintainability
           just perf setup
           just perf check
           just fmt-check
+          just quality lint
           just unused-deps
           just supply-chain
 

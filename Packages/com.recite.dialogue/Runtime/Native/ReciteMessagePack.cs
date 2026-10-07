@@ -88,12 +88,12 @@ namespace Recite.Unity.Native
                 case "line":
                     return new ReciteLineOutput(ReadLine(map));
                 case "prompt":
-                {
-                    var line = RequiredNullableMap(map, "line");
-                    return new RecitePromptOutput(
-                        line == null ? null : ReadLine(line),
-                        ReadList(map, "choices", ReadChoice));
-                }
+                    {
+                        var line = RequiredNullableMap(map, "line");
+                        return new RecitePromptOutput(
+                            line == null ? null : ReadLine(line),
+                            ReadList(map, "choices", ReadChoice));
+                    }
                 case "effect":
                     return new ReciteEffectOutput(ReadEffect(map));
                 case "end":

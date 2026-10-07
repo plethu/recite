@@ -21,7 +21,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   exit 0
 fi
 
-if (( $# > 1 )); then
+if (($# > 1)); then
   usage >&2
   exit 2
 fi
@@ -134,7 +134,7 @@ awk '
     if (count > 0 && lines[count] == "") count--
     for (i = 1; i <= count; i++) print lines[i]
   }
-' "$canonical_corpus" > "$canonical_source"
+' "$canonical_corpus" >"$canonical_source"
 if ! cmp -s "$canonical_fixture" "$canonical_source"; then
   echo "canonical Tree-sitter corpus source diverges from shared Recite fixture:" >&2
   diff -u "$canonical_fixture" "$canonical_source" >&2 || true
@@ -152,7 +152,7 @@ echo "== highlight query captures =="
   cd "$grammar_dir"
   tree-sitter query --grammar-path . --captures queries/highlights.scm \
     test/fixtures/capture-values.recite
-) > "$query_output"
+) >"$query_output"
 
 required_captures=(
   keyword
@@ -224,12 +224,12 @@ id_recovery_rc=0
 if (
   cd "$repo_root"
   tree-sitter parse --grammar-path "$grammar_dir" "$id_recovery_fixture"
-) > "$id_recovery_output" 2>&1; then
+) >"$id_recovery_output" 2>&1; then
   id_recovery_rc=0
 else
   id_recovery_rc=$?
 fi
-if (( id_recovery_rc > 1 )); then
+if ((id_recovery_rc > 1)); then
   echo "Tree-sitter ID recovery probe failed to run (exit $id_recovery_rc)" >&2
   exit 1
 fi
@@ -255,7 +255,7 @@ done
   cd "$grammar_dir"
   tree-sitter query --grammar-path . --captures queries/highlights.scm \
     test/fixtures/id-recovery.recite
-) > "$id_query_output"
+) >"$id_query_output"
 for expectation in \
   ' - label, start: (5, 12), end: (5, 15), text: `bad`' \
   ' - label, start: (7, 9), end: (7, 22), text: `NOT_AN_ANCHOR`' \
@@ -279,12 +279,12 @@ done
 semantic_output="$scratch/id-recovery-semantic.txt"
 semantic_rc=0
 if cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-  check-ids "$id_recovery_fixture" > "$semantic_output" 2>&1; then
+  check-ids "$id_recovery_fixture" >"$semantic_output" 2>&1; then
   semantic_rc=0
 else
   semantic_rc=$?
 fi
-if (( semantic_rc == 0 )); then
+if ((semantic_rc == 0)); then
   echo "compiler-facing ID validation unexpectedly accepted the recovery fixture" >&2
   exit 1
 fi
@@ -300,12 +300,12 @@ recovery_rc=0
 if (
   cd "$grammar_dir"
   tree-sitter parse --grammar-path . test/fixtures/incomplete.recite
-) > "$recovery_output"; then
+) >"$recovery_output"; then
   recovery_rc=0
 else
   recovery_rc=$?
 fi
-if (( recovery_rc > 1 )); then
+if ((recovery_rc > 1)); then
   echo "Tree-sitter recovery probe failed to run (exit $recovery_rc)" >&2
   exit 1
 fi
@@ -323,27 +323,27 @@ while IFS= read -r -d '' fixture; do
   if (
     cd "$repo_root"
     tree-sitter parse --grammar-path "$grammar_dir" "$fixture"
-  ) > "$fixture_output" 2>&1; then
+  ) >"$fixture_output" 2>&1; then
     fixture_rc=0
   else
     fixture_rc=$?
   fi
   if [[ "$fixture" == "$repo_root/fixtures/recite/valid/"* ]]; then
     valid_count=$((valid_count + 1))
-    if (( fixture_rc != 0 )) || grep -Eq '\((ERROR|MISSING)( |\))' "$fixture_output"; then
-      echo "canonical valid fixture does not parse cleanly: ${fixture#$repo_root/}" >&2
+    if ((fixture_rc != 0)) || grep -Eq '\((ERROR|MISSING)( |\))' "$fixture_output"; then
+      echo "canonical valid fixture does not parse cleanly: ${fixture#"$repo_root"/}" >&2
       sed -n '/ERROR\|MISSING/p' "$fixture_output" | sed -n '1,40p' >&2
       exit 1
     fi
   elif [[ "$fixture" == "$repo_root/fixtures/recite/invalid/"* ]]; then
     invalid_count=$((invalid_count + 1))
-    if (( fixture_rc > 1 )); then
-      echo "canonical invalid fixture failed to produce a parse tree: ${fixture#$repo_root/} (exit $fixture_rc)" >&2
+    if ((fixture_rc > 1)); then
+      echo "canonical invalid fixture failed to produce a parse tree: ${fixture#"$repo_root"/} (exit $fixture_rc)" >&2
       exit 1
     fi
   fi
 done < <(find "$repo_root/fixtures/recite" -type f -name '*.recite' -print0 | sort -z)
-if (( valid_count == 0 || invalid_count == 0 )); then
+if ((valid_count == 0 || invalid_count == 0)); then
   echo "canonical fixture differential did not cover both valid and invalid .recite inputs" >&2
   exit 1
 fi
@@ -351,12 +351,12 @@ echo "canonical fixture differential passed: $valid_count valid, $invalid_count 
 
 echo "== CRLF, non-BMP, and unexpected punctuation probes =="
 crlf_fixture="$scratch/canonical-crlf-non-bmp.recite"
-awk '{ sub(/tide/, "tide 🌊"); printf "%s\r\n", $0 }' "$canonical_fixture" > "$crlf_fixture"
+awk '{ sub(/tide/, "tide 🌊"); printf "%s\r\n", $0 }' "$canonical_fixture" >"$crlf_fixture"
 crlf_output="$scratch/crlf.tree"
 if ! (
   cd "$repo_root"
   tree-sitter parse --grammar-path "$grammar_dir" "$crlf_fixture"
-) > "$crlf_output" 2>&1; then
+) >"$crlf_output" 2>&1; then
   echo "canonical CRLF/non-BMP fixture failed to parse" >&2
   exit 1
 fi
@@ -371,18 +371,18 @@ printf '%s\n' \
   ':if stage("open") == 2' \
   '> later@0123456789abcdef0123' \
   '  Later prose.' \
-  '-> END' > "$punctuation_fixture"
+  '-> END' >"$punctuation_fixture"
 punctuation_output="$scratch/unexpected-punctuation.tree"
 punctuation_rc=0
 if (
   cd "$repo_root"
   tree-sitter parse --grammar-path "$grammar_dir" "$punctuation_fixture"
-) > "$punctuation_output" 2>&1; then
+) >"$punctuation_output" 2>&1; then
   punctuation_rc=0
 else
   punctuation_rc=$?
 fi
-if (( punctuation_rc > 1 )) || ! grep -Eq '\((ERROR|MISSING)( |\))' "$punctuation_output"; then
+if ((punctuation_rc > 1)) || ! grep -Eq '\((ERROR|MISSING)( |\))' "$punctuation_output"; then
   echo "unexpected punctuation probe did not expose a bounded recovery node" >&2
   exit 1
 fi

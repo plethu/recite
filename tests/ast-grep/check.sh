@@ -12,7 +12,7 @@ mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/scripts" "$test_root
 cp "$repo_root/scripts/check-ast-grep.sh" "$test_root/repo/scripts/check-ast-grep.sh"
 cp -R "$repo_root/tools/ast-grep" "$test_root/repo/tools/"
 chmod +x "$test_root/repo/scripts/check-ast-grep.sh"
-printf '%s\n' 'fn production() {}' > "$test_root/repo/crates/demo/src/lib.rs"
+printf '%s\n' 'fn production() {}' >"$test_root/repo/crates/demo/src/lib.rs"
 
 git -C "$test_root/repo" init -q -b main
 git -C "$test_root/repo" config user.name Fixture
@@ -44,7 +44,7 @@ printf '%s\n' \
   '        4' \
   '    }' \
   '}' \
-  > "$test_root/repo/crates/demo/src/lib.rs"
+  >"$test_root/repo/crates/demo/src/lib.rs"
 git -C "$test_root/repo" add crates/demo/src/lib.rs
 git -C "$test_root/repo" commit -q -m structural-rule
 
@@ -78,7 +78,7 @@ check_single_cascade_diagnostic() {
   {
     printf '%s\n' 'fn sprawling_classifier(value: usize) -> usize {'
     for ((branch = 0; branch < branch_count; branch++)); do
-      if (( branch == 0 )); then
+      if ((branch == 0)); then
         printf '    if value == %d {\n' "$branch"
       else
         printf '    } else if value == %d {\n' "$branch"
@@ -86,7 +86,7 @@ check_single_cascade_diagnostic() {
       printf '        %d\n' "$branch"
     done
     printf '%s\n' '    } else {' '        99' '    }' '}'
-  } > "$fixture"
+  } >"$fixture"
   git -C "$test_root/repo" add crates/demo/src/lib.rs
   git -C "$test_root/repo" commit -q -m "structural-${branch_count}-branch"
 
@@ -97,7 +97,7 @@ check_single_cascade_diagnostic() {
   )"
   result_code=$?
   set -e
-  if (( result_code == 0 )); then
+  if ((result_code == 0)); then
     echo "ast-grep ${branch_count}-branch fixture unexpectedly passed" >&2
     exit 1
   fi

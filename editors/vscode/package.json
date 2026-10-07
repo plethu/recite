@@ -1,35 +1,8 @@
 {
   "name": "recite-vscode",
   "displayName": "%lsp-client-display-name%",
-  "description": "%lsp-client-description%",
   "version": "0.1.0",
-  "publisher": "plethu",
-  "type": "module",
-  "license": "MIT OR Apache-2.0",
-  "homepage": "https://github.com/plethu/recite",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/plethu/recite.git",
-    "directory": "editors/vscode"
-  },
-  "bugs": {
-    "url": "https://github.com/plethu/recite/issues"
-  },
-  "engines": {
-    "vscode": "^1.89.0"
-  },
-  "capabilities": {
-    "untrustedWorkspaces": {
-      "supported": true,
-      "description": "%lsp-client-untrusted-workspaces-description%",
-      "restrictedConfigurations": [
-        "recite.lsp.path",
-        "recite.lsp.args",
-        "recite.lsp.projectRoot",
-        "recite.cli.path"
-      ]
-    }
-  },
+  "description": "%lsp-client-description%",
   "categories": [
     "Programming Languages"
   ],
@@ -39,18 +12,19 @@
     "language-server",
     "lsp"
   ],
+  "homepage": "https://github.com/plethu/recite",
+  "bugs": {
+    "url": "https://github.com/plethu/recite/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plethu/recite.git",
+    "directory": "editors/vscode"
+  },
+  "license": "MIT OR Apache-2.0",
+  "publisher": "plethu",
+  "type": "module",
   "main": "./dist/extension.cjs",
-  "activationEvents": [
-    "onLanguage:recite",
-    "onCommand:recite.validate",
-    "onCommand:recite.compile",
-    "onCommand:recite.extract",
-    "onCommand:recite.watch.start",
-    "onCommand:recite.watch.stop",
-    "onCommand:recite.run",
-    "onCommand:recite.trace",
-    "onCommand:recite.renameBlock"
-  ],
   "files": [
     "dist/**",
     "language-configuration.json",
@@ -59,6 +33,13 @@
     "package.nls.json",
     "README.md"
   ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "messages:update": "node scripts/message-projections.mjs --update",
+    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node scripts/check-grammar.mjs && node --test test/*.test.mjs",
+    "package": "node scripts/package.mjs",
+    "package:check": "node scripts/package.mjs --check"
+  },
   "contributes": {
     "languages": [
       {
@@ -143,12 +124,19 @@
       }
     ]
   },
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "messages:update": "node scripts/message-projections.mjs --update",
-    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node scripts/check-grammar.mjs && node --test test/*.test.mjs",
-    "package": "node scripts/package.mjs",
-    "package:check": "node scripts/package.mjs --check"
+  "activationEvents": [
+    "onLanguage:recite",
+    "onCommand:recite.validate",
+    "onCommand:recite.compile",
+    "onCommand:recite.extract",
+    "onCommand:recite.watch.start",
+    "onCommand:recite.watch.stop",
+    "onCommand:recite.run",
+    "onCommand:recite.trace",
+    "onCommand:recite.renameBlock"
+  ],
+  "dependencies": {
+    "vscode-languageclient": "9.0.1"
   },
   "devDependencies": {
     "@vscode/test-electron": "3.1.0",
@@ -157,7 +145,19 @@
     "vscode-oniguruma": "1.7.0",
     "vscode-textmate": "9.2.0"
   },
-  "dependencies": {
-    "vscode-languageclient": "9.0.1"
+  "engines": {
+    "vscode": "^1.89.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "%lsp-client-untrusted-workspaces-description%",
+      "restrictedConfigurations": [
+        "recite.lsp.path",
+        "recite.lsp.args",
+        "recite.lsp.projectRoot",
+        "recite.cli.path"
+      ]
+    }
   }
 }

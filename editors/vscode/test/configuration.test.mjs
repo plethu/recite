@@ -1,31 +1,42 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
+import test from "node:test";
 import { initializeParams, readCliConfiguration, readConfiguration } from "../src/configuration.js";
 
 test("CLI configuration resolves bare names through PATH and paths from the effective root", () => {
   const api = fakeApi({
-    workspaceFolders: [{ name: "demo", uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" } }],
-    values: { "cli.path": "tools/recite", "lsp.projectRoot": "project" }
+    workspaceFolders: [{
+      name: "demo",
+      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+    }],
+    values: { "cli.path": "tools/recite", "lsp.projectRoot": "project" },
   });
   assert.deepEqual(readCliConfiguration(api, userInterface()), {
     command: path.resolve("/workspace/demo/project", "tools/recite"),
     cwd: path.resolve("/workspace/demo/project"),
     projectRoot: path.resolve("/workspace/demo/project"),
-    projectRootOverridden: true
+    projectRootOverridden: true,
   });
-  const bare = fakeApi({ workspaceFolders: [{ name: "demo", uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" } }] });
+  const bare = fakeApi({
+    workspaceFolders: [{
+      name: "demo",
+      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+    }],
+  });
   assert.equal(readCliConfiguration(bare, userInterface()).command, "recite");
 });
 
 test("configuration resolves project-relative binaries without a shell", () => {
   const api = fakeApi({
-    workspaceFolders: [{ name: "demo", uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" } }],
+    workspaceFolders: [{
+      name: "demo",
+      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+    }],
     values: {
       "lsp.path": "./tools/recite-lsp",
       "lsp.args": ["--local"],
-      "lsp.projectRoot": "project"
-    }
+      "lsp.projectRoot": "project",
+    },
   });
 
   assert.deepEqual(readConfiguration(api, userInterface()), {
@@ -33,20 +44,25 @@ test("configuration resolves project-relative binaries without a shell", () => {
     args: ["--local"],
     cwd: path.resolve("/workspace/demo/project"),
     projectRoot: path.resolve("/workspace/demo/project"),
-    projectRootOverridden: true
+    projectRootOverridden: true,
   });
 });
 
 test("initialization advertises UTF-16, full sync, and dynamic watch registration", () => {
   const api = fakeApi({
-    workspaceFolders: [{ name: "demo", uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" } }]
+    workspaceFolders: [{
+      name: "demo",
+      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+    }],
   });
   const params = initializeParams(api, "/workspace/demo", true);
 
   assert.equal(params.rootUri, "file:///workspace/demo");
   assert.deepEqual(params.workspaceFolders, [{ name: "demo", uri: "file:///workspace/demo" }]);
   assert.deepEqual(params.capabilities.general.positionEncodings, ["utf-16"]);
-  assert.deepEqual(params.capabilities.workspace.didChangeWatchedFiles, { dynamicRegistration: true });
+  assert.deepEqual(params.capabilities.workspace.didChangeWatchedFiles, {
+    dynamicRegistration: true,
+  });
   assert.equal(params.capabilities.textDocument.synchronization.didSave, true);
   assert.equal(params.capabilities.textDocument.rename, undefined);
 });
@@ -63,16 +79,28 @@ test("CLI configuration reports its command-specific workspace error", () => {
 
 test("configuration validation reports canonical localized messages", () => {
   assert.throws(
-    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.path": "" } }), userInterface()),
-    /recite\.lsp\.path must be a non-empty string/
+    () =>
+      readConfiguration(
+        fakeApi({ workspaceFolders: [], values: { "lsp.path": "" } }),
+        userInterface(),
+      ),
+    /recite\.lsp\.path must be a non-empty string/,
   );
   assert.throws(
-    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.args": ["--ok", 1] } }), userInterface()),
-    /recite\.lsp\.args must be an array of strings/
+    () =>
+      readConfiguration(
+        fakeApi({ workspaceFolders: [], values: { "lsp.args": ["--ok", 1] } }),
+        userInterface(),
+      ),
+    /recite\.lsp\.args must be an array of strings/,
   );
   assert.throws(
-    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.projectRoot": 1 } }), userInterface()),
-    /recite\.lsp\.projectRoot must be a string/
+    () =>
+      readConfiguration(
+        fakeApi({ workspaceFolders: [], values: { "lsp.projectRoot": 1 } }),
+        userInterface(),
+      ),
+    /recite\.lsp\.projectRoot must be a string/,
   );
 });
 
@@ -80,11 +108,11 @@ function fakeApi({ workspaceFolders, values = {} }) {
   return {
     workspace: {
       workspaceFolders,
-      getConfiguration: () => ({ get: (key, fallback) => values[key] ?? fallback })
+      getConfiguration: () => ({ get: (key, fallback) => values[key] ?? fallback }),
     },
     Uri: {
-      file: (value) => ({ toString: () => `file://${value}` })
-    }
+      file: (value) => ({ toString: () => `file://${value}` }),
+    },
   };
 }
 
@@ -96,6 +124,6 @@ function userInterface() {
     configurationProjectRootNeedsWorkspace: () =>
       new Error("recite.lsp.projectRoot needs a workspace for relative paths."),
     cliPathInvalid: () => new Error("recite.cli.path must be a non-empty string."),
-    commandWorkspaceRequired: () => new Error("a workspace is required")
+    commandWorkspaceRequired: () => new Error("a workspace is required"),
   };
 }

@@ -41,7 +41,7 @@ for arg in "$@"; do
     refs+=("$arg")
   fi
 done
-if (( ${#refs[@]} > 2 )); then
+if ((${#refs[@]} > 2)); then
   usage >&2
   exit 2
 fi
@@ -61,7 +61,7 @@ echo "== ast-grep fixture tests =="
 )
 
 declare -a paths=()
-if (( full_scan )); then
+if ((full_scan)); then
   while IFS= read -r -d '' path; do
     paths+=("$path")
   done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
@@ -74,7 +74,7 @@ else
     echo "unable to resolve ast-grep base ref: $base_ref" >&2
     exit 2
   fi
-  if (( empty_base )); then
+  if ((empty_base)); then
     diff_command=(git -C "$repo_root" diff --name-only -z --diff-filter=ACMR "$base_sha" "$head_sha")
   else
     diff_command=(git -C "$repo_root" diff --name-only -z --diff-filter=ACMR "${base_sha}...${head_sha}")
@@ -94,14 +94,14 @@ for path in "${paths[@]}"; do
     continue
   fi
   case "$path" in
-    target/*|fixtures/generated/*)
+    target/* | fixtures/generated/*)
       continue
       ;;
   esac
   scan_paths+=("$path")
 done
 
-if (( ${#scan_paths[@]} == 0 )); then
+if ((${#scan_paths[@]} == 0)); then
   echo "no changed Rust source files to scan"
   exit 0
 fi

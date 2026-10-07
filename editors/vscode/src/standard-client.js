@@ -5,7 +5,12 @@ import { lspCodeActionsToVscode, vscodeCodeActionContextToLsp } from "./lsp-feat
 // registration, and standard providers. This adapter retains only Recite's
 // guarded edit and lifecycle policy.
 export class ReciteStandardClient extends EventEmitter {
-  constructor(api, configuration, controller, load = () => import("vscode-languageclient/node.js")) {
+  constructor(
+    api,
+    configuration,
+    controller,
+    load = () => import("vscode-languageclient/node.js"),
+  ) {
     super();
     this.api = api;
     this.configuration = configuration;
@@ -23,26 +28,30 @@ export class ReciteStandardClient extends EventEmitter {
     const options = {
       documentSelector: [
         { scheme: "file", language: "recite" },
-        { scheme: "untitled", language: "recite" }
+        { scheme: "untitled", language: "recite" },
       ],
       diagnosticCollectionName: "recite",
-      workspaceFolder: this.configuration.projectRootOverridden && cwd ? {
-        uri: this.api.Uri.file(cwd),
-        name: cwd.split(/[\\/]/).at(-1),
-        index: 0
-      } : undefined,
+      workspaceFolder: this.configuration.projectRootOverridden && cwd
+        ? {
+          uri: this.api.Uri.file(cwd),
+          name: cwd.split(/[\\/]/).at(-1),
+          index: 0,
+        }
+        : undefined,
       middleware: {
         // The host's native edit application does not preserve LSP document
         // versions. Keep code actions and rename on Recite's guarded commands.
         provideCodeActions: (document, range, context, token) =>
           this.guardedCodeActions(document, range, context, token),
-        handleRegisterCapability: (params, next) => next({
-          ...params,
-          registrations: params.registrations?.filter((entry) =>
-            entry.method !== "textDocument/rename") ?? []
-        }),
+        handleRegisterCapability: (params, next) =>
+          next({
+            ...params,
+            registrations: params.registrations?.filter((entry) =>
+              entry.method !== "textDocument/rename"
+            ) ?? [],
+          }),
         provideRenameEdits: () => undefined,
-        prepareRename: () => undefined
+        prepareRename: () => undefined,
       },
       errorHandler: {
         error: (error) => {
@@ -53,8 +62,8 @@ export class ReciteStandardClient extends EventEmitter {
           this.status = "stopped";
           this.emit("exit", {});
           return { action: CloseAction.DoNotRestart };
-        }
-      }
+        },
+      },
     };
     this.client = new LanguageClient("recite", "Recite", server, options);
     this.stateListener = this.client.onDidChangeState(({ newState }) => {
@@ -85,19 +94,24 @@ export class ReciteStandardClient extends EventEmitter {
       textDocument: { uri: document.uri.toString() },
       range: {
         start: { line: range.start.line, character: range.start.character },
-        end: { line: range.end.line, character: range.end.character }
+        end: { line: range.end.line, character: range.end.character },
       },
-      context: vscodeCodeActionContextToLsp(this.api, context)
+      context: vscodeCodeActionContextToLsp(this.api, context),
     }, token);
     if (token?.isCancellationRequested) return undefined;
     const batch = this.controller.createEditCommandBatch();
     try {
-      return lspCodeActionsToVscode(this.api, result,
-        (uri) => this.api.workspace.textDocuments.find(
-          (candidate) => candidate.uri.toString() === uri.toString()), {
-          createEditCommand: (title, edit) =>
-            this.controller.createEditCommand(title, edit, batch)
-        });
+      return lspCodeActionsToVscode(
+        this.api,
+        result,
+        (uri) =>
+          this.api.workspace.textDocuments.find(
+            (candidate) => candidate.uri.toString() === uri.toString(),
+          ),
+        {
+          createEditCommand: (title, edit) => this.controller.createEditCommand(title, edit, batch),
+        },
+      );
     } finally {
       batch.finish();
     }

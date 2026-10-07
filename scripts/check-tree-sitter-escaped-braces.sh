@@ -17,10 +17,10 @@ escaped_source="$(<"$escaped_fixture")"
 escaped_lf_file="$scratch/escaped-braces.recite"
 escaped_crlf_file="$scratch/escaped-braces-crlf.recite"
 escaped_eof_file="$scratch/escaped-braces-eof.recite"
-printf '%s\n' "$escaped_source" > "$escaped_lf_file"
+printf '%s\n' "$escaped_source" >"$escaped_lf_file"
 escaped_crlf_source="${escaped_source//$'\n'/$'\r\n'}"
-printf '%s\r\n' "$escaped_crlf_source" > "$escaped_crlf_file"
-printf '%s' "$escaped_source" > "$escaped_eof_file"
+printf '%s\r\n' "$escaped_crlf_source" >"$escaped_crlf_file"
+printf '%s' "$escaped_source" >"$escaped_eof_file"
 
 echo "== escaped braces and production differential =="
 for escaped_file in "$escaped_lf_file" "$escaped_crlf_file" "$escaped_eof_file"; do
@@ -29,12 +29,12 @@ for escaped_file in "$escaped_lf_file" "$escaped_crlf_file" "$escaped_eof_file";
   if (
     cd "$repo_root"
     tree-sitter parse --grammar-path "$grammar_dir" "$escaped_file"
-  ) > "$escaped_output" 2>&1; then
+  ) >"$escaped_output" 2>&1; then
     escaped_rc=0
   else
     escaped_rc=$?
   fi
-  if (( escaped_rc > 1 )) || grep -Eq '\((ERROR|MISSING)( |\))' "$escaped_output"; then
+  if ((escaped_rc > 1)) || grep -Eq '\((ERROR|MISSING)( |\))' "$escaped_output"; then
     echo "escaped-brace fixture produced a recovery node: $escaped_file" >&2
     sed -n '1,160p' "$escaped_output" >&2
     exit 1
@@ -48,7 +48,7 @@ for escaped_file in "$escaped_lf_file" "$escaped_crlf_file" "$escaped_eof_file";
     exit 1
   fi
   if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-    validate "$escaped_file" > "$production_output" 2>&1; then
+    validate "$escaped_file" >"$production_output" 2>&1; then
     echo "production parser rejected escaped-brace fixture: $escaped_file" >&2
     sed -n '1,100p' "$production_output" >&2
     exit 1
@@ -56,18 +56,18 @@ for escaped_file in "$escaped_lf_file" "$escaped_crlf_file" "$escaped_eof_file";
 done
 
 escaped_recovery_file="$scratch/escaped-braces-recovery.recite"
-printf '%s' $':: escaped_recovery default\n> first@0123456789abcdef0123\n  Two slashes \\\\{name}\n> next@fedcba98765432100123\n  Recovery keeps the following statement.\n-> END\n' > "$escaped_recovery_file"
+printf '%s' $':: escaped_recovery default\n> first@0123456789abcdef0123\n  Two slashes \\\\{name}\n> next@fedcba98765432100123\n  Recovery keeps the following statement.\n-> END\n' >"$escaped_recovery_file"
 escaped_recovery_output="$scratch/escaped-braces-recovery.tree"
 escaped_recovery_rc=0
 if (
   cd "$repo_root"
   tree-sitter parse --grammar-path "$grammar_dir" "$escaped_recovery_file"
-) > "$escaped_recovery_output" 2>&1; then
+) >"$escaped_recovery_output" 2>&1; then
   escaped_recovery_rc=0
 else
   escaped_recovery_rc=$?
 fi
-if (( escaped_recovery_rc > 1 )) \
+if ((escaped_recovery_rc > 1)) \
   || ! grep -Eq '\((ERROR|MISSING)( |\))' "$escaped_recovery_output" \
   || [[ "$(grep -Fc '(line_statement' "$escaped_recovery_output")" -ne 2 ]] \
   || ! grep -Fq '(divert_statement' "$escaped_recovery_output"; then
@@ -77,12 +77,12 @@ if (( escaped_recovery_rc > 1 )) \
 fi
 escaped_recovery_production_rc=0
 if cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-  validate "$escaped_recovery_file" > "$production_output" 2>&1; then
+  validate "$escaped_recovery_file" >"$production_output" 2>&1; then
   escaped_recovery_production_rc=0
 else
   escaped_recovery_production_rc=$?
 fi
-if (( escaped_recovery_production_rc == 0 )); then
+if ((escaped_recovery_production_rc == 0)); then
   echo "production parser unexpectedly accepted the unescaped closing brace" >&2
   sed -n '1,100p' "$production_output" >&2
   exit 1

@@ -1,0 +1,12 @@
+{{ define "menu-container" }}
+  <a class="skip-link" href="#content">{{ i18n "ui.skip-content" }}</a>
+  <aside class="book-menu" aria-label="Menu">
+    <div class="book-menu-content">{{ template "menu" . }}</div>
+  </aside>
+{{ end }}
+{{ define "main" }}
+  <article class="markdown" id="content" tabindex="-1">
+    <h1 id="_top">{{ .Title }}</h1>
+    {{ .Content }}
+  </article>
+{{ end }}

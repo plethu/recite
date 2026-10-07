@@ -1,8 +1,4 @@
-import {
-  isValidLspRange,
-  lspWorkspaceEditToVscode,
-  workspaceEditStatus
-} from "./lsp-features.js";
+import { isValidLspRange, lspWorkspaceEditToVscode, workspaceEditStatus } from "./lsp-features.js";
 
 export const RENAME_BLOCK_COMMAND = "recite.renameBlock";
 
@@ -17,9 +13,11 @@ export class RenameCommand {
     this.api = api;
     this.userInterface = userInterface;
     this.getClient = getClient;
-    this.getOpenDocument = options.getOpenDocument ?? ((uri) =>
-      this.api.workspace.textDocuments?.find((document) =>
-        document.uri.toString() === uri.toString()));
+    this.getOpenDocument = options.getOpenDocument
+      ?? ((uri) =>
+        this.api.workspace.textDocuments?.find((document) =>
+          document.uri.toString() === uri.toString()
+        ));
     this.active = undefined;
     this.disposed = false;
     this.registered = false;
@@ -30,7 +28,7 @@ export class RenameCommand {
     this.registered = true;
     subscriptions.push(this.api.commands.registerCommand(
       RENAME_BLOCK_COMMAND,
-      () => this.execute()
+      () => this.execute(),
     ));
   }
 
@@ -58,8 +56,10 @@ export class RenameCommand {
     const editor = this.userInterface.activeEditor() ?? this.api.window?.activeTextEditor;
     const document = editor?.document;
     const position = editor?.selection?.active;
-    if (!document || document.languageId !== "recite" || !position ||
-      !Number.isInteger(position.line) || !Number.isInteger(position.character)) {
+    if (
+      !document || document.languageId !== "recite" || !position
+      || !Number.isInteger(position.line) || !Number.isInteger(position.character)
+    ) {
       this.userInterface.renameDocumentRequired();
       return false;
     }
@@ -82,12 +82,12 @@ export class RenameCommand {
       document,
       uri,
       version: document.version,
-      position: { line: position.line, character: position.character }
+      position: { line: position.line, character: position.character },
     };
     const current = () => this.isCurrent(snapshot, client);
     const params = {
       textDocument: { uri: snapshot.uri },
-      position: snapshot.position
+      position: snapshot.position,
     };
 
     let prepared;
@@ -134,7 +134,7 @@ export class RenameCommand {
     try {
       result = await client.request("textDocument/rename", {
         ...params,
-        newName
+        newName,
       });
     } catch (error) {
       if (!current()) return this.stale();
@@ -147,8 +147,10 @@ export class RenameCommand {
     // Rename is intentionally narrower than a general WorkspaceEdit: it must
     // contain at least one versioned document change. The conversion helper
     // then requires every affected document to be open at that exact version.
-    if (!Array.isArray(result?.documentChanges) || result.documentChanges.length === 0 ||
-      Object.hasOwn(result, "changes")) {
+    if (
+      !Array.isArray(result?.documentChanges) || result.documentChanges.length === 0
+      || Object.hasOwn(result, "changes")
+    ) {
       this.userInterface.renameInvalid();
       return false;
     }
@@ -192,12 +194,12 @@ export class RenameCommand {
     const editor = this.userInterface.activeEditor() ?? this.api.window?.activeTextEditor;
     const document = editor?.document;
     const position = editor?.selection?.active;
-    return document === snapshot.document &&
-      document?.uri?.toString?.() === snapshot.uri &&
-      document.version === snapshot.version &&
-      position?.line === snapshot.position.line &&
-      position?.character === snapshot.position.character &&
-      this.userInterface.documentIsOpen(document);
+    return document === snapshot.document
+      && document?.uri?.toString?.() === snapshot.uri
+      && document.version === snapshot.version
+      && position?.line === snapshot.position.line
+      && position?.character === snapshot.position.character
+      && this.userInterface.documentIsOpen(document);
   }
 
   stale() {
@@ -218,8 +220,10 @@ function classifyPrepareRename(result) {
   if (hasExactKeys(result, ["start", "end"]) && validRange(result)) {
     return { kind: "valid" };
   }
-  if (hasExactKeys(result, ["range", "placeholder"]) && validRange(result.range) &&
-    typeof result.placeholder === "string") {
+  if (
+    hasExactKeys(result, ["range", "placeholder"]) && validRange(result.range)
+    && typeof result.placeholder === "string"
+  ) {
     return { kind: "valid", placeholder: result.placeholder };
   }
   if (hasExactKeys(result, ["defaultBehavior"]) && result.defaultBehavior === true) {
@@ -229,11 +233,14 @@ function classifyPrepareRename(result) {
 }
 
 function validRange(range) {
-  return Boolean(range && typeof range === "object" && !Array.isArray(range) &&
-    hasExactKeys(range, ["start", "end"]) && isValidLspRange(range));
+  return Boolean(
+    range && typeof range === "object" && !Array.isArray(range)
+      && hasExactKeys(range, ["start", "end"]) && isValidLspRange(range),
+  );
 }
 
 function hasExactKeys(value, expected) {
   const keys = Object.keys(value).sort();
-  return keys.length === expected.length && expected.slice().sort().every((key, index) => key === keys[index]);
+  return keys.length === expected.length
+    && expected.slice().sort().every((key, index) => key === keys[index]);
 }

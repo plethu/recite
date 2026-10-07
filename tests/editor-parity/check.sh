@@ -88,7 +88,7 @@ expect_target_failure() {
   output="$(CARGO_TARGET_DIR="$target_dir" run_checker 2>&1)"
   result=$?
   set -e
-  if (( result == 0 )) || [[ "$output" != *"$expected"* ]]; then
+  if ((result == 0)) || [[ "$output" != *"$expected"* ]]; then
     echo "editor parity target boundary fixture missed: $target_dir" >&2
     printf '%s\n' "$output" >&2
     exit 1
@@ -150,8 +150,7 @@ PY
 
 assert_portable_lock_source
 python3 "$repo_root/tests/editor-parity/assert_client_foundation.py" \
-  "$fixture_repo/fixtures/editor-parity/contract.json" \
-  "$fixture_repo/docs/editor-parity-contract.md"
+  "$fixture_repo/fixtures/editor-parity/contract.json"
 run_checker
 echo "editor parity baseline fixture passed"
 assert_no_hashed_targets
@@ -191,7 +190,7 @@ before = selected_target_digest(context, "recite-lsp")
 # Generated documentation/editor output is ignored and must not invalidate the
 # evidence executable merely because a packaging or docs command touched it.
 ignored_outputs = [
-    repo / "docs-site/.astro/cache.json",
+    repo / "docs-site/resources/cache.json",
     repo / "docs-site/dist/index.html",
     repo / "editors/vscode/dist/extension.js",
     repo / "editors/vscode/recite.vsix",
@@ -206,6 +205,23 @@ for output in ignored_outputs:
     output.write_bytes(b"rewritten generated output")
 if ignored_after_creation != selected_target_digest(context, "recite-lsp"):
     raise SystemExit("modifying ignored generated output changed the parity digest")
+
+# The site theme is a pinned dependency outside the compiler input boundary.
+# Other gitlinks/nested repositories are still rejected by the hostile cases.
+theme = repo / "docs-site/themes/hugo-book"
+theme.mkdir(parents=True)
+theme_source = theme / "theme.toml"
+theme_source.write_text('name = "site dependency"\n', encoding="utf-8")
+subprocess.run(["git", "-C", str(repo), "update-index", "--add", "--cacheinfo",
+                "160000," + subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+                + ",docs-site/themes/hugo-book"], check=True)
+if selected_target_digest(context, "recite-lsp") != ignored_after_creation or context.errors:
+    raise SystemExit("site theme dependency changed or invalidated the compiler digest")
+theme_source.write_text('name = "updated site dependency"\n', encoding="utf-8")
+if selected_target_digest(context, "recite-lsp") != ignored_after_creation:
+    raise SystemExit("site theme source changed the compiler digest")
+subprocess.run(["git", "-C", str(repo), "update-index", "--force-remove", "docs-site/themes/hugo-book"], check=True)
+shutil.rmtree(theme)
 
 # A force-added path is tracked input even when its directory is ignored. This
 # is the explicit escape hatch for compiler-visible generated/source files.
@@ -321,7 +337,7 @@ set +e
 module_shapes_output="$(run_checker 2>&1)"
 module_shapes_result=$?
 set -e
-if (( module_shapes_result != 0 )); then
+if ((module_shapes_result != 0)); then
   echo "editor parity valid Rust module-shapes fixture failed" >&2
   printf '%s\n' "$module_shapes_output" >&2
   exit 1

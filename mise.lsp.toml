@@ -1,7 +1,2 @@
-[tools]
-# The external LSP harness has its own Python environment; ordinary Rust work
-# does not need this tool or its process-accounting dependencies.
-uv = "0.12.23"
-
 [env]
 UV_CACHE_DIR = "{{config_root}}/target/uv-cache"

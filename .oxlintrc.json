@@ -1,0 +1,14 @@
+{
+  "ignorePatterns": [
+    "docs/archive/**",
+    "**/node_modules/**",
+    "**/target/**",
+    "docs-site/dist/**",
+    "docs-site/.astro/**",
+    "docs-site/themes/**",
+    "editors/recite-tree-sitter/src/**",
+    "editors/vscode/src/*.generated.js"
+  ],
+  "categories": { "correctness": "error" },
+  "env": { "node": true, "browser": true }
+}

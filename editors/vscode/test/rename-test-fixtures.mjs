@@ -9,20 +9,35 @@ export function harness() {
     workspace: {
       isTrusted: true,
       textDocuments: documents,
-      applyEdit: async (edit) => { applied.push(edit); return true; }
+      applyEdit: async (edit) => {
+        applied.push(edit);
+        return true;
+      },
     },
-    window: { activeTextEditor: { document: primary, selection: { active: { line: 1, character: 4 } } } },
+    window: {
+      activeTextEditor: { document: primary, selection: { active: { line: 1, character: 4 } } },
+    },
     Uri: { parse: (value) => ({ toString: () => value }) },
     Position: class Position {
-      constructor(line, character) { this.line = line; this.character = character; }
+      constructor(line, character) {
+        this.line = line;
+        this.character = character;
+      }
     },
     Range: class Range {
-      constructor(start, end) { this.start = start; this.end = end; }
+      constructor(start, end) {
+        this.start = start;
+        this.end = end;
+      }
     },
     WorkspaceEdit: class WorkspaceEdit {
-      constructor() { this.replacements = []; }
-      replace(uri, editRange, newText) { this.replacements.push({ uri, editRange, newText }); }
-    }
+      constructor() {
+        this.replacements = [];
+      }
+      replace(uri, editRange, newText) {
+        this.replacements.push({ uri, editRange, newText });
+      }
+    },
   };
   const ui = {
     activeEditor: () => api.window.activeTextEditor,
@@ -37,7 +52,7 @@ export function harness() {
     renameApplyFailed: () => messages.push("apply-failed"),
     renameRequestFailed: (detail) => messages.push(["request-failed", detail]),
     serverNotRunning: () => new Error("Recite language server is not running."),
-    commandFailure: (detail) => messages.push(["failure", detail])
+    commandFailure: (detail) => messages.push(["failure", detail]),
   };
   return { api, ui, client, primary, sibling, documents, applied, messages };
 }
@@ -47,7 +62,7 @@ export function document(file, version) {
     languageId: "recite",
     version,
     uri: { toString: () => `file:///${file}` },
-    getText: () => `:: ${file}`
+    getText: () => `:: ${file}`,
   };
 }
 
@@ -60,12 +75,12 @@ export function workspaceEdit(primary, sibling) {
     documentChanges: [
       {
         textDocument: { uri: primary.uri.toString(), version: primary.version },
-        edits: [{ range: range(), newText: "renamed" }]
+        edits: [{ range: range(), newText: "renamed" }],
       },
       {
         textDocument: { uri: sibling.uri.toString(), version: sibling.version },
-        edits: [{ range: range(), newText: "renamed" }]
-      }
-    ]
+        edits: [{ range: range(), newText: "renamed" }],
+      },
+    ],
   };
 }

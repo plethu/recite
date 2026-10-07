@@ -1,0 +1,6 @@
+{{ with resources.Get "theme.js" | resources.Minify | resources.Fingerprint }}
+  <script src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}"></script>
+{{ end }}
+{{ with resources.Get "menu.js" | resources.Minify | resources.Fingerprint }}
+  <script src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" defer></script>
+{{ end }}

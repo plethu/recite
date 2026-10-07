@@ -417,12 +417,42 @@
     },
     "projectionInputSource": {
       "oneOf": [
-        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "event_kind" } } },
-        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_line_id" } } },
-        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_choice_id" } } },
-        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_effect_request_id" } } },
-        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_block_id" } } },
-        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_project" } } },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "event_kind" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "candidate_line_id" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "candidate_choice_id" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "candidate_effect_request_id" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "candidate_block_id" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "candidate_project" } }
+        },
         {
           "type": "object",
           "additionalProperties": false,

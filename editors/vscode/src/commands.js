@@ -1,20 +1,24 @@
 import * as path from "node:path";
-import { readCliConfiguration } from "./configuration.js";
+import { clearDiagnostics, replaceDiagnostics } from "./command-diagnostics.js";
 import {
-  savedSourceSnapshot,
   assertSavedSource,
   optionalSavePath,
   requiredBlock,
   requiredFixturePath,
   requiredOpenPath,
-  requiredSavePath
+  requiredSavePath,
+  savedSourceSnapshot,
 } from "./command-inputs.js";
+import { disposeCommands, stopForAuthorityChange } from "./command-lifecycle.js";
 import { makeInvocationId } from "./command-process.js";
 import { CommandProtocolError } from "./command-protocol.js";
+import { readCliConfiguration } from "./configuration.js";
+import {
+  executeFiniteCommand,
+  finiteCommand,
+  replaceFiniteDiagnostics,
+} from "./finite-commands.js";
 import { WatchCommand } from "./watch-command.js";
-import { replaceDiagnostics, clearDiagnostics } from "./command-diagnostics.js";
-import { finiteCommand, executeFiniteCommand, replaceFiniteDiagnostics } from "./finite-commands.js";
-import { disposeCommands, stopForAuthorityChange } from "./command-lifecycle.js";
 
 const COMMANDS = Object.freeze([
   ["recite.validate", (registry, args) => registry.validate(args)],
@@ -23,14 +27,14 @@ const COMMANDS = Object.freeze([
   ["recite.watch.start", (registry, args) => registry.watchStart(args)],
   ["recite.watch.stop", (registry) => registry.watchStop()],
   ["recite.run", (registry, args) => registry.run(args)],
-  ["recite.trace", (registry, args) => registry.trace(args)]
+  ["recite.trace", (registry, args) => registry.trace(args)],
 ]);
 
 const EMPTY_DIAGNOSTICS = Object.freeze({
   clear() {},
   set() {},
   delete() {},
-  dispose() {}
+  dispose() {},
 });
 
 export class CommandRegistry {
@@ -40,7 +44,8 @@ export class CommandRegistry {
     this.options = options;
     this.spawnProcess = options.spawnProcess;
     this.makeInvocationId = options.makeInvocationId ?? makeInvocationId;
-    this.cliDiagnostics = api.languages?.createDiagnosticCollection?.("recite-cli") ?? EMPTY_DIAGNOSTICS;
+    this.cliDiagnostics = api.languages?.createDiagnosticCollection?.("recite-cli")
+      ?? EMPTY_DIAGNOSTICS;
     this.diagnosticUris = new Map();
     this.finiteGeneration = 0;
     this.finiteSessions = new Map();
@@ -55,7 +60,7 @@ export class CommandRegistry {
     for (const [id, callback] of COMMANDS) {
       subscriptions.push(this.api.commands.registerCommand(
         id,
-        (args) => callback(this, args)
+        (args) => callback(this, args),
       ));
     }
   }
@@ -63,7 +68,9 @@ export class CommandRegistry {
   async validate() {
     if (!this.trusted()) return undefined;
     let snapshot;
-    try { snapshot = savedSourceSnapshot(this.userInterface); } catch (error) {
+    try {
+      snapshot = savedSourceSnapshot(this.userInterface);
+    } catch (error) {
       this.failure(error);
       return undefined;
     }
@@ -79,7 +86,7 @@ export class CommandRegistry {
       output = await requiredSavePath(
         args?.output,
         this.userInterface,
-        this.api.Uri?.file?.(path.join(configuration.projectRoot, "dialogue.recitec"))
+        this.api.Uri?.file?.(path.join(configuration.projectRoot, "dialogue.recitec")),
       );
     } catch (error) {
       this.failure(error);
@@ -87,7 +94,13 @@ export class CommandRegistry {
     }
     if (!output) return undefined;
     if (!this.revalidateSource(snapshot, configuration)) return undefined;
-    return this.finite("compile", ["--output", output, snapshot.path], { diagnostics: true }, configuration, snapshot);
+    return this.finite(
+      "compile",
+      ["--output", output, snapshot.path],
+      { diagnostics: true },
+      configuration,
+      snapshot,
+    );
   }
 
   async extract(args = {}) {
@@ -99,7 +112,7 @@ export class CommandRegistry {
       output = await optionalSavePath(
         args?.output,
         this.userInterface,
-        this.api.Uri?.file?.(path.join(configuration.projectRoot, "messages.pot"))
+        this.api.Uri?.file?.(path.join(configuration.projectRoot, "messages.pot")),
       );
     } catch (error) {
       this.failure(error);
@@ -135,8 +148,16 @@ export class CommandRegistry {
     if (!this.trusted() || !this.configurationMatches(configuration)) return undefined;
     const invocationId = this.makeInvocationId();
     const commandArgs = [
-      command, "--output-format", "structured", "--invocation-id", invocationId,
-      asset, "--block", block, "--fixture", fixture
+      command,
+      "--output-format",
+      "structured",
+      "--invocation-id",
+      invocationId,
+      asset,
+      "--block",
+      block,
+      "--fixture",
+      fixture,
     ];
     return this.execute(configuration, command, invocationId, commandArgs, { diagnostics: false });
   }
@@ -164,9 +185,9 @@ export class CommandRegistry {
   configurationMatches(expected) {
     try {
       const current = this.configuration();
-      return current.command === expected.command && current.cwd === expected.cwd &&
-        current.projectRoot === expected.projectRoot &&
-        current.projectRootOverridden === expected.projectRootOverridden;
+      return current.command === expected.command && current.cwd === expected.cwd
+        && current.projectRoot === expected.projectRoot
+        && current.projectRootOverridden === expected.projectRootOverridden;
     } catch (error) {
       this.failure(error);
       return false;
@@ -218,7 +239,10 @@ export class CommandRegistry {
       if (!this.configurationMatches(configuration)) return false;
       assertSavedSource(this.userInterface, snapshot);
       const relative = path.relative(configuration.projectRoot, snapshot.path);
-      if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      if (
+        !relative || relative === ".." || relative.startsWith(`..${path.sep}`)
+        || path.isAbsolute(relative)
+      ) {
         throw this.userInterface.commandDocumentOutsideRoot();
       }
       return true;

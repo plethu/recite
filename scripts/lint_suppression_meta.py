@@ -16,7 +16,10 @@ def _split_top_level(source: str) -> list[str]:
     pieces: list[str] = []
     start = 0
     depth = {"(": 0, "[": 0, "{": 0}
-    matching = {")": "(", "]": "[", "}": "{",
+    matching = {
+        ")": "(",
+        "]": "[",
+        "}": "{",
     }
     quote: str | None = None
     raw_hashes: int | None = None
@@ -124,7 +127,7 @@ def _literal(value: str) -> str | None:
         if value[index] == "\\":
             return None
         if value[index] == '"':
-            return value[1:index] if not value[index + 1:].strip() else None
+            return value[1:index] if not value[index + 1 :].strip() else None
         index += 1
     return None
 
@@ -159,7 +162,7 @@ def _meta(body: str) -> list[tuple[str, tuple[str, ...], str | None]]:
             equals = piece.find("=")
             if equals < 0 or piece[:equals].strip() != "reason":
                 raise MetadataError(f"malformed {name} suppression reason")
-            reason = _literal(piece[equals + 1:])
+            reason = _literal(piece[equals + 1 :])
             if reason is None:
                 raise MetadataError(f"malformed {name} suppression reason")
             continue
@@ -176,4 +179,4 @@ def attributes(text: str, inner: bool) -> list[tuple[str, tuple[str, ...], str |
     prefix = "#![" if inner else "#["
     if not text.startswith(prefix) or not text.endswith("]"):
         raise MetadataError("malformed Rust attribute")
-    return [(kind, lints, reason, inner) for kind, lints, reason in _meta(text[len(prefix):-1])]
+    return [(kind, lints, reason, inner) for kind, lints, reason in _meta(text[len(prefix) : -1])]

@@ -61,34 +61,49 @@ local flags_id = recite.start(0, { flags = { debounce_text_changes = 200 } })
 assert_true(flags_id ~= default_id, "changed flags silently reused the default client")
 local flags_client = wait_initialized(flags_id, "flags override client")
 assert_true(flags_client.flags.debounce_text_changes == 200, "flags override was not applied")
-assert_true(recite.start(0, { flags = { debounce_text_changes = 200 } }) == flags_id,
-  "identical flags did not reuse their client")
+assert_true(
+  recite.start(0, { flags = { debounce_text_changes = 200 } }) == flags_id,
+  "identical flags did not reuse their client"
+)
 stop_probe(recite, flags_id, "flags override client")
 
 local settings_id = recite.start(0, { settings = { material_probe = { enabled = true } } })
 assert_true(settings_id ~= default_id, "changed settings silently reused the default client")
 local settings_client = wait_initialized(settings_id, "settings override client")
-assert_true(settings_client.config.settings.material_probe.enabled == true,
-  "settings override was not applied")
-assert_true(recite.start(0, { settings = { material_probe = { enabled = true } } }) == settings_id,
-  "identical settings override did not reuse its client")
+assert_true(
+  settings_client.config.settings.material_probe.enabled == true,
+  "settings override was not applied"
+)
+assert_true(
+  recite.start(0, { settings = { material_probe = { enabled = true } } }) == settings_id,
+  "identical settings override did not reuse its client"
+)
 stop_probe(recite, settings_id, "settings override client")
 
 local command_id = recite.start(0, { cmd = { vim.env.RECITE_LSP, "--material-command" } })
 assert_true(command_id ~= default_id, "changed command silently reused the default client")
 local command_client = wait_initialized(command_id, "command override client")
-assert_true(command_client.config.cmd[2] == "--material-command", "command override was not applied")
-assert_true(recite.start(0, { cmd = { vim.env.RECITE_LSP, "--material-command" } }) == command_id,
-  "identical command override did not reuse its client")
+assert_true(
+  command_client.config.cmd[2] == "--material-command",
+  "command override was not applied"
+)
+assert_true(
+  recite.start(0, { cmd = { vim.env.RECITE_LSP, "--material-command" } }) == command_id,
+  "identical command override did not reuse its client"
+)
 stop_probe(recite, command_id, "command override client")
 
 local init_id = recite.start(0, { init_options = { material_probe = { enabled = true } } })
 assert_true(init_id ~= default_id, "changed init_options silently reused the default client")
 local init_client = wait_initialized(init_id, "init_options override client")
-assert_true(init_client.config.init_options.material_probe.enabled == true,
-  "init_options override was not applied")
-assert_true(recite.start(0, { init_options = { material_probe = { enabled = true } } }) == init_id,
-  "identical init_options override did not reuse its client")
+assert_true(
+  init_client.config.init_options.material_probe.enabled == true,
+  "init_options override was not applied"
+)
+assert_true(
+  recite.start(0, { init_options = { material_probe = { enabled = true } } }) == init_id,
+  "identical init_options override did not reuse its client"
+)
 stop_probe(recite, init_id, "init_options override client")
 
 local material_root = vim.fn.fnamemodify(vim.env.RECITE_TEST_PROJECT, ":h")
@@ -100,16 +115,24 @@ local material_overrides = {
   init_options = { material_recovery = { enabled = true } },
   capabilities = { workspace = { configuration = true } },
   flags = { debounce_text_changes = 200 },
-  on_attach = function() attach_calls = attach_calls + 1 end,
-  on_init = function() init_calls = init_calls + 1 end,
-  on_exit = function() exit_calls = exit_calls + 1 end,
+  on_attach = function()
+    attach_calls = attach_calls + 1
+  end,
+  on_init = function()
+    init_calls = init_calls + 1
+  end,
+  on_exit = function()
+    exit_calls = exit_calls + 1
+  end,
 }
 local material_id = recite.start(0, material_overrides)
 assert_true(material_id ~= default_id, "material variant unexpectedly reused the default client")
 local material_client = wait_initialized(material_id, "material recovery client")
 assert_true(material_client.config.root_dir == material_root, "material root override was lost")
-assert_true(recite.start(0, material_overrides) == material_id,
-  "identical material override did not reuse its client")
+assert_true(
+  recite.start(0, material_overrides) == material_id,
+  "identical material override did not reuse its client"
+)
 material_client.rpc:terminate()
 local recovered
 wait_for(function()
@@ -117,14 +140,27 @@ wait_for(function()
   return recovered ~= nil
 end, "material variant did not recover")
 assert_true(recovered.config.root_dir == material_root, "recovered root override was lost")
-assert_true(recovered.config.settings.material_recovery.enabled == true, "recovered settings were lost")
-assert_true(recovered.config.init_options.material_recovery.enabled == true, "recovered init_options were lost")
-assert_true(recovered.config.capabilities.workspace.configuration == true, "recovered capabilities were lost")
+assert_true(
+  recovered.config.settings.material_recovery.enabled == true,
+  "recovered settings were lost"
+)
+assert_true(
+  recovered.config.init_options.material_recovery.enabled == true,
+  "recovered init_options were lost"
+)
+assert_true(
+  recovered.config.capabilities.workspace.configuration == true,
+  "recovered capabilities were lost"
+)
 assert_true(recovered.flags.debounce_text_changes == 200, "recovered debounce override was lost")
-assert_true(init_calls >= 2 and exit_calls >= 1 and attach_calls >= 2,
-  "recovered callbacks were not preserved")
-assert_true(recite.start(0, material_overrides) == recovered.id,
-  "identical material override did not reuse the recovered client")
+assert_true(
+  init_calls >= 2 and exit_calls >= 1 and attach_calls >= 2,
+  "recovered callbacks were not preserved"
+)
+assert_true(
+  recite.start(0, material_overrides) == recovered.id,
+  "identical material override did not reuse the recovered client"
+)
 stop_probe(recite, recovered.id, "recovered material client")
 
 local exhausted = false
@@ -137,7 +173,10 @@ local budget_id = recite.start(0, { cmd = { vim.env.RECITE_LSP, "--budget-a" } }
 wait_initialized(budget_id, "budget A client")
 for attempt = 1, 4 do
   local crashed = vim.lsp.get_client_by_id(budget_id)
-  assert_true(crashed ~= nil and crashed.rpc and crashed.rpc.terminate, "budget A crash probe unavailable")
+  assert_true(
+    crashed ~= nil and crashed.rpc and crashed.rpc.terminate,
+    "budget A crash probe unavailable"
+  )
   crashed.rpc:terminate()
   if attempt < 4 then
     local replacement
@@ -147,8 +186,9 @@ for attempt = 1, 4 do
     end, "budget A crash did not recover")
     budget_id = replacement.id
   else
-    wait_for(function() return vim.lsp.get_client_by_id(budget_id) == nil and exhausted end,
-      "budget A did not exhaust independently")
+    wait_for(function()
+      return vim.lsp.get_client_by_id(budget_id) == nil and exhausted
+    end, "budget A did not exhaust independently")
   end
 end
 local other_id = recite.start(0, { cmd = { vim.env.RECITE_LSP, "--budget-b" } })
@@ -161,8 +201,10 @@ wait_for(function()
   other_replacement = find_variant("--budget-b", other_id)
   return other_replacement ~= nil
 end, "budget B inherited budget A's exhausted recovery")
-assert_true(((vim.uv or vim.loop).hrtime() - crash_time) / 1e6 < 500,
-  "budget B did not use its independent first backoff")
+assert_true(
+  ((vim.uv or vim.loop).hrtime() - crash_time) / 1e6 < 500,
+  "budget B did not use its independent first backoff"
+)
 stop_probe(recite, other_replacement.id, "budget B client")
 
 -- Recovery belongs to the lifecycle's material, not every Recite buffer under
@@ -192,22 +234,31 @@ vim.bo[ownership_buffer_a2].filetype = "recite"
 local ownership_a2_id = recite.start(ownership_buffer_a2, {
   cmd = { vim.env.RECITE_LSP, "--ownership-a" },
 })
-assert_true(ownership_a2_id == ownership_a_id, "identical material did not reuse its owned client across buffers")
-vim.cmd("edit " .. vim.fn.fnameescape(vim.env.RECITE_SECOND_PROJECT .. "/core_language_spike.recite"))
+assert_true(
+  ownership_a2_id == ownership_a_id,
+  "identical material did not reuse its owned client across buffers"
+)
+vim.cmd(
+  "edit " .. vim.fn.fnameescape(vim.env.RECITE_SECOND_PROJECT .. "/core_language_spike.recite")
+)
 local ownership_buffer_b = vim.api.nvim_get_current_buf()
 local ownership_b_id = recite.start(ownership_buffer_b, {
   cmd = { vim.env.RECITE_LSP, "--ownership-b" },
 })
 local ownership_b = wait_initialized(ownership_b_id, "ownership B client")
-assert_true(ownership_a.config.root_dir == ownership_root and ownership_b.config.root_dir == ownership_root,
-  "same-root ownership probe did not use the configured root")
+assert_true(
+  ownership_a.config.root_dir == ownership_root and ownership_b.config.root_dir == ownership_root,
+  "same-root ownership probe did not use the configured root"
+)
 assert_true(ownership_a_id ~= ownership_b_id, "incompatible same-root materials shared a client")
 
 -- A deleted member must be pruned from the long-lived lifecycle before the
 -- next recovery, rather than accumulating as a stale buffer number.
 vim.api.nvim_buf_delete(ownership_buffer_a2, { force = true })
-assert_true(not vim.api.nvim_buf_is_valid(ownership_buffer_a2),
-  "deleted ownership probe buffer remained valid")
+assert_true(
+  not vim.api.nvim_buf_is_valid(ownership_buffer_a2),
+  "deleted ownership probe buffer remained valid"
+)
 local ownership_added = vim.api.nvim_create_buf(true, true)
 vim.api.nvim_buf_set_name(ownership_added, ownership_root .. "/added-during-recovery.recite")
 vim.bo[ownership_added].filetype = "recite"
@@ -222,10 +273,14 @@ wait_for(function()
     and b_clients[1].id == ownership_b_id
     and #added_clients == 0
 end, "crash recovery crossed same-root material or adopted a new buffer")
-assert_true(#vim.lsp.get_clients({ bufnr = ownership_buffer_a, name = "recite-lsp" }) == 1,
-  "crashed material A left duplicate clients on its owned buffer")
-assert_true(ownership_recovered.config.cmd[2] == "--ownership-a",
-  "crashed material A recovered with the wrong command")
+assert_true(
+  #vim.lsp.get_clients({ bufnr = ownership_buffer_a, name = "recite-lsp" }) == 1,
+  "crashed material A left duplicate clients on its owned buffer"
+)
+assert_true(
+  ownership_recovered.config.cmd[2] == "--ownership-a",
+  "crashed material A recovered with the wrong command"
+)
 stop_probe(recite, ownership_recovered.id, "recovered ownership A client")
 stop_probe(recite, ownership_b_id, "ownership B client")
 vim.api.nvim_buf_delete(ownership_added, { force = true })

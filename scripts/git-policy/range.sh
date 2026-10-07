@@ -39,7 +39,7 @@ git_policy_run_commit_range() {
   fi
 
   mapfile -t commits < <(git -C "$repo_root" rev-list --reverse "${base_sha}..${head_sha}")
-  if (( ${#commits[@]} == 0 )); then
+  if ((${#commits[@]} == 0)); then
     echo "no commits in Git policy range: $base_ref..$head_ref"
     return 0
   fi
@@ -55,7 +55,7 @@ git_policy_run_commit_range() {
     fi
   done
 
-  if (( failures > 0 )); then
+  if ((failures > 0)); then
     echo "Found ${failures} Git policy commit violation(s)." >&2
     return 1
   fi

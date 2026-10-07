@@ -8,13 +8,14 @@ from pathlib import Path
 from .content_digest import selected_target_digest
 from .model import Context
 
-
 _CARGO_TIMEOUT_SECONDS = 120
 _MAX_CARGO_DIAGNOSTIC_LENGTH = 4096
 _CARGO_DIAGNOSTIC_TRUNCATION = "... [truncated]"
 
 
-def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | None = None) -> set[str] | None:
+def cargo_test_list(
+    ctx: Context, package: str, target: str, test_filter: str | None = None
+) -> set[str] | None:
     executable = cargo_test_executable(ctx, package, target)
     if executable is None:
         return None
@@ -40,13 +41,17 @@ def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | 
         )
         return None
     except OSError as error:
-        ctx.require(False, f"test harness discovery could not start for {package}/{target}: {error}")
+        ctx.require(
+            False, f"test harness discovery could not start for {package}/{target}: {error}"
+        )
         return None
     if result.returncode != 0:
         output = (result.stdout + result.stderr).strip().splitlines()
         detail = output[-1] if output else "no cargo output"
         suffix = " exact selection" if test_filter is not None else " test list"
-        ctx.require(False, f"test harness discovery failed for {package}/{target}{suffix}: {detail}")
+        ctx.require(
+            False, f"test harness discovery failed for {package}/{target}{suffix}: {detail}"
+        )
         return None
     return {
         line[: -len(": test")].strip()
@@ -81,7 +86,11 @@ def cargo_test_executable(ctx: Context, package: str, target: str) -> Path | Non
             text=True,
             encoding="utf-8",
             errors="replace",
-            env={**os.environ, "CARGO_TERM_COLOR": "never", "CARGO_TARGET_DIR": str(ctx.cargo_target_dir)},
+            env={
+                **os.environ,
+                "CARGO_TERM_COLOR": "never",
+                "CARGO_TARGET_DIR": str(ctx.cargo_target_dir),
+            },
             timeout=_CARGO_TIMEOUT_SECONDS,
             check=False,
         )
@@ -93,7 +102,9 @@ def cargo_test_executable(ctx: Context, package: str, target: str) -> Path | Non
         ctx.cargo_test_executable_cache[key] = None
         return None
     except OSError as error:
-        ctx.require(False, f"cargo test-target compilation could not start for {package}/{target}: {error}")
+        ctx.require(
+            False, f"cargo test-target compilation could not start for {package}/{target}: {error}"
+        )
         ctx.cargo_test_executable_cache[key] = None
         return None
     executable = None
@@ -168,12 +179,16 @@ def discovered_test_paths(ctx: Context, package: str, target: str) -> set[str] |
     if key not in ctx.cargo_test_list_cache:
         discovered = cargo_test_list(ctx, package, target)
         if discovered is not None and not discovered:
-            ctx.require(False, f"evidence target has no Cargo-discovered runnable tests: {package}/{target}")
+            ctx.require(
+                False, f"evidence target has no Cargo-discovered runnable tests: {package}/{target}"
+            )
         ctx.cargo_test_list_cache[key] = discovered
     return ctx.cargo_test_list_cache[key]
 
 
-def exact_test_selection(ctx: Context, package: str, target: str, test_filter: str) -> set[str] | None:
+def exact_test_selection(
+    ctx: Context, package: str, target: str, test_filter: str
+) -> set[str] | None:
     key = (package, target, test_filter)
     if key not in ctx.cargo_exact_selection_cache:
         ctx.cargo_exact_selection_cache[key] = cargo_test_list(ctx, package, target, test_filter)

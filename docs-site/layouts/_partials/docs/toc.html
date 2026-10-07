@@ -1,0 +1,3 @@
+{{ partial "docs/inject/toc-before" . }}
+{{ replace .TableOfContents `<nav id="TableOfContents">` (printf `<nav id="TableOfContents" aria-label="%s">` (partial "docs/text/i18n" "Table of Contents")) | safeHTML }}
+{{ partial "docs/inject/toc-after" . }}

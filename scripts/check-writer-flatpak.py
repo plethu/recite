@@ -3,12 +3,11 @@
 
 import argparse
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tomllib
 import xml.etree.ElementTree as ET
-
+from pathlib import Path
 
 APP_ID = "io.github.plethu.recite"
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,22 +35,30 @@ def check_builder_manifest() -> None:
         {
             "org.freedesktop.Sdk.Extension.rust-stable",
             "org.freedesktop.Sdk.Extension.llvm22",
-        } <= set(manifest["sdk-extensions"]),
+        }
+        <= set(manifest["sdk-extensions"]),
         "Rust and LLVM SDK extensions are required",
     )
     finish_args = set(manifest["finish-args"])
-    require({
-        "--socket=wayland",
-        "--socket=fallback-x11",
-        "--device=dri",
-        "--filesystem=host",
-        "--talk-name=org.freedesktop.Flatpak",
-    } <= finish_args, "missing sandbox permissions")
+    require(
+        {
+            "--socket=wayland",
+            "--socket=fallback-x11",
+            "--device=dri",
+            "--filesystem=host",
+            "--talk-name=org.freedesktop.Flatpak",
+        }
+        <= finish_args,
+        "missing sandbox permissions",
+    )
     writer = manifest["modules"][-1]
     require(writer["name"] == "recite-writer", "wrong writer module")
     env = writer["build-options"]["env"]
     require(env["CARGO_NET_OFFLINE"] == "true", "Cargo must build offline")
-    require(env["SKIA_SOURCE_DIR"] == "/run/build/recite-writer/skia", "Skia must build from pinned source")
+    require(
+        env["SKIA_SOURCE_DIR"] == "/run/build/recite-writer/skia",
+        "Skia must build from pinned source",
+    )
     skia = next(
         source
         for source in writer["sources"]
@@ -68,7 +75,8 @@ def check_builder_manifest() -> None:
             "skia/third_party/externals/wuffs": "e3f919ccfe3ef542cfc983a82146070258fb57f8",
             "skia/third_party/externals/vulkanmemoryallocator": "eb744ea7a2b17040121b4bbb4d6f9e8a77e3cae7",
             "skia/third_party/externals/spirv-cross": "b8fcf307f1f347089e3c46eb4451d27f32ebc8d3",
-        }.items() <= externals.items(),
+        }.items()
+        <= externals.items(),
         "missing Skia DEPS revisions",
     )
 
@@ -86,15 +94,15 @@ def check_sources_and_metadata() -> None:
         if package.get("source", "").startswith("registry+")
     }
     actual = {
-        (source["url"], source["sha256"])
-        for source in sources
-        if source["type"] == "archive"
+        (source["url"], source["sha256"]) for source in sources if source["type"] == "archive"
     }
     require(actual == expected, "Cargo sources must match the writer lockfile")
 
     desktop = (MANIFEST.parent / f"{APP_ID}.desktop").read_text()
     require("Exec=recite-writer %u" in desktop, "desktop entry must accept links")
-    require("MimeType=x-scheme-handler/recite;" in desktop, "desktop entry must register recite links")
+    require(
+        "MimeType=x-scheme-handler/recite;" in desktop, "desktop entry must register recite links"
+    )
     metadata = ET.parse(MANIFEST.parent / f"{APP_ID}.metainfo.xml")
     require(metadata.findtext("./id") == APP_ID, "wrong AppStream ID")
     require(metadata.findtext("./launchable") == f"{APP_ID}.desktop", "wrong AppStream launchable")
@@ -134,9 +142,10 @@ def check_export(output: Path) -> None:
         require((files / relative).is_file(), f"missing {relative}")
     metadata = (build / "metadata").read_text()
     require("org.freedesktop.Flatpak" in metadata, "host spawn permission missing")
-    require("x-scheme-handler/recite" in (
-        files / f"share/applications/{APP_ID}.desktop"
-    ).read_text(), "packaged desktop entry lost link registration")
+    require(
+        "x-scheme-handler/recite" in (files / f"share/applications/{APP_ID}.desktop").read_text(),
+        "packaged desktop entry lost link registration",
+    )
     for flag in ("--help", "--version"):
         subprocess.run(
             [

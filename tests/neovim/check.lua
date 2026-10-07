@@ -30,8 +30,10 @@ local function assert_isolated_neovim_paths()
   }
   for _, kind in ipairs({ "config", "data", "state", "cache" }) do
     local path = vim.fn.stdpath(kind)
-    assert_true(path == expected_paths[kind],
-      "Neovim " .. kind .. " path escaped the isolated XDG directory: " .. path)
+    assert_true(
+      path == expected_paths[kind],
+      "Neovim " .. kind .. " path escaped the isolated XDG directory: " .. path
+    )
   end
 
   local forbidden_user_roots = {
@@ -42,14 +44,18 @@ local function assert_isolated_neovim_paths()
     vim.fn.expand("~/.vim"),
   }
   local runtime_paths = vim.opt.runtimepath:get()
-  assert_true(vim.tbl_contains(runtime_paths, vim.env.VIMRUNTIME),
-    "Neovim system runtime was removed from runtimepath")
+  assert_true(
+    vim.tbl_contains(runtime_paths, vim.env.VIMRUNTIME),
+    "Neovim system runtime was removed from runtimepath"
+  )
   for _, path in ipairs(runtime_paths) do
     for _, forbidden_root in ipairs(forbidden_user_roots) do
       local is_forbidden = path == forbidden_root
         or path:sub(1, #forbidden_root + 1) == forbidden_root .. "/"
-      assert_true(not is_forbidden,
-        "Neovim runtimepath included a user directory or local plugin: " .. path)
+      assert_true(
+        not is_forbidden,
+        "Neovim runtimepath included a user directory or local plugin: " .. path
+      )
     end
   end
 end
@@ -105,7 +111,10 @@ if vim.env.RECITE_PARSER_AVAILABLE == "1" then
     captures[query.captures[capture_id]] = true
   end
   assert_true(captures.keyword == true, "Tree-sitter query did not produce a keyword capture")
-  assert_true(captures["string.special"] == true, "Tree-sitter query did not produce prose captures")
+  assert_true(
+    captures["string.special"] == true,
+    "Tree-sitter query did not produce prose captures"
+  )
 end
 
 local clients
@@ -116,7 +125,10 @@ end, "recite-lsp did not attach through the automatic runtimepath entry")
 local client = clients[1]
 assert_true(client.config.root_dir == project, "recite-lsp received the wrong project root")
 assert_true(client.offset_encoding == "utf-16", "recite-lsp did not negotiate UTF-16 positions")
-assert_true(client.config.cmd[1] == vim.env.RECITE_LSP, "pre-load options were not applied by the automatic plugin entry")
+assert_true(
+  client.config.cmd[1] == vim.env.RECITE_LSP,
+  "pre-load options were not applied by the automatic plugin entry"
+)
 
 local uri = vim.uri_from_fname(valid)
 local target = { line = 6, character = 7 }
@@ -138,8 +150,14 @@ local definition = request(client, "textDocument/definition", {
   textDocument = { uri = uri },
   position = target,
 })
-assert_true(type(definition) == "table" and definition.uri == uri, "definition did not preserve the source URI")
-assert_true(definition.range.start.line == 13 and definition.range.start.character == 3, "definition range changed")
+assert_true(
+  type(definition) == "table" and definition.uri == uri,
+  "definition did not preserve the source URI"
+)
+assert_true(
+  definition.range.start.line == 13 and definition.range.start.character == 3,
+  "definition range changed"
+)
 
 local hover = request(client, "textDocument/hover", {
   textDocument = { uri = uri },
@@ -152,13 +170,26 @@ local references = request(client, "textDocument/references", {
   position = target,
   context = { includeDeclaration = true },
 })
-assert_true(type(references) == "table" and #references == 2, "references response was not source ordered")
-assert_true(references[1].uri == uri and references[1].range.start.line == 13
-  and references[1].range.start.character == 3 and references[1].range["end"].line == 13
-  and references[1].range["end"].character == 7, "references did not put the declaration first")
-assert_true(references[2].uri == uri and references[2].range.start.line == 6
-  and references[2].range.start.character == 7 and references[2].range["end"].line == 6
-  and references[2].range["end"].character == 11, "references did not preserve source order")
+assert_true(
+  type(references) == "table" and #references == 2,
+  "references response was not source ordered"
+)
+assert_true(
+  references[1].uri == uri
+    and references[1].range.start.line == 13
+    and references[1].range.start.character == 3
+    and references[1].range["end"].line == 13
+    and references[1].range["end"].character == 7,
+  "references did not put the declaration first"
+)
+assert_true(
+  references[2].uri == uri
+    and references[2].range.start.line == 6
+    and references[2].range.start.character == 7
+    and references[2].range["end"].line == 6
+    and references[2].range["end"].character == 11,
+  "references did not preserve source order"
+)
 
 local prepared = request(client, "textDocument/prepareRename", {
   textDocument = { uri = uri },
@@ -170,19 +201,41 @@ local rename = request(client, "textDocument/rename", {
   position = target,
   newName = "renamed",
 })
-assert_true(type(rename) == "table" and type(rename.documentChanges) == "table", "rename response was not a safe document change: " .. vim.inspect(rename))
-assert_true(#rename.documentChanges == 1, "rename returned an unexpected number of document changes")
+assert_true(
+  type(rename) == "table" and type(rename.documentChanges) == "table",
+  "rename response was not a safe document change: " .. vim.inspect(rename)
+)
+assert_true(
+  #rename.documentChanges == 1,
+  "rename returned an unexpected number of document changes"
+)
 assert_true(rename.documentChanges[1].textDocument.uri == uri, "rename changed the source URI")
-assert_true(rename.documentChanges[1].textDocument.version ~= nil, "rename omitted the source version: " .. vim.inspect(rename))
+assert_true(
+  rename.documentChanges[1].textDocument.version ~= nil,
+  "rename omitted the source version: " .. vim.inspect(rename)
+)
 local rename_edits = rename.documentChanges[1].edits
 assert_true(#rename_edits == 2, "rename returned an unexpected number of edits")
-assert_true(rename_edits[1].range.start.line == 6 and rename_edits[1].range.start.character == 7
-  and rename_edits[1].range["end"].line == 6 and rename_edits[1].range["end"].character == 11
-  and rename_edits[1].newText == "renamed", "rename reference edit was not exact")
-assert_true(rename_edits[2].range.start.line == 13 and rename_edits[2].range.start.character == 3
-  and rename_edits[2].range["end"].line == 13 and rename_edits[2].range["end"].character == 7
-  and rename_edits[2].newText == "renamed", "rename declaration edit was not exact")
-assert_true(vim.api.nvim_buf_get_lines(0, 0, -1, false)[7]:find("work", 1, true) ~= nil, "rename request mutated the buffer")
+assert_true(
+  rename_edits[1].range.start.line == 6
+    and rename_edits[1].range.start.character == 7
+    and rename_edits[1].range["end"].line == 6
+    and rename_edits[1].range["end"].character == 11
+    and rename_edits[1].newText == "renamed",
+  "rename reference edit was not exact"
+)
+assert_true(
+  rename_edits[2].range.start.line == 13
+    and rename_edits[2].range.start.character == 3
+    and rename_edits[2].range["end"].line == 13
+    and rename_edits[2].range["end"].character == 7
+    and rename_edits[2].newText == "renamed",
+  "rename declaration edit was not exact"
+)
+assert_true(
+  vim.api.nvim_buf_get_lines(0, 0, -1, false)[7]:find("work", 1, true) ~= nil,
+  "rename request mutated the buffer"
+)
 
 local missing = vim.env.RECITE_MISSING_PROJECT .. "/missing.recite"
 vim.cmd("edit " .. escaped(missing))
@@ -205,15 +258,26 @@ local actions = request(client, "textDocument/codeAction", {
   range = { start = { line = 2, character = 0 }, ["end"] = { line = 2, character = 1 } },
   context = { diagnostics = { missing_id_diagnostic }, only = { "quickfix" } },
 })
-assert_true(type(actions) == "table" and #actions > 0, "code action response omitted the missing-ID quickfix")
+assert_true(
+  type(actions) == "table" and #actions > 0,
+  "code action response omitted the missing-ID quickfix"
+)
 local action = actions[1]
 local change = action.edit.documentChanges[1]
 assert_true(action.kind == "quickfix", "missing-ID code action was not a quickfix")
-assert_true(change.textDocument.uri == missing_uri and change.textDocument.version ~= nil, "code action edit did not preserve the source version: " .. vim.inspect(actions))
+assert_true(
+  change.textDocument.uri == missing_uri and change.textDocument.version ~= nil,
+  "code action edit did not preserve the source version: " .. vim.inspect(actions)
+)
 assert_true(#change.edits == 1, "missing-ID code action returned unexpected edits")
-assert_true(change.edits[1].range.start.line == 2 and change.edits[1].range.start.character == 1,
-  "missing-ID code action targeted the wrong insertion point")
-assert_true(change.edits[1].newText == " line@34e5ee56e949afa2bbf3", "missing-ID code action invented the wrong stable ID: " .. vim.inspect(actions))
+assert_true(
+  change.edits[1].range.start.line == 2 and change.edits[1].range.start.character == 1,
+  "missing-ID code action targeted the wrong insertion point"
+)
+assert_true(
+  change.edits[1].newText == " line@34e5ee56e949afa2bbf3",
+  "missing-ID code action invented the wrong stable ID: " .. vim.inspect(actions)
+)
 
 vim.cmd("edit " .. escaped(invalid))
 assert_true(vim.bo.filetype == "recite", "invalid .recite file lost its filetype")
@@ -221,7 +285,10 @@ wait_for(function()
   clients = vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" })
   return #clients > 0 and clients[1].initialized
 end, "recite-lsp did not attach to the Recite buffer")
-assert_true(clients[1].config.root_dir == invalid_project, "recite-lsp received the wrong project root")
+assert_true(
+  clients[1].config.root_dir == invalid_project,
+  "recite-lsp received the wrong project root"
+)
 assert_true(clients[1].offset_encoding == "utf-16", "recite-lsp did not negotiate UTF-16 positions")
 
 wait_for(function()
@@ -258,20 +325,34 @@ for _, item in ipairs(vim.diagnostic.get(0)) do
     unicode_diagnostic = item
   end
 end
-assert_true(unicode_diagnostic ~= nil, "unicode diagnostic was not positioned on the malformed line")
-assert_true(unicode_diagnostic.col == 15, "Neovim did not project UTF-16 diagnostics to the expected byte column: " .. vim.inspect(unicode_diagnostic))
-assert_true(unicode_diagnostic.user_data.lsp.range.start.character == 13, "the server did not retain the UTF-16 wire range")
+assert_true(
+  unicode_diagnostic ~= nil,
+  "unicode diagnostic was not positioned on the malformed line"
+)
+assert_true(
+  unicode_diagnostic.col == 15,
+  "Neovim did not project UTF-16 diagnostics to the expected byte column: "
+    .. vim.inspect(unicode_diagnostic)
+)
+assert_true(
+  unicode_diagnostic.user_data.lsp.range.start.character == 13,
+  "the server did not retain the UTF-16 wire range"
+)
 
 clients = vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" })
 assert_true(#clients > 0 and clients[1].initialized, "unicode buffer lost its initialized client")
 
 local messages = require("recite_messages")
 local health_module_path = vim.api.nvim_get_runtime_file("lua/recite/health.lua", true)
-assert_true(#health_module_path == 1
-  and health_module_path[1] == vim.env.RECITE_PLUGIN .. "/lua/recite/health.lua",
-  "Neovim runtimepath did not expose the standard Recite health module")
-assert_true(#vim.api.nvim_get_runtime_file("health/recite.lua", true) == 0,
-  "Neovim runtimepath retained the non-discoverable Recite health module")
+assert_true(
+  #health_module_path == 1
+    and health_module_path[1] == vim.env.RECITE_PLUGIN .. "/lua/recite/health.lua",
+  "Neovim runtimepath did not expose the standard Recite health module"
+)
+assert_true(
+  #vim.api.nvim_get_runtime_file("health/recite.lua", true) == 0,
+  "Neovim runtimepath retained the non-discoverable Recite health module"
+)
 -- `:checkhealth` runs runtime discovery and must execute on the main event
 -- loop, not nested inside the Lua chunk that drove the preceding LSP checks.
 -- This also keeps Neovim 0.10 and 0.12 from reporting a spurious E5009
@@ -280,10 +361,16 @@ local health_finished = false
 local health_error
 vim.schedule(function()
   local ok, error = pcall(vim.cmd, "checkhealth recite")
-  if ok then health_error = nil else health_error = error end
+  if ok then
+    health_error = nil
+  else
+    health_error = error
+  end
   health_finished = true
 end)
-wait_for(function() return health_finished end, "checkhealth did not complete")
+wait_for(function()
+  return health_finished
+end, "checkhealth did not complete")
 assert_true(health_error == nil, "checkhealth raised a Lua/Vim error: " .. tostring(health_error))
 local health_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 local function health_report_contains(message)
@@ -295,10 +382,14 @@ local function health_report_contains(message)
   return false
 end
 
-assert_true(package.loaded["recite.health"] ~= nil,
-  ":checkhealth recite did not load the discoverable recite.health module")
-assert_true(not health_report_contains('No healthcheck found for "recite" plugin.'),
-  ":checkhealth recite reported that no healthcheck was found")
+assert_true(
+  package.loaded["recite.health"] ~= nil,
+  ":checkhealth recite did not load the discoverable recite.health module"
+)
+assert_true(
+  not health_report_contains('No healthcheck found for "recite" plugin.'),
+  ":checkhealth recite reported that no healthcheck was found"
+)
 for _, message in ipairs({
   messages.format("neovim-health-filetype-ok"),
   messages.format("neovim-health-lsp-executable-found", { command = vim.env.RECITE_LSP }),
@@ -306,8 +397,10 @@ for _, message in ipairs({
   messages.format("neovim-health-parser-found"),
   messages.format("neovim-health-open-buffer"),
 }) do
-  assert_true(health_report_contains(message),
-    ":checkhealth recite omitted check result: " .. message)
+  assert_true(
+    health_report_contains(message),
+    ":checkhealth recite omitted check result: " .. message
+  )
 end
 
 vim.cmd("qa!")

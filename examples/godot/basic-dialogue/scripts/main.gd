@@ -7,6 +7,7 @@ var choices: VBoxContainer
 var status: Label
 var pending_effect_id := ""
 
+
 func _ready() -> void:
 	recite = ReciteDialogueNode.new()
 	add_child(recite)
@@ -41,6 +42,7 @@ func _ready() -> void:
 	if not started.is_ok():
 		_show_error(started.error())
 
+
 func _on_recite_output(output: ReciteOutput) -> void:
 	var data := output.data()
 	match data.get("kind", ""):
@@ -64,6 +66,7 @@ func _on_recite_output(output: ReciteOutput) -> void:
 				transcript.append_text("[color=gray]deferred: %s[/color]\n" % effect["function"])
 			status.text = "Ended"
 
+
 func _render_choices(items: Array) -> void:
 	for child in choices.get_children():
 		child.queue_free()
@@ -71,15 +74,18 @@ func _render_choices(items: Array) -> void:
 		var button := Button.new()
 		button.text = choice["text"]
 		button.disabled = not choice["availability"]["is_available"]
-		button.pressed.connect(func() -> void:
-			var result := recite.select_choice(choice["id"])
-			if not result.is_ok():
-				_show_error(result.error())
+		button.pressed.connect(
+			func() -> void:
+				var result := recite.select_choice(choice["id"])
+				if not result.is_ok():
+					_show_error(result.error())
 		)
 		choices.add_child(button)
 
+
 func _on_recite_error(error: ReciteAdapterError) -> void:
 	_show_error(error.data())
+
 
 func _show_error(error: Dictionary) -> void:
 	status.text = "%s: %s" % [error.get("code", "adapter_error"), error.get("message", "")]

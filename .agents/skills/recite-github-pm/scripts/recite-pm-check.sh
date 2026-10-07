@@ -57,7 +57,7 @@ cached_api() {
 
   if [[ -f "$cache_file" ]]; then
     mtime="$(stat -c %Y "$cache_file" 2>/dev/null || echo 0)"
-    if (( now - mtime < ttl )); then
+    if ((now - mtime < ttl)); then
       cat "$cache_file"
       return
     fi
@@ -69,10 +69,10 @@ cached_api() {
 mode="${1:-quick}"
 
 case "$mode" in
-  quick|--quick)
+  quick | --quick)
     print_local_preflight
     ;;
-  issue|--issue)
+  issue | --issue)
     issue_number="${2:-}"
     if [[ -z "$issue_number" ]]; then
       echo "issue mode requires an issue number" >&2
@@ -86,7 +86,7 @@ case "$mode" in
     echo "== issue #${issue_number} =="
     gh issue view "$issue_number" --repo "$repo" --json number,title,state,milestone,labels,url
     ;;
-  full|--full)
+  full | --full)
     print_local_preflight
 
     echo
@@ -116,7 +116,7 @@ case "$mode" in
     echo
     echo "Issue list is capped at ${issue_limit}; rerun issue mode for a specific target, or full mode with RECITE_PM_ISSUE_LIMIT adjusted."
     ;;
-  -h|--help|help)
+  -h | --help | help)
     usage
     ;;
   *)

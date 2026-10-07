@@ -33,7 +33,7 @@ if [[ "${RECITE_PERF_RENDER:-0}" == 1 ]]; then
 else
   unset RECITE_PERF_CDP_PORT_FILE
 fi
-printf '%s\n' '{"name":"recite-latency-probe","version":"0.0.0","engines":{"vscode":"^1.89.0"}}' > "$profile/probe/package.json"
+printf '%s\n' '{"name":"recite-latency-probe","version":"0.0.0","engines":{"vscode":"^1.89.0"}}' >"$profile/probe/package.json"
 export XDG_CONFIG_HOME="$profile/config" XDG_CACHE_HOME="$profile/cache"
 export XDG_STATE_HOME="$profile/state" XDG_RUNTIME_DIR="$profile/runtime"
 export VSCODE_PORTABLE="$profile/portable"

@@ -13,16 +13,13 @@ from editor_parity.portable_lock import PortableLock
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 4:
-        print("usage: check.py REPO_ROOT FIXTURE DOCUMENT", file=sys.stderr)
+    if len(argv) != 3:
+        print("usage: check.py REPO_ROOT FIXTURE", file=sys.stderr)
         return 2
     repo_root = Path(argv[1]).resolve()
     fixture_path = Path(argv[2])
-    document_path = Path(argv[3])
     if not fixture_path.is_absolute():
         fixture_path = repo_root / fixture_path
-    if not document_path.is_absolute():
-        document_path = repo_root / document_path
     cargo_target_dir = Path(os.environ.get("CARGO_TARGET_DIR", str(repo_root / "target")))
     if not cargo_target_dir.is_absolute():
         cargo_target_dir = repo_root / cargo_target_dir
@@ -38,7 +35,9 @@ def main(argv: list[str]) -> int:
     try:
         cargo_target_dir = cargo_target_dir.resolve(strict=False)
     except OSError as error:
-        print(f"editor parity contract: unable to resolve CARGO_TARGET_DIR: {error}", file=sys.stderr)
+        print(
+            f"editor parity contract: unable to resolve CARGO_TARGET_DIR: {error}", file=sys.stderr
+        )
         return 1
     canonical_target = repo_root / "target"
     inside_repo = cargo_target_dir == repo_root or repo_root in cargo_target_dir.parents
@@ -54,7 +53,6 @@ def main(argv: list[str]) -> int:
     lock_path = cargo_target_dir / "editor-parity.lock"
     with PortableLock(lock_path):
         fixture_input = require_control_file(ctx, fixture_path, "editor parity fixture")
-        document_input = require_control_file(ctx, document_path, "editor parity documentation")
         if ctx.errors:
             for error in ctx.errors:
                 print(f"editor parity contract: {error}", file=sys.stderr)
@@ -67,13 +65,19 @@ def main(argv: list[str]) -> int:
         if not isinstance(data, dict):
             print("editor parity contract must contain a JSON object", file=sys.stderr)
             return 2
-        validate(ctx, data, document_input)
+        validate(ctx, data)
     if errors:
         for error in errors:
             print(f"editor parity contract: {error}", file=sys.stderr)
         return 1
-    counts = {key: len(data.get(key, [])) for key in ("capabilities", "scenarios", "clients", "artifacts")}
-    print("Editor parity contract passed: " + ", ".join(f"{value} {key}" for key, value in counts.items()) + ".")
+    counts = {
+        key: len(data.get(key, [])) for key in ("capabilities", "scenarios", "clients", "artifacts")
+    }
+    print(
+        "Editor parity contract passed: "
+        + ", ".join(f"{value} {key}" for key, value in counts.items())
+        + "."
+    )
     return 0
 
 

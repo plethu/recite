@@ -78,5 +78,5 @@ validate_pr_metadata() {
     failures=$((failures + 1))
   fi
 
-  (( failures == 0 ))
+  ((failures == 0))
 }

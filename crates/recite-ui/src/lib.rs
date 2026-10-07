@@ -3,6 +3,18 @@
 //! Dialogue text and semantic diagnostics deliberately do not depend on this
 //! crate. Clients provide a [`UiCatalog`] at their presentation edge, while
 //! machine-facing values remain locale-neutral.
+//!
+//! The human-authored en-US resources and typed [`MsgId`] registry own UI text;
+//! `resources/arguments.toml` owns its arguments. Generated host projections
+//! retain those IDs and are read-only. Publishing another UI locale requires
+//! human authorship and review; en-GB is only a test fixture.
+//!
+//! Catalog lookup tries the requested BCP-47 locale, its language, then en-US.
+//! Invalid non-default resources are rejected atomically; an invalid default
+//! resource is fatal. Semantic producers provide structured presentations and
+//! clients render them here. Protocol values and dialogue localisation keep
+//! their own boundaries. `DiagnosticRecord` v1's legacy message fallback is a
+//! closed compatibility surface: removing it requires a versioned migration.
 
 mod args;
 mod catalog;

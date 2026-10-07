@@ -7,7 +7,8 @@ artifact_dir="$target_dir/recite-bevy-probe/cargo-packages"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/recite-bevy-package.XXXXXX")"
 trap 'rm -rf "$scratch"' EXIT
 stage="$scratch/artifacts"
-package_version="$(python3 - "$repo_root/Cargo.toml" <<'PY'
+package_version="$(
+  python3 - "$repo_root/Cargo.toml" <<'PY'
 import pathlib
 import sys
 import tomllib
@@ -18,7 +19,7 @@ PY
 crates=(recite-core recite-parser recite-compiler recite-runtime recite-adapter recite-ui recite-bevy)
 patches=()
 for crate in "${crates[@]}"; do
-    patches+=(--config "patch.crates-io.$crate.path=\"$repo_root/crates/$crate\"")
+  patches+=(--config "patch.crates-io.$crate.path=\"$repo_root/crates/$crate\"")
 done
 
 mkdir -p "$stage/packages" "$scratch/unpacked" "$scratch/consumer/examples/assets"
@@ -29,16 +30,16 @@ test -s "$stage/LICENSE-APACHE"
 # Temporary patches resolve unpublished Recite versions while Cargo prepares
 # ordinary registry archives with normalized dependency manifests.
 for crate in "${crates[@]}"; do
-    CARGO_TARGET_DIR="$target_dir" cargo package --manifest-path "$repo_root/Cargo.toml" \
-        -p "$crate" --allow-dirty --no-verify --offline "${patches[@]}"
-    cp "$target_dir/package/$crate-$package_version.crate" "$stage/packages/"
+  CARGO_TARGET_DIR="$target_dir" cargo package --manifest-path "$repo_root/Cargo.toml" \
+    -p "$crate" --allow-dirty --no-verify --offline "${patches[@]}"
+  cp "$target_dir/package/$crate-$package_version.crate" "$stage/packages/"
 done
 
 # Preparing the same inputs a second time must produce byte-identical archives.
 for crate in "${crates[@]}"; do
-    CARGO_TARGET_DIR="$target_dir" cargo package --manifest-path "$repo_root/Cargo.toml" \
-        -p "$crate" --allow-dirty --no-verify --offline "${patches[@]}"
-    cmp "$stage/packages/$crate-$package_version.crate" "$target_dir/package/$crate-$package_version.crate"
+  CARGO_TARGET_DIR="$target_dir" cargo package --manifest-path "$repo_root/Cargo.toml" \
+    -p "$crate" --allow-dirty --no-verify --offline "${patches[@]}"
+  cmp "$stage/packages/$crate-$package_version.crate" "$target_dir/package/$crate-$package_version.crate"
 done
 
 python3 - "$stage/packages" "$scratch/unpacked" "$package_version" <<'PY'
@@ -85,7 +86,7 @@ PY
 bevy_archive="$scratch/unpacked/recite-bevy-$package_version"
 cp "$bevy_archive/examples/headless_dialogue.rs" "$scratch/consumer/examples/"
 cp "$bevy_archive/examples/assets/demo.recite" "$scratch/consumer/examples/assets/"
-cat > "$scratch/consumer/Cargo.toml" <<EOF
+cat >"$scratch/consumer/Cargo.toml" <<EOF
 [package]
 name = "recite-bevy-package-consumer"
 version = "0.0.0"
@@ -101,32 +102,32 @@ recite-core = "=$package_version"
 recite-runtime = "=$package_version"
 EOF
 for crate in "${crates[@]}"; do
-    if [[ "$crate" == "recite-core" ]]; then
-        printf '\n[patch.crates-io]\n' >> "$scratch/consumer/Cargo.toml"
-    fi
-    printf '%s = { path = "../unpacked/%s-%s" }\n' "$crate" "$crate" "$package_version" >> "$scratch/consumer/Cargo.toml"
+  if [[ "$crate" == "recite-core" ]]; then
+    printf '\n[patch.crates-io]\n' >>"$scratch/consumer/Cargo.toml"
+  fi
+  printf '%s = { path = "../unpacked/%s-%s" }\n' "$crate" "$crate" "$package_version" >>"$scratch/consumer/Cargo.toml"
 done
 CARGO_TARGET_DIR="$target_dir" cargo run --manifest-path "$scratch/consumer/Cargo.toml" \
-    --example headless_dialogue --offline
+  --example headless_dialogue --offline
 CARGO_TARGET_DIR="$target_dir" cargo tree --manifest-path "$scratch/consumer/Cargo.toml" \
-    --offline > "$stage/dependency-tree.txt"
+  --offline >"$stage/dependency-tree.txt"
 for crate in "${crates[@]}"; do
-    [[ "$crate" == "recite-ui" ]] && continue # only an unpublished dev dependency
-    rg -Fq "$crate v$package_version ($scratch/unpacked/$crate-$package_version)" "$stage/dependency-tree.txt"
+  [[ "$crate" == "recite-ui" ]] && continue # only an unpublished dev dependency
+  rg -Fq "$crate v$package_version ($scratch/unpacked/$crate-$package_version)" "$stage/dependency-tree.txt"
 done
 if rg -q 'bevy_render|wgpu|winit|bevy_window' "$stage/dependency-tree.txt"; then
-    echo "renderer/window dependency leaked into CPU-only adapter" >&2
-    exit 1
+  echo "renderer/window dependency leaked into CPU-only adapter" >&2
+  exit 1
 fi
 mv "$scratch/unpacked" "$scratch/consumer" "$stage/"
 mkdir -p "$(dirname "$artifact_dir")"
 if [[ -e "$artifact_dir" ]]; then
-    mv "$artifact_dir" "$scratch/previous-artifacts"
+  mv "$artifact_dir" "$scratch/previous-artifacts"
 fi
 if ! mv "$stage" "$artifact_dir"; then
-    if [[ -e "$scratch/previous-artifacts" ]]; then
-        mv "$scratch/previous-artifacts" "$artifact_dir"
-    fi
-    exit 1
+  if [[ -e "$scratch/previous-artifacts" ]]; then
+    mv "$scratch/previous-artifacts" "$artifact_dir"
+  fi
+  exit 1
 fi
 printf 'Bevy Cargo packages and packaged example passed; archives: %s\n' "$artifact_dir/packages"

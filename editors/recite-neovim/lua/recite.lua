@@ -142,14 +142,30 @@ end
 -- Structured CLI adapters have a lifecycle separate from LSP.
 if vim.env.RECITE_DISABLE_COMMANDS ~= "1" then
   M.commands = command_adapter
-  M.validate = function(options) return command_adapter.validate(options) end
-  M.compile = function(options) return command_adapter.compile(options) end
-  M.extract = function(options) return command_adapter.extract(options) end
-  M.run = function(options) return command_adapter.run(options) end
-  M.trace = function(options) return command_adapter.trace(options) end
-  M.watch_start = function(options) return command_adapter.watch_start(options) end
-  M.watch_stop = function() return command_adapter.watch_stop() end
-  M.watch_active = function() return command_adapter.watch_active() end
+  M.validate = function(options)
+    return command_adapter.validate(options)
+  end
+  M.compile = function(options)
+    return command_adapter.compile(options)
+  end
+  M.extract = function(options)
+    return command_adapter.extract(options)
+  end
+  M.run = function(options)
+    return command_adapter.run(options)
+  end
+  M.trace = function(options)
+    return command_adapter.trace(options)
+  end
+  M.watch_start = function(options)
+    return command_adapter.watch_start(options)
+  end
+  M.watch_stop = function()
+    return command_adapter.watch_stop()
+  end
+  M.watch_active = function()
+    return command_adapter.watch_active()
+  end
 end
 
 --- Register filetype, Tree-sitter, and FileType integration.
@@ -174,13 +190,17 @@ function M.setup(options)
   end
 
   local function command(name, callback, command_options)
-    if vim.fn.exists(":" .. name) == 2 then vim.api.nvim_del_user_command(name) end
+    if vim.fn.exists(":" .. name) == 2 then
+      vim.api.nvim_del_user_command(name)
+    end
     local definition = vim.tbl_extend("force", {
       nargs = "*",
       complete = "file",
       desc = messages.format("neovim-command-description", { command = name }),
     }, command_options or {})
-    if definition.complete == false then definition.complete = nil end
+    if definition.complete == false then
+      definition.complete = nil
+    end
     vim.api.nvim_create_user_command(name, callback, definition)
   end
   command("ReciteValidate", function(args)
@@ -189,13 +209,19 @@ function M.setup(options)
   end)
   command("ReciteCompile", function(args)
     local values = args.fargs
-    M.compile(#values > 1 and { output = values[1], paths = vim.list_slice(values, 2) }
-      or #values == 1 and { output = values[1] } or {})
+    M.compile(
+      #values > 1 and { output = values[1], paths = vim.list_slice(values, 2) }
+        or #values == 1 and { output = values[1] }
+        or {}
+    )
   end)
   command("ReciteExtract", function(args)
     local values = args.fargs
-    M.extract(#values > 1 and { output = values[1], paths = vim.list_slice(values, 2) }
-      or #values == 1 and { output = values[1] } or {})
+    M.extract(
+      #values > 1 and { output = values[1], paths = vim.list_slice(values, 2) }
+        or #values == 1 and { output = values[1] }
+        or {}
+    )
   end)
   command("ReciteRun", function(args)
     local values = args.fargs

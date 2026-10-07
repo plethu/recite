@@ -90,7 +90,7 @@ git_policy_run_fixture_checks() {
       echo "fixture branch expectation failed: $branch (expected $expected)" >&2
       failures=$((failures + 1))
     fi
-  done < "$fixture_root/branches.tsv"
+  done <"$fixture_root/branches.tsv"
 
   for message_fixture in "$fixture_root"/commit-messages/*.txt; do
     [[ -e "$message_fixture" ]] || continue
@@ -135,7 +135,7 @@ git_policy_run_fixture_checks() {
     failures=$((failures + 1))
   fi
 
-  if (( failures > 0 )); then
+  if ((failures > 0)); then
     echo "Found ${failures} Git policy fixture failure(s)." >&2
     return 1
   fi

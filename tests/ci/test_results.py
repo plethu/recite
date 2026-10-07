@@ -2,10 +2,9 @@
 
 import copy
 import importlib.util
-from pathlib import Path
 import re
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("ci_results", ROOT / "scripts/check-ci-results.py")
@@ -16,9 +15,10 @@ spec.loader.exec_module(results)
 def fixture():
     needs = {lane: {"result": "skipped"} for lane in results.LANES}
     needs["docs"]["result"] = "success"
-    needs["changes"] = {"result": "success", "outputs": {
-        lane: "true" if lane == "docs" else "false" for lane in results.LANES
-    }}
+    needs["changes"] = {
+        "result": "success",
+        "outputs": {lane: "true" if lane == "docs" else "false" for lane in results.LANES},
+    }
     needs["git-policy"] = {"result": "success"}
     return needs
 
@@ -72,8 +72,13 @@ class ResultsTests(unittest.TestCase):
 
     def test_workflow_wires_every_lane_to_selection_and_required_result(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text()
-        jobs = dict(re.findall(r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:|\Z)",
-                               workflow.split("jobs:\n", 1)[1], re.M | re.S))
+        jobs = dict(
+            re.findall(
+                r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:|\Z)",
+                workflow.split("jobs:\n", 1)[1],
+                re.M | re.S,
+            )
+        )
         self.assertEqual(set(jobs), results.LANES | {"changes", "git-policy", "required-check"})
         for lane in results.LANES:
             self.assertIn("needs: changes", jobs[lane])

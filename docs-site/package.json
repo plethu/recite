@@ -3,33 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
-    "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
-    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview --host 127.0.0.1",
-    "check": "ASTRO_TELEMETRY_DISABLED=1 astro sync && pnpm exec vp check && ASTRO_TELEMETRY_DISABLED=1 astro check && svelte-check --tsgo --tsconfig ./tsconfig.json --fail-on-warnings && pnpm run lint:css",
+    "check": "tsc6 --noEmit && pnpm run lint:css",
     "test:browser": "playwright test",
-    "fmt": "vp fmt",
-    "lint:css": "stylelint \"src/**/*.css\" --max-warnings 0"
-  },
-  "dependencies": {
-    "@astrojs/markdown-remark": "7.3.1",
-    "@astrojs/starlight": "0.42.4",
-    "@astrojs/svelte": "9.0.1",
-    "astro": "7.3.5",
-    "svelte": "5.57.1"
+    "lint:css": "stylelint \"assets/**/*.css\" --max-warnings 0"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.10",
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
-    "@typescript/native": "npm:typescript@7.1.0-dev.20260928.1",
+    "@types/node": "24.19.1",
     "stylelint": "17.15.0",
     "stylelint-config-standard": "40.0.0",
-    "svelte-check": "4.7.6",
-    "typescript": "npm:@typescript/typescript6@6.0.2",
-    "vite-plus": "1.0.0"
+    "typescript": "npm:@typescript/typescript6@6.0.2"
   },
-  "engines": {
-    "node": ">=24 <25"
-  }
+  "engines": { "node": ">=24 <25" }
 }

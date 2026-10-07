@@ -1,10 +1,10 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
-import textmate from "vscode-textmate";
 import oniguruma from "vscode-oniguruma";
+import textmate from "vscode-textmate";
 
 const { Registry, INITIAL, parseRawGrammar } = textmate;
 const { OnigScanner, OnigString, loadWASM } = oniguruma;
@@ -13,28 +13,38 @@ const repositoryRoot = path.resolve(packageRoot, "..", "..");
 
 const grammarSource = await readFile(
   path.join(packageRoot, "syntaxes", "recite.tmLanguage.json"),
-  "utf8"
+  "utf8",
 );
-const fixtureManifest = JSON.parse(await readFile(
-  path.join(repositoryRoot, "fixtures/editor-parity/textmate.json"), "utf8"
-));
-const snapshots = JSON.parse(await readFile(
-  path.join(repositoryRoot, fixtureManifest.token_snapshots), "utf8"
-));
-const hostileSource = await readFile(path.join(repositoryRoot, fixtureManifest.hostile_fixture), "utf8");
+const fixtureManifest = JSON.parse(
+  await readFile(
+    path.join(repositoryRoot, "fixtures/editor-parity/textmate.json"),
+    "utf8",
+  ),
+);
+const snapshots = JSON.parse(
+  await readFile(
+    path.join(repositoryRoot, fixtureManifest.token_snapshots),
+    "utf8",
+  ),
+);
+const hostileSource = await readFile(
+  path.join(repositoryRoot, fixtureManifest.hostile_fixture),
+  "utf8",
+);
 const wasm = await readFile(
-  path.join(packageRoot, "node_modules/vscode-oniguruma/release/onig.wasm")
+  path.join(packageRoot, "node_modules/vscode-oniguruma/release/onig.wasm"),
 );
 await loadWASM(wasm);
 
 const registry = new Registry({
   onigLib: Promise.resolve({
     createOnigScanner: (patterns) => new OnigScanner(patterns),
-    createOnigString: (source) => new OnigString(source)
+    createOnigString: (source) => new OnigString(source),
   }),
-  loadGrammar: async (scopeName) => scopeName === "source.recite"
-    ? parseRawGrammar(grammarSource, "recite.tmLanguage.json")
-    : null
+  loadGrammar: async (scopeName) =>
+    scopeName === "source.recite"
+      ? parseRawGrammar(grammarSource, "recite.tmLanguage.json")
+      : null,
 });
 const grammar = await registry.loadGrammar("source.recite");
 assert.ok(grammar, "the pinned tokenizer must load the Recite grammar");
@@ -52,7 +62,7 @@ test("checked-in TextMate snapshots execute the pinned tokenizer", () => {
 test("canonical, malformed, and incomplete fixtures remain tokenizable", async () => {
   const paths = [
     ...fixtureManifest.canonical_fixtures,
-    fixtureManifest.incomplete_fixture
+    fixtureManifest.incomplete_fixture,
   ];
   for (const relative of paths) {
     const source = await readFile(path.join(repositoryRoot, relative), "utf8");
@@ -67,7 +77,7 @@ function tokenize(source) {
     const lineResult = grammar.tokenizeLine(line, state);
     result.push(lineResult.tokens.map((token, index) => [
       line.slice(token.startIndex, lineResult.tokens[index + 1]?.startIndex ?? line.length),
-      token.scopes
+      token.scopes,
     ]));
     state = lineResult.ruleStack;
   }

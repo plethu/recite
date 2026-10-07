@@ -4,7 +4,7 @@
 maintainability_validate_exceptions() {
   local rows path maximum issue reason kind actual follow_up
   rows="$(mktemp)"
-  if ! python3 "$script_dir/maintainability/parse-exceptions.py" "$exceptions_file" > "$rows"; then
+  if ! python3 "$script_dir/maintainability/parse-exceptions.py" "$exceptions_file" >"$rows"; then
     rm -f "$rows"
     return 1
   fi
@@ -19,15 +19,15 @@ maintainability_validate_exceptions() {
     fi
     actual="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
     follow_up="$(maintainability_follow_up_threshold "$kind")"
-    if (( actual <= follow_up )); then
+    if ((actual <= follow_up)); then
       echo "expired maintainability exception: $path ($actual <= $follow_up)" >&2
       failures=$((failures + 1))
-    elif (( actual > maximum )); then
+    elif ((actual > maximum)); then
       echo "maintainability exception maximum exceeded: $path ($actual > $maximum)" >&2
       failures=$((failures + 1))
     fi
     exception_maximum["$path"]="$maximum"
-  done < "$rows"
+  done <"$rows"
   rm -f "$rows"
-  (( failures == 0 ))
+  ((failures == 0))
 }

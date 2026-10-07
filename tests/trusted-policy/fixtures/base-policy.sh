@@ -7,4 +7,4 @@ set -euo pipefail
 [[ "${RECITE_BRANCH_NAME:-}" == feat/trusted-policy ]]
 [[ "${RECITE_BASE_REF:-}" =~ ^[0-9a-f]{40}$ ]]
 [[ "${RECITE_HEAD_REF:-}" == refs/recite/trusted-pr-head ]]
-printf 'base-policy\n' > "${TRUSTED_POLICY_MARKER:?}"
+printf 'base-policy\n' >"${TRUSTED_POLICY_MARKER:?}"

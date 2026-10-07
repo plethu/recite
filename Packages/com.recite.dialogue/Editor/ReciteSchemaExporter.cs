@@ -178,7 +178,8 @@ namespace Recite.Unity.Editor
             return "\"" + path + "\"";
         }
 
-        [Serializable] private sealed class ProtocolRecord
+        [Serializable]
+        private sealed class ProtocolRecord
         {
             public int version;
             public int sequence;

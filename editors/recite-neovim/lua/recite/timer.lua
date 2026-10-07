@@ -4,14 +4,22 @@
 local M = {}
 
 function M.stop(handle)
-  if not handle then return end
-  if type(handle) ~= "userdata" and type(handle) ~= "table" then return end
+  if not handle then
+    return
+  end
+  if type(handle) ~= "userdata" and type(handle) ~= "table" then
+    return
+  end
   local uv = vim.uv or vim.loop
-  if not uv then return end
+  if not uv then
+    return
+  end
   pcall(uv.timer_stop, handle)
   if handle.close then
     local closing = handle.is_closing and handle:is_closing()
-    if not closing then pcall(handle.close, handle) end
+    if not closing then
+      pcall(handle.close, handle)
+    end
   end
 end
 

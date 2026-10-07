@@ -1,7 +1,7 @@
 export const StartupOutcomeKind = Object.freeze({
   Started: "started",
   RetryableFailure: "retryable-failure",
-  Refused: "refused"
+  Refused: "refused",
 });
 
 export function startupOutcome(kind, error, reported = false) {

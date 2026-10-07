@@ -1,0 +1,20 @@
+<table tabindex="0">
+  <thead>
+    {{ range .THead }}
+      <tr>
+        {{ range . }}
+          <th scope="col" data-align="{{ .Alignment }}">{{ .Text }}</th>
+        {{ end }}
+      </tr>
+    {{ end }}
+  </thead>
+  <tbody>
+    {{ range .TBody }}
+      <tr>
+        {{ range . }}
+          <td data-align="{{ .Alignment }}">{{ .Text }}</td>
+        {{ end }}
+      </tr>
+    {{ end }}
+  </tbody>
+</table>

@@ -1,8 +1,7 @@
 """Validators for the bounded Milestone 4 editor parity contract."""
 
-from .evidence import is_host_runner
+from .commands import is_host_runner
 from .model import Context
-
 
 KEYBOARD_CAPABILITY_ID = "editor.keyboard.workflow"
 KEYBOARD_EVIDENCE_ISSUE = "#202"
@@ -23,24 +22,43 @@ def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: di
     if not isinstance(capability, dict):
         return
     scenario_id = capability.get("scenario")
-    ctx.require(scenario_id == "keyboard-workflow", f"{KEYBOARD_CAPABILITY_ID} must use the keyboard-workflow scenario")
+    ctx.require(
+        scenario_id == "keyboard-workflow",
+        f"{KEYBOARD_CAPABILITY_ID} must use the keyboard-workflow scenario",
+    )
     scenario = scenarios.get(scenario_id)
     capability_status = capability.get("implementation_status")
     if capability_status == "planned":
         if isinstance(scenario, dict):
-            ctx.require(scenario.get("status") == "planned", f"keyboard-workflow scenario must remain planned until installed-host evidence exists")
+            ctx.require(
+                scenario.get("status") == "planned",
+                "keyboard-workflow scenario must remain planned until installed-host evidence exists",
+            )
     elif capability_status in {"partial", "implemented"}:
         if isinstance(scenario, dict):
-            ctx.require(scenario.get("status") in {"partial", "implemented"}, f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires a partial/implemented keyboard-workflow scenario")
+            ctx.require(
+                scenario.get("status") in {"partial", "implemented"},
+                f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires a partial/implemented keyboard-workflow scenario",
+            )
         evidence = capability.get("expected_evidence")
         evidence_commands = []
         if isinstance(evidence, dict):
             commands = evidence.get("commands")
             command = evidence.get("command")
-            evidence_commands = commands if isinstance(commands, list) else ([command] if isinstance(command, str) else [])
+            evidence_commands = (
+                commands
+                if isinstance(commands, list)
+                else ([command] if isinstance(command, str) else [])
+            )
             host_records = evidence.get("host_records")
-            ctx.require(isinstance(host_records, list) and bool(host_records), f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires host_records")
-        ctx.require(any(is_host_runner(command) for command in evidence_commands), f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires an installed-host evidence runner")
+            ctx.require(
+                isinstance(host_records, list) and bool(host_records),
+                f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires host_records",
+            )
+        ctx.require(
+            any(is_host_runner(command) for command in evidence_commands),
+            f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires an installed-host evidence runner",
+        )
     evidence_issues = capability.get("evidence_issues")
     ctx.require(
         isinstance(evidence_issues, list) and KEYBOARD_EVIDENCE_ISSUE in evidence_issues,
@@ -51,24 +69,49 @@ def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: di
         f"{KEYBOARD_CAPABILITY_ID} closed evidence issue {KEYBOARD_EVIDENCE_ISSUE} must not remain a current follow_up",
     )
     if capability_status == "planned":
-        ctx.require(capability.get("implementation_status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must remain planned until installed-host evidence exists")
+        ctx.require(
+            capability.get("implementation_status") == "planned",
+            f"{KEYBOARD_CAPABILITY_ID} must remain planned until installed-host evidence exists",
+        )
     client_status = capability.get("client_status")
     if capability_status == "planned" and isinstance(client_status, dict):
         for client_id, client_status_value in client_status.items():
-            ctx.require(isinstance(client_status_value, str) and client_status_value in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {client_id} host evidence before {KEYBOARD_EVIDENCE_ISSUE}")
+            ctx.require(
+                isinstance(client_status_value, str)
+                and client_status_value in {"planned", "unsupported"},
+                f"{KEYBOARD_CAPABILITY_ID} cannot claim {client_id} host evidence before {KEYBOARD_EVIDENCE_ISSUE}",
+            )
     platform_status = capability.get("platform_status")
     if capability_status == "planned" and isinstance(platform_status, dict):
         for platform, platform_status_value in platform_status.items():
-            ctx.require(isinstance(platform_status_value, str) and platform_status_value in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {platform} host evidence before {KEYBOARD_EVIDENCE_ISSUE}")
+            ctx.require(
+                isinstance(platform_status_value, str)
+                and platform_status_value in {"planned", "unsupported"},
+                f"{KEYBOARD_CAPABILITY_ID} cannot claim {platform} host evidence before {KEYBOARD_EVIDENCE_ISSUE}",
+            )
     evidence = capability.get("expected_evidence")
     if capability_status == "planned" and isinstance(evidence, dict):
-        ctx.require(evidence.get("status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must not claim executable evidence before {KEYBOARD_EVIDENCE_ISSUE}")
-        ctx.require("command" not in evidence and "commands" not in evidence, f"{KEYBOARD_CAPABILITY_ID} must not reuse package/source/headless commands as keyboard evidence")
+        ctx.require(
+            evidence.get("status") == "planned",
+            f"{KEYBOARD_CAPABILITY_ID} must not claim executable evidence before {KEYBOARD_EVIDENCE_ISSUE}",
+        )
+        ctx.require(
+            "command" not in evidence and "commands" not in evidence,
+            f"{KEYBOARD_CAPABILITY_ID} must not reuse package/source/headless commands as keyboard evidence",
+        )
     limitation = str(capability.get("known_limitation", "")).lower()
     for boundary in ("installed-host", "package", "source", "headless"):
-        ctx.require(boundary in limitation, f"{KEYBOARD_CAPABILITY_ID} known_limitation must name the {boundary} evidence boundary")
+        ctx.require(
+            boundary in limitation,
+            f"{KEYBOARD_CAPABILITY_ID} known_limitation must name the {boundary} evidence boundary",
+        )
     sequence_scope = str(capability.get("keyboard_sequence_scope", "")).lower()
-    for phrase in ("dedicated lsp ui action sequence", "scripts/check-zed-host.sh", "lsp.code-actions", "lsp.rename"):
+    for phrase in (
+        "dedicated lsp ui action sequence",
+        "scripts/check-zed-host.sh",
+        "lsp.code-actions",
+        "lsp.rename",
+    ):
         ctx.require(
             phrase in sequence_scope,
             f"{KEYBOARD_CAPABILITY_ID} keyboard_sequence_scope must explain {phrase!r}",
@@ -85,7 +128,10 @@ def validate_zed_host_contract(ctx: Context, capabilities: dict) -> None:
     """
     for capability_id, assertion_fragment in ZED_HOST_CAPABILITY_ASSERTIONS.items():
         capability = capabilities.get(capability_id)
-        ctx.require(isinstance(capability, dict), f"contract must contain {capability_id} for accepted Zed host evidence")
+        ctx.require(
+            isinstance(capability, dict),
+            f"contract must contain {capability_id} for accepted Zed host evidence",
+        )
         if not isinstance(capability, dict):
             continue
         client_status = capability.get("client_status")
@@ -94,7 +140,9 @@ def validate_zed_host_contract(ctx: Context, capabilities: dict) -> None:
             f"{capability_id} must retain partial Zed host evidence",
         )
         evidence = capability.get("expected_evidence")
-        ctx.require(isinstance(evidence, dict), f"{capability_id} must retain Zed host evidence details")
+        ctx.require(
+            isinstance(evidence, dict), f"{capability_id} must retain Zed host evidence details"
+        )
         if not isinstance(evidence, dict):
             continue
         commands = evidence.get("commands")
@@ -114,7 +162,11 @@ def validate_zed_host_contract(ctx: Context, capabilities: dict) -> None:
             f"{capability_id} must retain an installed Zed Linux host record",
         )
         assertions = evidence.get("assertions")
-        assertion_text = " ".join(value.lower() for value in assertions if isinstance(value, str)) if isinstance(assertions, list) else ""
+        assertion_text = (
+            " ".join(value.lower() for value in assertions if isinstance(value, str))
+            if isinstance(assertions, list)
+            else ""
+        )
         ctx.require(
             assertion_fragment in assertion_text,
             f"{capability_id} must retain Zed assertion {assertion_fragment!r}",
@@ -125,9 +177,7 @@ def validate_zed_host_contract(ctx: Context, capabilities: dict) -> None:
         evidence = capability.get("expected_evidence")
         records = evidence.get("host_records") if isinstance(evidence, dict) else None
         has_zed_host_record = isinstance(records, list) and any(
-            isinstance(record, dict)
-            and record.get("client") == "zed"
-            for record in records
+            isinstance(record, dict) and record.get("client") == "zed" for record in records
         )
         if not has_zed_host_record:
             continue
@@ -153,8 +203,17 @@ def validate_cancellation_contract(ctx: Context, capabilities: dict) -> None:
         f"{CANCELLATION_CAPABILITY_ID} expected_evidence.status must retain shared-server partial evidence",
     )
     client_status = capability.get("client_status", {})
-    ctx.require(isinstance(client_status, dict) and all(value in {"planned", "unsupported"} for value in client_status.values()), f"{CANCELLATION_CAPABILITY_ID} must not claim installed-client cancellation without host evidence")
-    ctx.require(isinstance(evidence, dict) and evidence.get("command") == "cargo test --locked -p recite-lsp --test stdio_cancellation cancellation_settles_once_and_preserves_following_requests", f"{CANCELLATION_CAPABILITY_ID} must name its stdio cancellation evidence")
+    ctx.require(
+        isinstance(client_status, dict)
+        and all(value in {"planned", "unsupported"} for value in client_status.values()),
+        f"{CANCELLATION_CAPABILITY_ID} must not claim installed-client cancellation without host evidence",
+    )
+    ctx.require(
+        isinstance(evidence, dict)
+        and evidence.get("command")
+        == "cargo test --locked -p recite-lsp --test stdio_cancellation cancellation_settles_once_and_preserves_following_requests",
+        f"{CANCELLATION_CAPABILITY_ID} must name its stdio cancellation evidence",
+    )
     follow_up = capability.get("follow_up")
     ctx.require(
         follow_up == CANCELLATION_FOLLOW_UP,

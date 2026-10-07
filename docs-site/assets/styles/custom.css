@@ -1,0 +1,352 @@
+:root {
+  --recite-color-accent-low: light-dark(#eee2eb, #3c2439);
+  --recite-color-accent: light-dark(#683e62, #e5b9d9);
+  --recite-color-accent-high: light-dark(#3c2439, #f6e4f1);
+  --recite-color-white: light-dark(#241f27, #f3e9df);
+  --recite-color-gray-1: light-dark(#3b333e, #e1d5dd);
+  --recite-color-gray-2: light-dark(#514954, #c9bec8);
+  --recite-color-gray-3: light-dark(#6f6671, #a89ca8);
+  --recite-color-gray-4: light-dark(#978e98, #7f7480);
+  --recite-color-gray-5: light-dark(#cfc4ce, #514753);
+  --recite-color-gray-6: light-dark(#e9e2e9, #342d38);
+  --recite-color-black: light-dark(#fbf8f3, #241f27);
+  --recite-color-bg: light-dark(#fbf8f3, #241f27);
+  --recite-color-bg-nav: light-dark(#fbf8f3, #241f27);
+  --recite-color-bg-sidebar: light-dark(#fbf8f3, #241f27);
+  --recite-font: system-ui, sans-serif;
+  --recite-font-mono: ui-monospace, "Cascadia Code", monospace;
+  --body-background: var(--recite-color-bg);
+  --body-font-color: var(--recite-color-white);
+  --color-link: var(--recite-color-accent);
+  --color-visited-link: var(--recite-color-accent);
+}
+
+.markdown a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.markdown h1, .markdown h2, .markdown h3 {
+  font-weight: 600;
+}
+
+.markdown table:focus-visible {
+  outline: 2px solid var(--recite-color-accent);
+  outline-offset: 2px;
+}
+
+.markdown table [data-align="left"] {
+  text-align: left;
+}
+
+.markdown table [data-align="center"] {
+  text-align: center;
+}
+
+.markdown table [data-align="right"] {
+  text-align: right;
+}
+
+.markdown .landing-intro,
+.markdown .landing-scene,
+.markdown .landing-paths,
+.markdown .landing-end,
+.markdown .landing-licence {
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.landing-title,
+.markdown .landing-intro {
+  max-width: 58rem;
+  margin-inline: auto;
+}
+
+.markdown .landing-intro {
+  padding-block: 0 clamp(4rem, 9vw, 8rem);
+}
+
+.markdown .landing-release {
+  max-width: 68ch;
+  margin-top: 2rem;
+  color: var(--recite-color-gray-2);
+}
+
+.markdown .landing-release-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.landing-title > p,
+.markdown .landing-kicker {
+  color: var(--recite-color-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.landing-title h1 {
+  max-width: 13ch;
+  font-size: clamp(2.8rem, 7vw, 6.5rem);
+  font-weight: 560;
+  letter-spacing: -0.06em;
+  line-height: 1.02;
+}
+
+.markdown .landing-lead {
+  max-width: 62ch;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  line-height: 1.6;
+}
+
+.markdown .landing-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.1rem 1.7rem;
+}
+
+.markdown .landing-actions a,
+.markdown .landing-release-links a,
+.markdown .landing-path-grid a,
+.markdown .landing-copy a,
+.markdown .landing-end a {
+  text-underline-offset: 0.22em;
+}
+
+.markdown .landing-actions .landing-primary,
+.markdown .landing-actions .landing-primary:visited {
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  background: var(--recite-color-accent);
+  color: var(--recite-color-bg);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.markdown .landing-actions .landing-primary:hover {
+  background: var(--recite-color-accent-high);
+  color: var(--recite-color-bg);
+}
+
+.markdown .landing-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.markdown .landing-section-heading h2 {
+  margin-top: 0.35rem;
+  font-size: clamp(1.8rem, 4vw, 3.25rem);
+  letter-spacing: -0.04em;
+}
+
+.markdown .landing-section-heading > p {
+  max-width: 34ch;
+  color: var(--recite-color-gray-2);
+}
+
+.markdown .landing-scene,
+.markdown .landing-paths,
+.markdown .landing-copy {
+  padding-block: clamp(3rem, 6vw, 6rem);
+  border-top: 1px solid var(--recite-color-gray-5);
+}
+
+.markdown .landing-copy {
+  max-width: 58rem;
+  margin-inline: auto;
+}
+
+.markdown .landing-copy h2 {
+  font-size: clamp(1.8rem, 4vw, 3.25rem);
+  letter-spacing: -0.04em;
+}
+
+.markdown .landing-copy p {
+  max-width: 70ch;
+}
+
+.markdown .landing-path-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 4rem);
+}
+
+.markdown .landing-path-grid h3 {
+  font-size: 1.2rem;
+}
+
+.markdown .landing-path-grid p {
+  color: var(--recite-color-gray-2);
+}
+
+.markdown .landing-end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding-block: 2rem 1rem;
+  border-top: 1px solid var(--recite-color-gray-5);
+}
+
+.markdown .landing-licence {
+  padding-bottom: 5rem;
+  color: var(--recite-color-gray-2);
+  font-size: 0.9rem;
+}
+
+.scene {
+  margin: 0;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  background: var(--recite-color-gray-6);
+}
+
+.scene-script {
+  max-width: 64ch;
+  line-height: 1.7;
+}
+
+.markdown .scene-script p + p {
+  margin-top: 1.15rem;
+}
+
+.scene-speaker {
+  display: block;
+  color: var(--recite-color-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scene-action {
+  font-weight: 700;
+}
+
+.scene-direction {
+  color: var(--recite-color-gray-2);
+  font-style: italic;
+}
+
+.markdown .landing-actions a:focus-visible,
+.markdown .landing-release-links a:focus-visible,
+.markdown .landing-path-grid a:focus-visible,
+.markdown .landing-copy a:focus-visible,
+.markdown .landing-end a:focus-visible {
+  outline: 3px solid var(--recite-color-accent);
+  outline-offset: 3px;
+}
+
+@media (width <= 48rem) {
+  .markdown .landing-section-heading {
+    display: block;
+  }
+
+  .markdown .landing-path-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.book-brand {
+  display: block;
+}
+
+.book-brand img {
+  height: auto;
+  width: 6rem;
+  margin: 0;
+}
+
+.logo-dark {
+  display: none;
+}
+
+:root[data-theme="dark"] .logo-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .logo-dark {
+  display: block;
+}
+
+.book-layout-landing .container {
+  display: block;
+  max-width: 76rem;
+}
+
+.book-layout-landing .book-header {
+  display: block;
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.landing-nav .book-brand {
+  margin-right: auto;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  transform: translateY(-200%);
+  background: var(--body-background);
+  padding: 0.5rem;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+/* Visibility must change immediately so keyboard focus can enter an open menu. */
+.book-menu-content,
+.book-toc-content {
+  transition-property: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-menu-content,
+  .book-toc-content,
+  .book-icon,
+  a {
+    transition: none;
+  }
+}
+
+.book-header .toggle {
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+}
+
+.book-header .toggle:focus-visible + label {
+  outline: 2px solid currentcolor;
+  outline-offset: 4px;
+}
+
+/* Hugo's inline GitHub syntax palette includes a light background. Keep the
+ * unhighlighted text on that same palette instead of inheriting the page theme. */
+.markdown .highlight {
+  color: #24292e;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] .logo-light {
+    display: none;
+  }
+
+  :root[data-theme="auto"] .logo-dark {
+    display: block;
+  }
+}

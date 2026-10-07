@@ -1,0 +1,34 @@
+# Deployment can set HUGO_BASEURL; local builds preserve root-relative links.
+baseURL = "/"
+title = "Recite"
+theme = "hugo-book"
+defaultContentLanguage = "en"
+disableKinds = ["taxonomy", "term", "RSS"]
+enableRobotsTXT = true
+
+[params]
+BookSection = "/"
+BookTheme = "auto"
+BookSearch = true
+BookComments = false
+BookServiceWorker = false
+BookFavicon = "favicon.svg"
+
+[markup.goldmark.renderer]
+unsafe = true
+
+[markup.tableOfContents]
+startLevel = 2
+endLevel = 3
+
+[markup.highlight]
+noClasses = true
+style = "github"
+
+[[module.mounts]]
+source = "static"
+target = "static"
+
+[[module.mounts]]
+source = "../assets/identity"
+target = "static/identity"

@@ -1,5 +1,5 @@
-import { parseSource } from "./ui-boundary-ast.mjs";
 import { validateAdapter } from "./ui-boundary-adapter.mjs";
+import { parseSource } from "./ui-boundary-ast.mjs";
 import { validateOutside } from "./ui-boundary-calls.mjs";
 
 const ADAPTER_FILE = "user-interface.js";
@@ -10,7 +10,12 @@ const ADAPTER_FILE = "user-interface.js";
  * The adapter and caller policy are structural checks. They deliberately
  * avoid general source-level dataflow and alias resolution.
  */
-export function assertUiBoundary(sourceFiles, ownedIds, projectedMessages, adapterFile = ADAPTER_FILE) {
+export function assertUiBoundary(
+  sourceFiles,
+  ownedIds,
+  projectedMessages,
+  adapterFile = ADAPTER_FILE,
+) {
   const entries = new Map(sourceFiles);
   const adapterSource = entries.get(adapterFile);
   assert(typeof adapterSource === "string", `UI adapter ${adapterFile} is required`);

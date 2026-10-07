@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if (( $# > 1 )); then
+if (($# > 1)); then
   echo "usage: install-js-dependencies.sh [repo-root]" >&2
   exit 2
 fi

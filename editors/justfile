@@ -1,6 +1,6 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
-set default-list := true
+set default-list
 set working-directory := '..'
 
 # Zed extension quality and test commands.

@@ -4,11 +4,17 @@ import {
   assertDiagnosticTemplate,
   diagnosticIds,
   parseDiagnosticContracts,
-  parseRepresentableMessages
+  parseRepresentableMessages,
 } from "../../message-projection-parser.mjs";
 
-const SOURCE = path.resolve(import.meta.dirname, "../../../crates/recite-ui/resources/diagnostics.ftl");
-const CONTRACT = path.resolve(import.meta.dirname, "../../../crates/recite-ui/resources/vscode-diagnostic-contract.tsv");
+const SOURCE = path.resolve(
+  import.meta.dirname,
+  "../../../crates/recite-ui/resources/diagnostics.ftl",
+);
+const CONTRACT = path.resolve(
+  import.meta.dirname,
+  "../../../crates/recite-ui/resources/vscode-diagnostic-contract.tsv",
+);
 const OUTPUT = path.resolve(import.meta.dirname, "../lua/recite_diagnostics.lua");
 
 export function projectDiagnostics(source, contractSource) {
@@ -16,7 +22,9 @@ export function projectDiagnostics(source, contractSource) {
   const values = new Map();
   for (const id of diagnosticIds(source)) {
     try {
-      const message = parseRepresentableMessages(source, [id], "Neovim diagnostic projection").get(id);
+      const message = parseRepresentableMessages(source, [id], "Neovim diagnostic projection").get(
+        id,
+      );
       if (message !== undefined) {
         const argumentsForId = contracts.get(id) ?? [];
         assertDiagnosticTemplate(id, message, argumentsForId);
@@ -39,15 +47,21 @@ function render({ contracts, values }) {
     const definition = values.get(id);
     const argumentsForId = definition?.arguments ?? contracts.get(id) ?? [];
     const argumentsLua = argumentsForId.map(({ name, type }) =>
-      `{ name = ${luaString(name)}, type = ${luaString(type)} }`).join(", ");
+      `{ name = ${luaString(name)}, type = ${luaString(type)} }`
+    ).join(", ");
     const template = definition ? `, template = ${luaString(definition.template)}` : "";
     return `  [${luaString(id)}] = { arguments = { ${argumentsLua} }${template} },`;
   });
-  return `-- Generated from the canonical diagnostic contracts and diagnostics.ftl.\n-- Do not edit; run diagnostic-projections.mjs --update.\nreturn {\n${rows.join("\n")}\n}\n`;
+  return `-- Generated from the canonical diagnostic contracts and diagnostics.ftl.\n-- Do not edit; run diagnostic-projections.mjs --update.\nreturn {\n${
+    rows.join("\n")
+  }\n}\n`;
 }
 
 export async function renderDiagnosticProjection() {
-  const [source, contract] = await Promise.all([readFile(SOURCE, "utf8"), readFile(CONTRACT, "utf8")]);
+  const [source, contract] = await Promise.all([
+    readFile(SOURCE, "utf8"),
+    readFile(CONTRACT, "utf8"),
+  ]);
   return render(projectDiagnostics(source, contract));
 }
 
@@ -56,5 +70,9 @@ if (process.argv.includes("--update")) {
 } else if (process.argv[1] === new URL(import.meta.url).pathname) {
   const actual = await readFile(OUTPUT, "utf8");
   const expected = await renderDiagnosticProjection();
-  if (actual !== expected) throw new Error("Neovim diagnostic projection is stale; run diagnostic-projections.mjs --update");
+  if (actual !== expected) {
+    throw new Error(
+      "Neovim diagnostic projection is stale; run diagnostic-projections.mjs --update",
+    );
+  }
 }

@@ -115,12 +115,11 @@ if [[ -f "$bridge" && -f "$header" ]]; then
   done < <(grep -E '^[[:space:]]*RECITE_STATUS_[A-Z_]+ = -?[0-9]+,' "$header")
 fi
 
-for file in "$runtime_dir/ConditionCallbacks.cs"; do
-  for pattern in "GCHandleType.Normal" "MonoPInvokeCallback"; do
-    if [[ ! -f "$file" ]] || ! grep -qF "$pattern" "$file"; then
-      fail "$file is missing IL2CPP-safe callback ownership: $pattern"
-    fi
-  done
+file="$runtime_dir/ConditionCallbacks.cs"
+for pattern in "GCHandleType.Normal" "MonoPInvokeCallback"; do
+  if [[ ! -f "$file" ]] || ! grep -qF "$pattern" "$file"; then
+    fail "$file is missing IL2CPP-safe callback ownership: $pattern"
+  fi
 done
 
 while IFS= read -r file; do
@@ -163,10 +162,10 @@ if command -v dotnet >/dev/null 2>&1; then
     printf '    <Compile Include="%s" />\n' "$package_dir/Tests~/Headless/ReciteUnityNativeCases.cs"
     printf '%s\n' '  </ItemGroup>'
     printf '%s\n' '</Project>'
-  } > "$tmpdir/UnityRuntimeSubset.csproj"
+  } >"$tmpdir/UnityRuntimeSubset.csproj"
 
-  printf '%s\n' '{"sdk":{"version":"8.0.421"}}' > "$tmpdir/global.json"
-  printf '%s\n' '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><clear /></packageSources></configuration>' > "$tmpdir/NuGet.Config"
+  printf '%s\n' '{"sdk":{"version":"8.0.421"}}' >"$tmpdir/global.json"
+  printf '%s\n' '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><clear /></packageSources></configuration>' >"$tmpdir/NuGet.Config"
 
   cp "$sample_dir/Dialogue/basic.recite" "$tmpdir/basic.recite"
   if "$target_dir/debug/recite" compile -o "$tmpdir/revision.recitec" "$tmpdir/basic.recite"; then
@@ -182,7 +181,7 @@ if command -v dotnet >/dev/null 2>&1; then
   "$target_dir/debug/recite" compile -o "$tmpdir/conformance.recitec" \
     "$repo_root/fixtures/recite/valid/adapter_conformance/runtime_surface.recite" || fail "Unity conformance fixture failed to compile"
 
-  cat > "$tmpdir/schema-restore.recite" <<'RECITE'
+  cat >"$tmpdir/schema-restore.recite" <<'RECITE'
 :: start default
 > save_prompt@91000000000000000001
   Save here.
@@ -191,7 +190,7 @@ if command -v dotnet >/dev/null 2>&1; then
     -> END
 RECITE
   for schema in a b; do
-    cat > "$tmpdir/schema-$schema.toml" <<TOML
+    cat >"$tmpdir/schema-$schema.toml" <<TOML
 schema_version = 1
 [producer]
 id = "unity-schema-restore"
@@ -224,7 +223,7 @@ else
   fail "dotnet is required for the Unity runtime subset build"
 fi
 
-if (( failures > 0 )); then
+if ((failures > 0)); then
   echo "Found ${failures} Unity adapter check failure(s)." >&2
   exit 1
 fi

@@ -1,8 +1,8 @@
 # Conditions and effects
 
-Part of the [production specification](../recite-production-spec.md). These are
-requirements; implementation and release readiness require evidence from code,
-tests and the current GitHub milestone. Section numbers remain stable.
+Part of the [production specification](../recite-production-spec.md). These are requirements;
+implementation and release readiness require evidence from code, tests and the current GitHub
+milestone. Section numbers remain stable.
 
 ## 6. Conditions
 
@@ -26,7 +26,9 @@ familiarity_gte(hazel, rhea, 3)
 and not thread_completed(rhea_job_response)
 ```
 
-Identifiers such as actor IDs, thread IDs, and stage IDs should be accepted as bare tokens. Quoted string literals should be reserved for values that genuinely need spaces or punctuation beyond the identifier grammar. Dialogue prose itself must never require quotes.
+Identifiers such as actor IDs, thread IDs, and stage IDs should be accepted as bare tokens. Quoted
+string literals should be reserved for values that genuinely need spaces or punctuation beyond the
+identifier grammar. Dialogue prose itself must never require quotes.
 
 The grammar must be formally specified and parsed into an AST.
 
@@ -48,7 +50,11 @@ pub trait DialogueContext {
 
 The core runtime should not know project-specific condition meanings.
 
-Condition functions return either a boolean (the default, used by `:if` and choice `requires=(...)` clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An enum-returning function declares its return type in the canonical schema model; the dialogue context exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending on adapter ergonomics.
+Condition functions return either a boolean (the default, used by `:if` and choice `requires=(...)`
+clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An
+enum-returning function declares its return type in the canonical schema model; the dialogue context
+exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending
+on adapter ergonomics.
 
 ### 6.3 Schema Validation
 
@@ -110,7 +116,8 @@ Example:
 
 ### 7.3 Immediate Effects
 
-Immediate effects are yielded to the caller as soon as encountered. The runtime may continue after the caller observes the event.
+Immediate effects are yielded to the caller as soon as encountered. The runtime may continue after
+the caller observes the event.
 
 Use cases:
 
@@ -124,7 +131,8 @@ Example:
 ! immediate play_sfx(snap)
 ```
 
-Metadata may cover many presentation cues, but immediate effects are useful when a cue has event semantics rather than descriptive line metadata.
+Metadata may cover many presentation cues, but immediate effects are useful when a cue has event
+semantics rather than descriptive line metadata.
 
 ### 7.4 Blocking Effects
 
@@ -162,7 +170,9 @@ pub enum EffectAck {
 }
 ```
 
-Result-dependent branching should be deferred until there is a proven need. If dialogue needs to branch on the result of a game operation, the game should update state and later dialogue should query that state through conditions.
+Result-dependent branching should be deferred until there is a proven need. If dialogue needs to
+branch on the result of a game operation, the game should update state and later dialogue should
+query that state through conditions.
 
 ### 7.5 Effect Ordering
 
@@ -170,10 +180,14 @@ Effects must be emitted and collected in declaration order.
 
 Normative placement rule:
 
-- Effects are standalone statements (`!`) emitted in source order between dialogue events. Effects do not appear inside a line's prose body.
-- Per-line presentation cues (portrait, pose, sfx, delay, focus, shot) use metadata on the line header.
-- Deferred effects are appended to the session's deferred-effect list when traversal reaches their statement, and surface to the caller when the scene ends.
-- Immediate and blocking effects emit as `DialogueEvent::Effect` in the source order they are encountered.
+- Effects are standalone statements (`!`) emitted in source order between dialogue events. Effects
+  do not appear inside a line's prose body.
+- Per-line presentation cues (portrait, pose, sfx, delay, focus, shot) use metadata on the line
+  header.
+- Deferred effects are appended to the session's deferred-effect list when traversal reaches their
+  statement, and surface to the caller when the scene ends.
+- Immediate and blocking effects emit as `DialogueEvent::Effect` in the source order they are
+  encountered.
 
 ### 7.6 Effect Schema
 

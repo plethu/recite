@@ -1,0 +1,88 @@
+<div class="landing-intro">
+  <p class="landing-lead">{{ i18n "landing.lead" }}</p>
+  <p class="landing-release">{{ i18n "landing.release" }}</p>
+  <p class="landing-release-links">
+    <a href="{{ "getting-started/install/" | relLangURL }}">{{ i18n "landing.release.install" }}</a>
+    <a href="{{ "guides/distribution/" | relLangURL }}">{{ i18n "landing.release.packages" }}</a>
+  </p>
+  <p class="landing-actions">
+    <a class="landing-primary"
+       href="{{ "getting-started/first-scene/" | relLangURL }}">
+      {{ i18n "landing.action.firstScene" }}
+    </a>
+    <a href="{{ "reference/source-format/" | relLangURL }}">{{ i18n "landing.action.sourceFormat" }}</a>
+  </p>
+</div>
+<section class="landing-scene" aria-labelledby="scene-heading">
+  <div class="landing-section-heading">
+    <div>
+      <p class="landing-kicker">{{ i18n "landing.scene.kicker" }}</p>
+      <h2 id="scene-heading">{{ i18n "landing.scene.title" }}</h2>
+    </div>
+  </div>
+  <figure class="scene">
+    <div class="scene-script">
+      <p class="scene-direction">{{ i18n "landing.scene.opening" }}</p>
+      <p>
+        <span class="scene-speaker">{{ i18n "landing.scene.technician" }}</span>
+        {{ i18n "landing.scene.again" }}
+      </p>
+      <p>
+        <span class="scene-speaker">{{ i18n "landing.scene.recording" }}</span>
+        {{ i18n "landing.scene.directions" }}
+      </p>
+      <p class="scene-direction">{{ i18n "landing.scene.tape" }}</p>
+      <p><span class="scene-action">{{ i18n "landing.scene.power" }}</span></p>
+      <p class="scene-direction">{{ i18n "landing.scene.powerResult" }}</p>
+      <p><span class="scene-action">{{ i18n "landing.scene.plan" }}</span></p>
+      <p class="scene-direction">{{ i18n "landing.scene.planResult" }}</p>
+      <p class="scene-direction">{{ i18n "landing.scene.choose" }}</p>
+    </div>
+  </figure>
+</section>
+<section class="landing-paths" aria-labelledby="paths-heading">
+  <div class="landing-section-heading">
+    <div>
+      <p class="landing-kicker">{{ i18n "landing.path.kicker" }}</p>
+      <h2 id="paths-heading">{{ i18n "landing.path.title" }}</h2>
+    </div>
+  </div>
+  <div class="landing-path-grid">
+    <div>
+      <h3>{{ i18n "landing.write.title" }}</h3>
+      <p>{{ i18n "landing.write.body" }}</p>
+      <a href="{{ "guides/authoring-loop/" | relLangURL }}">{{ i18n "landing.write.link" }}</a>
+    </div>
+    <div>
+      <h3>{{ i18n "landing.check.title" }}</h3>
+      <p>{{ i18n "landing.check.body" }}</p>
+      <a href="{{ "guides/testing-dialogue/" | relLangURL }}">{{ i18n "landing.check.link" }}</a>
+    </div>
+    <div>
+      <h3>{{ i18n "landing.integrate.title" }}</h3>
+      <p>{{ i18n "landing.integrate.body" }}</p>
+      <a href="{{ "adapters/" | relLangURL }}">{{ i18n "landing.integrate.link" }}</a>
+    </div>
+  </div>
+</section>
+<section class="landing-copy" aria-labelledby="localisation-heading">
+  <h2 id="localisation-heading">{{ i18n "landing.localisation.title" }}</h2>
+  <p>{{ i18n "landing.localisation.body1" }}</p>
+  <p>{{ i18n "landing.localisation.body2" }}</p>
+  <a href="{{ "guides/localisation/" | relLangURL }}">{{ i18n "landing.localisation.link" }}</a>
+</section>
+<section class="landing-copy" aria-labelledby="fit-heading">
+  <h2 id="fit-heading">{{ i18n "landing.fit.title" }}</h2>
+  <p>{{ i18n "landing.fit.body1" }}</p>
+  <p>{{ i18n "landing.fit.body2" }}</p>
+  <p>{{ i18n "landing.fit.body3" }}</p>
+  <a href="{{ "guides/alternatives/" | relLangURL }}">{{ i18n "landing.fit.link" }}</a>
+</section>
+<nav class="landing-end" aria-label={{ i18n "landing.navigation.label" }}>
+  <a href="{{ "getting-started/" | relLangURL }}">{{ i18n "landing.navigation.manual" }}</a>
+  <a href="{{ "reference/" | relLangURL }}">{{ i18n "landing.navigation.reference" }}</a>
+  <a href="{{ "migration/" | relLangURL }}">{{ i18n "landing.navigation.migration" }}</a>
+  <a href="{{ "guides/distribution/" | relLangURL }}">{{ i18n "landing.navigation.packages" }}</a>
+  <a href="https://github.com/plethu/recite">{{ i18n "landing.navigation.source" }}</a>
+</nav>
+<p class="landing-licence">{{ i18n "landing.licence" }}</p>

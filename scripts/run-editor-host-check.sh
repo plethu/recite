@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if (( $# != 1 )) || [[ "$1" != "vscode" && "$1" != "neovim" && "$1" != "zed" ]]; then
+if (($# != 1)) || [[ "$1" != "vscode" && "$1" != "neovim" && "$1" != "zed" ]]; then
   echo "Usage: scripts/run-editor-host-check.sh {vscode|neovim|zed}" >&2
   exit 2
 fi

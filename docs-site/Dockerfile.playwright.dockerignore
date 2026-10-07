@@ -2,6 +2,8 @@
 !package.json
 !pnpm-lock.yaml
 !pnpm-workspace.yaml
+!.mise.toml
+!mise.site.toml
 !docs-site/
 !docs-site/**
 !editors/
@@ -12,8 +14,9 @@
 !assets/identity/**
 docs-site/node_modules/
 docs-site/dist/
-docs-site/.astro/
-docs-site/.svelte-check/
+docs-site/public/
+docs-site/resources/
+docs-site/.hugo_build.lock
 docs-site/playwright-report/
 docs-site/test-results/
 docs-site/.browser-artifacts/

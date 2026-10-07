@@ -17,7 +17,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   usage
   exit 0
 fi
-if (( $# > 1 )); then
+if (($# > 1)); then
   usage >&2
   exit 2
 fi
@@ -96,7 +96,7 @@ check_projection_unchanged() {
       failures=1
     fi
   done
-  if (( failures > 0 )); then
+  if ((failures > 0)); then
     exit 1
   fi
   exit "$status"

@@ -1,6 +1,6 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
-set default-list := true
+set default-list
 
 # Run the large-project CLI stress test.
 scale *args:

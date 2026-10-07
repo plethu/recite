@@ -17,7 +17,7 @@ maintainer_approval_passes() {
   non_author_approved="$(printf '%s\n' "$approved_maintainers" | awk -v author="$review_author" 'NF && $0 != author')"
   trusted_author="$(comm -12 <(printf '%s\n' "$maintainers" | sort -u) <(printf '%s\n' "$review_author" | awk 'NF' | sort -u) || true)"
 
-  if (( maintainer_count > 1 )); then
+  if ((maintainer_count > 1)); then
     [[ -n "$non_author_approved" ]]
   else
     [[ -n "$approved_maintainers" || -n "$trusted_author" ]]
@@ -70,8 +70,8 @@ run_live_review_gate() {
   if [[ -n "$merge_state_status" ]]; then
     # A retired Codex result can leave GitHub's aggregate state UNSTABLE;
     # required protection and the filtered check rollup are verified below.
-    [[ "$merge_state_status" == "CLEAN" || "$merge_state_status" == "UNSTABLE" ]] || \
-      fail "PR merge state is $merge_state_status, expected CLEAN or UNSTABLE"
+    [[ "$merge_state_status" == "CLEAN" || "$merge_state_status" == "UNSTABLE" ]] \
+      || fail "PR merge state is $merge_state_status, expected CLEAN or UNSTABLE"
   fi
   [[ -n "$head_sha" ]] || fail "PR head SHA is missing"
   [[ "$review_decision" != "CHANGES_REQUESTED" ]] || fail "GitHub reports blocking requested changes"
@@ -86,7 +86,7 @@ run_live_review_gate() {
     required_approvals="$(printf '%s\n' "$branch_json" | jq -r '.required_pull_request_reviews.required_approving_review_count // 0')"
     if ! [[ "$required_approvals" =~ ^[0-9]+$ ]]; then
       fail "branch protection required_approving_review_count is not numeric"
-    elif (( required_approvals == 0 )); then
+    elif ((required_approvals == 0)); then
       echo "solo-maintainer policy: independent approving review is not required"
     fi
 
@@ -119,7 +119,7 @@ run_live_review_gate() {
   non_author_approved_maintainers="$(printf '%s\n' "$approved_maintainers" | awk -v author="$pr_author" 'NF && $0 != author')"
   trusted_author="$(comm -12 <(printf '%s\n' "$maintainers" | sort -u) <(printf '%s\n' "$pr_author" | awk 'NF' | sort -u) || true)"
 
-  if (( maintainer_count > 1 )); then
+  if ((maintainer_count > 1)); then
     if [[ -n "$non_author_approved_maintainers" ]]; then
       printf '%s\n' "$non_author_approved_maintainers"
     else
@@ -144,7 +144,7 @@ run_live_review_gate() {
     fail "unable to read GitHub review threads"
   else
     unresolved_count="$(printf '%s\n' "$threads_json" | jq '[.[].data.repository.pullRequest.reviewThreads.nodes[]? | select(.isResolved == false)] | length')"
-    if (( unresolved_count > 0 )); then
+    if ((unresolved_count > 0)); then
       fail "${unresolved_count} unresolved review thread(s) remain"
     else
       echo "none"
@@ -164,7 +164,7 @@ run_live_review_gate() {
     fi
   fi
 
-  if (( failures > 0 )); then
+  if ((failures > 0)); then
     echo
     echo "PR #${pr_number} failed ${failures} review gate(s)." >&2
     return 1
@@ -187,8 +187,8 @@ run_live_review_gate() {
     [[ "$latest_state" == "OPEN" ]] || fail "PR state changed to ${latest_state:-missing}, expected OPEN"
     [[ "$latest_mergeable" == "MERGEABLE" ]] || fail "PR mergeability changed to ${latest_mergeable:-missing}, expected MERGEABLE"
     if [[ -n "$latest_merge_state_status" ]]; then
-      [[ "$latest_merge_state_status" == "CLEAN" || "$latest_merge_state_status" == "UNSTABLE" ]] || \
-        fail "PR merge state changed to $latest_merge_state_status, expected CLEAN or UNSTABLE"
+      [[ "$latest_merge_state_status" == "CLEAN" || "$latest_merge_state_status" == "UNSTABLE" ]] \
+        || fail "PR merge state changed to $latest_merge_state_status, expected CLEAN or UNSTABLE"
     fi
     [[ "$latest_review_decision" != "CHANGES_REQUESTED" ]] || fail "GitHub reports newly requested changes"
 
@@ -207,14 +207,14 @@ run_live_review_gate() {
       fail "unable to refresh GitHub review threads"
     else
       latest_unresolved_count="$(printf '%s\n' "$latest_threads_json" | jq '[.[].data.repository.pullRequest.reviewThreads.nodes[]? | select(.isResolved == false)] | length')"
-      (( latest_unresolved_count == 0 )) || fail "${latest_unresolved_count} unresolved review thread(s) remain"
+      ((latest_unresolved_count == 0)) || fail "${latest_unresolved_count} unresolved review thread(s) remain"
     fi
     if ! latest_reduced_rollup="$(printf '%s\n' "$latest_pr_json" | jq -c '.statusCheckRollup // []' | reduce_check_rollup)" || ! evaluate_check_rollup "$latest_reduced_rollup" "$required_check"; then
       fail "reported checks changed or are no longer successful"
     fi
   fi
 
-  if (( failures > 0 )); then
+  if ((failures > 0)); then
     echo
     echo "PR #${pr_number} failed ${failures} review gate(s)." >&2
     return 1

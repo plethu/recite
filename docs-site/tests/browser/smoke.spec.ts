@@ -49,7 +49,7 @@ test("alternatives guide remains readable on a narrow screen", async ({ page }, 
 });
 
 test("source and manual remain available without JavaScript", async ({ browser }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false });
+  const context = await browser.newContext({ javaScriptEnabled: false, colorScheme: "dark" });
   try {
     const page = await context.newPage();
     await page.goto("/");
@@ -64,9 +64,9 @@ test("source and manual remain available without JavaScript", async ({ browser }
 test("long manual code blocks can be scrolled with a keyboard", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/getting-started/first-scene/");
-  const blocks = page.locator(".expressive-code pre");
+  const blocks = page.locator("pre");
   const index = await blocks.evaluateAll((items) =>
-    items.findIndex((item) => item.scrollWidth > item.clientWidth),
+    items.findIndex((item) => item.scrollWidth > item.clientWidth)
   );
   expect(index).toBeGreaterThanOrEqual(0);
   const block = blocks.nth(index);
@@ -76,4 +76,20 @@ test("long manual code blocks can be scrolled with a keyboard", async ({ page })
   const before = await block.evaluate((item) => item.scrollLeft);
   await page.keyboard.press("ArrowRight");
   await expect.poll(() => block.evaluate((item) => item.scrollLeft)).toBeGreaterThan(before);
+});
+
+test("wide manual tables can be scrolled with a keyboard", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/guides/distribution/");
+  const tables = page.locator("table");
+  const index = await tables.evaluateAll((items) =>
+    items.findIndex((item) => item.scrollWidth > item.clientWidth)
+  );
+  expect(index).toBeGreaterThanOrEqual(0);
+  const table = tables.nth(index);
+  await table.focus();
+  await expect(table).toBeFocused();
+  const before = await table.evaluate((item) => item.scrollLeft);
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(() => table.evaluate((item) => item.scrollLeft)).toBeGreaterThan(before);
 });

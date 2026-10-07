@@ -7,7 +7,9 @@
 //! core decoder (`crate::compiled::messagepack`), and the documented field
 //! tables in `docs/recite-production-spec.md` §12.2. The compiler delegates to
 //! that core encoder. Any new compiled row, field, tag, or enum variant updates
-//! all of them together.
+//! all of them together, including the compact JSON inspection projection and
+//! focused fixtures. Review the golden snapshot as evidence of the byte change;
+//! do not introduce a second prose inventory of fields or tags.
 //!
 //! Drift fails close to the change: the tag-surface round-trip test
 //! (`recite-compiler/tests/asset/tag_surface.rs`) catches one-sided

@@ -13,14 +13,14 @@ trap cleanup EXIT
 
 parse_clean() {
   local name="$1" expected="$2" source="$3" file="$scratch/$1.recite" output rc
-  printf '%s' "$source" > "$file"
+  printf '%s' "$source" >"$file"
   rc=0
   if output="$(tree-sitter parse --grammar-path "$grammar_dir" "$file" 2>&1)"; then
     rc=0
   else
     rc=$?
   fi
-  if (( rc > 1 )) || grep -Eq '\((ERROR|MISSING)( |\))' <<<"$output"; then
+  if ((rc > 1)) || grep -Eq '\((ERROR|MISSING)( |\))' <<<"$output"; then
     echo "physical-line probe produced recovery for $name" >&2
     sed -n '1,100p' <<<"$output" >&2
     exit 1
@@ -59,7 +59,7 @@ done
 echo "== internal line separation =="
 parse_clean internal-separation if_statement $'  first prose\n:if true'
 adjacent_file="$scratch/adjacent.recite"
-printf '%s' ':: first:: second' > "$adjacent_file"
+printf '%s' ':: first:: second' >"$adjacent_file"
 adjacent_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$adjacent_file" 2>&1)" || true
 if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$adjacent_output"; then
   echo "same-line statements were accepted without a physical separator" >&2
@@ -71,7 +71,7 @@ echo "== blank lines, CRLF, and production differential =="
 boundary_source=$':: physical default\n> line@0123456789abcdef0123 bind=(name:string=$name)\n   \n\t\n  [slow]Final {name} prose.[/slow]'
 parse_clean blank-indentation prose_line "$boundary_source"
 boundary_file="$scratch/boundary.recite"
-printf '%s' "$boundary_source" > "$boundary_file"
+printf '%s' "$boundary_source" >"$boundary_file"
 boundary_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$boundary_file" 2>&1)"
 if [[ "$(grep -Fc '(blank_line' <<<"$boundary_output")" -ne 2 ]]; then
   echo "space/tab-only blank lines were not retained as two blank_line nodes" >&2
@@ -85,7 +85,7 @@ parse_clean final-blank-after-statement blank_line $':: source default\n  '
 parse_clean final-blank-lf blank_line $'  \n'
 parse_clean final-blank-crlf blank_line $'  \r\n'
 spaced_adjacent_file="$scratch/spaced-adjacent.recite"
-printf '%s' ':: first :: second' > "$spaced_adjacent_file"
+printf '%s' ':: first :: second' >"$spaced_adjacent_file"
 spaced_adjacent_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$spaced_adjacent_file" 2>&1)" || true
 if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$spaced_adjacent_output"; then
   echo "same-line statements with horizontal spacing were accepted without a physical separator" >&2
@@ -97,7 +97,7 @@ echo "== indented block headers and body boundaries =="
 indented_block_source=$':: outer default\n  > first@0123456789abcdef0123\n    First body.\n  :: nested speaker=guide\n  > nested@fedcba9876543210fedc\n    Nested body.\n\t:: tabbed\n\t> tabbed@00112233445566778899\n\t  Tabbed body.\n'
 parse_clean indented-block block_statement "$indented_block_source"
 indented_block_file="$scratch/indented-block.recite"
-printf '%s' "$indented_block_source" > "$indented_block_file"
+printf '%s' "$indented_block_source" >"$indented_block_file"
 indented_block_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$indented_block_file" 2>&1)"
 if [[ "$(grep -Fc '(block_statement' <<<"$indented_block_output")" -ne 3 ]]; then
   echo "indented block boundary probe did not retain all three block statements" >&2
@@ -106,7 +106,7 @@ if [[ "$(grep -Fc '(block_statement' <<<"$indented_block_output")" -ne 3 ]]; the
 fi
 indented_block_captures="$scratch/indented-block-captures.txt"
 tree-sitter query --grammar-path "$grammar_dir" --captures \
-  "$grammar_dir/queries/highlights.scm" "$indented_block_file" > "$indented_block_captures"
+  "$grammar_dir/queries/highlights.scm" "$indented_block_file" >"$indented_block_captures"
 for expectation in \
   ' - keyword, start: (3, 2), end: (3, 4), text: `::`' \
   ' - label, start: (3, 5), end: (3, 11), text: `nested`' \
@@ -123,17 +123,17 @@ done
 indented_block_eof_source="${indented_block_source%$'\n'}"
 parse_clean indented-block-eof block_statement "$indented_block_eof_source"
 indented_block_eof_file="$scratch/indented-block-eof.recite"
-printf '%s' "$indented_block_eof_source" > "$indented_block_eof_file"
+printf '%s' "$indented_block_eof_source" >"$indented_block_eof_file"
 parse_clean final-indented-block-eof block_statement $'  :: final_eof'
 indented_block_crlf_source="${indented_block_source//$'\n'/$'\r\n'}"
 parse_clean indented-block-crlf block_statement "$indented_block_crlf_source"
 indented_block_crlf_file="$scratch/indented-block-crlf.recite"
-printf '%s' "$indented_block_crlf_source" > "$indented_block_crlf_file"
+printf '%s' "$indented_block_crlf_source" >"$indented_block_crlf_file"
 
 production_output="$scratch/production.txt"
 for production_fixture in "$indented_block_file" "$indented_block_eof_file" "$indented_block_crlf_file"; do
   if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-    validate "$production_fixture" > "$production_output" 2>&1; then
+    validate "$production_fixture" >"$production_output" 2>&1; then
     echo "production parser rejected an indented-block boundary fixture: $production_fixture" >&2
     sed -n '1,100p' "$production_output" >&2
     exit 1
@@ -141,7 +141,7 @@ for production_fixture in "$indented_block_file" "$indented_block_eof_file" "$in
 done
 
 malformed_block_file="$scratch/malformed-indented-block.recite"
-printf '%s' $':: outer default\n> outer@0123456789abcdef0123\n  Outer body.\n  ::: malformed\n  :: recovered\n> recovered@fedcba9876543210fedc\n  Recovered body.\n' > "$malformed_block_file"
+printf '%s' $':: outer default\n> outer@0123456789abcdef0123\n  Outer body.\n  ::: malformed\n  :: recovered\n> recovered@fedcba9876543210fedc\n  Recovered body.\n' >"$malformed_block_file"
 malformed_block_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$malformed_block_file" 2>&1)" || true
 if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$malformed_block_output" \
   || [[ "$(grep -Fc '(block_statement' <<<"$malformed_block_output")" -lt 3 ]]; then
@@ -151,7 +151,7 @@ if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$malformed_block_output" \
 fi
 
 non_space_indent_file="$scratch/non-space-indented-block.recite"
-printf '%s' $' :: nbsp\n\v:: vertical\n:: valid\n' > "$non_space_indent_file"
+printf '%s' $' :: nbsp\n\v:: vertical\n:: valid\n' >"$non_space_indent_file"
 non_space_indent_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$non_space_indent_file" 2>&1)" || true
 if [[ "$(grep -Ec '\((ERROR|MISSING)( |\))' <<<"$non_space_indent_output")" -lt 2 ]] \
   || [[ "$(grep -Fc '(block_statement' <<<"$non_space_indent_output")" -ne 1 ]]; then
@@ -162,7 +162,7 @@ fi
 
 boundary_captures="$scratch/boundary-captures.txt"
 tree-sitter query --grammar-path "$grammar_dir" --captures \
-  "$grammar_dir/queries/highlights.scm" "$boundary_file" > "$boundary_captures"
+  "$grammar_dir/queries/highlights.scm" "$boundary_file" >"$boundary_captures"
 for expectation in \
   ' - tag, start: (4, 3), end: (4, 7), text: `slow`' \
   ' - string.special, start: (4, 8), end: (4, 14), text: `Final `' \
@@ -177,15 +177,15 @@ done
 crlf_source=$':: physical default\r\n> line@0123456789abcdef0123 bind=(name:string=$name)\r\n  [slow]Final {name} prose.[/slow]'
 parse_clean crlf prose_line "$crlf_source"
 crlf_file="$scratch/crlf.recite"
-printf '%s' "$crlf_source" > "$crlf_file"
+printf '%s' "$crlf_source" >"$crlf_file"
 
 production_output="$scratch/production.txt"
-if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- validate "$boundary_file" > "$production_output" 2>&1; then
+if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- validate "$boundary_file" >"$production_output" 2>&1; then
   echo "production parser rejected the blank-line/EOF boundary fixture" >&2
   sed -n '1,100p' "$production_output" >&2
   exit 1
 fi
-if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- validate "$crlf_file" > "$production_output" 2>&1; then
+if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- validate "$crlf_file" >"$production_output" 2>&1; then
   echo "production parser rejected the CRLF boundary fixture" >&2
   sed -n '1,100p' "$production_output" >&2
   exit 1
@@ -198,7 +198,7 @@ fi
 echo "== empty and malformed EOF recovery =="
 parse_clean empty source_file ''
 malformed_file="$scratch/malformed.recite"
-printf '%s' ':if (' > "$malformed_file"
+printf '%s' ':if (' >"$malformed_file"
 malformed_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$malformed_file" 2>&1)" || true
 if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$malformed_output"; then
   echo "incomplete final statement did not expose bounded recovery" >&2

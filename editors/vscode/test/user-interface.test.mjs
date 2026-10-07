@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 import { createUserInterface } from "../src/user-interface.js";
 
 test("semantic UI operations localize source messages and keep the channel private", () => {
@@ -8,20 +8,24 @@ test("semantic UI operations localize source messages and keep the channel priva
   const notices = [];
   let disposed = false;
   const api = {
-    l10n: { t: (template, detail) => detail === undefined ? `[${template}]` : `[${template}] ${detail}` },
+    l10n: {
+      t: (template, detail) => detail === undefined ? `[${template}]` : `[${template}] ${detail}`,
+    },
     window: {
       createOutputChannel: (name) => {
         assert.equal(name, "[Recite]");
         return {
           append: (value) => raw.push(value),
           appendLine: (value) => lines.push(value),
-          dispose: () => { disposed = true; }
+          dispose: () => {
+            disposed = true;
+          },
         };
       },
       showErrorMessage: (value) => notices.push(["error", value]),
       showWarningMessage: (value) => notices.push(["warning", value]),
-      showInformationMessage: (value) => notices.push(["information", value])
-    }
+      showInformationMessage: (value) => notices.push(["information", value]),
+    },
   };
   const ui = createUserInterface(api);
 
@@ -46,7 +50,7 @@ test("semantic UI operations localize source messages and keep the channel priva
     "log",
     "error from server",
     "warning from server",
-    "info from server"
+    "info from server",
   ]);
   assert.deepEqual(raw, ["stderr"]);
   assert.deepEqual(notices, [
@@ -57,7 +61,7 @@ test("semantic UI operations localize source messages and keep the channel priva
     ["error", "[Recite language server restart attempts exhausted.]"],
     ["error", "error from server"],
     ["warning", "warning from server"],
-    ["information", "info from server"]
+    ["information", "info from server"],
   ]);
   assert.equal(ui.output, undefined);
   assert.equal(ui.write, undefined);
@@ -75,9 +79,15 @@ test("runtime input pickers localize prompts and constrain file types", async ()
     l10n: { t: (template) => template },
     window: {
       createOutputChannel: () => ({ appendLine() {}, dispose() {} }),
-      showOpenDialog: async (options) => { calls.push(["open", options]); return undefined; },
-      showInputBox: async (options) => { calls.push(["input", options]); return undefined; }
-    }
+      showOpenDialog: async (options) => {
+        calls.push(["open", options]);
+        return undefined;
+      },
+      showInputBox: async (options) => {
+        calls.push(["input", options]);
+        return undefined;
+      },
+    },
   };
   const ui = createUserInterface(api);
   await ui.chooseAssetPath();
@@ -90,25 +100,25 @@ test("runtime input pickers localize prompts and constrain file types", async ()
       filters: { "Recite compiled assets": ["recitec"] },
       canSelectFiles: true,
       canSelectFolders: false,
-      canSelectMany: false
+      canSelectMany: false,
     }],
     ["input", {
       title: "Enter the Recite block name",
       prompt: "Block name used by the fixture",
-      placeHolder: "For example, start"
+      placeHolder: "For example, start",
     }],
     ["input", {
       title: "Recite: Rename block",
       prompt: "New block name",
-      placeHolder: "work"
+      placeHolder: "work",
     }],
     ["open", {
       title: "Choose the runtime fixture",
       filters: { "Recite runtime fixtures": ["toml"] },
       canSelectFiles: true,
       canSelectFolders: false,
-      canSelectMany: false
-    }]
+      canSelectMany: false,
+    }],
   ]);
   ui.dispose();
 });

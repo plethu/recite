@@ -1,22 +1,34 @@
-import AxeBuilder from "@axe-core/playwright";
+import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 for (const theme of ["light", "dark"] as const) {
-  test(`landing and guide pages pass axe in ${theme}`, async ({ page }, testInfo) => {
+  test(`published pages pass axe in ${theme}`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    for (const path of ["/", "/getting-started/first-scene/", "/guides/alternatives/"]) {
+    await page.goto("/");
+    const sitemap = await (await page.request.get("/sitemap.xml")).text();
+    const paths = await page.evaluate(
+      (xml) =>
+        Array.from(
+          new DOMParser().parseFromString(xml, "application/xml").querySelectorAll("url > loc"),
+        )
+          .map((node) => new URL(node.textContent!, location.href).pathname),
+      sitemap,
+    );
+    expect(paths.length).toBeGreaterThan(1);
+    for (const path of paths) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      // Expressive Code marks only genuinely scrollable blocks after ResizeObserver settles.
+      // Every overflowing block must be reachable for keyboard scrolling.
       await expect
         .poll(() =>
           page
-            .locator(".expressive-code pre")
+            .locator("pre")
             .evaluateAll((blocks) =>
               blocks.every(
                 (block) => block.scrollWidth <= block.clientWidth || block.tabIndex === 0,
-              ),
-            ),
+              )
+            )
         )
         .toBe(true);
       const results = await new AxeBuilder({ page })
@@ -31,3 +43,24 @@ for (const theme of ["light", "dark"] as const) {
     }
   });
 }
+
+test("dark static pages pass axe without site scripts", async ({ browser }) => {
+  const context = await browser.newContext({ colorScheme: "dark" });
+  try {
+    await context.route(
+      "**/*",
+      (route) => route.request().resourceType() === "script" ? route.abort() : route.continue(),
+    );
+    const page = await context.newPage();
+    await page.goto("/getting-started/first-scene/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("First Scene");
+    await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toBeHidden();
+    // Axe injects its audit library inline; external site scripts stay blocked.
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});

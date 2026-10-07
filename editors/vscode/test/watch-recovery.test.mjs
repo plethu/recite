@@ -1,6 +1,6 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-import { FakeChild, envelope, started, watchRegistry } from "./watch-test-fixtures.mjs";
+import test from "node:test";
+import { envelope, FakeChild, started, watchRegistry } from "./watch-test-fixtures.mjs";
 
 test("dispose recovers a child that never emits a terminal record", async () => {
   const messages = [];
@@ -36,13 +36,16 @@ test("fatal terminal enters bounded recovery without releasing a non-closing chi
   const registry = watchRegistry(messages, child, "fatal-hung-id", 5);
   registry.register([]);
   await registry.api.commands.executeCommand("recite.watch.start");
-  child.stdout.emit("data", Buffer.from(
-    JSON.stringify(started("fatal-hung-id", 0)) + "\n" +
-    JSON.stringify(envelope("fatal-hung-id", 1, "watch.stopped", {
-      reason: { type: "fatal" },
-      error: { category: "input", code: "missing_path", operation: "watch" }
-    })) + "\n"
-  ));
+  child.stdout.emit(
+    "data",
+    Buffer.from(
+      JSON.stringify(started("fatal-hung-id", 0)) + "\n"
+        + JSON.stringify(envelope("fatal-hung-id", 1, "watch.stopped", {
+          reason: { type: "fatal" },
+          error: { category: "input", code: "missing_path", operation: "watch" },
+        })) + "\n",
+    ),
+  );
   await new Promise((resolve) => setTimeout(resolve, 30));
   assert.deepEqual(child.signals, ["SIGTERM", "SIGKILL"]);
   assert.notEqual(registry.watch.active, undefined);

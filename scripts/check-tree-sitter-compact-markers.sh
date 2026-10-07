@@ -15,12 +15,12 @@ trap cleanup EXIT
 
 parse_clean() {
   local file="$1" output="$2" rc=0
-  if (cd "$repo_root" && tree-sitter parse --grammar-path "$grammar_dir" "$file") > "$output" 2>&1; then
+  if (cd "$repo_root" && tree-sitter parse --grammar-path "$grammar_dir" "$file") >"$output" 2>&1; then
     rc=0
   else
     rc=$?
   fi
-  if (( rc > 1 )) || grep -Eq '\((ERROR|MISSING)( |\))' "$output"; then
+  if ((rc > 1)) || grep -Eq '\((ERROR|MISSING)( |\))' "$output"; then
     echo "compact-marker fixture produced a recovery node: $file" >&2
     sed -n '1,180p' "$output" >&2
     exit 1
@@ -37,10 +37,10 @@ source_text="$(<"$fixture")"
 lf_file="$scratch/compact-markers.recite"
 crlf_file="$scratch/compact-markers-crlf.recite"
 eof_file="$scratch/compact-markers-eof.recite"
-printf '%s\n' "$source_text" > "$lf_file"
+printf '%s\n' "$source_text" >"$lf_file"
 crlf_text="${source_text//$'\n'/$'\r\n'}"
-printf '%s\r\n' "$crlf_text" > "$crlf_file"
-printf '%s' "$source_text" > "$eof_file"
+printf '%s\r\n' "$crlf_text" >"$crlf_file"
+printf '%s' "$source_text" >"$eof_file"
 
 echo "== compact/spaced/indented block and effect markers =="
 for file in "$lf_file" "$crlf_file" "$eof_file"; do
@@ -48,7 +48,7 @@ for file in "$lf_file" "$crlf_file" "$eof_file"; do
   parse_clean "$file" "$tree"
   if ! CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo_root/target}" \
     cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-    validate "$file" > "$production_output" 2>&1; then
+    validate "$file" >"$production_output" 2>&1; then
     echo "production parser rejected valid compact-marker fixture: $file" >&2
     sed -n '1,100p' "$production_output" >&2
     exit 1
@@ -57,7 +57,7 @@ done
 
 captures="$scratch/compact-marker-captures.txt"
 tree-sitter query --grammar-path "$grammar_dir" --captures \
-  "$grammar_dir/queries/highlights.scm" "$lf_file" > "$captures"
+  "$grammar_dir/queries/highlights.scm" "$lf_file" >"$captures"
 for expectation in \
   ' - keyword, start: (0, 0), end: (0, 2), text: `::`' \
   ' - label, start: (0, 2), end: (0, 17), text: `compact_markers`' \
@@ -78,15 +78,15 @@ done
 
 echo "== malformed separator and payload recovery =="
 recovery_file="$scratch/compact-markers-recovery.recite"
-printf '%s' $'::compact_recovery default\n!immediate play_sfx()\n::\n! \n!bogus play_sfx()\n! immediate\n! immediate ,\n!;immediate play_sfx()\n! immediate play_sfx()\n>following@0123456789abcdef0123\n  Recovery prose.\n' > "$recovery_file"
+printf '%s' $'::compact_recovery default\n!immediate play_sfx()\n::\n! \n!bogus play_sfx()\n! immediate\n! immediate ,\n!;immediate play_sfx()\n! immediate play_sfx()\n>following@0123456789abcdef0123\n  Recovery prose.\n' >"$recovery_file"
 recovery_tree="$scratch/compact-markers-recovery.tree"
 recovery_rc=0
-if (cd "$repo_root" && tree-sitter parse --grammar-path "$grammar_dir" "$recovery_file") > "$recovery_tree" 2>&1; then
+if (cd "$repo_root" && tree-sitter parse --grammar-path "$grammar_dir" "$recovery_file") >"$recovery_tree" 2>&1; then
   recovery_rc=0
 else
   recovery_rc=$?
 fi
-if (( recovery_rc > 1 )) \
+if ((recovery_rc > 1)) \
   || [[ "$(grep -Ec '\((ERROR|MISSING)( |\))' "$recovery_tree")" -lt 5 ]] \
   || [[ "$(grep -Fc '(line_statement' "$recovery_tree")" -ne 1 ]] \
   || [[ "$(grep -Fc '(prose_line' "$recovery_tree")" -ne 1 ]]; then
@@ -96,7 +96,7 @@ if (( recovery_rc > 1 )) \
 fi
 if CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo_root/target}" \
   cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
-  validate "$recovery_file" > "$production_output" 2>&1; then
+  validate "$recovery_file" >"$production_output" 2>&1; then
   echo "production parser unexpectedly accepted malformed compact-marker recovery" >&2
   sed -n '1,100p' "$production_output" >&2
   exit 1

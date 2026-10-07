@@ -1,21 +1,14 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
-set default-list := true
+set default-list
 
 # Install the scoped runner and sync the locked Python 3.12 environment.
 setup:
-    mise -E lsp install uv
-    mise -E lsp exec -- uv sync --locked
+    mise -E lsp exec -- uv sync --locked --python "$(mise which python)" --no-python-downloads
 
-# Run the LSP tooling's formatter, linter and CI contract tests.
+# Run LSP harness and CI contract tests; quality owns formatting and linting.
 check:
-    mise -E lsp exec -- uv run --locked ruff format --check
-    mise -E lsp exec -- uv run --locked ruff check
     mise -E lsp exec -- uv run --locked python -m unittest discover -s tests/ci -p 'test_*.py'
-
-# Deliberately format maintained LSP Python tools and their tests.
-fmt:
-    mise -E lsp exec -- uv run --locked ruff format
 
 # Measure a Criterion target on selected fixture scales; trailing arguments go to Criterion.
 bench target scales="tiny,small" *args:

@@ -94,11 +94,13 @@ fi
 
 echo "== workspace dependencies =="
 "$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
+(cd "$repo_root" && just quality setup)
 
 echo "== developer tool checks =="
 (
   cd "$repo_root"
   just fmt-check
+  just quality lint
   just spelling
   just unused-deps
   just supply-chain
@@ -121,6 +123,7 @@ echo "== maintainability fixtures and changed-surface check =="
 (
   cd "$repo_root"
   tests/maintainability/check.sh
+  tests/maintainability/format-replay.sh
   tests/ast-grep/check.sh
   just maintainability
   tests/lint-suppressions/check.sh

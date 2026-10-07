@@ -53,14 +53,20 @@ exports.connect = async function connect(portFile) {
           const editor = editors.find(e => e.querySelector('.view-lines')?.textContent.includes('host_probe'));
           const text = editor?.querySelector('.view-lines')?.textContent ?? '';
           const marks = editor ? [...editor.querySelectorAll('.squiggly-error')].filter(e => e.getBoundingClientRect().width > 0) : [];
-          const ready = editor && (${broken} ? text.includes(${JSON.stringify(missing)}) && marks.length > 0 : text.includes('END') && marks.length === 0);
+          const ready = editor && (${broken} ? text.includes(${
+        JSON.stringify(missing)
+      }) && marks.length > 0 : text.includes('END') && marks.length === 0);
           if (ready) requestAnimationFrame(() => requestAnimationFrame(() => resolve({ marks: marks.length, text })));
           else if (performance.now() > deadline) reject(new Error('visible diagnostic state timed out: ' + text.slice(-300)));
           else requestAnimationFrame(check);
         }
         check();
       })`;
-      const state = await call("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      const state = await call("Runtime.evaluate", {
+        expression,
+        awaitPromise: true,
+        returnByValue: true,
+      });
       assert(!state.exceptionDetails, JSON.stringify(state.exceptionDetails));
       const readyAt = performance.now();
       const image = await call("Page.captureScreenshot", { format: "png", fromSurface: true });
@@ -68,6 +74,8 @@ exports.connect = async function connect(portFile) {
       if (destination) fs.writeFileSync(destination, Buffer.from(image.data, "base64"));
       return { ...state.result.value, readyAt };
     },
-    close() { socket.close(); }
+    close() {
+      socket.close();
+    },
   };
 };

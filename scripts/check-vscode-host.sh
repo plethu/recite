@@ -18,7 +18,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   usage
   exit 0
 fi
-if (( $# > 1 )); then
+if (($# > 1)); then
   usage >&2
   exit 2
 fi
@@ -67,7 +67,6 @@ VSCODE_COMMIT="a44adf7f53e00964ab890f9f8758a334f1fc15bc"
 VSCODE_URL="https://vscode.download.prss.microsoft.com/dbazure/download/stable/${VSCODE_COMMIT}/code-stable-x64-1788413682.tar.gz"
 VSCODE_SHA256="9b4a54f0d49beaa413eda137d00c6541a639300d479efcac566ad13419409218"
 VSCODIUM_VERSION="1.126.04524"
-VSCODIUM_COMMIT="4c0b0c6cc561d2d3636d1ec250935431876ce4dc"
 VSCODIUM_URL="https://github.com/VSCodium/vscodium/releases/download/${VSCODIUM_VERSION}/VSCodium-linux-x64-${VSCODIUM_VERSION}.tar.gz"
 VSCODIUM_SHA256="adf3548df055d18e476cdee887488ba7486b879ad99a31a546c6b5c5ff296c24"
 
@@ -265,18 +264,18 @@ fs.writeFileSync(destination, fs.readFileSync(source, "utf8").replace(
   "> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert", ">"
 ));
 EOF
-cat > "$workspace/scratch/runtime-fixture.toml" <<'EOF'
+cat >"$workspace/scratch/runtime-fixture.toml" <<'EOF'
 [choices]
 start = 1
 
 [effects]
 auto_ack_blocking = true
 EOF
-cat > "$workspace/scratch/runtime-invalid.toml" <<'EOF'
+cat >"$workspace/scratch/runtime-invalid.toml" <<'EOF'
 [choices]
 start = 0
 EOF
-cat > "$workspace/recite.project.toml" <<'EOF'
+cat >"$workspace/recite.project.toml" <<'EOF'
 format_version = 1
 
 [discovery]
@@ -290,7 +289,6 @@ participants = ["hazel"]
 EOF
 
 asset="$workspace/compiled/dialogue.recitec"
-fixture="$workspace/scratch/runtime-fixture.toml"
 "$cli_bin" compile --output-format structured --invocation-id host-fixture \
   --output "$asset" "$workspace/dialogue/main.recite" >"$run_root/fixture-compile.jsonl"
 node - "$run_root/fixture-compile.jsonl" <<'EOF'
@@ -305,7 +303,8 @@ EOF
 probe="$run_root/probe"
 mkdir -p "$probe"
 cp "$repo_root/tests/editor-hosts/vscode/host-probe.cjs" "$probe/host-probe.cjs"
-cat > "$probe/package.json" <<'EOF'
+cp "$repo_root/tests/editor-hosts/vscode/keyboard-probe.cjs" "$probe/keyboard-probe.cjs"
+cat >"$probe/package.json" <<'EOF'
 {
   "name": "recite-installed-host-probe",
   "version": "0.0.0",
@@ -323,7 +322,7 @@ cat > "$probe/package.json" <<'EOF'
   }
 }
 EOF
-cat > "$probe/extension.cjs" <<'EOF'
+cat >"$probe/extension.cjs" <<'EOF'
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vscode = require("vscode");
@@ -526,11 +525,11 @@ run_host_process() {
     RECITE_HOST_PROBE_PROFILE_MARKER="$profile/profile.marker" \
     cage -- \
     "$host_bin" --no-sandbox --disable-gpu --disable-updates --skip-welcome \
-      --skip-release-notes --disable-telemetry --disable-crash-reporter \
-      --password-store=basic --user-data-dir="$profile/user-data" \
-      --extensions-dir="$profile/extensions" --shared-data-dir="$profile/shared" \
-      --extensionDevelopmentPath="$probe" --extensionTestsPath="$probe/host-probe.cjs" \
-      --disable-workspace-trust "$workspace" >"$log" 2>&1 &
+    --skip-release-notes --disable-telemetry --disable-crash-reporter \
+    --password-store=basic --user-data-dir="$profile/user-data" \
+    --extensions-dir="$profile/extensions" --shared-data-dir="$profile/shared" \
+    --extensionDevelopmentPath="$probe" --extensionTestsPath="$probe/host-probe.cjs" \
+    --disable-workspace-trust "$workspace" >"$log" 2>&1 &
   runner_pid=$!
   for _ in {1..20}; do
     candidate_pgid="$(ps -o pgid= -p "$runner_pid" 2>/dev/null | tr -d ' ')"
@@ -562,7 +561,7 @@ run_host_process() {
     fi
     sleep 0.05
   done
-  if (( finished == 0 )); then
+  if ((finished == 0)); then
     echo "host phase exceeded the 180-second bound" >&2
   fi
   local process_group="$runner_pgid"
@@ -576,10 +575,10 @@ run_host_process() {
   set -e
   runner_pid=""
   runner_pgid=""
-  if (( finished == 0 )); then
+  if ((finished == 0)); then
     return 124
   fi
-  if (( status != 0 )); then
+  if ((status != 0)); then
     return "$status"
   fi
   return "$group_status"

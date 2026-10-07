@@ -3,7 +3,6 @@
 
 import importlib.util
 import json
-from pathlib import Path
 import shutil
 import struct
 import subprocess
@@ -11,7 +10,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("package_writer", ROOT / "scripts/package-writer.py")
@@ -39,9 +38,7 @@ class PackageConfigTests(unittest.TestCase):
                     self.assertEqual(config["version"], "0.0.0")
                     self.assertEqual(config["identifier"], "io.github.plethu.recite")
                     self.assertEqual(config["binaries"], [{"path": "recite-writer", "main": True}])
-                    self.assertEqual(
-                        bool(config.get("deepLinkProtocols")), target == "linux"
-                    )
+                    self.assertEqual(bool(config.get("deepLinkProtocols")), target == "linux")
                     self.assertEqual("licenseFile" in config, target != "macos")
                     self.assertEqual(
                         {Path(resource["src"]).name for resource in config["resources"]},
@@ -98,7 +95,7 @@ class PackageConfigTests(unittest.TestCase):
             binary.parent.mkdir(parents=True)
             source = base / "writer.c"
             source.write_text(
-                '#include <stdio.h>\n#include <string.h>\n'
+                "#include <stdio.h>\n#include <string.h>\n"
                 'int main(int argc, char **argv) { if (argc > 1 && !strcmp(argv[1], "--help")) '
                 '{ puts("--project"); return 0; } if (argc > 1 && !strcmp(argv[1], "--version")) '
                 '{ puts("0.0.0"); return 0; } return 1; }\n'
@@ -113,7 +110,9 @@ class PackageConfigTests(unittest.TestCase):
             )
             desktop = payload / "usr/share/applications/recite-writer.desktop"
             desktop.parent.mkdir(parents=True)
-            desktop.write_text("[Desktop Entry]\nExec=recite-writer %u\nMimeType=x-scheme-handler/recite;\n")
+            desktop.write_text(
+                "[Desktop Entry]\nExec=recite-writer %u\nMimeType=x-scheme-handler/recite;\n"
+            )
             licenses = payload / "usr/lib/recite-writer/licenses"
             licenses.mkdir(parents=True)
             for name in ("LICENSE", "LICENSE-MIT", "LICENSE-APACHE"):
@@ -131,7 +130,9 @@ class PackageConfigTests(unittest.TestCase):
             self.build_deb_fixture(payload, artifact)
             with self.assertRaisesRegex(ValueError, "one URL"):
                 package_check.check_linux(base)
-            desktop.write_text("[Desktop Entry]\nExec=recite-writer %u\nMimeType=x-scheme-handler/recite;\n")
+            desktop.write_text(
+                "[Desktop Entry]\nExec=recite-writer %u\nMimeType=x-scheme-handler/recite;\n"
+            )
             control.write_text(
                 "Package: recite-writer\nVersion: 0.0.0\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
@@ -152,7 +153,13 @@ class PackageConfigTests(unittest.TestCase):
     def test_foreign_platform_inspection_is_rejected(self):
         foreign = "windows" if sys.platform.startswith("linux") else "linux"
         result = subprocess.run(
-            [sys.executable, str(ROOT / "scripts/check-writer-package.py"), "--platform", foreign, "."],
+            [
+                sys.executable,
+                str(ROOT / "scripts/check-writer-package.py"),
+                "--platform",
+                foreign,
+                ".",
+            ],
             capture_output=True,
             text=True,
         )
@@ -162,7 +169,11 @@ class PackageConfigTests(unittest.TestCase):
     @staticmethod
     def build_deb_fixture(payload, artifact):
         if shutil.which("dpkg-deb"):
-            subprocess.run(["dpkg-deb", "--build", str(payload), str(artifact)], check=True, capture_output=True)
+            subprocess.run(
+                ["dpkg-deb", "--build", str(payload), str(artifact)],
+                check=True,
+                capture_output=True,
+            )
             return
         control = payload.parent / "control.tar.gz"
         data = payload.parent / "data.tar.gz"

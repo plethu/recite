@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 import { projectDiagnostics } from "../scripts/diagnostic-projections.mjs";
 
 test("Neovim diagnostic projection validates shared contracts with CRLF input", () => {
@@ -8,7 +8,7 @@ test("Neovim diagnostic projection validates shared contracts with CRLF input", 
 
   assert.deepEqual(
     projectDiagnostics(source, contract).values.get("diagnostic-hostile"),
-    { template: "bad {$actual}", arguments: [{ name: "actual", type: "string" }] }
+    { template: "bad {$actual}", arguments: [{ name: "actual", type: "string" }] },
   );
 });
 
@@ -18,6 +18,6 @@ test("Neovim diagnostic projection rejects a contract placeholder mismatch", () 
 
   assert.throws(
     () => projectDiagnostics(source, contract),
-    /diagnostic contract\/template mismatch for diagnostic-hostile/
+    /diagnostic contract\/template mismatch for diagnostic-hostile/,
   );
 });

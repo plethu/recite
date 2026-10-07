@@ -12,9 +12,15 @@ export class EditCommandRegistry {
     this.ttlMs = Math.max(1, options.editCommandTtlMs ?? EDIT_COMMAND_TTL_MS);
     this.maxCommands = Math.max(1, Math.floor(options.maxEditCommands ?? MAX_EDIT_COMMANDS));
     this.retiredTtlMs = Math.max(1, options.retiredCommandTtlMs ?? this.ttlMs);
-    this.maxRetiredCommands = Math.max(1, Math.min(MAX_RETIRED_COMMANDS, Math.floor(
-      options.maxRetiredCommands ?? this.maxCommands
-    )));
+    this.maxRetiredCommands = Math.max(
+      1,
+      Math.min(
+        MAX_RETIRED_COMMANDS,
+        Math.floor(
+          options.maxRetiredCommands ?? this.maxCommands,
+        ),
+      ),
+    );
     this.commands = new Map();
     this.retired = new Map();
     this.nextId = 1;
@@ -27,13 +33,15 @@ export class EditCommandRegistry {
     this.registered = true;
     subscriptions.push(this.api.commands.registerCommand(
       APPLY_CODE_ACTION_COMMAND,
-      (id) => this.apply(id)
+      (id) => this.apply(id),
     ));
   }
 
   beginBatch() {
     const batch = { ids: new Set(), active: true };
-    batch.finish = () => { batch.active = false; };
+    batch.finish = () => {
+      batch.active = false;
+    };
     return batch;
   }
 
@@ -80,9 +88,11 @@ export class EditCommandRegistry {
 
   discardForDocument(document, reason = "document-stale") {
     for (const [id, entry] of this.commands) {
-      if (entry.edit.reciteVersionPreconditions?.some((precondition) =>
-        precondition.document === document
-      )) this.retire(id, reason);
+      if (
+        entry.edit.reciteVersionPreconditions?.some((precondition) =>
+          precondition.document === document
+        )
+      ) this.retire(id, reason);
     }
     this.schedulePrune();
   }

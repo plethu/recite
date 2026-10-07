@@ -16,7 +16,6 @@ import sys
 import threading
 from typing import BinaryIO
 
-
 LOG_PATH = os.environ["RECITE_PROBE_LSP_LOG"]
 REAL_SERVER = os.environ["RECITE_PROBE_LSP_REAL"]
 log_lock = threading.Lock()

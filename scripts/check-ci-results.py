@@ -5,10 +5,16 @@ import json
 import os
 import sys
 
-
 LANES = {
-    "rust", "windows-publisher", "docs", "site", "editor", "benchmark-smoke",
-    "maintainability", "packages", "lsp-sessions",
+    "rust",
+    "windows-publisher",
+    "docs",
+    "site",
+    "editor",
+    "benchmark-smoke",
+    "maintainability",
+    "packages",
+    "lsp-sessions",
 }
 
 

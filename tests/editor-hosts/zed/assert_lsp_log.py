@@ -88,7 +88,12 @@ def main() -> int:
     capabilities = initialize["result"]["capabilities"]
     assert capabilities["positionEncoding"] == "utf-16"
     assert capabilities["textDocumentSync"] == {"change": 2, "openClose": True, "save": {}}
-    for capability in ("completionProvider", "hoverProvider", "definitionProvider", "referencesProvider"):
+    for capability in (
+        "completionProvider",
+        "hoverProvider",
+        "definitionProvider",
+        "referencesProvider",
+    ):
         assert capabilities.get(capability), f"missing initialize capability: {capability}"
     assert capabilities["renameProvider"]["prepareProvider"] is True
     assert capabilities["codeActionProvider"]["codeActionKinds"]
@@ -113,8 +118,7 @@ def main() -> int:
         and entry["message"].get("params", {}).get("textDocument", {}).get("uri") == fixture_uri
     ]
     assert any(
-        len(text.splitlines()) > 2 and text.splitlines()[2][11] == "😀"
-        for text in fixture_texts
+        len(text.splitlines()) > 2 and text.splitlines()[2][11] == "😀" for text in fixture_texts
     ), "installed Zed did not send the non-BMP marker at the asserted source column"
     assert any(
         entry["direction"] == "client->server"
@@ -143,8 +147,9 @@ def main() -> int:
         for request in requests.values()
     ), "Zed did not send a completion request at the post-marker UTF-16 position"
 
-    assert any(has_label(result, "work") for result in response_results("textDocument/completion")), \
-        "no Zed-triggered completion response contained the canonical work symbol"
+    assert any(
+        has_label(result, "work") for result in response_results("textDocument/completion")
+    ), "no Zed-triggered completion response contained the canonical work symbol"
     assert any(
         isinstance(result, dict)
         and result.get("uri", "").endswith("/core.recite")
@@ -152,8 +157,7 @@ def main() -> int:
         for result in response_results("textDocument/definition")
     ), "no canonical definition response was captured from Zed"
     assert any(
-        isinstance(result, dict)
-        and result.get("range", {}).get("start", {}).get("line") == 6
+        isinstance(result, dict) and result.get("range", {}).get("start", {}).get("line") == 6
         for result in response_results("textDocument/hover")
     ), "no canonical hover response was captured from Zed"
     assert any(
@@ -174,7 +178,9 @@ def main() -> int:
         and request.get("params", {}).get("textDocument", {}).get("uri") == code_action_uri
         and request_id in responses
     ]
-    assert code_action_transactions, "Zed did not receive a code-action response for the canonical fixture"
+    assert code_action_transactions, (
+        "Zed did not receive a code-action response for the canonical fixture"
+    )
     missing_id_transactions = [
         (request, result)
         for request, result in code_action_transactions
@@ -186,7 +192,8 @@ def main() -> int:
     ]
     assert missing_id_transactions, "Zed did not send a missing-ID code-action request"
     assert any(
-        request.get("params", {}).get("range") == {
+        request.get("params", {}).get("range")
+        == {
             "start": {"line": 1, "character": 0},
             "end": {"line": 1, "character": 1},
         }
@@ -202,8 +209,7 @@ def main() -> int:
         for _, result in missing_id_transactions
         if isinstance(result, list)
         for action in result
-        if isinstance(action, dict)
-        and action.get("title") == "Insert missing stable ID"
+        if isinstance(action, dict) and action.get("title") == "Insert missing stable ID"
     ]
     assert actions, "Recite returned no canonical missing-ID quick-fix through Zed"
     action = actions[0]
@@ -241,8 +247,7 @@ def main() -> int:
     rename_transactions = [
         (request, responses[request_id].get("result"))
         for request_id, request in requests.items()
-        if request.get("method") == "textDocument/rename"
-        and request_id in responses
+        if request.get("method") == "textDocument/rename" and request_id in responses
     ]
     rename_request, rename_result = next(
         (

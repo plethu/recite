@@ -1,4 +1,16 @@
 [
-  {"node":"Start","text":"The station is quiet.","id":"arrival@11111111111111111111","speaker":"operator","next":"End"},
-  {"node":"End","text":"The signal returns.","id":"reply@11111111111111111112","speaker":"operator","next":"END"}
+  {
+    "node": "Start",
+    "text": "The station is quiet.",
+    "id": "arrival@11111111111111111111",
+    "speaker": "operator",
+    "next": "End"
+  },
+  {
+    "node": "End",
+    "text": "The signal returns.",
+    "id": "reply@11111111111111111112",
+    "speaker": "operator",
+    "next": "END"
+  }
 ]

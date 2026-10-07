@@ -6,37 +6,37 @@
 
 maintainability_is_test_path() {
   local path="$1"
-  [[ "$path" == crates/*/tests/* \
-    || "$path" == crates/*/benches/* \
-    || "$path" == crates/*/src/tests.rs \
-    || "$path" == crates/*/src/tests/* \
-    || "$path" == editors/zed/src/tests.rs \
-    || "$path" == */src/*/tests.rs \
-    || "$path" == tests/* \
-    || "$path" == editors/*/test/* \
-    || "$path" == editors/*/tests/* ]]
+  [[ "$path" == crates/*/tests/* ||
+    "$path" == crates/*/benches/* ||
+    "$path" == crates/*/src/tests.rs ||
+    "$path" == crates/*/src/tests/* ||
+    "$path" == editors/zed/src/tests.rs ||
+    "$path" == */src/*/tests.rs ||
+    "$path" == tests/* ||
+    "$path" == editors/*/test/* ||
+    "$path" == editors/*/tests/* ]]
 }
 
 maintainability_is_tooling_path() {
   local path="$1"
-  [[ "$path" == scripts/* \
-    || "$path" == editors/*/scripts/* \
-    || "$path" == .agents/*/scripts/* \
-    || "$path" == .agents/*/*/scripts/* \
-    || "$path" == .agents/*/*/*/scripts/* ]]
+  [[ "$path" == scripts/* ||
+    "$path" == editors/*/scripts/* ||
+    "$path" == .agents/*/scripts/* ||
+    "$path" == .agents/*/*/scripts/* ||
+    "$path" == .agents/*/*/*/scripts/* ]]
 }
 
 maintainability_is_rust_source_path() {
   local path="$1"
-  [[ "$path" == crates/*/src/* || "$path" == crates/*/tests/* \
-    || "$path" == crates/*/benches/* \
-    || "$path" == editors/zed/src/* \
-    || "$path" == tests/* ]]
+  [[ "$path" == crates/*/src/* || "$path" == crates/*/tests/* ||
+    "$path" == crates/*/benches/* ||
+    "$path" == editors/zed/src/* ||
+    "$path" == tests/* ]]
 }
 
 maintainability_is_supported_extension() {
   case "$1" in
-    *.rs|*.js|*.mjs|*.cjs|*.lua|*.py|*.sh)
+    *.rs | *.js | *.mjs | *.cjs | *.lua | *.py | *.sh)
       return 0
       ;;
     *)
@@ -47,13 +47,13 @@ maintainability_is_supported_extension() {
 
 maintainability_is_excluded_path() {
   case "$1" in
-    target/*|include/recite.h|fixtures/generated/* \
-      |editors/vscode/src/messages.generated.js \
-      |editors/recite-neovim/lua/recite_messages.lua \
-      |editors/recite-neovim/lua/recite_diagnostics.lua \
-      |editors/recite-tree-sitter/src/parser.c \
-      |editors/recite-tree-sitter/src/grammar.json \
-      |editors/recite-tree-sitter/src/node-types.json)
+    target/* | docs/archive/* | include/recite.h | fixtures/generated/* | \
+      editors/vscode/src/messages.generated.js | \
+      editors/recite-neovim/lua/recite_messages.lua | \
+      editors/recite-neovim/lua/recite_diagnostics.lua | \
+      editors/recite-tree-sitter/src/parser.c | \
+      editors/recite-tree-sitter/src/grammar.json | \
+      editors/recite-tree-sitter/src/node-types.json)
       return 0
       ;;
     *)
@@ -75,7 +75,7 @@ maintainability_is_valid_path() {
   local path="$1"
   maintainability_is_supported_extension "$path" || return 1
   case "$path" in
-    ''|*/../*|*/..|../*|./*|*/./*)
+    '' | */../* | */.. | ../* | ./* | */./*)
       return 1
       ;;
   esac
@@ -102,7 +102,7 @@ maintainability_classify_path() {
 
 maintainability_scrutiny_threshold() {
   case "$1" in
-    production|tooling) printf '250\n' ;;
+    production | tooling) printf '250\n' ;;
     test/support) printf '350\n' ;;
     *) return 1 ;;
   esac
@@ -110,7 +110,7 @@ maintainability_scrutiny_threshold() {
 
 maintainability_follow_up_threshold() {
   case "$1" in
-    production|tooling) printf '400\n' ;;
+    production | tooling) printf '400\n' ;;
     test/support) printf '500\n' ;;
     *) return 1 ;;
   esac
@@ -126,3 +126,27 @@ maintainability_line_count_at() {
   fi
   git -C "$repo_root" show "${revision}:${path}" | awk 'END { print NR + 0 }'
 }
+
+# Formatting may expand existing code without adding code. Replaying the pinned
+# formatter must reproduce the head bytes exactly; failures retain size policy.
+maintainability_is_format_only() (
+  local repo_root="$1" base_sha="$2" head_sha="$3" base_path="$4" path="$5"
+  [[ -f "$repo_root/dprint.json" ]] || return 1
+  local temporary
+  temporary="$(mktemp -d)" || return 1
+  trap 'rm -rf "$temporary"' EXIT
+  git -C "$repo_root" show "$base_sha:$base_path" >"$temporary/base" || return 1
+  git -C "$repo_root" show "$head_sha:$path" >"$temporary/head" || return 1
+  (
+    cd "$repo_root"
+    mise -E quality exec -- dprint fmt --stdin "$repo_root/$path" <"$temporary/base"
+  ) >"$temporary/formatted" 2>"$temporary/errors" || return 1
+  cmp -s "$temporary/formatted" "$temporary/head" && return 0
+  # StyLua can settle nested call/table layout on its second pass. Both passes
+  # must still reproduce exact head bytes; substantive changes fail closed.
+  (
+    cd "$repo_root"
+    mise -E quality exec -- dprint fmt --stdin "$repo_root/$path" <"$temporary/formatted"
+  ) >"$temporary/settled" 2>"$temporary/errors" || return 1
+  cmp -s "$temporary/settled" "$temporary/head"
+)

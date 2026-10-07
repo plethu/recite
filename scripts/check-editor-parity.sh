@@ -7,7 +7,7 @@ Usage:
   check-editor-parity.sh [repo-root]
 
 Validates the editor parity contract, canonical fixture references, and honest
-status/artifact claims shared by the documentation and JSON matrix.
+status/artifact claims in the JSON matrix.
 EOF
 }
 
@@ -28,7 +28,6 @@ else
 fi
 
 fixture="$repo_root/fixtures/editor-parity/contract.json"
-document="$repo_root/docs/editor-parity-contract.md"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec python3 "$script_dir/editor_parity/check.py" "$repo_root" "$fixture" "$document"
+exec python3 "$script_dir/editor_parity/check.py" "$repo_root" "$fixture"

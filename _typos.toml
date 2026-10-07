@@ -1,3 +1,6 @@
+[files]
+extend-exclude = ["docs-site/themes/**"]
+
 [default]
 # Stable dialogue IDs are hexadecimal data, including in JSON and PO strings.
 extend-ignore-re = ["[0-9a-f]{20}"]

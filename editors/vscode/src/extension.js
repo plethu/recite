@@ -8,7 +8,9 @@ export async function activateWithVscode(vscode, context) {
   const controller = new ExtensionController(vscode, userInterface);
   activeController = controller;
   context.subscriptions.push(userInterface, controller);
-  const outcome = await controller.start().catch((error) => controller.handleUnexpectedStartFailure(error));
+  const outcome = await controller.start().catch((error) =>
+    controller.handleUnexpectedStartFailure(error)
+  );
   if (outcome) controller.handleStartOutcome(outcome);
 }
 

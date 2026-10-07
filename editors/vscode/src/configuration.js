@@ -20,7 +20,7 @@ export function readConfiguration(api, userInterface) {
     args,
     cwd: root,
     projectRoot: root,
-    projectRootOverridden: Boolean(projectRoot.trim())
+    projectRootOverridden: Boolean(projectRoot.trim()),
   };
 }
 
@@ -49,7 +49,7 @@ export function readCliConfiguration(api, userInterface) {
     command: resolveCommand(command, root),
     cwd: root,
     projectRoot: root,
-    projectRootOverridden: Boolean(projectRoot.trim())
+    projectRootOverridden: Boolean(projectRoot.trim()),
   };
 }
 
@@ -57,9 +57,9 @@ export function initializeParams(api, root, override = false) {
   const workspaceFolders = override
     ? [{ name: path.basename(root), uri: api.Uri.file(root).toString() }]
     : (api.workspace.workspaceFolders ?? []).map((folder) => ({
-    uri: folder.uri.toString(),
-    name: folder.name
-  }));
+      uri: folder.uri.toString(),
+      name: folder.name,
+    }));
   return {
     processId: process.pid,
     rootUri: root ? api.Uri.file(root).toString() : null,
@@ -69,18 +69,23 @@ export function initializeParams(api, root, override = false) {
       general: { positionEncodings: ["utf-16"] },
       workspace: {
         configuration: true,
-        didChangeWatchedFiles: { dynamicRegistration: true }
+        didChangeWatchedFiles: { dynamicRegistration: true },
       },
       textDocument: {
-        synchronization: { dynamicRegistration: true, willSave: false, willSaveWaitUntil: false, didSave: true },
+        synchronization: {
+          dynamicRegistration: true,
+          willSave: false,
+          willSaveWaitUntil: false,
+          didSave: true,
+        },
         completion: { completionItem: { snippetSupport: false } },
         codeAction: {},
         definition: {},
         hover: {},
-        references: {}
-      }
+        references: {},
+      },
     },
-    trace: "off"
+    trace: "off",
   };
 }
 
@@ -95,6 +100,8 @@ export function projectRootPath(api, configured, userInterface) {
 }
 
 export function resolveCommand(command, root) {
-  if (!root || (!path.isAbsolute(command) && !command.includes("/") && !command.includes("\\"))) return command;
+  if (!root || (!path.isAbsolute(command) && !command.includes("/") && !command.includes("\\"))) {
+    return command;
+  }
   return path.resolve(root, command);
 }

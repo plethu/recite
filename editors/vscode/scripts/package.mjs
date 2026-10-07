@@ -1,17 +1,19 @@
-import { cp, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
+import { cp, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
-import { createRequire } from "node:module";
 import { assertContainedRegularFile, assertRegularFile, assertSafeTree } from "./safety.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DOS_EPOCH_TIME = 0;
 const DOS_EPOCH_DATE = 0x21; // 1980-01-01, the earliest legal ZIP date.
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
-const packageMessages = JSON.parse(await readFile(path.join(packageRoot, "package.nls.json"), "utf8"));
+const packageMessages = JSON.parse(
+  await readFile(path.join(packageRoot, "package.nls.json"), "utf8"),
+);
 const output = path.join(packageRoot, `${manifest.name}-${manifest.version}.vsix`);
 const repositoryRoot = path.resolve(packageRoot, "..", "..");
 const stage = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-package-"));
@@ -21,18 +23,25 @@ try {
   runNode(path.join(packageRoot, "scripts", "build.mjs"));
   assertSafeTree(path.join(packageRoot, "dist"), "extension package");
   await mkdir(extension, { recursive: true });
-  for (const file of ["package.json", "package.nls.json", "language-configuration.json", "README.md"]) {
+  for (
+    const file of ["package.json", "package.nls.json", "language-configuration.json", "README.md"]
+  ) {
     assertRegularFile(path.join(packageRoot, file));
     await cp(path.join(packageRoot, file), path.join(extension, file));
   }
   assertSafeTree(path.join(packageRoot, "syntaxes"), "extension syntax grammars");
-  await cp(path.join(packageRoot, "syntaxes"), path.join(extension, "syntaxes"), { recursive: true });
+  await cp(path.join(packageRoot, "syntaxes"), path.join(extension, "syntaxes"), {
+    recursive: true,
+  });
   await cp(path.join(packageRoot, "dist"), path.join(extension, "dist"), { recursive: true });
   await copyProductionDependencies(extension);
   const license = assertContainedRegularFile(repositoryRoot, "LICENSE", "repository license");
   await cp(license, path.join(extension, "LICENSE"));
   await writeText(path.join(stage, "[Content_Types].xml"), contentTypes());
-  await writeText(path.join(stage, "extension.vsixmanifest"), vsixManifest(manifest, packageMessages));
+  await writeText(
+    path.join(stage, "extension.vsixmanifest"),
+    vsixManifest(manifest, packageMessages),
+  );
   assertSafeTree(stage, "VSIX staging tree");
   await setStableMtimes(stage);
 
@@ -44,7 +53,10 @@ try {
 }
 
 async function copyProductionDependencies(extension) {
-  const pending = Object.keys(manifest.dependencies ?? {}).map((name) => ({ name, parent: packageRoot }));
+  const pending = Object.keys(manifest.dependencies ?? {}).map((name) => ({
+    name,
+    parent: packageRoot,
+  }));
   const installed = new Map();
   while (pending.length) {
     const { name, parent } = pending.shift();
@@ -54,7 +66,9 @@ async function copyProductionDependencies(extension) {
     const metadata = JSON.parse(await readFile(sourceManifest, "utf8"));
     const previous = installed.get(name);
     if (previous) {
-      if (previous !== metadata.version) throw new Error(`conflicting production dependency ${name}`);
+      if (previous !== metadata.version) {
+        throw new Error(`conflicting production dependency ${name}`);
+      }
       continue;
     }
     installed.set(name, metadata.version);
@@ -68,7 +82,9 @@ async function copyProductionDependencies(extension) {
   }
   for (const name of installed.keys()) {
     const stagedRequire = createRequire(path.join(extension, "node_modules", name, "package.json"));
-    const metadata = JSON.parse(await readFile(path.join(extension, "node_modules", name, "package.json"), "utf8"));
+    const metadata = JSON.parse(
+      await readFile(path.join(extension, "node_modules", name, "package.json"), "utf8"),
+    );
     for (const dependency of Object.keys(metadata.dependencies ?? {})) {
       await packageManifestFor(stagedRequire.resolve(dependency), dependency);
     }
@@ -100,7 +116,6 @@ function files(directory) {
   }).sort();
 }
 
-
 async function writeText(file, text) {
   await writeFile(file, text, "utf8");
 }
@@ -131,7 +146,9 @@ function vsixManifest(packageManifest, messages) {
   return `<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="1.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
-    <Identity Language="en-US" Id="${xml(packageManifest.name)}" Version="${xml(packageManifest.version)}" Publisher="${xml(packageManifest.publisher)}" />
+    <Identity Language="en-US" Id="${xml(packageManifest.name)}" Version="${
+    xml(packageManifest.version)
+  }" Publisher="${xml(packageManifest.publisher)}" />
     <DisplayName>${displayName}</DisplayName>
     <Description xml:space="preserve">${description}</Description>
     <MoreInfo>${xml(packageManifest.homepage)}</MoreInfo>
@@ -157,7 +174,7 @@ function localize(value, messages) {
 
 function xml(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;").replaceAll("'", "&apos;");
+    .replaceAll("\"", "&quot;").replaceAll("'", "&apos;");
 }
 
 function runNode(script) {
@@ -243,7 +260,9 @@ async function checkArchive(archive, stageRoot) {
   const entries = new Set();
   let cursor = centralOffset;
   for (let index = 0; index < count; index++) {
-    if (archiveData.readUInt32LE(cursor) !== 0x02014b50) throw new Error("VSIX central directory is malformed");
+    if (archiveData.readUInt32LE(cursor) !== 0x02014b50) {
+      throw new Error("VSIX central directory is malformed");
+    }
     const filenameLength = archiveData.readUInt16LE(cursor + 28);
     const extraLength = archiveData.readUInt16LE(cursor + 30);
     const commentLength = archiveData.readUInt16LE(cursor + 32);
@@ -259,21 +278,28 @@ async function checkArchive(archive, stageRoot) {
     const bodyStart = localOffset + 30 + localNameLength + localExtraLength;
     const compressed = archiveData.subarray(bodyStart, bodyStart + compressedSize);
     const content = inflateRawSync(compressed);
-    if (content.length !== uncompressedSize || !content.equals(await readFile(path.join(stageRoot, name)))) {
+    if (
+      content.length !== uncompressedSize
+      || !content.equals(await readFile(path.join(stageRoot, name)))
+    ) {
       throw new Error(`VSIX entry does not match its source bytes: ${name}`);
     }
     entries.add(name);
     cursor += 46 + filenameLength + extraLength + commentLength;
   }
-  for (const expected of [
-    "[Content_Types].xml",
-    "extension.vsixmanifest",
-    "extension/package.json",
-    "extension/syntaxes/recite.tmLanguage.json",
-    "extension/dist/extension.cjs",
-    "extension/dist/extension.js"
-  ]) {
+  for (
+    const expected of [
+      "[Content_Types].xml",
+      "extension.vsixmanifest",
+      "extension/package.json",
+      "extension/syntaxes/recite.tmLanguage.json",
+      "extension/dist/extension.cjs",
+      "extension/dist/extension.js",
+    ]
+  ) {
     if (!entries.has(expected)) throw new Error(`VSIX is missing ${expected}`);
   }
-  if (entries.size !== files(stageRoot).length) throw new Error("VSIX file list is not deterministic");
+  if (entries.size !== files(stageRoot).length) {
+    throw new Error("VSIX file list is not deterministic");
+  }
 }

@@ -13,24 +13,31 @@ mod engines 'engines.just'
 mod stress 'stress.just'
 # Criterion, LSP process measurements and tooling checks.
 mod perf 'perf.just'
+# Formatting and linting across maintained source languages.
+mod quality 'quality.just'
 
 default:
     @just --list
 
 # Install JavaScript workspace dependencies from the committed lockfile.
 setup:
+    just quality setup
     scripts/install-js-dependencies.sh
+    just perf setup
 
 fmt:
     cargo fmt --all
     just editor zed fmt
-    taplo fmt
+    just quality fmt
 
 fmt-check:
     cargo fmt --all -- --check
     just editor zed fmt-check
-    taplo fmt --check
-    taplo lint
+    just quality fmt-check
+
+lint:
+    just quality lint
+    just clippy
 
 clippy:
     just editor zed clippy

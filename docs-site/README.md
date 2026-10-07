@@ -1,39 +1,42 @@
 # Recite site
 
-The site uses Astro and Starlight for static documentation. Svelte integration
-is installed for a future demo backed by a compiled Recite fixture. The current
-landing scene is an excerpt, not a browser implementation of the dialogue
-runtime.
+Hugo and the pinned, unmodified Hugo Book theme build the static site. Site builds need no Node
+runtime or Go compiler. Playwright browser tests and CSS/type checks use the existing JavaScript
+toolchain; they are development dependencies.
 
-From the repository root, run `mise install` and `just web setup`, then
-`just web dev` for the local server. `just web check` checks formatting, types,
-components, and CSS without building; `just web verify` also builds the site
-and checks its links. Use `just web build` and `just web preview` to inspect
-the production output, or `just web fmt` to apply formatting. Run `just web`
-to list the site commands. From `docs-site/`, use the same recipe names without
-the `web` prefix, such as `just dev` or `just check`.
+From the repository root:
 
-Run `just web test-browser` for the browser suite. It builds the pinned
-Playwright image with Chromium, Firefox, and WebKit, serves the production
-build inside the container, and writes reports to `docs-site/.browser-artifacts/`.
-Pass Playwright filters after the recipe name, for example
-`just web test-browser --project=webkit`.
+```sh
+just web setup
+just web dev
+just web build
+just web verify
+just web test-browser
+```
 
-## Internationalisation
+Use `mise exec --` before `just` if mise is not activated. `setup` installs the mise-pinned
+generator and initializes the exact theme revision. Browser checks use the versioned Compose image;
+`just quality setup-browsers` provisions the matching browsers for direct local Playwright runs.
 
-English is served at the site root. Put translated Markdown or MDX in
-`src/content/docs/<locale>/`, keeping the same relative path as the English
-page. For example, `getting-started/first-scene.md` becomes
-`cy/getting-started/first-scene.md`.
+Write ordinary Markdown in `content/`. Section pages use `_index.md`; frontmatter titles become
+visible headings. Keep existing URLs and fragments when moving content. Hugo's language
+configuration and `i18n/<locale>.toml` handle translated pages and whole interface messages. English
+remains at the root. The landing scene is an excerpt and does not run dialogue in the browser.
 
-Custom landing-page prose and labels live in `src/content/i18n/en.json`. Keep
-semantic keys stable when the wording changes, and translate whole sentences
-or paragraphs rather than assembling them from fragments. Preserve the scene’s
-speakers, directions, and player actions as distinct elements; leave source
-syntax, commands, and API names unchanged.
+The few templates in `layouts/` supply the landing page, visible titles, keyboard-accessible mobile
+controls, and skip links. `assets/theme.js` adds a persistent light/dark/system preference.
+Canonical identity assets are mounted from `assets/identity`; do not copy them into the site. Native
+formatting and linting use the root quality commands and versioned configuration.
 
-Add a locale to the Starlight configuration when its translation is ready,
-including translations for custom sidebar labels. Use `getRelativeLocaleUrl`
-for internal links so navigation retains the selected locale. Check translated
-pages with JavaScript disabled, at narrow widths and increased text sizes, and
-in right-to-left layout where applicable.
+We replaced Astro/Starlight after comparing the full Markdown corpus and testing landing, First
+Scene, and Alternatives: preserved URLs, search, no-JavaScript reading, narrow reflow, keyboard
+controls and manual themes. The browser suite audits every published page in light/dark themes and
+checks keyboard scrolling for both code blocks and tables. A native build took about 70 ms locally;
+this is evidence from one machine, not a CI budget. The benefit is simpler build dependencies with
+comparable authored template/style code. Svelte had no components or hydration and was removed.
+
+Update Hugo Book by changing its submodule revision. Review upstream changes to the overridden
+header/brand templates and run the browser suite. Keep upstream files unmodified. Reconsider
+Starlight or another maintained shell if translated navigation or future interactive documentation
+starts requiring substantial replacement of the theme's behavior. The generator language alone is
+not a reason to maintain our own navigation or search framework.

@@ -28,12 +28,12 @@ git_policy_validate_branch() {
   local branch_name="$1"
   local pr_context="$2"
 
-  if (( pr_context )) && [[ "$branch_name" == "main" ]]; then
+  if ((pr_context)) && [[ "$branch_name" == "main" ]]; then
     echo "pull-request head branch must not be protected main" >&2
     return 1
   fi
 
-  if (( ! pr_context )) && [[ -z "$branch_name" ]]; then
+  if ((! pr_context)) && [[ -z "$branch_name" ]]; then
     echo "detached Git policy checks require explicit branch or pull-request metadata" >&2
     return 1
   fi

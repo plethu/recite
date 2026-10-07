@@ -4,17 +4,17 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Recite DSL parser and source mapping."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 recite-core.workspace = true
 rowan = "0.16"
 
-[lints]
-workspace = true
-
 [dev-dependencies]
 insta.workspace = true
 recite-ui.workspace = true
+
+[lints]
+workspace = true

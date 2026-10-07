@@ -15,7 +15,7 @@ values = ["rhea", "hazel"]
 [registries.item]
 values = ["brass_key", "silver_key"]
 producer_fingerprints = [
-  { id = "content/items", kind = "directory", algorithm = "blake3", value = "items-v1" },
+    { id = "content/items", kind = "directory", algorithm = "blake3", value = "items-v1" },
 ]
 
 [registries.item.origin]
@@ -68,7 +68,7 @@ params = [{ name = "item", type = "registry:item" }]
 kind = "flat"
 values = ["calm", "tense"]
 producer_fingerprints = [
-  { id = "content/tone.toml", kind = "file", algorithm = "blake3", value = "tone-v1" },
+    { id = "content/tone.toml", kind = "file", algorithm = "blake3", value = "tone-v1" },
 ]
 
 [metadata_domains.tone.origin]
@@ -89,7 +89,7 @@ selector = "field:speaker"
 values_by_context = { rhea = ["calm"], hazel = ["tense"] }
 missing_context = { policy = "fallback", domain = "tone" }
 producer_fingerprints = [
-  { id = "content/tone.csv", kind = "file", algorithm = "blake3", value = "tone-v1" },
+    { id = "content/tone.csv", kind = "file", algorithm = "blake3", value = "tone-v1" },
 ]
 
 [metadata_domains.tone_by_speaker.origin]
@@ -133,10 +133,10 @@ max_calls_per_event = 1
 [presentation_projectors.choice_badge]
 candidates = { kind = "metadata_set", target = "choice", required_keys = ["skill", "threshold"] }
 inputs = [
-  { name = "skill", source = { kind = "candidate_metadata", key = "skill" }, type = "string", required = true },
-  { name = "threshold", source = { kind = "candidate_metadata", key = "threshold" }, type = "int", required = true },
-  { name = "event", source = { kind = "event_kind" }, type = "string" },
-  { name = "literal", source = { kind = "literal", value = 3 }, type = "int" },
+    { name = "skill", source = { kind = "candidate_metadata", key = "skill" }, type = "string", required = true },
+    { name = "threshold", source = { kind = "candidate_metadata", key = "threshold" }, type = "int", required = true },
+    { name = "event", source = { kind = "event_kind" }, type = "string" },
+    { name = "literal", source = { kind = "literal", value = 3 }, type = "int" },
 ]
 
 [presentation_projectors.choice_badge.queries.current]
@@ -160,7 +160,7 @@ type = "int"
 [presentation_projectors.reason_badge]
 candidates = { kind = "availability_reason", reason = "missing_key" }
 inputs = [
-  { name = "item", source = { kind = "availability_reason_arg", name = "item" }, type = "registry:item" },
+    { name = "item", source = { kind = "availability_reason_arg", name = "item" }, type = "registry:item" },
 ]
 
 [presentation_projectors.reason_badge.outputs.badge]

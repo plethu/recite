@@ -1,0 +1,33 @@
+[global]
+line-length = 100
+exclude = [
+    "docs/archive/**",
+    "**/node_modules/**",
+    "**/target/**",
+    "docs-site/dist/**",
+    "docs-site/themes/**",
+]
+
+[MD013]
+line-length = 100
+code-blocks = false
+tables = false
+
+# Raw HTML supplies accessible examples and layout in the static documentation.
+[MD033]
+allowed-elements = [
+    "a",
+    "br",
+    "details",
+    "summary",
+    "kbd",
+    "div",
+    "span",
+    "img",
+    "picture",
+    "source",
+]
+
+[per-file-ignores]
+# The root README opens with the accessible wordmark before its first heading.
+"README.md" = ["MD041"]

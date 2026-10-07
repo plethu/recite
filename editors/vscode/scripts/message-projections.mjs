@@ -1,14 +1,5 @@
-import {
-  copyFile,
-  lstat,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rename,
-  rm,
-  writeFile
-} from "node:fs/promises";
 import { readFileSync } from "node:fs";
+import { copyFile, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseRepresentableMessages } from "../../message-projection-parser.mjs";
@@ -50,7 +41,9 @@ export function lowerRuntimeMessage(id, value, arguments_) {
   });
   const missing = arguments_.filter((name) => !observed.has(name));
   if (missing.length > 0) {
-    throw new Error(`canonical Fluent message ${id} is missing required argument(s): ${missing.join(", ")}`);
+    throw new Error(
+      `canonical Fluent message ${id} is missing required argument(s): ${missing.join(", ")}`,
+    );
   }
   return projected;
 }
@@ -58,16 +51,17 @@ export function lowerRuntimeMessage(id, value, arguments_) {
 export function projectMessages(fluent) {
   const canonical = parseRepresentableMessages(fluent, [
     ...RUNTIME_MESSAGE_IDS,
-    ...PACKAGE_MESSAGE_IDS
+    ...PACKAGE_MESSAGE_IDS,
   ], "VS Code and Neovim");
-  const projection = (ids, transform = (value) => value) => Object.fromEntries(ids.map((id) => {
-    const value = canonical.get(id);
-    if (value === undefined) throw new Error(`canonical Fluent message is missing ${id}`);
-    return [id, transform(value, id)];
-  }));
+  const projection = (ids, transform = (value) => value) =>
+    Object.fromEntries(ids.map((id) => {
+      const value = canonical.get(id);
+      if (value === undefined) throw new Error(`canonical Fluent message is missing ${id}`);
+      return [id, transform(value, id)];
+    }));
   return {
     runtime: projection(RUNTIME_MESSAGE_IDS, (value, id) => projectRuntimeMessage(id, value)),
-    package: projection(PACKAGE_MESSAGE_IDS)
+    package: projection(PACKAGE_MESSAGE_IDS),
   };
 }
 
@@ -82,10 +76,15 @@ function parseProjectionInventory(source, name) {
   const runtimeIds = array(section, "runtime_ids");
   const packageIds = array(section, "package_ids");
   const runtimeArguments = argumentMap(section, "runtime_arguments");
-  if (!sourceResource || !runtimeOutput || !packageOutput || !runtimeIds.length || !packageIds.length) {
+  if (
+    !sourceResource || !runtimeOutput || !packageOutput || !runtimeIds.length || !packageIds.length
+  ) {
     throw new Error(`${marker} must declare source, outputs, and IDs`);
   }
-  if (JSON.stringify(Object.keys(runtimeArguments).sort()) !== JSON.stringify(runtimeIds.slice().sort())) {
+  if (
+    JSON.stringify(Object.keys(runtimeArguments).sort())
+      !== JSON.stringify(runtimeIds.slice().sort())
+  ) {
     throw new Error(`${marker} runtime arguments must cover runtime IDs exactly`);
   }
   return { sourceResource, runtimeOutput, packageOutput, runtimeIds, packageIds, runtimeArguments };
@@ -110,8 +109,12 @@ function argumentMap(section, key) {
   for (const entry of match[1].matchAll(/"([a-z0-9-]+)"\s*=\s*\[([^\]]*)\]/gu)) {
     const id = entry[1];
     if (result[id]) throw new Error(`${key} contains duplicate IDs`);
-    const arguments_ = [...entry[2].matchAll(/"([a-zA-Z][a-zA-Z0-9_-]*)"/gu)].map((value) => value[1]);
-    if (new Set(arguments_).size !== arguments_.length) throw new Error(`${key} contains duplicate arguments for ${id}`);
+    const arguments_ = [...entry[2].matchAll(/"([a-zA-Z][a-zA-Z0-9_-]*)"/gu)].map((value) =>
+      value[1]
+    );
+    if (new Set(arguments_).size !== arguments_.length) {
+      throw new Error(`${key} contains duplicate arguments for ${id}`);
+    }
     result[id] = arguments_;
   }
   return result;
@@ -129,18 +132,27 @@ function assertProjectionParity(left, right) {
 }
 
 export function renderMessageProjections(projections) {
-  const runtimeOutput = path.relative(packageRoot, path.resolve(packageRoot, "../../", vscodeProjection.runtimeOutput));
-  const packageOutput = path.relative(packageRoot, path.resolve(packageRoot, "../../", vscodeProjection.packageOutput));
+  const runtimeOutput = path.relative(
+    packageRoot,
+    path.resolve(packageRoot, "../../", vscodeProjection.runtimeOutput),
+  );
+  const packageOutput = path.relative(
+    packageRoot,
+    path.resolve(packageRoot, "../../", vscodeProjection.packageOutput),
+  );
   return {
     [runtimeOutput]:
-      `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${JSON.stringify(projections.runtime, null, 2)});\n`,
-    [packageOutput]: `${JSON.stringify(projections.package, null, 2)}\n`
+      `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${
+        JSON.stringify(projections.runtime, null, 2)
+      });\n`,
+    [packageOutput]: `${JSON.stringify(projections.package, null, 2)}\n`,
   };
 }
 
 export async function verifyMessageProjections(packageRoot) {
   const fluent = await readFile(
-    path.resolve(packageRoot, "../../crates/recite-ui/resources", vscodeProjection.sourceResource), "utf8"
+    path.resolve(packageRoot, "../../crates/recite-ui/resources", vscodeProjection.sourceResource),
+    "utf8",
   );
   const projections = projectMessages(fluent);
   const expectedFiles = renderMessageProjections(projections);
@@ -150,12 +162,17 @@ export async function verifyMessageProjections(packageRoot) {
     try {
       actual = await readFile(file, "utf8");
     } catch (error) {
-      throw new Error(`VS Code message projection is missing: ${relative}; run the explicit message update command`, {
-        cause: error
-      });
+      throw new Error(
+        `VS Code message projection is missing: ${relative}; run the explicit message update command`,
+        {
+          cause: error,
+        },
+      );
     }
     if (actual !== expected) {
-      throw new Error(`VS Code message projection is stale: ${relative}; run the explicit message update command`);
+      throw new Error(
+        `VS Code message projection is stale: ${relative}; run the explicit message update command`,
+      );
     }
   }
   return { fluent, projections };
@@ -163,7 +180,8 @@ export async function verifyMessageProjections(packageRoot) {
 
 export async function generateMessageProjections(packageRoot, options = {}) {
   const fluent = await readFile(
-    path.resolve(packageRoot, "../../crates/recite-ui/resources", vscodeProjection.sourceResource), "utf8"
+    path.resolve(packageRoot, "../../crates/recite-ui/resources", vscodeProjection.sourceResource),
+    "utf8",
   );
   const files = renderMessageProjections(projectMessages(fluent));
   const fileSystem = {
@@ -174,23 +192,27 @@ export async function generateMessageProjections(packageRoot, options = {}) {
     rename,
     rm,
     writeFile,
-    ...(options.fileSystem ?? {})
+    ...options.fileSystem,
   };
   const destinations = Object.entries(files).map(([relative, contents]) => ({
     relative,
     contents,
-    target: path.resolve(packageRoot, relative)
+    target: path.resolve(packageRoot, relative),
   }));
   for (const destination of destinations) {
     destination.originallyExisted = await assertSafeDestination(
-      packageRoot, destination.relative, fileSystem
+      packageRoot,
+      destination.relative,
+      fileSystem,
     );
   }
 
   let stageRoot;
   const backedUp = [];
   try {
-    stageRoot = await fileSystem.mkdtemp(path.join(path.resolve(packageRoot), ".recite-message-projections-"));
+    stageRoot = await fileSystem.mkdtemp(
+      path.join(path.resolve(packageRoot), ".recite-message-projections-"),
+    );
     const stageDirectory = path.join(stageRoot, "staged");
     const backupDirectory = path.join(stageRoot, "backups");
     await fileSystem.mkdir(stageDirectory, { recursive: true });
@@ -209,7 +231,11 @@ export async function generateMessageProjections(packageRoot, options = {}) {
     }
 
     for (const destination of destinations) {
-      const stillExists = await assertSafeDestination(packageRoot, destination.relative, fileSystem);
+      const stillExists = await assertSafeDestination(
+        packageRoot,
+        destination.relative,
+        fileSystem,
+      );
       if (stillExists !== destination.originallyExisted) {
         throw new Error(`projection changed during update: ${destination.relative}`);
       }
@@ -237,13 +263,20 @@ async function assertSafeDestination(packageRoot, relative, fileSystem) {
   const root = path.resolve(packageRoot);
   const target = path.resolve(root, relative);
   const remainder = path.relative(root, target);
-  if (!remainder || remainder === ".." || remainder.startsWith(`..${path.sep}`) || path.isAbsolute(remainder)) {
+  if (
+    !remainder || remainder === ".." || remainder.startsWith(`..${path.sep}`)
+    || path.isAbsolute(remainder)
+  ) {
     throw new Error(`refusing projection path outside package root: ${relative}`);
   }
 
   const rootStat = await fileSystem.lstat(root);
-  if (rootStat.isSymbolicLink()) throw new Error(`refusing symlink in projection package root: ${root}`);
-  if (!rootStat.isDirectory()) throw new Error(`projection package root is not a directory: ${root}`);
+  if (rootStat.isSymbolicLink()) {
+    throw new Error(`refusing symlink in projection package root: ${root}`);
+  }
+  if (!rootStat.isDirectory()) {
+    throw new Error(`projection package root is not a directory: ${root}`);
+  }
 
   const components = remainder.split(path.sep);
   let current = root;
@@ -254,7 +287,9 @@ async function assertSafeDestination(packageRoot, relative, fileSystem) {
       stat = await fileSystem.lstat(current);
     } catch (error) {
       if (index === components.length - 1 && error?.code === "ENOENT") return false;
-      throw new Error(`projection path is missing: ${path.relative(root, current)}`, { cause: error });
+      throw new Error(`projection path is missing: ${path.relative(root, current)}`, {
+        cause: error,
+      });
     }
     if (stat.isSymbolicLink()) throw new Error(`refusing symlink in projection path: ${current}`);
     if (index < components.length - 1 && !stat.isDirectory()) {
@@ -270,7 +305,11 @@ async function assertSafeDestination(packageRoot, relative, fileSystem) {
 async function assertSafeAbsent(file, fileSystem) {
   try {
     const stat = await fileSystem.lstat(file);
-    throw new Error(`refusing pre-existing projection backup: ${file} (${stat.isSymbolicLink() ? "symlink" : "path"})`);
+    throw new Error(
+      `refusing pre-existing projection backup: ${file} (${
+        stat.isSymbolicLink() ? "symlink" : "path"
+      })`,
+    );
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
@@ -286,7 +325,7 @@ async function rollbackProjectionUpdate(backedUp, fileSystem, originalError) {
     }
   } catch (rollbackError) {
     throw new Error("failed to roll back VS Code message projections", {
-      cause: new AggregateError([originalError, rollbackError])
+      cause: new AggregateError([originalError, rollbackError]),
     });
   }
 }

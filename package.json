@@ -1,15 +1,11 @@
 {
   "private": true,
-  "packageManager": "pnpm@11.8.0",
+  "scripts": {
+    "editor:check": "pnpm --filter recite-vscode run check",
+    "editor:package": "pnpm --filter recite-vscode run package:check"
+  },
   "devDependencies": {
     "ajv": "8.20.0"
   },
-  "scripts": {
-    "docs:dev": "pnpm -C docs-site dev",
-    "docs:build": "pnpm -C docs-site build",
-    "docs:check": "pnpm -C docs-site check",
-    "docs:verify": "pnpm docs:check && pnpm docs:build",
-    "editor:check": "pnpm --filter recite-vscode run check",
-    "editor:package": "pnpm --filter recite-vscode run package:check"
-  }
+  "packageManager": "pnpm@11.8.0"
 }

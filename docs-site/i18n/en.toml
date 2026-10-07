@@ -1,0 +1,158 @@
+["landing.title"]
+other = "A dialogue language for games"
+
+["landing.lead"]
+other = "Recite turns plain-text dialogue into checked assets for a game. The runtime returns lines, choices, and typed effect requests; the game decides how to present them and what to do next."
+
+["landing.release"]
+other = "This page describes Recite’s v1 scope. Release preparation is still in progress; the installation and distribution guides record what you can use today."
+
+["landing.release.install"]
+other = "Installation"
+
+["landing.release.packages"]
+other = "Packages and release status"
+
+["landing.action.firstScene"]
+other = "Write a first scene"
+
+["landing.action.sourceFormat"]
+other = "Read the source format"
+
+["landing.scene.kicker"]
+other = "A scene"
+
+["landing.scene.title"]
+other = "At the junction"
+
+["landing.scene.opening"]
+other = "[Junction. N-2 is stamped on the stair door behind you.]"
+
+["landing.scene.technician"]
+other = "Technician:"
+
+["landing.scene.again"]
+other = "Again."
+
+["landing.scene.recording"]
+other = "Recording:"
+
+["landing.scene.directions"]
+other = "Left at the junction. You’ll hear the fans before you reach the chamber."
+
+["landing.scene.tape"]
+other = "[A click. Tape hiss.]"
+
+["landing.scene.power"]
+other = "Restore auxiliary power:"
+
+["landing.scene.powerResult"]
+other = "[A contactor closes. The lights hold. Fans gather speed beyond the partition; through the grille between the doors comes a knock that misses every third turn.]"
+
+["landing.scene.plan"]
+other = "Unfold the survey plan:"
+
+["landing.scene.planResult"]
+other = "[The paper opens along an old repair. It shows a stair south of the junction. N-2 is marked as a cable shaft. Neither chamber has a name.]"
+
+["landing.scene.choose"]
+other = "[Choose a door.]"
+
+["landing.path.kicker"]
+other = "The working path"
+
+["landing.path.title"]
+other = "From source to game"
+
+["landing.write.title"]
+other = "Write"
+
+["landing.write.body"]
+other = "Work in VS Code or VSCodium, Neovim, Zed, or the standalone Recite Writer. The CLI, language server, and workbench use the same project model for diagnostics, stable-ID edits, schema inspection, and preview."
+
+["landing.write.link"]
+other = "The authoring workflow"
+
+["landing.check.title"]
+other = "Check"
+
+["landing.check.body"]
+other = "Validate source and schema, compile assets, and run scenes against fixtures without opening the game. Traces record the path through a conversation. CI can check that compiled assets still match the files writers edit."
+
+["landing.check.link"]
+other = "Testing dialogue"
+
+["landing.integrate.title"]
+other = "Integrate"
+
+["landing.integrate.body"]
+other = "Load compiled assets in Bevy, Godot, or Unity. The game answers condition queries, presents dialogue, and carries out effect requests. Recite’s session snapshot records traversal state; your save system keeps it alongside the game state."
+
+["landing.integrate.link"]
+other = "Engine adapters"
+
+["landing.localisation.title"]
+other = "Keep the words editable"
+
+["landing.localisation.body1"]
+other = "Lines and choices have identities separate from their wording. You can revise a sentence without replacing the ID used by a translation or a runtime choice."
+
+["landing.localisation.body2"]
+other = "Localisation is optional. When you need it, extract gettext templates with source references and translator context, edit PO catalogues, and test locale and fallback behaviour against the same scene. Recite Writer includes catalogue editing; translation and editorial decisions remain with the people doing that work."
+
+["landing.localisation.link"]
+other = "Localising dialogue"
+
+["landing.fit.title"]
+other = "Where Recite fits"
+
+["landing.fit.body1"]
+other = "Recite fits projects that want dialogue in version control, checks outside the engine, and an explicit boundary between narrative source and game code. A project schema describes the conditions, effects, and metadata available to writers."
+
+["landing.fit.body2"]
+other = "That boundary takes some integration work. Your game supplies presentation, state, and effect handling. Recite’s workbench is source-first; a general visual node editor is outside v1."
+
+["landing.fit.body3"]
+other = "Existing dialogue projects also need a migration review: the importers handle documented subsets, and engine UI, scripts, and saves require separate decisions."
+
+["landing.fit.link"]
+other = "Choosing dialogue tools"
+
+["landing.navigation.label"]
+other = "Explore the documentation"
+
+["landing.navigation.manual"]
+other = "Browse the manual"
+
+["landing.navigation.reference"]
+other = "Open the reference"
+
+["landing.navigation.migration"]
+other = "Read the migration notes"
+
+["landing.navigation.packages"]
+other = "Packages and release status"
+
+["landing.navigation.source"]
+other = "View the source"
+
+["landing.licence"]
+other = "Recite is free and open-source software, licensed under MIT or Apache-2.0."
+
+["ui.theme"]
+other = "Theme"
+
+["ui.system"]
+other = "System"
+
+["ui.light"]
+other = "Light"
+
+["ui.dark"]
+other = "Dark"
+
+["ui.skip-content"]
+other = "Skip to content"
+
+["ui.home"]
+other = "Recite home"

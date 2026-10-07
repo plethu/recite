@@ -1,8 +1,18 @@
 local M = {}
 
 local keys = {
-  "name", "root_dir", "root_dir_spec", "root_markers", "cmd", "settings",
-  "init_options", "capabilities", "on_attach", "on_init", "on_exit", "flags",
+  "name",
+  "root_dir",
+  "root_dir_spec",
+  "root_markers",
+  "cmd",
+  "settings",
+  "init_options",
+  "capabilities",
+  "on_attach",
+  "on_init",
+  "on_exit",
+  "flags",
 }
 
 local function same_value(left, right)

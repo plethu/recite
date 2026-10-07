@@ -15,7 +15,7 @@ EOF
 }
 
 case "${1:-}" in
-  -h|--help)
+  -h | --help)
     usage
     exit 0
     ;;
@@ -78,7 +78,7 @@ cp -R "$repo_root/tests/godot-host/." "$tmpdir/"
 
 echo "== package addon in clean consumer ==" >&2
 RECITE_GODOT_PROFILE="${RECITE_GODOT_PROFILE:-debug}" "$repo_root/scripts/package-godot-addon.sh" "$package_tmpdir/first" >&2
-printf 'old package file\n' > "$package_tmpdir/first/addons/recite/obsolete-addon.gd"
+printf 'old package file\n' >"$package_tmpdir/first/addons/recite/obsolete-addon.gd"
 RECITE_GODOT_PROFILE="${RECITE_GODOT_PROFILE:-debug}" "$repo_root/scripts/package-godot-addon.sh" "$package_tmpdir/first" >&2
 test ! -e "$package_tmpdir/first/addons/recite/obsolete-addon.gd"
 RECITE_GODOT_PROFILE="${RECITE_GODOT_PROFILE:-debug}" "$repo_root/scripts/package-godot-addon.sh" "$package_tmpdir/second" >&2
@@ -105,7 +105,7 @@ cargo run --locked --quiet --manifest-path "$repo_root/Cargo.toml" -p recite-cli
 cargo run --locked --quiet --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
   compile --output "$tmpdir/dialogue/runtime_changed.recitec" \
   "$repo_root/fixtures/recite/valid/adapter_conformance/runtime_surface_changed.recite"
-cat > "$tmpdir/schema_a.toml" <<'EOF'
+cat >"$tmpdir/schema_a.toml" <<'EOF'
 schema_version = 1
 [producer]
 id = "godot-host-schema"
@@ -113,7 +113,7 @@ id = "godot-host-schema"
 kind = "enum"
 values = ["left"]
 EOF
-cat > "$tmpdir/schema_b.toml" <<'EOF'
+cat >"$tmpdir/schema_b.toml" <<'EOF'
 schema_version = 1
 [producer]
 id = "godot-host-schema"
@@ -210,7 +210,7 @@ fi
 cat "$tmpdir/runtime.log"
 
 echo "== reject changed compiled import and check last-good cache ==" >&2
-printf '\001\002\003' > "$tmpdir/dialogue/basic.recitec"
+printf '\001\002\003' >"$tmpdir/dialogue/basic.recitec"
 # This project has completed its first editor scan. Godot's --import waits for
 # the changed asset's import to finish before exiting; --quit-after counts
 # frames and can stop the scan early on a slower host.
@@ -258,15 +258,15 @@ cp -R "$package_tmpdir/extracted/examples/basic-dialogue/." "$tmpdir/example/"
 cp -R "$package_tmpdir/extracted/addons/recite" "$tmpdir/example/addons/"
 cp "$repo_root/tests/godot-host/check_example.gd" "$tmpdir/example/"
 if timeout 8s "$CARGO_TARGET_DIR/debug/recite" watch --output-format structured \
-  "$tmpdir/example" > "$tmpdir/example-watch.ndjson" 2> "$tmpdir/example-watch.stderr"; then
+  "$tmpdir/example" >"$tmpdir/example-watch.ndjson" 2>"$tmpdir/example-watch.stderr"; then
   echo "Godot example watcher exited before its authoring loop could run." >&2
   exit 1
 else
   watch_status=$?
 fi
-if [[ "$watch_status" -ne 124 ]] || \
-   [[ ! -s "$tmpdir/example/dialogue/basic.recitec" ]] || \
-   ! python3 - "$tmpdir/example-watch.ndjson" <<'PY'
+if [[ "$watch_status" -ne 124 ]] \
+  || [[ ! -s "$tmpdir/example/dialogue/basic.recitec" ]] \
+  || ! python3 - "$tmpdir/example-watch.ndjson" <<'PY'
 import json
 import sys
 
@@ -286,8 +286,8 @@ if ! run_godot "$tmpdir/example-runtime.log" timeout 30s "${godot_env[@]}" "$god
   cat "$tmpdir/example-runtime.log" >&2
   exit 1
 fi
-if ! grep -Fqx "Godot packaged example started" "$tmpdir/example-runtime.log" || \
-   grep -Eq "SCRIPT ERROR|Parse Error|GDScript backtrace" "$tmpdir/example-runtime.log"; then
+if ! grep -Fqx "Godot packaged example started" "$tmpdir/example-runtime.log" \
+  || grep -Eq "SCRIPT ERROR|Parse Error|GDScript backtrace" "$tmpdir/example-runtime.log"; then
   cat "$tmpdir/example-runtime.log" >&2
   exit 1
 fi
@@ -297,8 +297,8 @@ echo "== replace old addon while retaining authored project data ==" >&2
 mkdir -p "$tmpdir/upgrade/addons"
 cp -R "$package_tmpdir/extracted/examples/basic-dialogue/." "$tmpdir/upgrade/"
 cp -R "$package_tmpdir/extracted/addons/recite" "$tmpdir/upgrade/addons/"
-printf 'obsolete addon code\n' > "$tmpdir/upgrade/addons/recite/obsolete-addon.gd"
-printf 'author-owned dialogue data\n' > "$tmpdir/upgrade/dialogue/owner-keep.txt"
+printf 'obsolete addon code\n' >"$tmpdir/upgrade/addons/recite/obsolete-addon.gd"
+printf 'author-owned dialogue data\n' >"$tmpdir/upgrade/dialogue/owner-keep.txt"
 cp "$repo_root/tests/godot-host/check_example.gd" "$tmpdir/upgrade/"
 cargo run --locked --quiet --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
   compile --output "$tmpdir/upgrade/dialogue/basic.recitec" \
@@ -314,8 +314,8 @@ if ! run_godot "$tmpdir/upgrade-runtime.log" timeout 30s "${godot_env[@]}" "$god
   cat "$tmpdir/upgrade-runtime.log" >&2
   exit 1
 fi
-if ! grep -Fqx "Godot packaged example started" "$tmpdir/upgrade-runtime.log" || \
-   grep -Eq "SCRIPT ERROR|Parse Error|GDScript backtrace" "$tmpdir/upgrade-runtime.log"; then
+if ! grep -Fqx "Godot packaged example started" "$tmpdir/upgrade-runtime.log" \
+  || grep -Eq "SCRIPT ERROR|Parse Error|GDScript backtrace" "$tmpdir/upgrade-runtime.log"; then
   cat "$tmpdir/upgrade-runtime.log" >&2
   exit 1
 fi
