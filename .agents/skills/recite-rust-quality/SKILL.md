@@ -9,6 +9,10 @@ When available, load the global `rust-quality` skill for general Rust
 implementation and review. This overlay records the Recite-specific
 maintainability and compatibility checks required in any environment.
 
+For optimisation requests, read `docs/profiling-and-optimisation.md` before
+choosing probes or proposing added runtime complexity; it defines completion
+evidence for broad passes and focused fixes.
+
 ## File-size review
 
 Line count is a triage signal, not an automatic split rule. Inspect whether a

@@ -50,5 +50,13 @@ wall-clock values, nondeterministic ordering, and debug-only formatting.
 - Benchmark and scale evidence support the serious-v1 release outcome (GitHub
   milestone 25). Issue #109 owns the release benchmark
   baseline. Require benchmark smoke for affected changes and complete CI runs
-  as defined in production spec §19.8; numeric budgets remain evidence until
-  that baseline is established.
+  as defined in production spec §19.8, including the existing paired LSP gate.
+  Broader numeric budgets remain evidence until that baseline is established.
+
+## Performance investigations
+
+For performance requests, read `docs/profiling-and-optimisation.md` before
+choosing probes. Its broad-pass workflow requires actual timing measurements,
+CPU and allocation discovery, and final implementation evidence; smoke,
+estimated model size and RSS alone do not satisfy it. Use a narrow hypothesis
+and focused checks for an individual fix rather than repeating the broad pass.

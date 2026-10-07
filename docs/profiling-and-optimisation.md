@@ -6,9 +6,10 @@ repeatable profile and a concrete optimisation hypothesis.
 
 The production requirements live in
 [`docs/recite-production-spec.md`](recite-production-spec.md) section 19.
-Numbers in that section are aspirational until a release baseline exists. Before
-that baseline, local measurements are evidence for review and investigation, not
-hard pass/fail gates.
+Release targets in that section are aspirational until a release baseline
+exists. Local measurements are evidence for investigation, not new CI budgets.
+The paired LSP regression gate already has an explicit baseline and rerun policy
+in section 19.8; keep that protection distinct from discovery profiling.
 
 ## Investigation Workflow
 
@@ -22,6 +23,53 @@ Use the same sequence for compiler, runtime, LSP, watch, and memory work:
 5. Change code only after the hypothesis is specific enough to review.
 6. Re-run the same benchmark or profile command before widening the claim.
 7. Record the result, caveats, and follow-up issue links in the PR or report.
+
+### Broad optimisation passes
+
+A request to optimise a subsystem or investigate remaining performance wins
+requires bounded discovery, even when latency and CI checks are green. Start
+with actual Criterion measurements, then capture both CPU and allocation
+profiles for representative paths. Do not wait for a reported memory problem.
+A narrowly scoped fix needs only the measurements relevant to its hypothesis;
+it does not require repeating a subsystem audit.
+
+Choose an authored realistic fixture and a larger stress fixture. Separate
+startup from repeated warm operations; include fallback/recovery and large
+output paths when the subsystem has them. Read benchmark setup and teardown
+before interpreting results. For an LSP pass, include the running server:
+`LspWorkspace` benchmarks bypass protocol handling and coordinator scheduling.
+
+Record the following evidence, or mark it unmeasured with a concrete reason:
+
+| Metric | Evidence |
+| --- | --- |
+| Wall latency | Actual benchmark estimates or repeated process timings |
+| CPU | Sampled stacks identifying work, with capture/loss limitations |
+| Allocation churn | Allocated bytes and allocation count per operation, with call sites |
+| Live and peak heap | Heap at named lifecycle checkpoints and its high-water mark |
+| Process memory | RSS separately from heap and estimated model sizes |
+
+Criterion measures timing; `--test` smoke only proves execution. RSS and model
+size estimates do not identify allocation churn. Instrumented runs identify
+causes; use uninstrumented binaries for timing comparisons. Build before
+profiling and identify the measured phase so compilation, fixture construction,
+startup and teardown are not mistaken for steady-state work.
+
+Inspect the attributed paths for simpler fixes first: known output sizes,
+collection growth, unnecessary clones, repeated conversions and repeated
+analysis. Reserve capacity only where a useful size is available; do not add
+caches, custom representations or dependencies without evidence that the
+benefit justifies their maintenance cost. The
+[final LSP resource investigation](design/lsp-cancellation/final-resource-profiling.md)
+shows allocation profiles finding avoidable vector growth after latency work.
+
+Before closing a broad pass, refresh profiles on the final implementation where
+substantial changes could have moved the hotspots. Preserve commands, build and
+fixture identities, phase boundaries, raw evidence, semantic parity and
+alternating control/candidate comparisons for retained changes. Name the
+remaining dominant costs, rejected experiments and concrete reevaluation
+triggers. Report missing profiler access or incomplete coverage as limitations;
+passing smoke or latency gates alone does not complete this investigation.
 
 Do not tune against a single laptop timing. Local runs are useful for finding a
 cause. Trend claims and release comparisons should come from one documented
@@ -37,10 +85,9 @@ Use two profiles deliberately:
   selector, git commit, and whether the machine was on AC power and otherwise
   idle.
 - Stable trend profile: the only source for release notes, blocking regression
-claims, and cross-PR trend comparisons. Until [#109 Perf: establish release
-benchmark baseline profile](https://github.com/plethu/recite/issues/109) defines
-it, treat trend
-  numbers as provisional.
+  claims beyond the existing paired LSP gate, and cross-PR trend comparisons.
+  Until [#109 Perf: establish release benchmark baseline profile](https://github.com/plethu/recite/issues/109)
+  defines it, treat trend numbers as provisional.
 
 Criterion is the first timing surface. Prefer the existing benchmark targets
 before opening lower-level profilers:
@@ -69,8 +116,8 @@ For quick build/execution smoke, use:
 scripts/benchmark-smoke.sh
 ```
 
-The smoke proves the tiny compiler, runtime, and preview Criterion targets build
-and run. It does not compare timing.
+The smoke proves the tiny compiler, runtime, preview, and LSP Criterion targets
+build and run. It does not compare timing or attribute CPU and allocations.
 
 ## Interpreting Criterion Output
 
@@ -99,13 +146,17 @@ Use Linux `perf` as the primary low-level profiler. It is external tooling: do
 not add it, flamegraph scripts, or GPL-licensed helper code as workspace
 dependencies.
 
-Capture an authoritative local CPU profile by running exactly one benchmark
-group and one scale:
+Build first, then use the executable path printed by Cargo (including its hash)
+to profile one group and one scale. Criterion's `--profile-time` repeats the
+workload without statistical analysis; these samples do not replace a timing
+baseline. For example:
 
 ```bash
+cargo bench --locked -p recite-benchmarks --bench runtime --no-run
+bench_bin=/absolute/path/from/cargo/output/runtime-HASH
 RECITE_BENCH_SCALES=medium \
   perf record --call-graph dwarf -- \
-  cargo bench -p recite-benchmarks --bench runtime -- runtime/full_traversal
+  "$bench_bin" --bench 'runtime/full_traversal/medium' --profile-time 15
 
 perf report
 ```
@@ -118,17 +169,12 @@ RECITE_BENCH_SCALES=medium \
   cargo flamegraph --bench runtime -- runtime/full_traversal
 ```
 
-Use the same pattern for compiler and LSP groups:
-
-```bash
-RECITE_BENCH_SCALES=medium \
-  perf record --call-graph dwarf -- \
-  cargo bench -p recite-benchmarks --bench compiler -- compiler/validate_with_schema
-
-RECITE_BENCH_SCALES=medium \
-  perf record --call-graph dwarf -- \
-  cargo bench -p recite-benchmarks --bench lsp -- lsp/diagnostics_refresh
-```
+Use the same build-then-profile pattern for compiler and LSP groups. Select the
+matching executable and filter, such as `compiler/validate_with_schema/medium`
+or `lsp/diagnostics_refresh/medium`. Benchmark fixture setup and batched
+preparation still execute in profiling mode; inspect stacks or use a focused
+process probe when the question requires isolating a warm operation. Preserve
+the profiler build flags, unresolved frames and lost-sample counts in evidence.
 
 When `perf` cannot be used, keep the fallback explicit in the report. Criterion
 with a narrow group filter is acceptable for triage; it is not a substitute for
@@ -136,11 +182,13 @@ a CPU profile when the issue is algorithmic.
 
 ## Memory and Allocation Profiling
 
-Use memory tools when the symptom is allocation pressure, peak memory, or clone
-growth rather than elapsed time. Keep these tools optional and external:
+Use memory tools for allocation pressure, peak memory and clone growth, and as
+part of the bounded discovery required for broad optimisation passes. Keep
+instrumentation out of production builds:
 
 - `heaptrack` for allocation flamegraphs and retained allocations;
 - Valgrind Massif for peak heap shape when overhead is acceptable;
+- DHAT in an isolated diagnostic build for allocation sites and lifecycle counters;
 - allocator counters or custom measurement binaries for focused reports;
 - existing Recite benchmark helpers for size-oriented reports.
 
@@ -155,15 +203,20 @@ cargo run -p recite-benchmarks --release --bin id_memory_report -- --scales tiny
 RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench lsp -- lsp/initial_index
 ```
 
-Then profile the narrow path:
+Size reports are estimates of selected structures, not heap allocation traces
+or process RSS. Then profile the narrow path using a prebuilt executable:
 
 ```bash
+cargo bench --locked -p recite-benchmarks --bench runtime --no-run
+bench_bin=/absolute/path/from/cargo/output/runtime-HASH
 RECITE_BENCH_SCALES=medium \
-  heaptrack cargo bench -p recite-benchmarks --bench runtime -- runtime/full_traversal
+  heaptrack "$bench_bin" --bench 'runtime/full_traversal/medium' --profile-time 15
 
+cargo bench --locked -p recite-benchmarks --bench compiler --no-run
+bench_bin=/absolute/path/from/cargo/output/compiler-HASH
 RECITE_BENCH_SCALES=medium \
   valgrind --tool=massif \
-  cargo bench -p recite-benchmarks --bench compiler -- compiler/compile_with_schema
+  "$bench_bin" --bench 'compiler/compile_with_schema/medium' --profile-time 15
 ```
 
 [#70 Perf: report memory profiles and known scale limits](https://github.com/plethu/recite/issues/70)
