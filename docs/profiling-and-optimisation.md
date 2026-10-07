@@ -31,7 +31,7 @@ requires bounded discovery, even when latency and CI checks are green. Start
 by identifying the ownership that could be simplified or delegated to maintained
 ecosystem packages. Count replacement glue and tests alongside deleted code;
 for LSP work, consult the existing
-[dependency decisions](design/lsp-cancellation/dependency-decisions.md).
+[dependency decisions](lsp-dependency-decisions.md).
 Then collect actual Criterion measurements and both CPU and allocation profiles
 for representative paths. Do not wait for a reported memory problem.
 A narrowly scoped fix needs only the measurements relevant to its hypothesis;
@@ -67,7 +67,7 @@ benefit justifies their maintenance cost. Performance and maintainability are
 joint acceptance criteria: a roughly 5% slowdown can be acceptable for a
 substantial net simplification, subject to relevant workload evidence and
 unchanged correctness. The
-[final LSP resource investigation](design/lsp-cancellation/final-resource-profiling.md)
+[final LSP resource investigation](archive/lsp-optimisation/final-resource-profiling.md)
 shows allocation profiles finding avoidable vector growth after latency work.
 
 Before closing a broad pass, refresh profiles on the final implementation where

@@ -1,5 +1,10 @@
 # Recovery attribution and driver pacing
 
+Historical evidence archived from `docs/design/lsp-cancellation/recovery-calibration.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 The first cross-platform session run showed much higher burst recovery on the
 macOS runner. A phase-attribution experiment kept the release server unchanged
 and repeated each workload three times per operating system. It measured elapsed

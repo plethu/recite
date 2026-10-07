@@ -1,5 +1,10 @@
 # Crossbeam handoff experiment
 
+Historical evidence archived from `docs/design/lsp-cancellation/channel-handoff.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 This records the selected-worker checkpoint and its ablations. The subsequent
 [resource and ownership study](resource-tradeoff.md) retains standard bounded
 worker inputs, removes redundant JSON copies and records the current CPU

@@ -1,5 +1,10 @@
 # Bounded LSP latency experiments
 
+Historical evidence archived from `docs/design/lsp-cancellation/prototypes.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 Later sustained-load, text-sync, installed-editor and CI experiments are recorded
 in the [experience follow-up](follow-up.md).
 

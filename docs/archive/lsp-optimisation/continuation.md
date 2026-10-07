@@ -1,5 +1,10 @@
 # LSP validation, overload recovery, and rendered-editor follow-through
 
+Historical evidence archived from `docs/design/lsp-cancellation/continuation.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 The subsequent [bounded session and platform checks](session-testing.md) exercise
 accumulated state and run the protocol/editor probes across hosted operating systems.
 

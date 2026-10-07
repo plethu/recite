@@ -1,5 +1,10 @@
 # Bounded LSP session and platform checks
 
+Historical evidence archived from `docs/design/lsp-cancellation/session-testing.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 The session test exercises accumulated work, rather than leaving an idle process
 running. One server survives each fixed-working-set or document-churn workload.
 The generated project has 40 documents, 800 blocks, 16,000 stable-ID lines and ten

@@ -55,7 +55,7 @@ spelling:
 maintainability:
     scripts/check-maintainability.sh
     mise -E maintainability exec -- scripts/check-ast-grep.sh
-    scripts/check-lint-suppressions.sh
+    mise -E maintainability exec -- scripts/check-lint-suppressions.sh
 
 check:
     mise -E maintainability exec -- scripts/verify.sh

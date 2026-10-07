@@ -1,5 +1,10 @@
 # Adoption and migration implementation
 
+Historical evidence archived from `docs/adoption-migration-design.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](README.md).
+
 This integration covers #38, #57, #60 and #99–104. Product positioning (#56)
 and publication remain outside this pass.
 

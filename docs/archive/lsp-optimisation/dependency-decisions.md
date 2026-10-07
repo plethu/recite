@@ -1,5 +1,10 @@
 # LSP dependency decisions
 
+Historical evidence archived from `docs/design/lsp-cancellation/dependency-decisions.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 Assessment date: 6 October 2026. Recite base: `a524d281`.
 
 This is the decision record for LSP dependency adoption. It preserves both

@@ -52,25 +52,8 @@ declared CI build baseline before offering them to other distributions. Package
 extraction and CLI launch do not establish package-manager upgrade/uninstall,
 signing, notarisation, native accessibility or usability acceptance.
 
-## Local preview evidence
-
-On September 23, the Linux release build produced a `.deb` and passed artifact,
-license, CLI and runtime-ABI inspection. Its extracted binary and packaged desktop
-entry passed `scripts/check-writer-desktop-links.py`: `gio` delivered encoded
-Unicode/space-containing links, the running writer acknowledged the second scene,
-and a malformed route exited with code 2. Fixture bytes and a deliberately
-overridden configuration sentinel stayed unchanged. The test used a private
-D-Bus session and temporary desktop association.
-
-The shared project-loader regressions also cover welcome-screen activation,
-clean project switches, source/translation draft refusal, navigation history,
-and clearing the previous project's clean catalogue on a route-less switch.
-Cancellation before handling is tested; the load-completion cancellation and
-edit guards were inspected, without a deterministic mid-load UI test.
-
-The local package requires the host's GLIBC 2.44. It is a host-specific preview;
-the Ubuntu 24.04 CI baseline, macOS and Windows runs, and package-manager
-install/upgrade/uninstall acceptance remain outstanding.
+The [September 2026 preview evidence](../../docs/archive/delivery-evidence.md#writer-packaging)
+is historical; rerun the maintained checks for a new candidate.
 
 ## Required deep-link handling
 

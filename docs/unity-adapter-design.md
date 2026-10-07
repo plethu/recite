@@ -105,15 +105,8 @@ with iteration counts and no thresholds. `scripts/unity/build-upm.sh` builds
 and inspects the package tarball. EditMode/PlayMode runners exist at
 `scripts/unity/run-unity-tests.sh`; they require an installed Unity Editor.
 Headless .NET results do not establish Unity serialization, Mono/IL2CPP,
-ScriptedImporter or player behavior. Clean-consumer Unity 2022.3.62f3 and
-6.7.0b2 Editor runs each passed 3 EditMode and 3 PlayMode tests. The bounded
-player matrix is 2022.3.62f3 Mono and 6.7.0b2 IL2CPP, with a separate
-experimental 6.7.0b2 CoreCLR probe. The runner builds a Linux desktop player
-and bounds its runtime to 90 seconds. Each player passed the imported-resource
-PlayMode test (1/1) in a clean consumer. Mono remains a best-effort 2022.3
-backend; IL2CPP is the primary 6.7 player backend.
-Unity's [6.7 scripting documentation](https://docs.unity.com/en-us/engine/6000.7/manual/scripting/compilation-and-code-reload/script-compilation/backends/coreclr)
-says its Editor still uses Mono and desktop CoreCLR is an experimental technical
-preview, unsuitable for production. The [June 2026 CoreCLR update](https://discussions.unity.com/t/coreclr-scripting-and-serialization-update-june-2026/1723299)
-targets supported Editor/player CoreCLR in Unity 7.0. That target does not
-establish current 6.7 CoreCLR support for this package.
+ScriptedImporter or player behavior. The [named Linux host observations](archive/delivery-evidence.md#unity-adapter)
+are historical evidence. The maintained runner builds a desktop player and bounds
+its runtime to 90 seconds. Mono remains the best-effort 2022.3 backend; IL2CPP is
+the primary 6.7 backend. Experimental CoreCLR probes do not establish production
+support. Other platforms need their own native plugin and host checks.

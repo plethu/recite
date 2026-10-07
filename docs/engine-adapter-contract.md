@@ -1063,16 +1063,9 @@ companions still own asset import, callbacks, native events, and UI projection.
 
 ## 17. Follow-up Prerequisites
 
-This contract unblocks adapter implementation and refresh planning for [#46
-host-agnostic conformance tests](https://github.com/plethu/recite/issues/46),
-[#47 Godot adapter MVP](https://github.com/plethu/recite/issues/47), [#49 Bevy
-adapter MVP](https://github.com/plethu/recite/issues/49), [#72 cross-engine
-acceptance matrix](https://github.com/plethu/recite/issues/72), [#73 Unity
-adapter MVP](https://github.com/plethu/recite/issues/73), [#83 Godot refresh
-workflow](https://github.com/plethu/recite/issues/83), [#84 Bevy refresh
-workflow](https://github.com/plethu/recite/issues/84), [#85 Unity refresh
-workflow](https://github.com/plethu/recite/issues/85), and [#86 Docs: document
-engine authoring refresh workflows and reload limits](https://github.com/plethu/recite/issues/86).
+The [engine companion milestone](https://github.com/plethu/recite/milestone/23)
+owns delivery and follow-up state. Completed prerequisite routing is
+[historical evidence](archive/delivery-evidence.md#adapter-prerequisites).
 Follow-up issues should reference this document when choosing:
 
 - their host asset import and freshness behavior;

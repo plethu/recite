@@ -1,5 +1,10 @@
 # Final LSP CPU and allocation investigation
 
+Historical evidence archived from `docs/design/lsp-cancellation/final-resource-profiling.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 Investigation date: 7 October 2026. Control revision: `00055c8c`.
 This completes the final bounded profiling pass requested after the dependency
 spikes. It refreshes CPU attribution, records a Criterion baseline, and measures

@@ -61,15 +61,6 @@ structured completion record, and starts in a fresh Godot project. A replacement
 install then removes obsolete addon code, preserves authored dialogue source
 and compiled bytes, imports again, and starts the example in a new process.
 
-The informational headless profile on an AMD Ryzen AI 7 350, Linux x86_64,
-official Godot 4.6.3, debug GDExtension measured 25 loads in 7,724 µs,
-25 start/end output conversions in 3,247 µs, 25 condition/effect routes in
-3,799 µs, and 500 inactive process notifications in 16 µs. These are sample
-totals from one run, not release budgets or frame-time guarantees. The host
-gate prints a new bounded measurement on each run.
-
-The same clean host probe with the packaged release GDExtension measured
-25 loads in 1,089 µs, 25 start/end routes in 1,573 µs, 25 condition/effect
-routes in 1,491 µs, and 500 inactive notifications in 15 µs. The release
-bundle also passed native import, rejected refresh retention, and the
-packaged example probe.
+The [debug/release microtimings](../../docs/archive/delivery-evidence.md#godot-performance)
+are historical observations, not thresholds. Rerun the maintained probe for
+current measurements.

@@ -204,14 +204,6 @@ def main() -> int:
         capability["known_limitation"] = capability["known_limitation"].replace("headless", "protocol")
     elif mutation == "keyboard-zed-sequence-provenance":
         record(contract, "capabilities", "editor.keyboard.workflow").pop("keyboard_sequence_scope")
-    elif mutation == "m4-zed-task-diagnostics":
-        replace_reconciliation_text(fixture_repo, "Zed does not parse task records", "Zed parses task records")
-    elif mutation == "m4-zed-native-cancellation":
-        replace_reconciliation_text(fixture_repo, "native task cancellation controller", "native task controller")
-    elif mutation == "m4-zed-built-in-run-trace":
-        replace_reconciliation_text(fixture_repo, "built-in run/trace remain unclaimed", "built-in run/trace are supported")
-    elif mutation == "m4-zed-stale-didchange":
-        replace_reconciliation_text(fixture_repo, "Stale-version rejection remains a lower-level test boundary", "Installed-host stale-version rejection is covered")
     elif mutation == "keyboard-document-wording":
         document = fixture_repo / "docs/editor-parity-contract.md"
         marker = "broader Milestone 5 accessibility proof"
@@ -337,20 +329,6 @@ def restore_mtime(path: Path, content: str) -> None:
     original_stat = path.stat()
     path.write_text(content, encoding="utf-8")
     os.utime(path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
-
-
-def replace_reconciliation_text(fixture_repo: Path, original: str, replacement: str) -> None:
-    document = fixture_repo / "docs/editor-parity-contract.md"
-    source = document.read_text(encoding="utf-8")
-    start = source.find("## Milestone 4 reconciliation")
-    end = source.find("## Reopening conditions", start)
-    if start < 0 or end < 0:
-        raise SystemExit(f"Milestone 4 reconciliation text was not present: {original}")
-    pattern = re.compile(r"\s+".join(re.escape(part) for part in original.split()))
-    scoped, count = pattern.subn(replacement, source[start:end], count=1)
-    if count != 1:
-        raise SystemExit(f"Milestone 4 reconciliation text was not present: {original}")
-    restore_mtime(document, source[:start] + scoped + source[end:])
 
 
 def set_module_shapes_command(contract: dict) -> None:

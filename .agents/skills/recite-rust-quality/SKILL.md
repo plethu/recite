@@ -69,12 +69,14 @@ patterns that make an ownership split difficult to assess.
   or fastest timing alone. A roughly 5% slowdown can be acceptable for a
   substantial simplification; preserve correctness and verify relevant workloads.
   Check maintenance, license and platform fit before adoption. For LSP work,
-  start with `docs/design/lsp-cancellation/dependency-decisions.md` and its
+  start with `docs/lsp-dependency-decisions.md` and its
   reopening conditions rather than repeating settled spikes.
 - Before expanding Recite's tooling language or runtime footprint, compare the
-  existing Rust and Node ecosystems and include setup, tests, debugging and the
-  maintainer's learning cost. "It is for CI" does not establish that another
-  language or a new collection of scripts is the best owner.
+  existing Rust ownership with maintained alternatives suited to the concrete
+  job. Include setup, tests, debugging and the maintainer's learning cost;
+  existing editor dependencies do not justify expanding Node. "It is for CI"
+  does not establish that another language or collection of scripts is the best
+  owner.
 
 ## FFI surface
 

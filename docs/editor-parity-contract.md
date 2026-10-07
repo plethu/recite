@@ -317,35 +317,19 @@ install is likewise not gallery publication. Zed package, activation, and host
 smoke, syntax, LSP, task/lifecycle, keyboard, and clean-shutdown evidence is
 recorded under #192; future gallery/distribution work needs a separate owner.
 
-## Milestone 4 reconciliation
+## Evidence boundaries
 
-The evidence now closes the remaining #53 and #192 acceptance questions for the
-named Linux hosts without changing the Milestone 4 exit gate or broadening any
-platform claim.
+The structured [capability fixture](../fixtures/editor-parity/contract.json)
+names accepted host versions, platforms, runners and limitations. CI validates
+those records and their executable evidence; historical milestone reconciliation
+is preserved in the [archive](archive/delivery-evidence.md#editor-parity).
 
-- #53 command availability and lifecycle are covered by the VS Code/VSCodium
-  and Neovim structured adapters, including Neovim extract and valid run/trace;
-  Zed's supported workflow is the explicit static terminal projection, with
-  exact validate/extract/compile argv, cwd, and status plus genuine watch
-  Ctrl-C termination. Zed does not parse task records, expose a native task
-  cancellation controller, or ship built-in run/trace tasks because their
-  asset, block, and fixture inputs are explicit. Those are documented client
-  limits, not missing M4 evidence.
-- LSP request cancellation now has shared-server stdio and deterministic
-  coordinator evidence. Installed-client cancellation remains unclaimed.
-  Delivery belongs to #206 as a serious-v1 scheduler/performance capability,
-  not M4 command/watch work.
-- #192 package, activation, grammar, installed LSP, keyboard, and task
-  acceptance is covered on Zed 1.18.1 Linux x86_64. The host sent the
-  client-generated post-emoji UTF-16 request, applied the canonical missing-ID
-  code action, applied exactly the two returned rename edits, and proved the
-  finite task argv/cwd/status boundaries. Stale-version rejection remains a
-  lower-level test boundary; response-range conversion, non-Linux hosts,
-  accessibility, gallery/distribution, parsed task diagnostics, native task
-  cancellation, and built-in run/trace remain unclaimed.
-- The keyboard workflow evidence is recorded under closed #202. Package,
-  source, and headless checks remain supporting evidence only, and broader
-  Milestone 5 accessibility proof is not implied.
+Zed tasks are static terminal projections without parsed task diagnostics or a
+native task cancellation controller. Built-in run/trace tasks remain unsupported.
+Shared-server request cancellation has stdio and coordinator tests; installed
+editor cancellation remains unclaimed. Stale-version refusal has lower-level
+tests, without an installed Zed host claim. Package/source/headless checks do
+not establish accessibility, publication or support on other platforms.
 
 ## Reopening conditions
 

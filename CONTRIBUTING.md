@@ -103,12 +103,18 @@ operations; Python owns structured external-process measurements and report
 checks. Reuse production Rust APIs for domain semantics instead of reproducing
 them in either language.
 
-Python is a deliberate choice for this harness's cross-platform process counters,
-not a general CI-language default. The
-[language assessment](docs/design/lsp-cancellation/dependency-decisions.md#maintainer-tooling-language)
-compares Rust and Node, records bounded probes, and includes the maintainer's
-additional language and learning costs. Revisit it when an alternative removes
-more ownership without weakening the measured contract.
+Python is retained provisionally for the already validated LSP harness. The
+[language assessment](docs/lsp-dependency-decisions.md#maintainer-tooling-language)
+compares Rust, Go, Python and Node, with bounded probes and explicit learning,
+setup and maintenance costs. Start substantial new general tooling with a
+private Rust tool crate; evaluate Rust and Go before extending the external
+harness's ownership. A replacement must reduce total maintenance or material
+driver interference while preserving the gate. Expand Node only for a concrete
+editor/frontend need.
+
+Concluded reports and raw assets live together in [the archive](docs/archive/README.md).
+Keep current ownership, commands, limits and reopening conditions in their
+existing guides. Historical milestone counts and prose are not CI contracts.
 
 ## Project Notes
 
@@ -118,7 +124,7 @@ more ownership without weakening the measured contract.
   subsystem contracts in `docs/spec/`. Read the affected chapter; GitHub owns
   implementation task state, and historical measurements remain separate.
 - LSP dependency choices, experiments and reevaluation triggers are recorded in
-  [the dependency decision record](docs/design/lsp-cancellation/dependency-decisions.md).
+  [the dependency decision record](docs/lsp-dependency-decisions.md).
 - The trusted pull-request policy in `.github/workflows/trusted-policy.yml`
   runs base-owned policy code with read-only permissions. It fetches proposed
   commits as Git objects for metadata checks and never checks out or executes

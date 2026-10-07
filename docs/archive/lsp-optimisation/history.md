@@ -1,5 +1,10 @@
 # Historical LSP implementation evidence
 
+Historical evidence archived from `docs/design/lsp-cancellation/history.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 Archived from the former maintainer entrypoint. Measurements and commands belong
 to their named revisions, not the current tooling. Start with the
 [current architecture](../../lsp-cancellation-design.md).

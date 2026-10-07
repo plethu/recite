@@ -1,5 +1,10 @@
 # LSP review follow-up profiling
 
+Historical evidence archived from `docs/design/lsp-cancellation/profiling.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 Local Linux evidence for the cancellation implementation. These experiments
 address the adversarial review and identify remaining costs; they do not
 establish a cross-platform release latency guarantee. The latest implementation
@@ -157,7 +162,7 @@ reuse compact summaries, project facts and local diagnostics. Byte-identical
 shifted regions relocate their positions. File-wide recovery participation still
 controls local validation; semantic project changes still use the existing
 validator. The architecture and fallback rules are in
-[the cancellation design](../../lsp-cancellation-design.md#reusing-analysis-within-an-edited-file).
+[the historical cancellation design](history.md#reusing-analysis-within-an-edited-file).
 
 ### Controlled edit comparison
 

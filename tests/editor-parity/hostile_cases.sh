@@ -112,10 +112,6 @@ expect_failure keyboard-executable-evidence "capability editor.keyboard.workflow
 expect_failure keyboard-evidence-boundary "editor.keyboard.workflow known_limitation must name the headless evidence boundary"
 expect_failure keyboard-zed-sequence-provenance "editor.keyboard.workflow keyboard_sequence_scope must explain 'dedicated lsp ui action sequence'"
 expect_failure keyboard-document-wording "editor parity documentation must retain 'broader milestone 5 accessibility proof'"
-expect_failure m4-zed-task-diagnostics "Milestone 4 reconciliation must retain the Zed task-diagnostics limitation"
-expect_failure m4-zed-native-cancellation "Milestone 4 reconciliation must retain the Zed native-cancellation limitation"
-expect_failure m4-zed-built-in-run-trace "Milestone 4 reconciliation must retain the unsupported Zed built-in run/trace boundary"
-expect_failure m4-zed-stale-didchange "Milestone 4 reconciliation must retain the lower-level stale-didchange boundary"
 mutate_fixture keyboard-valid-host-evidence
 set +e
 keyboard_host_output="$(run_checker 2>&1)"

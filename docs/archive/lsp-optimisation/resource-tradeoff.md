@@ -1,5 +1,10 @@
 # Worker scheduling resource tradeoff
 
+Historical evidence archived from `docs/design/lsp-cancellation/resource-tradeoff.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 The initial selected-worker change exchanged lower macOS recovery tails for
 approximately 14% more process CPU in one 200 Hz burst session. Later paced
 comparisons show mixed CPU costs. The current refinement uses standard bounded

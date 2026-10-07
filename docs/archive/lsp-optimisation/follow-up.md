@@ -1,5 +1,10 @@
 # LSP experience and regression-gate follow-up
 
+Historical evidence archived from `docs/design/lsp-cancellation/follow-up.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 Local experiments on 2026-10-05, using the release server from `d7c4306c`.
 This report separates server throughput, installed-client latency and automated
 regression protection. None establishes a best-in-class or cross-platform claim.

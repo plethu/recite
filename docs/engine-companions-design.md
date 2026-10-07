@@ -168,21 +168,11 @@ The dialogue integration does not enable rendering or windowing by default.
 | Unity 6.7.0b2, Linux x86_64 | Primary Editor import, EditMode/PlayMode on Editor Mono, IL2CPP player, separate experimental CoreCLR probe |
 | Unity 2022.3.62f3, Linux x86_64 | Best-effort minimum compatibility: import, EditMode/PlayMode, and Mono player |
 
-These are verification targets, not blanket support declarations. Clean
-consumer Unity 2022.3.62f3 and 6.7.0b2 Editor suites each passed 3 EditMode
-and 3 PlayMode tests. The 2022.3 Mono and 6.7 IL2CPP desktop players each
-passed the imported-resource test (1/1); the separate 6.7 experimental
-CoreCLR player also passed 1/1. Unity's
-[6.7 scripting documentation](https://docs.unity.com/en-us/engine/6000.7/manual/scripting/compilation-and-code-reload/script-compilation/backends/coreclr)
-describes the Editor as Mono-based and desktop CoreCLR as an experimental
-technical preview unsuitable for production. Its
-[June 2026 update](https://discussions.unity.com/t/coreclr-scripting-and-serialization-update-june-2026/1723299)
-targets supported Editor/player CoreCLR in Unity 7.0; no current 6.7 CoreCLR
-production claim follows. The host's Arch-based OS also requires empirical
-results; Unity's
-[Ubuntu system requirements](https://docs.unity3d.com/2022.3/Documentation/Manual/system-requirements.html)
-do not establish Arch compatibility. Other platforms require their own native
-builds and host evidence before inclusion in a support claim.
+These are verification targets, not blanket support declarations. Named Linux
+host runs are preserved as [historical evidence](archive/delivery-evidence.md#engine-companions).
+Other platforms require native builds and host evidence. Experimental CoreCLR
+checks do not establish production support; the managed .NET fixture does not
+establish an engine host backend.
 
 Verification has three distinct layers:
 

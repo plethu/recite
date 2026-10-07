@@ -1,5 +1,10 @@
 # LSP Project Index Design
 
+Historical evidence archived from `docs/lsp-project-index-design.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](README.md).
+
 This document records the project-index design for Recite's LSP work. The
 cross-platform project-discovery contract is now owned by `recite-config` and
 implemented under [#167](https://github.com/plethu/recite/issues/167). Its

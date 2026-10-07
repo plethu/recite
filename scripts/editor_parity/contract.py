@@ -5,7 +5,6 @@ from .evidence import validate_capabilities
 from .milestone4 import (
     validate_cancellation_contract,
     validate_keyboard_capability,
-    validate_reconciliation_document,
     validate_zed_host_contract,
 )
 from .model import Context, has_record
@@ -223,4 +222,3 @@ def validate_document(ctx: Context, document_path: Path, capabilities: dict, sce
         platform_status = filetype.get("platform_status", {})
         linux_status = platform_status.get("linux") if isinstance(platform_status, dict) else None
         ctx.require(isinstance(linux_status, str) and linux_status in {"partial", "implemented"}, "Neovim filetype evidence needs Linux support status")
-    validate_reconciliation_document(ctx, document, capabilities)

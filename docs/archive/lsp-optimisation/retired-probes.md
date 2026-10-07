@@ -1,5 +1,10 @@
 # Retired LSP diagnostic tools
 
+Historical evidence archived from `docs/design/lsp-cancellation/retired-probes.md` at `58b8f04965af`.
+This records its named revision and execution profile; it is not current
+workflow or implementation authority. Historical commands use their original
+revision and paths. See the [archive index](../README.md).
+
 The tools and CI modes below answered bounded questions during #206. Their
 results and rejected/retained decisions remain in the linked reports. The final
 maintenance pass removes them from active tooling rather than turning every

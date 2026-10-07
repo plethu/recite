@@ -39,7 +39,7 @@ outputs, stable IDs, source spans and prior snapshots.
   text-library alternatives did not demonstrate enough net complexity reduction
   while preserving the required contracts.
 
-The [dependency decision record](design/lsp-cancellation/dependency-decisions.md)
+The [dependency decision record](lsp-dependency-decisions.md)
 contains candidate versions, maintenance assessment, bounded probes and exact
 reopening conditions. A roughly 5% slowdown can be worth substantial maintenance
 reduction; the decision counts adapters and retained validation, not gross file
@@ -78,16 +78,16 @@ or a best-in-class comparison. The final profile still attributes work to text
 position conversion, dependency lookups, AST construction and large response
 serialization. Further changes need a practical workload and a measured
 maintenance/performance benefit, as described in the
-[final resource investigation](design/lsp-cancellation/final-resource-profiling.md#stopping-and-future-investigations).
+[final resource investigation](archive/lsp-optimisation/final-resource-profiling.md#stopping-and-future-investigations).
 
 ## Evidence and concluded experiments
 
 Start with the dependency decisions and final resource investigation above.
-The [resource tradeoff](design/lsp-cancellation/resource-tradeoff.md) records the
+The [resource tradeoff](archive/lsp-optimisation/resource-tradeoff.md) records the
 retained worker/JSON decisions. The former chronological overview is preserved
-as [historical implementation evidence](design/lsp-cancellation/history.md).
+as [historical implementation evidence](archive/lsp-optimisation/history.md).
 
 Completed channel, driver-accounting, stopped-response and macOS yield probes
-are [retired experiments](design/lsp-cancellation/retired-probes.md). Their named
+are [retired experiments](archive/lsp-optimisation/retired-probes.md). Their named
 revision preserves the tools and workflow needed to reproduce them. They are
 not permanent CI modes or another maintained implementation.

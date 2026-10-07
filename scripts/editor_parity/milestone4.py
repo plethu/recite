@@ -17,46 +17,6 @@ ZED_HOST_CAPABILITY_ASSERTIONS = {
 }
 
 
-def validate_reconciliation_document(ctx: Context, document: str, capabilities: dict) -> None:
-    """Check the bounded M4 reconciliation prose against capability status.
-
-    Keep these checks inside the reconciliation section so unrelated design
-    prose can discuss the same host limitations without becoming a fragile
-    global wording contract.
-    """
-    heading = "## Milestone 4 reconciliation"
-    end_heading = "## Reopening conditions"
-    start = document.find(heading)
-    end = document.find(end_heading, start + len(heading)) if start >= 0 else -1
-    ctx.require(start >= 0 and end > start, "editor parity documentation must contain a bounded Milestone 4 reconciliation section")
-    if start < 0 or end <= start:
-        return
-    section = " ".join(document[start:end].lower().split())
-
-    def require_phrase(phrase: str, reason: str) -> None:
-        ctx.require(phrase in section, f"Milestone 4 reconciliation must retain {reason}")
-
-    command_capability = capabilities.get("command.compile.validate.extract", {})
-    command_client_status = command_capability.get("client_status") if isinstance(command_capability, dict) else None
-    if isinstance(command_client_status, dict) and command_client_status.get("zed") == "partial":
-        require_phrase("zed does not parse task records", "the Zed task-diagnostics limitation")
-        require_phrase("native task cancellation controller", "the Zed native-cancellation limitation")
-    run_trace = capabilities.get("command.run.trace", {})
-    run_trace_client_status = run_trace.get("client_status") if isinstance(run_trace, dict) else None
-    if isinstance(run_trace_client_status, dict) and run_trace_client_status.get("zed") == "unsupported":
-        require_phrase("built-in run/trace remain unclaimed", "the unsupported Zed built-in run/trace boundary")
-    stale_version = capabilities.get("lsp.stale.version", {})
-    stale_evidence = stale_version.get("expected_evidence", {}) if isinstance(stale_version, dict) else {}
-    stale_commands = stale_evidence.get("commands", []) if isinstance(stale_evidence, dict) else []
-    if not any(is_host_runner(command) for command in stale_commands):
-        require_phrase("stale-version rejection remains a lower-level test boundary", "the lower-level stale-didchange boundary")
-    cancellation = capabilities.get(CANCELLATION_CAPABILITY_ID, {})
-    if isinstance(cancellation, dict) and cancellation.get("implementation_status") == "unsupported":
-        require_phrase("lsp request cancellation remains unsupported", "the unsupported LSP cancellation status")
-        require_phrase("#206", "the LSP cancellation owner")
-        require_phrase("serious-v1 scheduler/performance capability", "the serious-v1 scheduler/performance scope")
-
-
 def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: dict) -> None:
     capability = capabilities.get(KEYBOARD_CAPABILITY_ID)
     ctx.require(isinstance(capability, dict), f"contract must contain {KEYBOARD_CAPABILITY_ID}")
