@@ -312,11 +312,6 @@ a ranking of engine value. The serious v1 gate requires all three adapters to be
 and to pass the engine-independent conformance coverage in `docs/engine-adapter-contract.md` §13,
 including contract-aligned asset refresh and active-session behavior.
 
-The v1 review checklist for those adapters lives in `docs/adapter-acceptance-matrix.md`. The
-checklist maps the shared contract to Godot, Bevy, and Unity acceptance rows for asset loading,
-authoring refresh, active-session changed-asset behavior, runtime operations, conditions, effects,
-save/load, localisation, errors, lifecycle, examples, conformance, and performance.
-
 No adapter may weaken the engine-independent core contract.
 
 The source-tree adapter packages are acceptable while Recite is pre-release, but the release path

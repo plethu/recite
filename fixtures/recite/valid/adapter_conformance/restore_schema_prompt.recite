@@ -1,0 +1,6 @@
+:: start default
+> save_prompt@91000000000000000001
+  Save here.
+  ? continue@91000000000000000002
+    Continue.
+    -> END

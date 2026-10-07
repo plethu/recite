@@ -21,8 +21,17 @@ macro. Export native declarations with `ReciteSchema::export_json_with_producer`
 `ProducerIdentity` (`kind = "bevy"`) so the generated manifest records truthful ownership. The
 lower-level `export_json` emits an unowned canonical manifest.
 
-See [conformance](CONFORMANCE.md) for all 26 published scenario classifications and
-[performance](#performance) for a reproducible headless probe.
+## Verification
+
+Run `cargo test --locked -p recite-bevy`. The
+[conformance tests](https://github.com/plethu/recite/blob/main/crates/recite-bevy/tests/conformance.rs)
+exercise real Bevy Apps and transactional output batches; they do not execute every published
+reference trace byte for byte. The detailed availability-reason fixture and exact version-99
+snapshot mutation remain unrun through Bevy. Immutable session ownership makes asset substitution
+during advance unavailable by construction. Projection is unsupported; compiled-only imports have no
+source/schema freshness visibility. The
+[shared scenarios](https://github.com/plethu/recite/blob/main/fixtures/adapter-conformance/v1/scenarios.json)
+own the required observations. See [performance](#performance) for the headless probe.
 
 ## Installing and upgrading
 

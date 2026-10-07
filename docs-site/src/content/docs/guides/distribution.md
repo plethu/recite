@@ -32,7 +32,7 @@ Before release, [#79](https://github.com/plethu/recite/issues/79) owns final pac
 evidence and [#81](https://github.com/plethu/recite/issues/81) owns known limits and support
 records. Include the artifact hash, platform and architecture, install/upgrade result, signing
 status and unresolved limitations. The
-[engine acceptance matrix](https://github.com/plethu/recite/blob/main/docs/adapter-acceptance-matrix.md)
+[engine authoring checks](https://github.com/plethu/recite/blob/main/docs/engine-authoring-workflows.md)
 and Writer's platform records remain the detailed evidence owners.
 
 For a reproducible bug report, include the source revision, package hash, engine/runtime version

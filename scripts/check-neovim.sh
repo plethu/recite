@@ -80,6 +80,7 @@ for required_file in \
   "$repo_root/tests/neovim/recovery.lua" \
   "$repo_root/tests/neovim/material.lua" \
   "$repo_root/tests/neovim/commands_protocol.lua" \
+  "$repo_root/tests/neovim/structured_errors.lua" \
   "$repo_root/tests/neovim/commands_lifecycle.lua" \
   "$repo_root/tests/neovim/commands.lua"; do
   if [[ ! -f "$required_file" ]]; then

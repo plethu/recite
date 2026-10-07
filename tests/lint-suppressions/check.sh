@@ -397,3 +397,19 @@ full_output="$(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD
   exit 1
 }
 echo "lint suppression structural fixtures passed"
+
+# Both branches independently introduce the same suppression. The base tip
+# must not silently make new head policy appear grandfathered.
+fork="$(git -C "$test_root/repo" rev-parse HEAD)"
+cat >"$test_root/repo/crates/demo/src/independent.rs" <<'RUST'
+#[allow(clippy::too_many_arguments)]
+fn independently_added() {}
+RUST
+git -C "$test_root/repo" add crates/demo/src/independent.rs
+git -C "$test_root/repo" commit -qm base-addition
+base_tip="$(git -C "$test_root/repo" rev-parse HEAD)"
+git -C "$test_root/repo" checkout -q --detach "$fork"
+git -C "$test_root/repo" checkout "$base_tip" -- crates/demo/src/independent.rs
+git -C "$test_root/repo" commit -qm head-addition
+check_fails "$base_tip" HEAD "lint suppression policy violation"
+echo 'merge-base suppression comparison passed'

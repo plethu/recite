@@ -1,11 +1,8 @@
 # Engine companion architecture
 
-This design applies the [adapter contract](engine-adapter-contract.md) and
-[acceptance matrix](adapter-acceptance-matrix.md) to Bevy, Godot, and Unity. It records the shared
-ownership decisions for the engine companions. GitHub milestone
-[7 Engine Companions](https://github.com/plethu/recite/milestone/23) owns delivery state. The
-interfaces described here are the implementation target; support claims require the checks described
-below.
+The [adapter contract](engine-adapter-contract.md) defines common semantics. This guide explains
+ownership choices that differ across Bevy, Godot and Unity; their READMEs own setup and tested
+support.
 
 ## Runtime ownership
 
@@ -13,18 +10,9 @@ below.
 comparisons. `recite-runtime` owns traversal, conditions, effect requests, localisation resolution,
 and serialisable session state.
 
-`recite-adapter` owns the behavior shared by embedded runtime clients:
-
-- a loaded immutable dialogue asset;
-- one session per driver, including preparation before the first traversal;
-- ordered output batches and the operation transaction boundary;
-- operation-aware adapter error classification;
-- an owned catalogue implementing the runtime's locale provider capability.
-
-Bevy and Godot call this crate directly. Unity calls it through `recite-ffi`. The shared crate does
-not depend on an engine, compiler, filesystem watcher, native handle registry, or UI framework.
-Runtime events remain the common Rust output model; each foreign-language boundary owns its
-necessary conversion.
+Bevy and Godot call `recite-adapter` directly; Unity calls it through `recite-ffi`. The shared
+driver owns preparation, transactional batches and adapter error classification. Each host owns its
+import, callbacks and native output conversion.
 
 The driver borrows `DialogueContext` and `LocaleResolution` for an operation. Host callbacks, engine
 object references, interpolation values, and catalogue resources remain outside the serialised
@@ -70,25 +58,10 @@ it as provenance.
 
 ## Authoring ownership
 
-Engine producers collect declarations through explicit host registration and lower them into the
-existing schema contract. Recite's canonical loader, validator, exporter, and fingerprint functions
-remain authoritative. Export failure must preserve the previously published manifest.
-
-The shared schema-export command provides the same canonical export path to non-Rust editor tools.
-Bevy tooling may call the underlying Rust capability. The CLI's structured protocol supplies
-machine-readable build and diagnostic results; engine tools must not parse human output.
-
-Native producers supply their engine kind and stable registration identity. Unity asset GUIDs and
-Godot resource UIDs or explicit registration IDs identify the owner; paths remain diagnostic
-provenance. A temporary TOML declaration is transport to the canonical validator, not a transfer of
-source ownership to a standalone producer. Core computes the producer fingerprint after applying
-that identity, without changing ordinary standalone exports.
-
-Godot owns declaration resources and editor import/export commands. Unity owns editor registration
-and asset-backed declarations in an editor-only assembly. Bevy owns explicit Rust registration and
-an export entrypoint. Generated manifests remain inputs to the compiler, LSP, and writer without
-requiring an engine process. Compilation and watch orchestration reuse `recite-build` and the CLI;
-they are not dependencies of the shipped runtime integration.
+Native producers own their declarations and registration identities. They lower into Recite's
+canonical schema validator/exporter; failed export preserves the previous manifest. Temporary TOML
+is transport to that validator, not a new source owner. Generated manifests remain usable by the
+compiler, LSP and Writer without an engine process. Build/watch tooling is not a runtime dependency.
 
 ## Engine boundaries
 
@@ -134,39 +107,7 @@ snapshots, existing ABI payloads and status numbers, and persisted engine resour
 contracts. An additive ABI capability uses the existing minor-version policy and synchronized
 header/binding checks. Extracted behavior replaces its prior implementation in the same change.
 
-Support is recorded by exact engine version, platform, architecture, scripting backend where
-relevant, and artifact. The starting Godot target is the pinned 4.6 API and 4.6.3 host. Unity 6.7+
-is the primary development and runtime modernization target; the declared 2022.3 minimum is one
-pinned, best-effort compatibility lane with a Mono player check. The 6.7 primary lane checks an
-IL2CPP player and probes experimental CoreCLR separately. The managed .NET fixture establishes
-neither host backend. Bevy's version is pinned to 0.19.1 with direct app, ECS, asset, and reflection
-dependencies. The dialogue integration does not enable rendering or windowing by default.
-
-| Initial verification target                       | Required host evidence                                                                                      |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Bevy 0.19.1, Linux x86_64                         | Real `App` and `AssetServer`, external consumer executable                                                  |
-| Godot 4.6.3 official standard build, Linux x86_64 | GDExtension import, Resource persistence, Node signals, clean addon consumer                                |
-| Unity 6.7.0b2, Linux x86_64                       | Primary Editor import, EditMode/PlayMode on Editor Mono, IL2CPP player, separate experimental CoreCLR probe |
-| Unity 2022.3.62f3, Linux x86_64                   | Best-effort minimum compatibility: import, EditMode/PlayMode, and Mono player                               |
-
-These are verification targets, not blanket support declarations. Named Linux host runs are
-preserved as
-[historical evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#engine-companions).
-Other platforms require native builds and host evidence. Experimental CoreCLR checks do not
-establish production support; the managed .NET fixture does not establish an engine host backend.
-
-Verification has three distinct layers:
-
-1. Shared and host-independent tests exercise session semantics, structured failures, rollback,
-   localisation, and ABI ownership.
-2. Adapter runners execute the versioned conformance scenarios through actual Bevy, Godot, and Unity
-   surfaces. Required adapter scenarios cannot be counted as passed merely because the runtime
-   reference runner skips them.
-3. Clean consumer projects install packaged artifacts, import content, run the example, exercise
-   refresh and save/load, and build the declared player or executable target.
-
-The common example must cover conditions, typed effect requests, locale and variant selection,
-save/load at a prompt and blocking effect, and an edit, rebuild, import, next-session refresh loop.
-Performance evidence records loading, idle cost, output conversion, and retained revisions on a
-named profile. Unavailable engine or platform checks remain explicit gaps in the acceptance matrix;
-source inspection and successful managed compilation do not replace them.
+Support records belong to the package READMEs and
+[authoring checks](engine-authoring-workflows.md#workflow-checks). Distinguish shared semantics,
+actual host execution and clean packaged consumers. A managed/native test does not establish Unity
+import or player behavior; compiled-only imports cannot establish source/schema freshness.

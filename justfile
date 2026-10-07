@@ -62,33 +62,18 @@ spelling:
 
 # Check source size, structural rules and lint-suppression regressions.
 maintainability:
-    scripts/check-maintainability.sh
+    mise -E maintainability exec -- scripts/check-source-policy.sh
     mise -E maintainability exec -- ast-grep test --config tools/ast-grep/sgconfig.yml --skip-snapshot-tests
     mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml
-    mise -E maintainability exec -- scripts/check-lint-suppressions.sh
 
 check:
     mise -E maintainability exec -- just _verify
 
 [private]
 _verify:
-    scripts/install-js-dependencies.sh
-    just quality setup
-    just fmt-check
-    just quality lint
-    just spelling
-    just unused-deps
-    just supply-chain
-    actionlint -shellcheck= -pyflakes=
+    just _check-quality
     scripts/check-git-policy.sh
     bash tests/git-policy/check-integration.sh
-    just perf setup
-    just perf check
-    tests/maintainability/check.sh
-    tests/maintainability/format-replay.sh
-    tests/ast-grep/check.sh
-    just maintainability
-    tests/lint-suppressions/check.sh
     bash tests/trusted-policy/check.sh
     bash tests/editor-parity/check.sh
     scripts/check-vscode.sh
@@ -97,5 +82,24 @@ _verify:
     scripts/check-project-gates.sh
     scripts/check-docs.sh
     just perf smoke
+
+# Shared local and CI quality lane; commands have one owner.
+[private]
+_check-quality:
+    scripts/install-js-dependencies.sh
+    just quality setup
+    just fmt-check
+    just quality lint
+    just spelling
+    just unused-deps
+    just supply-chain
+    actionlint -shellcheck= -pyflakes=
+    just perf setup
+    just perf check
+    tests/maintainability/check.sh
+    tests/maintainability/format-replay.sh
+    tests/ast-grep/check.sh
+    just maintainability
+    tests/lint-suppressions/check.sh
 
 verify: check

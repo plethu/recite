@@ -34,5 +34,5 @@ use **Project → Tools → Export Recite Schema**. The addon invokes the canoni
 and preserves the previous manifest if validation fails.
 
 The verified host target is the official Godot 4.6.3 Linux x86_64 standard build. The
-[host coverage record](https://github.com/plethu/recite/blob/main/tests/godot-host/coverage.md)
+[verification scope](https://github.com/plethu/recite/blob/main/addons/recite/README.md#verification)
 distinguishes Godot execution from Rust-only checks and unavailable capability gates.

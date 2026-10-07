@@ -252,7 +252,7 @@ are documented; companions stay thin and the runtime remains game-side-effect fr
 **Outcome:** a new team can install, learn, evaluate, and migrate toward Recite with honest
 boundaries.
 
-**Entry gate:** the authoring loop and companion acceptance matrix are stable.
+**Entry gate:** the authoring loop and companion conformance contract are stable.
 
 **Exit gate:** CLI/LSP/GUI/editor integrations and companion artifacts have reproducible package,
 upgrade, signing, and support instructions; examples and guides cover the source-first loop; bounded
@@ -330,7 +330,8 @@ The project is not production-credible until all of the following are true:
 - Godot, Bevy, and Unity adapters can load compiled assets, traverse dialogue, evaluate conditions,
   emit effects without executing them, and participate in save/load workflows.
 - Each v1 adapter has a documented asset refresh/import workflow, an explicit active-session
-  behavior for changed compiled assets, and coverage against the v1 adapter acceptance matrix.
+  behavior for changed compiled assets, and coverage against the shared adapter conformance
+  contract.
 - The adapter contract is stable enough that additional engines can be implemented without changing
   core runtime semantics.
 - Public docs and examples demonstrate headless CLI workflows and real Godot, Bevy, and Unity

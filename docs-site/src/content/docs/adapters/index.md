@@ -22,5 +22,4 @@ records the tested engines, platforms, package checks, and limits.
 
 For implementation details, see the
 [companion architecture](https://github.com/plethu/recite/blob/main/docs/engine-companions-design.md),
-[adapter contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md), and
-[acceptance checklist](https://github.com/plethu/recite/blob/main/docs/adapter-acceptance-matrix.md).
+[adapter contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md).

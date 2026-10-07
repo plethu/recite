@@ -57,8 +57,8 @@ def git(repo: str, *args: str) -> bytes:
     return result.stdout
 
 
-def resolve(repo: str, reference: str) -> str:
-    return git(repo, "rev-parse", "--verify", f"{reference}^{{commit}}").decode().strip()
+def resolve(repo: str, reference: str, kind: str = "commit") -> str:
+    return git(repo, "rev-parse", "--verify", f"{reference}^{{{kind}}}").decode().strip()
 
 
 def is_zero_sha(reference: str) -> bool:
@@ -77,8 +77,7 @@ def changed_paths(repo: str, base: str, head: str) -> list[str]:
     zero_base = is_zero_sha(base)
     if zero_base:
         base = git(repo, "hash-object", "-t", "tree", "/dev/null").decode().strip()
-    diff_args = [base, head] if zero_base else [f"{base}...{head}"]
-    fields = git(repo, "diff", "--name-status", "-z", "-M", *diff_args, "--", "*.rs").split(b"\0")
+    fields = git(repo, "diff", "--name-status", "-z", "-M", base, head, "--", "*.rs").split(b"\0")
     paths: list[str] = []
     index = 0
     while index < len(fields) and fields[index]:
@@ -262,11 +261,16 @@ def main() -> int:
         ).stdout.strip()
         base_ref = args.refs[0] if args.refs else os.environ.get("RECITE_BASE_REF", "origin/main")
         head_ref = args.refs[1] if len(args.refs) > 1 else os.environ.get("RECITE_HEAD_REF", "HEAD")
-        head = resolve(repo, head_ref)
+        head = resolve(repo, head_ref, "tree")
         base = (
             None if args.full else (base_ref if is_zero_sha(base_ref) else resolve(repo, base_ref))
         )
-        policy = head if args.policy_revision is None else resolve(repo, args.policy_revision)
+        if base is not None and not is_zero_sha(base):
+            if git(repo, "cat-file", "-t", head_ref).strip() != b"tree":
+                base = git(repo, "merge-base", base, resolve(repo, head_ref)).decode().strip()
+        policy = (
+            head if args.policy_revision is None else resolve(repo, args.policy_revision, "tree")
+        )
         paths = [
             path
             for path in (
@@ -311,7 +315,7 @@ def main() -> int:
         print(
             f"lint suppression inventory: {len(baseline)} baseline / {len(current)} current suppressions"
         )
-        print(f"range: {base}...{head}")
+        print(f"range: {base} {head}")
     for item in sorted(output, key=lambda value: (value.path, value.line, value.kind, value.lints)):
         print(display(item))
     if args.full:

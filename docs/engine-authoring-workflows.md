@@ -24,17 +24,16 @@ implemented by these companions.
 ## Workflow checks
 
 Run the maintained checks against the candidate and record the exact engine, platform, architecture
-and backend. The [adapter acceptance matrix](adapter-acceptance-matrix.md) defines the required
-coverage;
+and backend. The [adapter contract](engine-adapter-contract.md) defines the required coverage;
 [historical host observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#engine-authoring)
 do not establish a fresh candidate's support.
 
-| Surface     | Maintained check                                                                                               | Evidence scope                                                                       |
-| ----------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Bevy        | `cargo test --locked -p recite-bevy`; [conformance](../crates/recite-bevy/CONFORMANCE.md)                      | Real App/AssetServer, revisions, choices and snapshots                               |
-| Godot       | `just engines godot`; [coverage](../tests/godot-host/coverage.md)                                              | Native import, Resource/Node behavior and packaged example                           |
-| Unity       | `scripts/unity/run-unity-tests.sh`; [coverage](../Packages/com.recite.dialogue/Tests~/Headless/CONFORMANCE.md) | Installed Editor and selected player backend; managed tests alone do not prove these |
-| CLI refresh | `cargo test --locked -p recite-cli --test structured_watch`                                                    | Invalid builds retain compiled bytes; correction publishes fresh output              |
+| Surface     | Maintained check                                                                                       | Evidence scope                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| Bevy        | `cargo test --locked -p recite-bevy`; [conformance](../crates/recite-bevy/README.md#verification)      | Real App/AssetServer, revisions, choices and snapshots                               |
+| Godot       | `just engines godot`; [coverage](../addons/recite/README.md#verification)                              | Native import, Resource/Node behavior and packaged example                           |
+| Unity       | `scripts/unity/run-unity-tests.sh`; [coverage](../Packages/com.recite.dialogue/README.md#verification) | Installed Editor and selected player backend; managed tests alone do not prove these |
+| CLI refresh | `cargo test --locked -p recite-cli --test structured_watch`                                            | Invalid builds retain compiled bytes; correction publishes fresh output              |
 
 Interactive diagnostic display and walkthrough usability need separate host evidence. Headless
 checks do not establish those behaviors.

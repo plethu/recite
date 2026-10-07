@@ -6,6 +6,8 @@
     "**/*.{js,mjs,cjs,ts,json,yml,yaml,md,mdx,css,html,astro,svg,xml,py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}",
     "**/Dockerfile",
     "**/Dockerfile.playwright",
+    "**/*.csproj",
+    "**/NuGet.Config",
     "gdlintrc",
     ".clang-format"
   ],
@@ -35,7 +37,7 @@
   "typescript": { "quoteStyle": "alwaysDouble", "semiColons": "always" },
   "json": { "trailingCommas": "never" },
   "markdown": { "textWrap": "always", "emphasisKind": "asterisks", "strongKind": "asterisks" },
-  "markup": { "associations": ["**/*.{html,svg,xml}"] },
+  "markup": { "associations": ["**/*.{html,svg,xml,csproj}", "**/NuGet.Config"] },
   "yaml": { "associations": ["**/gdlintrc", "**/.clang-format"] },
   "exec": {
     "associations": ["**/*.{py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}"],

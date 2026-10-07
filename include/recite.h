@@ -74,7 +74,7 @@
 #define RECITE_LOCALE_ATTEMPT_MATCHED 3
 
 /**
- * Stable C error codes. Matches the category table in docs/c-abi-boundary-design.md.
+ * Stable C error codes. The generated header defines the public names.
  *
  * Add a new variant only when a new contract §12 category is introduced.
  * Never renumber existing variants — that breaks compiled host bindings.

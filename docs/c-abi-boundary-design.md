@@ -1,4 +1,4 @@
-# Recite C ABI Boundary Design
+# C ABI ownership and encoding
 
 `recite-ffi` exposes the shared native boundary used by non-Rust engine adapters. The
 [generated C header](../include/recite.h) owns exported declarations; the
@@ -25,11 +25,6 @@ FFI layer.
 `recite-core`. The shared driver owns session lifecycle and transactional draining; FFI owns
 handles, buffers, callbacks, and status numbers.
 
-```toml
-[lib]
-crate-type = ["cdylib", "staticlib"]
-```
-
 `cdylib` produces a `.dll`/`.so`/`.dylib` for runtime P/Invoke loading. `staticlib` is available for
 host build systems that prefer link-time integration. Both expose the same `extern "C"` surface;
 only the link mode differs.
@@ -44,22 +39,24 @@ owns the C ABI plumbing.
 through `recite-ffi` functions. The host never dereferences, copies into its own persistent state,
 or interprets the handle bits.
 
-Two handle types:
+There are asset, session and catalogue handles:
 
 - **Asset handle** — wraps a decoded `CompiledDialogue` (via `Arc<CompiledDialogue>` as in the Godot
   adapter). Valid until `recite_asset_free` is called.
 - **Session handle** — wraps an active `DialogueSession` plus its condition registry. Valid until
-  `recite_session_free` or the session ends. The session handle carries its own compiled-asset
-  reference (incrementing the `Arc` refcount), so freeing the asset handle before the session handle
-  is safe.
+  `recite_session_free`, including after traversal ends. The session handle carries its own
+  compiled-asset reference (incrementing the `Arc` refcount), so freeing the asset handle before the
+  session handle is safe.
+- **Catalogue handle** — owns a validated catalogue revision. Attaching it captures that revision;
+  later mutation or disposal of the handle does not change the session's provider.
 
 Why not raw pointers exposed as `*mut c_void`? Handles decouple the ABI from Rust's pointer model,
 allow a validity check on the Recite side before dereferencing (returning `invalid_handle_error`
 instead of UB), and avoid exposing Rust's allocator address space to the host. The `u64` type is
 stable across all target pointer widths.
 
-A handle value of `0` is reserved to mean "null / no handle." Every `recite_*_new` function returns
-`0` on failure.
+A handle value of `0` is reserved to mean "null / no handle." The generated header documents status
+returns and output-handle parameters for each operation.
 
 Mapping to contract obligations:
 
@@ -71,7 +68,8 @@ Mapping to contract obligations:
 
 ## Output Payload Encoding
 
-**Decision: MessagePack length-prefixed byte buffers.**
+Payloads are MessagePack values carried in owned buffers with an explicit byte length. There is no
+additional length prefix inside the bytes.
 
 After each session operation that drains traversal (`recite_session_start`, `recite_session_begin`,
 `recite_session_choose`, `recite_session_acknowledge_effect`, and `recite_session_restore`) the
@@ -250,9 +248,9 @@ Unity must distribute one native `recite-ffi` library for both Mono and IL2CPP P
 a buffer through another copy, a separately recompiled backend library or a separately linked
 runtime: allocation and free must reach the same library and allocator.
 
-Binary payloads (output batches, snapshots) are length-prefixed byte buffers, not NUL-terminated C
-strings. NUL bytes may appear inside msgpack data. NUL termination is used only for the host-facing
-error detail string (see Error Codes).
+Binary payloads (output batches, snapshots) use a pointer and separate byte length, not
+NUL-terminated C strings. NUL bytes may appear inside msgpack data. NUL termination is used only for
+the host-facing error detail string (see Error Codes).
 
 All UTF-8. The host must not pass non-UTF-8 bytes in string inputs; `recite-ffi` validates and
 returns `validation_error` if encoding is invalid.
@@ -305,87 +303,15 @@ availability-reason origin is an optional addition to batch v0.
 
 ## Error Codes
 
-Every `extern "C"` function returns a `ReciteStatus` (i32). Zero means success; negative values are
-error categories. The stable integer assignments are:
+Status-returning operations use `ReciteStatus`: zero means success and negative values identify
+failure categories. Free functions and error-message accessors have their own signatures. The
+[generated header](../include/recite.h) owns the integer assignments; the
+[Rust mapping](../crates/recite-ffi/src/error.rs) and shared adapter classification own their
+operation-specific translation.
 
-```c
-typedef enum {
-    RECITE_OK                            =  0,
-    RECITE_ERR_VALIDATION                = -1,
-    RECITE_ERR_ASSET_LOAD_OR_DECODE      = -2,
-    RECITE_ERR_STALE_OR_INCOMPATIBLE     = -3,
-    RECITE_ERR_SCHEMA_MISMATCH           = -4,
-    RECITE_ERR_NO_ACTIVE_SESSION         = -5,
-    RECITE_ERR_SESSION_ALREADY_ACTIVE    = -6,
-    RECITE_ERR_UNKNOWN_START_BLOCK       = -7,
-    RECITE_ERR_INVALID_CHOICE            = -8,
-    RECITE_ERR_UNAVAILABLE_CHOICE        = -9,
-    RECITE_ERR_STALE_CHOICE              = -10,
-    RECITE_ERR_MISSING_CONDITION_HANDLER = -11,
-    RECITE_ERR_CONDITION_EVALUATION      = -12,
-    RECITE_ERR_INVALID_CONDITION_RESULT  = -13,
-    RECITE_ERR_EFFECT_ACKNOWLEDGEMENT    = -14,
-    RECITE_ERR_REJECTED_REFRESH          = -15,
-    RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY = -16,
-    RECITE_ERR_LOCALISATION              = -17,
-    RECITE_ERR_MISSING_PROJECTION_HANDLER = -18,
-    RECITE_ERR_PROJECTION_EVALUATION     = -19,
-    RECITE_ERR_INVALID_PROJECTION_RESULT = -20,
-    RECITE_ERR_INVALID_HANDLE            = -21,
-    RECITE_ERR_DIALOGUE_FAULT            = -22,
-} ReciteStatus;
-```
-
-These map directly to the stable machine categories in contract §12 plus two additional codes for
-FFI-layer concerns:
-
-- `RECITE_ERR_INVALID_HANDLE` — the host passed an unknown or already-freed handle. Not a
-  `DialogueError` variant; detected at the FFI boundary before delegating to the runtime.
-- `RECITE_ERR_DIALOGUE_FAULT` — maps to `DialogueError::TraversalLimitExceeded`, which the Godot
-  adapter (`adapter_error.rs`) maps to `DialogueFault`. This indicates a dialogue authoring bug
-  (e.g. an infinite divert), not an API misuse.
-
-`RECITE_ERR_REJECTED_REFRESH` covers the `rejected_changed_asset_refresh_error` contract §12
-category; it is raised by the FFI layer when a host attempts to pass a changed asset to an active
-session.
-
-Projection error codes (`-18`, `-19`, `-20`) are capability-gated: adapters that do not expose
-presentation projection never emit them (contract §12).
-
-**`DialogueError` → `ReciteStatus` mapping:**
-
-| `DialogueError` variant            | `ReciteStatus`                                                                                                                         |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `UnknownBlock`                     | `RECITE_ERR_UNKNOWN_START_BLOCK`                                                                                                       |
-| `UnsupportedCompiledFormat`        | `RECITE_ERR_STALE_OR_INCOMPATIBLE`                                                                                                     |
-| `AssetMismatch`                    | `RECITE_ERR_STALE_OR_INCOMPATIBLE`                                                                                                     |
-| `AssetContentMismatch`             | `RECITE_ERR_STALE_OR_INCOMPATIBLE`                                                                                                     |
-| `SchemaMismatch`                   | `RECITE_ERR_SCHEMA_MISMATCH`                                                                                                           |
-| `MalformedCompiledAsset`           | `RECITE_ERR_ASSET_LOAD_OR_DECODE`                                                                                                      |
-| `EffectPending`                    | `RECITE_ERR_EFFECT_ACKNOWLEDGEMENT`                                                                                                    |
-| `NoEffectPending`                  | `RECITE_ERR_EFFECT_ACKNOWLEDGEMENT`                                                                                                    |
-| `WrongEffectAcknowledgement`       | `RECITE_ERR_EFFECT_ACKNOWLEDGEMENT`                                                                                                    |
-| `PromptPending`                    | `RECITE_ERR_STALE_CHOICE`                                                                                                              |
-| `NoPromptPending`                  | `RECITE_ERR_STALE_CHOICE`                                                                                                              |
-| `InvalidChoice`                    | `RECITE_ERR_INVALID_CHOICE`                                                                                                            |
-| `UnavailableChoice`                | `RECITE_ERR_UNAVAILABLE_CHOICE`                                                                                                        |
-| `ConditionEvaluationFailed`        | `RECITE_ERR_MISSING_CONDITION_HANDLER`, `RECITE_ERR_CONDITION_EVALUATION`, or `RECITE_ERR_INVALID_CONDITION_RESULT` by structured kind |
-| `ConditionResultTypeMismatch`      | `RECITE_ERR_INVALID_CONDITION_RESULT`                                                                                                  |
-| `ConditionDepthLimitExceeded`      | `RECITE_ERR_CONDITION_EVALUATION`                                                                                                      |
-| `UnsupportedSessionSnapshotFormat` | `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`                                                                                                 |
-| `SessionSnapshotEncodeFailed`      | `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`                                                                                                 |
-| `SessionSnapshotDecodeFailed`      | `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`                                                                                                 |
-| `InvalidSessionSnapshot`           | `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`                                                                                                 |
-| `SessionEnded`                     | `RECITE_ERR_NO_ACTIVE_SESSION`                                                                                                         |
-| `TraversalLimitExceeded`           | `RECITE_ERR_DIALOGUE_FAULT`                                                                                                            |
-
-The `recite-adapter` `From<DialogueError> for AdapterError` implementation owns semantic categories.
-FFI maps those categories to stable numeric statuses. Condition failures carry a structured runtime
-kind, so callback categories do not depend on a thread-local side channel.
-
-`recite_session_restore` applies the operation-specific override described in Save and Load Handoff:
-`AssetMismatch` and `AssetContentMismatch` become `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`, while the
-typed `SchemaMismatch` remains `RECITE_ERR_SCHEMA_MISMATCH`.
+Unknown or freed handles fail at the FFI boundary. Traversal limits map to `DialogueFault`; snapshot
+format, decoding and restore incompatibilities map to `SaveLoadIncompatibility`. Projection errors
+are capability-gated and are not emitted by adapters without presentation projection.
 
 Each function that returns a non-zero status also writes a NUL-terminated, UTF-8 detail string into
 a thread-local that the host can retrieve with `recite_last_error_message() -> const char*`. The
@@ -508,15 +434,15 @@ An asset handle is safe to share across threads for reading (backed by `Arc<Comp
 `recite-ffi` functions are not reentrant. A condition callback must not call any `recite-ffi`
 function.
 
-The host's `userdata` pointer is passed back to condition callbacks as-is. `recite-ffi` does not
-dereference or hold it. The host must ensure it remains valid and accessible on the calling thread
-for the duration of the traversal call.
+The session retains the condition callback and `userdata` pointers without owning or freeing the
+host allocation. It passes `userdata` back as-is on each invocation. Keep both the callback and
+userdata valid and accessible on the owner thread for the session's lifetime.
 
 ## Save and Load Handoff
 
-`recite_session_snapshot` encodes the complete runtime session state as a length-prefixed msgpack
-byte buffer (via `snapshot_session` + `encode_session_messagepack`). The host treats this as opaque:
-stores it in its game save data, reads it back, and passes it to `recite_session_restore` later.
+`recite_session_snapshot` encodes the complete runtime session state as raw MessagePack bytes in an
+owned buffer with a separate length. The host treats this as opaque: stores it in its game save
+data, reads it back, and passes it to `recite_session_restore` later.
 
 `recite_session_restore` reconstructs the session by validating the snapshot against the supplied
 asset handle (via `decode_session_messagepack` + `restore_session`). A schema-fingerprint difference
@@ -559,24 +485,3 @@ The `generate-bindings` direction (post-v1) generates typed host-language wrappe
 stubs, effect records/enums, typed session service classes — from schema. Those wrappers target the
 `recite-ffi` C ABI as their underlying call surface. Keeping the ABI narrow, handle-based, and
 versioned now means the generated layer can add types without changing the ABI underneath.
-
-Specifically: a generated C# `ReciteDialogueService` would P/Invoke into `recite_session_start`,
-`recite_session_choose`, etc., and decode the msgpack output batch into typed C# structs. The C ABI
-does not need to know about those typed structs; they are a generation-time concern.
-
-## Delivery ownership
-
-[Engine companion delivery](https://github.com/plethu/recite/milestone/23) owns platform and package
-acceptance. Completed ABI implementation issue routing is
-[historical evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#c-abi-delivery).
-
-`pkg-config` or CMake find-module support remains outside v1 scope unless a downstream package needs
-it.
-
-## Open Items
-
-- **`validation_error` category coverage:** the contract §12 category `validation_error` has no
-  direct `DialogueError` variant (it is raised by host-level checks such as invalid UTF-8 input,
-  malformed handle, or unsupported batch format version). The mapping table above covers all current
-  `DialogueError` variants; if future variants add a `Validation` case, the table and the
-  `RECITE_ERR_VALIDATION` code are already in place.

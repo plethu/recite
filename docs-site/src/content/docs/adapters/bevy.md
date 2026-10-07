@@ -110,12 +110,12 @@ while this host API reports the equivalent ordered events in one batch and repor
 publishing a partial batch. The Bevy test suite executes the two mandatory adapter-runner fixtures
 for plural metadata and localisation errors directly, plus published error category observations
 through a real App and native AssetServer refresh. Its
-[26-case conformance report](https://github.com/plethu/recite/blob/main/crates/recite-bevy/CONFORMANCE.md)
+[verification scope](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#verification)
 distinguishes exact, equivalent, gated, and unrun scenarios. The
 [headless performance probe](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#performance)
-records load, idle, active, and retained-revision observations without CI timing thresholds. See the
-[adapter contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md) and
-[acceptance matrix](https://github.com/plethu/recite/blob/main/docs/adapter-acceptance-matrix.md).
+records load, idle, active, and retained-revision observations without CI timing thresholds. The
+[adapter contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md)
+defines the shared requirements.
 
 Before the Recite crates are published, use the repository as a path dependency.
 `scripts/check-bevy-package.sh` prepares seven real Cargo `.crate` archives with temporary local

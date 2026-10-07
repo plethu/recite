@@ -10,6 +10,8 @@ fixture() {
   test_root="$(mktemp -d)"
   mkdir -p "$test_root/repo/scripts/maintainability" "$test_root/repo/crates/demo/src" "$test_root/repo/crates/demo/tests"
   cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/"
+  cp "$repo_root/scripts/check-source-policy.sh" "$repo_root/scripts/check-lint-suppressions.sh" \
+    "$repo_root/scripts/check-lint-suppressions.py" "$repo_root/scripts/"lint_suppression_*.py "$test_root/repo/scripts/"
   cp "$repo_root/scripts/maintainability"/{*.sh,*.py} "$test_root/repo/scripts/maintainability/"
   cat >"$test_root/repo/scripts/maintainability/exceptions.toml" <<'TOML'
 [[exceptions]]
@@ -182,5 +184,62 @@ save
 lines crates/demo/src/excepted.rs 402
 save
 assert_check pass 'initial push exception' 0000000000000000000000000000000000000000
+
+fixture
+save
+policy() { (cd "$test_root/repo" && RECITE_BASE_REF=HEAD env -u RECITE_HEAD_REF scripts/check-source-policy.sh); }
+lines crates/demo/src/new.rs 401
+if policy >"$test_root/result" 2>&1; then
+  echo 'untracked oversized source escaped policy' >&2
+  exit 1
+fi
+rg -q 'follow-up threshold exceeded' "$test_root/result"
+(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD scripts/check-source-policy.sh)
+git -C "$test_root/repo" add crates/demo/src/new.rs
+index_before="$(git -C "$test_root/repo" write-tree)"
+lines crates/demo/src/new.rs 300
+policy
+[[ "$(git -C "$test_root/repo" write-tree)" == "$index_before" ]]
+rm "$test_root/repo/crates/demo/src/new.rs"
+policy
+[[ "$(git -C "$test_root/repo" write-tree)" == "$index_before" ]]
+cat >"$test_root/repo/crates/demo/src/new.rs" <<'RUST'
+#[allow(clippy::too_many_arguments)]
+fn example() {}
+RUST
+if policy >"$test_root/result" 2>&1; then
+  echo 'untracked production suppression escaped policy' >&2
+  exit 1
+fi
+rg -q 'lint suppression policy violation' "$test_root/result"
+[[ "$(git -C "$test_root/repo" write-tree)" == "$index_before" ]]
+echo 'working source snapshot and index preservation passed'
+
+lines crates/demo/src/new.rs 300
+policy >"$test_root/result"
+save
+committed_tree="$(git -C "$test_root/repo" rev-parse 'HEAD^{tree}')"
+rg -q "$committed_tree" "$test_root/result"
+echo 'snapshot equals the equivalent committed tree'
+
+fixture
+printf '%s\n' 'crates/demo/src/ignored.rs' >"$test_root/repo/.gitignore"
+save
+cat >"$test_root/repo/crates/demo/src/ignored.rs" <<'RUST'
+#[allow(clippy::too_many_arguments)]
+fn force_staged() {}
+RUST
+git -C "$test_root/repo" add -f crates/demo/src/ignored.rs
+index_before="$(git -C "$test_root/repo" write-tree)"
+if policy >"$test_root/result" 2>&1; then
+  echo 'force-staged ignored source escaped policy' >&2
+  exit 1
+fi
+rg -q 'lint suppression policy violation' "$test_root/result"
+[[ "$(git -C "$test_root/repo" write-tree)" == "$index_before" ]]
+rm "$test_root/repo/crates/demo/src/ignored.rs"
+policy
+[[ "$(git -C "$test_root/repo" write-tree)" == "$index_before" ]]
+echo 'force-staged ignored source and deletion passed'
 
 echo 'maintainability fixtures passed'

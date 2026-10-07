@@ -14,7 +14,8 @@ Line counts are review triggers, not automatic split rules:
 Unchanged or shrinking oversized files pass. A file crossing or growing above
 its follow-up threshold requires an exact, bounded, issue-linked exception in
 scripts/maintainability/exceptions.toml. File sizes are read from the checked
-out commit, excluding uncommitted edits; use --full for a repository-wide trigger report.
+out commit/tree, excluding uncommitted edits. `just maintainability` snapshots
+working sources. Use --full for a repository-wide trigger report.
 EOF
 }
 
@@ -55,7 +56,7 @@ fi
 
 base_ref="${refs[0]:-${RECITE_BASE_REF:-origin/main}}"
 head_ref="${refs[1]:-${RECITE_HEAD_REF:-HEAD}}"
-if ! head_sha="$(git -C "$repo_root" rev-parse --verify "${head_ref}^{commit}" 2>/dev/null)"; then
+if ! head_sha="$(git -C "$repo_root" rev-parse --verify "${head_ref}^{tree}" 2>/dev/null)"; then
   echo "unable to resolve maintainability head ref: $head_ref" >&2
   exit 2
 fi
@@ -71,13 +72,15 @@ if ((! full_scan)); then
     echo "unable to resolve maintainability base ref: $base_ref" >&2
     exit 2
   fi
-  if ((! empty_base)); then
-    base_sha="$(git -C "$repo_root" merge-base "$base_sha" "$head_sha")"
+  if ((! empty_base)) && head_commit="$(git -C "$repo_root" rev-parse --verify "${head_ref}^{commit}" 2>/dev/null)"; then
+    base_sha="$(git -C "$repo_root" merge-base "$base_sha" "$head_commit")"
   fi
 fi
 
-exceptions_file="$repo_root/scripts/maintainability/exceptions.toml"
-if [[ ! -f "$exceptions_file" ]]; then
+policy_temporary="$(mktemp -d)"
+trap 'rm -rf "$policy_temporary"' EXIT
+exceptions_file="$policy_temporary/exceptions.toml"
+if ! git -C "$repo_root" show "$head_sha:scripts/maintainability/exceptions.toml" >"$exceptions_file"; then
   echo "missing maintainability exceptions: $exceptions_file" >&2
   exit 2
 fi
@@ -89,9 +92,10 @@ if ! maintainability_validate_exceptions; then
 fi
 
 declare -a all_paths=()
+git -C "$repo_root" ls-tree -r --name-only -z "$head_sha" >"$policy_temporary/paths"
 while IFS= read -r -d '' path; do
   all_paths+=("$path")
-done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
+done <"$policy_temporary/paths"
 
 declare -a paths=()
 declare -A base_paths=()

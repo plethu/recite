@@ -68,6 +68,9 @@ schema inputs are available.
 
 ## 3. Session Ownership
 
+When the host owner exits, the adapter must deterministically release its active session, callback
+registrations, native buffers and host subscriptions.
+
 The v1 adapter contract supports one active dialogue session per declared adapter owner. Each
 adapter must document whether that owner is a singleton service/resource, node, component, scene
 service, or equivalent host-native object.
@@ -251,72 +254,10 @@ data during traversal.
 
 ### 7.2 Metadata-Domain Export Shape
 
-The manifest must represent metadata domains using the schema model from spec §10.2. Adapters and
-standalone producers must export domains by symbolic domain name, not by hardcoded presentation
-keys. A metadata definition references a domain by name; the key using that domain remains project
-schema data.
-
-Flat domains must include:
-
-- `kind: "flat"`;
-- a deterministic list of symbol `values`;
-- optional domain-level `origin` metadata when available;
-- optional `value_origins`, keyed by symbol value, when value-level provenance is available;
-- optional `producer_fingerprints` for the host inputs used to create the domain.
-
-Contextual domains must include:
-
-- `kind: "contextual"`;
-- a contextual `selector`, using the v1 selector forms defined by spec §10.2;
-- deterministic `values_by_context`, keyed by the selector result symbol;
-- a declared `missing_context` policy;
-- optional domain-level `origin` metadata when available;
-- optional `context_origins`, keyed by context symbol, when context provenance is available;
-- optional `value_origins`, keyed by context symbol and then value symbol, when value-level
-  provenance is available;
-- optional `producer_fingerprints` for the host inputs used to create the domain.
-
-`missing_context` must be one of the policies accepted by the schema model: `diagnostic`, `empty`,
-or `fallback` to a named flat domain. Fallback targets must be metadata-domain references, not
-copied value lists, so validation, completion, fingerprinting, and diagnostics share one definition.
-
-Origin metadata must be structured enough for tools to identify the host source without parsing
-prose. The minimum logical shape is:
-
-```json
-{
-  "kind": "asset_path",
-  "id": "content/items/brass_key.item",
-  "label": "Brass Key"
-}
-```
-
-`kind` names the origin namespace, such as `asset_path`, `asset_guid`, `script_member`,
-`type_member`, `data_row`, or an adapter-defined namespace. `id` is the stable identifier within
-that namespace. `label` is optional, diagnostic-only display text. Producers may include additional
-namespaced fields, but compiler acceptance must not depend on them.
-
-Producer fingerprints must use a stable shape:
-
-```json
-{
-  "id": "content/items",
-  "kind": "directory",
-  "algorithm": "blake3",
-  "value": "6f1d..."
-}
-```
-
-`id` identifies the input set, `kind` identifies how the producer found it, `algorithm` names the
-fingerprint algorithm or host fingerprint source, and `value` is the repeatable fingerprint.
-Producer fingerprints may appear at the manifest level for whole-export inputs or inside a domain
-for domain-specific inputs.
-
-A generated manifest may also identify its owning producer with a top-level `producer` object
-(`kind` and stable project-relative `id`) and carry an overall `content_fingerprint` object
-(`algorithm` and `value`). These are diagnostic and freshness metadata, not semantic schema content.
-Namespaced origin extensions are preserved as format-neutral diagnostic values; compiler validity
-must not depend on them.
+[Schema §10.2](spec/schema.md#102-schema-model-and-producers) owns metadata-domain fields,
+selectors, missing-context policies, origins and producer fingerprints. Export domains by symbolic
+name and reference them from metadata definitions; do not embed presentation keys or duplicate a
+fallback domain's values. Host provenance stays diagnostic: it cannot change compiler acceptance.
 
 ### 7.3 Deterministic Snapshots and Fingerprints
 
@@ -423,109 +364,9 @@ the check reproducible without host access.
 
 ### 7.6 Host-Agnostic Example
 
-This example models item inspection states. The dialogue uses a project metadata key named `item`,
-and a second metadata key references a contextual domain keyed by `metadata:item`.
-
-```json
-{
-  "schema_version": 1,
-  "schema_export_version": 1,
-  "inclusion_policy": "dialogue-export-v1",
-  "producer_fingerprints": [
-    {
-      "id": "content/items",
-      "kind": "directory",
-      "algorithm": "blake3",
-      "value": "6f1d..."
-    }
-  ],
-  "metadata_domains": {
-    "inventory_item": {
-      "kind": "flat",
-      "values": ["brass_key", "field_journal"],
-      "origin": {
-        "kind": "directory",
-        "id": "content/items"
-      },
-      "value_origins": {
-        "brass_key": {
-          "kind": "asset_path",
-          "id": "content/items/brass_key.item",
-          "label": "Brass Key"
-        },
-        "field_journal": {
-          "kind": "asset_path",
-          "id": "content/items/field_journal.item",
-          "label": "Field Journal"
-        }
-      }
-    },
-    "inspection_state_all": {
-      "kind": "flat",
-      "values": ["new", "noticed", "examined"]
-    },
-    "inspection_state_by_item": {
-      "kind": "contextual",
-      "selector": "metadata:item",
-      "values_by_context": {
-        "brass_key": ["new", "noted_teeth", "matched_to_lock"],
-        "field_journal": ["new", "skimmed", "decoded_margin_notes"]
-      },
-      "missing_context": {
-        "policy": "fallback",
-        "domain": "inspection_state_all"
-      },
-      "origin": {
-        "kind": "directory",
-        "id": "content/items"
-      },
-      "context_origins": {
-        "brass_key": {
-          "kind": "asset_path",
-          "id": "content/items/brass_key.item",
-          "label": "Brass Key"
-        },
-        "field_journal": {
-          "kind": "asset_path",
-          "id": "content/items/field_journal.item",
-          "label": "Field Journal"
-        }
-      },
-      "value_origins": {
-        "brass_key": {
-          "matched_to_lock": {
-            "kind": "asset_path",
-            "id": "content/items/brass_key.item#inspection_states"
-          }
-        },
-        "field_journal": {
-          "decoded_margin_notes": {
-            "kind": "asset_path",
-            "id": "content/items/field_journal.item#inspection_states"
-          }
-        }
-      }
-    }
-  },
-  "metadata": {
-    "item": {
-      "targets": ["line", "choice"],
-      "type": "symbol",
-      "domain": "inventory_item"
-    },
-    "inspection_state": {
-      "targets": ["line", "choice"],
-      "type": "symbol",
-      "domain": "inspection_state_by_item"
-    }
-  }
-}
-```
-
-The producer owns the scan that turns host item definitions into `inventory_item` and
-`inspection_state_by_item`. Recite validation only sees the manifest snapshot. If a dialogue line
-uses `inspection_state=matched_to_lock` without `item=brass_key`, validation follows the
-`missing_context` policy from the manifest; it does not query the host item registry.
+The [full manifest fixture](../fixtures/schema/valid/full_manifest.json) is a tested example of the
+canonical format. Producer identity and fingerprint rules are defined above and in
+[schema §10.2](spec/schema.md#102-schema-model-and-producers).
 
 ### 7.7 Engine Notes
 
@@ -700,28 +541,14 @@ Do not duplicate parser/compiler/runtime snapshot expectations in `fixtures/adap
 
 ### 13.2 `AdapterConformanceDriver` Operation Contract
 
-Adapters should expose a host-test surface equivalent to the v1 operation/result schema so external
-suites can run the same scenarios. The contract covers:
+The published operation/result schema defines the host test surface. Results are structured; callers
+must not parse prose to determine success. The
+[fixture observation rules](../fixtures/adapter-conformance/README.md#observation-modes) explain how
+individual reference advances relate to transactional host batches, invariant-only checks and
+unavailable capabilities.
 
-- compile/import operations for conformance fixture inputs;
-- start from default or explicit block;
-- advance (`next`) and choose by stable `ChoiceId`;
-- acknowledge blocking effects with `EffectAck`;
-- save/load operations for session snapshots;
-- condition-hook configuration and failure injection;
-- localisation-hook behavior and failure injection;
-- projection-hook configuration and failure injection when the adapter exposes presentation
-  projection;
-- declared adapter capabilities;
-- declared changed-asset policy and active-session refresh/import behavior;
-- structured success outputs and structured stable-category errors.
-
-The result shape is machine-checkable. Callers must not parse prose to determine pass/fail.
-
-The Rust Godot conversion layer cannot be exercised by ordinary unit tests: Godot 4's
-`VarDictionary` and related built-ins require an initialized engine binding. The adapter conversion
-code is therefore compile-checked here and must be exercised by a Godot-hosted conformance runner
-before release; the reference Rust driver and FFI tests do not claim Godot execution evidence.
+Godot conversions require initialized engine bindings. Compile checks and reference/FFI tests do not
+exercise `VarDictionary` or other Godot-native values; use the Godot-hosted runner.
 
 ### 13.3 Stable Category Table and Drift Checks
 
@@ -743,29 +570,8 @@ Failure scenarios must map to exactly one expected stable error category, or to 
 category set only where this contract deliberately permits more than one outcome. Success-only
 scenarios may omit `expected_error`; they must contain no error step.
 
-Mandatory scenarios must cover every committed stable category from §12, except projection
-categories, which are required only when the adapter declares presentation projection capability:
-
-- `validation_error`;
-- `asset_load_or_decode_error`;
-- `stale_or_incompatible_asset_error`;
-- `schema_mismatch_error`;
-- `no_active_session_error`;
-- `session_already_active_error`;
-- `unknown_start_block_error`;
-- `invalid_choice_error`;
-- `unavailable_choice_error`;
-- `stale_choice_error`;
-- `missing_condition_handler_error`;
-- `condition_evaluation_error`;
-- `invalid_condition_result_error`;
-- `effect_acknowledgement_error`;
-- `rejected_changed_asset_refresh_error`;
-- `save_load_incompatibility_error`;
-- `localisation_error`;
-- `missing_projection_handler_error`;
-- `projection_evaluation_error`;
-- `invalid_projection_result_error`.
+Mandatory scenarios cover every category in the operation/result schema. Projection categories apply
+only when the adapter declares presentation projection capability.
 
 If a category cannot be exercised with a host-agnostic reference runtime alone, the scenario must
 remain in the manifest as `adapter_runner_required` with the same operation/result shape and an
@@ -782,97 +588,36 @@ Freshness scenarios are split:
 
 ### 13.5 Required Host-Independent Coverage
 
-Each adapter must have automated coverage for host-independent semantics, including:
+Each adapter must exercise the applicable published scenarios through its own surface, including
+`adapter_runner_required` cases and its chosen changed-asset policy. Cover rollback, structured
+fields and event order. Projection scenarios apply only to adapters exposing that capability.
+Reference-runtime success does not establish host execution.
 
-- load/decode failure;
-- stale compiled asset compatibility and schema mismatch behavior;
-- one-active-session rejection;
-- start from default and explicit block;
-- prompt selection by `ChoiceId`;
-- unavailable or stale choice rejection;
-- blocking effect acknowledgement and wrong-ID rejection;
-- blocking-effect save/load with the same pending effect ID;
-- pure condition handler dispatch;
-- missing/evaluation/result-type condition errors;
-- immediate, blocking, and deferred effect emission;
-- save/load with a pending prompt;
-- locale fallback or localisation failure behavior;
-- the adapter's declared changed-asset policy.
+Adapters exposing projection must also test successful candidate order, repeated metadata, stable
+affordance IDs and preservation of template, source, localized and structured label fields; the
+published failure scenarios alone do not cover those behaviors.
 
-Adapters that expose presentation projection must also cover:
-
-- deterministic projection candidate ordering for prompts with lines and multiple choices;
-- repeated-metadata occurrence behavior;
-- projection query handler dispatch, failure, and result-type validation;
-- stable affordance ID and ordering in conformance output;
-- presentation label template ID, source text, localized text, and structured field preservation.
-
-Host-runtime tests may be adapter-specific, but expected Recite traces should remain
-engine-independent where practical. Manual checks are acceptable only for editor/import UX that
-cannot reasonably be automated.
-
-Conformance above covers semantics. Adapters must also meet the engine-adapter performance
-expectations in spec §19.6, including negligible cost when no session is active.
+Host tests may differ in mechanics, but their expected Recite observations remain
+engine-independent. Conformance covers semantics; performance evidence must also meet spec §19.6,
+including negligible cost when no session is active.
 
 ## 14. Per-Engine Guidance
 
-Godot, Bevy, and Unity are the v1-facing adapter targets. This document treats that set as settled
-product scope and defines the contract each target must preserve. The serious v1 gate (spec §16.5)
-requires all three adapters to be production-quality and to pass the §13 conformance coverage; one
-adapter does not satisfy the gate on its own.
+Godot, Bevy and Unity are the v1 adapter targets. All three must meet this contract and the
+[release gates](spec/release.md#23-acceptance-criteria-for-a-serious-v1). Their package READMEs own
+native API, setup, upgrade and tested-support details:
 
-The review checklist for those targets lives in `docs/adapter-acceptance-matrix.md`. It does not
-replace this contract; it maps the shared requirements below to the minimum Godot, Bevy, and Unity
-surfaces, examples, changed-asset behavior, and verification expected for v1.
+- [Godot](../addons/recite/README.md): Resources, dialogue Nodes, callables and signals.
+- [Bevy](../crates/recite-bevy/README.md): assets, ordered requests, output messages and game
+  systems.
+- [Unity](../Packages/com.recite.dialogue/README.md): managed service and GameObject runner over the
+  shared native core. An optional DOTS facade must preserve the same semantics and declare its own
+  tested support; it is not required by the base package.
 
-### 14.1 Godot
-
-Godot adapters should expose compiled dialogue as resources or imported assets where possible. A
-session owner may be a node, autoload service, or resource manager, depending on the final adapter
-shape.
-
-Godot-facing APIs should support C# and/or GDScript surfaces. Runtime output should map naturally to
-signals, typed C# events, or pull-style methods without requiring dialogue files to call engine
-scripts.
-
-Authoring import should fit Godot's resource workflow. The adapter must declare one changed-asset
-policy from this document and make rejected refresh or restart requirements visible in the editor or
-runtime logs.
-
-### 14.2 Bevy
-
-Bevy adapters should feel like Rust and ECS. Compiled dialogue should fit the asset system where
-practical. Active session ownership may use resources, components, or a dedicated session resource.
-
-Runtime output should map naturally to events, messages, resources, or systems. Condition handlers
-should be ordinary typed Rust game code. Effect requests may be emitted as generic Recite events and
-optionally as schema-generated typed events.
-
-The adapter should keep frame cost negligible when no dialogue session is active and should make
-headless tests practical without a full rendered game.
-
-### 14.3 Unity
-
-Unity adapters should expose a C#-native package shape. Compiled dialogue may be represented as
-imported assets, ScriptableObject-backed resources, or another Unity-native asset form that
-preserves compiled asset identity and freshness.
-
-Runtime output should map naturally to C# events, UnityEvent-style hooks where appropriate, or
-service responses. Condition and effect bindings should feel like ordinary typed C# game code and
-must still export or consume the canonical Recite schema manifest.
-
-GameObject-facing and DOTS-facing Unity facades should share the same adapter core. The DOTS surface
-may use Entities components, systems, buffers, or baked data, but it must not fork Recite traversal,
-asset identity, save/load, localisation, error, or changed-asset semantics away from the non-DOTS
-Unity surface.
-
-Editor import should make the edit/save/build/import/restart loop explicit. The adapter must declare
-one changed-asset policy from this document before it is treated as v1-ready.
-
-### 14.4 Post-v1 Evaluation Targets
-
-Unreal and GameMaker are post-v1 evaluation targets only. Their future adapters must preserve this
-same contract, but they must not expand the v1 adapter scope.
+Examples or documented tests must demonstrate load/start/select/end, pure conditions, all effect
+modes, prompt and blocking-effect save/load, structured errors and the source/build/import/refresh
+loop. One small sample plus focused tests can supply that evidence; separate sample projects are not
+required for every operation. Unreal and GameMaker remain post-v1 evaluation targets.
 
 ## 15. Shared Crate Boundary
 
@@ -880,18 +625,3 @@ same contract, but they must not expand the v1 adapter scope.
 assets, one-owner session lifecycle, transactional traversal batches, stable error categories, and
 owned dialogue catalogue lookup. Engine companions still own asset import, callbacks, native events,
 and UI projection. `recite-runtime` remains the sole authority for traversal and snapshot bytes.
-
-## 16. Follow-up Prerequisites
-
-The [engine companion milestone](https://github.com/plethu/recite/milestone/23) owns delivery and
-follow-up state. Completed prerequisite routing is
-[historical evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#adapter-prerequisites).
-Follow-up issues should reference this document when choosing:
-
-- their host asset import and freshness behavior;
-- their active-session owner shape;
-- their changed-asset policy;
-- their start/select/ack API;
-- their condition and effect binding surface;
-- their save/load handoff;
-- their conformance tests.

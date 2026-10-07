@@ -84,3 +84,14 @@ uses the official Godot 4.6.3 stable Linux x86_64 standard build
 (`4.6.3.stable.official.7d41c59c4`), matching the crate's `api-4-6` feature; set `GODOT` to that
 binary when it is not on `PATH`. The ordinary Cargo lane remains host-independent, while this script
 is the required engine-hosted evidence before changing the Resource format.
+
+## Verification
+
+The [host tests](https://github.com/plethu/recite/blob/main/tests/godot-host/run_tests.gd) observe
+transactional batches through actual Godot classes and signals; related Rust tests do not establish
+exact manifest execution. They also exercise rejected imports, persisted Resources, reentrant signal
+order and a clean packaged example. Immutable session ownership prevents replacing the asset during
+advance. Projection is unsupported; compiled-only imports cannot establish source/schema freshness.
+The
+[shared scenarios](https://github.com/plethu/recite/blob/main/fixtures/adapter-conformance/v1/scenarios.json)
+own required observations.

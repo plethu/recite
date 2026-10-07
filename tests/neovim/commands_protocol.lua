@@ -1,4 +1,3 @@
-local vocabulary = require("recite_error_vocabulary")
 local protocol = require("recite.command_protocol")
 local finite = require("recite.finite_protocol")
 local watch_protocol = require("recite.watch_protocol")
@@ -88,47 +87,6 @@ assert_true(
   "deterministic placeholder collision was not excluded from the original inventory"
 )
 
-for code in pairs(vocabulary.errorCodes) do
-  assert_true(
-    protocol.valid_error({ category = "input", code = code, operation = "validate" }),
-    "authoritative error code was rejected: " .. code
-  )
-end
-assert_true(not protocol.valid_error({
-  category = "input",
-  code = "structured_stderr",
-  operation = "validate",
-}), "transport stderr error leaked into the authoritative error-code set")
-for operation in pairs(vocabulary.operations) do
-  assert_true(
-    protocol.valid_error({ category = "input", code = "missing_path", operation = operation }),
-    "authoritative operation was rejected: " .. operation
-  )
-end
-for _, operation in ipairs({ "control", "dispatch", "export_schema", "render" }) do
-  assert_true(
-    not protocol.valid_error({ category = "input", code = "missing_path", operation = operation }),
-    "non-wire operation was accepted: " .. operation
-  )
-end
-assert_true(not protocol.valid_error({
-  category = "input",
-  code = "missing_path",
-  operation = "validate",
-  path = vim.NIL,
-}), "explicit null path was accepted")
-assert_true(not protocol.valid_error({
-  category = "input",
-  code = "missing_path",
-  operation = "validate",
-  related_path = vim.NIL,
-}), "explicit null related_path was accepted")
-assert_true(not protocol.valid_error({
-  category = "input",
-  code = "missing_path",
-  operation = "validate",
-  details = vim.NIL,
-}), "explicit null details was accepted")
 local many_records = protocol.new_parser(8)
 assert_true(#many_records:push("{}\n{}\n{}\n") == 3, "per-record limit was incorrectly cumulative")
 expect_error(function()

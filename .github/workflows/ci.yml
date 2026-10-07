@@ -344,20 +344,7 @@ jobs:
           just --dry-run perf check
 
       - name: Run maintainability checks
-        run: |
-          scripts/install-js-dependencies.sh
-          just quality setup
-          tests/maintainability/check.sh
-          tests/maintainability/format-replay.sh
-          tests/ast-grep/check.sh
-          tests/lint-suppressions/check.sh
-          just maintainability
-          just perf setup
-          just perf check
-          just fmt-check
-          just quality lint
-          just unused-deps
-          just supply-chain
+        run: just _check-quality
 
   packages:
     needs: changes

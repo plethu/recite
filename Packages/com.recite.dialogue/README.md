@@ -120,7 +120,12 @@ UNITY_EDITOR=/path/to/Unity-6.7 RECITE_UNITY_PLAYER_MODE=coreclr scripts/unity/r
 ```
 
 The first check builds the native library and CLI, tests the managed service through real FFI, and
-checks schema export. The informational `.NET 8` probe prints iteration counts and total time for
+checks schema export. Its [managed suite](Tests~/Headless/ReciteUnityNativeCases.cs) observes
+transactional batches, not every reference advance. The
+[shared scenarios](https://github.com/plethu/recite/blob/main/fixtures/adapter-conformance/v1/scenarios.json)
+own required observations. Projection is unsupported, and isolated compiled assets cannot establish
+source/schema freshness. The larger managed suite is distinct from the single imported-resource
+player smoke test. The informational `.NET 8` probe prints iteration counts and total time for
 native load/metadata decode, managed line/effect conversion, condition traversal, and inactive
 service access; it has no pass threshold. With Unity Editor installed, the host runner extracts the
 built UPM archive into a temporary clean consumer project and executes EditMode and PlayMode tests.

@@ -7,37 +7,14 @@ generated million-passage workload. Repeatable workloads and heap checks below c
 allocation, and regression limits. Freya remains the selected UI; model measurements do not
 establish native GUI readiness.
 
-## Implemented boundaries
+## Measured boundaries
 
-- **Data and computation:** saved document clones share immutable source bytes. Passage and script
-  projections are cached until source changes; passage lookup uses frozen IDs. Graph topology,
-  adjacency, layout and routes are cached apart from camera/hover state. Scene switching reuses the
-  discovered project context; Refresh explicitly discovers new files and updates saved context.
-- **Bounded rendering:** scene navigation, project results and connections use fixed-height virtual
-  rows. Map cards and routes are culled against the viewport with overscan, including routes whose
-  endpoints are offscreen. The selected card stays mounted. Scenes over 200 beats default to an
-  explicitly labelled neighbourhood of at most 80 connected beats; Whole scene is an explicit
-  choice.
-- **Finding and reading:** project search indexes saved dialogue/reply text, speaker, document and
-  beat. Queries match all complete words, case-insensitively; results retain document/beat context
-  and show at most 100 matches plus the total. Save reindexes the affected document; Refresh
-  rebuilds the saved index. Search does not silently include uncommitted drafts. Selecting a result
-  opens its beat. The scene drawer also filters names. Back/forward retains up to 128 visited beats
-  within a scene. One pinned, labelled snapshot supplies reading context while navigating; long
-  reference previews are explicitly truncated.
-- **Sustained writing:** prose is paged in groups of 32 entries without recycling active text
-  editors or flattening condition groups. Page navigation applies a valid draft before leaving it
-  and retains undo. History stores UTF-8 replacement transactions with a 32 MiB retention budget,
-  always retaining the latest edit even if that single transaction exceeds the budget. This is
-  per-document undo, not a durable cross-project history.
-- **Recovery and cold loading:** one recovery worker owns the file lock and disk writes. Pending
-  snapshots coalesce; failures are visible and retryable. Save and Keep recovery and close wait for
-  a durable flush. Initial project open runs on a worker, reports progress, and discards cancelled
-  results or results arriving after the current text changed. Cancellation discards the result; it
-  does not interrupt compiler work. Subsequent scene switches, refresh and committed edits still
-  have synchronous kernel work.
-- **Resizing:** pane dividers move a guide while dragging and commit width on release. Text stays at
-  its existing measure during the drag; Escape cancels.
+The [application guide](guide.md) owns navigation and editing behavior. These probes exercise the
+model and bounded rendering, not a whole native authoring session. Source bytes and accepted
+analysis are shared across document sessions; closing a tab releases its retained history and
+workers. Project loading has cooperative cancellation, including compiler and search checkpoints. An
+individual filesystem operation or parse finishes before its next checkpoint. Scene switches,
+refresh and committed edits still perform synchronous kernel work.
 
 ## Repeatable workloads
 
@@ -68,18 +45,9 @@ assets.
 
 ## Incremental project validation and profiling
 
-Local validation runs against the parsed document, then discards its full AST. Project facts retain
-only identities, block definitions/defaults, references, echo targets, source locations and recovery
-participation. Saved inputs, analyses and snapshots share source bytes. A reverse dependency index
-tracks definitions and consumers separately, so scenes sharing a destination do not form one giant
-revalidation group. Moving that destination's location does not change whether its blocks resolve;
-changing/removing its block definitions invalidates callers.
-
-Changed documents and affected dependents are validated with their required providers using the
-existing project validator. Only each target's diagnostics are published: context providers may omit
-their own unrelated dependencies. Completeness and global stable-ID recovery transitions
-conservatively refresh all documents. Schema changes create a new kernel. The uncached batch
-validator remains the differential oracle, including related diagnostic locations.
+The [compiler kernel](../../crates/recite-compiler/src/authoring/state.rs) owns incremental
+validation; its differential tests compare accepted results with uncached batch validation. The
+Writer probes measure that kernel together with saved-source and search ownership.
 
 ```sh
 mise exec -- just writer profile cpu 100000 /tmp/writer-cpu
@@ -92,17 +60,8 @@ The profiler builds the existing optimized benchmark with line debug information
 executable directly under Linux `perf` (DWARF stacks) or DHAT. It records environment/build metadata
 and refuses to overwrite a prior profile. DHAT is a development dependency, with its allocator
 enabled only in this bench under `heap-profile`; production allocation is unchanged. Instrumented
-reports include per-operation allocation counts/bytes and live/peak heap bytes. Their latencies and
-RSS are not compared with uninstrumented runs.
-
-`just writer check` (and therefore `just check`) runs both independent and shared-target
-10,000-passage heap checks. Bounds are 20 MB peak live heap, 55 MB allocated for indexing, 3.2 MB
-for cold script projection, and 4 MB allocated per wording/undo/redo/multiline/ID edit, using 500
-passages per document. These are fixed corpus allocation contracts with measured headroom, not
-machine timing budgets. A private work-count test additionally prevents unrelated callers being
-revalidated; batch-equivalence tests cover joins, splits, removals, defaults, recovery, echo/ID
-collisions and context-only diagnostics. Keep bounds reviewed alongside raw heap evidence rather
-than increasing them to accommodate an unexplained regression.
+latencies are not normal-run timings. The executable heap checks own fixed-corpus allocation bounds;
+`just writer check` includes them. Investigate an unexplained regression before changing a bound.
 
 ## Remaining work and acceptance
 
@@ -121,6 +80,4 @@ over hours, crash injection and physical Linux/macOS input/rendering. Screen-rea
 across virtual rows and IME composition remain manual acceptance requirements.
 
 Proposed native targets remain 16.7 ms camera/guide frames, p95 edit-to-paint below 50 ms, and warm
-search results below 100 ms on named hardware. Current results do not establish those targets. Keep
-the writer centred on a conversation and nearby context; project-wide production navigation can add
-authored folders/tags without inventing a hierarchy from graph connectivity.
+search results below 100 ms on named hardware. Current results do not establish those targets.
