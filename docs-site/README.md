@@ -1,9 +1,12 @@
 # Recite site
 
+The public site needs an authored landing page, runnable examples, how-tos, a project showcase and
+reference documentation. It should not present every section as a documentation page.
+
 The current implementation uses Hugo and an unmodified, pinned Hugo Book theme. Hugo is temporary;
-the comparison below recommends Zola with DevLab for its replacement. The landing runs the actual
-Rust compiler/runtime through wasm-bindgen. Node supports browser tests and CSS/type checks, but is
-not required for the current site build.
+the comparison below identifies finalists for its replacement. The landing runs the actual Rust
+compiler/runtime through wasm-bindgen. Node supports browser tests and CSS/type checks, but is not
+required for the current site build.
 
 From the repository root:
 
@@ -32,8 +35,10 @@ unmodified and review matching upstream views when updating an overridden templa
 ## Generator decision
 
 The 2026-10-07 investigation built 19 alternative configurations across 15 generators and an Astro
-7.3.5/Starlight 0.42.4 baseline. **Recommend Zola 0.23.6 with DevLab 0.8.0** for this
-documentation-heavy site. This recommendation has not yet replaced production.
+7.3.5/Starlight 0.42.4 baseline. **Zola 0.23.6 with DevLab 0.8.0 and Astro remain finalists.** The
+documentation-focused screen favored DevLab; it does not establish a whole-site winner. Compare
+authored landing/showcase layouts, how-to discovery and the docs shell together before choosing. No
+recommendation has replaced production.
 
 Screens used three real pages, a wide table, offline requests, positive/negative/repeated-positive
 search, keyboard result activation, actual WASM execution, 390px reflow and sampled axe checks. Most
@@ -43,7 +48,7 @@ and recovery. Search was driven through each tool's native events and result wid
 
 | Candidate                                                                    | Decision and concrete evidence                                                                                                                                      |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Zola + DevLab](https://codeberg.org/RiPetitor/devlab-theme), 0.23.6 / 0.8.0 | Preferred: working docs shell, search, runner and native preview. Small TOC override fixes nested interactive elements.                                             |
+| [Zola + DevLab](https://codeberg.org/RiPetitor/devlab-theme), 0.23.6 / 0.8.0 | Docs finalist: working shell, search, runner and native preview. Small TOC override fixes nested interactive elements.                                              |
 | [Zensical](https://zensical.org/), 0.0.68                                    | Strong workflow, active Material maintainers; Rust/Python pipeline. Three critical search accessibility defects persist after initialization and interaction.       |
 | [docs-gen](https://github.com/yhirose/docs-gen), 0.7.0                       | Compact reserve: runner/search/routes/errors work. Young single-maintainer project; mobile table reflow and search semantics need repairs.                          |
 | [RustPress](https://github.com/ZenithInc/rust-press), 0.1.11                 | Reserve: runner/search/routes/reflow work. Search is JavaScript; WASM asset is a placeholder. MVP with contrast/scrolling gaps.                                     |
