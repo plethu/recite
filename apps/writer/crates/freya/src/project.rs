@@ -1,10 +1,12 @@
 //! File ownership for the retained editor.
 mod external;
 mod manifest;
+mod recovery;
 mod rename;
 pub(crate) mod save;
 mod sessions;
 use crate::recovery::{Recovery, RecoveryStore};
+use recite_compiler::authoring::WorkControl;
 use recite_writer_model::{Document, ProjectContext, Workbench};
 
 use std::{
@@ -40,12 +42,13 @@ impl ProjectFiles {
     pub fn root(&self) -> &Path {
         &self.root
     }
-    pub fn open(path: &Path) -> Result<Self, FileError> {
-        Self::open_at(path, None)
-    }
-
-    fn open_at(path: &Path, selection: Option<&Path>) -> Result<Self, FileError> {
+    pub(crate) fn open_with_control(
+        path: &Path,
+        control: &dyn WorkControl,
+    ) -> Result<Self, FileError> {
+        control.checkpoint()?;
         let report = recite_config::discover_project(path)?;
+        control.checkpoint()?;
         if !report.is_complete() {
             return Err(FileError::Incomplete);
         }
@@ -54,16 +57,15 @@ impl ProjectFiles {
             .iter()
             .map(|d| d.path().to_owned())
             .collect();
-        let current = match selection {
-            Some(path) if paths.iter().any(|p| p == path) => path.to_owned(),
-            Some(_) => return Err(FileError::Selection),
-            None => paths.first().ok_or(FileError::Empty)?.clone(),
-        };
+        let current = paths.first().ok_or(FileError::Empty)?.clone();
         let saved = read_regular(&current)?.into();
         let recovery = RecoveryStore::open(&current)?;
         let context = crate::project_context::load(&report)?;
-        let search =
-            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
+        control.checkpoint()?;
+        let search = std::sync::Arc::new(recite_writer_model::SearchIndex::build_with_control(
+            &context.documents,
+            control,
+        )?);
         let root = report.manifest().project_root().to_owned();
         let names = report
             .documents()
@@ -72,6 +74,7 @@ impl ProjectFiles {
             .collect();
         let manifest = manifest::ManifestDraft::open(&root)?;
         let watch = crate::external::Watch::new(&root);
+        control.checkpoint()?;
         Ok(Self {
             manifest,
             watch,
@@ -113,42 +116,6 @@ impl ProjectFiles {
 
     pub fn dirty(&self, source: &str) -> bool {
         self.saved.as_ref() != source || self.recovery.pending()
-    }
-
-    pub fn workbench(&mut self) -> Result<Workbench, FileError> {
-        // Complete an interrupted multi-file checkpoint before restoring sessions.
-        let pending = self.manifest.pending().clone();
-        for (name, recovery) in pending {
-            let path = self.path_for_document(&name).ok_or(FileError::Selection)?;
-            if path == self.current {
-                self.recovery.persist(Some(recovery))?;
-            } else {
-                RecoveryStore::open(&path)?.persist(Some(recovery))?;
-            }
-        }
-        let recovered = self.recovery.snapshot();
-        let source = recovered.map_or(self.saved.as_ref(), |r| r.draft.source());
-        let key = recite_core::DocumentKey::new(self.document_name()?)
-            .map_err(recite_writer_model::EditError::from)
-            .map_err(recite_writer_model::WorkbenchError::from)?;
-        let document = Document::in_project(key, source, self.context.clone())
-            .map_err(recite_writer_model::WorkbenchError::from)?;
-        let mut workbench = Workbench::from_document(document)?;
-        if let Some(recovery) = recovered {
-            recovery.draft.restore(&mut workbench)?;
-            self.saved = recovery.baseline.clone();
-        }
-        let original = self.current.clone();
-        let affected = self.manifest.affected().to_vec();
-        for name in affected {
-            let path = self.path_for_document(&name).ok_or(FileError::Selection)?;
-            self.switch(&mut workbench, &path, |_| Ok(()))?;
-        }
-        self.switch(&mut workbench, &original, |_| Ok(()))?;
-        if !self.manifest.pending().is_empty() {
-            self.manifest.checkpointed()?;
-        }
-        Ok(workbench)
     }
 
     pub fn has_recovery(&self) -> bool {

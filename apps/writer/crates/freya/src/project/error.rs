@@ -1,6 +1,8 @@
 use std::io;
 #[derive(Debug, thiserror::Error)]
 pub enum FileError {
+    #[error("Project opening was cancelled.")]
+    Interrupted(#[from] recite_compiler::authoring::Interrupted),
     #[error(transparent)]
     Discovery(#[from] recite_config::ProjectDiscoveryError),
     #[error(transparent)]

@@ -14,6 +14,8 @@ type ErrorParts<'a> = (
     Option<ErrorDetails>,
 );
 
+#[path = "error_mapping/project.rs"]
+mod project;
 #[path = "error_mapping/watch.rs"]
 mod watch;
 
@@ -259,31 +261,7 @@ pub(crate) fn structured_error(
             fallback_operation,
             source.manifest_path().or(fallback_path),
         ),
-        CliError::ProjectSchema { source } => match source {
-            recite_config::ProjectSchemaError::Read { path, .. } => {
-                generic(ErrorCategory::Io, ErrorCode::Read, "read", Some(path))
-            }
-            recite_config::ProjectSchemaError::InvalidPath { path, .. } => generic(
-                ErrorCategory::Schema,
-                ErrorCode::ProjectSchema,
-                "resolve_schema",
-                Some(path),
-            ),
-            recite_config::ProjectSchemaError::OutsideProject { declared, resolved } => (
-                ErrorCategory::Schema,
-                ErrorCode::ProjectSchema,
-                "resolve_schema",
-                Some(declared),
-                Some(resolved),
-                None,
-            ),
-            _ => generic(
-                ErrorCategory::Schema,
-                ErrorCode::ProjectSchema,
-                "load_schema",
-                fallback_path,
-            ),
-        },
+        CliError::ProjectSchema { source } => project::schema(source, fallback_path),
         CliError::UiCatalog { .. } => generic(
             ErrorCategory::Configuration,
             ErrorCode::UiCatalog,

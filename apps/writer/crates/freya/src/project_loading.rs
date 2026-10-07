@@ -2,10 +2,11 @@
 use crate::{
     design::{Button, tokens as t},
     editing::Writer,
-    project::{FileError, ProjectFiles},
+    project::ProjectFiles,
 };
 use freya::prelude::*;
-use std::{path::PathBuf, sync::mpsc, thread::JoinHandle};
+use std::path::PathBuf;
+mod worker;
 
 pub(crate) fn can_switch_project(writer: Writer) -> bool {
     !writer.localisation.peek().dirty()
@@ -75,19 +76,10 @@ fn receive_activation(
 }
 
 pub(crate) struct LoadJob {
-    result: mpsc::Receiver<Result<(ProjectFiles, recite_writer_model::Workbench), FileError>>,
-    worker: Option<JoinHandle<()>>,
-    cancelled: bool,
+    load: worker::Load,
     source: Option<std::sync::Arc<str>>,
     #[cfg(target_os = "linux")]
     activation: Option<crate::activation::IncomingRoute>,
-}
-impl Drop for LoadJob {
-    fn drop(&mut self) {
-        if let Some(worker) = self.worker.take() {
-            let _ = worker.join();
-        }
-    }
 }
 pub(crate) fn start(
     job: State<Option<LoadJob>>,
@@ -120,21 +112,14 @@ fn start_inner(
     if job.peek().is_some() {
         return Err("A project is still opening. Cancel it or wait for it to finish.".into());
     }
-    let (sender, result) = mpsc::sync_channel(1);
-    match std::thread::Builder::new()
-        .name("recite-project-open".into())
-        .spawn(move || {
-            let loaded = ProjectFiles::open(&path).and_then(|mut project| {
-                let workbench = project.workbench()?;
-                Ok((project, workbench))
-            });
-            let _ = sender.send(loaded);
-        }) {
-        Ok(worker) => {
+    #[cfg(target_os = "linux")]
+    let forwarded = activation.as_ref().map(|request| request.cancelled.clone());
+    #[cfg(not(target_os = "linux"))]
+    let forwarded = None;
+    match worker::Load::open(path, forwarded) {
+        Ok(load) => {
             job.set(Some(LoadJob {
-                result,
-                worker: Some(worker),
-                cancelled: false,
+                load,
                 source: buffers
                     .model
                     .peek()
@@ -186,20 +171,11 @@ impl Component for Loading {
                     );
                 }
             }
-            let loaded = job
-                .peek()
-                .as_ref()
-                .and_then(|job| match job.result.try_recv() {
-                    Ok(result) => Some((job.cancelled, job.source.clone(), result)),
-                    Err(mpsc::TryRecvError::Empty) => None,
-                    Err(mpsc::TryRecvError::Disconnected) => Some((
-                        job.cancelled,
-                        job.source.clone(),
-                        Err(FileError::Io(std::io::Error::other(
-                            "Project loading stopped unexpectedly",
-                        ))),
-                    )),
-                });
+            let loaded = job.peek().as_ref().and_then(|job| {
+                job.load
+                    .try_result()
+                    .map(|result| (job.load.cancelled(), job.source.clone(), result))
+            });
             if let Some((cancelled, source, loaded)) = loaded {
                 let current = self
                     .writer
@@ -309,7 +285,7 @@ impl Component for Loading {
                 .spacing(t::SPACE_XS)
                 .child(
                     label()
-                        .text(if current.cancelled {
+                        .text(if current.load.cancelled() {
                             "Finishing cancelled load…"
                         } else {
                             "Opening project…"
@@ -319,10 +295,10 @@ impl Component for Loading {
                 .child(
                     Button::new()
                         .flat()
-                        .enabled(!current.cancelled)
+                        .enabled(!current.load.cancelled())
                         .on_press(move |_| {
                             if let Some(current) = job.write().as_mut() {
-                                current.cancelled = true;
+                                current.load.cancel();
                             }
                         })
                         .child(crate::messages::text(

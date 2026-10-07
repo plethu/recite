@@ -137,6 +137,8 @@ jobs:
           install_args: cargo:cargo-packager
 
       - name: Build native package preview
+        env:
+          MISE_ENV: packaging
         run: python scripts/package-writer.py --platform '${{ matrix.platform }}'
 
       - name: Inspect artifact and run installed CLI

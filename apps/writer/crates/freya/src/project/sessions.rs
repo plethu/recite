@@ -1,6 +1,7 @@
 //! Retained documents preserve drafts, undo history and recovery ownership on navigation.
 use super::{FileError, ProjectFiles, read_regular};
 use crate::recovery::RecoveryStore;
+use recite_compiler::authoring::{CancellationToken, WorkControl};
 use recite_writer_model::{Document, Workbench};
 use std::{
     path::{Path, PathBuf},
@@ -133,6 +134,17 @@ impl ProjectFiles {
         path: &Path,
         select: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
     ) -> Result<(), FileError> {
+        self.switch_with_control(current, path, select, &CancellationToken::new())
+    }
+
+    pub(super) fn switch_with_control(
+        &mut self,
+        current: &mut Workbench,
+        path: &Path,
+        select: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
+        control: &dyn WorkControl,
+    ) -> Result<(), FileError> {
+        control.checkpoint()?;
         if path == self.current {
             select(current)?;
             return Ok(());
@@ -145,7 +157,9 @@ impl ProjectFiles {
         let mut context = self.retained_context(self.context.clone());
         overlay(&mut context, current);
         let mut next = if let Some(session) = self.retained.get_mut(path) {
-            session.model.refresh_project(context)?;
+            session
+                .model
+                .refresh_project_with_control(context, control)?;
             select(&mut session.model)?;
             self.retained.remove(path).ok_or(FileError::Selection)?
         } else {
@@ -158,13 +172,16 @@ impl ProjectFiles {
             let source = recovery
                 .snapshot()
                 .map_or(baseline.as_ref(), |r| r.draft.source());
-            let document = Document::in_project(key, source, context)
+            let document = Document::in_project_with_control(key, source, context, control)
                 .map_err(recite_writer_model::WorkbenchError::from)?;
+            control.checkpoint()?;
             let mut model = Workbench::from_document(document)?;
+            control.checkpoint()?;
             if let Some(snapshot) = recovery.snapshot() {
                 snapshot.draft.restore(&mut model)?;
                 baseline = snapshot.baseline.clone();
             }
+            control.checkpoint()?;
             select(&mut model)?;
             Retained {
                 model,

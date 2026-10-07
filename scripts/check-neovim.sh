@@ -57,6 +57,7 @@ for required_file in \
   "$plugin_root/lua/recite/health.lua" \
   "$plugin_root/lua/recite/command_json.lua" \
   "$plugin_root/lua/recite/command_protocol.lua" \
+  "$plugin_root/lua/recite/error_protocol.lua" \
   "$plugin_root/lua/recite/diagnostic_protocol.lua" \
   "$plugin_root/lua/recite/finite_protocol.lua" \
   "$plugin_root/lua/recite/command_process.lua" \

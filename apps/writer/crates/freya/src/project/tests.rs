@@ -1,5 +1,16 @@
 use super::ProjectFiles;
+use recite_compiler::authoring::CancellationToken;
 use std::fs;
+
+impl ProjectFiles {
+    pub(crate) fn open(path: &std::path::Path) -> Result<Self, super::FileError> {
+        Self::open_with_control(path, &CancellationToken::new())
+    }
+
+    pub(crate) fn workbench(&mut self) -> Result<recite_writer_model::Workbench, super::FileError> {
+        self.workbench_with_control(&CancellationToken::new())
+    }
+}
 
 fn project() -> Result<(tempfile::TempDir, ProjectFiles), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;

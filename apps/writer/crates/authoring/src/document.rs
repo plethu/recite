@@ -1,5 +1,6 @@
 use recite_compiler::authoring::{
-    AuthoringError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument,
+    AuthoringError, AuthoringKernel, AuthoringRequest, CancellationToken, DocumentVersion,
+    OpenDocument, SavedDocument, WorkControl,
 };
 use recite_core::{CoreValueError, Diagnostic, DocumentKey, schema::ProjectSchema};
 
@@ -71,6 +72,17 @@ impl Document {
         source: impl Into<String>,
         context: ProjectContext,
     ) -> Result<Self, EditError> {
+        Self::in_project_with_control(key, source, context, &CancellationToken::new())
+    }
+
+    /// Construct initial analysis cooperatively; interruption returns no document.
+    pub fn in_project_with_control(
+        key: DocumentKey,
+        source: impl Into<String>,
+        context: ProjectContext,
+        control: &dyn WorkControl,
+    ) -> Result<Self, EditError> {
+        control.checkpoint().map_err(AuthoringError::from)?;
         let kernel = context
             .schema
             .clone()
@@ -84,11 +96,21 @@ impl Document {
             history: crate::history::History::default(),
             projections: crate::projection_cache::ProjectionCache::default(),
         };
-        document.accept(source.into())?;
+        document.accept_with_control(source.into(), control)?;
         Ok(document)
     }
 
     pub fn refresh_project(&mut self, context: ProjectContext) -> Result<(), EditError> {
+        self.refresh_project_with_control(context, &CancellationToken::new())
+    }
+
+    /// Refresh transactionally while retaining unchanged compiler analysis.
+    pub fn refresh_project_with_control(
+        &mut self,
+        context: ProjectContext,
+        control: &dyn WorkControl,
+    ) -> Result<(), EditError> {
+        control.checkpoint().map_err(AuthoringError::from)?;
         let same_schema = self.context.schema == context.schema;
         let same_inputs = self.context.documents.len() == context.documents.len()
             && self
@@ -113,21 +135,27 @@ impl Document {
             self.source_snapshot(),
         );
         if same_schema {
-            self.kernel.apply(AuthoringRequest::new(
-                self.kernel.snapshot().generation(),
-                context.documents.clone(),
-                [open],
-            ))?;
+            self.kernel.apply_with_control(
+                AuthoringRequest::new(
+                    self.kernel.snapshot().generation(),
+                    context.documents.clone(),
+                    [open],
+                ),
+                control,
+            )?;
         } else {
             let mut kernel = context
                 .schema
                 .clone()
                 .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
-            kernel.apply(AuthoringRequest::new(
-                kernel.snapshot().generation(),
-                context.documents.clone(),
-                [open],
-            ))?;
+            kernel.apply_with_control(
+                AuthoringRequest::new(
+                    kernel.snapshot().generation(),
+                    context.documents.clone(),
+                    [open],
+                ),
+                control,
+            )?;
             self.kernel = kernel;
         }
         self.context = context;
@@ -246,21 +274,33 @@ impl Document {
     }
 
     fn accept(&mut self, source: String) -> Result<(), EditError> {
+        self.accept_with_control(source, &CancellationToken::new())
+    }
+
+    fn accept_with_control(
+        &mut self,
+        source: String,
+        control: &dyn WorkControl,
+    ) -> Result<(), EditError> {
         let version = self
             .version
             .checked_add(1)
             .ok_or(EditError::RevisionExhausted)?;
-        self.kernel.apply(AuthoringRequest::new(
-            self.kernel.snapshot().generation(),
-            self.context.documents.clone(),
-            [OpenDocument::new(
-                self.key.clone(),
-                DocumentVersion::new(version),
-                source.clone(),
-            )],
-        ))?;
+        let source: std::sync::Arc<str> = source.into();
+        self.kernel.apply_with_control(
+            AuthoringRequest::new(
+                self.kernel.snapshot().generation(),
+                self.context.documents.clone(),
+                [OpenDocument::from_shared(
+                    self.key.clone(),
+                    DocumentVersion::new(version),
+                    source.clone(),
+                )],
+            ),
+            control,
+        )?;
         self.projections = crate::projection_cache::ProjectionCache::default();
-        self.source = source.into();
+        self.source = source;
         self.version = version;
         Ok(())
     }

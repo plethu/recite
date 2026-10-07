@@ -1,6 +1,7 @@
 mod navigation;
 mod structure;
 use crate::{Document, EditError, PassageKind, Preview, PreviewError, PreviewPage};
+use recite_compiler::authoring::{CancellationToken, WorkControl};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum View {
@@ -54,26 +55,20 @@ impl Workbench {
 
     pub fn from_document(document: Document) -> Result<Self, WorkbenchError> {
         let source = document.source();
-        let first = document
-            .passages()
-            .ok()
-            .and_then(|passages| passages.into_iter().next());
+        // Script construction also fills the passage cache from its parse.
+        let script = document.script_snapshot().ok();
+        let passages = document.passage_snapshot().ok();
+        let first = passages.as_ref().and_then(|passages| passages.first());
+        let first_block = script.as_ref().and_then(|blocks| blocks.first());
         let revision = document.revision();
         let (view, draft) = match first {
-            Some(first) => (View::Passage(first.id), first.text),
-            None => match document
-                .script()
-                .ok()
-                .and_then(|blocks| blocks.into_iter().next())
-            {
-                Some(block) => (View::Block(block.id), String::new()),
+            Some(first) => (View::Passage(first.id.clone()), first.text.clone()),
+            None => match first_block {
+                Some(block) => (View::Block(block.id.clone()), String::new()),
                 None => (View::Source, source.to_owned()),
             },
         };
-        let script_selection = document
-            .script()
-            .ok()
-            .and_then(|blocks| blocks.first().map(|block| block.id.clone()));
+        let script_selection = first_block.map(|block| block.id.clone());
         Ok(Self {
             script_selection,
             document,
@@ -89,7 +84,17 @@ impl Workbench {
         &mut self,
         context: crate::ProjectContext,
     ) -> Result<(), WorkbenchError> {
-        self.document.refresh_project(context)?;
+        self.refresh_project_with_control(context, &CancellationToken::new())
+    }
+
+    /// Preserve drafts if cooperative project analysis is interrupted.
+    pub fn refresh_project_with_control(
+        &mut self,
+        context: crate::ProjectContext,
+        control: &dyn WorkControl,
+    ) -> Result<(), WorkbenchError> {
+        self.document
+            .refresh_project_with_control(context, control)?;
         self.draft_revision = self.document.revision();
         Ok(())
     }
