@@ -3,7 +3,11 @@ set -euo pipefail
 repo_root="${1:-$(git rev-parse --show-toplevel)}"
 package_dir="$repo_root/Packages/com.recite.dialogue"
 target_dir="${CARGO_TARGET_DIR:-$repo_root/target/companions-unity}"
-version="$(jq -ser 'if length == 1 then .[0].version else error("expected one package manifest") end' "$package_dir/package.json")"
+version="$(
+  jq --slurp --exit-status --raw-output \
+    'if length == 1 then .[0].version else error("expected one package manifest") end' \
+    "$package_dir/package.json"
+)"
 case "$(uname -s)-$(uname -m)" in
   Linux-x86_64)
     platform=linux-x86_64
