@@ -261,4 +261,5 @@ updates the affected search index; Refresh discovers new files and refreshes the
 Initial project open runs in the background. Cancellation reaches compiler and search checkpoints;
 an individual filesystem operation or parse finishes before its next checkpoint. Recovery writes are
 coalesced on a separate worker; Save and Keep recovery and close still wait for durability. The
-[scalability report](scalability.md) documents workloads and current limits.
+[profiling guide](../../docs/profiling-and-optimisation.md#writer-workloads) owns workloads;
+[acceptance](acceptance.md#scale-and-performance) owns native scale requirements.

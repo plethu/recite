@@ -60,11 +60,8 @@ whole owner. Cross-platform counters alone do not distinguish Python from Go.
 
 The
 [bounded language probes](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/tooling-language-evidence.json.gz)
-preserve source, dependency locks and Linux observations. Rust/sysinfo and Go/gopsutil matched
-deliberate memory/CPU/thread/descriptor growth. Node's existing JSON-RPC client and the Go client
-matched initialize, open/edit diagnostics and definition against the Python control. Go also sampled
-the live server, shut it down and rejected reads from the reaped child. These are critical seams,
-not complete ports or comparative end-to-end performance measurements.
+record dependency locks and tested process/protocol seams, not complete ports or comparative
+end-to-end performance.
 
 | Option                         | Benefit and remaining cost                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -73,9 +70,8 @@ not complete ports or comparative end-to-end performance measurements.
 | Python + psutil                | Existing validated harness and native counter library. Adds Python/uv, environment management and learning cost; use one locked package/CLI. Retention is bounded to this owner, not permission to grow Python across unrelated automation.                                                                                                                              |
 | Node/TypeScript                | Existing editor protocol ecosystem works, but inspected process packages do not supply the complete resource contract. No case demonstrated for expanding Node or splitting the harness across runtimes.                                                                                                                                                                 |
 
-The dated probes established specific seams, not complete ports or end-to-end superiority. Native
-alternative runs on macOS and Windows remain unperformed. Invalid or exited-process measurements
-must fail closed, including CPU-only idle samples.
+Native alternative runs on macOS and Windows remain unperformed. Invalid or exited-process
+measurements must fail closed, including CPU-only idle samples.
 
 For the next substantial harness ownership change, compare a private Rust tool and Go against the
 existing Python owner before extending it. A full replacement must preserve report schemas,
@@ -84,11 +80,3 @@ maintenance or material interference reduction. Measure cold setup and warm comm
 driver CPU/RSS. Preserve the complete-body timestamp before JSON decoding, encoding before the send
 timer, and monotonic elapsed time; recalibrate budgets explicitly if those boundaries change. Do not
 drop a counter or add a permanent sampler daemon merely to make a language migration fit.
-
-## Comparable Rust projects
-
-The
-[dated assessment](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/dependency-decisions.md)
-records the upstream comparisons and primary sources. They support using Recite's existing Rust
-ownership for substantial general tooling and evaluating specialist harnesses separately; they do
-not justify copying another project's complete toolchain.

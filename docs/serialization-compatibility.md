@@ -32,12 +32,9 @@ envelope design.
 
 ### The initial v1 snapshot contract
 
-Runtime snapshots include the canonical compiled payload fingerprint. Compilation and decoding
-validate the asset and prepare its identity once; session creation copies that cached value.
-Exclusive edits to a compiled payload invalidate its cached identity, so a modified payload must be
-validated again before its identity can be reused. Header and source fingerprints alone cannot
-detect a changed compiled effect argument or semantic table. A session records its payload identity
-when created; restore compares it with the supplied asset before reconstructing saved requests.
+Runtime snapshots carry canonical compiled payload identity, checked before restore reconstructs
+saved requests. Header/source fingerprints alone cannot detect changed effect arguments or semantic
+tables.
 
 Both session snapshots and preview envelopes use their initial v1 format. Development snapshots may
 be discarded and regenerated; there are no released snapshot formats to migrate. Malformed
@@ -46,12 +43,9 @@ invent missing identity from the asset supplied during restore.
 
 ## Why MessagePack remains
 
-MessagePack already has the smallest complete Recite implementation: its fixtures, deterministic
-compiled-table profile, strict decoder validation, snapshot restore checks, and C# / Godot /
-Unity-adjacent host paths exist. The compiled asset profile supplies the application rules that
-generic MessagePack does not: fixed array arity, explicit tags, ordered repeated metadata, sorted
-lookups, stable IDs, source maps, and fingerprints. Snapshots and FFI values are structured data
-rather than asset fingerprints, and already have their own validation and lifecycle rules.
+MessagePack has a complete validated Recite implementation and real host paths. The
+[compiled profile](spec/build-cli.md#122-compiled-format) supplies determinism and model rules that
+a generic codec does not. Snapshots and FFI retain their separate validation and lifecycles.
 
 Generate current asset and session sizes with `memory_profile_report` as described in
 [profiling and optimisation](profiling-and-optimisation.md). No candidate format has comparable
@@ -60,7 +54,6 @@ implemented boundary.
 
 | Candidate                                                                                | Decision record and primary evidence                                                                                                                                                                      |
 | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MessagePack                                                                              | Retain. The existing deterministic asset profile, strict readers, fixtures, snapshot restore, and host paths are the only complete Recite implementation.                                                 |
 | [Deterministic CBOR](https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2)            | General future escape hatch. Its deterministic profile is credible, but Recite would still own mapping, limits, validation, and migration. External save inspection does not currently justify that work. |
 | [FlatBuffers](https://flatbuffers.dev/evolution/)                                        | Asset-only measured hypothesis. Its direct-read benefit must be demonstrated on Recite's large immutable assets; it is not a snapshot or FFI default.                                                     |
 | [Protocol Buffers](https://protobuf.dev/programming-guides/serialization-not-canonical/) | Conditional on generated bindings becoming a product requirement. Non-canonical deterministic output makes it a poor default for asset fingerprints.                                                      |
@@ -69,14 +62,11 @@ implemented boundary.
 
 ## Unpublished format corrections
 
-For compiled assets only, [§12.2 of the production spec](spec/build-cli.md#122-compiled-format)
-permits an intentional v0 wire-shape correction before the first tagged release. It must update the
-model, writer, reader, validator, inspection projection, shared wire registry, and focused fixtures
-together, with the byte change reviewed as evidence. That is a coordinated decision, never a silent
-encoder change. Snapshot v1 corrections likewise update the model, codec, validation, documentation,
-and fixtures together. Earlier development snapshots do not need compatibility aliases or migration
-readers. FFI batches and condition payloads keep their own contracts. After the first tagged
-release, compiled-asset field or tag changes require the format or compatibility-version rule below.
+Before the first tagged release, [§12.2](spec/build-cli.md#122-compiled-format) permits intentional
+compiled v0 corrections. Update models, codecs, validation, inspection and fixtures together, with
+byte changes reviewed. Snapshot v1 corrections follow the same coordination; discarded development
+snapshots need no migration reader. FFI batches and condition payloads keep their own contracts.
+After the first release, compiled changes follow explicit format/compatibility version rules.
 
 ## Future format gate
 

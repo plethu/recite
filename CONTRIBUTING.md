@@ -76,12 +76,8 @@ other-platform support or replace the release benchmark baseline.
 
 ## Formatting and validation
 
-Versioned configurations at the repository root define formatting and lint rules. `just fmt`, `just
-fmt-check` and `just lint` provide common commands; `just quality` lists the non-Rust lane.
-
-The versioned formatter/linter configurations own source coverage and tool selection. `mise install`
-provides the pinned tools; use the common commands rather than maintaining parallel formatter or
-language-server installations for this repository.
+Versioned configurations own formatter/linter selection and coverage. Use the common commands above;
+`just quality` lists the non-Rust lane.
 
 Recite source, Fluent, gettext PO and Tree-sitter queries use their parser, typed-contract and
 fixture gates. They are validated, not automatically reformatted: whitespace and deliberately
@@ -96,36 +92,11 @@ modules.
 
 ## Performance tooling
 
-Criterion remains the Rust timing suite. Maintained external LSP probes live in
-`scripts/lsp_tools/`, with one CLI and a scoped, locked Python 3.12 environment. The pinned uv
-runner owns environment setup; psutil is locked in `uv.lock`. Ruff belongs to the shared mise
-quality toolchain.
-
-```sh
-just perf setup
-just perf check
-just perf bench lsp large,realistic:v1-pack 'lsp/change_refresh'
-just perf compare BASE_COMMIT
-just perf build
-just perf lsp --help
-just maintainability
-```
-
-`perf check` runs harness and CI contract tests; the complete `just check` includes it. Python
-formatting and linting belong to the common quality commands. The
-[current LSP overview](docs/lsp-cancellation-design.md) and
-[profiling playbook](docs/profiling-and-optimisation.md) explain ownership, measurement boundaries
-and the dependency/maintainability tradeoff. Completed diagnostic experiments are archived at named
-revisions rather than kept as permanent workflow modes. Bash launches tools and handles platform
-shell operations; Python owns structured external-process measurements and report checks. Reuse
-production Rust APIs for domain semantics instead of reproducing them in either language.
-
-Python is retained provisionally for the already validated LSP harness. The
-[language assessment](docs/lsp-dependency-decisions.md#maintainer-tooling-language) compares Rust,
-Go, Python and Node, with bounded probes and explicit learning, setup and maintenance costs. Start
-substantial new general tooling with a private Rust tool crate; evaluate Rust and Go before
-extending the external harness's ownership. A replacement must reduce total maintenance or material
-driver interference while preserving the gate. Expand Node only for a concrete editor/frontend need.
+Use [profiling and optimisation](docs/profiling-and-optimisation.md) for benchmark selection,
+process measurements, CPU sampling and allocation probes. `just perf` lists commands; its harness
+checks run in `just check`. The [LSP overview](docs/lsp-cancellation-design.md) owns concurrency,
+and [dependency decisions](docs/lsp-dependency-decisions.md#maintainer-tooling-language) own harness
+language choices and conditions for replacing or extending that owner.
 
 Keep current ownership, commands, limits and reopening conditions in their existing guides.
 Concluded reports belong in Git or PR history. Raw captures, benchmark output and disposable probes
@@ -142,11 +113,6 @@ contracts.
 - The [production specification](docs/recite-production-spec.md) routes to subsystem contracts in
   `docs/spec/`. Read the affected chapter; GitHub owns implementation task state, and historical
   measurements remain separate.
-- LSP dependency choices, experiments and reevaluation triggers are recorded in
-  [the dependency decision record](docs/lsp-dependency-decisions.md).
-- Trusted policy runs base-owned code with read-only permissions and never executes PR files. Keep
-  it separate from ordinary untrusted CI. Required checks and branch protection remain authoritative
-  for a protected merge.
 
 ## Change and review workflow
 
@@ -193,17 +159,14 @@ maintainer's home-directory instructions, or copy a general skill collection int
 
 ## CI coverage
 
-[`scripts/ci-scope.py`](scripts/ci-scope.py) and its tests own affected-lane selection. Unknown
-paths select the full suite; deleted and renamed paths participate. Inspect it with `just perf
-scope` and run its regression checks with `just perf check`.
+[`scripts/ci-scope.py`](scripts/ci-scope.py) and its tests own affected-lane selection. Inspect it
+with `just perf scope` and verify it with `just perf check`. The unconditional `required-check`
+rollup rejects missing, failed, cancelled and unexpected skipped results. Trusted policy executes
+base-owned code with read-only permissions, separately from ordinary untrusted CI.
 
-The unconditional `required-check` rollup rejects missing results, failures, cancellation and
-unexpected skips. The separate trusted policy workflow executes base-owned code only.
-
-GitHub Actions supports manual complete CI and Writer package runs; scheduled runs exercise the full
-suite. Run package previews before a release or after platform-dependent packaging changes. Package
-builds and automated accessibility probes establish their tested contracts; installed package
-acceptance remains separate. Workflow definitions own the current lanes and schedules.
+Workflow definitions own lanes, schedules and manual complete/package runs. Run package previews
+before release or after platform-dependent changes. Installed package and native accessibility
+acceptance require their own evidence.
 
 ## Preparing and publishing releases
 
@@ -263,12 +226,3 @@ evidence; green CI alone does not establish readiness.
    delete only an incomplete draft, never overwrite a public release or re-upload different bytes
    under an existing crate version. Stable promotion requires a stable-version preparation PR and
    fresh candidate, even when its code matches the last RC.
-
-The tooling follows
-[cargo-release's separate preparation/publication steps](https://github.com/crate-ci/cargo-release/blob/main/docs/reference.md)
-and
-[cargo-dist's local/global artifact split](https://axodotdev.github.io/cargo-dist/book/reference/cli.html#dist-build),
-with both pinned through `mise.release.toml`. CI stays repository-owned; Writer retains its existing
-packagers. Separating ordinary checks from scheduled/tagged distribution follows
-[rust-analyzer](https://github.com/rust-lang/rust-analyzer/blob/master/.github/workflows/release.yaml)
-and [Helix](https://github.com/helix-editor/helix/blob/master/.github/workflows/release.yml).

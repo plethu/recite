@@ -1,30 +1,20 @@
 # Runtime and localisation
 
-Part of the [production specification](../recite-production-spec.md). These are requirements;
-implementation and release readiness require evidence from code, tests and the current GitHub
-milestone. Section numbers remain stable.
+Part of the [production specification](../recite-production-spec.md). Section numbers remain stable.
 
 ## 8. Runtime
 
 ### 8.1 Core Requirements
 
-The runtime must:
-
-- be implemented in Rust;
-- have no engine dependencies;
-- be deterministic;
-- be side-effect free;
-- expose serialisable session state;
-- support save/load while waiting on a blocking effect;
-- support programmatic tests without engine runtime;
-- return structured errors instead of panicking.
+The Rust runtime must be deterministic, side-effect free and testable without engine dependencies.
+Session state is serialisable, including while a blocking effect is pending. Malformed content
+returns structured errors rather than panicking.
 
 ### 8.2 Runtime API
 
 The [runtime API](../../crates/recite-runtime/src/lib.rs) owns concrete types and signatures.
 Callers start a session, advance it, select by stable choice ID and acknowledge blocking effects by
-request ID. An absent locale selects source-text-only mode and bypasses the locale provider; a
-provider is never required to infer an absent locale from the environment.
+request ID. Section 9 defines locale selection.
 
 ### 8.3 Event Model
 
@@ -61,74 +51,40 @@ Session snapshots retain asset identity, traversal position, choices, effects, l
 needed for exact resumption. They never contain game state. The runtime's versioned snapshot types
 own the field layout; hosts round-trip them as an opaque unit.
 
-Live sessions represent running, awaiting a choice, awaiting a blocking effect, and ended as
-exclusive states. The versioned snapshot keeps its existing fields; restore validates them and
-converts them into one live state.
-
-Runtime session snapshots use an explicit format version. The initial v1 stores the canonical
-compiled payload fingerprint so restoring against an asset with the same header and source metadata
-but different semantic tables is rejected. Preview snapshot envelopes also use their initial v1
-format. Before publication, development snapshots may be regenerated as these contracts are
-completed; they do not require compatibility aliases or migration readers. Unknown versions and
-snapshots missing the required payload identity are rejected.
-
-Prepared assets are immutable. Starting and advancing a session reuse their validated identity; a
-changed payload is rejected even when its header and source metadata are unchanged.
+Restore validates the snapshot before constructing a live session. The runtime and preview snapshot
+formats are versioned; both currently use v1. Unknown versions and missing or mismatched compiled
+payload fingerprints are rejected, even when asset headers and source metadata match. Prepared
+assets are immutable, so advancing reuses their validated identity.
+[Serialization compatibility](../serialization-compatibility.md) governs unpublished snapshots and
+future format changes.
 
 #### Save/load while waiting on a blocking effect
 
 If the session is saved while a blocking effect is pending, on resume the runtime re-emits the same
 effect with the same `EffectRequestId`. The runtime makes no claim about whether the game-side
 operation was partially executed before the save. The game decides whether to fast-forward, replay,
-or otherwise reconcile and then calls `acknowledge_effect`. The runtime contract is purely: same ID
-re-emitted, same acknowledgement expected.
+or otherwise reconcile and then calls `acknowledge_effect`. The same ID is re-emitted and requires
+the same acknowledgement.
 
 ### 8.7 Error Handling
 
-Runtime errors must be structured.
-
-Examples:
-
-- unknown block;
-- invalid choice;
-- unavailable choice selected;
-- missing blocking effect acknowledgement;
-- wrong acknowledgement ID;
-- malformed compiled asset;
-- condition evaluation failure;
-- locale provider failure;
-- unsupported compiled format version.
-
-The runtime must not panic on malformed project content.
+[`DialogueError`](../../crates/recite-runtime/src/error.rs) owns the structured error variants.
+Malformed project content must not cause a panic.
 
 ## 9. Localisation
 
-Recite has two localisation domains:
+Dialogue content uses the gettext/POT and PO workflow below. Recite-owned UI text across the
+CLI/TUI, Writer, LSP and editor extensions uses the shared
+[Fluent resources](../../crates/recite-ui/resources). Stable resource IDs, English source resources,
+extraction and completeness checks apply to every client. Generated host projections are allowed
+where a manifest or metadata surface cannot consume Fluent; hard-coded UI strings are not another
+path. Host-required metadata remains host-owned. Published non-English UI locales require human
+authorship and review.
 
-- dialogue content localisation, owned by compiled project content and runtime locale providers;
-- Recite-owned UI text across the CLI/TUI, standalone GUI, LSP, and editor extensions, owned by one
-  canonical shared Fluent resource set.
-
-Dialogue content uses the gettext/POT and PO workflow in this section. Every Recite-owned UI
-string—CLI/TUI helper text, GUI labels and status, LSP messages, and editor-extension text—must use
-the shared Fluent resource contract so variables, future plural/select rules, and deterministic
-fallback behavior are available in every client. The shared set need not become a new crate before
-the ownership boundary is proven. It includes stable resource IDs, English source resources,
-extraction, and completeness checks across every client; generated host-specific projections are
-allowed where a host manifest or metadata surface cannot consume Fluent directly. Host-required
-metadata remains owned by that host and is distinct from Recite-owned strings. Hard-coded UI strings
-are not a second path. Published non-English UI locales require human authorship and review;
-machine-generated translations are not supported locale claims. Fluent UI resources must not
-substitute for translated dialogue text, which remains on the explicit runtime/provider path.
-
-Dialogue localisation is an opt-in project capability, distinct from the mandatory localisation of
-Recite-owned authoring text. A project may remain source-text-only: when no dialogue locale is
-supplied, the CLI's `--dialogue-locale` remains unset (`Option<String>`), the runtime session and
-its serialized locale field are unset (`None`), and source text is delivered without preview
-translation. A project that enables dialogue localisation must declare its default locale and
-fallback locale/catalog policy at its project or fixture configuration boundary; neither mode may
-infer a dialogue locale from the host environment. This does not make `--dialogue-locale` mandatory
-for source-only play or preview.
+Dialogue localisation is opt-in. Without an explicit dialogue locale, the session and saved locale
+remain unset, providers are bypassed and source text is delivered. Localised projects must declare a
+default locale and fallback/catalogue policy at the project or fixture boundary. Neither mode may
+infer dialogue locale from the host environment; Fluent UI locale never selects dialogue locale.
 
 ### 9.1 Requirements
 
@@ -147,22 +103,9 @@ Reevaluate a dependency when it provides source-preserving edits and ranges, rat
 both its parser and our lossless representation. CLDR plural categories also do not replace
 gettext's positional `Plural-Forms` expressions or their bounded validation.
 
-Localisable strings:
-
-- line text;
-- choice text;
-- availability reason templates;
-- presentation projection label templates;
-- speaker display names;
-- optional project-defined localisable metadata values.
-
-Each localisable string must have:
-
-- stable ID;
-- source text;
-- source location;
-- translator comments;
-- block/scene context where available.
+Lines, choices, availability reasons, presentation labels, speaker display names and optional
+schema-defined localisable metadata require stable IDs, source text and locations, translator
+comments, and block/scene context where available.
 
 ### 9.2 POT Extraction
 
@@ -181,21 +124,13 @@ msgid "Oh, hey! Didn't expect to see you here."
 msgstr ""
 ```
 
-Speaker names must be extracted separately:
+Schema text uses separate gettext contexts:
 
-```po
-msgctxt "dialogue_speaker:rhea"
-msgid "Rhea"
-msgstr ""
-```
-
-Availability reason templates are extracted by stable schema reason ID:
-
-```po
-msgctxt "availability_reason:trust_too_low"
-msgid "{subject} does not trust {target} enough."
-msgstr ""
-```
+| Text                         | `msgctxt`                          |
+| ---------------------------- | ---------------------------------- |
+| Speaker display name         | `dialogue_speaker:<speaker_id>`    |
+| Availability reason template | `availability_reason:<reason_id>`  |
+| Presentation label template  | `presentation_label:<template_id>` |
 
 Availability reason placeholders follow the same placeholder syntax as line interpolation (§5.10).
 Translation validation must reject missing, renamed, or extra placeholders relative to the source
@@ -204,14 +139,6 @@ then renders the template with the structured `AvailabilityReasonArg` values rec
 leaf. `localized_text` on a reason leaf is the rendered display string; the localized template and
 source template remain available through the reason ID and `template_source_text` for trace/debug
 output.
-
-Presentation projection label templates are extracted by stable schema template ID:
-
-```po
-msgctxt "presentation_label:skill_check_prefix"
-msgid "[{skill} {current}/{threshold}]"
-msgstr ""
-```
 
 Projection label placeholders follow the same placeholder syntax and validation rules as
 availability reason placeholders. Runtime or adapter projection first resolves the template by
@@ -225,14 +152,9 @@ fetched from game code or adapter registries during traversal.
 
 ### 9.3 Locale Provider
 
-The runtime locale provider must receive both stable ID and source text.
-
-The runtime calls the provider only when the session has an explicit dialogue locale.
-Source-text-only sessions have no locale to pass to `lookup`; they bypass the provider and use the
-source text directly.
-
-This supports gettext-style lookup where `msgctxt` is the stable ID and `msgid` is the source text.
-The `variant` parameter carries the explicit selection from the caller (see §9.5).
+The [locale provider](../../crates/recite-runtime/src/locale.rs) receives stable ID and source text:
+gettext lookup must match both `msgctxt` and `msgid`. The caller supplies the optional variant
+(§9.5).
 
 ### 9.4 Fallback
 
@@ -261,22 +183,10 @@ IDs may support variant suffixes:
 8f1c2d3e4a5b6c708192
 ```
 
-Lookup priority:
-
-1. `id&suffix`;
-2. `id`;
-3. source text.
-
-Variant selection must be explicit and deterministic. The caller selects a variant either via a
-session-level setter (`session.set_variant("formal")`) or via a per-call override threaded through
-`next` / `choose`. The runtime never infers a variant. Lookup priority remains `id&variant` → `id` →
-source text.
-
-Variants are recite's mechanism for grammatical or register selection (formal/informal,
-masculine/feminine, polite/casual). They deliberately do not overload `msgctxt` semantically;
-`msgctxt` carries the full `id&variant` string and remains the stable lookup key. Counts (plural
-forms, §9.7) are a separate axis resolved by the locale's validated gettext rule, not by variant
-lookup.
+The caller explicitly selects the grammatical or register variant; the runtime never infers one.
+Lookup tries `id&variant` through the locale fallback chain, then the base `id` through that chain,
+then source text. Gettext `msgctxt` contains the full suffixed ID. Plural counts (§9.7) are a
+separate axis, selected by the locale's validated gettext rule.
 
 ### 9.6 Inline Markup in Translation
 
@@ -304,10 +214,6 @@ msgid_plural "You have {count} letters."
 msgstr[0] ""
 msgstr[1] ""
 ```
-
-The number of `msgstr[N]` arms per locale is determined by the locale's `nplurals` header in the
-`.po` file. Translators use standard po editors (poedit, weblate, crowdin) without recite-specific
-tooling.
 
 POT is a locale-neutral template: plural entries always contain exactly two empty `msgstr` arms for
 extraction and deliberately do not contain a `Plural-Forms` header. A translated PO catalogue must

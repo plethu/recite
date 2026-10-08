@@ -156,7 +156,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "heap-profile")]
     if check_heap {
         // Fixed corpus allocation bounds, independent of wall-clock/host speed.
-        // Heap evidence and rationale live in scalability.md.
+        // Heap evidence and rationale live in the profiling guide and Writer acceptance.
         let peak_bytes = dhat::HeapStats::get().max_bytes;
         dhat::assert!(peak_bytes < 20_000_000);
         for row in &rows {

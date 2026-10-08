@@ -1,261 +1,141 @@
 # Migration, scope and release acceptance
 
-Part of the [production specification](../recite-production-spec.md). These are requirements;
-implementation and release readiness require evidence from code, tests and the current GitHub
-milestone. Section numbers remain stable.
+Part of the [production specification](../recite-production-spec.md). GitHub owns task state; these
+sections define release outcomes and the evidence required to claim them.
 
 ## 20. Import and Migration
 
-Full ink/Yarn/Clyde import compatibility is not a v1 goal. Importers exist to help teams inspect and
-migrate existing content, not to make Recite execute another tool's runtime model. Clyde is a
-guidance-only comparison target for v1; no Clyde importer or compatibility runtime is promised.
+Importers produce editable Recite source and structured diagnostic reports. They must preserve
+available provenance and ID mappings, report unsupported or lossy constructs, and validate output
+through the normal parser, compiler, schema, ID, localisation and effect checks. Native syntax,
+semantics and stable-ID policy never change to accommodate another tool.
 
-Importer design must follow these boundaries:
+Imports do not execute source-language commands or emulate its runtime. External calls require an
+explicit schema-backed mapping; unmapped conditions and effects need manual migration. Full Ink/Yarn
+compatibility is outside v1, and Clyde has guidance only.
 
-- importers produce ordinary Recite source and structured reports, not a second compiled format or
-  compatibility runtime;
-- generated source is validated by the normal Recite parser, compiler, schema, ID, localisation, and
-  effect checks;
-- native Recite syntax, runtime semantics, schema rules, and stable-ID policy do not change to
-  preserve compatibility with an imported source format;
-- unsupported constructs are reported explicitly instead of being silently dropped;
-- lossy conversions are reported even when usable Recite source can be emitted;
-- source provenance is preserved where practical so authors can review the original construct that
-  produced each generated line, choice, effect, or report item.
-
-The useful v1 migration surface is a best-effort assistant with honest limits:
-
-- convert recognizable line forms such as `Speaker: text #id:x #portrait:y` into structured line
-  records with speaker and metadata where the source format exposes that information;
-- convert simple choices such as `+ Choice #id:x` or link-style options into structured choice
-  records;
-- convert direct jumps, diverts, or passage links into Recite block references when the target is
-  statically identifiable;
-- convert tags, headers, passage metadata, or export fields into ordered metadata entries;
-- map external calls, commands, or engine hooks to typed effect declarations only when the user
-  supplies an explicit schema-backed mapping;
-- preserve source IDs when they already exist and are valid Recite IDs, and otherwise record an
-  old-to-new ID mapping for review.
-
-Importer output should include:
-
-- generated `.recite` source files that are meant to be edited after import;
-- a machine-readable import report containing diagnostics, skipped constructs, lossy conversions,
-  generated IDs, old-to-new ID mappings, and unmapped source fields;
-- human-readable summary counts by source file and construct type;
-- provenance references for generated records and report items.
-
-The report should use the same diagnostic shape as §18. Importer diagnostic codes should use a
-dedicated namespace such as `RECITE_IMPORT001`. Each report item should include severity, source
-family, source file, source location when available, source construct type, action taken, and help
-text for the expected manual follow-up.
-
-Source-location preservation is best-effort:
-
-- plain text formats should report file, line, column, and end position where the importer parser
-  can recover them;
-- CSV imports should report row, column, and header name;
-- JSON imports should report a JSON Pointer path and, when supported by the parser used by the
-  implementation, byte or line/column ranges;
-- if a source format does not expose stable spans, the report should still carry a stable record key
-  such as node name, passage title, row number, or object ID.
-
-Supported migration paths by source family:
-
-- **ink**: importers may map knots, stitches, plain lines, simple choices, static diverts, tags, and
-  explicitly mapped external function calls. They must report variables, tunnels, threads,
-  glue/weave behavior, list operations, sequence/shuffle behavior, arithmetic, complex expressions,
-  and runtime control flow as unsupported or lossy unless a later implementation issue defines a
-  narrower safe subset.
-- **Yarn Spinner**: importers may map nodes, dialogue lines, speaker prefixes, options, tags,
-  headers, simple jumps, and explicitly mapped commands. They must report variable storage,
-  expression semantics, command side effects, shortcuts with unsupported conditions, localization
-  metadata that cannot be preserved, and runtime-specific behavior as manual migration work.
-- **Twee/Twine-style source**: importers may map passages to blocks, passage text to lines, simple
-  links to choices or diverts, and passage tags to metadata. They must report macros, widgets,
-  JavaScript/CSS, story-format behavior, global state, and conditional/link syntax that has no
-  direct Recite equivalent.
-- **custom JSON/CSV exports**: importers may map conventional fields such as ID, speaker, text,
-  choice text, target, condition, effect, and metadata when the mapping is explicit. They must
-  report ambiguous nesting, multiple possible targets, embedded scripts, unmapped columns or object
-  fields, and rows or objects that cannot produce valid Recite statements.
+The [import inspection guide](../../docs-site/src/content/docs/migration/importer-boundaries.md)
+owns report interpretation, source locations, supported subsets and adoption steps. The
+[import model](../../crates/recite-import/src/model.rs),
+[readers](../../crates/recite-import/src/lib.rs) and [fixtures](../../fixtures/import/) own
+executable mappings and losses.
 
 ## 21. Non-Goals
 
-Initial non-goals:
+v1 excludes:
 
-- executing game state mutations inside the runtime;
-- embedding variable storage in the dialogue runtime;
-- implementing a full scripting language;
-- hidden arbitrary code execution;
+- runtime-owned game mutations, variable storage, arbitrary code execution or a full scripting
+  language;
 - result-dependent branching from blocking effects;
-- a full CLDR pluralization engine beyond the bounded gettext `Plural-Forms` rules;
-- a fully general visual node editor or graph-first authoring format for v1;
+- a full CLDR plural engine beyond bounded gettext `Plural-Forms` rules;
+- a general visual-node or graph-first authoring format;
 - generated host-language bindings unless a later decision promotes them;
-- tying the authoring model to one engine's scripting language;
-- engine adapters that move game logic into the Recite runtime;
-- network/cloud collaboration;
-- AI-authored dialogue features;
-- automatic ID renaming based on content changes;
-- implicit localization variant selection by the runtime;
-- `:elif` / `else if` sugar (deferred until real authoring pain is reported; nested `:else` + `:if`
-  and `:match` cover the use cases);
-- general pattern matching beyond schema-declared enum dispatch (no destructuring, no tuples, no
-  guards);
-- a compatibility runtime for ink, Yarn Spinner, Clyde, Twee/Twine story formats, or engine-specific
-  dialogue plugins;
-- importer behavior that requires Recite to adopt another tool's syntax, variable model, expression
-  language, runtime side effects, or localization pipeline;
-- silent migration of unsupported source constructs.
+- an authoring model tied to one engine's scripting language;
+- network/cloud collaboration and AI-authored dialogue;
+- automatic content-based ID renaming or implicit localisation variant selection;
+- `:elif` / `else if` sugar until real authoring pain is reported; nested `:else` + `:if` and
+  `:match` cover the current cases;
+- pattern matching beyond schema-declared enum dispatch: no destructuring, tuples or guards; and
+- compatibility runtimes, imported variable/expression/localisation models, or silent losses in the
+  migration paths described in §20.
 
 ## 22. Recommended Milestones
 
-These are durable release outcomes. GitHub owns their task state and scheduling; completion requires
-the relevant exit evidence, not a checked box or historical issue count. §23 is the final release
-gate.
+GitHub owns scheduling and completion state. Each outcome requires its exit evidence; §23 governs
+the final release.
 
 ### Milestone 1: Product Foundation and Maintainability
 
-Ownership of syntax, semantics, schemas, wire data, snapshots, diagnostics, FFI and adapters is
-explicit. Versioned quality checks, compatibility fixtures and the complete local gate provide the
-baseline. File-size thresholds are review triggers, not automatic split rules.
+Explicit subsystem ownership, versioned quality checks and compatibility fixtures pass the
+[complete gate](../../CONTRIBUTING.md#maintainer-setup). File-size thresholds trigger review, not
+automatic splits.
 
 ### Milestone 2: Language, Schema, and Localisation Readiness
 
-Representative projects validate and compile deterministically. Stable IDs, schema producers,
-source-only mode, explicit locale/fallback policies, extraction, placeholders and markup have
-executable coverage. Generated manifests remain read-only; unsupported producers are identified as
-such. Default `en-US` Fluent resources cover Recite-owned UI text independently of dialogue locales.
+Representative projects exercise the source, schema and localisation contracts. Default `en-US`
+Fluent resources cover Recite-owned UI independently of dialogue locales.
 
 ### Milestone 3: Shared Authoring Kernel and Preview
 
-CLI, LSP and Writer share project discovery, source-preserving edits, diagnostics, configuration,
-schema/catalogue state, freshness and deterministic preview. Schema actions edit source or invoke
-its producer; preview never executes game-side effects.
+CLI, LSP and Writer share discovery, edits, diagnostics, configuration, schema/catalogue state,
+freshness and deterministic preview. Preview never executes game effects.
 
 ### Milestone 4: Editor Integration Parity
 
-VS Code/VSCodium, Neovim and Zed have tested setup and parity for their declared LSP and command
-capabilities. Shared fixtures cover malformed content, schema, IDs, localisation and UTF-16. Host
-limitations and missing platform evidence remain visible.
+Declared VS Code/VSCodium, Neovim and Zed capabilities pass the
+[parity contract](../editor-parity-contract.md), with host and platform limits visible.
 
 ### Milestone 5: Native GUI Strategy and Accessibility Proof
 
-Freya is selected. Acceptance still requires evidence for every claimed platform: keyboard, focus,
-screen readers, IME, BiDi/RTL, scaling, contrast, non-colour paths, progress, cancellation, retry,
-conflicts, reduced motion, startup, memory and packaging. Framework selection alone does not satisfy
-this outcome; [Writer acceptance](../../apps/writer/acceptance.md) records the checks and limits.
+Freya is selected; platform acceptance still needs the
+[native checks and evidence](../../apps/writer/acceptance.md). Selection alone is insufficient.
 
 ### Milestone 6: GUI Workbench
 
-The source-first workbench supports the complete authoring loop through the shared kernel, including
-undo/recovery, safe saves, standalone schema source editing, engine-producer actions, lossless PO
-editing and preview. Graph navigation has an equivalent accessible list/outline. Layout never
-becomes dialogue semantics. General graph-format authoring and generated bindings are not required.
+The source-first workbench completes the [authoring contract](tooling.md#154-gui-workbench),
+including safe saves/recovery, schema producer actions, lossless PO editing and preview.
 
 ### Milestone 7: Engine Companions
 
-Godot, Bevy and Unity meet the shared adapter contract through their real host surfaces. Evidence
-covers loading, identities, conditions, effects, snapshots, localisation, errors and changed-asset
-behavior. Native producers and package paths are documented without creating alternate runtimes.
+Godot, Bevy and Unity meet the [adapter contract](../engine-adapter-contract.md) through real hosts,
+with native producers and package paths.
 
 ### Milestone 8: Distribution, Adoption, and Migration
 
-A new team can install, upgrade and evaluate the declared packages using reproducible instructions.
-Bounded importers preserve provenance and report losses; migration guides distinguish supported
-conversion from manual work. Signing and support claims match the shipped artifacts and platforms.
+A new team can install, upgrade and evaluate declared packages. Migration limits are explicit;
+signing and support claims match shipped artifacts and platforms.
 
 ### Milestone 9: Serious v1 Release
 
-The preceding outcomes and §23 pass. Compatibility boundaries are frozen for the release, artifacts
-install and run, required review is resolved, and the release candidate is reproducible from its
-stated toolchain. Performance and human acceptance evidence name the tested profiles and limits.
+§23 passes, compatibility boundaries are frozen, required review is resolved, and the candidate is
+reproducible from its stated toolchain. Performance and human evidence name tested profiles.
 
 ## 23. Acceptance Criteria for a Serious v1
 
-Developer previews use numbered SemVer prereleases; a candidate's prepared component versions,
-source commit and verified artifacts form one immutable release identity. Stable promotion changes
-that identity and requires fresh validation.
-[The contributor release workflow](../../CONTRIBUTING.md#preparing-and-publishing-releases) owns
-preparation, tags and publication. Preview publication does not imply the acceptance criteria below
-have passed.
+Numbered SemVer previews do not imply serious-v1 acceptance. The
+[release workflow](../../CONTRIBUTING.md#preparing-and-publishing-releases) owns immutable candidate
+identity, preparation, tags and publication; stable promotion requires fresh validation.
 
-The project is not production-credible until all of the following are true:
+A serious-v1 candidate requires all of the following:
 
-- A dialogue scene can be compiled, validated, run, snapshotted, and replayed headlessly in
-  source-only mode or with an explicitly configured locale; enabled localisation has tested default
-  and fallback locale/catalog policy.
-- All runtime outputs are structured and deterministic.
-- Effects are schema-checked and never executed by the runtime.
-- Blocking effects can pause and resume across save/load, including re-emission of the pending
-  effect with the same `EffectRequestId`.
-- Choice IDs are stable and selection by ID is supported.
-- Stable anchors survive prose and label edits; ID insertion is an explicit, guarded authoring
-  action. Changed prose still requires translation review.
-- Metadata supports repeated ordered keys.
-- Inline markup is preserved and validated.
-- POT extraction produces translator-usable context.
-- The LSP catches common mistakes before runtime, including guarded actions to fill missing IDs.
-  Clients may invoke those actions on save.
-- CI can verify compiled assets are fresh relative to source and schema.
-- The [serialization compatibility decision](../serialization-compatibility.md) is accepted, and the
-  compiled asset, snapshot, FFI, and condition-payload migration boundaries are documented per
-  artifact.
-- The CLI, LSP, editor integrations, standalone GUI, and preview surface use the shared authoring
-  kernel for project discovery, diagnostics, edits, schema/localisation state, and freshness; they
-  do not maintain competing semantic models.
-- VS Code/VSCodium, Neovim, and Zed are first-class supported text-authoring surfaces with tested
-  setup and parity for the declared LSP and command workflow.
-- A standalone, source-first GUI workbench supports source editing, stable-ID actions, diagnostics,
-  source-owning editing for the standalone declarative schema producer, producer-backed schema
-  edit/open-declaration actions, schema inspection and stale/regeneration reporting, required
-  gettext PO catalogue editing with comments/context/unknown-data preservation and safe atomic
-  writes, and deterministic preview. Generated manifests are never edited directly; unsupported
-  schema producers are explicitly read-only.
-- The standalone workbench handles stale generations and cancellation, announces progress and
-  status, supports failure/retry, retains or restores focus, handles external-file and save
-  conflicts, supports reduced motion, and has manual assistive-technology verification where
-  automation is insufficient. It also provides keyboard, screen-reader, IME, BiDi/RTL,
-  zoom/text-scaling, high-contrast, and non-colour paths for every essential operation, with an
-  equivalent accessible list/outline for graph navigation.
-- The native GUI strategy has a checked-in bake-off decision and accessibility evidence for every
-  declared platform, including its fallback path and known maintenance limits.
-- Linux, Windows, and macOS are first-class desktop platforms for the CLI, LSP, editor integrations,
-  and standalone workbench. Engine companions may publish narrower engine/platform matrices.
-- Authors have a fast documented loop from source edit to LSP diagnostics, explicit stable-ID
-  insertion, `recite watch` rebuild, engine adapter import/refresh, and scene restart or documented
-  active-session behavior.
-- Shared authoring configuration resolves an explicit `$RECITE_CONFIG` override or the platform
-  strategy location, stays separate from project and generated files, and behaves consistently on
-  Linux, macOS, and Windows.
-- Large-project fixtures exercise compile, validate, run, trace, localisation extraction, and
-  snapshot restore at narrative scale comparable to serious dialogue-heavy games.
-- Performance and memory characteristics for authoring, preview, GUI startup, editing, and runtime
-  are measured on named profiles, documented, and protected by regression smoke checks.
-- Godot, Bevy, and Unity adapters can load compiled assets, traverse dialogue, evaluate conditions,
-  emit effects without executing them, and participate in save/load workflows.
-- Each v1 adapter has a documented asset refresh/import workflow, an explicit active-session
-  behavior for changed compiled assets, and coverage against the shared adapter conformance
-  contract.
-- The adapter contract is stable enough that additional engines can be implemented without changing
-  core runtime semantics.
-- Public docs and examples demonstrate headless CLI workflows and real Godot, Bevy, and Unity
-  integration paths.
-- Adoption and migration guidance makes a credible case for teams evaluating Recite against
-  established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Clyde, Yarn
-  Spinner, and Ink; Clyde is explicitly guidance-only and has no v1 importer or compatibility
-  runtime.
-
-Shipping a credible v1 means more than proving the core can run headlessly. The core runtime, shared
-authoring kernel, CLI, first-class text editors, accessible source-first GUI, schema/localisation
-workflow, scale proof, adapter contract, Godot/Bevy/Unity companion paths, and adoption
-documentation must work together well enough for a serious narrative-heavy game team to evaluate
-Recite as a practical replacement for established dialogue tooling. A fully general visual node
-editor and generated host bindings remain post-v1 options unless a later decision explicitly
-promotes them.
+- The complete gate and
+  [integrated workflow](../../docs-site/src/content/docs/examples/headless-cli.md) pass on the
+  candidate. Representative scenes validate, compile, extract, run, trace, save and replay
+  headlessly in source-only and configured-locale modes, including default/fallback policy and
+  blocking-effect re-emission with the same request ID. The source/runtime contracts govern
+  structured deterministic output, stable IDs, ordered metadata and markup preservation.
+- [Serialization policy](../serialization-compatibility.md) is accepted, with compiled-asset,
+  snapshot, FFI and condition-payload migration boundaries documented per artifact.
+- CLI, LSP, text editors, Writer and preview use the shared authoring kernel rather than competing
+  semantic models. VS Code/VSCodium, Neovim and Zed have tested setup and parity for declared
+  capabilities.
+- The complete [workbench contract](tooling.md#154-gui-workbench) works through source editing,
+  guarded ID actions, diagnostics, standalone schema source editing, producer-backed navigation and
+  regeneration, lossless gettext PO editing and preview. Generated manifests and unsupported
+  producers remain read-only. Graph navigation has an accessible list/outline equivalent.
+- Native evidence covers every essential operation's keyboard, focus, screen-reader, IME, BiDi/RTL,
+  scaling, high-contrast and non-colour paths. It covers cancellation, stale generations,
+  progress/status, failure/retry, focus restoration, external-file/save conflicts and reduced
+  motion. The GUI strategy decision, fallback and maintenance limits are recorded; automation does
+  not replace [hands-on acceptance](../../apps/writer/acceptance.md).
+- Linux, Windows and macOS are supported for the CLI, LSP, editors and workbench. Engine companions
+  may declare narrower engine/platform matrices. Shared configuration resolves explicit
+  `$RECITE_CONFIG` or its platform location consistently and stays separate from project content and
+  generated files.
+- Authors can follow a documented edit → diagnostics → explicit ID insertion → watch rebuild →
+  engine import/refresh → restart loop, including each adapter's active-session policy.
+- Narrative-scale fixtures exercise compilation, validation, traversal, traces, extraction and
+  snapshot restore. Authoring, preview, GUI startup/editing and runtime performance and memory are
+  measured on named profiles and protected by regression smoke checks under
+  [§19](quality.md#19-performance-and-benchmarks).
+- Godot, Bevy and Unity pass applicable conformance through their real hosts: assets, identities,
+  conditions, effect requests, saves, localisation, errors and refresh. The adapter contract
+  supports additional engines without changing core traversal semantics.
+- Public examples demonstrate headless CLI and real engine workflows. Adoption/migration guidance
+  supports evaluation against established dialogue tools and distinguishes conversion from manual
+  work; Clyde remains guidance-only.
 
 ## 24. Design Summary
 
-The [product contract](product.md) owns Recite's purpose, glossary and invariants. Serious-v1
-acceptance covers the complete authoring-to-preview-to-engine workflow in §23, rather than a second
-summary checklist.
+The [product contract](product.md) owns purpose, glossary and invariants. §23 requires the complete
+authoring-to-preview-to-engine workflow; headless runtime success alone does not establish v1.

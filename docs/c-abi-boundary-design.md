@@ -26,24 +26,16 @@ handles, buffers, callbacks, and status numbers.
 host build systems that prefer link-time integration. Both expose the same `extern "C"` surface;
 only the link mode differs.
 
-The crate must not re-implement traversal, session ownership semantics, or error categories. Runtime
-owns traversal; `recite-adapter` owns shared session and error-category behaviour. The FFI crate
-owns the C ABI plumbing.
-
 ## Handle Model
 
-**Decision: opaque handle-based.** Handles are opaque `u64` identifiers produced and consumed only
-through `recite-ffi` functions. The host never dereferences, copies into its own persistent state,
-or interprets the handle bits.
+Handles are opaque `u64` identifiers produced and consumed through `recite-ffi`. Hosts must not
+dereference, persist or interpret their bits.
 
 There are asset, session and catalogue handles:
 
-- **Asset handle** — wraps a decoded `CompiledDialogue` (via `Arc<CompiledDialogue>` as in the Godot
-  adapter). Valid until `recite_asset_free` is called.
-- **Session handle** — wraps an active `DialogueSession` plus its condition registry. Valid until
-  `recite_session_free`, including after traversal ends. The session handle carries its own
-  compiled-asset reference (incrementing the `Arc` refcount), so freeing the asset handle before the
-  session handle is safe.
+- **Asset handle** — owns a decoded asset until `recite_asset_free`.
+- **Session handle** — owns a session and condition registry until `recite_session_free`, including
+  after traversal ends. It retains the asset independently, so freeing the asset handle is safe.
 - **Catalogue handle** — owns a validated catalogue revision. Attaching it captures that revision;
   later mutation or disposal of the handle does not change the session's provider.
 
@@ -57,46 +49,37 @@ owners.
 Payloads are MessagePack values carried in owned buffers with an explicit byte length. There is no
 additional length prefix inside the bytes.
 
-After each session operation that drains traversal (`recite_session_start`, `recite_session_begin`,
-`recite_session_choose`, `recite_session_acknowledge_effect`, and `recite_session_restore`) the
-crate writes a single serialized output batch into a caller-supplied buffer slot (see Buffer
-Ownership below). The batch has its own MessagePack envelope and encoder in `recite-ffi`; it is
-distinct from the runtime session snapshot codec. The current batch envelope has
-`batch_format_version = 0`. Condition callback payloads have no independent version field: their
-shape is fixed by this ABI v0 contract and the major-version policy below. A future callback or
-batch format change requires an explicitly designed compatibility mechanism (an ABI-major reset, an
-additive versioned entrypoint, or a versioned envelope); there is no negotiation in the current ABI.
+Each traversal operation (`start`, `begin`, `choose`, `acknowledge_effect`, `restore`) writes one
+ordered batch to the caller's output slot, stopping at a prompt, blocking effect, ending or error.
+The [batch encoder](../crates/recite-ffi/src/output/encode.rs) is distinct from the snapshot codec.
+Its envelope contains `batch_format_version = 0` (u16); adapters must reject unknown versions as
+`validation_error`. Transactional draining follows the adapter contract; hosts need no separate
+`next` loop.
 
-MessagePack preserves nested structured values without a second fixed C structure hierarchy. Rust
-uses Serde; hosts decode the versioned payload into their own typed representation.
+Condition payloads have no independent version field. Future callback or batch changes require an
+explicit compatibility mechanism under
+[serialization compatibility](serialization-compatibility.md), such as an ABI-major reset, versioned
+entrypoint or envelope. The current ABI has no negotiation.
 
 The Unity byte-codec probe with MessagePack-CSharp 3.1.11 preserved managed adapter conformance and
 reduced allocation. Adoption is deferred under the current self-contained UPM distribution: bundled
 assemblies conflict with a consumer's existing MessagePack installation, while upstream uses a
 [shared NuGet installation](https://github.com/MessagePack-CSharp/MessagePack-CSharp#unity-support).
-Reevaluate when Unity distribution chooses one shared dependency owner. Another timing run or
-hands-on session does not resolve that ownership tradeoff; keep the Recite-specific typed projection
-and strict malformed-input checks in either implementation.
-
-The batch output format is versioned with a `batch_format_version` field (u16) in the envelope.
-Adapters must reject batches with an unrecognised version and surface `validation_error`.
+Reevaluate when Unity distribution chooses one shared dependency owner. Either implementation must
+retain Recite's typed projection and strict malformed-input checks.
 
 Availability reasons optionally carry `origin`: either `condition_call` with `function` and tagged
 `args`, or `requirement_expression` with `source_text`. This is an additive batch-v0 field; its
 absence means provenance is unavailable. Hosts preserve both origins and reject unknown kinds.
 
-Each traversal operation returns one ordered batch, stopping at a prompt, blocking effect, ending or
-error. Shared adapter semantics govern transactional draining; hosts do not need a separate `next`
-loop.
-
 ## Asset Metadata
 
-`recite_asset_info` is an additive 0.6.0 entrypoint for importer identity checks. It returns a
-separate named MessagePack map with `asset_info_format_version = 0`. The map carries `asset_id`,
-`content_fingerprint` (`algorithm` string and binary `digest`), nullable `schema_fingerprint` of the
-same shape, numeric `format_version` and `compiler_compatibility_version`, `compiler_version`, and
-`source_map_id`. Metadata inspection does not replace runtime compatibility validation. The caller
-frees the returned buffer with `recite_buffer_free`.
+`recite_asset_info` returns a named MessagePack map for importer identity checks, with
+`asset_info_format_version = 0`. The map carries `asset_id`, `content_fingerprint` (`algorithm`
+string and binary `digest`), nullable `schema_fingerprint` of the same shape, numeric
+`format_version` and `compiler_compatibility_version`, `compiler_version`, and `source_map_id`.
+Metadata inspection does not replace runtime compatibility validation. The caller frees the returned
+buffer with `recite_buffer_free`.
 
 ## Owned Gettext Catalogue
 
@@ -113,9 +96,6 @@ configured PO files, then attaches it after every import succeeds. For restored 
 catalogue after preparation and before begin so the first batch is localized.
 
 ## Session Lifecycle Functions
-
-The generated header defines the exported functions and parameter types. The Rust implementation and
-FFI contract tests own their mappings to runtime operations.
 
 Create a session or call `recite_session_prepare_restore`, install its condition handlers,
 interpolation values and locale configuration, then begin traversal. Failed preparation publishes no
@@ -135,35 +115,25 @@ functions.
 
 ### Locale provider callback
 
-`ReciteLocaleFn` is a typed, synchronous callback rather than a Rust trait object. Recite supplies a
-borrowed `ReciteLocaleQuery` for each line, choice, or plural lookup. The host returns
-`ReciteLocaleResult` with a translated template, or `text = NULL` to request the authored source
-fallback. Plural results include the selected arm, matched locale/context/key, and ordered candidate
-attempts so adapters can preserve resolution traces. The host owns the complete returned pointer
-tree—`text`, `error_message`, every matched string, the attempts array, and each attempt string—and
-must keep it immutable and valid from callback return until the enclosing Recite API call returns.
-Recite copies the tree before that call returns. Stack or callback-local temporaries are forbidden,
-and the host must release owner storage only after the enclosing call has returned. This lifetime
-rule applies independently to every synchronous call that can traverse (`start`, `choose`,
-`acknowledge`, and `restore`); there is no callback-level release point. Hosts must also keep the
-callback and `userdata` valid until the session is freed or the provider is cleared. A null session
-locale bypasses the callback entirely. For each plural query, hosts must enumerate candidates in
-this exact order: the requested variant context (`context&variant`) across the locale's
-most-specific-to-base fallback chain, followed by the base context across the same chain. Missing
-plural rules, missing entries, empty translations, and fuzzy translations continue to the next
-candidate; represent empty or fuzzy catalogue records as
-`RECITE_LOCALE_ATTEMPT_MISSING_TRANSLATION`. A catalogue conflict must not be reported as a match.
-`RECITE_LOCALE_ATTEMPT_MATCHED` terminates the sequence, and its selected arm and matched provenance
-must come from the validated plural rule and matching candidate. If no candidate matches, return
-`text = NULL`, `selected_arm = -1`, and null match provenance so traversal applies the authored
-English source fallback. Violating this ordering is a host contract violation: Recite copies and
-reports the supplied attempt sequence but cannot enforce lookup order inside a custom callback.
-Callbacks must not re-enter Recite, panic, unwind, or throw across the C ABI. Because these callback
-types use `extern "C"`, a Rust panic in a callback aborts before Recite can catch it. C and C++
-hosts must enforce the strict non-null, synchronous, no-panic/no-throw/no-unwind contract; C++ hosts
-should call through an `extern "C"` wrapper that catches C++ exceptions and returns `ok = 0`. C++
-exceptions cannot be caught by Rust. The Unity managed wrapper catches managed exceptions and
-returns the same failure result.
+`ReciteLocaleFn` receives a borrowed `ReciteLocaleQuery` and returns a translated template in
+`ReciteLocaleResult`, or `text = NULL` for authored source fallback. A null session locale bypasses
+the callback.
+
+The host owns the entire result pointer tree: text, error message, matched locale/context/key,
+attempts array and each attempt's strings. Keep it immutable and valid until the enclosing Recite
+API call returns, when Recite has finished copying it. This applies to every call that traverses;
+there is no callback-level release point. Stack or callback-local temporaries are forbidden. The
+callback and `userdata` must remain valid until the session is freed or the provider cleared. The
+common restrictions in [Threading and Reentrancy](#threading-and-reentrancy) also apply.
+
+For plural queries, enumerate the requested variant context (`context&variant`) across the locale's
+most-specific-to-base chain, then the base context across that chain. Missing plural rules, missing
+entries, empty translations and fuzzy translations continue to the next candidate; represent empty
+or fuzzy records as `RECITE_LOCALE_ATTEMPT_MISSING_TRANSLATION`. Conflicts are not matches.
+`RECITE_LOCALE_ATTEMPT_MATCHED` ends the sequence; its arm and provenance must come from that
+candidate's validated rule and matching entry. If none matches, return `text = NULL`,
+`selected_arm = -1` and null match provenance for English source fallback. Recite copies and reports
+the supplied attempts but cannot enforce a custom callback's actual lookup order.
 
 ## String and Buffer Ownership
 
@@ -171,24 +141,18 @@ Recite allocates output; the host copies it and frees it through the same librar
 leave caller output slots unchanged. Initialize those slots deliberately; a failure does not promise
 a null pointer or zero length.
 
-Input strings (`start_block`, `locale`, `choice_id`, etc.) are caller-owned borrows. They are valid
-only for the duration of the call. `recite-ffi` never stores a pointer to caller memory past the
-function return.
+Input strings (`start_block`, `locale`, `choice_id`, etc.) are borrowed for the call; Recite retains
+no pointer after return.
 
-Output buffers (`batch_out`, `snapshot_out`) are allocated by `recite-ffi` on its Rust allocator.
-The host must call `recite_buffer_free` exactly once after consuming the data. Freeing with the
-wrong allocator is UB; this must be documented prominently in the generated C header.
+Call `recite_buffer_free` exactly once for each output buffer. Another allocator causes undefined
+behavior; the generated header must state this prominently.
 
 Unity must distribute one native `recite-ffi` library for both Mono and IL2CPP P/Invoke. Never free
 a buffer through another copy, a separately recompiled backend library or a separately linked
 runtime: allocation and free must reach the same library and allocator.
 
-Binary payloads (output batches, snapshots) use a pointer and separate byte length, not
-NUL-terminated C strings. NUL bytes may appear inside msgpack data. NUL termination is used only for
-the host-facing error detail string (see Error Codes).
-
-All UTF-8. The host must not pass non-UTF-8 bytes in string inputs; `recite-ffi` validates and
-returns `RECITE_STATUS_VALIDATION` if encoding is invalid.
+Binary payloads use a pointer and byte length and may contain NUL bytes. Error detail strings are
+NUL-terminated UTF-8. Invalid UTF-8 string inputs return `RECITE_STATUS_VALIDATION`.
 
 Interpolation inputs use the runtime typed scalar model: string, integer, finite float or boolean.
 The generated header owns the records and kind constants.
@@ -201,9 +165,8 @@ snapshot; hosts must provide them again on restore when the resumption drain nee
 
 ## Generated C Header
 
-The committed C header lives at `include/recite.h` and is generated from `crates/recite-ffi` with
-`cbindgen.toml`. Downstream adapters, including the Unity MVP, should consume this header rather
-than hand-maintaining type or function declarations.
+Consume the generated header linked above rather than hand-maintaining declarations. It is generated
+from `crates/recite-ffi` with `cbindgen.toml`.
 
 Run `scripts/generate-ffi-header.sh --write` after changing the FFI surface. The project gate runs
 `scripts/generate-ffi-header.sh` without `--write`, which fails if the committed header is stale.
@@ -213,10 +176,6 @@ Header version constants (`RECITE_FFI_VERSION_MAJOR`, `RECITE_FFI_VERSION_MINOR`
 and unstable: 0.x minor revisions may change the interface, and hosts must ship matching headers,
 bindings and native libraries. After stabilization, incompatible changes require a major bump; patch
 versions remain for documentation and implementation changes.
-
-ABI 0.7 uses prepared creation/restoration, setters and begin in place of the old option-combination
-entrypoints. Compiled assets, snapshots and condition payloads keep their independently versioned
-encodings; availability-reason origin is an optional addition to batch v0.
 
 ## Error Codes
 
@@ -242,25 +201,16 @@ Register one synchronous callback per condition name before beginning traversal.
 on the calling thread and receives borrowed function and argument data. The generated header owns
 the callback declarations; the MessagePack contract below owns their payloads.
 
-The function pointer must be non-null, synchronous, and non-panicking. Host wrappers must enforce
-the no-panic/no-throw/no-unwind contract and return `ok = 0` for an evaluation failure; they must
-not unwind across `extern "C"`, re-enter Recite, or retain borrowed query pointers. A Rust panic in
-an `extern "C"` callback aborts before Recite can catch it, and a C++ exception must be caught by
-the host wrapper before entering Recite.
+The callback pointer must be non-null. Do not retain borrowed query pointers. The common callback
+restrictions in [Threading and Reentrancy](#threading-and-reentrancy) apply.
 
 Condition failures map to these statuses:
 
-- Handler not registered → `RECITE_STATUS_MISSING_CONDITION_HANDLER` (detected in `recite-ffi`
-  before invoking the callback, just as the Godot adapter checks its `BTreeMap`).
-- Handler returns `ok = 0` with a message → `RECITE_STATUS_CONDITION_EVALUATION`.
-- Handler returns a msgpack value whose type mismatches the schema declaration →
-  `RECITE_STATUS_INVALID_CONDITION_RESULT` (detected by the runtime during `ConditionValue` type
-  validation, as `ConditionResultTypeMismatch`).
+- Missing handler: `RECITE_STATUS_MISSING_CONDITION_HANDLER`.
+- Evaluation failure (`ok = 0`): `RECITE_STATUS_CONDITION_EVALUATION`.
+- Malformed result or schema type mismatch: `RECITE_STATUS_INVALID_CONDITION_RESULT`.
 
-The condition result value is a msgpack-encoded `ConditionValue` (bool or enum variant string).
-Arguments are a msgpack-encoded list of `ConditionArgument` values. The host-side msgpack
-representation must match the schema-declared parameter types; mismatches produce
-`RECITE_STATUS_INVALID_CONDITION_RESULT`.
+Argument and result encoding follows the MessagePack contract below and the schema-declared types.
 
 ### Condition callback MessagePack v0
 
@@ -302,60 +252,45 @@ The native query bytes and function-name pointer are Rust-owned borrows valid on
 synchronous callback. Host result bytes and error strings must remain immutable and valid after
 callback return until the next condition callback for that session or the enclosing Recite operation
 returns, whichever happens first. Recite decodes the result before invoking the next callback, so a
-session-owned reusable buffer is sufficient. Callbacks must not re-enter `recite-ffi`.
+session-owned reusable buffer is sufficient.
 
 ## Threading and Reentrancy
 
-Hosts serialize operations on a session and keep callbacks and `userdata` valid for that session's
-lifetime. Asset handles may be shared for reads. A session retains its own asset reference, so an
-asset handle can be freed while an existing session continues; do not race disposal with an
-operation still using the disposed handle.
+Hosts serialize operations on a session and retain its condition callbacks and `userdata` for the
+session's lifetime. Locale callback lifetime is specified above. Asset handles may be shared for
+reads; do not race disposal with an operation using that handle.
 
 Condition and locale callbacks must not re-enter Recite. Same-thread session-registry re-entry
 returns `RECITE_STATUS_VALIDATION` before locking; a reentrant void free records the error and
 leaves the handle intact. This protection cannot make foreign pointers valid, catch foreign
 exceptions or prevent a callback waiting on another thread that needs Recite's held registry lock.
-Callbacks must return their result synchronously without throwing, panicking or unwinding across the
-ABI.
+Callbacks must return synchronously without throwing, panicking or unwinding across the ABI. Rust
+panics in `extern "C"` callbacks abort before Recite can catch them; Rust cannot catch C++
+exceptions. C++ hosts should use an `extern "C"` wrapper that catches exceptions and returns `ok =
+0`. The Unity wrapper does the same for managed exceptions.
 
 ## Save and Load Handoff
 
-`recite_session_snapshot` encodes the complete runtime session state as raw MessagePack bytes in an
-owned buffer with a separate length. The host treats this as opaque: stores it in its game save
-data, reads it back, and passes it to `recite_session_restore` later.
+`recite_session_snapshot` returns complete runtime state as opaque MessagePack bytes in an owned
+buffer. Store those bytes with the game save. Restore validates them against the supplied asset:
+schema-fingerprint differences return `RECITE_STATUS_SCHEMA_MISMATCH`, taking precedence over other
+identity/content differences, which return `RECITE_STATUS_SAVE_LOAD_INCOMPATIBILITY`.
 
-`recite_session_restore` reconstructs the session by validating the snapshot against the supplied
-asset handle (via `decode_session_messagepack` + `restore_session`). A schema-fingerprint difference
-returns `RECITE_STATUS_SCHEMA_MISMATCH`; schema comparison is performed first, so a snapshot that
-differs in both schema and another identity/content field still returns
-`RECITE_STATUS_SCHEMA_MISMATCH`. All other asset identity/content differences during restore return
-`RECITE_STATUS_SAVE_LOAD_INCOMPATIBILITY`. This operation-specific mapping keeps schema drift
-actionable without changing ordinary runtime stale-asset handling. The call still enforces the
-contract §9 requirement that session state is tied to a specific compiled asset.
-
-Keep snapshot bytes opaque and restore host-owned conditions, interpolation values and catalogue
-configuration before beginning. Pending-effect reconciliation remains the game's responsibility, as
-specified in the [adapter save/load contract](engine-adapter-contract.md#9-save-and-load-handoff).
+Use the prepared lifecycle above to restore host conditions, interpolation values and catalogue
+configuration before traversal begins. Pending-effect reconciliation remains the game's
+responsibility under the
+[adapter save/load contract](engine-adapter-contract.md#9-save-and-load-handoff).
 
 ## Schema Manifest and Projection
 
-Schema manifest production (contract §7) and presentation projection (contract §5, spec §5.6.1) are
-not part of the v1 `recite-ffi` surface.
+Schema production and presentation projection are outside the v1 FFI surface. Host build/editor
+tooling writes the shared JSON schema manifest for the compiler and LSP.
 
-Schema manifests are produced by host build tooling or editor integration that writes a JSON file
-read by the Recite compiler and LSP. The schema manifest format is already host-agnostic and
-JSON-based; no C ABI is needed for the manifest production path.
-
-Projection queries are a capability-gated feature. Adapters that expose them must document the query
-protocol. For v1, projection in a C ABI context is deferred: the typed projection surface
-(`generate-bindings`, spec §13.9) is the natural fit, and that is post-v1. A Unity MVP that does not
-expose projection is conformant. If a v1 Unity adapter chooses to expose projection, it must do so
-through an agreed extension to this design (filed as a follow-up) and must not invent a private FFI
-shape.
+Projection is capability-gated and deferred at this boundary; Unity may conform without it. An
+adapter that adds projection must document its query protocol through an agreed extension to this
+design, not a private FFI shape. See the [adapter contract](engine-adapter-contract.md).
 
 ## Relationship to `generate-bindings` (spec §13.9)
 
-The `generate-bindings` direction (post-v1) generates typed host-language wrappers — C# condition
-stubs, effect records/enums, typed session service classes — from schema. Those wrappers target the
-`recite-ffi` C ABI as their underlying call surface. Keeping the ABI narrow, handle-based, and
-versioned now means the generated layer can add types without changing the ABI underneath.
+Post-v1 schema-generated host wrappers would call this ABI; they would not implement a second
+runtime. See [§13.9](spec/build-cli.md#139-future-generate-bindings).

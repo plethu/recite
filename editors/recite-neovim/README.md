@@ -65,8 +65,8 @@ nearer manifest wins, while a manifest's `discovery.source_roots` and `excludes`
 
 The language server separately loads the shared user configuration. It honors `$RECITE_CONFIG` first
 and then the platform configuration location described in the
-[production spec](../../docs/recite-production-spec.md#137-play). The Neovim integration does not
-read, merge, or write that file. Project semantics belong in `recite.project.toml`, not in Neovim
+[production spec](../../docs/spec/build-cli.md#137-play). The Neovim integration does not read,
+merge, or write that file. Project semantics belong in `recite.project.toml`, not in Neovim
 settings. An explicit schema manifest can be passed to the server through `lsp.init_options` when
 needed:
 

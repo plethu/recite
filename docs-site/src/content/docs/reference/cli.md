@@ -6,7 +6,7 @@ description: Reference for the shipped recite CLI commands.
 The `recite` binary is the headless surface of the toolchain: everything a CI job, a writer, or an
 engine build step needs without an editor or adapter. This page covers common commands; `recite
 --help` owns the full command and flag list, while design rationale lives in the
-[production spec §13](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md).
+[production spec §13](https://github.com/plethu/recite/blob/main/docs/spec/build-cli.md#13-cli).
 
 Path arguments accept one or more `.recite` files or directories containing them. Commands taking
 `<PROJECT_ROOT>` expect a directory containing `recite.project.toml`. Validation-style commands

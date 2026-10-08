@@ -30,15 +30,31 @@ Use `just perf lsp --help` for bounded process/session probes. Its setup is `jus
 Criterion filters match group names, for example `lsp/change_refresh` or
 `sessions/preview_condition_replay/deferred/2048`; `cargo bench -- --list` lists a target's cases.
 
-The `sessions` workloads use 0, 32, 256 and 2,048 selected choices, with and without queued deferred
-effects. They measure one warm choice or condition replay after setup and restoration. Setup and
-final session/output disposal are excluded; work and temporary allocations inside the operation
-remain included. C ABI fixtures verify the encoded prompt and checkpoint against the shared driver
-before measurement. Allocation reports capture counts before returned values are dropped.
+The [session target](../crates/recite-benchmarks/benches/sessions.rs) owns warm-operation workload
+shape and setup/teardown. The [C ABI probes](../crates/recite-ffi/benches/) own callback/encoding
+parity checks and allocation boundaries; inspect those owners when interpreting a result.
 
 Keep allocation instrumentation separate from timing binaries. Allocated bytes/counts describe
 churn, not live heap or process RSS. Size reports describe selected structures, not observed
 allocations; use `memory_profile_report` or `id_memory_report` only for those questions.
+
+## Writer workloads
+
+The [Writer recipes](../apps/writer/justfile) expose project, headless UI and recovery workloads.
+The [project benchmark](../apps/writer/crates/authoring/benches/large_project.rs) owns corpus shape,
+operations, reports and fixed-corpus allocation bounds. For example:
+
+```sh
+mise exec -- just writer bench --passages 100000 --linked --output target/writer-linked.json
+mise exec -- just writer profile heap 10000 target/writer-heap
+```
+
+Kernel-open timing excludes filesystem discovery, indexing and painting. The
+[profile script](../scripts/profile-writer.sh) records builds/environment, refuses overwrite and
+runs perf or bench-only DHAT instrumentation; instrumented latency is not normal-run timing and
+production allocation is unchanged. Allocation bounds run in `just writer check`; investigate
+unexplained regressions before changing them. Native scale requirements belong to
+[Writer acceptance](../apps/writer/acceptance.md#scale-and-performance).
 
 ## Investigation and acceptance
 

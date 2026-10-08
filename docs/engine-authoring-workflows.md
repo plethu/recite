@@ -8,18 +8,12 @@ setup is covered by the [Bevy](../docs-site/src/content/docs/adapters/bevy.md),
 
 ## Shared behavior
 
-The language server reports diagnostics while editing. `recite watch` validates saved inputs and
-publishes a compiled asset only when the build succeeds. Existing authored line and choice IDs stay
-in the source. A failed build leaves the previous compiled output available.
-
-All three adapters use `reload_for_next_session_only`. The active session keeps its loaded revision.
-A valid refresh becomes available to the next session; a rejected import reports an error and
-retains the last accepted revision when one exists. A saved session still requires compatible
-compiled content. Stable IDs alone do not make a snapshot compatible with an edited asset.
-
-Run `recite check-fresh` where source and schema inputs are available. A runtime that only has
-`.recitec` files reports freshness as unavailable. Optional presentation projection is not
-implemented by these companions.
+The [public walkthrough](../docs-site/src/content/docs/adapters/authoring.md) owns edit, validate,
+rebuild, import and restart steps. The
+[companion architecture](engine-companions-design.md#assets-and-refresh) owns active/available
+revision policy; [adapter conformance](engine-adapter-contract.md#13-adapter-conformance-fixtures)
+owns compatibility and freshness requirements. Compiled-only hosts cannot establish source/schema
+freshness, and these companions do not expose presentation projection.
 
 ## Workflow checks
 

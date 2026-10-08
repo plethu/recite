@@ -1,8 +1,6 @@
 # Scene manifests, compiler and CLI
 
-Part of the [production specification](../recite-production-spec.md). These are requirements;
-implementation and release readiness require evidence from code, tests and the current GitHub
-milestone. Section numbers remain stable.
+Part of the [production specification](../recite-production-spec.md). Section numbers remain stable.
 
 ## 11. Scene Manifest
 
@@ -32,10 +30,6 @@ The shared discovery report retains valid documents alongside typed diagnostics 
 complete or partial. CLI project commands fail on partial coverage; LSP clients may retain usable
 documents while publishing the diagnostics. The LSP owns URIs, versions, overlays, and protocol
 state; filesystem and path semantics belong to the shared authoring configuration.
-
-The scene entries remain the project-level connection between dialogue assets and game concepts.
-
-This mirrors the current need for scene IDs, presentation modes, participants, and cinematic paths.
 
 ### 11.2 Example
 
@@ -80,21 +74,9 @@ Validation must check:
 
 ### 12.1 Compilation
 
-The compiler must:
-
-- parse dialogue sources;
-- resolve imports/includes;
-- validate block references;
-- validate IDs;
-- validate conditions;
-- validate effects;
-- validate metadata;
-- validate markup;
-- emit compiled assets;
-- embed source fingerprints;
-- embed schema fingerprint;
-- embed compiler version;
-- preserve source map information for diagnostics.
+The compiler parses sources, resolves imports/includes and validates block references, IDs,
+conditions, effects, metadata and markup. Compiled assets retain source and schema fingerprints,
+compiler version and source maps for diagnostics.
 
 ### 12.2 Compiled Format
 
@@ -108,13 +90,8 @@ and numeric tags with the typed model, codecs, inspection projection, and focuse
 accepted retention and migration policy is recorded in the
 [serialization compatibility decision](../serialization-compatibility.md).
 
-v0 uses:
-
-- `format_version = 0`;
-- `compiler_compatibility_version = 0`;
-- MessagePack as the primary `.recitec` encoding;
-- compact JSON as a decoded inspection encoding, not as the shipped runtime asset;
-- BLAKE3 as the default content fingerprint algorithm.
+The current `format_version` and `compiler_compatibility_version` are both `0`. BLAKE3 is the
+default content fingerprint algorithm.
 
 The compiler must serialize deterministic tables, not parser-shaped object graphs. The v0 wire
 contract must preserve row order explicitly and must not depend on unordered map iteration. Lookup
@@ -200,16 +177,11 @@ before the first v0 reader ships; after that point the versioning policy below a
 must be treated as a format decision with fixtures and compatibility evidence, not as an implicit
 encoder-only addition.
 
-The compiled `requirement` tree stores condition calls plus schema-derived availability reason
-mappings for positive boolean condition leaves. `requirement_source_text` stores the compiler's
-canonical expression text for the full requirement and is used for `RequirementExpression` origins.
-The compiled data must be self-contained: runtime traversal and adapters must not require the
-original schema manifest or game code to recover reason IDs, template source text, parameter
-definitions, bound argument values, source condition identity, or the full requirement expression
-identity. `availability_reasons` is the compiled reason table used for localisation, trace output,
-and adapter export during traversal. `condition_availability_reasons` maps condition functions to
-compiled reason IDs and bound argument values so runtime traversal can emit unavailable-choice
-reasons without reparsing the schema manifest.
+Compiled availability data is self-contained: traversal and adapters must recover reason IDs,
+template text, parameter definitions, bound arguments and origin identity without the schema
+manifest or game code. `availability_reasons` stores templates; `condition_availability_reasons`
+maps positive boolean condition leaves to reasons and bound arguments. `requirement_source_text`
+stores the canonical full expression for `RequirementExpression` origins.
 
 v0 fixed array arity is not append-compatible. While the project is pre-release, the v0 shape may
 still be corrected: until the first tagged release publishes compiled assets to external consumers,
@@ -219,29 +191,15 @@ changes, or semantic changes require a `format_version` or `compiler_compatibili
 A v0 reader must reject unexpected array lengths, unknown tags, invalid indexes, malformed lookup
 order, and algorithm-specific fingerprint length mismatches as malformed compiled assets.
 
-The runtime-facing contract must exclude rowan syntax nodes, parser recovery state, malformed source
-state, comments that are not part of runtime semantics, and traversal over the `recite-core` source
-AST. Syntax trees and source AST values are compiler and tooling inputs only. Runtime traversal
-consumes compiled tables, source maps, fingerprints, and compact lookup indexes.
-
-Custom binary, FlatBuffers, Cap'n Proto, bincode, postcard, CBOR, and other encodings remain
-possible future versions only under the
-[serialization compatibility decision](../serialization-compatibility.md), when artifact-specific
-benchmark evidence or adapter requirements justify them. They must not be introduced as v0
-alternatives after assets exist without a format or compatibility version change.
+Traversal consumes compiled tables, source maps, fingerprints and lookup indexes. Parser syntax,
+recovery state, source ASTs and non-semantic comments must not enter runtime assets. Alternative
+encodings require artifact-specific evidence and the compatibility decision above; introducing one
+after assets exist requires a format or compatibility version change.
 
 ### 12.3 Freshness
 
-The compiler must embed enough data for tooling to detect stale compiled assets.
-
-`recite check-fresh` must compare:
-
-- current source fingerprints;
-- current schema fingerprint;
-- current compiler compatibility version;
-- compiled asset embedded source fingerprints;
-- compiled asset embedded schema fingerprint or no-schema marker;
-- compiled asset embedded compiler compatibility version.
+`recite check-fresh` compares current source fingerprints, schema fingerprint or no-schema marker,
+and compiler compatibility version against their embedded counterparts.
 
 The v0 freshness comparison is content-based. Source and schema fingerprints are algorithm-tagged
 binary digest values; the initial algorithm is BLAKE3. The MessagePack asset stores digest bytes
@@ -250,8 +208,6 @@ text. A compiler version change alone does not require recompilation unless the 
 compatibility version changes or the writer changes any runtime-facing semantics.
 
 ## 13. CLI
-
-The CLI is a core product surface.
 
 The [CLI reference](../../docs-site/src/content/docs/reference/cli.md) owns command usage; `recite
 --help` owns the complete flag surface. The contracts below describe observable behavior rather than
@@ -293,19 +249,9 @@ Reports:
 
 ### 13.5 `run`
 
-Runs a dialogue scene headlessly with fixture data.
-
-Useful for tests, CI, and writer review.
-
-Must be able to:
-
-- auto-select choices by ID or index;
-- reject fixture selections of unavailable choices without advancing traversal;
-- auto-acknowledge immediate/blocking effects;
-- emit transcript;
-- emit effect list;
-- emit condition query trace;
-- emit unavailable choice reason trees in machine-readable output.
+Runs a scene headlessly from fixture data, selecting choices by ID or index and acknowledging
+immediate/blocking effects. Selecting an unavailable choice must fail without advancing. Output must
+include a transcript, effects, condition query trace and machine-readable unavailable reason trees.
 
 `run` may preview translated dialogue content only when the fixture opts in with
 `[dialogue].locale`. Dialogue catalog paths in fixtures are resolved relative to the fixture file
@@ -314,18 +260,10 @@ runtime session locale remains unset. Catalogs without a dialogue locale are an 
 
 ### 13.6 `trace`
 
-Produces a deterministic execution trace including:
-
-- lines;
-- prompts;
-- choices;
-- choice availability, including hidden-vs-unavailable behavior and structured unavailable reason
-  trees;
-- conditions evaluated;
-- condition results;
-- effects emitted;
-- blocking acknowledgements;
-- final deferred effects.
+Produces a deterministic execution trace of events, condition queries/results, blocking
+acknowledgements and final deferred effects. It preserves choice availability and structured reason
+trees, distinguishing hidden choices from unavailable ones. The
+[trace model](../../crates/recite-cli/src/runtime_fixture/trace/model.rs) owns field definitions.
 
 Structured trace field names and machine values are stable English identifiers. When fixture
 dialogue preview is configured, trace output includes the selected dialogue locale and fallback
@@ -334,14 +272,9 @@ so terminal source fallback remains testable.
 
 ### 13.7 `play`
 
-Interactive REPL for writers. Loads a compiled asset, starts a scene, prints or renders lines and
-prompts, accepts choice selections by ID or index, asks for condition results as `y`/`n`, and
-requires explicit acknowledgement of blocking effects. Useful for fast authoring iteration without
-standing up a game.
-
-`play` is a live authoring surface, distinct from the deterministic fixture runner. `run` and
-`trace` remain scriptable commands driven by fixture data; `play` is allowed to prompt the author
-and maintain an interactive transcript.
+Interactive preview for writers: load a compiled asset, start a scene, select choices by ID or
+index, answer condition queries and explicitly acknowledge blocking effects. Unlike fixture-driven
+`run` and `trace`, it prompts the author and retains an interactive transcript.
 
 The default `--ui auto` mode should use a TUI when stdin and stdout are interactive terminals, and
 should fall back to the line-oriented plain mode for pipes, CI, and accessibility tooling. `--ui
@@ -349,29 +282,17 @@ tui` must fail clearly when no interactive terminal is available and suggest `--
 plain` must preserve the same runtime event flow as the TUI with line-oriented prompts and
 responses, and is the screen-reader- and script-friendly play surface.
 
-Interactive UI preferences are user preferences, not project content. The shared authoring
-configuration contract must use `$RECITE_CONFIG` when it is set, then an OS-aware user configuration
-base chosen by a platform strategy (for example, `etcetera::choose_base_strategy()`), rather than
-assembling `$HOME` paths in each frontend. That strategy resolves to
-`$XDG_CONFIG_HOME/recite/config.toml` or `~/.config/recite/config.toml` on Linux and other XDG
-systems, `~/Library/Application Support/Recite/config.toml` on macOS, and the user's `AppData`
-Recite configuration path on Windows. Missing config uses defaults. UI preferences must not be
-stored in `recite.project.toml`. Window geometry, recent-file lists, and other shell state are
-user-owned and must not become project semantics. Malformed UI config must not affect `run` or
-`trace`.
+UI preferences and shell state are user-owned and must not enter `recite.project.toml` or project
+semantics. [`recite-config`](../../crates/recite-config/src/lib.rs) owns platform paths, typed
+defaults, validation and source-preserving edits: use `$RECITE_CONFIG` first, otherwise the shared
+OS-aware configuration strategy. Missing config uses defaults; malformed UI config must not affect
+`run` or `trace`. Loading is read-only. Explicit changes retain unrelated settings and comments and
+refuse stale writes. The [Writer guide](../../apps/writer/guide.md#keyboard-and-preferences) owns
+its controls.
 
-`recite-config` owns typed defaults, validation and source-preserving preference edits. The
-[Writer guide](../../apps/writer/guide.md#keyboard-and-preferences) owns its controls and keymaps;
-those settings never enter project files. Loading is read-only. Explicit changes retain unrelated
-settings and comments and refuse stale writes.
-
-When `color = "auto"`, TUI color is disabled if `NO_COLOR` is present or `CLICOLOR=0`; otherwise
-color may be used. `color = "always"` enables TUI color regardless of those environment variables,
-and `color = "never"` disables TUI color. `contrast = "accessible"` selects a higher-contrast,
-color-vision-friendlier palette when color is enabled. Color must never be the sole carrier of
-meaning: selected choices keep a `>` marker, unavailable choices keep textual unavailable/reason
-text, condition rows keep `yes`/`no` labels, and prompt, effect, transcript, and footer labels
-remain visible without color.
+The shared color and contrast preferences apply to the TUI. Color must never be the sole carrier of
+meaning: retain the selected-choice marker, unavailable/reason text, condition `yes`/`no` labels,
+and visible prompt, effect, transcript and footer labels.
 
 When `show_unavailable_choices` is true, `play` should render unavailable choices as disabled and
 may show a compact primary reason. The full structured reason tree remains available through
@@ -379,49 +300,24 @@ trace/test output and adapter conformance fixtures. When the setting is false, `
 unavailable choices as a UI preference only; runtime prompt output and previous-prompt state are
 unchanged.
 
-When dialogue localisation is enabled, `play`, preview, and engine-facing runtime operations must
-receive a locale from the caller or fixture and must not infer it from the host environment. Without
-one, source-text-only mode is valid and the optional runtime/session locale remains `None`. The
-Recite UI locale is a separate preference; `system` is allowed for it and resolves through the
-deterministic UI fallback chain. It controls Recite-owned text across the CLI/TUI, GUI, LSP, and
-editor extensions—pane titles, labels, prompts, status, diagnostics, and human errors—through the
-shared Fluent resource contract. It never controls dialogue line or choice translation for `play`,
-`run`, or `trace`; those remain runtime/provider concerns (§9). There is no `--ui-locale` flag.
-
-Dialogue content preview for `play` is separately opt in:
-
-```text
-recite play <asset> --block <block> --dialogue-locale fr-FR \
-  --dialogue-catalog fr-FR=locale/fr-FR.po
-```
-
-`--dialogue-catalog` is repeatable and accepts `LOCALE=PATH`. Catalog paths on the `play` command
-line are resolved relative to the current working directory unless absolute. Passing a dialogue
-catalog without `--dialogue-locale` is an error. Missing or empty catalog translations fall back to
-source text through the runtime locale-provider path; Recite-owned UI text remains on the Fluent UI
-catalog path.
+[Localisation §9](runtime-localisation.md#9-localisation) owns dialogue opt-in, fallback and its
+separation from UI locale. `play` catalogue paths resolve relative to the current working directory
+unless absolute; fixture paths resolve relative to the fixture file. Supplying a catalogue without
+`--dialogue-locale` is an error. The CLI reference owns invocation examples. UI locale is a
+preference, with no `--ui-locale` flag.
 
 Locale fallback for Recite-owned UI text is deterministic: an explicit UI locale, or the resolved
 system UI locale, then language-only locale, then `en-US`. Missing or malformed non-default Fluent
 resources fall back to `en-US`. The default `en-US` resources are test-gated and must be complete
 across the CLI/TUI, GUI, LSP, and editor extensions.
 
-The default keymap is `standard`: arrows move choices, printable keys enter a choice ID/index, Enter
-submits typed input or the highlighted choice, and Ctrl-C/Esc/`:q`/`:quit` quit cleanly. Vim mode is
-opt-in: choices start in normal mode, `j`/`k` and arrows move, `i` enters text input, `:` opens
-command mode, and Esc leaves insert/command/help before quitting at the root prompt. No required
-play action may be reachable only through arrow-key navigation: plain mode accepts choices by
-ID/index, condition answers by typed values, and blocking-effect acknowledgement by Enter/`ack`; TUI
-mode keeps typed choice ID/index entry in standard mode and insert-mode typed entry in vim mode.
+The default keymap is `standard`; vim mode is opt-in. No required action may depend on arrow-key
+navigation: both keymaps retain typed choice ID/index entry, plain mode accepts typed condition
+answers, and blocking effects accept Enter/`ack`.
 
-The TUI should include:
-
-- a transcript pane for lines, selected choices, effects, acknowledgements, and end state;
-- a current prompt pane with visible choice indexes and stable choice IDs;
-- a status/footer area showing the compiled asset, block, and available controls;
-- a condition prompt accepting `y`/`n`;
-- a blocking-effect panel showing mode, runtime effect ID, function, args, and Enter/`ack`
-  acknowledgement.
+The TUI should show the transcript, current prompt with choice indexes and stable IDs, asset/block
+status and available controls, `y`/`n` condition input, and blocking-effect mode, request ID,
+function and arguments.
 
 `play` must not execute game-side effects. Immediate and blocking effects remain typed runtime
 requests emitted to the authoring surface.
@@ -445,17 +341,8 @@ deterministic whole-project compiler as `compile`. It should reuse `check-fresh`
 semantics so generated assets can be compared against current source and schema without editor- or
 engine-specific state.
 
-The expected authoring loop is:
-
-1. edit source or schema inputs;
-2. LSP reports live diagnostics;
-3. on save, LSP/editor code actions may insert missing stable IDs without rewriting existing IDs;
-4. `recite watch` validates and rebuilds compiled assets;
-5. the engine adapter imports or refreshes those assets and restarts the scene or applies the
-   adapter's documented active-session policy.
-
-`watch` must not imply mid-session patch reload for v1. It is a fast rebuild surface for authoring,
-CI-adjacent local checks, and editor/engine integration.
+The [authoring loop](../../docs-site/src/content/docs/guides/authoring-loop.md) connects editor
+feedback, builds and adapter refresh. `watch` must not imply mid-session patch reload for v1.
 
 The authoring kernel must expose the watch/build result as structured state so the GUI and editor
 integrations do not parse human CLI output. The result must identify the affected project inputs,
@@ -464,6 +351,5 @@ according to the adapter's declared policy.
 
 ### 13.9 Future: `generate-bindings`
 
-Deferred past v1. Will generate typed host-language bindings (condition stubs, effect records/enums,
-runtime conversions, test helpers, optional engine event/signal wrappers) from schema once the
-schema and adapter contracts stabilise. It is not a current v1 capability.
+Deferred past v1: generate typed host-language bindings from schema once the schema and adapter
+contracts stabilise.

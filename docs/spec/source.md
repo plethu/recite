@@ -1,29 +1,15 @@
 # Source format
 
-Part of the [production specification](../recite-production-spec.md). These are requirements;
-implementation and release readiness require evidence from code, tests and the current GitHub
-milestone. Section numbers remain stable.
+Part of the [production specification](../recite-production-spec.md). Section numbers remain stable.
 
 ## 5. Source Format
 
 ### 5.1 Requirements
 
-The format must be human-readable, line-oriented where practical, and formally specified with a
-grammar. Writers must not need to understand general programming beyond variables, function-style
-conditions, simple boolean logic, and structured annotations.
-
-Recite has a small domain language because dialogue has structure that should be named directly:
-blocks, lines, choices, stable IDs, conditions, metadata, and effects. The format must teach a
-portable way of thinking about narrative systems, not a one-off bridge into a specific engine
-scripting language.
-
-Dialogue prose must not be written as quoted string literals. Quoted prose creates the same awkward
-formatting pressure as long strings in source code. Recite source should treat dialogue text as
-indented body text owned by a structured statement header.
-
-The source format should be indentation-first and must not mix one-line object literals, curly-brace
-blocks, and ad hoc nested styles. The concrete grammar should use a small, consistent statement
-vocabulary:
+Recite is an indentation-first language with structured statement headers and unquoted prose bodies.
+Its formal grammar must remain usable without general programming knowledge beyond variables,
+function-style conditions, simple boolean logic and annotations. Do not mix object literals,
+curly-brace blocks or competing nesting styles into this vocabulary:
 
 ```text
 :: block_name default      # block
@@ -50,23 +36,9 @@ breaks; blank lines do not by themselves terminate the prose body.
 Nested statements inside a line body, conditional branch, or block share a single indent column.
 Mixing indent widths within a body is a parse error.
 
-The format must support:
-
-- named blocks;
-- exactly one default block per file or project;
-- block references within the same file;
-- block references across files;
-- localisable lines;
-- localisable choices;
-- structured speaker references;
-- ordered metadata entries;
-- conditional choices;
-- conditional branches;
-- effect declarations;
-- comments;
-- includes/imports;
-- inline markup in text;
-- stable source spans for diagnostics.
+The format must support exactly one default block per file or project, references within and across
+files, includes/imports, and stable source spans for diagnostics. The following sections specify the
+statement forms.
 
 ### 5.1.1 Parser Architecture
 
@@ -77,16 +49,7 @@ syntax highlighting only; they are not another semantic parser.
 
 ### 5.2 Blocks
 
-A dialogue file is organised into named blocks.
-
-Each block may declare:
-
-- `id`;
-- optional metadata;
-- optional default speaker context;
-- a sequence of statements.
-
-Example syntax:
+Named blocks contain statements and may declare metadata and a default speaker context:
 
 ```text
 :: tavern_arrival default
@@ -95,21 +58,10 @@ Example syntax:
   Welcome to the Rusty Flagon. Haven't seen you in a while.
 ```
 
-The concrete syntax should optimise for writer ergonomics and LSP implementation while preserving
-this structural shape.
-
 ### 5.3 Lines
 
-A line is the atomic localisable output unit.
-
-Each line must expose:
-
-- `id`: stable string identifier;
-- `speaker`: optional speaker identifier;
-- `source_text`: localisable source text;
-- `metadata`: ordered metadata entries;
-- `inline_markup`: preserved in source text and validated separately;
-- source location.
+A line is a localisable output unit with a stable ID, optional speaker, ordered metadata and source
+location. Its source text preserves inline markup, which is validated separately.
 
 Speaker names must not be parsed from line text. The following is invalid as a speaker declaration:
 
@@ -139,24 +91,9 @@ body. Per-line presentation cues belong in metadata. See §7.5.
 
 ### 5.4 Choices
 
-Choices are first-class records.
-
-Each choice must expose:
-
-- `id`: stable localisable choice ID;
-- `text`: source text;
-- `metadata`: ordered metadata entries;
-- optional `requires=(<condition expression>)` availability requirement;
-- optional `reason=<availability_reason_id>` primary unavailable reason override;
-- `target`: block reference or `END`;
-- `availability`: evaluated at runtime;
-- `echo`: explicit echo policy.
-
-Unavailable choices must be included in runtime output by default so callers can render disabled
-choices. Hidden choices are authored structurally by placing the choice inside a `:if` branch. A
-hidden choice is omitted from the prompt entirely; it is not a disabled prompt item.
-
-Choice header clauses are dedicated syntax, not metadata:
+Choices have stable localisable IDs, source text, ordered metadata and a target block or `END`.
+`requires=(...)` declares availability; `reason=...` supplies a primary unavailable reason (§5.4.1).
+These clauses are dedicated syntax, not metadata:
 
 ```text
 ? ask_news@b34dda3cb1fa5853566e requires=(trust_gte(innkeeper, player, 3))
@@ -170,46 +107,20 @@ Choice header clauses are dedicated syntax, not metadata:
 
 Rules:
 
-- `requires=(...)` is evaluated through the §6 pure condition language. If it evaluates true, the
-  choice is available. If it evaluates false, the choice remains in prompt output with
-  `availability.is_available = false` and structured availability reason data when one can be
-  resolved.
-- `reason=<availability_reason_id>` is an explicit primary presentation reason used when the
-  requirement is false. The ID must reference a schema-declared, parameterless availability reason
-  (§10.2.3). Use this for narrative exceptions or for negated and otherwise ambiguous expressions
-  where automatic condition-derived reasons would be misleading. It does not erase the detailed
-  derived reason tree when one can be produced.
+- `requires=(...)` uses the §6 pure condition language.
 - Metadata clauses may appear before or after `requires=(...)` and `reason=...`; metadata order must
   be preserved relative to other metadata entries. `requires` and `reason` are not emitted as
   metadata entries.
-- `:if` is for structural omission and hidden choices. A choice omitted by `:if` is not in the
-  previous prompt choice set; selecting its ID is invalid or stale, not unavailable.
 - The old trailing choice `if` form is malformed syntax in v1. Authors should use `requires=(...)`
   for visible-but-unavailable choices and `:if` for hidden or structurally different dialogue.
 
-Examples:
+Use `:if` to omit a choice entirely:
 
 ```text
-# Plain single-player dialogue: disabled until trust is high enough.
-? ask_news@6a6b706d5c267f9f7da2 requires=(trust_gte(innkeeper, player, 3))
-  What's the news?
-  -> local_news
-
-# Visual novel: structural omission for a route-specific option.
 :if route_active(rhea_confession)
   ? confess@f6c109bab34c9529ca23
     Tell Rhea the truth.
     -> confession
-
-# Twine-like interactive fiction: disabled affordance with a reusable hint.
-? open_door@c268a2f7f56bab22d1e3 requires=(has_flag(cell_key)) reason=need_cell_key
-  Unlock the cell door.
-  -> cell_exit
-
-# CRPG-flavoured content without RPG-specific core syntax.
-? intimidate_guard@a2622f8e848318ad7f2b requires=(trait_gte(player, presence, 4)) reason=presence_too_low
-  Make the guard stand aside.
-  -> guard_intimidated
 ```
 
 Choice echo policies:
@@ -220,26 +131,14 @@ echo = selected_text
 echo = line(4b3a1d9e8c7f6a5b2c10)
 ```
 
-The default should be `none`. If a game wants the protagonist to repeat the selected choice, it
-should be an explicit authored output, not a runtime quirk.
+The default is `none`; repeating the selected choice requires an explicit echo policy.
 
 ### 5.4.1 Choice Availability And Reasons
 
-Choice availability is a prompt affordance, not control flow. It answers "can the player select this
-visible option now?" Structural branches answer "does this dialogue content exist in this
-traversal?"
-
-Runtime behavior:
-
-- A choice with no `requires=(...)` clause is available.
-- A choice with `requires=(...)` remains in prompt output by default whether available or
-  unavailable.
-- Unavailable choices remain in previous-prompt/session state so the runtime can reject selection
-  with an unavailable-choice error instead of treating the ID as stale.
-- Selecting an unavailable choice returns a structured unavailable-choice error, does not advance
-  traversal, does not emit choice echo, and does not record selected-choice history.
-- Choices omitted by `:if` are not prompt choices. Selecting an omitted choice ID is invalid or
-  stale according to the current prompt/session state.
+A choice is available unless its `requires=(...)` expression evaluates false. Unavailable choices
+remain in prompt output and session state so callers can render them disabled. Selecting one returns
+a structured unavailable-choice error without advancing, emitting echo or recording a selection. A
+choice omitted by `:if` is absent from the prompt; selecting its ID is invalid or stale.
 
 Unavailable reason ownership:
 
@@ -281,18 +180,10 @@ costs, risk labels, chance estimates, skill labels, consequence hints, route mar
 or risky-option presentation, use the general metadata projection contract in §5.6.1. They must not
 introduce choice-only magic metadata behavior.
 
-Selection resolution remains host-owned:
-
-- selecting a choice is always a deterministic `ChoiceId` operation;
-- pre-selection gating uses `requires=(...)` with pure conditions;
-- selecting an unavailable choice returns the structured unavailable-choice error described above
-  and does not advance traversal;
-- costs, rolls, random outcomes, inventory changes, relationship changes, and other game mutations
-  are represented as schema-checked effect requests or as game state changes outside Recite, not as
-  runtime behavior;
-- if dialogue must branch on the result of a game operation, the game updates state and later
-  dialogue queries that state through conditions. Blocking effects only acknowledge completion or
-  failure in v1.
+Selection is a deterministic `ChoiceId` operation. Costs, rolls and other game mutations remain
+host-owned, requested through typed effects or performed outside Recite. To branch on a game
+operation's result, update game state and query it through a later condition. Blocking effects only
+acknowledge completion or failure in v1.
 
 For example, a chance-based skill check is authored as ordinary choice metadata plus host-owned
 resolution:
@@ -335,11 +226,10 @@ identity.
   work.
 - The compiler errors if any line or choice has a missing, draft, malformed, or plain unsuffixed ID.
   `recite check-ids` enforces the same.
-- Anchors and gettext contexts survive prose and label edits. Changed prose requires catalogue
-  refresh and translation review because lookup matches both context and source text.
 
-The anchor is `msgctxt`; the source text is `msgid`. A retained translation for changed source is
-review material, not an exact match. Tooling never regenerates anchors from edited prose.
+The anchor is gettext `msgctxt`; source text is `msgid`. Anchors survive prose and label edits, but
+changed prose requires catalogue refresh and translation review: lookup matches both fields. A
+retained translation for changed source is review material, not an exact match.
 
 ### 5.5 Prompts
 
@@ -375,10 +265,7 @@ A prompt may also omit line text and present choices only:
 
 ### 5.6 Metadata
 
-Metadata must be ordered and must allow repeated keys.
-
-A plain string map is insufficient because existing production use cases include repeated cues such
-as multiple sound effects or ordered presentation hints.
+Metadata preserves entry order and repeated keys, including repeated sound or presentation cues.
 
 Source values preserve the distinction between symbols and quoted strings. Scalars are symbols,
 strings, integers, floats or booleans; arrays contain scalars only. Nested arrays are not v1 syntax.
@@ -397,9 +284,7 @@ Compiled/runtime metadata semantics are schema-driven. Runtime consumers should 
 from whether a source value was bare or quoted; they consume the compiled value after schema
 validation has assigned the allowed type and domain.
 
-The core format must not hardcode keys such as `portrait`, `sfx`, `delay`, `shot`, `pose`, or
-`focus`. Those keys belong in project schema. The tooling must still make project-specific metadata
-validation excellent.
+Keys such as `portrait`, `sfx` and `delay` belong in project schema, not the core format.
 
 #### 5.6.1 Presentation Projection
 
@@ -438,9 +323,8 @@ The project must provide markup validation:
 
 The runtime does not interpret inline markup. Presentation layers may interpret it.
 
-The bracketed tag form `[name]...[/name]` is deliberately distinct from ink's `[choice text]`
-convention. The visual collision is acknowledged; the bracket form is chosen for parser simplicity
-and translator familiarity.
+`[name]...[/name]` denotes markup, not choice syntax. Parser simplicity and translator familiarity
+justify the visual overlap with Ink's bracketed choice text.
 
 ### 5.8 Diverts
 
@@ -473,10 +357,8 @@ Rules:
 - `:if <condition>` opens a body of statements at the next indent level.
 - An optional `:else` at the same indent attaches to the immediately preceding `:if`. Anything else
   at that indent terminates the conditional.
-- No `:elif` in v1. Chained boolean conditions are a smell — they typically indicate that the
-  dispatch is on an enum (use `:match`, see §5.9.1) or that the branches should be separate blocks.
-  Adding `:elif` later is trivial if real authoring pain is reported; removing it once authors
-  depend on it is not.
+- There is no `:elif` in v1. Use nested branches, separate blocks or `:match` for enum dispatch.
+  Adding it after demonstrated need is easier than removing syntax authors already depend on.
 - Conditions reuse §6 grammar, semantics, and validation. The expression must be a boolean
   condition.
 - Lines inside a branch must still carry stable IDs (§5.4.2) and are extracted to POT regardless of
@@ -506,10 +388,8 @@ an enum. It is not general destructuring.
 
 Rules:
 
-- The match scrutinee is a single condition-grammar query (§6.1) whose return type is declared in
-  schema as an enum.
-- Schema must declare the function as enum-returning. Boolean-returning queries are not valid
-  scrutinees — use `:if` for those.
+- The scrutinee is a single condition-grammar query (§6.1) declared in schema as enum-returning. Use
+  `:if` for boolean queries.
 - `:case <variant>` arms must reference declared variants of that enum. Unknown variants are
   validation errors.
 - `:case _` is the wildcard arm. It matches any variant not covered above and may appear at most
@@ -520,12 +400,7 @@ Rules:
 - Duplicate `:case <variant>` arms are validation errors.
 - Each arm's body follows the same indentation rules as `:if` bodies and may contain lines, choices,
   effects, diverts, nested `:if`, or nested `:match`.
-- The schema declares the query's enum return type. Runtime evaluation must return one declared
-  variant or a structured error.
-
-The intent is narrow: schema-checked exhaustive dispatch on declared enum state. Writers who do not
-need it never see it; writers who do get compile-time coverage errors when a new enum variant is
-added and an old `:match` was not updated.
+- Runtime evaluation must return one declared variant or a structured error.
 
 ### 5.10 Text Interpolation
 
@@ -548,9 +423,7 @@ time. The same clause is accepted on choice headers. `type` is one of `string`, 
 - An undeclared placeholder is a validation error.
 - A declared attribute that is not referenced in the line's text is a validation error; remove the
   unused binding before compiling.
-- The `$` sigil distinguishes runtime-bound references from metadata symbols and literal strings
-  (`portrait=flat`, `caption="Door closes"`). `$name` metadata values remain reserved until explicit
-  runtime-bound metadata support is designed.
+- `$` distinguishes caller-bound values from metadata symbols and literals (§5.6).
 
 Interpolation rules:
 
@@ -593,12 +466,8 @@ Plural line rules:
 - Both forms must be valid localisable text and may contain interpolation placeholders and inline
   markup.
 - The placeholder bound by `count` may, but need not, appear in either form.
-- POT extraction emits the line as a single entry with `msgid`, `msgid_plural`, and `msgstr[N]` arms
-  (§9.7).
-- The runtime resolves which form to deliver via the locale provider's plural lookup, supplying the
-  count value. If the locale provider returns no translation, the runtime falls back to the source
-  forms using the English rule (`n == 1 → singular`, otherwise plural).
-- Plurals compose with variants (§9.5): `id&formal` may be a plural line.
+- [Localisation §9.7](runtime-localisation.md#97-plural-forms) defines extraction, variant lookup,
+  locale-specific arm selection and the English source fallback.
 
 Multiline body prose is not permitted on plural lines in v1. If a plural line needs more than one
 paragraph, split it into separate adjacent lines.

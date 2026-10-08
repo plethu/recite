@@ -53,7 +53,7 @@ translation support, and a stateless runtime that leaves game state with the hos
 
 A move to Recite requires reviewing conditions and mutations against its schema and effect model.
 Godot presentation and project setup stay separate. Read the
-[Dialogue Manager migration notes](/migration/dialogue-manager/).
+[Dialogue Manager migration notes](/migration/manual/#dialogue-manager).
 
 ### Dialogic
 
@@ -61,8 +61,9 @@ Godot presentation and project setup stay separate. Read the
 characters, and presentation tools for Godot. Include the timeline behaviour and presentation you
 use when assessing the work involved in changing tools.
 
-Recite has no automatic Dialogic importer. The [Dialogic migration notes](/migration/dialogic/)
-describe how to map dialogue and identify the parts that need manual work.
+Recite has no automatic Dialogic importer. The
+[Dialogic migration notes](/migration/manual/#dialogic) describe how to map dialogue and identify
+the parts that need manual work.
 
 ### Dialogue System for Unity
 
@@ -72,8 +73,8 @@ inventory the conversations, UI, sequencing, quests, and Unity integrations your
 replacing dialogue traversal.
 
 Recite does not import the Unity project or reproduce those systems. Read the
-[Dialogue System migration notes](/migration/dialogue-system-for-unity/) to plan the integration
-work.
+[Dialogue System migration notes](/migration/manual/#dialogue-system-for-unity) to plan the
+integration work.
 
 ### Clyde
 
@@ -82,7 +83,7 @@ translations, and game integration through variables and events. Compare those b
 Recite’s conditions, typed effects, and localisation model.
 
 Migration is manual. Recite v1 includes neither a Clyde importer nor a compatibility runtime. Read
-the [Clyde migration notes](/migration/clyde/).
+the [Clyde migration notes](/migration/manual/#clyde).
 
 For passage-based work, the [Twee and Twine notes](/migration/twee/) describe the limited source
 forms Recite can import. A published Twine game, its story format, and its presentation are separate

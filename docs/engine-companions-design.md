@@ -70,11 +70,14 @@ Signal and event wrappers queue a complete committed batch before delivery. If a
 another dialogue operation synchronously, its outputs follow the remaining outputs from the current
 batch. Reentrant host callbacks must not reorder runtime events.
 
-[Unity's boundary guide](unity-adapter-design.md) owns callback/thread lifetime and importer-cache
-decisions. Godot retains validated bytes beside its derived Resource; clearing its import cache
-removes that fallback and requires a valid source import again. Bevy borrows the catalogue resource
-per operation, so replacement affects the next operation even in an active session. This does not
-replace the compiled dialogue revision.
+Unity creates its service in `Awake`: field initializers may run on a loading thread. Handles stay
+on that owner thread. Queued post-operation events permit nested runner calls; re-entry from a
+native condition callback remains forbidden. The
+[Unity package guide](../Packages/com.recite.dialogue/README.md) owns importer-cache, catalogue,
+upgrade and host-support details. Godot retains validated bytes beside its derived Resource;
+clearing its import cache removes that fallback and requires a valid source import again. Bevy
+borrows the catalogue resource per operation, so replacement affects the next operation even in an
+active session. This does not replace the compiled dialogue revision.
 
 ## Compatibility and verification
 
