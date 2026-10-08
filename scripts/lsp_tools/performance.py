@@ -10,8 +10,60 @@ from pathlib import Path
 from . import edits, latency
 from .fanout import generate as generate_fanout
 from .lifecycle import measure as measure_lifecycle
-from .measurement import environment, provenance
+from .measurement import environment, fixture_files, provenance
 from .regression import regressions
+
+
+def family(workload):
+    prefix, separator, _ = workload.partition("/")
+    if not separator:
+        return "edits"
+    return "startup" if prefix in ("lifecycle", "memory") else prefix
+
+
+def measure(binary, root, policy, workloads):
+    families = {family(name) for name in workloads}
+    files = fixture_files(root)
+    result = {"workloads": {}, "diagnostics": {}}
+    if "edits" in families:
+        result = edits.measure(binary, root, policy["samples"])
+    if "negotiated" in families:
+        negotiated = edits.measure(binary, root, policy["samples"], ranged=None)
+        result["negotiated_sync_mode"] = negotiated["sync_mode"]
+        for name, rows in negotiated["workloads"].items():
+            result["workloads"][f"negotiated/{name}"] = rows
+            result["diagnostics"][f"negotiated/{name}"] = negotiated["diagnostics"][name]
+    if "query" in families:
+        with tempfile.TemporaryDirectory(prefix="recite-lsp-queries-") as config:
+            interactive = latency.run(binary, root, policy["samples"], Path(config))
+        result["interactive"] = interactive
+        for name, rows in interactive["requests"].items():
+            key = f"query/{name}"
+            result["workloads"][key] = [row["ms"] for row in rows]
+            result["diagnostics"][key] = [
+                {"sha256": row["result_sha256"], "bytes": row["result_bytes"]} for row in rows
+            ]
+    if "fanout" in families:
+        with tempfile.TemporaryDirectory(prefix="recite-lsp-fanout-") as fixture:
+            generate_fanout(Path(fixture), **policy["fanout"])
+            fanout = edits.measure(
+                binary,
+                Path(fixture),
+                policy["samples"],
+                ranged=None,
+                workloads=("block_topology",),
+            )
+        result["fanout_fixture_files"] = fanout["files"]
+        result["workloads"]["fanout/block_topology"] = fanout["workloads"]["block_topology"]
+        result["diagnostics"]["fanout/block_topology"] = fanout["diagnostics"]["block_topology"]
+    if "startup" in families:
+        lifecycle = measure_lifecycle(edits.probe, binary, root, policy["samples"])
+        result["workloads"].update(lifecycle["workloads"])
+        result["diagnostics"].update(lifecycle["diagnostics"])
+    if fixture_files(root) != files:
+        raise RuntimeError("fixture changed during measurement")
+    result["files"] = files
+    return result
 
 
 def compare(control, candidate, root, output, policy):
@@ -30,9 +82,13 @@ def compare(control, candidate, root, output, policy):
 
     save()
     try:
+        workloads = policy["workloads"]
+        suspected = []
         for round_index in range(2):
             pairs = []
-            report["rounds"].append({"pairs": pairs})
+            report["rounds"].append(
+                {"pairs": pairs, "workloads": workloads, "suspected_workloads": suspected}
+            )
             for pair_index in range(3):
                 pair = {}
                 pairs.append(pair)
@@ -43,45 +99,9 @@ def compare(control, candidate, root, output, policy):
                 )
                 for side in order:
                     binary = control if side == "control" else candidate
-                    pair[side] = edits.measure(binary, root, policy["samples"])
-                    negotiated = edits.measure(binary, root, policy["samples"], ranged=None)
-                    if negotiated["files"] != pair[side]["files"]:
-                        raise RuntimeError("fixture changed between sync modes")
-                    pair[side]["negotiated_sync_mode"] = negotiated["sync_mode"]
-                    for name, rows in negotiated["workloads"].items():
-                        pair[side]["workloads"][f"negotiated/{name}"] = rows
-                        pair[side]["diagnostics"][f"negotiated/{name}"] = negotiated["diagnostics"][
-                            name
-                        ]
-                    with tempfile.TemporaryDirectory(prefix="recite-lsp-queries-") as config:
-                        interactive = latency.run(binary, root, policy["samples"], Path(config))
-                    with tempfile.TemporaryDirectory(prefix="recite-lsp-fanout-") as fixture:
-                        generate_fanout(Path(fixture), **policy["fanout"])
-                        fanout = edits.measure(
-                            binary,
-                            Path(fixture),
-                            policy["samples"],
-                            ranged=None,
-                            workloads=("block_topology",),
-                        )
-                    pair[side]["fanout_fixture_files"] = fanout["files"]
-                    pair[side]["workloads"]["fanout/block_topology"] = fanout["workloads"][
-                        "block_topology"
-                    ]
-                    pair[side]["diagnostics"]["fanout/block_topology"] = fanout["diagnostics"][
-                        "block_topology"
-                    ]
-                    pair[side]["interactive"] = interactive
-                    for name, rows in interactive["requests"].items():
-                        key = f"query/{name}"
-                        pair[side]["workloads"][key] = [row["ms"] for row in rows]
-                        pair[side]["diagnostics"][key] = [
-                            {"sha256": row["result_sha256"], "bytes": row["result_bytes"]}
-                            for row in rows
-                        ]
-                    lifecycle = measure_lifecycle(edits.probe, binary, root, policy["samples"])
-                    pair[side]["workloads"].update(lifecycle["workloads"])
-                    pair[side]["diagnostics"].update(lifecycle["diagnostics"])
+                    pair[side] = measure(binary, root, policy, workloads)
+                    if pair[side]["files"] != report[side]["files"]:
+                        raise ValueError("fixture identity differs from comparison provenance")
                     pair[side]["environment_after"] = environment()
                     save()
                     print(
@@ -90,12 +110,15 @@ def compare(control, candidate, root, output, policy):
                     )
                     if environment() != before:
                         raise RuntimeError("execution profile changed during measurement")
+            limits = policy.get("limits", {})
+            if round_index:
+                limits = {name: limit for name, limit in limits.items() if name in workloads}
             findings = regressions(
                 pairs,
                 policy["ratio"],
                 policy["absolute_ms"],
-                policy["workloads"],
-                policy.get("limits", {}),
+                workloads,
+                limits,
             )
             report["rounds"][-1]["regressions"] = findings
             if not findings:
@@ -107,7 +130,10 @@ def compare(control, candidate, root, output, policy):
                 }
                 report["status"] = "regression" if confirmed else "unstable"
                 return False
-            print("Suspected regression; repeating three pairs before deciding.", flush=True)
+            suspected = [finding["workload"] for finding in findings]
+            families = {family(name) for name in suspected}
+            workloads = [name for name in policy["workloads"] if family(name) in families]
+            print("Suspected regression; confirming affected probe families.", flush=True)
         raise AssertionError("unreachable comparison state")
     except BaseException as error:
         report["error"] = str(error)

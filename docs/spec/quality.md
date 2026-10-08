@@ -389,11 +389,13 @@ Ubuntu 24.04 runner. The current harness and generated large fixture drive both 
 alternating pairs measure six real edit kinds in full and negotiated sync modes, eight query/action
 kinds, shared-destination invalidation, fresh-process indexing/opening and peak RSS. Each has two
 warmups and 21 recorded samples with exact output fingerprints. Warm latency regressions must exceed
-both 20% and 2 ms, occur in at least two pairs, and recur in a second three-pair round.
-Fresh-process readiness uses 30% plus 50 ms; document opening uses 30% plus 10 ms; peak RSS through
-indexing/opening uses 20% plus 16 MiB. The shared-destination fixture has 100 files, 2,000 blocks
-and 20,000 dialogue lines with references to ten shared files. Fresh-process samples use a warm
-filesystem, not cold storage.
+both 20% and 2 ms, occur in at least two pairs, and recur in a second three-pair round. The first
+round covers every workload. Confirmation repeats only affected probe families, with each family's
+request order, warmups and sample counts unchanged. Each round records its exact coverage; startup
+and peak-memory observations remain coupled. Fresh-process readiness uses 30% plus 50 ms; document
+opening uses 30% plus 10 ms; peak RSS through indexing/opening uses 20% plus 16 MiB. The
+shared-destination fixture has 100 files, 2,000 blocks and 20,000 dialogue lines with references to
+ten shared files. Fresh-process samples use a warm filesystem, not cold storage.
 
 Incomplete or inconsistent evidence fails the check rather than reporting success. The checked-in
 policy is `scripts/lsp-performance-policy.json`; raw samples and revision/binary identities are

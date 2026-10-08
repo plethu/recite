@@ -67,6 +67,14 @@ def environment():
     }
 
 
+def fixture_files(root):
+    return {
+        str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
 def provenance(binary, root):
     return {
         "recorded_at_unix": time.time(),
@@ -78,9 +86,5 @@ def provenance(binary, root):
             subprocess.check_output(["git", "status", "--porcelain"], text=True).strip()
         ),
         "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-        "files": {
-            str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(root.rglob("*"))
-            if p.is_file()
-        },
+        "files": fixture_files(root),
     }

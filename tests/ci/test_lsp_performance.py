@@ -1,9 +1,13 @@
 """Regression decisions must reject broken evidence and tolerate isolated noise."""
 
 import copy
+import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
-from scripts.lsp_tools import measurement, regression
+from scripts.lsp_tools import measurement, performance, regression
 
 
 def pairs():
@@ -113,6 +117,145 @@ class RegressionTests(unittest.TestCase):
                 del candidate["workloads"]["prose"]
             with self.subTest(corruption=corruption), self.assertRaises(ValueError):
                 regression.regressions(observations, 1.2, 2, {"prose"})
+
+
+class ConfirmationTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        directory = Path(temporary.name)
+        self.root = directory / "project"
+        self.root.mkdir()
+        (self.root / "scene.recite").write_text(":: start\n-> END\n")
+        self.control, self.candidate = directory / "control", directory / "candidate"
+        self.control.write_bytes(b"control")
+        self.candidate.write_bytes(b"candidate")
+        self.output = directory / "report.json"
+        self.policy = json.loads(Path("scripts/lsp-performance-policy.json").read_text())
+        self.calls = []
+
+    def compare(self, slow_rounds, *, interrupt=False, corrupt=False, mutate=False):
+        def measure(binary, root, policy, workloads):
+            round_index = len(self.calls) // 6
+            if interrupt and round_index == 1:
+                raise KeyboardInterrupt("interrupted confirmation")
+            self.calls.append((binary.name, list(workloads), policy["samples"]))
+            if mutate and round_index == 1:
+                (root / "scene.recite").write_text("changed on both sides")
+            values = {}
+            for name in workloads:
+                baseline = 100_000.0 if name.startswith("memory/") else 100.0
+                slow = binary == self.candidate and name in slow_rounds[round_index]
+                values[name] = [baseline * (1.6 if slow else 1)] * policy["samples"]
+            result = {
+                "files": measurement.fixture_files(root),
+                "workloads": values,
+                "diagnostics": {name: [{"sha256": "same"}] * policy["samples"] for name in values},
+            }
+            if "fanout/block_topology" in workloads:
+                result["fanout_fixture_files"] = {"scene.recite": "same"}
+            if corrupt and round_index == 1 and binary == self.candidate:
+                result["files"]["scene.recite"] = "changed"
+            return result
+
+        with patch.object(performance, "measure", side_effect=measure):
+            return performance.compare(
+                self.control, self.candidate, self.root, self.output, self.policy
+            )
+
+    def test_clean_round_does_not_repeat(self):
+        self.assertTrue(self.compare([set()]))
+        self.assertEqual(len(self.calls), 6)
+        self.assertTrue(all(coverage == self.policy["workloads"] for _, coverage, _ in self.calls))
+        self.assertEqual(
+            [side for side, _, _ in self.calls],
+            ["control", "candidate", "candidate", "control", "control", "candidate"],
+        )
+
+    def test_fix_all_confirmation_repeats_the_complete_query_family(self):
+        finding = {"query/code_action_fix_all"}
+        self.assertFalse(self.compare([finding, finding]))
+        queries = [name for name in self.policy["workloads"] if name.startswith("query/")]
+        self.assertEqual(len(self.calls), 12)
+        self.assertTrue(
+            all(coverage == queries and samples == 21 for _, coverage, samples in self.calls[6:])
+        )
+        self.assertEqual(
+            [side for side, _, _ in self.calls[6:]],
+            ["candidate", "control", "control", "candidate", "candidate", "control"],
+        )
+        report = json.loads(self.output.read_text())
+        self.assertEqual(report["status"], "regression")
+        self.assertEqual(report["rounds"][1]["suspected_workloads"], sorted(finding))
+
+    def test_confirmation_unions_families_and_preserves_startup_limits(self):
+        findings = {"query/code_action_fix_all", "lifecycle/index_ready"}
+        self.assertFalse(self.compare([findings, findings]))
+        expected = [
+            name
+            for name in self.policy["workloads"]
+            if name.startswith(("query/", "lifecycle/", "memory/"))
+        ]
+        self.assertTrue(all(coverage == expected for _, coverage, _ in self.calls[6:]))
+        report = json.loads(self.output.read_text())
+        self.assertEqual(report["policy"]["limits"], self.policy["limits"])
+        self.assertEqual({row["workload"] for row in report["rounds"][1]["regressions"]}, findings)
+
+    def test_cleared_suspicion_passes_but_different_slowdown_is_unstable(self):
+        finding = {"query/code_action_fix_all"}
+        self.assertTrue(self.compare([finding, set()]))
+        self.calls.clear()
+        self.assertFalse(self.compare([finding, {"query/hover"}]))
+        self.assertEqual(json.loads(self.output.read_text())["status"], "unstable")
+
+    def test_interruption_and_changed_confirmation_fixtures_fail_closed(self):
+        finding = {"query/code_action_fix_all"}
+        with self.assertRaises(KeyboardInterrupt):
+            self.compare([finding, finding], interrupt=True)
+        self.assertEqual(json.loads(self.output.read_text())["status"], "incomplete")
+        self.calls.clear()
+        with self.assertRaises(ValueError):
+            self.compare([finding, finding], corrupt=True)
+        self.assertEqual(json.loads(self.output.read_text())["status"], "incomplete")
+
+    def test_matching_but_changed_confirmation_fixtures_fail_closed(self):
+        finding = {"query/code_action_fix_all"}
+        with self.assertRaises(ValueError):
+            self.compare([finding, finding], mutate=True)
+        self.assertEqual(json.loads(self.output.read_text())["status"], "incomplete")
+
+    def test_query_measurement_keeps_probe_sequence_and_checks_live_fixture_identity(self):
+        queries = [name for name in self.policy["workloads"] if name.startswith("query/")]
+        interactive = {
+            "requests": {
+                name.removeprefix("query/"): [
+                    {"ms": 10.0, "result_sha256": "same", "result_bytes": 1}
+                ]
+                * 21
+                for name in queries
+            }
+        }
+        with (
+            patch.object(performance.latency, "run", return_value=interactive) as query,
+            patch.object(performance.edits, "measure") as edit,
+            patch.object(performance, "measure_lifecycle") as startup,
+            patch.object(performance, "generate_fanout") as fanout,
+        ):
+            result = performance.measure(self.control, self.root, self.policy, queries)
+            self.assertEqual(set(result["workloads"]), set(queries))
+            query.assert_called_once()
+            edit.assert_not_called()
+            startup.assert_not_called()
+            fanout.assert_not_called()
+            self.assertEqual(result["files"], measurement.fixture_files(self.root))
+
+            def mutate_fixture(*_):
+                (self.root / "scene.recite").write_text("changed")
+                return interactive
+
+            query.side_effect = mutate_fixture
+            with self.assertRaises(RuntimeError):
+                performance.measure(self.control, self.root, self.policy, queries)
 
 
 if __name__ == "__main__":
