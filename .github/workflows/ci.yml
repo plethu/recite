@@ -186,6 +186,9 @@ jobs:
     name: Documentation
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      # This lane provisions its tools explicitly; skip unrelated implicit installs.
+      MISE_EXEC_AUTO_INSTALL: "false"
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -206,6 +209,8 @@ jobs:
     name: Documentation browsers
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -270,6 +275,8 @@ jobs:
     name: Benchmarks and LSP regression
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
