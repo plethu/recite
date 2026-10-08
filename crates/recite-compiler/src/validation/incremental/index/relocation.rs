@@ -57,27 +57,11 @@ impl ProjectIndex {
         for (key, reports) in &mut relocated {
             for diagnostic in reports.iter_mut() {
                 control.checkpoint()?;
-                let mut valid = true;
-                for span in std::iter::once(&mut diagnostic.span)
-                    .chain(diagnostic.related.iter_mut().map(|item| &mut item.span))
-                    .chain(
-                        diagnostic
-                            .related_presentations
-                            .iter_mut()
-                            .map(|item| &mut item.span),
-                    )
-                {
-                    if let Some(map) = maps.get(span.file.as_str()) {
-                        if let Some(next) = map.get(&span_key(span)) {
-                            *span = (*next).clone();
-                            affected.insert(key.clone());
-                        } else {
-                            valid = false;
-                        }
-                    }
-                }
-                if !valid {
+                let Some(was_relocated) = relocate_diagnostic(diagnostic, &maps) else {
                     return Ok(None);
+                };
+                if was_relocated {
+                    affected.insert(key.clone());
                 }
             }
             // Position changes may change diagnostic ordering in a document.
@@ -92,6 +76,30 @@ impl ProjectIndex {
         *diagnostics = relocated;
         Ok(Some(affected))
     }
+}
+
+fn relocate_diagnostic(
+    diagnostic: &mut Diagnostic,
+    maps: &BTreeMap<&str, SpanMap<'_>>,
+) -> Option<bool> {
+    let mut was_relocated = false;
+    for span in std::iter::once(&mut diagnostic.span)
+        .chain(diagnostic.related.iter_mut().map(|item| &mut item.span))
+        .chain(
+            diagnostic
+                .related_presentations
+                .iter_mut()
+                .map(|item| &mut item.span),
+        )
+    {
+        let Some(map) = maps.get(span.file.as_str()) else {
+            continue;
+        };
+        let next = map.get(&span_key(span))?;
+        *span = (*next).clone();
+        was_relocated = true;
+    }
+    Some(was_relocated)
 }
 
 fn spans(diagnostic: &Diagnostic) -> impl Iterator<Item = &SourceSpan> {

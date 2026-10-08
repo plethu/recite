@@ -3,9 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   assertDiagnosticTemplate,
-  diagnosticIds,
   parseDiagnosticContracts,
-  parseRepresentableMessages,
+  parseDiagnosticMessages,
 } from "../../message-projection-parser.mjs";
 
 const SOURCE = path.resolve(
@@ -32,22 +31,8 @@ export function projectDiagnostics(source, _inventory) {
   // Fluent entry, including typed parser/PO/schema variants; selector entries
   // are retained as inventory candidates but filtered below when they cannot
   // be represented by the host's simple message projector.
-  const ids = diagnosticIds(source);
   const contracts = diagnosticContracts();
-  const messages = new Map();
-  for (const id of ids) {
-    try {
-      for (
-        const [key, value] of parseRepresentableMessages(
-          source,
-          [id],
-          "VS Code diagnostic projection",
-        )
-      ) messages.set(key, value);
-    } catch (error) {
-      if (!/unsupported expression/u.test(error.message)) throw error;
-    }
-  }
+  const messages = parseDiagnosticMessages(source, "VS Code diagnostic projection");
   return Object.fromEntries([...messages.entries()].map(([id, template]) => {
     const argumentsForId = contracts.get(id) ?? legacyArguments(id);
     assertDiagnosticTemplate(id, template, argumentsForId);

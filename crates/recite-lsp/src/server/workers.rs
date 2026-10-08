@@ -135,14 +135,17 @@ fn analyze(
             )?,
         };
         workspace.control = job.control.clone();
-        let mut diagnostics = Vec::new();
+        // Lifecycle refreshes identify publications, rather than carrying an
+        // intermediate snapshot's diagnostics through later accepted updates.
+        // Keep first-seen order, then project every URI from the final candidate.
+        let mut refresh_uris = job.refresh_uris.clone();
         if cached.is_none() {
             for refresh in workspace
                 .project_diagnostics_all()
                 .into_iter()
                 .chain(workspace.schema_diagnostics_all())
             {
-                replace_diagnostic(&mut diagnostics, project_refresh(&workspace, refresh)?);
+                remember_refresh(&mut refresh_uris, refresh);
             }
         }
         for update in &job.updates {
@@ -154,30 +157,23 @@ fn analyze(
             }
             for refresh in refreshes {
                 job.control.checkpoint()?;
-                if !workspace.is_current_generation(refresh.generation()) {
-                    continue;
-                }
-                let params = project_refresh(&workspace, refresh)?;
-                replace_diagnostic(&mut diagnostics, params);
+                remember_refresh(&mut refresh_uris, refresh);
             }
         }
         job.control.checkpoint()?;
-        let mut refreshed = Vec::new();
-        for uri in &job.refresh_uris {
+        let mut diagnostics = Vec::new();
+        for uri in refresh_uris {
             job.control.checkpoint()?;
-            replace_diagnostic(
-                &mut refreshed,
-                project_refresh(&workspace, workspace.diagnostic_refresh_for_uri(uri))?,
-            );
-        }
-        for params in diagnostics {
-            replace_diagnostic(&mut refreshed, params);
+            let refresh = workspace.diagnostic_refresh_for_uri(&uri);
+            if workspace.is_current_generation(refresh.generation()) {
+                diagnostics.push(project_refresh(&workspace, refresh)?);
+            }
         }
         let scopes = workspace.query_scopes();
         Ok::<_, AnalysisError>(AnalysisSnapshot {
             workspace: Arc::new(workspace),
             scopes,
-            diagnostics: refreshed,
+            diagnostics,
         })
     })();
     if job.control.checkpoint().is_err() {
@@ -214,16 +210,12 @@ fn project_refresh(
     }
 }
 
-fn replace_diagnostic(
-    diagnostics: &mut Vec<PublishDiagnosticsParams>,
-    params: PublishDiagnosticsParams,
-) {
-    if let Some(existing) = diagnostics
-        .iter_mut()
-        .find(|existing| existing.uri == params.uri)
-    {
-        *existing = params;
-    } else {
-        diagnostics.push(params);
+fn remember_refresh(uris: &mut Vec<Uri>, refresh: DiagnosticRefresh) {
+    let uri = match refresh {
+        DiagnosticRefresh::Publish(published) => published.uri,
+        DiagnosticRefresh::Clear { uri, .. } => uri,
+    };
+    if !uris.contains(&uri) {
+        uris.push(uri);
     }
 }

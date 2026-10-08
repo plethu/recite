@@ -58,55 +58,7 @@ impl Component for Setup {
         }
         if pending.read().is_some() && tick.elapsed() {
             tick.reset();
-            let result = pending.peek().as_ref().and_then(|p| p.preparation.poll());
-            if let Some(result) = result {
-                let job = pending.write().take();
-                if let Some(job) = job {
-                    let unchanged = writer.buffers.model.peek().as_ref().is_ok_and(|m| {
-                        m.document().key().as_str() == job.document
-                            && m.document().source() == job.source.as_ref()
-                            && !m.has_draft()
-                    });
-                    let result = if !unchanged || state.peek().dirty() {
-                        Err(wording(MsgId::WriterCreationChanged))
-                    } else {
-                        result.and_then(|document| {
-                            if super::extraction::template(writer, files)? != job.template {
-                                return Err(wording(MsgId::WriterCreationChanged));
-                            }
-                            create::persist(&document, &job.path)
-                        })
-                    };
-                    match result {
-                        Ok(catalogue) => {
-                            let mut current = state.write();
-                            if let Err(error) = current.install(Some(catalogue)) {
-                                message.error(error);
-                            } else {
-                                current.view = super::CatalogueView::Passage;
-                                current.panel = None;
-                                locale.set(String::new());
-                                choosing.set(false);
-                                message.info(wording(MsgId::WriterCatalogueCreated));
-                                writer.inspector_focus.request_focus();
-                            }
-                        }
-                        Err(error) => {
-                            if state.peek().dirty() {
-                                message.error_with_action(
-                                    error,
-                                    crate::messages::text(
-                                        crate::messages::MsgId::WriterGuiOpenUnsavedTranslations,
-                                    ),
-                                    EventHandler::new(move |()| super::show_unsaved(writer)),
-                                );
-                            } else {
-                                message.error(error);
-                            }
-                        }
-                    }
-                }
-            }
+            poll_creation(writer, files, pending, locale, choosing);
         }
         let busy = pending.read().is_some();
         let root = files
@@ -223,22 +175,64 @@ impl Component for Setup {
                             ids[2].request_focus();
                         }
                         Err(error) => {
-                            if state.peek().dirty() {
-                                message.error_with_action(
-                                    error,
-                                    crate::messages::text(
-                                        crate::messages::MsgId::WriterGuiOpenUnsavedTranslations,
-                                    ),
-                                    EventHandler::new(move |()| super::show_unsaved(writer)),
-                                );
-                            } else {
-                                message.error(error);
-                            }
+                            report_creation_error(writer, error);
                         }
                     }
                 }),
             },
         }
         .into_element()
+    }
+}
+
+fn poll_creation(
+    writer: Writer,
+    files: State<Option<ProjectFiles>>,
+    mut pending: State<Option<Pending>>,
+    mut locale: State<String>,
+    mut choosing: State<bool>,
+) {
+    let result = pending
+        .peek()
+        .as_ref()
+        .and_then(|job| job.preparation.poll());
+    let Some(result) = result else {
+        return;
+    };
+    let Some(job) = pending.write().take() else {
+        return;
+    };
+    let catalogue = match job.persist(writer, files, result) {
+        Ok(catalogue) => catalogue,
+        Err(error) => {
+            report_creation_error(writer, error);
+            return;
+        }
+    };
+    let mut state = writer.localisation;
+    let mut current = state.write();
+    let mut message = writer.message;
+    if let Err(error) = current.install(Some(catalogue)) {
+        message.error(error);
+        return;
+    }
+    current.view = super::CatalogueView::Passage;
+    current.panel = None;
+    locale.set(String::new());
+    choosing.set(false);
+    message.info(wording(MsgId::WriterCatalogueCreated));
+    writer.inspector_focus.request_focus();
+}
+
+fn report_creation_error(writer: Writer, error: String) {
+    let mut message = writer.message;
+    if writer.localisation.peek().dirty() {
+        message.error_with_action(
+            error,
+            crate::messages::text(crate::messages::MsgId::WriterGuiOpenUnsavedTranslations),
+            EventHandler::new(move |()| super::show_unsaved(writer)),
+        );
+    } else {
+        message.error(error);
     }
 }

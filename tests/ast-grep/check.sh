@@ -9,7 +9,9 @@ cp -R "$repo_root/tools/ast-grep" "$scratch/tools/"
 cd "$scratch"
 
 # A fresh file must be checked without Git metadata, across every Rust workspace.
-for scope in crates/demo/src apps/writer/crates/demo/src editors/zed/src; do
+for scope in crates/demo/src crates/demo/benches crates/demo/examples \
+  apps/writer/crates/demo/src apps/writer/crates/demo/benches \
+  apps/writer/crates/demo/examples editors/zed/src tools/demo/src; do
   mkdir -p "$scope"
   cat >"$scope/lib.rs" <<'RUST'
 fn classifier(value: usize) -> usize {

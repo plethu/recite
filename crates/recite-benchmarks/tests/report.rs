@@ -65,6 +65,25 @@ fn fixture_count_metadata_makes_scale_shape_concrete() -> Result<(), Box<dyn std
 }
 
 #[test]
+fn condition_site_counts_do_not_depend_on_selected_groups() -> Result<(), Box<dyn std::error::Error>>
+{
+    let mut counts = Vec::new();
+    for group in BenchGroup::all() {
+        let report = build_bench_report(
+            &BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
+                BenchmarkScale::Tiny,
+            )]))
+            .with_groups(vec![*group])
+            .with_samples(1),
+        )?;
+        counts.push(report.targets[0].metadata.counts.conditions);
+    }
+    // Four match sites and twelve choice requirements, regardless of reasons.
+    assert_eq!(counts, [16, 16, 16]);
+    Ok(())
+}
+
+#[test]
 fn markdown_renders_counts_timings_and_caveats() -> Result<(), Box<dyn std::error::Error>> {
     let report = build_bench_report(
         &BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
@@ -108,6 +127,45 @@ fn baseline_comparison_attaches_matching_operation_deltas() -> Result<(), Box<dy
         delta.baseline_median_ns,
         baseline.targets[0].operations[0].summary.median_ns
     );
+    Ok(())
+}
+
+#[test]
+fn baseline_comparison_rejects_previous_timing_boundaries() -> Result<(), Box<dyn std::error::Error>>
+{
+    let options =
+        BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
+            BenchmarkScale::Tiny,
+        )]))
+        .with_groups(vec![BenchGroup::Compiler])
+        .with_samples(1);
+    let baseline = build_bench_report(&options)?;
+    let mut json = serde_json::to_value(baseline)?;
+    json["build"]
+        .as_object_mut()
+        .ok_or("build metadata")?
+        .remove("measurement_revision");
+    let previous = serde_json::from_value(json)?;
+    let error =
+        build_bench_report(&options.with_baseline(previous)).expect_err("incomparable baseline");
+    assert!(error.to_string().contains("different timing boundaries"));
+    Ok(())
+}
+
+#[test]
+fn baseline_comparison_rejects_different_build_profiles() -> Result<(), Box<dyn std::error::Error>>
+{
+    let options =
+        BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
+            BenchmarkScale::Tiny,
+        )]))
+        .with_groups(vec![BenchGroup::Compiler])
+        .with_samples(1);
+    let mut baseline = build_bench_report(&options)?;
+    baseline.build.profile = "other-profile".to_owned();
+    let error = build_bench_report(&options.with_baseline(baseline))
+        .expect_err("incomparable build profiles");
+    assert!(error.to_string().contains("different build profile"));
     Ok(())
 }
 

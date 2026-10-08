@@ -11,6 +11,9 @@ overrides:
 importers:
   .:
     devDependencies:
+      "@fluent/syntax":
+        specifier: 0.19.0
+        version: 0.19.0
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -754,6 +757,12 @@ packages:
     resolution: {
       integrity: sha512-SNI7EgUSiADqbqUzzMbj1ZeC/r2pa5eg3KyFOGAd3a7EsIA4qzjXQLp+ODWQtHVDKFCdGs4J3ovSJUqvKIK96g==,
     }
+
+  "@fluent/syntax@0.19.0":
+    resolution: {
+      integrity: sha512-5D2qVpZrgpjtqU4eNOcWGp1gnUCgjfM+vKGE2y03kKN6z5EBhtx0qdRFbg8QuNNj8wXNoX93KJoYb+NqoxswmQ==,
+    }
+    engines: { node: ">=14.0.0", npm: ">=7.0.0" }
 
   "@img/colour@1.1.0":
     resolution: {
@@ -4418,6 +4427,8 @@ snapshots:
   "@expressive-code/plugin-text-markers@0.44.2":
     dependencies:
       "@expressive-code/core": 0.44.2
+
+  "@fluent/syntax@0.19.0": {}
 
   "@img/colour@1.1.0":
     optional: true

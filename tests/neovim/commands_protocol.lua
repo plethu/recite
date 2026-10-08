@@ -113,6 +113,47 @@ assert_true(
   diagnostic_protocol.render(canonical) == "project manifest not found: missing",
   "canonical diagnostic was not rendered"
 )
+local diagnostic_registry = require("recite_diagnostics")
+diagnostic_registry["diagnostic-host-fixture"] = {
+  template = "limit {$Limit-name}, detail {$Detail_2}, repeat {$Limit-name}",
+  arguments = {
+    { name = "Limit-name", type = "integer" },
+    { name = "Detail_2", type = "string" },
+  },
+}
+local invalid_diagnostic_names = {
+  id = "diagnostic-host-fixture",
+  arguments = {
+    ["Limit-name"] = { type = "integer", value = 7 },
+    Detail_2 = { type = "string", value = "ready" },
+  },
+}
+assert_true(
+  diagnostic_protocol.render(invalid_diagnostic_names) == nil,
+  "Fluent variable names outside the diagnostic wire contract were accepted"
+)
+for _, name in ipairs({ "Limit", "limit-name", "0limit", "_limit", "bad.name", "naïve", "" }) do
+  diagnostic_registry["diagnostic-host-fixture"].arguments = { { name = name, type = "string" } }
+  assert_true(not diagnostic_protocol.valid_presentation({
+    id = "diagnostic-host-fixture",
+    arguments = { [name] = { type = "string", value = "detail" } },
+  }), "invalid diagnostic wire argument name was accepted: " .. name)
+end
+diagnostic_registry["diagnostic-host-fixture"] = nil
+
+local formatter_source = table
+  .concat(vim.fn.readfile(vim.env.RECITE_PLUGIN .. "/lua/recite_messages.lua"), "\n")
+  :gsub("{%$kind}", "{$Kind-name}")
+  :gsub("{%$detail}", "{$Detail_2}")
+local fixture_messages = assert(loadstring(formatter_source))()
+assert_true(
+  fixture_messages.format("neovim-callback-failed", { ["Kind-name"] = "exit", Detail_2 = "ready" })
+    == "Recite exit callback failed: ready",
+  "generated UI formatter did not render Fluent hyphenated and uppercase variables"
+)
+expect_failure(function()
+  fixture_messages.format("neovim-callback-failed", { ["Kind-name"] = "exit" })
+end, "missing argument")
 assert_true(not diagnostic_protocol.valid_presentation({
   id = "diagnostic-config-101",
   arguments = { wrong = { type = "string", value = "x" } },

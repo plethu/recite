@@ -1,18 +1,43 @@
-//! Capture creation intent without writing source or replacing a catalogue.
+//! Capture and revalidate catalogue creation intent at the persistence boundary.
 use super::super::{
+    catalogue::Catalogue,
     create,
     messages::{MsgId, text as wording},
 };
 use crate::{editing::Writer, project::ProjectFiles};
 use freya::prelude::State;
+use recite_core::po::PoDocument;
 use std::{path::PathBuf, sync::Arc};
 
 pub(super) struct Pending {
     pub(super) preparation: create::Preparation,
-    pub(super) path: PathBuf,
-    pub(super) source: Arc<str>,
-    pub(super) document: String,
-    pub(super) template: String,
+    path: PathBuf,
+    source: Arc<str>,
+    document: String,
+    template: String,
+}
+
+impl Pending {
+    pub(super) fn persist(
+        self,
+        writer: Writer,
+        files: State<Option<ProjectFiles>>,
+        result: Result<PoDocument, String>,
+    ) -> Result<Catalogue, String> {
+        let unchanged = writer.buffers.model.peek().as_ref().is_ok_and(|model| {
+            model.document().key().as_str() == self.document
+                && model.document().source() == self.source.as_ref()
+                && !model.has_draft()
+        });
+        if !unchanged || writer.localisation.peek().dirty() {
+            return Err(wording(MsgId::WriterCreationChanged));
+        }
+        let document = result?;
+        if super::super::extraction::template(writer, files)? != self.template {
+            return Err(wording(MsgId::WriterCreationChanged));
+        }
+        create::persist(&document, &self.path)
+    }
 }
 
 pub(super) fn begin(

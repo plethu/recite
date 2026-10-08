@@ -70,19 +70,9 @@ impl ControlTransport {
                     }
                 };
                 let message = match serde_json::from_str::<ControlWire>(&line) {
-                    Ok(control) => {
-                        if control.version != 1 {
-                            ControlMessage::Error(ControlError::UnsupportedVersion)
-                        } else if control.command != "watch" {
-                            ControlMessage::Error(ControlError::UnsupportedCommand)
-                        } else if control.action != "cancel" {
-                            ControlMessage::Error(ControlError::UnsupportedAction)
-                        } else if !matching_invocation(
-                            invocation_id.as_deref(),
-                            control.invocation_id.as_deref(),
-                        ) {
-                            ControlMessage::Error(ControlError::InvocationMismatch)
-                        } else {
+                    Ok(control) => match control.validate(invocation_id.as_deref()) {
+                        Err(error) => ControlMessage::Error(error),
+                        Ok(()) => {
                             requested.store(true, Ordering::Release);
                             if let Ok(active) = active.lock()
                                 && let Some(control) = active.as_ref()
@@ -91,7 +81,7 @@ impl ControlTransport {
                             }
                             ControlMessage::Cancel
                         }
-                    }
+                    },
                     Err(_) => ControlMessage::Error(ControlError::Malformed),
                 };
                 if sender.send(message).is_err() {
@@ -119,6 +109,24 @@ impl ControlTransport {
 
     pub(super) fn requested(&self) -> bool {
         self.requested.load(Ordering::Acquire)
+    }
+}
+
+impl ControlWire {
+    fn validate(&self, expected_invocation: Option<&str>) -> Result<(), ControlError> {
+        if self.version != 1 {
+            return Err(ControlError::UnsupportedVersion);
+        }
+        if self.command != "watch" {
+            return Err(ControlError::UnsupportedCommand);
+        }
+        if self.action != "cancel" {
+            return Err(ControlError::UnsupportedAction);
+        }
+        if !matching_invocation(expected_invocation, self.invocation_id.as_deref()) {
+            return Err(ControlError::InvocationMismatch);
+        }
+        Ok(())
     }
 }
 

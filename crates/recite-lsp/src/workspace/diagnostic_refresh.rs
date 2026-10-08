@@ -5,13 +5,25 @@ impl LspWorkspace {
     /// Recompute a publication that was superseded before transport handoff.
     /// In particular, a suppressed close must eventually clear its exact URI.
     pub(crate) fn diagnostic_refresh_for_uri(&self, uri: &Uri) -> DiagnosticRefresh {
-        if let SchemaRefreshOutcome::Refreshes(refreshes) = self.schema_refresh_for_uri(uri)
-            && let Some(refresh) = refreshes.into_iter().find(|refresh| match refresh {
-                DiagnosticRefresh::Publish(diagnostics) => &diagnostics.uri == uri,
-                DiagnosticRefresh::Clear { uri: candidate, .. } => candidate == uri,
-            })
-        {
-            return refresh;
+        match self.schema_refresh_for_uri(uri) {
+            SchemaRefreshOutcome::Silent => {
+                // An open alias that lost schema authority must clear its old
+                // publication without claiming the current owner's version.
+                return DiagnosticRefresh::Clear {
+                    uri: uri.clone(),
+                    version: None,
+                    generation: self.generation,
+                };
+            }
+            SchemaRefreshOutcome::Refreshes(refreshes) => {
+                if let Some(refresh) = refreshes.into_iter().find(|refresh| match refresh {
+                    DiagnosticRefresh::Publish(diagnostics) => &diagnostics.uri == uri,
+                    DiagnosticRefresh::Clear { uri: candidate, .. } => candidate == uri,
+                }) {
+                    return refresh;
+                }
+            }
+            SchemaRefreshOutcome::NotSchema => {}
         }
         if let Some(document) = self.documents.document(uri) {
             if self.is_schema_document_uri(uri) {
@@ -30,7 +42,9 @@ impl LspWorkspace {
         {
             return refresh;
         }
-        if let Some(document) = self.saved.document_by_uri(uri) {
+        if let Some(document) = self.saved.document_by_uri(uri)
+            && &document.identity.uri == uri
+        {
             return self.publish_saved_document(document);
         }
         DiagnosticRefresh::Clear {

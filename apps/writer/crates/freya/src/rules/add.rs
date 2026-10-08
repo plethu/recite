@@ -1,7 +1,7 @@
 use crate::editing::Writer;
 use crate::messages::{MsgId, text};
 use freya::prelude::*;
-use recite_writer_model::RuleExpression;
+use recite_writer_model::{ReplyRules, RuleExpression};
 #[derive(Clone)]
 pub(super) struct AddRule {
     pub writer: Writer,
@@ -79,39 +79,44 @@ impl Component for AddRule {
             open: use_state(|| false),
             options: std::sync::Arc::new(options),
             choose: EventHandler::new(move |option: crate::design::PickerOption| {
-                if let Ok(index) = option.value.parse::<usize>() {
-                    super::change(writer, |rules| {
-                        if is_effect {
-                            if let Some(effect) = rules.available_effects.get(index) {
-                                rules.effects.push(effect.clone());
-                            }
-                        } else if let Some(condition) =
-                            rules.available_conditions.get(index).cloned()
-                        {
-                            if let Some(path) = &path {
-                                if let Some(root) = &mut rules.condition
-                                    && let Some(
-                                        RuleExpression::All(items) | RuleExpression::Any(items),
-                                    ) = super::tree::at(root, path)
-                                {
-                                    items.push(condition);
-                                }
-                                return;
-                            }
-                            rules.condition = Some(match rules.condition.take() {
-                                None => condition,
-                                Some(RuleExpression::All(mut items)) => {
-                                    items.push(condition);
-                                    RuleExpression::All(items)
-                                }
-                                Some(existing) => RuleExpression::All(vec![existing, condition]),
-                            });
-                        }
-                    });
-                }
+                let Ok(index) = option.value.parse::<usize>() else {
+                    return;
+                };
+                super::change(writer, |rules| {
+                    add_available_rule(rules, is_effect, path.as_deref(), index)
+                });
             }),
             vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
             enabled,
         }
     }
+}
+
+fn add_available_rule(rules: &mut ReplyRules, effect: bool, path: Option<&[usize]>, index: usize) {
+    if effect {
+        if let Some(effect) = rules.available_effects.get(index) {
+            rules.effects.push(effect.clone());
+        }
+        return;
+    }
+    let Some(condition) = rules.available_conditions.get(index).cloned() else {
+        return;
+    };
+    if let Some(path) = path {
+        if let Some(root) = &mut rules.condition
+            && let Some(RuleExpression::All(items) | RuleExpression::Any(items)) =
+                super::tree::at(root, path)
+        {
+            items.push(condition);
+        }
+        return;
+    }
+    rules.condition = Some(match rules.condition.take() {
+        None => condition,
+        Some(RuleExpression::All(mut items)) => {
+            items.push(condition);
+            RuleExpression::All(items)
+        }
+        Some(existing) => RuleExpression::All(vec![existing, condition]),
+    });
 }

@@ -36,6 +36,7 @@ unic-langid.workspace = true
 [dev-dependencies]
 strum = { version = "=0.28.0", features = ["derive"] }
 tempfile.workspace = true
+wait-timeout = "0.2.1"
 
 [lints]
 workspace = true

@@ -68,7 +68,6 @@ pub(super) fn restore_pending_prompt(
         pending_choices.push(PendingPromptChoice {
             id: choice_id,
             target: compiled_choice.target.clone(),
-            is_available: availability.is_available,
             availability,
         });
     }

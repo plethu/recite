@@ -68,8 +68,7 @@ fn project_root_operations(
                         report.diagnostics.len()
                     )));
                 }
-                std::hint::black_box(report.manifest);
-                Ok(())
+                Ok(std::hint::black_box(report.manifest))
             },
         )?,
         timed_operation(
@@ -77,6 +76,7 @@ fn project_root_operations(
             "project_asset_decode",
             samples,
             || {
+                let mut dialogues = Vec::with_capacity(project.assets.len());
                 for asset in &project.assets {
                     let dialogue =
                         decode_compiled_dialogue_messagepack(std::hint::black_box(&asset.bytes))
@@ -85,9 +85,9 @@ fn project_root_operations(
                                     "failed to decode compiled project asset: {decode_error}"
                                 ))
                             })?;
-                    std::hint::black_box(dialogue);
+                    dialogues.push(dialogue);
                 }
-                Ok(())
+                Ok(std::hint::black_box(dialogues))
             },
         )?,
         timed_operation(
@@ -95,6 +95,7 @@ fn project_root_operations(
             "project_source_parse",
             samples,
             || {
+                let mut parses = Vec::with_capacity(project.sources.len());
                 for source in &project.sources {
                     let parsed = parse(
                         std::hint::black_box(&source.path),
@@ -107,9 +108,9 @@ fn project_root_operations(
                             parsed.diagnostics().len()
                         )));
                     }
-                    std::hint::black_box(parsed);
+                    parses.push(parsed);
                 }
-                Ok(())
+                Ok(std::hint::black_box(parses))
             },
         )?,
     ])
@@ -174,7 +175,7 @@ impl ProjectRootBenchProject {
             counts.dialogue_lines += dialogue.lines.len() as u64;
             counts.choices += dialogue.choices.len() as u64;
             counts.effects += dialogue.effects.len() as u64;
-            counts.conditions += dialogue.condition_availability_reasons.len() as u64;
+            counts.conditions += super::compiled_condition_sites(&dialogue);
             for source in &dialogue.sources {
                 let resolved_source =
                     project_source_candidates(project_root, &asset_path, &source.path)

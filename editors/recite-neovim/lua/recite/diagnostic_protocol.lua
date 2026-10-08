@@ -100,7 +100,7 @@ function M.render(value)
     return nil
   end
   return (
-    definition.template:gsub("{%$([%w_]+)}", function(name)
+    definition.template:gsub("{%$([A-Za-z][A-Za-z0-9_%-]*)}", function(name)
       local argument = value.arguments[name]
       if not argument then
         return ""

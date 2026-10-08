@@ -29,10 +29,11 @@ fn bench_parse(criterion: &mut Criterion, fixture: &CompilerFixture) {
     criterion.benchmark_group("compiler/parse").bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
+            let inputs = fixture.project.compile_inputs();
             bencher.iter_batched(
-                || fixture.project.compile_inputs(),
-                |inputs| black_box(must(parse_inputs(black_box(&inputs)))),
-                BatchSize::SmallInput,
+                || (),
+                |()| black_box(must(parse_inputs(black_box(&inputs)))),
+                BatchSize::LargeInput,
             );
         },
     );
@@ -42,10 +43,11 @@ fn bench_lower(criterion: &mut Criterion, fixture: &CompilerFixture) {
     criterion.benchmark_group("compiler/lower").bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
+            let inputs = fixture.project.compile_inputs();
             bencher.iter_batched(
-                || fixture.project.compile_inputs(),
-                |inputs| black_box(must(lower_inputs(black_box(&inputs)))),
-                BatchSize::SmallInput,
+                || (),
+                |()| black_box(must(lower_inputs(black_box(&inputs)))),
+                BatchSize::LargeInput,
             );
         },
     );
@@ -57,10 +59,11 @@ fn bench_validate(criterion: &mut Criterion, fixture: &CompilerFixture) {
         .bench_function(
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
+                let sources = fixture.project.source_files();
                 bencher.iter_batched(
-                    || fixture.project.source_files(),
-                    |sources| black_box(validate_without_schema(black_box(&sources))),
-                    BatchSize::SmallInput,
+                    || (),
+                    |()| black_box(validate_without_schema(black_box(&sources))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -72,15 +75,16 @@ fn bench_validate_with_schema(criterion: &mut Criterion, fixture: &CompilerFixtu
         .bench_function(
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
+                let sources = fixture.project.source_files();
                 bencher.iter_batched(
-                    || fixture.project.source_files(),
-                    |sources| {
+                    || (),
+                    |()| {
                         black_box(validate_with_schema(
                             black_box(&sources),
                             black_box(fixture.project.schema()),
                         ))
                     },
-                    BatchSize::SmallInput,
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -93,9 +97,9 @@ fn bench_compile_with_schema(criterion: &mut Criterion, fixture: &CompilerFixtur
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 bencher.iter_batched(
-                    || fixture.project.clone(),
-                    |project| black_box(must(compile_with_schema(black_box(&project)))),
-                    BatchSize::SmallInput,
+                    || (),
+                    |()| black_box(must(compile_with_schema(black_box(&fixture.project)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -107,10 +111,11 @@ fn bench_block_reference_resolution(criterion: &mut Criterion, fixture: &Compile
         .bench_function(
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
+                let sources = fixture.project.source_files();
                 bencher.iter_batched(
-                    || fixture.project.source_files(),
-                    |sources| black_box(resolve_block_references(black_box(&sources))),
-                    BatchSize::SmallInput,
+                    || (),
+                    |()| black_box(resolve_block_references(black_box(&sources))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -122,10 +127,11 @@ fn bench_id_uniqueness(criterion: &mut Criterion, fixture: &CompilerFixture) {
         .bench_function(
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
+                let sources = fixture.project.source_files();
                 bencher.iter_batched(
-                    || fixture.project.source_files(),
-                    |sources| black_box(validate_localisable_id_uniqueness(black_box(&sources))),
-                    BatchSize::SmallInput,
+                    || (),
+                    |()| black_box(validate_localisable_id_uniqueness(black_box(&sources))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -137,15 +143,16 @@ fn bench_markup_validation(criterion: &mut Criterion, fixture: &CompilerFixture)
         .bench_function(
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
+                let sources = fixture.project.source_files();
                 bencher.iter_batched(
-                    || fixture.project.source_files(),
-                    |sources| {
+                    || (),
+                    |()| {
                         black_box(validate_markup(
                             black_box(&sources),
                             black_box(fixture.project.schema()),
                         ))
                     },
-                    BatchSize::SmallInput,
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -158,9 +165,9 @@ fn bench_pot_extraction_pressure(criterion: &mut Criterion, fixture: &CompilerFi
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 bencher.iter_batched(
-                    || fixture.project.clone(),
-                    |project| black_box(must(extract_pot(black_box(&project)))),
-                    BatchSize::SmallInput,
+                    || (),
+                    |()| black_box(must(extract_pot(black_box(&fixture.project)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -173,9 +180,11 @@ fn bench_compiled_asset_serialization(criterion: &mut Criterion, fixture: &Compi
     group.bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
-            bencher.iter(|| {
-                black_box(must(serialize_compiled_asset(black_box(&fixture.compiled))));
-            });
+            bencher.iter_batched(
+                || (),
+                |()| black_box(must(serialize_compiled_asset(black_box(&fixture.compiled)))),
+                BatchSize::LargeInput,
+            );
         },
     );
     group.finish();

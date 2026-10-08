@@ -6,10 +6,11 @@ use recite_benchmarks::compiler::CompilerProject;
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::runtime::RuntimeProject;
 use recite_benchmarks::{BenchmarkFixture, BenchmarkResult};
-use recite_core::compiled::CompiledDialogue;
+use recite_core::compiled::{CompiledDialogue, decode_compiled_dialogue_messagepack};
 
 fn runtime_benchmarks(criterion: &mut Criterion) {
     for fixture in load_runtime_projects() {
+        bench_asset_decode(criterion, &fixture);
         bench_asset_preparation(criterion, &fixture);
         bench_start_scene(criterion, &fixture);
         bench_next_line(criterion, &fixture);
@@ -24,6 +25,28 @@ fn runtime_benchmarks(criterion: &mut Criterion) {
         bench_session_decode(criterion, &fixture);
         bench_full_traversal(criterion, &fixture);
     }
+}
+
+fn bench_asset_decode(criterion: &mut Criterion, fixture: &RuntimeFixture) {
+    criterion
+        .benchmark_group("runtime/asset_decode")
+        .bench_function(
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
+            |bencher| {
+                // Bytes are prepared once; the decoded asset is disposed after the
+                // sample, matching asset_preparation's ownership boundary.
+                bencher.iter_batched(
+                    || (),
+                    |()| {
+                        black_box(
+                            decode_compiled_dialogue_messagepack(black_box(&fixture.bytes))
+                                .unwrap_or_else(|error| panic!("invalid benchmark asset: {error}")),
+                        )
+                    },
+                    BatchSize::LargeInput,
+                );
+            },
+        );
 }
 
 fn bench_asset_preparation(criterion: &mut Criterion, fixture: &RuntimeFixture) {
@@ -54,7 +77,11 @@ fn bench_start_scene(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter(|| black_box(must(driver.start_scene())));
+                bencher.iter_batched(
+                    || (),
+                    |()| black_box(must(driver.start_scene())),
+                    BatchSize::LargeInput,
+                );
             },
         );
 }
@@ -66,10 +93,10 @@ fn bench_next_line(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.session_before_first_line()),
-                    |mut session| black_box(must(driver.next_line(black_box(&mut session)))),
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.next_line(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -82,10 +109,10 @@ fn bench_next_prompt(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.session_before_first_prompt()),
-                    |mut session| black_box(must(driver.next_prompt(black_box(&mut session)))),
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.next_prompt(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -98,10 +125,10 @@ fn bench_choose_first(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.session_with_prompt()),
-                    |mut session| black_box(must(driver.choose_first(black_box(&mut session)))),
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.choose_first(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -114,12 +141,10 @@ fn bench_condition_dispatch(criterion: &mut Criterion, fixture: &RuntimeFixture)
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.session_before_condition_prompt()),
-                    |mut session| {
-                        black_box(must(driver.condition_dispatch(black_box(&mut session))))
-                    },
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.condition_dispatch(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -132,10 +157,10 @@ fn bench_effect_immediate(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.start_scene()),
-                    |mut session| black_box(must(driver.immediate_effect(black_box(&mut session)))),
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.immediate_effect(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -148,10 +173,10 @@ fn bench_effect_deferred(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.session_before_deferred_effect()),
-                    |mut session| black_box(must(driver.deferred_effect(black_box(&mut session)))),
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.deferred_effect(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -164,17 +189,17 @@ fn bench_effect_blocking_ack(criterion: &mut Criterion, fixture: &RuntimeFixture
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || {
                         let mut session = must(driver.session_before_blocking_effect());
                         let _event = must(driver.blocking_effect(&mut session));
                         session
                     },
-                    |mut session| {
-                        must(driver.acknowledge_blocking(&mut session));
+                    |session| {
+                        must(driver.acknowledge_blocking(session));
                         black_box(())
                     },
-                    BatchSize::SmallInput,
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -187,10 +212,10 @@ fn bench_localised_next(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.localised_session_before_first_line()),
-                    |mut session| black_box(must(driver.localised_next(black_box(&mut session)))),
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.localised_next(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -203,10 +228,10 @@ fn bench_session_encode(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || must(driver.session_with_prompt()),
-                    |session| black_box(must(driver.encode_session(black_box(&session)))),
-                    BatchSize::SmallInput,
+                    |session| black_box(must(driver.encode_session(black_box(session)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -220,10 +245,10 @@ fn bench_session_decode(criterion: &mut Criterion, fixture: &RuntimeFixture) {
             |bencher| {
                 let driver = fixture.project.driver();
                 let bytes = must(driver.encoded_prompt_session());
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || bytes.clone(),
-                    |bytes| black_box(must(driver.decode_session(black_box(&bytes)))),
-                    BatchSize::SmallInput,
+                    |bytes| black_box(must(driver.decode_session(black_box(bytes)))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -245,6 +270,7 @@ fn bench_full_traversal(criterion: &mut Criterion, fixture: &RuntimeFixture) {
 struct RuntimeFixture {
     fixture: BenchmarkFixture,
     project: RuntimeProject,
+    bytes: Vec<u8>,
 }
 
 fn load_runtime_projects() -> Vec<RuntimeFixture> {
@@ -262,6 +288,7 @@ fn load_runtime_projects_result() -> BenchmarkResult<Vec<RuntimeFixture>> {
             Ok(RuntimeFixture {
                 fixture,
                 project: runtime,
+                bytes: compiled.asset().messagepack.clone(),
             })
         })
         .collect()

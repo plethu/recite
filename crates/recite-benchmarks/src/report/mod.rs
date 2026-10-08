@@ -1,4 +1,8 @@
+mod counts;
 mod lsp;
+
+pub use counts::BenchCounts;
+use counts::compiled_condition_sites;
 mod timing;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
@@ -119,6 +123,9 @@ pub struct BenchReport {
 pub struct BuildMetadata {
     pub profile: String,
     pub features: FeatureMetadata,
+    /// Revision of timing boundaries, independent of product and wire versions.
+    #[serde(default)]
+    pub measurement_revision: u32,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -173,23 +180,6 @@ pub struct TargetMetadata {
     pub notes: Vec<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Default, Eq, PartialEq, Serialize)]
-pub struct BenchCounts {
-    pub source_files: u64,
-    pub schema_files: u64,
-    pub runtime_fixtures: u64,
-    pub locale_catalogs: u64,
-    pub recite_lines: u64,
-    pub blocks: u64,
-    pub dialogue_lines: u64,
-    pub choices: u64,
-    pub effects: u64,
-    pub conditions: u64,
-    pub generated_words: Option<u64>,
-    pub project_bytes: Option<u64>,
-    pub compiled_asset_bytes: Option<u64>,
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BenchOperationReport {
     pub group: BenchGroup,
@@ -215,6 +205,23 @@ pub struct BaselineDelta {
 }
 
 pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<BenchReport> {
+    const MEASUREMENT_REVISION: u32 = 1;
+    if options
+        .baseline
+        .as_ref()
+        .is_some_and(|baseline| baseline.build.measurement_revision != MEASUREMENT_REVISION)
+    {
+        return Err(error(
+            "benchmark baseline uses different timing boundaries; collect a fresh baseline",
+        ));
+    }
+    if options
+        .baseline
+        .as_ref()
+        .is_some_and(|baseline| baseline.build.profile != build_profile())
+    {
+        return Err(error("benchmark baseline uses a different build profile"));
+    }
     let samples = validate_samples(options.samples)?;
     let groups = selected_groups(&options.groups);
     let mut targets = match &options.target {
@@ -232,6 +239,7 @@ pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<Bench
         generated_by: "recite bench".to_owned(),
         recite_version: env!("CARGO_PKG_VERSION").to_owned(),
         build: BuildMetadata {
+            measurement_revision: MEASUREMENT_REVISION,
             profile: build_profile().to_owned(),
             features: FeatureMetadata {
                 id_storage: "compact_str".to_owned(),
@@ -249,32 +257,34 @@ pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<Bench
     })
 }
 
-pub(crate) fn timed_operation(
+pub(crate) fn timed_operation<T>(
     group: BenchGroup,
     operation: &'static str,
     samples: usize,
-    mut measure: impl FnMut() -> BenchmarkResult<()>,
+    mut measure: impl FnMut() -> BenchmarkResult<T>,
 ) -> BenchmarkResult<BenchOperationReport> {
-    timed_operation_with_setup(group, operation, samples, || (), |()| measure())
+    timed_operation_with_setup(group, operation, samples, || Ok(()), |_| measure())
 }
 
 #[allow(
     clippy::disallowed_methods,
     reason = "benchmark timing is intentionally outside deterministic runtime measurements"
 )]
-pub(crate) fn timed_operation_with_setup<T>(
+pub(crate) fn timed_operation_with_setup<I, O>(
     group: BenchGroup,
     operation: &'static str,
     samples: usize,
-    mut setup: impl FnMut() -> T,
-    mut measure: impl FnMut(T) -> BenchmarkResult<()>,
+    mut setup: impl FnMut() -> BenchmarkResult<I>,
+    mut measure: impl FnMut(&mut I) -> BenchmarkResult<O>,
 ) -> BenchmarkResult<BenchOperationReport> {
     let mut timings = Vec::with_capacity(samples);
     for _ in 0..samples {
-        let input = setup();
+        let mut input = setup()?;
         let started = Instant::now();
-        measure(input)?;
+        let output = measure(&mut input)?;
         timings.push(started.elapsed());
+        // Keep receivers and returned values alive until after the timer stops.
+        std::hint::black_box(&output);
     }
     Ok(BenchOperationReport {
         group,

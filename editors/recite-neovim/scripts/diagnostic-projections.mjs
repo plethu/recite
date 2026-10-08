@@ -2,9 +2,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   assertDiagnosticTemplate,
-  diagnosticIds,
   parseDiagnosticContracts,
-  parseRepresentableMessages,
+  parseDiagnosticMessages,
 } from "../../message-projection-parser.mjs";
 
 const SOURCE = path.resolve(
@@ -20,19 +19,10 @@ const OUTPUT = path.resolve(import.meta.dirname, "../lua/recite_diagnostics.lua"
 export function projectDiagnostics(source, contractSource) {
   const contracts = parseDiagnosticContracts(contractSource);
   const values = new Map();
-  for (const id of diagnosticIds(source)) {
-    try {
-      const message = parseRepresentableMessages(source, [id], "Neovim diagnostic projection").get(
-        id,
-      );
-      if (message !== undefined) {
-        const argumentsForId = contracts.get(id) ?? [];
-        assertDiagnosticTemplate(id, message, argumentsForId);
-        values.set(id, { template: message, arguments: argumentsForId });
-      }
-    } catch (error) {
-      if (!/unsupported expression/u.test(error.message)) throw error;
-    }
+  for (const [id, message] of parseDiagnosticMessages(source, "Neovim diagnostic projection")) {
+    const argumentsForId = contracts.get(id) ?? [];
+    assertDiagnosticTemplate(id, message, argumentsForId);
+    values.set(id, { template: message, arguments: argumentsForId });
   }
   return { contracts, values };
 }

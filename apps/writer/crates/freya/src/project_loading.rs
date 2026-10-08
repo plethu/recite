@@ -6,6 +6,7 @@ use crate::{
 };
 use freya::prelude::*;
 use std::path::PathBuf;
+mod completion;
 mod worker;
 
 pub(crate) fn can_switch_project(writer: Writer) -> bool {
@@ -154,9 +155,7 @@ impl Component for Loading {
         #[cfg(target_os = "linux")]
         let ready = use_try_consume::<crate::navigation::NavigationReady>();
         let mut job = self.job;
-        let mut files = self.files;
-        let mut panel = self.panel;
-        let mut message = self.writer.message;
+        let files = self.files;
         if tick.elapsed() {
             tick.reset();
             #[cfg(target_os = "linux")]
@@ -171,113 +170,7 @@ impl Component for Loading {
                     );
                 }
             }
-            let loaded = job.peek().as_ref().and_then(|job| {
-                job.load
-                    .try_result()
-                    .map(|result| (job.load.cancelled(), job.source.clone(), result))
-            });
-            if let Some((cancelled, source, loaded)) = loaded {
-                let current = self
-                    .writer
-                    .buffers
-                    .model
-                    .peek()
-                    .as_ref()
-                    .ok()
-                    .map(|m| m.document().source_snapshot());
-                #[cfg(target_os = "linux")]
-                let activation = job.write().take().and_then(|mut job| job.activation.take());
-                #[cfg(not(target_os = "linux"))]
-                job.set(None);
-                #[cfg(target_os = "linux")]
-                let activation_cancelled = activation.as_ref().is_some_and(|request| {
-                    request.cancelled.load(std::sync::atomic::Ordering::Acquire)
-                });
-                #[cfg(not(target_os = "linux"))]
-                let activation_cancelled = false;
-                if cancelled || activation_cancelled {
-                    message.info("Project opening cancelled.".into());
-                    #[cfg(target_os = "linux")]
-                    if let Some(request) = activation {
-                        let _ = request.reply.send(Err("Project opening cancelled".into()));
-                    }
-                } else if source != current || !can_switch_project(self.writer) {
-                    message.error("The current document changed while loading. Save it before opening another project.".into());
-                    #[cfg(target_os = "linux")]
-                    if let Some(request) = activation {
-                        let _ = request
-                            .reply
-                            .send(Err("The current document changed while loading".into()));
-                    }
-                } else {
-                    match loaded {
-                        Ok((project, workbench)) => {
-                            let recovered = project.has_recovery();
-                            let opened_root = project.root().display().to_string();
-                            let reset = {
-                                let mut state = self.writer.localisation;
-                                let mut localisation = state.write();
-                                localisation.install(None).map(|()| {
-                                    *localisation = crate::localisation::Localisation::default();
-                                })
-                            };
-                            if let Err(error) = reset {
-                                message.error(error.clone());
-                                #[cfg(target_os = "linux")]
-                                if let Some(request) = activation {
-                                    let _ = request.reply.send(Err(error));
-                                }
-                                return rect();
-                            }
-                            self.writer.buffers.install(workbench, self.writer.dark);
-                            files.set(Some(project));
-                            if let Err(error) = self.writer.scene_opened() {
-                                let error = format!(
-                                    "Project {opened_root} opened, but its initial scene could not open: {error}"
-                                );
-                                message.error(error.clone());
-                                #[cfg(target_os = "linux")]
-                                if let Some(request) = activation {
-                                    let _ = request.reply.send(Err(error));
-                                }
-                                return rect();
-                            }
-                            panel.set(false);
-                            message.info(
-                                if recovered {
-                                    "Recovered your previous session."
-                                } else {
-                                    "Project opened."
-                                }
-                                .into(),
-                            );
-                            #[cfg(target_os = "linux")]
-                            if let Some(request) = activation {
-                                let result = crate::navigation::activation::receive(
-                                    self.writer,
-                                    request.route.as_deref(),
-                                    &request.cancelled,
-                                    true,
-                                ).map_err(|error| format!(
-                                    "Project {opened_root} opened, but the target location could not open: {error}"
-                                ));
-                                if let Err(error) = &result {
-                                    message.error(error.clone());
-                                }
-                                let _ = request.reply.send(result);
-                            }
-                        }
-                        Err(error) => {
-                            panel.set(true);
-                            message.error(error.to_string());
-                            #[cfg(target_os = "linux")]
-                            if let Some(request) = activation {
-                                let _ = request.reply.send(Err(error.to_string()));
-                            }
-                        }
-                    }
-                }
-            }
+            completion::poll(self);
         }
         rect().maybe_child(job.read().as_ref().map(|current| {
             rect()

@@ -11,6 +11,7 @@ diagnostic-parse-012	reason	string
 diagnostic-parse-012-unexpected-character	character	string
 diagnostic-parse-013	reason	string
 diagnostic-parse-013-unexpected-character	character	string
+diagnostic-parse-013-nesting-limit	limit	integer
 diagnostic-parse-014
 diagnostic-parse-015
 diagnostic-parse-016

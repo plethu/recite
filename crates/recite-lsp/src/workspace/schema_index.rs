@@ -172,12 +172,7 @@ impl SchemaIndex {
         overlay
     }
 
-    pub(super) fn overlay_for_documents_in_partition(
-        &self,
-        documents: &OpenDocumentStore,
-        _saved: &super::project_index::SavedProjectIndex,
-        _partition: &str,
-    ) -> Option<Self> {
+    pub(super) fn overlay_for_open_documents(&self, documents: &OpenDocumentStore) -> Option<Self> {
         // URI aliases identify one schema target.  The open-document store is
         // URI ordered, so selecting its first matching document gives the
         // target one deterministic live owner without manufacturing an
@@ -190,34 +185,6 @@ impl SchemaIndex {
             document.text(),
             document.version(),
         ))
-    }
-
-    pub(super) fn has_open_match_in_partition(
-        &self,
-        documents: &OpenDocumentStore,
-        _saved: &super::project_index::SavedProjectIndex,
-        _partition: &str,
-    ) -> bool {
-        documents
-            .documents()
-            .any(|document| self.matches_uri(&document.identity().uri))
-    }
-
-    pub(crate) fn unavailable_overlay(&self, uri: Uri) -> Self {
-        let mut overlay = self.clone();
-        overlay.uri = Some(uri);
-        overlay.active_version = None;
-        overlay.schema = None;
-        overlay.source = None;
-        overlay.summary = None;
-        overlay.text = None;
-        overlay.diagnostics = schema_unavailable_diagnostic(
-            overlay
-                .path
-                .as_ref()
-                .map_or_else(|| "schema".to_owned(), |path| path.display().to_string()),
-        );
-        overlay
     }
 
     pub(crate) fn base(&self) -> Self {

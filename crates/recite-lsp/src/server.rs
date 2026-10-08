@@ -96,18 +96,7 @@ impl Server {
     }
     fn event_loop(&mut self) -> Result<(), ServerError> {
         loop {
-            // Bound ingress work so an active editor cannot indefinitely starve
-            // worker completions or a ready writer. Publication follows the last
-            // processed input, never a request's original dispatch decision.
-            for _ in 0..32 {
-                if !self.can_receive() {
-                    break;
-                }
-                let Ok(message) = self.connection.receiver.try_recv() else {
-                    break;
-                };
-                self.receive(message)?;
-            }
+            self.drain_ready_inputs()?;
             self.prune_publications();
             self.schedule()?;
             if self.exit_received && self.requests.is_empty() && self.output.is_empty() {
@@ -171,6 +160,21 @@ impl Server {
                 },
             }
         }
+    }
+    fn drain_ready_inputs(&mut self) -> Result<(), ServerError> {
+        // Bound ingress work so an active editor cannot indefinitely starve
+        // worker completions or a ready writer. Publication follows the last
+        // processed input, never a request's original dispatch decision.
+        for _ in 0..32 {
+            if !self.can_receive() {
+                break;
+            }
+            let Ok(message) = self.connection.receiver.try_recv() else {
+                break;
+            };
+            self.receive(message)?;
+        }
+        Ok(())
     }
     fn receive(&mut self, message: Message) -> Result<(), ServerError> {
         trace::message("ingress", &message);

@@ -47,9 +47,9 @@ clippy:
 
 [private]
 _clippy-rust:
-    cargo clippy --workspace --locked --all-targets --all-features -- -D warnings
-    # Assertion-heavy scenarios distort this metric; enforce it on production targets.
-    cargo clippy --workspace --locked --all-features --lib --bins -- -D warnings -D clippy::cognitive_complexity
+    cargo clippy --workspace --locked --all-targets --all-features -- -D warnings -D clippy::excessive_nesting
+    # Assertion-heavy scenarios distort cognitive complexity; nesting covers all targets.
+    cargo clippy --workspace --locked --all-features --lib --bins -- -D warnings -D clippy::cognitive_complexity -D clippy::excessive_nesting
 
 # Core semantics and Rust APIs; host and Writer checks run independently in CI.
 core-check:
@@ -88,7 +88,7 @@ supply-chain:
     scripts/check-dependencies.sh
 
 unused-deps:
-    cargo machete crates editors/zed
+    cargo machete crates tools editors/zed apps/writer/crates
 
 spelling:
     typos

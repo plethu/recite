@@ -11,6 +11,11 @@ use std::fmt;
 use self::lexer::Lexer;
 use self::parser::Parser;
 
+// This bounds source syntax and the AST produced by recursive descent. It is
+// separate from runtime evaluation depth: parentheses remain in the source AST
+// but disappear during compilation, and wide boolean groups stay shallow.
+pub(crate) const MAX_CONDITION_SYNTAX_NESTING: u8 = 128;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ParseError {
     pub(crate) span: SourceSpan,
@@ -40,6 +45,7 @@ pub(crate) enum ParseErrorKind {
     ExpectedRightParen,
     ExpectedScalarArgument,
     UnexpectedTrailingTokens,
+    NestingLimitExceeded,
 }
 
 impl fmt::Display for ParseErrorKind {
@@ -58,6 +64,10 @@ impl fmt::Display for ParseErrorKind {
             Self::ExpectedRightParen => formatter.write_str("expected ')'"),
             Self::ExpectedScalarArgument => formatter.write_str("expected scalar argument"),
             Self::UnexpectedTrailingTokens => formatter.write_str("unexpected trailing tokens"),
+            Self::NestingLimitExceeded => write!(
+                formatter,
+                "condition syntax nesting exceeds the limit of {MAX_CONDITION_SYNTAX_NESTING}"
+            ),
         }
     }
 }

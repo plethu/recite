@@ -9,28 +9,29 @@
 //! `recite-compiler/tests/asset/` fail when one drifts.
 
 use serde::Deserialize;
-use serde::de::{IntoDeserializer, SeqAccess, Visitor};
+use serde::de::{SeqAccess, Visitor};
 
 use crate::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, ScalarValue, SpeakerId};
 
 use super::CompiledAssetDecodeError;
-use super::interpolation::MsgInterpolationBinding;
 use super::tags::{
-    MsgArgument, MsgAssetEncoding, MsgChoiceEcho, MsgConditionExpression, MsgDivertTarget,
-    MsgEffectMode, MsgFingerprint, MsgInspectionEncoding, MsgMatchPattern, MsgSchemaFingerprint,
-    MsgSourceSpan, MsgStatementKind, MsgValue, collect_wrapped,
+    MsgArgument, MsgAssetEncoding, MsgEffectMode, MsgFingerprint, MsgInspectionEncoding,
+    MsgMatchPattern, MsgSchemaFingerprint, MsgSourceSpan, MsgStatementKind, MsgValue,
+    collect_wrapped,
 };
 use crate::compiled::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, COMPILED_ASSET_FORMAT_VERSION_V0,
     COMPILER_COMPATIBILITY_VERSION_V0, ChoiceIndex, ChoiceLookupEntry, ChoiceLookupTable,
-    ChoiceRange, CompiledAssetHeader, CompiledAssetId, CompiledBlock, CompiledChoice,
-    CompiledDialogue, CompiledDialoguePayload, CompiledEffect, CompiledInterpolationMode,
-    CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile,
-    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, CompilerVersion, LineIndex,
-    LineLookupEntry, LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange,
-    SourceFileIndex, SourceMapId, SourceMapIndex, SpeakerIndex, StatementIndex, StatementRange,
-    TableRange, V0_TAGGED_VALUE_FIELDS,
+    ChoiceRange, CompiledAssetHeader, CompiledAssetId, CompiledBlock, CompiledDialogue,
+    CompiledDialoguePayload, CompiledEffect, CompiledMatchArm, CompiledMetadataEntry,
+    CompiledSourceFile, CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement,
+    CompilerVersion, LineIndex, LineLookupEntry, LineLookupTable, MatchArmIndex, MatchArmRange,
+    MetadataIndex, MetadataRange, SourceFileIndex, SourceMapId, SourceMapIndex, SpeakerIndex,
+    StatementIndex, StatementRange, TableRange, V0_TAGGED_VALUE_FIELDS,
 };
+
+mod text_rows;
+use text_rows::{MsgChoice, MsgLine};
 
 #[derive(Deserialize)]
 pub(super) struct MsgDialogue(
@@ -193,229 +194,6 @@ impl TryFrom<MsgMatchArm> for CompiledMatchArm {
             statements: value.1.statement(),
             source_map: SourceMapIndex::new(value.2),
         })
-    }
-}
-
-enum MsgLine {
-    Plural(MsgLinePlural),
-    Current(MsgLineCurrent),
-    Legacy(MsgLineLegacy),
-}
-
-impl<'de> Deserialize<'de> for MsgLine {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = serde_value::Value::deserialize(deserializer)?;
-        let len = match &value {
-            serde_value::Value::Seq(values) => values.len(),
-            _ => 0,
-        };
-        match len {
-            9 => MsgLinePlural::deserialize(value.into_deserializer())
-                .map(Self::Plural)
-                .map_err(serde::de::Error::custom),
-            7 => MsgLineCurrent::deserialize(value.into_deserializer())
-                .map(Self::Current)
-                .map_err(serde::de::Error::custom),
-            5 => MsgLineLegacy::deserialize(value.into_deserializer())
-                .map(Self::Legacy)
-                .map_err(serde::de::Error::custom),
-            _ => Err(serde::de::Error::custom(
-                "compiled line must have 5, 7, or 9 fields",
-            )),
-        }
-    }
-}
-
-#[derive(Deserialize)]
-struct MsgLineCurrent(
-    String,
-    String,
-    Option<u32>,
-    MsgRange,
-    u32,
-    String,
-    Vec<MsgInterpolationBinding>,
-);
-
-#[derive(Deserialize)]
-struct MsgLinePlural(
-    String,
-    String,
-    Option<u32>,
-    MsgRange,
-    u32,
-    String,
-    Vec<MsgInterpolationBinding>,
-    Option<String>,
-    Option<String>,
-);
-
-#[derive(Deserialize)]
-struct MsgLineLegacy(String, String, Option<u32>, MsgRange, u32);
-
-impl TryFrom<MsgLine> for CompiledLine {
-    type Error = CompiledAssetDecodeError;
-
-    fn try_from(value: MsgLine) -> Result<Self, Self::Error> {
-        match value {
-            MsgLine::Plural(value) => {
-                let line = Self {
-                    id: LineId::new(value.0)?,
-                    source_text: value.1,
-                    plural_source_text: value.7,
-                    speaker: value.2.map(SpeakerIndex::new),
-                    metadata: value.3.metadata(),
-                    source_map: SourceMapIndex::new(value.4),
-                    authored_source_text: value.5,
-                    authored_plural_source_text: value.8,
-                    interpolation_bindings: value
-                        .6
-                        .into_iter()
-                        .map(TryInto::try_into)
-                        .collect::<Result<_, _>>()?,
-                    interpolation_mode: CompiledInterpolationMode::Current,
-                };
-                Ok(line)
-            }
-            MsgLine::Current(value) => {
-                let line = Self {
-                    id: LineId::new(value.0)?,
-                    source_text: value.1,
-                    plural_source_text: None,
-                    speaker: value.2.map(SpeakerIndex::new),
-                    metadata: value.3.metadata(),
-                    source_map: SourceMapIndex::new(value.4),
-                    authored_source_text: value.5,
-                    interpolation_bindings: value
-                        .6
-                        .into_iter()
-                        .map(TryInto::try_into)
-                        .collect::<Result<_, _>>()?,
-                    interpolation_mode: CompiledInterpolationMode::Current,
-                    authored_plural_source_text: None,
-                };
-                Ok(line)
-            }
-            MsgLine::Legacy(value) => Ok(Self {
-                id: LineId::new(value.0)?,
-                source_text: value.1.clone(),
-                plural_source_text: None,
-                authored_source_text: value.1,
-                authored_plural_source_text: None,
-                interpolation_bindings: Vec::new(),
-                interpolation_mode: CompiledInterpolationMode::Legacy,
-                speaker: value.2.map(SpeakerIndex::new),
-                metadata: value.3.metadata(),
-                source_map: SourceMapIndex::new(value.4),
-            }),
-        }
-    }
-}
-
-enum MsgChoice {
-    Current(MsgChoiceCurrent),
-    Legacy(MsgChoiceLegacy),
-}
-
-impl<'de> Deserialize<'de> for MsgChoice {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = serde_value::Value::deserialize(deserializer)?;
-        let len = match &value {
-            serde_value::Value::Seq(values) => values.len(),
-            _ => 0,
-        };
-        match len {
-            11 => MsgChoiceCurrent::deserialize(value.into_deserializer())
-                .map(Self::Current)
-                .map_err(serde::de::Error::custom),
-            9 => MsgChoiceLegacy::deserialize(value.into_deserializer())
-                .map(Self::Legacy)
-                .map_err(serde::de::Error::custom),
-            _ => Err(serde::de::Error::custom(
-                "compiled choice must have 11 fields",
-            )),
-        }
-    }
-}
-
-#[derive(Deserialize)]
-struct MsgChoiceCurrent(
-    String,
-    String,
-    MsgRange,
-    Option<MsgConditionExpression>,
-    Option<String>,
-    Option<String>,
-    MsgDivertTarget,
-    MsgChoiceEcho,
-    u32,
-    String,
-    Vec<MsgInterpolationBinding>,
-);
-
-#[derive(Deserialize)]
-struct MsgChoiceLegacy(
-    String,
-    String,
-    MsgRange,
-    Option<MsgConditionExpression>,
-    Option<String>,
-    Option<String>,
-    MsgDivertTarget,
-    MsgChoiceEcho,
-    u32,
-);
-
-impl TryFrom<MsgChoice> for CompiledChoice {
-    type Error = CompiledAssetDecodeError;
-
-    fn try_from(value: MsgChoice) -> Result<Self, Self::Error> {
-        match value {
-            MsgChoice::Current(value) => {
-                let choice = Self {
-                    id: ChoiceId::new(value.0)?,
-                    source_text: value.1,
-                    metadata: value.2.metadata(),
-                    availability_requirement: value.3.map(|condition| condition.0),
-                    availability_requirement_source_text: value.4,
-                    availability_reason_override: value
-                        .5
-                        .map(AvailabilityReasonId::new)
-                        .transpose()?,
-                    target: value.6.0,
-                    echo: value.7.0,
-                    source_map: SourceMapIndex::new(value.8),
-                    authored_source_text: value.9,
-                    interpolation_bindings: value
-                        .10
-                        .into_iter()
-                        .map(TryInto::try_into)
-                        .collect::<Result<_, _>>()?,
-                    interpolation_mode: CompiledInterpolationMode::Current,
-                };
-                Ok(choice)
-            }
-            MsgChoice::Legacy(value) => Ok(Self {
-                id: ChoiceId::new(value.0)?,
-                source_text: value.1.clone(),
-                authored_source_text: value.1,
-                interpolation_bindings: Vec::new(),
-                interpolation_mode: CompiledInterpolationMode::Legacy,
-                metadata: value.2.metadata(),
-                availability_requirement: value.3.map(|condition| condition.0),
-                availability_requirement_source_text: value.4,
-                availability_reason_override: value.5.map(AvailabilityReasonId::new).transpose()?,
-                target: value.6.0,
-                echo: value.7.0,
-                source_map: SourceMapIndex::new(value.8),
-            }),
-        }
     }
 }
 

@@ -1,5 +1,5 @@
 use recite_core::{
-    ScalarValue, SourceSpan, SpeakerId, Value,
+    ScalarValue, SourceLineIndex, SourcePosition, SourceSpan, SpeakerId, Value,
     ast::{
         Choice, DivertTarget, Effect, Line, MatchArm, SourceMetadata, SourceMetadataScalar,
         SourceMetadataValue,
@@ -118,7 +118,7 @@ impl AssetBuilder<'_> {
 
     fn source_text_for_span(&self, span: &SourceSpan) -> Option<String> {
         let document = self.source_documents.get(span.file.as_str())?;
-        slice_source_span(document.source, &document.positions, span)
+        slice_source_span(document, span)
     }
 
     pub(super) fn compile_match_arms(
@@ -291,32 +291,23 @@ impl AssetBuilder<'_> {
     }
 }
 
-fn slice_source_span(
-    source: &str,
-    positions: &super::SourcePositionIndex,
-    span: &SourceSpan,
-) -> Option<String> {
-    let start = positions.byte_offset(source, span.start.line(), span.start.column())?;
+fn slice_source_span(source: &SourceLineIndex, span: &SourceSpan) -> Option<String> {
+    let start = source.byte_offset(span.start)?;
     let end = span
         .end
-        .and_then(|end| byte_offset_after_position(source, positions, end.line(), end.column()))
+        .and_then(|end| byte_offset_after_position(source, end))
         .unwrap_or(start);
 
     if end < start {
         return None;
     }
 
-    source.get(start..end).map(str::to_owned)
+    source.source().get(start..end).map(str::to_owned)
 }
 
-fn byte_offset_after_position(
-    source: &str,
-    positions: &super::SourcePositionIndex,
-    line: u32,
-    column: u32,
-) -> Option<usize> {
-    let start = positions.byte_offset(source, line, column)?;
-    let character = source.get(start..)?.chars().next()?;
+fn byte_offset_after_position(source: &SourceLineIndex, position: SourcePosition) -> Option<usize> {
+    let start = source.byte_offset(position)?;
+    let character = source.source().get(start..)?.chars().next()?;
     Some(start + character.len_utf8())
 }
 
@@ -342,6 +333,3 @@ fn lower_source_metadata_scalar(value: &SourceMetadataScalar) -> ScalarValue {
         SourceMetadataScalar::Bool(value) => ScalarValue::Boolean(*value),
     }
 }
-
-#[cfg(test)]
-mod tests;

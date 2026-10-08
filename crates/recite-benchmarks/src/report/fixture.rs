@@ -6,7 +6,7 @@ use crate::{BenchmarkFixture, BenchmarkResult, error};
 
 use super::{
     BenchCounts, BenchGroup, BenchOperationReport, BenchTargetKind, BenchTargetReport,
-    TargetMetadata, timed_operation,
+    TargetMetadata, timed_operation, timed_operation_with_setup,
 };
 
 pub(super) fn build_fixture_reports(
@@ -30,47 +30,17 @@ fn build_fixture_report(
     samples: usize,
 ) -> BenchmarkResult<BenchTargetReport> {
     let project = BenchmarkProject::load_fixture(fixture)?;
-    let compiler_project = if groups.iter().any(|group| {
-        matches!(
-            group,
-            BenchGroup::Compiler | BenchGroup::Runtime | BenchGroup::Lsp
-        )
-    }) {
-        Some(CompilerProject::load(&project)?)
-    } else {
-        None
-    };
-    let compiled = if groups
-        .iter()
-        .any(|group| matches!(group, BenchGroup::Runtime))
-    {
-        Some(
-            compiler_project
-                .as_ref()
-                .ok_or_else(|| error("compiler project was not loaded"))?
-                .compile_with_schema()?,
-        )
-    } else {
-        None
-    };
+    // Shape metadata uses the same compiled tables for every selected group.
+    let compiler_project = CompilerProject::load(&project)?;
+    let compiled = compiler_project.compile_with_schema()?;
     let mut operations = Vec::new();
     for group in groups {
         match group {
             BenchGroup::Compiler => {
-                operations.extend(compiler_fixture_operations(
-                    compiler_project
-                        .as_ref()
-                        .ok_or_else(|| error("compiler project was not loaded"))?,
-                    samples,
-                )?);
+                operations.extend(compiler_fixture_operations(&compiler_project, samples)?);
             }
             BenchGroup::Runtime => {
-                let runtime = RuntimeProject::load(
-                    &project,
-                    compiled
-                        .as_ref()
-                        .ok_or_else(|| error("compiled project was not loaded"))?,
-                )?;
+                let runtime = RuntimeProject::load(&project, &compiled)?;
                 operations.extend(runtime_fixture_operations(&runtime, samples)?);
             }
             BenchGroup::Lsp => {
@@ -81,23 +51,8 @@ fn build_fixture_report(
     }
 
     let mut counts = fixture_counts(&project)?;
-    if groups
-        .iter()
-        .any(|group| matches!(group, BenchGroup::Compiler))
-    {
-        let compiled_asset_bytes = match &compiled {
-            Some(compiled) => compiled.asset().messagepack.len() as u64,
-            None => compiler_project
-                .as_ref()
-                .ok_or_else(|| error("compiler project was not loaded"))?
-                .compile_with_schema()?
-                .asset()
-                .messagepack
-                .len() as u64,
-        };
-        counts.compiled_asset_bytes = Some(compiled_asset_bytes);
-    }
-
+    counts.conditions = super::compiled_condition_sites(&compiled.asset().dialogue);
+    counts.compiled_asset_bytes = Some(compiled.asset().messagepack.len() as u64);
     Ok(BenchTargetReport {
         target: project.fixture_label().to_owned(),
         kind: BenchTargetKind::Fixture,
@@ -124,31 +79,22 @@ fn compiler_fixture_operations(
         BenchGroup::Compiler,
         "parse",
         samples,
-        || {
-            compiler::parse_inputs(std::hint::black_box(&inputs)).map(|count| {
-                std::hint::black_box(count);
-            })
-        },
+        || compiler::parse_inputs(std::hint::black_box(&inputs)).map(std::hint::black_box),
     )?);
     operations.push(timed_operation(
         BenchGroup::Compiler,
         "lower",
         samples,
-        || {
-            compiler::lower_inputs(std::hint::black_box(&inputs)).map(|files| {
-                std::hint::black_box(files);
-            })
-        },
+        || compiler::lower_inputs(std::hint::black_box(&inputs)).map(std::hint::black_box),
     )?);
     operations.push(timed_operation(
         BenchGroup::Compiler,
         "validate",
         samples,
         || {
-            std::hint::black_box(compiler::validate_without_schema(std::hint::black_box(
-                &source_files,
-            )));
-            Ok(())
+            Ok(std::hint::black_box(compiler::validate_without_schema(
+                std::hint::black_box(&source_files),
+            )))
         },
     )?);
     operations.push(timed_operation(
@@ -156,11 +102,10 @@ fn compiler_fixture_operations(
         "validate_with_schema",
         samples,
         || {
-            std::hint::black_box(compiler::validate_with_schema(
+            Ok(std::hint::black_box(compiler::validate_with_schema(
                 std::hint::black_box(&source_files),
                 std::hint::black_box(&schema),
-            ));
-            Ok(())
+            )))
         },
     )?);
     operations.push(timed_operation(
@@ -179,8 +124,7 @@ fn compiler_fixture_operations(
                     report.diagnostics.len()
                 )));
             }
-            std::hint::black_box(report.asset);
-            Ok(())
+            Ok(std::hint::black_box(report.asset))
         },
     )?);
     operations.push(timed_operation(
@@ -195,8 +139,7 @@ fn compiler_fixture_operations(
                     report.diagnostics.len()
                 )));
             }
-            std::hint::black_box(report.catalog);
-            Ok(())
+            Ok(std::hint::black_box(report.catalog))
         },
     )?);
     Ok(operations)
@@ -211,77 +154,76 @@ fn runtime_fixture_operations(
     let prompt_session = driver.session_with_prompt()?;
     Ok(vec![
         timed_operation(BenchGroup::Runtime, "start_scene", samples, || {
-            driver.start_scene().map(|session| {
-                std::hint::black_box(session);
-            })
+            driver.start_scene()
         })?,
-        timed_operation(BenchGroup::Runtime, "next_line", samples, || {
-            let mut session = driver.session_before_first_line()?;
-            driver.next_line(&mut session).map(|event| {
-                std::hint::black_box(event);
-            })
-        })?,
-        timed_operation(BenchGroup::Runtime, "next_prompt", samples, || {
-            let mut session = driver.session_before_first_prompt()?;
-            driver.next_prompt(&mut session).map(|event| {
-                std::hint::black_box(event);
-            })
-        })?,
-        timed_operation(BenchGroup::Runtime, "choose_first", samples, || {
-            let mut session = driver.session_with_prompt()?;
-            driver.choose_first(&mut session).map(|event| {
-                std::hint::black_box(event);
-            })
-        })?,
-        timed_operation(BenchGroup::Runtime, "condition_dispatch", samples, || {
-            let mut session = driver.session_before_condition_prompt()?;
-            driver.condition_dispatch(&mut session).map(|event| {
-                std::hint::black_box(event);
-            })
-        })?,
-        timed_operation(BenchGroup::Runtime, "effect_immediate", samples, || {
-            let mut session = driver.start_scene()?;
-            driver.immediate_effect(&mut session).map(|event| {
-                std::hint::black_box(event);
-            })
-        })?,
-        timed_operation(BenchGroup::Runtime, "effect_deferred", samples, || {
-            let mut session = driver.session_before_deferred_effect()?;
-            driver.deferred_effect(&mut session).map(|event| {
-                std::hint::black_box(event);
-            })
-        })?,
-        timed_operation(BenchGroup::Runtime, "effect_blocking_ack", samples, || {
-            let mut session = driver.session_before_blocking_effect()?;
-            driver.blocking_effect(&mut session)?;
-            driver.acknowledge_blocking(&mut session)?;
-            std::hint::black_box(session);
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Runtime, "localised_next", samples, || {
-            let mut session = driver.localised_session_before_first_line()?;
-            driver.localised_next(&mut session).map(|event| {
-                std::hint::black_box(event);
-            })
-        })?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "next_line",
+            samples,
+            || driver.session_before_first_line(),
+            |session| driver.next_line(session),
+        )?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "next_prompt",
+            samples,
+            || driver.session_before_first_prompt(),
+            |session| driver.next_prompt(session),
+        )?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "choose_first",
+            samples,
+            || driver.session_with_prompt(),
+            |session| driver.choose_first(session),
+        )?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "condition_dispatch",
+            samples,
+            || driver.session_before_condition_prompt(),
+            |session| driver.condition_dispatch(session),
+        )?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "effect_immediate",
+            samples,
+            || driver.start_scene(),
+            |session| driver.immediate_effect(session),
+        )?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "effect_deferred",
+            samples,
+            || driver.session_before_deferred_effect(),
+            |session| driver.deferred_effect(session),
+        )?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "effect_blocking_ack",
+            samples,
+            || {
+                let mut session = driver.session_before_blocking_effect()?;
+                driver.blocking_effect(&mut session)?;
+                Ok(session)
+            },
+            |session| driver.acknowledge_blocking(session),
+        )?,
+        timed_operation_with_setup(
+            BenchGroup::Runtime,
+            "localised_next",
+            samples,
+            || driver.localised_session_before_first_line(),
+            |session| driver.localised_next(session),
+        )?,
         timed_operation(BenchGroup::Runtime, "session_encode", samples, || {
-            driver
-                .encode_session(std::hint::black_box(&prompt_session))
-                .map(|bytes| {
-                    std::hint::black_box(bytes);
-                })
+            driver.encode_session(std::hint::black_box(&prompt_session))
         })?,
         timed_operation(BenchGroup::Runtime, "session_decode", samples, || {
-            driver
-                .decode_session(std::hint::black_box(&encoded_prompt))
-                .map(|session| {
-                    std::hint::black_box(session);
-                })
+            driver.decode_session(std::hint::black_box(&encoded_prompt))
         })?,
         timed_operation(BenchGroup::Runtime, "full_traversal", samples, || {
-            driver.full_traversal().map(|events| {
-                std::hint::black_box(events);
-            })
+            driver.full_traversal()
         })?,
     ])
 }

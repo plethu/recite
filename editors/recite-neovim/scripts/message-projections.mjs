@@ -88,7 +88,7 @@ export function renderMessages(messages) {
     "    error(\"unknown Recite UI message: \" .. tostring(id), 2)",
     "  end",
     "  arguments = arguments or {}",
-    "  return (template:gsub(\"{%$([%w_]+)}\", function(name)",
+    "  return (template:gsub(\"{%$([A-Za-z][A-Za-z0-9_%-]*)}\", function(name)",
     "    local value = arguments[name]",
     "    if value == nil then",
     "      error(\"missing argument for Recite UI message \" .. id .. \".$\" .. name, 2)",

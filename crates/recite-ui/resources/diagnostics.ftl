@@ -59,6 +59,7 @@ diagnostic-parse-013 = { $reason ->
    *[other] malformed condition expression: invalid syntax
 }
 diagnostic-parse-013-unexpected-character = malformed condition expression: unexpected character '{$character}'
+diagnostic-parse-013-nesting-limit = malformed condition expression: condition syntax nesting exceeds the limit of { $limit }
 
 # RECITE_PARSE014
 diagnostic-parse-014 = case header must include a variant or _

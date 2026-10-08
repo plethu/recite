@@ -1,6 +1,7 @@
 use std::alloc::System;
 use std::hint::black_box;
 
+use recite_core::compiled::decode_compiled_dialogue_messagepack;
 use recite_runtime::{DialogueEvent, DialogueSession};
 use serde::Serialize;
 use stats_alloc::{Region, Stats, StatsAlloc};
@@ -72,7 +73,7 @@ pub fn build_runtime_allocation_report(
         fixtures,
         caveats: vec![
             "Counts come from an instrumented process-global allocator and can vary by platform, build profile, allocator, and surrounding process activity.",
-            "Each operation measures the runtime hot-path body after fixture, asset, and setup-session preparation where possible.",
+            "Asset decoding starts from prepared bytes; traversal operations start after fixture, asset, and setup-session preparation.",
             "Returned events, sessions, and buffers are dropped after the measured region, so deallocation counts do not necessarily mirror allocation counts.",
             "Clone pressure is inferred from allocation and byte spikes; this report does not count individual Clone calls.",
             "Thresholds remain review evidence only until #109 establishes the release benchmark baseline profile.",
@@ -89,10 +90,15 @@ fn build_fixture_report(
     let compiled = compiler.compile_with_schema()?;
     let runtime = RuntimeProject::load(&project, &compiled)?;
     let driver = runtime.driver();
+    let mut operations = vec![measure_operation(allocator, "asset_decode", || {
+        decode_compiled_dialogue_messagepack(&compiled.asset().messagepack)
+            .map_err(|error| crate::error(format!("invalid allocation-probe asset: {error}")))
+    })?];
+    operations.extend(runtime_operations(&driver, allocator)?);
 
     Ok(FixtureRuntimeAllocationReport {
         fixture: project.fixture_label(),
-        operations: runtime_operations(&driver, allocator)?,
+        operations,
     })
 }
 

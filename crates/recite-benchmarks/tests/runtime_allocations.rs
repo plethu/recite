@@ -34,6 +34,7 @@ fn tiny_runtime_allocation_report_covers_hot_path_operations()
         operations,
         BTreeSet::from([
             "acknowledge_blocking",
+            "asset_decode",
             "choose_first",
             "condition_dispatch",
             "effect_blocking",

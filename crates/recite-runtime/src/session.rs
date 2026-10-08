@@ -177,7 +177,6 @@ impl PendingPrompt {
 pub(crate) struct PendingPromptChoice {
     pub(crate) id: ChoiceId,
     pub(crate) target: CompiledDivertTarget,
-    pub(crate) is_available: bool,
     pub(crate) availability: ChoiceAvailability,
 }
 

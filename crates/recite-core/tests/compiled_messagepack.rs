@@ -13,6 +13,8 @@ use support::*;
 mod encode_validation;
 #[path = "compiled_messagepack/interpolation.rs"]
 mod interpolation;
+#[path = "compiled_messagepack/row_shapes.rs"]
+mod row_shapes;
 #[path = "compiled_messagepack/shape.rs"]
 mod shape;
 #[path = "compiled_messagepack/validation.rs"]

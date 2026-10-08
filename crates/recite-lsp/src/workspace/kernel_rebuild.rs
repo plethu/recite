@@ -1,10 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use recite_compiler::authoring::AuthoringKernel;
+use recite_compiler::authoring::{AuthoringError, AuthoringKernel};
 
 use super::kernel::{KernelPartition, effective_open_documents};
-use super::partition_rollback::take_old_partitions;
 use super::project_index::SavedProjectIndex;
 use super::schema_index::SchemaIndex;
 use super::{LspWorkspace, SnapshotGeneration};
@@ -37,20 +36,13 @@ impl LspWorkspace {
         saved: SavedProjectIndex,
         documents: OpenDocumentStore,
         schemas: BTreeMap<String, SchemaIndex>,
-    ) -> Result<(), recite_compiler::authoring::AuthoringError> {
+    ) -> Result<(), AuthoringError> {
         let retired = self
             .partitions
             .iter()
             .map(|(id, partition)| (id.clone(), partition.retired_schema_uris.clone()))
             .collect();
-        let old_partitions = std::mem::take(&mut self.partitions);
-        match self.rebuild_partitions(saved, documents, schemas, retired, Some(old_partitions)) {
-            Ok(()) => Ok(()),
-            Err((error, old_partitions)) => {
-                self.partitions = old_partitions;
-                Err(error)
-            }
-        }
+        self.rebuild_for_documents_with_schemas_and_retired(saved, documents, schemas, retired)
     }
 
     pub(super) fn rebuild_for_documents_with_schemas_and_retired(
@@ -59,44 +51,14 @@ impl LspWorkspace {
         documents: OpenDocumentStore,
         schemas: BTreeMap<String, SchemaIndex>,
         retired: BTreeMap<String, BTreeSet<String>>,
-    ) -> Result<(), recite_compiler::authoring::AuthoringError> {
-        let old_partitions = std::mem::take(&mut self.partitions);
-        match self.rebuild_partitions(saved, documents, schemas, retired, Some(old_partitions)) {
-            Ok(()) => Ok(()),
-            Err((error, old_partitions)) => {
-                self.partitions = old_partitions;
-                Err(error)
-            }
-        }
-    }
-
-    fn rebuild_partitions(
-        &mut self,
-        saved: SavedProjectIndex,
-        documents: OpenDocumentStore,
-        schemas: BTreeMap<String, SchemaIndex>,
-        retired: BTreeMap<String, BTreeSet<String>>,
-        mut old_partitions: Option<BTreeMap<String, KernelPartition>>,
-    ) -> Result<
-        (),
-        (
-            recite_compiler::authoring::AuthoringError,
-            BTreeMap<String, KernelPartition>,
-        ),
-    > {
-        let generation = SnapshotGeneration(
-            self.generation
-                .0
-                .checked_add(1)
-                .ok_or(
-                    recite_compiler::authoring::AuthoringError::GenerationExhausted {
-                        current: recite_compiler::authoring::SnapshotGeneration::new(
-                            self.generation.0,
-                        ),
-                    },
-                )
-                .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?,
-        );
+    ) -> Result<(), AuthoringError> {
+        // Keep the committed state available until the complete candidate and
+        // its final cancellation checkpoint succeed. Failure needs no rollback.
+        let generation = SnapshotGeneration(self.generation.0.checked_add(1).ok_or(
+            AuthoringError::GenerationExhausted {
+                current: recite_compiler::authoring::SnapshotGeneration::new(self.generation.0),
+            },
+        )?);
         let mut next_partition_build_id = self.next_partition_build_id;
         let mut ids = saved.partition_ids();
         ids.extend(schemas.keys().cloned());
@@ -156,25 +118,10 @@ impl LspWorkspace {
         }
         let mut partitions = BTreeMap::new();
         for id in ids {
-            self.control
-                .checkpoint()
-                .map_err(|error| (error.into(), take_old_partitions(&mut old_partitions)))?;
+            self.control.checkpoint()?;
             let base_schema = schemas.get(&id).cloned().unwrap_or_else(SchemaIndex::empty);
             let schema = base_schema
-                .overlay_for_documents_in_partition(&documents, &saved, &id)
-                .or_else(|| {
-                    base_schema
-                        .has_open_match_in_partition(&documents, &saved, &id)
-                        .then(|| {
-                            documents
-                                .documents()
-                                .find(|document| base_schema.matches_uri(&document.identity().uri))
-                                .map(|document| {
-                                    base_schema.unavailable_overlay(document.identity().uri.clone())
-                                })
-                        })
-                        .flatten()
-                })
+                .overlay_for_open_documents(&documents)
                 .unwrap_or_else(|| base_schema.base());
             let open = effective_open_documents(
                 &saved,
@@ -198,32 +145,21 @@ impl LspWorkspace {
                 &retired_targets,
             );
             input_fingerprint.project_complete = saved.partition_is_complete(&id);
-            let reusable = old_partitions
-                .as_ref()
-                .and_then(|old| old.get(&id))
-                .is_some_and(|old| old.input_fingerprint == input_fingerprint);
+            let old = self.partitions.get(&id);
+            let reusable = old.is_some_and(|old| old.input_fingerprint == input_fingerprint);
             let build_id = if reusable {
-                old_partitions
-                    .as_ref()
-                    .and_then(|old| old.get(&id))
-                    .map_or(next_partition_build_id, |old| old.build_id)
+                old.map_or(next_partition_build_id, |old| old.build_id)
             } else {
-                let build_id = next_partition_build_id
-                    .checked_add(1)
-                    .ok_or(
-                        recite_compiler::authoring::AuthoringError::GenerationExhausted {
-                            current: recite_compiler::authoring::SnapshotGeneration::new(
-                                next_partition_build_id,
-                            ),
-                        },
-                    )
-                    .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?;
+                let build_id = next_partition_build_id.checked_add(1).ok_or(
+                    AuthoringError::GenerationExhausted {
+                        current: recite_compiler::authoring::SnapshotGeneration::new(
+                            next_partition_build_id,
+                        ),
+                    },
+                )?;
                 next_partition_build_id = build_id;
                 build_id
             };
-            let old = old_partitions
-                .as_ref()
-                .and_then(|partitions| partitions.get(&id));
             let kernel = if reusable {
                 old.map(|old| Arc::clone(&old.kernel)).unwrap_or_default()
             } else {
@@ -251,10 +187,7 @@ impl LspWorkspace {
                     base.snapshot().generation(),
                 )
                 .with_project_completeness(saved.partition_is_complete(&id));
-                Arc::new(
-                    base.updated(request, &self.control)
-                        .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?,
-                )
+                Arc::new(base.updated(request, &self.control)?)
             };
             let retired_schema_uris = retired.get(&id).cloned().unwrap_or_default();
             partitions.insert(
@@ -272,9 +205,7 @@ impl LspWorkspace {
         let snapshot = self
             .snapshot
             .rebuild(generation, &saved, &documents, &partitions);
-        self.control
-            .checkpoint()
-            .map_err(|error| (error.into(), take_old_partitions(&mut old_partitions)))?;
+        self.control.checkpoint()?;
         self.saved = saved;
         self.documents = documents;
         self.partitions = partitions;

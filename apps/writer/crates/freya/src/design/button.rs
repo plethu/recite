@@ -204,6 +204,44 @@ impl Button {
             Color::TRANSPARENT
         }
     }
+
+    fn with_accessibility(&self, mut control: Rect) -> Rect {
+        let role = match self.semantics {
+            Semantics::Tab => AccessibilityRole::Tab,
+            Semantics::MenuItem => AccessibilityRole::MenuItem,
+            Semantics::Option => AccessibilityRole::ListBoxOption,
+            Semantics::Radio => AccessibilityRole::RadioButton,
+            Semantics::Button if self.checked.is_some() => AccessibilityRole::CheckBox,
+            Semantics::Button => AccessibilityRole::Button,
+        };
+        control = control.a11y_focusable(self.enabled).a11y_role(role);
+        if !self.enabled {
+            control = control.a11y_builder(|node| node.set_disabled());
+        }
+        if let Some(shortcut) = self.shortcut.clone() {
+            control =
+                control.a11y_builder(move |node| node.set_keyboard_shortcut(shortcut.clone()));
+        }
+        if let Some(name) = self.name.clone().or_else(|| content_name(&self.children)) {
+            control = control.a11y_alt(name);
+        }
+        if matches!(self.semantics, Semantics::Option | Semantics::Tab) {
+            let selected = self.selected.unwrap_or(false);
+            control = control.a11y_builder(move |node| node.set_selected(selected));
+        } else if let Some(checked) = self.checked.or(self.selected) {
+            control = control.a11y_builder(move |node| {
+                node.set_toggled(if checked {
+                    accesskit::Toggled::True
+                } else {
+                    accesskit::Toggled::False
+                })
+            });
+        }
+        if let Some(expanded) = self.expanded {
+            control = control.a11y_builder(move |node| node.set_expanded(expanded));
+        }
+        control
+    }
 }
 
 impl Component for Button {
@@ -235,21 +273,11 @@ impl Component for Button {
             if down { 0 } else { 80 },
             freya::animation::Function::Cubic,
         );
-        let role = match self.semantics {
-            Semantics::Tab => AccessibilityRole::Tab,
-            Semantics::MenuItem => AccessibilityRole::MenuItem,
-            Semantics::Option => AccessibilityRole::ListBoxOption,
-            Semantics::Radio => AccessibilityRole::RadioButton,
-            Semantics::Button if self.checked.is_some() => AccessibilityRole::CheckBox,
-            Semantics::Button => AccessibilityRole::Button,
-        };
         let border_color = self.border_color(&colors, focused, down);
         let mut control = rect()
             .horizontal()
             .on_sized(move |event: Event<SizedEventData>| area.set_if_modified(Some(event.area)))
             .a11y_id(id)
-            .a11y_focusable(self.enabled)
-            .a11y_role(role)
             .width(self.width.clone())
             .min_height(Size::px(if self.compact || segment {
                 t::control_height() - 2. * t::SPACE_XS
@@ -280,31 +308,7 @@ impl Component for Button {
             } else {
                 CursorIcon::Default
             });
-        if !self.enabled {
-            control = control.a11y_builder(|node| node.set_disabled());
-        }
-        if let Some(shortcut) = self.shortcut.clone() {
-            control =
-                control.a11y_builder(move |node| node.set_keyboard_shortcut(shortcut.clone()));
-        }
-        if let Some(name) = self.name.clone().or_else(|| content_name(&self.children)) {
-            control = control.a11y_alt(name);
-        }
-        if matches!(self.semantics, Semantics::Option | Semantics::Tab) {
-            let selected = self.selected.unwrap_or(false);
-            control = control.a11y_builder(move |node| node.set_selected(selected));
-        } else if let Some(checked) = self.checked.or(self.selected) {
-            control = control.a11y_builder(move |node| {
-                node.set_toggled(if checked {
-                    accesskit::Toggled::True
-                } else {
-                    accesskit::Toggled::False
-                })
-            });
-        }
-        if let Some(expanded) = self.expanded {
-            control = control.a11y_builder(move |node| node.set_expanded(expanded));
-        }
+        control = self.with_accessibility(control);
         if self.enabled {
             control = control
                 .on_pointer_enter(move |_| { hovered.set(true); if let Some(enter) = &enter { enter.call(true); } })
