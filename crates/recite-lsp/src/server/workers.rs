@@ -16,6 +16,9 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+#[cfg(test)]
+mod tests;
+
 pub(super) struct AnalysisJob {
     pub(super) through: u64,
     pub(super) epochs: Epochs,
@@ -145,19 +148,19 @@ fn analyze(
                 .into_iter()
                 .chain(workspace.schema_diagnostics_all())
             {
-                remember_refresh(&mut refresh_uris, refresh);
+                remember_uri(&mut refresh_uris, refresh.into_uri());
             }
         }
         for update in &job.updates {
             job.control.checkpoint()?;
-            let refreshes = update.apply(&mut workspace);
+            let uris = update.apply(&mut workspace);
             job.control.checkpoint()?;
             if !update.is_applied(&workspace) {
                 return Err(AnalysisError::RejectedInput);
             }
-            for refresh in refreshes {
+            for uri in uris {
                 job.control.checkpoint()?;
-                remember_refresh(&mut refresh_uris, refresh);
+                remember_uri(&mut refresh_uris, uri);
             }
         }
         job.control.checkpoint()?;
@@ -210,11 +213,7 @@ fn project_refresh(
     }
 }
 
-fn remember_refresh(uris: &mut Vec<Uri>, refresh: DiagnosticRefresh) {
-    let uri = match refresh {
-        DiagnosticRefresh::Publish(published) => published.uri,
-        DiagnosticRefresh::Clear { uri, .. } => uri,
-    };
+fn remember_uri(uris: &mut Vec<Uri>, uri: Uri) {
     if !uris.contains(&uri) {
         uris.push(uri);
     }

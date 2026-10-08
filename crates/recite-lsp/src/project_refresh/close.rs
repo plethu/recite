@@ -106,9 +106,10 @@ impl LspWorkspace {
             .as_ref()
             .and_then(|key| self.effective_open_document_for_partition_key(&closed_partition, key))
             .or_else(|| {
+                let closed_path = closed.identity().saved_path.as_ref()?;
                 self.documents
                     .documents()
-                    .find(|document| document.identity().saved_path == closed.identity().saved_path)
+                    .find(|document| document.identity().saved_path.as_ref() == Some(closed_path))
             });
         let closed_refresh = was_retired.then_some(DiagnosticRefresh::Clear {
             uri: uri.clone(),

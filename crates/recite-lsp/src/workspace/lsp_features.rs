@@ -165,21 +165,6 @@ impl LspWorkspace {
         )
     }
 
-    pub(crate) fn open_document_diagnostics_except(
-        &self,
-        exclude: Option<&Uri>,
-    ) -> Vec<super::DiagnosticRefresh> {
-        self.documents
-            .documents()
-            .filter(|document| !self.query_is_schema(&document.identity().uri))
-            .filter(|document| match exclude {
-                Some(uri) => document.identity().uri != *uri,
-                None => true,
-            })
-            .map(|document| self.publish_open_document(document))
-            .collect()
-    }
-
     fn navigation_documents(&self, partition: &str) -> Vec<features::NavigationDocument<'_>> {
         let Some(snapshot) = self.partition(partition).map(|p| p.kernel.snapshot()) else {
             return Vec::new();

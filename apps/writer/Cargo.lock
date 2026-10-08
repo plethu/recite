@@ -3948,7 +3948,6 @@ dependencies = [
  "language-tags",
  "recite-core",
  "recite-parser",
- "rmp-serde",
  "rpds",
  "serde",
  "serde_json",

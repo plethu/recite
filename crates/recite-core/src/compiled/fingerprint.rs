@@ -31,7 +31,7 @@ pub fn canonical_compiled_dialogue_fingerprint(
         .map_err(Clone::clone)
 }
 
-pub(crate) fn compute_canonical_compiled_dialogue_fingerprint(
+pub(super) fn compute_canonical_compiled_dialogue_fingerprint(
     dialogue: &CompiledDialogue,
 ) -> Result<ContentFingerprint, CompiledAssetEncodeError> {
     let bytes = super::messagepack::encode_compiled_dialogue_messagepack_uncached(dialogue)?;

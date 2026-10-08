@@ -1,7 +1,23 @@
 use super::{DiagnosticRefresh, LspWorkspace, SchemaRefreshOutcome};
 use lsp_types::Uri;
 
+impl DiagnosticRefresh {
+    pub(crate) fn into_uri(self) -> Uri {
+        match self {
+            Self::Publish(diagnostics) => diagnostics.uri,
+            Self::Clear { uri, .. } => uri,
+        }
+    }
+}
+
 impl LspWorkspace {
+    pub(crate) fn open_diagnostic_uris(&self) -> impl Iterator<Item = &Uri> {
+        self.documents
+            .documents()
+            .map(|document| &document.identity().uri)
+            .filter(|uri| !self.query_is_schema(uri))
+    }
+
     /// Recompute a publication that was superseded before transport handoff.
     /// In particular, a suppressed close must eventually clear its exact URI.
     pub(crate) fn diagnostic_refresh_for_uri(&self, uri: &Uri) -> DiagnosticRefresh {

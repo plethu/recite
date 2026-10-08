@@ -45,18 +45,18 @@ impl CompiledDialogue {
             .as_ref()
     }
 
-    pub(crate) fn prime_content_fingerprint(&self) -> Result<(), CompiledAssetEncodeError> {
+    pub(super) fn prime_content_fingerprint(&self) -> Result<(), CompiledAssetEncodeError> {
         self.content_fingerprint().map(|_| ()).map_err(Clone::clone)
     }
 
-    pub(crate) fn cache_content_fingerprint(
+    pub(super) fn cache_content_fingerprint(
         &self,
         result: Result<ContentFingerprint, CompiledAssetEncodeError>,
     ) {
         let _ = self.content_fingerprint.set(result);
     }
 
-    pub(crate) fn cache_canonical_bytes(&self, bytes: &[u8]) {
+    pub(super) fn cache_canonical_bytes(&self, bytes: &[u8]) {
         self.cache_content_fingerprint(Ok(super::fingerprint::canonical_blake3_fingerprint(bytes)));
     }
 }
