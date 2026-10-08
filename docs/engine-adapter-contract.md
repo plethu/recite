@@ -139,32 +139,17 @@ same canonical schema manifest used by the compiler, CLI, LSP, and runtime integ
 
 ## 7. Schema Manifest Generation
 
-Adapters can expose explicit source navigation and generation to the writer using
-[the producer registration contract](schema-producer-registration.md). Its commands are
-author-requested tooling operations; loading a registration never executes game or generator code.
-
-Adapters should let game projects produce Recite schema manifests from typed host code where
-practical. The host-specific authoring surface may be a Rust builder or derive, Godot C#/GDScript
-registration, Unity C# attributes or builders, editor-imported assets, data tables, or another
-native mechanism.
-
-All producer surfaces must lower into the canonical Recite schema model and generated manifest. The
-compiler, CLI, LSP, and adapter runtime integration must agree on condition names, effect names,
-parameter types, enum variants, registries, metadata keys, metadata domains, availability reason
-templates, condition-to-reason mappings, projection query functions, presentation projector
-definitions, presentation label templates, and documented handler requirements.
-
-Adapters must not introduce a second, host-only schema truth that can drift from compiled dialogue
-validation. The generated manifest is the boundary: game or adapter code may produce it; Recite
-compiler, CLI, LSP, and adapter import tooling consume it. Runtime traversal consumes compiled
-assets produced from that manifest-backed validation, not host schema discovery APIs.
+[Schema §10.2](spec/schema.md#102-schema-model-and-producers) owns the canonical model, generated
+manifest and source-editing boundary. Adapters provide native authoring surfaces and the
+host-specific export obligations below. [Producer registration](schema-producer-registration.md)
+connects their explicit navigation and generation actions to Writer.
 
 ### 7.1 Producer Responsibilities
 
 Producers own host-resource discovery, typed registrations, inclusion rules, provenance and stale
-checks. They export a self-contained snapshot accepted by the canonical schema validator. Compiler,
-CLI and LSP validation must not load engine resources, reflect over game code or execute it. Runtime
-traversal uses compiled assets rather than rediscovering schema data.
+checks. They export a self-contained snapshot accepted by the canonical validator. Host handlers and
+compiled dialogue must agree on the exported declarations; adapters cannot maintain a second schema
+truth.
 
 ### 7.2 Metadata-Domain Export Shape
 
@@ -329,17 +314,9 @@ These files are public adapter-consumable fixtures, not private Rust-only test h
 
 ### 13.1 Source Fixture Boundary
 
-`.recite` source fixtures should stay under `fixtures/recite/` so parser, compiler, runtime, CLI,
-and LSP tests share one source corpus.
-
-Adapter-conformance manifests are the exception layer for:
-
-- driver operations and step sequencing;
-- declared capabilities;
-- declared changed-asset policy;
-- expected host-observable results and stable error categories.
-
-Do not duplicate parser/compiler/runtime snapshot expectations in `fixtures/adapter-conformance/`.
+The [fixture placement rules](../fixtures/adapter-conformance/README.md#source-fixture-rule) keep
+shared `.recite` sources in the main corpus and adapter operation/capability expectations in the
+conformance manifests.
 
 ### 13.2 `AdapterConformanceDriver` Operation Contract
 
@@ -354,46 +331,25 @@ exercise `VarDictionary` or other Godot-native values; use the Godot-hosted runn
 
 ### 13.3 Stable Category Table and Drift Checks
 
-The operation/result schema owns the exhaustive stable category enum. The scenario manifest and its
-schema must match it exactly; §12 explains the codes for host implementers.
-
-Reference-driver verification must fail when any of these drift:
-
-- the manifest schema table;
-- the operation/result schema category enum;
-- the scenario manifest table.
-
-Mandatory scenarios cover every non-projection code, and projection scenarios cover their declared
-capability. These executable checks do not parse prose.
+Reference-driver checks must reject drift between the §12 operation/result category enum, the
+manifest schema and the scenario manifest.
 
 ### 13.4 Scenario Requirements
 
-Failure scenarios must map to exactly one expected stable error category, or to an explicit allowed
-category set only where this contract deliberately permits more than one outcome. Success-only
-scenarios may omit `expected_error`; they must contain no error step.
+Each failure scenario names one expected stable error category, or an allowed set where this
+contract explicitly permits alternatives. Success-only scenarios may omit `expected_error` and must
+contain no error step.
 
-Mandatory scenarios cover every category in the operation/result schema. Projection categories apply
-only when the adapter declares presentation projection capability.
-
-If a category cannot be exercised with a host-agnostic reference runtime alone, the scenario must
-remain in the manifest as `adapter_runner_required` with the same operation/result shape and an
-explicit runner note. It must not be omitted.
-
-Changed-asset scenarios must carry the declared policy and expected observable behavior for each
-supported policy, including success-only behavior such as `reload_for_next_session_only`.
-
-Freshness scenarios are split:
-
-- mandatory scenarios for compiled-asset compatibility and save/load identity;
-- capability-gated scenarios for source/schema freshness checks, gated by the adapter's declared
-  source/schema import visibility.
+The published scenarios must cover every category from §12. Projection cases apply only to adapters
+exposing that capability; source/schema freshness cases require declared import visibility. Compiled
+compatibility and save/load identity are mandatory. Host-dependent cases remain in the manifest as
+`adapter_runner_required`, with the same operation/result shape and an explicit runner note.
+Changed-asset cases must cover each declared policy, including successful next-session reload.
 
 ### 13.5 Required Host-Independent Coverage
 
-Each adapter must exercise the applicable published scenarios through its own surface, including
-`adapter_runner_required` cases and its chosen changed-asset policy. Cover rollback, structured
-fields and event order. Projection scenarios apply only to adapters exposing that capability.
-Reference-runtime success does not establish host execution.
+Each adapter must run its applicable §13.4 scenarios through its own surface, asserting rollback,
+structured fields and event order. Reference-runtime success does not establish host execution.
 
 Adapters exposing projection must also test successful candidate order, repeated metadata, stable
 affordance IDs and preservation of template, source, localized and structured label fields; the

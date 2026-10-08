@@ -1,7 +1,10 @@
 # Writer packaging and desktop integration
 
-The writer has preview package definitions and repeatable artifact checks. Installed-package and
-native accessibility acceptance require evidence for each release candidate.
+The writer has preview package definitions and repeatable artifact checks. For each release
+candidate, record actual OS/architecture results separately from configured CI jobs, artifact
+inspection and headless launches. Installed upgrade/uninstall, desktop activation, signing or
+notarisation, GUI usability, accessibility and physical input require their own evidence. The
+[acceptance guide](acceptance.md) owns native interaction checks; package-specific limits follow.
 
 | Platform | Preview artifact                                                               | Desktop activation                                                              |
 | -------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
@@ -16,12 +19,6 @@ development shell. Flatpak uses the standard Cargo source generator. The package
 x86-64 and ARM64 Linux builds for both formats, and both Mac architectures for Nix and native
 bundles.
 
-Flatpak uses a shared runtime instead of depending on each distro's library versions. Its manifest
-grants host filesystem access for projects and host-command access for explicitly configured schema
-producers and source editors. Those commands retain separate arguments and the validated project
-working directory; cancelling generation terminates the host-command bridge and its child. The app's
-gettext and preferred-application launcher come from the runtime.
-
 The [package build instructions](#native-packages) name the pinned tool, artifact checks and current
 limits. `--help` and `--version` work without a display. The default launch opens project controls;
 `--examples` opens temporary examples. A project link selects its project before resolving its
@@ -31,12 +28,6 @@ Linux forwards later project/link launches to one project-writer window per user
 [navigation guide](guide.md#navigation-and-links) describes draft protection and partial route
 failures. Examples and the specimen remain independent. macOS and Windows package candidates omit
 URL registration until the native activation and ownership-safe uninstall paths are verified.
-
-The native CI matrix is configured, not evidence that those hosted runs passed. Local Linux
-artifacts built on a newer distribution are host-specific; use the declared CI build baseline before
-offering them to other distributions. Package extraction and CLI launch do not establish
-package-manager upgrade/uninstall, signing, notarisation, native accessibility or usability
-acceptance.
 
 ## Native packages
 
@@ -75,13 +66,11 @@ installed binary CLI flags, then writes `SHA256SUMS`. The
 uploads short-lived CI artifacts. macOS has separate Apple Silicon (`macos-15`) and Intel
 (`macos-15-intel`) jobs; inspection checks the packaged Mach-O architecture before launching it. The
 Windows runner also installs, reinstalls the same version and uninstalls the preview under its
-disposable account. It preserves any pre-existing `recite://` association. Neither a workflow
-definition nor a checksum is evidence of a signed or accepted release.
+disposable account. It preserves any pre-existing `recite://` association.
 
 Linux artifact checks compare declared runtime libraries and ABI requirements with the actual
 binary. Use the declared Ubuntu CI baseline before offering a package across distributions; a local
-build against newer system libraries does not establish older-system support. Package-manager
-installation and upgrade still need native tests.
+build against newer system libraries does not establish older-system support.
 
 For a bounded local packager smoke, `--binary /path/to/recite-writer` stages an already built native
 binary instead of building a release binary. Such an artifact is only a packaging fixture; its bytes
@@ -91,24 +80,19 @@ uses a separate directory and never overwrites Cargo's cached release executable
 The Linux desktop entry accepts one URL (`%u`) and declares `x-scheme-handler/recite`. With a
 display and `gio` available, run `mise -E packaging exec -- python
 scripts/check-writer-desktop-links.py /path/to/extracted-deb` to exercise cold launch and
-running-window delivery in a private desktop session. The Linux CI lane runs it under Xvfb. This
-does not test package-manager installation, upgrade association or uninstall ownership; see the
-[local evidence](#required-deep-link-handling). macOS omits URL scheme registration until the app
-handles native URL-open events. Windows also omits scheme registration: cargo-packager 0.11.8's
+running-window delivery in a private desktop session. The Linux CI lane runs it under Xvfb. The
+[installed-link matrix](#required-deep-link-handling) also requires upgrade and uninstall checks.
+macOS omits URL scheme registration until the app handles native URL-open events. Windows also omits
+scheme registration: cargo-packager 0.11.8's
 [NSIS uninstall template](https://github.com/crabnebula-dev/cargo-packager/blob/cargo-packager-v0.11.8/crates/packager/src/package/nsis/installer.nsi#L561-L567)
 does not provide a verified runtime ownership check, and the published NSIS configuration has no
 small uninstall hook. The Windows installer is an app preview, not a deep-link-capable install.
-
-The workflow still needs a native run on each configured OS and architecture. It does not assert
-GUI, screen-reader, IME/BiDi, physical device, signing, notarisation or full desktop-link
-acceptance. Those results belong in the platform acceptance record before distribution.
 
 ## Flatpak
 
 This manifest builds Recite Writer from the current source checkout with the GNOME 50 SDK and
 exports `io.github.plethu.recite.flatpak`. It builds the locked Cargo workspace offline from
-committed, generated sources and builds the `freya-skia-bindings` Skia revision from source. The
-result is a preview, not a published or installation-accepted release.
+committed, generated sources and builds the `freya-skia-bindings` Skia revision from source.
 
 Install the build prerequisites in an isolated Flatpak installation or a disposable CI runner:
 `flatpak-builder`, `dbus-run-session`, `org.gnome.Platform//50`, `org.gnome.Sdk//50`, and
@@ -153,13 +137,13 @@ python3 flatpak-cargo-generator.py apps/writer/Cargo.lock \
 ```
 
 The Flatpak manifest owns GN, Skia and SDK pins. Update generated Cargo sources with the Writer
-lockfile; each native architecture needs its own SDK and build runner.
+lockfile; each native architecture needs its own SDK and build runner. The shared runtime supplies
+gettext and the preferred-application launcher.
 
-The manifest grants host filesystem access because Writer projects may live on mounted drives, and
-grants `org.freedesktop.Flatpak` D-Bus access so explicitly configured producers and editors can be
-launched through `flatpak-spawn --host`. This is a broad permission and should be visible to
-reviewers. Installed link activation, upgrade/uninstall association ownership, device input, native
-accessibility, and both architecture builds still require separate acceptance.
+Host filesystem access lets projects live on mounted drives. `org.freedesktop.Flatpak` D-Bus access
+runs explicitly configured producers and editors through `flatpak-spawn --host`; this broad
+permission should remain visible to reviewers. Commands retain separate arguments and the validated
+project directory. Cancelling generation terminates the host-command bridge and its child.
 
 ## Required deep-link handling
 
@@ -186,6 +170,4 @@ unsaved-edit refusal, malformed links, upgrade and uninstall. Record results and
 for each OS.
 
 The [route format, Copy link control and startup arguments](guide.md#navigation-and-links) share one
-route validator. Record desktop smoke results separately from headless route tests and package
-inspection, and keep each platform's remaining requirements open until its installed-host evidence
-exists.
+route validator. Headless route tests do not satisfy the installed-link matrix.

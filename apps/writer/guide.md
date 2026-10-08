@@ -246,17 +246,9 @@ requirements remain in [acceptance](acceptance.md).
 
 ## Writing trial
 
-Use a copy of a real project. Edit in Script and Source, leave a field draft, close with recovery,
-and reopen. Then change the source in another editor and exercise the conflict/reload path. Check
-keyboard save, dialog navigation, focus restoration, and whether the recovered field matches what
-you left.
-
-Component and filesystem tests cover these transitions. Physical IME/BiDi, screen-reader operation,
-native window-manager closing, and macOS/Windows acceptance still need hands-on checks. The pinned
-CodeEditor preedit limitation remains recorded in the [acceptance checks](acceptance.md).
-
-Run `mise exec -- just writer check` for automated verification. The
-[acceptance guide](acceptance.md) owns native drills and their evidence limits.
+The [acceptance guide](acceptance.md) owns real writing sessions, recovery/conflict drills and
+native keyboard, IME and screen-reader checks. Run `mise exec -- just writer check` for automated
+verification.
 
 Pane dividers preview a new width with a guide while dragging, then reflow on release. Escape
 cancels the drag. Keyboard resizing remains immediate.
