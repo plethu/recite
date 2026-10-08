@@ -8,6 +8,8 @@ mod identity;
 mod policy;
 #[path = "authoring_build/policy_check.rs"]
 mod policy_check;
+#[path = "authoring_build/state_queries.rs"]
+mod state_queries;
 #[path = "authoring_build/status_projection.rs"]
 mod status_projection;
 #[path = "authoring_build/status_projection_active.rs"]

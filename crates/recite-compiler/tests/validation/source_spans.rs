@@ -4,6 +4,9 @@ use recite_core::{Diagnostic, DiagnosticArgumentValue};
 
 use super::*;
 
+#[path = "source_spans/owners.rs"]
+mod owners;
+
 fn assert_presentation(diagnostic: &Diagnostic, presentation_id: &str, owner: &str) {
     let presentation = diagnostic
         .presentation
