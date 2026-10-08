@@ -92,13 +92,13 @@ jobs:
           primary-key: ${{ steps.nix_dependencies.outputs.key }}
           restore-prefixes-first-match: nix-writer-v1-${{ matrix.system }}-
           gc-max-store-size: 8G
+      - name: Build and check native flake packages
+        run: nix flake check --print-build-logs
       - name: Retain Writer dependency artifacts
         if: matrix.system == 'x86_64-darwin'
         run: |
           nix build .#recite-writer.cargoArtifacts --out-link "$RUNNER_TEMP/recite-writer-dependencies"
           test -s "$RUNNER_TEMP/recite-writer-dependencies/target.tar.zst"
-      - name: Build and check native flake packages
-        run: nix flake check --print-build-logs
       - name: Retain checked packages for the cache
         if: matrix.system == 'x86_64-darwin'
         run: nix build .#recite .#recite-writer --out-link "$RUNNER_TEMP/recite-packages"
