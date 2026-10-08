@@ -182,7 +182,14 @@
     dontUseNinjaBuild = true;
     dontUseNinjaCheck = true;
     dontUseNinjaInstall = true;
-    env = writerEnv // {CARGO_TARGET_DIR = "target";};
+    env =
+      writerEnv
+      // {
+        CARGO_TARGET_DIR = "target";
+        # Keep bindgen flags identical between dependency and application builds.
+        # https://crane.dev/faq/rebuilds-bindgen.html
+        NIX_OUTPATH_USED_AS_RANDOM_SEED = "recitewrit";
+      };
     preBuild = ''
       export NIX_LDFLAGS="$NIX_LDFLAGS ${writerExtraLinkFlags}"
     '';
