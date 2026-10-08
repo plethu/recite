@@ -80,7 +80,9 @@ done < <(
     'editors/zed/src/*.rs' \
     'editors/zed/src/**/*.rs' \
     'apps/*/crates/*/src/*.rs' \
-    'apps/*/crates/*/src/**/*.rs'
+    'apps/*/crates/*/src/**/*.rs' \
+    'tools/*/src/*.rs' \
+    'tools/*/src/**/*.rs'
 )
 
 if ((failures > 0)); then

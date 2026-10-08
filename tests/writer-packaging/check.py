@@ -11,6 +11,7 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("package_writer", ROOT / "scripts/package-writer.py")
@@ -24,6 +25,49 @@ check_spec.loader.exec_module(package_check)
 
 
 class PackageConfigTests(unittest.TestCase):
+    def test_numbered_prereleases_preserve_app_identity_and_debian_upgrade_order(self):
+        versions = ["0.2.0-beta.1", "0.2.0-beta.2", "0.2.0-rc.1", "0.2.0"]
+        templates = package_writer.CONFIG
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "apps/writer/packaging"
+            config.mkdir(parents=True)
+            common = json.loads((templates / "common.json").read_text())
+            for platform in ("linux", "macos", "windows"):
+                shutil.copyfile(templates / f"{platform}.json", config / f"{platform}.json")
+            with (
+                patch.object(package_writer, "ROOT", root),
+                patch.object(package_writer, "CONFIG", config),
+            ):
+                for version in versions:
+                    with self.subTest(version=version):
+                        common["version"] = version
+                        (config / "common.json").write_text(json.dumps(common))
+                        (root / "apps/writer/Cargo.toml").write_text(
+                            f'[workspace.package]\nversion="{version}"\nlicense="MIT OR Apache-2.0"\n'
+                        )
+                        self.assertEqual(package_writer.writer_version(), version)
+                        for platform in ("linux", "macos", "windows"):
+                            prepared = package_writer.load_config(
+                                platform, root / "target", root / "packages"
+                            )
+                            expected = (
+                                version.replace("-", "~", 1) if platform == "linux" else version
+                            )
+                            self.assertEqual(prepared["version"], expected)
+        if shutil.which("dpkg"):
+            for older, newer in zip(versions, versions[1:]):
+                subprocess.run(
+                    [
+                        "dpkg",
+                        "--compare-versions",
+                        package_writer.debian_version(older),
+                        "lt",
+                        package_writer.debian_version(newer),
+                    ],
+                    check=True,
+                )
+
     def test_platform_formats_and_registration(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
@@ -35,7 +79,10 @@ class PackageConfigTests(unittest.TestCase):
                 with self.subTest(target=target):
                     config = package_writer.load_config(target, base, base)
                     self.assertEqual(config["formats"], formats)
-                    self.assertEqual(config["version"], "0.0.0")
+                    expected = package_writer.writer_version()
+                    if target == "linux":
+                        expected = package_writer.debian_version(expected)
+                    self.assertEqual(config["version"], expected)
                     self.assertEqual(config["identifier"], "io.github.plethu.recite")
                     self.assertEqual(config["binaries"], [{"path": "recite-writer", "main": True}])
                     self.assertEqual(bool(config.get("deepLinkProtocols")), target == "linux")
@@ -98,13 +145,13 @@ class PackageConfigTests(unittest.TestCase):
                 "#include <stdio.h>\n#include <string.h>\n"
                 'int main(int argc, char **argv) { if (argc > 1 && !strcmp(argv[1], "--help")) '
                 '{ puts("--project"); return 0; } if (argc > 1 && !strcmp(argv[1], "--version")) '
-                '{ puts("0.0.0"); return 0; } return 1; }\n'
+                f'{{ puts("recite-writer {package_writer.writer_version()}"); return 0; }} return 1; }}\n'
             )
             subprocess.run(["cc", str(source), "-o", str(binary)], check=True, capture_output=True)
             abi = package_writer.linux_abi(binary)
             (base / "runtime-abi.json").write_text(json.dumps(abi))
             control.write_text(
-                "Package: recite-writer\nVersion: 0.0.0\nArchitecture: amd64\n"
+                f"Package: recite-writer\nVersion: {package_writer.debian_version(package_writer.writer_version())}\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
                 f"Depends: libc6 (>= {abi['minimumGlibc']}), libxkbcommon-x11-0\nDescription: test fixture\n"
             )
@@ -134,7 +181,7 @@ class PackageConfigTests(unittest.TestCase):
                 "[Desktop Entry]\nExec=recite-writer %u\nMimeType=x-scheme-handler/recite;\n"
             )
             control.write_text(
-                "Package: recite-writer\nVersion: 0.0.0\nArchitecture: amd64\n"
+                f"Package: recite-writer\nVersion: {package_writer.debian_version(package_writer.writer_version())}\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
                 "Depends: libc6 (>= 2.1), libxkbcommon-x11-0\nDescription: test fixture\n"
             )
@@ -142,7 +189,7 @@ class PackageConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "below the packaged ELF requirement"):
                 package_check.check_linux(base)
             control.write_text(
-                "Package: recite-writer\nVersion: 0.0.0\nArchitecture: amd64\n"
+                f"Package: recite-writer\nVersion: {package_writer.debian_version(package_writer.writer_version())}\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
                 "Description: test fixture\n"
             )

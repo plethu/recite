@@ -18,6 +18,7 @@ members = [
     "crates/recite-playground",
     "crates/recite-runtime",
     "crates/recite-ui",
+    "tools/recite-release",
 ]
 
 [workspace.package]
@@ -89,3 +90,7 @@ unwrap_used = "warn"
 [workspace.lints.rust]
 unreachable_pub = "warn"
 unsafe_code = "forbid"
+
+[profile.dist]
+inherits = "release"
+lto = "thin"

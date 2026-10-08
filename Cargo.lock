@@ -3160,6 +3160,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "recite-release"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "recite-runtime"
 version = "0.1.0"
 dependencies = [

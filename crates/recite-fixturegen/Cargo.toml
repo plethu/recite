@@ -8,6 +8,9 @@ readme.workspace = true
 repository.workspace = true
 license.workspace = true
 
+[package.metadata.dist]
+dist = false
+
 [[bin]]
 name = "recite-fixturegen"
 path = "src/main.rs"

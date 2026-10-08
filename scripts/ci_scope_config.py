@@ -7,6 +7,10 @@ import tomllib
 LANES = frozenset(
     {
         "rust",
+        "hosts",
+        "writer",
+        "editor-native",
+        "release-plan",
         "windows-publisher",
         "docs",
         "site",
@@ -14,24 +18,36 @@ LANES = frozenset(
         "benchmark-smoke",
         "maintainability",
         "packages",
+        "nix-packages",
+        "flatpak-packages",
         "lsp-sessions",
     }
 )
-RUST = frozenset({"rust", "windows-publisher", "benchmark-smoke", "editor", "maintainability"})
+DISTRIBUTION = frozenset({"packages", "nix-packages", "flatpak-packages"})
+RUST = frozenset(
+    {
+        "rust",
+        "hosts",
+        "writer",
+        "editor-native",
+        "windows-publisher",
+        "benchmark-smoke",
+        "editor",
+        "maintainability",
+        "release-plan",
+    }
+)
 JS = frozenset({"docs", "site", "editor", "lsp-sessions"})
-RUST_BUILD = RUST | {"packages", "lsp-sessions", "docs", "site"}
+RUST_BUILD = RUST | {"lsp-sessions", "docs", "site"}
 JUST = frozenset({"maintainability"})
-JUST_QUALITY = LANES - {"windows-publisher", "packages"}
-ENGINE = frozenset({"rust", "maintainability"})
+JUST_QUALITY = LANES - DISTRIBUTION - {"windows-publisher"}
+ENGINE = frozenset({"rust", "hosts", "maintainability"})
 PACKAGING_PREFIXES = (
     "apps/writer/packaging/",
     "assets/identity/",
-    "nix/",
     "scripts/package-writer",
     "scripts/check-writer-package",
-    "scripts/check-writer-flatpak",
     "tests/writer-packaging/",
-    "tests/writer-flatpak/",
 )
 ENGINE_COMPANION_PREFIXES = (
     "addons/",
@@ -107,7 +123,7 @@ def lane_wiring_changes(before, after, pattern, fixed):
 
 
 def justfile_lanes(before, after):
-    pattern = r"^([a-z][a-z0-9-]*)(?: [^:\n]*)?:(?!=)[^\n]*$"
+    pattern = r"^([a-z_][a-z0-9_-]*)(?: [^:\n]*)?:(?!=)[^\n]*$"
 
     def without_comments(source):
         return (
@@ -131,11 +147,15 @@ def justfile_lanes(before, after):
     if shared_preamble(old_preamble) != shared_preamble(new_preamble):
         return JUST_QUALITY
     changed = changed_sections(before, after, pattern) - {"__preamble__"}
-    if changed & {"check", "verify"}:
+    if changed & {"check", "verify", "_verify"}:
         return JUST_QUALITY
     lanes = set(JUST)
-    if changed & {"test", "test-doc", "clippy"}:
+    if changed & {"test", "test-doc", "clippy", "_clippy-rust", "core-check"}:
         lanes.add("rust")
+    if "host-check" in changed:
+        lanes.add("hosts")
+    if "editor-native-check" in changed:
+        lanes.add("editor-native")
     if "setup" in changed:
         lanes.update(JS)
     return frozenset(lanes)
@@ -221,6 +241,12 @@ def shared_config_lanes(path, base, head):
             "benchmark-smoke": {"benchmark-smoke"},
             "maintainability": {"maintainability"},
             "packages": {"packages"},
+            "nix-packages": {"nix-packages"},
+            "flatpak-packages": {"flatpak-packages"},
+            "hosts": {"hosts"},
+            "writer": {"writer"},
+            "editor-native": {"editor-native"},
+            "release-plan": {"release-plan"},
             "lsp-sessions": {"lsp-sessions"},
         }
         if changed - job_lanes.keys():

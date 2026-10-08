@@ -28,20 +28,19 @@ class ScopeTests(unittest.TestCase):
             "README.md",
             "apps/writer/acceptance.md",
             "apps/writer/packaging.md",
+            "docs/LICENSE-POLICY.md",
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "maintainability"})
 
     def test_site_and_shared_javascript_do_not_select_native_builds(self):
-        self.assertEqual(
-            selected("docs-site/src/content/docs/index.md"), {"docs", "site", "maintainability"}
-        )
-        self.assertEqual(
-            selected("docs-site/src/content/docs/reference/index.md"),
-            {"docs", "site", "maintainability"},
-        )
+        for path in (
+            "docs-site/src/content/docs/index.md",
+            "docs-site/src/content/docs/reference/index.md",
+            "docs-site/justfile",
+        ):
+            self.assertEqual(selected(path), {"docs", "site", "maintainability"})
         self.assertEqual(selected("docs-site/README.md"), {"docs", "maintainability"})
-        self.assertEqual(selected("docs-site/justfile"), {"docs", "site", "maintainability"})
         for path in ("docs-site/astro.config.mjs", "docs-site/check-browser.sh"):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
@@ -59,23 +58,21 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
         self.assertEqual(selected(".gitignore"), {"maintainability"})
-        for path in (
-            "apps/writer/justfile",
-            "editors/justfile",
-            "editors/zed/justfile",
-            "engines.just",
-            "stress.just",
-        ):
-            self.assertEqual(selected(path), scope.JUST)
+        for path, lanes in {
+            "apps/writer/justfile": {"writer", "maintainability"},
+            "editors/justfile": {"rust", "editor-native", "maintainability"},
+            "editors/zed/justfile": {"editor-native", "maintainability"},
+            "engines.just": {"hosts", "maintainability"},
+            "stress.just": scope.JUST,
+        }.items():
+            self.assertEqual(selected(path), lanes)
         for path in ("scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"):
-            self.assertEqual(selected(path), {"rust", "maintainability"})
-        self.assertEqual(selected("scripts/check-zed.sh"), {"rust", "editor", "maintainability"})
+            self.assertEqual(selected(path), scope.RUST)
+        self.assertEqual(selected("scripts/check-zed.sh"), {"editor-native", "maintainability"})
         self.assertEqual(selected("justfile"), scope.JUST)
-        self.assertNotIn("packages", selected("justfile"))
-        self.assertNotIn("windows-publisher", selected("justfile"))
         self.assertEqual(
             selected("docs-site/src/content/docs/index.md", "justfile", "apps/writer/justfile"),
-            {"docs", "site", "maintainability"},
+            {"docs", "site", "writer", "maintainability"},
         )
         self.assertIn("site", selected("crates/recite-runtime/src/lib.rs"))
         self.assertIn("docs", selected("crates/recite-runtime/src/lib.rs"))
@@ -94,22 +91,15 @@ class ScopeTests(unittest.TestCase):
             selected("scripts/maintainability/exceptions.toml"), {"docs", "maintainability"}
         )
 
-    def test_optional_packager_environment_selects_native_packages(self):
-        self.assertEqual(selected("mise.packaging.toml"), {"packages", "maintainability", "docs"})
-
-    def test_core_changes_keep_windows_and_benchmarks(self):
+    def test_core_and_dependencies_keep_contracts_without_distribution(self):
         self.assertEqual(
-            selected("crates/recite-runtime/src/lib.rs"),
-            {
-                "rust",
-                "windows-publisher",
-                "benchmark-smoke",
-                "editor",
-                "maintainability",
-                "docs",
-                "site",
-            },
+            selected("crates/recite-runtime/src/lib.rs"), scope.RUST | {"docs", "site"}
         )
+        for path in ("Cargo.lock", "apps/writer/Cargo.lock", "crates/recite-core/src/lib.rs"):
+            with self.subTest(path=path):
+                lanes = selected(path)
+                self.assertTrue(scope.RUST <= lanes)
+                self.assertFalse(scope.DISTRIBUTION & lanes)
 
     def test_playground_bridge_changes_select_real_browser_checks(self):
         self.assertEqual(
@@ -177,14 +167,12 @@ class ScopeTests(unittest.TestCase):
         self.assertTrue(selection["rust"] and selection["lsp-sessions"])
 
     def test_writer_keeps_ui_and_accessibility_without_packaging(self):
-        self.assertEqual(
-            selected("apps/writer/crates/freya/src/app.rs"),
-            {
-                "rust",
-                "maintainability",
-            },
-        )
-        self.assertIn("rust", selected("scripts/check-writer-native-accessibility.py"))
+        for path in (
+            "apps/writer/crates/freya/src/app.rs",
+            "scripts/check-writer-native-accessibility.py",
+            "scripts/check-writer-colors.py",
+        ):
+            self.assertEqual(selected(path), {"writer", "maintainability"})
 
     def test_editor_and_schema_consumers(self):
         self.assertIn("editor", selected("crates/recite-lsp/src/lib.rs"))
@@ -230,36 +218,71 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), scope.ENGINE | {"docs"})
 
-    def test_packaging_and_shared_build_inputs(self):
-        for path in (
-            "flake.nix",
-            "apps/writer/packaging/flatpak/manifest.json",
-            "scripts/package-writer.py",
-            "assets/identity/recite.png",
-            "apps/writer/Cargo.lock",
-            "crates/recite-core/Cargo.toml",
+    def test_packaging_owners_select_only_their_distribution_family(self):
+        for path, lane in (
+            ("flake.nix", "nix-packages"),
+            ("flake.lock", "nix-packages"),
+            ("nix/packages.nix", "nix-packages"),
+            ("apps/writer/packaging/flatpak/manifest.json", "flatpak-packages"),
+            ("scripts/package-writer-flatpak.sh", "flatpak-packages"),
+            ("scripts/check-writer-flatpak.py", "flatpak-packages"),
+            ("tests/writer-flatpak/check.py", "flatpak-packages"),
+            ("apps/writer/packaging/icons/recite-writer.svg", "flatpak-packages"),
+            ("scripts/package-writer.py", "packages"),
+            ("mise.packaging.toml", "packages"),
+            ("scripts/check-writer-package-windows.ps1", "packages"),
+            ("tests/writer-packaging/check.py", "packages"),
+            ("apps/writer/packaging/common.json", "packages"),
+            ("apps/writer/packaging/icons/recite-writer.ico", "packages"),
         ):
             with self.subTest(path=path):
-                self.assertIn("packages", selected(path))
+                self.assertEqual(selected(path), {lane, "maintainability", "docs"})
         for path in (".mise.toml", ".github/workflows/ci.yml"):
             self.assertEqual(selected(path), scope.LANES)
+
+    def test_release_owners_validate_plans_and_shared_rust_workflow_validates_callers(self):
+        for path in (
+            "dist-workspace.toml",
+            "release.toml",
+            "mise.release.toml",
+            "release.just",
+            ".github/workflows/release.yml",
+            ".github/workflows/publish-release.yml",
+            "tools/recite-release/Cargo.toml",
+            "tools/recite-release/src/main.rs",
+        ):
+            self.assertEqual(selected(path), {"rust", "release-plan", "maintainability", "docs"})
+        self.assertEqual(
+            selected(".github/workflows/rust-checks.yml"),
+            {"rust", "hosts", "writer", "editor-native", "maintainability"},
+        )
 
     def test_ci_policy_changes_use_unconditional_contract_checks(self):
         for path in (
             "scripts/ci-scope.py",
+            "scripts/ci_scope_config.py",
             "scripts/check-ci-results.py",
             "tests/ci/test_scope.py",
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"maintainability"})
 
-    def test_shared_wordmarks_select_site_browser_checks(self):
+    def test_shared_distribution_inputs_and_wordmarks_select_all_consumers(self):
+        for path in (".github/workflows/writer-packages.yml", "LICENSE-MIT"):
+            self.assertEqual(selected(path), scope.DISTRIBUTION | {"maintainability", "docs"})
+        self.assertEqual(
+            selected("apps/writer/packaging/icons/recite-writer.png"),
+            scope.DISTRIBUTION | {"writer", "maintainability", "docs"},
+        )
         for path in (
             "assets/identity/recite-wordmark.svg",
             "assets/identity/recite-wordmark-reversed.svg",
         ):
             with self.subTest(path=path):
-                self.assertEqual(selected(path), {"packages", "maintainability", "docs", "site"})
+                self.assertEqual(
+                    selected(path),
+                    scope.DISTRIBUTION | {"writer", "maintainability", "docs", "site"},
+                )
         self.assertEqual(
             selected("assets/identity/recite.png"), {"packages", "maintainability", "docs"}
         )
@@ -295,24 +318,6 @@ class ScopeTests(unittest.TestCase):
             (
                 "justfile",
                 b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
-                b'set shell := ["bash"]\n\nfmt:\n    cargo fmt --all\n',
-                scope.JUST,
-            ),
-            (
-                "justfile",
-                b'set shell := ["bash"]\n\nclippy:\n    cargo clippy\n',
-                b'set shell := ["bash"]\n\nclippy:\n    cargo clippy --all\n',
-                {"rust", "maintainability"},
-            ),
-            (
-                "justfile",
-                b'set shell := ["bash"]\n\ncheck:\n    just quality lint\n',
-                b'set shell := ["bash"]\n\ncheck:\n    just quality lint\n    just test\n',
-                scope.JUST_QUALITY,
-            ),
-            (
-                "justfile",
-                b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
                 b'set shell := ["zsh"]\n\nfmt:\n    cargo fmt\n',
                 scope.JUST_QUALITY,
             ),
@@ -321,12 +326,6 @@ class ScopeTests(unittest.TestCase):
                 b"name: CI\n\njobs:\n  docs:\n    old\n  rust:\n    same\n",
                 b"name: CI\n\njobs:\n  docs:\n    new\n  rust:\n    same\n",
                 {"docs", "site"},
-            ),
-            (
-                ".github/workflows/ci.yml",
-                b"name: CI\n\njobs:\n  rust:\n    old\n",
-                b"name: CI\n\njobs:\n  rust:\n    new\n",
-                {"rust"},
             ),
             (
                 ".github/workflows/ci.yml",
@@ -348,6 +347,31 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path, new=new):
                 with patch("ci_scope_config.file_at", side_effect=[old, new]):
                     self.assertEqual(scope.shared_config_lanes(path, "base", "head"), expected)
+        for recipe, expected in {
+            "fmt": scope.JUST,
+            "_check-quality": scope.JUST,
+            "clippy": {"rust", "maintainability"},
+            "_clippy-rust": {"rust", "maintainability"},
+            "core-check": {"rust", "maintainability"},
+            "host-check": {"hosts", "maintainability"},
+            "editor-native-check": {"editor-native", "maintainability"},
+            "check": scope.JUST_QUALITY,
+            "_verify": scope.JUST_QUALITY,
+        }.items():
+            old = f'set shell := ["bash"]\n\nhelp:\n    same\n\n{recipe}:\n    old\n'.encode()
+            with (
+                self.subTest(recipe=recipe),
+                patch("ci_scope_config.file_at", side_effect=[old, old.replace(b"old", b"new")]),
+            ):
+                self.assertEqual(scope.shared_config_lanes("justfile", "base", "head"), expected)
+        workflow = ".github/workflows/ci.yml"
+        for lane in scope.LANES - {"docs"}:
+            old = f"name: CI\n\njobs:\n  {lane}:\n    old\n".encode()
+            with (
+                self.subTest(lane=lane),
+                patch("ci_scope_config.file_at", side_effect=[old, old.replace(b"old", b"new")]),
+            ):
+                self.assertEqual(scope.shared_config_lanes(workflow, "base", "head"), {lane})
 
     def test_full_events_and_initial_push(self):
         for event in ("schedule", "workflow_dispatch"):

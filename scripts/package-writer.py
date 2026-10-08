@@ -24,6 +24,16 @@ def host_platform():
     return {"Linux": "linux", "Darwin": "macos", "Windows": "windows"}.get(platform.system())
 
 
+def writer_version():
+    with (ROOT / "apps/writer/Cargo.toml").open("rb") as source:
+        return tomllib.load(source)["workspace"]["package"]["version"]
+
+
+def debian_version(version):
+    # Debian's tilde orders prereleases before stable; a SemVer hyphen does not.
+    return version.replace("-", "~", 1)
+
+
 def version_parts(version):
     return tuple(int(part) for part in version.split("."))
 
@@ -78,6 +88,7 @@ def load_config(target, target_dir, output_dir):
         resource["src"] = str(ROOT / resource["src"])
     config["icons"] = [str(ROOT / icon) for icon in config["icons"]]
     if "deb" in config:
+        config["version"] = debian_version(config["version"])
         config["deb"]["desktopTemplate"] = str(ROOT / config["deb"]["desktopTemplate"])
     config["binariesDir"] = str(target_dir / "release")
     config["outDir"] = str(output_dir)

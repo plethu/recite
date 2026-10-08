@@ -29,9 +29,14 @@ def one(directory, suffix):
 
 
 def launch_cli(binary):
-    for flag, marker in (("--help", "--project"), ("--version", "0.0.0")):
+    for flag in ("--help", "--version"):
         result = subprocess.run([str(binary), flag], text=True, capture_output=True, timeout=20)
-        if result.returncode != 0 or marker not in result.stdout:
+        matches = (
+            result.stdout.strip() == f"recite-writer {package_writer.writer_version()}"
+            if flag == "--version"
+            else "--project" in result.stdout
+        )
+        if result.returncode != 0 or not matches:
             raise ValueError(f"{binary} {flag} failed: {result.stderr}")
 
 
@@ -58,7 +63,9 @@ def check_linux(directory):
             for line in fields.splitlines()
             if not line.startswith(" ") and ": " in line
         )
-        if metadata.get("Package") != "recite-writer" or metadata.get("Version") != "0.0.0":
+        if metadata.get("Package") != "recite-writer" or metadata.get(
+            "Version"
+        ) != package_writer.debian_version(package_writer.writer_version()):
             raise ValueError(f"unexpected Debian metadata: {fields}")
         binary = one(root / "usr/bin", "recite-writer")
         debian_for_library = {

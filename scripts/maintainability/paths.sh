@@ -10,6 +10,7 @@ maintainability_is_test_path() {
     "$path" == crates/*/benches/* ||
     "$path" == apps/*/crates/*/tests/* ||
     "$path" == apps/*/crates/*/benches/* ||
+    "$path" == tools/*/tests/* || "$path" == tools/*/benches/* ||
     "$path" == */src/tests.rs ||
     "$path" == crates/*/src/tests/* ||
     "$path" == */src/*/tests.rs ||
@@ -21,6 +22,7 @@ maintainability_is_test_path() {
 maintainability_is_tooling_path() {
   local path="$1"
   [[ "$path" == scripts/* ||
+    "$path" == tools/*/src/* ||
     "$path" == editors/*/scripts/* ||
     "$path" == .agents/*/scripts/* ||
     "$path" == .agents/*/*/scripts/* ||
@@ -34,6 +36,7 @@ maintainability_is_rust_source_path() {
     "$path" == apps/*/crates/*/src/* ||
     "$path" == apps/*/crates/*/tests/* ||
     "$path" == apps/*/crates/*/benches/* ||
+    "$path" == tools/*/src/* || "$path" == tools/*/tests/* ||
     "$path" == editors/zed/src/* ||
     "$path" == tests/* ]]
 }

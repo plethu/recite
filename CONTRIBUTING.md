@@ -217,7 +217,8 @@ maintainer's home-directory instructions, or copy a general skill collection int
 
 [scripts/ci-scope.py](scripts/ci-scope.py) selects lanes from the complete diff, including deleted
 paths and both sides of renames. Pull requests use their merge base; pushes compare the previous and
-current commits. Unknown paths and shared Cargo manifests or locks select the complete suite. A
+current commits. Unknown paths select the complete suite. Shared Cargo manifests and locks select
+the correctness suite; packaging inputs additionally select their native, Nix or Flatpak builds. A
 missing revision fails selection.
 
 Inspect the selector and its regression tests through the pinned toolchain:
@@ -235,3 +236,69 @@ GitHub Actions supports manual complete CI and Writer package runs; scheduled ru
 suite. Run package previews before a release or after platform-dependent packaging changes. Package
 builds and automated accessibility probes establish their tested contracts; installed package
 acceptance remains separate. Workflow definitions own the current lanes and schedules.
+
+## Preparing and publishing releases
+
+Use [SemVer 2.0](https://semver.org/). Before 1.0, bump the minor version for incompatible public
+changes and the patch for compatible fixes. From 1.0, use major/minor/patch for breaking
+changes/additions/fixes. The product tag is `vVERSION`; core crates share the root version, while
+Writer and the FFI crate retain their own version groups. ABI and persisted-format counters change
+only for their respective compatibility rules.
+
+Number previews explicitly: `0.2.0-beta.1`, `0.2.0-beta.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, then
+`0.2.0`. Alpha is available for earlier development. Beta invites feedback; RC freezes intended
+scope while addressing release blockers. Changing code or an embedded version requires a new
+candidate run. Published versions and signed tags are immutable; corrections get a new version. Do
+not use build metadata to distinguish releases.
+
+Writer preserves SemVer in application identity. Debian installers map the prerelease separator to
+`~` so beta → RC → stable upgrades follow
+[Debian's version ordering](https://www.debian.org/doc/debian-policy/ch-controlfields.html#version).
+
+Keep the release's accepted scope, compatibility notes, known limits and candidate run in a GitHub
+release issue attached to the relevant milestone. Link unresolved blockers there rather than copying
+task state into Markdown. The issue body becomes release notes. Before stable 1.0, assess
+[§22–23](docs/spec/release.md#23-acceptance-criteria-for-a-serious-v1), including remaining consumer
+evidence; green CI alone does not establish readiness.
+
+1. Create `release/VERSION` from current `main`, linked to that release issue. Provision tools with
+   `just release setup`, inspect `just release prepare VERSION`, then apply with `just release
+   set-version VERSION`. This coordinated helper updates core and Writer; the FFI version is
+   deliberately excluded. Review the manifest, lockfile, installer and AppStream changes and update
+   `CHANGELOG.md`. Commit with `[REC-N] release: prepare VERSION` and use the usual protected PR
+   workflow. Neither helper commits, tags, pushes nor publishes.
+2. After the approved merge, resolve the complete commit ID. Dispatch **Release candidate** from
+   `main`, supplying that exact `commit` and prepared `version`. It runs complete correctness,
+   performance/session and distribution verification, exercises archived CLI/LSP binaries, and
+   collects Writer installers. Wait for success and inspect its receipt and artifacts. Branch
+   rehearsals are supported but cannot be published. Candidates expire after 30 days; rerun expired
+   candidates rather than rebuilding inside publication.
+3. Once release publication is authorized, create and verify one annotated signed product tag: `git
+   tag -s vVERSION COMMIT -m 'Recite VERSION'`, `git verify-tag vVERSION`, then `git push origin
+   refs/tags/vVERSION`. The signing key must be registered with GitHub so its tag API reports a
+   verified signature. Never force-update or recycle a version tag.
+4. Dispatch **Publish verified release** from `main` with the successful candidate run, same
+   version/commit and release issue. Before the first publication, configure the GitHub `release`
+   environment to allow only `main` and require maintainer approval. Its optional
+   `CARGO_REGISTRY_TOKEN` is needed only when explicitly selecting Rust `crates` to publish. Leave
+   that input blank for artifact-only previews. For first registry publication, use `registry_only`
+   with dependency-ordered batches within cargo-release's default five-new-crate limit; each batch
+   checks the same candidate and publishes no GitHub release. Once those dependencies are available,
+   run final publication with `registry_only` false and any remaining selected crates. Publication
+   checks workflow origin, tag identity and all hashes, stages a draft, then publishes those
+   artifacts without rebuilding them. Beta/RC versions are GitHub prereleases. Registry publication
+   verifies crate packages separately; it does not rebuild the downloadable artifacts.
+5. Verify the published assets and notes, close the release issue and reconcile its milestone. If
+   publication fails, inspect partial registry uploads and the unpublished draft before retrying;
+   delete only an incomplete draft, never overwrite a public release or re-upload different bytes
+   under an existing crate version. Stable promotion requires a stable-version preparation PR and
+   fresh candidate, even when its code matches the last RC.
+
+The tooling follows
+[cargo-release's separate preparation/publication steps](https://github.com/crate-ci/cargo-release/blob/main/docs/reference.md)
+and
+[cargo-dist's local/global artifact split](https://axodotdev.github.io/cargo-dist/book/reference/cli.html#dist-build),
+with both pinned through `mise.release.toml`. CI stays repository-owned; Writer retains its existing
+packagers. Separating ordinary checks from scheduled/tagged distribution follows
+[rust-analyzer](https://github.com/rust-lang/rust-analyzer/blob/master/.github/workflows/release.yaml)
+and [Helix](https://github.com/helix-editor/helix/blob/master/.github/workflows/release.yml).

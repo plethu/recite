@@ -277,6 +277,13 @@ from the stated toolchain.
 
 ## 23. Acceptance Criteria for a Serious v1
 
+Developer previews use numbered SemVer prereleases; a candidate's prepared component versions,
+source commit and verified artifacts form one immutable release identity. Stable promotion changes
+that identity and requires fresh validation.
+[The contributor release workflow](../../CONTRIBUTING.md#preparing-and-publishing-releases) owns
+preparation, tags and publication. Preview publication does not imply the acceptance criteria below
+have passed.
+
 The project is not production-credible until all of the following are true:
 
 - A dialogue scene can be compiled, validated, run, snapshotted, and replayed headlessly in

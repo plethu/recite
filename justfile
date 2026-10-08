@@ -15,6 +15,8 @@ mod stress 'stress.just'
 mod perf 'perf.just'
 # Formatting and linting across maintained source languages.
 mod quality 'quality.just'
+# Release preparation, distribution planning and candidate verification.
+mod release 'release.just'
 
 default:
     @just --list
@@ -41,9 +43,40 @@ lint:
 
 clippy:
     just editor zed clippy
+    just _clippy-rust
+
+[private]
+_clippy-rust:
     cargo clippy --workspace --locked --all-targets --all-features -- -D warnings
     # Assertion-heavy scenarios distort this metric; enforce it on production targets.
     cargo clippy --workspace --locked --all-features --lib --bins -- -D warnings -D clippy::cognitive_complexity
+
+# Core semantics and Rust APIs; host and Writer checks run independently in CI.
+core-check:
+    cargo fmt --all -- --check
+    just test
+    just test-doc
+    just _clippy-rust
+    RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
+
+# Real host conformance and clean package consumers remain correctness checks.
+host-check:
+    scripts/generate-ffi-header.sh
+    scripts/check-ffi-header.sh
+    just engines unity
+    just engines godot
+    cargo fetch --locked
+    just engines bevy
+    just engines workflow
+
+# Native editor and grammar contracts, separate from the TypeScript client lane.
+editor-native-check:
+    scripts/check-test-organization.sh
+    scripts/check-editor-parity.sh
+    scripts/check-tree-sitter.sh
+    scripts/check-neovim.sh
+    scripts/check-zed.sh
+    scripts/check-lint-suppressions.sh
 
 test *args:
     cargo nextest run --workspace --locked "$@"

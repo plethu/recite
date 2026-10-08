@@ -7,6 +7,9 @@ description = "Benchmark fixtures, drivers, and report generation for Recite."
 repository.workspace = true
 license.workspace = true
 
+[package.metadata.dist]
+dist = false
+
 [lib]
 bench = false
 name = "recite_benchmarks"

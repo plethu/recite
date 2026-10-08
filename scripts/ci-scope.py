@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from ci_scope_config import (
+    DISTRIBUTION,
     ENGINE,
     ENGINE_COMPANION_PREFIXES,
     JS,
@@ -24,6 +25,34 @@ from ci_scope_config import JUST_QUALITY as JUST_QUALITY
 def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
+    if path.startswith("nix/") or path in {"flake.nix", "flake.lock"}:
+        return frozenset({"nix-packages", "maintainability", "docs"})
+    if path.startswith(("apps/writer/packaging/flatpak/", "tests/writer-flatpak/")) or path in {
+        "scripts/check-writer-flatpak.py",
+        "scripts/package-writer-flatpak.sh",
+        "apps/writer/packaging/icons/recite-writer.svg",
+    }:
+        return frozenset({"flatpak-packages", "maintainability", "docs"})
+    if path in {
+        "dist-workspace.toml",
+        "release.toml",
+        "mise.release.toml",
+        "release.just",
+        ".github/workflows/release.yml",
+        ".github/workflows/publish-release.yml",
+    } or path.startswith("tools/recite-release/"):
+        return frozenset({"rust", "release-plan", "maintainability", "docs"})
+    if path == ".github/workflows/rust-checks.yml":
+        return frozenset({"rust", "hosts", "writer", "editor-native", "maintainability"})
+    if path in {
+        ".github/workflows/writer-packages.yml",
+        "LICENSE",
+        "LICENSE-MIT",
+        "LICENSE-APACHE",
+    }:
+        return DISTRIBUTION | {"maintainability", "docs"}
+    if path == "apps/writer/packaging/icons/recite-writer.png":
+        return DISTRIBUTION | {"writer", "maintainability", "docs"}
     if path == ".github/workflows/lsp-sessions.yml" or path.startswith(
         (
             "scripts/lsp_session",
@@ -57,9 +86,11 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"benchmark-smoke", "lsp-sessions", "maintainability"})
     if path in {"mise.maintainability.toml", "mise.godot.toml"}:
         return RUST
-    if path in {"scripts/ci-scope.py", "scripts/check-ci-results.py"} or path.startswith(
-        "tests/ci/"
-    ):
+    if path in {
+        "scripts/ci-scope.py",
+        "scripts/ci_scope_config.py",
+        "scripts/check-ci-results.py",
+    } or path.startswith("tests/ci/"):
         # The unconditional git-policy job runs these contracts on every PR.
         return frozenset({"maintainability"})
     if path in {".mise.toml", "justfile", ".github/workflows/ci.yml"}:
@@ -70,18 +101,20 @@ def lanes_for_path(path, *, base=None, head=None):
         )
     if path == ".gitignore":
         return frozenset()
-    if path in {
-        "apps/writer/justfile",
-        "editors/justfile",
-        "editors/zed/justfile",
-        "engines.just",
-        "stress.just",
-    }:
+    if path == "apps/writer/justfile":
+        return frozenset({"writer", "maintainability"})
+    if path == "editors/justfile":
+        return frozenset({"rust", "editor-native", "maintainability"})
+    if path == "editors/zed/justfile":
+        return frozenset({"editor-native", "maintainability"})
+    if path == "engines.just":
+        return frozenset({"hosts", "maintainability"})
+    if path == "stress.just":
         return JUST
     if path in {"scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"}:
-        return frozenset({"rust", "maintainability"})
+        return RUST
     if path == "scripts/check-zed.sh":
-        return frozenset({"rust", "editor", "maintainability"})
+        return frozenset({"editor-native", "maintainability"})
     if path == "scripts/maintainability/exceptions.toml":
         return frozenset({"docs", "maintainability"})
     if path.startswith(ENGINE_COMPANION_PREFIXES):
@@ -101,19 +134,11 @@ def lanes_for_path(path, *, base=None, head=None):
         "assets/identity/recite-wordmark.svg",
         "assets/identity/recite-wordmark-reversed.svg",
     }:
-        return frozenset({"packages", "maintainability", "docs", "site"})
-    if (
-        path.startswith(PACKAGING_PREFIXES)
-        or name.startswith("LICENSE")
-        or path
-        in {
-            "flake.nix",
-            "flake.lock",
-            "mise.packaging.toml",
-            ".github/workflows/writer-packages.yml",
-            "scripts/check-writer-desktop-links.py",
-        }
-    ):
+        return DISTRIBUTION | {"writer", "maintainability", "docs", "site"}
+    if path.startswith(PACKAGING_PREFIXES) or path in {
+        "mise.packaging.toml",
+        "scripts/check-writer-desktop-links.py",
+    }:
         return frozenset({"packages", "maintainability", "docs"})
     if path.startswith(
         tuple(
@@ -139,15 +164,15 @@ def lanes_for_path(path, *, base=None, head=None):
         "scripts/check-writer-colors.py",
         "scripts/check-writer-native-accessibility.py",
     }:
-        return frozenset({"rust", "maintainability"})
+        return frozenset({"writer", "maintainability"})
     if path.startswith(("editors/vscode/", "tests/editor-hosts/vscode/")):
         return frozenset({"editor", "lsp-sessions", "maintainability"})
     if path.startswith(("editors/helix/", "tests/editor-hosts/helix/")):
         return frozenset({"editor", "maintainability"})
     if path.startswith("editors/"):
-        return frozenset({"rust", "editor", "maintainability"})
+        return frozenset({"editor-native", "editor", "maintainability"})
     if path.startswith(("fixtures/", "schemas/", "tests/editor-parity/")):
-        return LANES - {"packages"}
+        return LANES - DISTRIBUTION
     if path.startswith(("examples/", "include/", "Packages/")):
         return RUST
     if path in {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"}:

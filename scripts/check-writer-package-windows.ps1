@@ -1,6 +1,7 @@
 param([Parameter(Mandatory = $true)][string]$ArtifactDirectory)
 
 $ErrorActionPreference = 'Stop'
+$expectedVersion = (Get-Content "$PSScriptRoot/../apps/writer/packaging/common.json" -Raw | ConvertFrom-Json).version
 $installer = @(Get-ChildItem $ArtifactDirectory -Filter '*.exe' -Recurse)
 if ($installer.Count -ne 1) { throw 'Expected one NSIS installer' }
 $installRoot = Join-Path $env:RUNNER_TEMP 'recite-writer-install-smoke'
@@ -37,7 +38,7 @@ try {
     $binary = Join-Path $installRoot 'recite-writer.exe'
     if (!(Test-Path $binary)) { throw 'Installer omitted writer binary' }
     if ((& $binary --help | Out-String) -notmatch '--project') { throw 'Installed --help failed' }
-    if ((& $binary --version | Out-String) -notmatch '0\.0\.0') { throw 'Installed --version failed' }
+    if ((& $binary --version | Out-String).Trim() -ne "recite-writer $expectedVersion") { throw 'Installed --version failed' }
     if ((Get-ProtocolSnapshot) -ne $before) { throw 'Installer changed another recite:// association' }
 
     $process = Start-Process $installer[0].FullName -ArgumentList @('/S', '/NS', "/D=$installRoot") -Wait -PassThru
