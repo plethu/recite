@@ -128,8 +128,6 @@ fn trace_availability_reason_tree(
 
 fn localized_template(trace: &PreviewTrace, id: &str) -> Option<String> {
     trace
-        .localized_lookups()
-        .filter(|lookup| lookup.id == id && lookup.domain == TextDomain::AvailabilityReason)
-        .last()
+        .latest_localized_lookup(id, TextDomain::AvailabilityReason)
         .and_then(|lookup| lookup.resolved_text.clone())
 }

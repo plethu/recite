@@ -85,6 +85,7 @@ diagnostic-validate-038-enum	function	string
 diagnostic-validate-039	reason	string
 diagnostic-validate-040	reason	string
 diagnostic-validate-041	reason	string
+diagnostic-validate-050	limit	integer
 diagnostic-validate-017	function	string
 diagnostic-validate-018	actual	integer
 diagnostic-validate-018	expected	integer
@@ -751,4 +752,7 @@ diagnostic-validate-048-remediation-001
 diagnostic-validate-049-meaning
 diagnostic-validate-049-cause-001
 diagnostic-validate-049-remediation-001
+diagnostic-validate-050-meaning
+diagnostic-validate-050-cause-001
+diagnostic-validate-050-remediation-001
 diagnostic-legacy-message	message	string

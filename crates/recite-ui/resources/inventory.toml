@@ -879,6 +879,7 @@ diagnostic_presentation_ids = [
     "diagnostic-validate-047",
     "diagnostic-validate-048",
     "diagnostic-validate-049",
+    "diagnostic-validate-050",
 ]
 
 [clients.cli]

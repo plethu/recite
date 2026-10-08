@@ -65,6 +65,16 @@ const PARAMETERIZED_REASON: DiagnosticPresentationContract =
 const REASON_WITHOUT_REQUIREMENT: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_VALIDATE041", "diagnostic-validate-041", REASON);
 
+const CONDITION_DEPTH_EXCEEDED: DiagnosticPresentationContract =
+    DiagnosticPresentationContract::new(
+        "RECITE_VALIDATE050",
+        "diagnostic-validate-050",
+        &[DiagnosticArgumentSpec::new(
+            "limit",
+            DiagnosticArgumentType::Integer,
+        )],
+    );
+
 const UNKNOWN_FUNCTION_HELP: DiagnosticAuxiliaryPresentationContract =
     DiagnosticAuxiliaryPresentationContract::new("diagnostic-validate-034-help", NO_ARGUMENTS);
 const WRONG_ARITY_HELP: DiagnosticAuxiliaryPresentationContract =
@@ -86,6 +96,7 @@ static CONTRACTS: &[&DiagnosticPresentationContract] = &[
     &UNKNOWN_REASON,
     &PARAMETERIZED_REASON,
     &REASON_WITHOUT_REQUIREMENT,
+    &CONDITION_DEPTH_EXCEEDED,
 ];
 static AUXILIARY_CONTRACTS: &[&DiagnosticAuxiliaryPresentationContract] = &[
     &UNKNOWN_FUNCTION_HELP,

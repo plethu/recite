@@ -18,6 +18,6 @@ The boundaries are separate:
 
 Compact JSON is inspection-only. A future encoding needs a named artifact, measured Recite evidence,
 an explicit versioned boundary, typed-model migration, and conformance for every shipped host. New
-FFI encodings first need a separate ABI design under
-[#171](https://github.com/plethu/recite/issues/171); Unity v0 batch rejection is required and
-tracked by #171.
+FFI encodings must follow the
+[C ABI compatibility contract](https://github.com/plethu/recite/blob/main/docs/c-abi-boundary-design.md#output-payload-encoding).
+Hosts must reject unsupported batch versions; Unity already enforces this in its batch decoder.

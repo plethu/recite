@@ -160,10 +160,7 @@ pub(super) fn trace_localisation(
     id: &str,
     domain: recite_runtime::localisation::TextDomain,
 ) -> Option<Box<TraceLocalisation>> {
-    let lookup = trace
-        .localized_lookups()
-        .filter(|lookup| lookup.id == id && lookup.domain == domain)
-        .last()?;
+    let lookup = trace.latest_localized_lookup(id, domain)?;
     Some(Box::new(TraceLocalisation {
         matched_locale: lookup.matched_locale.clone(),
         matched_context: lookup.matched_context.clone(),

@@ -42,6 +42,7 @@ export default Object.freeze({
   "diagnostic-validate-047": {"template":"translation changes attributes for inline markup tag `{$tag}`: expected `{$expected}`, got `{$actual}`","arguments":[{"name":"actual","type":"string"},{"name":"expected","type":"string"},{"name":"tag","type":"string"}]},
   "diagnostic-validate-048": {"template":"translation introduces inline markup tag `{$tag}` not present in the source value","arguments":[{"name":"tag","type":"string"}]},
   "diagnostic-validate-049": {"template":"translation is missing required inline markup tag `{$tag}` from the source value","arguments":[{"name":"tag","type":"string"}]},
+  "diagnostic-validate-050": {"template":"condition exceeds the boolean nesting limit of {$limit}","arguments":[{"name":"limit","type":"integer"}]},
   "diagnostic-id-001": {"template":"line header must include a stable line id","arguments":[]},
   "diagnostic-id-002": {"template":"choice header must include a stable choice id","arguments":[]},
   "diagnostic-id-003": {"template":"duplicate localisable id `{$id}` on line","arguments":[{"name":"id","type":"string"}]},

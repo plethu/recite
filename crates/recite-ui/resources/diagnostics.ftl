@@ -106,6 +106,7 @@ diagnostic-validate-044-plural-header-required = active plural entries require P
 diagnostic-validate-047 = translation changes attributes for inline markup tag `{$tag}`: expected `{$expected}`, got `{$actual}`
 diagnostic-validate-048 = translation introduces inline markup tag `{$tag}` not present in the source value
 diagnostic-validate-049 = translation is missing required inline markup tag `{$tag}` from the source value
+diagnostic-validate-050 = condition exceeds the boolean nesting limit of {$limit}
 
 # Compiler diagnostic primary presentations. These resources are deliberately
 # kept beside the parser presentations; their exact arguments come from the
@@ -911,6 +912,11 @@ diagnostic-validate-048-remediation-001 = Remove the introduced tag or add the t
 diagnostic-validate-049-meaning = A PO translation omits an inline markup tag required by the source value.
 diagnostic-validate-049-cause-001 = Translated markup must preserve every source tag occurrence, even when prose is reordered.
 diagnostic-validate-049-remediation-001 = Restore the missing tag occurrence in the translated value.
+
+# RECITE_VALIDATE050
+diagnostic-validate-050-meaning = A condition expression exceeds the compiled nesting limit.
+diagnostic-validate-050-cause-001 = Boolean operators are nested too deeply. Parentheses alone do not add to compiled depth.
+diagnostic-validate-050-remediation-001 = Simplify the nested condition or move part of its logic into a condition function.
 
 diagnostic-import-001 = Invalid import input: {$detail}
 diagnostic-import-002 = Unsupported import construct: {$detail}

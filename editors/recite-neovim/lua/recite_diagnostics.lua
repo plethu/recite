@@ -582,4 +582,8 @@ return {
   ["diagnostic-validate-049-cause-001"] = { arguments = {  } },
   ["diagnostic-validate-049-meaning"] = { arguments = {  } },
   ["diagnostic-validate-049-remediation-001"] = { arguments = {  } },
+  ["diagnostic-validate-050"] = { arguments = { { name = "limit", type = "integer" } }, template = "condition exceeds the boolean nesting limit of {$limit}" },
+  ["diagnostic-validate-050-cause-001"] = { arguments = {  } },
+  ["diagnostic-validate-050-meaning"] = { arguments = {  } },
+  ["diagnostic-validate-050-remediation-001"] = { arguments = {  } },
 }

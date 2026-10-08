@@ -190,8 +190,9 @@ impl<'a> Validator<'a> {
                     &requirement.span,
                     O::ChoiceAvailabilityRequirement,
                 );
-                self.validate_condition_expression(source_file, &requirement.condition);
-                self.validate_boolean_condition_schema(&requirement.condition);
+                if self.validate_condition_expression(source_file, &requirement.condition) {
+                    self.validate_boolean_condition_schema(&requirement.condition);
+                }
             }
             if let Some(reason) = &choice.availability_reason_override {
                 self.validate_span(source_file, &reason.span, O::ChoiceAvailabilityReason);
@@ -233,8 +234,8 @@ impl<'a> Validator<'a> {
         }
         if self.participation.ast_structure() == ValidationCompleteness::Complete
             && self.participation.condition_functions() == ValidationCompleteness::Complete
+            && self.validate_condition_expression(source_file, &branch.condition)
         {
-            self.validate_condition_expression(source_file, &branch.condition);
             self.validate_boolean_condition_schema(&branch.condition);
         }
     }

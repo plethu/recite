@@ -79,7 +79,7 @@ hands-on session does not resolve that ownership tradeoff; keep the Recite-speci
 and strict malformed-input checks in either implementation.
 
 The batch output format is versioned with a `batch_format_version` field (u16) in the envelope.
-Adapters may reject batches with an unrecognised version and surface `validation_error`.
+Adapters must reject batches with an unrecognised version and surface `validation_error`.
 
 Availability reasons optionally carry `origin`: either `condition_call` with `function` and tagged
 `args`, or `requirement_expression` with `source_text`. This is an additive batch-v0 field; its
