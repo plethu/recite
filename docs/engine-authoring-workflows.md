@@ -40,25 +40,15 @@ checks do not establish those behaviors.
 
 ## Packages before publication
 
-Recite is preparing for its first public release. Local package verification must work before any
-Recite dependency is on crates.io or an asset store. Publishing the packages is a release step, not
-a prerequisite for these checks.
+Package checks apply to developer previews as well as stable release candidates. Local package
+verification must work before any Recite dependency is on crates.io or an asset store. Publishing
+the packages is a release step, not a prerequisite for these checks.
 
 | Package | Build and consumer check                                         | Scope                                                                                                                                                                          |
 | ------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Bevy    | `scripts/check-bevy-package.sh`                                  | Prepare real `.crate` archives with temporary Cargo patches for unpublished dependencies, then run the packaged example in an external consumer using only extracted archives. |
 | Godot   | `scripts/package-godot-addon.sh`; `scripts/check-godot-host.sh`  | Bundle the native addon and example; check clean installation, import, and replacement without changing authored project files.                                                |
 | Unity   | `scripts/unity/build-upm.sh`; `scripts/unity/run-unity-tests.sh` | Bundle runtime/editor assemblies, Linux native plugin, and sample; check clean installation, import/reimport, legacy reference migration, and the selected player backend.     |
-
-The Bevy check prepares each Cargo archive twice and compares the bytes. It retains the archives,
-hashes, license texts, extracted crates, and consumer under
-`target/recite-bevy-probe/cargo-packages/`. The consumer confirms the next-session refresh policy
-and has no rendering or windowing dependencies.
-
-The Godot host check compares independently staged archives, removes an obsolete file from a prior
-package output, and runs the example extracted from the archive. Its watcher must report successful
-builds before the editor imports the generated asset. A second consumer replaces an old addon,
-verifies that authored source and compiled bytes are unchanged, and starts the example again.
 
 Rerun the package checks for the candidate. The
 [recorded reproducibility observations](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#engine-package-reproducibility)

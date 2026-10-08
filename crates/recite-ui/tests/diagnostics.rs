@@ -252,6 +252,16 @@ fn schema_finite_variant_resources_preserve_compatibility_messages() {
             "projector 'hud' output 'label' presentation label 'title' has invalid placeholder syntax: unescaped closing brace",
         ),
         (
+            "diagnostic-schema-001-native-invalid",
+            vec![(
+                "detail",
+                DiagnosticArgumentValue::String(
+                    "typed literal changes during manifest export".to_owned(),
+                ),
+            )],
+            "invalid native project schema: typed literal changes during manifest export",
+        ),
+        (
             "diagnostic-schema-001-producer-content-fingerprint-empty-algorithm",
             vec![],
             "manifest content_fingerprint is invalid: FingerprintAlgorithm must not be empty",

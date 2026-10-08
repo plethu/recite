@@ -264,3 +264,67 @@ fn assert_rejected(payload: CompiledDialoguePayload, expected: &str) {
         Err(CompiledAssetEncodeError::InvalidDialogue(reason)) if reason.contains(expected)
     ));
 }
+
+#[test]
+fn condition_depth_is_checked_at_every_compiled_asset_boundary() {
+    use recite_core::compiled::MAX_COMPILED_CONDITION_DEPTH;
+    for depth in [
+        MAX_COMPILED_CONDITION_DEPTH,
+        MAX_COMPILED_CONDITION_DEPTH + 1,
+    ] {
+        for requirement in [false, true] {
+            let mut asset = decode_valid();
+            let mut condition = CompiledConditionExpression::Call(CompiledConditionCall {
+                function: "ready".to_owned(),
+                args: Vec::new(),
+            });
+            for _ in 0..depth {
+                condition = CompiledConditionExpression::Not(Box::new(condition));
+            }
+            if requirement {
+                asset.choices.push(CompiledChoice {
+                    id: ChoiceId::new("choice").expect("choice id"),
+                    source_text: "Choose.".to_owned(),
+                    authored_source_text: "Choose.".to_owned(),
+                    interpolation_bindings: Vec::new(),
+                    interpolation_mode: CompiledInterpolationMode::Current,
+                    metadata: TableRange::new(MetadataIndex::new(0), 0),
+                    availability_requirement: Some(condition),
+                    availability_requirement_source_text: Some("ready()".to_owned()),
+                    availability_reason_override: None,
+                    target: CompiledDivertTarget::End,
+                    echo: CompiledChoiceEcho::None,
+                    source_map: SourceMapIndex::new(0),
+                });
+                asset.choice_lookup = ChoiceLookupTable::new(vec![ChoiceLookupEntry {
+                    id: ChoiceId::new("choice").expect("choice id"),
+                    index: ChoiceIndex::new(0),
+                }])
+                .expect("sorted lookup");
+            } else {
+                asset.statements[0].kind = CompiledStatementKind::If {
+                    condition,
+                    then_statements: TableRange::new(
+                        recite_core::compiled::StatementIndex::new(0),
+                        0,
+                    ),
+                    else_statements: TableRange::new(
+                        recite_core::compiled::StatementIndex::new(0),
+                        0,
+                    ),
+                };
+            }
+            if depth == MAX_COMPILED_CONDITION_DEPTH {
+                let asset = CompiledDialogue::new(asset);
+                let encoded = encode_compiled_dialogue_messagepack(&asset);
+                let fingerprint = canonical_compiled_dialogue_fingerprint(&asset);
+                assert!(encoded.is_ok(), "boundary must encode: {encoded:?}");
+                assert!(fingerprint.is_ok());
+                decode_compiled_dialogue_messagepack(&encoded.expect("boundary encoded"))
+                    .expect("boundary decodes");
+            } else {
+                assert_rejected(asset, "condition depth exceeds");
+            }
+        }
+    }
+}

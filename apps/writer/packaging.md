@@ -1,9 +1,7 @@
 # Writer packaging and desktop integration
 
-The writer has preview package definitions and repeatable artifact checks. Installation acceptance
-remains open. Release smoke evidence is tracked in
-[#79](https://github.com/plethu/recite/issues/79); platform acceptance also remains part of the GUI
-milestone.
+The writer has preview package definitions and repeatable artifact checks. Installed-package and
+native accessibility acceptance require evidence for each release candidate.
 
 | Platform | Preview artifact                                                               | Desktop activation                                                              |
 | -------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
@@ -14,9 +12,9 @@ milestone.
 
 The [Flatpak instructions](#flatpak) cover source builds, offline Cargo dependencies and bundle
 checks. The [Nix instructions](../../nix/README.md) cover `nix build`, `nix run`, and the
-development shell. Both follow the source packaging approach used by Neovide for Rust and Skia;
-Flatpak uses the standard Cargo source generator. The package workflow declares x86-64 and ARM64
-Linux builds for both formats, and both Mac architectures for Nix and native bundles.
+development shell. Flatpak uses the standard Cargo source generator. The package workflow declares
+x86-64 and ARM64 Linux builds for both formats, and both Mac architectures for Nix and native
+bundles.
 
 Flatpak uses a shared runtime instead of depending on each distro's library versions. Its manifest
 grants host filesystem access for projects and host-command access for explicitly configured schema
@@ -29,17 +27,10 @@ limits. `--help` and `--version` work without a display. The default launch open
 `--examples` opens temporary examples. A project link selects its project before resolving its
 location.
 
-Linux has one project-writer window per user configuration. Subsequent launches forward their
-project and route over a private local socket. Opening another project uses the same asynchronous
-loader and unsaved-work guards as the GUI; the welcome screen can receive project links too.
-Examples and the component specimen remain independent windows. An unconfirmed or refused request
-does not start a competing writer. macOS and Windows still use the standalone launcher and existing
-file-recovery locks; their package candidates deliberately omit URL registration.
-
-Unsaved work blocks a project switch. With a clean workspace, the linked project can open before an
-unavailable scene or catalogue is discovered; that error names the opened project and the failed
-location. A timeout leaves the outcome unconfirmed: cancellation prevents a pending load from
-replacing the workspace, but cannot undo an application step that has already begun.
+Linux forwards later project/link launches to one project-writer window per user configuration. The
+[navigation guide](guide.md#navigation-and-links) describes draft protection and partial route
+failures. Examples and the specimen remain independent. macOS and Windows package candidates omit
+URL registration until the native activation and ownership-safe uninstall paths are verified.
 
 The native CI matrix is configured, not evidence that those hosted runs passed. Local Linux
 artifacts built on a newer distribution are host-specific; use the declared CI build baseline before
@@ -47,17 +38,13 @@ offering them to other distributions. Package extraction and CLI launch do not e
 package-manager upgrade/uninstall, signing, notarisation, native accessibility or usability
 acceptance.
 
-The
-[September 2026 preview evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/delivery-evidence.md#writer-packaging)
-is historical; rerun the maintained checks for a new candidate.
-
 ## Native packages
 
-The packaging directory defines native package candidates for Recite Writer 0.0.0: Linux `.deb`,
-macOS `.app` and `.dmg`, and Windows current-user NSIS. The application ID is
-`io.github.plethu.recite`. Packages include the repository's MIT/Apache dual-license notice and both
-license texts. The icon uses the shared [Recite identity](../../assets/identity/README.md). Its
-source is `packaging/icons/recite-writer.svg`; the native icon files are derived from that source.
+The packaging directory defines native package candidates: Linux `.deb`, macOS `.app` and `.dmg`,
+and Windows current-user NSIS. The application ID is `io.github.plethu.recite`. Packages include the
+repository's MIT/Apache dual-license notice and both license texts. The icon uses the shared
+[Recite identity](../../assets/identity/README.md). Its source is
+`packaging/icons/recite-writer.svg`; the native icon files are derived from that source.
 
 For Linux distribution across distros, start with the [Flatpak source build](#flatpak). The
 repository also provides [Nix packages and a development shell](../../nix/README.md). The native
@@ -91,13 +78,10 @@ Windows runner also installs, reinstalls the same version and uninstalls the pre
 disposable account. It preserves any pre-existing `recite://` association. Neither a workflow
 definition nor a checksum is evidence of a signed or accepted release.
 
-The Debian config declares the writer's direct runtime libraries. Packaging sets the `libc6` minimum
-from the actual binary's highest required `GLIBC_*` symbol. Artifact inspection compares that
-minimum and the `NEEDED` libraries against the package control file. It also checks
-`runtime-abi.json`, which records the binary hash and its `GLIBC`, `GLIBCXX` and `CXXABI` symbol
-requirements. The native Linux CI runner is Ubuntu 24.04; a passing build there, rather than a local
-package made on a newer distribution, will establish the preview's older-system baseline. Other
-library package versions remain subject to native install testing.
+Linux artifact checks compare declared runtime libraries and ABI requirements with the actual
+binary. Use the declared Ubuntu CI baseline before offering a package across distributions; a local
+build against newer system libraries does not establish older-system support. Package-manager
+installation and upgrade still need native tests.
 
 For a bounded local packager smoke, `--binary /path/to/recite-writer` stages an already built native
 binary instead of building a release binary. Such an artifact is only a packaging fixture; its bytes
@@ -168,12 +152,8 @@ python3 flatpak-cargo-generator.py apps/writer/Cargo.lock \
   -o apps/writer/packaging/flatpak/cargo-sources.json
 ```
 
-GN is pinned to the source revision used by the
-[Neovide Flatpak](https://github.com/flathub/dev.neovide.neovide/tree/a0cba7888dbd06eecfefc27e493f92ec8bb72585/modules/gn).
-Skia is pinned to `rust-skia/skia` tag `m152-0.100.0`, the revision declared by `freya-skia-bindings
-0.100.0`. `SKIA_SOURCE_DIR` prevents its build script from fetching a different source during
-compilation. Native x86_64 and aarch64 builds are intended; each architecture needs its own SDK and
-build runner.
+The Flatpak manifest owns GN, Skia and SDK pins. Update generated Cargo sources with the Writer
+lockfile; each native architecture needs its own SDK and build runner.
 
 The manifest grants host filesystem access because Writer projects may live on mounted drives, and
 grants `org.freedesktop.Flatpak` D-Bus access so explicitly configured producers and editors can be

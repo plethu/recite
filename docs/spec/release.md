@@ -80,23 +80,6 @@ Supported migration paths by source family:
   report ambiguous nesting, multiple possible targets, embedded scripts, unmapped columns or object
   fields, and rows or objects that cannot produce valid Recite statements.
 
-The likely implementation order is:
-
-1. define the shared import report, provenance model, diagnostic namespace, and fixture
-   expectations;
-2. prototype a custom JSON/CSV importer because it validates mappings, reporting, and span fallbacks
-   without inheriting another language's runtime semantics;
-3. prototype a small Twee/Twine-style subset because passages and links map cleanly to blocks and
-   choices;
-4. add ink and Yarn Spinner inspection or subset importers only after the report model has proven
-   useful for skipped and lossy constructs. Clyde remains on the compatibility-guidance path rather
-   than becoming another importer family.
-
-Importer follow-up issues should stay separate from the native language design. The branchable work
-units are: shared import report/provenance model, custom JSON/CSV importer prototype, Twee/Twine
-subset importer prototype, ink inspection or subset importer, Yarn Spinner inspection or subset
-importer, and compatibility notes that document what must be migrated manually.
-
 ## 21. Non-Goals
 
 Initial non-goals:
@@ -127,153 +110,66 @@ Initial non-goals:
 
 ## 22. Recommended Milestones
 
-These are outcome milestones rather than a list of isolated implementation issues. The tracker may
-split or reorder work inside a milestone, but a milestone is not complete until its exit evidence
-exists. The dependency order is: 1 -> 2 -> 3; milestones 4, 5, and 7 can then proceed in parallel
-from the milestone-2/3 contracts and fixtures; 5 -> 6; and 4, 6, and 7 -> 8 -> 9. Milestone 1
-supplies maintainability and verification gates throughout. The current tracker milestones 17
-through 25 correspond to these nine outcomes; issue links remain secondary to this specification.
+These are durable release outcomes. GitHub owns their task state and scheduling; completion requires
+the relevant exit evidence, not a checked box or historical issue count. §23 is the final release
+gate.
 
 ### Milestone 1: Product Foundation and Maintainability
 
-**Outcome:** the project has explicit ownership boundaries and a dependable verification baseline.
-
-**Entry gate:** the current parser, compiler, runtime, CLI, LSP, schema, FFI, benchmark, and adapter
-surfaces have been inventoried.
-
-**Exit gate:** syntax, semantic lowering, schema, compiled wire data, snapshots, diagnostics, FFI,
-and adapters have explicit owners. Structural ast-grep gates cover repeated equality cascades and
-private-test placement. The maintainability gate compares handwritten file sizes against the change
-base: unchanged or shrinking debt passes, while growth above 400 production/tooling lines or 500
-test/support lines requires an exact, issue-linked, bounded exception in
-`scripts/maintainability/exceptions.toml`. Generated paths are explicit exclusions. Compatibility
-fixtures and the complete local gate remain the acceptance checks. Line count is a review trigger,
-not a split rule.
+Ownership of syntax, semantics, schemas, wire data, snapshots, diagnostics, FFI and adapters is
+explicit. Versioned quality checks, compatibility fixtures and the complete local gate provide the
+baseline. File-size thresholds are review triggers, not automatic split rules.
 
 ### Milestone 2: Language, Schema, and Localisation Readiness
 
-**Outcome:** authors can write stable, schema-checked, localisable source while the implementation
-remains ready for more than one locale.
-
-**Entry gate:** the foundation audit names the source, schema, compiler, and stable-ID authorities.
-
-**Exit gate:** representative projects compile and validate deterministically; the source-owning
-schema-authoring capability and fixtures define at least one source-owning, kernel-editable
-declarative producer path suitable for GUI integration for standalone projects and producer-backed
-edit/open-declaration actions for engine-owned schemas; generated manifests remain read-only and
-unsupported producers are explicitly read-only. The shipped GUI realization is gated by milestone 6.
-Schema manifests have producer provenance and stale/regeneration behavior; source IDs, extraction,
-PO catalogue lookup, fallback, placeholders, markup, and translator context are tested. Dialogue
-localisation is optional: source-only projects retain an unset locale, while projects that enable it
-declare and test their default and fallback locale/catalog policy. Recite-owned authoring text still
-requires complete Fluent-backed default `en-US` resources. English-only launch is explicit rather
-than an architectural assumption, and exact standalone schema-source syntax follows the TOML
-contract in §10.2.1.
+Representative projects validate and compile deterministically. Stable IDs, schema producers,
+source-only mode, explicit locale/fallback policies, extraction, placeholders and markup have
+executable coverage. Generated manifests remain read-only; unsupported producers are identified as
+such. Default `en-US` Fluent resources cover Recite-owned UI text independently of dialogue locales.
 
 ### Milestone 3: Shared Authoring Kernel and Preview
 
-**Outcome:** every authoring surface consumes one project/index/edit/diagnostic/ preview model.
-
-**Entry gate:** source, schema, localisation, and runtime contracts from milestone 2 are stable
-enough to expose operations.
-
-**Exit gate:** a shared kernel provides project discovery, source-preserving edit transactions,
-source-owning schema edits, and producer-backed declaration actions that open source,
-invoke/regenerate through the producer, report stale output, and return structured failure/retry
-outcomes; structured diagnostics/completion/navigation, schema and catalogue summaries,
-cross-platform user configuration, typed watch/build freshness state, and deterministic
-preview/traces. CLI, LSP, and fixtures use those operations; preview never executes game-side
-effects, and generated manifests are never written by the kernel.
+CLI, LSP and Writer share project discovery, source-preserving edits, diagnostics, configuration,
+schema/catalogue state, freshness and deterministic preview. Schema actions edit source or invoke
+its producer; preview never executes game-side effects.
 
 ### Milestone 4: Editor Integration Parity
 
-**Outcome:** VS Code/VSCodium, Neovim, and Zed are first-class text-authoring surfaces rather than
-syntax-only examples.
-
-**Entry gate:** the shared kernel and parity fixture set exist.
-
-**Exit gate:** each editor has tested setup, highlighting/file detection, LSP diagnostics,
-completion, hover, navigation, rename, code actions, and command integration for the supported
-workflow. The same malformed, schema, ID, localisation, and UTF-16 fixtures produce equivalent
-semantic answers.
+VS Code/VSCodium, Neovim and Zed have tested setup and parity for their declared LSP and command
+capabilities. Shared fixtures cover malformed content, schema, IDs, localisation and UTF-16. Host
+limitations and missing platform evidence remain visible.
 
 ### Milestone 5: Native GUI Strategy and Accessibility Proof
 
-**Maintainer decision:** Freya is selected. Further candidate implementation, including the unrun
-platform-native lanes, is parked. Accessibility and declared-platform acceptance remain outstanding.
-Early workbench implementation is authorized alongside those checks, without claiming milestone
-completion.
-
-**Outcome:** the standalone workbench strategy is selected from comparable authoring and
-accessibility evidence.
-
-**Entry gate:** the kernel, reusable editor-parity fixtures, and preview loop can be reused without
-reimplementing language semantics in each candidate; completed editor clients are not a
-prerequisite.
-
-**Exit gate:** the selected frontend has evidence for every claimed platform. The frontend
-assessment names support, dependencies, maintenance burden, known limits, and reconsideration
-triggers. Keyboard-only, focus, screen-reader, IME, BiDi/RTL, zoom/text scaling, high-contrast,
-non-colour, stale-generation, cancellation, progress/status announcement, failure/retry, focus
-retention/restoration, external-file/save conflict, reduced-motion, startup, memory, and packaging
-evidence exists for every declared platform.
+Freya is selected. Acceptance still requires evidence for every claimed platform: keyboard, focus,
+screen readers, IME, BiDi/RTL, scaling, contrast, non-colour paths, progress, cancellation, retry,
+conflicts, reduced motion, startup, memory and packaging. Framework selection alone does not satisfy
+this outcome; [Writer acceptance](../../apps/writer/acceptance.md) records the checks and limits.
 
 ### Milestone 6: GUI Workbench
 
-**Outcome:** writers can use an accessible standalone source-first workbench for the complete v1
-authoring loop.
-
-**Entry gate:** the strategy decision and accessibility proof are accepted.
-
-**Exit gate:** project open, source editing, search/outline/graph navigation, diagnostics,
-completion, stable-ID actions, undo/redo, atomic save and conflict handling, source-owning
-standalone schema editing, producer-backed schema-declaration actions, schema
-inspection/provenance/staleness actions, required gettext PO catalogue editing with safe atomic
-writes, and deterministic preview are all available through the kernel. Graphs have an equivalent
-list/outline path, with automatic layout by default, transient/local viewport state, and optional
-stable-ID open sidecar state only. Full general visual node authoring and generated bindings are not
-required for this exit.
+The source-first workbench supports the complete authoring loop through the shared kernel, including
+undo/recovery, safe saves, standalone schema source editing, engine-producer actions, lossless PO
+editing and preview. Graph navigation has an equivalent accessible list/outline. Layout never
+becomes dialogue semantics. General graph-format authoring and generated bindings are not required.
 
 ### Milestone 7: Engine Companions
 
-**Outcome:** Godot, Unity, and Bevy companions integrate with the same compiled asset, schema,
-localisation, and refresh contracts without becoming alternate authoring runtimes.
-
-**Entry gate:** adapter, schema, localisation, and FFI contracts plus kernel preview/runtime
-semantics are stable. The GUI is not a prerequisite.
-
-**Exit gate:** each companion has conformance and integration coverage for loading, stable
-identities, conditions, typed effects, save/load, localisation, errors, asset freshness,
-import/refresh, and changed-asset session behavior. Host-native schema producers and package paths
-are documented; companions stay thin and the runtime remains game-side-effect free.
+Godot, Bevy and Unity meet the shared adapter contract through their real host surfaces. Evidence
+covers loading, identities, conditions, effects, snapshots, localisation, errors and changed-asset
+behavior. Native producers and package paths are documented without creating alternate runtimes.
 
 ### Milestone 8: Distribution, Adoption, and Migration
 
-**Outcome:** a new team can install, learn, evaluate, and migrate toward Recite with honest
-boundaries.
-
-**Entry gate:** the authoring loop and companion conformance contract are stable.
-
-**Exit gate:** CLI/LSP/GUI/editor integrations and companion artifacts have reproducible package,
-upgrade, signing, and support instructions; examples and guides cover the source-first loop; bounded
-subset importers for custom JSON/CSV, Twee/Twine, Ink, and Yarn Spinner preserve provenance and
-report losses; Clyde, Dialogic, Dialogue Manager, Dialogue System for Unity, and related tools
-receive compatibility and migration guidance under the import-report work without an unowned
-importer promise; known limits and alternatives are published without implying compatibility that
-does not exist.
+A new team can install, upgrade and evaluate the declared packages using reproducible instructions.
+Bounded importers preserve provenance and report losses; migration guides distinguish supported
+conversion from manual work. Signing and support claims match the shipped artifacts and platforms.
 
 ### Milestone 9: Serious v1 Release
 
-**Outcome:** Recite can make a bounded, supportable compatibility promise.
-
-**Entry gate:** milestones 1–8 have passed, the compiled format and snapshot policy are frozen for
-the release, and all required reviews are resolved.
-
-**Exit gate:** §23 passes; all declared platforms have Rust, CLI, LSP, editor-integration, GUI, and
-companion verification; accessibility, scale, memory, preview, watch, and adapter evidence has named
-profiles and regression policies; release artifacts install and run; known limits, migration
-boundaries, and active-session rules are published; and a clean release candidate is reproducible
-from the stated toolchain.
+The preceding outcomes and §23 pass. Compatibility boundaries are frozen for the release, artifacts
+install and run, required review is resolved, and the release candidate is reproducible from its
+stated toolchain. Performance and human acceptance evidence name the tested profiles and limits.
 
 ## 23. Acceptance Criteria for a Serious v1
 
@@ -294,11 +190,13 @@ The project is not production-credible until all of the following are true:
 - Blocking effects can pause and resume across save/load, including re-emission of the pending
   effect with the same `EffectRequestId`.
 - Choice IDs are stable and selection by ID is supported.
-- Stable IDs survive author edits to source text. Renames happen only via the explicit code action.
+- Stable anchors survive prose and label edits; ID insertion is an explicit, guarded authoring
+  action. Changed prose still requires translation review.
 - Metadata supports repeated ordered keys.
 - Inline markup is preserved and validated.
 - POT extraction produces translator-usable context.
-- The LSP catches common mistakes before runtime, including auto-filling missing IDs on save.
+- The LSP catches common mistakes before runtime, including guarded actions to fill missing IDs.
+  Clients may invoke those actions on save.
 - CI can verify compiled assets are fresh relative to source and schema.
 - The [serialization compatibility decision](../serialization-compatibility.md) is accepted, and the
   compiled asset, snapshot, FFI, and condition-payload migration boundaries are documented per
@@ -324,7 +222,7 @@ The project is not production-credible until all of the following are true:
   declared platform, including its fallback path and known maintenance limits.
 - Linux, Windows, and macOS are first-class desktop platforms for the CLI, LSP, editor integrations,
   and standalone workbench. Engine companions may publish narrower engine/platform matrices.
-- Authors have a fast documented loop from source edit to LSP diagnostics, on-save stable ID
+- Authors have a fast documented loop from source edit to LSP diagnostics, explicit stable-ID
   insertion, `recite watch` rebuild, engine adapter import/refresh, and scene restart or documented
   active-session behavior.
 - Shared authoring configuration resolves an explicit `$RECITE_CONFIG` override or the platform
@@ -358,29 +256,6 @@ promotes them.
 
 ## 24. Design Summary
 
-Recite's core value is a deterministic dialogue/effect protocol with a humane, inspectable authoring
-workflow:
-
-- authored in a small domain language that names narrative structure directly;
-- validated before runtime;
-- compiled into deterministic assets;
-- run as a pure state machine;
-- integrated with games through explicit typed effects;
-- authored through one shared kernel by CLI, LSP, VS Code/VSCodium, Neovim, Zed, and an accessible
-  standalone source-first GUI;
-- ready for schema-backed localisation even when the first release ships English-only content;
-- previewed through the same deterministic runtime loop before an engine is involved;
-- accompanied by thin Godot, Unity, and Bevy integrations rather than parallel semantic runtimes;
-- tested with normal programmatic assertions.
-
-The source format is small. It is a way to describe dialogue structure, not a second general-purpose
-scripting layer. Conditions are pure queries. Effects are typed requests. Game logic stays in the
-game. The GUI is source-first and never becomes a second source of semantic truth; a general visual
-node editor and generated host bindings are deliberately left for post-v1 evaluation.
-
-The native GUI strategy is a product decision earned through comparable authoring, accessibility,
-performance, packaging, and maintenance evidence. Cross-platform user configuration is explicit and
-separate from project content. The release promise is therefore about a complete, reproducible
-authoring-to-preview-to-engine loop, not just a runtime library.
-
-That is the standard the project should optimise for.
+The [product contract](product.md) owns Recite's purpose, glossary and invariants. Serious-v1
+acceptance covers the complete authoring-to-preview-to-engine workflow in §23, rather than a second
+summary checklist.

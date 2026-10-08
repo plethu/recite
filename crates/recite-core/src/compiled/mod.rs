@@ -1,3 +1,6 @@
+/// Maximum number of child edges from a compiled condition root to a leaf.
+pub const MAX_COMPILED_CONDITION_DEPTH: usize = 128;
+
 mod dialogue;
 mod fingerprint;
 mod header;

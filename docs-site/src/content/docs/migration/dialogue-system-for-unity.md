@@ -77,7 +77,7 @@ Sequence: SetActive(Gate,true)
 > gate_001@8f6939290fcd3122d120 speaker=guard
   Papers?
 
-? gate_show_pass@646ec5b28069a5b31d62 if has_pass(player)
+? gate_show_pass@646ec5b28069a5b31d62 requires=(has_pass(player))
   Here they are.
   -> open_gate
 

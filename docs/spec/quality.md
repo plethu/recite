@@ -27,23 +27,10 @@ Supported test patterns:
 
 ### 17.2 Example Rust Test
 
-```rust
-let asset = compile_fixture("small_talk.recite");
-let mut session = start_scene(&asset, Some("small_talk_start"), locale!("en-GB"))?;
-let mut fixture = DialogueFixture::default()
-    .with_condition("trust_gte(hazel, rhea, 3)", true)
-    .auto_ack_effects();
-
-let trace = run_to_end(&mut session, &fixture)?;
-
-assert_snapshot!(trace.transcript);
-assert_eq!(
-    trace.deferred_effects,
-    vec![
-        effect!("advance_thread", "rhea_job_response", "fine"),
-    ],
-);
-```
+Use the [runtime integration tests](../../crates/recite-runtime/tests) and
+[headless CLI walkthrough](../../docs-site/src/content/docs/examples/headless-cli.md) as executable
+examples. Assert emitted values and state transitions, including rejection without mutation;
+documentation wording is not a behavioral test.
 
 ### 17.3 Fixture Format
 
@@ -202,15 +189,10 @@ The repository must include synthetic and realistic fixtures. Synthetic fixtures
 from named scale profiles so compiler, runtime, CLI, LSP, and adapter benchmarks exercise the same
 deterministic project shapes.
 
-Synthetic scale profiles:
-
-| Profile | Blocks |  Lines | Choices | Localizable entries | Generated words |
-| ------- | -----: | -----: | ------: | ------------------: | --------------: |
-| tiny    |     10 |    100 |      20 |           about 120 |     about 1,000 |
-| small   |    100 |  1,000 |     200 |         about 1,200 |    about 10,000 |
-| medium  |  1,000 | 10,000 |   2,000 |        about 12,000 |   about 100,000 |
-| large   |  5,000 | 50,000 |  10,000 |        about 60,000 |   about 500,000 |
-| epic    | 10,000 | 80,000 |  20,000 |       about 100,000 | about 1,000,000 |
+The benchmark fixture definitions own each profile's exact counts. Reports must show those counts
+and relevant byte sizes beside profile names, so `large` or `epic` never substitutes for project
+shape. The [benchmark guide](../../docs-site/src/content/docs/reference/benchmarks.md) gives the
+current commands.
 
 Each synthetic profile must define deterministic structural complexity targets:
 
@@ -384,31 +366,13 @@ Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit compiler/runtime/
 target commands. It proves that the tiny compiler, runtime, preview, and LSP benchmarks build and
 execute quickly; it does not compare timings or enforce regression thresholds.
 
-The benchmark lane additionally compares release LSP binaries against the change base on the same
-Ubuntu 24.04 runner. The current harness and generated large fixture drive both binaries. Three
-alternating pairs measure six real edit kinds in full and negotiated sync modes, eight query/action
-kinds, shared-destination invalidation, fresh-process indexing/opening and peak RSS. Each has two
-warmups and 21 recorded samples with exact output fingerprints. Warm latency regressions must exceed
-both 20% and 2 ms, occur in at least two pairs, and recur in a second three-pair round. The first
-round covers every workload. Confirmation repeats only affected probe families, with each family's
-request order, warmups and sample counts unchanged. Each round records its exact coverage; startup
-and peak-memory observations remain coupled. Fresh-process readiness uses 30% plus 50 ms; document
-opening uses 30% plus 10 ms; peak RSS through indexing/opening uses 20% plus 16 MiB. The
-shared-destination fixture has 100 files, 2,000 blocks and 20,000 dialogue lines with references to
-ten shared files. Fresh-process samples use a warm filesystem, not cold storage.
-
-Incomplete or inconsistent evidence fails the check rather than reporting success. The checked-in
-policy is `scripts/lsp-performance-policy.json`; raw samples and revision/binary identities are
-retained as CI artifacts. Full and ranged sustained sessions check settlement and continued service.
-A burst probe sends 25 edits at 5 ms intervals separated by 150 ms pauses; diagnostics and
-successful completion, definition, rename and fix-all responses must recover within 500 ms of the
-last edit. Freshness checks remain mandatory under overload.
-
-This gate protects the measured Linux process workloads. It does not establish cross-platform editor
-rendering or long-lived memory budgets. Issue #109 still owns the named release/scheduled benchmark
-baseline and fuller regression suite; issue #77 owns the evidence ledger and release-gate decision
-that consume its results. Those broader guarantees must not be inferred from the smoke or paired LSP
-comparison.
+The paired LSP gate compares base and candidate binaries on the same named Linux runner. Its
+workloads, samples, thresholds and confirmation rounds are owned by
+[`scripts/lsp-performance-policy.json`](../../scripts/lsp-performance-policy.json) and the
+[maintained harness](../../scripts/lsp_tools/). It requires complete coverage and matching output
+fingerprints; raw samples and binary identities remain CI artifacts. This protects its measured
+process workloads, not cross-platform rendering or long-lived memory. Release baselines must still
+name their fixture, runner, build profile and measurement method.
 
 Regression thresholds must be explicit and reviewable. They become blocking only when measured
 against an agreed baseline and execution profile, such as a stable Linux runner or documented

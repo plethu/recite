@@ -26,6 +26,7 @@ export const errorCodes = new Set([
   "dialogue_catalog_conflict",
   "dialogue_catalog_plural_forms_conflict",
   "dialogue_catalog_malformed",
+  "dialogue_catalog_invalid",
   "dialogue_catalog_missing_locale",
   "dialogue_catalog_spec_invalid",
   "dialogue_locale_invalid",

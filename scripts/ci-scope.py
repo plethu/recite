@@ -121,6 +121,10 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"docs", "maintainability"})
     if path.startswith(ENGINE_COMPANION_PREFIXES):
         return ENGINE | ({"docs"} if path.endswith(".md") else set())
+    if path == "docs-site/src/content/docs/getting-started/first-scene.md" or path.startswith(
+        "docs-site/src/content/docs/migration/"
+    ):
+        return frozenset({"docs", "site", "rust"})
     if path.startswith("docs-site/"):
         if path == "docs-site/README.md":
             return frozenset({"docs"})
@@ -163,7 +167,8 @@ def lanes_for_path(path, *, base=None, head=None):
             return RUST | {"docs", "site"}
         return RUST
     if path.startswith("apps/writer/") or path in {
-        "scripts/check-writer-colors.py",
+        "tools/ast-grep/rules/rust-writer-palette.yml",
+        "tools/ast-grep/tests/rust-writer-palette-test.yml",
         "scripts/check-writer-native-accessibility.py",
     }:
         return frozenset({"writer", "maintainability"})

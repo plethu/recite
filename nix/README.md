@@ -2,18 +2,9 @@
 
 The flake builds `recite` and `recite-writer` from the repository's two locked Cargo workspaces. It
 pins nixpkgs and rust-overlay in `flake.lock` and selects the Rust version from `.mise.toml`. The
-writer builds the exact Skia source referenced by `freya-skia-bindings 0.100.0`: rust-skia/skia
-commit `41382841f36aa208e7433f3c46d14237a1b15054` (`m152-0.100.0`). Its build uses Nix-provided GN,
-Ninja and system image/font libraries, with Skia's offline source-build path. The Wuffs, Vulkan
-Memory Allocator and SPIRV-Cross sources are pinned to that Skia checkout's `DEPS` revisions. The
-package follows the
-[Nixpkgs Neovide recipe](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/ne/neovide/package.nix)
-for source-built Skia and a Clang build environment. Skia m152's system HarfBuzz rule assumes
-`/usr/include/harfbuzz`, so the assembled source points that rule at Nix's HarfBuzz headers. Its GN
-WebP target also needs `webpdemux` and `webpmux` at the final Rust link. On macOS the bindings embed
-FreeType from the pinned Skia `DEPS` revision and need explicit links for the selected system image
-and text libraries. Keep these adaptations aligned with the locked `freya-skia-bindings` version
-when updating it.
+Writer package builds Skia from the source pinned by its Cargo dependency, with Nix-provided build
+tools and system libraries. The [package definition](packages.nix) owns source revisions and
+platform linker adaptations; keep these aligned when updating `freya-skia-bindings`.
 
 From a committed checkout:
 

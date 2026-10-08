@@ -182,6 +182,7 @@ diagnostic-fresh-002	asset	string
 diagnostic-fresh-003	asset	string
 diagnostic-fresh-003	expected	integer
 diagnostic-fresh-003	version	integer
+diagnostic-schema-001-native-invalid	detail	string
 diagnostic-schema-001-json-parse	detail	string
 diagnostic-schema-001-toml-parse	detail	string
 diagnostic-schema-001-toml-decode	detail	string

@@ -219,30 +219,6 @@ changes, or semantic changes require a `format_version` or `compiler_compatibili
 A v0 reader must reject unexpected array lengths, unknown tags, invalid indexes, malformed lookup
 order, and algorithm-specific fingerprint length mismatches as malformed compiled assets.
 
-Compiled assets must include:
-
-- format version;
-- compiler compatibility version;
-- compiler version;
-- primary encoding and inspection encoding identifiers;
-- asset identity and source-map identity;
-- source file table;
-- source fingerprints;
-- schema fingerprint, or an explicit no-schema marker;
-- default block index;
-- block table;
-- statement table;
-- match arm table;
-- line table;
-- choice table;
-- availability reason table;
-- condition availability reason table;
-- speaker table;
-- metadata table;
-- effect table;
-- source map table;
-- sorted lookup tables for block IDs, line IDs, and choice IDs.
-
 The runtime-facing contract must exclude rowan syntax nodes, parser recovery state, malformed source
 state, comments that are not part of runtime semantics, and traversal over the `recite-core` source
 AST. Syntax trees and source AST values are compiler and tooling inputs only. Runtime traversal
@@ -277,33 +253,16 @@ compatibility version changes or the writer changes any runtime-facing semantics
 
 The CLI is a core product surface.
 
-Required commands:
-
-```text
-recite compile <path-or-project>
-recite validate <path-or-project>
-recite validate-project <project-root>
-recite extract <path-or-project>
-recite check-ids <path-or-project>
-recite check-fresh <project-root>
-recite check-markup <path-or-project>
-recite check-metadata <path-or-project> --schema <schema>
-recite watch <project-root>
-recite run <asset> --block <block> --fixture <fixture>
-recite trace <asset> --block <block> --fixture <fixture>
-recite play <asset> --block <block> [--ui auto|tui|plain] [--keymap standard|vim]
-  [--dialogue-locale <locale>] [--dialogue-catalog <locale=path>]...
-```
-
-`recite play` is an interactive REPL for writers and a reference consumer of the shared preview loop
-(Milestone 3). Future commands include `recite generate-bindings --schema <schema> --lang <lang>`
-once the schema and adapter contracts stabilise; it is not part of the v1 CLI surface.
+The [CLI reference](../../docs-site/src/content/docs/reference/cli.md) owns command usage; `recite
+--help` owns the complete flag surface. The contracts below describe observable behavior rather than
+a second option inventory. `play` is interactive; fixture-driven `run` and `trace` remain
+scriptable. Binding generation is deferred beyond v1.
 
 ### 13.1 `compile`
 
 Compiles source dialogue into a compiled asset.
 
-Must fail on validation errors unless `--allow-warnings` only warnings are present.
+Validation errors prevent compiled output; warnings remain diagnostics.
 
 ### 13.2 `validate`
 
@@ -401,51 +360,10 @@ stored in `recite.project.toml`. Window geometry, recent-file lists, and other s
 user-owned and must not become project semantics. Malformed UI config must not affect `run` or
 `trace`.
 
-Initial UI config:
-
-```toml
-[ui]
-locale = "en-US"        # Recite UI BCP-47 locale, or "system"
-keymap = "standard"      # "standard" or "vim"
-key_hints = "contextual" # "contextual", "compact", or "hidden"
-color = "auto"           # "auto", "always", or "never"
-contrast = "standard"    # "standard" or "accessible"
-
-[play]
-show_unavailable_choices = true
-
-[writer]
-confirm_exit = true
-view = "script"         # "script", "map", or "source"
-theme = "light"         # "light" or "dark"
-monochrome = false
-shortcut_hints = false # true keeps shortcut chips visible without holding a modifier
-reduced_motion = false
-zoom_to_pointer = true
-```
-
-Workspace shortcuts can be changed in **Settings → Keyboard shortcuts**. The optional
-`[writer.shortcuts]` table uses action names such as `commands`, `save`, `save_all`, `script`,
-`map`, `source`, `focus`, and `split`. Values use portable chords such as `"Primary+Shift+P"` or
-`"F8"`; `Primary` means Command on macOS and Ctrl elsewhere. An empty string disables an assignment.
-Missing entries use the defaults. Duplicate assignments, unmodified character keys, and reserved
-editing or navigation keys are rejected when loading or saving. Apply, Undo and Redo stay with the
-focused editor. These bindings never enter project files.
-
-The native writer's Vim navigation adds `:` for Commands (`w`, `wa`, and `q` invoke Save, Save all,
-and Close), `/` for scene/beat search, `n`/`N` for matching beats, and `gg`/`G` for search-list
-boundaries. `Ctrl+o`/`Ctrl+i` follow navigation history; `Ctrl+w` followed by `h/j/k/l` moves
-between visible panes. Pending pane sequences show their destinations and can be cancelled with
-Escape. Search fields show INSERT/NORMAL; character navigation does not replace text insertion. The
-navigation actions also accept alternative workspace chords in Keyboard shortcuts.
-
-The native writer confirms routine closure unless `writer.confirm_exit` is false. This preference
-never bypasses unsaved project protection. Writer presentation preferences apply across scenes and
-are user-owned; the shared `ui.keymap` selects Standard or Vim navigation. Project manifests never
-supply these values. Shared user configuration loading is read-only; explicit typed edits reload and
-validate the current file, preserve unrelated settings and comments, and use cooperative locking and
-atomic replacement. Frontends own the controls and error presentation, not configuration paths or
-file-writing policy.
+`recite-config` owns typed defaults, validation and source-preserving preference edits. The
+[Writer guide](../../apps/writer/guide.md#keyboard-and-preferences) owns its controls and keymaps;
+those settings never enter project files. Loading is read-only. Explicit changes retain unrelated
+settings and comments and refuse stale writes.
 
 When `color = "auto"`, TUI color is disabled if `NO_COLOR` is present or `CLICOLOR=0`; otherwise
 color may be used. `color = "always"` enables TUI color regardless of those environment variables,
@@ -548,5 +466,4 @@ according to the adapter's declared policy.
 
 Deferred past v1. Will generate typed host-language bindings (condition stubs, effect records/enums,
 runtime conversions, test helpers, optional engine event/signal wrappers) from schema once the
-schema and adapter contracts stabilise. This direction has no current tracker owner; assign one
-before it is promoted into planned work.
+schema and adapter contracts stabilise. It is not a current v1 capability.

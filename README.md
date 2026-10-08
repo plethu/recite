@@ -60,7 +60,8 @@ answers, traversal order is deterministic across tests, save/load, and replay.
 Most authoring should happen in your editor. Today, `recite-lsp` reports diagnostics and provides
 completion, hover, definition navigation, block rename, and code actions for missing stable IDs
 through compatible LSP clients. The [Neovim setup](editors/recite-neovim/README.md) is available
-directly from a checkout; the packaged VS Code extension is still in progress.
+directly from a checkout; the [VS Code guide](editors/vscode/README.md) also covers the local VSIX
+package and its checks.
 
 `recite watch` rebuilds when project inputs change. Engine adapters own how a running game imports
 or refreshes those assets. In CI, the CLI can validate and compile without an engine, then run

@@ -62,6 +62,11 @@ pub(crate) fn structured_error(
             fallback_operation,
             fallback_path,
         ),
+        CliError::DialogueCatalogInvalid { path, .. } => localised(
+            ErrorCode::DialogueCatalogInvalid,
+            ErrorOperation::LoadCatalog,
+            Some(path),
+        ),
         CliError::DialogueCatalogConflict { path, .. } => localised(
             ErrorCode::DialogueCatalogConflict,
             ErrorOperation::LoadCatalog,

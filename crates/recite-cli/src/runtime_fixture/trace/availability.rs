@@ -34,6 +34,11 @@ fn trace_availability_reason(
     TraceChoiceAvailabilityReason {
         id: reason.id.as_str().to_owned(),
         source_text: reason.source_text.clone(),
+        localisation: super::convert::trace_localisation(
+            dialogue_trace,
+            reason.id.as_str(),
+            TextDomain::AvailabilityReason,
+        ),
         localized_template: localized_template(dialogue_trace, reason.id.as_str())
             .unwrap_or_else(|| reason.source_text.clone()),
         text: reason.text.clone(),

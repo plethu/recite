@@ -29,7 +29,7 @@ fn region_edits_and_global_recovery_match_batch_validation() {
     let source = format!("{a}{b}{c}");
     let other = ":: target\n-> a.recite::b\n";
     let schema = ProjectSchema::empty_v1();
-    let mut kernel = AuthoringKernel::with_schema(schema.clone());
+    let mut kernel = AuthoringKernel::with_schema(schema.clone()).expect("valid schema");
     for newline in ["\n", "\r\n"] {
         for edited in [
             source.clone(),
@@ -55,7 +55,7 @@ fn region_edits_and_global_recovery_match_batch_validation() {
                 Some(&schema),
                 true,
             );
-            let mut cold = AuthoringKernel::with_schema(schema.clone());
+            let mut cold = AuthoringKernel::with_schema(schema.clone()).expect("valid schema");
             compare(
                 &mut cold,
                 &[("a.recite", &edited), ("other.recite", other)],

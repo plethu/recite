@@ -1,7 +1,7 @@
 # Recite Tree-sitter grammar
 
-This directory contains the syntax-only Tree-sitter feasibility grammar for Recite source. It is
-intended for editor highlighting and structural tooling; it is not a second Recite parser.
+This directory contains the syntax-only Tree-sitter grammar for Recite source. It is intended for
+editor highlighting and structural tooling; it is not a second Recite parser.
 
 The Rowan parser, compiler, and LSP remain authoritative for source recovery, stable IDs,
 references, schema, conditions, effects, markup validation, and match exhaustiveness. In particular,
@@ -10,11 +10,9 @@ editor buffers and allows Tree-sitter recovery to expose `ERROR` nodes while the
 tooling reports the real diagnostic.
 
 The checked-in `src/parser.c` is generated from `grammar.js` for Tree-sitter language ABI 14. That
-deliberately broad target keeps the generated parser loadable by the Tree-sitter runtime shipped
-with Neovim 0.10.4; it is a parser compatibility choice, not a claim that Neovim setup or package
-support exists. `queries/` holds host-neutral captures. This package is syntax and highlighting
-evidence only; it does not provide Neovim setup, a plugin/package, or Zed integration. The Rowan
-parser and compiler remain the authority for language meaning.
+ABI keeps the parser loadable by the minimum supported Neovim runtime. `queries/` holds canonical
+captures projected into the [Neovim](../recite-neovim/README.md), [Zed](../zed/README.md) and
+[Helix](../helix/README.md) clients; those packages own installation and host support.
 
 Run the local grammar checks from the repository root:
 

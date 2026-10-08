@@ -7,8 +7,8 @@ use recite_runtime::{
 use super::availability::trace_availability;
 use super::format::effect_mode_name;
 use super::model::{
-    TraceChoice, TraceEffect, TraceLine, TraceMetadata, TracePlural, TracePluralAttempt,
-    TraceScalar, TraceSourceSpan, TraceValue,
+    TraceChoice, TraceEffect, TraceLine, TraceLocalisation, TraceLocalisationAttempt,
+    TraceMetadata, TracePlural, TracePluralAttempt, TraceScalar, TraceSourceSpan, TraceValue,
 };
 
 pub(in crate::runtime_fixture) fn trace_line(
@@ -24,6 +24,11 @@ pub(in crate::runtime_fixture) fn trace_line(
             .as_ref()
             .map(|speaker| speaker.as_str().to_owned()),
         metadata: line.metadata.iter().map(trace_metadata).collect(),
+        localisation: trace_localisation(
+            dialogue_trace,
+            line.id.as_str(),
+            recite_runtime::localisation::TextDomain::Line,
+        ),
         plural: dialogue_trace
             .plural_line(line.id.as_str())
             .map(|trace| trace_plural(trace.clone())),
@@ -81,6 +86,11 @@ pub(in crate::runtime_fixture) fn trace_choice(
         text: choice.text.clone(),
         metadata: choice.metadata.iter().map(trace_metadata).collect(),
         is_available: choice.availability.is_available,
+        localisation: trace_localisation(
+            dialogue_trace,
+            choice.id.as_str(),
+            recite_runtime::localisation::TextDomain::Choice,
+        ),
         availability: trace_availability(&choice.availability, dialogue_trace),
         unavailable_reason: choice
             .availability
@@ -142,5 +152,39 @@ pub(in crate::runtime_fixture) fn trace_effect_argument(
         DialogueEffectArgument::Integer(value) => TraceScalar::Integer(*value),
         DialogueEffectArgument::Float(value) => TraceScalar::Float(*value),
         DialogueEffectArgument::Boolean(value) => TraceScalar::Boolean(*value),
+    }
+}
+
+pub(super) fn trace_localisation(
+    trace: &PreviewTrace,
+    id: &str,
+    domain: recite_runtime::localisation::TextDomain,
+) -> Option<Box<TraceLocalisation>> {
+    let lookup = trace
+        .localized_lookups()
+        .filter(|lookup| lookup.id == id && lookup.domain == domain)
+        .last()?;
+    Some(Box::new(TraceLocalisation {
+        matched_locale: lookup.matched_locale.clone(),
+        matched_context: lookup.matched_context.clone(),
+        matched_key: lookup.matched_key.clone(),
+        outcome: lookup_outcome(&lookup.outcome),
+        attempts: lookup
+            .attempts
+            .iter()
+            .map(|attempt| TraceLocalisationAttempt {
+                locale: attempt.locale.clone(),
+                context: attempt.context.clone(),
+                key: attempt.key.clone(),
+                outcome: lookup_outcome(&attempt.outcome),
+            })
+            .collect(),
+    }))
+}
+
+fn lookup_outcome(outcome: &recite_runtime::localisation::LocaleLookupOutcome) -> &'static str {
+    match outcome {
+        recite_runtime::localisation::LocaleLookupOutcome::MissingEntry => "missing_entry",
+        recite_runtime::localisation::LocaleLookupOutcome::Matched => "matched",
     }
 }

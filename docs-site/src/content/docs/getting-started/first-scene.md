@@ -36,9 +36,10 @@ Create `dialogue/crossroads.recite`:
 
 Each line and choice header is a `label@anchor` pair: the label (`alice_way_001`) is editable
 context for you, and the 20-hex anchor is the frozen ID that localisation and saves key on. When you
-author with the LSP you write headers without anchors and an on-save code action fills them in; when
-hand-writing, any unique 20-hex value works. The `! deferred` statement is a typed effect request.
-The runtime never executes it; it hands it to your game when the scene ends.
+author with the LSP, its explicit missing-ID action fills in anchors; clients may configure that
+action on save. When hand-writing, use a unique 20-character lowercase hex value. The `! deferred`
+statement is a typed effect request. The runtime never executes it; it hands it to your game when
+the scene ends.
 
 ## Validate and compile
 
@@ -76,7 +77,7 @@ recite run crossroads.recitec --block which_way --fixture fixture.toml
 ```text
 line 7701ceab59d2adfa057a: Would you tell me, please, which way I ought to go from here?
 line e26ae3e6834c21c1b716: That depends a good deal on where you want to get to.
-prompt which_way
+prompt
   [1] a6f46c2edbe8466b9bfd: I don't much care where.
 selected choice a6f46c2edbe8466b9bfd
 line a11b4b64dceda892c08e: Then it doesn't matter which way you go.
@@ -94,8 +95,9 @@ trace` emits the same run as structured JSON for snapshot tests and CI.
 recite extract dialogue/crossroads.recite
 ```
 
-This produces gettext POT entries whose `msgctxt` is the anchor. Editing prose or labels later never
-invalidates a translation.
+This produces gettext POT entries whose `msgctxt` is the anchor. Label edits keep that context.
+Prose edits also retain the anchor, but gettext matches the source text too: refresh the catalogue
+and review retained translations after changing prose.
 
 From here: the [source format reference](/reference/source-format/) covers the full statement
 vocabulary, and the [CLI reference](/reference/cli/) covers every command.

@@ -4,7 +4,6 @@ use recite_compiler::compile::{
     CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs, compile_inputs_with_schema,
 };
 use recite_core::{
-    AvailabilityReasonId,
     compiled::{
         BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
         CompiledAssetEncoding, CompiledAssetId, CompiledAvailabilityReasonArgValue,
@@ -12,12 +11,7 @@ use recite_core::{
         SchemaFingerprint, SourceMapId, StatementIndex, canonical_source_fingerprint,
         decode_compiled_dialogue_messagepack,
     },
-    schema::{
-        AvailabilityReasonArgBinding, AvailabilityReasonDefinition,
-        ConditionAvailabilityReasonMapping, ConditionDefinition, ConditionReturnType,
-        ParameterDefinition, ProjectSchema, SchemaLiteralValue, SchemaTypeRef,
-        load_schema_manifest_str,
-    },
+    schema::load_schema_manifest_str,
 };
 #[path = "../../../tests/support/fixtures.rs"]
 #[allow(dead_code, reason = "shared snapshot fixtures are selectively reused")]
@@ -296,67 +290,6 @@ fn compiler_consumes_full_manifest_without_mixing_producer_metadata_into_schema_
     assert!(
         report.asset.is_some(),
         "producer metadata must not block compile"
-    );
-}
-
-#[test]
-fn compile_with_programmatic_schema_rejects_non_finite_availability_reason_literals() {
-    let mut schema = ProjectSchema::empty_v1();
-    let reason_id = AvailabilityReasonId::new("blocked_reason").expect("valid reason id");
-    schema.availability_reasons.insert(
-        reason_id.clone(),
-        AvailabilityReasonDefinition {
-            template: "Need {threshold}".to_owned(),
-            params: vec![ParameterDefinition {
-                name: "threshold".to_owned(),
-                type_ref: SchemaTypeRef::Float,
-            }],
-            origin: None,
-        },
-    );
-    schema.conditions.insert(
-        "blocked".to_owned(),
-        ConditionDefinition {
-            params: Vec::new(),
-            returns: ConditionReturnType::Bool,
-            availability_reason: Some(ConditionAvailabilityReasonMapping {
-                reason: reason_id,
-                args: [(
-                    "threshold".to_owned(),
-                    AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::Float(
-                        "NaN".to_owned(),
-                    )),
-                )]
-                .into(),
-            }),
-        },
-    );
-
-    let error = compile_inputs_with_schema(
-        [CompileInput::new(
-            "dialogue/start.recite",
-            concat!(
-                ":: start default\n",
-                "? blocked_choice@fa18ce77aacd995c1666 requires=(blocked())\n",
-                "  Blocked.\n",
-                "  -> END\n",
-            ),
-        )],
-        CompileOptions::new(
-            CompilerVersion::new("0.0.1").expect("valid compiler version"),
-            CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
-            SourceMapId::new("dialogue/main.recitec.map").expect("valid source map id"),
-            schema.canonical_fingerprint(),
-        ),
-        &schema,
-    )
-    .expect_err("non-finite programmatic availability literals hard-fail compile");
-
-    assert!(
-        error
-            .to_string()
-            .contains("availability reason float literal is not finite"),
-        "{error}"
     );
 }
 

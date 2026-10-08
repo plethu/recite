@@ -44,13 +44,25 @@ pub use source::{
 pub fn export_schema_manifest_json(
     schema: &ProjectSchema,
 ) -> Result<String, Vec<crate::Diagnostic>> {
+    source::validate_native_export(schema).map_err(|error| vec![error.diagnostic()])?;
     let json = source::export_json(schema);
     let report = load_schema_manifest_str("<generated schema>", &json);
-    if report.diagnostics.is_empty() && report.schema.is_some() {
-        Ok(json)
-    } else {
-        Err(report.diagnostics)
+    let Some(loaded) = report.schema.filter(|_| report.diagnostics.is_empty()) else {
+        return Err(report.diagnostics);
+    };
+    // JSON numbers carry no Int/Float model tag. Validation must reject a
+    // transport round trip that changes the native typed meaning.
+    if schema.canonical_content_fingerprint() != loaded.canonical_content_fingerprint() {
+        return Err(vec![source::NativeExportError::SemanticDrift.diagnostic()]);
     }
+    Ok(json)
+}
+
+/// Validate every declaration in a host-built schema through the canonical
+/// manifest validator. Call when accepting an immutable schema revision, not
+/// for each document in an incremental authoring refresh.
+pub fn validate_project_schema(schema: &ProjectSchema) -> Result<(), Vec<crate::Diagnostic>> {
+    export_schema_manifest_json(schema).map(|_| ())
 }
 
 /// Export a validated schema under an engine-owned stable producer identity.

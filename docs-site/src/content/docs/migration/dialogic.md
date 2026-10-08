@@ -22,7 +22,7 @@ Terminology checked against official Dialogic 2 docs for
 | Label                             | Block                                              |
 | Text event                        | Line                                               |
 | Choice event                      | Choice                                             |
-| Condition event                   | `:if` or choice `if` condition                     |
+| Condition event                   | `:if` or choice `requires=(...)`                   |
 | Set Variable event                | Effect or host-owned state update                  |
 | Do/Call event                     | Effect request                                     |
 | Signal event                      | Effect request or metadata, depending on semantics |

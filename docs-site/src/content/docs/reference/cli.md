@@ -4,8 +4,8 @@ description: Reference for the shipped recite CLI commands.
 ---
 
 The `recite` binary is the headless surface of the toolchain: everything a CI job, a writer, or an
-engine build step needs without an editor or adapter. This page documents the shipped commands;
-design rationale lives in the
+engine build step needs without an editor or adapter. This page covers common commands; `recite
+--help` owns the full command and flag list, while design rationale lives in the
 [production spec §13](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md).
 
 Path arguments accept one or more `.recite` files or directories containing them. Commands taking
@@ -36,12 +36,8 @@ Validates metadata keys and values against a schema manifest.
 Projects a standalone schema TOML or generated schema manifest JSON to a versioned, deterministic
 JSON summary on stdout. The input extension selects the authoritative loader: `.toml` uses
 standalone source loading and `.json` uses the generated-manifest loader. Generated manifests are
-read-only; this command does not invoke producers or write files. The projection includes schema
-ownership, producer identity, scoped fingerprints, available freshness channels, declaration
-origins, capabilities, and producer action evidence. The top-level `capability` field uses the same
-typed action and producer-action projection as each declaration. `source.path` is an exact tagged
-machine path: UTF-8 text where representable, raw Unix bytes as lowercase hex otherwise, and WTF-16
-units on Windows when UTF-16 text is not representable.
+read-only; this command does not invoke producers or write files. The JSON retains typed ownership,
+freshness and provenance; machine paths use an explicit encoding rather than lossy text conversion.
 
 ### `recite export-schema --schema <SCHEMA> --output <OUTPUT>`
 
@@ -150,10 +146,6 @@ recite trace build/scenes.recitec --block main --fixture tests/golden.toml
 
 `recite import INPUT --from json|csv|twee|ink|yarn` prints a versioned JSON report and candidate
 source. JSON/CSV requires `--mapping mapping.json`. Use `--schema manifest.json` to validate against
-game declarations. Writing requires `--output-dir NEW_DIRECTORY`; partial results additionally
-require `--accept-partial`. Use `--source-id PATH` for a stable import namespace and `--no-default`
-on additional files in one project. Map cross-file jumps with `--target-source
-BLOCK=SOURCE_ID::RECITE_PATH`, where `SOURCE_ID` matches the defining file's `--source-id` and
-`RECITE_PATH` is its final project-relative source path. Existing destinations are never
-overwritten. See [import inspection](/migration/importer-boundaries/) for result states, exit
-behavior and the supported format subsets.
+game declarations. See [import inspection](/migration/importer-boundaries/) for destination
+handling, result states, partial conversion, stable import namespaces and cross-file target
+mappings.

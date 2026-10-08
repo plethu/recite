@@ -240,8 +240,8 @@ impl LspWorkspace {
                     fresh = schema
                         .schema()
                         .cloned()
-                        .map(AuthoringKernel::with_schema)
-                        .unwrap_or_default();
+                        .map_or_else(|| Ok(AuthoringKernel::new()), AuthoringKernel::with_schema)
+                        .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?;
                     &fresh
                 };
                 let request = super::kernel::authoring_request(

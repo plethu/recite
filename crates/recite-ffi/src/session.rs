@@ -1,5 +1,7 @@
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
+use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, ThreadId};
 
@@ -45,12 +47,45 @@ fn sessions() -> &'static SessionMap {
     SESSIONS.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
-#[allow(
-    clippy::unwrap_used,
-    reason = "ffi: the process-global session registry cannot recover a poisoned mutex"
-)]
-pub(crate) fn lock_sessions() -> std::sync::MutexGuard<'static, BTreeMap<u64, FfiSession>> {
-    sessions().lock().unwrap()
+thread_local! {
+    static SESSION_REGISTRY_ACTIVE: Cell<bool> = const { Cell::new(false) };
+}
+
+pub(crate) struct SessionRegistryGuard {
+    guard: std::sync::MutexGuard<'static, BTreeMap<u64, FfiSession>>,
+}
+
+impl Deref for SessionRegistryGuard {
+    type Target = BTreeMap<u64, FfiSession>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.guard
+    }
+}
+
+impl DerefMut for SessionRegistryGuard {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.guard
+    }
+}
+
+impl Drop for SessionRegistryGuard {
+    fn drop(&mut self) {
+        SESSION_REGISTRY_ACTIVE.set(false);
+    }
+}
+
+pub(crate) fn lock_sessions() -> Result<SessionRegistryGuard, ReciteStatus> {
+    if SESSION_REGISTRY_ACTIVE.get() {
+        set_last_error("session registry cannot be re-entered from a callback");
+        return Err(ReciteStatus::Validation);
+    }
+    let guard = sessions().lock().map_err(|_| {
+        set_last_error("session registry mutex is poisoned");
+        ReciteStatus::Validation
+    })?;
+    SESSION_REGISTRY_ACTIVE.set(true);
+    Ok(SessionRegistryGuard { guard })
 }
 
 pub(crate) struct FfiSession {
@@ -86,7 +121,9 @@ unsafe fn begin_and_publish(
     if status == ReciteStatus::Ok {
         unsafe { *session_handle_out = handle };
     } else {
-        lock_sessions().remove(&handle);
+        if let Ok(mut guard) = lock_sessions() {
+            guard.remove(&handle);
+        }
     }
     status
 }

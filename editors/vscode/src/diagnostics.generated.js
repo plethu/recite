@@ -127,6 +127,7 @@ export default Object.freeze({
   "diagnostic-config-115": {"template":"project source is not valid UTF-8: {$detail}","arguments":[{"name":"detail","type":"string"}]},
   "diagnostic-config-116": {"template":"project source root is not a directory: {$detail}","arguments":[{"name":"detail","type":"string"}]},
   "diagnostic-config-117": {"template":"project source has an invalid document key: {$detail}","arguments":[{"name":"detail","type":"string"}]},
+  "diagnostic-schema-001-native-invalid": {"template":"invalid native project schema: {$detail}","arguments":[{"name":"detail","type":"string"}]},
   "diagnostic-schema-001-json-parse": {"template":"malformed schema manifest: {$detail}","arguments":[{"name":"detail","type":"string"}]},
   "diagnostic-schema-001-toml-parse": {"template":"malformed schema source: {$detail}","arguments":[{"name":"detail","type":"string"}]},
   "diagnostic-schema-001-toml-decode": {"template":"malformed schema source: {$detail}","arguments":[{"name":"detail","type":"string"}]},

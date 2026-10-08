@@ -16,60 +16,35 @@ buttons, segments, search, destination pickers and graph cards.
 
 ## Ownership
 
-`crates/freya/src/design` owns reusable presentation and interaction:
+[`crates/freya/src/design`](crates/freya/src/design) owns palette, typography, geometry and shared
+controls. Use its tokens rather than local colour, spacing or timing constants. Dialogue typography
+is shared across writing, localisation, preview and excerpts; fonts resolve locally with fallbacks.
 
-- `palette` is the source of truth for colours. Its theme adapter supplies the same colours to Freya
-  controls and source syntax. Contrast tests cover text, placeholders, boundaries, focus and
-  interaction states in all appearances.
-- `tokens` owns spacing, type scales, control geometry and font fallbacks. UI uses Inter/Geist with
-  platform sans fallbacks; dialogue uses Literata/Source Serif 4/Noto Serif with Georgia/serif
-  fallbacks. Fonts are resolved locally. `ProseTypography` keeps editing, localisation, preview and
-  map excerpts consistent.
-- `Button` owns pointer filtering, keyboard activation, focus, hover, press and disabled feedback.
-  Icon buttons, navigation rows and checkboxes reuse it. Use quiet actions in toolbars and a filled
-  primary action in dialogs.
-- `Segments` presents exclusive choices as a radio group; arrows change the selected option and Tab
-  moves between groups. `Options` adds a setting label.
-- `Dialog` owns the scrim, bounded scrolling body, fixed actions, Escape and focus containment.
-  Callers provide the order and restore the invoker's focus.
-- `SearchPicker` owns its anchored, bounded, virtualised popup and keyboard selection. Callers own
-  values, cached results, validation and persistence. Opening or filtering a picker must not resize
-  its containing dialog.
-- `SearchField` owns clear/focus behavior and result navigation. `use_list_reveal` scrolls when the
-  query or keyboard selection changes, not when unrelated layout updates occur. Manual scroll
-  position must survive idle rerenders.
-- `SubmitAction` provides one action for the button and platform submit chord. Disabled actions must
-  stay disabled through either route. Enter in prose inserts a newline; Ctrl+Enter or Command+Enter
-  submits a containing dialog.
-- `PathField` owns typed paths and asynchronous Browse. Cancel preserves text; selection never
-  implicitly opens a project or file.
-- `Splitter` owns bounded pointer and keyboard resizing. Pointer dragging previews a guide; release
-  reflows once, Escape cancels, keyboard changes apply immediately.
-- `BeatCard` owns card presentation. Scene layout, routes, selection and camera state stay with the
-  map. `material` owns restrained card/search shading; other reading panels, buttons and selection
-  plates use flat fills.
+Use quiet toolbar actions and a filled primary dialog action. Exclusive choices use `Segments`,
+searchable bounded lists use `SearchPicker`, and modal work uses `Dialog`. Reuse button and submit
+behavior so keyboard and pointer activation agree. Enter in prose inserts a newline; the platform
+submit chord invokes the containing action. Pickers must not resize their dialog or lose manual
+scroll position during idle updates. Dialog callers supply meaningful focus order and restore the
+invoker's focus.
 
-Feature modules own validation and persistence. A reusable control must not acquire project state or
-duplicate compiler, schema, catalogue or runtime rules.
+Feature modules own values, validation and persistence. Shared controls must not acquire project
+state or duplicate compiler, schema, catalogue or runtime rules. Map layout, routes and camera state
+remain separate from card presentation.
 
 ## Type, layout and motion
 
-The minimum window is 900 × 650 logical pixels. Controls must also work at 200% UI scale. Standard
-actions and fields have a 32-pixel minimum height; 24-pixel clear actions and segment plates sit
-inside that frame. The drawer spans 180–360 pixels and the script pane 320–800, constrained by the
-remaining map space. Dividers support Left/Right and Home/End. Saved dimensions and pane side belong
-to personal `writer.presentation`/`writer.pane_side` settings.
+The token module owns window, control and pane dimensions and animation timing. Review the specimen
+at the minimum window size and 200% scale. Resizing must remain available by keyboard; pointer
+resizing previews a guide and can be cancelled before reflow.
 
 Script and localisation use a reading column. Metadata and passage actions stay stable while
-editing; long beats page entries without flattening condition groups. Map geometry stays independent
-of excerpt length. A graph action must have an accessible textual route, and technical IDs remain
-available through details.
+editing; paging preserves condition groups. Map geometry stays independent of excerpt length. Graph
+actions need an accessible textual route, with technical IDs available through details.
 
-Pointer and keyboard presses share immediate colour feedback. Button transitions use 100 ms
-ease-out; press depth settles in 60 ms and returns in 160 ms. Segments use 200 ms interpolation
-without moving labels or hit targets. Pickers enter with a four-pixel translation/fade over 160 ms
-and dismiss immediately. Dialogs fade without scaling text. Interrupted animation starts from its
-visible state. Reduced motion makes these changes immediate.
+Pointer and keyboard actions share feedback. Animation must not move labels or hit targets, scale
+reading text or jump when interrupted. Reduced motion makes transitions immediate without removing
+state information. Reading panels, controls and selection plates use flat fills; restrained depth
+belongs to cards and search surfaces.
 
 ## Verification
 

@@ -79,21 +79,9 @@ other-platform support or replace the release benchmark baseline.
 Versioned configurations at the repository root define formatting and lint rules. `just fmt`, `just
 fmt-check` and `just lint` provide common commands; `just quality` lists the non-Rust lane.
 
-| Source                                                                 | Formatter               | Lint or semantic gate                                      |
-| ---------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
-| Rust                                                                   | rustfmt                 | Clippy, ast-grep, domain tests                             |
-| Markdown, JSON, YAML, JavaScript/TypeScript, CSS, SVG/XML, Dockerfiles | dprint                  | rumdl, Oxlint, type checks, Stylelint, schemas, actionlint |
-| TOML                                                                   | Tombi, offline          | Tombi syntax and owning domain checks                      |
-| Python                                                                 | Ruff                    | Ruff and harness tests                                     |
-| Shell                                                                  | shfmt                   | ShellCheck                                                 |
-| Lua                                                                    | StyLua                  | Lua language server and Neovim tests                       |
-| GDScript                                                               | gdformat                | gdlint and Godot adapter tests                             |
-| C/C++                                                                  | clang-format            | FFI compilation with warnings as errors                    |
-| C#                                                                     | dotnet format           | Headless Unity compilation/tests                           |
-| Nix                                                                    | Alejandra               | Flake/package checks                                       |
-| PowerShell                                                             | PSScriptAnalyzer        | PSScriptAnalyzer                                           |
-| Astro components                                                       | dprint                  | Astro type checks and site browser tests                   |
-| Just recipes                                                           | just's native formatter | Recipe and workflow checks                                 |
+The versioned formatter/linter configurations own source coverage and tool selection. `mise install`
+provides the pinned tools; use the common commands rather than maintaining parallel formatter or
+language-server installations for this repository.
 
 Recite source, Fluent, gettext PO and Tree-sitter queries use their parser, typed-contract and
 fixture gates. They are validated, not automatically reformatted: whitespace and deliberately
@@ -156,21 +144,9 @@ contracts.
   measurements remain separate.
 - LSP dependency choices, experiments and reevaluation triggers are recorded in
   [the dependency decision record](docs/lsp-dependency-decisions.md).
-- The trusted pull-request policy in `.github/workflows/trusted-policy.yml` runs base-owned policy
-  code with read-only permissions. It fetches proposed commits as Git objects for metadata checks
-  and never checks out or executes pull-request files. Keep that boundary intact when changing
-  workflow or policy files; ordinary CI remains a separate, untrusted pull-request lane. The
-  repository's deterministic fixture gate also performs static workflow assertions. Pinned
-  `actionlint` validates workflow syntax, expressions and reusable-workflow wiring in CI and the
-  complete local gate.
-- The canonical local quality gate is `mise exec -- just check`. It loads the scoped
-  `maintainability` mise environment for the pinned ast-grep check. GitHub Actions selects affected
-  lanes on pushes to `main` and pull requests (`.github/workflows/ci.yml`), then validates their
-  results with the unconditional `required-check` rollup. The base-owned trusted policy lane is a
-  separate `pull_request_target` check (`.github/workflows/trusted-policy.yml`); required CI and
-  branch protection remain authoritative for the final protected PR. Focused checks are acceptable
-  for narrow documentation or instruction-only changes; run the full gate locally for broad or
-  high-risk code changes.
+- Trusted policy runs base-owned code with read-only permissions and never executes PR files. Keep
+  it separate from ordinary untrusted CI. Required checks and branch protection remain authoritative
+  for a protected merge.
 
 ## Change and review workflow
 
@@ -217,22 +193,12 @@ maintainer's home-directory instructions, or copy a general skill collection int
 
 ## CI coverage
 
-[scripts/ci-scope.py](scripts/ci-scope.py) selects lanes from the complete diff, including deleted
-paths and both sides of renames. Pull requests use their merge base; pushes compare the previous and
-current commits. Unknown paths select the complete suite. Shared Cargo manifests and locks select
-the correctness suite; packaging inputs additionally select their native, Nix or Flatpak builds. A
-missing revision fails selection.
-
-Inspect the selector and its regression tests through the pinned toolchain:
-
-```sh
-just perf scope
-just perf check
-```
+[`scripts/ci-scope.py`](scripts/ci-scope.py) and its tests own affected-lane selection. Unknown
+paths select the full suite; deleted and renamed paths participate. Inspect it with `just perf
+scope` and run its regression checks with `just perf check`.
 
 The unconditional `required-check` rollup rejects missing results, failures, cancellation and
-unexpected skips. Package results participate through the reusable Writer package workflow. The
-separate trusted policy workflow reads base-owned code and does not execute PR files.
+unexpected skips. The separate trusted policy workflow executes base-owned code only.
 
 GitHub Actions supports manual complete CI and Writer package runs; scheduled runs exercise the full
 suite. Run package previews before a release or after platform-dependent packaging changes. Package

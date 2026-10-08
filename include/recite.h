@@ -600,7 +600,9 @@ ReciteStatus recite_session_create(uint64_t asset_handle,
                                    uint64_t *session_handle_out);
 
 /**
- * Frees a session handle. Does nothing if the handle is unknown.
+ * Frees a session handle on its owner thread. Unknown handles are ignored.
+ * Re-entry from a condition or locale callback records a validation error
+ * and leaves the handle alive.
  */
 void recite_session_free(uint64_t session_handle);
 

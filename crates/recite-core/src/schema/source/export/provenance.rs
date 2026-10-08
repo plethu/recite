@@ -18,7 +18,13 @@ pub(super) fn insert_manifest_metadata(
             "content_fingerprint".to_owned(),
             serde_json::json!({
                 "algorithm": content.algorithm().as_str(),
-                "value": content.digest().as_bytes().iter().map(|byte| format!("{byte:02x}")).collect::<String>()
+                "value": if content.algorithm().as_str() == "blake3" {
+                    content.digest().as_bytes().iter().map(|byte| format!("{byte:02x}")).collect::<String>()
+                } else {
+                    // Source loading retains UTF-8 text; native export rejects
+                    // non-UTF8 digests before reaching this serializer.
+                    String::from_utf8_lossy(content.digest().as_bytes()).into_owned()
+                }
             }),
         );
     }

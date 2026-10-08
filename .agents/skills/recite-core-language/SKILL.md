@@ -9,23 +9,9 @@ Use this overlay for changes to Recite's language and execution semantics. Load 
 contract chapter and subsections before implementation; the
 [production specification](../../../docs/recite-production-spec.md) routes to their owners.
 
-## Recite invariants
-
-- Conditions are evaluated through caller-provided context.
-- Source-backed diagnostics carry spans.
-- Metadata preserves repeated keys and source order.
-- Blocking effects pause traversal and resume with the same effect ID after save/load.
-- Runtime traversal remains deterministic, emits structured events, and never performs game-side
-  effects.
-
-## Ownership boundaries
-
-- Parser code describes syntax and spans, not runtime policy.
-- AST and model types represent source structure without performing execution.
-- Compiler code validates references, IDs, schema use, and deterministic compiled output.
-- Runtime code consumes compiled structures and exposes structured events.
-- Keep parser, AST/model, compiler/validation, runtime traversal, serialisation, and host-facing
-  tooling responsibilities separate.
+Use [product invariants](../../../docs/spec/product.md#2-core-invariants) and the affected subsystem
+contract. Parser/lowering, validation, traversal, serialization and host-facing tooling keep
+separate owners; a client must not grow its own validator.
 
 ## Blocking effects
 

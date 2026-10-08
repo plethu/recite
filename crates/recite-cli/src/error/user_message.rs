@@ -10,7 +10,7 @@ mod tests;
 impl CliError {
     pub(crate) fn to_user_message(&self, messages: &Messages) -> String {
         match self {
-            Self::Import(_) | Self::ImportJson(_) => {
+            Self::Import(_) | Self::ImportJson(_) | Self::DialogueCatalogInvalid { .. } => {
                 messages.format(MsgId::CliErrorGeneric, [("message", self.to_string())])
             }
             Self::PlayEof { field } => {

@@ -88,32 +88,42 @@ pub(super) fn validate_divert(
 pub(super) fn validate_condition(
     condition: &CompiledConditionExpression,
 ) -> Result<(), CompiledAssetDecodeError> {
-    match condition {
-        CompiledConditionExpression::Call(call) => {
-            validate_identifier("condition function", &call.function)?;
-            for argument in &call.args {
-                validate_argument(argument)?;
-            }
+    let mut pending = vec![(condition, 0)];
+    while let Some((condition, depth)) = pending.pop() {
+        if depth > crate::compiled::MAX_COMPILED_CONDITION_DEPTH {
+            return Err(malformed(format!(
+                "condition depth exceeds {}",
+                crate::compiled::MAX_COMPILED_CONDITION_DEPTH
+            )));
         }
-        CompiledConditionExpression::And(expressions) => {
-            if expressions.is_empty() {
-                return Err(malformed(
-                    "condition and group must not be empty".to_owned(),
-                ));
+        match condition {
+            CompiledConditionExpression::Call(call) => {
+                validate_identifier("condition function", &call.function)?;
+                for argument in &call.args {
+                    validate_argument(argument)?;
+                }
             }
-            for expression in expressions {
-                validate_condition(expression)?;
+            CompiledConditionExpression::And(expressions)
+            | CompiledConditionExpression::Or(expressions) => {
+                if expressions.is_empty() {
+                    let group = if matches!(condition, CompiledConditionExpression::And(_)) {
+                        "and"
+                    } else {
+                        "or"
+                    };
+                    return Err(malformed(format!(
+                        "condition {group} group must not be empty"
+                    )));
+                }
+                pending.extend(
+                    expressions
+                        .iter()
+                        .rev()
+                        .map(|expression| (expression, depth + 1)),
+                );
             }
+            CompiledConditionExpression::Not(expression) => pending.push((expression, depth + 1)),
         }
-        CompiledConditionExpression::Or(expressions) => {
-            if expressions.is_empty() {
-                return Err(malformed("condition or group must not be empty".to_owned()));
-            }
-            for expression in expressions {
-                validate_condition(expression)?;
-            }
-        }
-        CompiledConditionExpression::Not(expression) => validate_condition(expression)?,
     }
     Ok(())
 }

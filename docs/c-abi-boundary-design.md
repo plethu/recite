@@ -12,12 +12,9 @@ introduce a second semantic implementation.
 
 ## Why a C ABI
 
-Bevy and Godot adapters link the Rust `recite-adapter`/`recite-runtime` crates. No FFI is needed
-because both are Rust (or use a Rust-first bridge like gdext). Unity gameplay code is C# on Mono or
-IL2CPP and can only call native code through P/Invoke, which requires a stable C ABI (`extern "C"`
-functions in a `cdylib` or `staticlib`). The C ABI is the lowest common denominator for every
-non-Rust host: C++, C#, GDScript-native-extension alternatives, and eventually any language with a C
-FFI layer.
+Unity and other non-Rust hosts call the shared native runtime through C. Bevy and Godot use Rust
+integration directly. The boundary keeps traversal in one implementation while allowing native host
+APIs above it.
 
 ## Crate Shape
 
@@ -50,21 +47,10 @@ There are asset, session and catalogue handles:
 - **Catalogue handle** — owns a validated catalogue revision. Attaching it captures that revision;
   later mutation or disposal of the handle does not change the session's provider.
 
-Why not raw pointers exposed as `*mut c_void`? Handles decouple the ABI from Rust's pointer model,
-allow a validity check on the Recite side before dereferencing (returning `invalid_handle_error`
-instead of UB), and avoid exposing Rust's allocator address space to the host. The `u64` type is
-stable across all target pointer widths.
-
-A handle value of `0` is reserved to mean "null / no handle." The generated header documents status
-returns and output-handle parameters for each operation.
-
-Mapping to contract obligations:
-
-- §2 compiled asset identity: the asset handle owns the decoded data; its lifetime is explicit and
-  host-managed.
-- §3 session ownership: one session handle per declared owner; `recite_session_begin` returns
-  `session_already_active_error` if called more than once on the same handle.
-- §16.3 (spec): single active session per owner enforced at the FFI boundary.
+Zero is the null handle. Unknown or freed handles are rejected, but raw caller pointers still
+require valid memory. A session handle enforces its own lifecycle; the host adapter owns the rule
+that a scene object or service has at most one active session. FFI handles do not identify host
+owners.
 
 ## Output Payload Encoding
 
@@ -81,18 +67,8 @@ shape is fixed by this ABI v0 contract and the major-version policy below. A fut
 batch format change requires an explicitly designed compatibility mechanism (an ABI-major reset, an
 additive versioned entrypoint, or a versioned envelope); there is no negotiation in the current ABI.
 
-**Why not C structs?** Contract §5 structured output is deeply nested: choice availability reason
-trees (`all` / `any` / leaf), projection affordances, deferred effect lists, inline markup.
-Attempting to freeze this as a fixed-arity C struct layout would:
-
-- couple the ABI to v0 wire shape that spec §12.2 explicitly permits to change before the first
-  tagged release;
-- require the host to understand Rust's struct padding rules or depend on a repr(C) layout that will
-  widen with every new contract feature;
-- duplicate a serialization design that already exists and is already versioned.
-
-MessagePack has maintained host implementations; the versioned payload separates the byte ABI from
-the host's typed projection. Rust uses Serde rather than a handwritten tagged-map decoder.
+MessagePack preserves nested structured values without a second fixed C structure hierarchy. Rust
+uses Serde; hosts decode the versioned payload into their own typed representation.
 
 The Unity byte-codec probe with MessagePack-CSharp 3.1.11 preserved managed adapter conformance and
 reduced allocation. Adoption is deferred under the current self-contained UPM distribution: bundled
@@ -109,11 +85,9 @@ Availability reasons optionally carry `origin`: either `condition_call` with `fu
 `args`, or `requirement_expression` with `source_text`. This is an additive batch-v0 field; its
 absence means provenance is unavailable. Hosts preserve both origins and reject unknown kinds.
 
-**Draining behaviour:** each session call drains traversal synchronously and returns one ordered
-output batch. The batch stops at the first prompt, blocking effect, end event, or structured error.
-This matches what the Godot adapter does (`adapter.rs` — it drains until a host-observable
-boundary). The host does not need to call `next` in a loop; `recite-ffi` does it internally. This is
-the behaviour documented per contract §4.
+Each traversal operation returns one ordered batch, stopping at a prompt, blocking effect, ending or
+error. Shared adapter semantics govern transactional draining; hosts do not need a separate `next`
+loop.
 
 ## Asset Metadata
 
@@ -128,9 +102,9 @@ frees the returned buffer with `recite_buffer_free`.
 
 `recite_catalog_add_po` uses the core lossless PO parser and atomically merges a file into an owned
 catalogue. Identical duplicate entries are accepted; conflicting translations or plural rules return
-`RECITE_ERR_LOCALISATION` without changing the handle. Fuzzy and obsolete entries are ignored. Bare
-gettext contexts serve both line and choice domains; prefixed availability reason and presentation
-label contexts retain their distinct domains.
+`RECITE_STATUS_LOCALISATION` without changing the handle. Fuzzy and obsolete entries are ignored.
+Bare gettext contexts serve both line and choice domains; prefixed availability reason and
+presentation label contexts retain their distinct domains.
 
 `recite_session_set_catalog` explicitly switches a session from callback mode to an owned catalogue
 revision; installing a callback switches back. A session retains its attached revision after the
@@ -140,8 +114,8 @@ catalogue after preparation and before begin so the first batch is localized.
 
 ## Session Lifecycle Functions
 
-The generated [public C header](../include/recite.h) defines the exported functions and parameter
-types. The Rust implementation and FFI contract tests own their mappings to runtime operations.
+The generated header defines the exported functions and parameter types. The Rust implementation and
+FFI contract tests own their mappings to runtime operations.
 
 Create a session or call `recite_session_prepare_restore`, install its condition handlers,
 interpolation values and locale configuration, then begin traversal. Failed preparation publishes no
@@ -152,7 +126,7 @@ variant is not serialized and must be supplied again when restoring.
 
 Choosing a choice or acknowledging an effect drains the next output batch. Restoring a pending
 blocking effect re-emits it once; a pending prompt produces an empty resumption batch. Ended
-snapshots reject restore with `NoActiveSession`.
+snapshots reject restore with `RECITE_STATUS_NO_ACTIVE_SESSION`.
 
 `EffectAck::Completed` maps to `ack_completed = 1`; failure maps to `ack_completed = 0` with its
 reason. Hosts that cannot surface the reason pass `failure_reason = null` and still acknowledge
@@ -191,50 +165,11 @@ should call through an `extern "C"` wrapper that catches C++ exceptions and retu
 exceptions cannot be caught by Rust. The Unity managed wrapper catches managed exceptions and
 returns the same failure result.
 
-For example, a callback that returns plural attempts can use session-owned or heap-owned storage. It
-must release that owner only after the enclosing native call returns (including error and rollback
-paths):
-
-```c
-struct LocaleOwner {
-    char text[64];
-    char locale[16];
-    char context[64];
-    char key[32];
-    ReciteLocaleAttempt attempts[1];
-};
-
-static ReciteLocaleResult locale_callback(
-    const ReciteLocaleQuery *query, void *userdata)
-{
-    struct LocaleOwner *owner = userdata; /* not callback-local storage */
-    (void)query;
-    /* Fill owner->... before returning and do not mutate it until the call
-       that invoked Recite has returned. */
-    owner->attempts[0] = (ReciteLocaleAttempt){
-        owner->locale, owner->context, owner->key, 0,
-        RECITE_LOCALE_ATTEMPT_MATCHED};
-    return (ReciteLocaleResult){
-        1, owner->text, 0, owner->locale, owner->context, owner->key,
-        owner->attempts, 1, NULL};
-}
-```
-
-Returning pointers to arrays, strings, or error messages allocated on the callback stack, or freeing
-them when the callback returns, violates the host contract. C++ wrappers should use equivalent owner
-storage and catch C++ exceptions before entering the `extern "C"` callback; Rust cannot catch a C++
-exception or an `extern "C"` Rust panic.
-
 ## String and Buffer Ownership
 
-**Rule: callee allocates output; host copies then frees.**
-
-```c
-typedef struct {
-    uint8_t *data;       // heap-allocated by recite-ffi; NULL on error
-    uintptr_t len;       // byte length; 0 if data is NULL
-} ReciteBuffer;
-```
+Recite allocates output; the host copies it and frees it through the same library. Failed calls
+leave caller output slots unchanged. Initialize those slots deliberately; a failure does not promise
+a null pointer or zero length.
 
 Input strings (`start_block`, `locale`, `choice_id`, etc.) are caller-owned borrows. They are valid
 only for the duration of the call. `recite-ffi` never stores a pointer to caller memory past the
@@ -253,32 +188,14 @@ NUL-terminated C strings. NUL bytes may appear inside msgpack data. NUL terminat
 the host-facing error detail string (see Error Codes).
 
 All UTF-8. The host must not pass non-UTF-8 bytes in string inputs; `recite-ffi` validates and
-returns `validation_error` if encoding is invalid.
+returns `RECITE_STATUS_VALIDATION` if encoding is invalid.
 
-Interpolation inputs use the same explicit typed scalar model as the canonical runtime
-`InterpolationValues` map:
-
-```c
-typedef enum {
-    RECITE_INTERPOLATION_VALUE_KIND_STRING = 0,
-    RECITE_INTERPOLATION_VALUE_KIND_INTEGER = 1,
-    RECITE_INTERPOLATION_VALUE_KIND_FLOAT = 2,
-    RECITE_INTERPOLATION_VALUE_KIND_BOOLEAN = 3,
-} ReciteInterpolationValueKind;
-
-typedef struct {
-    const char *name;             // UTF-8 NUL-terminated; borrowed
-    uint32_t kind;               // RECITE_INTERPOLATION_VALUE_KIND_* constant
-    const char *string_value;    // borrowed; used for STRING
-    int64_t integer_value;       // used for INTEGER
-    double float_value;          // finite; used for FLOAT
-    uint8_t boolean_value;       // exactly 0 or 1; used for BOOLEAN
-} ReciteInterpolationValue;
-```
+Interpolation inputs use the runtime typed scalar model: string, integer, finite float or boolean.
+The generated header owns the records and kind constants.
 
 The records and string payloads are borrowed only for the call and copied into session-owned
 storage. Duplicate names, invalid UTF-8, unknown kind constants, non-finite floats, and invalid
-boolean payloads return `RECITE_ERR_VALIDATION` without changing the existing map. Passing zero
+boolean payloads return `RECITE_STATUS_VALIDATION` without changing the existing map. Passing zero
 records clears the map. Interpolation values are deliberately not part of the opaque session
 snapshot; hosts must provide them again on restore when the resumption drain needs them.
 
@@ -298,20 +215,21 @@ bindings and native libraries. After stabilization, incompatible changes require
 versions remain for documentation and implementation changes.
 
 ABI 0.7 uses prepared creation/restoration, setters and begin in place of the old option-combination
-entrypoints. Compiled assets, snapshots and condition payloads retain their existing v0 encodings;
-availability-reason origin is an optional addition to batch v0.
+entrypoints. Compiled assets, snapshots and condition payloads keep their independently versioned
+encodings; availability-reason origin is an optional addition to batch v0.
 
 ## Error Codes
 
-Status-returning operations use `ReciteStatus`: zero means success and negative values identify
-failure categories. Free functions and error-message accessors have their own signatures. The
-[generated header](../include/recite.h) owns the integer assignments; the
+Status-returning operations use `ReciteStatus`: `RECITE_STATUS_OK` means success and negative values
+identify failure categories. Free functions and error-message accessors have their own signatures.
+The generated header owns the integer assignments; the
 [Rust mapping](../crates/recite-ffi/src/error.rs) and shared adapter classification own their
 operation-specific translation.
 
-Unknown or freed handles fail at the FFI boundary. Traversal limits map to `DialogueFault`; snapshot
-format, decoding and restore incompatibilities map to `SaveLoadIncompatibility`. Projection errors
-are capability-gated and are not emitted by adapters without presentation projection.
+Unknown or freed handles fail at the FFI boundary. Traversal limits map to
+`RECITE_STATUS_DIALOGUE_FAULT`; snapshot format, decoding and restore incompatibilities map to
+`RECITE_STATUS_SAVE_LOAD_INCOMPATIBILITY`. Projection errors are capability-gated and are not
+emitted by adapters without presentation projection.
 
 Each function that returns a non-zero status also writes a NUL-terminated, UTF-8 detail string into
 a thread-local that the host can retrieve with `recite_last_error_message() -> const char*`. The
@@ -320,65 +238,29 @@ calling further functions.
 
 ## Conditions Across the Boundary
 
-**Decision: synchronous callback function pointers.**
-
-```c
-typedef struct {
-    const char *function_name;   // Recite-owned callback borrow; UTF-8 NUL-terminated
-    const uint8_t *args_msgpack; // Recite-owned callback borrow; msgpack argument list
-    uintptr_t args_len;
-} ReciteConditionQuery;
-
-typedef struct {
-    uint8_t ok;                  // 1 = success, 0 = error
-    const uint8_t *value_msgpack;// host-owned; valid after callback return (see below)
-    uintptr_t value_len;         // valid when ok = 1
-    const char *error_message;   // same result lifetime when ok = 0
-} ReciteConditionResult;
-
-typedef ReciteConditionResult (*ReciteConditionFn)(
-    const ReciteConditionQuery *query,
-    void *userdata
-);
-```
-
-The host registers one function pointer per condition name before starting the session. During
-traversal, `recite-ffi` invokes the matching handler synchronously — the call is inline with
-`next_with` traversal, exactly as in the Godot adapter (`adapter.rs` — `BTreeMap<String,
-Box<ConditionHandler>>` with `Fn(ConditionCall<'_>) -> ConditionHandlerResult`).
+Register one synchronous callback per condition name before beginning traversal. The callback runs
+on the calling thread and receives borrowed function and argument data. The generated header owns
+the callback declarations; the MessagePack contract below owns their payloads.
 
 The function pointer must be non-null, synchronous, and non-panicking. Host wrappers must enforce
 the no-panic/no-throw/no-unwind contract and return `ok = 0` for an evaluation failure; they must
-not unwind across `extern "C"`, re-enter Recite, or retain borrowed query/result pointers. A Rust
-panic in an `extern "C"` callback aborts before Recite can catch it, and a C++ exception must be
-caught by the host wrapper before entering Recite.
+not unwind across `extern "C"`, re-enter Recite, or retain borrowed query pointers. A Rust panic in
+an `extern "C"` callback aborts before Recite can catch it, and a C++ exception must be caught by
+the host wrapper before entering Recite.
 
-**Why callbacks, not pre-resolved query batches?** The alternative (pause traversal, return the
-pending condition set to the host, wait for the host to re-enter with answers) is a two-round-trip
-protocol. It requires the host to maintain explicit "condition query pending" state between calls
-and makes the traversal loop stateful from the host's perspective. For Unity (Mono/IL2CPP),
-single-threaded condition evaluation from a P/Invoke call site is simpler than a polling loop. The
-callback approach is also what the Godot MVP proved works under a Rust-foreign-language boundary
-(Godot conditions are GDScript `Callable`s invoked through the gdext callback path).
+Condition failures map to these statuses:
 
-**Threading constraint:** condition callbacks are invoked on the same thread that called the
-`recite-ffi` traversal function. They must not call back into `recite-ffi` (no reentrancy). Hosts
-that evaluate conditions on a different thread must marshal via `userdata` and synchronize
-themselves. This is the same single-threaded evaluation model the Godot adapter uses.
-
-The three condition error categories from contract §6 map through `ReciteConditionResult.ok = 0`:
-
-- Handler not registered → `RECITE_ERR_MISSING_CONDITION_HANDLER` (detected in `recite-ffi` before
-  invoking the callback, just as the Godot adapter checks its `BTreeMap`).
-- Handler returns `ok = 0` with a message → `RECITE_ERR_CONDITION_EVALUATION`.
+- Handler not registered → `RECITE_STATUS_MISSING_CONDITION_HANDLER` (detected in `recite-ffi`
+  before invoking the callback, just as the Godot adapter checks its `BTreeMap`).
+- Handler returns `ok = 0` with a message → `RECITE_STATUS_CONDITION_EVALUATION`.
 - Handler returns a msgpack value whose type mismatches the schema declaration →
-  `RECITE_ERR_INVALID_CONDITION_RESULT` (detected by the runtime during `ConditionValue` type
+  `RECITE_STATUS_INVALID_CONDITION_RESULT` (detected by the runtime during `ConditionValue` type
   validation, as `ConditionResultTypeMismatch`).
 
 The condition result value is a msgpack-encoded `ConditionValue` (bool or enum variant string).
 Arguments are a msgpack-encoded list of `ConditionArgument` values. The host-side msgpack
 representation must match the schema-declared parameter types; mismatches produce
-`RECITE_ERR_INVALID_CONDITION_RESULT`.
+`RECITE_STATUS_INVALID_CONDITION_RESULT`.
 
 ### Condition callback MessagePack v0
 
@@ -411,10 +293,10 @@ produced as the following canonical bytes:
 The result map uses the same named-map convention and is exactly either
 `{"kind":"bool","value":<bool>}` or `{"kind":"enum","variant":<UTF-8 string>}`. The producer emits
 the keys in that order. On the result side, `ok` is exactly `0` or `1`: `0` reports
-`RECITE_ERR_CONDITION_EVALUATION` (a null error pointer uses a stable fallback), and `1` requires a
-non-null, non-empty, complete result map. Scalars, maps with missing, duplicate, or unknown keys,
+`RECITE_STATUS_CONDITION_EVALUATION` (a null error pointer uses a stable fallback), and `1` requires
+a non-null, non-empty, complete result map. Scalars, maps with missing, duplicate, or unknown keys,
 wrong field types, truncated payloads, and trailing bytes are rejected as
-`RECITE_ERR_INVALID_CONDITION_RESULT`.
+`RECITE_STATUS_INVALID_CONDITION_RESULT`.
 
 The native query bytes and function-name pointer are Rust-owned borrows valid only during the
 synchronous callback. Host result bytes and error strings must remain immutable and valid after
@@ -424,19 +306,17 @@ session-owned reusable buffer is sufficient. Callbacks must not re-enter `recite
 
 ## Threading and Reentrancy
 
-A session handle is not thread-safe. The host must not call `recite-ffi` functions on the same
-session handle from multiple threads concurrently. This mirrors the Rust `!Sync` nature of
-`DialogueSession`.
+Hosts serialize operations on a session and keep callbacks and `userdata` valid for that session's
+lifetime. Asset handles may be shared for reads. A session retains its own asset reference, so an
+asset handle can be freed while an existing session continues; do not race disposal with an
+operation still using the disposed handle.
 
-An asset handle is safe to share across threads for reading (backed by `Arc<CompiledDialogue>`), but
-`recite_asset_free` must not race with any session that holds a reference to the same asset.
-
-`recite-ffi` functions are not reentrant. A condition callback must not call any `recite-ffi`
-function.
-
-The session retains the condition callback and `userdata` pointers without owning or freeing the
-host allocation. It passes `userdata` back as-is on each invocation. Keep both the callback and
-userdata valid and accessible on the owner thread for the session's lifetime.
+Condition and locale callbacks must not re-enter Recite. Same-thread session-registry re-entry
+returns `RECITE_STATUS_VALIDATION` before locking; a reentrant void free records the error and
+leaves the handle intact. This protection cannot make foreign pointers valid, catch foreign
+exceptions or prevent a callback waiting on another thread that needs Recite's held registry lock.
+Callbacks must return their result synchronously without throwing, panicking or unwinding across the
+ABI.
 
 ## Save and Load Handoff
 
@@ -446,22 +326,16 @@ data, reads it back, and passes it to `recite_session_restore` later.
 
 `recite_session_restore` reconstructs the session by validating the snapshot against the supplied
 asset handle (via `decode_session_messagepack` + `restore_session`). A schema-fingerprint difference
-returns `RECITE_ERR_SCHEMA_MISMATCH`; schema comparison is performed first, so a snapshot that
+returns `RECITE_STATUS_SCHEMA_MISMATCH`; schema comparison is performed first, so a snapshot that
 differs in both schema and another identity/content field still returns
-`RECITE_ERR_SCHEMA_MISMATCH`. All other asset identity/content differences during restore return
-`RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`. This operation-specific mapping keeps schema drift
+`RECITE_STATUS_SCHEMA_MISMATCH`. All other asset identity/content differences during restore return
+`RECITE_STATUS_SAVE_LOAD_INCOMPATIBILITY`. This operation-specific mapping keeps schema drift
 actionable without changing ordinary runtime stale-asset handling. The call still enforces the
 contract §9 requirement that session state is tied to a specific compiled asset.
 
-The host must not deserialize, modify, or re-serialize the snapshot bytes. Doing so silently breaks
-deterministic resume (contract §9 — the snapshot includes trace counters, the divert stack, pending
-blocking effects, and other determinism-critical state).
-
-If a blocking effect was pending when the snapshot was taken, restoring the session re-emits that
-effect once in the resumption batch with the same request ID, and leaves it pending until the host
-acknowledges it. The stable ID lets the host reconcile, replay, fast-forward, or treat the effect as
-complete; the runtime does not know whether the game-side operation happened before the save
-(contract §9).
+Keep snapshot bytes opaque and restore host-owned conditions, interpolation values and catalogue
+configuration before beginning. Pending-effect reconciliation remains the game's responsibility, as
+specified in the [adapter save/load contract](engine-adapter-contract.md#9-save-and-load-handoff).
 
 ## Schema Manifest and Projection
 

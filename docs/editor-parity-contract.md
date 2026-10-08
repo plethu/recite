@@ -45,7 +45,7 @@ units. Clients must send the encoding advertised by `initialize`; the conformanc
 CRLF and a non-BMP scalar rather than relying on ASCII-only tests.
 
 Open documents are overlays. Accepted full-document or sequential UTF-16 ranged `didChange` events
-update the overlay and produces diagnostics for that version. A change whose version is not greater
+update the overlay and produce diagnostics for that version. A change whose version is not greater
 than the current open version is stale and is refused without replacing text or publishing a result.
 Malformed batches are refused atomically without consuming the version. The server advertises
 incremental synchronization and accepts full replacements. A partial or incomplete buffer is still
@@ -67,67 +67,29 @@ Superseded requests return `RequestFailed` (-32803) with `data.reason = "stale_s
 query capacity uses `"server_busy"`. Results are checked again at transport handoff. Clients must
 not infer cancellation from a request timeout.
 
-Shared stdio and deterministic coordinator tests cover this contract. Installed editor cancellation
-and non-Linux proof remain unclaimed. Issue #206 owns this serious-v1 scheduler/performance
-capability, not M4 command/watch work; #53 retains the historical command/watch evidence. See the
-[cancellation design and measurements](lsp-cancellation-design.md).
+Shared stdio and coordinator tests cover cancellation and freshness. Installed-client and non-Linux
+evidence remain separate; see the [LSP architecture](lsp-cancellation-design.md).
 
 ## Evidence input boundary
 
-The parity evidence compiler digest uses Git's path set rather than walking the filesystem. It
-includes tracked files and nonignored untracked files, in stable repository-relative byte order, so
-source changes still invalidate evidence even when a file's mtime is restored. It deliberately
-excludes ignored build output, editor packages, documentation-site output, and Python bytecode;
-creating or rewriting those files must not trigger a Cargo evidence rebuild.
-
-Tracked and force-added files remain inputs even when their names resemble an ignored output path
-such as `target/`, `node_modules/`, `__pycache__/`, or a `.pyc`/`.pyo` file. The Git index mode and
-current worktree permission mode are included too, so executable-bit changes cannot reuse stale
-evidence.
-
-The repository-metadata exception is the exact root `CLAUDE.md` path and paths below the exact root
-`.claude/` directory. These are agent metadata in this checkout and are excluded before symlink
-checks because the tracked checkout intentionally represents them as metadata symlinks. A similarly
-named `nested/CLAUDE.md` or `nested/.claude/` path is not metadata and follows the ordinary digest
-and symlink rules.
-
-An ignored untracked file is not an accepted compiler-input surface. If a `build.rs`, `include!`,
-generated source step, or other compiler action needs a file that is currently ignored, remove the
-ignore rule or force-add the file to Git. Force-added files are tracked inputs and therefore count.
-The checker does not pretend to discover an arbitrary ignored Cargo input from a pre-compilation
-filesystem walk.
-
-Nested repositories and Git submodules are not accepted digest inputs. Git may enumerate an
-untracked nested repository as a directory or a staged submodule as a mode-160000 gitlink; either
-form fails closed with a controlled checker error. Remove the nested repository/submodule from the
-compiler tree or make its source files ordinary repository inputs before collecting evidence.
+Evidence is tied to Git-enumerated source content and modes, not mtimes. Ignored generated output is
+excluded; compiler inputs must be tracked or nonignored. Nested repositories and submodules are
+unsupported inputs. The exact metadata exclusions, digest algorithm and hostile cases belong to
+[`content_digest.py`](../scripts/editor_parity/content_digest.py) and the parity checker, rather
+than a second algorithm specification here.
 
 ## Structured commands and watch
 
-The command boundary is structured for the finite `compile`, `validate`, `extract`, `run`, and
-`trace` commands and the streaming `watch` command. Their opt-in version-1 NDJSON contracts are
-documented in [`docs/cli-structured-protocol.md`](cli-structured-protocol.md) and exercised by the
-external `recite-cli` tests, the VS Code/VSCodium adapter tests, and the Neovim headless command
-lane. Configured Linux host runners additionally cover the bounded VS Code/VSCodium, Neovim, and Zed
-command paths. Run `scripts/run-editor-host-check.sh {vscode|neovim|zed}` to retain each native
-run's log and result under `target/editor-host-evidence/`. The shared CLI remains semantic
-authority: clients resolve a local binary, pass argv and the project root, validate every record,
-and project typed diagnostics and runtime/watch data without parsing human output. Neovim owns a
-separate `vim.system` process lifecycle and one watch child, including cooperative cancel, bounded
-teardown, and stale-result fencing. A late or malformed record is a protocol failure. Zed's compile,
-validate, extract, and watch entries are static terminal tasks only: the installed Linux host proves
-exact argv, cwd, and exit status for the finite tasks and genuine terminal Ctrl-C termination for
-watch, while the tasks pass structured output to the host terminal but do not parse records, replace
-diagnostics, or provide a fake stdin cancellation controller. Zed intentionally has no built-in
-run/trace task because asset, block, and fixture inputs cannot be guessed; a project may add an
-explicit task. Zed's installed-host evidence is deliberately partial: its task terminal does not
-parse records into a diagnostic controller or expose a native cancellation API. Non-Linux platform
-evidence remains outside this contract.
+Finite commands and streaming watch use the [versioned CLI protocol](cli-structured-protocol.md).
+Clients pass explicit argv/project roots and preserve typed diagnostics and results. Malformed or
+late records are not current success. Native process lifecycle, diagnostic presentation and
+cancellation controls belong to each client.
 
-The VS Code/VSCodium adapter deliberately contributes no line-oriented `problemMatcher` or task
-definition. Such a matcher would parse localized or nested NDJSON text and would duplicate the
-structured boundary. The command adapter's typed `DiagnosticCollection` is the problem integration
-for this slice; native task/workbench affordances remain a separate host surface.
+The [VS Code](../editors/vscode/README.md), [Neovim](../editors/recite-neovim/README.md) and
+[Zed](../editors/zed/README.md) guides own their concrete command surfaces. VS Code and Neovim
+consume structured records; Zed's static tasks display them in a terminal without claiming a
+structured diagnostic or cancellation controller. Run `scripts/run-editor-host-check.sh
+{vscode|neovim|zed}` for the bounded native lanes.
 
 ## Capability and evidence authority
 

@@ -560,6 +560,7 @@ diagnostic-schema-004-remediation-001 = Define the type or update the reference 
 # Schema diagnostic primary presentations. These IDs are intentionally more
 # specific than the machine-facing schema codes; the code remains the stable
 # machine category while the presentation identifies the semantic case.
+diagnostic-schema-001-native-invalid = invalid native project schema: {$detail}
 diagnostic-schema-001-json-parse = malformed schema manifest: {$detail}
 diagnostic-schema-001-toml-parse = malformed schema source: {$detail}
 diagnostic-schema-001-toml-decode = malformed schema source: {$detail}

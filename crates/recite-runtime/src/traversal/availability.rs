@@ -18,8 +18,6 @@ use super::asset::AssetView;
 use super::malformed;
 use super::output::LocaleLookup;
 
-const MAX_AVAILABILITY_CONDITION_DEPTH: usize = 128;
-
 #[derive(Clone, Copy)]
 enum AvailabilityGroup {
     All,
@@ -75,9 +73,9 @@ fn evaluate_availability_expression(
     depth: usize,
     locale: LocaleLookup<'_>,
 ) -> Result<(bool, Option<ChoiceAvailabilityReasonTree>), DialogueError> {
-    if depth > MAX_AVAILABILITY_CONDITION_DEPTH {
+    if depth > recite_core::compiled::MAX_COMPILED_CONDITION_DEPTH {
         return Err(DialogueError::ConditionDepthLimitExceeded {
-            limit: MAX_AVAILABILITY_CONDITION_DEPTH,
+            limit: recite_core::compiled::MAX_COMPILED_CONDITION_DEPTH,
         });
     }
 

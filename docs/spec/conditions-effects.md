@@ -16,7 +16,7 @@ Conditions must support:
 - `or`;
 - `not`;
 - parenthetical grouping;
-- arbitrary nesting;
+- nested expressions;
 - clear precedence rules.
 
 Example:
@@ -30,31 +30,23 @@ Identifiers such as actor IDs, thread IDs, and stage IDs should be accepted as b
 string literals should be reserved for values that genuinely need spaces or punctuation beyond the
 identifier grammar. Dialogue prose itself must never require quotes.
 
-The grammar must be formally specified and parsed into an AST.
+Compiled condition trees have at most 128 child edges from root to leaf. Compiled asset validation,
+encoding, fingerprinting and runtime evaluation share this bound for branches and choice
+requirements. Excess depth is rejected rather than creating an asset that cannot traverse. This is a
+compiled-expression limit; syntactic parentheses alone do not add tree depth.
 
 ### 6.2 Condition Semantics
 
 Conditions are pure queries. They must not mutate dialogue state or game state.
 
-The runtime evaluates conditions through a caller-provided context:
-
-```rust
-pub trait DialogueContext {
-    fn evaluate_condition(
-        &self,
-        function: &str,
-        args: &[Value],
-    ) -> Result<bool, DialogueError>;
-}
-```
-
-The core runtime should not know project-specific condition meanings.
+The host supplies condition evaluation through the runtime context and is responsible for purity.
+The core runtime does not know project-specific meanings.
 
 Condition functions return either a boolean (the default, used by `:if` and choice `requires=(...)`
 clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An
 enum-returning function declares its return type in the canonical schema model; the dialogue context
-exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending
-on adapter ergonomics.
+exposes it through the same `evaluate_condition` path with typed results. Host adapters preserve the
+distinction.
 
 ### 6.3 Schema Validation
 
@@ -76,25 +68,7 @@ Validation must reject:
 
 ### 7.1 Effect Model
 
-The previous term "mutation" is too narrow. The production system should use **effects**.
-
 Effects are typed intents emitted by dialogue. The runtime never executes them.
-
-```rust
-pub struct DialogueEffectRequest {
-    pub id: EffectRequestId,
-    pub mode: EffectMode,
-    pub function: String,
-    pub args: Vec<Value>,
-    pub source: EffectSource,
-}
-
-pub enum EffectMode {
-    Deferred,
-    Immediate,
-    Blocking,
-}
-```
 
 ### 7.2 Deferred Effects
 
@@ -151,24 +125,7 @@ Example:
 ! blocking mark_map(old_watchtower)
 ```
 
-Runtime API:
-
-```rust
-pub fn acknowledge_effect(
-    session: &mut DialogueSession,
-    effect_id: EffectRequestId,
-    result: EffectAck,
-) -> Result<(), DialogueError>;
-```
-
-Initial production scope should only require completion/failure acknowledgement:
-
-```rust
-pub enum EffectAck {
-    Completed,
-    Failed { reason: String },
-}
-```
+Acknowledgement names the exact pending request and reports completion or failure with a reason.
 
 Result-dependent branching should be deferred until there is a proven need. If dialogue needs to
 branch on the result of a game operation, the game should update state and later dialogue should
@@ -201,49 +158,5 @@ Validation must reject:
 - unsupported mode for that effect;
 - invalid enum/registry values.
 
-Preferred adapter registration example:
-
-```rust
-schema
-    .effect("advance_thread")
-    .deferred()
-    .param::<ThreadId>("thread_id")
-    .param::<ThreadStageKind>("stage");
-
-schema
-    .effect("record_relationship_interaction")
-    .deferred()
-    .param::<ActorId>("actor_a")
-    .param::<ActorId>("actor_b")
-    .param::<RelationshipInteractionKind>("kind");
-
-schema
-    .effect("mark_map")
-    .blocking()
-    .param::<LocationId>("location_id");
-
-schema
-    .effect("play_sfx")
-    .immediate()
-    .param::<DialogueSoundEffectId>("sound_effect_id");
-```
-
-Generated manifest excerpt:
-
-```json
-{
-  "effects": {
-    "advance_thread": {
-      "modes": ["deferred"],
-      "params": [
-        { "name": "thread_id", "type": "registry:thread" },
-        { "name": "stage", "type": "enum:thread_stage_kind" }
-      ]
-    },
-    "play_sfx": {
-      "modes": ["immediate"],
-      "params": [{ "name": "sound_effect_id", "type": "registry:dialogue_sound_effect" }]
-    }
-  }
-}
-```
+Use the [canonical schema fixture](../../fixtures/schema/valid/full_manifest.json) for declaration
+examples and the host's package guide for typed registration APIs.

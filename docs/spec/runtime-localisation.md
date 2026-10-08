@@ -21,80 +21,18 @@ The runtime must:
 
 ### 8.2 Runtime API
 
-Illustrative API:
-
-```rust
-pub fn start_scene(
-    asset: &CompiledDialogue,
-    block: Option<&str>,
-    locale: Option<LocaleId>,
-) -> Result<DialogueSession, DialogueError>;
-
-pub fn next(
-    session: &mut DialogueSession,
-    context: &dyn DialogueContext,
-    locale_provider: &dyn LocaleProvider,
-) -> Result<DialogueEvent, DialogueError>;
-
-pub fn choose(
-    session: &mut DialogueSession,
-    choice_id: ChoiceId,
-    context: &dyn DialogueContext,
-    locale_provider: &dyn LocaleProvider,
-) -> Result<DialogueEvent, DialogueError>;
-
-pub fn acknowledge_effect(
-    session: &mut DialogueSession,
-    effect_id: EffectRequestId,
-    ack: EffectAck,
-) -> Result<(), DialogueError>;
-
-pub fn end_scene(
-    session: DialogueSession,
-) -> Result<Vec<DialogueEffectRequest>, DialogueError>;
-```
-
-The concrete API may differ, but the semantics must hold. `None` starts a source-text-only session.
-The runtime may still receive a locale provider for a caller that can localise dialogue, but it must
-bypass that provider entirely when the session locale is `None` and emit the compiled source text. A
-provider must not be required to represent an absent locale or infer one from the host environment.
+The [runtime API](../../crates/recite-runtime/src/lib.rs) owns concrete types and signatures.
+Callers start a session, advance it, select by stable choice ID and acknowledge blocking effects by
+request ID. An absent locale selects source-text-only mode and bypasses the locale provider; a
+provider is never required to infer an absent locale from the environment.
 
 ### 8.3 Event Model
 
-The event model must represent prompts directly.
-
-```rust
-pub enum DialogueEvent {
-    Line(DialogueLine),
-    Prompt {
-        line: Option<DialogueLine>,
-        choices: Vec<DialogueChoice>,
-    },
-    Effect(DialogueEffectRequest),
-    End,
-}
-```
-
-`Line` should be used when no choices are present.
-
-`Prompt` should be used when choices are present, with or without prompt text.
-
-`Effect` should be used for immediate and blocking effects. Deferred effects are collected and may
-optionally also be observable in trace/debug mode.
+Events distinguish a line, a prompt with optional line and choices, an immediate or blocking effect,
+and an ending with collected deferred effects. Hosts preserve event order and structured values. See
+[`DialogueEvent`](../../crates/recite-runtime/src/event.rs).
 
 ### 8.4 Line Model
-
-```rust
-pub struct DialogueLine {
-    pub id: LineId,
-    pub source_text: String,
-    pub text: String,
-    pub speaker: Option<SpeakerId>,
-    pub metadata: Vec<MetadataEntry>,
-    pub plural: Option<DialoguePlural>,
-    pub pending_deferred_effects: Vec<DialogueEffectRequest>,
-}
-```
 
 `text` is the resolved localized text.
 
@@ -106,79 +44,22 @@ templates and are not replaced by the selected decoded compatibility form in
 
 ### 8.5 Choice Model
 
-```rust
-pub struct DialogueChoice {
-    pub id: ChoiceId,
-    pub source_text: String,
-    pub text: String,
-    pub metadata: Vec<MetadataEntry>,
-    pub availability: ChoiceAvailability,
-    pub echo: ChoiceEchoMode,
-}
-
-pub struct ChoiceAvailability {
-    pub is_available: bool,
-    pub primary_reason: Option<AvailabilityReasonLeaf>,
-    pub reason_tree: Option<AvailabilityReasonTree>,
-}
-
-pub enum AvailabilityReasonTree {
-    All(Vec<AvailabilityReasonTree>),
-    Any(Vec<AvailabilityReasonTree>),
-    Leaf(AvailabilityReasonLeaf),
-}
-
-pub struct AvailabilityReasonLeaf {
-    pub reason_id: Option<AvailabilityReasonId>,
-    pub template_source_text: Option<String>,
-    pub localized_text: Option<String>,
-    pub args: Vec<AvailabilityReasonArg>,
-    pub origin: AvailabilityReasonOrigin,
-}
-
-pub enum AvailabilityReasonOrigin {
-    ConditionCall {
-        function: String,
-        args: Vec<Value>,
-    },
-    RequirementExpression {
-        source: String,
-    },
-}
-
-pub enum ChoiceEchoMode {
-    None,
-    SelectedText,
-    ExplicitLine(LineId),
-}
-```
-
-Selection should prefer `ChoiceId` over index. Adapters may expose index-based APIs for engine
-ergonomics, but the core runtime should preserve stable choice identity.
+Core selection uses `ChoiceId`. Adapters may expose index-based APIs for engine ergonomics, but the
+core runtime should preserve stable choice identity.
 
 `availability.primary_reason` is present only when an explicit choice-level `reason=...` override
 applies. Tooling and adapters may derive compact display reasons from `reason_tree`, but that
 presentation choice is outside runtime conformance output. `availability.reason_tree` is present
 only for unavailable choices when the compiler and schema can resolve detailed structured reason
-data. A v1 API must not expose only a flat `Option<String>` reason.
+data. Available choices have neither a primary reason nor a reason tree; restoration rejects
+contradictory saved availability rather than requerying the host. A flat display string does not
+replace this data.
 
 ### 8.6 Session State
 
-`DialogueSession` must serialise enough information to resume exactly:
-
-- compiled asset identity/version;
-- canonical fingerprint of the complete compiled asset payload;
-- current block;
-- statement pointer;
-- call/divert stack if applicable;
-- collected deferred effects;
-- pending blocking effect;
-- previous prompt choices;
-- optional dialogue locale, serialized as `None` in source-text-only mode;
-- deterministic trace counters;
-- selected choice history.
-
-The session must not serialise game state.
+Session snapshots retain asset identity, traversal position, choices, effects, locale and history
+needed for exact resumption. They never contain game state. The runtime's versioned snapshot types
+own the field layout; hosts round-trip them as an opaque unit.
 
 Live sessions represent running, awaiting a choice, awaiting a blocking effect, and ended as
 exclusive states. The versioned snapshot keeps its existing fields; restore validates them and
@@ -191,12 +72,8 @@ format. Before publication, development snapshots may be regenerated as these co
 completed; they do not require compatibility aliases or migration readers. Unknown versions and
 snapshots missing the required payload identity are rejected.
 
-Compilation and asset decoding prepare the canonical payload fingerprint once. Starting another
-session from that asset reuses the prepared identity; it must not serialize and hash the whole asset
-again. Prepared assets expose no mutable payload access. Deliberate edits consume the asset into a
-raw payload and require construction of a new asset. Advance and choice operations compare that
-cached identity against the session's identity before they inspect executable tables. A changed
-payload with unchanged header and source metadata is rejected with a structured content mismatch.
+Prepared assets are immutable. Starting and advancing a session reuse their validated identity; a
+changed payload is rejected even when its header and source metadata are unchanged.
 
 #### Save/load while waiting on a blocking effect
 
@@ -354,19 +231,6 @@ The runtime calls the provider only when the session has an explicit dialogue lo
 Source-text-only sessions have no locale to pass to `lookup`; they bypass the provider and use the
 source text directly.
 
-```rust
-pub trait LocaleProvider {
-    fn lookup(
-        &self,
-        id: &str,
-        source_text: &str,
-        domain: TextDomain,
-        locale: &LocaleId,
-        variant: Option<&str>,
-    ) -> Result<Option<String>, LocaleError>;
-}
-```
-
 This supports gettext-style lookup where `msgctxt` is the stable ID and `msgid` is the source text.
 The `variant` parameter carries the explicit selection from the caller (see §9.5).
 
@@ -451,31 +315,7 @@ carry its own validated locale header and the number of arms declared there. Edi
 loading the resulting translated PO are separate operations; the latter cannot borrow plural
 metadata from another catalogue or from the source language.
 
-The locale provider must expose one structured plural resolution alongside the singular lookup:
-
-```rust
-pub trait LocaleProvider {
-    fn lookup(
-        &self,
-        id: &str,
-        source_text: &str,
-        domain: TextDomain,
-        locale: &LocaleId,
-        variant: Option<&str>,
-    ) -> Result<Option<String>, LocaleError>;
-
-    fn resolve_plural(
-        &self,
-        id: &str,
-        source_singular: &str,
-        source_plural: &str,
-        count: i64,
-        domain: TextDomain,
-        locale: &LocaleId,
-        variant: Option<&str>,
-    ) -> Result<PluralResolution, LocaleError>;
-}
-```
+The locale provider exposes structured plural resolution alongside singular lookup.
 
 `PluralResolution` carries the optional translated template, matched locale, context, and source
 key, matched arm, and deterministic candidate attempts. An attempt records its candidate locale,

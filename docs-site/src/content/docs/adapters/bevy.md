@@ -100,33 +100,14 @@ session are separate operations; the compiled dialogue revision never swaps in p
 
 ## Compatibility and evidence
 
-The crate pins Bevy `=0.19.1` and uses its versioned
-[asset loader](https://docs.rs/bevy_asset/0.19.1/bevy_asset/trait.AssetLoader.html),
-[message](https://docs.rs/bevy_ecs/0.19.1/bevy_ecs/message/index.html), and
-[app scheduling](https://docs.rs/bevy_app/0.19.1/bevy_app/) APIs. The adapter declares no
-presentation projection capability. Its conformance observation mode is
-`transactional_drained_batch`: published reference-driver scenarios use individual `advance` steps,
-while this host API reports the equivalent ordered events in one batch and reports an error before
-publishing a partial batch. The Bevy test suite executes the two mandatory adapter-runner fixtures
-for plural metadata and localisation errors directly, plus published error category observations
-through a real App and native AssetServer refresh. Its
-[verification scope](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#verification)
-distinguishes exact, equivalent, gated, and unrun scenarios. The
-[headless performance probe](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#performance)
-records load, idle, active, and retained-revision observations without CI timing thresholds. The
-[adapter contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md)
-defines the shared requirements.
+The crate pins Bevy `=0.19.1`. Its
+[package guide](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md) owns
+conformance coverage, performance probes and clean-consumer verification. The adapter has no
+presentation projection capability. It exposes transactional drained batches: an operation returns
+its ordered events together, or an error without publishing a partial batch.
 
-Before the Recite crates are published, use the repository as a path dependency.
-`scripts/check-bevy-package.sh` prepares seven real Cargo `.crate` archives with temporary local
-patches for the unpublished dependencies, then runs the packaged headless example from a separate
-project. It checks stable archive bytes across two builds and saves SHA-256 hashes, license texts,
-and a replayable consumer in `target/recite-bevy-probe/cargo-packages/`. Run `cargo fetch --locked`
-from the repository first on a cold cache. The probe does not publish crates.
-
-For an upgrade, move the Recite dependencies together to a compatible release and retain Bevy 0.19.1
-until a newer host version is supported. Re-export the schema, rebuild compiled assets, run `recite
-check-fresh <project-root>`, and wait for an accepted Bevy import before starting a new session. An
-active session continues on its original revision. Keep authored IDs stable, and test restore with
-saves your game needs to preserve. A crates.io release needs the matching `recite-core`,
-`recite-runtime`, and `recite-adapter` versions available before `recite-bevy`.
+Before publication, use the repository as a path dependency. For an upgrade, move the Recite
+packages together and retain the supported Bevy version. Re-export the schema, rebuild assets, run
+`recite check-fresh <project-root>`, and wait for an accepted import before starting a session on
+the new revision. An active session retains its original revision. Test restore with the saves your
+game needs to preserve.

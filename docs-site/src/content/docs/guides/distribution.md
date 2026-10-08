@@ -4,9 +4,10 @@ description: Build local artifacts and distinguish package checks from release a
 template: splash
 ---
 
-The current packages are prepared from source. Publication is reserved for v1; local installation
-and upgrade checks can run before that release. Keep the source revision, toolchain, artifact hashes
-and host profile with each result.
+Packages can be checked locally and published as numbered developer previews. Preview publication
+does not establish the serious-v1 acceptance criteria; follow the
+[release workflow](https://github.com/plethu/recite/blob/main/CONTRIBUTING.md#preparing-and-publishing-releases).
+Keep the source revision, toolchain, artifact hashes and host profile with each result.
 
 | Surface                | Preparation and smoke check                                                                                                                                                                                             | Upgrade and remaining acceptance                                                                                                                                                                                      |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -28,12 +29,11 @@ acceptance. Record those outcomes for the actual release candidates instead of i
 CI definitions. No new signing keys, accounts or publication infrastructure are required by the
 local checks above.
 
-Before release, [#79](https://github.com/plethu/recite/issues/79) owns final packaging/install
-evidence and [#81](https://github.com/plethu/recite/issues/81) owns known limits and support
-records. Include the artifact hash, platform and architecture, install/upgrade result, signing
-status and unresolved limitations. The
+Release evidence names the source revision, artifact hash, platform/architecture, install and
+upgrade results, signing status and unresolved limits. The
 [engine authoring checks](https://github.com/plethu/recite/blob/main/docs/engine-authoring-workflows.md)
-and Writer's platform records remain the detailed evidence owners.
+and [Writer packaging guide](https://github.com/plethu/recite/blob/main/apps/writer/packaging.md)
+own the reproducible procedures.
 
 For a reproducible bug report, include the source revision, package hash, engine/runtime version
 when applicable, OS/architecture, exact command and a small source/schema fixture. Remove private

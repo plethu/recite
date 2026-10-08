@@ -104,6 +104,8 @@ update a referring document when touching it.
   [10.2.1 Standalone TOML source contract](spec/schema.md#1021-standalone-toml-source-contract)
 - <a id="1023-availability-reason-definitions"></a>
   [10.2.3 Availability Reason Definitions](spec/schema.md#1023-availability-reason-definitions)
+- <a id="1024-presentation-projection"></a>
+  [10.2.4 Presentation Projection](spec/schema.md#1024-presentation-projection)
 - <a id="103-validation-reporting"></a>
   [10.3 Validation Reporting](spec/schema.md#103-validation-reporting)
 - <a id="11-scene-manifest"></a> [11. Scene Manifest](spec/build-cli.md#11-scene-manifest)

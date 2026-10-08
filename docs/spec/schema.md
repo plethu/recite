@@ -77,40 +77,6 @@ should feel like Lua, and future adapters should follow the language their users
 Those producer APIs may differ, but they must all export the same generated manifest and pass the
 same Recite manifest validation suite.
 
-Adapter registration should feel like ordinary typed game code. The Bevy/Rust adapter should support
-a builder style for explicit central registration:
-
-```rust
-schema
-    .condition("trust_gte")
-    .param::<ActorId>("actor_a")
-    .param::<ActorId>("actor_b")
-    .param::<i32>("threshold")
-    .returns_bool();
-
-schema
-    .condition("thread_stage")
-    .param::<ThreadId>("thread_id")
-    .returns_enum::<ThreadStageKind>();
-
-schema
-    .effect("play_sfx")
-    .immediate()
-    .param::<DialogueSoundEffectId>("sound_effect");
-```
-
-The Bevy/Rust adapter should also support derive or macro-based declarations from the start. Builder
-registration and derive declarations serve different ergonomic needs, and both lower into the same
-canonical model:
-
-```rust
-#[derive(ReciteEffect)]
-#[recite(name = "play_sfx", mode = "immediate")]
-struct PlaySfx {
-    sound_effect: DialogueSoundEffectId,
-}
-```
-
 The generated manifest is a deterministic, language-neutral data artifact. It is the only schema
 surface the compiler and LSP must understand. Compiler and editor tooling must not execute game code
 to validate dialogue.
@@ -165,32 +131,9 @@ return compatibility, effect arity/type checks, metadata target policy, markup p
 query function references, projector input/output references, presentation label placeholders,
 diagnostics, and deterministic fingerprinting.
 
-The Rust schema model should live in `recite-core::schema` and include:
-
-- `ProjectSchema`;
-- `ProducerMetadata`, including optional typed producer identity, overall content fingerprint,
-  export version, inclusion policy, and content freshness fingerprints kept outside the semantic
-  schema fingerprint;
-- `SchemaTypeDefinition`, including enum definitions;
-- `SchemaTypeRef`, covering built-in scalar types, speaker IDs, enum types, and registry-backed IDs,
-  and the metadata-only `symbol` scalar;
-- `ConditionDefinition`, including typed parameters and optional enum return type, and optional
-  availability reason mapping;
-- `AvailabilityReasonDefinition`, including localisable template text and typed parameters;
-- `EffectDefinition`, including typed parameters and supported modes;
-- `MetadataDefinition`, including targets, type, repeatability, and optional range constraints, and
-  optional domain reference;
-- `MetadataDomainDefinition`, including flat value sets, contextual value selectors, and optional
-  origin/fingerprint metadata for adapter-produced manifests;
-- `ProjectionQueryFunctionDefinition`, including typed parameters, return type, and optional
-  per-event call bound;
-- `SchemaPresentationProjectorDefinition`, including candidate selectors, typed inputs, query calls,
-  output definitions, and label templates;
-- `PresentationLabelDefinition`, including stable localisable template ID, source text, and typed
-  placeholders;
-- `MarkupDefinition`, including closing, translatability, and nesting policy;
-- `SpeakerDefinition`;
-- `RegistryDefinition`, including value snapshots and optional origin/fingerprint metadata.
+The public types and their fields are documented in `recite-core::schema`. All schema ingress,
+including native callers constructing a `ProjectSchema`, must use the same integrity validation;
+acceptance must not depend on whether the input arrived as JSON, TOML or Rust values.
 
 Metadata domains are named schema definitions. Metadata definitions reference domains by name rather
 than hardcoding special keys such as `portrait`.
@@ -282,135 +225,46 @@ The primary reason override above uses the reusable `innkeeper_trust_hint` templ
 repeating prose on every choice. The compiler may still preserve any schema-derived detailed reason
 tree for trace and adapter output.
 
-Example generated manifest excerpt:
+The [full manifest fixture](../../fixtures/schema/valid/full_manifest.json) is an executable example
+of the generated format. Host setup and schema-producing APIs belong in each adapter's guide.
 
-```json
-{
-  "schema_version": 1,
-  "types": {
-    "thread_stage_kind": {
-      "kind": "enum",
-      "values": ["fresh", "tired", "angry", "fine", "completed"]
-    }
-  },
-  "registries": {
-    "dialogue_sound_effect": {
-      "values": ["snap", "door_close", "rain_window"],
-      "origin": {
-        "kind": "asset_path",
-        "id": "data/content/dialogue-sound-effects.toml"
-      }
-    }
-  },
-  "speakers": {
-    "rhea": {},
-    "hazel": {}
-  },
-  "metadata_domains": {
-    "portrait_all": {
-      "kind": "flat",
-      "values": ["flat", "concerned", "wry"]
-    },
-    "sound_effect": {
-      "kind": "flat",
-      "values": ["snap", "door_close", "rain_window"]
-    },
-    "portrait_by_speaker": {
-      "kind": "contextual",
-      "selector": "field:speaker",
-      "values_by_context": {
-        "rhea": ["flat", "concerned"],
-        "hazel": ["flat", "wry"]
-      },
-      "missing_context": {
-        "policy": "fallback",
-        "domain": "portrait_all"
-      }
-    },
-    "emotion_by_subject": {
-      "kind": "contextual",
-      "selector": "metadata:subject",
-      "values_by_context": {
-        "rhea": ["calm", "hurt", "angry"],
-        "hazel": ["calm", "guarded", "wry"]
-      },
-      "missing_context": { "policy": "diagnostic" }
-    }
-  },
-  "conditions": {
-    "thread_stage": {
-      "params": [{ "name": "thread_id", "type": "registry:thread" }],
-      "returns": "enum:thread_stage_kind"
-    },
-    "trust_gte": {
-      "params": [
-        { "name": "actor_a", "type": "registry:actor" },
-        { "name": "actor_b", "type": "registry:actor" },
-        { "name": "threshold", "type": "int" }
-      ],
-      "returns": "bool",
-      "availability_reason": {
-        "reason": "trust_too_low",
-        "args": {
-          "subject": "$actor_a",
-          "target": "$actor_b",
-          "threshold": "$threshold"
-        }
-      }
-    }
-  },
-  "availability_reasons": {
-    "trust_too_low": {
-      "template": "{subject} does not trust {target} enough.",
-      "params": [
-        { "name": "subject", "type": "registry:actor" },
-        { "name": "target", "type": "registry:actor" },
-        { "name": "threshold", "type": "int" }
-      ]
-    },
-    "innkeeper_trust_hint": {
-      "template": "The innkeeper is not ready to share that.",
-      "params": []
-    }
-  },
-  "effects": {
-    "play_sfx": {
-      "modes": ["immediate"],
-      "params": [{ "name": "sound_effect", "type": "registry:dialogue_sound_effect" }]
-    }
-  },
-  "metadata": {
-    "portrait": {
-      "targets": ["line"],
-      "type": "symbol",
-      "domain": "portrait_by_speaker"
-    },
-    "sfx": {
-      "targets": ["line", "choice"],
-      "type": "symbol",
-      "domain": "sound_effect",
-      "repeatable": true
-    }
-  },
-  "markup": {
-    "slow": { "requires_closing": true, "translatable": true },
-    "shake": { "requires_closing": true, "translatable": true }
-  }
-}
-```
+#### 10.2.4 Presentation Projection
 
-Hand-authored schema configuration may exist as a fallback for standalone experiments, tests, or
-projects without an adapter. That fallback must lower into the same `ProjectSchema` model and must
-not become the primary integration contract for typed game projects.
+Projection declarations describe pure presentation over runtime output. They are inspectable schema
+data; validation does not execute host queries. The canonical types live in
+[`recite-core::schema`](../../crates/recite-core/src/schema/mod.rs).
 
-Schema freshness is part of the authoring contract:
+Selectors address an event, metadata key/set on a declared target, or an availability reason. Inputs
+bind stable candidate identities, ordered metadata occurrences, reason arguments or literals. A
+candidate-relative input must apply to its selector: a choice ID cannot bind a line candidate.
+Project identity requires a declared stable project/content-set ID.
 
-- compiled assets compare against the current schema manifest fingerprint;
-- adapter tooling should provide a command to regenerate the manifest;
-- adapter tooling should provide a check that reports stale generated schema manifests where the
-  host ecosystem can support it;
-- Recite diagnostics should clearly distinguish dialogue errors from stale or malformed schema
-  manifest errors.
+Repeated metadata is explicit: `Only` requires exactly one value; `First`, `Last` and `Index` select
+in source order; `All` produces an array and requires an array-compatible input type. Validation
+checks metadata targets and domains, query names, argument/result types, input references, output
+fields and template bindings. Query functions are schema-global declarations separate from condition
+functions; calls take their return type from the declaration.
+
+Each projector and output has a stable ID. Affordance identity derives from projector ID, output ID,
+target identity and relevant metadata occurrence, never an address, counter or display label.
+Projectors, queries and outputs are ordered by their canonical sorted IDs. Query-result references
+may name only earlier queries in that order; forward dependencies are invalid. Within an event,
+candidate order is event, prompt container, prompt line, choices in runtime order, effect request,
+current block, then project. Repeated values retain authored metadata order. Query results retain
+request order even if a host batches or caches equivalent queries.
+
+Labels have stable extraction IDs, source templates and named typed bindings to declared inputs or
+query results. Translations preserve those placeholders. Structured output retains target, kind,
+slot, provenance and bound fields alongside the localized label; a rendered string alone is not a
+portable projection result.
+
+V1 does not require a core projection executor. A host that implements projection must document when
+queries run, how displayed projections refresh and how structured failures surface. Work is bounded
+by the event, reachable compiled metadata and declared projectors; resource discovery belongs to
+schema export. Projection cannot alter runtime text, choice order or availability, IDs, targets,
+effects or session state; execute game mutations or random rolls; or become a save/load dependency.
+The same event and host context produce the same affordances. Refreshing labels after host state
+changes does not reevaluate a frozen prompt's availability.
 
 ### 10.3 Validation Reporting
 

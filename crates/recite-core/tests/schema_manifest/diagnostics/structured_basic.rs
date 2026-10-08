@@ -12,7 +12,7 @@ fn manifest_contract_family_is_registered() {
     let schema = migrated_diagnostic_presentation_contracts()
         .filter(|contract| contract.code().as_str().starts_with("RECITE_SCHEMA"))
         .collect::<Vec<_>>();
-    assert_eq!(schema.len(), 119);
+    assert_eq!(schema.len(), 120);
     assert_eq!(
         schema
             .iter()
@@ -25,6 +25,7 @@ fn manifest_contract_family_is_registered() {
         "diagnostic-schema-002-unsupported-version",
         "diagnostic-schema-001-schema-version-type",
         "diagnostic-schema-001-float-not-representable",
+        "diagnostic-schema-001-native-invalid",
         "diagnostic-schema-001-producer-export-version",
         "diagnostic-schema-003-duplicate-definition",
         "diagnostic-schema-001-invalid-name",

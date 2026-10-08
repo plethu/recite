@@ -17,6 +17,8 @@ use recite_runtime::{
 
 #[path = "session_serialization/asset_identity.rs"]
 mod asset_identity;
+#[path = "session_serialization/availability_conversion.rs"]
+mod availability_conversion;
 #[path = "session_serialization/continuation.rs"]
 mod continuation;
 #[path = "session_serialization/deferred_effects.rs"]

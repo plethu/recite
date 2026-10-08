@@ -26,13 +26,12 @@ snapshot, or FFI format.
 
 ### The initial v1 snapshot contract
 
-[#212](https://github.com/plethu/recite/issues/212) adds the canonical compiled payload fingerprint
-to runtime snapshots. Compilation and decoding validate the asset and prepare its identity once;
-session creation copies that cached value. Exclusive edits to a compiled payload invalidate its
-cached identity, so a modified payload must be validated again before its identity can be reused.
-Header and source fingerprints alone cannot detect a changed compiled effect argument or semantic
-table. A session records its payload identity when created; restore compares it with the supplied
-asset before reconstructing saved requests.
+Runtime snapshots include the canonical compiled payload fingerprint. Compilation and decoding
+validate the asset and prepare its identity once; session creation copies that cached value.
+Exclusive edits to a compiled payload invalidate its cached identity, so a modified payload must be
+validated again before its identity can be reused. Header and source fingerprints alone cannot
+detect a changed compiled effect argument or semantic table. A session records its payload identity
+when created; restore compares it with the supplied asset before reconstructing saved requests.
 
 Both session snapshots and preview envelopes use their initial v1 format. Development snapshots may
 be discarded and regenerated; there are no released snapshot formats to migrate. Unknown versions
@@ -53,12 +52,6 @@ Generate current asset and session sizes with `memory_profile_report` as describ
 Recite measurements. Generic claims such as “zero-copy” or “fast” do not justify replacing the
 implemented boundary.
 
-The alternatives were considered with these weights: compatibility and migration 25%; host and
-platform portability 20%; deterministic inspectability and recovery 20%; maintainability and
-authoring ergonomics 15%; measured performance and size potential 10%; and FOSS governance,
-licensing, and ecosystem 10%. These weights informed the qualitative record below; they are not
-benchmark scores.
-
 | Candidate                                                                                | Decision record and primary evidence                                                                                                                                                                      |
 | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | MessagePack                                                                              | Retain. The existing deterministic asset profile, strict readers, fixtures, snapshot restore, and host paths are the only complete Recite implementation.                                                 |
@@ -67,13 +60,6 @@ benchmark scores.
 | [Protocol Buffers](https://protobuf.dev/programming-guides/serialization-not-canonical/) | Conditional on generated bindings becoming a product requirement. Non-canonical deterministic output makes it a poor default for asset fingerprints.                                                      |
 | [BSON](https://bsonspec.org/spec.html)                                                   | Reject as a default: its document/Mongo ecosystem and duplicate-key behavior do not answer Recite's compatibility problem.                                                                                |
 | [Cap'n Proto](https://capnproto.org/otherlang.html)                                      | Reject as a default: schema/toolchain and cross-language support costs are not justified by an unmeasured layout benefit.                                                                                 |
-
-For compiled assets and snapshots, MessagePack's existing validation and typed restore paths
-outweigh a second codec. For FFI batches, named maps and the host boundary matter more than a schema
-generator. For condition payloads, the current ABI ownership and strictness are the contract; no
-alternate encoding is implied. The Bevy companion loads the same compiled assets through
-`recite-adapter`. No candidate has shown a Recite-level size, allocation, load, or cross-host
-advantage that repays a second codec and its migration surface.
 
 ## Unpublished format corrections
 
@@ -107,27 +93,13 @@ Recite requirement or a concrete shipped-host need. An accepted candidate must p
 
 For FFI, this gate starts with a separate ABI design. It must choose an ABI-major change, an
 additive versioned entrypoint, or a versioned envelope, then define capability/version handling and
-host rejection against the current v0 strictness in
-[#171](https://github.com/plethu/recite/issues/171). This decision does not claim that negotiation
-exists today.
+host rejection against the current [C ABI contract](c-abi-boundary-design.md). This decision does
+not claim that negotiation exists today.
 
 The first rollout is additive or dual-read: a new reader may understand the old format and the new
 format, while writers continue to produce the old format until the migration is demonstrated.
 Unknown versions fail before payload interpretation. No host guesses a format from incidental
 fields, and there is no silent fallback.
-
-The candidate posture is deliberately narrow:
-
-- Deterministic CBOR is the general future escape hatch if a named artifact gains a real standards,
-  tooling, or inspection need.
-- FlatBuffers is an asset-only hypothesis. It must demonstrate a material load or heap benefit for
-  Recite's large immutable assets while preserving the current model and inspection path.
-- Protocol Buffers is conditional on generated bindings becoming a product requirement. It is not
-  the default for canonical compiled asset bytes.
-- BSON and Cap'n Proto are rejected as current defaults. Reconsidering either would require a new,
-  artifact-specific decision with evidence.
-
-No alternate encoding is being added by this decision.
 
 ## Migration and deprecation
 
@@ -150,8 +122,8 @@ decision is then documented for that artifact:
 - FFI v0 remains through its ABI-major contract. An additive versioned surface does not silently
   authorise removal of v0; the accounting rule above and an explicit ABI-boundary
   deprecation/removal decision still apply. A separate design must define host rejection and
-  ownership before any new batch or condition encoding is interpreted. Unity v0 batch rejection is
-  required and tracked by [#171](https://github.com/plethu/recite/issues/171).
+  ownership before any new batch or condition encoding is interpreted. Hosts must reject unsupported
+  batch versions.
 
 Length-prefixed buffers, allocator ownership, statuses, callback non-reentrancy, and condition error
 categories remain part of the ABI migration test. Existing hosts keep using the current contract or

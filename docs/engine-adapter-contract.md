@@ -9,29 +9,10 @@ companions and the C ABI wrapper.
 
 ## 1. Contract Goals
 
-Adapters exist to make Recite feel native in a host engine while preserving the same dialogue
-semantics everywhere.
-
-Every adapter must:
-
-- load compiled Recite assets through the host asset system where practical;
-- preserve deterministic runtime traversal;
-- preserve choice selection by stable `ChoiceId`;
-- preserve blocking-effect acknowledgement by stable `EffectRequestId`;
-- emit dialogue output, choices, effects, endings, and errors as structured host-visible values;
-- keep condition evaluation outside the runtime as pure host queries;
-- emit effect requests without executing game-side mutation in the runtime;
-- serialize and restore Recite session state without serializing game state;
-- define and test its changed-asset behavior;
-- document its authoring import or refresh loop.
-
-Adapters must not:
-
-- mutate an active runtime session by silently swapping its compiled asset;
-- execute game-side effects from inside `recite-runtime`;
-- require dialogue source to call directly into engine scripts;
-- depend on prose parsing for lines, choices, metadata, effects, or errors;
-- weaken schema validation to match a host engine convenience API.
+Adapters integrate compiled dialogue with host assets, callbacks and structured events. They
+preserve the [runtime contract](spec/runtime-localisation.md#8-runtime), stable IDs and effect
+semantics; game mutations remain outside traversal. An adapter cannot weaken validation or require
+callers to parse prose. Host-specific setup belongs in the package guides linked in §14.
 
 ## 2. Compiled Asset Identity and Freshness
 
@@ -126,71 +107,20 @@ not as unexpected content.
 
 ## 5. Structured Output
 
-Adapters must surface runtime output as structured values, not host-formatted strings. The
-host-visible shape must include equivalents for:
+Expose the [runtime event model](spec/runtime-localisation.md#83-event-model) through native
+signals, events, messages or return values. Preserve IDs, order, metadata, markup, effect modes and
+structured errors. Prompts retain optional line content and full choice availability, including
+primary reasons, `all`/`any` groups, bound arguments and origins. A compact display reason does not
+replace the structured tree, and rejected selections leave traversal unchanged.
 
-- line output with line ID, speaker, localized text, source text where useful, metadata, markup, and
-  pending deferred effects. A plural line additionally carries optional structured plural metadata:
-  both source forms, the count, selected arm, matched catalogue context/locale/key, ordered lookup
-  attempts, and whether English source fallback terminated resolution. Localized catalogue templates
-  remain trace/debug data and must not be smuggled into normal output prose;
-- prompt output with optional line content and a list of structured choices, where each choice
-  preserves its `ChoiceId`, localized text, source text, metadata, availability state, and
-  structured unavailable reason data (spec §8.5) so hosts can present and disable choices and so the
-  §4 unavailable-choice error is satisfiable from emitted data alone;
-- effect request output with effect request ID, effect name, mode, arguments, and source/debug
-  identity where available;
-- end output with deferred effects;
-- structured errors.
+Plural output preserves authored singular/plural forms, count, selected arm and lookup provenance.
+`DialogueLine.source_text` is the selected decoded source form; authored plural forms are not
+localized templates. Catalogue templates belong in trace/debug output, not normal prose.
 
-Adapters may map those values to signals, events, messages, resources, callbacks, or service
-responses. The mapping must preserve Recite IDs, effect modes, line/choice metadata, locale, and
-error categories. Inline markup must be preserved as part of runtime text/source text; adapters may
-add a later presentation layer that interprets markup, but that layer is outside the core adapter
-contract.
-
-The public raw/decoded distinction is intentional: `DialogueLine.source_text` is the selected
-decoded source form delivered for compatibility and fallback, while
-`DialoguePlural.singular_source_text` and `DialoguePlural.plural_source_text` preserve the
-authored/raw source forms. Adapters must carry those plural fields as structured metadata and must
-not substitute localized catalogue templates into them.
-
-Choice availability data must preserve the runtime reason tree rather than flattening it to a single
-host string. Adapters should expose equivalents for:
-
-- available/unavailable state;
-- primary reason when present;
-- `all` and `any` reason groups matching `and` and `or` requirement structure;
-- leaf reason ID, template/source text where available, localized text where resolved, bound reason
-  arguments, and reason origin as either a source condition call or the compiler's canonical full
-  requirement expression.
-
-Adapters may add host UI helpers that choose a compact primary reason for display. Those helpers are
-presentation policy; conformance output and structured APIs must retain the full tree. Selecting an
-unavailable choice must return the unavailable-choice error without advancing traversal or recording
-selected-choice history.
-
-Adapters may also expose optional presentation projection hooks as defined by spec §5.6.1.
-Projection may add structured presentation affordances such as prefixes, badges, costs, chance
-estimates, skill labels, risk labels, consequence hints, portraits, sound cues, camera cues, or
-route hints to runtime output for host UI display. Projection must run around runtime traversal, not
-inside it: it must not add, remove, reorder, enable, or disable choices; change runtime output;
-mutate runtime session state; emit game-side effects; perform random rolls; or make save/load depend
-on projected UI state.
-
-Projection queries are pure host queries for presentation. Adapters that expose them must document
-when projection runs, whether it is synchronous or asynchronous, how stale projection data is
-refreshed while runtime output is visible, and how structured projection errors surface to the host.
-Projection query work must be bounded by the emitted runtime event, compiled metadata reachable from
-that event, and declared projector definitions; display must not trigger unbounded scans of engine
-resources or editor assets.
-
-Adapters may use host-native generic projector, affordance, target, kind, slot, or source types
-internally. Those types must lower into the canonical `SchemaPresentationProjectorDefinition`,
-`RuntimeProjectedDialogueEvent`, and `RuntimePresentationProjectionQuery` shapes from spec §5.6.1
-before generated manifests, CLI/LSP tooling, or adapter conformance output depend on them. The
-generic helper shape is an implementation convenience; the lowered structured contract is the
-cross-adapter compatibility boundary.
+Optional [presentation projection](spec/schema.md#1024-presentation-projection) adds structured
+affordances without changing runtime output or session state. Adapters implementing it document
+query timing, refresh and error handling and preserve the canonical declaration and output data for
+tooling and conformance. Host rendering alone is not a portable projection result.
 
 ## 6. Conditions
 
@@ -231,26 +161,10 @@ assets produced from that manifest-backed validation, not host schema discovery 
 
 ### 7.1 Producer Responsibilities
 
-Schema producers are responsible for host discovery. A producer may be part of an engine adapter or
-may be a standalone project tool, but it owns:
-
-- scanning host resource directories, content folders, asset databases, and import metadata;
-- reading typed registries, editor assets, data tables, or reflected host code;
-- applying host-specific inclusion and exclusion rules;
-- resolving resource-backed enum, registry, and metadata-domain values into a self-contained
-  manifest snapshot;
-- exporting schema-owned availability reason templates and condition reason mappings without
-  requiring Recite tooling to execute game code;
-- exporting schema-owned projection query function declarations, presentation projector definitions,
-  and presentation label templates without requiring Recite tooling to execute game code;
-- checking whether the previously generated manifest is stale relative to the host state it claims
-  to represent.
-
-Recite core validation must not scan engine resources, query an asset database, load editor-only
-data, reflect over game code, or execute game code to validate dialogue. Compiler, CLI, and LSP
-validation consume only the generated manifest plus dialogue/project inputs. Runtime-facing adapter
-code consumes compiled assets and any schema-derived bindings; it must not rediscover host schema
-data during traversal.
+Producers own host-resource discovery, typed registrations, inclusion rules, provenance and stale
+checks. They export a self-contained snapshot accepted by the canonical schema validator. Compiler,
+CLI and LSP validation must not load engine resources, reflect over game code or execute it. Runtime
+traversal uses compiled assets rather than rediscovering schema data.
 
 ### 7.2 Metadata-Domain Export Shape
 
@@ -261,54 +175,15 @@ fallback domain's values. Host provenance stays diagnostic: it cannot change com
 
 ### 7.3 Deterministic Snapshots and Fingerprints
 
-Generated schema manifests are snapshots. The same host state and producer configuration must
-produce the same canonical schema model and schema fingerprint.
+The same host state and producer configuration produce the same canonical schema and fingerprint.
+Symbols must not depend on addresses, transient import IDs, localized labels, filesystem order, time
+or editor sessions. Canonical map ordering and ordered semantic collections belong to
+[schema §10.2](spec/schema.md#102-schema-model-and-producers).
 
-Producers must use stable symbolic IDs for resource-backed values. Host object addresses, transient
-import IDs, localized display names, filesystem traversal order, wall-clock time, or editor session
-state must not affect symbol identity.
-
-Manifest content must be ordered deterministically before fingerprinting and diagnostics. At
-minimum, producers must make ordering stable for:
-
-- domain names;
-- flat-domain values;
-- contextual-domain context keys;
-- contextual-domain values within each context;
-- metadata-domain references;
-- registry names and values;
-- availability reason IDs, templates, parameter definitions, and provenance;
-- condition-to-availability-reason mappings;
-- projection query function names, parameter definitions, return types, and call bounds;
-- presentation projector IDs, candidate selectors, inputs, query calls, output IDs, output ordering,
-  label template IDs, label source text, and structured output field definitions;
-- canonical origin and producer-fingerprint records.
-
-Schema fingerprints must include availability reason templates and condition-to-reason mappings,
-projection query function declarations, presentation projector definitions, and presentation label
-templates. A template, parameter, mapping, projector definition, projection query declaration, or
-provenance change that can affect validation, localisation, generated bindings, projection output,
-or runtime reason output must change the canonical schema fingerprint.
-
-The schema fingerprint must change when any canonical domain definition changes, including:
-
-- added, removed, or renamed domains;
-- domain kind changes;
-- added, removed, renamed, or reordered canonical values;
-- selector changes;
-- `values_by_context` changes;
-- `missing_context` policy or fallback target changes;
-- metadata definitions that reference different domains;
-- inclusion or exclusion policy changes that affect exported domain content;
-- origin or producer-fingerprint changes that are explicitly part of the canonical manifest model.
-
-Producer metadata that is explicitly non-canonical for diagnostics only must be marked or modeled so
-it cannot accidentally perturb schema fingerprints. Manifest fields that describe the export process
-itself, such as producer name, producer tool version, schema export version, previous-output path,
-or cached stale-check results, are non-canonical unless the schema model explicitly promotes them. A
-manifest must not include its own canonical schema fingerprint as a fingerprint input. If a producer
-records the last computed schema fingerprint for troubleshooting, that record is non-canonical and
-excluded from schema fingerprint computation.
+The semantic fingerprint covers validation and runtime-relevant declarations, including domains,
+availability reasons, mappings, projection queries and labels. Diagnostic origins and producer
+metadata remain outside it. A manifest never hashes its own recorded fingerprint. Producer input
+freshness is a separate comparison channel.
 
 ### 7.4 Provenance and Diagnostics
 
@@ -324,43 +199,18 @@ origin must not make a valid dialogue invalid or make an invalid dialogue valid.
 
 ### 7.5 Stale-Schema Checks
 
-Adapters and standalone producers should provide a command or editor action that reports whether the
-generated schema manifest is stale relative to the producer's current host inputs. The strongest
-host-agnostic check is to rerun the producer, lower both the existing manifest and fresh export into
-the canonical schema model, and compare the resulting canonical schema fingerprints.
+Producers expose an explicit regeneration or stale-check action. Re-exporting current inputs and
+comparing canonical schema fingerprints establishes whether their semantics changed. Typed producer
+and content fingerprints may also detect stale inputs; they do not replace the semantic fingerprint.
 
-Producer metadata may support cheaper preflight checks before a full export:
+`recite check-schema-producer-freshness --expected OLD.json --actual NEW.json` compares exported
+fingerprints without inspecting host resources. Detailed results distinguish manifest content,
+producer inputs, registry inputs and metadata-domain inputs, including missing, duplicate,
+unexpected and mismatched records. A digest in one scope cannot stand in for another.
 
-- `schema_export_version`, a non-canonical producer-contract version for the export shape;
-- `inclusion_policy`, a stable symbolic name or fingerprint for the producer's include/exclude
-  rules;
-- manifest-level or domain-level `producer_fingerprints`, as defined in §7.2.
-
-Those fields are producer stale-check inputs, not a replacement for Recite's canonical schema
-fingerprint. They are non-canonical unless the schema model explicitly says otherwise.
-
-Recite CLI exposes the bounded host-agnostic action `check-schema-producer-freshness --expected
-OLD.json --actual NEW.json`. It loads both manifests, compares their typed producer/content
-fingerprints, and prints deterministic JSON evidence with a failing status for missing, mismatched,
-unexpected, or duplicate fingerprints. It does not inspect host resources and is separate from the
-compiled-asset `check-fresh` command. Manifest-level `content_fingerprint` is a separate typed
-comparison channel; it is not converted into a synthetic producer fingerprint, so a producer input
-with the same `kind` and `id` remains distinct from the exported manifest content digest. Registry
-and metadata-domain input fingerprints are compared in their own named scope for the same reason.
-The existing core `compare_schema_producer_freshness` API remains available as a `ProducerFreshness`
-compatibility summary across the established producer and content channels; callers that need
-complete evidence for every scope should use the separately named
-`compare_schema_producer_freshness_detailed` API.
-
-Where the host cannot expose reliable file or asset fingerprints, the adapter must document the
-weaker check it can perform. The adapter may require an explicit regenerate action, but it must not
-hide stale schemas by silently falling back to editor state that Recite compiler, CLI, and LSP
-cannot reproduce.
-
-Recite diagnostics should distinguish dialogue-source validation failures from malformed manifests
-and stale-schema reports. Stale-schema reporting belongs to producer and adapter tooling; compiler
-and LSP validation may surface it only when the manifest carries enough producer metadata to make
-the check reproducible without host access.
+Document weaker checks when host fingerprints are unavailable. Never conceal staleness by using
+editor state that compiler and LSP cannot reproduce. Distinguish source errors, malformed manifests
+and stale producer output in diagnostics.
 
 ### 7.6 Host-Agnostic Example
 
@@ -370,57 +220,27 @@ canonical format. Producer identity and fingerprint rules are defined above and 
 
 ### 7.7 Engine Notes
 
-Bevy producers may gather metadata domains from Rust builders, derives, resources, asset
-collections, or editor-side export commands. They must emit the same manifest shape whether the data
-came from reflected code, `AssetServer` paths, or project data files.
-
-Godot producers may gather metadata domains from imported resources, project settings, C#
-registrations, GDScript registrations, or editor plugins. They must snapshot Godot resource
-identities into stable Recite symbols rather than requiring Recite compiler or LSP code to open the
-Godot project.
-
-Unity producers may gather metadata domains from ScriptableObjects, importers, GUID-addressed
-assets, C# attributes, Addressables, or editor tooling. They must export stable symbols and
-fingerprints in the generated manifest; Recite tooling must not depend on Unity editor APIs to
-validate dialogue.
+Engine-specific producers and resource identities are described in the
+[package guides](#14-per-engine-guidance). Each exports ordinary Recite symbols and a canonical
+manifest, regardless of its discovery API.
 
 ## 8. Effects
 
-Effects are typed requests emitted to the game. The runtime and adapter must not execute game-side
-mutation as part of traversal.
-
-Adapters must preserve effect mode semantics:
-
-- deferred effects are collected and emitted at session end;
-- immediate effects are emitted during traversal and do not require acknowledgement;
-- blocking effects are emitted during traversal and pause the session until the host acknowledges
-  the same `EffectRequestId`.
-
-Adapters may offer generated typed effect events, signals, records, or message wrappers. Those
-wrappers must preserve the original structured effect request and must not hide unknown or
-schema-invalid effects.
+Preserve [effect modes and order](spec/conditions-effects.md#7-effects): deferred requests collect
+until the ending, immediate requests yield during traversal, and blocking requests require the
+matching acknowledgement. Typed host wrappers may improve ergonomics but cannot hide the original
+structured request or move game-side mutation into traversal.
 
 ## 9. Save and Load Handoff
 
-Recite session state and host game state are separate. The adapter must provide a host-native way to
-extract and restore the serialized Recite session state.
+Round-trip the runtime snapshot as one opaque unit. Hand-picking or reconstructing fields loses
+identity, history or pending work needed for deterministic resume. Host game state stays separate.
+Restore validates against the supplied compiled asset; stable line IDs alone do not establish
+compatibility.
 
-The runtime owns the session state shape (spec §8.6). The adapter must round-trip the runtime's
-complete serialized session state as a single opaque unit. It must not re-serialize a hand-picked
-subset of fields, because the snapshot includes determinism-critical state — compiled asset
-identity, current block and statement pointer, the call/divert stack, deterministic trace counters,
-previous prompt choices, selected choice history, locale, collected deferred effects, and any
-pending blocking effect. Dropping any of these (for example, trace counters or the divert stack)
-silently breaks deterministic resume, which the core contract forbids. Treat the snapshot as opaque:
-serialize and restore what the runtime produces, in full.
-
-The adapter must not serialize arbitrary game state into Recite session state. The host game owns
-its own save data and decides how to reconcile game-side effects across save/load.
-
-If a save occurs while a blocking effect is pending, restoring the Recite session must preserve the
-pending effect identity. The runtime contract is that the same effect ID is expected before
-traversal continues; the host game decides whether the game-side operation should be replayed,
-fast-forwarded, or treated as already complete.
+A restored blocking request retains its ID. The game decides whether its operation already happened,
+should replay or should fast-forward, then acknowledges that same request. The runtime cannot
+establish whether an external effect occurred before saving.
 
 ## 10. Localisation
 
@@ -483,28 +303,10 @@ deterministic replay.
 Adapters must surface structured errors with stable machine categories. Host-specific error text may
 be added for diagnostics, but callers must be able to match the category without parsing prose.
 
-Required categories:
-
-- `validation_error`;
-- `asset_load_or_decode_error`;
-- `stale_or_incompatible_asset_error`;
-- `schema_mismatch_error`;
-- `no_active_session_error`;
-- `session_already_active_error`;
-- `unknown_start_block_error`;
-- `invalid_choice_error`;
-- `unavailable_choice_error`;
-- `stale_choice_error`;
-- `missing_condition_handler_error`;
-- `condition_evaluation_error`;
-- `invalid_condition_result_error`;
-- `effect_acknowledgement_error`;
-- `rejected_changed_asset_refresh_error`;
-- `save_load_incompatibility_error`;
-- `localisation_error`;
-- `missing_projection_handler_error`;
-- `projection_evaluation_error`;
-- `invalid_projection_result_error`.
+The
+[operation/result schema](../fixtures/adapter-conformance/v1/adapter-conformance-operation-result-v1.schema.json)
+owns the exhaustive category enum. Shared Rust classification and host conformance tests enforce its
+mapping; documentation does not duplicate that table.
 
 Adapters should preserve source-backed diagnostics from the compiler and should include host asset
 paths or resource identifiers when available.

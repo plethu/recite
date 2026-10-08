@@ -1,9 +1,8 @@
 # LSP architecture and performance decisions
 
 The server accepts editor changes in order, analyses immutable snapshots off the protocol loop, and
-checks freshness and cancellation through writer handoff. This is the current maintainer overview
-for [#206](https://github.com/plethu/recite/issues/206). The
-[tooling contract](spec/tooling.md#14-lsp) and
+checks freshness and cancellation through writer handoff. This is the current maintainer overview.
+The [tooling contract](spec/tooling.md#14-lsp) and
 [performance policy](spec/quality.md#195-lsp-and-editor-benchmarks) define requirements;
 measurements establish only the workloads and platforms they actually cover.
 
@@ -75,12 +74,9 @@ comparison. The final profile still attributes work to text position conversion,
 AST construction and large response serialization. Further changes need a practical workload and a
 measured maintenance/performance benefit.
 
-The final Linux large-fixture investigation retained capacity reservation after reducing measured
-open-file live heap from about 90.1 to 83.9 MiB and per-operation completion allocation from 16.5 to
-11.3 MiB. Peak RSS fell only about 0.5–0.6%; allocation savings do not imply equivalent resident
-memory savings. These are dated local observations, not release or cross-platform budgets. Raw
-profiles and identities remain in
-[`final-resource-evidence.json.gz`](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/final-resource-evidence.json.gz).
+Dated allocation and RSS observations remain in the
+[resource evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/final-resource-evidence.json.gz).
+Allocation savings do not imply equal RSS savings or a cross-platform budget.
 
 Reopen further optimisation when a practical profile shows:
 

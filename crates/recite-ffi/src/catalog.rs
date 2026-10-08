@@ -121,7 +121,10 @@ pub extern "C" fn recite_session_set_catalog(
     session_handle: u64,
     catalog_handle: u64,
 ) -> ReciteStatus {
-    let mut guard = lock_sessions();
+    let mut guard = match lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     let Some(session) = guard.get_mut(&session_handle) else {
         set_last_error("unknown session handle");
         return ReciteStatus::InvalidHandle;

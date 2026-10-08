@@ -32,7 +32,10 @@ pub unsafe extern "C" fn recite_session_set_locale_provider(
         set_last_error("locale callback is null");
         return ReciteStatus::Validation;
     };
-    let mut guard = super::lock_sessions();
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     let Some(session) = guard.get_mut(&session_handle) else {
         set_last_error("unknown session handle");
         return ReciteStatus::InvalidHandle;
@@ -51,7 +54,10 @@ pub unsafe extern "C" fn recite_session_set_locale_provider(
 /// The session handle must be used only from the thread that created it.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn recite_session_clear_locale_provider(session_handle: u64) -> ReciteStatus {
-    let mut guard = super::lock_sessions();
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     let Some(session) = guard.get_mut(&session_handle) else {
         set_last_error("unknown session handle");
         return ReciteStatus::InvalidHandle;
@@ -84,7 +90,10 @@ pub unsafe extern "C" fn recite_session_set_locale_variant(
 }
 
 fn set_locale_variant_value(session_handle: u64, variant: Option<String>) -> ReciteStatus {
-    let mut guard = super::lock_sessions();
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     let Some(session) = guard.get_mut(&session_handle) else {
         set_last_error("unknown session handle");
         return ReciteStatus::InvalidHandle;

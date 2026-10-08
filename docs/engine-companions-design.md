@@ -19,26 +19,13 @@ object references, interpolation values, and catalogue resources remain outside 
 session. This allows a Bevy system to supply game context without imposing Bevy's threading
 constraints on Godot callables or foreign callbacks.
 
-An operation prepares a candidate session transition and its ordered outputs. Fallible output
-encoding must succeed before the driver commits the candidate. Rejected operations preserve the
-previous session. Host signal delivery and game-side effect execution happen after the operation
-returns; the adapter cannot undo arbitrary host behavior. Conditions therefore remain pure queries.
+The shared driver commits session state only after fallible output conversion succeeds. Signal and
+event delivery happen afterwards; arbitrary host actions cannot be rolled back, so conditions remain
+pure queries. The runtime owns prompt/blocking/ended states rather than a parallel adapter state
+machine.
 
-Catalogue imports use the existing core PO parser and the shared owned catalogue. An import
-validates a complete candidate before replacing the available catalogue. Native catalogue handles
-retain ownership at the ABI boundary; attaching one to a session captures a catalogue revision so
-later handle mutation or disposal cannot invalidate that session's provider. Bevy borrows its
-catalogue resource for each operation; replacing that resource affects subsequent operations,
-including an active session. This explicit catalogue update does not replace the session's compiled
-dialogue revision.
-
-The prepared/active distinction belongs to the adapter lifecycle. Prompt, blocking-effect, and ended
-states remain owned by the runtime rather than being copied into a parallel adapter state machine.
-
-The adapter remembers choice IDs from successfully committed prompt batches to distinguish stale
-selections from unknown IDs. This observation history commits with the session operation. Restore
-seeds it from the snapshot's previous prompt and selected-choice history; older unselected choices
-are not present in the existing snapshot format and cannot be recovered as observations.
+The adapter tracks observed choices to distinguish stale and unknown selection. Restore can recover
+only choices represented in the snapshot; it cannot reconstruct older unselected observations.
 
 ## Assets and refresh
 
@@ -83,22 +70,11 @@ Signal and event wrappers queue a complete committed batch before delivery. If a
 another dialogue operation synchronously, its outputs follow the remaining outputs from the current
 batch. Reentrant host callbacks must not reorder runtime events.
 
-Unity separates its session facade from native session and catalogue ownership, condition callbacks,
-and output decoding. Built-in localisation accepts writer-owned PO documents and uses the shared
-native catalogue. The older managed catalogue resolver is removed with its source-level consumers;
-the C ABI retains locale callbacks for independent hosts. Disposal follows the ABI's owner-thread
-rule. Runtime assemblies exclude editor APIs. An optional DOTS facade must use the same service and
-declare its own tested support; the base package does not require Entities.
-
-Unity's importer retains validated compiled bytes in a derived cache under
-`Library/Recite/CompiledCache`, keyed by the asset GUID. A rejected candidate can therefore expose
-its error while the imported resource retains the last valid revision. Cached bytes are revalidated
-before use. Clearing `Library` also clears this fallback; the source must then produce a valid
-import again.
-
-Godot retains validated bytes alongside its derived imported Resource. A rejected replacement leaves
-the source path loadable and stores the import error on the retained Resource. Clearing the derived
-import cache removes this fallback and requires a valid source import again.
+[Unity's boundary guide](unity-adapter-design.md) owns callback/thread lifetime and importer-cache
+decisions. Godot retains validated bytes beside its derived Resource; clearing its import cache
+removes that fallback and requires a valid source import again. Bevy borrows the catalogue resource
+per operation, so replacement affects the next operation even in an active session. This does not
+replace the compiled dialogue revision.
 
 ## Compatibility and verification
 

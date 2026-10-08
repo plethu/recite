@@ -106,24 +106,11 @@ into the game. Those observations will be more useful than a feature count.
 
 ## Performance and release evidence
 
-Recite’s [benchmark reference](/reference/benchmarks/) documents commands, fixture scales, and
-regression policy; smoke runs do not save baselines, and the
-[release baseline in #109](https://github.com/plethu/recite/issues/109) remains pending. It does not
-establish that Recite is faster or smaller than another dialogue tool. A useful comparison needs the
-same workload, named versions and hardware, and a clear account of what was measured.
+Recite’s [benchmark reference](/reference/benchmarks/) documents the maintained workloads and
+regression policy. Smoke runs establish buildability and execution, not comparative speed or memory
+use. A useful comparison needs the same workload, named versions and hardware, and a clear account
+of what was measured.
 
 Check the [distribution guide](/guides/distribution/) and relevant [engine adapter](/adapters/) for
-package and platform evidence. A successful build alone does not establish desktop accessibility,
-engine compatibility, or release support.
-
-The [example work in #38](https://github.com/plethu/recite/issues/38) and
-[guide work in #57](https://github.com/plethu/recite/issues/57) are complete. Their examples and
-documentation give you something to inspect and run; closing those issues does not establish
-suitability for your project.
-
-Release evidence remains pending for
-[packaging and installation in #79](https://github.com/plethu/recite/issues/79),
-[known limits and support records in #81](https://github.com/plethu/recite/issues/81), and the
-[benchmark baseline in #109](https://github.com/plethu/recite/issues/109). Check the recorded
-versions, platforms, workloads, and unresolved limitations before relying on a release claim. These
-records do not establish comparative performance against other dialogue tools.
+package and platform evidence. Build and fixture results do not establish desktop accessibility,
+engine compatibility or suitability for your project.

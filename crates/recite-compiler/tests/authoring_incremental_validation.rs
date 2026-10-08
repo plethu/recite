@@ -84,9 +84,9 @@ fn edits_recovery_removal_and_completeness_match_batch_validation() {
     let a = ":: start default\n> hello@11111111111111111111\n  Hello.\n-> b.recite::there\n";
     let b = ":: there\n> next@22222222222222222222\n  Next.\n-> END\n";
     for schema in [None, Some(ProjectSchema::empty_v1())] {
-        let mut kernel = schema
-            .clone()
-            .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
+        let mut kernel = schema.clone().map_or_else(AuthoringKernel::new, |schema| {
+            AuthoringKernel::with_schema(schema).expect("valid schema")
+        });
         for complete in [true, false, true] {
             for edited in [
                 a.to_owned(),
@@ -143,7 +143,7 @@ fn every_source_fixture_matches_the_batch_validator_after_a_previous_revision() 
     );
     paths.sort();
     assert!(!paths.is_empty());
-    let mut kernel = AuthoringKernel::with_schema(ProjectSchema::empty_v1());
+    let mut kernel = AuthoringKernel::with_schema(ProjectSchema::empty_v1()).expect("valid schema");
     let schema = ProjectSchema::empty_v1();
     for path in paths {
         let source = std::fs::read_to_string(path).unwrap();

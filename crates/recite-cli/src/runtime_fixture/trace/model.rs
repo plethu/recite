@@ -129,6 +129,8 @@ pub(in crate::runtime_fixture) struct TraceLine {
     pub(in crate::runtime_fixture) metadata: Vec<TraceMetadata>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(in crate::runtime_fixture) plural: Option<TracePlural>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(in crate::runtime_fixture) localisation: Option<Box<TraceLocalisation>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -163,6 +165,8 @@ pub(in crate::runtime_fixture) struct TraceChoice {
     pub(in crate::runtime_fixture) metadata: Vec<TraceMetadata>,
     pub(in crate::runtime_fixture) is_available: bool,
     pub(in crate::runtime_fixture) availability: TraceChoiceAvailability,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(in crate::runtime_fixture) localisation: Option<Box<TraceLocalisation>>,
     pub(in crate::runtime_fixture) unavailable_reason: Option<String>,
 }
 
@@ -178,6 +182,8 @@ pub(in crate::runtime_fixture) struct TraceChoiceAvailabilityReason {
     pub(in crate::runtime_fixture) id: String,
     pub(in crate::runtime_fixture) source_text: String,
     pub(in crate::runtime_fixture) localized_template: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(in crate::runtime_fixture) localisation: Option<Box<TraceLocalisation>>,
     pub(in crate::runtime_fixture) text: String,
     pub(in crate::runtime_fixture) origin: Option<TraceChoiceAvailabilityReasonOrigin>,
     pub(in crate::runtime_fixture) args: Vec<TraceChoiceAvailabilityReasonArg>,
@@ -261,3 +267,20 @@ pub(in crate::runtime_fixture) struct TraceSourceSpan {
     pub(in crate::runtime_fixture) end_column: Option<u32>,
 }
 use serde::Serialize;
+
+#[derive(Clone, Debug, Serialize)]
+pub(in crate::runtime_fixture) struct TraceLocalisation {
+    pub(in crate::runtime_fixture) matched_locale: Option<String>,
+    pub(in crate::runtime_fixture) matched_context: Option<String>,
+    pub(in crate::runtime_fixture) matched_key: Option<String>,
+    pub(in crate::runtime_fixture) outcome: &'static str,
+    pub(in crate::runtime_fixture) attempts: Vec<TraceLocalisationAttempt>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(in crate::runtime_fixture) struct TraceLocalisationAttempt {
+    pub(in crate::runtime_fixture) locale: String,
+    pub(in crate::runtime_fixture) context: String,
+    pub(in crate::runtime_fixture) key: String,
+    pub(in crate::runtime_fixture) outcome: &'static str,
+}

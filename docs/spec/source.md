@@ -70,24 +70,10 @@ The format must support:
 
 ### 5.1.1 Parser Architecture
 
-The production parser uses a rowan-style lossless syntax tree as the core parser foundation. Syntax
-parsing preserves source text, trivia, malformed regions, and recovery context, and reports syntax
-diagnostics with stable codes and spans.
-
-Valid and partially valid syntax lowers into the `recite-core` source AST. That AST is the
-compiler-facing source model, not the parse tree. Parser responsibilities stop at syntax shape,
-source spans, trivia, malformed regions, recovery, and parse diagnostics.
-
-Compiler-facing validation owns stable ID policy, references, schema checks, match exhaustiveness,
-semantic validation, and compiled output determinism. Runtime traversal must never depend on
-parser-only trivia or malformed syntax nodes.
-
-Tree-sitter is not part of the v1 core parser. It remains a possible future editor integration for
-highlighting or structural editing after the rowan parser and lowering path are established.
-
-Lossless syntax trees are heavier than AST-only parsing. Compiler and CLI flows should treat them as
-temporary parse artifacts and lower promptly. LSP flows may retain syntax trees and a live index for
-open or recently changed files.
+The rowan parser preserves source, trivia, malformed regions and diagnostic spans, then lowers to
+the compiler-facing AST. Compiler validation owns IDs, references, schema rules and deterministic
+output. Runtime traversal does not depend on parser trivia. Editor Tree-sitter grammars provide
+syntax highlighting only; they are not another semantic parser.
 
 ### 5.2 Blocks
 
@@ -316,13 +302,13 @@ resolution:
   Talk the guard down.
   -> attempt_talk_down
 
-@attempt_talk_down
+:: attempt_talk_down
 ! blocking resolve_dialogue_check(talk_down_guard, player, speech, 20)
 :match dialogue_check_result(talk_down_guard)
-  success:
+  :case success
     > guard_relents@c123e8e85bf15374cb60
       Fine. Go through.
-  failure:
+  :case failure
     > guard_refuses@f64d7023a39ec8ec5345
       Not a chance.
 ```
@@ -349,12 +335,11 @@ identity.
   work.
 - The compiler errors if any line or choice has a missing, draft, malformed, or plain unsuffixed ID.
   `recite check-ids` enforces the same.
-- Because anchors do not encode content, translation files survive author edits to source text and
-  label edits.
+- Anchors and gettext contexts survive prose and label edits. Changed prose requires catalogue
+  refresh and translation review because lookup matches both context and source text.
 
-This policy keeps gettext-style translation stable: an edit to source text or label text does not
-invalidate `msgctxt`, which stores the anchor. Auto-rewriting anchors based on content is an
-explicit non-goal.
+The anchor is `msgctxt`; the source text is `msgid`. A retained translation for changed source is
+review material, not an exact match. Tooling never regenerates anchors from edited prose.
 
 ### 5.5 Prompts
 
@@ -395,36 +380,8 @@ Metadata must be ordered and must allow repeated keys.
 A plain string map is insufficient because existing production use cases include repeated cues such
 as multiple sound effects or ordered presentation hints.
 
-Runtime representation:
-
-```rust
-pub struct MetadataEntry {
-    pub key: String,
-    pub value: Value,
-    pub source_span: Option<SourceSpan>,
-}
-```
-
-Source metadata values must distinguish author spelling from compiled/runtime meaning. The source
-AST preserves this as:
-
-```rust
-pub enum SourceMetadataValue {
-    Scalar(SourceMetadataScalar),
-    Array(Vec<SourceMetadataScalar>),
-}
-
-pub enum SourceMetadataScalar {
-    Symbol(String),
-    StringLiteral(String),
-    Integer(i64),
-    Float(f64),
-    Bool(bool),
-}
-```
-
-`SourceMetadataScalar` is the scalar subset: symbol, string literal, integer, float, and bool.
-Nested arrays are not part of v1.
+Source values preserve the distinction between symbols and quoted strings. Scalars are symbols,
+strings, integers, floats or booleans; arrays contain scalars only. Nested arrays are not v1 syntax.
 
 Metadata source spelling:
 
@@ -440,420 +397,21 @@ Compiled/runtime metadata semantics are schema-driven. Runtime consumers should 
 from whether a source value was bare or quoted; they consume the compiled value after schema
 validation has assigned the allowed type and domain.
 
-Metadata values must support:
-
-- string;
-- integer;
-- float;
-- boolean;
-- arrays of scalar values.
-
 The core format must not hardcode keys such as `portrait`, `sfx`, `delay`, `shot`, `pose`, or
 `focus`. Those keys belong in project schema. The tooling must still make project-specific metadata
 validation excellent.
 
-Migration note: existing examples, fixtures, and tests should leave reference-like metadata values
-bare (`portrait=grin`, `sfx=chime`, `speaker=rhea`). Literal display text or values that rely on
-spaces or punctuation must be quoted. Existing generated fixtures that quote registry-like
-presentation values are legacy inputs until the parser/schema implementation issue updates them.
-
 #### 5.6.1 Presentation Projection
 
-Metadata projection is a general presentation architecture, not a choice-only special case. If
-metadata on choices can drive host UI affordances, metadata on lines, blocks, and project inputs
-must be able to participate in the same contract. Otherwise Recite would create hidden special
-meanings for one metadata target and make adjacent metadata targets surprising.
-
-Projection has three layers:
-
-1. Authoring metadata and schema describe project intent.
-2. A pure presentation projector turns runtime output and compiled metadata into structured
-   presentation affordances.
-3. Host UI and game code decide how to render or resolve those affordances.
-
-Core Recite must not define dice, difficulty classes, stats, factions, inventory, currency,
-relationship meters, chance math, portrait behavior, camera behavior, or skill checks as runtime
-semantics or source syntax. Those concepts belong to project schema, host game code, adapter
-presentation layers, and optional projector definitions.
-
-The minimum useful projector definition model should be generic over selector, input-source,
-affordance-kind, and slot types so shared helper code can reuse the same structure for schema
-manifests, adapter-owned extensions, tests, and host UI projections:
-
-```rust
-pub struct DialoguePresentationProjectorDefinition<TSelector, TInputSource, TKind, TSlot> {
-    pub id: PresentationProjectorId,
-    pub candidates: TSelector,
-    pub inputs: Vec<ProjectionInput<TInputSource>>,
-    pub queries: Vec<ProjectionQueryDefinition>,
-    pub outputs: Vec<PresentationAffordanceOutputDefinition<TKind, TSlot>>,
-}
-
-pub type SchemaPresentationProjectorDefinition = DialoguePresentationProjectorDefinition<
-    SchemaProjectionSelector,
-    SchemaProjectionInputSource,
-    PresentationAffordanceKind,
-    PresentationSlot,
->;
-
-pub enum SchemaProjectionSelector {
-    RuntimeEvent { kind: DialogueEventKind },
-    MetadataKey { target: MetadataTarget, key: String },
-    MetadataSet { target: MetadataTarget, required_keys: Vec<String> },
-    AvailabilityReason { reason_id: AvailabilityReasonId },
-}
-
-pub struct ProjectionInput<TSource> {
-    pub name: String,
-    pub source: TSource,
-    pub ty: SchemaTypeRef,
-    pub required: bool,
-}
-
-pub enum SchemaProjectionInputSource {
-    EventKind,
-    CandidateLineId,
-    CandidateChoiceId,
-    CandidateEffectRequestId,
-    CandidateBlockId,
-    CandidateProject,
-    CandidateMetadata { key: String, occurrence: MetadataOccurrence },
-    AvailabilityReasonArg { name: String },
-    Literal(Value),
-}
-
-pub enum MetadataOccurrence {
-    Only,
-    First,
-    Last,
-    Index(u32),
-    All,
-}
-
-pub struct ProjectionQueryFunctionDefinition {
-    pub name: String,
-    pub params: Vec<ParameterDefinition>,
-    pub returns: SchemaTypeRef,
-    pub max_calls_per_event: Option<u32>,
-}
-
-pub struct ProjectionQueryDefinition {
-    pub name: String,
-    pub function: String,
-    pub args: Vec<ProjectionInputRef>,
-}
-
-pub enum ProjectionInputRef {
-    Input { name: String },
-    QueryResult { name: String },
-}
-
-pub struct PresentationAffordanceOutputDefinition<TKind, TSlot> {
-    pub id: PresentationAffordanceOutputId,
-    pub target: ProjectionOutputTarget,
-    pub kind: TKind,
-    pub slot: TSlot,
-    pub label: Option<PresentationLabelDefinition>,
-    pub fields: Vec<PresentationAffordanceFieldDefinition>,
-}
-
-pub enum ProjectionOutputTarget {
-    Candidate,
-    Event,
-    Prompt,
-}
-
-pub struct PresentationLabelDefinition {
-    pub template_id: PresentationTemplateId,
-    pub source_text: String,
-    pub args: Vec<PresentationLabelArgDefinition>,
-}
-
-pub struct PresentationLabelArgDefinition {
-    pub name: String,
-    pub source: ProjectionInputRef,
-    pub ty: SchemaTypeRef,
-}
-
-pub struct PresentationAffordanceFieldDefinition {
-    pub name: String,
-    pub source: PresentationAffordanceFieldSource,
-    pub ty: SchemaTypeRef,
-}
-
-pub enum PresentationAffordanceFieldSource {
-    Input { name: String },
-    QueryResult { name: String },
-    Literal(Value),
-}
-```
-
-This model is declarative. It can live in a generated schema manifest or in an adapter-owned schema
-extension, but compiler, LSP, CLI, and adapter tooling must be able to inspect it without executing
-game code. Validation must reject projector definitions that reference unknown metadata keys,
-metadata targets not allowed by the key definition, unknown metadata domains, unknown query
-functions, wrong argument types, invalid repeated-metadata occurrence requests, or output fields
-that cannot be represented as structured values.
-
-`candidates` selects the runtime or compiled items a projector may inspect. A projector runs once
-per ordered candidate unless the selector is `RuntimeEvent`, which has a single event candidate.
-Candidate order is:
-
-1. event;
-2. prompt container, when the event is a prompt;
-3. prompt line, when present;
-4. choices in runtime output order;
-5. effect request, when the event is an effect;
-6. current block, when known;
-7. project.
-
-Inputs using `CandidateLineId`, `CandidateChoiceId`, `CandidateEffectRequestId`, `CandidateBlockId`,
-`CandidateProject`, or `CandidateMetadata` are relative to the current candidate. Candidate ID
-inputs lower to stable string values. Validation must reject a candidate ID input that cannot apply
-to the selected candidate kind: for example, `CandidateChoiceId` is valid only for choice
-candidates. `CandidateProject` yields the stable project/content-set ID when one is declared, or is
-a projection error if the compiled project has no stable project identity.
-
-`MetadataOccurrence::Only` requires exactly one metadata entry after schema validation; it is a
-projection error if the key is absent or repeated. `First`, `Last`, and `Index` select from the
-source-order-preserved metadata entries for that key. `All` returns an array value in source order
-and therefore requires the input type to be an array-compatible schema type. This keeps repeated
-metadata explicit instead of letting projectors accidentally collapse multiple cues.
-
-Projection query functions are schema-global declarations, separate from condition functions.
-Function names must be unique in the projection query function table. Projectors reference those
-global functions by name; duplicate or unknown function references are validation errors. Query call
-argument types must match the declared function parameters. A query result type is always the
-declared function return type, so `ProjectionQueryDefinition` does not carry a second return type
-that could drift. Runtime or adapter code may still implement handlers through host-native APIs, but
-the generated manifest remains the shared truth for what can be queried.
-
-Each output definition has a stable `id`. Presentation affordance IDs are derived from
-`(projector_id, output_id, target identity, metadata occurrence identity where relevant)` and must
-not use host-generated counters, object addresses, or display labels. Output ordering is
-deterministic: runtime event order, candidate order, projector definition order, output definition
-order, then metadata occurrence order where one output expands over repeated metadata.
-
-`PresentationLabelDefinition` is a schema-owned localisable template. Its `template_id` is the
-stable extraction key. Each placeholder is bound by a named `PresentationLabelArgDefinition`; the
-`name` must match a placeholder in `source_text`, and the `source` references a declared input or
-query result. Translation validation rejects missing, renamed, or extra placeholders relative to
-those named bindings. Adapter-owned labels may exist as host UI helpers, but they are outside
-cross-adapter conformance unless they lower to a schema-owned template with stable ID, source text,
-and typed placeholders.
-
-The canonical generated manifest lowers into the concrete `Schema...` aliases. Rust helper APIs may
-instantiate the generic parameters with richer host-native selector, input, kind, or slot types, but
-those host types must still lower into the canonical schema model before compiler, LSP, CLI, or
-conformance tooling depend on them.
-
-V1 does not require core runtime APIs to execute projectors. The contract is still useful because
-adapters, editor tools, docs, conformance fixtures, and future shared helper crates can agree on
-stable inputs and outputs.
-
-A projector is a pure presentation pass over runtime output. It takes a `DialogueEvent`, compiled
-schema/projection definitions, relevant compiled metadata context, the active locale/variant, and a
-caller-provided projection context, then returns structured affordances:
-
-```rust
-pub struct ProjectedDialogueEvent<TEvent, TTarget, TKind, TSlot, TSource> {
-    pub event: TEvent,
-    pub affordances: Vec<PresentationAffordance<TTarget, TKind, TSlot, TSource>>,
-}
-
-pub type RuntimeProjectedDialogueEvent = ProjectedDialogueEvent<
-    DialogueEvent,
-    ProjectionTarget,
-    PresentationAffordanceKind,
-    PresentationSlot,
-    PresentationAffordanceSource,
->;
-
-pub struct PresentationAffordance<TTarget, TKind, TSlot, TSource> {
-    pub id: PresentationAffordanceId,
-    pub target: TTarget,
-    pub kind: TKind,
-    pub slot: TSlot,
-    pub label: Option<PresentationLabel>,
-    pub fields: Vec<PresentationAffordanceField>,
-    pub source: TSource,
-}
-
-pub enum ProjectionTarget {
-    Event,
-    Prompt,
-    Line { line_id: LineId },
-    Choice { choice_id: ChoiceId },
-    Effect { effect_request_id: EffectRequestId },
-    Block { block_id: BlockId },
-    Project,
-}
-
-pub struct PresentationLabel {
-    pub template_id: PresentationTemplateId,
-    pub source_text: String,
-    pub text: String,
-    pub args: Vec<PresentationAffordanceField>,
-}
-
-pub struct PresentationAffordanceField {
-    pub name: String,
-    pub value: Value,
-}
-
-pub enum PresentationAffordanceKind {
-    Prefix,
-    Badge,
-    RequirementSummary,
-    Cost,
-    ChanceEstimate,
-    Risk,
-    ConsequenceHint,
-    PresentationCue,
-    Custom(String),
-}
-
-pub enum PresentationSlot {
-    BeforeText,
-    AfterText,
-    SecondaryLine,
-    Tooltip,
-    Icon,
-    DisabledReason,
-    TranscriptCue,
-    Container,
-}
-
-pub enum PresentationAffordanceSource {
-    Metadata { target: MetadataTarget, key: String },
-    AvailabilityReason { reason_id: AvailabilityReasonId },
-    Projector {
-        projector_id: PresentationProjectorId,
-        output_id: PresentationAffordanceOutputId,
-    },
-    AdapterPolicy { name: String },
-}
-```
-
-`label` is presentation text resolved from a schema-owned `PresentationLabelDefinition` for the
-current locale. `fields` and `label.args` must preserve the structured data used to build that
-label, such as skill ID, display name, current value, threshold, difficulty band, chance estimate,
-cost item, cost amount, risk level, route hint, portrait ID, sound cue ID, or camera cue ID.
-Adapters may render labels as prefixes, badges, icons, secondary lines, tooltips, portrait swaps,
-transcript cues, or other host UI, but adapter conformance output must preserve structured
-affordance records rather than flattening them to a single host string.
-
-Projection must not:
-
-- add, remove, reorder, enable, or disable runtime choices;
-- change line text, choice text, IDs, echo policy, targets, effects, or availability;
-- mutate game state, emit effects, advance time, or perform random rolls;
-- make runtime save/load depend on projected UI state;
-- require parsing project-facing prose.
-
-Projection errors must be structured adapter/tooling errors. They do not become runtime traversal
-errors unless the adapter explicitly chooses to fail display when projection fails.
-
-Adapters may expose lifecycle hooks for projection, but those hooks operate around runtime traversal
-rather than inside it:
-
-- `after_event`: receives a runtime `DialogueEvent` and may return a `ProjectedDialogueEvent` for UI
-  display;
-- `refresh_projection`: recomputes projection for the current event after relevant host state
-  changes while the event is still visible;
-- `schema_projection_loaded`: validates or registers projector definitions when a generated schema
-  manifest or adapter schema extension is loaded.
-
-These hooks must not call `choose`, `next`, or `acknowledge_effect`; mutate the runtime session;
-emit game-side effects; or make projected state part of session serialization. Reprojecting the same
-event with the same projection context must produce the same projected output. Reprojecting after
-host state changes may change labels such as skill values, chance bands, cost availability,
-portraits, or UI hints, but it must not change runtime choice availability unless the game advances
-dialogue and the runtime emits a new prompt.
-
-Projection queries are pure host queries for presentation, separate from condition evaluation. They
-may read game state needed to show labels such as `[Speech 12/20]` or `[Visual Calculus:
-Impossible]`, but they must not decide core traversal semantics.
-
-Query providers should support a batch-oriented shape:
-
-```rust
-pub struct PresentationProjectionQuery<TTarget> {
-    pub projector_id: PresentationProjectorId,
-    pub target: TTarget,
-    pub function: String,
-    pub args: Vec<Value>,
-    pub expected: SchemaTypeRef,
-}
-
-pub type RuntimePresentationProjectionQuery = PresentationProjectionQuery<ProjectionTarget>;
-
-pub trait PresentationProjectionContext<TTarget> {
-    fn evaluate_projection_queries(
-        &self,
-        queries: &[PresentationProjectionQuery<TTarget>],
-    ) -> Result<Vec<Value>, ProjectionError>;
-}
-```
-
-The projector builds a deterministic query list in runtime output order, then projector definition
-order. Providers may coalesce identical queries and cache within a projection pass, but they must
-return results in request order. Adapters must document whether projection queries are evaluated
-synchronously, asynchronously before display, or through an engine-specific UI refresh path.
-
-Projection queries must be bounded by the emitted runtime event, compiled metadata reachable from
-that event, and declared projector definitions. They must not scan arbitrary engine resources or
-perform unbounded searches during display. Resource-backed value discovery belongs in schema
-manifest export (§10.2 and adapter contract §7), not projection.
-
-Examples:
-
-```text
-# Line metadata can project a portrait cue.
-> rhea_greeting@79e8dc1d5f3af8157e85 speaker=rhea portrait=smile
-  You came back.
-
-# Choice metadata can project a Fallout/Skyrim-style skill prefix.
-? talk_down_guard@925d7aa147feea3e7085 check_skill=speech check_threshold=20 check_actor=player
-  Talk the guard down.
-  -> attempt_talk_down
-
-# Block metadata can project scene-level presentation policy.
-:: intro camera_mode=close_dialogue
-```
-
-Projected output examples:
-
-```text
-[Speech 12/20] Talk the guard down.
-[Visual Calculus: Impossible] Read the scuff marks around the body.
-```
-
-Those prefixes are projector output, not source syntax. A Fallout/Skyrim-style projector might query
-the current skill value and combine it with metadata thresholds. A Disco-style projector might query
-or compute a project-defined difficulty band and render the configured skill display name plus band
-label. Both projectors keep the underlying `DialogueChoice` unchanged.
-
-Recite should not ship a mandatory v1 plugin mechanism or first-party affordance package for these
-patterns. First-party documentation may include copyable schema, projector, and source examples for
-common VN, IF, plain-dialogue, and RPG/CRPG workflows, but those examples are not normative schema
-packages. Deferring a plugin package ecosystem avoids freezing genre-specific names before real
-adapters and projects prove which conventions repeat across domains.
-
-Future syntax or extension proposals must satisfy all of these criteria:
-
-- the need recurs across multiple dialogue genres, not only RPG/CRPG checks;
-- existing conditions, metadata, effects, schema domains, availability reasons, presentation
-  projectors, projection queries, and adapter policy are demonstrably insufficient;
-- the proposal preserves deterministic traversal and keeps game-side effects outside the runtime;
-- the proposal can be represented as structured compiled/runtime data and validated without
-  executing game code;
-- adapters can preserve the data without weakening the engine-independent contract.
-
-If a future extension/plugin contract becomes necessary, its minimum useful shape is schema
-fragments, metadata domain definitions, availability reason templates, adapter presentation hint
-names, diagnostics/LSP documentation, and examples. It must not include executable game logic,
-runtime mutation hooks, or host-specific semantics in core Recite.
+Metadata can drive presentation on lines, choices, blocks and project inputs. A host may project
+`portrait=smile` into a portrait cue or skill metadata into a label such as `[Speech 12/20]`. These
+remain project conventions, not built-in runtime semantics. Costs, rolls, inventory changes and
+other game operations use host state and typed effects.
+
+[Schema §10.2.4](schema.md#1024-presentation-projection) owns projector declarations, validation,
+ordering, stable affordance identity and presentation-query boundaries. Projection adds structured
+presentation without changing the underlying event or its choice availability. A mandatory plugin
+system or genre-specific schema package is not required for v1.
 
 ### 5.7 Inline Markup
 
@@ -923,7 +481,7 @@ Rules:
   condition.
 - Lines inside a branch must still carry stable IDs (§5.4.2) and are extracted to POT regardless of
   which branch evaluates true at runtime.
-- Branches may be nested arbitrarily.
+- Branches may be nested.
 
 #### 5.9.1 Enum Match
 
@@ -962,41 +520,11 @@ Rules:
 - Duplicate `:case <variant>` arms are validation errors.
 - Each arm's body follows the same indentation rules as `:if` bodies and may contain lines, choices,
   effects, diverts, nested `:if`, or nested `:match`.
-- Schema producers should mark a condition function as enum-returning in the canonical schema model.
-  Adapter code should do this through typed bindings, and the generated manifest records the enum
-  type for compiler and LSP use:
-
-  ```rust
-  schema
-      .condition("thread_stage")
-      .param::<ThreadId>("thread_id")
-      .returns_enum::<ThreadStageKind>();
-  ```
-
-  ```json
-  {
-    "types": {
-      "thread_stage_kind": {
-        "kind": "enum",
-        "values": ["fresh", "tired", "angry", "fine", "completed"]
-      }
-    },
-    "conditions": {
-      "thread_stage": {
-        "params": [{ "name": "thread_id", "type": "registry:thread" }],
-        "returns": "enum:thread_stage_kind"
-      }
-    }
-  }
-  ```
-
-- Runtime evaluation extends `DialogueContext` with an enum-returning lookup or, equivalently,
-  schema-generated bindings convert host return values to declared variants. Either path is
-  acceptable; the runtime contract is that the scrutinee returns one declared variant of the schema
-  enum or evaluation fails as a structured error.
+- The schema declares the query's enum return type. Runtime evaluation must return one declared
+  variant or a structured error.
 
 The intent is narrow: schema-checked exhaustive dispatch on declared enum state. Writers who do not
-need it never see it; writers who do get compile-time coverage warnings when a new enum variant is
+need it never see it; writers who do get compile-time coverage errors when a new enum variant is
 added and an old `:match` was not updated.
 
 ### 5.10 Text Interpolation
