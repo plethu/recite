@@ -44,16 +44,17 @@ pub(super) fn insertion_label(stable: &StableIdSummary, ordinal: u32) -> String 
 pub(super) fn occupied_anchors(
     snapshot: &AuthoringQuery<'_>,
 ) -> Result<BTreeSet<String>, crate::authoring::Interrupted> {
-    let mut occupied = BTreeSet::new();
+    let mut occupied = Vec::new();
     for document in snapshot.documents() {
         snapshot.checkpoint()?;
         for stable in document.summary().stable_ids() {
             if let Some(anchor) = stable.source_id().anchor() {
-                occupied.insert(anchor.as_str().to_owned());
+                occupied.push(anchor.as_str().to_owned());
             }
         }
     }
-    Ok(occupied)
+    // Bulk construction avoids repeated tree insertion while retaining per-document checkpoints.
+    Ok(occupied.into_iter().collect())
 }
 
 pub(super) fn generated_anchor(
