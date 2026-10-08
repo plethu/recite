@@ -8,6 +8,8 @@ use recite_compiler::authoring::CancellationToken;
 use recite_ui::{UiCatalog, UiLocale};
 use std::sync::Arc;
 
+mod publication_model;
+
 #[test]
 fn update_batch_projects_final_versions_once_in_first_seen_uri_order() {
     let (workspace, catalog) = workspace_with_open_documents();
