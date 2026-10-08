@@ -28,6 +28,15 @@ git_policy_closing_issue_matches_body() {
     <<<"$body"
 }
 
+git_policy_nonclosing_issue_matches_body() {
+  local body="$1"
+  local issue_code="$2"
+
+  grep -Eiq -- \
+    "(^|[^[:alnum:]])(refs|references)[[:space:]]+#${issue_code}([^[:alnum:]_]|$)" \
+    <<<"$body"
+}
+
 git_policy_in_pull_request_context() {
   [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ||
     -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_BASE_REF:-}" ||
@@ -123,12 +132,18 @@ git_policy_validate_pr_metadata() {
 
     if ((pr_context)); then
       if [[ -z "${RECITE_PR_BODY:-}" ]]; then
-        echo "pull-request context requires RECITE_PR_BODY with a closing issue" >&2
+        echo "pull-request context requires RECITE_PR_BODY with matching issue linkage" >&2
         return 1
       fi
       if ! git_policy_closing_issue_matches_body "$RECITE_PR_BODY" "${title_issue_code#REC-}"; then
-        echo "pull-request body must contain Closes/Fixes/Resolves #${title_issue_code#REC-}" >&2
-        return 1
+        if [[ "$integration_pr" == "1" ]]; then
+          echo "integration pull-request body must contain Closes/Fixes/Resolves #${title_issue_code#REC-}" >&2
+          return 1
+        fi
+        if ! git_policy_nonclosing_issue_matches_body "$RECITE_PR_BODY" "${title_issue_code#REC-}"; then
+          echo "pull-request body must contain Closes/Fixes/Resolves or Refs/References #${title_issue_code#REC-}" >&2
+          return 1
+        fi
       fi
     fi
 

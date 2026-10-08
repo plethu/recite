@@ -181,7 +181,9 @@ kinds are `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`, `cho
 Commit subjects begin with `[REC-N] <type>(optional-scope): <subject>`, with at most one explanatory
 body sentence and no agent-attribution trailers. Run `scripts/check-git-policy.sh` locally.
 Standalone PR titles use the same issue code as every commit in their range; the body includes
-`Closes #N`, `Fixes #N` or `Resolves #N` matching that title.
+`Closes #N`, `Fixes #N`, `Resolves #N`, `Refs #N` or `References #N` matching that title. Use a
+closing reference when the PR completes the issue; use a nonclosing reference when work remains
+after merge.
 
 Milestone work uses a coordinator-owned `integration/<short-kebab-topic>` branch from `main`.
 Delegated slices use isolated purpose-first branches/worktrees at its stated base SHA, do not open
@@ -267,7 +269,8 @@ evidence; green CI alone does not establish readiness.
    with `just release set-version VERSION`. This coordinated helper updates core and Writer; the FFI
    version is deliberately excluded. Review the manifest, lockfile, installer and AppStream changes
    and update `CHANGELOG.md`. Commit with `[REC-N] release: prepare VERSION` and use the usual
-   protected PR workflow. Neither helper commits, tags, pushes nor publishes.
+   protected PR workflow with `Refs #N`, keeping the release issue open until publication succeeds.
+   Neither helper commits, tags, pushes nor publishes.
 2. After the approved merge, resolve the complete commit ID. Dispatch **Release candidate** from
    `main`, supplying that exact `commit` and prepared `version`. It runs complete correctness,
    performance/session and distribution verification, exercises archived CLI/LSP binaries, and

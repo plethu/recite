@@ -11,13 +11,14 @@ fi
 workflow="$repo_root/.github/workflows/trusted-policy.yml"
 wrapper="$repo_root/scripts/check-trusted-pr-policy.sh"
 fixture="$repo_root/tests/trusted-policy/fixtures/base-policy.sh"
+metadata="$repo_root/scripts/git-policy/metadata.sh"
 lint_fixture="$repo_root/tests/trusted-policy/fixtures/base-lint-suppression-policy.sh"
 lint_checker="$repo_root/scripts/check-lint-suppressions.py"
 lint_ast="$repo_root/scripts/lint_suppression_ast.py"
 lint_scan="$repo_root/scripts/lint_suppression_scan.py"
 lint_meta="$repo_root/scripts/lint_suppression_meta.py"
 lint_allowlist="$repo_root/scripts/generated-rust-allowlist.txt"
-for required_file in "$workflow" "$wrapper" "$fixture" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_scan" "$lint_meta" "$lint_allowlist"; do
+for required_file in "$workflow" "$wrapper" "$fixture" "$metadata" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_scan" "$lint_meta" "$lint_allowlist"; do
   [[ -f "$required_file" ]] || {
     echo "missing trusted-policy fixture file: $required_file" >&2
     exit 1
@@ -92,8 +93,9 @@ before_parse_probe="$(sha256sum "$parse_probe")"
 }
 git init --bare --quiet "$origin"
 git clone --quiet "$origin" "$repo"
-mkdir -p "$repo/scripts" "$repo/crates/demo/src"
+mkdir -p "$repo/scripts/git-policy" "$repo/crates/demo/src"
 cp -- "$fixture" "$repo/scripts/check-git-policy.sh"
+cp -- "$metadata" "$repo/scripts/git-policy/metadata.sh"
 cp -- "$lint_fixture" "$repo/scripts/check-lint-suppressions.sh"
 cp -- "$lint_checker" "$repo/scripts/check-lint-suppressions.py"
 cp -- "$lint_ast" "$repo/scripts/lint_suppression_ast.py"
@@ -109,6 +111,7 @@ git -C "$repo" config user.name 'Trusted policy fixture'
 git -C "$repo" config user.email 'trusted-policy-fixture@example.invalid'
 git -C "$repo" config commit.gpgsign false
 git -C "$repo" add scripts/check-git-policy.sh scripts/check-lint-suppressions.sh \
+  scripts/git-policy/metadata.sh \
   scripts/check-lint-suppressions.py scripts/lint_suppression_ast.py \
   scripts/lint_suppression_meta.py scripts/lint_suppression_scan.py \
   scripts/generated-rust-allowlist.txt \
@@ -187,6 +190,32 @@ fi
   echo 'untrusted lint policy executed' >&2
   exit 1
 }
+
+# The production base-owned metadata helper accepts nonclosing linkage for an
+# ordinary PR, while mismatched and malformed issue identities still fail.
+for body in 'Refs #164' 'References #164.' 'Refs #165' 'Refs #1640' 'Refs #164abc' 'References #164_issue' 'Refs # 164'; do
+  jq --arg body "$body" '.body = $body' "$test_root/live.json" >"$test_root/linkage-live.json"
+  status=0
+  PATH="$clean_path" GH_FIXTURE_JSON="$test_root/linkage-live.json" \
+    GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
+    GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$marker" \
+    TRUSTED_LINT_POLICY_MARKER="$lint_marker" \
+    bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >"$test_root/linkage-output" 2>&1 || status=$?
+  if [[ "$body" == 'Refs #164' || "$body" == 'References #164.' ]]; then
+    if ((status != 0)); then
+      echo "trusted base rejected matching nonclosing linkage: $body" >&2
+      cat "$test_root/linkage-output" >&2
+      exit 1
+    fi
+  elif ((status == 0)); then
+    echo "trusted base accepted mismatched or malformed linkage: $body" >&2
+    exit 1
+  elif ! grep -Fq 'pull-request body must contain' "$test_root/linkage-output"; then
+    echo "trusted linkage rejection missed the production metadata diagnostic: $body" >&2
+    cat "$test_root/linkage-output" >&2
+    exit 1
+  fi
+done
 
 # A pull request cannot grant a new exemption by changing the generated
 # allowlist in the same change. The trusted base checker must read its policy

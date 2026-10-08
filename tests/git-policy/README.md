@@ -6,7 +6,8 @@ metadata, commit messages, and ref-range handling; they are sourced from the bas
 `branches.tsv` records expected branch-name results. Files under `commit-messages/` use the filename
 prefix `valid-` or `invalid-` to record expected commit-message results, including the issue prefix,
 body-sentence, and attribution-trailer rules. An ordinary pull-request title supplies one issue code
-that every commit must use. Run the integration fixture with `bash
+that every commit must use, with matching `Closes`/`Fixes`/`Resolves` or nonclosing
+`Refs`/`References` issue linkage. Run the integration fixture with `bash
 tests/git-policy/check-integration.sh`; it proves that only a matching `workflow/integration` label
 and `integration/<short-kebab-topic>` branch targeting `main` may contain multiple valid issue
 codes, with a closing issue token matching the title code, while retaining the subject and
