@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 import { ExtensionController } from "../src/controller.js";
 import { FakeClient, hostApi, output } from "./controller-fixtures.mjs";
 
@@ -7,7 +7,10 @@ test("untrusted workspaces do not start a language server or command process", a
   const api = hostApi({ isTrusted: () => false });
   let created = 0;
   const controller = new ExtensionController(api, output(), undefined, {
-    createClient: () => { created++; return new FakeClient(); }
+    createClient: () => {
+      created++;
+      return new FakeClient();
+    },
   });
   const outcome = await controller.start();
   assert.equal(outcome.kind, "refused");
@@ -25,7 +28,7 @@ test("restart retires the prior client and shutdown cleans the active client", a
       clients.push(client);
       return client;
     },
-    restartDelaysMs: []
+    restartDelaysMs: [],
   });
   assert.equal((await controller.start()).kind, "started");
   assert.equal(api.registeredProviders.length, 0);

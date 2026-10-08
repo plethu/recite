@@ -1,15 +1,23 @@
 [package]
 name = "recite-ffi"
-version = "0.6.0"
+description = "C ABI and MessagePack host bindings for Recite dialogue sessions"
+version = "0.7.0"
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[package.metadata.release]
+shared-version = false
 
 [lib]
 # rlib is included for the integration test harness only and is not a distributed artifact.
-crate-type = ["cdylib", "staticlib", "rlib"]
+crate-type = ["cdylib", "rlib", "staticlib"]
+
+[[bench]]
+name = "sessions"
+harness = false
 
 [dependencies]
 recite-adapter = { workspace = true }
@@ -20,10 +28,12 @@ serde = { workspace = true }
 serde_bytes = { workspace = true }
 
 [dev-dependencies]
+criterion.workspace = true
 recite-compiler = { workspace = true }
 rmp-serde = { workspace = true }
-serde_json = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+stats_alloc = "0.1.10"
 
 [lints.rust]
 unsafe_code = "allow"

@@ -75,7 +75,7 @@ fn build_fixture_report(
             }
             BenchGroup::Lsp => {
                 let lsp = LspBenchmarkProject::load(&project)?;
-                operations.extend(lsp_fixture_operations(&lsp, samples)?);
+                operations.extend(super::lsp::fixture_operations(&lsp, samples)?);
             }
         }
     }
@@ -282,54 +282,6 @@ fn runtime_fixture_operations(
             driver.full_traversal().map(|events| {
                 std::hint::black_box(events);
             })
-        })?,
-    ])
-}
-
-fn lsp_fixture_operations(
-    project: &LspBenchmarkProject,
-    samples: usize,
-) -> BenchmarkResult<Vec<BenchOperationReport>> {
-    let probes = project.probes();
-    Ok(vec![
-        timed_operation(BenchGroup::Lsp, "initial_index", samples, || {
-            std::hint::black_box(project.memory_report());
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Lsp, "open_file_parse", samples, || {
-            let mut driver = project.driver();
-            std::hint::black_box(driver.open_file(&probes.document));
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Lsp, "change_refresh", samples, || {
-            let mut driver = project.driver();
-            std::hint::black_box(driver.change_file(&probes.document));
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Lsp, "diagnostics_refresh", samples, || {
-            let mut driver = project.driver();
-            std::hint::black_box(driver.diagnostics_refresh(&probes.document));
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Lsp, "completion", samples, || {
-            let driver = project.driver();
-            std::hint::black_box(driver.completion(&probes.completion));
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Lsp, "definition", samples, || {
-            let driver = project.driver();
-            std::hint::black_box(driver.definition(&probes.definition));
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Lsp, "rename", samples, || {
-            let driver = project.driver();
-            std::hint::black_box(driver.rename(&probes.rename, "renamed_block"));
-            Ok(())
-        })?,
-        timed_operation(BenchGroup::Lsp, "stale_change_suppression", samples, || {
-            let mut driver = project.driver();
-            std::hint::black_box(driver.stale_change_is_suppressed(&probes.document));
-            Ok(())
         })?,
     ])
 }

@@ -1,11 +1,12 @@
 ---
 title: First Scene
 description: Write, validate, compile, play, and headlessly run a minimal Recite scene.
+template: splash
 ---
 
-This walkthrough takes one scene from source to a deterministic headless run
-using only the CLI. It does not need an engine or adapter. Every command below is
-the real invocation against the file shown.
+This walkthrough takes one scene from source to a deterministic headless run using only the CLI. It
+does not need an engine or adapter. Every command below is the real invocation against the file
+shown.
 
 ## Write the scene
 
@@ -33,13 +34,11 @@ Create `dialogue/crossroads.recite`:
 -> END
 ```
 
-Each line and choice header is a `label@anchor` pair: the label
-(`alice_way_001`) is editable context for you, and the 20-hex anchor is the
-frozen ID that localisation and saves key on. When you author with the LSP you
-write headers without anchors and an on-save code action fills them in; when
-hand-writing, any unique 20-hex value works. The `! deferred` statement is a
-typed effect request. The runtime never executes it; it hands it to your game
-when the scene ends.
+Each line and choice header is a `label@anchor` pair: the label (`alice_way_001`) is editable
+context for you, and the 20-hex anchor is the frozen ID that localisation and saves key on. When you
+author with the LSP you write headers without anchors and an on-save code action fills them in; when
+hand-writing, any unique 20-hex value works. The `! deferred` statement is a typed effect request.
+The runtime never executes it; it hands it to your game when the scene ends.
 
 ## Validate and compile
 
@@ -48,9 +47,9 @@ recite validate dialogue/crossroads.recite
 recite compile dialogue/crossroads.recite -o crossroads.recitec
 ```
 
-`validate` exits non-zero with structured diagnostics if the scene is malformed:
-wrong indentation, duplicate anchors, or a divert to a missing block.
-`compile` writes the deterministic MessagePack asset the runtime consumes.
+`validate` exits non-zero with structured diagnostics if the scene is malformed: wrong indentation,
+duplicate anchors, or a divert to a missing block. `compile` writes the deterministic MessagePack
+asset the runtime consumes.
 
 ## Play it interactively
 
@@ -58,13 +57,12 @@ wrong indentation, duplicate anchors, or a divert to a missing block.
 recite play crossroads.recitec --block which_way
 ```
 
-`play` is the writer's REPL: it renders lines and prompts in a TUI (or plain
-mode with `--ui plain`) and lets you pick choices.
+`play` is the writer's REPL: it renders lines and prompts in a TUI (or plain mode with `--ui plain`)
+and lets you pick choices.
 
 ## Run it headlessly
 
-Deterministic runs use a TOML fixture that answers every prompt. Create
-`fixture.toml`:
+Deterministic runs use a TOML fixture that answers every prompt. Create `fixture.toml`:
 
 ```toml
 [choices]
@@ -87,9 +85,8 @@ deferred effects:
   mark_thread (alice_crossroads, direction_unsettled)
 ```
 
-If the fixture is missing an answer for a prompt, `run` tells you the exact
-key it expected. `recite trace` emits the same run as structured JSON for
-snapshot tests and CI.
+If the fixture is missing an answer for a prompt, `run` tells you the exact key it expected. `recite
+trace` emits the same run as structured JSON for snapshot tests and CI.
 
 ## Extract localisation entries
 
@@ -97,9 +94,8 @@ snapshot tests and CI.
 recite extract dialogue/crossroads.recite
 ```
 
-This produces gettext POT entries whose `msgctxt` is the anchor. Editing prose or
-labels later never invalidates a translation.
+This produces gettext POT entries whose `msgctxt` is the anchor. Editing prose or labels later never
+invalidates a translation.
 
-From here: the
-[source format reference](/reference/source-format/) covers the full statement
+From here: the [source format reference](/reference/source-format/) covers the full statement
 vocabulary, and the [CLI reference](/reference/cli/) covers every command.

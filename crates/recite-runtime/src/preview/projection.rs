@@ -10,6 +10,7 @@ impl<'asset> PreviewSession<'asset> {
             self.trace.push(event.clone());
             self.transcript.push(event);
         }
+        self.refresh_state_projection();
         PreviewOutput::new(events, self.state.clone())
     }
 
@@ -52,14 +53,20 @@ impl<'asset> PreviewSession<'asset> {
             }
             PreviewEvent::Error(_) => {}
         }
-        self.refresh_state_projection();
     }
 
     fn refresh_state_projection(&mut self) {
         self.state.block = self.current_block_id_opt();
         self.state.locale = self.session.locale().cloned();
-        self.state.selected_choice_history = self.session.selected_choice_history().to_vec();
-        self.state.deferred_effects = self.session.deferred_effects().to_vec();
+        // Both collections only append during traversal. Restart and restore
+        // install a new projection. Other events can share the immutable rows.
+        if self.state.selected_choice_history.len() != self.session.selected_choice_history().len()
+        {
+            self.state.selected_choice_history = self.session.selected_choice_history().into();
+        }
+        if self.state.deferred_effects.len() != self.session.deferred_effects().len() {
+            self.state.deferred_effects = self.session.deferred_effects().into();
+        }
     }
 
     pub(super) fn error(&mut self, error: PreviewError) -> PreviewOutput {
@@ -78,13 +85,12 @@ impl<'asset> PreviewSession<'asset> {
 }
 
 pub(super) fn new_deferred_events(
-    base: &crate::DialogueSession,
+    previous_len: usize,
     trial: &crate::DialogueSession,
 ) -> Vec<PreviewEvent> {
-    let base_len = base.deferred_effects().len();
     trial
         .deferred_effects()
-        .get(base_len..)
+        .get(previous_len..)
         .unwrap_or_default()
         .iter()
         .cloned()

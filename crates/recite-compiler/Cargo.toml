@@ -4,26 +4,27 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Recite compiler, validator, POT extractor, and compiled asset writer."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
-
-[features]
-default = []
-bench-support = []
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
+language-tags.workspace = true
 recite-core.workspace = true
 recite-parser.workspace = true
 rmp-serde.workspace = true
+rpds.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-language-tags.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
 recite-ui.workspace = true
 serde-value.workspace = true
+
+[features]
+default = []
+bench-support = []
 
 [lints]
 workspace = true

@@ -9,7 +9,8 @@ use recite_core::{
 use recite_ui::{CatalogError, RenderedRelatedDiagnostic, UiCatalog};
 use thiserror::Error;
 
-use crate::position::span_to_range;
+use crate::position::DocumentLines;
+use std::cell::OnceCell;
 #[cfg(test)]
 mod tests;
 
@@ -47,13 +48,28 @@ pub(crate) fn publish_diagnostics(
     catalog: &UiCatalog,
     sources: &[DiagnosticSource<'_>],
 ) -> Result<PublishDiagnosticsParams, DiagnosticPublishError> {
+    if diagnostics.is_empty() {
+        return Ok(PublishDiagnosticsParams::new(uri, Vec::new(), version));
+    }
+    let lines = DocumentLines::new(text);
+    let sources = sources
+        .iter()
+        .map(|source| IndexedSource {
+            source,
+            lines: OnceCell::new(),
+        })
+        .collect::<Vec<_>>();
     let mut records = diagnostics
         .iter()
         .enumerate()
         .map(|(index, diagnostic)| {
             diagnostic
                 .record()
-                .map(|record| IndexedDiagnostic { index, record })
+                .map(|record| IndexedDiagnostic {
+                    index,
+                    sort_key: diagnostic_sort_key(&lines, &record),
+                    record,
+                })
                 .map_err(|source| DiagnosticPublishError::Record {
                     code: diagnostic.code.as_str().to_owned(),
                     source,
@@ -61,14 +77,14 @@ pub(crate) fn publish_diagnostics(
         })
         .collect::<Result<Vec<_>, _>>()?;
     records.sort_by(|left, right| {
-        diagnostic_sort_key(text, &left.record)
-            .cmp(&diagnostic_sort_key(text, &right.record))
+        left.sort_key
+            .cmp(&right.sort_key)
             .then_with(|| left.index.cmp(&right.index))
     });
 
     let diagnostics = records
         .into_iter()
-        .map(|item| to_lsp_diagnostic(text, &item.record, catalog, sources))
+        .map(|item| to_lsp_diagnostic(&lines, &item.record, catalog, &sources))
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(PublishDiagnosticsParams::new(uri, diagnostics, version))
@@ -77,6 +93,12 @@ pub(crate) fn publish_diagnostics(
 struct IndexedDiagnostic {
     index: usize,
     record: DiagnosticRecord,
+    sort_key: DiagnosticSortKey,
+}
+
+struct IndexedSource<'a> {
+    source: &'a DiagnosticSource<'a>,
+    lines: OnceCell<DocumentLines<'a>>,
 }
 
 pub(crate) fn clear_diagnostics(uri: Uri, version: Option<i32>) -> PublishDiagnosticsParams {
@@ -84,10 +106,10 @@ pub(crate) fn clear_diagnostics(uri: Uri, version: Option<i32>) -> PublishDiagno
 }
 
 fn to_lsp_diagnostic(
-    text: &str,
+    lines: &DocumentLines<'_>,
     record: &DiagnosticRecord,
     catalog: &UiCatalog,
-    sources: &[DiagnosticSource<'_>],
+    sources: &[IndexedSource<'_>],
 ) -> Result<Diagnostic, DiagnosticPublishError> {
     let rendered =
         catalog
@@ -98,7 +120,7 @@ fn to_lsp_diagnostic(
             })?;
 
     Ok(Diagnostic {
-        range: span_to_range(text, &record.span),
+        range: lines.span_to_range(&record.span),
         severity: Some(to_lsp_severity(record.severity)),
         code: Some(NumberOrString::String(record.code.as_str().to_owned())),
         code_description: None,
@@ -112,16 +134,16 @@ fn to_lsp_diagnostic(
 
 fn related_information(
     related: &[RenderedRelatedDiagnostic],
-    sources: &[DiagnosticSource<'_>],
+    sources: &[IndexedSource<'_>],
 ) -> Option<Vec<DiagnosticRelatedInformation>> {
     let related = related
         .iter()
         .filter_map(|related| {
-            let (uri, text) = resolve_source(sources, &related.span.file)?;
+            let (uri, lines) = resolve_source(sources, &related.span.file)?;
             Some(DiagnosticRelatedInformation {
                 location: Location {
                     uri: uri.clone(),
-                    range: span_to_range(text, &related.span),
+                    range: lines.span_to_range(&related.span),
                 },
                 message: related.text.clone(),
             })
@@ -131,13 +153,20 @@ fn related_information(
 }
 
 fn resolve_source<'a>(
-    sources: &'a [DiagnosticSource<'_>],
+    sources: &'a [IndexedSource<'_>],
     path: &str,
-) -> Option<(&'a Uri, &'a str)> {
+) -> Option<(&'a Uri, &'a DocumentLines<'a>)> {
     sources
         .iter()
-        .find(|source| source.path == path || source.uri.as_str() == path)
-        .map(|source| (source.uri, source.text))
+        .find(|source| source.source.path == path || source.source.uri.as_str() == path)
+        .map(|source| {
+            (
+                source.source.uri,
+                source
+                    .lines
+                    .get_or_init(|| DocumentLines::new(source.source.text)),
+            )
+        })
 }
 
 fn to_lsp_severity(severity: ReciteSeverity) -> DiagnosticSeverity {
@@ -149,8 +178,8 @@ fn to_lsp_severity(severity: ReciteSeverity) -> DiagnosticSeverity {
     }
 }
 
-fn diagnostic_sort_key(text: &str, record: &DiagnosticRecord) -> DiagnosticSortKey {
-    let range = span_to_range(text, &record.span);
+fn diagnostic_sort_key(lines: &DocumentLines<'_>, record: &DiagnosticRecord) -> DiagnosticSortKey {
+    let range = lines.span_to_range(&record.span);
     DiagnosticSortKey {
         primary_range: (
             range.start.line,

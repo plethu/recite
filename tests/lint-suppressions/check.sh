@@ -9,6 +9,7 @@ mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/tests" \
 cp "$repo_root/scripts/check-lint-suppressions.sh" \
   "$repo_root/scripts/check-lint-suppressions.py" \
   "$repo_root/scripts/lint_suppression_ast.py" \
+  "$repo_root/scripts/lint_suppression_scan.py" \
   "$repo_root/scripts/lint_suppression_meta.py" "$test_root/repo/scripts/"
 chmod +x "$test_root/repo/scripts/check-lint-suppressions.sh"
 git -C "$test_root/repo" init -q -b main
@@ -30,13 +31,13 @@ check_fails() {
   output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$base" "$head" 2>&1)"
   result=$?
   set -e
-  if (( result == 0 )) || [[ "$output" != *"$expected"* ]]; then
+  if ((result == 0)) || [[ "$output" != *"$expected"* ]]; then
     echo "lint suppression fixture missed expected diagnostic: $expected" >&2
     printf '%s\n' "$output" >&2
     exit 1
   fi
 }
-cat > "$test_root/repo/crates/demo/src/lib.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/lib.rs" <<'EOF'
 const TEXT: &str = "#[allow(clippy::unwrap_used)] recite-lint-suppression: ffi";
 const RAW: &str = r##"#[expect(dead_code)] recite-lint-suppression: compatibility"##;
 // #[allow(dead_code)] recite-lint-suppression: ffi
@@ -57,7 +58,7 @@ check_passes "$zero_sha" "$initial_sha"
 sed -i '1i// unrelated movement' "$test_root/repo/crates/demo/src/lib.rs"
 sed -i 's/dead_code, unused_variables, reason/dead_code, reason/' \
   "$test_root/repo/crates/demo/src/lib.rs"
-cat > "$test_root/repo/crates/demo/src/cfg.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/cfg.rs" <<'EOF'
 #[cfg_attr(any(feature = "one", feature = "two"),
     allow(dead_code, reason = "cfg predicate belongs to the named helper"),
     expect(unused_variables, reason = "cfg sibling remains explicit"))]
@@ -90,7 +91,7 @@ cfg_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$moved
 # Anonymous and identical declarations cannot consume a baseline, even when
 # the source text is identical. The current record is deliberately unreasoned
 # so fail-closed ownership is observable.
-cat > "$test_root/repo/crates/demo/src/anonymous.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/anonymous.rs" <<'EOF'
 #[allow(dead_code, reason = "anonymous baseline")]
 const _: i32 = 0;
 const _: i32 = 0;
@@ -111,7 +112,7 @@ anonymous_head="$(git -C "$test_root/repo" rev-parse HEAD)"
 check_fails "$anonymous_base" "$anonymous_head" "owner=unstable"
 # Braced use trees and const-generic/array-const braces are parser structure,
 # not declaration delimiters. A named use and impl survive unchanged.
-cat > "$test_root/repo/crates/demo/src/structured.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/structured.rs" <<'EOF'
 #[allow(unused_imports, reason = "braced use tree is a single named item")]
 use crate::{alpha::{Beta, Gamma}, delta as epsilon};
 struct Generic<const N: usize> where [(); { N + 1 }]: {
@@ -129,7 +130,7 @@ check_passes "$anonymous_head" "$structured_sha"
 # Closures and macro token trees are intentionally ambiguous;
 # they are still inventoried and require a reason rather than borrowing an
 # unrelated named baseline.
-cat > "$test_root/repo/crates/demo/src/ambiguous.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/ambiguous.rs" <<'EOF'
 fn host() {
     #[allow(dead_code, reason = "closure expression is a local exception")]
     let closure = || { 1 };
@@ -153,13 +154,13 @@ set +e
 ambiguous_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$structured_sha" "$ambiguous_sha" 2>&1)"
 ambiguous_result=$?
 set -e
-(( ambiguous_result != 0 )) || {
+((ambiguous_result != 0)) || {
   echo "macro token-tree suppressions were accepted" >&2
   printf '%s\n' "$ambiguous_output" >&2
   exit 1
 }
-[[ "$ambiguous_output" == *"ambiguous.rs:6: new opaque_macro(allow) scope=item owner=unstable"* \
-  && "$ambiguous_output" == *"ambiguous.rs:12: new opaque_macro(allow) scope=item owner=unstable"* ]] || {
+[[ "$ambiguous_output" == *"ambiguous.rs:6: new opaque_macro(allow) scope=item owner=unstable"* &&
+  "$ambiguous_output" == *"ambiguous.rs:12: new opaque_macro(allow) scope=item owner=unstable"* ]] || {
   echo "macro token-tree suppressions were not recorded exactly" >&2
   printf '%s\n' "$ambiguous_output" >&2
   exit 1
@@ -167,7 +168,7 @@ set -e
 # Direct attributes, cfg_attr attributes, and comments between #[ and allow are
 # parsed as ordinary attributes. Macro definitions and invocations remain raw
 # opaque token trees and are represented by explicit unstable records.
-cat > "$test_root/repo/crates/demo/src/opaque.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/opaque.rs" <<'EOF'
 #[allow(dead_code, reason = "direct allow remains structured")]
 fn direct_allow() {}
 #[cfg_attr(unix, allow(dead_code, reason = "cfg_attr allow remains structured"))]
@@ -193,16 +194,16 @@ set +e
 opaque_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_base" "$opaque_head" 2>&1)"
 opaque_result=$?
 set -e
-(( opaque_result != 0 )) || {
+((opaque_result != 0)) || {
   echo "opaque token-tree suppressions were accepted" >&2
   printf '%s\n' "$opaque_output" >&2
   exit 1
 }
-[[ "$opaque_output" == *"opaque.rs:1: new allow(dead_code) scope=item owner=fn:direct_allow category=production owner_stable=true"* \
-  && "$opaque_output" == *"opaque.rs:3: new allow(dead_code) scope=item owner=fn:cfg_allow category=production owner_stable=false"* \
-  && "$opaque_output" == *"opaque.rs:5: new allow(dead_code) scope=item owner=fn:commented_allow category=production owner_stable=true"* \
-  && "$opaque_output" == *"opaque.rs:7: new opaque_macro(allow) scope=item owner=unstable category=production owner_stable=false reason=null"* \
-  && "$opaque_output" == *"opaque.rs:13: new opaque_macro(allow,cfg_attr) scope=item owner=unstable category=production owner_stable=false reason=null"* ]] || {
+[[ "$opaque_output" == *"opaque.rs:1: new allow(dead_code) scope=item owner=fn:direct_allow category=production owner_stable=true"* &&
+  "$opaque_output" == *"opaque.rs:3: new allow(dead_code) scope=item owner=fn:cfg_allow category=production owner_stable=false"* &&
+  "$opaque_output" == *"opaque.rs:5: new allow(dead_code) scope=item owner=fn:commented_allow category=production owner_stable=true"* &&
+  "$opaque_output" == *"opaque.rs:7: new opaque_macro(allow) scope=item owner=unstable category=production owner_stable=false reason=null"* &&
+  "$opaque_output" == *"opaque.rs:13: new opaque_macro(allow,cfg_attr) scope=item owner=unstable category=production owner_stable=false reason=null"* ]] || {
   echo "opaque fixture records were not exact" >&2
   printf '%s\n' "$opaque_output" >&2
   exit 1
@@ -210,7 +211,7 @@ set -e
 # Raw identifiers have the same lint-control names as their plain forms. The
 # attribute metadata parser, configuration check, and opaque macro inventory
 # all normalize one leading r# while keeping near-identifiers out.
-cat > "$test_root/repo/crates/demo/src/raw-identifiers.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/raw-identifiers.rs" <<'EOF'
 #[r#allow(dead_code, reason = "raw direct allow remains structured")]
 fn raw_allow() {}
 #[r#expect(dead_code, reason = "raw direct expect remains structured")]
@@ -242,18 +243,18 @@ set +e
 raw_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_base" "$raw_identifiers_head" 2>&1)"
 raw_result=$?
 set -e
-(( raw_result != 0 )) || {
+((raw_result != 0)) || {
   echo "raw token-tree suppressions were accepted" >&2
   printf '%s\n' "$raw_output" >&2
   exit 1
 }
-[[ "$raw_output" == *"raw-identifiers.rs:1: new allow(dead_code) scope=item owner=fn:raw_allow category=production owner_stable=true"* \
-  && "$raw_output" == *"raw-identifiers.rs:3: new expect(dead_code) scope=item owner=fn:raw_expect category=production owner_stable=true"* \
-  && "$raw_output" == *"raw-identifiers.rs:5: new allow(dead_code) scope=item owner=fn:raw_cfg_attr category=production owner_stable=false"* \
-  && "$raw_output" == *"raw-identifiers.rs:5: new expect(unused_variables) scope=item owner=fn:raw_cfg_attr category=production owner_stable=false"* \
-  && "$raw_output" == *"raw-identifiers.rs:8: new allow(dead_code) scope=item owner=fn:raw_cfg category=production owner_stable=false"* \
-  && "$raw_output" == *"raw-identifiers.rs:10: new opaque_macro(allow,expect) scope=item owner=unstable category=production owner_stable=false reason=null"* \
-  && "$raw_output" == *"raw-identifiers.rs:17: new opaque_macro(allow,cfg_attr) scope=item owner=unstable category=production owner_stable=false reason=null"* ]] || {
+[[ "$raw_output" == *"raw-identifiers.rs:1: new allow(dead_code) scope=item owner=fn:raw_allow category=production owner_stable=true"* &&
+  "$raw_output" == *"raw-identifiers.rs:3: new expect(dead_code) scope=item owner=fn:raw_expect category=production owner_stable=true"* &&
+  "$raw_output" == *"raw-identifiers.rs:5: new allow(dead_code) scope=item owner=fn:raw_cfg_attr category=production owner_stable=false"* &&
+  "$raw_output" == *"raw-identifiers.rs:5: new expect(unused_variables) scope=item owner=fn:raw_cfg_attr category=production owner_stable=false"* &&
+  "$raw_output" == *"raw-identifiers.rs:8: new allow(dead_code) scope=item owner=fn:raw_cfg category=production owner_stable=false"* &&
+  "$raw_output" == *"raw-identifiers.rs:10: new opaque_macro(allow,expect) scope=item owner=unstable category=production owner_stable=false reason=null"* &&
+  "$raw_output" == *"raw-identifiers.rs:17: new opaque_macro(allow,cfg_attr) scope=item owner=unstable category=production owner_stable=false reason=null"* ]] || {
   echo "raw identifier fixture records were not exact" >&2
   printf '%s\n' "$raw_output" >&2
   exit 1
@@ -263,7 +264,7 @@ set -e
   printf '%s\n' "$raw_output" >&2
   exit 1
 }
-cat > "$test_root/repo/crates/demo/src/opaque-negative.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/opaque-negative.rs" <<'EOF'
 macro_rules! strings_and_comments {
     () => {
         let _ = format!("allow");
@@ -293,7 +294,7 @@ opaque_negative_output="$(cd "$test_root/repo" && scripts/check-lint-suppression
 }
 # Duplicate consumption is one-to-one: one baseline use cannot legitimize two
 # current identical records. Cross-file moves are always new at the destination.
-cat > "$test_root/repo/crates/demo/src/duplicates.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/duplicates.rs" <<'EOF'
 #[allow(unused_imports)]
 use crate::duplicate::Thing;
 EOF
@@ -305,7 +306,7 @@ git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m duplicate-current
 duplicate_head="$(git -C "$test_root/repo" rev-parse HEAD)"
 check_fails "$duplicate_base" "$duplicate_head" "new allow(unused_imports)"
-cat > "$test_root/repo/crates/demo/src/old.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/old.rs" <<'EOF'
 #[allow(dead_code)]
 fn moved_across_files() {}
 EOF
@@ -319,7 +320,7 @@ check_fails "$cross_file_base" "$cross_file_head" \
   "crates/demo/src/new.rs:1: new allow(dead_code)"
 # Adjacent markers are comment nodes, never substrings in a string or old
 # comment. The path remains production and therefore needs the scoped prefix.
-cat > "$test_root/repo/crates/demo/src/marked.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/marked.rs" <<'EOF'
 // recite-lint-suppression: compatibility
 #[allow(dead_code, reason = "compatibility: retain the old symbol")]
 fn old_symbol() {}
@@ -330,27 +331,27 @@ marker_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
 check_passes "$cross_file_head" "$marker_sha"
 # New broad production scopes remain forbidden, while support and generated
 # paths retain their explicit exceptions.
-cat > "$test_root/repo/crates/demo/src/broad.rs" <<'EOF'
+cat >"$test_root/repo/crates/demo/src/broad.rs" <<'EOF'
 #![allow(dead_code, reason = "crate scope must be rejected")]
 #[allow(unused_variables, reason = "module scope must be rejected")]
 mod broad {}
 EOF
-cat > "$test_root/repo/tests/support.rs" <<'EOF'
+cat >"$test_root/repo/tests/support.rs" <<'EOF'
 #[allow(dead_code)]
 fn support() {}
 EOF
-cat > "$test_root/repo/fixtures/generated.rs" <<'EOF'
+cat >"$test_root/repo/fixtures/generated.rs" <<'EOF'
 #[allow(dead_code)]
 fn generated() {}
 EOF
-printf '%s\n' fixtures/generated.rs > "$test_root/repo/scripts/generated-rust-allowlist.txt"
+printf '%s\n' fixtures/generated.rs >"$test_root/repo/scripts/generated-rust-allowlist.txt"
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m broad-and-exceptions
 broad_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
 check_fails "$marker_sha" "$broad_sha" "crate/module-wide suppressions are not permitted"
 # Malformed attributes become structural parse failures, not silently ignored
 # records. Full inventory remains reporting-only.
-printf '%s\n' '#[allow(' > "$test_root/repo/crates/demo/src/malformed.rs"
+printf '%s\n' '#[allow(' >"$test_root/repo/crates/demo/src/malformed.rs"
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m malformed
 malformed_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
@@ -388,11 +389,27 @@ git -C "$test_root/repo" commit -q -m remove-escaped-reason
 # from the outer repository (as CI does). Both refs are overridden to this
 # fixture's HEAD before the temporary Git checkout is inspected.
 full_output="$(cd "$test_root/repo" && RECITE_BASE_REF=HEAD RECITE_HEAD_REF=HEAD scripts/check-lint-suppressions.sh --full)"
-[[ "$full_output" == *"full inventory mode is reporting-only"* \
-  && "$full_output" == *"owner=fn:named_function"* \
-  && "$full_output" == *"owner=unstable"* ]] || {
+[[ "$full_output" == *"full inventory mode is reporting-only"* &&
+  "$full_output" == *"owner=fn:named_function"* &&
+  "$full_output" == *"owner=unstable"* ]] || {
   echo "full lint suppression inventory fixture failed" >&2
   printf '%s\n' "$full_output" >&2
   exit 1
 }
 echo "lint suppression structural fixtures passed"
+
+# Both branches independently introduce the same suppression. The base tip
+# must not silently make new head policy appear grandfathered.
+fork="$(git -C "$test_root/repo" rev-parse HEAD)"
+cat >"$test_root/repo/crates/demo/src/independent.rs" <<'RUST'
+#[allow(clippy::too_many_arguments)]
+fn independently_added() {}
+RUST
+git -C "$test_root/repo" add crates/demo/src/independent.rs
+git -C "$test_root/repo" commit -qm base-addition
+base_tip="$(git -C "$test_root/repo" rev-parse HEAD)"
+git -C "$test_root/repo" checkout -q --detach "$fork"
+git -C "$test_root/repo" checkout "$base_tip" -- crates/demo/src/independent.rs
+git -C "$test_root/repo" commit -qm head-addition
+check_fails "$base_tip" HEAD "lint suppression policy violation"
+echo 'merge-base suppression comparison passed'

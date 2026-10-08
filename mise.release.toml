@@ -1,0 +1,8 @@
+[tools]
+"github:crate-ci/cargo-release" = "1.1.6"
+"aqua:axodotdev/cargo-dist" = "0.33.0"
+"aqua:cli/cli" = "2.102.0"
+powershell = "7.6.6"
+
+[env]
+MISE_EXEC_AUTO_INSTALL = "false"

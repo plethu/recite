@@ -1,0 +1,126 @@
+name: LSP sessions
+
+on:
+  workflow_call:
+    inputs:
+      server_ref:
+        type: string
+        default: ""
+      server_control_ref:
+        type: string
+        default: ""
+      native_trace:
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      server_control_ref:
+        description: Optional historical server revision for alternating binary comparisons
+        type: string
+        default: ""
+      native_trace:
+        description: Compare native tracing enabled and disabled
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  sessions:
+    name: LSP and editor sessions (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            recovery_budget_ms: 20
+          - os: windows-2025
+            recovery_budget_ms: 40
+          - os: macos-15
+            recovery_budget_ms: 75
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      # Install only this lane's Rust, editor and locked Python tooling.
+      MISE_AUTO_INSTALL: "false"
+      MISE_ENV: lsp
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.server_ref || github.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust node pnpm python uv
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Check out optional control
+        if: inputs.server_control_ref != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.server_control_ref }}
+          path: .lsp-session-control
+          persist-credentials: false
+      - name: Build release server and fixture generator
+        run: cargo build --locked --release -p recite-lsp -p recite-fixturegen
+      - name: Build optional control server
+        if: inputs.server_control_ref != ''
+        run: CARGO_TARGET_DIR="$PWD/target/lsp-session-control-build" cargo build --locked --release --manifest-path .lsp-session-control/Cargo.toml -p recite-lsp
+      - name: Check incremental protocol transactions
+        run: cargo test --locked --release -p recite-lsp --test stdio_incremental_sync --test stdio_trace
+      - name: Prepare session and editor dependencies
+        run: |
+          uv sync --locked --python "$(mise which python)" --no-python-downloads
+          pnpm install --frozen-lockfile
+          pnpm --filter recite-vscode run build
+      - name: Install Linux display dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libasound2t64 libnss3 libgbm1 libgtk-3-0
+      - name: Exercise live resource and latency faults
+        run: uv run --locked python scripts/lsp.py faults --output target/lsp-sessions/faults.json
+      - name: Exercise fixed working set and document churn
+        env:
+          SERVER_CONTROL_REF: ${{ inputs.server_control_ref }}
+          NATIVE_TRACE: ${{ inputs.native_trace }}
+        run: |
+          suffix=""
+          if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
+          binary="$PWD/target/release/recite-lsp$suffix"
+          control_binary="$PWD/target/lsp-session-control-build/release/recite-lsp$suffix"
+          reports="$PWD/target/lsp-sessions"
+          options=()
+          if [[ -n "$SERVER_CONTROL_REF" ]]; then options+=(--control "$control_binary"); fi
+          if [[ "$NATIVE_TRACE" == true ]]; then options+=(--native-trace); fi
+          uv run --locked python scripts/lsp.py matrix --binary "$binary" --output "$reports" "${options[@]}"
+      - name: Attribute native request boundaries
+        if: inputs.native_trace
+        run: uv run --locked python scripts/lsp.py native-summary --reports target/lsp-sessions --output target/lsp-sessions/native-summary.json
+      - name: Compare server recovery and CPU
+        if: inputs.server_control_ref != ''
+        run: uv run --locked python scripts/lsp.py server-comparison --reports target/lsp-sessions --output target/lsp-sessions/server-comparison.json
+      - name: Enforce repeated recovery and completion budgets
+        run: >-
+          uv run --locked python scripts/lsp.py recovery
+          --reports target/lsp-sessions
+          --budget-ms ${{ matrix.recovery_budget_ms }}
+          --completion-budget-ms 5
+          --idle-cpu-budget-ms 100
+          --output target/lsp-sessions/recovery.json
+      - name: Exercise rendered VS Code and document lifecycle
+        run: |
+          suffix=""
+          if [[ "$RUNNER_OS" == Windows ]]; then suffix=.exe; fi
+          "target/release/recite-fixturegen$suffix" --profile large --output target/lsp-editor-project --summaries target/lsp-sessions/fixture.json
+          command=(node tests/editor-hosts/vscode/run-matrix.mjs target/lsp-editor-project "target/release/recite-lsp$suffix" target/lsp-sessions/editor.json)
+          if [[ "$RUNNER_OS" == Linux ]]; then xvfb-run -a "${command[@]}"; else "${command[@]}"; fi
+      - name: Retain checkpoint reports, traces and rendered frames
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lsp-sessions-${{ matrix.os }}
+          path: target/lsp-sessions/
+          if-no-files-found: error
+          retention-days: 30

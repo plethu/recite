@@ -5,24 +5,36 @@ local timer = require("recite.timer")
 local M = {}
 
 local function callback_failed(options, error)
-  if options.on_callback_failed then pcall(options.on_callback_failed, error) end
+  if options.on_callback_failed then
+    pcall(options.on_callback_failed, error)
+  end
 end
 
 local function invoke(options, callback, ...)
-  if not callback then return true end
+  if not callback then
+    return true
+  end
   local ok, error = pcall(callback, ...)
-  if not ok then callback_failed(options, error) end
+  if not ok then
+    callback_failed(options, error)
+  end
   return ok, error
 end
 
 local function schedule(options, callback, ...)
-  if not callback then return end
+  if not callback then
+    return
+  end
   local arguments = { ... }
-  vim.schedule(function() invoke(options, callback, unpack(arguments)) end)
+  vim.schedule(function()
+    invoke(options, callback, unpack(arguments))
+  end)
 end
 
 local function terminate(session, force)
-  if not session.process or session.closed then return end
+  if not session.process or session.closed then
+    return
+  end
   pcall(session.process.kill, session.process, force and "sigkill" or "sigterm")
 end
 
@@ -33,24 +45,34 @@ local function cancel_timers(session)
 end
 
 local function terminate_bounded(session, term_timeout_ms, kill_timeout_ms, on_hung)
-  if session.closed or session.exiting or session.termination_started then return end
+  if session.closed or session.exiting or session.termination_started then
+    return
+  end
   session.termination_started = true
   terminate(session, false)
   session.term_timer = timer.after(term_timeout_ms or 250, function()
     session.term_timer = nil
-    if session.closed then return end
+    if session.closed then
+      return
+    end
     terminate(session, true)
     session.kill_timer = timer.after(kill_timeout_ms or 250, function()
       session.kill_timer = nil
-      if session.closed then return end
+      if session.closed then
+        return
+      end
       session.hung = true
-      if on_hung then on_hung(session) end
+      if on_hung then
+        on_hung(session)
+      end
     end)
   end)
 end
 
 local function close_once(session, callback, event, options)
-  if session.close_called then return end
+  if session.close_called then
+    return
+  end
   session.close_called = true
   invoke(options, callback, event)
 end
@@ -73,7 +95,10 @@ function M.start_finite(options)
   local session = {
     argv = vim.deepcopy(options.argv),
     cwd = options.cwd,
-    parser = protocol.new_parser(options.max_record_bytes or protocol.MAX_RECORD_BYTES, options.max_bytes or protocol.MAX_FINITE_BYTES),
+    parser = protocol.new_parser(
+      options.max_record_bytes or protocol.MAX_RECORD_BYTES,
+      options.max_bytes or protocol.MAX_FINITE_BYTES
+    ),
     records = {},
     bytes = 0,
     stderr_bytes = 0,
@@ -89,20 +114,26 @@ function M.start_finite(options)
   }
 
   local function report_error(error)
-    if session.error_called then return end
+    if session.error_called then
+      return
+    end
     session.error_called = true
     schedule(options, options.on_error, error)
   end
 
   local function fail(error)
-    if session.failed or session.finished then return end
+    if session.failed or session.finished then
+      return
+    end
     session.failed = true
     terminate_bounded(session, options.term_timeout_ms, options.kill_timeout_ms, options.on_hung)
     report_error(error)
   end
 
   local function stdout(_, data)
-    if session.failed or session.closed or not data then return end
+    if session.failed or session.closed or not data then
+      return
+    end
     session.bytes = session.bytes + #data
     if session.bytes > (options.max_bytes or protocol.MAX_FINITE_BYTES) then
       fail(protocol.error("stdout_too_large"))
@@ -117,18 +148,32 @@ function M.start_finite(options)
   end
 
   local function stderr(_, data)
-    if session.failed or session.closed or not data or #data == 0 then return end
+    if session.failed or session.closed or not data or #data == 0 then
+      return
+    end
     session.stderr_bytes = session.stderr_bytes + #data
-    fail(protocol.error(session.stderr_bytes > protocol.MAX_STDERR_BYTES
-      and "stderr_too_large" or "stderr_output"))
+    fail(
+      protocol.error(
+        session.stderr_bytes > protocol.MAX_STDERR_BYTES and "stderr_too_large" or "stderr_output"
+      )
+    )
   end
 
   local function on_exit(result)
-    if session.closed then return end
+    if session.closed then
+      return
+    end
     session.closed = true
     cancel_timers(session)
     if session.failed then
-      schedule(options, close_once, session, options.on_close, { failed = true, code = result and result.code, signal = result and result.signal }, options)
+      schedule(
+        options,
+        close_once,
+        session,
+        options.on_close,
+        { failed = true, code = result and result.code, signal = result and result.signal },
+        options
+      )
       return
     end
     schedule(options, function()
@@ -136,28 +181,63 @@ function M.start_finite(options)
       if not ok then
         session.failed = true
         report_error(error)
-        close_once(session, options.on_close, { failed = true, code = result and result.code, signal = result and result.signal }, options)
+        close_once(
+          session,
+          options.on_close,
+          { failed = true, code = result and result.code, signal = result and result.signal },
+          options
+        )
         return
       end
       local exit_code = result and result.code
-      local parsed_ok, parsed = pcall(finite_protocol.parse, session.records, options.command, options.invocation_id, exit_code)
+      local parsed_ok, parsed = pcall(
+        finite_protocol.parse,
+        session.records,
+        options.command,
+        options.invocation_id,
+        exit_code
+      )
       if not parsed_ok then
         session.failed = true
         report_error(parsed)
-        close_once(session, options.on_close, { failed = true, code = exit_code, signal = result and result.signal }, options)
+        close_once(
+          session,
+          options.on_close,
+          { failed = true, code = exit_code, signal = result and result.signal },
+          options
+        )
         return
       end
-      local callback_ok, callback_error = invoke(options, options.on_result, parsed, { code = exit_code, signal = result and result.signal })
+      local callback_ok, callback_error = invoke(
+        options,
+        options.on_result,
+        parsed,
+        { code = exit_code, signal = result and result.signal }
+      )
       if not callback_ok then
         session.failed = true
         report_error(protocol.error("callback_failed", tostring(callback_error)))
-        terminate_bounded(session, options.term_timeout_ms, options.kill_timeout_ms, options.on_hung)
+        terminate_bounded(
+          session,
+          options.term_timeout_ms,
+          options.kill_timeout_ms,
+          options.on_hung
+        )
       end
-      close_once(session, options.on_close, { failed = session.failed, code = exit_code, signal = result and result.signal }, options)
+      close_once(
+        session,
+        options.on_close,
+        { failed = session.failed, code = exit_code, signal = result and result.signal },
+        options
+      )
     end)
   end
 
-  local ok, process = pcall(make_system, vim.tbl_extend("force", options, { stdout = stdout, stderr = stderr }), on_exit)
+  local ok, process = pcall(
+    make_system,
+    vim.tbl_extend("force", options, { stdout = stdout, stderr = stderr }),
+    on_exit
+  )
   if not ok then
     session.failed = true
     report_error(protocol.error("spawn", tostring(process)))
@@ -192,13 +272,17 @@ function M.start_stream(options)
   }
 
   local function report_error(error)
-    if session.error_called then return end
+    if session.error_called then
+      return
+    end
     session.error_called = true
     schedule(options, options.on_error, error)
   end
 
   local function fail(error)
-    if session.failed or session.closed then return end
+    if session.failed or session.closed then
+      return
+    end
     session.failed = true
     report_error(error)
     if options.terminate_on_error ~= false then
@@ -206,25 +290,41 @@ function M.start_stream(options)
     end
   end
   local function stdout(_, data)
-    if session.failed or session.closed or session.exiting or not data then return end
+    if session.failed or session.closed or session.exiting or not data then
+      return
+    end
     local ok, records = pcall(session.parser.push, session.parser, data)
-    if not ok then fail(records); return end
+    if not ok then
+      fail(records)
+      return
+    end
     for _, record in ipairs(records) do
       schedule(options, function()
-        if session.failed or session.closed then return end
+        if session.failed or session.closed then
+          return
+        end
         local callback_ok, callback_error = invoke(options, options.on_record, record)
-        if not callback_ok then fail(protocol.error("callback_failed", tostring(callback_error))) end
+        if not callback_ok then
+          fail(protocol.error("callback_failed", tostring(callback_error)))
+        end
       end)
     end
   end
   local function stderr(_, data)
-    if session.failed or session.closed or not data or #data == 0 then return end
+    if session.failed or session.closed or not data or #data == 0 then
+      return
+    end
     session.stderr_bytes = session.stderr_bytes + #data
-    fail(protocol.error(session.stderr_bytes > protocol.MAX_STDERR_BYTES
-      and "stderr_too_large" or "stderr_output"))
+    fail(
+      protocol.error(
+        session.stderr_bytes > protocol.MAX_STDERR_BYTES and "stderr_too_large" or "stderr_output"
+      )
+    )
   end
   local function on_exit(result)
-    if session.closed or session.exiting then return end
+    if session.closed or session.exiting then
+      return
+    end
     -- stdout schedules record callbacks.  Keep the transport open from the
     -- callbacks' perspective until those callbacks have drained; otherwise
     -- a same-tick on_exit discards already-parsed terminal records.
@@ -265,7 +365,9 @@ function M.start_stream(options)
 end
 
 function M.write(session, data)
-  if not session or not session.process or session.closed or session.failed then return false end
+  if not session or not session.process or session.closed or session.failed then
+    return false
+  end
   local ok = pcall(session.process.write, session.process, data)
   return ok
 end

@@ -1,6 +1,6 @@
 import { startStreamingCommand } from "./command-process.js";
-import { WatchProtocolValidator } from "./watch-protocol.js";
 import { protocol } from "./command-protocol.js";
+import { WatchProtocolValidator } from "./watch-protocol.js";
 
 const STOP_TIMEOUT_MS = 1_500;
 const FORCE_KILL_DELAY_MS = 100;
@@ -35,20 +35,26 @@ export class WatchCommand {
       closed: false,
       forceTimer: undefined,
       teardownTimer: undefined,
-      stopTimedOut: false
+      stopTimedOut: false,
     };
     this.active = session;
     try {
       session.transport = startStreamingCommand({
         command: configuration.command,
-        args: ["watch", "--output-format", "structured", "--invocation-id", invocationId,
-          configuration.projectRoot],
+        args: [
+          "watch",
+          "--output-format",
+          "structured",
+          "--invocation-id",
+          invocationId,
+          configuration.projectRoot,
+        ],
         cwd: configuration.cwd,
         invocationId,
         spawnProcess: this.registry.spawnProcess,
         onRecord: (record) => this.record(session, record),
         onError: (error) => this.error(session, error),
-        onClose: (event) => this.close(session, event)
+        onClose: (event) => this.close(session, event),
       });
     } catch (error) {
       this.error(session, error);
@@ -66,12 +72,14 @@ export class WatchCommand {
     session.stopPromise = new Promise((resolve) => {
       session.stopResolve = resolve;
     });
-    if (!session.transport?.write({
-      version: 1,
-      command: "watch",
-      action: "cancel",
-      invocation_id: session.invocationId
-    })) {
+    if (
+      !session.transport?.write({
+        version: 1,
+        command: "watch",
+        action: "cancel",
+        invocation_id: session.invocationId,
+      })
+    ) {
       this.error(session, protocol("cancel_write_failed"));
       return session.stopPromise;
     }
@@ -99,8 +107,16 @@ export class WatchCommand {
     try {
       session.validator.consume(record);
       if (record.event === "watch.started") session.projectRoot = session.validator.projectRoot;
-      if (["watch.started", "watch.build.started", "watch.waiting", "watch.cancel.requested",
-        "watch.control.error", "watch.notify.error"].includes(record.event)) {
+      if (
+        [
+          "watch.started",
+          "watch.build.started",
+          "watch.waiting",
+          "watch.cancel.requested",
+          "watch.control.error",
+          "watch.notify.error",
+        ].includes(record.event)
+      ) {
         const detail = JSON.stringify(record.data);
         this.registry.userInterface.commandWatchStatus(detail);
       } else if (record.event === "watch.build.completed") {
@@ -111,7 +127,7 @@ export class WatchCommand {
         this.registry.replaceWatchDiagnostics(
           session,
           record.data.diagnostics,
-          session.projectRoot
+          session.projectRoot,
         );
         const detail = JSON.stringify(record.data);
         this.registry.userInterface.commandWatchStatus(detail);
@@ -216,8 +232,11 @@ export class WatchCommand {
     const stopping = this.stop();
     const timeout = new Promise((resolve) => {
       const setTimeout_ = this.clock.setTimeout ?? setTimeout;
-      const timer = setTimeout_(resolve, this.registry.options.watchDisposeTimeoutMs ??
-        this.stopTimeoutMs + this.forceKillDelayMs + 100);
+      setTimeout_(
+        resolve,
+        this.registry.options.watchDisposeTimeoutMs
+          ?? this.stopTimeoutMs + this.forceKillDelayMs + 100,
+      );
     });
     await Promise.race([stopping, timeout]);
     if (this.active === session && !session.recovery) this.recover(session, false);

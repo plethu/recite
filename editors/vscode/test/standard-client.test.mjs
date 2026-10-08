@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 import { ReciteStandardClient } from "../src/standard-client.js";
-import { hostApi, action } from "./controller-fixtures.mjs";
+import { action, hostApi } from "./controller-fixtures.mjs";
 
 class FakeLanguageClient {
   constructor(_id, _name, server, options) {
@@ -10,9 +10,16 @@ class FakeLanguageClient {
     this.requests = [];
     FakeLanguageClient.current = this;
   }
-  onDidChangeState(listener) { this.stateListener = listener; return { dispose() {} }; }
-  async start() { this.started = true; }
-  async stop() { this.stopped = true; }
+  onDidChangeState(listener) {
+    this.stateListener = listener;
+    return { dispose() {} };
+  }
+  async start() {
+    this.started = true;
+  }
+  async stop() {
+    this.stopped = true;
+  }
   async sendRequest(method, params, token) {
     this.requestArgumentCount = arguments.length;
     this.requests.push({ method, params, token });
@@ -23,30 +30,44 @@ const load = async () => ({
   LanguageClient: FakeLanguageClient,
   State: { Stopped: 3 },
   ErrorAction: { Shutdown: 2 },
-  CloseAction: { DoNotRestart: 2 }
+  CloseAction: { DoNotRestart: 2 },
 });
 
 test("standard client delegates synchronization and language features to the library", async () => {
   const api = hostApi({ isTrusted: () => true });
   const controller = {
     createEditCommandBatch: () => ({ finish() {} }),
-    createEditCommand: () => ({ title: "Apply", command: "recite.applyCodeAction" })
+    createEditCommand: () => ({ title: "Apply", command: "recite.applyCodeAction" }),
   };
-  const client = new ReciteStandardClient(api,
-    { command: "recite-lsp", args: ["--stdio"], cwd: "/project", projectRootOverridden: true }, controller, load);
+  const client = new ReciteStandardClient(
+    api,
+    { command: "recite-lsp", args: ["--stdio"], cwd: "/project", projectRootOverridden: true },
+    controller,
+    load,
+  );
   await client.start();
   const implementation = FakeLanguageClient.current;
   assert.equal(client.status, "running");
   assert.deepEqual(implementation.server, {
-    command: "recite-lsp", args: ["--stdio"], options: { cwd: "/project", shell: false }
+    command: "recite-lsp",
+    args: ["--stdio"],
+    options: { cwd: "/project", shell: false },
   });
-  assert.deepEqual(implementation.options.documentSelector.map((entry) => entry.scheme), ["file", "untitled"]);
+  assert.deepEqual(implementation.options.documentSelector.map((entry) => entry.scheme), [
+    "file",
+    "untitled",
+  ]);
   assert.equal(implementation.options.workspaceFolder.uri.toString(), "file:///project");
   assert.equal(api.registeredProviders.length, 0);
   assert.equal(implementation.options.middleware.provideRenameEdits(), undefined);
-  await client.request("textDocument/prepareRename", { textDocument: { uri: "file:///project/start.recite" } });
-  assert.equal(implementation.requestArgumentCount, 2,
-    "raw requests without cancellation must not pass an undefined token");
+  await client.request("textDocument/prepareRename", {
+    textDocument: { uri: "file:///project/start.recite" },
+  });
+  assert.equal(
+    implementation.requestArgumentCount,
+    2,
+    "raw requests without cancellation must not pass an undefined token",
+  );
   await client.stop();
   assert.equal(implementation.stopped, true);
 });
@@ -54,11 +75,16 @@ test("standard client delegates synchronization and language features to the lib
 test("multi-root workspaces leave folder discovery to the language client", async () => {
   const api = hostApi({ isTrusted: () => true });
   api.workspace.workspaceFolders = ["/first", "/second"].map((root, index) => ({
-    name: root.slice(1), uri: api.Uri.file(root), index
+    name: root.slice(1),
+    uri: api.Uri.file(root),
+    index,
   }));
-  const client = new ReciteStandardClient(api,
+  const client = new ReciteStandardClient(
+    api,
     { command: "recite-lsp", args: [], cwd: "/first", projectRootOverridden: false },
-    {}, load);
+    {},
+    load,
+  );
 
   await client.start();
   assert.equal(FakeLanguageClient.current.options.workspaceFolder, undefined);
@@ -73,16 +99,26 @@ test("code actions keep version guards and cancellation at the Recite boundary",
   const edits = [];
   const controller = {
     createEditCommandBatch: () => ({ finish() {} }),
-    createEditCommand: (_title, edit) => { edits.push(edit); return { command: "recite.applyCodeAction" }; }
+    createEditCommand: (_title, edit) => {
+      edits.push(edit);
+      return { command: "recite.applyCodeAction" };
+    },
   };
-  const client = new ReciteStandardClient(api,
-    { command: "recite-lsp", args: [], cwd: "/project" }, controller, load);
+  const client = new ReciteStandardClient(
+    api,
+    { command: "recite-lsp", args: [], cwd: "/project" },
+    controller,
+    load,
+  );
   await client.start();
   const implementation = FakeLanguageClient.current;
   implementation.response = [action(document, "Add ID")];
-  const result = await implementation.options.middleware.provideCodeActions(document,
+  const result = await implementation.options.middleware.provideCodeActions(
+    document,
     { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } },
-    { diagnostics: [] }, { isCancellationRequested: false });
+    { diagnostics: [] },
+    { isCancellationRequested: false },
+  );
   assert.equal(result[0].command.command, "recite.applyCodeAction");
   assert.equal(edits[0].reciteVersionStatus(), "current");
   document.version += 1;

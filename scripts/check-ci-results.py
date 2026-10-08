@@ -5,29 +5,30 @@ import json
 import os
 import sys
 
-
-LANES = {
-    "rust", "windows-publisher", "docs", "site", "editor", "benchmark-smoke",
-    "maintainability", "packages",
-}
+from ci_scope_config import LANES
 
 
 def failures(needs):
+    if not isinstance(needs, dict):
+        return ["required job results must be an object"]
     errors = []
-    for job in {"changes", "git-policy"}:
-        if needs.get(job, {}).get("result") != "success":
+    jobs = {job: value if isinstance(value, dict) else {} for job, value in needs.items()}
+    for job in ("changes", "git-policy"):
+        if jobs.get(job, {}).get("result") != "success":
             errors.append(f"{job} did not succeed")
-    scope = needs.get("changes", {}).get("outputs", {})
+    scope = jobs.get("changes", {}).get("outputs", {})
+    if not isinstance(scope, dict):
+        scope = {}
     if set(scope) != LANES:
         errors.append("scope outputs are missing or unexpected")
     if set(needs) != LANES | {"changes", "git-policy"}:
         errors.append("required jobs are missing or unexpected")
     for lane in sorted(LANES):
         selection = scope.get(lane)
-        if selection not in {"true", "false"}:
+        if selection not in ("true", "false"):
             errors.append(f"{lane}: invalid selection {selection!r}")
             continue
-        result = needs.get(lane, {}).get("result")
+        result = jobs.get(lane, {}).get("result")
         expected = "success" if selection == "true" else "skipped"
         if result != expected:
             errors.append(f"{lane}: expected {expected}, got {result}")

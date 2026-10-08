@@ -123,17 +123,19 @@ impl Component for DocumentTabs {
                                 .on_press(move |_| {
                                     // Harvest before checking: rendered dirty state can lag typing.
                                     writer.buffers.harvest();
-                                    let state = writer.buffers.model.peek();
-                                    let dirty = state
-                                        .as_ref()
-                                        .ok()
-                                        .zip(writer.files.peek().as_ref())
-                                        .is_none_or(|(model, files)| {
-                                            files
-                                                .open_documents(model)
-                                                .iter()
-                                                .any(|(p, d)| p == &close_target && *d)
-                                        });
+                                    let dirty = {
+                                        let state = writer.buffers.model.peek();
+                                        state
+                                            .as_ref()
+                                            .ok()
+                                            .zip(writer.files.peek().as_ref())
+                                            .is_none_or(|(model, files)| {
+                                                files
+                                                    .open_documents(model)
+                                                    .iter()
+                                                    .any(|(p, d)| p == &close_target && *d)
+                                            })
+                                    };
                                     if dirty {
                                         closing.set(Some(close_target.clone()));
                                         submit_id.request_focus();
@@ -170,10 +172,24 @@ impl Component for DocumentTabs {
                     caption: text(MsgId::WriterSaveCloseDocument),
                     enabled: true,
                     action: EventHandler::new(move |()| {
-                        let result = writer
-                            .buffers
-                            .switch(writer.files, &path, writer.dark, |_| Ok(()))
-                            .and_then(|()| writer.buffers.save(writer.files));
+                        let result = if writer
+                            .files
+                            .peek()
+                            .as_ref()
+                            .is_some_and(|files| files.current == path)
+                        {
+                            writer.buffers.save(writer.files)
+                        } else {
+                            writer.buffers.harvest();
+                            let mut state = writer.buffers.model.write();
+                            let mut files = writer.files.write();
+                            match (state.as_mut(), files.as_mut()) {
+                                (Ok(model), Some(files)) => files
+                                    .save_document(model, &path)
+                                    .map_err(|error| error.to_string()),
+                                _ => Err("Open a project first.".into()),
+                            }
+                        };
                         match result {
                             Ok(()) => {
                                 if close(writer, &path) {
@@ -202,6 +218,11 @@ impl Component for DocumentTabs {
     }
 }
 fn close(mut writer: Writer, path: &std::path::Path) -> bool {
+    let active = writer
+        .files
+        .peek()
+        .as_ref()
+        .is_some_and(|files| files.current == path);
     let result = {
         let mut state = writer.buffers.model.write();
         let mut files = writer.files.write();
@@ -215,6 +236,9 @@ fn close(mut writer: Writer, path: &std::path::Path) -> bool {
     if let Err(e) = result {
         writer.message.error(e);
         return false;
+    }
+    if !active {
+        return true;
     }
     let model = writer.buffers.model.peek();
     if let Ok(model) = model.as_ref() {

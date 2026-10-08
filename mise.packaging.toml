@@ -1,0 +1,7 @@
+[tools]
+# Native installers are optional; ordinary development does not need the packager.
+"cargo:cargo-packager" = "0.11.8"
+
+[settings]
+# Keep the existing locked source build independent of ambient cargo-binstall shims.
+cargo.binstall = false

@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/authoring", "crates/freya", "crates/grammar"]
 resolver = "3"
+members = ["crates/authoring", "crates/freya", "crates/grammar"]
 
 [workspace.package]
 version = "0.0.0"
@@ -10,24 +10,24 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
-recite-writer-model = { path = "crates/authoring" }
 recite-compiler = { path = "../../crates/recite-compiler" }
 recite-core = { path = "../../crates/recite-core" }
 recite-parser = { path = "../../crates/recite-parser" }
 recite-runtime = { path = "../../crates/recite-runtime" }
+recite-writer-model = { path = "crates/authoring" }
 thiserror = "2"
+
+[workspace.lints.clippy]
+expect_used = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "deny"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
-[workspace.lints.clippy]
-unwrap_used = "deny"
-expect_used = "deny"
-todo = "deny"
-unimplemented = "deny"
+[profile.bench]
+debug = "line-tables-only"
 
 [profile.dev]
 debug = 0
-
-[profile.bench]
-debug = "line-tables-only"

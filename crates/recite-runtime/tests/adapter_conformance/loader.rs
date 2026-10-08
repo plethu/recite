@@ -11,7 +11,6 @@ const MANIFEST_SCHEMA_PATH: &str =
     "fixtures/adapter-conformance/v1/adapter-conformance-manifest-v1.schema.json";
 const OPERATION_SCHEMA_PATH: &str =
     "fixtures/adapter-conformance/v1/adapter-conformance-operation-result-v1.schema.json";
-const ADAPTER_CONTRACT_PATH: &str = "docs/engine-adapter-contract.md";
 
 pub(crate) fn load_manifest() -> Result<ConformanceManifest, String> {
     let source = fs::read_to_string(workspace_path(MANIFEST_PATH))
@@ -20,38 +19,6 @@ pub(crate) fn load_manifest() -> Result<ConformanceManifest, String> {
         .map_err(|error| format!("failed to parse `{MANIFEST_PATH}` JSON: {error}"))?;
     validate_manifest_structure(&manifest)?;
     Ok(manifest)
-}
-
-pub(crate) fn load_contract_error_categories() -> Result<Vec<String>, String> {
-    let source = fs::read_to_string(workspace_path(ADAPTER_CONTRACT_PATH))
-        .map_err(|error| format!("failed to read `{ADAPTER_CONTRACT_PATH}`: {error}"))?;
-
-    let mut in_error_section = false;
-    let mut categories = Vec::new();
-    for line in source.lines() {
-        let trimmed = line.trim();
-        if trimmed == "## 12. Error Categories" {
-            in_error_section = true;
-            continue;
-        }
-        if in_error_section && trimmed.starts_with("## ") {
-            break;
-        }
-        if in_error_section
-            && let Some(rest) = trimmed.strip_prefix("- `")
-            && let Some(index) = rest.find('`')
-        {
-            categories.push(rest[..index].to_owned());
-        }
-    }
-
-    if categories.is_empty() {
-        return Err(format!(
-            "no stable error categories found in `{ADAPTER_CONTRACT_PATH}` §12"
-        ));
-    }
-
-    Ok(categories)
 }
 
 pub(crate) fn load_manifest_schema_error_categories() -> Result<Vec<String>, String> {

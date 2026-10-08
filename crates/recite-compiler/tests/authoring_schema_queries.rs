@@ -102,37 +102,42 @@ fn contextual_metadata_uses_canonical_inherited_and_key_context() {
             provenance: Default::default(),
         }),
     );
-    let mut kernel = AuthoringKernel::with_schema(schema);
-    kernel
-        .apply(AuthoringRequest::new(
-            SnapshotGeneration::initial(),
-            [SavedDocument::new(
-                key("main.recite"),
-                ":: start speaker=hazel\n> line subject=warm tone=\n> line voice=\n",
-            )],
-            [],
-        ))
-        .expect("context fixture accepted");
-    let document = key("main.recite");
-    let QueryResult::Ready(tone) = kernel.snapshot().complete(&document, position(2, 26)) else {
-        panic!("metadata-key context resolves");
-    };
-    assert_eq!(
-        tone.iter()
-            .map(|candidate| candidate.name())
-            .collect::<Vec<_>>(),
-        ["market"]
-    );
-    let QueryResult::Ready(voice) = kernel.snapshot().complete(&document, position(3, 14)) else {
-        panic!("block default speaker context resolves");
-    };
-    assert_eq!(
-        voice
-            .iter()
-            .map(|candidate| candidate.name())
-            .collect::<Vec<_>>(),
-        ["soft"]
-    );
+    for ending in ["\n", "\r\n", "\r"] {
+        let mut kernel = AuthoringKernel::with_schema(schema.clone());
+        kernel
+            .apply(AuthoringRequest::new(
+                SnapshotGeneration::initial(),
+                [SavedDocument::new(
+                    key("main.recite"),
+                    ":: start speaker=hazel\n> line subject=warm tone=\n> line voice=\n"
+                        .replace('\n', ending),
+                )],
+                [],
+            ))
+            .expect("context fixture accepted");
+        let document = key("main.recite");
+        let QueryResult::Ready(tone) = kernel.snapshot().complete(&document, position(2, 26))
+        else {
+            panic!("metadata-key context resolves");
+        };
+        assert_eq!(
+            tone.iter()
+                .map(|candidate| candidate.name())
+                .collect::<Vec<_>>(),
+            ["market"]
+        );
+        let QueryResult::Ready(voice) = kernel.snapshot().complete(&document, position(3, 14))
+        else {
+            panic!("block default speaker context resolves");
+        };
+        assert_eq!(
+            voice
+                .iter()
+                .map(|candidate| candidate.name())
+                .collect::<Vec<_>>(),
+            ["soft"]
+        );
+    }
 }
 
 #[test]

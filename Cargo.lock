@@ -123,6 +123,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "archery"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33ca55ee147b1926dbea904f50fe4902494e97bc742205abbbf10c709e43815f"
+dependencies = [
+ "triomphe",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2925,6 +2934,7 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "criterion",
+ "recite-adapter",
  "recite-compiler",
  "recite-core",
  "recite-fixturegen",
@@ -2991,6 +3001,7 @@ dependencies = [
  "same-file",
  "serde",
  "serde_json",
+ "strum",
  "tempfile",
  "toml",
  "unic-langid",
@@ -3006,6 +3017,7 @@ dependencies = [
  "recite-parser",
  "recite-ui",
  "rmp-serde",
+ "rpds",
  "serde-value",
  "serde_json",
  "thiserror 2.0.18",
@@ -3034,6 +3046,7 @@ dependencies = [
  "atomic-write-file",
  "blake3",
  "compact_str 0.8.1",
+ "memchr",
  "rmp-serde",
  "serde",
  "serde-value",
@@ -3048,8 +3061,9 @@ dependencies = [
 
 [[package]]
 name = "recite-ffi"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
+ "criterion",
  "recite-adapter",
  "recite-compiler",
  "recite-core",
@@ -3058,6 +3072,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
+ "stats_alloc",
 ]
 
 [[package]]
@@ -3105,6 +3120,7 @@ dependencies = [
 name = "recite-lsp"
 version = "0.1.0"
 dependencies = [
+ "crossbeam-channel",
  "lsp-server",
  "lsp-types",
  "recite-compiler",
@@ -3116,6 +3132,8 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "tracing",
+ "tracing-subscriber",
  "url",
 ]
 
@@ -3127,6 +3145,31 @@ dependencies = [
  "recite-core",
  "recite-ui",
  "rowan",
+]
+
+[[package]]
+name = "recite-playground"
+version = "0.1.0"
+dependencies = [
+ "recite-compiler",
+ "recite-core",
+ "recite-runtime",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "recite-release"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "toml",
 ]
 
 [[package]]
@@ -3247,6 +3290,16 @@ dependencies = [
  "hashbrown 0.14.5",
  "rustc-hash 1.1.0",
  "text-size",
+]
+
+[[package]]
+name = "rpds"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e025feb26210bc196b908e72deb063b1b4000754304341cbc168a1e72c857ebc"
+dependencies = [
+ "archery",
+ "smallvec",
 ]
 
 [[package]]
@@ -3424,6 +3477,15 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
  "digest",
+]
+
+[[package]]
+name = "sharded-slab"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
+dependencies = [
+ "lazy_static",
 ]
 
 [[package]]
@@ -3907,6 +3969,40 @@ name = "tracing-core"
 version = "0.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
+dependencies = [
+ "once_cell",
+ "valuable",
+]
+
+[[package]]
+name = "tracing-serde"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
+dependencies = [
+ "serde",
+ "tracing-core",
+]
+
+[[package]]
+name = "tracing-subscriber"
+version = "0.3.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sharded-slab",
+ "thread_local",
+ "tracing-core",
+ "tracing-serde",
+]
+
+[[package]]
+name = "triomphe"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b40688ea6389c8171614b25491f71d4a27946e0c7ce2da1c6de27e25abf1a0ae"
 
 [[package]]
 name = "type-map"
@@ -4073,6 +4169,12 @@ dependencies = [
  "serde_core",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "valuable"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
 name = "variadics_please"

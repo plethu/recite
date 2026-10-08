@@ -25,16 +25,23 @@ fn locale_variant_is_supplied_on_start_and_restore() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_start_with_locale_provider_and_variant(
-                asset,
-                std::ptr::null(),
-                locale.as_ptr(),
-                variant.as_ptr(),
-                Some(locale_callback),
-                std::ptr::null_mut(),
-                &raw mut session,
-                &raw mut batch,
-            )
+            assert_eq!(
+                recite_session_create(asset, std::ptr::null(), locale.as_ptr(), &raw mut session),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_locale_variant(session, variant.as_ptr()),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_locale_provider(
+                    session,
+                    Some(locale_callback),
+                    std::ptr::null_mut()
+                ),
+                ReciteStatus::Ok
+            );
+            recite_session_begin(session, &raw mut batch)
         },
         ReciteStatus::Ok
     );
@@ -53,18 +60,28 @@ fn locale_variant_is_supplied_on_start_and_restore() {
     let mut restored = 0;
     assert_eq!(
         unsafe {
-            recite_session_restore_with_values_and_locale_provider_and_variant(
-                asset,
-                snapshot_bytes.as_ptr(),
-                snapshot_bytes.len(),
-                std::ptr::null(),
-                0,
-                variant.as_ptr(),
-                Some(locale_callback),
-                std::ptr::null_mut(),
-                &raw mut restored,
-                &raw mut batch,
-            )
+            assert_eq!(
+                recite_session_prepare_restore(
+                    asset,
+                    snapshot_bytes.as_ptr(),
+                    snapshot_bytes.len(),
+                    &raw mut restored
+                ),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_locale_variant(restored, variant.as_ptr()),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_locale_provider(
+                    restored,
+                    Some(locale_callback),
+                    std::ptr::null_mut()
+                ),
+                ReciteStatus::Ok
+            );
+            recite_session_begin(restored, &raw mut batch)
         },
         ReciteStatus::Ok
     );

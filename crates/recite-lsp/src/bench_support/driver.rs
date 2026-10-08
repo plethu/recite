@@ -84,15 +84,17 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn change_file(&mut self, probe: &LspDocumentProbe) -> usize {
-        self.workspace
-            .open_refreshes(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
+        // Exercise a real local edit, rather than only advancing the version of
+        // byte-identical input. Structural/prose variants live in the stdio suite.
+        let mut text = read_probe_text_or_panic(probe);
+        text.push_str("\n# benchmark local edit\n");
         match self.workspace.change(
             probe.uri.clone(),
             2,
             vec![TextDocumentContentChangeEvent {
                 range: None,
                 range_length: None,
-                text: read_probe_text_or_panic(probe),
+                text,
             }],
         ) {
             WorkspaceChangeResult::Accepted(refresh) => diagnostic_count(refresh),

@@ -6,7 +6,13 @@ import { parseRepresentableMessages } from "../../message-projection-parser.mjs"
 const scriptRoot = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(scriptRoot, "..");
 const repositoryRoot = path.resolve(packageRoot, "../..");
-const inventoryPath = path.join(repositoryRoot, "crates", "recite-ui", "resources", "inventory.toml");
+const inventoryPath = path.join(
+  repositoryRoot,
+  "crates",
+  "recite-ui",
+  "resources",
+  "inventory.toml",
+);
 
 export async function projectMessages({ sourceOverride } = {}) {
   const inventory = await readFile(inventoryPath, "utf8");
@@ -22,7 +28,8 @@ export async function projectMessages({ sourceOverride } = {}) {
   }
 
   const source = sourceOverride ?? await readFile(
-    path.join(repositoryRoot, "crates", "recite-ui", "resources", sourceResource), "utf8"
+    path.join(repositoryRoot, "crates", "recite-ui", "resources", sourceResource),
+    "utf8",
   );
   const canonical = parseRepresentableMessages(source, ids, "Neovim");
   const messages = ids.map((id) => {
@@ -44,13 +51,19 @@ async function assertCallsites(ids) {
     const source = await readFile(file, "utf8");
     for (const match of source.matchAll(/messages\.format\("([a-z0-9-]+)"/g)) {
       if (!known.has(match[1])) {
-        throw new Error(`${path.relative(repositoryRoot, file)} uses an undeclared Neovim UI message ${match[1]}`);
+        throw new Error(
+          `${path.relative(repositoryRoot, file)} uses an undeclared Neovim UI message ${match[1]}`,
+        );
       }
     }
-    if (/\bhealth\.(?:start|ok|error|warn|info)\(\s*["']/.test(source)
+    if (
+      /\bhealth\.(?:start|ok|error|warn|info)\(\s*["']/.test(source)
       || /vim\.notify\(\s*["']/.test(source)
-      || /\bdesc\s*=\s*["']/.test(source)) {
-      throw new Error(`${path.relative(repositoryRoot, file)} contains a hard-coded Recite-owned UI string`);
+      || /\bdesc\s*=\s*["']/.test(source)
+    ) {
+      throw new Error(
+        `${path.relative(repositoryRoot, file)} contains a hard-coded Recite-owned UI string`,
+      );
     }
   }
 }
@@ -97,7 +110,11 @@ if (path.resolve(process.argv[1] ?? "") === path.resolve(fileURLToPath(import.me
   if (process.argv.includes("--check")) {
     const current = await readFile(destination, "utf8").catch(() => null);
     if (current !== generated) {
-      throw new Error(`${path.relative(repositoryRoot, destination)} is stale; run the message projection generator`);
+      throw new Error(
+        `${
+          path.relative(repositoryRoot, destination)
+        } is stale; run the message projection generator`,
+      );
     }
   } else {
     await writeFile(destination, generated, "utf8");

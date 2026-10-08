@@ -15,9 +15,9 @@ def evidence_artifacts(evidence: dict) -> set[str]:
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        raise SystemExit("usage: assert_client_foundation.py CONTRACT DOCUMENT")
-    contract_path, document_path = map(Path, sys.argv[1:])
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: assert_client_foundation.py CONTRACT")
+    contract_path = Path(sys.argv[1])
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     clients = {client["id"]: client for client in contract["clients"]}
     artifacts = {artifact["id"]: artifact for artifact in contract["artifacts"]}
@@ -26,14 +26,25 @@ def main() -> int:
         client = clients[client_id]
         if client["status"] != "partial":
             raise SystemExit(f"{client_id} foundation must remain partial")
-        if client["platform_status"] != {"linux": "partial", "macos": "planned", "windows": "planned"}:
+        if client["platform_status"] != {
+            "linux": "partial",
+            "macos": "planned",
+            "windows": "planned",
+        }:
             raise SystemExit(f"{client_id} foundation must claim Linux-only partial evidence")
 
     artifact = artifacts["vscode-vsix"]
     if artifact["status"] != "partial" or artifact["path"] is not None:
-        raise SystemExit("VS Code artifact must remain a partial generated artifact, not checked-in archive")
-    if "package-checked" not in artifact["notes"] or "ignored build output" not in artifact["notes"]:
-        raise SystemExit("VS Code artifact notes must distinguish package checks from checked-in output")
+        raise SystemExit(
+            "VS Code artifact must remain a partial generated artifact, not checked-in archive"
+        )
+    if (
+        "package-checked" not in artifact["notes"]
+        or "ignored build output" not in artifact["notes"]
+    ):
+        raise SystemExit(
+            "VS Code artifact notes must distinguish package checks from checked-in output"
+        )
 
     capabilities = {capability["id"]: capability for capability in contract["capabilities"]}
     expected_client_evidence = {
@@ -61,13 +72,19 @@ def main() -> int:
         and "scripts/check-vscode.sh" in capability["expected_evidence"].get("commands", [])
     }
     if actual_client_evidence != expected_client_evidence:
-        raise SystemExit("VS Code partial client evidence rows drifted from the checked package/live surface")
+        raise SystemExit(
+            "VS Code partial client evidence rows drifted from the checked package/live surface"
+        )
     for capability_id in expected_client_evidence:
         capability = capabilities[capability_id]
         expected_evidence_issue = "#53" if capability_id.startswith("command.") else "#51"
         if expected_evidence_issue not in capability.get("evidence_issues", []):
-            raise SystemExit(f"{capability_id} must retain historical evidence issue {expected_evidence_issue}")
-        if not capability_id.startswith("command.") and "vscode-vsix" not in evidence_artifacts(capability["expected_evidence"]):
+            raise SystemExit(
+                f"{capability_id} must retain historical evidence issue {expected_evidence_issue}"
+            )
+        if not capability_id.startswith("command.") and "vscode-vsix" not in evidence_artifacts(
+            capability["expected_evidence"]
+        ):
             raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
 
     expected_zed_evidence = {
@@ -94,10 +111,16 @@ def main() -> int:
         and "scripts/check-zed.sh" in capability["expected_evidence"].get("commands", [])
     }
     if actual_zed_evidence != expected_zed_evidence:
-        raise SystemExit("Zed partial client evidence rows drifted from the checked package/static surface")
+        raise SystemExit(
+            "Zed partial client evidence rows drifted from the checked package/static surface"
+        )
     for capability_id in expected_zed_evidence:
-        if "zed-extension" not in evidence_artifacts(capabilities[capability_id]["expected_evidence"]):
-            raise SystemExit(f"{capability_id} must attribute package/static evidence to zed-extension")
+        if "zed-extension" not in evidence_artifacts(
+            capabilities[capability_id]["expected_evidence"]
+        ):
+            raise SystemExit(
+                f"{capability_id} must attribute package/static evidence to zed-extension"
+            )
     zed_syntax = capabilities["editor.zed.syntax-projection"]
     if zed_syntax["client_status"].get("vscode") != "planned":
         raise SystemExit("editor.zed.syntax-projection must not project Zed evidence to VS Code")
@@ -113,7 +136,9 @@ def main() -> int:
     }
     for capability_id, capability in zed_host_capabilities.items():
         if "#192" not in capability.get("evidence_issues", []):
-            raise SystemExit(f"{capability_id} must retain historical evidence issue #192 for Zed host evidence")
+            raise SystemExit(
+                f"{capability_id} must retain historical evidence issue #192 for Zed host evidence"
+            )
 
     expected_zed_command_status = {
         "command.compile.validate.extract": "partial",
@@ -125,8 +150,7 @@ def main() -> int:
         actual_status = capabilities[capability_id]["client_status"].get("zed")
         if actual_status != expected_status:
             raise SystemExit(
-                f"{capability_id} must retain Zed status {expected_status!r}, "
-                f"not {actual_status!r}"
+                f"{capability_id} must retain Zed status {expected_status!r}, not {actual_status!r}"
             )
 
     static_task_assertions = {
@@ -166,17 +190,19 @@ def main() -> int:
             raise SystemExit(f"{capability_id} must retain its positive Zed host assertion")
 
     cancellation = capabilities["lsp.cancellation"]
-    if cancellation.get("implementation_status") != "unsupported":
-        raise SystemExit("lsp.cancellation implementation status must remain unsupported until #206")
-    if cancellation.get("expected_evidence", {}).get("status") != "unsupported":
-        raise SystemExit("lsp.cancellation evidence status must remain unsupported until #206")
+    if cancellation.get("implementation_status") != "partial":
+        raise SystemExit(
+            "lsp.cancellation implementation status must retain shared-server partial evidence"
+        )
+    if cancellation.get("expected_evidence", {}).get("status") != "partial":
+        raise SystemExit(
+            "lsp.cancellation evidence status must retain shared-server partial evidence"
+        )
     if cancellation.get("follow_up") != "#206":
         raise SystemExit("lsp.cancellation must retain current follow-up #206")
     if set(cancellation.get("client_status", {}).values()) - {"planned", "unsupported"}:
         raise SystemExit("lsp.cancellation must not claim client support before #206")
 
-    if "installed vs code/vscodium activation smoke" not in document_path.read_text(encoding="utf-8").lower():
-        raise SystemExit("editor parity docs must retain the missing host activation boundary")
     print("editor parity VS Code partial-foundation fixture passed")
     return 0
 

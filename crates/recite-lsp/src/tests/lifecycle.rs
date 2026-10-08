@@ -15,7 +15,7 @@ use tempfile::tempdir;
 
 use super::support::{Harness, uri};
 
-pub(super) fn initialize_advertises_full_sync_save_and_utf16() {
+pub(super) fn initialize_advertises_incremental_sync_save_and_utf16() {
     let (harness, result) = Harness::start_with_result(json!({
         "capabilities": ClientCapabilities::default()
     }));
@@ -27,7 +27,7 @@ pub(super) fn initialize_advertises_full_sync_save_and_utf16() {
     match result.capabilities.text_document_sync {
         Some(TextDocumentSyncCapability::Options(options)) => {
             assert_eq!(options.open_close, Some(true));
-            assert_eq!(options.change, Some(TextDocumentSyncKind::FULL));
+            assert_eq!(options.change, Some(TextDocumentSyncKind::INCREMENTAL));
             assert_eq!(
                 options.save,
                 Some(TextDocumentSyncSaveOptions::SaveOptions(Default::default()))

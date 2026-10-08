@@ -31,7 +31,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   usage
   exit 0
 fi
-if (( $# > 1 )); then
+if (($# > 1)); then
   usage >&2
   exit 2
 fi
@@ -166,7 +166,7 @@ probe_pids() {
 terminate_probe_processes() {
   local -a pids remaining
   mapfile -t pids < <(probe_pids)
-  if (( ! ${#pids[@]} )); then
+  if ((! ${#pids[@]})); then
     return 0
   fi
 
@@ -179,19 +179,19 @@ terminate_probe_processes() {
   kill "${pids[@]}" 2>/dev/null || true
   for _ in {1..50}; do
     mapfile -t remaining < <(probe_pids)
-    (( ! ${#remaining[@]} )) && {
+    ((! ${#remaining[@]})) && {
       echo "INFO: private probe processes exited after bounded TERM" >&2
       return 1
     }
     sleep 0.1
   done
-  if (( ${#remaining[@]} )); then
+  if ((${#remaining[@]})); then
     echo "ERROR: private probe processes survived bounded TERM; sending KILL: ${remaining[*]}" >&2
     kill -KILL "${remaining[@]}" 2>/dev/null || true
   fi
   for _ in {1..50}; do
     mapfile -t remaining < <(probe_pids)
-    (( ! ${#remaining[@]} )) && {
+    ((! ${#remaining[@]})) && {
       echo "INFO: private probe processes exited after bounded KILL" >&2
       return 1
     }
@@ -214,7 +214,7 @@ cleanup() {
   elif [[ -d "$probe_dir" ]]; then
     echo "INFO: keeping probe artifacts at $probe_dir" >&2
   fi
-  if (( evidence_failure )) && (( cleanup_status == 0 )); then
+  if ((evidence_failure)) && ((cleanup_status == 0)); then
     cleanup_status=1
   fi
   exit "$cleanup_status"
@@ -285,8 +285,8 @@ cmp -s -- "$proxy_script" "$proxy_probe_script" || {
   exit 1
 }
 
-printf 'format_version = 1\n\n[discovery]\nexcludes = ["host-fixtures/**"]\n' > "$project_dir/recite.project.toml"
-printf '{"lsp":{"recite-lsp":{"binary":{"path":"%s","arguments":[]}}}}\n' "$bin_dir/recite-lsp" > "$project_dir/.zed/settings.json"
+printf 'format_version = 1\n\n[discovery]\nexcludes = ["host-fixtures/**"]\n' >"$project_dir/recite.project.toml"
+printf '{"lsp":{"recite-lsp":{"binary":{"path":"%s","arguments":[]}}}}\n' "$bin_dir/recite-lsp" >"$project_dir/.zed/settings.json"
 cp -- "$fixture" "$fixture_dir/fixture.recite"
 # Keep the checked-in parser fixture authoritative while adding a real
 # non-BMP source marker to the installed-host copy.  The malformed marker
@@ -322,7 +322,7 @@ rm -rf -- "$extension_copy/target"
 # interposes the checked-in transport logger, forwarding all original frames
 # while retaining both the logger and real server under this private path.
 task_log="$probe_dir/task.log"
-cat > "$bin_dir/recite" <<EOF
+cat >"$bin_dir/recite" <<EOF
 #!/usr/bin/env bash
 set -uo pipefail
 printf 'start pid=%s cwd=%s argv=' "\$\$" "\$(pwd)" >> "$task_log"
@@ -335,7 +335,7 @@ exit "\$rc"
 EOF
 chmod 755 "$bin_dir/recite"
 lsp_log="$probe_dir/lsp.log"
-cat > "$bin_dir/recite-lsp" <<EOF
+cat >"$bin_dir/recite-lsp" <<EOF
 #!/usr/bin/env bash
 set -uo pipefail
 env RECITE_PROBE_LSP_REAL="$lsp_probe_bin" RECITE_PROBE_LSP_LOG="$lsp_log" \
@@ -348,10 +348,10 @@ chmod 755 "$bin_dir/recite-lsp"
 # precedence. The service files prevent credential/portal prompts from
 # stealing the private keyboard focus; they never run a replacement service.
 settings='{"disable_ai":true,"telemetry":{"diagnostics":false,"metrics":false},"cursor_blink":false,"show_sign_in":false,"auto_update":false,"session":{"trust_all_worktrees":true}}'
-printf '%s\n' "$settings" > "$user_data/config/settings.json"
-printf '%s\n' "$settings" > "$config_home/zed/settings.json"
+printf '%s\n' "$settings" >"$user_data/config/settings.json"
+printf '%s\n' "$settings" >"$config_home/zed/settings.json"
 for service in org.freedesktop.secrets org.freedesktop.portal.Desktop org.a11y.Bus; do
-  cat > "$data_home/dbus-1/services/$service.service" <<EOF
+  cat >"$data_home/dbus-1/services/$service.service" <<EOF
 [D-BUS Service]
 Name=$service
 Exec=/bin/false
@@ -447,8 +447,8 @@ wait_for_file() {
   local path="$1"
   local waited=0
   while [[ ! -e "$path" ]]; do
-    (( waited += 1 ))
-    (( waited >= timeout_seconds )) && return 1
+    ((waited += 1))
+    ((waited >= timeout_seconds)) && return 1
     sleep 1
   done
 }
@@ -457,8 +457,8 @@ wait_for_file_match() {
   local pattern="$2"
   local waited=0
   while ! [[ -f "$path" ]] || ! rg -q -- "$pattern" "$path"; do
-    (( waited += 1 ))
-    (( waited >= timeout_seconds )) && return 1
+    ((waited += 1))
+    ((waited >= timeout_seconds)) && return 1
     sleep 1
   done
 }
@@ -466,8 +466,8 @@ wait_for_log() {
   local pattern="$1"
   local waited=0
   while ! [[ -f "$zed_log" ]] || ! rg -q -- "$pattern" "$zed_log"; do
-    (( waited += 1 ))
-    (( waited >= timeout_seconds )) && return 1
+    ((waited += 1))
+    ((waited >= timeout_seconds)) && return 1
     sleep 1
   done
 }
@@ -475,8 +475,8 @@ wait_for_probe_process() {
   local needle="$1"
   local waited=0
   while ! probe_processes | rg -F -- "$needle" >/dev/null; do
-    (( waited += 1 ))
-    (( waited >= timeout_seconds )) && return 1
+    ((waited += 1))
+    ((waited >= timeout_seconds)) && return 1
     sleep 1
   done
 }
@@ -498,7 +498,7 @@ start_host() {
   # socket. The direct editor binary avoids zeditor's single-instance client.
   "${host_env[@]}" dbus-run-session -- cage -d -- "$zed_bin" \
     --user-data-dir "$user_data" "$project_dir" \
-    > "$stage_log" 2>&1 &
+    >"$stage_log" 2>&1 &
   cage_pid=$!
   wait_for_file "$runtime_dir/$wayland_display" || {
     echo "private Cage Wayland socket did not appear" >&2
@@ -527,8 +527,8 @@ stop_host() {
   press -M alt -k F4 -m alt || true
   local waited=0
   while [[ -n "$(probe_processes)" ]]; do
-    (( waited += 1 ))
-    (( waited >= 10 )) && break
+    ((waited += 1))
+    ((waited >= 10)) && break
     sleep 1
   done
   if [[ -n "$(probe_processes)" ]]; then
@@ -580,8 +580,8 @@ if "Recite" not in manifest.get("language_servers", {}).get("recite-lsp", {}).ge
     raise SystemExit("installed extension index lacks Recite language-server registration")
 PY
 do
-  (( index_wait += 1 ))
-  (( index_wait >= timeout_seconds )) && {
+  ((index_wait += 1))
+  ((index_wait >= timeout_seconds)) && {
     echo "Zed did not publish the development extension in its index" >&2
     exit 1
   }
@@ -602,7 +602,7 @@ wait_for_probe_process "$bin_dir/recite-lsp" || {
   echo "Zed did not leave recite-lsp running after opening the Recite fixture" >&2
   exit 1
 }
-ps -eo pid=,args= > "$probe_dir/processes-after-lsp.txt"
+ps -eo pid=,args= >"$probe_dir/processes-after-lsp.txt"
 rg -F -- "$bin_dir/recite-lsp" "$probe_dir/processes-after-lsp.txt" >/dev/null || {
   echo "recite-lsp process disappeared before process capture" >&2
   exit 1
@@ -801,7 +801,7 @@ press -M shift -k F8 -m shift
 sleep 2
 capture diagnostic-previous
 diagnostic_previous_hash="$capture_hash"
-if [[ "$diagnostic_start_hash" == "$diagnostic_next_hash" || \
+if [[ "$diagnostic_start_hash" == "$diagnostic_next_hash" ||
   "$diagnostic_next_hash" == "$diagnostic_previous_hash" ]]; then
   echo "diagnostic navigation did not change the rendered host boundary" >&2
   exit 1
@@ -841,7 +841,7 @@ rg -F -- 'watch --output-format structured' "$task_log" >/dev/null || {
 }
 press -M ctrl -k c -m ctrl
 sleep 3
-ps -eo pid=,args= > "$probe_dir/processes-after-watch-stop.txt"
+ps -eo pid=,args= >"$probe_dir/processes-after-watch-stop.txt"
 if probe_processes | rg -F -- "$cli_probe_bin" | rg -e ' watch( |$)' >/dev/null; then
   echo "recite watch process remained after the host keyboard stop boundary" >&2
   exit 1

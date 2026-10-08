@@ -20,61 +20,106 @@ pub(super) fn symbol_locations(
     document: &DocumentSnapshot,
     options: SymbolQueryOptions,
 ) -> Vec<SymbolLocation> {
+    matching_symbol_locations(key, document, options, |_| true)
+}
+
+/// Preserve the full symbol ordering while materializing only cursor hits.
+pub(super) fn symbol_at(
+    key: &DocumentKey,
+    document: &DocumentSnapshot,
+    position: SourcePosition,
+) -> Option<SymbolLocation> {
+    matching_symbol_locations(key, document, SymbolQueryOptions::default(), |span| {
+        contains(span, position)
+    })
+    .into_iter()
+    .next()
+}
+
+fn matching_symbol_locations(
+    key: &DocumentKey,
+    document: &DocumentSnapshot,
+    options: SymbolQueryOptions,
+    matches: impl Fn(&SourceSpan) -> bool,
+) -> Vec<SymbolLocation> {
     let summary = document.summary();
     let mut locations = Vec::new();
     if options.include_declarations() {
-        locations.extend(summary.blocks().iter().filter_map(|block| {
-            Some(SymbolLocation {
-                document: key.clone(),
-                identity: SymbolIdentity::Block(block.id().clone()),
-                kind: SymbolKind::Block,
-                role: SymbolRole::Definition,
-                span: block.id_span()?.clone(),
-            })
-        }));
+        locations.extend(
+            summary
+                .blocks()
+                .iter()
+                .filter(|block| block.id_span().is_some_and(&matches))
+                .filter_map(|block| {
+                    Some(SymbolLocation {
+                        document: key.clone(),
+                        identity: SymbolIdentity::Block(block.id().clone()),
+                        kind: SymbolKind::Block,
+                        role: SymbolRole::Definition,
+                        span: block.id_span()?.clone(),
+                    })
+                }),
+        );
     }
-    locations.extend(summary.block_references().iter().map(|reference| {
-        SymbolLocation {
-            document: key.clone(),
-            identity: SymbolIdentity::Block(reference.block_id().clone()),
-            kind: SymbolKind::BlockReference,
-            role: SymbolRole::Reference,
-            span: reference
-                .block_id_span()
-                .cloned()
-                .unwrap_or_else(|| reference.span().clone()),
-        }
-    }));
-    locations.extend(summary.stable_ids().iter().filter_map(|stable| {
-        if !options.include_declarations() && matches!(stable.source_id(), SourceId::Frozen { .. })
-        {
-            return None;
-        }
-        Some(SymbolLocation {
-            document: key.clone(),
-            identity: SymbolIdentity::Source(stable.source_id().clone()),
-            kind: SymbolKind::StableId,
-            role: if matches!(stable.source_id(), SourceId::Frozen { .. }) {
-                SymbolRole::Definition
-            } else {
-                SymbolRole::Annotation
-            },
-            span: stable.source_id_span()?.clone(),
-        })
-    }));
-    locations.extend(summary.metadata().iter().filter_map(|metadata| {
-        Some(SymbolLocation {
-            document: key.clone(),
-            identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
-            kind: SymbolKind::Metadata,
-            role: SymbolRole::Annotation,
-            span: metadata.key_span()?.clone(),
-        })
-    }));
+    locations.extend(
+        summary
+            .block_references()
+            .iter()
+            .filter(|reference| matches(reference.block_id_span().unwrap_or(reference.span())))
+            .map(|reference| SymbolLocation {
+                document: key.clone(),
+                identity: SymbolIdentity::Block(reference.block_id().clone()),
+                kind: SymbolKind::BlockReference,
+                role: SymbolRole::Reference,
+                span: reference
+                    .block_id_span()
+                    .cloned()
+                    .unwrap_or_else(|| reference.span().clone()),
+            }),
+    );
+    locations.extend(
+        summary
+            .stable_ids()
+            .iter()
+            .filter(|stable| stable.source_id_span().is_some_and(&matches))
+            .filter_map(|stable| {
+                if !options.include_declarations()
+                    && matches!(stable.source_id(), SourceId::Frozen { .. })
+                {
+                    return None;
+                }
+                Some(SymbolLocation {
+                    document: key.clone(),
+                    identity: SymbolIdentity::Source(stable.source_id().clone()),
+                    kind: SymbolKind::StableId,
+                    role: if matches!(stable.source_id(), SourceId::Frozen { .. }) {
+                        SymbolRole::Definition
+                    } else {
+                        SymbolRole::Annotation
+                    },
+                    span: stable.source_id_span()?.clone(),
+                })
+            }),
+    );
+    locations.extend(
+        summary
+            .metadata()
+            .iter()
+            .filter(|metadata| metadata.key_span().is_some_and(&matches))
+            .filter_map(|metadata| {
+                Some(SymbolLocation {
+                    document: key.clone(),
+                    identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
+                    kind: SymbolKind::Metadata,
+                    role: SymbolRole::Annotation,
+                    span: metadata.key_span()?.clone(),
+                })
+            }),
+    );
     for metadata in summary.metadata() {
         let element_spans = metadata.value_element_spans();
         if element_spans.is_empty() {
-            if let Some(span) = metadata.value_span() {
+            if let Some(span) = metadata.value_span().filter(|span| matches(span)) {
                 locations.push(SymbolLocation {
                     document: key.clone(),
                     identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
@@ -84,19 +129,26 @@ pub(super) fn symbol_locations(
                 });
             }
         } else {
-            locations.extend(element_spans.iter().cloned().map(|span| SymbolLocation {
-                document: key.clone(),
-                identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
-                kind: SymbolKind::Metadata,
-                role: SymbolRole::Annotation,
-                span,
-            }));
+            locations.extend(
+                element_spans
+                    .iter()
+                    .filter(|span| matches(span))
+                    .cloned()
+                    .map(|span| SymbolLocation {
+                        document: key.clone(),
+                        identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
+                        kind: SymbolKind::Metadata,
+                        role: SymbolRole::Annotation,
+                        span,
+                    }),
+            );
         }
     }
     locations.extend(
         summary
             .condition_functions()
             .iter()
+            .filter(|function| matches(function.span()))
             .map(|function| SymbolLocation {
                 document: key.clone(),
                 identity: SymbolIdentity::Function(function.name().to_owned()),
@@ -109,6 +161,7 @@ pub(super) fn symbol_locations(
         summary
             .effect_functions()
             .iter()
+            .filter(|function| matches(function.span()))
             .map(|function| SymbolLocation {
                 document: key.clone(),
                 identity: SymbolIdentity::Function(function.name().to_owned()),
@@ -173,3 +226,6 @@ fn clause_name(kind: super::types::ClauseKind) -> &'static str {
         super::types::ClauseKind::If => "if",
     }
 }
+
+#[cfg(test)]
+mod tests;

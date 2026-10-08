@@ -2,7 +2,7 @@
 mod bookmarks;
 use crate::{
     editing::{Session, editor_data},
-    project::ProjectFiles,
+    project::{FileError, ProjectFiles},
 };
 pub(crate) use bookmarks::Bookmarks;
 use freya::{code_editor::CodeEditorData, prelude::*};
@@ -66,7 +66,18 @@ impl Buffers {
         }
     }
 
-    pub(super) fn save(mut self, mut files: State<Option<ProjectFiles>>) -> Result<(), String> {
+    pub(super) fn save(self, files: State<Option<ProjectFiles>>) -> Result<(), String> {
+        self.save_with(files, ProjectFiles::save_current)
+    }
+
+    fn save_with(
+        mut self,
+        mut files: State<Option<ProjectFiles>>,
+        save: impl FnOnce(
+            &mut ProjectFiles,
+            &mut recite_writer_model::Workbench,
+        ) -> Result<(), FileError>,
+    ) -> Result<(), String> {
         self.harvest();
         let mut model = self.model;
         let mut state = model.write();
@@ -84,7 +95,7 @@ impl Buffers {
                 .validate(workbench.document())
                 .map_err(|error| error.to_string())?;
         }
-        workbench.apply().map_err(|error| error.to_string())?;
+        let outcome = save(project, workbench).map_err(|error| error.to_string());
         let reply = self
             .rules
             .peek()
@@ -94,17 +105,7 @@ impl Buffers {
             self.rules
                 .set(workbench.document().reply_rules(&reply).ok());
         }
-        let grouped = project.project_edit_pending(workbench);
-        project
-            .save(workbench.document().source())
-            .map_err(|error| error.to_string())?;
-        project
-            .checkpoint(workbench)
-            .map_err(|error| error.to_string())?;
-        if grouped {
-            project.save_retained().map_err(|error| error.to_string())?;
-        }
-        Ok(())
+        outcome
     }
 
     pub(super) fn switch(
@@ -141,35 +142,15 @@ impl Buffers {
         Ok(())
     }
 
-    pub(super) fn save_all(mut self, mut files: State<Option<ProjectFiles>>) -> Result<(), String> {
-        self.save(files)?;
-        let mut files = files.write();
-        let project = files.as_mut().ok_or("Open a project first.")?;
-        project.save_retained().map_err(|e| e.to_string())?;
-        if let Some(session) = &mut project.declarations
-            && session.dirty()
-        {
-            session.save_and_generate().map_err(|e| e.to_string())?;
-            if let Ok(model) = self.model.write().as_mut() {
-                project.refresh(model).map_err(|e| e.to_string())?;
-            }
-        }
-        Ok(())
+    pub(super) fn save_all(self, files: State<Option<ProjectFiles>>) -> Result<(), String> {
+        self.save_with(files, ProjectFiles::save_all)
     }
 
     pub(super) fn can_leave(self, files: Option<&ProjectFiles>) -> bool {
         self.harvest();
-        self.model.peek().as_ref().is_ok_and(|m| {
-            !m.has_draft()
-                && files.is_none_or(|f| {
-                    !f.dirty(m.document().source())
-                        && !f.retained_dirty()
-                        && !f.builds.busy()
-                        && !f
-                            .declarations
-                            .as_ref()
-                            .is_some_and(|s| s.dirty() || s.busy())
-                })
-        })
+        self.model
+            .peek()
+            .as_ref()
+            .is_ok_and(|m| !m.has_draft() && files.is_none_or(|f| f.can_leave(m)))
     }
 }

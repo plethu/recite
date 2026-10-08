@@ -13,6 +13,7 @@ mod interpolation;
 mod locale;
 mod output;
 mod session;
+mod tagged_value;
 
 pub use asset::{recite_asset_free, recite_asset_info, recite_asset_load};
 pub use buffer::{ReciteBuffer, recite_buffer_free};
@@ -34,24 +35,18 @@ pub use locale::{
 };
 pub use session::{
     recite_session_acknowledge_effect, recite_session_begin, recite_session_choose,
-    recite_session_clear_locale_provider, recite_session_create, recite_session_create_with_values,
-    recite_session_free, recite_session_register_condition, recite_session_restore,
-    recite_session_restore_with_catalog, recite_session_restore_with_values,
-    recite_session_restore_with_values_and_locale_provider,
-    recite_session_restore_with_values_and_locale_provider_and_variant,
+    recite_session_clear_locale_provider, recite_session_create, recite_session_free,
+    recite_session_prepare_restore, recite_session_register_condition, recite_session_restore,
     recite_session_set_interpolation_values, recite_session_set_locale_provider,
     recite_session_set_locale_variant, recite_session_snapshot, recite_session_start,
-    recite_session_start_with_locale_provider,
-    recite_session_start_with_locale_provider_and_variant, recite_session_start_with_values,
-    recite_session_start_with_values_and_locale_provider,
-    recite_session_start_with_values_and_locale_provider_and_variant,
 };
 
 /// ABI major version for the generated C header.
 ///
-/// Increment this for breaking C ABI changes.
+/// Stable ABI families use major bumps for breaking changes. The current
+/// unreleased 0.x family versions interface changes through its minor revision.
 pub const RECITE_FFI_VERSION_MAJOR: u32 = 0;
-/// ABI minor version for additive, backwards-compatible C ABI changes.
-pub const RECITE_FFI_VERSION_MINOR: u32 = 6;
+/// Pre-release ABI revision; hosts must ship matching headers and libraries.
+pub const RECITE_FFI_VERSION_MINOR: u32 = 7;
 /// ABI patch version for documentation-only or implementation-only releases.
 pub const RECITE_FFI_VERSION_PATCH: u32 = 0;

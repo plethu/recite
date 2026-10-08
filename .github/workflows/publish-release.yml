@@ -1,0 +1,133 @@
+name: Publish verified release
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run:
+        description: Successful Release candidate run ID
+        required: true
+        type: string
+      version:
+        description: Exact verified version; its signed vVERSION tag must already exist
+        required: true
+        type: string
+      commit:
+        description: Exact verified candidate commit ID
+        required: true
+        type: string
+      release_issue:
+        description: Release tracking issue containing accepted scope and compatibility notes
+        required: true
+        type: string
+      crates:
+        description: Optional space-separated crate names to publish; blank skips registry publication
+        type: string
+        default: ""
+      registry_only:
+        description: Publish only a registry batch; defer GitHub release publication
+        type: boolean
+        default: false
+
+concurrency:
+  group: publish-${{ inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+      issues: read
+    env:
+      MISE_ENV: release
+      MISE_EXEC_AUTO_INSTALL: "false"
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      COMMIT: ${{ inputs.commit }}
+      CANDIDATE_RUN: ${{ inputs.candidate_run }}
+      RELEASE_ISSUE: ${{ inputs.release_issue }}
+      CRATES: ${{ inputs.crates }}
+    steps:
+      # Execute only the protected main verifier, never scripts from downloaded artifacts.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust github:crate-ci/cargo-release aqua:jqlang/jq aqua:cli/cli
+      - name: Require the successful candidate workflow and a signed immutable tag
+        run: |
+          [[ "$CANDIDATE_RUN" =~ ^[0-9]+$ && "$RELEASE_ISSUE" =~ ^[0-9]+$ ]]
+          if [[ "$REGISTRY_ONLY" == true ]]; then test -n "$CRATES"; fi
+          mkdir -p target
+          gh api repos/plethu/recite/environments/release | jq -e 'any(.protection_rules[]; .type == "required_reviewers" and (.reviewers | length) > 0) and .deployment_branch_policy.custom_branch_policies'
+          gh api repos/plethu/recite/environments/release/deployment-branch-policies | jq -e '.branch_policies | length == 1 and .[0].name == "main" and .[0].type == "branch"'
+          gh api "repos/plethu/recite/actions/runs/$CANDIDATE_RUN" > target/candidate-run.json
+          jq -e '.conclusion == "success" and .path == ".github/workflows/release.yml" and .event == "workflow_dispatch" and .head_branch == "main"' target/candidate-run.json
+          cargo build --locked -p recite-release
+          target/debug/recite-release tag "$VERSION" "$COMMIT"
+          tag_object=$(git rev-parse "v$VERSION^{tag}")
+          remote_tag_object=$(gh api "repos/plethu/recite/git/ref/tags/v$VERSION" --jq '.object.sha')
+          test "$remote_tag_object" = "$tag_object"
+          gh api "repos/plethu/recite/git/tags/$tag_object" > target/release-tag.json
+          jq -e --arg commit "$COMMIT" --arg tag "v$VERSION" '.verification.verified and .tag == $tag and .object.type == "commit" and .object.sha == $commit' target/release-tag.json
+          gh issue view "$RELEASE_ISSUE" --repo plethu/recite --json body --jq '.body' > target/release-notes.md
+        env:
+          REGISTRY_ONLY: ${{ inputs.registry_only }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: verified-candidate
+          path: target/publication/artifacts
+          run-id: ${{ inputs.candidate_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-receipt
+          path: target/publication
+          run-id: ${{ inputs.candidate_run }}
+          github-token: ${{ github.token }}
+      - name: Verify candidate identity and every artifact digest
+        run: |
+          target/debug/recite-release provenance target/publication/release-receipt.json "$CANDIDATE_RUN" "$(jq -r .head_sha target/candidate-run.json)"
+          target/debug/recite-release assets "$VERSION" "$COMMIT" target/publication/release-receipt.json target/publication/artifacts target/publication/assets
+          target/debug/recite-release version "$VERSION" > target/version.json
+      - name: Reserve an unpublished draft before registry publication
+        if: "!inputs.registry_only"
+        run: |
+          flags=()
+          if [[ $(jq -r .prerelease target/version.json) == true ]]; then flags+=(--prerelease); fi
+          gh release create "v$VERSION" --repo plethu/recite --verify-tag --draft --title "Recite $VERSION" --notes-file target/release-notes.md "${flags[@]}"
+      - name: Publish selected Cargo crates
+        if: inputs.crates != ''
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          test -n "$CARGO_REGISTRY_TOKEN"
+          git checkout --detach "$COMMIT"
+          read -ra packages <<< "$CRATES"
+          cargo metadata --locked --no-deps --format-version 1 > target/publication/cargo-packages.json
+          args=()
+          for package in "${packages[@]}"; do
+            jq -e --arg name "$package" '.packages[] | select(.name == $name) | .publish == null or (.publish | length) > 0' target/publication/cargo-packages.json
+            args+=(--package "$package")
+          done
+          test "${#args[@]}" -gt 0
+          cargo release publish "${args[@]}" --isolated --config release.toml --allow-branch HEAD
+          cargo release publish "${args[@]}" --isolated --config release.toml --allow-branch HEAD --execute --no-confirm
+      - name: Attach the verified artifacts
+        if: "!inputs.registry_only"
+        run: |
+          gh release upload "v$VERSION" target/publication/assets/* --repo plethu/recite
+          gh release upload "v$VERSION" target/publication/release-receipt.json --repo plethu/recite
+      - name: Publish the complete release
+        if: "!inputs.registry_only"
+        run: gh release edit "v$VERSION" --repo plethu/recite --draft=false

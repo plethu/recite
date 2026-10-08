@@ -4,9 +4,9 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Command-line interface for Recite projects."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "recite"
@@ -15,25 +15,26 @@ path = "src/main.rs"
 [dependencies]
 clap.workspace = true
 crossterm.workspace = true
+language-tags.workspace = true
 notify.workspace = true
 ratatui.workspace = true
+recite-benchmarks = { path = "../recite-benchmarks", version = "0.1.0" }
+recite-build.workspace = true
+recite-compiler.workspace = true
+recite-config.workspace = true
 recite-core.workspace = true
 recite-import.workspace = true
-recite-build.workspace = true
 recite-parser.workspace = true
-recite-compiler.workspace = true
-recite-benchmarks = { version = "0.1.0", path = "../recite-benchmarks" }
-recite-config.workspace = true
 recite-runtime.workspace = true
 recite-ui.workspace = true
+same-file = "1.0.6"
 serde.workspace = true
 serde_json.workspace = true
-same-file = "1.0.6"
 toml.workspace = true
 unic-langid.workspace = true
-language-tags.workspace = true
 
 [dev-dependencies]
+strum = { version = "=0.28.0", features = ["derive"] }
 tempfile.workspace = true
 
 [lints]

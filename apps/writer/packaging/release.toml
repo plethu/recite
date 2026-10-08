@@ -1,0 +1,5 @@
+# cargo-release resolves replacement paths from the selected crate (crates/freya).
+pre-release-replacements = [
+    { file = "../../packaging/common.json", search = '"version": "[^"]+"', replace = '"version": "{{version}}"', exactly = 1, prerelease = true },
+    { file = "../../packaging/flatpak/io.github.plethu.recite.metainfo.xml", search = '<release version="[^"]+" date="[^"]+"', replace = '<release version="{{version}}" date="{{date}}"', exactly = 1, prerelease = true },
+]

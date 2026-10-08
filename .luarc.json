@@ -1,0 +1,7 @@
+{
+  "runtime.version": "LuaJIT",
+  "diagnostics.globals": ["vim"],
+  "workspace.library": ["editors/recite-neovim/lua"],
+  "workspace.ignoreDir": ["node_modules", "target"],
+  "workspace.checkThirdParty": false
+}

@@ -1,15 +1,6 @@
 ---
-import Default from "@astrojs/starlight/components/PageTitle.astro";
-import { getRelativeLocaleUrl } from "astro:i18n";
-
-const isHome = Astro.url.pathname === getRelativeLocaleUrl(Astro.currentLocale ?? "en", "");
+const { entry } = Astro.locals.starlightRoute;
 ---
-
-{isHome ? (
-  <div class="landing-title">
-    <p>Recite</p>
-    <h1 id="_top">{Astro.locals.t("landing.title")}</h1>
-  </div>
-) : (
-  <Default />
+{entry.data.presentation === "article" && (
+  <h1 class="recite-title" id="_top" tabindex="-1">{entry.data.title}</h1>
 )}

@@ -1,0 +1,30 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+# Native formatters own line wrapping and syntax-aware indentation checks.
+max_line_length = off
+
+[*.{rs,py,cs,ftl,ps1,psd1,toml,just}]
+indent_size = 4
+
+[justfile]
+indent_size = 4
+
+[*.gd]
+indent_style = tab
+indent_size = 4
+
+# Markdown uses trailing spaces for explicit line breaks.
+[*.{md,mdx}]
+trim_trailing_whitespace = false
+
+# Exact wire bytes, malformed-input cases and engine-owned assets are not prose.
+[*.{snap,recitec,png,ico,icns,gz,patch,unity,tscn,meta,po,recite}]
+trim_trailing_whitespace = false
+insert_final_newline = unset

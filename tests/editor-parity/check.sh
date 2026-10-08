@@ -88,7 +88,7 @@ expect_target_failure() {
   output="$(CARGO_TARGET_DIR="$target_dir" run_checker 2>&1)"
   result=$?
   set -e
-  if (( result == 0 )) || [[ "$output" != *"$expected"* ]]; then
+  if ((result == 0)) || [[ "$output" != *"$expected"* ]]; then
     echo "editor parity target boundary fixture missed: $target_dir" >&2
     printf '%s\n' "$output" >&2
     exit 1
@@ -150,8 +150,7 @@ PY
 
 assert_portable_lock_source
 python3 "$repo_root/tests/editor-parity/assert_client_foundation.py" \
-  "$fixture_repo/fixtures/editor-parity/contract.json" \
-  "$fixture_repo/docs/editor-parity-contract.md"
+  "$fixture_repo/fixtures/editor-parity/contract.json"
 run_checker
 echo "editor parity baseline fixture passed"
 assert_no_hashed_targets
@@ -191,7 +190,8 @@ before = selected_target_digest(context, "recite-lsp")
 # Generated documentation/editor output is ignored and must not invalidate the
 # evidence executable merely because a packaging or docs command touched it.
 ignored_outputs = [
-    repo / "docs-site/.astro/cache.json",
+    repo / "docs-site/.astro/types.d.ts",
+    repo / "docs-site/src/client/generated/recite_playground.js",
     repo / "docs-site/dist/index.html",
     repo / "editors/vscode/dist/extension.js",
     repo / "editors/vscode/recite.vsix",
@@ -321,7 +321,7 @@ set +e
 module_shapes_output="$(run_checker 2>&1)"
 module_shapes_result=$?
 set -e
-if (( module_shapes_result != 0 )); then
+if ((module_shapes_result != 0)); then
   echo "editor parity valid Rust module-shapes fixture failed" >&2
   printf '%s\n' "$module_shapes_output" >&2
   exit 1

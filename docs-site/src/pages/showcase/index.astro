@@ -1,0 +1,28 @@
+---
+import { getCollection } from "astro:content";
+import PublicPage from "../../components/PublicPage.astro";
+const projects = (await getCollection("showcase", ({ data }) => !data.draft)).sort((a, b) =>
+  a.id.localeCompare(b.id, "en")
+);
+---
+<PublicPage title="Projects using Recite">
+  <div class="recite-showcase site-content">
+    <h1 id="_top" tabindex="-1">Projects using Recite</h1>
+    <p class="intro">Scenes, tools and games made with the language.</p>
+    {projects.length ? (
+      <ul class="project-list">
+        {projects.map(({ id, data }) => (
+          <li class="project">
+            {data.image && (
+              <img src={data.image} alt={data.imageAlt} width="640" height="480" loading="lazy" />
+            )}
+            <div>
+              <h2><a href={`/showcase/${id}/`}>{data.title}</a></h2>
+              <p>{data.summary}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    ) : <p>No projects are featured here yet.</p>}
+  </div>
+</PublicPage>

@@ -1,25 +1,32 @@
 ---
 title: Dialogue Manager
 description: Migration notes for Nathan Hoad's Dialogue Manager for Godot.
+template: splash
 ---
 
-Dialogue Manager for Godot uses script-like dialogue files, cues, responses, conditions, mutations, tags, jumps, and a stateless data-provider runtime. Recite has a similar text-first migration path, but it separates pure conditions from emitted effects and requires stable line and choice IDs.
+Dialogue Manager for Godot uses script-like dialogue files, cues, responses, conditions, mutations,
+tags, jumps, and a stateless data-provider runtime. Recite has a similar text-first migration path,
+but it separates pure conditions from emitted effects and requires stable line and choice IDs.
 
-Terminology checked against the official Dialogue Manager site and repository docs for [project overview](https://dialogue.nathanhoad.net/), [basic dialogue](https://github.com/nathanhoad/godot_dialogue_manager/blob/main/docs/Basic_Dialogue.md), and [conditions and mutations](https://github.com/nathanhoad/godot_dialogue_manager/blob/main/docs/Conditions_Mutations.md).
+Terminology checked against the official Dialogue Manager site and repository docs for
+[project overview](https://dialogue.nathanhoad.net/),
+[basic dialogue](https://github.com/nathanhoad/godot_dialogue_manager/blob/main/docs/Basic_Dialogue.md),
+and
+[conditions and mutations](https://github.com/nathanhoad/godot_dialogue_manager/blob/main/docs/Conditions_Mutations.md).
 
 ## Concept map
 
-| Dialogue Manager | Recite |
-| --- | --- |
-| Dialogue file | Recite source file |
-| Cue (`~ start`) | Block (`:: start`) |
-| Dialogue line | Line with stable ID |
-| Response (`- text`) | Choice with stable ID |
-| Jump (`=> cue`) | Target (`-> cue`) |
-| Condition | Pure condition function |
-| Mutation (`$>` / `do`) | Typed effect request |
-| Tags (`[#tag]`) | Ordered metadata |
-| Example balloon | Host UI, not Recite runtime |
+| Dialogue Manager       | Recite                      |
+| ---------------------- | --------------------------- |
+| Dialogue file          | Recite source file          |
+| Cue (`~ start`)        | Block (`:: start`)          |
+| Dialogue line          | Line with stable ID         |
+| Response (`- text`)    | Choice with stable ID       |
+| Jump (`=> cue`)        | Target (`-> cue`)           |
+| Condition              | Pure condition function     |
+| Mutation (`$>` / `do`) | Typed effect request        |
+| Tags (`[#tag]`)        | Ordered metadata            |
+| Example balloon        | Host UI, not Recite runtime |
 
 ## Clean migrations
 
@@ -30,9 +37,11 @@ Terminology checked against the official Dialogue Manager site and repository do
 
 ## Lossy migrations
 
-- Randomised lines need an explicit Recite design decision. Preserve candidates as separate blocks or choose in host code.
+- Randomised lines need an explicit Recite design decision. Preserve candidates as separate blocks
+  or choose in host code.
 - Inline waits, speed changes, and text effects should become metadata or presentation effects.
-- Concurrent lines need a project-specific representation, such as metadata or parallel host UI events.
+- Concurrent lines need a project-specific representation, such as metadata or parallel host UI
+  events.
 
 ## Manual work
 
@@ -42,7 +51,8 @@ Terminology checked against the official Dialogue Manager site and repository do
 
 ## Not imported or replaced
 
-- Balloons, Godot UI scenes, editor plugin settings, autoload configuration, node references, and GDScript/C# methods.
+- Balloons, Godot UI scenes, editor plugin settings, autoload configuration, node references, and
+  GDScript/C# methods.
 - Dialogue Manager runtime files or save assumptions.
 - Automatic compatibility for mutation timing or randomisation.
 

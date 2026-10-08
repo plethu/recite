@@ -223,12 +223,15 @@ fn duplicate_fields_ambiguous_mappings_and_malformed_records_are_invalid() {
 fn native_validation_rejects_unknown_targets_and_duplicate_authored_ids() {
     let mapping = serde_json::from_str(include_str!("../../../fixtures/import/mapping.json"))
         .expect("mapping");
-    for source in [
-        include_str!("../../../fixtures/import/lines.json")
-            .replace("\"End\",\"text\"", "\"Missing\",\"text\""),
-        include_str!("../../../fixtures/import/lines.json")
-            .replace("11111111111111111112", "11111111111111111111"),
-    ] {
+    let records: Vec<serde_json::Value> =
+        serde_json::from_str(include_str!("../../../fixtures/import/lines.json"))
+            .expect("source records");
+    let mut unknown_target = records.clone();
+    unknown_target[1]["node"] = "Missing".into();
+    let mut duplicate_id = records;
+    duplicate_id[1]["id"] = "reply@11111111111111111111".into();
+    for records in [unknown_target, duplicate_id] {
+        let source = serde_json::to_string(&records).expect("invalid source records");
         let report = run(SourceFamily::Json, "bad.json", &source, Some(&mapping));
         assert_eq!(report.status, ImportStatus::Invalid);
         assert!(!report.native_diagnostics.is_empty());

@@ -1,22 +1,22 @@
 use recite_core::{BlockId, DocumentKey, SourcePosition, is_valid_source_label};
 
 use super::helpers::{
-    incomplete_from_query, make_plan, no_symbol, project_block_definitions,
-    require_complete_block_references, source_range,
+    incomplete_from_query, make_plan, no_symbol, require_complete_block_references, source_range,
 };
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
 use crate::authoring::{
-    AuthoringSnapshot, NavigationResult, QueryResult, SymbolIdentity, SymbolLocation,
+    AuthoringQuery, NavigationResult, QueryResult, SymbolIdentity, SymbolLocation,
     SymbolQueryOptions, SymbolRole,
 };
 
 /// Plans a block rename from the unique block symbol at `position`.
-pub fn plan_rename_block(
-    snapshot: &AuthoringSnapshot,
+pub(super) fn plan_rename_block(
+    snapshot: &AuthoringQuery<'_>,
     key: &DocumentKey,
     position: SourcePosition,
     new_name: &str,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     let new_name =
         BlockId::new(new_name.to_owned()).map_err(|_| AuthoringEditError::InvalidBlockName {
             name: new_name.to_owned(),
@@ -61,8 +61,14 @@ pub fn plan_rename_block(
         return Err(no_symbol(key, position));
     }
 
-    let target_symbols = match snapshot.symbols(&target_document, SymbolQueryOptions::default()) {
-        QueryResult::Ready(locations) => locations,
+    match snapshot.rename_destination_exists(&target_document, &new_name) {
+        QueryResult::Ready(false) => {}
+        QueryResult::Ready(true) => {
+            return Err(AuthoringEditError::DestinationCollision {
+                document: target_document,
+                block: new_name,
+            });
+        }
         QueryResult::Partial { unavailable, .. } | QueryResult::Unavailable(unavailable) => {
             return Err(incomplete_from_query(&target_document, unavailable));
         }
@@ -71,32 +77,12 @@ pub fn plan_rename_block(
                 document: target_document,
             });
         }
-    };
-    if target_symbols.iter().any(|location| {
-        location.role() == SymbolRole::Definition
-            && matches!(location.identity(), SymbolIdentity::Block(block) if block == &new_name)
-    }) {
-        return Err(AuthoringEditError::DestinationCollision {
-            document: target_document,
-            block: new_name,
-        });
-    }
-    if project_block_definitions(snapshot, key)?
-        .into_iter()
-        .any(|location| {
-            location.document() != &target_document
-                && matches!(location.identity(), SymbolIdentity::Block(block) if block == &new_name)
-        })
-    {
-        return Err(AuthoringEditError::DestinationCollision {
-            document: target_document,
-            block: new_name,
-        });
     }
 
     let mut edits = Vec::with_capacity(references.len());
     let mut edit_keys = Vec::with_capacity(references.len());
     for location in references {
+        snapshot.checkpoint()?;
         if !matches!(
             location.role(),
             SymbolRole::Definition | SymbolRole::Reference
@@ -125,7 +111,7 @@ pub fn plan_rename_block(
     )
 }
 
-impl AuthoringSnapshot {
+impl AuthoringQuery<'_> {
     /// Plans a safe rename of the block symbol at `position`.
     pub fn plan_rename_block(
         &self,
@@ -138,7 +124,7 @@ impl AuthoringSnapshot {
 }
 
 fn unique_navigation(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     key: &DocumentKey,
     position: SourcePosition,
 ) -> Result<SymbolLocation, AuthoringEditError> {

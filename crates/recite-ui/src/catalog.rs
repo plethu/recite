@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, fmt};
 
-use fluent_bundle::{FluentBundle, FluentResource};
+use fluent_bundle::{FluentResource, concurrent::FluentBundle};
 use unic_langid::LanguageIdentifier;
 
 use crate::{DEFAULT_LOCALE, DEFAULT_RESOURCE, MsgId, UiArgs};
@@ -91,7 +91,7 @@ impl UiCatalog {
                 }
                 Err(_) => continue,
             };
-            let mut bundle = FluentBundle::new(vec![locale]);
+            let mut bundle = FluentBundle::new_concurrent(vec![locale]);
             bundle.set_use_isolating(false);
             if let Err(errors) = bundle.add_resource(resource) {
                 if key == DEFAULT_LOCALE {

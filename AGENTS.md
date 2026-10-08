@@ -1,118 +1,55 @@
 # Recite Agent Instructions
 
-Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling project for ECS-oriented games. It is dual-licensed public open source under MIT OR Apache-2.0; do not introduce proprietary content, copied private material, or dependency code that is incompatible with that distribution.
+Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling project for
+ECS-oriented games, dual-licensed MIT OR Apache-2.0. Do not introduce incompatible dependencies,
+proprietary content or copied private material.
 
-## Project Workflow
+## Workflow
 
-- Use GitHub as the canonical forge. Use the GitHub CLI (`gh`) with explicit
-  `--repo plethu/recite` for issue, milestone, label, and pull-request work.
-- Standalone work starts from `main` on a short-lived, purpose-first branch and
-  follows the machine-wide branch naming convention; never prefix a branch
-  with an issue number. Milestone work uses a coordinator-owned
-  `integration/<short-kebab-topic>` branch; its delegated slices follow the
-  GitHub PM skill and do not open issue-slice pull requests. Recite commit
-  subjects begin with `[REC-N]`, followed by a concise
-  conventional-commit-style subject.
-- Run `scripts/check-git-policy.sh` locally. It is part of the complete
-  verification gate and checks the relevant change range on pull requests;
-  never add agent-attribution trailers.
-- Keep patches scoped to the issue or user request.
-- Do not revert unrelated user changes.
-- Prefer small, reviewable changes over broad refactors.
-- Track outstanding work in GitHub issues and milestones. After a merge,
-  verify linked issue and milestone state before handoff.
-- For non-trivial Rust changes, use the relevant Recite overlay, especially
-  `.agents/skills/recite-rust-quality/SKILL.md`, and load the global
-  `rust-quality` skill when it is available.
-- The complete local gate is `mise exec -- just check` (`mise run verify` is
-  an alias); use a narrower documented check only when the changed surface
-  makes that sufficient.
-- Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
-- Repo-local skills must be Recite-specific overlays or Recite domain guidance. Put reusable personal workflow skills in the global agent config instead.
-
-## Multi-Agent Execution Contract
-
-- The coordinating session owns scope, product direction, subjective decisions,
-  integration review, and final acceptance. A delegated implementer may own a
-  bounded slice only through explicitly authorized stages; local edits,
-  commits, pushes, and forge updates are separate authorizations. Slices do
-  not open pull requests. The coordinator returns slice findings to the owner
-  and mechanically integrates accepted commits; only mechanical conflict
-  resolution belongs in the coordinator's worktree.
-- Task packets stay compact: outcome, write scope, settled constraints, permitted decisions, stop-and-ask categories, acceptance evidence, and delivery target. Keep assumptions bounded: agents may choose reversible local details, but must stop for semantics, public compatibility, destructive changes, or scope expansion.
-- Parallel writable implementers, or workers with potentially conflicting
-  scopes, use isolated branches/worktrees at the stated base SHA. Read-only
-  workers and a lone worker with an available clean checkout may use it after
-  the same preflight for clean state, repository/remote, branch policy, and
-  required tools or GitHub access. Concurrent writable workers must have
-  disjoint scopes; never share a writable worktree.
-- If implementation fails, retry once with the concrete error. On a second failure, replace it with a fresh worker/context and diagnose the environment or boundary; do not silently take over the implementation.
-- Reviewers and auditors remain independent and read-only; return actionable
-  findings to the owning implementer rather than patching their work.
-- Verify in proportion to change: targeted checks in the inner loop, one
-  appropriate full gate for a coherent slice, and broader checks at milestone
-  or release boundaries. Codex review is advisory and requested manually from
-  a connected GitHub account when available; continue useful work while it runs.
-- A delivery handoff reports the resulting behaviour, the authorized delivery stages actually completed, checks and outcomes, and residual uncertainty. Report a commit SHA, pushed branch, or PR only when that stage was both authorized and completed. Treat temporary-worktree-only changes as incomplete only when the delivery target required a commit, push, or PR; local-edit-only tasks may complete without those stages.
-
-## Agent Workflow Routing
-
-- Issue planning and milestone integration route through
-  `.agents/skills/recite-github-pm/SKILL.md`.
-- Clean diff review uses the global `code-review` skill plus the relevant
-  Recite domain or language skill in a fresh reviewer context.
-- Final protected merges remain with the coordinating main session.
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for setup, branch and commit conventions, contribution
+  policy and protected merges. Use `gh` with explicit `--repo plethu/recite` for forge work.
+- Keep changes within the request and preserve unrelated user edits. Commits, pushes, review
+  requests and merges must stay within the authorized delivery stages.
+- Run `scripts/check-git-policy.sh` locally. The complete gate is `just check` (`mise run verify` is
+  an alias; use `mise exec -- just check` without shell activation). Use focused checks for narrow
+  changes and the complete gate for broad or high-risk changes.
+- GitHub owns outstanding tasks and milestone state. Verify linked issue and milestone state after
+  an authorized merge.
+- Repository guidance must work from a fresh checkout without personal skills or machine-local
+  instruction files. Keep general personal workflows in the maintainer's own configuration.
 
 ## Product Invariants
 
-- Runtime traversal must be deterministic.
-- Runtime code must never perform game-side effects.
+- Runtime traversal is deterministic; game-side effects stay outside the runtime.
 - Effects are typed, schema-checked requests emitted to the caller.
-- Runtime state must be serializable without game state.
-- Author-visible line and choice IDs must remain stable once written.
-- Dialogue outputs, choices, metadata, effects, and diagnostics should be structured values, not prose conventions.
-- Validation should catch malformed project content without running a game engine.
-- Semantic changes should include tests unless the work is explicitly exploratory.
+- Runtime state is serializable without game state.
+- Author-visible line and choice IDs remain stable once written.
+- Outputs, choices, metadata, effects and diagnostics are structured values.
+- Validation catches malformed content without running a game engine.
+- Semantic changes include tests unless explicitly exploratory.
 
-## Code Review Rules
+## Contracts and Release
 
-- Preserve deterministic runtime traversal and keep game-side effects outside
-  runtime code; effects remain typed, schema-checked requests for the caller.
-- Treat serialisable runtime state, structured dialogue outputs, and
-  author-visible line and choice IDs as compatibility surfaces. Flag changes
-  that weaken those boundaries and identify the safe migration path.
+The [production specification](docs/recite-production-spec.md) routes to subsystem contracts. Read
+only the affected chapter and subsections before changing that contract. Update its existing owner
+when behavior changes; do not append a second specification to an experiment report. Consult
+historical evidence only when revisiting its decision.
 
-## Spec Authority
+Recite remains pre-release. Before recommending 1.0, consult [release gates](docs/spec/release.md)
+§22–23 and name remaining consumer and compatibility evidence gaps. Passing automated checks alone
+does not establish readiness; developer previews remain appropriate while those boundaries are being
+exercised.
 
-The production spec lives at `docs/recite-production-spec.md`. Route work to these sections:
+## Task Routing
 
-- Parser/source format: §5
-- Conditions: §6
-- Effects: §7
-- Runtime: §8
-- Localisation and stable IDs: §9
-- Schema: §10
-- Scene manifests/compiler: §11-12
-- CLI: §13
-- LSP/editor support: §14-15
-- Bevy adapter: §16
-- Tests and diagnostics: §17-18
-- Performance/benchmarks: §19
-- Milestones and serious v1 gate: §22-23
+| Task                                                     | Repository skill                                                              |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Rust implementation and maintainability                  | [Rust quality](.agents/skills/recite-rust-quality/SKILL.md)                   |
+| Parser, compiler, runtime, schema and language semantics | [Core language](.agents/skills/recite-core-language/SKILL.md)                 |
+| Tests, fixtures, diagnostics, LSP and benchmarks         | [Testing and diagnostics](.agents/skills/recite-testing-diagnostics/SKILL.md) |
+| GitHub planning, milestone integration and merge checks  | [GitHub workflow](.agents/skills/recite-github-pm/SKILL.md)                   |
 
-Verify section numbers against the committed spec before editing this table.
-
-Do not copy large sections of the spec into agent guidance. Read the relevant spec section before changing that subsystem.
-
-## Repo-Local Skills
-
-Use the relevant skill for procedural details:
-
-- GitHub issues, milestones, labels, pull requests, and project planning:
-  `.agents/skills/recite-github-pm/SKILL.md`
-- Recite-specific Rust maintainability, diagnostics, FFI, and file-size review
-  triggers: `.agents/skills/recite-rust-quality/SKILL.md`
-- Parser, AST, compiler, runtime, schema, effects, localisation IDs, and deterministic dialogue semantics: `.agents/skills/recite-core-language/SKILL.md`
-- Fixtures, snapshots, diagnostics, CLI checks, LSP behavior, and headless runtime tests: `.agents/skills/recite-testing-diagnostics/SKILL.md`
-
-For agent-facing instruction edits, use the global `agent-instructions` skill when available. In this repo, keep `AGENTS.md` to workflow, product invariants, spec routing, and Recite-specific skill pointers.
+Load relevant skills only. For reviews, use the relevant domain skill and inspect the final diff,
+callers and verification evidence. Follow session delegation rules; do not spawn reviews by default.
+Keep this file to workflow, invariants and task routing, and repo-local skills to Recite-specific
+procedures.

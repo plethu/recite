@@ -242,12 +242,13 @@ namespace Recite.Unity
 
     public sealed class ReciteAvailabilityReason
     {
-        public ReciteAvailabilityReason(string id, string sourceText, string text, IReadOnlyList<ReciteReasonArg> args)
+        public ReciteAvailabilityReason(string id, string sourceText, string text, IReadOnlyList<ReciteReasonArg> args, ReciteAvailabilityReasonOrigin origin = null)
         {
             Id = id ?? string.Empty;
             SourceText = sourceText ?? string.Empty;
             Text = text ?? string.Empty;
             Args = args ?? Array.Empty<ReciteReasonArg>();
+            Origin = origin;
         }
 
         public string Id { get; }
@@ -257,6 +258,33 @@ namespace Recite.Unity
         public string Text { get; }
 
         public IReadOnlyList<ReciteReasonArg> Args { get; }
+
+        public ReciteAvailabilityReasonOrigin Origin { get; }
+    }
+
+    public abstract class ReciteAvailabilityReasonOrigin { }
+
+    public sealed class ReciteConditionCallOrigin : ReciteAvailabilityReasonOrigin
+    {
+        public ReciteConditionCallOrigin(string function, IReadOnlyList<ReciteTaggedValue> args)
+        {
+            Function = function ?? throw new ArgumentNullException(nameof(function));
+            Args = args ?? throw new ArgumentNullException(nameof(args));
+        }
+
+        public string Function { get; }
+
+        public IReadOnlyList<ReciteTaggedValue> Args { get; }
+    }
+
+    public sealed class ReciteRequirementExpressionOrigin : ReciteAvailabilityReasonOrigin
+    {
+        public ReciteRequirementExpressionOrigin(string sourceText)
+        {
+            SourceText = sourceText ?? throw new ArgumentNullException(nameof(sourceText));
+        }
+
+        public string SourceText { get; }
     }
 
     public sealed class ReciteReasonArg

@@ -3,9 +3,9 @@ use lsp_types::{
     Uri, WorkspaceEdit,
 };
 use recite_compiler::authoring::{
-    AuthoringEditPlan, AuthoringSnapshot, DocumentLayer, DocumentVersion,
+    AuthoringEditPlan, AuthoringQuery, DocumentLayer, DocumentVersion,
 };
-use recite_core::DocumentKey;
+use recite_core::{DocumentKey, SourceLineIndex};
 
 use crate::position::source_range_to_lsp;
 
@@ -30,13 +30,14 @@ pub(crate) struct EditDocument<'a> {
 /// or overlay state.
 pub(crate) fn project_plan(
     plan: &AuthoringEditPlan,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[EditDocument<'_>],
 ) -> Option<WorkspaceEdit> {
-    plan.validate(snapshot).ok()?;
+    plan.validate_with_control(snapshot).ok()?;
 
     let mut changes = Vec::with_capacity(plan.preconditions().len());
     for precondition in plan.preconditions() {
+        snapshot.checkpoint().ok()?;
         let document = unique_document(documents, precondition.document())?;
         precondition_matches(snapshot, precondition, document)?;
         let version = protocol_version(document)?;
@@ -44,6 +45,7 @@ pub(crate) fn project_plan(
             key: document.key.clone(),
             uri: document.uri.clone(),
             version,
+            source: snapshot.document(document.key)?.source_index(),
             edits: Vec::new(),
         });
     }
@@ -52,6 +54,7 @@ pub(crate) fn project_plan(
     // edit. Reject that mapping rather than emitting a partial or ambiguous
     // transaction, including for a precondition-only guarded document.
     for (index, change) in changes.iter().enumerate() {
+        snapshot.checkpoint().ok()?;
         if changes[index + 1..]
             .iter()
             .any(|other| change.uri == other.uri && change.key != other.key)
@@ -61,18 +64,13 @@ pub(crate) fn project_plan(
     }
 
     for edit in plan.edits() {
-        let document = unique_document(documents, edit.document())?;
-        let current = snapshot.document(document.key)?;
-        if current.source_text() != document.text
-            || current.layer() != document.layer
-            || current.version() != document.version
-        {
-            return None;
-        }
-        let range = source_range_to_lsp(document.text, edit.range())?;
-        let change = changes
-            .iter_mut()
-            .find(|change| change.key == *document.key)?;
+        snapshot.checkpoint().ok()?;
+        // Preconditions have already checked the immutable source and URI mapping.
+        let index = changes
+            .binary_search_by(|change| change.key.cmp(edit.document()))
+            .ok()?;
+        let change = &mut changes[index];
+        let range = source_range_to_lsp(change.source, edit.range())?;
         change.edits.push(TextEdit {
             range,
             new_text: edit.replacement().to_owned(),
@@ -81,6 +79,7 @@ pub(crate) fn project_plan(
 
     changes.sort_by(|left, right| left.uri.as_str().cmp(right.uri.as_str()));
     for change in &mut changes {
+        snapshot.checkpoint().ok()?;
         // Plans already reject overlaps and are sorted in scalar source order.
         // Keep that ascending order in the protocol projection: LSP clients
         // apply a TextDocumentEdit as one non-overlapping transaction.
@@ -135,7 +134,7 @@ fn protocol_version(document: &EditDocument<'_>) -> Option<Option<i32>> {
 }
 
 fn precondition_matches(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     precondition: &recite_compiler::authoring::EditPrecondition,
     document: &EditDocument<'_>,
 ) -> Option<()> {
@@ -144,18 +143,16 @@ fn precondition_matches(
         || current.layer() != document.layer
         || current.version() != document.version
         || current.version() != precondition.expected_version()
-        || !precondition
-            .source_fingerprint()
-            .matches_source(document.text)
     {
         return None;
     }
     Some(())
 }
 
-struct PendingDocument {
+struct PendingDocument<'a> {
     key: DocumentKey,
     uri: Uri,
     version: Option<i32>,
+    source: &'a SourceLineIndex,
     edits: Vec<TextEdit>,
 }

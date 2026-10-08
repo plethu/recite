@@ -1,5 +1,5 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
-set default-list := true
+set default-list
 
 # Run the copyable CLI project and Bevy companion together.
 workflow:

@@ -1,63 +1,65 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import {
   cp,
-  mkdtemp,
   mkdir,
-  readFile,
+  mkdtemp,
   readdir,
+  readFile,
   rename,
   rm,
   symlink,
-  writeFile
+  writeFile,
 } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   generateMessageProjections,
   lowerRuntimeMessage,
-  projectRuntimeMessage,
   projectMessages,
-  verifyMessageProjections
+  projectRuntimeMessage,
+  verifyMessageProjections,
 } from "../scripts/message-projections.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 test("VS Code lowers typed canonical placeables to positional placeholders", async () => {
   const source = await readFile(
-    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
+    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"),
+    "utf8",
   );
   const projected = projectMessages(source).runtime["lsp-client-restart-scheduled"];
   assert.equal(
     projected,
-    "Recite language server restart scheduled in {0} milliseconds."
+    "Recite language server restart scheduled in {0} milliseconds.",
   );
   assert.equal(
     projectRuntimeMessage("lsp-client-restart-scheduled", "restart in {$milliseconds} ms"),
-    "restart in {0} ms"
+    "restart in {0} ms",
   );
   assert.equal(
     lowerRuntimeMessage("fixture", "{$detail}: {$kind}", ["kind", "detail"]),
-    "{1}: {0}"
+    "{1}: {0}",
   );
   assert.equal(
     projectRuntimeMessage("lsp-client-start-failed", "{$detail}: {$detail}"),
-    "{0}: {0}"
+    "{0}: {0}",
   );
   assert.throws(
     () => projectRuntimeMessage("lsp-client-start-failed", "started"),
-    /missing required argument.*detail/
+    /missing required argument.*detail/,
   );
   assert.throws(
     () => projectRuntimeMessage("lsp-client-start-failed", "{$detail}: {$unknown}"),
-    /undeclared argument unknown/
+    /undeclared argument unknown/,
   );
 });
 
 test("message projections preserve representation across LF and CRLF Fluent resources", async () => {
   const source = await readFile(
-    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
+    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"),
+    "utf8",
   );
   assert.deepEqual(projectMessages(source.replaceAll("\n", "\r\n")), projectMessages(source));
 });
@@ -65,14 +67,18 @@ test("message projections preserve representation across LF and CRLF Fluent reso
 test("message projections reject multiline and selector Fluent before generation", async () => {
   const sourcePath = path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl");
   const source = await readFile(sourcePath, "utf8");
-  const original = "lsp-client-start-failed = Recite language server could not be started: {$detail}.";
+  const original =
+    "lsp-client-start-failed = Recite language server could not be started: {$detail}.";
   assert.throws(
     () => projectMessages(source.replace(original, `${original}\n  continuation`)),
-    /continuation/
+    /continuation/,
   );
   assert.throws(
-    () => projectMessages(source.replace(original, "lsp-client-start-failed = { $kind -> [one] one *[other] other }")),
-    /unsupported expression/
+    () =>
+      projectMessages(
+        source.replace(original, "lsp-client-start-failed = { $kind -> [one] one *[other] other }"),
+      ),
+    /unsupported expression/,
   );
 });
 
@@ -84,7 +90,7 @@ test("message verification rejects a mutation without rewriting its projection",
     await writeFile(projection, mutated, "utf8");
     await assert.rejects(
       verifyMessageProjections(fixturePackage),
-      /message projection is stale/
+      /message projection is stale/,
     );
     assert.equal(await readFile(projection, "utf8"), mutated);
   } finally {
@@ -105,7 +111,7 @@ test("message projection updates refuse symlinked destinations before writing", 
 
     await assert.rejects(
       generateMessageProjections(fixturePackage),
-      /refusing symlink/
+      /refusing symlink/,
     );
     assert.equal(await readFile(outside, "utf8"), "outside\n");
     assert.equal(await readFile(runtimeProjection, "utf8"), originalRuntime);
@@ -129,7 +135,7 @@ test("message projection updates refuse symlinked projection parents before writ
 
     await assert.rejects(
       generateMessageProjections(fixturePackage),
-      /refusing symlink/
+      /refusing symlink/,
     );
     assert.equal(await readFile(outsideProjection, "utf8"), outsideOriginal);
     assert.equal(await readFile(packageProjection, "utf8"), originalPackage);
@@ -146,8 +152,10 @@ test("message projection updates restore missing projections", async () => {
     await generateMessageProjections(fixturePackage);
     await assert.doesNotReject(verifyMessageProjections(fixturePackage));
     assert.deepEqual(
-      (await readdir(fixturePackage)).filter((entry) => entry.startsWith(".recite-message-projections-")),
-      []
+      (await readdir(fixturePackage)).filter((entry) =>
+        entry.startsWith(".recite-message-projections-")
+      ),
+      [],
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -169,17 +177,23 @@ test("missing projections remain absent when a later install fails", async () =>
             renameCount += 1;
             if (renameCount === 2) throw new Error("induced projection install failure");
             return rename(from, to);
-          }
-        }
+          },
+        },
       }),
-      /induced projection install failure/
+      /induced projection install failure/,
     );
-    assert.equal(renameCount, 2, "the newly installed missing projection should be removed on rollback");
+    assert.equal(
+      renameCount,
+      2,
+      "the newly installed missing projection should be removed on rollback",
+    );
     assert.equal((await readdir(fixtureSource)).includes("messages.generated.js"), false);
     assert.equal(await readFile(packageProjection, "utf8"), originalPackage);
     assert.deepEqual(
-      (await readdir(fixturePackage)).filter((entry) => entry.startsWith(".recite-message-projections-")),
-      []
+      (await readdir(fixturePackage)).filter((entry) =>
+        entry.startsWith(".recite-message-projections-")
+      ),
+      [],
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -192,8 +206,10 @@ test("message projection updates install verified projections as a pair", async 
     await generateMessageProjections(fixturePackage);
     await assert.doesNotReject(verifyMessageProjections(fixturePackage));
     assert.deepEqual(
-      (await readdir(fixturePackage)).filter((entry) => entry.startsWith(".recite-message-projections-")),
-      []
+      (await readdir(fixturePackage)).filter((entry) =>
+        entry.startsWith(".recite-message-projections-")
+      ),
+      [],
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -206,7 +222,7 @@ test("message projection updates roll back a partial commit and clean staging", 
   const runtimeProjection = path.join(fixtureSource, "messages.generated.js");
   const originals = await Promise.all([
     readFile(runtimeProjection, "utf8"),
-    readFile(packageProjection, "utf8")
+    readFile(packageProjection, "utf8"),
   ]);
   let renameCount = 0;
   try {
@@ -217,23 +233,34 @@ test("message projection updates roll back a partial commit and clean staging", 
             renameCount += 1;
             if (renameCount === 2) throw new Error("induced projection install failure");
             return rename(from, to);
-          }
-        }
+          },
+        },
       }),
-      /induced projection install failure/
+      /induced projection install failure/,
     );
-    assert.equal(renameCount, 3, "rollback should restore the first projection after the failed install");
-    assert.deepEqual(await Promise.all([
-      readFile(runtimeProjection, "utf8"),
-      readFile(packageProjection, "utf8")
-    ]), originals);
-    assert.deepEqual(
-      (await readdir(fixturePackage)).filter((entry) => entry.startsWith(".recite-message-projections-")),
-      []
+    assert.equal(
+      renameCount,
+      3,
+      "rollback should restore the first projection after the failed install",
     );
     assert.deepEqual(
-      (await readdir(path.join(fixturePackage, "src"))).filter((entry) => entry.includes(".backup-")),
-      []
+      await Promise.all([
+        readFile(runtimeProjection, "utf8"),
+        readFile(packageProjection, "utf8"),
+      ]),
+      originals,
+    );
+    assert.deepEqual(
+      (await readdir(fixturePackage)).filter((entry) =>
+        entry.startsWith(".recite-message-projections-")
+      ),
+      [],
+    );
+    assert.deepEqual(
+      (await readdir(path.join(fixturePackage, "src"))).filter((entry) =>
+        entry.includes(".backup-")
+      ),
+      [],
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -249,12 +276,15 @@ async function createProjectionFixture() {
   await mkdir(fixtureFluent, { recursive: true });
   await cp(
     path.join(packageRoot, "src", "messages.generated.js"),
-    path.join(fixtureSource, "messages.generated.js")
+    path.join(fixtureSource, "messages.generated.js"),
   );
-  await cp(path.join(packageRoot, "package.nls.json"), path.join(fixturePackage, "package.nls.json"));
+  await cp(
+    path.join(packageRoot, "package.nls.json"),
+    path.join(fixturePackage, "package.nls.json"),
+  );
   await cp(
     path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"),
-    path.join(fixtureFluent, "en-US.ftl")
+    path.join(fixtureFluent, "en-US.ftl"),
   );
   return { root, fixturePackage, fixtureSource };
 }

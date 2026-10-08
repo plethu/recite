@@ -2,7 +2,7 @@ use lsp_types::Position;
 use serde_json::json;
 use tempfile::TempDir;
 
-use super::super::support::{Harness, file_uri, full_change, write_file};
+use super::super::support::{Harness, file_uri, write_file};
 
 #[path = "schema_close.rs"]
 mod schema_close;
@@ -221,7 +221,18 @@ pub(super) fn valid_schema_overlay_clears_diagnostics_with_new_version() {
     assert_eq!(malformed.version, Some(4));
     assert!(!malformed.diagnostics.is_empty());
 
-    harness.did_change(schema_uri.clone(), 5, vec![full_change(schema)]);
+    harness.did_change(
+        schema_uri.clone(),
+        5,
+        vec![lsp_types::TextDocumentContentChangeEvent {
+            range: Some(lsp_types::Range::new(
+                lsp_types::Position::new(0, 0),
+                lsp_types::Position::new(1, 0),
+            )),
+            range_length: Some(13),
+            text: schema.to_owned(),
+        }],
+    );
     let cleared = harness.recv_publish_diagnostics();
     assert_eq!(cleared.uri, schema_uri);
     assert_eq!(cleared.version, Some(5));

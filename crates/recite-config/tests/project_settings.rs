@@ -73,3 +73,36 @@ fn manifest_edits_preserve_open_documents_before_writing() -> Result<(), Box<dyn
     assert_eq!(settings.source(), valid);
     Ok(())
 }
+
+#[test]
+fn settings_validate_the_prospective_schema_and_reject_outside_paths_before_writing()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("recite.project.toml");
+    let original = "format_version = 1\n[project]\nschema = 'valid.json'\n";
+    std::fs::write(&path, original)?;
+    std::fs::write(dir.path().join("valid.json"), "{\"schema_version\":1}")?;
+    std::fs::write(dir.path().join("invalid.json"), "{ invalid")?;
+    let mut settings = recite_config::ProjectSettings::open(dir.path())?;
+    assert!(matches!(
+        settings.save(&original.replace("valid.json", "invalid.json")),
+        Err(recite_config::ProjectSettingsError::Validation(_))
+    ));
+    assert!(matches!(
+        settings.save(&original.replace("valid.json", "../external.json")),
+        Err(recite_config::ProjectSettingsError::Schema(
+            recite_config::ProjectSchemaError::InvalidPath { .. }
+        ))
+    ));
+    assert_eq!(settings.source(), original);
+    assert_eq!(std::fs::read_to_string(&path)?, original);
+    std::fs::write(
+        dir.path().join("replacement.json"),
+        "{\"schema_version\":1}",
+    )?;
+    let replacement = original.replace("valid.json", "replacement.json");
+    settings.save(&replacement)?;
+    assert_eq!(settings.source(), replacement);
+    assert_eq!(std::fs::read_to_string(&path)?, replacement);
+    Ok(())
+}

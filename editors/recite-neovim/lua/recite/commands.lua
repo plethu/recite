@@ -50,8 +50,12 @@ function M.new(options)
   local watcher = watch.new({
     config = state.config,
     notify = report,
-    on_started = function() clear_diagnostics() end,
-    clear_diagnostics = function() diagnostics.clear(state.watch_namespace, state.watch_buffers) end,
+    on_started = function()
+      clear_diagnostics()
+    end,
+    clear_diagnostics = function()
+      diagnostics.clear(state.watch_namespace, state.watch_buffers)
+    end,
     replace_diagnostics = function(records, root)
       diagnostics.replace(state.watch_namespace, records, root, state.watch_buffers)
     end,
@@ -60,21 +64,33 @@ function M.new(options)
   local finite = finite_controller.new({
     state = state,
     report = report,
-    watcher_active = function() return watcher.active() ~= nil end,
+    watcher_active = function()
+      return watcher.active() ~= nil
+    end,
   })
 
   local function prepare_source(options)
     local root = inputs.project_root(options, state.config.project_root or state.root_dir)
     local paths = inputs.paths_for(options, root)
-    if not paths then report("neovim-command-input-invalid", {}, vim.log.levels.ERROR); return nil end
+    if not paths then
+      report("neovim-command-input-invalid", {}, vim.log.levels.ERROR)
+      return nil
+    end
     local snapshot, error = inputs.clean_snapshot(root)
-    if error then report("neovim-command-document-unsaved", {}, vim.log.levels.ERROR); return nil end
+    if error then
+      report("neovim-command-document-unsaved", {}, vim.log.levels.ERROR)
+      return nil
+    end
     return root, paths, snapshot
   end
 
   local function ensure_derived_output_parent(output, config)
     if state.finite_blocked then
-      report("neovim-command-protocol-failure", { detail = "finite_process_hung" }, vim.log.levels.ERROR)
+      report(
+        "neovim-command-protocol-failure",
+        { detail = "finite_process_hung" },
+        vim.log.levels.ERROR
+      )
       return false
     end
     local binary, requested = inputs.command_binary(config)
@@ -83,46 +99,96 @@ function M.new(options)
       return false
     end
     local parent = vim.fn.fnamemodify(output, ":h")
-    if vim.fn.isdirectory(parent) == 1 then return true end
+    if vim.fn.isdirectory(parent) == 1 then
+      return true
+    end
     local ok, created = pcall(vim.fn.mkdir, parent, "p")
-    if ok and created == 1 and vim.fn.isdirectory(parent) == 1 then return true end
-    report("neovim-command-failure", { detail = "unable to create derived compile output directory: " .. parent }, vim.log.levels.ERROR)
+    if ok and created == 1 and vim.fn.isdirectory(parent) == 1 then
+      return true
+    end
+    report(
+      "neovim-command-failure",
+      { detail = "unable to create derived compile output directory: " .. parent },
+      vim.log.levels.ERROR
+    )
     return false
   end
 
   function adapter.validate(options_override)
     local root, paths, snapshot = prepare_source(options_override or {})
-    if not root then return nil end
-    return finite.execute("validate", paths, { project_root = root, cwd = root, snapshot = snapshot, config = options_override and options_override.config, invocation_id = options_override and options_override.invocation_id, on_result = options_override and options_override.on_result, on_error = options_override and options_override.on_error })
+    if not root then
+      return nil
+    end
+    return finite.execute("validate", paths, {
+      project_root = root,
+      cwd = root,
+      snapshot = snapshot,
+      config = options_override and options_override.config,
+      invocation_id = options_override and options_override.invocation_id,
+      on_result = options_override and options_override.on_result,
+      on_error = options_override and options_override.on_error,
+    })
   end
 
   function adapter.compile(options_override)
     options_override = options_override or {}
     local root, paths, snapshot = prepare_source(options_override)
-    if not root then return nil end
-    local output = options_override.output or state.config.compile_output or root .. "/build/dialogue.recitec"
+    if not root then
+      return nil
+    end
+    local output = options_override.output
+      or state.config.compile_output
+      or root .. "/build/dialogue.recitec"
     output = inputs.absolute(output)
-    for _, path in ipairs(paths) do
-      if inputs.absolute(path) == output then report("neovim-command-input-invalid", {}, vim.log.levels.ERROR); return nil end
+    for _, path in ipairs(assert(paths)) do
+      if inputs.absolute(path) == output then
+        report("neovim-command-input-invalid", {}, vim.log.levels.ERROR)
+        return nil
+      end
     end
     if not options_override.output then
-      local config = vim.tbl_deep_extend("force", vim.deepcopy(state.config), options_override.config or {})
-      if not ensure_derived_output_parent(output, config) then return nil end
+      local config =
+        vim.tbl_deep_extend("force", vim.deepcopy(state.config), options_override.config or {})
+      if not ensure_derived_output_parent(output, config) then
+        return nil
+      end
     end
-    if not options_override.output then report("neovim-command-output-derived", { path = output }, vim.log.levels.INFO) end
+    if not options_override.output then
+      report("neovim-command-output-derived", { path = output }, vim.log.levels.INFO)
+    end
     local args = { "--output", output }
     vim.list_extend(args, paths)
-    return finite.execute("compile", args, { project_root = root, cwd = options_override.cwd or root, snapshot = snapshot, config = options_override.config, invocation_id = options_override.invocation_id, on_result = options_override.on_result, on_error = options_override.on_error })
+    return finite.execute("compile", args, {
+      project_root = root,
+      cwd = options_override.cwd or root,
+      snapshot = snapshot,
+      config = options_override.config,
+      invocation_id = options_override.invocation_id,
+      on_result = options_override.on_result,
+      on_error = options_override.on_error,
+    })
   end
 
   function adapter.extract(options_override)
     options_override = options_override or {}
     local root, paths, snapshot = prepare_source(options_override)
-    if not root then return nil end
+    if not root then
+      return nil
+    end
     local args = {}
-    if options_override.output then args = { "--output", inputs.absolute(options_override.output) } end
+    if options_override.output then
+      args = { "--output", inputs.absolute(options_override.output) }
+    end
     vim.list_extend(args, paths)
-    return finite.execute("extract", args, { project_root = root, cwd = options_override.cwd or root, snapshot = snapshot, config = options_override.config, invocation_id = options_override.invocation_id, on_result = options_override.on_result, on_error = options_override.on_error })
+    return finite.execute("extract", args, {
+      project_root = root,
+      cwd = options_override.cwd or root,
+      snapshot = snapshot,
+      config = options_override.config,
+      invocation_id = options_override.invocation_id,
+      on_result = options_override.on_result,
+      on_error = options_override.on_error,
+    })
   end
 
   local function runtime(options_override, command)
@@ -130,31 +196,57 @@ function M.new(options)
     local asset = options_override.asset
     local fixture = options_override.fixture
     local block = options_override.block
-    if type(asset) ~= "string" or asset == "" or vim.fn.filereadable(asset) ~= 1
-      or type(fixture) ~= "string" or fixture == "" or vim.fn.filereadable(fixture) ~= 1
-      or type(block) ~= "string" or block == "" then
+    if
+      type(asset) ~= "string"
+      or asset == ""
+      or vim.fn.filereadable(asset) ~= 1
+      or type(fixture) ~= "string"
+      or fixture == ""
+      or vim.fn.filereadable(fixture) ~= 1
+      or type(block) ~= "string"
+      or block == ""
+    then
       report("neovim-command-input-invalid", {}, vim.log.levels.ERROR)
       return nil
     end
     asset, fixture = inputs.absolute(asset), inputs.absolute(fixture)
-    return finite.execute(command, { asset, "--block", block, "--fixture", fixture }, { cwd = options_override.cwd or vim.fn.fnamemodify(asset, ":h"), config = options_override.config, invocation_id = options_override.invocation_id, on_result = options_override.on_result, on_error = options_override.on_error })
+    return finite.execute(command, { asset, "--block", block, "--fixture", fixture }, {
+      cwd = options_override.cwd or vim.fn.fnamemodify(asset, ":h"),
+      config = options_override.config,
+      invocation_id = options_override.invocation_id,
+      on_result = options_override.on_result,
+      on_error = options_override.on_error,
+    })
   end
 
-  function adapter.run(options_override) return runtime(options_override, "run") end
-  function adapter.trace(options_override) return runtime(options_override, "trace") end
+  function adapter.run(options_override)
+    return runtime(options_override, "run")
+  end
+  function adapter.trace(options_override)
+    return runtime(options_override, "trace")
+  end
 
   function adapter.watch_start(options_override)
     local config = vim.tbl_deep_extend("force", vim.deepcopy(state.config), options_override or {})
-    config.project_root = inputs.project_root(options_override or {}, state.config.project_root or state.root_dir)
+    config.project_root =
+      inputs.project_root(options_override or {}, state.config.project_root or state.root_dir)
     watcher.configure(config)
     return watcher.start(config)
   end
-  function adapter.watch_stop() return watcher.stop() end
-  function adapter.watch_active() return watcher.active() end
-  function adapter.clear_diagnostics() clear_diagnostics() end
+  function adapter.watch_stop()
+    return watcher.stop()
+  end
+  function adapter.watch_active()
+    return watcher.active()
+  end
+  function adapter.clear_diagnostics()
+    clear_diagnostics()
+  end
   function adapter.configure(config)
     local next_config = vim.tbl_deep_extend("force", vim.deepcopy(state.config), config or {})
-    if vim.deep_equal(next_config, state.config) then return false end
+    if vim.deep_equal(next_config, state.config) then
+      return false
+    end
     finite.cancel("configuration changed")
     watcher.reconfigure()
     clear_diagnostics()

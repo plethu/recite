@@ -1,7 +1,9 @@
 use recite_core::DocumentKey;
 
+mod equality;
+
 /// A caller-owned saved logical document.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq)]
 pub struct SavedDocument {
     key: DocumentKey,
     text: std::sync::Arc<str>,
@@ -15,6 +17,12 @@ impl SavedDocument {
             key,
             text: text.into().into(),
         }
+    }
+
+    /// Creates saved input by sharing an existing immutable text allocation.
+    #[must_use]
+    pub fn from_shared(key: DocumentKey, text: std::sync::Arc<str>) -> Self {
+        Self { key, text }
     }
 
     /// Returns the document's logical key.
@@ -35,7 +43,7 @@ impl SavedDocument {
 }
 
 /// An open editor overlay over a logical document.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq)]
 pub struct OpenDocument {
     key: DocumentKey,
     version: DocumentVersion,
@@ -51,6 +59,16 @@ impl OpenDocument {
             version,
             text: text.into().into(),
         }
+    }
+
+    /// Creates overlay input by sharing an existing immutable text allocation.
+    #[must_use]
+    pub fn from_shared(
+        key: DocumentKey,
+        version: DocumentVersion,
+        text: std::sync::Arc<str>,
+    ) -> Self {
+        Self { key, version, text }
     }
 
     /// Returns the overlaid document's logical key.

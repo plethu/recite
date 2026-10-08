@@ -13,12 +13,12 @@ mod stable_selection;
 mod types;
 mod validate;
 
-pub use plan_rename::plan_rename_block;
-pub use plan_stable_ids::{plan_insert_missing_id, plan_insert_missing_ids};
-pub use plan_stable_ids_scope::{
-    plan_insert_missing_ids_for_document, plan_insert_missing_ids_in_range,
+mod synchronous;
+pub use synchronous::{
+    plan_create_block_stub, plan_create_block_stub_in_range, plan_insert_missing_id,
+    plan_insert_missing_ids, plan_insert_missing_ids_for_document,
+    plan_insert_missing_ids_in_range, plan_rename_block,
 };
-pub use plan_stub::{plan_create_block_stub, plan_create_block_stub_in_range};
 pub use types::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,
     SourceFingerprint, SourceRange,

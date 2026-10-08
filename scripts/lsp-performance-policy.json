@@ -1,0 +1,55 @@
+{
+  "profile": "same-runner alternating release binaries; large seed-7203 project; warm filesystem",
+  "samples": 21,
+  "ratio": 1.2,
+  "absolute_ms": 2.0,
+  "workloads": [
+    "comment",
+    "prose",
+    "line_insert",
+    "stable_id",
+    "block_topology",
+    "recovery",
+    "query/completion",
+    "query/hover",
+    "query/definition",
+    "query/references",
+    "query/prepare_rename",
+    "query/rename",
+    "query/code_action",
+    "query/code_action_fix_all",
+    "negotiated/comment",
+    "negotiated/prose",
+    "negotiated/line_insert",
+    "negotiated/stable_id",
+    "negotiated/block_topology",
+    "negotiated/recovery",
+    "fanout/block_topology",
+    "lifecycle/index_ready",
+    "lifecycle/open",
+    "memory/peak_rss_kib"
+  ],
+  "fanout": {
+    "documents": 100,
+    "blocks": 20,
+    "lines": 10,
+    "shared_destinations": 10
+  },
+  "limits": {
+    "lifecycle/index_ready": {
+      "ratio": 1.3,
+      "absolute": 50,
+      "unit": "ms"
+    },
+    "lifecycle/open": {
+      "ratio": 1.3,
+      "absolute": 10,
+      "unit": "ms"
+    },
+    "memory/peak_rss_kib": {
+      "ratio": 1.2,
+      "absolute": 16384,
+      "unit": "KiB"
+    }
+  }
+}

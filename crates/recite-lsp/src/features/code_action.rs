@@ -8,7 +8,7 @@ use lsp_types::{
     DocumentChanges, OneOf, OptionalVersionedTextDocumentIdentifier, Position, Range,
     TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
 };
-use recite_compiler::authoring::AuthoringSnapshot;
+use recite_compiler::authoring::AuthoringQuery;
 use recite_core::schema::{SchemaSource, SchemaSourceEditPlan};
 use recite_ui::{MsgId, UiCatalog};
 
@@ -30,7 +30,7 @@ pub(crate) struct SchemaCodeActionDocument {
 
 pub(crate) fn code_action(
     params: &CodeActionParams,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument>,
     schema_summary: Option<&recite_compiler::authoring::SchemaSummary>,
@@ -174,17 +174,11 @@ pub(crate) fn schema_workspace_edit(
 }
 
 fn full_document_range(text: &str) -> Range {
-    let lines = text.split('\n').collect::<Vec<_>>();
-    let (line, character) = if text.ends_with('\n') {
-        (lines.len().saturating_sub(1), 0)
-    } else {
-        let last = lines
-            .last()
-            .copied()
-            .unwrap_or_default()
-            .trim_end_matches('\r');
-        (lines.len().saturating_sub(1), last.encode_utf16().count())
-    };
+    let (line, (content, _)) = recite_core::source_lines(text)
+        .enumerate()
+        .last()
+        .unwrap_or((0, ("", "")));
+    let character = content.encode_utf16().count();
     Range {
         start: Position::new(0, 0),
         end: Position::new(line as u32, character as u32),

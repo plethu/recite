@@ -1,6 +1,11 @@
 name: CI
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ""
   push:
     branches:
       - main
@@ -13,6 +18,19 @@ on:
       - reopened
 
   workflow_dispatch:
+    inputs:
+      lsp_sessions_only:
+        description: Run the cross-platform LSP session matrix and CI policy checks
+        type: boolean
+        default: false
+      lsp_server_control_ref:
+        description: Optional historical server revision for alternating binary comparisons
+        type: string
+        default: ""
+      lsp_native_trace:
+        description: Compare native tracing enabled and disabled on each session runner
+        type: boolean
+        default: false
   schedule:
     - cron: "23 5 * * 1"
 
@@ -20,8 +38,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: ${{ inputs.ref == '' }}
 
 jobs:
   changes:
@@ -30,6 +48,13 @@ jobs:
     timeout-minutes: 5
     outputs:
       rust: ${{ steps.scope.outputs.rust }}
+      flatpak-packages: ${{ steps.scope.outputs.flatpak-packages }}
+      nix-packages: ${{ steps.scope.outputs.nix-packages }}
+      release-plan: ${{ steps.scope.outputs.release-plan }}
+      cli-packages: ${{ steps.scope.outputs.cli-packages }}
+      editor-native: ${{ steps.scope.outputs.editor-native }}
+      writer: ${{ steps.scope.outputs.writer }}
+      hosts: ${{ steps.scope.outputs.hosts }}
       windows-publisher: ${{ steps.scope.outputs.windows-publisher }}
       docs: ${{ steps.scope.outputs.docs }}
       site: ${{ steps.scope.outputs.site }}
@@ -37,11 +62,17 @@ jobs:
       benchmark-smoke: ${{ steps.scope.outputs.benchmark-smoke }}
       maintainability: ${{ steps.scope.outputs.maintainability }}
       packages: ${{ steps.scope.outputs.packages }}
+      lsp-sessions: ${{ steps.scope.outputs.lsp-sessions }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
+      - name: Install pinned CI routing runtime
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: python
       - id: scope
         name: Inspect complete changed-file list
         run: python3 scripts/ci-scope.py
@@ -56,7 +87,7 @@ jobs:
         with:
           # pull_request's default checkout is a synthetic merge commit. The
           # policy must inspect the source branch's actual commit range.
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -69,7 +100,7 @@ jobs:
       - name: Install lightweight checkers
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: typos aqua:rhysd/actionlint
+          install_args: python uv typos aqua:rhysd/actionlint
 
       - name: Check spelling
         run: typos
@@ -78,51 +109,60 @@ jobs:
         run: actionlint -shellcheck= -pyflakes=
 
       - name: Check CI selection and result contracts
-        run: python3 -m unittest discover -s tests/ci -p 'test_*.py'
+        run: uv run --locked --no-python-downloads python -m unittest discover -s tests/ci -p 'test_*.py'
 
       - name: Check integration-mode policy fixtures
         run: bash tests/git-policy/check-integration.sh
 
-      - name: Check pull-request rollup policy
-        run: tests/check-pr-review-gates/check-rollup-fixtures.sh
-
   rust:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
-    name: Rust gates
+    uses: ./.github/workflows/rust-checks.yml
+    with:
+      lane: core
+      ref: ${{ inputs.ref || '' }}
+
+  hosts:
+    needs: changes
+    if: needs.changes.outputs.hosts == 'true'
+    uses: ./.github/workflows/rust-checks.yml
+    with:
+      lane: hosts
+      ref: ${{ inputs.ref || '' }}
+
+  writer:
+    needs: changes
+    if: needs.changes.outputs.writer == 'true'
+    uses: ./.github/workflows/rust-checks.yml
+    with:
+      lane: writer
+      ref: ${{ inputs.ref || '' }}
+
+  editor-native:
+    needs: changes
+    if: needs.changes.outputs.editor-native == 'true'
+    uses: ./.github/workflows/rust-checks.yml
+    with:
+      lane: editor-native
+      ref: ${{ inputs.ref || '' }}
+
+  release-plan:
+    needs: changes
+    if: needs.changes.outputs.release-plan == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 10
     env:
-      MISE_ENV: maintainability
-      RECITE_BASE_REF: >-
-        ${{ github.event_name == 'pull_request' &&
-            format('origin/{0}', github.base_ref) || github.event.before }}
-      RECITE_HEAD_REF: >-
-        ${{ github.event_name == 'pull_request' &&
-            github.event.pull_request.head.sha || github.sha }}
+      MISE_ENV: release
+      MISE_EXEC_AUTO_INSTALL: "false"
     steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-
-      - name: Install repository toolchain
-        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
-
-      - name: Cache Rust dependencies and build output
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-
-      - name: Install native writer build dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config gettext cmake libgtk-3-dev libclang-dev libxkbcommon-x11-0 xvfb dbus-x11 python3-gi gir1.2-atspi-2.0 at-spi2-core
-
-      - name: Run Rust and adapter gates
-        run: scripts/check-project-gates.sh
-
-      - name: Probe the Linux native accessibility bridge
-        # Records current native limitations; --require-actions remains a
-        # separate acceptance gate until the pinned host implements actions.
-        run: xvfb-run -a just writer probe-accessibility
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust just github:crate-ci/cargo-release aqua:axodotdev/cargo-dist
+      - run: just release plan
 
   windows-publisher:
     needs: changes
@@ -135,6 +175,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Install repository toolchain
@@ -167,16 +208,20 @@ jobs:
     name: Documentation
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      # This lane provisions its tools explicitly; skip unrelated implicit installs.
+      MISE_EXEC_AUTO_INSTALL: "false"
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: node pnpm just
+          install_args: node pnpm python just
 
       - name: Verify documentation
         run: just web verify
@@ -187,10 +232,13 @@ jobs:
     name: Documentation browsers
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Install repository toolchain
@@ -222,12 +270,13 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: rust node pnpm aqua:BurntSushi/ripgrep
+          install_args: rust node pnpm python aqua:BurntSushi/ripgrep
 
       - name: Cache Rust dependencies and build output
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -247,27 +296,51 @@ jobs:
   benchmark-smoke:
     needs: changes
     if: needs.changes.outputs.benchmark-smoke == 'true'
-    # This checks that the tiny benchmark targets build and execute. It does
-    # not compare timings or enforce the performance thresholds in §19.8.
-    name: Benchmark smoke
+    # Tiny benchmark execution plus a paired, confirmed LSP latency comparison.
+    name: Benchmarks and LSP regression
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          install_args: rust
+          install_args: rust python uv just
 
       - name: Cache Rust dependencies and build output
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Run benchmark smoke
         run: scripts/benchmark-smoke.sh
+
+      - name: Compare LSP performance against the change base
+        env:
+          EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -z "$EVENT_BASE" || "$EVENT_BASE" =~ ^0+$ ]]; then
+            base="$(git rev-parse HEAD^)"
+          else
+            base="$(git merge-base "$EVENT_BASE" HEAD)"
+          fi
+          just perf setup
+          just perf compare "$base"
+
+      - name: Retain LSP measurement evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lsp-performance
+          path: target/lsp-performance/*.json
+          if-no-files-found: warn
+          retention-days: 30
 
   maintainability:
     needs: changes
@@ -278,18 +351,17 @@ jobs:
     env:
       # Lanes running structural policy checks use this scoped environment,
       # which installs ast-grep.
-      MISE_ENV: maintainability
+      MISE_ENV: maintainability,quality
       RECITE_BASE_REF: >-
         ${{ github.event_name == 'pull_request' &&
             format('origin/{0}', github.base_ref) || github.event.before }}
       RECITE_HEAD_REF: >-
-        ${{ github.event_name == 'pull_request' &&
-            github.event.pull_request.head.sha || github.sha }}
+        ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out source change
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -304,23 +376,57 @@ jobs:
           just --dry-run editor zed fmt-check
           just --dry-run engines godot
           just --dry-run stress scale
+          just --dry-run perf bench lsp
+          just --dry-run perf check
 
       - name: Run maintainability checks
-        run: |
-          tests/maintainability/check.sh
-          tests/ast-grep/check.sh
-          tests/lint-suppressions/check.sh
-          scripts/check-maintainability.sh
-          scripts/check-ast-grep.sh
-          scripts/check-lint-suppressions.sh
-          just fmt-check
-          just unused-deps
-          just supply-chain
+        run: just _check-quality
+
+  cli-packages:
+    needs: changes
+    if: needs.changes.outputs.cli-packages == 'true'
+    uses: ./.github/workflows/cli-packages.yml
+    with:
+      ref: ${{ inputs.ref || '' }}
 
   packages:
     needs: changes
     if: needs.changes.outputs.packages == 'true'
     uses: ./.github/workflows/writer-packages.yml
+    with:
+      ref: ${{ inputs.ref || '' }}
+      native: true
+      nix: false
+      flatpak: false
+
+  nix-packages:
+    needs: changes
+    if: needs.changes.outputs.nix-packages == 'true'
+    uses: ./.github/workflows/writer-packages.yml
+    with:
+      ref: ${{ inputs.ref || '' }}
+      native: false
+      nix: true
+      flatpak: false
+
+  flatpak-packages:
+    needs: changes
+    if: needs.changes.outputs.flatpak-packages == 'true'
+    uses: ./.github/workflows/writer-packages.yml
+    with:
+      ref: ${{ inputs.ref || '' }}
+      native: false
+      nix: false
+      flatpak: true
+
+  lsp-sessions:
+    needs: changes
+    if: needs.changes.outputs.lsp-sessions == 'true'
+    uses: ./.github/workflows/lsp-sessions.yml
+    with:
+      server_ref: ${{ inputs.ref || '' }}
+      server_control_ref: ${{ inputs.lsp_server_control_ref || '' }}
+      native_trace: ${{ inputs.lsp_native_trace || false }}
 
   required-check:
     name: required-check
@@ -329,6 +435,13 @@ jobs:
       - changes
       - git-policy
       - rust
+      - flatpak-packages
+      - nix-packages
+      - release-plan
+      - cli-packages
+      - editor-native
+      - writer
+      - hosts
       - docs
       - site
       - benchmark-smoke
@@ -336,11 +449,13 @@ jobs:
       - windows-publisher
       - editor
       - packages
+      - lsp-sessions
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
       - name: Require every selected lane
         env:

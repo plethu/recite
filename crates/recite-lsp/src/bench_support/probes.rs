@@ -21,7 +21,7 @@ impl LspBenchmarkProbes {
         let summaries = workspace.snapshot().summaries();
         let document = summaries
             .iter()
-            .find_map(LspDocumentProbe::from_summary)
+            .find_map(|summary| LspDocumentProbe::from_summary(summary))
             .unwrap_or_else(|| {
                 panic!("LSP benchmark fixture contains at least one saved source file")
             });

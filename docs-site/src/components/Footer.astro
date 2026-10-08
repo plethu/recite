@@ -1,0 +1,8 @@
+---
+import Default from "@astrojs/starlight/components/Footer.astro";
+---
+{Astro.locals.starlightRoute.entry.data.presentation === "article" ? <Default /> : (
+   <footer class="site-footer site-content">
+     Recite · MIT OR Apache-2.0 · <a href="https://github.com/plethu/recite">Source</a>
+   </footer>
+ )}

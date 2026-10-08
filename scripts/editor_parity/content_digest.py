@@ -124,14 +124,24 @@ def _git_files(ctx: Context) -> list[tuple[bytes, bool, int | None]]:
             ctx.require(False, f"unable to parse Git digest input metadata: {error}")
             continue
         if stage != 0:
-            ctx.require(False, f"workspace digest input has an unmerged Git index entry: {os.fsdecode(raw_path)}")
+            ctx.require(
+                False,
+                f"workspace digest input has an unmerged Git index entry: {os.fsdecode(raw_path)}",
+            )
         if mode not in {0o100644, 0o100755, 0o120000, 0o160000}:
-            ctx.require(False, f"workspace digest input has unsupported Git mode {mode:o}: {os.fsdecode(raw_path)}")
+            ctx.require(
+                False,
+                f"workspace digest input has unsupported Git mode {mode:o}: {os.fsdecode(raw_path)}",
+            )
         if mode == 0o160000:
-            ctx.require(False, f"workspace digest input must not be a gitlink: {os.fsdecode(raw_path)}")
+            ctx.require(
+                False, f"workspace digest input must not be a gitlink: {os.fsdecode(raw_path)}"
+            )
         existing_mode = tracked_modes.get(raw_path)
         if existing_mode is not None and existing_mode != mode:
-            ctx.require(False, f"workspace digest input has conflicting Git modes: {os.fsdecode(raw_path)}")
+            ctx.require(
+                False, f"workspace digest input has conflicting Git modes: {os.fsdecode(raw_path)}"
+            )
         tracked_modes[raw_path] = mode
     return [
         (raw_path, raw_path in tracked_modes, tracked_modes.get(raw_path))
@@ -164,7 +174,10 @@ def _ignored(ctx: Context, relative_path: Path) -> bool:
     if relative_path.suffix in {".pyc", ".pyo"}:
         return True
     target_relative = _target_relative(ctx)
-    return bool(target_relative and (relative_path == target_relative or target_relative in relative_path.parents))
+    return bool(
+        target_relative
+        and (relative_path == target_relative or target_relative in relative_path.parents)
+    )
 
 
 def _is_repository_metadata(relative_path: Path) -> bool:

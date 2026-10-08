@@ -199,13 +199,14 @@ fn shared_destination_does_not_revalidate_unrelated_callers() {
         .unwrap();
     assert_eq!(
         VALIDATED_DOCUMENTS.with(Cell::get),
-        1,
-        "moving the destination must not invalidate callers"
+        0,
+        "moving the destination preserves project meaning and diagnostic locations"
     );
     saved[0] = SavedDocument::new(
         key("scene000.recite"),
         saved[0].text().replace(":: beat0", ":: renamed"),
     );
+    VALIDATED_DOCUMENTS.with(|count| count.set(0));
     kernel
         .apply(AuthoringRequest::new(
             kernel.snapshot().generation(),
@@ -220,5 +221,10 @@ fn shared_destination_does_not_revalidate_unrelated_callers() {
             .iter()
             .all(|doc| !doc.diagnostics().is_empty()),
         "removing the referenced block must invalidate every caller"
+    );
+    assert_eq!(
+        VALIDATED_DOCUMENTS.with(Cell::get),
+        100,
+        "shared validation contexts must visit each document only once"
     );
 }

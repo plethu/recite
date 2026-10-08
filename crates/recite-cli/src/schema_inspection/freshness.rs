@@ -1,7 +1,5 @@
 use recite_compiler::authoring::SchemaFreshness;
-use recite_core::schema::{
-    ContentFingerprintFreshness, ProducerFreshness, SchemaProducerFreshness,
-};
+use recite_core::schema::{ContentFingerprintFreshness, ProducerFreshness};
 
 use super::fingerprints::producer_fingerprint_projection;
 use super::model::{FreshnessChannelsProjection, FreshnessProjection};
@@ -25,7 +23,7 @@ pub(super) fn freshness_json(freshness: &SchemaFreshness) -> FreshnessProjection
                     .collect(),
             };
             FreshnessProjection {
-                status: freshness_status(comparison),
+                status: crate::schema_freshness::freshness_status(comparison).to_owned(),
                 reason: None,
                 channels: Some(channels),
             }
@@ -49,64 +47,6 @@ pub(super) fn freshness_json(freshness: &SchemaFreshness) -> FreshnessProjection
             channels: None,
         },
     }
-}
-
-fn freshness_status(evidence: &SchemaProducerFreshness) -> String {
-    let mut invalid = false;
-    let mut missing = false;
-    let mut mismatch = false;
-    let mut unexpected = false;
-    let mut record = |freshness: &ProducerFreshness| match freshness {
-        ProducerFreshness::Fresh => {}
-        ProducerFreshness::ContentMissing { .. } | ProducerFreshness::Missing { .. } => {
-            missing = true
-        }
-        ProducerFreshness::ContentMismatch { .. } | ProducerFreshness::Mismatch { .. } => {
-            mismatch = true
-        }
-        ProducerFreshness::ContentUnexpected { .. } | ProducerFreshness::Unexpected { .. } => {
-            unexpected = true
-        }
-        ProducerFreshness::Invalid { .. } => invalid = true,
-        ProducerFreshness::Mixed { .. } => {
-            missing = true;
-            mismatch = true;
-            unexpected = true;
-        }
-    };
-    record(&evidence.manifest);
-    for value in evidence
-        .registries
-        .values()
-        .chain(evidence.metadata_domains.values())
-    {
-        record(value);
-    }
-    match evidence.content_fingerprint {
-        ContentFingerprintFreshness::Fresh => {}
-        ContentFingerprintFreshness::Missing { .. } => missing = true,
-        ContentFingerprintFreshness::Mismatch { .. } => mismatch = true,
-        ContentFingerprintFreshness::Unexpected { .. } => unexpected = true,
-    }
-    if invalid {
-        "invalid"
-    } else if [missing, mismatch, unexpected]
-        .into_iter()
-        .filter(|value| *value)
-        .count()
-        > 1
-    {
-        "mixed"
-    } else if missing {
-        "missing"
-    } else if mismatch {
-        "mismatch"
-    } else if unexpected {
-        "unexpected"
-    } else {
-        "fresh"
-    }
-    .to_owned()
 }
 
 fn content_freshness_json(value: &ContentFingerprintFreshness) -> serde_json::Value {

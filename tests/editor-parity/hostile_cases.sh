@@ -11,7 +11,7 @@ expect_failure() {
   output="$(run_checker 2>&1)"
   result=$?
   set -e
-  if (( result == 0 )) || [[ "$output" != *"$expected"* ]]; then
+  if ((result == 0)) || [[ "$output" != *"$expected"* ]]; then
     echo "editor parity hostile fixture missed: $mutation" >&2
     printf '%s\n' "$output" >&2
     exit 1
@@ -39,11 +39,11 @@ compiler_diagnostic_a_result=$?
 compiler_diagnostic_b="$(run_checker 2>&1)"
 compiler_diagnostic_b_result=$?
 set -e
-if (( compiler_diagnostic_a_result == 0 || compiler_diagnostic_b_result == 0 )) \
+if ((compiler_diagnostic_a_result == 0 || compiler_diagnostic_b_result == 0)) \
   || [[ "$compiler_diagnostic_a" != "$compiler_diagnostic_b" ]] \
   || [[ "$compiler_diagnostic_a" != *"editor parity compiler diagnostic fixture"* ]] \
   || [[ "$compiler_diagnostic_a" != *"... [truncated]"* ]] \
-  || (( ${#compiler_diagnostic_a} > 40000 )); then
+  || ((${#compiler_diagnostic_a} > 40000)); then
   echo "editor parity compiler diagnostic fixture was not bounded and deterministic" >&2
   printf '%s\n' "$compiler_diagnostic_a" >&2
   exit 1
@@ -73,7 +73,7 @@ expect_failure symlink-cycle "workspace digest input must not be a symlink"
 expect_failure evidence-traversal "evidence target escapes the repository"
 expect_failure orphan-utf16 "orphaned=['orphan-utf16-crlf-non-bmp']"
 expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"
-expect_failure neovim-stale-filetype "Neovim filetype evidence cannot retain stale no-activation wording"
+expect_failure neovim-stale-filetype "Neovim filetype evidence needs Linux support status"
 assert_no_hashed_targets
 expect_failure reciprocity "artifact vscode-vsix client list must exactly reciprocate"
 expect_failure topology "VS Code and VSCodium must share one VSIX artifact topology"
@@ -96,9 +96,9 @@ expect_failure evidence-issues-shape "capability lsp.completion must name non-em
 expect_failure evidence-issues-open "capability lsp.completion evidence_issues must name closed historical issues, not #206"
 expect_failure follow-up-owner-drift "capability lsp.completion follow_up #206 belongs to lsp.cancellation"
 expect_failure cancellation-follow-up "lsp.cancellation must remain owned by serious-v1 follow-up #206"
-expect_failure cancellation-status-inflation "unsupported capability lsp.cancellation cannot claim neovim status partial"
+expect_failure cancellation-status-inflation "lsp.cancellation must not claim installed-client cancellation without host evidence"
 expect_failure cancellation-status-bypass "planned capability lsp.cancellation cannot claim neovim status partial"
-expect_failure cancellation-evidence-status "lsp.cancellation expected_evidence.status must remain unsupported until #206"
+expect_failure cancellation-evidence-status "lsp.cancellation expected_evidence.status must retain shared-server partial evidence"
 expect_failure zed-code-action-support "lsp.code-actions must retain partial Zed host evidence"
 expect_failure zed-rename-support "lsp.rename must retain partial Zed host evidence"
 expect_failure zed-utf16-post-emoji "lsp.utf16.positions must retain Zed assertion 'post-emoji utf-16 completion request'"
@@ -111,17 +111,12 @@ expect_failure keyboard-scenario-status "editor.keyboard.workflow partial/implem
 expect_failure keyboard-executable-evidence "capability editor.keyboard.workflow host_records require an installed-host evidence runner command"
 expect_failure keyboard-evidence-boundary "editor.keyboard.workflow known_limitation must name the headless evidence boundary"
 expect_failure keyboard-zed-sequence-provenance "editor.keyboard.workflow keyboard_sequence_scope must explain 'dedicated lsp ui action sequence'"
-expect_failure keyboard-document-wording "editor parity documentation must retain 'broader milestone 5 accessibility proof'"
-expect_failure m4-zed-task-diagnostics "Milestone 4 reconciliation must retain the Zed task-diagnostics limitation"
-expect_failure m4-zed-native-cancellation "Milestone 4 reconciliation must retain the Zed native-cancellation limitation"
-expect_failure m4-zed-built-in-run-trace "Milestone 4 reconciliation must retain the unsupported Zed built-in run/trace boundary"
-expect_failure m4-zed-stale-didchange "Milestone 4 reconciliation must retain the lower-level stale-didchange boundary"
 mutate_fixture keyboard-valid-host-evidence
 set +e
 keyboard_host_output="$(run_checker 2>&1)"
 keyboard_host_result=$?
 set -e
-if (( keyboard_host_result != 0 )); then
+if ((keyboard_host_result != 0)); then
   echo "editor parity valid installed-host keyboard evidence fixture failed" >&2
   printf '%s\n' "$keyboard_host_output" >&2
   exit 1
@@ -142,7 +137,7 @@ set +e
 non_keyboard_dual_output="$(run_checker 2>&1)"
 non_keyboard_dual_result=$?
 set -e
-if (( non_keyboard_dual_result != 0 )); then
+if ((non_keyboard_dual_result != 0)); then
   echo "editor parity valid dual-client installed-host evidence fixture failed" >&2
   printf '%s\n' "$non_keyboard_dual_output" >&2
   exit 1
@@ -154,7 +149,7 @@ set +e
 non_keyboard_incremental_output="$(run_checker 2>&1)"
 non_keyboard_incremental_result=$?
 set -e
-if (( non_keyboard_incremental_result != 0 )); then
+if ((non_keyboard_incremental_result != 0)); then
   echo "editor parity valid incremental installed-host evidence fixture failed" >&2
   printf '%s\n' "$non_keyboard_incremental_output" >&2
   exit 1
@@ -167,4 +162,3 @@ expect_failure symlink-artifact-component "artifact vscode-vsix path must not tr
 expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"
 expect_failure symlink-component "scenario lsp-stdio-baseline fixture must not traverse symlink component"
 expect_failure symlink-contract-control "editor parity fixture must not be a symlink"
-expect_failure symlink-document-control "editor parity documentation must not be a symlink"

@@ -1,14 +1,14 @@
 use recite_core::{DocumentKey, SourcePosition, SourceSpan};
 
-use super::types::{EditPrecondition, SourceFingerprint, SourceRange};
+use super::types::{EditPrecondition, SourceRange};
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan};
 use crate::authoring::{
-    AuthoringSnapshot, QueryClass, QueryResult, QueryUnavailableReason, SymbolIdentity,
+    AuthoringQuery, QueryClass, QueryResult, QueryUnavailableReason, SymbolIdentity,
     SymbolLocation, SymbolQueryOptions,
 };
 
 pub(super) fn document<'a>(
-    snapshot: &'a AuthoringSnapshot,
+    snapshot: &'a AuthoringQuery<'_>,
     key: &DocumentKey,
 ) -> Result<&'a super::super::snapshot::DocumentSnapshot, AuthoringEditError> {
     snapshot
@@ -19,7 +19,7 @@ pub(super) fn document<'a>(
 }
 
 pub(super) fn require_complete_block_references(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
 ) -> Result<(), AuthoringEditError> {
     snapshot
         .documents()
@@ -34,7 +34,7 @@ pub(super) fn require_complete_block_references(
 }
 
 pub(super) fn project_block_definitions(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     document: &DocumentKey,
 ) -> Result<Vec<SymbolLocation>, AuthoringEditError> {
     match snapshot.project_block_definitions() {
@@ -50,25 +50,26 @@ pub(super) fn project_block_definitions(
 }
 
 pub(super) fn precondition(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     key: &DocumentKey,
 ) -> Result<EditPrecondition, AuthoringEditError> {
     let document = document(snapshot, key)?;
     Ok(EditPrecondition::new(
         key.clone(),
         document.version(),
-        SourceFingerprint::for_source(document.source_text()),
+        document.source_fingerprint().clone(),
     ))
 }
 
 pub(super) fn make_plan(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     keys: impl IntoIterator<Item = DocumentKey>,
     edits: Vec<super::SourceEdit>,
     operation: AuthoringEditOperation,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     let mut preconditions = Vec::new();
     for key in keys {
+        snapshot.checkpoint()?;
         if !preconditions
             .iter()
             .any(|item: &EditPrecondition| item.document() == &key)
@@ -76,7 +77,7 @@ pub(super) fn make_plan(
             preconditions.push(precondition(snapshot, &key)?);
         }
     }
-    AuthoringEditPlan::new(snapshot.generation(), preconditions, edits, operation)
+    AuthoringEditPlan::new(snapshot, preconditions, edits, operation)
 }
 
 pub(super) fn source_range(
@@ -134,13 +135,17 @@ pub(super) fn incomplete_from_query(
     document: &DocumentKey,
     unavailable: Vec<QueryUnavailableReason>,
 ) -> AuthoringEditError {
+    if unavailable.contains(&QueryUnavailableReason::Interrupted) {
+        return AuthoringEditError::Interrupted(crate::authoring::Interrupted);
+    }
     let class = unavailable
         .into_iter()
         .find_map(|reason| match reason {
             QueryUnavailableReason::Incomplete(class) => Some(class),
             QueryUnavailableReason::MissingMetadataContext
             | QueryUnavailableReason::MalformedMetadataContext
-            | QueryUnavailableReason::Unsupported => None,
+            | QueryUnavailableReason::Unsupported
+            | QueryUnavailableReason::Interrupted => None,
         })
         .unwrap_or(QueryClass::Diagnostics);
     AuthoringEditError::Incomplete {
@@ -150,7 +155,7 @@ pub(super) fn incomplete_from_query(
 }
 
 pub(super) fn block_occurrence(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     key: &DocumentKey,
     position: SourcePosition,
 ) -> Result<SymbolLocation, AuthoringEditError> {

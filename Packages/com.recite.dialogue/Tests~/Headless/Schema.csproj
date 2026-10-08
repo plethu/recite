@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Editor/ReciteSchemaRegistration.cs;../../Editor/ReciteSchemaToml.cs" />
+    <Compile Include="UnitySchemaStubs.cs;ReciteUnitySchemaHeadless.cs" />
+  </ItemGroup>
+</Project>

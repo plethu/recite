@@ -52,18 +52,27 @@ fn c_abi_locale_attempts_preserve_context_first_order_and_trace() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_start_with_values_and_locale_provider_and_variant(
-                asset,
-                std::ptr::null(),
-                locale.as_ptr(),
-                variant.as_ptr(),
-                values.as_ptr(),
-                values.len(),
-                Some(ordered_locale_callback),
-                std::ptr::null_mut(),
-                &raw mut session,
-                &raw mut batch,
-            )
+            assert_eq!(
+                recite_session_create(asset, std::ptr::null(), locale.as_ptr(), &raw mut session),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_locale_variant(session, variant.as_ptr()),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_interpolation_values(session, values.as_ptr(), values.len()),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_locale_provider(
+                    session,
+                    Some(ordered_locale_callback),
+                    std::ptr::null_mut()
+                ),
+                ReciteStatus::Ok
+            );
+            recite_session_begin(session, &raw mut batch)
         },
         ReciteStatus::Ok
     );

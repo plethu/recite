@@ -10,11 +10,10 @@
 //! snapshots are structural save data and should be stored or authenticated by
 //! the host save system.
 //!
-//! Adapter-facing convenience APIs are intentionally deferred to future adapter
-//! crates. Until those crates exist, adapters may call this crate directly while
-//! preserving the host-agnostic contract in `docs/engine-adapter-contract.md`.
-//! Broader game-developer workflow guides live in the [docs site][guides] as
-//! they are filled in.
+//! `recite-adapter` supplies host-independent session ownership and transactional
+//! batches. Engine companions build on that crate while preserving the
+//! host-agnostic contract in `docs/engine-adapter-contract.md`.
+//! Game-developer workflow guides live in the [docs site][guides].
 //!
 //! [guides]: https://github.com/plethu/recite/tree/main/docs-site/src/content/docs
 //!

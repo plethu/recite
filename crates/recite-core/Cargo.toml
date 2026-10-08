@@ -4,23 +4,26 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Core Recite AST, identifiers, values, diagnostics, and schema model."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
-atomic-write-file.workspace = true
 blake3.workspace = true
 compact_str.workspace = true
+memchr.workspace = true
 rmp-serde.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
-serde-value.workspace = true
 serde_json.workspace = true
+serde-value.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 toml_edit.workspace = true
 unicode-ident.workspace = true
+
+[target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
+atomic-write-file.workspace = true
 
 [dev-dependencies]
 # Test-only isolated directories for the PO atomic-write/conflict contract.

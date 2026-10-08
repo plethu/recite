@@ -6,7 +6,7 @@ usage() {
 Usage:
   check-maintainability.sh [base-ref [head-ref]] [--full]
 
-Checks changed handwritten Rust, JavaScript, Lua, Python, and shell source.
+Checks changed handwritten Rust, JavaScript/TypeScript, Lua, Python, and shell source.
 Line counts are review triggers, not automatic split rules:
   production and tooling: scrutiny >250, follow-up >400
   test/support: scrutiny >350, follow-up >500
@@ -14,7 +14,8 @@ Line counts are review triggers, not automatic split rules:
 Unchanged or shrinking oversized files pass. A file crossing or growing above
 its follow-up threshold requires an exact, bounded, issue-linked exception in
 scripts/maintainability/exceptions.toml. File sizes are read from the checked
-out head; use --full for a repository-wide trigger report.
+out commit/tree, excluding uncommitted edits. `just maintainability` snapshots
+working sources. Use --full for a repository-wide trigger report.
 EOF
 }
 
@@ -48,21 +49,21 @@ for arg in "$@"; do
     refs+=("$arg")
   fi
 done
-if (( ${#refs[@]} > 2 )); then
+if ((${#refs[@]} > 2)); then
   usage >&2
   exit 2
 fi
 
 base_ref="${refs[0]:-${RECITE_BASE_REF:-origin/main}}"
 head_ref="${refs[1]:-${RECITE_HEAD_REF:-HEAD}}"
-if ! head_sha="$(git -C "$repo_root" rev-parse --verify "${head_ref}^{commit}" 2>/dev/null)"; then
+if ! head_sha="$(git -C "$repo_root" rev-parse --verify "${head_ref}^{tree}" 2>/dev/null)"; then
   echo "unable to resolve maintainability head ref: $head_ref" >&2
   exit 2
 fi
 
 base_sha=""
 empty_base=0
-if (( ! full_scan )); then
+if ((! full_scan)); then
   if [[ "$base_ref" =~ ^0{40}$ ]]; then
     base_sha="$(git -C "$repo_root" hash-object -t tree /dev/null)"
     empty_base=1
@@ -71,10 +72,15 @@ if (( ! full_scan )); then
     echo "unable to resolve maintainability base ref: $base_ref" >&2
     exit 2
   fi
+  if ((! empty_base)) && head_commit="$(git -C "$repo_root" rev-parse --verify "${head_ref}^{commit}" 2>/dev/null)"; then
+    base_sha="$(git -C "$repo_root" merge-base "$base_sha" "$head_commit")"
+  fi
 fi
 
-exceptions_file="$repo_root/scripts/maintainability/exceptions.toml"
-if [[ ! -f "$exceptions_file" ]]; then
+policy_temporary="$(mktemp -d)"
+trap 'rm -rf "$policy_temporary"' EXIT
+exceptions_file="$policy_temporary/exceptions.toml"
+if ! git -C "$repo_root" show "$head_sha:scripts/maintainability/exceptions.toml" >"$exceptions_file"; then
   echo "missing maintainability exceptions: $exceptions_file" >&2
   exit 2
 fi
@@ -86,14 +92,15 @@ if ! maintainability_validate_exceptions; then
 fi
 
 declare -a all_paths=()
+git -C "$repo_root" ls-tree -r --name-only -z "$head_sha" >"$policy_temporary/paths"
 while IFS= read -r -d '' path; do
   all_paths+=("$path")
-done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
+done <"$policy_temporary/paths"
 
 declare -a paths=()
 declare -A base_paths=()
 declare -A renamed_paths=()
-if (( full_scan )); then
+if ((full_scan)); then
   paths=("${all_paths[@]}")
   echo "== full maintainability inventory at $head_sha =="
 else
@@ -125,7 +132,7 @@ for path in "${paths[@]}"; do
   head_lines="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
   base_lines=0
   policy_transition=0
-  if (( ! full_scan )); then
+  if ((! full_scan)); then
     base_path="${base_paths["$path"]-$path}"
     base_lines="$(maintainability_line_count_at "$repo_root" "$base_sha" "$base_path")"
     if [[ -n "${renamed_paths["$path"]+present}" ]]; then
@@ -135,37 +142,40 @@ for path in "${paths[@]}"; do
       else
         base_scrutiny="$(maintainability_scrutiny_threshold "$base_kind")"
         base_follow_up="$(maintainability_follow_up_threshold "$base_kind")"
-        if (( scrutiny < base_scrutiny || follow_up < base_follow_up )); then
+        if ((scrutiny < base_scrutiny || follow_up < base_follow_up)); then
           policy_transition=1
         fi
       fi
-      if (( policy_transition )); then
+      if ((policy_transition)); then
         base_lines=0
       fi
     fi
   fi
-  if (( head_lines <= scrutiny )); then
+  if ((head_lines <= scrutiny)); then
     continue
   fi
 
   triggered=$((triggered + 1))
-  if (( full_scan )); then
+  if ((full_scan)); then
     echo "legacy trigger: $path ($kind, $head_lines lines; threshold $scrutiny)"
     continue
   fi
 
-  if (( policy_transition )); then
+  if ((policy_transition)); then
     echo "policy transition trigger: $path ($kind, newly entering stricter maintainability policy; threshold $scrutiny)"
-  elif (( base_lines == head_lines )); then
+  elif ((base_lines == head_lines)); then
     echo "unchanged trigger: $path ($kind, $head_lines lines; threshold $scrutiny)"
-  elif (( head_lines < base_lines )); then
+  elif ((head_lines < base_lines)); then
     echo "shrinking trigger: $path ($kind, $base_lines -> $head_lines lines)"
   else
     echo "growing trigger: $path ($kind, $base_lines -> $head_lines lines)"
   fi
 
-  if (( head_lines > follow_up && (base_lines <= follow_up || head_lines > base_lines) )); then
-    if [[ -n "${exception_maximum["$path"]+present}" ]]; then
+  if ((head_lines > follow_up && (base_lines <= follow_up || head_lines > base_lines))); then
+    if ((base_lines > 0 && ! policy_transition)) \
+      && maintainability_is_format_only "$repo_root" "$base_sha" "$head_sha" "$base_path" "$path"; then
+      echo "formatting-only expansion: $path (pinned formatter reproduces head bytes)"
+    elif [[ -n "${exception_maximum["$path"]+present}" ]]; then
       echo "documented exception: $path"
     else
       echo "follow-up threshold exceeded by new or growing $kind file: $path ($head_lines > $follow_up)" >&2
@@ -175,11 +185,11 @@ for path in "${paths[@]}"; do
   fi
 done
 
-if (( ${#paths[@]} == 0 )); then
+if ((${#paths[@]} == 0)); then
   echo "no changed maintainability source files"
 fi
 echo "maintainability triggers: $triggered"
-if (( failures > 0 )); then
+if ((failures > 0)); then
   echo "Found $failures maintainability violation(s)." >&2
   exit 1
 fi

@@ -4,8 +4,18 @@
       "id": "full-comment",
       "source": "# a full line comment",
       "tokens": [
-        ["#", ["source.recite", "comment.line.number-sign.recite", "punctuation.definition.comment.recite"]],
-        [" a full line comment", ["source.recite", "comment.line.number-sign.recite", "comment.line.number-sign.recite"]]
+        [
+          "#",
+          [
+            "source.recite",
+            "comment.line.number-sign.recite",
+            "punctuation.definition.comment.recite"
+          ]
+        ],
+        [
+          " a full line comment",
+          ["source.recite", "comment.line.number-sign.recite", "comment.line.number-sign.recite"]
+        ]
       ]
     },
     {

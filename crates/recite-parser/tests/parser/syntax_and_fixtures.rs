@@ -15,6 +15,22 @@ fn syntax_tree_round_trips_source_text() {
 }
 
 #[test]
+fn bare_cr_and_mixed_endings_preserve_syntax_and_source_spans() {
+    for source in [
+        ":: first\r-> END\r:: second\r-> END\r",
+        ":: first\r\n-> END\r:: second\n-> END\r",
+    ] {
+        let parsed = parse(TEST_PATH, source);
+        assert_eq!(parsed.syntax().text().to_string(), source);
+        assert!(parsed.diagnostics().is_empty());
+        let lowered = parsed.lower_source_file();
+        assert!(lowered.diagnostics.is_empty());
+        assert_eq!(lowered.source_file.blocks.len(), 2);
+        assert_eq!(lowered.source_file.blocks[1].span.start.line(), 3);
+    }
+}
+
+#[test]
 fn statement_markers_classify_consistently() {
     let source = concat!(
         ":: tavern\n",

@@ -15,14 +15,26 @@ null_probe="$repo_root/tests/ffi-header/null_callbacks.c"
 lifetime_probe="$repo_root/tests/ffi-header/locale_lifetime.c"
 lifetime_source="$repo_root/tests/ffi-header/locale_lifetime.recite"
 for path in "$header" "$c_probe" "$cpp_probe" "$null_probe" "$lifetime_probe" "$lifetime_source"; do
-  [[ -f "$path" ]] || { echo "missing FFI header probe input: $path" >&2; exit 2; }
+  [[ -f "$path" ]] || {
+    echo "missing FFI header probe input: $path" >&2
+    exit 2
+  }
 done
 
 cc_bin="${CC:-cc}"
 cxx_bin="${CXX:-c++}"
-command -v "$cc_bin" >/dev/null 2>&1 || { echo "missing C compiler: $cc_bin" >&2; exit 2; }
-command -v "$cxx_bin" >/dev/null 2>&1 || { echo "missing C++ compiler: $cxx_bin" >&2; exit 2; }
-command -v cargo >/dev/null 2>&1 || { echo "missing cargo" >&2; exit 2; }
+command -v "$cc_bin" >/dev/null 2>&1 || {
+  echo "missing C compiler: $cc_bin" >&2
+  exit 2
+}
+command -v "$cxx_bin" >/dev/null 2>&1 || {
+  echo "missing C++ compiler: $cxx_bin" >&2
+  exit 2
+}
+command -v cargo >/dev/null 2>&1 || {
+  echo "missing cargo" >&2
+  exit 2
+}
 
 if [[ -n "${CARGO_TARGET_DIR:-}" && "${CARGO_TARGET_DIR}" != /* ]]; then
   cargo_target_dir="$repo_root/${CARGO_TARGET_DIR}"
@@ -61,9 +73,18 @@ if [[ -z "$ffi_library" ]]; then
 fi
 
 case "$ffi_library" in
-  *.so) library_dir="$(dirname "$ffi_library")"; library_name="recite_ffi" ;;
-  *.dylib) library_dir="$(dirname "$ffi_library")"; library_name="recite_ffi" ;;
-  *.dll) library_dir="$(dirname "$ffi_library")"; library_name="recite_ffi" ;;
+  *.so)
+    library_dir="$(dirname "$ffi_library")"
+    library_name="recite_ffi"
+    ;;
+  *.dylib)
+    library_dir="$(dirname "$ffi_library")"
+    library_name="recite_ffi"
+    ;;
+  *.dll)
+    library_dir="$(dirname "$ffi_library")"
+    library_name="recite_ffi"
+    ;;
 esac
 "$cc_bin" -std=c11 -Wall -Wextra -Werror -pedantic -I"$repo_root/include" \
   "$null_probe" -L"$library_dir" -l"$library_name" \

@@ -6,7 +6,7 @@ use super::{
 use recite_core::{ast::Statement, schema::ProjectSchema};
 
 mod facts;
-pub(crate) use facts::ProjectFacts;
+pub(crate) use facts::{FactRanges, ProjectFacts};
 mod index;
 pub(crate) use index::ProjectIndex;
 

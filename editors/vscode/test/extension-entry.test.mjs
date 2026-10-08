@@ -1,9 +1,9 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import Module from "node:module";
 import { createRequire } from "node:module";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
+import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { hostApi } from "./controller-fixtures.mjs";
 
@@ -16,7 +16,7 @@ const require = createRequire(import.meta.url);
 test("the CommonJS entry injects the host API into the built ESM lifecycle", async () => {
   const api = hostApi({
     isTrusted: () => false,
-    onDidGrantWorkspaceTrust: () => ({ dispose() {} })
+    onDidGrantWorkspaceTrust: () => ({ dispose() {} }),
   });
   const outputChannels = [];
   api.window = {
@@ -25,20 +25,22 @@ test("the CommonJS entry injects the host API into the built ESM lifecycle", asy
         name,
         append() {},
         appendLine() {},
-        dispose() { channel.disposed = true; },
-        disposed: false
+        dispose() {
+          channel.disposed = true;
+        },
+        disposed: false,
       };
       outputChannels.push(channel);
       return channel;
     },
     showErrorMessage() {},
     showWarningMessage() {},
-    showInformationMessage() {}
+    showInformationMessage() {},
   };
   api.languages.createDiagnosticCollection = () => ({
     delete() {},
     dispose() {},
-    set() {}
+    set() {},
   });
 
   const originalLoad = Module._load;
@@ -66,15 +68,20 @@ test("the CommonJS entry injects the host API into the built ESM lifecycle", asy
     assert.equal(outputChannels.length, 1);
 
     await entry.deactivate();
-    assert.equal(controller.disposed, true,
-      "deactivate must reach the controller created by the same ESM module");
+    assert.equal(
+      controller.disposed,
+      true,
+      "deactivate must reach the controller created by the same ESM module",
+    );
 
     const implementation = await import(pathToFileURL(implementationPath).href);
     assert.equal(typeof implementation.activateWithVscode, "function");
     assert.equal(typeof implementation.deactivateWithVscode, "function");
 
     const failure = new Error("host activation sentinel");
-    api.window.createOutputChannel = () => { throw failure; };
+    api.window.createOutputChannel = () => {
+      throw failure;
+    };
     await assert.rejects(entry.activate({ subscriptions: [] }), (error) => error === failure);
   } finally {
     Module._load = originalLoad;

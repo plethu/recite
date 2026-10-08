@@ -4,11 +4,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Shared local configuration and capability contracts for Recite tooling."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
+atomic-write-file.workspace = true
 dirs.workspace = true
 recite-core.workspace = true
 recite-ui.workspace = true
@@ -16,7 +17,6 @@ serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 toml_edit.workspace = true
-atomic-write-file.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

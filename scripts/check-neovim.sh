@@ -18,11 +18,11 @@ EOF
 static_only=0
 host_evidence=0
 input_root=""
-while (( $# > 0 )); do
+while (($# > 0)); do
   case "$1" in
     --static) static_only=1 ;;
     --host-evidence) host_evidence=1 ;;
-    -h|--help|help)
+    -h | --help | help)
       usage
       exit 0
       ;;
@@ -57,6 +57,8 @@ for required_file in \
   "$plugin_root/lua/recite/health.lua" \
   "$plugin_root/lua/recite/command_json.lua" \
   "$plugin_root/lua/recite/command_protocol.lua" \
+  "$plugin_root/lua/recite/error_protocol.lua" \
+  "$plugin_root/lua/recite_error_vocabulary.lua" \
   "$plugin_root/lua/recite/diagnostic_protocol.lua" \
   "$plugin_root/lua/recite/finite_protocol.lua" \
   "$plugin_root/lua/recite/command_process.lua" \
@@ -78,6 +80,7 @@ for required_file in \
   "$repo_root/tests/neovim/recovery.lua" \
   "$repo_root/tests/neovim/material.lua" \
   "$repo_root/tests/neovim/commands_protocol.lua" \
+  "$repo_root/tests/neovim/structured_errors.lua" \
   "$repo_root/tests/neovim/commands_lifecycle.lua" \
   "$repo_root/tests/neovim/commands.lua"; do
   if [[ ! -f "$required_file" ]]; then
@@ -85,7 +88,7 @@ for required_file in \
     exit 2
   fi
 done
-if (( host_evidence )) && [[ ! -f "$repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua" ]]; then
+if ((host_evidence)) && [[ ! -f "$repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua" ]]; then
   echo "missing Neovim installed-host evidence file: $repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua" >&2
   exit 2
 fi
@@ -127,7 +130,7 @@ fi
 "$node_bin" "$plugin_root/scripts/diagnostic-projections.mjs"
 echo "Neovim UI message projection checks passed"
 
-if (( static_only )); then
+if ((static_only)); then
   exit 0
 fi
 
@@ -146,6 +149,10 @@ if [[ -z "$tree_sitter_bin" ]]; then
   echo "Neovim headless checks require tree-sitter; install the pinned tool or set TREE_SITTER=/path/to/tree-sitter" >&2
   exit 2
 fi
+(
+  cd "$repo_root"
+  "$cargo_bin" test --locked -q -p recite-cli --lib structured::tests::error_vocabulary_projections_are_current
+)
 nvim_version="$($nvim_bin --headless --version | sed -n '1s/^NVIM v//p')"
 if [[ -z "$nvim_version" ]]; then
   echo "unable to determine Neovim version from $nvim_bin" >&2
@@ -178,8 +185,8 @@ mkdir -p "$project" "$second_project" "$invalid_project" "$missing_project" "$un
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$project/core_language_spike.recite"
 cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$invalid_project/invalid.recite"
 sed 's/> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert/>/' \
-  "$repo_root/fixtures/recite/valid/core_language_spike.recite" > "$missing_project/missing.recite"
-printf '%s\n' 'format_version = 1' > "$project/recite.project.toml"
+  "$repo_root/fixtures/recite/valid/core_language_spike.recite" >"$missing_project/missing.recite"
+printf '%s\n' 'format_version = 1' >"$project/recite.project.toml"
 printf '%s\r\n' \
   ':: marker_probe default' \
   '> sign@88990011223344556677' \
@@ -187,12 +194,12 @@ printf '%s\r\n' \
   '  :if this is a sentence, not a branch.' \
   '  # ash marks the lintel.' \
   '  ? ask@99aabbccddeeff001122' \
-    '    Ask what the sign means.' \
-    '    -> END' > "$unicode_project/unicode.recite"
+  '    Ask what the sign means.' \
+  '    -> END' >"$unicode_project/unicode.recite"
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$second_project/core_language_spike.recite"
-printf '%s\n' 'format_version = 1' > "$second_project/recite.project.toml"
+printf '%s\n' 'format_version = 1' >"$second_project/recite.project.toml"
 for isolated_project in "$invalid_project" "$missing_project" "$unicode_project"; do
-  printf '%s\n' 'format_version = 1' > "$isolated_project/recite.project.toml"
+  printf '%s\n' 'format_version = 1' >"$isolated_project/recite.project.toml"
 done
 
 delayed_lsp="$scratch/delayed-recite-lsp"
@@ -202,7 +209,7 @@ printf '%s\n' \
   '#!/usr/bin/env bash' \
   'set -euo pipefail' \
   'sleep 2.1' \
-  'exec "${RECITE_LSP_TARGET:?}" "$@"' > "$delayed_lsp"
+  'exec "${RECITE_LSP_TARGET:?}" "$@"' >"$delayed_lsp"
 chmod +x "$delayed_lsp"
 
 echo "== Neovim headless filetype/LSP/structured-command checks =="
@@ -221,22 +228,22 @@ fi
 
 run_nvim() {
   RECITE_PLUGIN="$plugin_root" \
-  RECITE_PARSER_ROOT="$parser_root" \
-  RECITE_LSP="$repo_root/target/debug/recite-lsp" \
-  RECITE_TEST_PROJECT="$project" \
-  RECITE_SECOND_PROJECT="$second_project" \
-  RECITE_INVALID_PROJECT="$invalid_project" \
-  RECITE_MISSING_PROJECT="$missing_project" \
-  RECITE_UNICODE_PROJECT="$unicode_project" \
-  RECITE_DELAYED_LSP="$delayed_lsp" \
-  RECITE_LSP_TARGET="$repo_root/target/debug/recite-lsp" \
-  RECITE_CLI="$repo_root/target/debug/recite" \
-  RECITE_REPO_ROOT="$repo_root" \
-  RECITE_PARSER_AVAILABLE="$parser_available" \
+    RECITE_PARSER_ROOT="$parser_root" \
+    RECITE_LSP="$repo_root/target/debug/recite-lsp" \
+    RECITE_TEST_PROJECT="$project" \
+    RECITE_SECOND_PROJECT="$second_project" \
+    RECITE_INVALID_PROJECT="$invalid_project" \
+    RECITE_MISSING_PROJECT="$missing_project" \
+    RECITE_UNICODE_PROJECT="$unicode_project" \
+    RECITE_DELAYED_LSP="$delayed_lsp" \
+    RECITE_LSP_TARGET="$repo_root/target/debug/recite-lsp" \
+    RECITE_CLI="$repo_root/target/debug/recite" \
+    RECITE_REPO_ROOT="$repo_root" \
+    RECITE_PARSER_AVAILABLE="$parser_available" \
     env -u RECITE_CONFIG -u NVIM_APPNAME -u VIMINIT -u EXINIT -u VIMRUNTIME \
-      XDG_CONFIG_HOME="$config_home" XDG_CONFIG_DIRS="$config_dirs" \
-      XDG_DATA_HOME="$data_home" XDG_DATA_DIRS="$data_dirs" \
-      XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" "$@"
+    XDG_CONFIG_HOME="$config_home" XDG_CONFIG_DIRS="$config_dirs" \
+    XDG_DATA_HOME="$data_home" XDG_DATA_DIRS="$data_dirs" \
+    XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" "$@"
 }
 
 group_processes() {
@@ -254,14 +261,14 @@ cleanup_process_group() {
   fi
   echo "Neovim host lane terminating processes left in process group $group" >&2
   kill -TERM -- "-$group" 2>/dev/null || true
-  for (( attempt = 0; attempt < 20; attempt++ )); do
+  for ((attempt = 0; attempt < 20; attempt++)); do
     leaked_processes="$(group_processes "$group")"
     [[ -z "$leaked_processes" ]] && return 0
     sleep 0.05
   done
   echo "Neovim host lane escalating process-group cleanup to KILL: $group" >&2
   kill -KILL -- "-$group" 2>/dev/null || true
-  for (( attempt = 0; attempt < 20; attempt++ )); do
+  for ((attempt = 0; attempt < 20; attempt++)); do
     leaked_processes="$(group_processes "$group")"
     [[ -z "$leaked_processes" ]] && return 0
     sleep 0.05
@@ -274,7 +281,7 @@ cleanup_process_group() {
 run_headless() {
   local output
   local status=0
-  if (( host_evidence )); then
+  if ((host_evidence)); then
     local output_file="$scratch/nvim-output.$$.${RANDOM}"
     if ! command -v setsid >/dev/null 2>&1 || ! command -v ps >/dev/null 2>&1; then
       echo "Neovim host evidence requires setsid and ps for process-group cleanup checks" >&2
@@ -293,7 +300,7 @@ run_headless() {
     local leaked_processes
     leaked_processes="$(group_processes "$nvim_pid")"
     if [[ -n "$leaked_processes" ]]; then
-      if (( status == 0 )); then
+      if ((status == 0)); then
         echo "Neovim host lane leaked processes from process group $nvim_pid:" >&2
         printf '%s\n' "$leaked_processes" >&2
       fi
@@ -309,7 +316,7 @@ run_headless() {
       status=1
     fi
   fi
-  if (( status != 0 )); then
+  if ((status != 0)); then
     printf '%s\n' "$output"
     return 1
   fi
@@ -324,7 +331,7 @@ run_headless "$repo_root/tests/neovim/check.lua"
 run_headless "$repo_root/tests/neovim/recovery.lua"
 run_headless "$repo_root/tests/neovim/material.lua"
 run_headless "$repo_root/tests/neovim/commands.lua"
-if (( host_evidence )); then
+if ((host_evidence)); then
   run_headless "$repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua"
 fi
 

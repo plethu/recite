@@ -332,7 +332,7 @@ fn control_stream_read_error_stops_with_typed_record() {
     stop_with_error(
         &mut protocol,
         crate::error::CliError::Io(error),
-        "control",
+        ErrorOperation::Watch,
         None,
     )
     .expect("stopped");
@@ -403,7 +403,7 @@ fn active_control_stream_error_emits_completion_before_fatal_stop() {
         &mut cancel_emitted,
     )
     .expect_err("stream failure is fatal");
-    stop_with_error(&mut protocol, error, "control", None).expect("stopped");
+    stop_with_error(&mut protocol, error, ErrorOperation::Watch, None).expect("stopped");
 
     let events = String::from_utf8(output)
         .expect("protocol output")
@@ -415,3 +415,4 @@ fn active_control_stream_error_emits_completion_before_fatal_stop() {
     assert_eq!(events[1]["event"], "watch.build.completed");
     assert_eq!(events[2]["event"], "watch.stopped");
 }
+use crate::structured::errors::ErrorOperation;

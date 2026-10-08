@@ -1,6 +1,6 @@
 #[test]
-fn initialize_advertises_full_sync_save_and_utf16() {
-    super::lifecycle::initialize_advertises_full_sync_save_and_utf16();
+fn initialize_advertises_incremental_sync_save_and_utf16() {
+    super::lifecycle::initialize_advertises_incremental_sync_save_and_utf16();
 }
 
 #[test]
@@ -49,8 +49,8 @@ fn stale_versions_do_not_publish_or_overwrite_newer_text() {
 }
 
 #[test]
-fn non_full_or_malformed_changes_are_ignored() {
-    super::sync::non_full_or_malformed_changes_are_ignored();
+fn malformed_changes_are_ignored() {
+    super::sync::malformed_changes_are_ignored();
 }
 
 #[test]
@@ -61,4 +61,9 @@ fn change_for_unopened_document_is_ignored() {
 #[test]
 fn crlf_and_non_bmp_text_use_utf16_ranges() {
     super::position::crlf_and_non_bmp_text_use_utf16_ranges();
+}
+
+#[test]
+fn indexed_edit_ranges_preserve_crlf_and_utf16_boundaries() {
+    super::position::indexed_edit_ranges_preserve_crlf_and_utf16_boundaries();
 }

@@ -1,13 +1,13 @@
 use recite_core::{DocumentKey, SourcePosition};
 
-use super::super::snapshot::AuthoringSnapshot;
-use super::symbols::{contains, symbol_locations};
+use super::symbols::symbol_at;
 use super::types::{
     NavigationResult, QueryClass, QueryResult, QueryUnavailableReason, SymbolIdentity, SymbolKind,
-    SymbolLocation, SymbolQueryOptions, SymbolRole,
+    SymbolLocation, SymbolRole,
 };
+use crate::authoring::AuthoringQuery;
 
-impl AuthoringSnapshot {
+impl AuthoringQuery<'_> {
     /// Resolves a block reference or declaration to deterministic declarations.
     #[must_use]
     pub fn navigate(
@@ -15,13 +15,13 @@ impl AuthoringSnapshot {
         key: &DocumentKey,
         position: SourcePosition,
     ) -> QueryResult<NavigationResult> {
+        if self.checkpoint().is_err() {
+            return QueryResult::unavailable(QueryUnavailableReason::Interrupted);
+        }
         let Some(document) = self.document(key) else {
             return QueryResult::NoMatch;
         };
-        let Some(symbol) = symbol_locations(key, document, SymbolQueryOptions::default())
-            .into_iter()
-            .find(|symbol| contains(symbol.span(), position))
-        else {
+        let Some(symbol) = symbol_at(key, document, position) else {
             return QueryResult::NoMatch;
         };
         let SymbolIdentity::Block(block_id) = symbol.identity() else {
@@ -41,6 +41,9 @@ impl AuthoringSnapshot {
         let mut declarations = Vec::new();
         let mut incomplete_targets = false;
         for target in self.documents() {
+            if self.checkpoint().is_err() {
+                return QueryResult::unavailable(QueryUnavailableReason::Interrupted);
+            }
             let matches_target =
                 qualified_file.map_or(target.key() == key, |file| file == target.key().as_str());
             if !matches_target {

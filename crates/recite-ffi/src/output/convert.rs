@@ -1,17 +1,17 @@
 use recite_core::{ScalarValue, Value};
 use recite_runtime::{
-    ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonTree,
-    ChoiceAvailabilityReasonValue, ChoiceEchoMode, DialogueEffectArgument, DialogueEffectMode,
-    DialogueEffectRequest, DialogueEvent, DialogueLine, DialoguePlural,
-    DialoguePluralResolutionOutcome,
+    ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonOrigin,
+    ChoiceAvailabilityReasonTree, ChoiceEchoMode, DialogueEffectMode, DialogueEffectRequest,
+    DialogueEvent, DialogueLine, DialoguePlural, DialoguePluralResolutionOutcome,
     localisation::{PluralResolutionAttempt, PluralResolutionOutcome},
 };
 
 use super::model::{
-    FfiAvailability, FfiAvailabilityReason, FfiChoice, FfiEcho, FfiEffect, FfiEffectArg, FfiEvent,
-    FfiLine, FfiMetaValue, FfiMetadata, FfiPlural, FfiPluralAttempt, FfiPluralResolution,
-    FfiReasonArg, FfiReasonTree, FfiReasonValue, FfiScalar,
+    FfiAvailability, FfiAvailabilityReason, FfiChoice, FfiEcho, FfiEffect, FfiEvent, FfiLine,
+    FfiMetaValue, FfiMetadata, FfiPlural, FfiPluralAttempt, FfiPluralResolution, FfiReasonArg,
+    FfiReasonOrigin, FfiReasonTree, FfiScalar,
 };
+use crate::tagged_value::TaggedValue;
 
 pub(crate) fn ffi_event(event: DialogueEvent) -> FfiEvent {
     match event {
@@ -124,12 +124,13 @@ fn ffi_availability_reason(reason: ChoiceAvailabilityReason) -> FfiAvailabilityR
         id: reason.id.as_str().to_owned(),
         source_text: reason.source_text,
         text: reason.text,
+        origin: reason.origin.map(ffi_reason_origin),
         args: reason
             .args
             .into_iter()
             .map(|arg| FfiReasonArg {
                 name: arg.name,
-                value: ffi_reason_value(arg.value),
+                value: arg.value.into(),
             })
             .collect(),
     }
@@ -152,13 +153,17 @@ fn ffi_reason_tree(tree: ChoiceAvailabilityReasonTree) -> FfiReasonTree {
     }
 }
 
-fn ffi_reason_value(value: ChoiceAvailabilityReasonValue) -> FfiReasonValue {
-    match value {
-        ChoiceAvailabilityReasonValue::Identifier(v) => FfiReasonValue::Identifier { value: v },
-        ChoiceAvailabilityReasonValue::String(v) => FfiReasonValue::String { value: v },
-        ChoiceAvailabilityReasonValue::Integer(v) => FfiReasonValue::Integer { value: v },
-        ChoiceAvailabilityReasonValue::Float(v) => FfiReasonValue::Float { value: v },
-        ChoiceAvailabilityReasonValue::Boolean(v) => FfiReasonValue::Boolean { value: v },
+fn ffi_reason_origin(origin: ChoiceAvailabilityReasonOrigin) -> FfiReasonOrigin {
+    match origin {
+        ChoiceAvailabilityReasonOrigin::ConditionCall { function, args } => {
+            FfiReasonOrigin::ConditionCall {
+                function,
+                args: args.into_iter().map(TaggedValue::from).collect(),
+            }
+        }
+        ChoiceAvailabilityReasonOrigin::RequirementExpression { source_text } => {
+            FfiReasonOrigin::RequirementExpression { source_text }
+        }
     }
 }
 
@@ -172,20 +177,10 @@ fn ffi_effect(effect: DialogueEffectRequest) -> FfiEffect {
         id: effect.id.as_str().to_owned(),
         mode,
         function: effect.function,
-        args: effect.args.into_iter().map(ffi_effect_arg).collect(),
+        args: effect.args.into_iter().map(TaggedValue::from).collect(),
         source_file: effect.source_span.file,
         source_line: effect.source_span.start.line(),
         source_col: effect.source_span.start.column(),
-    }
-}
-
-fn ffi_effect_arg(arg: DialogueEffectArgument) -> FfiEffectArg {
-    match arg {
-        DialogueEffectArgument::Identifier(v) => FfiEffectArg::Identifier { value: v },
-        DialogueEffectArgument::String(v) => FfiEffectArg::String { value: v },
-        DialogueEffectArgument::Integer(v) => FfiEffectArg::Integer { value: v },
-        DialogueEffectArgument::Float(v) => FfiEffectArg::Float { value: v },
-        DialogueEffectArgument::Boolean(v) => FfiEffectArg::Boolean { value: v },
     }
 }
 

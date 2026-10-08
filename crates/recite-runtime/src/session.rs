@@ -109,6 +109,12 @@ impl DialogueSession {
         }
     }
 
+    /// Whether traversal has ended and this checkpoint cannot be resumed.
+    #[must_use]
+    pub fn is_ended(&self) -> bool {
+        matches!(self.phase, SessionPhase::Ended)
+    }
+
     #[must_use]
     pub fn locale(&self) -> Option<&LocaleId> {
         self.locale.as_ref()

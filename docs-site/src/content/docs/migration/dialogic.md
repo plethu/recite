@@ -1,25 +1,32 @@
 ---
 title: Dialogic
 description: Migration notes for Dialogic 2 timeline projects.
+template: splash
 ---
 
-Dialogic 2 for Godot organizes dialogue as `.dtl` timelines made of events such as text, character, choice, condition, variable, label, jump, return, and do/call events. Recite migration should preserve the narrative flow and validation surface, while leaving Dialogic-specific editor and presentation behavior in Godot or adapter code.
+Dialogic 2 for Godot organizes dialogue as `.dtl` timelines made of events such as text, character,
+choice, condition, variable, label, jump, return, and do/call events. Recite migration should
+preserve the narrative flow and validation surface, while leaving Dialogic-specific editor and
+presentation behavior in Godot or adapter code.
 
-Terminology checked against official Dialogic 2 docs for [timeline text syntax](https://docs.dialogic.pro/timeline-text-syntax.html), [variables](https://docs.dialogic.pro/variables.html), and [signals](https://docs.dialogic.pro/dialogic-signals.html).
+Terminology checked against official Dialogic 2 docs for
+[timeline text syntax](https://docs.dialogic.pro/timeline-text-syntax.html),
+[variables](https://docs.dialogic.pro/variables.html), and
+[signals](https://docs.dialogic.pro/dialogic-signals.html).
 
 ## Concept map
 
-| Dialogic | Recite |
-| --- | --- |
-| Timeline (`.dtl`) | Recite file or block group |
-| Label | Block |
-| Text event | Line |
-| Choice event | Choice |
-| Condition event | `:if` or choice `if` condition |
-| Set Variable event | Effect or host-owned state update |
-| Do/Call event | Effect request |
-| Signal event | Effect request or metadata, depending on semantics |
-| Character join/update/leave event | Host presentation effect or metadata |
+| Dialogic                          | Recite                                             |
+| --------------------------------- | -------------------------------------------------- |
+| Timeline (`.dtl`)                 | Recite file or block group                         |
+| Label                             | Block                                              |
+| Text event                        | Line                                               |
+| Choice event                      | Choice                                             |
+| Condition event                   | `:if` or choice `if` condition                     |
+| Set Variable event                | Effect or host-owned state update                  |
+| Do/Call event                     | Effect request                                     |
+| Signal event                      | Effect request or metadata, depending on semantics |
+| Character join/update/leave event | Host presentation effect or metadata               |
 
 ## Clean migrations
 
@@ -32,7 +39,8 @@ Terminology checked against official Dialogic 2 docs for [timeline text syntax](
 
 - Character staging events do not have a native Recite UI equivalent.
 - Timeline indentation and editor event blocks may need hand review after conversion.
-- Dialogic variable writes are not Recite runtime mutations; they must become effects or host state changes.
+- Dialogic variable writes are not Recite runtime mutations; they must become effects or host state
+  changes.
 
 ## Manual work
 
@@ -42,7 +50,8 @@ Terminology checked against official Dialogic 2 docs for [timeline text syntax](
 
 ## Not imported or replaced
 
-- Dialogic editor data, Godot scenes, autoload setup, character resources, portrait animation, timeline UI, and signal connections.
+- Dialogic editor data, Godot scenes, autoload setup, character resources, portrait animation,
+  timeline UI, and signal connections.
 - Automatic support for every built-in or custom Dialogic event.
 - Direct execution of `do` calls from Recite runtime.
 

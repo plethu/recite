@@ -1,0 +1,99 @@
+{
+  "lineWidth": 100,
+  "indentWidth": 2,
+  "newLineKind": "lf",
+  "includes": [
+    "**/*.{js,mjs,cjs,ts,json,yml,yaml,md,mdx,css,html,astro,svg,xml,py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}",
+    "**/Dockerfile",
+    "**/Dockerfile.playwright",
+    "**/*.csproj",
+    "**/NuGet.Config",
+    "gdlintrc",
+    ".clang-format"
+  ],
+  "excludes": [
+    "**/node_modules/**",
+    "**/target/**",
+    "docs-site/dist/**",
+    "docs-site/.astro/**",
+    "docs-site/.browser-artifacts/**",
+    "docs-site/src/client/generated/**",
+    "**/__pycache__/**",
+    ".venv/**",
+    "fixtures/schema/invalid/**",
+    "fixtures/schema/valid/unsorted_manifest.json",
+    "fixtures/synthetic/tiny/**",
+    "fixtures/realistic/v1-pack/**",
+    "fixtures/recite/invalid/**",
+    "editors/recite-tree-sitter/src/**",
+    "editors/vscode/src/*.generated.js",
+    "editors/vscode/package.nls.json",
+    "editors/recite-neovim/lua/recite_messages.lua",
+    "editors/recite-neovim/lua/recite_diagnostics.lua",
+    "apps/writer/packaging/flatpak/cargo-sources.json",
+    "apps/writer/packaging/flatpak/last_commit_position.h",
+    "include/recite.h"
+  ],
+  "typescript": { "quoteStyle": "alwaysDouble", "semiColons": "always" },
+  "json": { "trailingCommas": "never" },
+  "markdown": { "textWrap": "always", "emphasisKind": "asterisks", "strongKind": "asterisks" },
+  "markup": { "associations": ["**/*.{html,svg,xml,csproj}", "**/NuGet.Config"] },
+  "yaml": { "associations": ["**/gdlintrc", "**/.clang-format"] },
+  "exec": {
+    "associations": ["**/*.{py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}"],
+    "cwd": "${configDir}",
+    "cacheKey": "1",
+    "commands": [
+      {
+        "command": "ruff format --stdin-filename {{file_path}} -",
+        "exts": ["py"],
+        "cacheKeyFiles": ["pyproject.toml", "mise.quality.toml"]
+      },
+      {
+        "command": "shfmt -i 2 -ci -bn -filename {{file_path}}",
+        "exts": ["sh"],
+        "cacheKeyFiles": [".editorconfig", "mise.quality.toml"]
+      },
+      {
+        "command": "stylua --stdin-filepath {{file_path}} -",
+        "exts": ["lua"],
+        "cacheKeyFiles": ["stylua.toml", "mise.quality.toml"]
+      },
+      {
+        "command": "gdformat -",
+        "setupCommand": "gdformat -",
+        "exts": ["gd"],
+        "cacheKeyFiles": ["gdlintrc", "mise.quality.toml"]
+      },
+      {
+        "command": "clang-format --assume-filename {{file_path}}",
+        "exts": ["c", "cpp", "h"],
+        "cacheKeyFiles": [".clang-format", "mise.quality.toml"]
+      },
+      {
+        "command": "alejandra --quiet",
+        "exts": ["nix"],
+        "cacheKeyFiles": ["mise.quality.toml"]
+      },
+      {
+        "command": "pwsh -NoProfile -File scripts/quality/powershell.ps1 format",
+        "exts": ["ps1", "psd1"],
+        "cacheKeyFiles": [
+          "scripts/quality/powershell.ps1",
+          "scripts/quality/PSScriptAnalyzerSettings.psd1",
+          "mise.quality.toml"
+        ]
+      }
+    ]
+  },
+  "plugins": [
+    "https://plugins.dprint.dev/typescript-0.96.1.wasm",
+    "https://plugins.dprint.dev/json-0.25.2.wasm",
+    "https://plugins.dprint.dev/markdown-0.26.0.wasm",
+    "https://plugins.dprint.dev/dockerfile-0.7.0.wasm",
+    "https://plugins.dprint.dev/g-plane/malva-v0.16.0.wasm",
+    "https://plugins.dprint.dev/g-plane/markup_fmt-v0.27.5.wasm",
+    "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.6.0.wasm",
+    "https://plugins.dprint.dev/exec-0.7.3.json@a7898d5f1897e77bff474cec3d948c3ec3a7f455e32de2cc60c8adb9a5dd24aa"
+  ]
+}

@@ -1,6 +1,6 @@
 use lsp_types::Hover;
 use recite_compiler::authoring::{
-    AuthoringSnapshot, ClauseKind, FunctionReferenceKind, HoverInfo, SchemaSummary, SemanticFact,
+    AuthoringQuery, ClauseKind, FunctionReferenceKind, HoverInfo, SchemaSummary, SemanticFact,
     SymbolIdentity,
 };
 use recite_core::DocumentKey;
@@ -14,7 +14,7 @@ use super::schema_values::{metadata_value_hover, schema_candidate_hover};
 
 pub(super) fn typed_hover(
     key: &DocumentKey,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     info: &HoverInfo,
     catalog: &UiCatalog,

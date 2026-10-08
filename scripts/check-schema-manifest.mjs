@@ -1,10 +1,12 @@
-import { readFile, readdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
+import { readdir, readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const repoRoot = process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), "..");
-const schema = JSON.parse(await readFile(join(repoRoot, "schemas/recite-schema-manifest-v1.schema.json"), "utf8"));
+const schema = JSON.parse(
+  await readFile(join(repoRoot, "schemas/recite-schema-manifest-v1.schema.json"), "utf8"),
+);
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
 const validate = ajv.compile(schema);
 
@@ -13,8 +15,12 @@ async function documents(directory) {
 }
 
 for (const name of await documents(join(repoRoot, "fixtures/schema/valid"))) {
-  const document = JSON.parse(await readFile(join(repoRoot, "fixtures/schema/valid", name), "utf8"));
-  if (!validate(document)) throw new Error(`valid fixture rejected: ${name}\n${ajv.errorsText(validate.errors)}`);
+  const document = JSON.parse(
+    await readFile(join(repoRoot, "fixtures/schema/valid", name), "utf8"),
+  );
+  if (!validate(document)) {
+    throw new Error(`valid fixture rejected: ${name}\n${ajv.errorsText(validate.errors)}`);
+  }
 }
 
 const shapeInvalid = [
@@ -29,7 +35,13 @@ const shapeInvalid = [
   "unsupported_version.json",
 ];
 for (const name of shapeInvalid) {
-  const document = JSON.parse(await readFile(join(repoRoot, "fixtures/schema/invalid", name), "utf8"));
+  const document = JSON.parse(
+    await readFile(join(repoRoot, "fixtures/schema/invalid", name), "utf8"),
+  );
   if (validate(document)) throw new Error(`shape-invalid fixture accepted: ${name}`);
 }
-console.log(`JSON Schema validated ${ (await documents(join(repoRoot, "fixtures/schema/valid"))).length } valid and ${shapeInvalid.length} shape-invalid fixtures`);
+console.log(
+  `JSON Schema validated ${
+    (await documents(join(repoRoot, "fixtures/schema/valid"))).length
+  } valid and ${shapeInvalid.length} shape-invalid fixtures`,
+);

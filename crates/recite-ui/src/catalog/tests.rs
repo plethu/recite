@@ -21,7 +21,7 @@ fn typed_float_and_boolean_values_resolve_from_a_valid_resource() {
 
     let resource = FluentResource::try_new(source.to_owned()).expect("resource");
     let locale = "en-US".parse().expect("locale");
-    let mut bundle = FluentBundle::new(vec![locale]);
+    let mut bundle = FluentBundle::new_concurrent(vec![locale]);
     bundle.set_use_isolating(false);
     bundle
         .add_resource(resource)
@@ -66,4 +66,43 @@ fn resource_registry_uses_one_owned_lookup_path() {
             .get(&ResourceId::new("diagnostic-not-inventory").expect("resource ID"))
             .is_none()
     );
+}
+
+#[test]
+fn one_injected_catalog_can_be_shared_by_worker_threads() {
+    fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<UiCatalog>();
+    let source = crate::DEFAULT_RESOURCE.replace(
+        "lsp-completion-block = Recite block",
+        "lsp-completion-block = Worker block",
+    );
+    let catalog = UiCatalog::from_resources(
+        "en-US"
+            .parse()
+            .unwrap_or_else(|error| panic!("locale: {error}")),
+        [(
+            "en-US"
+                .parse()
+                .unwrap_or_else(|error| panic!("locale: {error}")),
+            source,
+        )],
+    )
+    .unwrap_or_else(|error| panic!("catalog: {error}"));
+    let expected = "Worker block";
+    std::thread::scope(|scope| {
+        let first = scope.spawn(|| catalog.text(crate::MsgId::LspCompletionBlock));
+        let second = scope.spawn(|| catalog.text(crate::MsgId::LspCompletionBlock));
+        assert_eq!(
+            first
+                .join()
+                .unwrap_or_else(|_| panic!("first worker panicked")),
+            expected
+        );
+        assert_eq!(
+            second
+                .join()
+                .unwrap_or_else(|_| panic!("second worker panicked")),
+            expected
+        );
+    });
 }

@@ -5,15 +5,14 @@ import argparse
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
-import plistlib
 import platform
+import plistlib
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
 
 PACKAGER_SPEC = importlib.util.spec_from_file_location(
     "package_writer", Path(__file__).with_name("package-writer.py")
@@ -30,11 +29,14 @@ def one(directory, suffix):
 
 
 def launch_cli(binary):
-    for flag, marker in (("--help", "--project"), ("--version", "0.0.0")):
-        result = subprocess.run(
-            [str(binary), flag], text=True, capture_output=True, timeout=20
+    for flag in ("--help", "--version"):
+        result = subprocess.run([str(binary), flag], text=True, capture_output=True, timeout=20)
+        matches = (
+            result.stdout.strip() == f"recite-writer {package_writer.writer_version()}"
+            if flag == "--version"
+            else "--project" in result.stdout
         )
-        if result.returncode != 0 or marker not in result.stdout:
+        if result.returncode != 0 or not matches:
             raise ValueError(f"{binary} {flag} failed: {result.stderr}")
 
 
@@ -43,9 +45,7 @@ def check_linux(directory):
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
         if shutil.which("dpkg-deb"):
-            fields = subprocess.check_output(
-                ["dpkg-deb", "--field", str(package)], text=True
-            )
+            fields = subprocess.check_output(["dpkg-deb", "--field", str(package)], text=True)
             subprocess.run(["dpkg-deb", "--extract", str(package), str(root)], check=True)
         else:
             members = subprocess.check_output(["ar", "t", str(package)], text=True).splitlines()
@@ -63,7 +63,9 @@ def check_linux(directory):
             for line in fields.splitlines()
             if not line.startswith(" ") and ": " in line
         )
-        if metadata.get("Package") != "recite-writer" or metadata.get("Version") != "0.0.0":
+        if metadata.get("Package") != "recite-writer" or metadata.get(
+            "Version"
+        ) != package_writer.debian_version(package_writer.writer_version()):
             raise ValueError(f"unexpected Debian metadata: {fields}")
         binary = one(root / "usr/bin", "recite-writer")
         debian_for_library = {
@@ -85,15 +87,26 @@ def check_linux(directory):
         declared = {part.strip().split(" (")[0] for part in metadata.get("Depends", "").split(",")}
         # Winit loads this at runtime, so ELF DT_NEEDED cannot discover it.
         runtime_dependencies = {"libxkbcommon-x11-0"}
-        missing = ({debian_for_library[library] for library in needed} | runtime_dependencies) - declared
+        missing = (
+            {debian_for_library[library] for library in needed} | runtime_dependencies
+        ) - declared
         if missing:
             raise ValueError(f"Debian package lacks runtime dependencies: {sorted(missing)}")
-        libc_dependency = next((part.strip() for part in metadata.get("Depends", "").split(",") if part.strip().startswith("libc6")), "")
+        libc_dependency = next(
+            (
+                part.strip()
+                for part in metadata.get("Depends", "").split(",")
+                if part.strip().startswith("libc6")
+            ),
+            "",
+        )
         minimum = re.fullmatch(r"libc6 \(>= ([0-9]+(?:\.[0-9]+)+)\)", libc_dependency)
         if minimum is None:
             raise ValueError("Debian package lacks a versioned libc6 dependency")
         abi = package_writer.linux_abi(binary)
-        if package_writer.version_parts(minimum.group(1)) < package_writer.version_parts(abi["minimumGlibc"]):
+        if package_writer.version_parts(minimum.group(1)) < package_writer.version_parts(
+            abi["minimumGlibc"]
+        ):
             raise ValueError("Debian libc6 minimum is below the packaged ELF requirement")
         recorded = json.loads((directory / "runtime-abi.json").read_text(encoding="utf-8"))
         if recorded != abi:
@@ -138,7 +151,15 @@ def check_macos(directory, expected_arch):
         if not list(bundle.rglob(name)):
             raise ValueError(f"macOS bundle lacks {name}")
     subprocess.run(
-        ["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(bundle), str(directory / "recite-writer.app.zip")],
+        [
+            "ditto",
+            "-c",
+            "-k",
+            "--sequesterRsrc",
+            "--keepParent",
+            str(bundle),
+            str(directory / "recite-writer.app.zip"),
+        ],
         check=True,
     )
 
@@ -156,7 +177,11 @@ def check_windows(directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--platform", choices=("linux", "macos", "windows"))
-    parser.add_argument("--arch", choices=("x86_64", "arm64"), help="expected native runner and package architecture")
+    parser.add_argument(
+        "--arch",
+        choices=("x86_64", "arm64"),
+        help="expected native runner and package architecture",
+    )
     parser.add_argument("directory", type=Path)
     args = parser.parse_args()
     host = {"Linux": "linux", "Darwin": "macos", "Windows": "windows"}.get(platform.system())
@@ -174,7 +199,12 @@ def main():
         check_macos(directory, args.arch or architecture)
     else:
         {"linux": check_linux, "windows": check_windows}[target](directory)
-    artifacts = [p for p in directory.rglob("*") if p.is_file() and (p.suffix in {".deb", ".dmg", ".exe", ".zip"} or p.name == "runtime-abi.json")]
+    artifacts = [
+        p
+        for p in directory.rglob("*")
+        if p.is_file()
+        and (p.suffix in {".deb", ".dmg", ".exe", ".zip"} or p.name == "runtime-abi.json")
+    ]
     with (directory / "SHA256SUMS").open("w", encoding="ascii") as sums:
         for artifact in sorted(artifacts):
             with artifact.open("rb") as source:

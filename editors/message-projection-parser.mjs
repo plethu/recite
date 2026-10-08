@@ -25,12 +25,16 @@ export function parseRepresentableMessages(source, ids, host = "editor") {
     if (currentId && wanted.has(currentId) && line.trim() !== "") {
       if (/^\s/u.test(line)) {
         throw new Error(
-          `canonical Fluent message ${currentId} uses a continuation at line ${index + 1}; ` +
-          `${host} projections support only single-line templates`
+          `canonical Fluent message ${currentId} uses a continuation at line ${index + 1}; `
+            + `${host} projections support only single-line templates`,
         );
       }
-      if (/^\./u.test(line.trim())) {
-        throw new Error(`canonical Fluent message ${currentId} uses an unsupported attribute at line ${index + 1}`);
+      if (line.trim().startsWith(".")) {
+        throw new Error(
+          `canonical Fluent message ${currentId} uses an unsupported attribute at line ${
+            index + 1
+          }`,
+        );
       }
     }
     if (line.trim() !== "") currentId = undefined;
@@ -42,7 +46,7 @@ export function parseRepresentableMessages(source, ids, host = "editor") {
 }
 
 export function diagnosticIds(source) {
-  return [...source.split(/\r?\n/u)].flatMap((line) => {
+  return source.split(/\r?\n/u).flatMap((line) => {
     const match = /^(diagnostic-[a-z0-9-]+)\s*=\s*[^\r\n]*$/u.exec(line);
     return match ? [match[1]] : [];
   }).filter((id) => !/(?:-help|-related|-meaning|-cause-\d+|-remediation-\d+)$/u.test(id));
@@ -73,6 +77,8 @@ export function assertDiagnosticTemplate(id, template, argumentsForId) {
 
 function assertRepresentableValue(id, value, line) {
   if (!/^([^{}]|\{\$[a-zA-Z][a-zA-Z0-9_-]*\})*$/u.test(value)) {
-    throw new Error(`canonical Fluent message ${id} uses an unsupported expression at line ${line}`);
+    throw new Error(
+      `canonical Fluent message ${id} uses an unsupported expression at line ${line}`,
+    );
   }
 }

@@ -53,8 +53,14 @@ impl Target {
     }
 }
 pub(super) fn all(writer: Writer) -> Vec<Target> {
-    let mut documents = if let Some(files) = writer.files.read().as_ref() {
-        files.navigation_targets()
+    let mut documents = if writer.files.read().is_some() {
+        writer
+            .buffers
+            .model
+            .read()
+            .as_ref()
+            .map(|model| model.document().project_sections())
+            .unwrap_or_default()
     } else {
         WRITER_EXAMPLES
             .iter()

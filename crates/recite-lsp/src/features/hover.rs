@@ -1,5 +1,5 @@
 use lsp_types::{Hover, Position};
-use recite_compiler::authoring::{AuthoringSnapshot, QueryResult, SchemaSummary};
+use recite_compiler::authoring::{AuthoringQuery, QueryResult, SchemaSummary};
 use recite_core::DocumentKey;
 use recite_ui::UiCatalog;
 
@@ -14,7 +14,7 @@ pub(super) fn hover(
     text: &str,
     position: Position,
     key: &DocumentKey,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<Hover> {

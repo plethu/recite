@@ -13,9 +13,8 @@ use std::fs;
 use driver::{ReferenceDriver, StepResult};
 use manifest::{
     AvailabilityReasonTreeExpectation, Capability, ExecutionMode, PluralAttemptOutcomeExpectation,
-    PluralResolutionOutcomeExpectation, RequirementLevel, StepStatus,
-    load_contract_error_categories, load_manifest, load_manifest_schema_error_categories,
-    load_operation_schema_error_categories,
+    PluralResolutionOutcomeExpectation, RequirementLevel, StepStatus, load_manifest,
+    load_manifest_schema_error_categories, load_operation_schema_error_categories,
 };
 
 const PROJECTION_ERROR_CATEGORIES: [&str; 3] = [
@@ -25,26 +24,20 @@ const PROJECTION_ERROR_CATEGORIES: [&str; 3] = [
 ];
 
 #[test]
-fn stable_error_category_table_stays_in_sync_with_contract_and_schema_artifacts() {
+fn stable_error_categories_match_the_operation_schema() {
     let manifest = load_manifest().expect("conformance manifest loads");
-    let contract_categories =
-        load_contract_error_categories().expect("contract categories parse from docs");
     let manifest_schema_categories =
         load_manifest_schema_error_categories().expect("manifest schema categories parse");
     let operation_schema_categories =
         load_operation_schema_error_categories().expect("operation schema categories parse");
 
     assert_eq!(
-        manifest.stable_error_categories, contract_categories,
-        "scenario manifest stable_error_categories drifted from docs/engine-adapter-contract.md §12"
+        manifest.stable_error_categories, operation_schema_categories,
+        "scenario manifest stable_error_categories drifted from the operation/result schema"
     );
     assert_eq!(
-        manifest_schema_categories, contract_categories,
-        "manifest schema stable_error_categories drifted from docs/engine-adapter-contract.md §12"
-    );
-    assert_eq!(
-        operation_schema_categories, contract_categories,
-        "operation/result schema stable_error_category enum drifted from docs/engine-adapter-contract.md §12"
+        manifest_schema_categories, operation_schema_categories,
+        "manifest schema stable_error_categories drifted from the operation/result schema"
     );
 }
 
@@ -158,7 +151,7 @@ fn plural_adapter_scenario_declares_structured_line_metadata() {
 fn reference_driver_runs_reference_scenarios_and_checks_mandatory_category_coverage() {
     let manifest = load_manifest().expect("conformance manifest loads");
     let contract_categories =
-        load_contract_error_categories().expect("contract categories parse from docs");
+        load_operation_schema_error_categories().expect("operation schema categories parse");
 
     let mandatory_categories = manifest
         .scenarios
@@ -178,7 +171,7 @@ fn reference_driver_runs_reference_scenarios_and_checks_mandatory_category_cover
         .collect::<BTreeSet<_>>();
     assert_eq!(
         mandatory_categories, mandatory_contract_categories,
-        "mandatory scenario set must cover every non-projection stable category from docs/engine-adapter-contract.md §12"
+        "mandatory scenarios must cover every non-projection category in the operation/result schema"
     );
 
     let projection_capability_categories = manifest

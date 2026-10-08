@@ -1,0 +1,5 @@
+external-sources=true
+source-path=SCRIPTDIR
+source-path=.
+# Scripts deliberately embed literal JavaScript templates and Tree-sitter output.
+disable=SC2016

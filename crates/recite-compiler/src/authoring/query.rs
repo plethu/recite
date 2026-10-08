@@ -1,3 +1,6 @@
+mod blocks;
+mod controlled;
+pub use controlled::AuthoringQuery;
 mod completion;
 mod context;
 mod diagnostics;
@@ -18,3 +21,5 @@ pub use self::types::{
     SemanticFact, SemanticSymbolKind, SymbolIdentity, SymbolKind, SymbolLocation,
     SymbolQueryOptions, SymbolRole,
 };
+
+mod synchronous;

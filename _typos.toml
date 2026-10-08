@@ -10,3 +10,7 @@ sav = "sav"
 
 # French text in the localisation workflow specimen.
 reste = "reste"
+
+[default.extend-identifiers]
+# Published crate name in archived dependency-probe lockfile evidence.
+writeable = "writeable"

@@ -54,17 +54,17 @@
   },
   "conditions": {
     "can_open": {
-      "params": [{"name": "item", "type": "registry:item"}],
+      "params": [{ "name": "item", "type": "registry:item" }],
       "availability_reason": {
         "reason": "missing_key",
-        "args": {"item": "$item"}
+        "args": { "item": "$item" }
       }
     }
   },
   "availability_reasons": {
     "missing_key": {
       "template": "You need {item}.",
-      "params": [{"name": "item", "type": "registry:item"}],
+      "params": [{ "name": "item", "type": "registry:item" }],
       "origin": {
         "kind": "script_member",
         "id": "schema/reasons.rs"
@@ -74,7 +74,7 @@
   "effects": {
     "open": {
       "modes": ["immediate"],
-      "params": [{"name": "item", "type": "registry:item"}]
+      "params": [{ "name": "item", "type": "registry:item" }]
     }
   },
   "metadata_domains": {
@@ -86,7 +86,7 @@
         "id": "content/tone.toml#tone"
       },
       "value_origins": {
-        "calm": {"kind": "data_row", "id": "content/tone.toml#calm"}
+        "calm": { "kind": "data_row", "id": "content/tone.toml#calm" }
       },
       "producer_fingerprints": [
         {
@@ -136,13 +136,13 @@
     }
   },
   "metadata": {
-    "skill": {"targets": ["choice"], "type": "string"},
-    "threshold": {"targets": ["choice"], "type": "int"},
-    "tag": {"targets": ["choice"], "type": "symbol", "repeatable": true}
+    "skill": { "targets": ["choice"], "type": "string" },
+    "threshold": { "targets": ["choice"], "type": "int" },
+    "tag": { "targets": ["choice"], "type": "symbol", "repeatable": true }
   },
   "projection_queries": {
     "actor_skill": {
-      "params": [{"name": "skill", "type": "string"}],
+      "params": [{ "name": "skill", "type": "string" }],
       "returns": "int",
       "max_calls_per_event": 1
     }
@@ -157,13 +157,13 @@
       "inputs": [
         {
           "name": "skill",
-          "source": {"kind": "candidate_metadata", "key": "skill"},
+          "source": { "kind": "candidate_metadata", "key": "skill" },
           "type": "string",
           "required": true
         },
         {
           "name": "threshold",
-          "source": {"kind": "candidate_metadata", "key": "threshold"},
+          "source": { "kind": "candidate_metadata", "key": "threshold" },
           "type": "int",
           "required": true
         },
@@ -180,7 +180,7 @@
       "queries": {
         "current": {
           "function": "actor_skill",
-          "args": [{"input": "skill"}]
+          "args": [{ "input": "skill" }]
         }
       },
       "outputs": {
@@ -192,18 +192,18 @@
             "template_id": "skill_check_prefix",
             "source_text": "[{skill} {current}/{threshold}]",
             "args": {
-              "skill": {"source": {"input": "skill"}, "type": "string"},
-              "current": {"source": {"query_result": "current"}, "type": "int"},
-              "threshold": {"source": {"input": "threshold"}, "type": "int"}
+              "skill": { "source": { "input": "skill" }, "type": "string" },
+              "current": { "source": { "query_result": "current" }, "type": "int" },
+              "threshold": { "source": { "input": "threshold" }, "type": "int" }
             }
           },
           "fields": {
             "current": {
-              "source": {"kind": "query_result", "name": "current"},
+              "source": { "kind": "query_result", "name": "current" },
               "type": "int"
             },
             "threshold": {
-              "source": {"kind": "input", "name": "threshold"},
+              "source": { "kind": "input", "name": "threshold" },
               "type": "int"
             }
           }
@@ -212,6 +212,6 @@
     }
   },
   "markup": {
-    "slow": {"requires_closing": true, "translatable": true}
+    "slow": { "requires_closing": true, "translatable": true }
   }
 }

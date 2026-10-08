@@ -4,9 +4,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Deterministic synthetic fixture generator for Recite benchmark profiles."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[package.metadata.dist]
+dist = false
 
 [[bin]]
 name = "recite-fixturegen"

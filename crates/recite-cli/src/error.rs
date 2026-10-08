@@ -124,6 +124,9 @@ pub(crate) enum CliError {
     ProjectDiscovery {
         source: recite_config::ProjectDiscoveryError,
     },
+    ProjectSchema {
+        source: recite_config::ProjectSchemaError,
+    },
     UiCatalog {
         source: String,
     },
@@ -328,6 +331,7 @@ impl std::fmt::Display for CliError {
             Self::SchemaInspection(error) => write!(formatter, "{error}"),
             Self::UserConfig { source } => write!(formatter, "{source}"),
             Self::ProjectDiscovery { source } => write!(formatter, "{source}"),
+            Self::ProjectSchema { source } => write!(formatter, "{source}"),
             Self::UiCatalog { source } => write!(formatter, "failed to load UI text catalog: {source}"),
             Self::Watch { message } => formatter.write_str(message),
             Self::WatchPreparation { source } => write!(formatter, "{source}"),

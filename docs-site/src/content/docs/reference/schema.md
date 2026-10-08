@@ -6,4 +6,5 @@ draft: true
 
 This page will document schema manifests, validation behavior, and metadata domains.
 
-The schema design is currently specified in the [production spec](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md).
+The schema contract is specified in the
+[schema chapter](https://github.com/plethu/recite/blob/main/docs/spec/schema.md).

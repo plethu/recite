@@ -6,8 +6,10 @@ use recite_core::{
     },
 };
 
+mod regions;
 #[path = "types.rs"]
 mod types;
+pub(crate) use regions::SummaryRanges;
 pub use types::*;
 
 /// A deterministic, host-neutral summary of one lowered source file.

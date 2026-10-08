@@ -47,7 +47,9 @@ echo
 echo "== documentation verification =="
 (
   cd "$repo_root"
-  pnpm docs:verify
+  just web setup
+  just web check
+  just web build
 )
 
 echo

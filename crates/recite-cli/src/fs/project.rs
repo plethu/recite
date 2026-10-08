@@ -10,19 +10,17 @@ use recite_core::{
     Diagnostic, DiagnosticArgumentValue,
     compiled::SchemaFingerprint,
     project::ProjectFreshnessInput,
-    project::ProjectManifest,
     project::ProjectManifestSource,
     project::{
         MISSING_COMPILED_ASSET, validate_project_freshness_source, validate_project_manifest_source,
     },
-    schema::ProjectSchema,
+    schema::{ProjectSchema, SchemaLoadReport},
 };
 
 use super::paths::resolve_project_path;
 use super::project_asset::decode_project_asset;
 use super::project_diagnostics::project_diagnostic;
 use super::project_sources::read_project_sources;
-use super::schema::{LoadedSchema, load_schema};
 use crate::error::CliError;
 
 pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>, CliError> {
@@ -59,7 +57,16 @@ fn validate_project_with_mode(
         .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
         .collect::<Vec<_>>();
 
-    let loaded_schema = load_project_schema(&project_root, manifest_source.manifest())?;
+    let loaded_schema = match discovered
+        .load_schema()
+        .map_err(|source| CliError::ProjectSchema { source })?
+    {
+        Some(loaded) => loaded.into_report(),
+        None => SchemaLoadReport {
+            schema: None,
+            diagnostics: Vec::new(),
+        },
+    };
     diagnostics.extend(loaded_schema.diagnostics.iter().cloned());
     diagnostics.extend(validate_project_manifest_source(
         manifest_source,
@@ -234,18 +241,4 @@ pub(crate) fn validate_project_asset_freshness(
     }
 
     Ok(diagnostics)
-}
-
-fn load_project_schema(
-    project_root: &Path,
-    manifest: &ProjectManifest,
-) -> Result<LoadedSchema, CliError> {
-    let Some(schema_path) = manifest.project.schema.as_deref() else {
-        return Ok(LoadedSchema {
-            schema: None,
-            diagnostics: Vec::new(),
-        });
-    };
-
-    load_schema(&resolve_project_path(project_root, schema_path))
 }

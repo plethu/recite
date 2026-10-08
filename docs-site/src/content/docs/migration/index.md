@@ -1,16 +1,21 @@
 ---
 title: Migration
 description: Transition guides for evaluating and moving existing dialogue content into Recite.
+template: splash
 ---
 
-These guides help teams inventory existing dialogue content, decide what maps cleanly to Recite, and identify work that should remain manual. They are not promises of automatic full compatibility with another dialogue tool.
+These guides help teams inventory existing dialogue content, decide what maps cleanly to Recite, and
+identify work that should remain manual. They are not promises of automatic full compatibility with
+another dialogue tool.
 
-Recite is useful when the goal is deterministic runtime traversal, structured outputs, schema-checked effects, stable line and choice IDs, and validation outside the game engine. A migration should preserve author intent first, then reshape source into Recite's native model.
+Recite is useful when the goal is deterministic runtime traversal, structured outputs,
+schema-checked effects, stable line and choice IDs, and validation outside the game engine. A
+migration should preserve author intent first, then reshape source into Recite's native model.
 
-The executable import paths are JSON/CSV, Twee, Ink and Yarn, each with a
-documented subset. Start with [import inspection](/migration/importer-boundaries/)
-to see source mappings and unsupported constructs. Dialogic, Dialogue Manager,
-Dialogue System for Unity and Clyde have manual guidance only.
+The executable import paths are JSON/CSV, Twee, Ink and Yarn, each with a documented subset. Start
+with [import inspection](/migration/importer-boundaries/) to see source mappings and unsupported
+constructs. Dialogic, Dialogue Manager, Dialogue System for Unity and Clyde have manual guidance
+only.
 
 ## Start here
 

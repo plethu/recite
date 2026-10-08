@@ -94,34 +94,29 @@ impl Component for Workspace {
             .content(Content::Flex)
             .width(Size::fill())
             .height(Size::flex(1.));
-        if *writer.pane.read() == Pane::Disk {
-            editor = editor.child(crate::external::ExternalScreen { writer });
-        } else if *writer.pane.read() == Pane::Rename {
-            editor = editor.child(crate::rename::RenameScreen { writer });
-        } else if *writer.pane.read() == Pane::Build {
-            editor = editor.child(crate::builds::BuildScreen { writer });
-        } else if *writer.pane.read() == Pane::Declarations {
-            editor = editor.child(crate::declarations::Declarations { writer });
-        } else if *writer.pane.read() == Pane::Rules {
-            editor = editor.child(crate::rules::RulesScreen { writer });
-        } else if *writer.pane.read() == Pane::Preview {
-            editor = editor.child(crate::preview_panel::PreviewScreen { writer });
-        } else if writer.localisation.read().active {
-            editor = editor.child(crate::localisation::Surface {
-                writer,
-                reading: self.reading.clone(),
-                files: self.files,
-            });
-        } else if self.source || full_script {
-            editor = editor.child(pane);
-        } else if editing && left {
-            editor = editor.child(pane).child(divider).child(self.map.clone());
-        } else {
-            editor = editor.child(self.map.clone());
-            if editing {
-                editor = editor.child(divider).child(pane);
+        editor = match *writer.pane.read() {
+            Pane::Disk => editor.child(crate::external::ExternalScreen { writer }),
+            Pane::Rename => editor.child(crate::rename::RenameScreen { writer }),
+            Pane::Build => editor.child(crate::builds::BuildScreen { writer }),
+            Pane::Declarations => editor.child(crate::declarations::Declarations { writer }),
+            Pane::Rules => editor.child(crate::rules::RulesScreen { writer }),
+            Pane::Preview => editor.child(crate::preview_panel::PreviewScreen { writer }),
+            Pane::Map | Pane::Script if writer.localisation.read().active => {
+                editor.child(crate::localisation::Surface {
+                    writer,
+                    reading: self.reading.clone(),
+                    files: self.files,
+                })
             }
-        }
+            Pane::Map | Pane::Script if self.source || full_script => editor.child(pane),
+            Pane::Map | Pane::Script if editing && left => {
+                editor.child(pane).child(divider).child(self.map.clone())
+            }
+            Pane::Map | Pane::Script if editing => {
+                editor.child(self.map.clone()).child(divider).child(pane)
+            }
+            Pane::Map | Pane::Script => editor.child(self.map.clone()),
+        };
         let updates = writer.localisation.read().active
             && writer.localisation.read().view == crate::localisation::CatalogueView::Updates;
         rect()

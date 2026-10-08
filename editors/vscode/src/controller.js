@@ -1,10 +1,10 @@
-import { ReciteStandardClient } from "./standard-client.js";
+import { CommandRegistry } from "./commands.js";
 import { readConfiguration } from "./configuration.js";
 import { EditCommandRegistry } from "./edit-commands.js";
-import { RestartPolicy } from "./restart-policy.js";
-import { StartupOutcomeKind, startupOutcome } from "./startup-outcome.js";
-import { CommandRegistry } from "./commands.js";
 import { RenameCommand } from "./rename-command.js";
+import { RestartPolicy } from "./restart-policy.js";
+import { ReciteStandardClient } from "./standard-client.js";
+import { startupOutcome, StartupOutcomeKind } from "./startup-outcome.js";
 
 const STABLE_RUN_MS = 10_000;
 
@@ -12,8 +12,8 @@ export class ExtensionController {
   constructor(api, userInterface, _diagnostics, options = {}) {
     this.api = api;
     this.userInterface = userInterface;
-    this.createClient = options.createClient ?? ((configuration) =>
-      new ReciteStandardClient(api, configuration, this));
+    this.createClient = options.createClient
+      ?? ((configuration) => new ReciteStandardClient(api, configuration, this));
     this.stableRunMs = options.stableRunMs ?? STABLE_RUN_MS;
     this.restartPolicy = new RestartPolicy(options.restartDelaysMs);
     this.client = undefined;
@@ -41,7 +41,9 @@ export class ExtensionController {
     if (this.client?.status === "stopped") {
       const stopped = this.client;
       this.retireClient(stopped);
-      try { await stopped.stop(); } catch { /* already stopped */ }
+      try {
+        await stopped.stop();
+      } catch { /* already stopped */ }
     }
     let configuration;
     try {
@@ -60,8 +62,12 @@ export class ExtensionController {
     client.on("exit", () => this.handleExit(client, phase));
     try {
       await client.start();
-      if (this.disposed || this.client !== client || client.retired || client.status !== "running") {
-        try { await client.stop(); } catch { /* already stopped */ }
+      if (
+        this.disposed || this.client !== client || client.retired || client.status !== "running"
+      ) {
+        try {
+          await client.stop();
+        } catch { /* already stopped */ }
         return startupOutcome(StartupOutcomeKind.Refused);
       }
       this.scheduleStableReset(client);
@@ -84,18 +90,23 @@ export class ExtensionController {
     }
     this.subscriptions.push(
       workspace.onDidChangeTextDocument((event) =>
-        this.editCommands.discardForDocument(event.document, "document-stale")),
+        this.editCommands.discardForDocument(event.document, "document-stale")
+      ),
       workspace.onDidCloseTextDocument((document) =>
-        this.editCommands.discardForDocument(document, "document-closed")),
+        this.editCommands.discardForDocument(document, "document-closed")
+      ),
       workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration("recite.lsp") || event.affectsConfiguration("recite.cli")) {
           void this.restart().catch((error) => this.handleUnexpectedStartFailure(error));
         }
-      })
+      }),
     );
     if (workspace.onDidChangeWorkspaceFolders) {
-      this.subscriptions.push(workspace.onDidChangeWorkspaceFolders(() =>
-        void this.restart().catch((error) => this.handleUnexpectedStartFailure(error))));
+      this.subscriptions.push(
+        workspace.onDidChangeWorkspaceFolders(() =>
+          void this.restart().catch((error) => this.handleUnexpectedStartFailure(error))
+        ),
+      );
     }
     this.editCommands.register(this.subscriptions);
     this.commands.register(this.subscriptions);
@@ -156,7 +167,9 @@ export class ExtensionController {
     if (clearReference && this.client === client) this.client = undefined;
   }
   scheduleRestart() {
-    if (this.restartTimer || this.disposed || this.stopping || this.api.workspace.isTrusted === false) return;
+    if (
+      this.restartTimer || this.disposed || this.stopping || this.api.workspace.isTrusted === false
+    ) return;
     const delay = this.restartPolicy.nextDelay();
     if (delay === undefined) {
       if (this.restartPolicy.reportExhausted()) this.userInterface.restartExhausted();
@@ -207,7 +220,9 @@ export class ExtensionController {
         this.handleStartOutcome(outcome);
         if (outcome.kind !== StartupOutcomeKind.Started) break;
       } while (this.restartRevision !== revision && !this.disposed);
-    })().finally(() => { this.restartPromise = undefined; });
+    })().finally(() => {
+      this.restartPromise = undefined;
+    });
     return this.restartPromise;
   }
   async dispose() {
@@ -222,6 +237,10 @@ export class ExtensionController {
     for (const subscription of this.subscriptions.splice(0)) subscription.dispose();
     const retired = this.client;
     this.retireClient(retired);
-    try { await retired?.stop(); } finally { this.client = undefined; }
+    try {
+      await retired?.stop();
+    } finally {
+      this.client = undefined;
+    }
   }
 }

@@ -1,0 +1,22 @@
+---
+import { getCollection, render } from "astro:content";
+import PublicPage from "../../components/PublicPage.astro";
+export async function getStaticPaths() {
+  return (await getCollection("showcase", ({ data }) => !data.draft)).map(project => ({
+    params: { id: project.id },
+    props: { project },
+  }));
+}
+const { project } = Astro.props;
+const { Content } = await render(project);
+---
+<PublicPage title={project.data.title} description={project.data.summary}>
+  <div class="recite-showcase site-content">
+    <h1 id="_top" tabindex="-1">{project.data.title}</h1>
+    <article class="recite-article">
+      <p>{project.data.summary}</p><Content />
+      <p><a href={project.data.projectUrl}>Visit the project</a></p>
+      <p><a href="/showcase/">Back to the showcase</a></p>
+    </article>
+  </div>
+</PublicPage>

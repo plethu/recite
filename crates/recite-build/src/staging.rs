@@ -72,15 +72,15 @@ pub(super) enum ReplaceOutcome {
 }
 
 pub(super) fn replace(staged: &StagedOutput) -> ReplaceOutcome {
-    let bytes = match fs::read(&staged.temp) {
-        Ok(bytes) => bytes,
+    let mut source = match File::open(&staged.temp) {
+        Ok(file) => file,
         Err(_) => return ReplaceOutcome::Failed,
     };
     let mut replacement = match AtomicWriteFile::options().open(&staged.output) {
         Ok(file) => file,
         Err(_) => return ReplaceOutcome::Failed,
     };
-    if replacement.as_file_mut().write_all(&bytes).is_err() {
+    if io::copy(&mut source, replacement.as_file_mut()).is_err() {
         return ReplaceOutcome::Failed;
     }
     replace_with(staged, replacement, AtomicWriteFile::commit)

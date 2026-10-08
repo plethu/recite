@@ -39,6 +39,7 @@ git -C "$clone_root" config user.name "Git policy fixture"
 git -C "$clone_root" config user.email "git-policy-fixture@example.invalid"
 git -C "$clone_root" config commit.gpgsign false
 git -C "$clone_root" commit --quiet --allow-empty -m "[REC-143] docs: first accepted slice"
+ordinary_base_sha="$(git -C "$clone_root" rev-parse HEAD)"
 git -C "$clone_root" commit --quiet --allow-empty -m "[REC-144] docs: second accepted slice"
 
 run_policy() {
@@ -48,6 +49,7 @@ run_policy() {
   local branch="${4:-integration/milestone-integration}"
   local base_branch="${5-main}"
   local body="${6-Closes #163}"
+  local range_base="${7-$base_sha}"
 
   # The clone is detached like actions/checkout; the explicit environment
   # values carry the pull-request metadata that Actions would provide.
@@ -56,7 +58,7 @@ run_policy() {
     RECITE_INTEGRATION_PR="$integration" \
     RECITE_INTEGRATION_LABEL="$label" \
     RECITE_PR_BASE_REF="$base_branch" \
-    RECITE_BASE_REF="$base_sha" \
+    RECITE_BASE_REF="$range_base" \
     RECITE_HEAD_REF=HEAD \
     GITHUB_EVENT_NAME=pull_request \
     GITHUB_HEAD_REF="$branch" \
@@ -97,6 +99,34 @@ if run_policy "[REC-163] chore: integrate milestone" 0 0 feat/milestone-integrat
   echo "ordinary policy unexpectedly accepted a mixed-code commit range" >&2
   exit 1
 fi
+
+for body in 'Closes #144' 'Refs #144' 'References #144' 'references #144.'; do
+  if ! run_policy "[REC-144] docs: preserve issue tracking" 0 0 feat/issue-tracking main "$body" "$ordinary_base_sha" >/dev/null; then
+    echo "ordinary PR with matching issue linkage was rejected: $body" >&2
+    exit 1
+  fi
+done
+for body in '' 'Refs #143' 'References #143' 'Refs #1440' 'Refs #144abc' \
+  'References #144_issue' 'Refs # 144' 'Reference #144' 'notrefs #144'; do
+  if run_policy "[REC-144] docs: preserve issue tracking" 0 0 feat/issue-tracking main "$body" "$ordinary_base_sha" >/dev/null 2>&1; then
+    echo "ordinary PR with missing, mismatched or malformed issue linkage was accepted: $body" >&2
+    exit 1
+  fi
+done
+if run_policy "[REC-143] docs: preserve issue tracking" 0 0 feat/issue-tracking main 'Refs #143' "$ordinary_base_sha" >/dev/null 2>&1; then
+  echo "nonclosing linkage bypassed commit/title issue matching" >&2
+  exit 1
+fi
+if RECITE_ISSUE_CODE=REC-143 run_policy "[REC-144] docs: preserve issue tracking" 0 0 feat/issue-tracking main 'Refs #144' "$ordinary_base_sha" >/dev/null 2>&1; then
+  echo "nonclosing linkage bypassed explicit issue/title matching" >&2
+  exit 1
+fi
+for body in 'Refs #163' 'References #163'; do
+  if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration main "$body" >/dev/null 2>&1; then
+    echo "integration PR with only nonclosing linkage was accepted: $body" >&2
+    exit 1
+  fi
+done
 
 if ! run_policy "[REC-163] chore: integrate milestone" 0 1; then
   echo "matching integration label and branch rejected a valid mixed-code commit range" >&2

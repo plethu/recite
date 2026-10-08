@@ -18,6 +18,7 @@ mod choice;
 mod create;
 mod effect;
 mod locale;
+mod prepare_restore;
 mod restore;
 mod snapshot;
 mod start;
@@ -25,25 +26,16 @@ mod values;
 
 pub use begin::{recite_session_begin, recite_session_register_condition};
 pub use choice::recite_session_choose;
-pub use create::{recite_session_create, recite_session_create_with_values};
+pub use create::recite_session_create;
 pub use effect::recite_session_acknowledge_effect;
-pub(crate) use locale::set_locale_variant_value;
 pub use locale::{
     recite_session_clear_locale_provider, recite_session_set_locale_provider,
     recite_session_set_locale_variant,
 };
-pub use restore::recite_session_restore_with_values_and_locale_provider;
-pub use restore::recite_session_restore_with_values_and_locale_provider_and_variant;
-pub use restore::{
-    recite_session_restore, recite_session_restore_with_catalog, recite_session_restore_with_values,
-};
+pub use prepare_restore::recite_session_prepare_restore;
+pub use restore::recite_session_restore;
 pub use snapshot::recite_session_snapshot;
-pub use start::{
-    recite_session_start, recite_session_start_with_locale_provider,
-    recite_session_start_with_locale_provider_and_variant, recite_session_start_with_values,
-    recite_session_start_with_values_and_locale_provider,
-    recite_session_start_with_values_and_locale_provider_and_variant,
-};
+pub use start::recite_session_start;
 pub use values::{recite_session_free, recite_session_set_interpolation_values};
 
 type SessionMap = Mutex<BTreeMap<u64, FfiSession>>;
@@ -68,6 +60,35 @@ pub(crate) struct FfiSession {
     pub(crate) locale_source: FfiLocaleSource,
     pub(crate) locale_variant: Option<String>,
     pub(crate) owner_thread: ThreadId,
+}
+
+impl FfiSession {
+    fn prepared(driver: SessionDriver) -> Self {
+        Self {
+            driver,
+            handlers: BTreeMap::new(),
+            interpolation_values: InterpolationValues::new(),
+            locale_source: FfiLocaleSource::None,
+            locale_variant: None,
+            owner_thread: thread::current().id(),
+        }
+    }
+}
+
+// Convenience entrypoints validate outputs before allocating. Publish the
+// handle only after begin succeeds; failure frees the prepared session.
+unsafe fn begin_and_publish(
+    handle: u64,
+    session_handle_out: *mut u64,
+    batch_out: *mut crate::buffer::ReciteBuffer,
+) -> ReciteStatus {
+    let status = unsafe { recite_session_begin(handle, batch_out) };
+    if status == ReciteStatus::Ok {
+        unsafe { *session_handle_out = handle };
+    } else {
+        lock_sessions().remove(&handle);
+    }
+    status
 }
 
 pub(crate) enum FfiLocaleSource {

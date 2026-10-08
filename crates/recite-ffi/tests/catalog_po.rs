@@ -7,7 +7,7 @@ use recite_ffi::{
     ReciteBuffer, ReciteStatus, recite_asset_free, recite_asset_load, recite_buffer_free,
     recite_catalog_add_po, recite_catalog_create, recite_catalog_free, recite_session_begin,
     recite_session_choose, recite_session_create, recite_session_free,
-    recite_session_restore_with_catalog, recite_session_set_catalog, recite_session_snapshot,
+    recite_session_prepare_restore, recite_session_set_catalog, recite_session_snapshot,
 };
 use support::{compile_to_bytes, decode_batch};
 
@@ -177,17 +177,20 @@ fn restore_with_catalog_localises_first_drain() {
     let mut batch = ReciteBuffer::null();
     assert_eq!(
         unsafe {
-            recite_session_restore_with_catalog(
-                asset,
-                snapshot.data,
-                snapshot.len,
-                std::ptr::null(),
-                0,
-                catalog,
-                std::ptr::null(),
-                &raw mut restored,
-                &raw mut batch,
-            )
+            assert_eq!(
+                recite_session_prepare_restore(
+                    asset,
+                    snapshot.data,
+                    snapshot.len,
+                    &raw mut restored
+                ),
+                ReciteStatus::Ok
+            );
+            assert_eq!(
+                recite_session_set_catalog(restored, catalog),
+                ReciteStatus::Ok
+            );
+            recite_session_begin(restored, &raw mut batch)
         },
         ReciteStatus::Ok
     );

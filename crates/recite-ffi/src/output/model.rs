@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::tagged_value::TaggedValue;
 use rmp_serde::encode;
 use serde::Serialize;
 
@@ -143,23 +144,27 @@ pub(crate) struct FfiAvailabilityReason {
     pub id: String,
     pub source_text: String,
     pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub origin: Option<FfiReasonOrigin>,
     pub args: Vec<FfiReasonArg>,
 }
 
 #[derive(Serialize)]
 pub(crate) struct FfiReasonArg {
     pub name: String,
-    pub value: FfiReasonValue,
+    pub value: TaggedValue,
 }
 
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub(crate) enum FfiReasonValue {
-    Identifier { value: String },
-    String { value: String },
-    Integer { value: i64 },
-    Float { value: f64 },
-    Boolean { value: bool },
+pub(crate) enum FfiReasonOrigin {
+    ConditionCall {
+        function: String,
+        args: Vec<TaggedValue>,
+    },
+    RequirementExpression {
+        source_text: String,
+    },
 }
 
 #[derive(Serialize)]
@@ -176,18 +181,8 @@ pub(crate) struct FfiEffect {
     pub id: String,
     pub mode: &'static str,
     pub function: String,
-    pub args: Vec<FfiEffectArg>,
+    pub args: Vec<TaggedValue>,
     pub source_file: String,
     pub source_line: u32,
     pub source_col: u32,
-}
-
-#[derive(Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub(crate) enum FfiEffectArg {
-    Identifier { value: String },
-    String { value: String },
-    Integer { value: i64 },
-    Float { value: f64 },
-    Boolean { value: bool },
 }

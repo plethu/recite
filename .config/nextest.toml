@@ -4,5 +4,5 @@
 max-threads = 1
 
 [[profile.default.overrides]]
-filter = 'package(recite-benchmarks) & binary(benchmark_support) & test(/^generated_/)'
+filter = "package(recite-benchmarks) & binary(benchmark_support) & test(/^generated_/)"
 test-group = "generated-small-fixture"

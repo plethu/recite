@@ -1,7 +1,0 @@
-{
-  "title": "[REC-163] validate PR metadata",
-  "body": "Closes #163",
-  "labels": [],
-  "baseRefName": "main",
-  "headRefName": "docs/policy-metadata"
-}

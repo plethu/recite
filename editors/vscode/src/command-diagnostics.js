@@ -1,8 +1,8 @@
-import * as path from "node:path";
 import { readFileSync } from "node:fs";
+import * as path from "node:path";
 import { integerInRange, protocol } from "./command-protocol.js";
-import diagnosticMessages from "./diagnostics.generated.js";
 import diagnosticContracts from "./diagnostic-contract.generated.js";
+import diagnosticMessages from "./diagnostics.generated.js";
 
 export function applyDiagnostics(api, collection, records, projectRoot, knownUris) {
   applyProjectedDiagnostics(collection, projectDiagnostics(api, records, projectRoot), knownUris);
@@ -52,19 +52,21 @@ function toDiagnostic(api, record, projectRoot) {
   }
   const fullPath = diagnosticPath(projectRoot, record.span.file);
   const open = api.workspace?.textDocuments?.find((document) =>
-    document.uri?.scheme === "file" && path.normalize(document.uri.fsPath) === fullPath);
+    document.uri?.scheme === "file" && path.normalize(document.uri.fsPath) === fullPath
+  );
   if (open?.isDirty) return undefined;
   const text = sourceText(api, fullPath);
   const range = rangeForSpan(api, text, record.span);
   const uri = api.Uri.file(fullPath);
   const severityName = record.severity;
   const severity = api.DiagnosticSeverity?.[
-    ({ error: "Error", warning: "Warning", information: "Information", hint: "Hint" })[severityName] ?? "Error"
+    ({ error: "Error", warning: "Warning", information: "Information", hint: "Hint" })[severityName]
+      ?? "Error"
   ] ?? api.DiagnosticSeverity?.Error;
   const value = new api.Diagnostic(
     range,
     diagnosticMessage(record.presentation, record.compatibility_message ?? record.code),
-    severity
+    severity,
   );
   value.code = record.code;
   value.source = "recite";
@@ -77,7 +79,8 @@ function sourceText(api, fullPath) {
   // dirty overlays are deliberately ignored so CLI diagnostics never attach
   // to unsaved text.
   const open = api.workspace?.textDocuments?.find((document) =>
-    document.uri?.scheme === "file" && path.normalize(document.uri.fsPath) === fullPath);
+    document.uri?.scheme === "file" && path.normalize(document.uri.fsPath) === fullPath
+  );
   if (open && !open.isDirty && typeof open.getText === "function") return open.getText();
   try {
     return readFileSync(fullPath, "utf8");
@@ -123,62 +126,93 @@ function advanceInclusive(text, position) {
 }
 
 export function validDiagnosticRecord(record) {
-  return Boolean(record && keys(record, ["version", "code", "severity", "span", "presentation", "related", "help", "explanation", "compatibility_message"]) &&
-    record.version === 1 && typeof record.code === "string" && /^[A-Z][A-Z0-9]*_[A-Z0-9]+$/u.test(record.code) &&
-    ["error", "warning", "information", "hint"].includes(record.severity) && validSpan(record.span) &&
-    validPresentation(record.presentation) && Array.isArray(record.related) &&
-    record.related.every(validRelatedPresentation) &&
-    (record.help === null || record.help === undefined || validPresentation(record.help)) &&
-    (record.explanation === null || record.explanation === undefined || validExplanation(record.explanation)) &&
-    (record.compatibility_message === null || record.compatibility_message === undefined ||
-      typeof record.compatibility_message === "string"));
+  return Boolean(
+    record
+      && keys(record, [
+        "version",
+        "code",
+        "severity",
+        "span",
+        "presentation",
+        "related",
+        "help",
+        "explanation",
+        "compatibility_message",
+      ])
+      && record.version === 1 && typeof record.code === "string"
+      && /^[A-Z][A-Z0-9]*_[A-Z0-9]+$/u.test(record.code)
+      && ["error", "warning", "information", "hint"].includes(record.severity)
+      && validSpan(record.span)
+      && validPresentation(record.presentation) && Array.isArray(record.related)
+      && record.related.every(validRelatedPresentation)
+      && (record.help === null || record.help === undefined || validPresentation(record.help))
+      && (record.explanation === null || record.explanation === undefined
+        || validExplanation(record.explanation))
+      && (record.compatibility_message === null || record.compatibility_message === undefined
+        || typeof record.compatibility_message === "string"),
+  );
 }
 
 function validSpan(span) {
-  return Boolean(span && keys(span, ["file", "start", "end"]) &&
-    typeof span.file === "string" && span.file.length > 0 &&
-    positive(span.start?.line) && positive(span.start?.column) &&
-    (span.end === null || positive(span.end?.line) && positive(span.end?.column) &&
-      (span.end.line > span.start.line || span.end.line === span.start.line &&
-        span.end.column >= span.start.column)));
+  return Boolean(
+    span && keys(span, ["file", "start", "end"])
+      && typeof span.file === "string" && span.file.length > 0
+      && positive(span.start?.line) && positive(span.start?.column)
+      && (span.end === null || positive(span.end?.line) && positive(span.end?.column)
+          && (span.end.line > span.start.line || span.end.line === span.start.line
+              && span.end.column >= span.start.column)),
+  );
 }
 
 function validPresentation(presentation) {
-  if (!presentation || !keys(presentation, ["id", "arguments"]) ||
-      typeof presentation.id !== "string" ||
-      !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u.test(presentation.id) ||
-      !presentation.arguments || typeof presentation.arguments !== "object" ||
-      Array.isArray(presentation.arguments) ||
-      !Object.keys(presentation.arguments).every((name) => /^[a-z][a-z0-9_]*$/u.test(name)) ||
-      !Object.values(presentation.arguments).every(validArgument)) return false;
+  if (
+    !presentation || !keys(presentation, ["id", "arguments"])
+    || typeof presentation.id !== "string"
+    || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u.test(presentation.id)
+    || !presentation.arguments || typeof presentation.arguments !== "object"
+    || Array.isArray(presentation.arguments)
+    || !Object.keys(presentation.arguments).every((name) => /^[a-z][a-z0-9_]*$/u.test(name))
+    || !Object.values(presentation.arguments).every(validArgument)
+  ) return false;
   const definition = diagnosticContracts[presentation.id];
   if (!definition) return true;
   const expected = new Map(definition.arguments.map(({ name, type }) => [name, type]));
-  return Object.keys(presentation.arguments).length === expected.size &&
-    Object.entries(presentation.arguments).every(([name, argument]) =>
-      expected.has(name) && validArgument(argument, expected.get(name)));
+  return Object.keys(presentation.arguments).length === expected.size
+    && Object.entries(presentation.arguments).every(([name, argument]) =>
+      expected.has(name) && validArgument(argument, expected.get(name))
+    );
 }
 
 function validRelatedPresentation(related) {
-  return Boolean(related && keys(related, ["span", "presentation"]) &&
-    validSpan(related.span) && validPresentation(related.presentation));
+  return Boolean(
+    related && keys(related, ["span", "presentation"])
+      && validSpan(related.span) && validPresentation(related.presentation),
+  );
 }
 
 function validExplanation(explanation) {
-  return Boolean(explanation && keys(explanation, ["meaning", "common_causes", "remediation"]) &&
-    validPresentation(explanation.meaning) &&
-    Array.isArray(explanation.common_causes) && explanation.common_causes.every(validPresentation) &&
-    Array.isArray(explanation.remediation) && explanation.remediation.every(validPresentation));
+  return Boolean(
+    explanation && keys(explanation, ["meaning", "common_causes", "remediation"])
+      && validPresentation(explanation.meaning)
+      && Array.isArray(explanation.common_causes)
+      && explanation.common_causes.every(validPresentation)
+      && Array.isArray(explanation.remediation) && explanation.remediation.every(validPresentation),
+  );
 }
 
 function validArgument(argument, expectedType) {
-  return Boolean(argument && typeof argument === "object" && keys(argument, ["type", "value"]) &&
-    ["string", "integer", "float", "boolean"].includes(argument.type) &&
-    (!expectedType || argument.type === expectedType) &&
-    (argument.type === "string" ? typeof argument.value === "string" :
-      argument.type === "integer" ? integerInRange(argument.value, "-9223372036854775808", "9223372036854775807") :
-        argument.type === "float" ? typeof argument.value === "number" && Number.isFinite(argument.value) :
-          typeof argument.value === "boolean"));
+  return Boolean(
+    argument && typeof argument === "object" && keys(argument, ["type", "value"])
+      && ["string", "integer", "float", "boolean"].includes(argument.type)
+      && (!expectedType || argument.type === expectedType)
+      && (argument.type === "string"
+        ? typeof argument.value === "string"
+        : argument.type === "integer"
+        ? integerInRange(argument.value, "-9223372036854775808", "9223372036854775807")
+        : argument.type === "float"
+        ? typeof argument.value === "number" && Number.isFinite(argument.value)
+        : typeof argument.value === "boolean"),
+  );
 }
 
 function diagnosticMessage(presentation, fallback) {
@@ -186,9 +220,12 @@ function diagnosticMessage(presentation, fallback) {
   if (!definition) return fallback;
   const template = definition.template;
   const expected = new Map(definition.arguments.map(({ name, type }) => [name, type]));
-  if (Object.keys(presentation.arguments).length !== expected.size ||
-      Object.entries(presentation.arguments).some(([name, argument]) =>
-        !expected.has(name) || !validArgument(argument, expected.get(name)))) return fallback;
+  if (
+    Object.keys(presentation.arguments).length !== expected.size
+    || Object.entries(presentation.arguments).some(([name, argument]) =>
+      !expected.has(name) || !validArgument(argument, expected.get(name))
+    )
+  ) return fallback;
   let unresolved = false;
   const rendered = template.replace(/\{\$([a-zA-Z][a-zA-Z0-9_-]*)\}/gu, (_, name) => {
     const argument = presentation.arguments[name];
@@ -201,7 +238,10 @@ function diagnosticMessage(presentation, fallback) {
 function diagnosticPath(root, file) {
   const fullPath = path.isAbsolute(file) ? path.normalize(file) : path.resolve(root, file);
   const relative = path.relative(root, fullPath);
-  if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  if (
+    !relative || relative === ".." || relative.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relative)
+  ) {
     throw protocol("diagnostic_path_outside_project");
   }
   return fullPath;

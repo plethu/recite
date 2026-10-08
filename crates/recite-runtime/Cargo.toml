@@ -4,13 +4,9 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Deterministic Recite runtime with no engine dependencies."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
-
-[features]
-default = []
-bench-support = []
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 recite-core.workspace = true
@@ -22,6 +18,10 @@ thiserror.workspace = true
 recite-compiler.workspace = true
 serde_json.workspace = true
 serde-value.workspace = true
+
+[features]
+default = []
+bench-support = []
 
 [lints]
 workspace = true

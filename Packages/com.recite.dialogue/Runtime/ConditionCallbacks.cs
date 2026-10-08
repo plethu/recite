@@ -89,9 +89,9 @@ namespace Recite.Unity
             return EvaluateConditionCore(queryPtr);
         }
 
-        #if UNITY_2022_3_OR_NEWER
+#if UNITY_2022_3_OR_NEWER
         [MonoPInvokeCallback(typeof(ReciteNativeBridge.ReciteConditionFn))]
-        #endif
+#endif
         private static ReciteNativeBridge.ReciteConditionResult ConditionCallbackEntry(IntPtr queryPtr, IntPtr userdata)
         {
             ConditionCallbacks service = null;

@@ -17,11 +17,9 @@ impl<'asset> PreviewSession<'asset> {
         if self.pending.is_some() {
             return self.error(PreviewError::ConditionPending);
         }
-        let base = self.session.clone();
         let prior_status = self.state.status.clone();
         self.run_trial(Trial {
             operation,
-            base,
             answers: Vec::new(),
             requests: Vec::new(),
             inputs,
@@ -37,7 +35,7 @@ impl<'asset> PreviewSession<'asset> {
         answer: ConditionAnswer,
         inputs: PreviewInputs<'_>,
     ) -> PreviewOutput {
-        let Some(pending) = self.pending.clone() else {
+        let Some(pending) = self.pending.as_ref() else {
             return self.error(PreviewError::ConditionNotPending);
         };
         let Some(request) = pending.requests.last() else {
@@ -65,8 +63,14 @@ impl<'asset> PreviewSession<'asset> {
             });
         }
 
+        let request = request.clone();
+        // Rejected answers leave the pending operation available for retry.
+        // Once validated, replay owns it instead of cloning its requests.
+        let Some(pending) = self.pending.take() else {
+            return self.error(PreviewError::ConditionNotPending);
+        };
         let mut events = vec![PreviewEvent::ConditionResult {
-            request: request.clone(),
+            request,
             result: super::model::PreviewConditionResult::from_answer(&answer),
         }];
         if let ConditionAnswer::Failed { reason } = answer {
@@ -83,7 +87,6 @@ impl<'asset> PreviewSession<'asset> {
         answers.push(answer);
         self.run_trial(Trial {
             operation: pending.operation,
-            base: pending.base,
             answers,
             requests: pending.requests,
             inputs,
@@ -96,7 +99,6 @@ impl<'asset> PreviewSession<'asset> {
     fn run_trial(&mut self, trial: Trial<'_>) -> PreviewOutput {
         let Trial {
             operation,
-            base,
             answers,
             mut requests,
             inputs,
@@ -117,9 +119,12 @@ impl<'asset> PreviewSession<'asset> {
             resolution = resolution.with_variant(variant);
         }
 
+        let previous_deferred = self.session.deferred_effects().len();
         let (result, pending_query, mismatch, trial) = {
             let context = ReplayContext::new(&answers, &requests);
-            let mut trial = base.clone();
+            // The authoritative session stays unchanged until a visible event
+            // commits. Pending replay therefore needs no second saved base.
+            let mut trial = self.session.clone();
             let result = match &operation {
                 Operation::Advance { .. } => {
                     next_with(self.asset, &mut trial, &context, resolution)
@@ -187,7 +192,6 @@ impl<'asset> PreviewSession<'asset> {
             };
             self.pending = Some(PendingOperation {
                 operation,
-                base,
                 answers,
                 requests,
                 prior_status,
@@ -242,7 +246,7 @@ impl<'asset> PreviewSession<'asset> {
                 choice_id: choice_id.clone(),
             });
         }
-        events.extend(new_deferred_events(&base, &self.session));
+        events.extend(new_deferred_events(previous_deferred, &self.session));
         events.push(PreviewEvent::from_dialogue_event(
             event,
             block,

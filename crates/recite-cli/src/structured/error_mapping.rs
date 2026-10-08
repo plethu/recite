@@ -3,40 +3,57 @@ use std::path::Path;
 use crate::error::CliError;
 use crate::schema_inspection::machine_path;
 
-use super::errors::{ErrorCategory, ErrorCode, ErrorDetails, StructuredError};
+use super::errors::{ErrorCategory, ErrorCode, ErrorDetails, ErrorOperation, StructuredError};
 
 type ErrorParts<'a> = (
     ErrorCategory,
     ErrorCode,
-    &'static str,
+    ErrorOperation,
     Option<&'a Path>,
     Option<&'a Path>,
     Option<ErrorDetails>,
 );
 
+#[path = "error_mapping/classification.rs"]
+mod classification;
+#[path = "error_mapping/project.rs"]
+mod project;
 #[path = "error_mapping/watch.rs"]
 mod watch;
+use classification::{
+    asset, compilation, fixture, fixture_details, generic, input, internal, localised,
+    localised_details, unsupported,
+};
 
 pub(crate) fn structured_error(
     error: &CliError,
-    fallback_operation: &'static str,
+    fallback_operation: ErrorOperation,
     fallback_path: Option<&Path>,
 ) -> StructuredError {
     let parts: ErrorParts<'_> = match error {
         CliError::Import(_) => input(ErrorCode::Import, fallback_operation, fallback_path),
         CliError::ImportJson(_) => input(ErrorCode::ImportJson, fallback_operation, fallback_path),
-        CliError::Core(_) if matches!(fallback_operation, "run" | "trace") => generic(
-            ErrorCategory::Fixture,
-            ErrorCode::CoreValue,
-            fallback_operation,
-            fallback_path,
-        ),
+        CliError::Core(_)
+            if matches!(
+                fallback_operation,
+                ErrorOperation::Run | ErrorOperation::Trace
+            ) =>
+        {
+            generic(
+                ErrorCategory::Fixture,
+                ErrorCode::CoreValue,
+                fallback_operation,
+                fallback_path,
+            )
+        }
         CliError::Core(_) => compilation(ErrorCode::CoreValue, fallback_operation, fallback_path),
         CliError::Compile(_) => compilation(ErrorCode::Compile, fallback_operation, fallback_path),
         CliError::CompiledValue(_) => {
             compilation(ErrorCode::CompiledValue, fallback_operation, fallback_path)
         }
-        CliError::DecodeAsset { path, .. } => asset(ErrorCode::DecodeAsset, "load_asset", path),
+        CliError::DecodeAsset { path, .. } => {
+            asset(ErrorCode::DecodeAsset, ErrorOperation::LoadAsset, path)
+        }
         CliError::Diagnostics => {
             internal(ErrorCode::Diagnostics, fallback_operation, fallback_path)
         }
@@ -47,17 +64,17 @@ pub(crate) fn structured_error(
         ),
         CliError::DialogueCatalogConflict { path, .. } => localised(
             ErrorCode::DialogueCatalogConflict,
-            "load_catalog",
+            ErrorOperation::LoadCatalog,
             Some(path),
         ),
         CliError::DialogueCatalogPluralFormsConflict { path, .. } => localised(
             ErrorCode::DialogueCatalogPluralFormsConflict,
-            "load_catalog",
+            ErrorOperation::LoadCatalog,
             Some(path),
         ),
         CliError::DialogueCatalogMalformed { path, .. } => localised(
             ErrorCode::DialogueCatalogMalformed,
-            "load_catalog",
+            ErrorOperation::LoadCatalog,
             Some(path),
         ),
         CliError::DialogueCatalogMissingLocale => localised(
@@ -125,11 +142,15 @@ pub(crate) fn structured_error(
                 prompt_count: *prompt_count,
             },
         ),
-        CliError::FixtureToml { path, .. } => fixture(ErrorCode::FixtureToml, "load_fixture", path),
-        CliError::AssetMetadata { path, .. } => {
-            asset(ErrorCode::AssetMetadata, "inspect_asset", path)
+        CliError::FixtureToml { path, .. } => {
+            fixture(ErrorCode::FixtureToml, ErrorOperation::LoadFixture, path)
         }
-        CliError::AssetNotFile { path } => asset(ErrorCode::AssetNotFile, "load_asset", path),
+        CliError::AssetMetadata { path, .. } => {
+            asset(ErrorCode::AssetMetadata, ErrorOperation::InspectAsset, path)
+        }
+        CliError::AssetNotFile { path } => {
+            asset(ErrorCode::AssetNotFile, ErrorOperation::LoadAsset, path)
+        }
         CliError::Io(_) => generic(
             ErrorCategory::Io,
             ErrorCode::Io,
@@ -139,19 +160,19 @@ pub(crate) fn structured_error(
         CliError::MalformedCompiledAsset { .. } => generic(
             ErrorCategory::Asset,
             ErrorCode::MalformedCompiledAsset,
-            "load_asset",
+            ErrorOperation::LoadAsset,
             fallback_path,
         ),
         CliError::MissingPath(path) => generic(
             ErrorCategory::Input,
             ErrorCode::MissingPath,
-            "resolve_path",
+            ErrorOperation::ResolvePath,
             Some(path),
         ),
         CliError::InvalidProjectRoot(path) => generic(
             ErrorCategory::Input,
             ErrorCode::InvalidProjectRoot,
-            "resolve_path",
+            ErrorOperation::ResolvePath,
             Some(path),
         ),
         CliError::MissingFixtureChoice { prompt_keys } => fixture_details(
@@ -161,14 +182,18 @@ pub(crate) fn structured_error(
                 prompt_keys: prompt_keys.clone(),
             },
         ),
-        CliError::NoInputs => input(ErrorCode::NoInputs, "collect_inputs", fallback_path),
+        CliError::NoInputs => input(
+            ErrorCode::NoInputs,
+            ErrorOperation::CollectInputs,
+            fallback_path,
+        ),
         CliError::OutputOverwritesInput {
             output,
             input: related,
         } => (
             ErrorCategory::Input,
             ErrorCode::OutputOverwritesInput,
-            "write_output",
+            ErrorOperation::WriteOutput,
             Some(output),
             Some(related),
             None,
@@ -191,13 +216,16 @@ pub(crate) fn structured_error(
             fallback_operation,
             fallback_path,
         ),
-        CliError::Read { path, .. } => {
-            generic(ErrorCategory::Io, ErrorCode::Read, "read", Some(path))
-        }
+        CliError::Read { path, .. } => generic(
+            ErrorCategory::Io,
+            ErrorCode::Read,
+            ErrorOperation::Read,
+            Some(path),
+        ),
         CliError::ReadDir { path, .. } => generic(
             ErrorCategory::Io,
             ErrorCode::ReadDirectory,
-            "read_directory",
+            ErrorOperation::ReadDirectory,
             Some(path),
         ),
         CliError::Runtime(_) => generic(
@@ -215,7 +243,7 @@ pub(crate) fn structured_error(
         CliError::BlockingEffectNeedsAcknowledgement { effect } => (
             ErrorCategory::Runtime,
             ErrorCode::BlockingEffectNeedsAcknowledgement,
-            "acknowledge_effect",
+            ErrorOperation::AcknowledgeEffect,
             fallback_path,
             None,
             Some(ErrorDetails::BlockingEffect {
@@ -259,6 +287,7 @@ pub(crate) fn structured_error(
             fallback_operation,
             source.manifest_path().or(fallback_path),
         ),
+        CliError::ProjectSchema { source } => project::schema(source, fallback_path),
         CliError::UiCatalog { .. } => generic(
             ErrorCategory::Configuration,
             ErrorCode::UiCatalog,
@@ -285,9 +314,12 @@ pub(crate) fn structured_error(
             fallback_operation,
             fallback_path,
         ),
-        CliError::Write { path, .. } => {
-            generic(ErrorCategory::Io, ErrorCode::Write, "write", Some(path))
-        }
+        CliError::Write { path, .. } => generic(
+            ErrorCategory::Io,
+            ErrorCode::Write,
+            ErrorOperation::Write,
+            Some(path),
+        ),
     };
     StructuredError {
         category: parts.0,
@@ -297,88 +329,4 @@ pub(crate) fn structured_error(
         related_path: parts.4.map(machine_path),
         details: parts.5,
     }
-}
-
-fn generic<'a>(
-    category: ErrorCategory,
-    code: ErrorCode,
-    operation: &'static str,
-    path: Option<&'a Path>,
-) -> ErrorParts<'a> {
-    (category, code, operation, path, None, None)
-}
-
-fn compilation<'a>(
-    code: ErrorCode,
-    operation: &'static str,
-    path: Option<&'a Path>,
-) -> ErrorParts<'a> {
-    generic(ErrorCategory::Compilation, code, operation, path)
-}
-
-fn input<'a>(code: ErrorCode, operation: &'static str, path: Option<&'a Path>) -> ErrorParts<'a> {
-    generic(ErrorCategory::Input, code, operation, path)
-}
-
-fn internal<'a>(
-    code: ErrorCode,
-    operation: &'static str,
-    path: Option<&'a Path>,
-) -> ErrorParts<'a> {
-    generic(ErrorCategory::Internal, code, operation, path)
-}
-
-fn localised<'a>(
-    code: ErrorCode,
-    operation: &'static str,
-    path: Option<&'a Path>,
-) -> ErrorParts<'a> {
-    generic(ErrorCategory::Localisation, code, operation, path)
-}
-
-fn localised_details<'a>(
-    code: ErrorCode,
-    operation: &'static str,
-    path: Option<&'a Path>,
-    details: ErrorDetails,
-) -> ErrorParts<'a> {
-    (
-        ErrorCategory::Localisation,
-        code,
-        operation,
-        path,
-        None,
-        Some(details),
-    )
-}
-
-fn asset<'a>(code: ErrorCode, operation: &'static str, path: &'a Path) -> ErrorParts<'a> {
-    generic(ErrorCategory::Asset, code, operation, Some(path))
-}
-
-fn fixture<'a>(code: ErrorCode, operation: &'static str, path: &'a Path) -> ErrorParts<'a> {
-    generic(ErrorCategory::Fixture, code, operation, Some(path))
-}
-
-fn fixture_details<'a>(
-    code: ErrorCode,
-    path: Option<&'a Path>,
-    details: ErrorDetails,
-) -> ErrorParts<'a> {
-    (
-        ErrorCategory::Fixture,
-        code,
-        "select_fixture_choice",
-        path,
-        None,
-        Some(details),
-    )
-}
-
-fn unsupported<'a>(
-    code: ErrorCode,
-    operation: &'static str,
-    path: Option<&'a Path>,
-) -> ErrorParts<'a> {
-    generic(ErrorCategory::Unsupported, code, operation, path)
 }

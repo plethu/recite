@@ -1,35 +1,43 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
-set default-list := true
+set default-list
 
-# Install the locked JavaScript workspace dependencies.
+# Install the pinned build runtime and frozen workspace packages.
 setup:
-    ../scripts/install-js-dependencies.sh
+    mise install node pnpm
+    ../scripts/install-js-dependencies.sh ..
 
 # Run the site with hot reload.
-dev *args:
-    pnpm dev "$@"
+dev *args: wasm
+    pnpm dev --host 127.0.0.1 "$@"
 
-# Check formatting, types, components, and CSS without building.
-check:
+# Check Astro components, browser/worker types and authored CSS.
+check: wasm
     pnpm check
+    pnpm test:content
 
 # Build the static site.
-build:
+build: wasm
     pnpm build
 
 # Run the full documentation gate, including built links.
 verify:
     ../scripts/check-docs.sh
 
-# Serve the production build locally.
+# Serve the existing static build locally.
 preview *args:
     pnpm preview "$@"
 
 # Format the site source.
 fmt *args:
-    pnpm fmt "$@"
+    cd .. && mise -E quality exec -- dprint fmt docs-site "$@"
 
-# Test the production site in Chromium, Firefox, and WebKit through Compose.
+# Test the built site in Chromium, Firefox, and WebKit through Compose.
 test-browser *args:
     ./check-browser.sh "$@"
+
+# Generate native browser bindings for the real compiler/runtime host.
+wasm:
+    mise -E site install rust github:wasm-bindgen/wasm-bindgen
+    cd .. && mise -E site exec -- cargo rustc --locked -p recite-playground --target wasm32-unknown-unknown --release -- -C link-arg=--max-memory=67108864
+    cd .. && mise -E site exec -- wasm-bindgen target/wasm32-unknown-unknown/release/recite_playground.wasm --target web --out-dir docs-site/src/client/generated

@@ -1,4 +1,5 @@
 use recite_core::schema::{MetadataContextSelector, MetadataTarget};
+use recite_core::source_lines;
 
 pub(super) enum SelectorResolution<'a> {
     Missing,
@@ -12,7 +13,7 @@ pub(super) fn resolve_selector<'a>(
     line_number: u32,
     target: MetadataTarget,
 ) -> SelectorResolution<'a> {
-    let Some(line) = text.lines().nth(line_number.saturating_sub(1) as usize) else {
+    let Some((line, _)) = source_lines(text).nth(line_number.saturating_sub(1) as usize) else {
         return SelectorResolution::Missing;
     };
     if matches!(selector, MetadataContextSelector::FieldSpeaker)
@@ -21,8 +22,8 @@ pub(super) fn resolve_selector<'a>(
             .iter()
             .any(|assignment| assignment.key == "speaker")
     {
-        let prior_lines = text
-            .lines()
+        let prior_lines = source_lines(text)
+            .map(|(content, _)| content)
             .take(line_number.saturating_sub(1) as usize)
             .collect::<Vec<_>>();
         for prior in prior_lines.into_iter().rev() {

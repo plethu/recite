@@ -17,6 +17,8 @@ use crate::runtime_fixture::{
     load_compiled_asset, load_runtime_fixture, trace_document,
 };
 
+use super::errors::ErrorOperation;
+
 use super::data::{
     CatalogEntry, ContentDiagnosticData, StructuredOutcome, SuccessData, artifact_metadata,
     diagnostic_records,
@@ -24,12 +26,12 @@ use super::data::{
 
 pub(super) struct CommandFailure {
     pub(super) error: Box<CliError>,
-    pub(super) operation: &'static str,
+    pub(super) operation: ErrorOperation,
     pub(super) path: Option<std::path::PathBuf>,
 }
 
 impl CommandFailure {
-    fn new(error: CliError, operation: &'static str, path: Option<std::path::PathBuf>) -> Self {
+    fn new(error: CliError, operation: ErrorOperation, path: Option<std::path::PathBuf>) -> Self {
         Self {
             error: Box::new(error),
             operation,
@@ -42,26 +44,28 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
     match command {
         Command::Validate(args) => {
             let path = args.paths.first().cloned();
-            validate(args).map_err(|error| CommandFailure::new(error, "validate", path))
+            validate(args)
+                .map_err(|error| CommandFailure::new(error, ErrorOperation::Validate, path))
         }
         Command::Compile(args) => {
             let path = Some(args.output.clone());
-            compile(args).map_err(|error| CommandFailure::new(error, "compile", path))
+            compile(args).map_err(|error| CommandFailure::new(error, ErrorOperation::Compile, path))
         }
         Command::ExportSchema(args) => {
             let path = Some(args.output.clone());
-            export_schema(args).map_err(|error| CommandFailure::new(error, "export_schema", path))
+            export_schema(args)
+                .map_err(|error| CommandFailure::new(error, ErrorOperation::ExportSchema, path))
         }
         Command::Extract(args) => {
             let path = args.output.clone().or_else(|| args.paths.first().cloned());
-            extract(args).map_err(|error| CommandFailure::new(error, "extract", path))
+            extract(args).map_err(|error| CommandFailure::new(error, ErrorOperation::Extract, path))
         }
         Command::Run(args) => {
             let asset = args.asset.clone();
             let fixture = args.fixture.clone();
             runtime(args, RuntimeFixtureOptions::default()).map_err(|error| {
                 let path = runtime_failure_path(&error, &asset, &fixture);
-                CommandFailure::new(error, "run", Some(path))
+                CommandFailure::new(error, ErrorOperation::Run, Some(path))
             })
         }
         Command::Trace(args) => {
@@ -75,14 +79,14 @@ pub(super) fn execute(command: Command) -> Result<StructuredOutcome, CommandFail
             )
             .map_err(|error| {
                 let path = runtime_failure_path(&error, &asset, &fixture);
-                CommandFailure::new(error, "trace", Some(path))
+                CommandFailure::new(error, ErrorOperation::Trace, Some(path))
             })
         }
         _ => Err(CommandFailure::new(
             CliError::MalformedCompiledAsset {
                 reason: "structured protocol was requested for an unsupported command".to_owned(),
             },
-            "dispatch",
+            ErrorOperation::Dispatch,
             None,
         )),
     }

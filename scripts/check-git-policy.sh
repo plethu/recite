@@ -26,9 +26,9 @@ detached local checkout. Set RECITE_BASE_REF, RECITE_HEAD_REF,
 RECITE_BRANCH_NAME, RECITE_HEAD_BRANCH, RECITE_PR_TITLE, or RECITE_ISSUE_CODE
 to override those inputs for a focused check. Set
 RECITE_INTEGRATION_PR=1 for a coordinator's local milestone integration check;
-in pull-request context, every PR requires title/body metadata with a closing
-issue token matching the title code. Integration mode additionally requires
-label, branch, and main base metadata.
+in pull-request context, every PR requires title/body metadata with an issue
+reference matching the title code. Integration mode requires a closing reference
+and label, branch, and main base metadata.
 EOF
 }
 

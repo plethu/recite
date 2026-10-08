@@ -8,6 +8,9 @@ mod diagnostics;
 mod enumerate;
 mod glob;
 mod manifest;
+mod schema;
+
+pub use schema::{LoadedProjectSchema, ProjectSchemaError};
 
 pub use diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 pub use enumerate::{
@@ -22,3 +25,19 @@ pub use recite_core::{DocumentKey, DocumentKeyError};
 
 mod settings;
 pub use settings::{ProjectSettings, ProjectSettingsError};
+
+fn project_relative_key(project_root: &std::path::Path, path: &std::path::Path) -> Option<String> {
+    let relative = path.strip_prefix(project_root).ok()?;
+    let mut key = String::new();
+    for component in relative.components() {
+        let component = component.as_os_str().to_str()?;
+        if !key.is_empty() {
+            key.push('/');
+        }
+        key.push_str(component);
+    }
+    Some(key)
+}
+
+#[cfg(test)]
+mod tests;

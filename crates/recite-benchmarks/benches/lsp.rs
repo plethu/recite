@@ -54,7 +54,11 @@ fn bench_change_refresh(criterion: &mut Criterion, fixture: &LspFixture) {
             BenchmarkId::from_parameter(fixture.project.fixture_label()),
             |bencher| {
                 bencher.iter_batched(
-                    || (fixture.project.driver(), fixture.probes.document.clone()),
+                    || {
+                        let mut driver = fixture.project.driver();
+                        let _ = driver.open_file(&fixture.probes.document);
+                        (driver, fixture.probes.document.clone())
+                    },
                     |(mut driver, probe)| black_box(driver.change_file(black_box(&probe))),
                     BatchSize::SmallInput,
                 );

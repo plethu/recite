@@ -14,8 +14,12 @@ export class LosslessInteger {
     Object.freeze(this);
   }
 
-  toString() { return this.raw; }
-  toJSON() { return this.raw; }
+  toString() {
+    return this.raw;
+  }
+  toJSON() {
+    return this.raw;
+  }
 }
 
 export function isLosslessInteger(value) {
@@ -27,7 +31,11 @@ export function isIntegerValue(value) {
 }
 
 export function integerInRange(value, minimum, maximum) {
-  const raw = isLosslessInteger(value) ? value.raw : Number.isSafeInteger(value) ? String(value) : undefined;
+  const raw = isLosslessInteger(value)
+    ? value.raw
+    : Number.isSafeInteger(value)
+    ? String(value)
+    : undefined;
   if (raw === undefined || !/^-?(?:0|[1-9][0-9]*)$/u.test(raw)) return false;
   const candidate = BigInt(raw);
   return candidate >= BigInt(minimum) && candidate <= BigInt(maximum);
@@ -114,7 +122,7 @@ export function parseLosslessJson(line) {
   let index = 0;
   while (index < line.length) {
     const character = line[index];
-    if (character === '"') {
+    if (character === "\"") {
       const start = index++;
       let escaped = false;
       while (index < line.length) {
@@ -123,7 +131,7 @@ export function parseLosslessJson(line) {
           escaped = false;
         } else if (current === "\\") {
           escaped = true;
-        } else if (current === '"') {
+        } else if (current === "\"") {
           break;
         }
       }
@@ -131,10 +139,15 @@ export function parseLosslessJson(line) {
       continue;
     }
     if (character === "-" || /[0-9]/u.test(character)) {
-      const match = line.slice(index).match(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/u);
+      const match = line.slice(index).match(
+        /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/u,
+      );
       if (match) {
         const token = match[0];
-        if (!/[.eE]/u.test(token) && !rawIntegerInRange(token, "-9007199254740991", "9007199254740991")) {
+        if (
+          !/[.eE]/u.test(token)
+          && !rawIntegerInRange(token, "-9007199254740991", "9007199254740991")
+        ) {
           transformed += JSON.stringify(`${marker}${token}`);
         } else {
           transformed += token;
@@ -192,8 +205,10 @@ function decodeUtf8(bytes) {
 }
 
 export function validateEnvelope(record, command, invocationId, sequence) {
-  if (record.version !== PROTOCOL_VERSION || record.command !== command ||
-      record.sequence !== sequence || typeof record.event !== "string") {
+  if (
+    record.version !== PROTOCOL_VERSION || record.command !== command
+    || record.sequence !== sequence || typeof record.event !== "string"
+  ) {
     throw protocol("invalid_envelope");
   }
   const hasInvocationId = Object.hasOwn(record, "invocation_id");
@@ -210,6 +225,6 @@ export function exactEnvelopeKeys(value, expected, invocationId) {
   const keys = invocationId === undefined
     ? expected.filter((key) => key !== "invocation_id")
     : expected;
-  return value && typeof value === "object" && JSON.stringify(Object.keys(value).sort()) ===
-    JSON.stringify(keys.slice().sort());
+  return value && typeof value === "object" && JSON.stringify(Object.keys(value).sort())
+      === JSON.stringify(keys.slice().sort());
 }

@@ -1,0 +1,21 @@
+toml-version = "v1.0.0"
+
+[files]
+# Tombi matches discovery paths, including absolute paths. Generated benchmark
+# inputs are verified byte-for-byte by their producer and summary checks.
+exclude = [
+    "**/target/**",
+    "**/node_modules/**",
+    "**/fixtures/synthetic/tiny/**",
+    "**/fixtures/realistic/v1-pack/**"
+]
+
+[schema]
+# Domain schemas are checked by their owning gates. Keep formatting offline and
+# preserve source ordering rather than applying SchemaStore ordering rules.
+enabled = false
+catalog.paths = []
+
+[format.rules]
+indent-width = 4
+line-width = 100

@@ -1,17 +1,26 @@
 /target/
+# Disposable investigation reports are local artifacts; decisions belong in current guides.
+/docs/archive/
 /.flatpak-builder/
 /crates/recite-benchmarks/target/
 **/*.rs.bk
 
 node_modules/
-docs-site/.astro/
-docs-site/.svelte-check/
 docs-site/dist/
+docs-site/.astro/
+docs-site/src/client/generated/
 docs-site/.browser-artifacts/
 docs-site/playwright-report/
 docs-site/test-results/
 editors/vscode/dist/
 editors/vscode/*.vsix
+
+# Generated Python imports and downloaded extension test hosts
+__pycache__/
+.venv/
+.ruff_cache/
+/.vscode-test/
+/.lsp-session-control/
 
 .DS_Store
 .direnv/
@@ -36,6 +45,8 @@ nvim.log
 *~
 !Packages/com.recite.dialogue/Tests~/
 !Packages/com.recite.dialogue/Samples~/
+Packages/com.recite.dialogue/Tests~/Headless/bin/
+Packages/com.recite.dialogue/Tests~/Headless/obj/
 
 # Local/private agent overlays
 .claude/settings.local.json

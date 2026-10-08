@@ -5,6 +5,7 @@ mod location;
 use crate::{
     AppMode,
     editing::{Pane, Writer},
+    localisation::CatalogueView,
 };
 use freya::{prelude::*, router::*};
 use location::{Location, Screen};
@@ -47,30 +48,21 @@ fn snapshot(writer: Writer) -> Location {
     let files = writer.files.read();
     let root = files.as_ref().map(|f| f.root());
     let mut location = Location {
-        screen: if *writer.pane.read() == Pane::Disk {
-            Screen::Disk
-        } else if *writer.pane.read() == Pane::Rename {
-            Screen::Rename
-        } else if *writer.pane.read() == Pane::Build {
-            Screen::Build
-        } else if *writer.pane.read() == Pane::Declarations {
-            Screen::Declarations
-        } else if *writer.pane.read() == Pane::Rules {
-            Screen::Rules
-        } else if *writer.pane.read() == Pane::Preview {
-            Screen::Preview
-        } else if !state.active {
-            Screen::Write
-        } else if state.view == crate::localisation::CatalogueView::Compare {
-            Screen::Compare
-        } else if state.view == crate::localisation::CatalogueView::Entry {
-            Screen::Entry
-        } else if state.view == crate::localisation::CatalogueView::Updates {
-            Screen::Updates
-        } else if state.view == crate::localisation::CatalogueView::Queue {
-            Screen::Translations
-        } else {
-            Screen::Localise
+        screen: match *writer.pane.read() {
+            Pane::Disk => Screen::Disk,
+            Pane::Rename => Screen::Rename,
+            Pane::Build => Screen::Build,
+            Pane::Declarations => Screen::Declarations,
+            Pane::Rules => Screen::Rules,
+            Pane::Preview => Screen::Preview,
+            Pane::Map | Pane::Script if !state.active => Screen::Write,
+            Pane::Map | Pane::Script => match state.view {
+                CatalogueView::Compare => Screen::Compare,
+                CatalogueView::Entry => Screen::Entry,
+                CatalogueView::Updates => Screen::Updates,
+                CatalogueView::Queue => Screen::Translations,
+                CatalogueView::Passage => Screen::Localise,
+            },
         },
         entry: (state.active && state.view == crate::localisation::CatalogueView::Entry)
             .then(|| state.entry_context.clone())
@@ -356,22 +348,15 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
     if location.screen == Screen::Disk {
         crate::external::try_open(writer)?;
     }
-    writer.pane.set(if location.screen == Screen::Disk {
-        Pane::Disk
-    } else if location.screen == Screen::Rename {
-        Pane::Rename
-    } else if location.screen == Screen::Build {
-        Pane::Build
-    } else if location.screen == Screen::Declarations {
-        Pane::Declarations
-    } else if location.screen == Screen::Rules {
-        Pane::Rules
-    } else if location.screen == Screen::Preview {
-        Pane::Preview
-    } else if location.beat.is_some() || location.passage.is_some() {
-        Pane::Script
-    } else {
-        Pane::Map
+    writer.pane.set(match location.screen {
+        Screen::Disk => Pane::Disk,
+        Screen::Rename => Pane::Rename,
+        Screen::Build => Pane::Build,
+        Screen::Declarations => Pane::Declarations,
+        Screen::Rules => Pane::Rules,
+        Screen::Preview => Pane::Preview,
+        _ if location.beat.is_some() || location.passage.is_some() => Pane::Script,
+        _ => Pane::Map,
     });
     writer.layout.view.set(if location.source {
         recite_config::WriterView::Source

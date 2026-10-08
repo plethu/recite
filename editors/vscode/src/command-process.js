@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { CommandProtocolError, NdjsonRecordParser, protocol } from "./command-protocol.js";
 import { parseFiniteRecords } from "./finite-protocol.js";
-import { protocol, NdjsonRecordParser, CommandProtocolError } from "./command-protocol.js";
 
 const MAX_STDERR_BYTES = 4 * 1024 * 1024;
 
@@ -22,7 +22,11 @@ export function runFiniteCommand(options) {
   const spawnProcess = options.spawnProcess ?? spawn;
   let child;
   try {
-    child = spawnProcess(options.command, options.args, spawnOptions(options.cwd, options.environment));
+    child = spawnProcess(
+      options.command,
+      options.args,
+      spawnOptions(options.cwd, options.environment),
+    );
     options.onSpawn?.(child);
   } catch (error) {
     return Promise.reject(processError("spawn", error));
@@ -58,9 +62,11 @@ export function runFiniteCommand(options) {
       if (bytes === 0) return;
       stderrSeen = true;
       stderrBytes += bytes;
-      fail(stderrBytes > MAX_STDERR_BYTES
-        ? protocol("stderr_too_large")
-        : protocol("structured_stderr"));
+      fail(
+        stderrBytes > MAX_STDERR_BYTES
+          ? protocol("stderr_too_large")
+          : protocol("structured_stderr"),
+      );
     });
     child.stdin?.on?.("error", (error) => fail(processError("stdin", error)));
     child.on("error", (error) => fail(processError("process", error)));
@@ -72,8 +78,12 @@ export function runFiniteCommand(options) {
         return;
       }
       try {
-        const result = parseFiniteRecords(Buffer.concat(stdout), options.commandName,
-          options.invocationId, code);
+        const result = parseFiniteRecords(
+          Buffer.concat(stdout),
+          options.commandName,
+          options.invocationId,
+          code,
+        );
         resolve({ ...result, exitCode: code, signal });
       } catch (error) {
         reject(error);
@@ -92,7 +102,11 @@ export function startStreamingCommand(options) {
   const spawnProcess = options.spawnProcess ?? spawn;
   let child;
   try {
-    child = spawnProcess(options.command, options.args, spawnOptions(options.cwd, options.environment));
+    child = spawnProcess(
+      options.command,
+      options.args,
+      spawnOptions(options.cwd, options.environment),
+    );
   } catch (error) {
     throw processError("spawn", error);
   }
@@ -111,7 +125,9 @@ export function startStreamingCommand(options) {
     try {
       for (const record of parser.push(chunk)) options.onRecord?.(record);
     } catch (error) {
-      fail(error instanceof CommandProtocolError ? error : protocol("stdout_protocol", error.message));
+      fail(
+        error instanceof CommandProtocolError ? error : protocol("stdout_protocol", error.message),
+      );
     }
   });
   child.stderr.on("data", (chunk) => {
@@ -154,16 +170,16 @@ export function startStreamingCommand(options) {
     },
     forceTerminate() {
       terminateChild(child, { force: true });
-    }
+    },
   };
 }
 
 function spawnOptions(cwd, environment) {
   return {
     cwd,
-    env: { ...process.env, ...(environment ?? {}) },
+    env: { ...process.env, ...environment },
     shell: false,
-    stdio: ["pipe", "pipe", "pipe"]
+    stdio: ["pipe", "pipe", "pipe"],
   };
 }
 
@@ -174,12 +190,18 @@ function processError(kind, error) {
 }
 
 function endStdin(child) {
-  try { child.stdin?.end?.(); } catch { /* a child may close stdin before startup */ }
+  try {
+    child.stdin?.end?.();
+  } catch { /* a child may close stdin before startup */ }
 }
 
 export function terminateChild(child, { force = false } = {}) {
-  try { child.stdin?.destroy?.(); } catch { /* already closed */ }
+  try {
+    child.stdin?.destroy?.();
+  } catch { /* already closed */ }
   if (child && (!child.killed || force)) {
-    try { child.kill?.(force ? "SIGKILL" : "SIGTERM"); } catch { /* already gone */ }
+    try {
+      child.kill?.(force ? "SIGKILL" : "SIGTERM");
+    } catch { /* already gone */ }
   }
 }

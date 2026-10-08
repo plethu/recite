@@ -25,7 +25,7 @@ pub(super) struct WorkspaceDiscovery {
 
 #[derive(Clone, Debug)]
 pub(super) enum WorkspaceDiscoveryState {
-    Manifest(Box<ProjectDiscoveryReport>),
+    Manifest(std::sync::Arc<ProjectDiscoveryReport>),
     Manifestless,
     Failed {
         manifest_path: PathBuf,
@@ -148,7 +148,7 @@ pub(super) fn discover_workspace_roots(roots: &[PathBuf]) -> Vec<WorkspaceDiscov
 
 fn discover_workspace_root(root: &Path, roots: &[PathBuf]) -> WorkspaceDiscoveryState {
     match discover_project(root) {
-        Ok(report) => WorkspaceDiscoveryState::Manifest(Box::new(report)),
+        Ok(report) => WorkspaceDiscoveryState::Manifest(std::sync::Arc::new(report)),
         Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
             WorkspaceDiscoveryState::Manifestless
         }

@@ -1,8 +1,18 @@
 local M = {}
 
 local keys = {
-  "name", "root_dir", "root_dir_spec", "root_markers", "cmd", "settings",
-  "init_options", "capabilities", "on_attach", "on_init", "on_exit",
+  "name",
+  "root_dir",
+  "root_dir_spec",
+  "root_markers",
+  "cmd",
+  "settings",
+  "init_options",
+  "capabilities",
+  "on_attach",
+  "on_init",
+  "on_exit",
+  "flags",
 }
 
 local function same_value(left, right)
@@ -42,6 +52,7 @@ function M.restart_overrides(material)
     cmd = vim.deepcopy(material.cmd),
     root_markers = vim.deepcopy(material.root_markers),
     settings = vim.deepcopy(material.settings),
+    flags = vim.deepcopy(material.flags),
     init_options = vim.deepcopy(material.init_options),
     capabilities = vim.deepcopy(material.capabilities),
     on_attach = material.on_attach,

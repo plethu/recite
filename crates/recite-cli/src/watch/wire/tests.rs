@@ -1,3 +1,4 @@
+use crate::structured::errors::ErrorOperation;
 use std::fs;
 
 use recite_compiler::authoring::{
@@ -153,7 +154,7 @@ fn preparation_inputs_are_sorted_and_deduplicated() {
     let error = StructuredError {
         category: ErrorCategory::Io,
         code: ErrorCode::Read,
-        operation: "read",
+        operation: ErrorOperation::Read,
         path: None,
         related_path: None,
         details: None,

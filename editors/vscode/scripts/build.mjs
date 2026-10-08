@@ -1,9 +1,9 @@
 import { cp, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertSafeTree } from "./safety.mjs";
-import { verifyMessageProjections } from "./message-projections.mjs";
 import { verifyDiagnosticProjection } from "./diagnostic-projections.mjs";
+import { verifyMessageProjections } from "./message-projections.mjs";
+import { assertSafeTree } from "./safety.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(root, "..");

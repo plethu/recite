@@ -12,6 +12,8 @@ mod parser;
 mod pot;
 mod refresh;
 mod review;
+// Browser hosts use in-memory PO parsing; there is no filesystem to write.
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 mod write;
 
 pub use document::PoEditError;
@@ -22,6 +24,7 @@ pub use parser::{
 };
 pub use pot::{PotDocument, PotEntry, PotReference};
 pub use refresh::PoRefreshError;
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub use write::{PoIoError, PoWriteError};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

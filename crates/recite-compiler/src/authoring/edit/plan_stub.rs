@@ -6,16 +6,17 @@ use super::helpers::{
 };
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
 use crate::authoring::{
-    AuthoringSnapshot, BlockTarget, CompletionSiteKind, NavigationResult, QueryResult, SourceRange,
+    AuthoringQuery, BlockTarget, CompletionSiteKind, NavigationResult, QueryResult, SourceRange,
     SymbolIdentity, SymbolQueryOptions, SymbolRole,
 };
 
 /// Plans creation of a missing block at the target document's EOF.
-pub fn plan_create_block_stub(
-    snapshot: &AuthoringSnapshot,
+pub(super) fn plan_create_block_stub(
+    snapshot: &AuthoringQuery<'_>,
     key: &DocumentKey,
     position: SourcePosition,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     let reference = block_occurrence(snapshot, key, position)?;
     let SymbolIdentity::Block(block) = reference.identity() else {
         return Err(no_symbol(key, position));
@@ -122,11 +123,12 @@ pub fn plan_create_block_stub(
 ///
 /// Candidate locations come from the compiler's typed symbol summary, so a
 /// host can pass a wide diagnostic range without walking its source text.
-pub fn plan_create_block_stub_in_range(
-    snapshot: &AuthoringSnapshot,
+pub(super) fn plan_create_block_stub_in_range(
+    snapshot: &AuthoringQuery<'_>,
     key: &DocumentKey,
     range: SourceRange,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    snapshot.checkpoint()?;
     document(snapshot, key)?;
     if range.start() > range.end() {
         return Err(AuthoringEditError::UnmappableRange {
@@ -164,7 +166,7 @@ pub fn plan_create_block_stub_in_range(
     selected.ok_or_else(|| no_symbol(key, range.start()))
 }
 
-impl AuthoringSnapshot {
+impl AuthoringQuery<'_> {
     /// Plans a block stub for the missing reference at `position`.
     pub fn plan_create_block_stub(
         &self,

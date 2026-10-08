@@ -18,7 +18,7 @@ pub struct ReciteConditionQuery {
     /// Recite-owned UTF-8 NUL-terminated condition function name. Borrowed by
     /// the host only for the callback call.
     pub function_name: *const c_char,
-    /// Recite-owned msgpack-encoded array of `FfiConditionArg` values. Borrowed
+    /// Recite-owned msgpack-encoded array of tagged argument values. Borrowed
     /// by the host only for the callback call.
     pub args_msgpack: *const u8,
     pub args_len: usize,
@@ -27,20 +27,24 @@ pub struct ReciteConditionQuery {
 /// Result returned by a `ReciteConditionFn` callback.
 ///
 /// `ok` must be exactly 0 or 1. When `ok == 1`, `value_msgpack` must point to a
-/// complete msgpack-encoded `FfiConditionValue` valid for the duration of the
-/// callback frame. When `ok == 0`, `error_message` may be null (the runtime
-/// uses a stable fallback) or point to a UTF-8 NUL-terminated string valid for
-/// the duration of the callback frame.
+/// complete msgpack-encoded `FfiConditionValue`. When `ok == 0`, `error_message`
+/// may be null (the runtime uses a stable fallback) or point to a UTF-8
+/// NUL-terminated string. Result storage must remain immutable and valid after
+/// callback return until the next condition callback for this session or the
+/// enclosing Recite operation returns, whichever happens first. Recite decodes
+/// each result before invoking another condition callback.
 #[repr(C)]
 pub struct ReciteConditionResult {
     /// Exactly 1 = success, 0 = failure.
     pub ok: u8,
     /// Host-owned msgpack bytes encoding a `FfiConditionValue`. Borrowed by
-    /// Recite only until callback return; valid when `ok == 1`.
+    /// Recite after callback return under the result storage lifetime above;
+    /// valid when `ok == 1`.
     pub value_msgpack: *const u8,
     pub value_len: usize,
     /// Host-owned UTF-8 NUL-terminated error message. Borrowed by Recite only
-    /// until callback return; valid when `ok == 0`.
+    /// after callback return under the result storage lifetime above; valid
+    /// when `ok == 0`.
     pub error_message: *const c_char,
 }
 

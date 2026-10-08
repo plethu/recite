@@ -26,6 +26,9 @@ impl CliError {
             Self::ProjectDiscovery { source } => {
                 messages.format(MsgId::CliErrorGeneric, [("message", source.to_string())])
             }
+            Self::ProjectSchema { source } => {
+                messages.format(MsgId::CliErrorGeneric, [("message", source.to_string())])
+            }
             Self::DialogueCatalogConflict {
                 path,
                 locale,

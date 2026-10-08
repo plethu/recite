@@ -11,10 +11,24 @@ use crate::diagnostics::DiagnosticSource;
 use crate::documents::OpenDocumentStore;
 
 impl LspWorkspace {
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn with_ui_catalog(
         config: WorkspaceConfig,
         ui_catalog: UiCatalog,
     ) -> Result<Self, recite_compiler::authoring::AuthoringError> {
+        Self::with_control(
+            config,
+            std::sync::Arc::new(ui_catalog),
+            recite_compiler::authoring::CancellationToken::new(),
+        )
+    }
+
+    pub(crate) fn with_control(
+        config: WorkspaceConfig,
+        ui_catalog: std::sync::Arc<UiCatalog>,
+        control: recite_compiler::authoring::CancellationToken,
+    ) -> Result<Self, recite_compiler::authoring::AuthoringError> {
+        control.checkpoint()?;
         let saved = SavedProjectIndex::discover(&config);
         let schema_override_path = config.schema_override_path.clone();
         let documents = OpenDocumentStore::default();
@@ -27,10 +41,12 @@ impl LspWorkspace {
         }
         let generation = SnapshotGeneration(0);
         let mut workspace = LspWorkspace {
+            control,
             saved: saved.clone(),
             documents: documents.clone(),
             partitions: BTreeMap::new(),
             snapshot: LiveProjectSnapshot::empty(generation),
+            query_index: std::sync::Arc::default(),
             schema_override_path,
             schema_paths,
             retired_schema_uris: BTreeSet::new(),

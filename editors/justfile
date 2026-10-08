@@ -1,10 +1,14 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
-set default-list := true
+set default-list
 set working-directory := '..'
 
 # Zed extension quality and test commands.
 mod zed 'zed/justfile'
+
+# Regenerate editor error vocabularies from the CLI's serialized enums.
+protocol-update:
+    RECITE_UPDATE_PROTOCOL=1 cargo test --locked -p recite-cli --lib structured::tests::error_vocabulary_projections_are_current
 
 # Run an installed Neovim, VS Code, or Zed host check.
 host client *args:

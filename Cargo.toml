@@ -1,4 +1,5 @@
 [workspace]
+resolver = "3"
 members = [
     "crates/recite-adapter",
     "crates/recite-benchmarks",
@@ -14,74 +15,82 @@ members = [
     "crates/recite-import",
     "crates/recite-lsp",
     "crates/recite-parser",
+    "crates/recite-playground",
     "crates/recite-runtime",
     "crates/recite-ui",
+    "tools/recite-release",
 ]
-resolver = "3"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.96"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/plethu/recite"
 readme = "README.md"
-
-[workspace.lints.rust]
-unsafe_code = "forbid"
-unreachable_pub = "warn"
-
-[workspace.lints.clippy]
-unwrap_used = "warn"
-expect_used = "warn"
-todo = "warn"
-unimplemented = "warn"
+repository = "https://github.com/plethu/recite"
+license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
+# Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.
+atomic-write-file = "0.3.1"
 bevy_app = { version = "=0.19.1", default-features = false, features = ["std"] }
 bevy_asset = { version = "=0.19.1", default-features = false }
 bevy_ecs = { version = "=0.19.1", default-features = false, features = ["std"] }
 bevy_reflect = { version = "=0.19.1", default-features = false, features = ["std"] }
-recite-adapter = { version = "0.1.0", path = "crates/recite-adapter" }
-recite-core = { version = "0.1.0", path = "crates/recite-core" }
-recite-build = { version = "0.1.0", path = "crates/recite-build" }
-recite-ffi = { version = "0.6.0", path = "crates/recite-ffi" }
-recite-parser = { version = "0.1.0", path = "crates/recite-parser" }
-recite-compiler = { version = "0.1.0", path = "crates/recite-compiler" }
-recite-config = { version = "0.1.0", path = "crates/recite-config" }
-recite-fixturegen = { version = "0.1.0", path = "crates/recite-fixturegen" }
-recite-godot = { version = "0.1.0", path = "crates/recite-godot" }
-recite-import = { version = "0.1.0", path = "crates/recite-import" }
-recite-lsp = { version = "0.1.0", path = "crates/recite-lsp" }
-recite-runtime = { version = "0.1.0", path = "crates/recite-runtime" }
-recite-ui = { version = "0.1.0", path = "crates/recite-ui" }
 blake3 = "1.8.5"
-dirs = "6.0.0"
-# Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.
-atomic-write-file = "0.3.1"
 clap = { version = "4.5.51", features = ["derive", "string"] }
 compact_str = "0.8.1"
 criterion = { version = "0.8.2", default-features = false, features = ["plotters"] }
 crossterm = "0.29.0"
+dirs = "6.0.0"
 fluent-bundle = "0.15.3"
 fluent-syntax = "0.11.1"
 insta = { version = "1.47.2", default-features = false }
+language-tags = "0.3.2"
+memchr = "2.8.0"
 notify = "8.2.0"
-ratatui = "0.30.2"
 rand_chacha = { version = "0.10.0", default-features = false }
+ratatui = "0.30.2"
+recite-adapter = { path = "crates/recite-adapter", version = "0.1.0" }
+recite-build = { path = "crates/recite-build", version = "0.1.0" }
+recite-compiler = { path = "crates/recite-compiler", version = "0.1.0" }
+recite-config = { path = "crates/recite-config", version = "0.1.0" }
+recite-core = { path = "crates/recite-core", version = "0.1.0" }
+recite-ffi = { path = "crates/recite-ffi", version = "0.7.0" }
+recite-fixturegen = { path = "crates/recite-fixturegen", version = "0.1.0" }
+recite-godot = { path = "crates/recite-godot", version = "0.1.0" }
+recite-import = { path = "crates/recite-import", version = "0.1.0" }
+recite-lsp = { path = "crates/recite-lsp", version = "0.1.0" }
+recite-parser = { path = "crates/recite-parser", version = "0.1.0" }
+recite-runtime = { path = "crates/recite-runtime", version = "0.1.0" }
+recite-ui = { path = "crates/recite-ui", version = "0.1.0" }
 rmp-serde = "1.3.1"
+rpds = "1.2.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_bytes = "0.11.19"
-serde-value = "0.7.0"
 serde_json = { version = "1.0.149", features = ["arbitrary_precision", "preserve_order"] }
+serde-value = "0.7.0"
 tempfile = "3.23.0"
 thiserror = "2"
 toml = "0.9.8"
 toml_edit = { version = "0.25.12", features = ["serde"] }
-language-tags = "0.3.2"
 unic-langid = { version = "0.9.6", features = ["macros"] }
+# Full Unicode case folding for conservative case-insensitive output identities.
+unicase = "=2.7.0"
 unicode-ident = "1.0.22"
 # Unicode normalization for conservative case-insensitive output identities.
 unicode-normalization = "0.1.25"
-# Full Unicode case folding for conservative case-insensitive output identities.
-unicase = "=2.7.0"
+wasm-bindgen = "=0.2.128"
+
+[workspace.lints.clippy]
+expect_used = "warn"
+todo = "warn"
+unimplemented = "warn"
+unwrap_used = "warn"
+
+[workspace.lints.rust]
+unreachable_pub = "warn"
+unsafe_code = "forbid"
+
+[profile.dist]
+inherits = "release"
+lto = "thin"

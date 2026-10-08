@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use recite_core::{Diagnostic, DocumentKey};
 
-use super::super::{AuthoringSummary, DocumentVersion};
+use super::super::{AuthoringSummary, DocumentVersion, SourceFingerprint};
 use crate::validation::ValidationParticipation;
 
 /// Whether a snapshot document comes from saved state or an open overlay.
@@ -63,7 +63,8 @@ pub struct DocumentSnapshot {
     pub(super) metadata: DocumentMetadata,
     pub(super) diagnostics: Arc<[Diagnostic]>,
     pub(super) summary: Arc<AuthoringSummary>,
-    pub(super) source_text: Arc<str>,
+    pub(super) source: Arc<recite_core::SourceLineIndex>,
+    source_fingerprint: SourceFingerprint,
 }
 
 impl DocumentSnapshot {
@@ -71,13 +72,15 @@ impl DocumentSnapshot {
         metadata: DocumentMetadata,
         diagnostics: Arc<[Diagnostic]>,
         summary: Arc<AuthoringSummary>,
-        source_text: Arc<str>,
+        source: Arc<recite_core::SourceLineIndex>,
+        source_fingerprint: SourceFingerprint,
     ) -> Self {
         Self {
             metadata,
             diagnostics,
             summary,
-            source_text,
+            source,
+            source_fingerprint,
         }
     }
 
@@ -113,7 +116,14 @@ impl DocumentSnapshot {
         &self.summary
     }
     #[must_use]
+    pub fn source_index(&self) -> &recite_core::SourceLineIndex {
+        &self.source
+    }
+    pub(crate) fn source_fingerprint(&self) -> &SourceFingerprint {
+        &self.source_fingerprint
+    }
+    #[must_use]
     pub fn source_text(&self) -> &str {
-        &self.source_text
+        self.source.source()
     }
 }

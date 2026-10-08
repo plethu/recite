@@ -1,154 +1,79 @@
+use super::{Server, ServerError, updates::Update};
 use lsp_server::Notification;
-use lsp_types::notification::{
-    DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
-    DidSaveTextDocument, Notification as LspNotification,
-};
-use lsp_types::{
-    DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-};
-
-use super::{Server, ServerError};
-use crate::workspace::{DiagnosticRefresh, WorkspaceChangeResult};
+use std::sync::Arc;
 
 impl Server {
-    pub(super) fn handle_notification(
-        &mut self,
-        notification: Notification,
-    ) -> Result<bool, ServerError> {
+    pub(super) fn notification(&mut self, notification: Notification) -> Result<(), ServerError> {
         match notification.method.as_str() {
-            lsp_types::notification::Initialized::METHOD => {}
-            lsp_types::notification::DidSaveTextDocument::METHOD => {
-                self.handle_did_save(notification)?
+            "$/cancelRequest" => {
+                self.cancel(notification.params);
+                return Ok(());
             }
-            lsp_types::notification::Exit::METHOD => {
-                if self.shutdown_requested {
-                    return Ok(true);
+            "exit" => {
+                if !self.shutdown_requested {
+                    return Err(ServerError::ExitWithoutShutdown);
                 }
-
-                return Err(ServerError::ExitWithoutShutdown);
-            }
-            lsp_types::notification::DidOpenTextDocument::METHOD => {
-                self.handle_did_open(notification)?
-            }
-            lsp_types::notification::DidChangeTextDocument::METHOD => {
-                self.handle_did_change(notification)?
-            }
-            lsp_types::notification::DidChangeWatchedFiles::METHOD => {
-                self.handle_did_change_watched_files(notification)?
-            }
-            lsp_types::notification::DidCloseTextDocument::METHOD => {
-                self.handle_did_close(notification)?
+                self.exit_received = true;
+                return Ok(());
             }
             _ => {}
         }
-        Ok(false)
-    }
-
-    fn handle_did_open(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidOpenTextDocumentParams>(DidOpenTextDocument::METHOD)
-        else {
+        if self.shutdown_requested {
             return Ok(());
-        };
-        let refreshes = self.workspace.open_refreshes(
-            params.text_document.uri.clone(),
-            params.text_document.version,
-            params.text_document.text,
-        );
-        for refresh in refreshes {
-            self.publish_refresh(refresh)?;
         }
-        self.publish_open_document_refreshes(Some(&params.text_document.uri))
-    }
-
-    fn handle_did_change(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidChangeTextDocumentParams>(DidChangeTextDocument::METHOD)
-        else {
+        let Some(mut update) = Update::parse(notification) else {
             return Ok(());
         };
-        let uri = params.text_document.uri;
-        let version = params.text_document.version;
-        match self
-            .workspace
-            .change(uri.clone(), version, params.content_changes)
+        if !self.documents.accept(&mut update) {
+            return Ok(());
+        }
+        let scope = update
+            .changed_uri()
+            .and_then(|uri| self.known_scope(uri))
+            .map(str::to_owned);
+        self.epochs
+            .advance(scope.as_deref())
+            .ok_or(ServerError::SequenceExhausted)?;
+        self.revision = self
+            .revision
+            .checked_add(1)
+            .ok_or(ServerError::SequenceExhausted)?;
+        self.invalidate();
+        if let Some(uri) = update.changed_uri() {
+            // Only coalesce inside a pure-change segment. Lifecycle and filesystem
+            // notifications are ordering barriers, even when they name other files.
+            if let Some(index) = self
+                .updates
+                .iter()
+                .rposition(|(_, old)| old.changed_uri().is_none())
+            {
+                let remove = self
+                    .updates
+                    .iter()
+                    .enumerate()
+                    .skip(index + 1)
+                    .find(|(_, (_, old))| old.changed_uri() == Some(uri))
+                    .map(|(index, _)| index);
+                if let Some(index) = remove {
+                    self.updates.remove(index);
+                }
+            } else {
+                self.updates
+                    .retain(|(_, old)| old.changed_uri() != Some(uri));
+            }
+        }
+        if self.updates.len() >= 256 {
+            return Err(ServerError::InputCapacity);
+        }
+        self.updates.push_back((self.revision, Arc::new(update)));
+        // Do not repeatedly restart bootstrap or mixed-partition work. A hot
+        // editor may supersede its own exclusive job, but cannot prevent a
+        // sibling's already accepted revision from completing.
+        if let Some(partition) = &self.analysis_partition
+            && self.exclusive_update_partition().as_ref() == Some(partition)
+            && let Some(control) = &self.analyzing
         {
-            WorkspaceChangeResult::Accepted(refresh) => {
-                self.publish_refresh(refresh)?;
-                self.publish_open_document_refreshes(Some(&uri))?;
-            }
-            WorkspaceChangeResult::AcceptedRefreshes(refreshes) => {
-                for refresh in refreshes {
-                    self.publish_refresh(refresh)?;
-                }
-                self.publish_open_document_refreshes(Some(&uri))?;
-            }
-            _ => {}
-        }
-
-        Ok(())
-    }
-
-    fn handle_did_save(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidSaveTextDocumentParams>(DidSaveTextDocument::METHOD)
-        else {
-            return Ok(());
-        };
-        let uri = params.text_document.uri;
-        let schema_refreshed = if let Some(refresh) = self.workspace.save_schema(&uri) {
-            self.publish_refresh(refresh)?;
-            self.publish_open_document_refreshes(None)?;
-            true
-        } else {
-            false
-        };
-        if schema_refreshed {
-            return Ok(());
-        }
-        for refresh in self.workspace.save(uri.clone()) {
-            self.publish_refresh(refresh)?;
-        }
-        self.publish_open_document_refreshes(Some(&uri))?;
-
-        Ok(())
-    }
-
-    fn handle_did_change_watched_files(
-        &mut self,
-        notification: Notification,
-    ) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidChangeWatchedFilesParams>(DidChangeWatchedFiles::METHOD)
-        else {
-            return Ok(());
-        };
-        for event in params.changes {
-            for refresh in self.workspace.refresh_watched_uri(&event.uri) {
-                self.publish_refresh(refresh)?;
-            }
-            self.publish_open_document_refreshes(None)?;
-        }
-        Ok(())
-    }
-
-    fn handle_did_close(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidCloseTextDocumentParams>(DidCloseTextDocument::METHOD)
-        else {
-            return Ok(());
-        };
-        let refreshes = self.workspace.close(params.text_document.uri);
-        let explicit_open_uri = refreshes.iter().find_map(|refresh| match refresh {
-            DiagnosticRefresh::Publish(diagnostics) => Some(diagnostics.uri.clone()),
-            DiagnosticRefresh::Clear { .. } => None,
-        });
-        for refresh in &refreshes {
-            self.publish_refresh(refresh.clone())?;
-        }
-        if !refreshes.is_empty() {
-            self.publish_open_document_refreshes(explicit_open_uri.as_ref())?;
+            control.interrupt();
         }
         Ok(())
     }

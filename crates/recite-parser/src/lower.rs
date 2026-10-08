@@ -27,10 +27,12 @@ pub(crate) fn lower_source_file(
     source: &str,
     parse_diagnostics: &[Diagnostic],
     parse_recovery: SourceRecovery,
+    first_line: u32,
 ) -> LoweredSourceFile {
     let mut diagnostics = parse_diagnostics.to_vec();
     let mut recovery = parse_recovery;
-    let blocks = Lowerer::new(path, source, &mut diagnostics, &mut recovery).lower_blocks();
+    let blocks =
+        Lowerer::new(path, source, &mut diagnostics, &mut recovery, first_line).lower_blocks();
 
     LoweredSourceFile {
         source_file: SourceFile::new(path, blocks),
@@ -72,10 +74,11 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         source: &'source str,
         diagnostics: &'diagnostics mut Vec<Diagnostic>,
         recovery: &'diagnostics mut SourceRecovery,
+        first_line: u32,
     ) -> Self {
         Self {
             path,
-            lines: LogicalLines::new(source).collect(),
+            lines: LogicalLines::starting_at(source, first_line).collect(),
             diagnostics,
             recovery,
         }

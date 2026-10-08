@@ -1,16 +1,12 @@
-use recite_core::{DocumentKey, SourcePosition, SourceSpan};
+use recite_core::{DocumentKey, SourcePosition, SourceSpan, source_lines};
 
 pub(super) fn line_at(text: &str, line_number: u32) -> Option<(&str, usize)> {
     let mut offset = 0;
-    for (index, line) in text.split_inclusive('\n').enumerate() {
+    for (index, (content, terminator)) in source_lines(text).enumerate() {
         if u32::try_from(index + 1).ok()? == line_number {
-            let line = line.strip_suffix('\n').unwrap_or(line);
-            return Some((line.strip_suffix('\r').unwrap_or(line), offset));
+            return Some((content, offset));
         }
-        offset += line.len();
-    }
-    if u32::try_from(text.split('\n').count()).ok()? == line_number {
-        return Some((text.rsplit('\n').next().unwrap_or_default(), offset));
+        offset += content.len() + terminator.len();
     }
     None
 }
@@ -83,8 +79,10 @@ pub(super) fn assignment_span(
 fn position(text: &str, offset: usize) -> SourcePosition {
     let mut line = 1u32;
     let mut column = 1u32;
-    for character in text[..offset.min(text.len())].chars() {
-        if character == '\n' {
+    for (index, character) in text[..offset.min(text.len())].char_indices() {
+        if character == '\n'
+            || (character == '\r' && text.as_bytes().get(index + 1) != Some(&b'\n'))
+        {
             line += 1;
             column = 1;
         } else {

@@ -38,6 +38,8 @@ mod layout;
 mod lower;
 mod markers;
 mod parser;
+mod regions;
+pub use regions::{SourceRegion, source_regions};
 mod source;
 mod syntax;
 

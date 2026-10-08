@@ -54,6 +54,33 @@ fn prepared_build(
 }
 
 #[test]
+fn streamed_publication_preserves_large_binary_artifacts() {
+    let temp = TempDir::new().expect("tempdir");
+    let (prepared, output, stage) = prepared_build(&temp, "large.recitec", "large.stage");
+    let bytes: Vec<_> = (0..1_048_576).map(|i| (i % 251) as u8).collect();
+    fs::write(&stage, &bytes).expect("large stage");
+    let mut recovery = Vec::new();
+    let outcome = commit_prepared_with(temp.path(), prepared, &mut recovery, staging::replace);
+    assert!(matches!(outcome, PublishOutcome::Published { .. }));
+    assert_eq!(fs::read(output).expect("published bytes"), bytes);
+    assert!(!stage.exists());
+    assert!(recovery.is_empty());
+}
+
+#[test]
+fn missing_stage_preserves_the_previous_publication() {
+    let temp = TempDir::new().expect("tempdir");
+    let (prepared, output, stage) = prepared_build(&temp, "out.recitec", "missing.stage");
+    fs::remove_file(&stage).expect("remove stage");
+    let mut recovery = Vec::new();
+    let outcome = commit_prepared_with(temp.path(), prepared, &mut recovery, staging::replace);
+    assert!(matches!(outcome, PublishOutcome::Partial { committed, .. } if committed.is_empty()));
+    assert_eq!(fs::read(output).expect("previous bytes"), b"old");
+    assert_eq!(recovery.len(), 1);
+    assert_eq!(recovery[0].marker(), stage);
+}
+
+#[test]
 fn post_rename_error_is_indeterminate_with_visible_new_bytes() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("temporary directory: {error}"));
     let (prepared, output, _) = prepared_build(&temp, "dialogue.recitec", "dialogue.recitec.stage");

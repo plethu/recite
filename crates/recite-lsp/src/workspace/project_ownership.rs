@@ -102,7 +102,7 @@ impl SavedProjectIndex {
         self.documents.insert(
             path.to_owned(),
             SavedDocument {
-                text,
+                text: text.into(),
                 identity,
                 source_paths,
             },

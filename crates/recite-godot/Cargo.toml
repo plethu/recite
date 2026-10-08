@@ -4,17 +4,17 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Godot 4 GDExtension adapter for Recite dialogue runtime."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 godot = { version = "0.5.3", features = ["api-4-6"] }
-recite-core.workspace = true
 recite-adapter.workspace = true
+recite-core.workspace = true
 recite-runtime.workspace = true
 
 [dev-dependencies]

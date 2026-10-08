@@ -28,6 +28,15 @@ git_policy_closing_issue_matches_body() {
     <<<"$body"
 }
 
+git_policy_nonclosing_issue_matches_body() {
+  local body="$1"
+  local issue_code="$2"
+
+  grep -Eiq -- \
+    "(^|[^[:alnum:]])(refs|references)[[:space:]]+#${issue_code}([^[:alnum:]_]|$)" \
+    <<<"$body"
+}
+
 git_policy_in_pull_request_context() {
   [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ||
     -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_BASE_REF:-}" ||
@@ -38,18 +47,18 @@ git_policy_validate_pr_context_inputs() {
   local pr_context="$1"
   local branch_name="$2"
 
-  if (( pr_context )) && [[ -z "${RECITE_PR_TITLE:-}" ]]; then
+  if ((pr_context)) && [[ -z "${RECITE_PR_TITLE:-}" ]]; then
     echo "pull-request context requires RECITE_PR_TITLE" >&2
     return 1
   fi
 
-  if (( pr_context )) && [[ -z "${RECITE_BRANCH_NAME:-}" &&
+  if ((pr_context)) && [[ -z "${RECITE_BRANCH_NAME:-}" &&
     -z "${RECITE_HEAD_BRANCH:-}" && -z "${GITHUB_HEAD_REF:-}" ]]; then
     echo "pull-request context requires source/head branch metadata" >&2
     return 1
   fi
 
-  if (( pr_context )) && [[ "$branch_name" == "main" ]]; then
+  if ((pr_context)) && [[ "$branch_name" == "main" ]]; then
     echo "pull-request head branch must not be protected main" >&2
     return 1
   fi
@@ -65,7 +74,7 @@ git_policy_validate_integration_metadata() {
   # CI passes label presence separately so a branch/label mismatch cannot fall
   # through as an ordinary PR. Local explicit integration mode remains available
   # only when CI label metadata is absent.
-  if (( pr_context )) && [[ "$integration_pr" == "1" && -z "$integration_label" ]]; then
+  if ((pr_context)) && [[ "$integration_pr" == "1" && -z "$integration_label" ]]; then
     echo "pull-request integration mode requires workflow/integration label metadata" >&2
     return 1
   fi
@@ -81,7 +90,7 @@ git_policy_validate_integration_metadata() {
       echo "explicit integration mode conflicts with missing workflow/integration label" >&2
       return 1
     fi
-    if (( pr_context )) && git_policy_is_valid_integration_branch_name "$branch_name"; then
+    if ((pr_context)) && git_policy_is_valid_integration_branch_name "$branch_name"; then
       echo "integration/<short-kebab-topic> pull requests require the workflow/integration label" >&2
       return 1
     fi
@@ -90,7 +99,7 @@ git_policy_validate_integration_metadata() {
       echo "integration mode requires an integration/<short-kebab-topic> head branch: ${branch_name:-<unset>}" >&2
       return 1
     fi
-  elif (( pr_context )) && git_policy_is_valid_integration_branch_name "$branch_name"; then
+  elif ((pr_context)) && git_policy_is_valid_integration_branch_name "$branch_name"; then
     echo "integration/<short-kebab-topic> pull requests require the workflow/integration label" >&2
     return 1
   fi
@@ -121,14 +130,20 @@ git_policy_validate_pr_metadata() {
       return 1
     fi
 
-    if (( pr_context )); then
+    if ((pr_context)); then
       if [[ -z "${RECITE_PR_BODY:-}" ]]; then
-        echo "pull-request context requires RECITE_PR_BODY with a closing issue" >&2
+        echo "pull-request context requires RECITE_PR_BODY with matching issue linkage" >&2
         return 1
       fi
       if ! git_policy_closing_issue_matches_body "$RECITE_PR_BODY" "${title_issue_code#REC-}"; then
-        echo "pull-request body must contain Closes/Fixes/Resolves #${title_issue_code#REC-}" >&2
-        return 1
+        if [[ "$integration_pr" == "1" ]]; then
+          echo "integration pull-request body must contain Closes/Fixes/Resolves #${title_issue_code#REC-}" >&2
+          return 1
+        fi
+        if ! git_policy_nonclosing_issue_matches_body "$RECITE_PR_BODY" "${title_issue_code#REC-}"; then
+          echo "pull-request body must contain Closes/Fixes/Resolves or Refs/References #${title_issue_code#REC-}" >&2
+          return 1
+        fi
       fi
     fi
 

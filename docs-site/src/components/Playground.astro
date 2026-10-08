@@ -1,0 +1,59 @@
+---
+import source from "../../../fixtures/recite/valid/landing-junction.recite?raw";
+import moduleUrl from "../client/generated/recite_playground.js?url";
+import binaryUrl from "../client/generated/recite_playground_bg.wasm?url";
+import { messageNames } from "../client/messages";
+import workerUrl from "../client/worker.ts?worker&url";
+
+const t = Astro.locals.t;
+const messages = Object.fromEntries(messageNames.map(name => [name, t(`playground.${name}`)]));
+---
+<div
+  class="playground"
+  data-playground
+  data-worker-url={workerUrl}
+  data-module-url={moduleUrl}
+  data-binary-url={binaryUrl}
+>
+  <p>{t("playground.description")}</p>
+  <div class="playground-columns">
+    <div>
+      <label for="recite-source">{t("playground.source")}</label>
+      <textarea id="recite-source" spellcheck="false" autocapitalize="off" rows="16"
+      >{source}</textarea>
+      <div class="playground-actions">
+        <button type="button" data-run hidden>{t("playground.run")}</button>
+        <button type="button" data-stop hidden disabled>{t("playground.stop")}</button>
+        <button type="button" data-reset hidden>{t("playground.reset")}</button>
+        <a
+          href="/examples/junction.recite"
+          download="junction.recite"
+        >{t("playground.download")}</a>
+      </div>
+      <label for="recite-file">{t("playground.open")}</label>
+      <input id="recite-file" type="file" accept=".recite, text/plain" disabled />
+      <noscript><p>{t("playground.noJs")}</p></noscript>
+    </div>
+    <div class="scene-script playground-output">
+      <h3>{t("playground.output")}</h3>
+      <p data-status role="status" tabindex="-1">{t("playground.ready")}</p>
+      <ol
+        data-transcript
+        tabindex="0"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-label={t("playground.transcript")}
+      >
+      </ol>
+      <div class="playground-actions" data-controls></div>
+    </div>
+  </div>
+  <script
+    type="application/json"
+    data-messages
+    set:html={JSON.stringify(messages).replaceAll("<", "\\u003c")}
+  />
+</div>
+<script>
+import "../client/controller.ts";
+</script>

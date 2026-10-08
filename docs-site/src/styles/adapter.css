@@ -1,0 +1,87 @@
+@layer tokens {
+  :root, :root[data-theme="light"], ::backdrop {
+    --sl-color-white: var(--color-ink);
+    --sl-color-black: var(--color-paper);
+    --sl-color-gray-1: var(--color-ink);
+    --sl-color-gray-2: var(--color-ink);
+    --sl-color-gray-3: var(--color-muted);
+    --sl-color-gray-4: var(--color-muted);
+    --sl-color-gray-5: var(--color-rule);
+    --sl-color-gray-6: var(--color-surface);
+    --sl-color-gray-7: var(--color-paper);
+    --sl-color-accent: var(--color-plum);
+    --sl-color-accent-high: var(--color-plum);
+    --sl-color-accent-low: var(--color-surface);
+    --sl-color-orange-low: var(--color-surface);
+    --sl-color-orange: var(--color-warning);
+    --sl-color-orange-high: var(--color-warning);
+    --sl-color-green-low: var(--color-surface);
+    --sl-color-green: var(--color-success);
+    --sl-color-green-high: var(--color-success);
+    --sl-color-blue-low: var(--color-surface);
+    --sl-color-blue: var(--color-plum);
+    --sl-color-blue-high: var(--color-plum);
+    --sl-color-purple-low: var(--color-surface);
+    --sl-color-purple: var(--color-plum);
+    --sl-color-purple-high: var(--color-plum);
+    --sl-color-red-low: var(--color-surface);
+    --sl-color-red: var(--color-danger);
+    --sl-color-red-high: var(--color-danger);
+    --sl-color-text: var(--color-ink);
+    --sl-color-text-accent: var(--color-plum);
+    --sl-color-text-invert: var(--color-on-plum);
+    --sl-color-bg: var(--color-paper);
+    --sl-color-bg-nav: var(--color-paper);
+    --sl-color-bg-sidebar: var(--color-paper);
+    --sl-color-bg-inline-code: var(--color-surface);
+    --sl-color-bg-accent: var(--color-plum);
+    --sl-color-hairline: var(--color-rule);
+    --sl-color-hairline-light: var(--color-rule);
+    --sl-color-hairline-shade: var(--color-rule);
+    --sl-color-backdrop-overlay: var(--color-shadow);
+    --sl-shadow-sm: 0 0.1rem 0.3rem var(--color-shadow);
+    --sl-shadow-md: 0 0.5rem 1rem var(--color-shadow);
+    --sl-shadow-lg: 0 0.75rem 2rem var(--color-shadow);
+    --sl-font: var(--font-reading);
+    --sl-font-mono: var(--font-code);
+    --sl-nav-height: 5rem;
+    --sl-content-width: var(--measure-reading);
+    --astro-code-foreground: var(--color-ink);
+    --astro-code-background: var(--color-surface);
+    --astro-code-token-constant: var(--color-plum);
+    --astro-code-token-string: var(--color-success);
+    --astro-code-token-comment: var(--color-muted);
+    --astro-code-token-keyword: var(--color-plum);
+    --astro-code-token-parameter: var(--color-ink);
+    --astro-code-token-function: var(--color-plum);
+    --astro-code-token-string-expression: var(--color-success);
+    --astro-code-token-punctuation: var(--color-muted);
+    --astro-code-token-link: var(--color-plum);
+  }
+}
+
+@layer components {
+  .recite-title {
+    margin-block: 1rem 0;
+    font-size: var(--sl-text-h1);
+    font-weight: 600;
+    line-height: var(--sl-line-height-headings);
+    color: var(--color-ink);
+  }
+
+  @scope (.recite-header) {
+    :scope {
+      block-size: 100%;
+    }
+  }
+
+  :root:not([data-has-sidebar]) .content-panel {
+    border: none;
+  }
+
+  .reading-panel {
+    max-inline-size: var(--measure-reading);
+    margin-inline: auto;
+    padding-block: 1.5rem;
+  }
+}

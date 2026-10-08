@@ -3,18 +3,19 @@
 
 import argparse
 import json
-from pathlib import Path
 import queue
 import shutil
 import subprocess
 import tempfile
 import threading
 import time
+from pathlib import Path
 
 
 def command(recite, root, *args, success=True):
-    result = subprocess.run([str(recite), *args], cwd=root, text=True,
-                            capture_output=True, timeout=30)
+    result = subprocess.run(
+        [str(recite), *args], cwd=root, text=True, capture_output=True, timeout=30
+    )
     if (result.returncode == 0) != success:
         raise RuntimeError(f"{args}: exit {result.returncode}\n{result.stdout}\n{result.stderr}")
     return result.stdout
@@ -42,9 +43,14 @@ def wait_build(records, status):
 def watch_edits(recite, root):
     records = queue.Queue()
     with tempfile.TemporaryFile(mode="w+") as errors:
-        process = subprocess.Popen([str(recite), "watch", ".", "--output-format", "structured"],
-                                   cwd=root, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=errors, text=True)
+        process = subprocess.Popen(
+            [str(recite), "watch", ".", "--output-format", "structured"],
+            cwd=root,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=errors,
+            text=True,
+        )
 
         def collect():
             for line in process.stdout:
@@ -60,7 +66,9 @@ def watch_edits(recite, root):
             before = asset.read_bytes()
             source = root / "src/arrival.recite"
             original = source.read_text()
-            source.write_text(original.replace("-> src/effects.recite::effects", "-> missing_block"))
+            source.write_text(
+                original.replace("-> src/effects.recite::effects", "-> missing_block")
+            )
             failed = wait_build(records, "failed")
             assert failed["data"]["diagnostics"], "failed build must explain the source error"
             assert asset.read_bytes() == before, "failed build changed last valid asset"

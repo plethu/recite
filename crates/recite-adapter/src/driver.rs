@@ -238,31 +238,37 @@ impl SessionDriver {
         resolution: LocaleResolution<'_>,
         encode: impl FnOnce(Vec<DialogueEvent>) -> Result<T, E>,
     ) -> Result<T, DriverError<E>> {
-        if self.has_active_session() {
-            return Err(AdapterError::new(AdapterErrorKind::SessionAlreadyActive).into());
-        }
-        let session = decode_session_messagepack(asset.dialogue(), bytes)
-            .map_err(AdapterError::from_restore_error)?;
-        self.active = Some(SessionState::Prepared(ActiveSession {
-            asset: asset.clone(),
-            session,
-        }));
-        if let Some(active) = self.active.as_ref() {
-            self.observed_choices = active
-                .active()
-                .session
-                .previous_prompt_choices()
-                .iter()
-                .chain(active.active().session.selected_choice_history())
-                .cloned()
-                .collect();
-        }
+        self.prepare_restore(asset, bytes)?;
         let result = self.begin_with(context, resolution, encode);
         if result.is_err() {
             self.active = None;
             self.observed_choices.clear();
         }
         result
+    }
+
+    /// Restores the checkpoint without traversing. Configure host conditions
+    /// and locale resolution before calling `begin`, as for a new session.
+    pub fn prepare_restore(&mut self, asset: &LoadedDialogue, bytes: &[u8]) -> AdapterResult<()> {
+        if self.has_active_session() {
+            return Err(AdapterError::new(AdapterErrorKind::SessionAlreadyActive));
+        }
+        let session = decode_session_messagepack(asset.dialogue(), bytes)
+            .map_err(AdapterError::from_restore_error)?;
+        if session.is_ended() {
+            return Err(no_active());
+        }
+        self.observed_choices = session
+            .previous_prompt_choices()
+            .iter()
+            .chain(session.selected_choice_history())
+            .cloned()
+            .collect();
+        self.active = Some(SessionState::Prepared(ActiveSession {
+            asset: asset.clone(),
+            session,
+        }));
+        Ok(())
     }
 
     pub fn snapshot(&self) -> AdapterResult<Vec<u8>> {

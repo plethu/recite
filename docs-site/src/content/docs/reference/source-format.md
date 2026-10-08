@@ -3,9 +3,9 @@ title: Source Format
 description: Author-facing reference for Recite source syntax.
 ---
 
-Recite source is a line-oriented format for named dialogue blocks, localisable
-lines, choices, conditions, and effect requests. Headers carry structured data.
-Indented body text carries dialogue prose.
+Recite source is a line-oriented format for named dialogue blocks, localisable lines, choices,
+conditions, and effect requests. Headers carry structured data. Indented body text carries dialogue
+prose.
 
 ## Minimal scene
 
@@ -30,8 +30,8 @@ Indented body text carries dialogue prose.
 -> END
 ```
 
-The example defines a default block, one structurally conditional choice, a
-typed blocking effect request, and an `END` target.
+The example defines a default block, one structurally conditional choice, a typed blocking effect
+request, and an `END` target.
 
 ## Statements
 
@@ -50,23 +50,21 @@ Recite uses a small statement vocabulary:
 # comment                            # comment
 ```
 
-Statement headers can carry fields and metadata. Statement bodies are indented
-below the header. Blank lines inside a prose body are preserved as paragraph
-breaks.
+Statement headers can carry fields and metadata. Statement bodies are indented below the header.
+Blank lines inside a prose body are preserved as paragraph breaks.
 
 ## Lines and speakers
 
-Dialogue prose is not a quoted string. It is the indented body owned by a line
-header:
+Dialogue prose is not a quoted string. It is the indented body owned by a line header:
 
 ```text
 > gate_003@68e651c6d898d7f39f00 speaker=guard portrait=neutral
   Move along.
 ```
 
-Speaker is structured data on the header, not text parsed from the body. Write
-`speaker=guard` instead of `Guard: Move along.` so validation, localisation,
-runtime output, and adapters all see the same speaker value.
+Speaker is structured data on the header, not text parsed from the body. Write `speaker=guard`
+instead of `Guard: Move along.` so validation, localisation, runtime output, and adapters all see
+the same speaker value.
 
 ## Block default speaker
 
@@ -85,14 +83,13 @@ A block can provide a default speaker for lines that do not name one:
   Well?
 ```
 
-Here `gate_001` and `gate_003` inherit `guard`. `gate_002` explicitly overrides
-the speaker with `captain`. The default speaker is speaker context only; it is
-not general metadata inheritance.
+Here `gate_001` and `gate_003` inherit `guard`. `gate_002` explicitly overrides the speaker with
+`captain`. The default speaker is speaker context only; it is not general metadata inheritance.
 
 ## Metadata
 
-Metadata entries are ordered and schema-validated. Repeated keys are allowed
-when the project schema permits them.
+Metadata entries are ordered and schema-validated. Repeated keys are allowed when the project schema
+permits them.
 
 ```text
 :: gate_check default speaker=guard location=town_gate
@@ -101,19 +98,16 @@ when the project schema permits them.
   Last warning.
 ```
 
-Bare values are symbols or references, such as `portrait=neutral` and
-`location=town_gate`. Quoted values are literal strings, such as
-`caption="Door closes"`.
+Bare values are symbols or references, such as `portrait=neutral` and `location=town_gate`. Quoted
+values are literal strings, such as `caption="Door closes"`.
 
-Ordinary block metadata describes the block itself. It is not inherited by
-lines or choices. Put presentation cues, tags, or translator context on the
-statement that owns them unless a documented statement field has specific
-defaulting behavior.
+Ordinary block metadata describes the block itself. It is not inherited by lines or choices. Put
+presentation cues, tags, or translator context on the statement that owns them unless a documented
+statement field has specific defaulting behavior.
 
 ## Choices and targets
 
-Choices are localisable records with stable IDs, body text, metadata, and a
-target:
+Choices are localisable records with stable IDs, body text, metadata, and a target:
 
 ```text
 ? gate_show_pass@191a4a3ecf68db47f96a tone=polite
@@ -125,13 +119,12 @@ target:
   -> END
 ```
 
-Targets jump to another block or end traversal with `END`. Unknown targets are
-validation errors.
+Targets jump to another block or end traversal with `END`. Unknown targets are validation errors.
 
-Use `requires=(...)` to keep a choice visible while making its availability
-conditional, with `reason=...` for the schema-owned player-facing explanation.
-Use `:if` when the choice should be structurally absent instead. The distinction
-was settled in [#110](https://github.com/plethu/recite/issues/110),
+Use `requires=(...)` to keep a choice visible while making its availability conditional, with
+`reason=...` for the schema-owned player-facing explanation. Use `:if` when the choice should be
+structurally absent instead. The distinction was settled in
+[#110](https://github.com/plethu/recite/issues/110),
 [#111](https://github.com/plethu/recite/issues/111), and
 [#112](https://github.com/plethu/recite/issues/112).
 
@@ -153,8 +146,8 @@ Choices may be nested under a line to model a prompt:
 
 ## Conditions and effects
 
-Conditions are pure queries over host-provided state. They decide whether
-structural branches are included; they do not mutate the game:
+Conditions are pure queries over host-provided state. They decide whether structural branches are
+included; they do not mutate the game:
 
 ```text
 :if reputation_at_least(town_guard, 3)
@@ -178,9 +171,8 @@ Use `:match` and `:case` for schema-declared enum state:
     -> END
 ```
 
-Effects are typed requests emitted to the host. Recite reports the request; the
-game decides what mutation, animation, sound, inventory change, or scene action
-actually happens.
+Effects are typed requests emitted to the host. Recite reports the request; the game decides what
+mutation, animation, sound, inventory change, or scene action actually happens.
 
 ```text
 ! immediate play_sfx(gate_unlock)
@@ -188,13 +180,11 @@ actually happens.
 ! blocking set_gate_open(town_gate)
 ```
 
-Blocking effects require the host to acknowledge the effect before traversal
-continues.
+Blocking effects require the host to acknowledge the effect before traversal continues.
 
 ## Stable IDs
 
-The current compiler contract requires every line and choice to have a stable
-ID before compilation:
+The current compiler contract requires every line and choice to have a stable ID before compilation:
 
 ```text
 > gate_005@79ab5f91ee4e42b3da54
@@ -205,13 +195,12 @@ ID before compilation:
   -> road_news
 ```
 
-The planned editor-assisted workflow is for LSP or on-save tooling to insert
-missing line and choice IDs. That insertion workflow is not documented here as
-available until the relevant editor tooling has shipped.
+The planned editor-assisted workflow is for LSP or on-save tooling to insert missing line and choice
+IDs. That insertion workflow is not documented here as available until the relevant editor tooling
+has shipped.
 
-Once an ID is written, it is frozen. Tooling must not silently rewrite existing
-IDs because localisation, fixtures, traces, and save-compatible dialogue state
-depend on stable identifiers.
+Once an ID is written, it is frozen. Tooling must not silently rewrite existing IDs because
+localisation, fixtures, traces, and save-compatible dialogue state depend on stable identifiers.
 
 ## Related docs
 

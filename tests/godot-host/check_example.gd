@@ -1,5 +1,6 @@
 extends SceneTree
 
+
 func _initialize() -> void:
 	var scene = load("res://main.tscn")
 	if not scene is PackedScene:
@@ -9,6 +10,7 @@ func _initialize() -> void:
 	var instance = scene.instantiate()
 	root.add_child.call_deferred(instance)
 	call_deferred("_inspect", instance)
+
 
 func _inspect(instance: Node) -> void:
 	var running := false

@@ -1,6 +1,6 @@
 use lsp_types::Range;
 use recite_compiler::authoring::{
-    AuthoringEditError, AuthoringEditPlan, AuthoringSnapshot, SourceRange,
+    AuthoringEditError, AuthoringEditPlan, AuthoringQuery, SourceRange,
 };
 
 use super::CodeActionDocument;
@@ -9,7 +9,7 @@ use crate::position::lsp_position_to_source;
 
 pub(super) fn edit(
     document: &CodeActionDocument<'_>,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[EditDocument<'_>],
     range: Range,
 ) -> Option<lsp_types::WorkspaceEdit> {
@@ -18,7 +18,7 @@ pub(super) fn edit(
 }
 
 fn plan_for_range(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     document: &CodeActionDocument<'_>,
     range: Range,
 ) -> Option<AuthoringEditPlan> {
@@ -34,7 +34,7 @@ fn plan_for_range(
 
 pub(super) fn fix_all(
     document: &CodeActionDocument<'_>,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[EditDocument<'_>],
 ) -> Option<lsp_types::WorkspaceEdit> {
     let plan = snapshot

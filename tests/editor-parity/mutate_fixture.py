@@ -3,7 +3,6 @@
 
 import json
 import os
-import re
 import shutil
 import sys
 from pathlib import Path
@@ -23,14 +22,22 @@ def main() -> int:
     elif mutation == "client":
         client = record(contract, "clients", "vscode")
         client["status"] = "implemented"
-        client["platform_status"] = {"linux": "implemented", "macos": "partial", "windows": "partial"}
+        client["platform_status"] = {
+            "linux": "implemented",
+            "macos": "partial",
+            "windows": "partial",
+        }
         record(contract, "artifacts", "vscode-vsix")["status"] = "planned"
     elif mutation == "distribution":
         record(contract, "distributions", "vs-marketplace")["status"] = "implemented"
     elif mutation == "capability-platform":
-        record(contract, "capabilities", "lsp.completion")["platform_status"]["linux"] = "implemented"
+        record(contract, "capabilities", "lsp.completion")["platform_status"]["linux"] = (
+            "implemented"
+        )
     elif mutation == "capability-evidence":
-        record(contract, "capabilities", "lsp.completion")["expected_evidence"]["status"] = "implemented"
+        record(contract, "capabilities", "lsp.completion")["expected_evidence"]["status"] = (
+            "implemented"
+        )
     elif mutation == "duplicate":
         contract["capabilities"].append(dict(contract["capabilities"][0]))
     elif mutation == "malformed":
@@ -42,7 +49,9 @@ def main() -> int:
         evidence.pop("commands", None)
         evidence["command"] = "cargo test --locked -p recite-lsp --test editor_parity no_such_test"
     elif mutation == "stale-module-evidence":
-        evidence = record(contract, "capabilities", "command.structured.results")["expected_evidence"]
+        evidence = record(contract, "capabilities", "command.structured.results")[
+            "expected_evidence"
+        ]
         evidence.pop("commands", None)
         evidence["command"] = (
             "cargo test --locked -p recite-compiler --test authoring_build "
@@ -58,8 +67,12 @@ def main() -> int:
     elif mutation == "block-commented-stale-test":
         root = fixture_repo / "crates/recite-compiler/tests/authoring_catalog_summary.rs"
         source = root.read_text(encoding="utf-8")
-        original = "#[test]\nfn checked_in_locale_fallback_catalogue_resolves_deterministically() {}"
-        replacement = "/* #[test]\nfn checked_in_locale_fallback_catalogue_resolves_deterministically() {} */"
+        original = (
+            "#[test]\nfn checked_in_locale_fallback_catalogue_resolves_deterministically() {}"
+        )
+        replacement = (
+            "/* #[test]\nfn checked_in_locale_fallback_catalogue_resolves_deterministically() {} */"
+        )
         if original not in source:
             raise SystemExit("catalogue test was not present")
         restore_mtime(root, source.replace(original, replacement, 1))
@@ -111,7 +124,9 @@ def main() -> int:
     elif mutation == "escaping-file-link":
         create_digest_symlink_fixture(fixture_repo, "escaping-file-link", True)
     elif mutation == "contained-directory-link":
-        create_digest_symlink_fixture(fixture_repo, "contained-directory-link", False, directory=True)
+        create_digest_symlink_fixture(
+            fixture_repo, "contained-directory-link", False, directory=True
+        )
     elif mutation == "symlink-cycle":
         digest_root = fixture_repo / "digest-inputs"
         first = digest_root / "cycle-a"
@@ -146,7 +161,9 @@ def main() -> int:
         client["status"] = "implemented"
         client["platform_status"] = ["linux", "macos", "windows"]
     elif mutation == "neovim-evidence-shape":
-        record(contract, "capabilities", "editor.neovim.syntax-projection")["expected_evidence"] = ["broken evidence shape"]
+        record(contract, "capabilities", "editor.neovim.syntax-projection")["expected_evidence"] = [
+            "broken evidence shape"
+        ]
     elif mutation == "implementation-status-shape":
         record(contract, "capabilities", "lsp.completion")["implementation_status"] = ["partial"]
     elif mutation == "status-values-shape":
@@ -178,7 +195,9 @@ def main() -> int:
         capability["implementation_status"] = "planned"
         capability["client_status"]["neovim"] = "partial"
     elif mutation == "cancellation-evidence-status":
-        record(contract, "capabilities", "lsp.cancellation")["expected_evidence"]["status"] = "planned"
+        record(contract, "capabilities", "lsp.cancellation")["expected_evidence"]["status"] = (
+            "planned"
+        )
     elif mutation == "zed-code-action-support":
         record(contract, "capabilities", "lsp.code-actions")["client_status"]["zed"] = "unsupported"
     elif mutation == "zed-rename-support":
@@ -201,34 +220,23 @@ def main() -> int:
         evidence["commands"] = ["scripts/check-vscode.sh"]
     elif mutation == "keyboard-evidence-boundary":
         capability = record(contract, "capabilities", "editor.keyboard.workflow")
-        capability["known_limitation"] = capability["known_limitation"].replace("headless", "protocol")
+        capability["known_limitation"] = capability["known_limitation"].replace(
+            "headless", "protocol"
+        )
     elif mutation == "keyboard-zed-sequence-provenance":
         record(contract, "capabilities", "editor.keyboard.workflow").pop("keyboard_sequence_scope")
-    elif mutation == "m4-zed-task-diagnostics":
-        replace_reconciliation_text(fixture_repo, "Zed does not parse task records", "Zed parses task records")
-    elif mutation == "m4-zed-native-cancellation":
-        replace_reconciliation_text(fixture_repo, "native task cancellation controller", "native task controller")
-    elif mutation == "m4-zed-built-in-run-trace":
-        replace_reconciliation_text(fixture_repo, "built-in run/trace remain unclaimed", "built-in run/trace are supported")
-    elif mutation == "m4-zed-stale-didchange":
-        replace_reconciliation_text(fixture_repo, "Stale-version rejection remains a lower-level test boundary", "Installed-host stale-version rejection is covered")
-    elif mutation == "keyboard-document-wording":
-        document = fixture_repo / "docs/editor-parity-contract.md"
-        marker = "broader Milestone 5 accessibility proof"
-        source = document.read_text(encoding="utf-8")
-        if marker not in source:
-            raise SystemExit("keyboard documentation wording was not present")
-        document.write_text(source.replace(marker, "accessibility proof"), encoding="utf-8")
     elif mutation == "keyboard-valid-host-evidence":
         set_keyboard_host_evidence(contract)
     elif mutation == "keyboard-host-record-missing":
         set_keyboard_host_evidence(contract)
-        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0].pop("architecture")
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"][
+            "host_records"
+        ][0].pop("architecture")
     elif mutation == "keyboard-host-runner-missing":
         set_keyboard_host_evidence(contract)
-        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["commands"] = [
-            "scripts/check-neovim.sh"
-        ]
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"][
+            "commands"
+        ] = ["scripts/check-neovim.sh"]
     elif mutation == "keyboard-host-runner-file-missing":
         set_keyboard_host_evidence(contract)
         (fixture_repo / "scripts/check-neovim-host.sh").unlink()
@@ -241,18 +249,26 @@ def main() -> int:
         evidence["host_records"][0]["runner"] = "scripts/check-vscode-host.sh"
     elif mutation == "keyboard-host-platform-overclaim":
         set_keyboard_host_evidence(contract)
-        record(contract, "capabilities", "editor.keyboard.workflow")["platform_status"]["macos"] = "partial"
+        record(contract, "capabilities", "editor.keyboard.workflow")["platform_status"]["macos"] = (
+            "partial"
+        )
     elif mutation == "keyboard-host-scenario-mismatch":
         set_keyboard_host_evidence(contract)
         record(contract, "scenarios", "keyboard-workflow")["status"] = "planned"
     elif mutation == "keyboard-host-key-sequence":
         set_keyboard_host_evidence(contract)
-        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"].pop("key_sequence")
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"][
+            "host_records"
+        ][0]["keyboard"].pop("key_sequence")
     elif mutation == "keyboard-host-no-leak":
         set_keyboard_host_evidence(contract)
-        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"]["process_leak_check"] = False
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"][
+            "host_records"
+        ][0]["keyboard"]["process_leak_check"] = False
     elif mutation == "stable-id-zed-support":
-        record(contract, "capabilities", "authoring.stable-id.operations")["client_status"]["zed"] = "planned"
+        record(contract, "capabilities", "authoring.stable-id.operations")["client_status"][
+            "zed"
+        ] = "planned"
     elif mutation == "zed-lsp-provenance":
         record(contract, "capabilities", "lsp.code-actions")["evidence_issues"] = ["#51"]
     elif mutation == "zed-non-lsp-provenance":
@@ -268,7 +284,9 @@ def main() -> int:
         set_incremental_host_evidence(contract)
     elif mutation == "host-dual-client-mismatch":
         set_dual_client_host_evidence(contract)
-        evidence = record(contract, "capabilities", "editor.filetype.registration")["expected_evidence"]
+        evidence = record(contract, "capabilities", "editor.filetype.registration")[
+            "expected_evidence"
+        ]
         evidence["host_records"][1]["client"] = "zed"
     elif mutation == "neovim-stale-filetype":
         capability = record(contract, "capabilities", "editor.filetype.registration")
@@ -288,9 +306,13 @@ def main() -> int:
     elif mutation == "wrong-primary":
         record(contract, "distributions", "neovim-distribution")["artifact"] = "tree-sitter-grammar"
     elif mutation == "missing-grammar-support":
-        record(contract, "distributions", "neovim-distribution")["artifacts"].remove("tree-sitter-grammar")
+        record(contract, "distributions", "neovim-distribution")["artifacts"].remove(
+            "tree-sitter-grammar"
+        )
     elif mutation == "unknown-supporting-artifact":
-        record(contract, "distributions", "neovim-distribution")["artifacts"].append("unknown-editor-artifact")
+        record(contract, "distributions", "neovim-distribution")["artifacts"].append(
+            "unknown-editor-artifact"
+        )
     elif mutation == "symlink":
         outside = fixture_repo.parent / "outside-editor-parity.recite"
         outside.write_text("outside\n", encoding="utf-8")
@@ -314,12 +336,6 @@ def main() -> int:
         outside.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
         path.unlink()
         path.symlink_to(outside)
-    elif mutation == "symlink-document-control":
-        document = fixture_repo / "docs/editor-parity-contract.md"
-        outside = fixture_repo.parent / "outside-editor-parity-document.md"
-        outside.write_text(document.read_text(encoding="utf-8"), encoding="utf-8")
-        document.unlink()
-        document.symlink_to(outside)
     else:
         raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -337,20 +353,6 @@ def restore_mtime(path: Path, content: str) -> None:
     original_stat = path.stat()
     path.write_text(content, encoding="utf-8")
     os.utime(path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
-
-
-def replace_reconciliation_text(fixture_repo: Path, original: str, replacement: str) -> None:
-    document = fixture_repo / "docs/editor-parity-contract.md"
-    source = document.read_text(encoding="utf-8")
-    start = source.find("## Milestone 4 reconciliation")
-    end = source.find("## Reopening conditions", start)
-    if start < 0 or end < 0:
-        raise SystemExit(f"Milestone 4 reconciliation text was not present: {original}")
-    pattern = re.compile(r"\s+".join(re.escape(part) for part in original.split()))
-    scoped, count = pattern.subn(replacement, source[start:end], count=1)
-    if count != 1:
-        raise SystemExit(f"Milestone 4 reconciliation text was not present: {original}")
-    restore_mtime(document, source[:start] + scoped + source[end:])
 
 
 def set_module_shapes_command(contract: dict) -> None:
@@ -453,7 +455,9 @@ def generic_host_record(
     }
 
 
-def create_digest_symlink_fixture(fixture_repo: Path, name: str, escaping: bool, directory: bool = False) -> None:
+def create_digest_symlink_fixture(
+    fixture_repo: Path, name: str, escaping: bool, directory: bool = False
+) -> None:
     digest_root = fixture_repo / "digest-inputs"
     digest_root.mkdir(exist_ok=True)
     if directory:

@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { projectMessages } from "../scripts/message-projections.mjs";
 
@@ -13,7 +13,7 @@ test("Neovim projection rejects multiline Fluent continuations", async () => {
   const original = "lsp-client-display-name = Recite";
   await assert.rejects(
     projectMessages({ sourceOverride: source.replace(original, `${original}\n  continuation`) }),
-    /continuation/
+    /continuation/,
   );
 });
 
@@ -22,9 +22,12 @@ test("Neovim projection rejects selectors and does not truncate them", async () 
   const original = "lsp-client-display-name = Recite";
   await assert.rejects(
     projectMessages({
-      sourceOverride: source.replace(original, "lsp-client-display-name = { $kind -> [one] one *[other] other }")
+      sourceOverride: source.replace(
+        original,
+        "lsp-client-display-name = { $kind -> [one] one *[other] other }",
+      ),
     }),
-    /unsupported expression/
+    /unsupported expression/,
   );
 });
 
@@ -32,6 +35,6 @@ test("Neovim retains canonical named placeables for its formatter", async () => 
   const { messages } = await projectMessages();
   assert.deepEqual(
     messages.find(([id]) => id === "neovim-callback-failed"),
-    ["neovim-callback-failed", "Recite {$kind} callback failed: {$detail}"]
+    ["neovim-callback-failed", "Recite {$kind} callback failed: {$detail}"],
   );
 });

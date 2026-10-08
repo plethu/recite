@@ -1,12 +1,20 @@
+FROM ghcr.io/jdx/mise:2026.9.17 AS mise-tool
 FROM mcr.microsoft.com/playwright:v1.63.0-noble
 
 ENV CI=1 \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    MISE_DATA_DIR=/opt/mise \
+    MISE_CACHE_DIR=/tmp/mise-cache \
+    MISE_TRUSTED_CONFIG_PATHS=/workspace \
+    MISE_AUTO_INSTALL=false \
     ASTRO_TELEMETRY_DISABLED=1 \
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+    PATH="/opt/mise/shims:${PATH}"
 
-RUN npm install --global pnpm@11.8.0
+COPY --from=mise-tool /usr/local/bin/mise /usr/local/bin/mise
 
 WORKDIR /workspace
+COPY .mise.toml ./
+RUN mise install node pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY docs-site/package.json ./docs-site/package.json
 COPY editors/vscode/package.json ./editors/vscode/package.json
@@ -14,11 +22,14 @@ RUN pnpm install --filter @recite/docs-site... --frozen-lockfile
 
 COPY docs-site/ ./docs-site/
 COPY assets/identity/ ./assets/identity/
+COPY fixtures/recite/valid/landing-junction.recite ./fixtures/recite/valid/landing-junction.recite
+COPY editors/vscode/syntaxes/recite.tmLanguage.json ./editors/vscode/syntaxes/recite.tmLanguage.json
 RUN pnpm -C docs-site build
 
 ARG LOCAL_UID=1000
 ARG LOCAL_GID=1000
-RUN chown -R "${LOCAL_UID}:${LOCAL_GID}" /workspace/docs-site/.astro
+RUN chown -R "${LOCAL_UID}:${LOCAL_GID}" /workspace/docs-site/.astro \
+    && chmod -R a+rX /opt/mise
 
 WORKDIR /workspace/docs-site
 CMD ["pnpm", "test:browser"]

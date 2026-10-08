@@ -11,21 +11,21 @@ trap 'rm -rf "$temporary"' EXIT
 
 CARGO_TARGET_DIR="$target_dir" cargo build -p recite-bevy --example performance_probe --offline
 CARGO_TARGET_DIR="$target_dir" cargo run --quiet -p recite-cli --offline -- compile --output "$artifact_dir/runtime.recitec" "$source_file"
-sed 's/Intro line\./Intro line changed./' "$source_file" > "$temporary/changed.recite"
+sed 's/Intro line\./Intro line changed./' "$source_file" >"$temporary/changed.recite"
 CARGO_TARGET_DIR="$target_dir" cargo run --quiet -p recite-cli --offline -- compile --output "$artifact_dir/changed.recitec" "$temporary/changed.recite"
 
 probe="$target_dir/debug/examples/performance_probe"
 report="$artifact_dir/performance.txt"
 {
-    date -u '+observed_utc=%Y-%m-%dT%H:%M:%SZ'
-    rustc --version
-    cargo --version
-    printf 'profile=debug engine=bevy-0.19.1 platform=%s\n' "$(uname -sm)"
-    if [[ -r /proc/cpuinfo ]]; then
-        rg -m1 '^model name' /proc/cpuinfo || true
-    fi
-    printf 'timer=Python-perf_counter-and-wait4 units=seconds,KiB thresholds=none\n'
-    python3 - "$probe" "$artifact_dir" <<'PY'
+  date -u '+observed_utc=%Y-%m-%dT%H:%M:%SZ'
+  rustc --version
+  cargo --version
+  printf 'profile=debug engine=bevy-0.19.1 platform=%s\n' "$(uname -sm)"
+  if [[ -r /proc/cpuinfo ]]; then
+    rg -m1 '^model name' /proc/cpuinfo || true
+  fi
+  printf 'timer=Python-perf_counter-and-wait4 units=seconds,KiB thresholds=none\n'
+  python3 - "$probe" "$artifact_dir" <<'PY'
 import os
 import subprocess
 import sys

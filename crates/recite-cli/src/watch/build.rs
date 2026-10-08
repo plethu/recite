@@ -7,8 +7,6 @@ use recite_compiler::authoring::{
 };
 use recite_config::discover_project;
 
-use crate::fs::resolve_project_path;
-
 use super::events::WatchState;
 use super::{
     ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildPreparationError,
@@ -236,20 +234,13 @@ where
 }
 
 fn discovery_input_keys(discovery: &recite_config::ProjectDiscoveryReport) -> Vec<String> {
-    let project_root = discovery.manifest().project_root();
-    let manifest = discovery.manifest().source().manifest();
     let mut inputs = discovery
         .documents()
         .iter()
         .map(|document| document.key().as_str().to_owned())
         .chain(std::iter::once(super::PROJECT_MANIFEST_FILE.to_owned()))
         .collect::<Vec<_>>();
-    if let Some(schema) = manifest.project.schema.as_deref()
-        && let Ok(key) = recite_build::schema_document_key(
-            project_root,
-            &resolve_project_path(project_root, schema),
-        )
-    {
+    if let Ok(Some(key)) = discovery.manifest().schema_key() {
         inputs.push(key.as_str().to_owned());
     }
     inputs

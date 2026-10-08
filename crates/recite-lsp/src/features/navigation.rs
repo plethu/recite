@@ -1,6 +1,6 @@
 use lsp_types::{GotoDefinitionResponse, Location, PrepareRenameResponse, WorkspaceEdit};
 use recite_compiler::authoring::{
-    AuthoringSnapshot, NavigationResult, QueryResult, SymbolIdentity, SymbolLocation,
+    AuthoringQuery, NavigationResult, QueryResult, SymbolIdentity, SymbolLocation,
     SymbolQueryOptions, SymbolRole,
 };
 use recite_core::{DocumentKey, SourcePosition};
@@ -13,7 +13,7 @@ pub(crate) type NavigationDocument<'a> = EditDocument<'a>;
 pub(crate) fn definition(
     key: &DocumentKey,
     position: SourcePosition,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[NavigationDocument<'_>],
 ) -> Option<GotoDefinitionResponse> {
     let result = snapshot.navigate(key, position);
@@ -34,7 +34,7 @@ pub(crate) fn references(
     key: &DocumentKey,
     position: SourcePosition,
     include_declaration: bool,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[NavigationDocument<'_>],
 ) -> Option<Vec<Location>> {
     let QueryResult::Ready(NavigationResult::Unique(_)) = snapshot.navigate(key, position) else {
@@ -51,6 +51,7 @@ pub(crate) fn references(
     let mut declarations = Vec::new();
     let mut references = Vec::new();
     for symbol in locations {
+        snapshot.checkpoint().ok()?;
         let location = location_for_symbol(&symbol, documents)?;
         if symbol.role() == SymbolRole::Definition {
             declarations.push(location);
@@ -65,7 +66,7 @@ pub(crate) fn references(
 pub(crate) fn prepare_rename(
     key: &DocumentKey,
     position: SourcePosition,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
 ) -> Option<PrepareRenameResponse> {
     let symbol = symbol_at(key, position, snapshot)?;
     unique_navigation(key, position, snapshot)?;
@@ -86,7 +87,7 @@ pub(crate) fn prepare_rename(
 fn symbol_at(
     key: &DocumentKey,
     position: SourcePosition,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
 ) -> Option<SymbolLocation> {
     let QueryResult::Ready(symbols) = snapshot.symbols(key, SymbolQueryOptions::default()) else {
         return None;
@@ -106,7 +107,7 @@ pub(crate) fn rename(
     key: &DocumentKey,
     position: SourcePosition,
     new_name: &str,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[NavigationDocument<'_>],
 ) -> Option<WorkspaceEdit> {
     let plan = snapshot.plan_rename_block(key, position, new_name).ok()?;
@@ -116,7 +117,7 @@ pub(crate) fn rename(
 fn unique_navigation(
     key: &DocumentKey,
     position: SourcePosition,
-    snapshot: &AuthoringSnapshot,
+    snapshot: &AuthoringQuery<'_>,
 ) -> Option<SymbolLocation> {
     let result = snapshot.navigate(key, position);
     match result {

@@ -51,6 +51,7 @@ pub enum QueryClass {
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[non_exhaustive]
 pub enum QueryUnavailableReason {
+    Interrupted,
     Incomplete(QueryClass),
     MissingMetadataContext,
     MalformedMetadataContext,

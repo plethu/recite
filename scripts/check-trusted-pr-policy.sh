@@ -87,16 +87,46 @@ initial_policy_snapshot="$(policy_snapshot <<<"$live_pr")" || {
   exit 1
 }
 
-live_number="$(json_value '.number')" || { echo "live pull request has no number" >&2; exit 1; }
-title="$(json_value '.title')" || { echo "live pull request has no title" >&2; exit 1; }
-body="$(jq -er '.body // ""' <<<"$live_pr")" || { echo "live pull request body is unreadable" >&2; exit 1; }
-base_ref="$(json_value '.base.ref')" || { echo "live pull request has no base ref" >&2; exit 1; }
-base_sha="$(json_value '.base.sha')" || { echo "live pull request has no base SHA" >&2; exit 1; }
-head_ref="$(json_value '.head.ref')" || { echo "live pull request has no head ref" >&2; exit 1; }
-head_sha="$(json_value '.head.sha')" || { echo "live pull request has no head SHA" >&2; exit 1; }
-head_repo="$(json_value '.head.repo.full_name')" || { echo "live pull request has no head repository" >&2; exit 1; }
-base_repo="$(json_value '.base.repo.full_name')" || { echo "live pull request has no base repository" >&2; exit 1; }
-state="$(json_value '.state')" || { echo "live pull request has no state" >&2; exit 1; }
+live_number="$(json_value '.number')" || {
+  echo "live pull request has no number" >&2
+  exit 1
+}
+title="$(json_value '.title')" || {
+  echo "live pull request has no title" >&2
+  exit 1
+}
+body="$(jq -er '.body // ""' <<<"$live_pr")" || {
+  echo "live pull request body is unreadable" >&2
+  exit 1
+}
+base_ref="$(json_value '.base.ref')" || {
+  echo "live pull request has no base ref" >&2
+  exit 1
+}
+base_sha="$(json_value '.base.sha')" || {
+  echo "live pull request has no base SHA" >&2
+  exit 1
+}
+head_ref="$(json_value '.head.ref')" || {
+  echo "live pull request has no head ref" >&2
+  exit 1
+}
+head_sha="$(json_value '.head.sha')" || {
+  echo "live pull request has no head SHA" >&2
+  exit 1
+}
+head_repo="$(json_value '.head.repo.full_name')" || {
+  echo "live pull request has no head repository" >&2
+  exit 1
+}
+base_repo="$(json_value '.base.repo.full_name')" || {
+  echo "live pull request has no base repository" >&2
+  exit 1
+}
+state="$(json_value '.state')" || {
+  echo "live pull request has no state" >&2
+  exit 1
+}
 
 if [[ "$state" != open ]]; then
   echo "pull request is not open: $state" >&2
@@ -160,14 +190,14 @@ fi
 # The script and fixtures below are from the checked-out base branch. The PR
 # ref is supplied only as a Git object reference and is never executed.
 RECITE_PR_TITLE="$title" \
-RECITE_PR_BODY="$body" \
-RECITE_PR_BASE_REF="$base_ref" \
-RECITE_BASE_REF="$base_sha" \
-RECITE_HEAD_REF=refs/recite/trusted-pr-head \
-RECITE_BRANCH_NAME="$head_ref" \
-RECITE_INTEGRATION_LABEL="$labels_integration" \
-RECITE_INTEGRATION_PR="$labels_integration" \
-GITHUB_EVENT_NAME=pull_request \
+  RECITE_PR_BODY="$body" \
+  RECITE_PR_BASE_REF="$base_ref" \
+  RECITE_BASE_REF="$base_sha" \
+  RECITE_HEAD_REF=refs/recite/trusted-pr-head \
+  RECITE_BRANCH_NAME="$head_ref" \
+  RECITE_INTEGRATION_LABEL="$labels_integration" \
+  RECITE_INTEGRATION_PR="$labels_integration" \
+  GITHUB_EVENT_NAME=pull_request \
   GITHUB_HEAD_REF="$head_ref" \
   GITHUB_BASE_REF="$base_ref" \
   "$repo_root/scripts/check-git-policy.sh" "$repo_root"
@@ -176,7 +206,7 @@ GITHUB_EVENT_NAME=pull_request \
 # fetched PR tree by object reference, so a PR cannot replace or remove the
 # suppression policy that evaluates its own Rust changes.
 RECITE_BASE_REF="$base_sha" \
-RECITE_HEAD_REF=refs/recite/trusted-pr-head \
+  RECITE_HEAD_REF=refs/recite/trusted-pr-head \
   "$repo_root/scripts/check-lint-suppressions.sh" "$base_sha" refs/recite/trusted-pr-head \
   --policy-revision "$base_sha"
 

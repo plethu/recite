@@ -1,4 +1,5 @@
 mod config;
+mod diagnostic_refresh;
 mod document_keys;
 mod kernel;
 #[path = "workspace/kernel_rebuild.rs"]
@@ -10,9 +11,12 @@ mod partition_rollback;
 mod project_index;
 #[path = "project_refresh.rs"]
 mod project_refresh;
+mod query_index;
 mod schema_index;
 mod schema_lifecycle;
 mod snapshot;
+#[cfg(any(test, feature = "bench-support"))]
+mod synchronous_queries;
 mod transaction;
 mod ui;
 
@@ -39,18 +43,21 @@ use crate::documents::{OpenDocument, OpenDocumentStore};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct SnapshotGeneration(u64);
 
+#[derive(Clone)]
 pub(crate) struct LspWorkspace {
+    pub(crate) control: recite_compiler::authoring::CancellationToken,
     saved: SavedProjectIndex,
     documents: OpenDocumentStore,
     partitions: BTreeMap<String, KernelPartition>,
     snapshot: LiveProjectSnapshot,
+    query_index: std::sync::Arc<query_index::QueryIndex>,
     schema_override_path: Option<std::path::PathBuf>,
     schema_paths: BTreeMap<String, Option<std::path::PathBuf>>,
     retired_schema_uris: BTreeSet<String>,
     retired_schema_targets: BTreeMap<String, String>,
     generation: SnapshotGeneration,
     next_partition_build_id: u64,
-    pub(crate) ui_catalog: UiCatalog,
+    pub(crate) ui_catalog: std::sync::Arc<UiCatalog>,
 }
 
 impl LspWorkspace {
@@ -229,7 +236,7 @@ impl DiagnosticRefresh {
     ) -> Self {
         Self::Publish(DocumentDiagnostics {
             uri: document.identity.uri.clone(),
-            text: document.text.clone(),
+            text: document.text.to_string(),
             version: None,
             diagnostics,
             generation,

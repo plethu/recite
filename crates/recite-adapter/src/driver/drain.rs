@@ -4,7 +4,11 @@ use recite_runtime::{
     DialogueSession, LocaleResolution, next_with,
 };
 
-use crate::AdapterResult;
+use crate::{AdapterError, AdapterErrorKind, AdapterResult};
+
+// The runtime bounds each next_with call. A line/effect loop can nevertheless
+// make an adapter operation emit forever across individually bounded calls.
+const MAX_BATCH_EVENTS: usize = 10_000;
 
 pub(super) fn drain_from_next(
     asset: &CompiledDialogue,
@@ -42,6 +46,12 @@ pub(super) fn drain_after_event(
         events.push(event);
         if !keep_going {
             return Ok(events);
+        }
+        if events.len() == MAX_BATCH_EVENTS {
+            return Err(AdapterError::with_detail(
+                AdapterErrorKind::DialogueFault,
+                format!("adapter operation exceeded {MAX_BATCH_EVENTS} output events"),
+            ));
         }
         match next_with(asset, session, context, resolution) {
             Ok(next) => event = next,

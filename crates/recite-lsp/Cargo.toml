@@ -4,33 +4,36 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 description = "Language server for Recite source files."
-license.workspace = true
-repository.workspace = true
 readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "recite-lsp"
 path = "src/main.rs"
 
-[features]
-default = []
-bench-support = []
-
 [dependencies]
-recite-core.workspace = true
-recite-parser.workspace = true
-recite-compiler.workspace = true
-recite-config.workspace = true
-recite-ui.workspace = true
+crossbeam-channel = "0.5.15"
 lsp-server = "0.7.9"
 lsp-types = "0.97.0"
-url = "2.5.8"
+recite-compiler.workspace = true
+recite-config.workspace = true
+recite-core.workspace = true
+recite-parser.workspace = true
+recite-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tracing = { version = "0.1.44", default-features = false, features = ["std"] }
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json"] }
+url = "2.5.8"
 
 [dev-dependencies]
 tempfile.workspace = true
+
+[features]
+default = []
+bench-support = []
 
 [lints]
 workspace = true

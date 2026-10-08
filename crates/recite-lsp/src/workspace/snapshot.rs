@@ -1,4 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
+
+use recite_compiler::authoring::DocumentSnapshot;
 
 use recite_core::DocumentKey;
 
@@ -8,20 +11,24 @@ use super::project_index::SavedProjectIndex;
 use crate::documents::OpenDocumentStore;
 use crate::summary::{FileIdentity, FileSummary};
 
+#[derive(Clone)]
 pub(crate) struct LiveProjectSnapshot {
     generation: SnapshotGeneration,
-    summaries: Vec<FileSummary>,
+    summaries: Arc<[Arc<FileSummary>]>,
+    documents: BTreeMap<(String, DocumentKey), (DocumentSnapshot, Arc<FileSummary>)>,
 }
 
 impl LiveProjectSnapshot {
     pub(super) fn empty(generation: SnapshotGeneration) -> Self {
         Self {
             generation,
-            summaries: Vec::new(),
+            summaries: Arc::default(),
+            documents: BTreeMap::new(),
         }
     }
 
     pub(super) fn rebuild(
+        &self,
         generation: SnapshotGeneration,
         saved: &SavedProjectIndex,
         documents: &OpenDocumentStore,
@@ -66,6 +73,7 @@ impl LiveProjectSnapshot {
         }
 
         let mut summaries = Vec::new();
+        let mut projections = BTreeMap::new();
         for (partition, kernel) in partitions {
             let Some(identities) = identities.get(partition) else {
                 continue;
@@ -81,15 +89,35 @@ impl LiveProjectSnapshot {
                         let version = document
                             .version()
                             .and_then(|version| i32::try_from(version.as_i64()).ok());
-                        Some(FileSummary::from_authoring(identity, version, document))
+                        let key = (partition.clone(), document.key().clone());
+                        let summary = self
+                            .documents
+                            .get(&key)
+                            .filter(|(previous, summary)| {
+                                summary.identity == identity
+                                    && previous.metadata() == document.metadata()
+                                    && std::ptr::eq(previous.summary(), document.summary())
+                                    && std::ptr::eq(previous.diagnostics(), document.diagnostics())
+                            })
+                            .map_or_else(
+                                || {
+                                    Arc::new(FileSummary::from_authoring(
+                                        identity, version, document,
+                                    ))
+                                },
+                                |(_, summary)| Arc::clone(summary),
+                            );
+                        projections.insert(key, (document.clone(), Arc::clone(&summary)));
+                        Some(summary)
                     }),
             );
         }
-        summaries.sort_by(summary_sort_key);
+        summaries.sort_by(|left, right| summary_sort_key(left, right));
 
         Self {
             generation,
-            summaries,
+            summaries: summaries.into(),
+            documents: projections,
         }
     }
 
@@ -97,7 +125,7 @@ impl LiveProjectSnapshot {
         self.generation
     }
 
-    pub(crate) fn summaries(&self) -> &[FileSummary] {
+    pub(crate) fn summaries(&self) -> &[Arc<FileSummary>] {
         &self.summaries
     }
 }

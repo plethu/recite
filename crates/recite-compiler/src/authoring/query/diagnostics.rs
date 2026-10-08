@@ -1,30 +1,14 @@
 use recite_core::{Diagnostic, DocumentKey};
 
-use super::super::snapshot::AuthoringSnapshot;
-use super::symbols::symbol_locations;
+use super::symbols::{symbol_at, symbol_locations};
 use super::types::{
     QueryClass, QueryResult, QueryUnavailableReason, SymbolIdentity, SymbolKind, SymbolLocation,
     SymbolQueryOptions, SymbolRole,
 };
+use crate::authoring::AuthoringQuery;
 use recite_core::SourcePosition;
 
-impl AuthoringSnapshot {
-    /// Returns diagnostics for one document, preserving partial recovery.
-    #[must_use]
-    pub fn document_diagnostics(&self, key: &DocumentKey) -> QueryResult<&[Diagnostic]> {
-        let Some(document) = self.document(key) else {
-            return QueryResult::NoMatch;
-        };
-        if document.participation().ast_structure().is_complete() {
-            QueryResult::Ready(document.diagnostics())
-        } else {
-            QueryResult::partial(
-                document.diagnostics(),
-                vec![QueryUnavailableReason::Incomplete(QueryClass::Diagnostics)],
-            )
-        }
-    }
-
+impl AuthoringQuery<'_> {
     /// Returns recoverable symbol occurrences for one document.
     #[must_use]
     pub fn symbols(
@@ -32,6 +16,9 @@ impl AuthoringSnapshot {
         key: &DocumentKey,
         options: SymbolQueryOptions,
     ) -> QueryResult<Vec<SymbolLocation>> {
+        if self.checkpoint().is_err() {
+            return QueryResult::unavailable(QueryUnavailableReason::Interrupted);
+        }
         let Some(document) = self.document(key) else {
             return QueryResult::NoMatch;
         };
@@ -50,47 +37,12 @@ impl AuthoringSnapshot {
         let mut locations = Vec::new();
         let mut unavailable = Vec::new();
         for document in self.documents() {
+            if self.checkpoint().is_err() {
+                return QueryResult::unavailable(QueryUnavailableReason::Interrupted);
+            }
             locations.extend(symbol_locations(document.key(), document, options));
             unavailable.extend(incomplete_symbol_classes(document.participation(), options));
         }
-        if unavailable.is_empty() {
-            QueryResult::Ready(locations)
-        } else {
-            QueryResult::partial(locations, unavailable)
-        }
-    }
-
-    /// Returns the complete-project block-definition index used by source
-    /// edit planning.
-    pub(crate) fn project_block_definitions(&self) -> QueryResult<Vec<SymbolLocation>> {
-        let mut locations = Vec::new();
-        let mut unavailable = Vec::new();
-        if !self.project_complete {
-            unavailable.push(QueryUnavailableReason::Incomplete(
-                QueryClass::BlockDefinitions,
-            ));
-        }
-        for document in self.documents() {
-            if !document.participation().block_definitions().is_complete() {
-                unavailable.push(QueryUnavailableReason::Incomplete(
-                    QueryClass::BlockDefinitions,
-                ));
-                continue;
-            }
-            locations.extend(
-                symbol_locations(document.key(), document, SymbolQueryOptions::default())
-                    .into_iter()
-                    .filter(|location| {
-                        location.kind() == SymbolKind::Block
-                            && location.role() == SymbolRole::Definition
-                    }),
-            );
-        }
-        locations.sort_by(|left, right| {
-            left.document()
-                .cmp(right.document())
-                .then_with(|| left.span().start.cmp(&right.span().start))
-        });
         if unavailable.is_empty() {
             QueryResult::Ready(locations)
         } else {
@@ -109,10 +61,7 @@ impl AuthoringSnapshot {
         let Some(document) = self.document(key) else {
             return QueryResult::NoMatch;
         };
-        let Some(symbol) = symbol_locations(key, document, SymbolQueryOptions::default())
-            .into_iter()
-            .find(|symbol| super::symbols::contains(symbol.span(), position))
-        else {
+        let Some(symbol) = symbol_at(key, document, position) else {
             return QueryResult::NoMatch;
         };
         let SymbolIdentity::Block(block_id) = symbol.identity() else {
@@ -132,6 +81,9 @@ impl AuthoringSnapshot {
         let mut locations = Vec::new();
         let mut unavailable = Vec::new();
         for target in self.documents() {
+            if self.checkpoint().is_err() {
+                return QueryResult::unavailable(QueryUnavailableReason::Interrupted);
+            }
             let relevant_references = target.key().as_str() == target_key
                 || target
                     .summary()
@@ -174,9 +126,7 @@ impl AuthoringSnapshot {
                     .block_references()
                     .iter()
                     .filter_map(|reference| {
-                        let scope = reference
-                            .file()
-                            .map_or_else(|| target.key().as_str().to_owned(), ToOwned::to_owned);
+                        let scope = reference.file().unwrap_or_else(|| target.key().as_str());
                         (scope == target_key && reference.block_id() == block_id).then(|| {
                             Some(SymbolLocation {
                                 document: target.key().clone(),
@@ -204,7 +154,7 @@ impl AuthoringSnapshot {
     }
 }
 
-fn incomplete_symbol_classes(
+pub(super) fn incomplete_symbol_classes(
     participation: crate::validation::ValidationParticipation,
     options: SymbolQueryOptions,
 ) -> Vec<QueryUnavailableReason> {
@@ -239,4 +189,22 @@ fn incomplete_symbol_classes(
             (!complete).then_some(QueryUnavailableReason::Incomplete(class))
         })
         .collect()
+}
+
+impl crate::authoring::AuthoringSnapshot {
+    /// Returns diagnostics for one document, preserving partial recovery.
+    #[must_use]
+    pub fn document_diagnostics(&self, key: &DocumentKey) -> QueryResult<&[Diagnostic]> {
+        let Some(document) = self.document(key) else {
+            return QueryResult::NoMatch;
+        };
+        if document.participation().ast_structure().is_complete() {
+            QueryResult::Ready(document.diagnostics())
+        } else {
+            QueryResult::partial(
+                document.diagnostics(),
+                vec![QueryUnavailableReason::Incomplete(QueryClass::Diagnostics)],
+            )
+        }
+    }
 }

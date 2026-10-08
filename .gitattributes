@@ -1,0 +1,9 @@
+# Generated editor projections are verified byte-for-byte against LF output.
+/editors/vscode/src/*.generated.js text eol=lf
+/editors/vscode/package.nls.json text eol=lf
+/editors/recite-neovim/lua/recite_error_vocabulary.lua text eol=lf
+
+# Required package sources generated from grammar.js; keep authored grammar diffs visible.
+/editors/recite-tree-sitter/src/parser.c linguist-generated
+/editors/recite-tree-sitter/src/grammar.json linguist-generated
+/editors/recite-tree-sitter/src/node-types.json linguist-generated

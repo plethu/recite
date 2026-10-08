@@ -14,7 +14,6 @@ target_dir="${CARGO_TARGET_DIR:-$repo_root/target/companions-unity}"
 export CARGO_TARGET_DIR="$target_dir"
 bridge="$runtime_dir/Native/ReciteNativeBridge.cs"
 header="$repo_root/include/recite.h"
-headless_test="$package_dir/Tests~/Headless/ReciteUnityHeadless.cs"
 
 failures=0
 fail() {
@@ -115,12 +114,11 @@ if [[ -f "$bridge" && -f "$header" ]]; then
   done < <(grep -E '^[[:space:]]*RECITE_STATUS_[A-Z_]+ = -?[0-9]+,' "$header")
 fi
 
-for file in "$runtime_dir/ConditionCallbacks.cs"; do
-  for pattern in "GCHandleType.Normal" "MonoPInvokeCallback"; do
-    if [[ ! -f "$file" ]] || ! grep -qF "$pattern" "$file"; then
-      fail "$file is missing IL2CPP-safe callback ownership: $pattern"
-    fi
-  done
+file="$runtime_dir/ConditionCallbacks.cs"
+for pattern in "GCHandleType.Normal" "MonoPInvokeCallback"; do
+  if [[ ! -f "$file" ]] || ! grep -qF "$pattern" "$file"; then
+    fail "$file is missing IL2CPP-safe callback ownership: $pattern"
+  fi
 done
 
 while IFS= read -r file; do
@@ -147,26 +145,13 @@ if command -v dotnet >/dev/null 2>&1; then
     fail "recite-ffi native library build failed"
   fi
   tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/recite-unity-check.XXXXXX")"
-  {
-    printf '%s\n' '<Project Sdk="Microsoft.NET.Sdk">'
-    printf '%s\n' '  <PropertyGroup>'
-    printf '%s\n' '    <TargetFramework>net8.0</TargetFramework>'
-    printf '%s\n' '    <Nullable>disable</Nullable>'
-    printf '%s\n' '    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>'
-    printf '%s\n' '    <OutputType>Exe</OutputType>'
-    printf '%s\n' '  </PropertyGroup>'
-    printf '%s\n' '  <ItemGroup>'
-    find "$runtime_dir" -path "$runtime_dir/GameObjects" -prune -o -name 'ReciteCompiledAsset.cs' -prune -o -name '*.cs' -type f -print | sort | while IFS= read -r file; do
-      printf '    <Compile Include="%s" />\n' "$file"
-    done
-    printf '    <Compile Include="%s" />\n' "$headless_test"
-    printf '    <Compile Include="%s" />\n' "$package_dir/Tests~/Headless/ReciteUnityNativeCases.cs"
-    printf '%s\n' '  </ItemGroup>'
-    printf '%s\n' '</Project>'
-  } > "$tmpdir/UnityRuntimeSubset.csproj"
-
-  printf '%s\n' '{"sdk":{"version":"8.0.421"}}' > "$tmpdir/global.json"
-  printf '%s\n' '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><clear /></packageSources></configuration>' > "$tmpdir/NuGet.Config"
+  trap 'rm -rf "$tmpdir"' EXIT
+  export TMPDIR="$tmpdir"
+  export DOTNET_CLI_HOME="$tmpdir/dotnet-home" NUGET_PACKAGES="$tmpdir/nuget"
+  export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+  headless_dir="$package_dir/Tests~/Headless"
+  assembly="$tmpdir/artifacts/bin/HeadlessRuntime/debug/HeadlessRuntime.dll"
+  export LD_LIBRARY_PATH="$target_dir/debug${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
   cp "$sample_dir/Dialogue/basic.recite" "$tmpdir/basic.recite"
   if "$target_dir/debug/recite" compile -o "$tmpdir/revision.recitec" "$tmpdir/basic.recite"; then
@@ -181,17 +166,14 @@ if command -v dotnet >/dev/null 2>&1; then
     "$repo_root/fixtures/recite/valid/adapter_conformance/plural_runtime.recite" || fail "Unity plural fixture failed to compile"
   "$target_dir/debug/recite" compile -o "$tmpdir/conformance.recitec" \
     "$repo_root/fixtures/recite/valid/adapter_conformance/runtime_surface.recite" || fail "Unity conformance fixture failed to compile"
+  "$target_dir/debug/recite" compile --schema "$repo_root/fixtures/schema/valid/generated_manifest.json" \
+    -o "$tmpdir/reasons.recitec" "$repo_root/fixtures/recite/valid/adapter_conformance/availability_reasons.recite" \
+    || fail "Unity availability fixture failed to compile"
+  export RECITE_UNITY_REASONS_ASSET="$tmpdir/reasons.recitec"
 
-  cat > "$tmpdir/schema-restore.recite" <<'RECITE'
-:: start default
-> save_prompt@91000000000000000001
-  Save here.
-  ? continue@91000000000000000002
-    Continue.
-    -> END
-RECITE
+  cp "$repo_root/fixtures/recite/valid/adapter_conformance/restore_schema_prompt.recite" "$tmpdir/schema-restore.recite"
   for schema in a b; do
-    cat > "$tmpdir/schema-$schema.toml" <<TOML
+    cat >"$tmpdir/schema-$schema.toml" <<TOML
 schema_version = 1
 [producer]
 id = "unity-schema-restore"
@@ -205,17 +187,19 @@ TOML
     cp "$tmpdir/schema-shared.recitec" "$tmpdir/schema-$schema.recitec"
   done
 
-  if [[ ! -f "$headless_test" ]]; then
-    fail "missing Unity headless package test"
-  elif ! (cd "$tmpdir" && DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet build "$tmpdir/UnityRuntimeSubset.csproj" --configfile "$tmpdir/NuGet.Config" --nologo -v:minimal >/tmp/recite-unity-dotnet-build.log 2>&1); then
-    cat /tmp/recite-unity-dotnet-build.log >&2
+  export RECITE_UNITY_SAMPLE_ASSET="$sample_dir/Dialogue/basic.recitec"
+  export RECITE_UNITY_REVISION_OLD="$tmpdir/old.recitec" RECITE_UNITY_REVISION_NEW="$tmpdir/revision.recitec"
+  export RECITE_UNITY_PLURAL_ASSET="$tmpdir/plural.recitec" RECITE_UNITY_CONFORMANCE_ASSET="$tmpdir/conformance.recitec"
+  export RECITE_UNITY_SCHEMA_A="$tmpdir/schema-a.recitec" RECITE_UNITY_SCHEMA_B="$tmpdir/schema-b.recitec"
+  if ! dotnet build "$headless_dir/HeadlessRuntime.csproj" --artifacts-path "$tmpdir/artifacts" \
+    --configfile "$headless_dir/NuGet.Config" --disable-build-servers --nologo -v:minimal >"$tmpdir/build.log" 2>&1; then
+    cat "$tmpdir/build.log" >&2
     fail "Unity runtime subset dotnet build failed"
-  elif ! (cd "$tmpdir" && RECITE_UNITY_SAMPLE_ASSET="$sample_dir/Dialogue/basic.recitec" RECITE_UNITY_REVISION_OLD="$tmpdir/old.recitec" RECITE_UNITY_REVISION_NEW="$tmpdir/revision.recitec" RECITE_UNITY_PLURAL_ASSET="$tmpdir/plural.recitec" RECITE_UNITY_CONFORMANCE_ASSET="$tmpdir/conformance.recitec" RECITE_UNITY_SCHEMA_A="$tmpdir/schema-a.recitec" RECITE_UNITY_SCHEMA_B="$tmpdir/schema-b.recitec" DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 LD_LIBRARY_PATH="$target_dir/debug${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore >/tmp/recite-unity-headless-test.log 2>&1); then
-    cat /tmp/recite-unity-headless-test.log >&2
+  elif ! dotnet "$assembly" >"$tmpdir/test.log" 2>&1; then
+    cat "$tmpdir/test.log" >&2
     fail "Unity headless package test failed"
-  fi
-  if [[ "${RECITE_UNITY_PERF:-}" == 1 ]]; then
-    (cd "$tmpdir" && RECITE_UNITY_SAMPLE_ASSET="$sample_dir/Dialogue/basic.recitec" DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 LD_LIBRARY_PATH="$target_dir/debug${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore -- --perf) || fail "Unity managed performance probe failed"
+  elif [[ "${RECITE_UNITY_PERF:-}" == 1 ]]; then
+    dotnet "$assembly" --perf || fail "Unity managed performance probe failed"
   fi
   if ! RECITE_UNITY_CLI="$target_dir/debug/recite" "$repo_root/scripts/unity/check-schema-export.sh" "$repo_root"; then
     fail "Unity schema export check failed"
@@ -224,7 +208,7 @@ else
   fail "dotnet is required for the Unity runtime subset build"
 fi
 
-if (( failures > 0 )); then
+if ((failures > 0)); then
   echo "Found ${failures} Unity adapter check failure(s)." >&2
   exit 1
 fi

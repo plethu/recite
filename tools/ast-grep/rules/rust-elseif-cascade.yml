@@ -1,6 +1,15 @@
 id: rust-elseif-cascade
 language: Rust
 severity: error
+files:
+  - "crates/*/src/**/*.rs"
+  - "crates/*/benches/**/*.rs"
+  - "apps/writer/crates/*/src/**/*.rs"
+  - "editors/zed/src/**/*.rs"
+ignores:
+  - "**/src/tests.rs"
+  - "**/src/**/tests.rs"
+  - "**/src/tests/**"
 message: Four or more equality branches over one value may hide policy ownership; prefer an enum match or an explicit dispatch table.
 note: |
   Matches one equality `if` followed by at least three `else if` branches over

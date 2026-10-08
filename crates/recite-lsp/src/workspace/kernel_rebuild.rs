@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 use recite_compiler::authoring::AuthoringKernel;
 
@@ -11,12 +12,23 @@ use crate::documents::OpenDocumentStore;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct PartitionInputFingerprint {
-    saved: Vec<(String, String)>,
-    open: Vec<(String, String, i32, String)>,
+    saved: Vec<(String, InputText)>,
+    open: Vec<(String, String, i32, InputText)>,
     schema: SchemaIndex,
     retired: BTreeSet<String>,
     retired_targets: BTreeSet<String>,
     project_complete: bool,
+}
+
+/// Immutable text identity is a sufficient equality proof. `Arc<str>` itself
+/// may still scan bytes on the supported toolchain, so make this explicit.
+#[derive(Clone, Debug, Eq)]
+struct InputText(Arc<str>);
+
+impl PartialEq for InputText {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0) || self.0 == other.0
+    }
 }
 
 impl LspWorkspace {
@@ -144,6 +156,9 @@ impl LspWorkspace {
         }
         let mut partitions = BTreeMap::new();
         for id in ids {
+            self.control
+                .checkpoint()
+                .map_err(|error| (error.into(), take_old_partitions(&mut old_partitions)))?;
             let base_schema = schemas.get(&id).cloned().unwrap_or_else(SchemaIndex::empty);
             let schema = base_schema
                 .overlay_for_documents_in_partition(&documents, &saved, &id)
@@ -169,7 +184,7 @@ impl LspWorkspace {
                 retired_all.clone(),
                 retired_targets.clone(),
             );
-            let owners = open
+            let owners: BTreeMap<_, _> = open
                 .iter()
                 .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
                 .collect();
@@ -206,19 +221,41 @@ impl LspWorkspace {
                 next_partition_build_id = build_id;
                 build_id
             };
-            let mut kernel = schema
-                .schema()
-                .cloned()
-                .map(AuthoringKernel::with_schema)
-                .unwrap_or_default();
-            if !reusable {
-                let expected = kernel.snapshot().generation();
-                let request = super::kernel::authoring_request(&saved, &open, &id, expected)
-                    .with_project_completeness(saved.partition_is_complete(&id));
-                kernel
-                    .apply(request)
-                    .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?;
-            }
+            let old = old_partitions
+                .as_ref()
+                .and_then(|partitions| partitions.get(&id));
+            let kernel = if reusable {
+                old.map(|old| Arc::clone(&old.kernel)).unwrap_or_default()
+            } else {
+                let fresh;
+                let base = if let Some(old) = old.filter(|old| {
+                    old.schema.schema() == schema.schema()
+                        && old
+                            .open_owners
+                            .iter()
+                            .all(|(key, uri)| owners.get(key).is_none_or(|next| next == uri))
+                }) {
+                    old.kernel.as_ref()
+                } else {
+                    fresh = schema
+                        .schema()
+                        .cloned()
+                        .map(AuthoringKernel::with_schema)
+                        .unwrap_or_default();
+                    &fresh
+                };
+                let request = super::kernel::authoring_request(
+                    &saved,
+                    &open,
+                    &id,
+                    base.snapshot().generation(),
+                )
+                .with_project_completeness(saved.partition_is_complete(&id));
+                Arc::new(
+                    base.updated(request, &self.control)
+                        .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?,
+                )
+            };
             let retired_schema_uris = retired.get(&id).cloned().unwrap_or_default();
             partitions.insert(
                 id,
@@ -232,26 +269,19 @@ impl LspWorkspace {
                 },
             );
         }
-        let mut old_partitions = take_old_partitions(&mut old_partitions);
-        for (id, partition) in &mut partitions {
-            if let Some(old) = old_partitions.remove(id)
-                && old.input_fingerprint == partition.input_fingerprint
-            {
-                partition.kernel = old.kernel;
-            }
-        }
-        let snapshot = super::snapshot::LiveProjectSnapshot::rebuild(
-            generation,
-            &saved,
-            &documents,
-            &partitions,
-        );
+        let snapshot = self
+            .snapshot
+            .rebuild(generation, &saved, &documents, &partitions);
+        self.control
+            .checkpoint()
+            .map_err(|error| (error.into(), take_old_partitions(&mut old_partitions)))?;
         self.saved = saved;
         self.documents = documents;
         self.partitions = partitions;
         self.retired_schema_targets = retired_schema_targets;
         self.generation = generation;
         self.next_partition_build_id = next_partition_build_id;
+        self.rebuild_query_index();
         self.snapshot = snapshot;
         Ok(())
     }
@@ -278,7 +308,7 @@ fn partition_input_fingerprint(
         .map(|document| {
             (
                 document.identity.project_relative_path.clone(),
-                document.text.clone(),
+                InputText(Arc::clone(&document.text)),
             )
         })
         .collect();
@@ -293,7 +323,7 @@ fn partition_input_fingerprint(
                 key.as_str().to_owned(),
                 document.identity().uri.as_str().to_owned(),
                 document.version(),
-                document.text().to_owned(),
+                InputText(document.shared_text()),
             ))
         })
         .collect();
@@ -306,3 +336,7 @@ fn partition_input_fingerprint(
         project_complete: false,
     }
 }
+
+#[path = "kernel_rebuild/tests.rs"]
+#[cfg(test)]
+mod tests;

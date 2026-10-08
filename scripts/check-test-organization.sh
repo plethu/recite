@@ -47,7 +47,7 @@ while IFS= read -r file; do
   [[ -f "$repo_root/$file" ]] || continue
 
   basename="${file##*/}"
-  if [[ "$basename" == *_test.rs || ( "$basename" == *_tests.rs && "$basename" != "tests.rs" ) ]]; then
+  if [[ "$basename" == *_test.rs || ("$basename" == *_tests.rs && "$basename" != "tests.rs") ]]; then
     fail "${file}: source-side test files must be named tests.rs"
   fi
 
@@ -80,10 +80,12 @@ done < <(
     'editors/zed/src/*.rs' \
     'editors/zed/src/**/*.rs' \
     'apps/*/crates/*/src/*.rs' \
-    'apps/*/crates/*/src/**/*.rs'
+    'apps/*/crates/*/src/**/*.rs' \
+    'tools/*/src/*.rs' \
+    'tools/*/src/**/*.rs'
 )
 
-if (( failures > 0 )); then
+if ((failures > 0)); then
   echo
   echo "Found ${failures} Recite test organization violation(s)." >&2
   exit 1

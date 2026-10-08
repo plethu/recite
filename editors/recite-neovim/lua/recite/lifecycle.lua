@@ -24,9 +24,11 @@ local function new(options)
   local function owned_buffers(lifecycle)
     local buffers = {}
     for bufnr in pairs(lifecycle.buffers) do
-      if vim.api.nvim_buf_is_valid(bufnr)
+      if
+        vim.api.nvim_buf_is_valid(bufnr)
         and vim.bo[bufnr].buflisted
-        and vim.bo[bufnr].filetype == "recite" then
+        and vim.bo[bufnr].filetype == "recite"
+      then
         buffers[#buffers + 1] = bufnr
       else
         lifecycle.buffers[bufnr] = nil
@@ -37,10 +39,14 @@ local function new(options)
   end
 
   local function report_callback_error(kind, detail)
-    pcall(vim.notify, messages.format("neovim-callback-failed", {
-      kind = kind,
-      detail = detail,
-    }), vim.log.levels.ERROR)
+    pcall(
+      vim.notify,
+      messages.format("neovim-callback-failed", {
+        kind = kind,
+        detail = detail,
+      }),
+      vim.log.levels.ERROR
+    )
   end
 
   local function report_exhausted()
@@ -84,7 +90,7 @@ local function new(options)
             start_client(bufnr, material.restart_overrides(lifecycle.material), lifecycle.attempts)
           end
         end)
-      end, delay)
+      end)
       state.pending_restarts[lifecycle] = true
     end)
   end
@@ -128,7 +134,7 @@ local function new(options)
       root_dir = root,
       recite_owned = true,
     }
-    for _, key in ipairs({ "capabilities", "init_options", "on_attach", "settings" }) do
+    for _, key in ipairs({ "capabilities", "init_options", "on_attach", "settings", "flags" }) do
       if lsp[key] ~= nil then
         client_config[key] = vim.deepcopy(lsp[key])
       end
@@ -167,7 +173,7 @@ local function new(options)
           if active and active.config.recite_owned == true then
             lifecycle.attempts = 0
           end
-        end, RESTART_STABILITY_MS)
+        end)
       end
       local detail = invoke("on_init", caller_on_init, initialized_client, initialize_result)
       if detail then
@@ -182,6 +188,7 @@ local function new(options)
       root_markers = vim.deepcopy(lsp.root_markers),
       cmd = vim.deepcopy(client_config.cmd),
       settings = vim.deepcopy(client_config.settings),
+      flags = vim.deepcopy(client_config.flags),
       init_options = vim.deepcopy(client_config.init_options),
       capabilities = vim.deepcopy(client_config.capabilities),
       on_attach = client_config.on_attach,

@@ -1,5 +1,5 @@
 //! Source-ordered word index for project passage navigation; never executes dialogue.
-use recite_compiler::authoring::SavedDocument;
+use recite_compiler::authoring::{Interrupted, SavedDocument, WorkControl};
 use recite_core::ast::Statement;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -21,49 +21,77 @@ fn words(text: &str) -> impl Iterator<Item = String> + '_ {
         .map(str::to_lowercase)
 }
 impl DocumentIndex {
-    pub fn build(documents: &[SavedDocument]) -> Self {
+    fn build(document: &SavedDocument) -> Self {
+        let parsed = recite_parser::parse(document.key().as_str(), document.text());
+        let lowered = parsed.lower_source_file();
         let mut index = Self::default();
-        for document in documents {
-            let parsed =
-                recite_parser::parse(document.key().as_str(), document.text()).lower_source_file();
-            for block in &parsed.source_file.blocks {
-                for root in &block.statements {
-                    root.visit_depth_first(&mut |statement| {
-                        let (text, speaker) = match statement {
-                            Statement::Line(line) => (
-                                &line.source_text.text,
-                                line.speaker
-                                    .as_ref()
-                                    .or(block.default_speaker.as_ref())
-                                    .map(ToString::to_string)
-                                    .unwrap_or_default(),
-                            ),
-                            Statement::Choice(choice) => (&choice.source_text.text, String::new()),
-                            _ => return,
-                        };
-                        let id = index.hits.len();
-                        let hit = SearchHit {
-                            document: document.key().as_str().into(),
-                            beat: block.id.to_string(),
-                            speaker,
-                            text: text.clone(),
-                        };
-                        for field in [&hit.document, &hit.beat, &hit.speaker, &hit.text] {
-                            for word in words(field) {
-                                let postings = index.words.entry(word).or_default();
-                                // Hits arrive in source order, so the last ID deduplicates
-                                // repeated words within and across this hit's fields.
-                                if postings.last() != Some(&id) {
-                                    postings.push(id);
-                                }
-                            }
-                        }
-                        index.hits.push(hit);
-                    });
-                }
+        for block in &lowered.source_file.blocks {
+            for root in &block.statements {
+                index.add_root(document, block, root);
             }
         }
         index
+    }
+
+    fn build_with_control(
+        document: &SavedDocument,
+        control: &dyn WorkControl,
+    ) -> Result<Self, Interrupted> {
+        control.checkpoint()?;
+        let parsed = recite_parser::parse(document.key().as_str(), document.text());
+        control.checkpoint()?;
+        let lowered = parsed.lower_source_file();
+        control.checkpoint()?;
+        let mut index = Self::default();
+        for block in &lowered.source_file.blocks {
+            control.checkpoint()?;
+            for root in &block.statements {
+                control.checkpoint()?;
+                index.add_root(document, block, root);
+            }
+        }
+        control.checkpoint()?;
+        Ok(index)
+    }
+
+    fn add_root(
+        &mut self,
+        document: &SavedDocument,
+        block: &recite_core::ast::Block,
+        root: &Statement,
+    ) {
+        root.visit_depth_first(&mut |statement| {
+            let (text, speaker) = match statement {
+                Statement::Line(line) => (
+                    &line.source_text.text,
+                    line.speaker
+                        .as_ref()
+                        .or(block.default_speaker.as_ref())
+                        .map(ToString::to_string)
+                        .unwrap_or_default(),
+                ),
+                Statement::Choice(choice) => (&choice.source_text.text, String::new()),
+                _ => return,
+            };
+            let id = self.hits.len();
+            let hit = SearchHit {
+                document: document.key().as_str().into(),
+                beat: block.id.to_string(),
+                speaker,
+                text: text.clone(),
+            };
+            for field in [&hit.document, &hit.beat, &hit.speaker, &hit.text] {
+                for word in words(field) {
+                    let postings = self.words.entry(word).or_default();
+                    // Hits arrive in source order, so the last ID deduplicates
+                    // repeated words within and across this hit's fields.
+                    if postings.last() != Some(&id) {
+                        postings.push(id);
+                    }
+                }
+            }
+            self.hits.push(hit);
+        });
     }
     /// All query words must match. Results preserve document/source order.
     pub fn search(&self, terms: &BTreeSet<String>, limit: usize) -> (usize, Vec<SearchHit>) {
@@ -102,20 +130,44 @@ pub struct SearchIndex {
 }
 impl SearchIndex {
     pub fn build(documents: &[SavedDocument]) -> Self {
-        Self {
-            documents: documents
-                .iter()
-                .map(|doc| {
-                    (
-                        doc.key().as_str().to_owned(),
-                        std::sync::Arc::new(DocumentIndex::build(std::slice::from_ref(doc))),
-                    )
-                })
-                .collect(),
+        let mut index = Self {
+            documents: Vec::with_capacity(documents.len()),
+        };
+        for document in documents {
+            index.add_document(document);
         }
+        index
+    }
+
+    /// Check parse and indexing boundaries; publish only a complete index.
+    pub fn build_with_control(
+        documents: &[SavedDocument],
+        control: &dyn WorkControl,
+    ) -> Result<Self, Interrupted> {
+        control.checkpoint()?;
+        let mut index = Self {
+            documents: Vec::with_capacity(documents.len()),
+        };
+        for document in documents {
+            control.checkpoint()?;
+            let shard = DocumentIndex::build_with_control(document, control)?;
+            index.documents.push((
+                document.key().as_str().to_owned(),
+                std::sync::Arc::new(shard),
+            ));
+            control.checkpoint()?;
+        }
+        Ok(index)
+    }
+
+    fn add_document(&mut self, document: &SavedDocument) {
+        self.documents.push((
+            document.key().as_str().to_owned(),
+            std::sync::Arc::new(DocumentIndex::build(document)),
+        ));
     }
     pub fn replace_document(&mut self, document: SavedDocument) {
-        let next = std::sync::Arc::new(DocumentIndex::build(std::slice::from_ref(&document)));
+        let next = std::sync::Arc::new(DocumentIndex::build(&document));
         if let Some((_, index)) = self
             .documents
             .iter_mut()
