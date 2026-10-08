@@ -47,6 +47,8 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: dist-${{ matrix.target }}
+          # Preserve scarce cache space for Writer/Nix; these precise builds are infrequent.
+          cache-targets: false
       - run: just release build '${{ matrix.target }}'
       - name: Run CLI and LSP from the distribution archives
         run: |
