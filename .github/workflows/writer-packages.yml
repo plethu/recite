@@ -73,6 +73,30 @@ jobs:
           persist-credentials: false
       - name: Install Nix
         uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+        with:
+          # Hosted interface detection can fail while the signed cache remains reachable.
+          extra_nix_config: |
+            substitute = true
+            connect-timeout = 15
+            filetransfer-retry-attempts = 5
+      - name: Identify Writer dependency cache
+        if: matrix.system == 'x86_64-darwin'
+        id: nix_dependencies
+        run: |
+          dependency_drv=$(nix eval --option allow-import-from-derivation false --raw .#recite-writer.cargoArtifacts.drvPath)
+          printf 'key=nix-writer-v1-%s-%s\n' '${{ matrix.system }}' "${dependency_drv##*/}" >> "$GITHUB_OUTPUT"
+      - name: Cache Intel macOS Nix dependencies
+        if: matrix.system == 'x86_64-darwin'
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+        with:
+          primary-key: ${{ steps.nix_dependencies.outputs.key }}
+          restore-prefixes-first-match: nix-writer-v1-${{ matrix.system }}-
+          gc-max-store-size: 8G
+      - name: Retain Writer dependency artifacts
+        if: matrix.system == 'x86_64-darwin'
+        run: |
+          nix build .#recite-writer.cargoArtifacts --out-link "$RUNNER_TEMP/recite-writer-dependencies"
+          test -s "$RUNNER_TEMP/recite-writer-dependencies/target.tar.zst"
       - name: Build and check native flake packages
         run: nix flake check --print-build-logs
       - name: Exercise packaged entrypoints
@@ -81,7 +105,7 @@ jobs:
           nix run .#recite-writer -- --help
           nix run .#recite-writer -- --version
       - name: Check development tools
-        run: nix develop --command sh -ec 'rustc --version; cargo --version; command -v clang++; command -v msginit'
+        run: nix develop --profile "$RUNNER_TEMP/recite-dev-shell" --command sh -ec 'rustc --version; cargo --version; command -v clang++; command -v msginit'
 
   package:
     name: ${{ matrix.platform }} ${{ matrix.arch }} preview

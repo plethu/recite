@@ -2,6 +2,7 @@
   description = "Recite CLI and Writer";
 
   inputs = {
+    crane.url = "github:ipetkov/crane/v0.24.0";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -11,6 +12,7 @@
 
   outputs = {
     self,
+    crane,
     nixpkgs,
     rust-overlay,
   }: let
@@ -22,7 +24,7 @@
         overlays = [rust-overlay.overlays.default];
       };
     in
-      import ./nix/packages.nix {inherit pkgs;};
+      import ./nix/packages.nix {inherit pkgs crane;};
   in {
     packages = eachSystem (system: let
       packages = packagesFor system;

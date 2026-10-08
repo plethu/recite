@@ -1,4 +1,7 @@
-{pkgs}: let
+{
+  pkgs,
+  crane,
+}: let
   inherit (pkgs) lib stdenv;
   rustVersion = (builtins.fromTOML (builtins.readFile ../.mise.toml)).tools.rust.version;
   cliVersion = (builtins.fromTOML (builtins.readFile ../Cargo.toml)).workspace.package.version;
@@ -157,14 +160,21 @@
       platforms = lib.platforms.linux ++ lib.platforms.darwin;
     };
   };
-  recite-writer = rustPlatform.buildRustPackage.override {stdenv = pkgs.clangStdenv;} {
+  writerCraneLib = ((crane.mkLib pkgs).overrideToolchain rustToolchain).overrideScope (_: _: {
+    stdenvSelector = p: p.clangStdenv;
+  });
+  writerArgs = {
     pname = "recite-writer";
     version = writerVersion;
     src = source;
-    cargoRoot = "apps/writer";
-    buildAndTestSubdir = "apps/writer";
-    cargoLock.lockFile = ../apps/writer/Cargo.lock;
-    cargoBuildFlags = ["-p" "recite-writer"];
+    cargoLock = ../apps/writer/Cargo.lock;
+    # Resolve vendoring without building the generated dummy source during evaluation.
+    cargoVendorDir = writerCraneLib.vendorCargoDeps {
+      src = source;
+      cargoLock = ../apps/writer/Cargo.lock;
+    };
+    cargoExtraArgs = "--locked -p recite-writer";
+    postUnpack = ''sourceRoot="$sourceRoot/apps/writer"'';
     doCheck = false;
     nativeBuildInputs = writerNativeInputs;
     buildInputs = writerBuildInputs;
@@ -172,34 +182,49 @@
     dontUseNinjaBuild = true;
     dontUseNinjaCheck = true;
     dontUseNinjaInstall = true;
-    env = writerEnv;
+    env = writerEnv // {CARGO_TARGET_DIR = "target";};
     preBuild = ''
       export NIX_LDFLAGS="$NIX_LDFLAGS ${writerExtraLinkFlags}"
     '';
-    postInstall = lib.optionalString stdenv.hostPlatform.isLinux ''
-      install -Dm644 apps/writer/packaging/icons/recite-writer.png \
-        "$out/share/icons/hicolor/512x512/apps/recite-writer.png"
-      install -Dm644 ${./recite-writer.desktop} \
-        "$out/share/applications/recite-writer.desktop"
-    '';
-    postFixup =
-      lib.optionalString stdenv.hostPlatform.isLinux ''
-        patchelf --add-rpath ${lib.makeLibraryPath linuxLibraries} \
-          "$out/bin/recite-writer"
-        wrapProgram "$out/bin/recite-writer" \
-          --suffix PATH : ${lib.makeBinPath [pkgs.gettext pkgs.xdg-utils]}
-      ''
-      + lib.optionalString stdenv.hostPlatform.isDarwin ''
-        wrapProgram "$out/bin/recite-writer" \
-          --suffix PATH : ${lib.makeBinPath [pkgs.gettext]}
-      '';
-    meta = {
-      description = "Recite dialogue writer";
-      mainProgram = "recite-writer";
-      license = with lib.licenses; [mit asl20];
-      platforms = lib.platforms.linux ++ lib.platforms.darwin;
-    };
   };
+  writerCargoArtifacts = writerCraneLib.buildDepsOnly ((builtins.removeAttrs writerArgs ["src"])
+    // {
+      dummySrc = writerCraneLib.mkDummySrc {
+        src = source;
+        cargoLock = ../apps/writer/Cargo.lock;
+        extraDummyScript = ''
+          cp ${../apps/writer/Cargo.lock} "$out/apps/writer/Cargo.lock"
+        '';
+      };
+      buildPhaseCargoCommand = "cargo build --profile release ${writerArgs.cargoExtraArgs}";
+    });
+  recite-writer = writerCraneLib.buildPackage (writerArgs
+    // {
+      cargoArtifacts = writerCargoArtifacts;
+      postInstall = lib.optionalString stdenv.hostPlatform.isLinux ''
+        install -Dm644 packaging/icons/recite-writer.png \
+          "$out/share/icons/hicolor/512x512/apps/recite-writer.png"
+        install -Dm644 ${./recite-writer.desktop} \
+          "$out/share/applications/recite-writer.desktop"
+      '';
+      postFixup =
+        lib.optionalString stdenv.hostPlatform.isLinux ''
+          patchelf --add-rpath ${lib.makeLibraryPath linuxLibraries} \
+            "$out/bin/recite-writer"
+          wrapProgram "$out/bin/recite-writer" \
+            --suffix PATH : ${lib.makeBinPath [pkgs.gettext pkgs.xdg-utils]}
+        ''
+        + lib.optionalString stdenv.hostPlatform.isDarwin ''
+          wrapProgram "$out/bin/recite-writer" \
+            --suffix PATH : ${lib.makeBinPath [pkgs.gettext]}
+        '';
+      meta = {
+        description = "Recite dialogue writer";
+        mainProgram = "recite-writer";
+        license = with lib.licenses; [mit asl20];
+        platforms = lib.platforms.linux ++ lib.platforms.darwin;
+      };
+    });
 in {
   inherit pkgs rustToolchain writerEnv writerExtraLinkFlags writerNativeInputs writerBuildInputs recite recite-writer;
 }
