@@ -169,3 +169,6 @@ impl Component for ComparisonView {
         body
     }
 }
+
+#[cfg(test)]
+mod tests;

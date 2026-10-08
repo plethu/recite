@@ -120,3 +120,6 @@ fn add_available_rule(rules: &mut ReplyRules, effect: bool, path: Option<&[usize
         Some(existing) => RuleExpression::All(vec![existing, condition]),
     });
 }
+
+#[cfg(test)]
+mod tests;

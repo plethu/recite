@@ -1,3 +1,7 @@
+#[path = "project_workflows/document_tabs.rs"]
+mod document_tabs;
+#[path = "project_workflows/closing.rs"]
+mod project_closing;
 mod support;
 use freya::prelude::*;
 use freya_testing::prelude::*;

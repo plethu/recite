@@ -65,3 +65,6 @@ pub(crate) fn open_editor(mut writer: Writer) {
         Err(e) => writer.message.error(e),
     }
 }
+
+#[cfg(test)]
+mod tests;
