@@ -4,7 +4,8 @@ set -euo pipefail
 source_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$source_root/scripts/maintainability/paths.sh"
 # CI must not depend on formatter executables from an activated or personal PATH.
-export PATH="$(dirname "$(command -v mise)"):/usr/bin:/bin"
+PATH="$(dirname "$(command -v mise)"):/usr/bin:/bin"
+export PATH
 temporary="$(mktemp -d)"
 trap 'rm -rf "$temporary"' EXIT
 fixture="$temporary/repo"
