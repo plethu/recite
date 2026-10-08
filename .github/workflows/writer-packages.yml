@@ -99,6 +99,9 @@ jobs:
           test -s "$RUNNER_TEMP/recite-writer-dependencies/target.tar.zst"
       - name: Build and check native flake packages
         run: nix flake check --print-build-logs
+      - name: Retain checked packages for the cache
+        if: matrix.system == 'x86_64-darwin'
+        run: nix build .#recite .#recite-writer --out-link "$RUNNER_TEMP/recite-packages"
       - name: Exercise packaged entrypoints
         run: |
           nix run .#recite -- --help
