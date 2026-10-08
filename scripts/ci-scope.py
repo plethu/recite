@@ -17,6 +17,7 @@ from ci_scope_config import (
     PACKAGING_PREFIXES,
     RUST,
     RUST_BUILD,
+    WRITER_DISTRIBUTION,
     shared_config_lanes,
 )
 from ci_scope_config import JUST_QUALITY as JUST_QUALITY
@@ -35,24 +36,25 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"flatpak-packages", "maintainability", "docs"})
     if path in {
         "dist-workspace.toml",
-        "release.toml",
         "mise.release.toml",
         "release.just",
+        ".github/workflows/cli-packages.yml",
+    }:
+        return frozenset({"cli-packages", "rust", "release-plan", "maintainability", "docs"})
+    if path in {
+        "release.toml",
         ".github/workflows/release.yml",
         ".github/workflows/publish-release.yml",
     } or path.startswith("tools/recite-release/"):
         return frozenset({"rust", "release-plan", "maintainability", "docs"})
     if path == ".github/workflows/rust-checks.yml":
         return frozenset({"rust", "hosts", "writer", "editor-native", "maintainability"})
-    if path in {
-        ".github/workflows/writer-packages.yml",
-        "LICENSE",
-        "LICENSE-MIT",
-        "LICENSE-APACHE",
-    }:
+    if path == ".github/workflows/writer-packages.yml":
+        return WRITER_DISTRIBUTION | {"maintainability", "docs"}
+    if path in {"LICENSE", "LICENSE-MIT", "LICENSE-APACHE"}:
         return DISTRIBUTION | {"maintainability", "docs"}
     if path == "apps/writer/packaging/icons/recite-writer.png":
-        return DISTRIBUTION | {"writer", "maintainability", "docs"}
+        return WRITER_DISTRIBUTION | {"writer", "maintainability", "docs"}
     if path == ".github/workflows/lsp-sessions.yml" or path.startswith(
         (
             "scripts/lsp_session",
@@ -134,7 +136,7 @@ def lanes_for_path(path, *, base=None, head=None):
         "assets/identity/recite-wordmark.svg",
         "assets/identity/recite-wordmark-reversed.svg",
     }:
-        return DISTRIBUTION | {"writer", "maintainability", "docs", "site"}
+        return WRITER_DISTRIBUTION | {"writer", "maintainability", "docs", "site"}
     if path.startswith(PACKAGING_PREFIXES) or path in {
         "mise.packaging.toml",
         "scripts/check-writer-desktop-links.py",

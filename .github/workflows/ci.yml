@@ -51,6 +51,7 @@ jobs:
       flatpak-packages: ${{ steps.scope.outputs.flatpak-packages }}
       nix-packages: ${{ steps.scope.outputs.nix-packages }}
       release-plan: ${{ steps.scope.outputs.release-plan }}
+      cli-packages: ${{ steps.scope.outputs.cli-packages }}
       editor-native: ${{ steps.scope.outputs.editor-native }}
       writer: ${{ steps.scope.outputs.writer }}
       hosts: ${{ steps.scope.outputs.hosts }}
@@ -381,6 +382,13 @@ jobs:
       - name: Run maintainability checks
         run: just _check-quality
 
+  cli-packages:
+    needs: changes
+    if: needs.changes.outputs.cli-packages == 'true'
+    uses: ./.github/workflows/cli-packages.yml
+    with:
+      ref: ${{ inputs.ref || '' }}
+
   packages:
     needs: changes
     if: needs.changes.outputs.packages == 'true'
@@ -430,6 +438,7 @@ jobs:
       - flatpak-packages
       - nix-packages
       - release-plan
+      - cli-packages
       - editor-native
       - writer
       - hosts

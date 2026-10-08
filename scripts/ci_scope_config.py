@@ -18,12 +18,14 @@ LANES = frozenset(
         "benchmark-smoke",
         "maintainability",
         "packages",
+        "cli-packages",
         "nix-packages",
         "flatpak-packages",
         "lsp-sessions",
     }
 )
-DISTRIBUTION = frozenset({"packages", "nix-packages", "flatpak-packages"})
+WRITER_DISTRIBUTION = frozenset({"packages", "nix-packages", "flatpak-packages"})
+DISTRIBUTION = WRITER_DISTRIBUTION | {"cli-packages"}
 RUST = frozenset(
     {
         "rust",
@@ -241,6 +243,7 @@ def shared_config_lanes(path, base, head):
             "benchmark-smoke": {"benchmark-smoke"},
             "maintainability": {"maintainability"},
             "packages": {"packages"},
+            "cli-packages": {"cli-packages"},
             "nix-packages": {"nix-packages"},
             "flatpak-packages": {"flatpak-packages"},
             "hosts": {"hosts"},

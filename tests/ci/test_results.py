@@ -112,6 +112,8 @@ class ResultsTests(unittest.TestCase):
         self.assertNotIn("      - edited", workflow)
         self.assertNotIn("      - labeled", workflow)
         self.assertNotIn("      - unlabeled", workflow)
+        self.assertEqual(workflow.count("uses: ./.github/workflows/cli-packages.yml"), 1)
+        self.assertIn("uses: ./.github/workflows/cli-packages.yml", jobs["cli-packages"])
         packages = (ROOT / ".github/workflows/writer-packages.yml").read_text()
         self.assertIn("  workflow_call:", packages)
         self.assertIn("  workflow_dispatch:", packages)

@@ -31,6 +31,7 @@
           "editors"
           "fixtures"
           "schemas"
+          "tools"
           "README.md"
           "LICENSE"
           "LICENSE-MIT"

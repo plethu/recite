@@ -92,19 +92,15 @@ class ScopeTests(unittest.TestCase):
         )
 
     def test_core_and_dependencies_keep_contracts_without_distribution(self):
-        self.assertEqual(
-            selected("crates/recite-runtime/src/lib.rs"), scope.RUST | {"docs", "site"}
-        )
+        for crate in ("runtime", "playground"):
+            self.assertEqual(
+                selected(f"crates/recite-{crate}/src/lib.rs"), scope.RUST | {"docs", "site"}
+            )
         for path in ("Cargo.lock", "apps/writer/Cargo.lock", "crates/recite-core/src/lib.rs"):
             with self.subTest(path=path):
                 lanes = selected(path)
                 self.assertTrue(scope.RUST <= lanes)
                 self.assertFalse(scope.DISTRIBUTION & lanes)
-
-    def test_playground_bridge_changes_select_real_browser_checks(self):
-        self.assertEqual(
-            selected("crates/recite-playground/src/lib.rs"), scope.RUST | {"docs", "site"}
-        )
 
     def test_lsp_tooling_package_and_environment_select_their_consumers(self):
         for path in (
@@ -234,6 +230,7 @@ class ScopeTests(unittest.TestCase):
             ("tests/writer-packaging/check.py", "packages"),
             ("apps/writer/packaging/common.json", "packages"),
             ("apps/writer/packaging/icons/recite-writer.ico", "packages"),
+            ("assets/identity/recite.png", "packages"),
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {lane, "maintainability", "docs"})
@@ -241,17 +238,22 @@ class ScopeTests(unittest.TestCase):
             self.assertEqual(selected(path), scope.LANES)
 
     def test_release_owners_validate_plans_and_shared_rust_workflow_validates_callers(self):
-        for path in (
-            "dist-workspace.toml",
-            "release.toml",
-            "mise.release.toml",
-            "release.just",
-            ".github/workflows/release.yml",
-            ".github/workflows/publish-release.yml",
-            "tools/recite-release/Cargo.toml",
-            "tools/recite-release/src/main.rs",
-        ):
-            self.assertEqual(selected(path), {"rust", "release-plan", "maintainability", "docs"})
+        for path, builds_archives in {
+            "dist-workspace.toml": True,
+            "mise.release.toml": True,
+            "release.just": True,
+            ".github/workflows/cli-packages.yml": True,
+            "release.toml": False,
+            ".github/workflows/release.yml": False,
+            ".github/workflows/publish-release.yml": False,
+            "tools/recite-release/Cargo.toml": False,
+            "tools/recite-release/src/main.rs": False,
+        }.items():
+            expected = {"rust", "release-plan", "maintainability", "docs"}
+            if builds_archives:
+                expected.add("cli-packages")
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), expected)
         self.assertEqual(
             selected(".github/workflows/rust-checks.yml"),
             {"rust", "hosts", "writer", "editor-native", "maintainability"},
@@ -268,11 +270,14 @@ class ScopeTests(unittest.TestCase):
                 self.assertEqual(selected(path), {"maintainability"})
 
     def test_shared_distribution_inputs_and_wordmarks_select_all_consumers(self):
-        for path in (".github/workflows/writer-packages.yml", "LICENSE-MIT"):
-            self.assertEqual(selected(path), scope.DISTRIBUTION | {"maintainability", "docs"})
+        for path, families in {
+            ".github/workflows/writer-packages.yml": scope.WRITER_DISTRIBUTION,
+            "LICENSE-MIT": scope.DISTRIBUTION,
+        }.items():
+            self.assertEqual(selected(path), families | {"maintainability", "docs"})
         self.assertEqual(
             selected("apps/writer/packaging/icons/recite-writer.png"),
-            scope.DISTRIBUTION | {"writer", "maintainability", "docs"},
+            scope.WRITER_DISTRIBUTION | {"writer", "maintainability", "docs"},
         )
         for path in (
             "assets/identity/recite-wordmark.svg",
@@ -281,11 +286,8 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(
                     selected(path),
-                    scope.DISTRIBUTION | {"writer", "maintainability", "docs", "site"},
+                    scope.WRITER_DISTRIBUTION | {"writer", "maintainability", "docs", "site"},
                 )
-        self.assertEqual(
-            selected("assets/identity/recite.png"), {"packages", "maintainability", "docs"}
-        )
 
     def test_unknown_inputs_are_conservative_and_changes_union(self):
         self.assertEqual(selected("new-build-system/config.json"), scope.LANES)

@@ -261,12 +261,13 @@ task state into Markdown. The issue body becomes release notes. Before stable 1.
 [§22–23](docs/spec/release.md#23-acceptance-criteria-for-a-serious-v1), including remaining consumer
 evidence; green CI alone does not establish readiness.
 
-1. Create `release/VERSION` from current `main`, linked to that release issue. Provision tools with
-   `just release setup`, inspect `just release prepare VERSION`, then apply with `just release
-   set-version VERSION`. This coordinated helper updates core and Writer; the FFI version is
-   deliberately excluded. Review the manifest, lockfile, installer and AppStream changes and update
-   `CHANGELOG.md`. Commit with `[REC-N] release: prepare VERSION` and use the usual protected PR
-   workflow. Neither helper commits, tags, pushes nor publishes.
+1. Create a release branch such as `release/prepare-v0-2-0-beta-1` from current `main`, linked to
+   that release issue. Branches follow the usual kebab-case policy; tags retain exact SemVer.
+   Provision tools with `just release setup`, inspect `just release prepare VERSION`, then apply
+   with `just release set-version VERSION`. This coordinated helper updates core and Writer; the FFI
+   version is deliberately excluded. Review the manifest, lockfile, installer and AppStream changes
+   and update `CHANGELOG.md`. Commit with `[REC-N] release: prepare VERSION` and use the usual
+   protected PR workflow. Neither helper commits, tags, pushes nor publishes.
 2. After the approved merge, resolve the complete commit ID. Dispatch **Release candidate** from
    `main`, supplying that exact `commit` and prepared `version`. It runs complete correctness,
    performance/session and distribution verification, exercises archived CLI/LSP binaries, and
