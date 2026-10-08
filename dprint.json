@@ -61,6 +61,7 @@
       },
       {
         "command": "gdformat -",
+        "setupCommand": "gdformat -",
         "exts": ["gd"],
         "cacheKeyFiles": ["gdlintrc", "mise.quality.toml"]
       },
