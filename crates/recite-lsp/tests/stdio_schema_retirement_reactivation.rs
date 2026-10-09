@@ -53,7 +53,22 @@ fn unrelated_uri_retirement_does_not_keep_a_closed_target_retired() {
 
 #[test]
 fn uri_retired_alias_retargeted_before_close_keeps_the_target_retired() {
-    let mut scenario = RetiredSchemaAliases::start();
+    assert_retargeted_alias_keeps_target_retired(RetiredSchemaAliases::start());
+}
+
+#[test]
+fn retired_alias_outlives_the_parent_project_replaced_by_a_nested_manifest() {
+    let mut scenario = RetiredSchemaAliases::with_discovery_root("nested");
+    let nested = scenario.temp.path().join("nested");
+
+    // The editor first inherited the parent project. Its new local manifest
+    // replaces that project, but open retired aliases must keep their lifetime
+    // even after the partition that first classified them as schema disappears.
+    switch_schema(&mut scenario.harness, &nested, "../active.json");
+    assert_retargeted_alias_keeps_target_retired(scenario);
+}
+
+fn assert_retargeted_alias_keeps_target_retired(mut scenario: RetiredSchemaAliases) {
     let target_uri = file_uri(&scenario.target);
     let alias_uri = file_uri(&scenario.alias);
     let late_alias_uri = format!("{}/./retired.json", file_uri(scenario.temp.path()));
@@ -119,12 +134,19 @@ struct RetiredSchemaAliases {
 
 impl RetiredSchemaAliases {
     fn start() -> Self {
+        Self::with_discovery_root(".")
+    }
+
+    fn with_discovery_root(directory: &str) -> Self {
         use std::os::unix::fs::symlink;
 
         let temp = Builder::new()
             .prefix("recite reactivated schema aliases ")
             .tempdir()
             .unwrap_or_else(|error| panic!("temporary schema workspace: {error}"));
+        let discovery_root = temp.path().join(directory);
+        std::fs::create_dir_all(&discovery_root)
+            .unwrap_or_else(|error| panic!("create discovery root: {error}"));
         let target = temp.path().join("retired.json");
         let active = temp.path().join("active.json");
         let replacement = temp.path().join("replacement.json");
@@ -140,7 +162,7 @@ impl RetiredSchemaAliases {
         write_manifest(temp.path(), "retired.json");
         let mut harness = StdioHarness::start(json!({
             "capabilities": {},
-            "rootUri": file_uri(temp.path())
+            "rootUri": file_uri(&discovery_root)
         }));
         let target_uri = file_uri(&target);
         let alias_uri = file_uri(&alias);
