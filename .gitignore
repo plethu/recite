@@ -1,4 +1,7 @@
 /target/
+# Source modules and test inputs must survive global ignores such as "build/".
+!crates/**/src/**
+!crates/**/tests/**
 # Disposable investigation reports are local artifacts; decisions belong in current guides.
 /docs/archive/
 /.flatpak-builder/
@@ -49,6 +52,8 @@ Packages/com.recite.dialogue/Tests~/Headless/bin/
 Packages/com.recite.dialogue/Tests~/Headless/obj/
 
 # Local/private agent overlays
+/.aws/
+/.codex/
 .claude/settings.local.json
 .agents/local/
 .agents/private/

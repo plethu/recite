@@ -74,6 +74,14 @@ currently require Linux x86_64, Cage, wtype, and official host downloads; see th
 and `docs/editor-parity-contract.md` for the evidence boundaries. These runs do not establish
 other-platform support or replace the release benchmark baseline.
 
+The required Rust CI lane also runs `just coverage` and `just mutants`; the Writer lane runs `just
+writer coverage`. Coverage floors apply separately to each named production owner, and the critical
+mutation scope includes downstream consumers and a baseline. These commands use the pinned Cargo
+tools and LLVM component installed by mise. Proptest runs with ordinary tests and persists shrunk
+failure seeds; CI uses 256 cases per property. See
+[testing policy](docs/spec/quality.md#175-enforced-rust-test-assurance) for the enforced targets and
+scope. Run the affected assurance command before committing changes to these contracts or tests.
+
 ## Formatting and validation
 
 Versioned configurations at the repository root define formatting and lint rules. `just fmt`, `just

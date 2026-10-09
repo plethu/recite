@@ -84,6 +84,34 @@ test *args:
 test-doc *args:
     cargo test --workspace --locked --doc "$@"
 
+# Enforce production line coverage per owner; tests, examples and benches are not production.
+coverage:
+    cargo llvm-cov clean --workspace
+    cargo llvm-cov nextest --workspace --locked --all-features --test-threads 4 --no-fail-fast --no-report
+    mkdir -p target/coverage
+    cargo llvm-cov report --json --summary-only --ignore-filename-regex '/(tests|benches|examples)/' --output-path target/coverage/workspace.json
+    for owner in recite-core:90 recite-parser:95 recite-compiler:90 recite-runtime:90 recite-lsp:90 recite-cli:80; do package="${owner%:*}"; floor="${owner#*:}"; cargo llvm-cov report --package "$package" --json --summary-only --ignore-filename-regex '/(tests|benches|examples)/' --fail-under-lines "$floor" --output-path "target/coverage/$package.json"; done
+
+# All viable critical mutations must be caught; retain the baseline and downstream consumers.
+mutants *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for arg in "$@"; do
+        case "$arg" in
+            --shard | --jobs | --build-timeout) ;;
+            *) [[ "$arg" =~ ^[0-9]+(/[0-9]+)?$ ]] || { echo 'just mutants accepts only --shard, --jobs and --build-timeout; use cargo mutants for scope experiments.' >&2; exit 2; } ;;
+        esac
+    done
+    critical="$(cargo metadata --locked --no-deps --format-version 1 | jq -ce '.metadata.recite.critical_mutation_files | if type == "array" and length > 0 and all(.[]; type == "string") then . else error("Missing or invalid critical mutation file list") end')"
+    file_args=()
+    while IFS= read -r file; do file_args+=(--file "$file"); done < <(jq -r '.[]' <<< "$critical")
+    mkdir -p target/mutation
+    cargo mutants --workspace --list --json "${file_args[@]}" > target/mutation/critical-mutants.json
+    jq -e --argjson expected "$critical" '($expected - ([.[].file] | unique)) as $missing | if ($missing | length) == 0 then true else error("No mutation candidates for: " + ($missing | join(", "))) end' target/mutation/critical-mutants.json > /dev/null
+    # cargo-mutants' baseline omits configured downstream consumers; check them first.
+    cargo nextest run --locked -p recite-core -p recite-compiler -p recite-lsp -p recite-runtime --cargo-profile mutants --test-threads 4
+    cargo mutants --workspace --output target/mutation "${file_args[@]}" "$@"
+
 supply-chain:
     scripts/check-dependencies.sh
 
@@ -115,6 +143,9 @@ _verify:
     scripts/check-project-gates.sh
     scripts/check-docs.sh
     just perf smoke
+    just coverage
+    just writer coverage
+    just mutants --jobs 2 --build-timeout 600
 
 # Shared local and CI quality lane; commands have one owner.
 [private]

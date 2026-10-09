@@ -93,6 +93,32 @@ Testing policy:
   operation/result shape and runner notes;
 - reference-driver checks must fail when §12 categories drift from fixture schema tables.
 
+### 17.5 Enforced Rust test assurance
+
+`just coverage` uses the pinned cargo-llvm-cov and Rust LLVM tools to measure all-feature workspace
+tests. Production line coverage must reach 90% separately in core, compiler, runtime and LSP, 95% in
+the parser and 80% in the CLI. `just writer coverage` requires 90% separately in the Writer model
+and headless UI. The required Rust and Writer CI lanes enforce these floors and retain JSON
+evidence. Tests, examples and benchmark harnesses are excluded from the production denominator;
+production error paths and platform boundaries remain included. Line coverage does not establish
+branch coverage, assertion strength or native accessibility acceptance.
+
+Generated tests use Proptest with shrinking and standard failure persistence. CI runs 256 cases per
+property. State and format properties must compare independent expected values or action models;
+round-trip equality alone cannot prove that both endpoints preserve the contract. Reproduce a
+failure using its persisted seed and keep a focused regression when correcting production behavior.
+
+`just mutants` runs cargo-mutants over the source-position index, LSP freshness fences, document
+close transitions, runtime choice selection and restored pending positions selected in `Cargo.toml`
+workspace metadata. The preflight requires mutation candidates from every named file, so an empty
+scope or stale path fails. `.cargo/mutants.toml` owns runner settings. Every run includes the
+unmutated baseline and core, compiler, LSP and runtime consumers. The required Rust lane runs the
+complete critical scope even for test-only changes; it fails on surviving mutants, timeouts or a
+broken baseline and retains `mutants.out`. Expand this scope when a new invariant needs stronger
+assertion evidence. Other mutation experiments can use `cargo mutants --no-config` with explicit
+owners and test packages. Do not remove production paths from coverage or suppress mutants merely to
+satisfy a threshold.
+
 ## 18. Diagnostics
 
 Diagnostics must be stable and testable.

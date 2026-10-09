@@ -27,6 +27,13 @@ packaging:
 supply-chain:
     cargo deny --locked --manifest-path apps/writer/Cargo.toml --all-features --config deny.toml check advisories bans licenses sources
 
+# Headless model and UI ownership have separate production-line floors.
+coverage:
+    cargo llvm-cov clean --manifest-path apps/writer/Cargo.toml --workspace
+    cargo llvm-cov test --manifest-path apps/writer/Cargo.toml --workspace --locked --no-fail-fast --no-report -- --test-threads=4
+    mkdir -p apps/writer/target/coverage
+    for package in recite-writer-model recite-writer; do cargo llvm-cov report --manifest-path apps/writer/Cargo.toml --package "$package" --json --summary-only --ignore-filename-regex '/(tests|benches|examples)/' --fail-under-lines 90 --output-path "apps/writer/target/coverage/$package.json"; done
+
 # Check keyboard, accessibility metadata, scaling, and contrast.
 accessibility:
     python3 scripts/check-writer-colors.py

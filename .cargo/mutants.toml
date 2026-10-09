@@ -1,0 +1,11 @@
+# Every critical-scope run includes an unmutated baseline and downstream consumers.
+# Test-only changes still run this complete scope in the required Rust CI lane.
+# The Just recipe reads and verifies exact contract paths from Cargo workspace metadata.
+test_package = ["recite-core", "recite-compiler", "recite-lsp", "recite-runtime"]
+test_tool = "nextest"
+profile = "mutants"
+additional_cargo_args = ["--locked"]
+copy_target = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0
