@@ -34,12 +34,6 @@ impl LspWorkspace {
             uris.remove(uri.as_str());
         }
         if let Some(target) = retired_target.as_deref() {
-            let retired_target_uris = self
-                .retired_schema_targets
-                .iter()
-                .filter(|(_, candidate)| candidate == &target)
-                .map(|(uri, _)| uri.clone())
-                .collect::<std::collections::BTreeSet<_>>();
             let target_remains_open = documents.documents().any(|document| {
                 self.retired_schema_targets
                     .get(document.identity().uri.as_str())
@@ -63,15 +57,9 @@ impl LspWorkspace {
             if !target_remains_open {
                 self.retired_schema_targets
                     .retain(|_, candidate| candidate != target);
-                // Global URI-only retirement can belong to another target
-                // whose schema has no usable target identity. Remove only the
-                // aliases proved to belong to the target whose final owner
-                // just closed; preserve unrelated conservative retirement.
-                self.retired_schema_uris
-                    .retain(|retired_uri| !retired_target_uris.contains(retired_uri));
-                for uris in retired.values_mut() {
-                    uris.retain(|retired_uri| !retired_target_uris.contains(retired_uri));
-                }
+                // URI retirement contains only open documents, and the closed
+                // URI was removed above. No URI mapped to this target remains
+                // open, so only its longer-lived target entries need cleanup.
             }
         }
         if self
