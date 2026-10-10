@@ -28,24 +28,22 @@ The schema must define:
 
 ### 10.2 Schema Model and Producers
 
-The schema has three separate surfaces:
+[`recite-core::schema`](../../crates/recite-core/src/schema/mod.rs) owns the canonical model and
+validation. Producers own source declarations and export deterministic JSON manifests for compiler,
+CLI and LSP consumption. Generated manifests are read-only derived artifacts. Dialogue validation
+must not execute game code, reflect over host types or load engine resources.
 
-1. a canonical Rust model in `recite-core`;
-2. a generated schema manifest consumed by `recite-compiler`, `recite-cli`, and `recite-lsp`;
-3. producer-specific authoring surfaces that create the manifest.
+Prefer native registrations for engine projects. Standalone projects use the source-owning TOML
+producer below. Through the shared authoring kernel, Writer and editor actions edit that source or
+open/regenerate through an engine producer, report stale output, and support structured failure and
+retry. Unsupported producers remain explicitly read-only and do not count as schema editing. Writer
+must expose the standalone path.
 
-For engine projects, the preferred producer is adapter or game code, not a parallel hand-authored
-schema configuration. Game projects already define typed handles, effect handlers, condition
-queries, enum state, speakers, and registries near their adapter code. Presentation projection query
-functions, projector definitions, and label templates may also originate in adapter or game code.
-Standalone projects without an engine producer must instead have a source-owning declarative
-producer path; the GUI edits that source and invokes deterministic generation rather than editing
-the manifest.
-
-The writer's explicit source-navigation and generation registration is specified in
-[Schema producer registration](../schema-producer-registration.md). Registration loading never
-executes a command; validated generated output is published only after an author-requested
-generation succeeds.
+[Producer registration](../schema-producer-registration.md) owns explicit navigation and generation
+actions; loading a registration executes nothing.
+[Adapter contract §7](../engine-adapter-contract.md#7-schema-manifest-generation) owns host-resource
+discovery, inclusion, provenance and freshness obligations. All producers must export the same
+manifest and pass its validation suite.
 
 #### 10.2.1 Standalone TOML source contract
 
@@ -71,92 +69,26 @@ while ignoring trivia, map order, generated fields, and diagnostic-only provenan
 schema fingerprint remains distinct and provenance safe. Producer IDs and fingerprints are the
 linkage used for stale-output comparisons.
 
-Producer APIs should be native to their host ecosystem. A Bevy adapter should feel like Rust, Godot
-adapters should support Godot-facing C# and/or GDScript surfaces, Unity should feel like C#, LÖVE
-should feel like Lua, and future adapters should follow the language their users already write.
-Those producer APIs may differ, but they must all export the same generated manifest and pass the
-same Recite manifest validation suite.
-
-Adapter registration should feel like ordinary typed game code. The Bevy/Rust adapter should support
-a builder style for explicit central registration:
-
-```rust
-schema
-    .condition("trust_gte")
-    .param::<ActorId>("actor_a")
-    .param::<ActorId>("actor_b")
-    .param::<i32>("threshold")
-    .returns_bool();
-
-schema
-    .condition("thread_stage")
-    .param::<ThreadId>("thread_id")
-    .returns_enum::<ThreadStageKind>();
-
-schema
-    .effect("play_sfx")
-    .immediate()
-    .param::<DialogueSoundEffectId>("sound_effect");
-```
-
-The Bevy/Rust adapter should also support derive or macro-based declarations from the start. Builder
-registration and derive declarations serve different ergonomic needs, and both lower into the same
-canonical model:
-
-```rust
-#[derive(ReciteEffect)]
-#[recite(name = "play_sfx", mode = "immediate")]
-struct PlaySfx {
-    sound_effect: DialogueSoundEffectId,
-}
-```
-
-The generated manifest is a deterministic, language-neutral data artifact. It is the only schema
-surface the compiler and LSP must understand. Compiler and editor tooling must not execute game code
-to validate dialogue.
-
-Generated manifests are compiler and LSP truth, but they are read-only derived artifacts: neither
-the GUI nor an editor may edit them directly. The shared authoring kernel must expose a
-source-owning schema-authoring capability. It must define at least one source-owning,
-kernel-editable declarative producer path suitable for GUI integration for standalone projects and
-producer-backed actions for engine-owned schemas. Those actions open the source declaration,
-invoke/regenerate through the producer, report stale output, surface structured failure and retry,
-and never write generated manifests directly. Unsupported producers are explicitly read-only and
-must not be counted as schema editing. The standalone source format is the TOML contract above. It
-lowers to the same canonical model while preserving producer provenance and deterministic
-regeneration. The GUI workbench must expose at least one standalone path.
-
-The host-agnostic export contract for adapter-produced manifests, including resource-backed metadata
-domains, presentation projection declarations, snapshot determinism, provenance, and stale-schema
-checks, lives in `docs/engine-adapter-contract.md` §7. This section defines the canonical schema
-model that those producers must lower into.
-
-The manifest format for v1 should be JSON unless implementation evidence shows that another data
-format materially improves the toolchain. JSON is widely generated by game tooling, easy for editor
-integrations to read, and adequate because the manifest is produced by adapters rather than
-hand-authored as the primary developer interface. The manifest is canonical only after parsing into
-the typed Rust model and sorting map-like collections deterministically for fingerprinting and
-diagnostics.
+A manifest becomes canonical after parsing into the typed model and sorting map-like collections for
+deterministic fingerprints and diagnostics.
 
 Recite should publish a JSON Schema for the generated manifest format. That JSON Schema validates
 manifest document shape only: required fields, allowed keys, scalar types, array/object structure,
 effect mode strings, and basic version compatibility. It is a useful public contract for adapter
 authors, CI checks, editor IntelliSense, and people inspecting generated manifests.
 
-The JSON Schema and manifest loader must classify adapter-produced provenance and producer metadata
-consistently with `docs/engine-adapter-contract.md` §7. Optional fields such as domain origins,
-value origins, context origins, producer fingerprints, schema export versions, and inclusion
-policies must be accepted only in their documented shapes. The loader must either preserve them for
-diagnostics, hovers, and stale-schema tooling or explicitly ignore non-canonical producer metadata;
-it must not accidentally treat diagnostic-only metadata as semantic validation input.
+The JSON Schema and manifest loader must classify provenance and producer metadata consistently with
+adapter contract §7. Optional fields such as domain origins, value origins, context origins,
+producer fingerprints, schema export versions, and inclusion policies must be accepted only in their
+documented shapes. The loader must either preserve them for diagnostics, hovers, and stale-schema
+tooling or explicitly ignore non-canonical producer metadata; it must not accidentally treat
+diagnostic-only metadata as semantic validation input.
 
-The v1 pre-1.0 contract deliberately resets producer-origin syntax: origins are structured objects
-containing `kind` and `id` (and optional `label`), not legacy strings. This intentional migration
-break is reported directly by the loader so a producer can regenerate its export. Namespaced
-producer-origin extension fields are retained as diagnostic-only JSON values and never affect the
-semantic schema fingerprint. Generated contextual domains must carry their resolved
-`missing_context` policy explicitly; a source-owning producer may resolve an omitted authoring
-option to `diagnostic` before exporting JSON.
+Origins are structured objects containing `kind` and `id`, with an optional `label`; the loader
+rejects legacy strings. Namespaced producer-origin extension fields remain diagnostic-only JSON
+values and never affect the semantic schema fingerprint. Generated contextual domains must carry
+their resolved `missing_context` policy explicitly; a source-owning producer may resolve an omitted
+authoring option to `diagnostic` before exporting JSON.
 
 JSON Schema is not the authority for Recite semantics. After document-shape validation, Recite must
 lower the manifest into the canonical Rust model and run semantic validation there. Semantic
@@ -165,32 +97,9 @@ return compatibility, effect arity/type checks, metadata target policy, markup p
 query function references, projector input/output references, presentation label placeholders,
 diagnostics, and deterministic fingerprinting.
 
-The Rust schema model should live in `recite-core::schema` and include:
-
-- `ProjectSchema`;
-- `ProducerMetadata`, including optional typed producer identity, overall content fingerprint,
-  export version, inclusion policy, and content freshness fingerprints kept outside the semantic
-  schema fingerprint;
-- `SchemaTypeDefinition`, including enum definitions;
-- `SchemaTypeRef`, covering built-in scalar types, speaker IDs, enum types, and registry-backed IDs,
-  and the metadata-only `symbol` scalar;
-- `ConditionDefinition`, including typed parameters and optional enum return type, and optional
-  availability reason mapping;
-- `AvailabilityReasonDefinition`, including localisable template text and typed parameters;
-- `EffectDefinition`, including typed parameters and supported modes;
-- `MetadataDefinition`, including targets, type, repeatability, and optional range constraints, and
-  optional domain reference;
-- `MetadataDomainDefinition`, including flat value sets, contextual value selectors, and optional
-  origin/fingerprint metadata for adapter-produced manifests;
-- `ProjectionQueryFunctionDefinition`, including typed parameters, return type, and optional
-  per-event call bound;
-- `SchemaPresentationProjectorDefinition`, including candidate selectors, typed inputs, query calls,
-  output definitions, and label templates;
-- `PresentationLabelDefinition`, including stable localisable template ID, source text, and typed
-  placeholders;
-- `MarkupDefinition`, including closing, translatability, and nesting policy;
-- `SpeakerDefinition`;
-- `RegistryDefinition`, including value snapshots and optional origin/fingerprint metadata.
+The public types and their fields are documented in `recite-core::schema`. All schema ingress,
+including native callers constructing a `ProjectSchema`, must use the same integrity validation;
+acceptance must not depend on whether the input arrived as JSON, TOML or Rust values.
 
 Metadata domains are named schema definitions. Metadata definitions reference domains by name rather
 than hardcoding special keys such as `portrait`.
@@ -228,16 +137,8 @@ Compiler validation, CLI validation, and LSP completions/diagnostics must consum
 manifest-backed metadata domain rules. The compiler is the authority for acceptance; LSP behavior is
 a live authoring projection of the same domain resolution.
 
-The generated manifest should be self-contained enough for validation without running the game.
-Registry-backed values should therefore be emitted as stable snapshots, optionally with
-source/origin metadata and fingerprints so tooling can explain where a value came from. If an
-adapter needs to read game data to build those snapshots, that happens during the explicit schema
-export command, not during normal Recite compilation or editor diagnostics.
-
-Adapter and standalone producer responsibilities for scanning host resources, exporting flat and
-contextual metadata-domain snapshots, recording provenance, and reporting stale manifests are
-normative in `docs/engine-adapter-contract.md` §7 and should not be redefined differently by
-engine-specific adapters.
+Registry-backed values are exported as self-contained snapshots, with optional origins and input
+fingerprints for the provenance and freshness checks in adapter contract §7.
 
 #### 10.2.3 Availability Reason Definitions
 
@@ -282,135 +183,46 @@ The primary reason override above uses the reusable `innkeeper_trust_hint` templ
 repeating prose on every choice. The compiler may still preserve any schema-derived detailed reason
 tree for trace and adapter output.
 
-Example generated manifest excerpt:
+The [full manifest fixture](../../fixtures/schema/valid/full_manifest.json) is an executable example
+of the generated format. Host setup and schema-producing APIs belong in each adapter's guide.
 
-```json
-{
-  "schema_version": 1,
-  "types": {
-    "thread_stage_kind": {
-      "kind": "enum",
-      "values": ["fresh", "tired", "angry", "fine", "completed"]
-    }
-  },
-  "registries": {
-    "dialogue_sound_effect": {
-      "values": ["snap", "door_close", "rain_window"],
-      "origin": {
-        "kind": "asset_path",
-        "id": "data/content/dialogue-sound-effects.toml"
-      }
-    }
-  },
-  "speakers": {
-    "rhea": {},
-    "hazel": {}
-  },
-  "metadata_domains": {
-    "portrait_all": {
-      "kind": "flat",
-      "values": ["flat", "concerned", "wry"]
-    },
-    "sound_effect": {
-      "kind": "flat",
-      "values": ["snap", "door_close", "rain_window"]
-    },
-    "portrait_by_speaker": {
-      "kind": "contextual",
-      "selector": "field:speaker",
-      "values_by_context": {
-        "rhea": ["flat", "concerned"],
-        "hazel": ["flat", "wry"]
-      },
-      "missing_context": {
-        "policy": "fallback",
-        "domain": "portrait_all"
-      }
-    },
-    "emotion_by_subject": {
-      "kind": "contextual",
-      "selector": "metadata:subject",
-      "values_by_context": {
-        "rhea": ["calm", "hurt", "angry"],
-        "hazel": ["calm", "guarded", "wry"]
-      },
-      "missing_context": { "policy": "diagnostic" }
-    }
-  },
-  "conditions": {
-    "thread_stage": {
-      "params": [{ "name": "thread_id", "type": "registry:thread" }],
-      "returns": "enum:thread_stage_kind"
-    },
-    "trust_gte": {
-      "params": [
-        { "name": "actor_a", "type": "registry:actor" },
-        { "name": "actor_b", "type": "registry:actor" },
-        { "name": "threshold", "type": "int" }
-      ],
-      "returns": "bool",
-      "availability_reason": {
-        "reason": "trust_too_low",
-        "args": {
-          "subject": "$actor_a",
-          "target": "$actor_b",
-          "threshold": "$threshold"
-        }
-      }
-    }
-  },
-  "availability_reasons": {
-    "trust_too_low": {
-      "template": "{subject} does not trust {target} enough.",
-      "params": [
-        { "name": "subject", "type": "registry:actor" },
-        { "name": "target", "type": "registry:actor" },
-        { "name": "threshold", "type": "int" }
-      ]
-    },
-    "innkeeper_trust_hint": {
-      "template": "The innkeeper is not ready to share that.",
-      "params": []
-    }
-  },
-  "effects": {
-    "play_sfx": {
-      "modes": ["immediate"],
-      "params": [{ "name": "sound_effect", "type": "registry:dialogue_sound_effect" }]
-    }
-  },
-  "metadata": {
-    "portrait": {
-      "targets": ["line"],
-      "type": "symbol",
-      "domain": "portrait_by_speaker"
-    },
-    "sfx": {
-      "targets": ["line", "choice"],
-      "type": "symbol",
-      "domain": "sound_effect",
-      "repeatable": true
-    }
-  },
-  "markup": {
-    "slow": { "requires_closing": true, "translatable": true },
-    "shake": { "requires_closing": true, "translatable": true }
-  }
-}
-```
+#### 10.2.4 Presentation Projection
 
-Hand-authored schema configuration may exist as a fallback for standalone experiments, tests, or
-projects without an adapter. That fallback must lower into the same `ProjectSchema` model and must
-not become the primary integration contract for typed game projects.
+Projection declarations describe pure presentation over runtime output. They are inspectable schema
+data; validation does not execute host queries. The canonical types live in
+[`recite-core::schema`](../../crates/recite-core/src/schema/mod.rs).
 
-Schema freshness is part of the authoring contract:
+Selectors address an event, metadata key/set on a declared target, or an availability reason. Inputs
+bind stable candidate identities, ordered metadata occurrences, reason arguments or literals. A
+candidate-relative input must apply to its selector: a choice ID cannot bind a line candidate.
+Project identity requires a declared stable project/content-set ID.
 
-- compiled assets compare against the current schema manifest fingerprint;
-- adapter tooling should provide a command to regenerate the manifest;
-- adapter tooling should provide a check that reports stale generated schema manifests where the
-  host ecosystem can support it;
-- Recite diagnostics should clearly distinguish dialogue errors from stale or malformed schema
-  manifest errors.
+Repeated metadata is explicit: `Only` requires exactly one value; `First`, `Last` and `Index` select
+in source order; `All` produces an array and requires an array-compatible input type. Validation
+checks metadata targets and domains, query names, argument/result types, input references, output
+fields and template bindings. Query functions are schema-global declarations separate from condition
+functions; calls take their return type from the declaration.
+
+Each projector and output has a stable ID. Affordance identity derives from projector ID, output ID,
+target identity and relevant metadata occurrence, never an address, counter or display label.
+Projectors, queries and outputs are ordered by their canonical sorted IDs. Query-result references
+may name only earlier queries in that order; forward dependencies are invalid. Within an event,
+candidate order is event, prompt container, prompt line, choices in runtime order, effect request,
+current block, then project. Repeated values retain authored metadata order. Query results retain
+request order even if a host batches or caches equivalent queries.
+
+Labels have stable extraction IDs, source templates and named typed bindings to declared inputs or
+query results. Translations preserve those placeholders. Structured output retains target, kind,
+slot, provenance and bound fields alongside the localized label; a rendered string alone is not a
+portable projection result.
+
+V1 does not require a core projection executor. A host that implements projection must document when
+queries run, how displayed projections refresh and how structured failures surface. Work is bounded
+by the event, reachable compiled metadata and declared projectors; resource discovery belongs to
+schema export. Projection cannot alter runtime text, choice order or availability, IDs, targets,
+effects or session state; execute game mutations or random rolls; or become a save/load dependency.
+The same event and host context produce the same affordances. Refreshing labels after host state
+changes does not reevaluate a frozen prompt's availability.
 
 ### 10.3 Validation Reporting
 

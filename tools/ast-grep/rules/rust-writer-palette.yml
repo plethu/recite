@@ -1,0 +1,58 @@
+id: rust-writer-palette
+language: Rust
+severity: error
+files:
+  - "apps/writer/crates/freya/src/**/*.rs"
+ignores:
+  - "apps/writer/crates/freya/src/design/palette.rs"
+  - "apps/writer/crates/freya/src/design/material.rs"
+  - "**/tests.rs"
+message: Construct Writer colours in the semantic palette or material owner.
+note: |
+  Presentation may use TRANSPARENT or interpolate palette values with lerp.
+  Keep raw constants, constructors, Color aliases and qualified trait construction
+  in the palette/material owners. This syntax gate checks visible Rust and macro
+  tokens; it does not expand external macros or infer conversion target types.
+rule:
+  any:
+    - all:
+        - kind: scoped_identifier
+        - has:
+            field: path
+            regex: '\b(r#)?Color$'
+        - not:
+            has:
+              field: name
+              regex: "^(r#)?(TRANSPARENT|lerp)$"
+    - all:
+        - kind: use_as_clause
+        - has:
+            field: path
+            regex: '\b(r#)?Color$'
+    - all:
+        - kind: type_item
+        - has:
+            field: type
+            regex: '\b(r#)?Color$'
+    - all:
+        - kind: qualified_type
+        - has:
+            field: type
+            regex: '\b(r#)?Color$'
+    - all:
+        - kind: identifier
+        - regex: "^(r#)?Color$"
+        - inside:
+            kind: token_tree
+        - precedes:
+            stopBy:
+              kind: identifier
+            all:
+              - regex: "^::$"
+              - precedes:
+                  stopBy:
+                    kind: identifier
+                  all:
+                    - kind: identifier
+                    - not:
+                        regex: "^(r#)?(TRANSPARENT|lerp)$"

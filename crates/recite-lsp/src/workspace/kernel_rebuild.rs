@@ -176,8 +176,7 @@ impl LspWorkspace {
                     fresh = schema
                         .schema()
                         .cloned()
-                        .map(AuthoringKernel::with_schema)
-                        .unwrap_or_default();
+                        .map_or_else(|| Ok(AuthoringKernel::new()), AuthoringKernel::with_schema)?;
                     &fresh
                 };
                 let request = super::kernel::authoring_request(

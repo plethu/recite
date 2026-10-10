@@ -17,7 +17,10 @@ pub unsafe extern "C" fn recite_session_snapshot(
         set_last_error("null pointer argument");
         return ReciteStatus::Validation;
     }
-    let guard = super::lock_sessions();
+    let guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     let ffi_session = match guard.get(&session_handle) {
         Some(session) => session,
         None => {

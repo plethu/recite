@@ -174,6 +174,7 @@ fn hash_snapshot_conversion_error(
     error: &recite_runtime::snapshot::DialogueSessionSnapshotConversionError,
 ) {
     match error {
+        recite_runtime::snapshot::DialogueSessionSnapshotConversionError::AvailableChoiceHasReasons => tag(hasher, 1),
         recite_runtime::snapshot::DialogueSessionSnapshotConversionError::InvalidAvailabilityReasonId {
             id,
             source,

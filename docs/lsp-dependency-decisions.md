@@ -33,18 +33,11 @@ encountering a dependency defect. A newer version or an elapsed date alone does 
 repeating the entire experiment suite. There is no scheduled benchmark job or automatic migration
 attached to this plan.
 
-| Candidate            | When to reopen                                                                                                                                                                                                                                                                      | First experiment and evidence needed                                                                                                                                                                                                                                        |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gen-lsp-types`      | First priority at a needed protocol-feature upgrade, a released edit-union repair, or a dedicated replacement of frozen `lsp-types`. Check its status during the v1 dependency review.                                                                                              | Rerun malformed-edit decoding and missing/null controls. Preserve strict acceptance through a small ingress representation if necessary; then establish whole-server wire parity. The existing compile-error count is not a rejection criterion.                            |
-| `str_indices`        | A profile shows scalar/UTF-16 counting or conversion materially contributes to diagnostics/query latency, or those loops become a demonstrated maintenance problem.                                                                                                                 | Try a narrow count/conversion replacement before reviving the combined prototype. Measure the affected operation end to end; this narrower variant is currently untested.                                                                                                   |
-| Ropey                | Real editing profiles show transaction copying or offset lookup dominates, representative documents grow beyond the tested sizes, or an independently justified analysis change can consume chunks.                                                                                 | Reapply the protocol-store prototype. Include initial construction, repeated edits, full replacements, flattening, peak memory and Unicode-feature unification. Improve the relevant workload without hiding the previous full-replacement regressions.                     |
-| `line-index`         | Repeated LF-based compiler/query conversions become hot and a snapshot can reuse one index across enough operations to amortize construction.                                                                                                                                       | Compare the complete projection path, including construction and retained memory. Preserve scalar columns, source spans and CRLF treatment. Protocol bare-CR support needs its own explicit solution.                                                                       |
-| crop                 | A released API supports the required CR/CRLF/LF semantics, or a separate chunk-based text-buffer requirement makes its byte-oriented representation useful.                                                                                                                         | Rerun the complete position corpus, strict surrogate checks and atomic transactions; compare against Ropey as well as String, including flattening. Avoid maintaining a second line index merely to adapt it.                                                               |
-| lspf                 | A release offers pre-mutation validation/rejection or custom document ownership, plus a supported publication boundary that can preserve freshness and cancellation. Alternatively, a demonstrated coordinator maintenance burden justifies testing its existing interception APIs. | Rerun the built-server controls and all rejected-input cases. Count the transport interceptor, validation state, encoding adaptation and publication coordination against gross deletions. Record the required toolchain upgrade; a 1.x label alone does not establish fit. |
-| Tower community fork | A supported integration hook preserves ordered mutation and the required publication authority, or lifecycle/routing code grows into a material maintenance burden.                                                                                                                 | Test suspended notification ordering, saturated cancellation and cancellation before writer acceptance. Inventory actual removed owners; a stable release alone does not establish savings.                                                                                 |
-| `async-lsp`          | A released version repairs saturation, and there is a concrete reason to replace protocol orchestration.                                                                                                                                                                            | Rerun the explicit readiness/gate probe with its capacity-two control before any backend migration. Then test ordering, shutdown and final publication authority.                                                                                                           |
-| `lsp-textdocument`   | A released transactional/checked API replaces substantial strict edit validation rather than requiring it alongside the dependency.                                                                                                                                                 | Replay malformed batches, stale versions, surrogate interiors, `rangeLength` and all newline conventions. Count remaining validation and staging code before benchmarking.                                                                                                  |
-| Salsa                | Profiling or concrete maintenance changes show manual query invalidation/recomputation is a bottleneck; evidence points beyond protocol transport.                                                                                                                                  | Replace one bounded analysis query and compare invalidation ownership, deterministic diagnostics, cancellation, recovery and retained memory. Do not begin with a whole-analysis rewrite.                                                                                   |
+Reopen a dependency for a required capability, a repaired contract violation or a measured ownership
+problem. For text libraries, replay strict UTF-16/CR/CRLF/LF acceptance, atomic edits and stale
+versions, including construction, flattening and retained memory. For frameworks, test saturated
+cancellation, ordered mutation, shutdown and publication freshness. For Salsa, replace one bounded
+analysis query before considering a whole-analysis migration.
 
 For every reopened candidate, refresh maintenance, licensing, supported features and platform
 requirements before compiling it. Use the retained reproductions as a starting point and the
@@ -67,11 +60,8 @@ whole owner. Cross-platform counters alone do not distinguish Python from Go.
 
 The
 [bounded language probes](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/tooling-language-evidence.json.gz)
-preserve source, dependency locks and Linux observations. Rust/sysinfo and Go/gopsutil matched
-deliberate memory/CPU/thread/descriptor growth. Node's existing JSON-RPC client and the Go client
-matched initialize, open/edit diagnostics and definition against the Python control. Go also sampled
-the live server, shut it down and rejected reads from the reaped child. These are critical seams,
-not complete ports or comparative end-to-end performance measurements.
+record dependency locks and tested process/protocol seams, not complete ports or comparative
+end-to-end performance.
 
 | Option                         | Benefit and remaining cost                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -80,12 +70,8 @@ not complete ports or comparative end-to-end performance measurements.
 | Python + psutil                | Existing validated harness and native counter library. Adds Python/uv, environment management and learning cost; use one locked package/CLI. Retention is bounded to this owner, not permission to grow Python across unrelated automation.                                                                                                                              |
 | Node/TypeScript                | Existing editor protocol ecosystem works, but inspected process packages do not supply the complete resource contract. No case demonstrated for expanding Node or splitting the harness across runtimes.                                                                                                                                                                 |
 
-Go and psutil took approximately 34 and 17 microseconds per settled Linux sample respectively (six
-alternating rounds of 1,000 samples, excluding startup and output encoding). Neither establishes
-material checkpoint interference or whole-driver superiority. The Go sampler cross-compiled for
-macOS ARM64 and Windows x86_64 with CGo disabled; native alternative runs remain unperformed. The
-inspected macOS gopsutil methods can ignore failed native reads. Invalid or exited-process samples
-must fail closed, including CPU-only idle measurements.
+Native alternative runs on macOS and Windows remain unperformed. Invalid or exited-process
+measurements must fail closed, including CPU-only idle samples.
 
 For the next substantial harness ownership change, compare a private Rust tool and Go against the
 existing Python owner before extending it. A full replacement must preserve report schemas,
@@ -94,33 +80,3 @@ maintenance or material interference reduction. Measure cold setup and warm comm
 driver CPU/RSS. Preserve the complete-body timestamp before JSON decoding, encoding before the send
 timer, and monotonic elapsed time; recalibrate budgets explicitly if those boundaries change. Do not
 drop a counter or add a permanent sampler daemon merely to make a language migration fit.
-
-## Comparable Rust projects
-
-Primary-source inspection on 7 October 2026 found deliberate mixtures rather than a universal
-Rust-project convention:
-
-- [rust-analyzer's Rust xtask](https://github.com/rust-lang/rust-analyzer/blob/master/xtask/src/main.rs)
-  owns auxiliary build, installation, distribution, code generation and metrics.
-- [Bevy's Rust CI tool](https://github.com/bevyengine/bevy/blob/main/tools/ci/src/main.rs) owns its
-  command dispatcher in an unpublished tools workspace member.
-- [Rust bootstrap](https://github.com/rust-lang/rust/blob/main/src/bootstrap/README.md) uses Python
-  to acquire the stage-zero toolchain and compile the main Rust build system. Its Python entrypoint
-  is not evidence that the whole build system is Python.
-- [uv's contributor guide](https://github.com/astral-sh/uv/blob/main/CONTRIBUTING.md) documents Rust
-  development/generation, Python external benchmark scripts and additional formatting/docs tools.
-  Its Python-product context differs from Recite.
-
-The inference for Recite is to reuse its Rust ownership for substantial general tooling, evaluate a
-specialist external harness separately, and keep one ordinary command owner. None of these examples
-establishes that adopting their entire toolchain mix would improve this repository.
-
-References: [psutil process API](https://psutil.io/api/),
-[sysinfo tasks](https://docs.rs/sysinfo/latest/sysinfo/struct.Process.html#method.tasks),
-[libproc task API](https://docs.rs/libproc/0.14.11/libproc/proc_pid/fn.pidinfo.html),
-[gopsutil Windows counters](https://github.com/shirou/gopsutil/blob/v4.26.9/process/process_windows.go),
-[macOS counters](https://github.com/shirou/gopsutil/blob/v4.26.9/process/process_darwin.go),
-[Go module footprint](https://github.com/shirou/gopsutil/blob/v4.26.9/go.mod),
-[Go monotonic clocks](https://pkg.go.dev/time#hdr-Monotonic_Clocks),
-[pidusage](https://github.com/soyuka/pidusage),
-[systeminformation process fields](https://systeminformation.io/processes.html).

@@ -349,4 +349,13 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         ],
         &["Restore the missing tag occurrence in the translated value."],
     ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE050",
+        DiagnosticCategory::Validation,
+        "A condition expression exceeds the compiled nesting limit.",
+        &[
+            "Boolean operators are nested too deeply. Parentheses alone do not add to compiled depth.",
+        ],
+        &["Simplify the nested condition or move part of its logic into a condition function."],
+    ),
 ];

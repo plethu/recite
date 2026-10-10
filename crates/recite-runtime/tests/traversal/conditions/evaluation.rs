@@ -32,8 +32,8 @@ fn condition_failure_is_structured_and_keeps_session_position() {
 }
 
 #[test]
-fn deeply_nested_condition_returns_structured_depth_error() {
-    let mut asset = compile_asset(
+fn deep_conditions_are_rejected_before_start_or_traversal() {
+    let asset = compile_asset(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -42,19 +42,23 @@ fn deeply_nested_condition_returns_structured_depth_error() {
             "    Secret.\n",
             "-> END\n",
         ),
-    )
-    .into_payload();
+    );
+    let mut session = start_scene(&asset, None).expect("valid asset starts");
+    let mut asset = asset.into_payload();
     let CompiledStatementKind::If { condition, .. } = &mut asset.statements[0].kind else {
         panic!("expected if statement");
     };
     *condition = deeply_nested_condition(150);
     let asset = CompiledDialogue::new(asset);
     let context = RecordingContext::default().with("trusts", true);
-    let mut session = start_scene(&asset, None).expect("starts");
+    assert!(
+        matches!(start_scene(&asset, None), Err(DialogueError::MalformedCompiledAsset { reason }) if reason.contains("condition depth exceeds 128"))
+    );
 
-    assert_eq!(
-        next_with_context(&asset, &mut session, &context),
-        Err(DialogueError::ConditionDepthLimitExceeded { limit: 128 })
+    // A caller supplying a different malformed asset after start still cannot
+    // enter the host condition callback through traversal.
+    assert!(
+        matches!(next_with_context(&asset, &mut session, &context), Err(DialogueError::MalformedCompiledAsset { reason }) if reason.contains("condition depth exceeds 128"))
     );
     assert!(
         context.calls().is_empty(),

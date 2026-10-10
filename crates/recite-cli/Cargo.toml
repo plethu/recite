@@ -18,6 +18,7 @@ crossterm.workspace = true
 language-tags.workspace = true
 notify.workspace = true
 ratatui.workspace = true
+recite-adapter.workspace = true
 recite-benchmarks = { path = "../recite-benchmarks", version = "0.1.0" }
 recite-build.workspace = true
 recite-compiler.workspace = true

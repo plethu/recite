@@ -9,7 +9,7 @@ run *args:
 
 # Verify the maintained writer and its source-editing model.
 check:
-    python3 scripts/check-writer-colors.py
+    mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-palette$'
     just writer packaging
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
@@ -36,7 +36,7 @@ coverage:
 
 # Check keyboard, accessibility metadata, scaling, and contrast.
 accessibility:
-    python3 scripts/check-writer-colors.py
+    mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-palette$'
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test accessibility --test commands --test keybindings --test options --test picker --test text_input --test writing_workspace
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib design::
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib feedback::

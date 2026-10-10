@@ -178,6 +178,16 @@ locale = "fr-FR"
                 "id": "trust_too_low",
                 "source_text": "{subject} does not trust {target} enough ({threshold}).",
                 "localized_template": "{subject} does not trust {target} enough ({threshold}).",
+                "localisation": {
+                    "matched_locale": null,
+                    "matched_context": null,
+                    "matched_key": null,
+                    "outcome": "missing_entry",
+                    "attempts": [
+                        {"locale": "fr-FR", "context": "availability_reason:trust_too_low", "key": "trust_too_low", "outcome": "missing_entry"},
+                        {"locale": "fr", "context": "availability_reason:trust_too_low", "key": "trust_too_low", "outcome": "missing_entry"}
+                    ]
+                },
                 "text": "hazel does not trust rhea enough (3).",
                 "origin": {
                     "type": "condition_call",

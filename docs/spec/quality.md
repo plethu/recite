@@ -27,23 +27,10 @@ Supported test patterns:
 
 ### 17.2 Example Rust Test
 
-```rust
-let asset = compile_fixture("small_talk.recite");
-let mut session = start_scene(&asset, Some("small_talk_start"), locale!("en-GB"))?;
-let mut fixture = DialogueFixture::default()
-    .with_condition("trust_gte(hazel, rhea, 3)", true)
-    .auto_ack_effects();
-
-let trace = run_to_end(&mut session, &fixture)?;
-
-assert_snapshot!(trace.transcript);
-assert_eq!(
-    trace.deferred_effects,
-    vec![
-        effect!("advance_thread", "rhea_job_response", "fine"),
-    ],
-);
-```
+Use the [runtime integration tests](../../crates/recite-runtime/tests) and
+[headless CLI walkthrough](../../docs-site/src/content/docs/examples/headless-cli.md) as executable
+examples. Assert emitted values and state transitions, including rejection without mutation;
+documentation wording is not a behavioral test.
 
 ### 17.3 Fixture Format
 
@@ -80,18 +67,10 @@ dialogue localisation requires the project's declared default and fallback local
 
 ### 17.4 Adapter Conformance Fixtures
 
-The normative adapter conformance fixture contract is in `docs/engine-adapter-contract.md` §13 and
-is backed by `fixtures/adapter-conformance/v1/`.
-
-Testing policy:
-
-- mandatory scenarios cover every stable adapter error category from contract §12;
-- source/schema freshness scenarios are capability-gated by adapter-declared source/schema import
-  visibility;
-- compiled-asset compatibility and save/load identity scenarios are mandatory;
-- scenarios that require concrete adapters remain in the manifest as `adapter_runner_required` with
-  operation/result shape and runner notes;
-- reference-driver checks must fail when §12 categories drift from fixture schema tables.
+[Adapter contract §13](../engine-adapter-contract.md#13-adapter-conformance-fixtures) owns required
+scenarios, capability gates and category drift checks. The published
+[fixtures](../../fixtures/adapter-conformance/v1/) supply the operation/result contract; each
+adapter must exercise its applicable cases through the real host surface.
 
 ### 17.5 Enforced Rust test assurance
 
@@ -158,16 +137,15 @@ Diagnostic codes should be namespaced, for example:
 
 ## 19. Performance and Benchmarks
 
-Performance is part of the product contract. Recite is intended for games that validate dialogue in
-CI, run headless tests frequently, and may load large narrative projects during editor workflows.
-Benchmarks must cover authoring, compilation, runtime traversal, localization, and adapter overhead.
+Benchmarks must cover authoring, compilation, runtime traversal, localisation and adapter overhead.
+Strategy, workbench and release decisions require evidence naming the fixture, runner, build
+profile, measurement method and regression policy. A result applies to that profile, not every
+machine or OS.
 
-All numeric budgets in this section are **aspirational targets, not contracts**, until a baseline
-exists from realistic fixtures. They will be re-evaluated against measured numbers; failing to hit a
-target is a benchmark report, not an automatic acceptance failure. Evidence is nevertheless required
-at the strategy, workbench, and release gates: each release baseline must name its fixture, runner,
-build profile, measurement method, and regression policy. Benchmarks are part of the serious-v1
-evidence package even where a target is not yet a hard threshold.
+The numeric targets below guide investigation until realistic baselines establish an enforced
+budget. A missed target must be reported, but blocks acceptance only where a reviewed policy names
+the baseline, runner, threshold and enforcement point. §19.8 identifies the current paired LSP gate.
+Changes to budgets require explicit review.
 
 ### Authoring refresh layers
 
@@ -187,40 +165,19 @@ runtime patching of active dialogue sessions.
 
 ### 19.1 Benchmark Harness
 
-The workspace must include repeatable benchmarks using Criterion or an equivalent Rust benchmark
-framework.
+The [Criterion targets](../../crates/recite-benchmarks/benches/) own maintainer benchmark cases. Use
+the [benchmark guide](../../docs-site/src/content/docs/reference/benchmarks.md) for suite and
+fixture selection, and [profiling and optimisation](../profiling-and-optimisation.md) for focused
+measurements, sampling and allocation evidence.
 
-Benchmarks must be runnable through:
+`recite bench <fixture-or-project>` is the stable product-facing report surface. It should support
+CI-readable JSON, Markdown summaries, local baseline comparison, benchmark-group filtering and
+fixture-scale selection. It complements the maintainer harness; Criterion output is not a product
+format contract.
 
-```text
-cargo bench
-recite bench <fixture-or-project>
-```
-
-`cargo bench` is the maintainer microbenchmark harness. It may use Criterion warmup, sampling,
-plots, local profiler integration, and maintainer-only target selection without treating its output
-format as a product contract.
-
-`recite bench` is the stable product-facing report surface. It exists for adoption evidence, release
-notes, CI-readable JSON, and local comparison against an explicitly supplied baseline snapshot. It
-must not replace or weaken the maintainer benchmark harness.
-
-The CLI benchmark command should support:
-
-- JSON output for CI comparison;
-- Markdown summary output for release notes;
-- baseline comparison against a checked-in, downloaded, or otherwise local benchmark snapshot;
-- filtering by benchmark group;
-- fixture scale selection.
-
-Synthetic names such as `tiny`, `small`, `medium`, `large`, and `epic` are fixture IDs, not
-self-explanatory performance claims. Every user-facing report must include concrete project-shape
-counts such as source files, blocks, dialogue lines, choices, effects, conditions, generated words,
-and relevant byte sizes where available.
-
-Timing deltas are evidence for the named run profile that produced them. They are not absolute
-performance guarantees, cross-machine promises, or hard release gates unless a separate regression
-policy explicitly defines a baseline, runner profile, threshold, and enforcement point.
+Reports must show concrete project shape: source files, blocks, lines, choices, effects, conditions,
+generated words and relevant byte sizes. Names such as `tiny` or `epic` identify fixture profiles;
+they do not establish performance.
 
 ### 19.2 Benchmark Fixtures
 
@@ -228,15 +185,7 @@ The repository must include synthetic and realistic fixtures. Synthetic fixtures
 from named scale profiles so compiler, runtime, CLI, LSP, and adapter benchmarks exercise the same
 deterministic project shapes.
 
-Synthetic scale profiles:
-
-| Profile | Blocks |  Lines | Choices | Localizable entries | Generated words |
-| ------- | -----: | -----: | ------: | ------------------: | --------------: |
-| tiny    |     10 |    100 |      20 |           about 120 |     about 1,000 |
-| small   |    100 |  1,000 |     200 |         about 1,200 |    about 10,000 |
-| medium  |  1,000 | 10,000 |   2,000 |        about 12,000 |   about 100,000 |
-| large   |  5,000 | 50,000 |  10,000 |        about 60,000 |   about 500,000 |
-| epic    | 10,000 | 80,000 |  20,000 |       about 100,000 | about 1,000,000 |
+The benchmark fixture definitions own each profile's exact counts.
 
 Each synthetic profile must define deterministic structural complexity targets:
 
@@ -294,179 +243,75 @@ Measurement hygiene:
 
 ### 19.3 Compiler Benchmarks
 
-Compiler benchmarks must measure:
+The [compiler target](../../crates/recite-benchmarks/benches/compiler.rs) owns individual cases.
+Required coverage spans parsing, lowering, validation, POT extraction and asset encoding. Validation
+measurements must expose schema, reference-resolution, ID-check and markup costs; report compiled
+size and the parser/AST memory costs in §19.7.
 
-- parse time;
-- lowering time;
-- parser syntax tree memory;
-- source AST allocation volume;
-- validation time;
-- schema validation time;
-- block reference resolution time;
-- ID uniqueness check time;
-- markup validation time;
-- POT extraction time;
-- compiled asset serialization time;
-- compiled asset size.
-
-Initial target budgets on a typical developer laptop:
-
-- small project compile: under 100 ms;
-- medium project compile: under 1 s;
-- large project compile: under 5 s;
-- no superlinear blowups for ID checks, block resolution, or schema validation.
-
-These are targets, not hard promises. If targets are missed, the benchmark report must make the cost
-visible.
+Initial compile targets on a typical developer laptop are under 100 ms for small projects, 1 s for
+medium and 5 s for large. ID checks, reference resolution and schema validation must avoid
+superlinear blowups.
 
 ### 19.4 Runtime Benchmarks
 
-Runtime benchmarks must measure:
+The [runtime target](../../crates/recite-benchmarks/benches/runtime.rs) owns individual cases.
+Coverage must include session start, line/prompt advancement, choice selection, condition dispatch,
+all effect modes and blocking acknowledgement, locale lookup, snapshot save/restore and complete
+fixture-driven traversal.
 
-- `start_scene`;
-- `next` for line events;
-- `next` for prompt events;
-- choice selection by ID;
-- condition evaluation dispatch overhead;
-- deferred effect collection;
-- immediate effect emission;
-- blocking effect pause and acknowledgement;
-- locale lookup overhead;
-- session serialization;
-- session deserialization;
-- full scene traversal with fixture context.
-
-Initial target budgets:
-
-- `next` without condition evaluation: allocation-free or near allocation-free after asset load;
-- line/prompt advancement: comfortably under 50 us per event in release builds;
-- choice selection by ID: effectively O(1) or O(log n), never linear over all project choices;
-- session save/load: proportional to session state, not compiled asset size;
-- runtime traversal must not clone full compiled assets.
+After asset load, advancement without condition evaluation should be allocation-free or nearly so;
+release line/prompt advancement targets under 50 us per event. Choice selection must be O(1) or
+O(log n), never linear over all project choices. Save/load cost should follow session state rather
+than compiled asset size, and traversal must not clone full compiled assets.
 
 ### 19.5 LSP and Editor Benchmarks
 
-LSP performance must be measured because authoring quality is a core product goal.
+The [LSP target](../../crates/recite-benchmarks/benches/lsp.rs) and
+[process harness](../../scripts/lsp_tools/) cover different boundaries. Evidence must include
+initial indexing, open/edit parsing, diagnostic refresh, completion, definition, block rename and
+index memory. Initial targets are completion under 50 ms for small/medium projects and diagnostics
+under 100 ms for typical single-file edits. Large-project indexing should be incremental and
+cancellable; a file-local edit must not force unnecessary whole-project parsing.
 
-Benchmarks must cover:
-
-- initial project indexing;
-- open file parse;
-- incremental edit parse;
-- diagnostics refresh;
-- completion latency;
-- go-to definition latency;
-- rename block latency;
-- memory usage for indexed projects.
-
-Initial target budgets:
-
-- completion response under 50 ms for small/medium projects;
-- diagnostics update under 100 ms for typical single-file edits;
-- large project indexing should be incremental and cancellable;
-- editor operations must avoid reparsing the entire project when a file-local edit is sufficient.
-
-The standalone GUI workbench must be measured on every declared platform using the same
-representative fixture and authoring operations. Its evidence must cover cold and warm startup,
-project open and index, source edit to diagnostics, schema and localisation view refresh, preview
-transition, graph navigation, and idle/active memory. These measurements inform the native strategy
-bake-off and the release baseline; cross-platform timing claims must identify the host profile
-rather than presenting one operating system as universal evidence.
+Measure Writer on every declared platform with the same representative fixture: cold/warm startup,
+project open/index, edit-to-diagnostics, schema/catalogue refresh, preview, graph navigation and
+idle/active memory. Headless LSP measurements do not establish those native GUI costs.
 
 ### 19.6 Engine Adapter Benchmarks
 
-Engine adapters must measure:
-
-- asset loading and conversion overhead;
-- event emission overhead;
-- active session update overhead per frame or tick;
-- condition handler dispatch overhead through the host engine;
-- generated typed effect event/signal conversion overhead.
-
-An adapter should add negligible frame cost when no dialogue session is active.
+Measure asset loading/conversion, event and typed-wrapper conversion, active-session update, and
+host condition dispatch. Package guides own host-specific probes. Idle adapters should add
+negligible frame cost.
 
 ### 19.7 Memory Metrics
 
-Benchmarks must report memory-sensitive metrics where practical:
-
-- syntax tree size during parser-heavy flows;
-- source AST allocation volume;
-- compiled asset size;
-- peak compiler memory;
-- runtime session size;
-- LSP project index size;
-- number of allocations during hot runtime traversal;
-- number of clones of large strings or metadata vectors.
-
-The runtime should prefer shared immutable compiled data plus compact session state.
+Report parser tree size, AST allocation volume, compiled asset size, peak compiler memory, session
+size, LSP index size, hot-path allocations and large string/metadata clones where practical. The
+[profiling guide](../profiling-and-optimisation.md) distinguishes retained memory, allocation churn
+and structural size reports. Runtime data should remain shared and immutable, with compact session
+state.
 
 ### 19.8 Regression Policy
 
-CI should run a fast, non-comparative benchmark smoke suite on pull requests that affect core Rust,
-benchmark fixtures, or shared build inputs, and on the weekly complete CI run. Documentation-only
-changes do not require benchmark builds. A fuller benchmark suite belongs on release branches or
-scheduled jobs. The pull-request smoke suite must use the existing `crates/recite-benchmarks`
-Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit compiler/runtime/preview/LSP bench
-target commands. It proves that the tiny compiler, runtime, preview, and LSP benchmarks build and
-execute quickly; it does not compare timings or enforce regression thresholds.
+Pull requests affecting core Rust, fixtures or shared build inputs, and the weekly complete run,
+should execute the existing tiny compiler/runtime/preview/LSP Criterion smoke targets. Documentation
+changes do not require benchmark builds. Smoke proves execution; fuller suites belong on release
+branches or scheduled jobs.
 
-The benchmark lane additionally compares release LSP binaries against the change base on the same
-Ubuntu 24.04 runner. The current harness and generated large fixture drive both binaries. Three
-alternating pairs measure six real edit kinds in full and negotiated sync modes, eight query/action
-kinds, shared-destination invalidation, fresh-process indexing/opening and peak RSS. Each has two
-warmups and 21 recorded samples with exact output fingerprints. Warm latency regressions must exceed
-both 20% and 2 ms, occur in at least two pairs, and recur in a second three-pair round. The first
-round covers every workload. Confirmation repeats only affected probe families, with each family's
-request order, warmups and sample counts unchanged. Each round records its exact coverage; startup
-and peak-memory observations remain coupled. Fresh-process readiness uses 30% plus 50 ms; document
-opening uses 30% plus 10 ms; peak RSS through indexing/opening uses 20% plus 16 MiB. The
-shared-destination fixture has 100 files, 2,000 blocks and 20,000 dialogue lines with references to
-ten shared files. Fresh-process samples use a warm filesystem, not cold storage.
+The paired LSP gate compares base and candidate binaries on the same named Linux runner. Its
+[policy](../../scripts/lsp-performance-policy.json) and [harness](../../scripts/lsp_tools/) own
+workloads, samples, thresholds and confirmation rounds. It requires complete coverage and matching
+output fingerprints, with raw samples and binary identities retained as CI artifacts. It covers
+those process workloads, not cross-platform rendering or long-lived memory.
 
-Incomplete or inconsistent evidence fails the check rather than reporting success. The checked-in
-policy is `scripts/lsp-performance-policy.json`; raw samples and revision/binary identities are
-retained as CI artifacts. Full and ranged sustained sessions check settlement and continued service.
-A burst probe sends 25 edits at 5 ms intervals separated by 150 ms pauses; diagnostics and
-successful completion, definition, rename and fix-all responses must recover within 500 ms of the
-last edit. Freshness checks remain mandatory under overload.
-
-This gate protects the measured Linux process workloads. It does not establish cross-platform editor
-rendering or long-lived memory budgets. Issue #109 still owns the named release/scheduled benchmark
-baseline and fuller regression suite; issue #77 owns the evidence ledger and release-gate decision
-that consume its results. Those broader guarantees must not be inferred from the smoke or paired LSP
-comparison.
-
-Regression thresholds must be explicit and reviewable. They become blocking only when measured
-against an agreed baseline and execution profile, such as a stable Linux runner or documented
-release-measurement profile. Before those baselines exist, exceeding a threshold is a review trigger
-rather than an automatic failure. The paired LSP gate above supplies an explicit comparative
-baseline and rerun policy for its covered operations.
-
-Initial regression review thresholds:
-
-- more than 10% regression in hot runtime paths;
-- more than 20% regression in compiler/LSP paths;
-- any accidental O(n^2) behaviour on medium or large fixtures;
-- unexpected allocation increases in allocation-sensitive runtime benchmarks.
-
-Benchmark thresholds must be adjustable as the implementation matures, but changes to thresholds
-should be reviewed explicitly. GUI performance and accessibility evidence must also record blocking
-regressions (for example, keyboard/focus loss, screen-reader dead ends, unusable zoom, or an
-interaction that becomes impossible under high contrast), even where no numeric threshold is
-enforced.
+Outside that gate, initial review triggers are more than 10% regression in hot runtime paths, more
+than 20% in compiler/LSP paths, accidental O(n^2) work on medium/large fixtures, or unexplained
+hot-path allocation growth. GUI evidence must also record blocking accessibility regressions such as
+lost focus, screen-reader dead ends, unusable zoom or inaccessible high-contrast controls.
 
 ### 19.9 Trace Metrics
 
-`recite trace` should optionally emit performance counters:
-
-- event count;
-- line count;
-- prompt count;
-- choice count;
-- condition evaluation count;
-- effect count by mode;
-- localization lookup count;
-- elapsed traversal time;
-- maximum serialized session size.
-
-This makes real project dialogue scenes measurable without requiring users to write Rust benchmarks.
+`recite trace --metrics` provides optional instrumentation; timing fields are not snapshot-stable.
+Default traces remain deterministic. The
+[CLI trace reference](../../docs-site/src/content/docs/reference/cli.md) owns invocation, and
+[`TraceMetrics`](../../crates/recite-cli/src/runtime_fixture/trace/model.rs) owns the report fields.

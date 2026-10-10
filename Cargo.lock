@@ -3067,6 +3067,7 @@ dependencies = [
  "language-tags",
  "notify",
  "ratatui",
+ "recite-adapter",
  "recite-benchmarks",
  "recite-build",
  "recite-compiler",

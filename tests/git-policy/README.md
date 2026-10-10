@@ -1,14 +1,9 @@
 # Git workflow policy fixtures
 
-`scripts/check-git-policy.sh` reads these deterministic fixtures on every invocation before checking
-the current repository. Its checker-local modules under `scripts/git-policy/` own branch/integration
-metadata, commit messages, and ref-range handling; they are sourced from the base checkout.
-`branches.tsv` records expected branch-name results. Files under `commit-messages/` use the filename
-prefix `valid-` or `invalid-` to record expected commit-message results, including the issue prefix,
-body-sentence, and attribution-trailer rules. An ordinary pull-request title supplies one issue code
-that every commit must use, with matching `Closes`/`Fixes`/`Resolves` or nonclosing
-`Refs`/`References` issue linkage. Run the integration fixture with `bash
-tests/git-policy/check-integration.sh`; it proves that only a matching `workflow/integration` label
-and `integration/<short-kebab-topic>` branch targeting `main` may contain multiple valid issue
-codes, with a closing issue token matching the title code, while retaining the subject and
-attribution rules.
+`scripts/check-git-policy.sh` exercises these fixtures before checking the current repository.
+`branches.tsv` records branch-name expectations; `commit-messages/` uses `valid-` and `invalid-`
+filename prefixes for commit-message cases. The checker loads its policy modules from the trusted
+base checkout.
+
+Run `bash tests/git-policy/check-integration.sh` for the integration-branch cases. Contribution and
+merge policy belongs in [CONTRIBUTING.md](../../CONTRIBUTING.md); these fixtures enforce it.

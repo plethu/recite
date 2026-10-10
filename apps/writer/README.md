@@ -25,19 +25,11 @@ recurring conversation hub, a branching and reconverging evacuation, and a three
 Example edits live only for the window's lifetime. Project mode provides explicit save, crash
 recovery, and external-edit conflict protection. See the [writer guide](guide.md).
 
-## Ownership
-
-`crates/authoring` owns source-preserving editing sessions and script projections from the existing
-Recite parser, compiler, and runtime. `crates/freya` owns the native presentation and file-session
-orchestration. `recite-config` owns user settings: platform discovery, typed edits, strict
-validation, comment-preserving TOML updates, locking, and atomic replacement. The GUI owns only
-preference controls and persistence-error presentation. `crates/grammar` binds the shared
-tree-sitter grammar for highlighting only.
+## Build requirements
 
 This workspace has its own lockfile to contain the pinned Freya native graphics stack. It is
 maintained application code: the repository verification gate runs its formatting, tests, and
-all-target Clippy checks. Other framework candidates and comparison harnesses have been removed; Git
-history retains that research.
+all-target Clippy checks.
 
 Native builds need Freya/Skia prerequisites (clang, CMake, pkg-config, and GTK 3 development
 libraries on Linux) and a working desktop session. Linux execution and component tests do not

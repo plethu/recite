@@ -123,10 +123,8 @@ Targets jump to another block or end traversal with `END`. Unknown targets are v
 
 Use `requires=(...)` to keep a choice visible while making its availability conditional, with
 `reason=...` for the schema-owned player-facing explanation. Use `:if` when the choice should be
-structurally absent instead. The distinction was settled in
-[#110](https://github.com/plethu/recite/issues/110),
-[#111](https://github.com/plethu/recite/issues/111), and
-[#112](https://github.com/plethu/recite/issues/112).
+structurally absent instead. Unavailable choices remain structured prompt items; hidden choices are
+absent.
 
 Choices may be nested under a line to model a prompt:
 
@@ -195,9 +193,9 @@ The current compiler contract requires every line and choice to have a stable ID
   -> road_news
 ```
 
-The planned editor-assisted workflow is for LSP or on-save tooling to insert missing line and choice
-IDs. That insertion workflow is not documented here as available until the relevant editor tooling
-has shipped.
+The LSP provides explicit actions to insert missing line and choice anchors without rewriting
+existing ones. Clients may configure the action on save. Labels remain editable; replacing an anchor
+changes identity. Changed source text requires catalogue refresh and translation review.
 
 Once an ID is written, it is frozen. Tooling must not silently rewrite existing IDs because
 localisation, fixtures, traces, and save-compatible dialogue state depend on stable identifiers.

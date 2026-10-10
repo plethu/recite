@@ -4,27 +4,10 @@ This package is the shared VSIX entry point for Recite's VS Code and VSCodium cl
 `.recite` files and connects the editor to a local `recite-lsp` process over standard input and
 output.
 
-The package also contributes `syntaxes/recite.tmLanguage.json`, a tolerant TextMate grammar shared
-by VS Code and VSCodium. It provides lexical scopes for Recite markers, names, anchors, references,
-metadata, values, calls, prose, markup, and placeholders. It never validates IDs, references,
-schemas, conditions, effects, markup balance, or match exhaustiveness; those remain
-parser/compiler/LSP responsibilities.
-
-The grammar supplies scopes only; the active VS Code or VSCodium theme controls their colour, font,
-and contrast. The line and choice anchor scopes are separate so a theme may de-emphasise them, but
-the grammar cannot require that visual treatment. Scope appearance is never the sole semantic
-signal: marker, label, and anchor text remains present, and non-colour/high-contrast themes remain
-valid. The pinned Node tokenizer snapshots provide evidence for scope identity, not installed-host
-rendering or accessibility behaviour.
-
-The package's CommonJS entry shim obtains the VS Code host API through `require`, keeping the VS
-Code 1.89 extension host boundary loadable, then delegates activation to the ESM implementation.
-
-The language server and shared authoring kernel own parsing, validation, diagnostics, completion,
-navigation, edits, and stable IDs. The extension only adapts those LSP values to editor APIs. It
-does not parse Recite source, run a game, or require a hosted service. Microsoft's MIT-licensed
-`vscode-languageclient` 9.0.1 owns the standard LSP transport and editor features; the VSIX includes
-its production dependencies for offline use.
+TextMate provides tolerant syntax highlighting; the active theme controls appearance. Parser,
+compiler and LSP remain the authority for validation and source edits. Highlight snapshots establish
+scope identity, not rendering or accessibility. The packaged `vscode-languageclient` owns LSP
+transport and ships with production dependencies for offline use.
 
 ## Local development
 
@@ -35,10 +18,6 @@ pnpm --filter recite-vscode run check
 pnpm --filter recite-vscode run package:check
 pnpm --filter recite-vscode run messages:update  # after changing the canonical Fluent resources
 ```
-
-Process fixtures and recovery tests use strict TypeScript and Node's test runner with mock timers.
-The remaining JavaScript tests are not yet typechecked. A bounded Vitest probe removed only the
-small timer-flushing helper; revisit that choice when it materially simplifies the suite.
 
 Build and verification never rewrite the checked-in message projections. Use the explicit update
 command when the canonical English Fluent resources change, then run the checks to review the
@@ -91,7 +70,7 @@ command is covered by the installed-host activation evidence; native F2 remains 
 unsupported by this client.
 
 Relative paths and process spawning use Node's platform-neutral path and process APIs. Linux, macOS,
-and Windows are intended hosts, but this scaffold contains Linux-only executable evidence; platform
+and Windows are intended hosts, but installed-host evidence is currently Linux-only; platform
 packaging and publication smoke remain release work. Run `scripts/check-vscode-host.sh` for
 installed VS Code and VSCodium activation checks; it prints the observed host versions and
 assertions. The same VSIX can be submitted to the VS Code Marketplace or Open VSX when those

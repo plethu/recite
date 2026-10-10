@@ -27,6 +27,7 @@ return {
     ["dialogue_catalog_conflict"] = true,
     ["dialogue_catalog_plural_forms_conflict"] = true,
     ["dialogue_catalog_malformed"] = true,
+    ["dialogue_catalog_invalid"] = true,
     ["dialogue_catalog_missing_locale"] = true,
     ["dialogue_catalog_spec_invalid"] = true,
     ["dialogue_locale_invalid"] = true,

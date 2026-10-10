@@ -1,9 +1,8 @@
 # LSP architecture and performance decisions
 
 The server accepts editor changes in order, analyses immutable snapshots off the protocol loop, and
-checks freshness and cancellation through writer handoff. This is the current maintainer overview
-for [#206](https://github.com/plethu/recite/issues/206). The
-[tooling contract](spec/tooling.md#14-lsp) and
+checks freshness and cancellation through writer handoff. This is the current maintainer overview.
+The [tooling contract](spec/tooling.md#14-lsp) and
 [performance policy](spec/quality.md#195-lsp-and-editor-benchmarks) define requirements;
 measurements establish only the workloads and platforms they actually cover.
 
@@ -26,72 +25,22 @@ preserve diagnostic and query outputs, stable IDs, source spans and prior snapsh
 
 ## Retained decisions
 
-- Incremental sync avoids editor-side full-text batching while retaining strict transactional text
-  acceptance.
-- Exact saved-schema identity, unchanged region reuse and final-array span relocation reduce
-  repeated work without changing semantic authority.
-- Parked bounded worker inputs and moving completed JSON through response handoff simplify ownership
-  and reduce measured scheduling/allocation costs.
-- Region output composition and completion reserve useful known capacities; these are small changes
-  with direct allocation evidence.
-- Existing framing, coordinator and freshness ownership remain. Framework and text-library
-  alternatives did not demonstrate enough net complexity reduction while preserving the required
-  contracts.
-
-The [dependency decision record](lsp-dependency-decisions.md) contains candidate versions,
-maintenance assessment, bounded probes and exact reopening conditions. A roughly 5% slowdown can be
-worth substantial maintenance reduction; the decision counts adapters and retained validation, not
-gross file deletions. Reopen a rejected candidate when its named condition changes.
+The [dependency record](lsp-dependency-decisions.md) owns transport/framework/text-library choices,
+rejection reasons and reopening conditions. Incremental acceptance and immutable snapshots retain
+strict edit semantics; compiler invalidation remains shared with other authoring surfaces.
 
 ## Normal commands
 
-```sh
-just perf setup
-just perf check
-just perf bench lsp large,realistic:v1-pack
-just perf compare BASE_COMMIT
-just perf build
-just perf sessions --binary target/release/recite-lsp --output target/lsp-sessions
-just perf lsp endurance --binary target/release/recite-lsp --output target/lsp-session.json
-just perf lsp --help
-```
-
-Use `recite-lsp.exe` on Windows. `compare` builds both revisions before sampling; its scratch builds
-need an outside-checkout `TMPDIR` with enough disk space. The
-[profiling playbook](profiling-and-optimisation.md) covers discovery, instrumentation boundaries and
-completion evidence. `just check` is the complete local gate; `just maintainability` runs focused
-structural checks.
+Use the [profiling guide](profiling-and-optimisation.md) for maintained commands, workload selection
+and instrumentation boundaries. `just check` is the complete local gate.
 
 ## Regression protection and remaining limits
 
-CI compares release servers in alternating pairs and rejects confirmed material regressions with
-matching fixture/output identities. The Linux comparison covers edits, queries, indexing, opening
-and peak RSS. The session workflow retains fixed-set and document-churn probes, fault injection,
-recovery/idle CPU budgets and rendered editor checks on Linux, Windows and macOS. Budgets and
-evidence boundaries live in [§19.8](spec/quality.md#198-regression-policy), not this overview.
-
-Those gates do not establish universal latency, arbitrary-session leak freedom or a best-in-class
-comparison. The final profile still attributes work to text position conversion, dependency lookups,
-AST construction and large response serialization. Further changes need a practical workload and a
-measured maintenance/performance benefit.
-
-The final Linux large-fixture investigation retained capacity reservation after reducing measured
-open-file live heap from about 90.1 to 83.9 MiB and per-operation completion allocation from 16.5 to
-11.3 MiB. Peak RSS fell only about 0.5–0.6%; allocation savings do not imply equivalent resident
-memory savings. These are dated local observations, not release or cross-platform budgets. Raw
-profiles and identities remain in
-[`final-resource-evidence.json.gz`](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/lsp-optimisation/final-resource-evidence.json.gz).
-
-Reopen further optimisation when a practical profile shows:
-
-- ranged end-of-file position conversion dominating; test a narrow newline-search change against
-  CR/CRLF/LF and UTF-16 acceptance before revisiting a text-library migration;
-- structural/recovery dependency traversal dominating; profile it before adding another index or
-  analysis representation;
-- large response construction dominating; measure item construction and serialization separately
-  before replacing protocol machinery; or
-- excessive resident memory; separate allocator retention from live summaries, facts, sources and
-  temporary ASTs before choosing a fix.
+[Quality §19.8](spec/quality.md#198-regression-policy) owns budgets and enforcement. Results apply
+to their named workloads and profiles; they do not establish arbitrary-session leak freedom or
+cross-platform latency. Further optimisation needs an attributed practical workload and measured
+maintenance or performance benefit. Distinguish live heap, allocation churn and process RSS before
+choosing a fix.
 
 ## Evidence and concluded experiments
 

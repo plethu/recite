@@ -44,7 +44,11 @@ pub unsafe extern "C" fn recite_session_prepare_restore(
         return ReciteStatus::from(error);
     }
     let handle = alloc_handle();
-    super::lock_sessions().insert(handle, super::FfiSession::prepared(driver));
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
+    guard.insert(handle, super::FfiSession::prepared(driver));
     unsafe { *session_handle_out = handle };
     ReciteStatus::Ok
 }

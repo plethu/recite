@@ -36,6 +36,7 @@ pub(crate) enum ErrorCode {
     DialogueCatalogConflict,
     DialogueCatalogPluralFormsConflict,
     DialogueCatalogMalformed,
+    DialogueCatalogInvalid,
     DialogueCatalogMissingLocale,
     DialogueCatalogSpecInvalid,
     DialogueLocaleInvalid,

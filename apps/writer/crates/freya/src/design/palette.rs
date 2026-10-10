@@ -170,6 +170,11 @@ pub fn display_name(identifier: &str) -> String {
 #[cfg(test)]
 mod tests;
 
+/// Project palette RGB into the graph renderer; edge opacity is applied separately.
+pub(crate) fn skia_opaque(color: Color) -> skia_safe::Color {
+    skia_safe::Color::from_rgb(color.r(), color.g(), color.b())
+}
+
 fn monochrome() -> bool {
     try_consume_context::<crate::presentation::Typography>()
         .is_some_and(|p| p.0.read().config.writer.monochrome)

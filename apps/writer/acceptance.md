@@ -14,24 +14,10 @@ mise exec -- just writer accessibility
 mise exec -- just writer probe-accessibility
 ```
 
-The focused accessibility checks also run in the full Writer gate. They cover control names, modal
-metadata, forward/reverse keyboard focus, focus restoration, 100% and 200% UI scale at 900 × 650,
-keyboard-only source editing, rebinding, Vim modes, pickers, scrolling, synthetic text input,
-contrast and reduced motion. Status metadata is polite for progress and assertive for errors; tests
-do not prove that a native screen reader announces it.
-
-| Requirement                                                   | Automated evidence                                                                               | Native acceptance                                                    |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| Keyboard, focus, escape and retry                             | `accessibility.rs`, `commands.rs`, `keybindings.rs`, `picker.rs`, `writing_workspace.rs`         | Repeat the keyboard and recovery drills below                        |
-| Names, roles, states and announcements                        | Accessibility tests and the AT-SPI probe                                                         | Screen-reader navigation, edit, error and progress announcements     |
-| Source round-trip, IDs, diagnostics, preview and localisation | Writer/model tests, `project_workflows.rs`, `localisation.rs`, `preview.rs`, `preview_locale.rs` | Complete a real writing/localisation session                         |
-| IME and mixed-direction text                                  | `text_input.rs` synthetic input probes                                                           | Composition, caret, selection and copy/paste with real input methods |
-| Contrast, non-colour cues, scaling and motion                 | Palette contrast and component/layout tests                                                      | High-contrast settings, display scaling and reduced-motion settings  |
-| Graph/text equivalence                                        | Map, script and navigation tests                                                                 | Perform essential authoring actions without pointer input            |
-| Packages and desktop activation                               | Package checkers and platform build jobs                                                         | [Install, upgrade, uninstall and link matrix](packaging.md)          |
-
-Test paths above are under `crates/freya/tests` unless otherwise noted. Palette and component tests
-live beside their private implementation modules.
+The [Writer gate](justfile) owns automated coverage, including focused accessibility tests. These
+checks verify model transitions and accessibility metadata; native announcements, physical input and
+usability still require the drills below. Use the [packaging matrix](packaging.md) for install,
+upgrade, uninstall and desktop activation.
 
 ## Known limits
 
@@ -124,6 +110,23 @@ the input/accessibility tools used:
 Unavailable hardware or an unfamiliar input method is an untested item, not a pass. Send screenshots
 or a short recording for visual/focus problems, plus exact reproduction steps. Do not send private
 project content unless intended.
+
+## Scale and performance
+
+Use the
+[maintained workloads and profiling commands](../../docs/profiling-and-optimisation.md#writer-workloads).
+Model latency and bounded headless rendering do not establish native GUI performance. Discovery,
+indexing and cold validation scale with corpus size; high-fan-out changes may invalidate many files,
+and topology changes still affect a whole scene. Source view opens the whole document.
+
+Before claiming RPG production scale, measure branching/fan-out, cycles, cross-scene references,
+long prose, diagnostics-heavy projects and prolonged editing. Functional coverage is not performance
+evidence for every combination. Measure end-to-end open/discovery, scene switching, edit-to-paint,
+search-to-passage reveal, memory over hours and crash recovery on declared platforms. Include real
+input/rendering, screen-reader navigation across virtual rows and IME composition.
+
+Proposed targets on named hardware remain 16.7 ms camera/guide frames, p95 edit-to-paint below 50
+ms, and warm search results below 100 ms. Current results do not establish those targets.
 
 ## Acceptance record
 

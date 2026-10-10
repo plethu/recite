@@ -36,13 +36,8 @@ that make an ownership split difficult to assess.
 
 ## Recite checks
 
-- Keep parser, AST/model, compiler/validation, runtime traversal, serialisation, CLI/TUI, and LSP
-  responsibilities separate.
-- Put validation policy at the boundary that owns the invalid state: a constructor, typed model,
-  loader/lowerer, compiler validation, runtime asset check, or named future issue.
-- Keep deterministic ordering explicit with source order or stable sorting where output can be
-  observed.
-- Prefer structured types, enums, and diagnostics over string conventions that callers must parse.
+- Use the affected subsystem contract for semantic ownership and public compatibility.
+- Keep observable ordering explicit with source order or stable sorting.
 - Build diagnostics through the shared `recite-core` constructor (`Diagnostic::error`) and per-crate
   code constants. Do not re-create a module-local diagnostic helper. Codes are static and
   namespaced; validate them with `DiagnosticCode::new_static` and select/group them by
@@ -64,11 +59,6 @@ that make an ownership split difficult to assess.
   Check maintenance, license and platform fit before adoption. For LSP work, start with
   `docs/lsp-dependency-decisions.md` and its reopening conditions rather than repeating settled
   spikes.
-- Before expanding Recite's tooling language or runtime footprint, compare the existing Rust
-  ownership with maintained alternatives suited to the concrete job. Include setup, tests, debugging
-  and the maintainer's learning cost; existing editor dependencies do not justify expanding Node.
-  "It is for CI" does not establish that another language or collection of scripts is the best
-  owner.
 
 ## FFI surface
 

@@ -11,12 +11,6 @@ Licensed under MIT OR Apache-2.0.
 
 Concrete format readers own their accepted subsets. Shared source generation owns escaping,
 generated identifiers, source mappings and native validation. The CLI owns filesystem access, report
-rendering and writes to a new destination. Reports distinguish complete conversion, partial
-conversion requiring review and invalid output; unsupported constructs retain provenance and an
-explicit action. Validation success does not establish source-runtime parity.
-
-Generated IDs are deterministic, and existing valid IDs are retained. After an author edits imported
-source, native IDs belong to that source; rerunning an importer is not incremental synchronization.
-The migration guide owns accepted formats and limitations.
-[Historical delivery evidence](https://github.com/plethu/recite/blob/6e32b614bd8c91a6616f02ec2991b7e300808129/docs/archive/adoption-migration-design.md)
-records the original implementation pass.
+rendering and writes to a new destination. The migration guide owns result states, ID adoption and
+supported subsets. Import is a one-time source conversion, not a source-runtime compatibility layer
+or an incremental synchronization protocol.

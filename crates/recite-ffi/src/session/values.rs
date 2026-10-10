@@ -17,7 +17,10 @@ pub unsafe extern "C" fn recite_session_set_interpolation_values(
     values: *const ReciteInterpolationValue,
     values_len: usize,
 ) -> ReciteStatus {
-    let mut guard = super::lock_sessions();
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     let ffi_session = match guard.get_mut(&session_handle) {
         Some(session) => session,
         None => {
@@ -40,8 +43,18 @@ pub unsafe extern "C" fn recite_session_set_interpolation_values(
     ReciteStatus::Ok
 }
 
-/// Frees a session handle. Does nothing if the handle is unknown.
+/// Frees a session handle on its owner thread. Unknown handles are ignored.
+/// Re-entry from a condition or locale callback records a validation error
+/// and leaves the handle alive.
 #[unsafe(no_mangle)]
 pub extern "C" fn recite_session_free(session_handle: u64) {
-    super::lock_sessions().remove(&session_handle);
+    let Ok(mut guard) = super::lock_sessions() else {
+        return;
+    };
+    if let Some(session) = guard.get(&session_handle)
+        && super::ensure_session_thread(session).is_err()
+    {
+        return;
+    }
+    guard.remove(&session_handle);
 }

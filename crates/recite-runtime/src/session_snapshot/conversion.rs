@@ -11,14 +11,12 @@ use super::{
     DialogueChoiceAvailabilityReasonValueSnapshot, DialogueChoiceAvailabilitySnapshot,
 };
 
-/// A failure while converting a trusted snapshot value into runtime state.
-///
-/// Snapshot restoration adds the context that is lost when a core value
-/// constructor is converted directly into a display string. The enclosing
-/// restore operation wraps this error in its public runtime error category,
-/// while conversion itself remains typed and inspectable.
+/// A typed failure while restoring snapshot availability, preserved as the
+/// source of `DialogueError::InvalidSessionSnapshot`.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum DialogueSessionSnapshotConversionError {
+    #[error("available choice contains unavailability reasons")]
+    AvailableChoiceHasReasons,
     #[error("invalid availability reason id `{id}`: {source}")]
     InvalidAvailabilityReasonId {
         id: String,
@@ -40,6 +38,11 @@ pub(crate) fn availability_snapshot(
 pub(crate) fn availability_from_snapshot(
     snapshot: DialogueChoiceAvailabilitySnapshot,
 ) -> Result<ChoiceAvailability, DialogueSessionSnapshotConversionError> {
+    if snapshot.is_available
+        && (snapshot.primary_reason.is_some() || snapshot.reason_tree.is_some())
+    {
+        return Err(DialogueSessionSnapshotConversionError::AvailableChoiceHasReasons);
+    }
     Ok(ChoiceAvailability {
         is_available: snapshot.is_available,
         primary_reason: snapshot

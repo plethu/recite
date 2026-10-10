@@ -108,7 +108,19 @@ fn validate_project_sources(
         .iter()
         .map(|document| SavedDocument::new(document.key().clone(), document.text().to_owned()));
     let mut kernel = match (schema, schema_is_valid) {
-        (Some(schema), true) => AuthoringKernel::with_schema(schema.clone()),
+        (Some(schema), true) => match AuthoringKernel::with_schema(schema.clone()) {
+            Ok(kernel) => kernel,
+            Err(recite_compiler::authoring::AuthoringError::InvalidSchema { diagnostics }) => {
+                return Ok(diagnostics);
+            }
+            Err(error) => {
+                return Err(CliError::Compile(
+                    recite_compiler::compile::CompileError::InvalidValidatedInput(
+                        error.to_string(),
+                    ),
+                ));
+            }
+        },
         _ => AuthoringKernel::new(),
     };
     let request = AuthoringRequest::new(

@@ -134,10 +134,21 @@ pub(super) fn lower_projector_queries(
     let mut seen = BTreeSet::new();
     let mut lowered = BTreeMap::new();
 
-    for raw_query in raw_queries {
-        let mut query_path = projector_path.to_vec();
-        query_path.extend(["queries".to_owned(), raw_query.name.clone()]);
-        let query_span = lowering.key_span_at(&query_path, &raw_query.name);
+    // Resolve occurrence-based JSON spans in source order before canonical
+    // query ordering. A query may consume only earlier canonical query IDs.
+    let mut queries = raw_queries
+        .into_iter()
+        .map(|raw_query| {
+            let mut query_path = projector_path.to_vec();
+            query_path.extend(["queries".to_owned(), raw_query.name.clone()]);
+            let query_span = lowering.key_span_at(&query_path, &raw_query.name);
+            query_path.push("function".to_owned());
+            let function_span = lowering.value_span_at(&query_path, &raw_query.value.function);
+            (raw_query, query_span, function_span)
+        })
+        .collect::<Vec<_>>();
+    queries.sort_by(|left, right| left.0.name.cmp(&right.0.name));
+    for (raw_query, query_span, function_span) in queries {
         validate_manifest_name(
             lowering.diagnostics,
             "projection query name",
@@ -154,9 +165,6 @@ pub(super) fn lower_projector_queries(
             ));
             continue;
         }
-        let mut function_path = query_path.clone();
-        function_path.push("function".to_owned());
-        let function_span = lowering.value_span_at(&function_path, &raw_query.value.function);
         let function = schema.projection_queries.get(&raw_query.value.function);
         let Some(function) = function else {
             lowering.diagnostics.push(schema_diagnostic(

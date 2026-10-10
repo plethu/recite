@@ -21,6 +21,10 @@ pub(crate) enum CliError {
     DiagnosticRendering {
         source: String,
     },
+    DialogueCatalogInvalid {
+        path: PathBuf,
+        source: recite_adapter::AdapterError,
+    },
     DialogueCatalogConflict {
         path: PathBuf,
         locale: String,
@@ -172,6 +176,7 @@ impl std::fmt::Display for CliError {
             Self::DiagnosticRendering { source } => {
                 write!(formatter, "failed to render diagnostic: {source}")
             }
+            Self::DialogueCatalogInvalid { path, source } => write!(formatter, "invalid dialogue catalog {}: {source}", display_path(path)),
             Self::DialogueCatalogConflict {
                 path,
                 locale,

@@ -34,13 +34,13 @@ recite compile --output build/dialogue.recitec dialogue/migrated/*.recite
 
 ## Guides
 
-- [Dialogue System for Unity](/migration/dialogue-system-for-unity/)
-- [Dialogue Manager](/migration/dialogue-manager/)
-- [Dialogic](/migration/dialogic/)
+- [Dialogue System for Unity](/migration/manual/#dialogue-system-for-unity)
+- [Dialogue Manager](/migration/manual/#dialogue-manager)
+- [Dialogic](/migration/manual/#dialogic)
 - [Yarn Spinner](/migration/yarn-spinner/)
 - [Ink](/migration/ink/)
 - [Twee/Twine](/migration/twee/)
-- [Clyde (manual)](/migration/clyde/)
+- [Clyde (manual)](/migration/manual/#clyde)
 - [JSON, CSV, and engine-native formats](/migration/json-csv-engine-native/)
 - [Importer boundaries](/migration/importer-boundaries/)
 

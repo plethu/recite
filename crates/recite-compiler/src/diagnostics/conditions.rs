@@ -20,6 +20,18 @@ const PARAMETERIZED_AVAILABILITY_REASON_OVERRIDE: DiagnosticCode =
 const AVAILABILITY_REASON_WITHOUT_REQUIREMENT: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_VALIDATE041");
 
+const CONDITION_DEPTH_EXCEEDED: DiagnosticCode = DiagnosticCode::new_static("RECITE_VALIDATE050");
+
+pub(crate) fn condition_depth_exceeded(span: SourceSpan) -> Diagnostic {
+    let limit = recite_core::compiled::MAX_COMPILED_CONDITION_DEPTH;
+    compiler_diagnostic(
+        diagnostic_contract(&CONDITION_DEPTH_EXCEEDED, "diagnostic-validate-050"),
+        format!("condition exceeds the boolean nesting limit of {limit}"),
+        span,
+        [("limit".to_owned(), integer_argument(limit))],
+    )
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ConditionReturnRequirement {
     Bool,

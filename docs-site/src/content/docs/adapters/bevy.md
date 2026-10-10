@@ -10,10 +10,8 @@ code chooses presentation and executes effects. The plugin can run in a headless
 
 The
 [headless example](https://github.com/plethu/recite/blob/main/crates/recite-bevy/examples/headless_dialogue.rs)
-demonstrates conditions, every effect mode, locale variants, prompt and blocking effect saves, and a
-rebuilt revision. Run it from the repository with `cargo run -p recite-bevy --example
-headless_dialogue`. The example uses `recite-compiler` as an authoring-only dev dependency. The
-shipped `recite-bevy` library never compiles source at runtime.
+runs from the repository with `cargo run -p recite-bevy --example headless_dialogue`. It uses the
+compiler as an authoring-only dev dependency; the shipped library loads compiled assets.
 
 ## Setup
 
@@ -81,16 +79,12 @@ canonical serializer and validator used by Recite core; compiler, CLI, and LSP c
 generated manifest. A host-owned TOML transport can instead run `recite export-schema --schema
 schema.toml --output schema.json --producer-kind bevy --producer-id stable_id`.
 
-The authoring loop is: edit `.recite` source or host schema declarations, check LSP diagnostics and
-stable IDs, save, export the canonical schema manifest, let `recite watch <project-root>` rebuild
-`.recitec`, then explicitly call `AssetServer::reload(path)` to request Bevy's import. Automatic
-file watching is not enabled by this crate's CPU-only default dependencies. A new session uses the
-accepted compiled revision. The [shared authoring walkthrough](/adapters/authoring/) follows
-diagnostics, rebuild, import, and restart across the three engine companions. The v1 changed-asset
-policy is **`reload_for_next_session_only`**: the active owner keeps its original compiled revision,
-including while a prompt or blocking effect is pending. A failed refresh retains the last accepted
-cache revision and reports `ReciteAssetImport::Rejected`; it does not pretend that the new source
-was imported. Wait for an `Accepted` status before starting a session meant to use the new revision.
+After exporting the schema and rebuilding with `recite watch <project-root>`, explicitly call
+`AssetServer::reload(path)`: this crate's CPU-only default dependencies do not enable automatic file
+watching. Wait for `ReciteAssetImport::Accepted` before starting against the rebuilt revision. The
+active session retains its original asset, even at a prompt or blocking effect. A rejected refresh
+reports its error and retains the last accepted revision. See the
+[shared authoring walkthrough](/adapters/authoring/) for the full edit/import/restart loop.
 
 Source/schema freshness is distinct from compiled revision compatibility. When the game sees only
 `.recitec` bytes, `ReciteAssetFreshness::Unavailable` is explicit. Run `recite check-fresh
@@ -100,33 +94,11 @@ session are separate operations; the compiled dialogue revision never swaps in p
 
 ## Compatibility and evidence
 
-The crate pins Bevy `=0.19.1` and uses its versioned
-[asset loader](https://docs.rs/bevy_asset/0.19.1/bevy_asset/trait.AssetLoader.html),
-[message](https://docs.rs/bevy_ecs/0.19.1/bevy_ecs/message/index.html), and
-[app scheduling](https://docs.rs/bevy_app/0.19.1/bevy_app/) APIs. The adapter declares no
-presentation projection capability. Its conformance observation mode is
-`transactional_drained_batch`: published reference-driver scenarios use individual `advance` steps,
-while this host API reports the equivalent ordered events in one batch and reports an error before
-publishing a partial batch. The Bevy test suite executes the two mandatory adapter-runner fixtures
-for plural metadata and localisation errors directly, plus published error category observations
-through a real App and native AssetServer refresh. Its
-[verification scope](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#verification)
-distinguishes exact, equivalent, gated, and unrun scenarios. The
-[headless performance probe](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#performance)
-records load, idle, active, and retained-revision observations without CI timing thresholds. The
-[adapter contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md)
-defines the shared requirements.
+The crate pins Bevy `=0.19.1`. Its
+[package guide](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md) owns
+conformance coverage, performance probes and clean-consumer verification. The adapter has no
+presentation projection capability.
 
-Before the Recite crates are published, use the repository as a path dependency.
-`scripts/check-bevy-package.sh` prepares seven real Cargo `.crate` archives with temporary local
-patches for the unpublished dependencies, then runs the packaged headless example from a separate
-project. It checks stable archive bytes across two builds and saves SHA-256 hashes, license texts,
-and a replayable consumer in `target/recite-bevy-probe/cargo-packages/`. Run `cargo fetch --locked`
-from the repository first on a cold cache. The probe does not publish crates.
-
-For an upgrade, move the Recite dependencies together to a compatible release and retain Bevy 0.19.1
-until a newer host version is supported. Re-export the schema, rebuild compiled assets, run `recite
-check-fresh <project-root>`, and wait for an accepted Bevy import before starting a new session. An
-active session continues on its original revision. Keep authored IDs stable, and test restore with
-saves your game needs to preserve. A crates.io release needs the matching `recite-core`,
-`recite-runtime`, and `recite-adapter` versions available before `recite-bevy`.
+Use a repository path dependency until publication. Follow the package guide's
+[installation and upgrade procedure](https://github.com/plethu/recite/blob/main/crates/recite-bevy/README.md#installing-and-upgrading),
+including save compatibility checks.

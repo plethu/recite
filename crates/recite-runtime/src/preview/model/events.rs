@@ -1,7 +1,9 @@
+use std::collections::BTreeMap;
+
 use recite_core::{BlockId, ChoiceId, EffectId, LocaleId, compiled::CompiledAssetId};
 
 use crate::{DialogueChoice, DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck};
-use crate::{LocalizedLookupTrace, PluralLineTrace};
+use crate::{LocalizedLookupTrace, PluralLineTrace, localisation::TextDomain};
 
 use super::api::{PreviewConditionRequest, PreviewConditionResult, PreviewPromptIdentity};
 use super::errors::PreviewError;
@@ -131,6 +133,7 @@ pub struct PreviewTrace {
     events: Vec<PreviewEvent>,
     plural_lines: Vec<(String, PluralLineTrace)>,
     localized_lookups: Vec<LocalizedLookupTrace>,
+    latest_lookup_positions: BTreeMap<TextDomain, BTreeMap<String, usize>>,
 }
 
 impl PreviewTrace {
@@ -141,6 +144,7 @@ impl PreviewTrace {
             events: Vec::new(),
             plural_lines: Vec::new(),
             localized_lookups: Vec::new(),
+            latest_lookup_positions: BTreeMap::new(),
         }
     }
 
@@ -180,8 +184,25 @@ impl PreviewTrace {
         self.localized_lookups.iter()
     }
 
+    /// Returns the latest recorded lookup for this ID and text domain.
+    #[must_use]
+    pub fn latest_localized_lookup(
+        &self,
+        id: &str,
+        domain: TextDomain,
+    ) -> Option<&LocalizedLookupTrace> {
+        let position = self.latest_lookup_positions.get(&domain)?.get(id)?;
+        self.localized_lookups.get(*position)
+    }
+
     pub(crate) fn merge_runtime_trace(&mut self, trace: &crate::DialogueTrace) {
         self.plural_lines.extend(trace.plural_lines());
-        self.localized_lookups.extend(trace.localized_lookups());
+        for lookup in trace.localized_lookups() {
+            self.latest_lookup_positions
+                .entry(lookup.domain)
+                .or_default()
+                .insert(lookup.id.clone(), self.localized_lookups.len());
+            self.localized_lookups.push(lookup);
+        }
     }
 }

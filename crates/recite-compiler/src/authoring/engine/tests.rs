@@ -99,7 +99,8 @@ fn prose_revalidates_one_file_and_reuses_project_diagnostics() {
 #[test]
 fn local_markup_errors_change_without_rebuilding_project_indexes() {
     super::PROJECT_VALIDATION_COUNT.with(|count| count.set(0));
-    let mut kernel = AuthoringKernel::with_schema(recite_core::schema::ProjectSchema::empty_v1());
+    let mut kernel = AuthoringKernel::with_schema(recite_core::schema::ProjectSchema::empty_v1())
+        .expect("valid schema");
     let a = ":: a default\n> line@11111111111111111111\n  Hello.\n-> END\n";
     let b = ":: b\n-> END\n";
     kernel
@@ -227,4 +228,59 @@ fn shared_destination_does_not_revalidate_unrelated_callers() {
         100,
         "shared validation contexts must visit each document only once"
     );
+}
+
+#[test]
+fn incremental_edits_share_the_accepted_schema_and_preserve_published_snapshots() {
+    use recite_core::schema::{ConditionDefinition, ConditionReturnType, ProjectSchema};
+    use std::sync::Arc;
+
+    let mut schema = ProjectSchema::empty_v1();
+    schema.conditions.insert(
+        "ready".to_owned(),
+        ConditionDefinition {
+            params: Vec::new(),
+            returns: ConditionReturnType::Bool,
+            availability_reason: None,
+        },
+    );
+    let mut kernel = AuthoringKernel::with_schema(schema).expect("valid schema accepted once");
+    let accepted_schema = Arc::clone(kernel.snapshot().schema.as_ref().expect("accepted schema"));
+    let source = ":: a default\n:if ready()\n  > hello@11111111111111111111\n    Hello.\n-> END\n";
+    let other = ":: b\n-> END\n";
+    kernel
+        .apply(request(kernel.snapshot().generation(), source, other))
+        .expect("initial source");
+    let published = kernel.snapshot().clone();
+    assert!(published.diagnostics().is_empty());
+
+    for (edited, invalid) in [
+        (source.replace("Hello.", "A longer sentence."), false),
+        (source.replace("ready()", "unknown()"), true),
+        (source.to_owned(), false),
+    ] {
+        kernel
+            .apply(request(kernel.snapshot().generation(), &edited, other))
+            .expect("source edit");
+        assert!(Arc::ptr_eq(
+            &accepted_schema,
+            kernel
+                .snapshot()
+                .schema
+                .as_ref()
+                .expect("same accepted schema"),
+        ));
+        assert_eq!(kernel.snapshot().diagnostics().is_empty(), !invalid);
+        assert!(
+            published.diagnostics().is_empty(),
+            "published diagnostics remain immutable"
+        );
+        assert_eq!(
+            published
+                .document(&key("a.recite"))
+                .expect("published source")
+                .source_text(),
+            source
+        );
+    }
 }

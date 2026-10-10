@@ -68,6 +68,11 @@ where
     I: IntoIterator,
     I::Item: std::borrow::Borrow<ValidationInput<'a>>,
 {
+    if let Some(schema) = schema
+        && let Err(diagnostics) = recite_core::schema::validate_project_schema(schema)
+    {
+        return ValidationReport { diagnostics };
+    }
     let mut validator = Validator::new(
         source_files.into_iter().map(|input| *input.borrow()),
         schema,

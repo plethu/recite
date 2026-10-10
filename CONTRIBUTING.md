@@ -84,24 +84,8 @@ scope. Run the affected assurance command before committing changes to these con
 
 ## Formatting and validation
 
-Versioned configurations at the repository root define formatting and lint rules. `just fmt`, `just
-fmt-check` and `just lint` provide common commands; `just quality` lists the non-Rust lane.
-
-| Source                                                                 | Formatter               | Lint or semantic gate                                      |
-| ---------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
-| Rust                                                                   | rustfmt                 | Clippy, ast-grep, domain tests                             |
-| Markdown, JSON, YAML, JavaScript/TypeScript, CSS, SVG/XML, Dockerfiles | dprint                  | rumdl, Oxlint, type checks, Stylelint, schemas, actionlint |
-| TOML                                                                   | Tombi, offline          | Tombi syntax and owning domain checks                      |
-| Python                                                                 | Ruff                    | Ruff and harness tests                                     |
-| Shell                                                                  | shfmt                   | ShellCheck                                                 |
-| Lua                                                                    | StyLua                  | Lua language server and Neovim tests                       |
-| GDScript                                                               | gdformat                | gdlint and Godot adapter tests                             |
-| C/C++                                                                  | clang-format            | FFI compilation with warnings as errors                    |
-| C#                                                                     | dotnet format           | Headless Unity compilation/tests                           |
-| Nix                                                                    | Alejandra               | Flake/package checks                                       |
-| PowerShell                                                             | PSScriptAnalyzer        | PSScriptAnalyzer                                           |
-| Astro components                                                       | dprint                  | Astro type checks and site browser tests                   |
-| Just recipes                                                           | just's native formatter | Recipe and workflow checks                                 |
+Versioned configurations own formatter/linter selection and coverage. Use the common commands above;
+`just quality` lists the non-Rust lane.
 
 Recite source, Fluent, gettext PO and Tree-sitter queries use their parser, typed-contract and
 fixture gates. They are validated, not automatically reformatted: whitespace and deliberately
@@ -121,36 +105,11 @@ modules.
 
 ## Performance tooling
 
-Criterion remains the Rust timing suite. Maintained external LSP probes live in
-`scripts/lsp_tools/`, with one CLI and a scoped, locked Python 3.12 environment. The pinned uv
-runner owns environment setup; psutil is locked in `uv.lock`. Ruff belongs to the shared mise
-quality toolchain.
-
-```sh
-just perf setup
-just perf check
-just perf bench lsp large,realistic:v1-pack 'lsp/change_refresh'
-just perf compare BASE_COMMIT
-just perf build
-just perf lsp --help
-just maintainability
-```
-
-`perf check` runs harness and CI contract tests; the complete `just check` includes it. Python
-formatting and linting belong to the common quality commands. The
-[current LSP overview](docs/lsp-cancellation-design.md) and
-[profiling playbook](docs/profiling-and-optimisation.md) explain ownership, measurement boundaries
-and the dependency/maintainability tradeoff. Completed diagnostic experiments are archived at named
-revisions rather than kept as permanent workflow modes. Bash launches tools and handles platform
-shell operations; Python owns structured external-process measurements and report checks. Reuse
-production Rust APIs for domain semantics instead of reproducing them in either language.
-
-Python is retained provisionally for the already validated LSP harness. The
-[language assessment](docs/lsp-dependency-decisions.md#maintainer-tooling-language) compares Rust,
-Go, Python and Node, with bounded probes and explicit learning, setup and maintenance costs. Start
-substantial new general tooling with a private Rust tool crate; evaluate Rust and Go before
-extending the external harness's ownership. A replacement must reduce total maintenance or material
-driver interference while preserving the gate. Expand Node only for a concrete editor/frontend need.
+Use [profiling and optimisation](docs/profiling-and-optimisation.md) for benchmark selection,
+process measurements, CPU sampling and allocation probes. `just perf` lists commands; its harness
+checks run in `just check`. The [LSP overview](docs/lsp-cancellation-design.md) owns concurrency,
+and [dependency decisions](docs/lsp-dependency-decisions.md#maintainer-tooling-language) own harness
+language choices and conditions for replacing or extending that owner.
 
 Keep current ownership, commands, limits and reopening conditions in their existing guides.
 Concluded reports belong in Git or PR history. Raw captures, benchmark output and disposable probes
@@ -167,23 +126,6 @@ contracts.
 - The [production specification](docs/recite-production-spec.md) routes to subsystem contracts in
   `docs/spec/`. Read the affected chapter; GitHub owns implementation task state, and historical
   measurements remain separate.
-- LSP dependency choices, experiments and reevaluation triggers are recorded in
-  [the dependency decision record](docs/lsp-dependency-decisions.md).
-- The trusted pull-request policy in `.github/workflows/trusted-policy.yml` runs base-owned policy
-  code with read-only permissions. It fetches proposed commits as Git objects for metadata checks
-  and never checks out or executes pull-request files. Keep that boundary intact when changing
-  workflow or policy files; ordinary CI remains a separate, untrusted pull-request lane. The
-  repository's deterministic fixture gate also performs static workflow assertions. Pinned
-  `actionlint` validates workflow syntax, expressions and reusable-workflow wiring in CI and the
-  complete local gate.
-- The canonical local quality gate is `mise exec -- just check`. It loads the scoped
-  `maintainability` mise environment for the pinned ast-grep check. GitHub Actions selects affected
-  lanes on pushes to `main` and pull requests (`.github/workflows/ci.yml`), then validates their
-  results with the unconditional `required-check` rollup. The base-owned trusted policy lane is a
-  separate `pull_request_target` check (`.github/workflows/trusted-policy.yml`); required CI and
-  branch protection remain authoritative for the final protected PR. Focused checks are acceptable
-  for narrow documentation or instruction-only changes; run the full gate locally for broad or
-  high-risk code changes.
 
 ## Change and review workflow
 
@@ -230,27 +172,14 @@ maintainer's home-directory instructions, or copy a general skill collection int
 
 ## CI coverage
 
-[scripts/ci-scope.py](scripts/ci-scope.py) selects lanes from the complete diff, including deleted
-paths and both sides of renames. Pull requests use their merge base; pushes compare the previous and
-current commits. Unknown paths select the complete suite. Shared Cargo manifests and locks select
-the correctness suite; packaging inputs additionally select their native, Nix or Flatpak builds. A
-missing revision fails selection.
+[`scripts/ci-scope.py`](scripts/ci-scope.py) and its tests own affected-lane selection. Inspect it
+with `just perf scope` and verify it with `just perf check`. The unconditional `required-check`
+rollup rejects missing, failed, cancelled and unexpected skipped results. Trusted policy executes
+base-owned code with read-only permissions, separately from ordinary untrusted CI.
 
-Inspect the selector and its regression tests through the pinned toolchain:
-
-```sh
-just perf scope
-just perf check
-```
-
-The unconditional `required-check` rollup rejects missing results, failures, cancellation and
-unexpected skips. Package results participate through the reusable Writer package workflow. The
-separate trusted policy workflow reads base-owned code and does not execute PR files.
-
-GitHub Actions supports manual complete CI and Writer package runs; scheduled runs exercise the full
-suite. Run package previews before a release or after platform-dependent packaging changes. Package
-builds and automated accessibility probes establish their tested contracts; installed package
-acceptance remains separate. Workflow definitions own the current lanes and schedules.
+Workflow definitions own lanes, schedules and manual complete/package runs. Run package previews
+before release or after platform-dependent changes. Installed package and native accessibility
+acceptance require their own evidence.
 
 ## Preparing and publishing releases
 
@@ -310,12 +239,3 @@ evidence; green CI alone does not establish readiness.
    delete only an incomplete draft, never overwrite a public release or re-upload different bytes
    under an existing crate version. Stable promotion requires a stable-version preparation PR and
    fresh candidate, even when its code matches the last RC.
-
-The tooling follows
-[cargo-release's separate preparation/publication steps](https://github.com/crate-ci/cargo-release/blob/main/docs/reference.md)
-and
-[cargo-dist's local/global artifact split](https://axodotdev.github.io/cargo-dist/book/reference/cli.html#dist-build),
-with both pinned through `mise.release.toml`. CI stays repository-owned; Writer retains its existing
-packagers. Separating ordinary checks from scheduled/tagged distribution follows
-[rust-analyzer](https://github.com/rust-lang/rust-analyzer/blob/master/.github/workflows/release.yaml)
-and [Helix](https://github.com/helix-editor/helix/blob/master/.github/workflows/release.yml).

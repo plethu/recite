@@ -65,7 +65,11 @@ pub unsafe extern "C" fn recite_session_create(
     }
 
     let handle = alloc_handle();
-    super::lock_sessions().insert(handle, FfiSession::prepared(driver));
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
+    guard.insert(handle, FfiSession::prepared(driver));
     unsafe { *session_handle_out = handle };
     ReciteStatus::Ok
 }

@@ -86,7 +86,7 @@ impl Document {
         let kernel = context
             .schema
             .clone()
-            .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
+            .map_or_else(|| Ok(AuthoringKernel::new()), AuthoringKernel::with_schema)?;
         let mut document = Self {
             source: String::new().into(),
             key,
@@ -147,7 +147,7 @@ impl Document {
             let mut kernel = context
                 .schema
                 .clone()
-                .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
+                .map_or_else(|| Ok(AuthoringKernel::new()), AuthoringKernel::with_schema)?;
             kernel.apply_with_control(
                 AuthoringRequest::new(
                     kernel.snapshot().generation(),

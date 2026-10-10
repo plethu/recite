@@ -25,7 +25,10 @@ pub unsafe extern "C" fn recite_session_begin(
         return ReciteStatus::Validation;
     }
 
-    let mut guard = super::lock_sessions();
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     let ffi_session = match guard.get_mut(&session_handle) {
         Some(session) => session,
         None => {
@@ -105,7 +108,10 @@ pub unsafe extern "C" fn recite_session_register_condition(
             return ReciteStatus::Validation;
         }
     };
-    let mut guard = super::lock_sessions();
+    let mut guard = match super::lock_sessions() {
+        Ok(guard) => guard,
+        Err(status) => return status,
+    };
     match guard.get_mut(&session_handle) {
         Some(ffi_session) => {
             if let Err(status) = super::ensure_session_thread(ffi_session) {

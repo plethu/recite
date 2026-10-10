@@ -92,6 +92,8 @@ pub fn decode_compiled_dialogue_messagepack(
 
     let mut cursor = Cursor::new(bytes);
     let mut deserializer = rmp_serde::Deserializer::new(&mut cursor);
+    // Tuple tags and child arrays add transport levels to logical condition depth.
+    deserializer.set_max_depth(super::MAX_COMPILED_CONDITION_DEPTH * 4 + 32);
     let wire = MsgDialogue::deserialize(&mut deserializer)
         .map_err(|error| malformed(error.to_string()))?;
     let consumed = cursor.position() as usize;

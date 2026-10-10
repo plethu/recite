@@ -65,8 +65,8 @@ nearer manifest wins, while a manifest's `discovery.source_roots` and `excludes`
 
 The language server separately loads the shared user configuration. It honors `$RECITE_CONFIG` first
 and then the platform configuration location described in the
-[production spec](../../docs/recite-production-spec.md#137-play). The Neovim integration does not
-read, merge, or write that file. Project semantics belong in `recite.project.toml`, not in Neovim
+[production spec](../../docs/spec/build-cli.md#137-play). The Neovim integration does not read,
+merge, or write that file. Project semantics belong in `recite.project.toml`, not in Neovim
 settings. An explicit schema manifest can be passed to the server through `lsp.init_options` when
 needed:
 
@@ -78,26 +78,15 @@ require("recite").setup({
 })
 ```
 
-The server owns resolution of that path and all schema, localisation, diagnostic, completion,
-navigation, rename, and code-action semantics. Completion, hover, definition, references, and
-server-supported edits are requested from that server without Lua-side semantic fallbacks. Rename
-and code-action responses are inspected as structured workspace edits; a refused operation is left
-unapplied. Re-running `setup` with changed LSP-owned options stops and reattaches Recite clients
-while retaining caller-supplied `capabilities`, `init_options`, `settings`, `flags`, `on_init`, and
-`on_exit`. Recite defaults `lsp.flags.debounce_text_changes` to 50 ms. Set a larger value to
-coalesce more typing before sending a full document, for example `lsp = { flags = {
-debounce_text_changes = 150 } }`. Direct `start` overrides are compared against the effective
-owned-client configuration: command, settings, flags, initialization options, capabilities, and
-callbacks must match before a client is reused. This keeps compatible repeated starts cheap without
-silently applying an incompatible override to an existing client. If an overridden client exits
-unexpectedly, recovery retains that exact material configuration and its independent retry budget;
-same-root variants do not inherit one another's command or restart state. Unexpected exits are
-retried for still-open Recite buffers with a bounded backoff. A client must remain alive for the
-stability window before its crash budget resets; changing the LSP configuration cancels queued
-recovery, and `autostart = false` cannot resurrect a client after reconfiguration. Exhausted
-recovery is reported through the shared Fluent UI resource. Intentional
-`require("recite").stop(client_id)` calls are not restarted. Caller callback failures are reported
-through `vim.notify` without blocking lifecycle cleanup or crash recovery.
+The server owns schema resolution and semantic answers. Rename and code actions keep version
+preconditions and are left unapplied when refused. Re-running `setup` with changed options
+reattaches clients while preserving supplied callbacks and capabilities.
+
+`lsp.flags.debounce_text_changes` defaults to 50 ms; override it to coalesce more typing. Unexpected
+server exits are retried with bounded backoff for still-open Recite buffers. Exhausted recovery is
+reported. An intentional `require("recite").stop(client_id)` is not restarted, and `autostart =
+false` remains respected after reconfiguration. Each distinct configuration retains its own recovery
+state; callback errors are reported without preventing cleanup.
 
 ## Tree-sitter highlighting
 
@@ -153,20 +142,9 @@ for clean disk-backed buffers; unsaved or changed buffers retain LSP ownership. 
 child, uses the version-1 stdin cancel record, and bounds TERM/KILL recovery. Late records from
 retired generations are ignored.
 
-The same commands remain ordinary CLI operations and do not depend on a plugin manager:
-
-```sh
-recite validate /path/to/project
-recite extract /path/to/project -o /path/to/project/locales/recite.pot
-recite watch /path/to/project
-recite play /path/to/project/build/dialogue.recitec \
-  --block which_way --ui plain
-```
-
-The Lua adapter does not scrape CLI prose or pretend that a watch process is an LSP feature. The
-`play --ui plain` form remains the predictable terminal preview path and is also suitable for screen
-readers and pipes. Zed's static tasks are a separate terminal projection; they do not parse these
-records or provide the Neovim adapter's diagnostic replacement and cancellation control.
+Use `recite play ASSET --block BLOCK --ui plain` for a terminal preview that accepts typed input.
+These commands remain ordinary CLI operations; the integration consumes structured records rather
+than scraping their human output.
 
 ## Health and troubleshooting
 
@@ -187,5 +165,5 @@ the Tree-sitter query, and the parser library. The health module is installed at
   `lsp.init_options.schemaManifest`; schema loading failures remain visible as server diagnostics.
 
 The syntax query in `queries/recite/highlights.scm` is kept byte-for-byte equal to the host-neutral
-query in `../recite-tree-sitter/queries/highlights.scm` by the Neovim integration check. Changes to
-grammar captures belong to #98 and must be reflected in both projections.
+query in `../recite-tree-sitter/queries/highlights.scm` by the Neovim integration check. Change the
+canonical query and regenerate its host projections together.

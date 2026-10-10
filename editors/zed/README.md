@@ -4,11 +4,8 @@ The Recite Zed extension registers `.recite` files, reuses the pinned Recite Tre
 projects the shared highlights query, and starts a separately installed `recite-lsp` through Zed's
 native LSP host.
 
-The grammar is loaded from the Recite repository at commit
-`209ea23195f674a18be0b8f87e037273fb3296bd`. The checked-in `languages/recite/highlights.scm` is an
-exact projection of `editors/recite-tree-sitter/queries/highlights.scm`; it adds no semantic
-validation. Stable IDs, references, diagnostics, project discovery, and configuration remain owned
-by Recite's parser/compiler/LSP and `recite-config`.
+`extension.toml` owns the grammar revision; its highlight query is checked against the canonical
+Tree-sitter query. Highlighting remains syntax-only.
 
 ## Local source development
 
@@ -65,9 +62,6 @@ explicit project task).
 The language package provides only tasks whose inputs can be derived from Zed without guessing
 project semantics:
 
-Compile output is explicit but not non-destructive: invoking the task may replace
-`$ZED_DIRNAME/$ZED_STEM.recitec`.
-
 Each task declares `save: "current"`, so launching validate, extract, compile, or watch saves the
 current buffer without saving unrelated open buffers. Subsequent watch rebuilds still depend on the
 editor's normal save events.
@@ -83,27 +77,17 @@ controller; LSP diagnostics remain the diagnostic authority. `run` and `trace` t
 intentionally absent because their required compiled asset, block, and fixture cannot be safely
 inferred from the current buffer. Add an explicit project task when those inputs are known.
 
-Zed owns task process lifecycle. These static tasks do not implement a fake stdin cancellation
-transport or claim parsed watch recovery; stopping a task uses the host's normal terminal/process
-controls. `recite` remains the owner of structured watch records. The isolated Linux probe observed
-validation failure, watch termination through the task terminal's Ctrl-C action, and clean private
-process shutdown.
-
-The isolated probe demonstrates keyboard reachability for the tested actions, not complete Zed
-accessibility conformance. Screen-reader, focus, high-contrast, and non-colour behavior remain
-host/LSP surfaces and are not claimed here. The package adds no color protocol or terminal-color
-parser.
+Zed owns terminal task lifecycle, including Ctrl-C. These tasks do not supply a structured watch
+controller. The Linux probe exercises named keyboard actions and clean process stopping; it does not
+establish complete accessibility, screen-reader or other-platform behavior.
 
 ## Evidence and limits
 
 `scripts/check-zed.sh` checks the manifest, package inventory, grammar pin and query drift, task
 argv contract, launcher unit tests, and a real `recite-lsp` stdio parity test.
 `scripts/check-zed-host.sh` exercises the installed Linux development-extension path in isolated
-Cage/WLR state. Its transport log asserts the exact Zed requests and canonical
-diagnostics/navigation results, including a non-empty quick-fix response and applied rename
-workspace edit. It independently records validate, extract, and compile argv/cwd/status by
-PID-matched start/exit records, plus watch lifecycle. Task-terminal structured-record parsing, a
-native watch-cancellation API, screen-reader/high-contrast behavior, macOS/Windows host smoke,
-gallery publication, and gallery installation remain residuals.
+Cage/WLR state. Package, LSP transport and installed-host assertions are distinct. The
+[parity fixture](../../fixtures/editor-parity/contract.json) records supported observations and
+remaining gaps, including task-record parsing, native cancellation and non-Linux hosts.
 
 The extension is dual-licensed under MIT OR Apache-2.0. See `LICENSE-MIT` and `LICENSE-APACHE`.

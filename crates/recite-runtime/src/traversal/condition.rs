@@ -5,8 +5,6 @@ use crate::context::{ConditionExpectedType, ConditionQuery, ConditionValue, Dial
 
 use super::malformed;
 
-const MAX_CONDITION_DEPTH: usize = 128;
-
 pub(super) fn evaluate_condition(
     context: &dyn DialogueContext,
     condition: &CompiledConditionExpression,
@@ -19,9 +17,9 @@ fn evaluate_condition_at_depth(
     condition: &CompiledConditionExpression,
     depth: usize,
 ) -> Result<bool, DialogueError> {
-    if depth > MAX_CONDITION_DEPTH {
+    if depth > recite_core::compiled::MAX_COMPILED_CONDITION_DEPTH {
         return Err(DialogueError::ConditionDepthLimitExceeded {
-            limit: MAX_CONDITION_DEPTH,
+            limit: recite_core::compiled::MAX_COMPILED_CONDITION_DEPTH,
         });
     }
 

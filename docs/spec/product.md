@@ -20,21 +20,9 @@ Its primary audience is developers building games where dialogue must be:
 - authorable through excellent text tooling, with a visual editor as a structured companion rather
   than the only workflow.
 
-Recite should be a credible replacement for existing dialogue tools when their tradeoffs do not fit
-a project's narrative, tooling, or architecture needs. The motivating pain points are specific:
-
-- localisation workflows that depend on unstable text or ad hoc IDs;
-- editor tooling that cannot catch enough content mistakes before runtime;
-- dialogue scripts that can call directly into engine scripting or mutate game state;
-- one-off authoring languages whose concepts do not travel well outside that tool;
-- runtime behaviour that is difficult to replay, test, save, load, or inspect deterministically;
-- asset-store or engine-specific packaging that makes the dialogue model feel less portable than the
-  game needs.
-
-This is not a claim that ink, Yarn Spinner, Godot-native tools, or other dialogue systems are bad
-fits for all projects. Recite is specifically for projects that value portable narrative-system
-thinking, strict architectural boundaries, reproducible execution, schema-checked integration, and
-tool-assisted content validation.
+Recite fits projects that need reproducible execution, schema-checked integration and portable text
+authoring. [The comparison guide](../../docs-site/src/content/docs/guides/alternatives.md) explains
+tradeoffs against established tools; these goals do not make Recite a universal fit.
 
 ## 2. Core Invariants
 
@@ -89,22 +77,6 @@ Linux, Windows, and macOS are first-class v1 desktop platforms for the core CLI,
 integrations, and standalone workbench. Engine companions may declare narrower supported
 combinations of engine version, host platform, and toolchain; v1 does not require testing every
 Cartesian product of desktop and engine targets.
-
-The workspace should contain:
-
-- `recite-core`: AST, identifiers, value model, diagnostics, schema model.
-- `recite-parser`: DSL parser and source mapping.
-- `recite-compiler`: compiler, validator, POT extractor, compiled asset writer.
-- `recite-runtime`: deterministic runtime with no engine dependencies.
-- `recite-cli`: project CLI, exposing the `recite` binary.
-- `recite-lsp`: language server.
-- shared authoring-kernel and configuration capabilities used by the CLI, LSP, editor clients,
-  preview, and GUI workbench. These may begin in existing crates and become a crate only when the
-  ownership boundary is proven.
-- engine adapter crates as integrations mature, such as `recite-godot`, `recite-bevy`, or
-  `recite-unity`.
-- editor integrations for VS Code/VSCodium, Neovim, and Zed.
-- the standalone GUI workbench and any platform-specific frontend projects selected by the bake-off.
 
 The GUI workbench is source-first. It may show a graph and provide safe structured edits, but
 source, comments, unknown metadata, and stable IDs remain authoritative. A general lossless

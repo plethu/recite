@@ -7,6 +7,12 @@ import keyboardAccess from "./src/markdown-keyboard-access.ts";
 export default defineConfig({
   output: "static",
   site: process.env.SITE_URL ?? "http://localhost:4173",
+  redirects: {
+    "/migration/dialogue-system-for-unity/": "/migration/manual/#dialogue-system-for-unity",
+    "/migration/dialogue-manager/": "/migration/manual/#dialogue-manager",
+    "/migration/dialogic/": "/migration/manual/#dialogic",
+    "/migration/clyde/": "/migration/manual/#clyde",
+  },
   integrations: [starlight({
     title: "Recite",
     locales: { root: { label: "English", lang: "en" } },

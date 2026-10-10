@@ -1,0 +1,43 @@
+id: rust-writer-palette
+valid:
+  - |
+    fn render(p: Palette) {
+        let clear = Color::TRANSPARENT;
+        let unrelated = OtherColor::from_rgb(red, green, blue);
+        let selected = Color::lerp(p.surface, p.selection, amount);
+        let text = "Color::from_rgb(r, g, b)";
+        // Color::BLACK is a documentation example.
+    }
+  - |
+    fn render(p: Palette) {
+        render!(Color::TRANSPARENT, Color::lerp(p.surface, p.selection, amount));
+        render!("Color::BLACK");
+        render!(Color /* type argument */, other::value);
+    }
+invalid:
+  - |
+    fn render() { skia_safe /* path */ :: /* name */ Color::from_rgb(red, green, blue); }
+  - |
+    fn render() { r#Color::r#from_rgb(red, green, blue); }
+  - |
+    fn render() { Color::from_rgb(red, green, blue); }
+  - |
+    fn render() { Color /* comment */ :: from_rgb /* comment */ (red, green, blue); }
+  - |
+    fn render() { skia_safe::Color::from_rgb(red, green, blue); }
+  - |
+    fn render() { Color::BLACK; }
+  - |
+    use skia_safe::{Color as Ink};
+  - |
+    type Ink = skia_safe::Color;
+  - |
+    fn render() { <Color as From<u32>>::from(raw); }
+  - |
+    fn render() { <skia_safe::Color as From<u32>>::from(raw); }
+  - |
+    fn render() { render!(Color::from_rgb(red, green, blue)); }
+  - |
+    fn render() { render!(skia_safe::Color::BLACK); }
+  - |
+    fn render() { render!(Color /* comment */ :: /* comment */ from_rgb(red, green, blue)); }

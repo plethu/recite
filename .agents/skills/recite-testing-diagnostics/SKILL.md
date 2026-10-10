@@ -16,7 +16,7 @@ conventions.
   parser, compiler, runtime, CLI, fixture, snapshot, diagnostic, and public-model behavior.
 - Put private unit tests in module-local `src/**/tests.rs` sidecars only when a test needs private
   internals that should not become public API.
-- Do not put `#[test]` bodies inline in production source files, or use source- side
+- Do not put `#[test]` bodies inline in production source files, or use source-side
   `*_test.rs`/`*_tests.rs` files.
 - Keep shared cross-crate fixtures under top-level `tests/support`.
 - Run `scripts/check-test-organization.sh` when test files move or new tests are added.
@@ -40,10 +40,8 @@ codes and avoid host paths, wall-clock values, nondeterministic ordering, and de
 - CLI and LSP tests reuse fixture inputs rather than maintaining divergent examples.
 - Runtime tests execute headlessly without an engine and assert structured events, deterministic
   order, serialisation/recovery, and effects when those surfaces are involved.
-- Benchmark and scale evidence support the serious-v1 release outcome (GitHub milestone 25). Issue
-  #109 owns the release benchmark baseline. Require benchmark smoke for affected changes and
-  complete CI runs as defined in production spec §19.8, including the existing paired LSP gate.
-  Broader numeric budgets remain evidence until that baseline is established.
+- Follow production spec §19.8 for affected benchmark smoke and paired LSP checks. A smoke pass
+  establishes execution, not a release baseline or native-host acceptance.
 
 ## Performance investigations
 

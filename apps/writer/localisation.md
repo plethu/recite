@@ -100,7 +100,5 @@ Catalogue-scale profiling and automatic file watching remain outstanding. Extern
 edit the same file; Compare and Reload handle conflicts without introducing a private translation
 database.
 
-Headless interaction tests cover creation, cancellation, invalid language, existing-path refusal,
-open/edit/save, plural and variant drafts, review, external comparison, source refresh and preview
-locale controls. Shared PO tests protect unknown data, comments, fuzzy flags and placeholder
-validation. Physical keyboard/IME and screen-reader workflows remain in [acceptance](acceptance.md).
+The [Writer gate](justfile) checks these workflows and shared PO preservation/validation. Physical
+keyboard, IME and screen-reader checks belong to [acceptance](acceptance.md).

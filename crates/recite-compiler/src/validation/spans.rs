@@ -52,32 +52,51 @@ impl<'a> Validator<'a> {
         }
         self.validate_metadata_schema(source_file, context);
     }
+    /// Returns false when the expression exceeds the compiled nesting limit.
     pub(super) fn validate_condition_expression(
         &mut self,
         source_file: &'a SourceFile,
         condition: &'a ConditionExpression,
-    ) {
-        match condition {
-            ConditionExpression::Call(call) => self.validate_condition_call(source_file, call),
-            ConditionExpression::And(group) | ConditionExpression::Or(group) => {
-                self.validate_span(
-                    source_file,
-                    &group.span,
-                    diagnostics::SourceSpanOwner::ConditionExpression,
-                );
-                for expression in &group.expressions {
-                    self.validate_condition_expression(source_file, expression);
+    ) -> bool {
+        let mut pending = vec![(condition, 0)];
+        while let Some((condition, depth)) = pending.pop() {
+            if depth > recite_core::compiled::MAX_COMPILED_CONDITION_DEPTH {
+                self.diagnostics.push(diagnostics::condition_depth_exceeded(
+                    condition.span().clone(),
+                ));
+                return false;
+            }
+            match condition {
+                ConditionExpression::Call(call) => self.validate_condition_call(source_file, call),
+                ConditionExpression::And(group) | ConditionExpression::Or(group) => {
+                    self.validate_span(
+                        source_file,
+                        &group.span,
+                        diagnostics::SourceSpanOwner::ConditionExpression,
+                    );
+                    pending.extend(
+                        group
+                            .expressions
+                            .iter()
+                            .rev()
+                            .map(|child| (child, depth + 1)),
+                    );
+                }
+                ConditionExpression::Not(unary) | ConditionExpression::Grouped(unary) => {
+                    self.validate_span(
+                        source_file,
+                        &unary.span,
+                        diagnostics::SourceSpanOwner::ConditionExpression,
+                    );
+                    // Parentheses disappear during compilation; only boolean
+                    // operators add edges to the compiled expression tree.
+                    let child_depth =
+                        depth + usize::from(matches!(condition, ConditionExpression::Not(_)));
+                    pending.push((&unary.expression, child_depth));
                 }
             }
-            ConditionExpression::Not(unary) | ConditionExpression::Grouped(unary) => {
-                self.validate_span(
-                    source_file,
-                    &unary.span,
-                    diagnostics::SourceSpanOwner::ConditionExpression,
-                );
-                self.validate_condition_expression(source_file, &unary.expression);
-            }
         }
+        true
     }
     pub(super) fn validate_condition_call(
         &mut self,

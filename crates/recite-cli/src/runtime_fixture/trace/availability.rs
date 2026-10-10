@@ -34,6 +34,11 @@ fn trace_availability_reason(
     TraceChoiceAvailabilityReason {
         id: reason.id.as_str().to_owned(),
         source_text: reason.source_text.clone(),
+        localisation: super::convert::trace_localisation(
+            dialogue_trace,
+            reason.id.as_str(),
+            TextDomain::AvailabilityReason,
+        ),
         localized_template: localized_template(dialogue_trace, reason.id.as_str())
             .unwrap_or_else(|| reason.source_text.clone()),
         text: reason.text.clone(),
@@ -123,8 +128,6 @@ fn trace_availability_reason_tree(
 
 fn localized_template(trace: &PreviewTrace, id: &str) -> Option<String> {
     trace
-        .localized_lookups()
-        .filter(|lookup| lookup.id == id && lookup.domain == TextDomain::AvailabilityReason)
-        .last()
+        .latest_localized_lookup(id, TextDomain::AvailabilityReason)
         .and_then(|lookup| lookup.resolved_text.clone())
 }

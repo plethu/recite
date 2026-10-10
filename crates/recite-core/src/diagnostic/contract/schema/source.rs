@@ -1,6 +1,7 @@
 use super::schema_contract as contract;
 use crate::DiagnosticPresentationContract;
 
+contract!(NATIVE_INVALID, "RECITE_SCHEMA001", "diagnostic-schema-001-native-invalid", ["detail" => String]);
 contract!(JSON_PARSE, "RECITE_SCHEMA001", "diagnostic-schema-001-json-parse", ["detail" => String]);
 contract!(TOML_PARSE, "RECITE_SCHEMA001", "diagnostic-schema-001-toml-parse", ["detail" => String]);
 contract!(TOML_DECODE, "RECITE_SCHEMA001", "diagnostic-schema-001-toml-decode", ["detail" => String]);
@@ -45,6 +46,7 @@ contract!(
 contract!(READ, "RECITE_SCHEMA001", "diagnostic-schema-001-read", ["detail" => String]);
 
 const CONTRACTS: &[&DiagnosticPresentationContract] = &[
+    &NATIVE_INVALID,
     &JSON_PARSE,
     &TOML_PARSE,
     &TOML_DECODE,

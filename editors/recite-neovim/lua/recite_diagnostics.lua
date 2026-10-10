@@ -250,6 +250,7 @@ return {
   ["diagnostic-schema-001-metadata-array-type"] = { arguments = { { name = "metadata", type = "string" }, { name = "type_ref", type = "string" } }, template = "metadata '{$metadata}' uses projection-only array type '{$type_ref}'" },
   ["diagnostic-schema-001-metadata-domain-type"] = { arguments = { { name = "metadata", type = "string" }, { name = "type_ref", type = "string" } }, template = "metadata '{$metadata}' uses a metadata domain but has non-symbol type '{$type_ref}'" },
   ["diagnostic-schema-001-metadata-target"] = { arguments = { { name = "metadata", type = "string" }, { name = "target", type = "string" } }, template = "metadata '{$metadata}' uses unsupported target '{$target}'" },
+  ["diagnostic-schema-001-native-invalid"] = { arguments = { { name = "detail", type = "string" } }, template = "invalid native project schema: {$detail}" },
   ["diagnostic-schema-001-origin-extension"] = { arguments = { { name = "key", type = "string" }, { name = "owner", type = "string" } }, template = "{$owner} origin extension '{$key}' must be namespaced" },
   ["diagnostic-schema-001-producer-content-fingerprint-blake3-digest-length"] = { arguments = { { name = "actual", type = "integer" } }, template = "manifest content_fingerprint is invalid: blake3 fingerprint digest must be 32 bytes, got {$actual}" },
   ["diagnostic-schema-001-producer-content-fingerprint-blake3-hex-data"] = { arguments = {  }, template = "manifest content_fingerprint is invalid: blake3 producer fingerprint must be hex" },
@@ -582,4 +583,8 @@ return {
   ["diagnostic-validate-049-cause-001"] = { arguments = {  } },
   ["diagnostic-validate-049-meaning"] = { arguments = {  } },
   ["diagnostic-validate-049-remediation-001"] = { arguments = {  } },
+  ["diagnostic-validate-050"] = { arguments = { { name = "limit", type = "integer" } }, template = "condition exceeds the boolean nesting limit of {$limit}" },
+  ["diagnostic-validate-050-cause-001"] = { arguments = {  } },
+  ["diagnostic-validate-050-meaning"] = { arguments = {  } },
+  ["diagnostic-validate-050-remediation-001"] = { arguments = {  } },
 }

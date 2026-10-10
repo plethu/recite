@@ -83,7 +83,7 @@ fn fixture() -> AuthoringKernel {
             outputs: Default::default(),
         },
     );
-    AuthoringKernel::with_schema(schema)
+    AuthoringKernel::with_schema(schema).expect("valid schema")
 }
 
 fn source() -> SavedDocument {

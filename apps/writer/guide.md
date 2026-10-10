@@ -3,7 +3,7 @@
 The native writer uses Freya and the shared Recite authoring kernel. Run from the repository root:
 
 ```sh
-mise exec -- cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
+mise exec -- just writer run
 ```
 
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
@@ -41,10 +41,9 @@ viewport centre when disabled in Settings). Zoom controls include **100%** and *
 not rearrange cards. **Arrange automatically** resets card placement while preserving the camera's
 zoom and position.
 
-Drag the divider beside the scene drawer or script pane to resize it. The drawer allows 180–360
-logical pixels and the script pane 320–800, constrained by the space needed for the graph. Focus a
-divider and use Left/Right to resize, or Home/End to reach its bounds. Settings includes **Script
-pane: Left/Right**; this preference and the divider widths are restored next launch.
+Drag the divider beside the scene drawer or script pane to resize it. Focus a divider and use
+Left/Right to resize, or Home/End to reach its bounds. Settings includes **Script pane:
+Left/Right**; this preference and the divider widths are restored next launch.
 
 Settings also controls reading size, Source size and UI scale independently. **Commands**
 (Ctrl/Cmd+Shift+P) searches workspace actions; **Go to scene or beat** (Ctrl/Cmd+P) searches scene
@@ -52,40 +51,31 @@ names and beat IDs. Search cancellation returns focus to the invoking control. S
 keeps typing in the editor: Ctrl+Space opens candidates, arrows select, Enter accepts a selected
 result, and Escape dismisses. Tab keeps its ordinary editor behaviour.
 
-Card positions survive reopening in `writer-layouts.json`, beside the resolved user configuration.
-Project scenes are identified by their full discovered file path, and examples have a separate
-namespace. Placement never changes source order or conversation flow. The writer owns the versioned
-layout schema; `recite-config` supplies the same locking and atomic replacement primitive used by
-preference edits. Corrupt or future layout files are left untouched and an error stays visible.
-Renaming a beat preserves placement through its first stable passage ID; effects-only beats use
-their block name.
+Map placement is saved with personal preferences and never changes source order or conversation
+flow. Corrupt or future layout files are left untouched and reported. Renaming a beat preserves its
+placement through its first stable passage ID; effects-only beats use their block name.
 
-Return styling comes from deterministic depth-first traversal of the scene, starting at its declared
-entry, rather than from card coordinates. Return routes use separate lanes and attachment points.
-Hovering a beat isolates its incident connections while dimming unrelated ones; keyboard focus
-reveals the same connections. Selection keeps a persistent outline. Reply labels appear beside the
-outgoing connections of the inspected beat. Cards separate speaker and dialogue from
-condition/effect annotations. Path emphasis eases over 160 ms, including when the pointer changes
-targets mid-transition.
+Hovering or focusing a beat reveals its connections and reply labels. Selection keeps a persistent
+outline. Return routes are identified from dialogue flow, independently of card positions.
 
 **Add beat** creates a separate beat and opens it for writing. **Rename** uses the compiler's rename
-operation, preserving passage IDs and updating references. Renames that require edits in another
-scene are refused. **Add line** inserts before the beat's branching or continuation; **Add reply**
-turns an existing unconditional continuation into a reply with the same destination. **Change
-destination…** rewires a reply or an unconditional continuation. These changes share the document's
-undo history.
+operation, preserving passage IDs and updating references. Inline renames refuse cross-scene edits.
+Source view also provides a reviewed multi-file rename that lists affected documents before applying
+the change. **Add line** inserts before the beat's branching or continuation; **Add reply** turns an
+existing unconditional continuation into a reply with the same destination. **Change destination…**
+rewires a reply or an unconditional continuation. These changes share the document's undo history.
 
 Prose remains a text field throughout: clicking places the caret without changing the text's layout.
-Hover outlines indicate editability; focus colour settles over 160 ms, without changing text
-geometry. Leaving a prose field or changing context applies a source-preserving edit to the working
-document, with undo available. Rejected text stays in its field with an explanation and a Discard
-draft action. Source changes still use explicit Apply / Discard actions. Script and Source share
-that working document; neither saves it automatically.
+Hover and focus indicate editability without changing text geometry. Leaving a prose field or
+changing context applies a source-preserving edit to the working document, with undo available.
+Rejected text stays in its field with an explanation and a Discard draft action. Source changes
+still use explicit Apply / Discard actions. Script and Source share that working document; neither
+saves it automatically.
 
 To edit files in a project:
 
 ```sh
-cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer -- --project /path/to/project
+mise exec -- just writer run --project /path/to/project
 ```
 
 The project argument opens that project through Recite's shared manifest discovery. Use **Project**
@@ -129,16 +119,16 @@ inside that project.
 
 For the bundled examples, pass `--examples`. Embedded native hosts can provide `InitialProject` and
 `InitialRoute(String)` as root contexts. Unavailable scenes, invalid parameters and links
-identifying a different project report an error without replacing the current scene. Freya's router
-owns the history; the workspace applies its draft and file checks before accepting the location.
+identifying a different project report an error without replacing the current scene. Draft and file
+checks apply before navigation is accepted.
 
 On Linux, another launch forwards its project and link to the existing project-writer window,
 including a window opened at the welcome screen. Opening another project uses the shared loader and
 refuses to replace unsaved work. If a clean project opens but its linked location is unavailable,
 the error identifies that partial result and the opened project stays selected. Examples and the
-component specimen remain independent windows. Desktop installation acceptance and the other
-platforms remain [packaging work](packaging.md), tracked in #79. Dialogs, preview playback and
-pinned reference snapshots are transient workspace state and are not encoded in links.
+component specimen remain independent windows. Desktop integration and platform limits are described
+in [packaging](packaging.md). Dialogs, preview playback and pinned reference snapshots are transient
+workspace state and are not encoded in links.
 
 Source-update review has its own `/source-updates` route. Its `page` parameter identifies the
 selected change index within the cached review; queue paging stays independent. Back/Forward
@@ -177,21 +167,18 @@ Shared controls, dialog layout and motion are described in the
 
 ## Save boundary
 
-The editor compares the file's current bytes with the version it opened or last saved. A conflict
-refuses replacement and retains the in-memory work. Saves use an exclusive cooperative sidecar lock,
-a synced temporary file in the same directory and atomic replacement. Each replacement keeps the
-previous bytes in a hidden `.recite-editor-backup-*` file beside the source.
+Save applies the current valid field draft and writes explicitly. If the file changed externally,
+replacement is refused and your work stays open. Each replacement retains the previous bytes in a
+hidden `.recite-editor-backup-*` file beside the source; backups are not automatically pruned.
 
-Existing permissions are preserved. Symlink/non-regular save targets and read-only files are
-refused. On Unix the parent directory is synced, including on a no-op retry after a failed directory
-sync. Failure after replacement can mean the new bytes are already visible; retry Save to complete
-synchronization.
+Read-only, symlink and non-regular targets are refused. A failure after replacement can mean the new
+bytes are already visible. Retry Save to complete durability synchronization, even when no text has
+changed. The persistent `.recite-editor.lock` sidecar need not be removed: its OS lock is released
+when the process exits.
 
-The lock coordinates these editor instances, not arbitrary third-party writers. A non-cooperating
-writer can still race the final content check. The persistent `<source>.recite-editor.lock` sidecar
-uses an OS-held lock; a process exit or crash releases that lock. The empty sidecar need not be
-removed. Backups are retained for inspection and are not automatically pruned. ACLs/xattrs and
-crash-injection durability have not been accepted on every platform.
+The lock coordinates cooperating writers; another program can still race the final content check.
+ACL/xattr preservation and crash-injection durability are not accepted on every platform. These
+limits are distinct from the tested conflict and atomic-replacement behavior.
 
 ## Recovery and closing
 
@@ -259,24 +246,9 @@ requirements remain in [acceptance](acceptance.md).
 
 ## Writing trial
 
-Use a copy of a real project. Edit in Script and Source, leave a field draft, close with recovery,
-and reopen. Then change the source in another editor and exercise the conflict/reload path. Check
-keyboard save, dialog navigation, focus restoration, and whether the recovered field matches what
-you left.
-
-Component and filesystem tests cover these transitions. Physical IME/BiDi, screen-reader operation,
-native window-manager closing, and macOS/Windows acceptance still need hands-on checks. The pinned
-CodeEditor preedit limitation remains recorded in the [acceptance checks](acceptance.md).
-
-Focused verification for this isolated workspace:
-
-```sh
-mise exec -- cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model -p recite-writer
-mise exec -- cargo clippy --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model -p recite-writer --all-targets -- -D warnings
-mise exec -- cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
-scripts/check-test-organization.sh
-scripts/check-git-policy.sh
-```
+The [acceptance guide](acceptance.md) owns real writing sessions, recovery/conflict drills and
+native keyboard, IME and screen-reader checks. Run `mise exec -- just writer check` for automated
+verification.
 
 Pane dividers preview a new width with a guide while dragging, then reflow on release. Escape
 cancels the drag. Keyboard resizing remains immediate.
@@ -286,7 +258,8 @@ snapshot alongside the script; Previous/Next beat retraces visits within the cur
 search matches complete words in saved passages and their document, beat and speaker context. Save
 updates the affected search index; Refresh discovers new files and refreshes the full saved context.
 
-Initial project open runs in the background. Cancel opening discards its result; it does not abort
-the compiler. Recovery writes are coalesced on a separate worker; Save and Keep recovery and close
-still wait for durability. The [scalability report](scalability.md) documents workloads and current
-limits.
+Initial project open runs in the background. Cancellation reaches compiler and search checkpoints;
+an individual filesystem operation or parse finishes before its next checkpoint. Recovery writes are
+coalesced on a separate worker; Save and Keep recovery and close still wait for durability. The
+[profiling guide](../../docs/profiling-and-optimisation.md#writer-workloads) owns workloads;
+[acceptance](acceptance.md#scale-and-performance) owns native scale requirements.

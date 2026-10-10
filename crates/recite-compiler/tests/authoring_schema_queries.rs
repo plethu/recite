@@ -46,7 +46,7 @@ fn projection_enumeration_is_explicit_and_typed() {
             outputs: Default::default(),
         },
     );
-    let kernel = AuthoringKernel::with_schema(schema);
+    let kernel = AuthoringKernel::with_schema(schema).expect("valid schema");
     let QueryResult::Ready(candidates) = kernel.snapshot().projection_candidates("hud") else {
         panic!("known projector is available");
     };
@@ -103,7 +103,7 @@ fn contextual_metadata_uses_canonical_inherited_and_key_context() {
         }),
     );
     for ending in ["\n", "\r\n", "\r"] {
-        let mut kernel = AuthoringKernel::with_schema(schema.clone());
+        let mut kernel = AuthoringKernel::with_schema(schema.clone()).expect("valid schema");
         kernel
             .apply(AuthoringRequest::new(
                 SnapshotGeneration::initial(),
@@ -166,7 +166,7 @@ fn contextual_metadata_rejects_duplicate_and_wrong_target_context() {
             provenance: Default::default(),
         }),
     );
-    let mut kernel = AuthoringKernel::with_schema(schema);
+    let mut kernel = AuthoringKernel::with_schema(schema).expect("valid schema");
     kernel
         .apply(AuthoringRequest::new(
             SnapshotGeneration::initial(),

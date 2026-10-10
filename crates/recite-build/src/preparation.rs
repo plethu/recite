@@ -137,9 +137,16 @@ fn validate_sources(
     schema: Option<&ProjectSchema>,
     project_complete: bool,
 ) -> Result<Vec<Diagnostic>, String> {
-    let mut kernel = schema.map_or_else(AuthoringKernel::new, |schema| {
-        AuthoringKernel::with_schema(schema.clone())
-    });
+    let mut kernel = match schema {
+        Some(schema) => match AuthoringKernel::with_schema(schema.clone()) {
+            Ok(kernel) => kernel,
+            Err(recite_compiler::authoring::AuthoringError::InvalidSchema { diagnostics }) => {
+                return Ok(diagnostics);
+            }
+            Err(error) => return Err(error.to_string()),
+        },
+        None => AuthoringKernel::new(),
+    };
     let saved = documents.iter().map(|document| {
         recite_compiler::authoring::SavedDocument::new(document.key().clone(), document.text())
     });

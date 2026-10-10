@@ -51,6 +51,8 @@ impl std::fmt::Display for SnapshotGeneration {
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum AuthoringError {
+    #[error("invalid project schema")]
+    InvalidSchema { diagnostics: Vec<Diagnostic> },
     #[error(transparent)]
     Interrupted(#[from] Interrupted),
     #[error("expected snapshot generation {expected}, but current generation is {actual}")]
@@ -113,13 +115,14 @@ impl AuthoringKernel {
     }
 
     /// Creates an empty kernel using a caller-owned immutable project schema.
-    #[must_use]
-    pub fn with_schema(schema: ProjectSchema) -> Self {
+    pub fn with_schema(schema: ProjectSchema) -> Result<Self, AuthoringError> {
+        recite_core::schema::validate_project_schema(&schema)
+            .map_err(|diagnostics| AuthoringError::InvalidSchema { diagnostics })?;
         let mut kernel = Self::new();
         let schema = Arc::new(schema);
         kernel.schema = Some(Arc::clone(&schema));
         kernel.snapshot.schema = Some(schema);
-        kernel
+        Ok(kernel)
     }
 
     /// Returns the current deterministic snapshot.

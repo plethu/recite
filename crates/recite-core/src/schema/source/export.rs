@@ -1,8 +1,10 @@
 mod basic;
+mod native;
 mod projection;
 mod provenance;
 
 use crate::schema::ProjectSchema;
+pub(crate) use native::{NativeExportError, validate_native_export};
 
 /// Emit deterministic generated JSON from the canonical schema.
 ///

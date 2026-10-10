@@ -53,7 +53,7 @@ translation support, and a stateless runtime that leaves game state with the hos
 
 A move to Recite requires reviewing conditions and mutations against its schema and effect model.
 Godot presentation and project setup stay separate. Read the
-[Dialogue Manager migration notes](/migration/dialogue-manager/).
+[Dialogue Manager migration notes](/migration/manual/#dialogue-manager).
 
 ### Dialogic
 
@@ -61,8 +61,9 @@ Godot presentation and project setup stay separate. Read the
 characters, and presentation tools for Godot. Include the timeline behaviour and presentation you
 use when assessing the work involved in changing tools.
 
-Recite has no automatic Dialogic importer. The [Dialogic migration notes](/migration/dialogic/)
-describe how to map dialogue and identify the parts that need manual work.
+Recite has no automatic Dialogic importer. The
+[Dialogic migration notes](/migration/manual/#dialogic) describe how to map dialogue and identify
+the parts that need manual work.
 
 ### Dialogue System for Unity
 
@@ -72,8 +73,8 @@ inventory the conversations, UI, sequencing, quests, and Unity integrations your
 replacing dialogue traversal.
 
 Recite does not import the Unity project or reproduce those systems. Read the
-[Dialogue System migration notes](/migration/dialogue-system-for-unity/) to plan the integration
-work.
+[Dialogue System migration notes](/migration/manual/#dialogue-system-for-unity) to plan the
+integration work.
 
 ### Clyde
 
@@ -82,7 +83,7 @@ translations, and game integration through variables and events. Compare those b
 Recite’s conditions, typed effects, and localisation model.
 
 Migration is manual. Recite v1 includes neither a Clyde importer nor a compatibility runtime. Read
-the [Clyde migration notes](/migration/clyde/).
+the [Clyde migration notes](/migration/manual/#clyde).
 
 For passage-based work, the [Twee and Twine notes](/migration/twee/) describe the limited source
 forms Recite can import. A published Twine game, its story format, and its presentation are separate
@@ -106,24 +107,11 @@ into the game. Those observations will be more useful than a feature count.
 
 ## Performance and release evidence
 
-Recite’s [benchmark reference](/reference/benchmarks/) documents commands, fixture scales, and
-regression policy; smoke runs do not save baselines, and the
-[release baseline in #109](https://github.com/plethu/recite/issues/109) remains pending. It does not
-establish that Recite is faster or smaller than another dialogue tool. A useful comparison needs the
-same workload, named versions and hardware, and a clear account of what was measured.
+Recite’s [benchmark reference](/reference/benchmarks/) documents the maintained workloads and
+regression policy. Smoke runs establish buildability and execution, not comparative speed or memory
+use. A useful comparison needs the same workload, named versions and hardware, and a clear account
+of what was measured.
 
 Check the [distribution guide](/guides/distribution/) and relevant [engine adapter](/adapters/) for
-package and platform evidence. A successful build alone does not establish desktop accessibility,
-engine compatibility, or release support.
-
-The [example work in #38](https://github.com/plethu/recite/issues/38) and
-[guide work in #57](https://github.com/plethu/recite/issues/57) are complete. Their examples and
-documentation give you something to inspect and run; closing those issues does not establish
-suitability for your project.
-
-Release evidence remains pending for
-[packaging and installation in #79](https://github.com/plethu/recite/issues/79),
-[known limits and support records in #81](https://github.com/plethu/recite/issues/81), and the
-[benchmark baseline in #109](https://github.com/plethu/recite/issues/109). Check the recorded
-versions, platforms, workloads, and unresolved limitations before relying on a release claim. These
-records do not establish comparative performance against other dialogue tools.
+package and platform evidence. Build and fixture results do not establish desktop accessibility,
+engine compatibility or suitability for your project.
