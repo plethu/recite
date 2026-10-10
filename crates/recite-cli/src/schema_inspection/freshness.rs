@@ -4,6 +4,9 @@ use recite_core::schema::{ContentFingerprintFreshness, ProducerFreshness};
 use super::fingerprints::producer_fingerprint_projection;
 use super::model::{FreshnessChannelsProjection, FreshnessProjection};
 
+#[cfg(test)]
+mod tests;
+
 pub(super) fn freshness_json(freshness: &SchemaFreshness) -> FreshnessProjection {
     match freshness {
         SchemaFreshness::Compared(evidence) => {

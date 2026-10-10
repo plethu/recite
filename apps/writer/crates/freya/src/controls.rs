@@ -121,7 +121,7 @@ impl Component for NavigationRow {
         crate::design::Button::new()
             .flat()
             .named(self.text.clone())
-            .selected(self.selected)
+            .toggle(self.selected)
             .width(Size::fill())
             .on_press(self.action.clone())
             .child(

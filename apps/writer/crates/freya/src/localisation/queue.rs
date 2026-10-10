@@ -211,7 +211,7 @@ fn render(writer: Writer) -> Element {
                         Button::new()
                             .flat()
                             .a11y_id(id)
-                            .selected(*active.read() == Some(index))
+                            .toggle(*active.read() == Some(index))
                             .width(Size::fill())
                             .enabled(context.is_some())
                             .on_press(move |_| {

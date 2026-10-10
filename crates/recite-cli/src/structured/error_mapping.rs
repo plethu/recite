@@ -3,6 +3,10 @@ use std::path::Path;
 use crate::error::CliError;
 use crate::schema_inspection::machine_path;
 
+#[path = "error_mapping/tests.rs"]
+#[cfg(test)]
+mod tests;
+
 use super::errors::{ErrorCategory, ErrorCode, ErrorDetails, ErrorOperation, StructuredError};
 
 type ErrorParts<'a> = (

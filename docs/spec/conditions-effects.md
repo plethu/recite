@@ -35,6 +35,11 @@ encoding, fingerprinting and runtime evaluation share this bound for branches an
 requirements. Excess depth is rejected rather than creating an asset that cannot traverse. This is a
 compiled-expression limit; syntactic parentheses alone do not add tree depth.
 
+Source parsing accepts up to 128 nested `not` operators and parenthetical groups on one path.
+Further nesting produces source-spanned `RECITE_PARSE013` diagnostics rather than exhausting the
+process stack. This guard does not limit the width of `and`/`or` expressions or scalar argument
+lists. Parenthetical grouping is removed before compiled evaluation.
+
 ### 6.2 Condition Semantics
 
 Conditions are pure queries. They must not mutate dialogue state or game state.

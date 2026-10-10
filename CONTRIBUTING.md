@@ -74,6 +74,14 @@ currently require Linux x86_64, Cage, wtype, and official host downloads; see th
 and `docs/editor-parity-contract.md` for the evidence boundaries. These runs do not establish
 other-platform support or replace the release benchmark baseline.
 
+The required Rust CI lane also runs `just coverage` and `just mutants`; the Writer lane runs `just
+writer coverage`. Coverage floors apply separately to each named production owner, and the critical
+mutation scope includes downstream consumers and a baseline. These commands use the pinned Cargo
+tools and LLVM component installed by mise. Proptest runs with ordinary tests and persists shrunk
+failure seeds; CI uses 256 cases per property. See
+[testing policy](docs/spec/quality.md#175-enforced-rust-test-assurance) for the enforced targets and
+scope. Run the affected assurance command before committing changes to these contracts or tests.
+
 ## Formatting and validation
 
 Versioned configurations own formatter/linter selection and coverage. Use the common commands above;
@@ -84,6 +92,11 @@ fixture gates. They are validated, not automatically reformatted: whitespace and
 incomplete inputs can be test data. Generated files and frozen historical evidence are excluded
 explicitly in the formatter configurations; their generators or owning tests check them. Do not edit
 dependency/theme sources to satisfy our style rules.
+
+Writer control models keep role-specific selection and toggle state in enums. The existing ast-grep
+gate rejects multiple `Option<bool>` state fields in one control under `src/design`; independent
+configuration overrides remain outside that rule. Complexity and nesting limits alone do not check
+the relationships between those fields.
 
 The [site](docs-site/README.md) uses Astro/Starlight with mise-managed Node/pnpm for builds and
 checks. Its output is static HTML, CSS and browser modules; hosting needs no Node server or UI

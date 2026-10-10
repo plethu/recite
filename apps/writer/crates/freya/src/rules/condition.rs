@@ -80,13 +80,9 @@ impl Component for ConditionControl {
                             Button::new()
                                 .flat()
                                 .on_press(move |_| {
-                                    super::change(writer, |rules| {
-                                        if let Some(root) = &mut rules.condition
-                                            && let Some(node) = at(root, &negate)
-                                        {
-                                            *node = RuleExpression::Not(Box::new(node.clone()));
-                                        }
-                                    })
+                                    change_node(writer, &negate, |node| {
+                                        *node = RuleExpression::Not(Box::new(node.clone()));
+                                    });
                                 })
                                 .child(text(MsgId::WriterRulesNegate)),
                         )
@@ -94,12 +90,8 @@ impl Component for ConditionControl {
                             Button::new()
                                 .flat()
                                 .on_press(move |_| {
-                                    super::change(writer, |rules| {
-                                        if let Some(root) = &mut rules.condition
-                                            && let Some(node) = at(root, &group_path)
-                                        {
-                                            *node = RuleExpression::All(vec![node.clone()]);
-                                        }
+                                    change_node(writer, &group_path, |node| {
+                                        *node = RuleExpression::All(vec![node.clone()]);
                                     });
                                 })
                                 .child(text(MsgId::WriterRulesGroup)),
@@ -127,15 +119,7 @@ impl Component for ConditionControl {
                         argument: argument.clone(),
                         owner: function.clone(),
                         change: EventHandler::new(move |value: String| {
-                            super::change(writer, |rules| {
-                                if let Some(root) = &mut rules.condition
-                                    && let Some(RuleExpression::Call { arguments, .. }) =
-                                        at(root, &path)
-                                    && let Some(argument) = arguments.get_mut(index)
-                                {
-                                    argument.value = value;
-                                }
-                            })
+                            set_argument(writer, &path, index, value);
                         }),
                     });
                 }
@@ -179,11 +163,8 @@ impl Component for ConditionControl {
                     Button::new()
                         .flat()
                         .on_press(move |_| {
-                            super::change(writer, |rules| {
-                                if let Some(root) = &mut rules.condition
-                                    && let Some(node) = at(root, &negate)
-                                    && let RuleExpression::Not(inner) = node
-                                {
+                            change_node(writer, &negate, |node| {
+                                if let RuleExpression::Not(inner) = node {
                                     *node = RuleExpression::Group(inner.clone());
                                 }
                             })
@@ -237,11 +218,8 @@ impl Component for MatchMode {
             selected: usize::from(!self.all),
             vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
             change: EventHandler::new(move |index| {
-                super::change(writer, |rules| {
-                    if let Some(root) = &mut rules.condition
-                        && let Some(node) = at(root, &path)
-                        && let RuleExpression::All(items) | RuleExpression::Any(items) = node
-                    {
+                change_node(writer, &path, |node| {
+                    if let RuleExpression::All(items) | RuleExpression::Any(items) = node {
                         let items = items.clone();
                         *node = if index == 0 {
                             RuleExpression::All(items)
@@ -253,4 +231,24 @@ impl Component for MatchMode {
             }),
         }
     }
+}
+
+fn change_node(writer: Writer, path: &[usize], edit: impl FnOnce(&mut RuleExpression)) {
+    super::change(writer, |rules| {
+        if let Some(root) = &mut rules.condition
+            && let Some(node) = at(root, path)
+        {
+            edit(node);
+        }
+    });
+}
+
+fn set_argument(writer: Writer, path: &[usize], index: usize, value: String) {
+    change_node(writer, path, |node| {
+        if let RuleExpression::Call { arguments, .. } = node
+            && let Some(argument) = arguments.get_mut(index)
+        {
+            argument.value = value;
+        }
+    });
 }

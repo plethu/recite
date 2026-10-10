@@ -238,18 +238,6 @@ class ScopeTests(unittest.TestCase):
         cases = (
             (
                 ".mise.toml",
-                b'[tools]\nrust = "1.96"\nnode = "22"\n',
-                b'[tools]\nrust = "1.96"\nnode = "24"\n',
-                scope.JS,
-            ),
-            (
-                ".mise.toml",
-                b'[tools]\nrust = "1.95"\n',
-                b'[tools]\nrust = "1.96"\n',
-                scope.RUST_BUILD,
-            ),
-            (
-                ".mise.toml",
                 b'[tools]\nnode = "22"\n',
                 b"[settings]\nexperimental = true\n",
                 scope.LANES,
@@ -292,6 +280,8 @@ class ScopeTests(unittest.TestCase):
             "clippy": {"rust", "maintainability"},
             "_clippy-rust": {"rust", "maintainability"},
             "core-check": {"rust", "maintainability"},
+            "coverage": {"rust", "maintainability"},
+            "mutants": {"rust", "maintainability"},
             "host-check": {"hosts", "maintainability"},
             "editor-native-check": {"editor-native", "maintainability"},
             "check": scope.JUST_QUALITY,
@@ -303,6 +293,19 @@ class ScopeTests(unittest.TestCase):
                 patch("ci_scope_config.file_at", side_effect=[old, old.replace(b"old", b"new")]),
             ):
                 self.assertEqual(scope.shared_config_lanes("justfile", "base", "head"), expected)
+        for tool, before, after, expected in (
+            ("node", "22", "24", scope.JS),
+            ("rust", "1.95", "1.96", scope.RUST_BUILD),
+            ("cargo:cargo-llvm-cov", "1", "2", scope.RUST_BUILD),
+            ("cargo:cargo-mutants", "1", "2", scope.RUST_BUILD),
+        ):
+            old = f'[tools]\n"{tool}" = "{before}"\n'.encode()
+            new = f'[tools]\n"{tool}" = "{after}"\n'.encode()
+            with (
+                self.subTest(tool=tool),
+                patch("ci_scope_config.file_at", side_effect=[old, new]),
+            ):
+                self.assertEqual(scope.shared_config_lanes(".mise.toml", "base", "head"), expected)
         workflow = ".github/workflows/ci.yml"
         for lane in scope.LANES - {"docs"}:
             old = f"name: CI\n\njobs:\n  {lane}:\n    old\n".encode()
@@ -313,11 +316,9 @@ class ScopeTests(unittest.TestCase):
                 self.assertEqual(scope.shared_config_lanes(workflow, "base", "head"), {lane})
 
     def test_full_events_and_initial_push(self):
-        for event in ("schedule", "workflow_dispatch"):
-            self.assertTrue(all(scope.event_scope(event, {}).values()))
-        self.assertTrue(
-            all(scope.event_scope("push", {"before": "0" * 40, "after": "head"}).values())
-        )
+        for event in ("schedule", "workflow_dispatch", "push"):
+            payload = {"before": "0" * 40, "after": "head"} if event == "push" else {}
+            self.assertTrue(all(scope.event_scope(event, payload).values()))
         with self.assertRaises(ValueError):
             scope.event_scope("pull_request_target", {})
         with self.assertRaises(KeyError):
@@ -342,6 +343,7 @@ class ScopeTests(unittest.TestCase):
 
 class GitDiffTests(unittest.TestCase):
     def test_complete_diff_includes_deletions_rename_sources_and_unusual_names(self):
+        cli = str(ROOT / "scripts/ci-scope.py")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
 
@@ -398,7 +400,7 @@ class GitDiffTests(unittest.TestCase):
                 )
                 output, summary = root / "outputs.txt", root / "summary.md"
                 subprocess.run(
-                    [sys.executable, str(ROOT / "scripts/ci-scope.py")],
+                    [sys.executable, cli],
                     check=True,
                     stdout=subprocess.PIPE,
                     env={
@@ -415,14 +417,7 @@ class GitDiffTests(unittest.TestCase):
                 self.assertEqual(decisions["docs"], "true")
                 self.assertIn("packages: not affected", summary.read_text())
                 missing = subprocess.run(
-                    [
-                        sys.executable,
-                        str(ROOT / "scripts/ci-scope.py"),
-                        "--base",
-                        "missing-ref",
-                        "--head",
-                        head,
-                    ],
+                    [sys.executable, cli, "--base", "missing-ref", "--head", head],
                     capture_output=True,
                     text=True,
                 )

@@ -183,6 +183,25 @@ test("typed diagnostic contracts cover auxiliary presentations and reject wrong 
   assert.equal(validDiagnosticRecord(wrong), false);
 });
 
+test("diagnostic argument names preserve the core wire contract", () => {
+  const record = diagnostic(
+    "dialogue.recite",
+    { line: 1, column: 1 },
+    null,
+    "diagnostic-host-fixture",
+  );
+  for (const name of ["limit_name", "detail_2", "x", "name"]) {
+    record.presentation.arguments = { [name]: { type: "string", value: "detail" } };
+    assert.equal(validDiagnosticRecord(record), true, name);
+  }
+  for (
+    const name of ["Limit", "limit-name", "name-", "0limit", "_limit", "bad.name", "naïve", ""]
+  ) {
+    record.presentation.arguments = { [name]: { type: "string", value: "detail" } };
+    assert.equal(validDiagnosticRecord(record), false, name);
+  }
+});
+
 async function tempRoot(name) {
   const root = path.join(os.tmpdir(), `recite-command-diagnostics-${name}-${process.pid}`);
   await mkdir(root, { recursive: true });

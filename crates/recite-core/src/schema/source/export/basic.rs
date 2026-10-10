@@ -1,17 +1,18 @@
 use super::{insert_object, json_literal_string, provenance};
+use serde_json::{Map, Value, json};
+
 use crate::ast::EffectMode;
 use crate::schema::{
-    AvailabilityReasonArgBinding, ConditionReturnType, MetadataContextSelector,
-    MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy, ParameterDefinition,
-    ProjectSchema, SchemaLiteralValue, SchemaTypeDefinition,
+    AvailabilityReasonArgBinding, ConditionDefinition, ConditionReturnType,
+    MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition, MetadataTarget,
+    MissingMetadataContextPolicy, ParameterDefinition, ProjectSchema, RegistryDefinition,
+    SchemaLiteralValue, SchemaTypeDefinition,
 };
 
 pub(super) fn insert_sections(
     root: &mut serde_json::Map<String, serde_json::Value>,
     schema: &ProjectSchema,
 ) {
-    use serde_json::{Map, Value, json};
-
     let mut types = Map::new();
     for (name, definition) in &schema.types {
         match definition {
@@ -28,28 +29,11 @@ pub(super) fn insert_sections(
     }
     insert_object(root, "types", types);
 
-    let mut registries = Map::new();
-    for (name, definition) in &schema.registries {
-        let mut value = serde_json::Map::new();
-        value.insert(
-            "values".to_owned(),
-            json!(definition.values.iter().collect::<Vec<_>>()),
-        );
-        provenance::add_origin(&mut value, definition.origin.as_ref());
-        if !definition.value_origins.is_empty() {
-            value.insert(
-                "value_origins".to_owned(),
-                provenance::json_origin_map(&definition.value_origins),
-            );
-        }
-        if !definition.producer_fingerprints.is_empty() {
-            value.insert(
-                "producer_fingerprints".to_owned(),
-                provenance::json_fingerprints(&definition.producer_fingerprints),
-            );
-        }
-        registries.insert(name.clone(), serde_json::Value::Object(value));
-    }
+    let registries = schema
+        .registries
+        .iter()
+        .map(|(name, definition)| (name.clone(), json_registry(definition)))
+        .collect();
     insert_object(root, "registries", registries);
 
     let mut speakers = Map::new();
@@ -62,29 +46,11 @@ pub(super) fn insert_sections(
     }
     insert_object(root, "speakers", speakers);
 
-    let mut conditions = Map::new();
-    for (name, definition) in &schema.conditions {
-        let mut value = Map::new();
-        value.insert("params".to_owned(), json_params(&definition.params));
-        value.insert(
-            "returns".to_owned(),
-            json!(match &definition.returns {
-                ConditionReturnType::Bool => "bool".to_owned(),
-                ConditionReturnType::Enum(name) => format!("enum:{name}"),
-            }),
-        );
-        if let Some(mapping) = &definition.availability_reason {
-            let mut args = Map::new();
-            for (name, binding) in &mapping.args {
-                args.insert(name.clone(), json_binding(binding));
-            }
-            value.insert(
-                "availability_reason".to_owned(),
-                json!({ "reason": mapping.reason.as_str(), "args": args }),
-            );
-        }
-        conditions.insert(name.clone(), Value::Object(value));
-    }
+    let conditions = schema
+        .conditions
+        .iter()
+        .map(|(name, definition)| (name.clone(), json_condition(definition)))
+        .collect();
     insert_object(root, "conditions", conditions);
 
     let mut reasons = Map::new();
@@ -115,29 +81,11 @@ pub(super) fn insert_sections(
     }
     insert_object(root, "metadata_domains", domains);
 
-    let mut metadata = Map::new();
-    for (name, definition) in &schema.metadata {
-        let mut value = Map::new();
-        value.insert(
-            "targets".to_owned(),
-            json!(
-                definition
-                    .targets
-                    .iter()
-                    .map(metadata_target_name)
-                    .collect::<Vec<_>>()
-            ),
-        );
-        value.insert(
-            "type".to_owned(),
-            json!(type_ref_name(&definition.type_ref)),
-        );
-        value.insert("repeatable".to_owned(), json!(definition.repeatable));
-        if let Some(domain) = &definition.domain {
-            value.insert("domain".to_owned(), json!(domain));
-        }
-        metadata.insert(name.clone(), Value::Object(value));
-    }
+    let metadata = schema
+        .metadata
+        .iter()
+        .map(|(name, definition)| (name.clone(), json_metadata(definition)))
+        .collect();
     insert_object(root, "metadata", metadata);
 
     let mut markup = Map::new();
@@ -152,6 +100,75 @@ pub(super) fn insert_sections(
         );
     }
     insert_object(root, "markup", markup);
+}
+
+fn json_registry(definition: &RegistryDefinition) -> Value {
+    let mut value = Map::new();
+    value.insert(
+        "values".to_owned(),
+        json!(definition.values.iter().collect::<Vec<_>>()),
+    );
+    provenance::add_origin(&mut value, definition.origin.as_ref());
+    if !definition.value_origins.is_empty() {
+        value.insert(
+            "value_origins".to_owned(),
+            provenance::json_origin_map(&definition.value_origins),
+        );
+    }
+    if !definition.producer_fingerprints.is_empty() {
+        value.insert(
+            "producer_fingerprints".to_owned(),
+            provenance::json_fingerprints(&definition.producer_fingerprints),
+        );
+    }
+    Value::Object(value)
+}
+
+fn json_condition(definition: &ConditionDefinition) -> Value {
+    let mut value = Map::new();
+    value.insert("params".to_owned(), json_params(&definition.params));
+    value.insert(
+        "returns".to_owned(),
+        json!(match &definition.returns {
+            ConditionReturnType::Bool => "bool".to_owned(),
+            ConditionReturnType::Enum(name) => format!("enum:{name}"),
+        }),
+    );
+    if let Some(mapping) = &definition.availability_reason {
+        let args = mapping
+            .args
+            .iter()
+            .map(|(name, binding)| (name.clone(), json_binding(binding)))
+            .collect::<Map<_, _>>();
+        value.insert(
+            "availability_reason".to_owned(),
+            json!({ "reason": mapping.reason.as_str(), "args": args }),
+        );
+    }
+    Value::Object(value)
+}
+
+fn json_metadata(definition: &MetadataDefinition) -> Value {
+    let mut value = Map::new();
+    value.insert(
+        "targets".to_owned(),
+        json!(
+            definition
+                .targets
+                .iter()
+                .map(metadata_target_name)
+                .collect::<Vec<_>>()
+        ),
+    );
+    value.insert(
+        "type".to_owned(),
+        json!(type_ref_name(&definition.type_ref)),
+    );
+    value.insert("repeatable".to_owned(), json!(definition.repeatable));
+    if let Some(domain) = &definition.domain {
+        value.insert("domain".to_owned(), json!(domain));
+    }
+    Value::Object(value)
 }
 
 fn json_params(params: &[ParameterDefinition]) -> serde_json::Value {

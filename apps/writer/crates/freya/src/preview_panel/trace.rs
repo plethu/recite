@@ -160,3 +160,6 @@ pub(super) fn effect(effect: &recite_runtime::DialogueEffectRequest) -> String {
         .collect::<Vec<_>>();
     format!("{}({})", effect.function, values.join(", "))
 }
+
+#[cfg(test)]
+mod tests;

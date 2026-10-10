@@ -137,7 +137,7 @@ fn result_row(
     Button::new()
         .flat()
         .width(Size::fill())
-        .selected(active)
+        .toggle(active)
         .named(name)
         .on_press(move |_| open_result(writer, files, &hit))
         .child(

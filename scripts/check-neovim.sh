@@ -123,6 +123,7 @@ if [[ -z "$node_bin" ]]; then
   exit 2
 fi
 
+"$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
 "$node_bin" "$plugin_root/scripts/message-projections.mjs" --check
 "$node_bin" --test \
   "$plugin_root/test/message-projections.test.mjs" \

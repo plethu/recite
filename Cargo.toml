@@ -29,6 +29,16 @@ readme = "README.md"
 repository = "https://github.com/plethu/recite"
 license = "MIT OR Apache-2.0"
 
+[workspace.metadata.recite]
+# Exact paths let the mutation preflight reject stale or empty contract scopes.
+critical_mutation_files = [
+    "crates/recite-core/src/source_line_index.rs",
+    "crates/recite-lsp/src/server/freshness.rs",
+    "crates/recite-lsp/src/project_refresh/close.rs",
+    "crates/recite-runtime/src/traversal/choice.rs",
+    "crates/recite-runtime/src/session_serialization/pending_position.rs",
+]
+
 [workspace.dependencies]
 # Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.
 atomic-write-file = "0.3.1"
@@ -48,6 +58,7 @@ insta = { version = "1.47.2", default-features = false }
 language-tags = "0.3.2"
 memchr = "2.8.0"
 notify = "8.2.0"
+proptest = "1.11.0"
 rand_chacha = { version = "0.10.0", default-features = false }
 ratatui = "0.30.2"
 recite-adapter = { path = "crates/recite-adapter", version = "0.1.0" }
@@ -94,3 +105,8 @@ unsafe_code = "forbid"
 [profile.dist]
 inherits = "release"
 lto = "thin"
+
+# Mutation testing repeatedly relinks consumers; retain test checks without debug symbols.
+[profile.mutants]
+inherits = "test"
+debug = 0

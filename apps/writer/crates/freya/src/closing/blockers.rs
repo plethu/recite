@@ -19,8 +19,8 @@ impl PartialEq for Blockers {
 }
 impl Component for Blockers {
     fn render(&self) -> impl IntoElement {
-        let mut writer = self.writer;
-        let mut failure = use_state(|| None::<String>);
+        let writer = self.writer;
+        let failure = use_state(|| None::<String>);
         let ids = [
             use_a11y(),
             use_a11y(),
@@ -86,21 +86,7 @@ impl Component for Blockers {
                         .enabled(!generating)
                         .child(caption)
                         .on_press(move |_| {
-                            let result = writer
-                                .files
-                                .write()
-                                .as_mut()
-                                .and_then(|p| p.declarations.as_mut())
-                                .map(|s| {
-                                    if save {
-                                        s.save_and_generate()
-                                    } else {
-                                        s.discard()
-                                    }
-                                });
-                            if let Some(Err(error)) = result {
-                                failure.set(Some(error.to_string()));
-                            }
+                            resolve_declaration_draft(writer, save, failure);
                         }),
                 );
             }
@@ -151,5 +137,24 @@ impl Component for Blockers {
             reduced_motion: writer.preferences.read().config.writer.reduced_motion,
         }
         .into_element()
+    }
+}
+
+fn resolve_declaration_draft(mut writer: Writer, save: bool, mut failure: State<Option<String>>) {
+    let mut files = writer.files.write();
+    let Some(session) = files
+        .as_mut()
+        .and_then(|project| project.declarations.as_mut())
+    else {
+        return;
+    };
+    let result = if save {
+        session.save_and_generate()
+    } else {
+        session.discard()
+    };
+    drop(files);
+    if let Err(error) = result {
+        failure.set(Some(error.to_string()));
     }
 }

@@ -1,0 +1,41 @@
+id: rust-control-optional-states
+language: Rust
+severity: error
+files:
+  - "apps/writer/crates/*/src/design/**/*.rs"
+ignores:
+  - "**/src/**/tests.rs"
+  - "**/src/**/tests/**"
+message: Multiple optional boolean states in a control hide valid role/state combinations; put role-specific state in an enum.
+note: |
+  Writer controls may keep orthogonal presentation flags and one optional
+  state such as expansion. Two or more Option<bool> fields require an explicit
+  state owner instead of precedence between absent, selected and checked values.
+  This rule covers control models, not configuration/wire patches where absence
+  is a meaningful independent value. It is a structural backstop, not a proof
+  of architecture quality.
+utils:
+  optional-bool-field:
+    kind: field_declaration
+    has:
+      field: type
+      any:
+        - pattern:
+            context: "type Flag = Option<bool>;"
+            selector: generic_type
+        - pattern:
+            context: "type Flag = std::option::Option<bool>;"
+            selector: generic_type
+        - pattern:
+            context: "type Flag = core::option::Option<bool>;"
+            selector: generic_type
+rule:
+  kind: struct_item
+  has:
+    kind: field_declaration_list
+    has:
+      all:
+        - matches: optional-bool-field
+        - precedes:
+            matches: optional-bool-field
+            stopBy: end

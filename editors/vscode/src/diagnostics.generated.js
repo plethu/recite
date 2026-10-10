@@ -11,6 +11,7 @@ export default Object.freeze({
   "diagnostic-parse-011": {"template":"malformed divert target","arguments":[]},
   "diagnostic-parse-012-unexpected-character": {"template":"malformed effect statement: unexpected character '{$character}'","arguments":[{"name":"character","type":"string"}]},
   "diagnostic-parse-013-unexpected-character": {"template":"malformed condition expression: unexpected character '{$character}'","arguments":[{"name":"character","type":"string"}]},
+  "diagnostic-parse-013-nesting-limit": {"template":"malformed condition expression: condition syntax nesting exceeds the limit of {$limit}","arguments":[{"name":"limit","type":"integer"}]},
   "diagnostic-parse-014": {"template":"case header must include a variant or _","arguments":[]},
   "diagnostic-parse-015": {"template":":else must immediately follow a sibling :if body","arguments":[]},
   "diagnostic-parse-016": {"template":":case must appear inside a :match body","arguments":[]},

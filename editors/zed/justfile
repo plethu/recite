@@ -9,7 +9,8 @@ fmt-check:
     cargo fmt --manifest-path Cargo.toml -- --check
 
 clippy:
-    cargo clippy --locked --manifest-path Cargo.toml --all-targets -- -D warnings
+    cargo clippy --locked --manifest-path Cargo.toml --all-targets -- -D warnings -D clippy::excessive_nesting
+    cargo clippy --locked --manifest-path Cargo.toml --lib -- -D warnings -D clippy::cognitive_complexity -D clippy::excessive_nesting
 
 test *args:
     cargo nextest run --locked --manifest-path Cargo.toml "$@"

@@ -24,10 +24,10 @@ fn bench_step(criterion: &mut Criterion, fixture: &PreviewFixture) {
     group.bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
-            bencher.iter_batched(
+            bencher.iter_batched_ref(
                 || must(fixture.project.start()),
-                |mut preview| black_box(preview.step(fixture.project.inputs())),
-                BatchSize::SmallInput,
+                |preview| black_box(preview.step(fixture.project.inputs())),
+                BatchSize::LargeInput,
             );
         },
     );
@@ -50,13 +50,13 @@ fn bench_snapshot_encode(criterion: &mut Criterion, fixture: &PreviewFixture) {
     group.bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
-            bencher.iter_batched(
+            bencher.iter_batched_ref(
                 || must(fixture.project.at_first_prompt()),
                 |preview| {
                     let snapshot = must_preview(preview.snapshot());
                     black_box(must_preview(snapshot.encode()))
                 },
-                BatchSize::SmallInput,
+                BatchSize::LargeInput,
             );
         },
     );
@@ -68,17 +68,17 @@ fn bench_restore(criterion: &mut Criterion, fixture: &PreviewFixture) {
     group.bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
-            bencher.iter_batched(
+            bencher.iter_batched_ref(
                 || {
                     let preview = must(fixture.project.at_first_prompt());
                     let bytes = must_preview(must_preview(preview.snapshot()).encode());
                     (bytes, must(fixture.project.start()))
                 },
-                |(bytes, mut receiver)| {
-                    let snapshot = must_preview(PreviewSnapshot::decode(black_box(&bytes)));
+                |(bytes, receiver)| {
+                    let snapshot = must_preview(PreviewSnapshot::decode(black_box(bytes)));
                     black_box(must_preview(receiver.restore(snapshot)))
                 },
-                BatchSize::SmallInput,
+                BatchSize::LargeInput,
             );
         },
     );
@@ -90,14 +90,14 @@ fn bench_retained_trace_shape(criterion: &mut Criterion, fixture: &PreviewFixtur
         .bench_function(
             BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || {
                         let mut preview = must(fixture.project.start());
                         must(fixture.project.collect_to_end(&mut preview));
                         preview
                     },
-                    |preview| black_box(fixture.project.retained_trace_shape(&preview)),
-                    BatchSize::SmallInput,
+                    |preview| black_box(fixture.project.retained_trace_shape(preview)),
+                    BatchSize::LargeInput,
                 );
             },
         );

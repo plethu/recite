@@ -156,60 +156,67 @@ impl PartialEq for WatchPoll {
 }
 impl Component for WatchPoll {
     fn render(&self) -> impl IntoElement {
-        let mut writer = self.writer;
         let mut tick = freya::sdk::use_timeout(|| std::time::Duration::from_millis(500));
         if tick.elapsed() {
             tick.reset();
-            let result = writer
-                .files
-                .peek()
-                .as_ref()
-                .and_then(|p| p.handoff.as_ref())
-                .and_then(Handoff::poll);
-            if let Some(result) = result {
-                writer
-                    .message
-                    .report(result, text(MsgId::WriterExternalOpened));
-                if let Some(project) = writer.files.write().as_mut() {
-                    project.handoff = None;
-                }
-            }
-            let files = writer.files.peek();
-            if let Some(project) = files.as_ref()
-                && let Ok(watch) = &project.watch
-            {
-                match watch.changed() {
-                    Ok(paths) => {
-                        let changed = paths
-                            .iter()
-                            .filter(|p| project.externally_changed(p))
-                            .collect::<Vec<_>>();
-                        if !changed.is_empty() && !writer.message.is_error() {
-                            let target = changed[0].clone();
-                            writer.message.error_with_action(
-                                text(MsgId::WriterDiskChanged),
-                                text(MsgId::WriterCompare),
-                                EventHandler::new(move |()| {
-                                    match writer.buffers.switch(
-                                        writer.files,
-                                        &target,
-                                        writer.dark,
-                                        |_| Ok(()),
-                                    ) {
-                                        Ok(()) => open(writer),
-                                        Err(e) => writer.message.error(e),
-                                    }
-                                }),
-                            );
-                        }
-                    }
-                    Err(e) => writer.message.error(format!(
-                        "File watching stopped: {e}. Save still checks for external changes."
-                    )),
-                }
-            }
+            poll_external_changes(self.writer);
         }
         rect()
+    }
+}
+
+fn poll_external_changes(mut writer: Writer) {
+    let result = writer
+        .files
+        .peek()
+        .as_ref()
+        .and_then(|project| project.handoff.as_ref())
+        .and_then(Handoff::poll);
+    if let Some(result) = result {
+        writer
+            .message
+            .report(result, text(MsgId::WriterExternalOpened));
+        if let Some(project) = writer.files.write().as_mut() {
+            project.handoff = None;
+        }
+    }
+    let files = writer.files.peek();
+    let Some(project) = files.as_ref() else {
+        return;
+    };
+    let Ok(watch) = &project.watch else {
+        return;
+    };
+    let paths = match watch.changed() {
+        Ok(paths) => paths,
+        Err(error) => {
+            writer.message.error(format!(
+                "File watching stopped: {error}. Save still checks for external changes."
+            ));
+            return;
+        }
+    };
+    let Some(target) = paths.iter().find(|path| project.externally_changed(path)) else {
+        return;
+    };
+    if writer.message.is_error() {
+        return;
+    }
+    let target = target.clone();
+    writer.message.error_with_action(
+        text(MsgId::WriterDiskChanged),
+        text(MsgId::WriterCompare),
+        EventHandler::new(move |()| compare_changed_document(writer, &target)),
+    );
+}
+
+fn compare_changed_document(mut writer: Writer, target: &std::path::Path) {
+    match writer
+        .buffers
+        .switch(writer.files, target, writer.dark, |_| Ok(()))
+    {
+        Ok(()) => open(writer),
+        Err(error) => writer.message.error(error),
     }
 }
 pub(crate) use handoff::open_editor;

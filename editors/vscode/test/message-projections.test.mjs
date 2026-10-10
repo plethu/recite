@@ -76,7 +76,10 @@ test("message projections reject multiline and selector Fluent before generation
   assert.throws(
     () =>
       projectMessages(
-        source.replace(original, "lsp-client-start-failed = { $kind -> [one] one *[other] other }"),
+        source.replace(
+          original,
+          "lsp-client-start-failed = { $kind ->\n    [one] one\n   *[other] other\n}",
+        ),
       ),
     /unsupported expression/,
   );

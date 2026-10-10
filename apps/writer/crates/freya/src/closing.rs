@@ -322,3 +322,6 @@ fn flush_recovery(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

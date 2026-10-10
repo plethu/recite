@@ -9,6 +9,10 @@ const CHARACTER_ARGUMENTS: &[DiagnosticArgumentSpec] = &[DiagnosticArgumentSpec:
     "character",
     DiagnosticArgumentType::String,
 )];
+const NESTING_LIMIT_ARGUMENTS: &[DiagnosticArgumentSpec] = &[DiagnosticArgumentSpec::new(
+    "limit",
+    DiagnosticArgumentType::Integer,
+)];
 
 const PARSE001: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_PARSE001", "diagnostic-parse-001", NO_ARGUMENTS);
@@ -48,6 +52,11 @@ const PARSE013_UNEXPECTED_CHARACTER: DiagnosticPresentationContract =
         "diagnostic-parse-013-unexpected-character",
         CHARACTER_ARGUMENTS,
     );
+const PARSE013_NESTING_LIMIT: DiagnosticPresentationContract = DiagnosticPresentationContract::new(
+    "RECITE_PARSE013",
+    "diagnostic-parse-013-nesting-limit",
+    NESTING_LIMIT_ARGUMENTS,
+);
 const PARSE014: DiagnosticPresentationContract =
     DiagnosticPresentationContract::new("RECITE_PARSE014", "diagnostic-parse-014", NO_ARGUMENTS);
 const PARSE015: DiagnosticPresentationContract =
@@ -72,6 +81,7 @@ static CONTRACTS: &[&DiagnosticPresentationContract] = &[
     &PARSE012_UNEXPECTED_CHARACTER,
     &PARSE013,
     &PARSE013_UNEXPECTED_CHARACTER,
+    &PARSE013_NESTING_LIMIT,
     &PARSE014,
     &PARSE015,
     &PARSE016,

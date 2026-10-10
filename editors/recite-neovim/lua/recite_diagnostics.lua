@@ -133,6 +133,7 @@ return {
   ["diagnostic-parse-013"] = { arguments = { { name = "reason", type = "string" } } },
   ["diagnostic-parse-013-cause-001"] = { arguments = {  } },
   ["diagnostic-parse-013-meaning"] = { arguments = {  } },
+  ["diagnostic-parse-013-nesting-limit"] = { arguments = { { name = "limit", type = "integer" } }, template = "malformed condition expression: condition syntax nesting exceeds the limit of {$limit}" },
   ["diagnostic-parse-013-remediation-001"] = { arguments = {  } },
   ["diagnostic-parse-013-unexpected-character"] = { arguments = { { name = "character", type = "string" } }, template = "malformed condition expression: unexpected character '{$character}'" },
   ["diagnostic-parse-014"] = { arguments = {  }, template = "case header must include a variant or _" },

@@ -3,6 +3,10 @@ use std::path::Path;
 use super::super::errors::{ErrorCategory, ErrorCode, ErrorDetails, ErrorOperation};
 use super::ErrorParts;
 
+#[path = "watch/tests.rs"]
+#[cfg(test)]
+mod tests;
+
 pub(super) fn preparation<'a>(
     source: &'a crate::watch::ProjectBuildPreparationError,
     fallback_path: Option<&'a Path>,

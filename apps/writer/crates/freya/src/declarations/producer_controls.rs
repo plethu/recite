@@ -165,37 +165,42 @@ impl PartialEq for ProducerPoll {
 }
 impl Component for ProducerPoll {
     fn render(&self) -> impl IntoElement {
-        let mut writer = self.writer;
         let mut tick = freya::sdk::use_timeout(|| std::time::Duration::from_millis(100));
         if tick.elapsed() {
             tick.reset();
-            let result = writer
-                .files
-                .peek()
-                .as_ref()
-                .and_then(|p| p.declarations.as_ref())
-                .and_then(|s| s.job.as_ref())
-                .and_then(|job| job.poll());
-            if let Some(result) = result {
-                let mut files = writer.files.write();
-                if let Some(project) = files.as_mut() {
-                    let result = project
-                        .declarations
-                        .as_mut()
-                        .ok_or("Declarations were closed.".to_owned())
-                        .and_then(|s| s.finish_generation(result));
-                    let result = result.and_then(|()| {
-                        if let Ok(model) = writer.buffers.model.write().as_mut() {
-                            project.refresh(model).map_err(|e| e.to_string())?;
-                        }
-                        Ok(())
-                    });
-                    writer
-                        .message
-                        .report(result, text(MsgId::WriterProducerFinished));
-                }
-            }
+            poll_generation(self.writer);
         }
         rect()
     }
+}
+
+fn poll_generation(mut writer: Writer) {
+    let result = writer
+        .files
+        .peek()
+        .as_ref()
+        .and_then(|project| project.declarations.as_ref())
+        .and_then(|session| session.job.as_ref())
+        .and_then(|job| job.poll());
+    let Some(result) = result else {
+        return;
+    };
+    let mut files = writer.files.write();
+    let Some(project) = files.as_mut() else {
+        return;
+    };
+    let result = project
+        .declarations
+        .as_mut()
+        .ok_or("Declarations were closed.".to_owned())
+        .and_then(|session| session.finish_generation(result))
+        .and_then(|()| {
+            if let Ok(model) = writer.buffers.model.write().as_mut() {
+                project.refresh(model).map_err(|error| error.to_string())?;
+            }
+            Ok(())
+        });
+    writer
+        .message
+        .report(result, text(MsgId::WriterProducerFinished));
 }

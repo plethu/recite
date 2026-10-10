@@ -98,17 +98,22 @@ impl AuthoringQuery<'_> {
                         QueryClass::BlockDefinitions,
                     ));
                 } else if options.include_declarations() {
-                    locations.extend(target.summary().blocks().iter().filter_map(|block| {
-                        (block.id() == block_id).then(|| {
-                            Some(SymbolLocation {
-                                document: target.key().clone(),
-                                identity: SymbolIdentity::Block(block.id().clone()),
-                                kind: SymbolKind::Block,
-                                role: SymbolRole::Definition,
-                                span: block.id_span()?.clone(),
-                            })
-                        })?
-                    }));
+                    locations.extend(
+                        target
+                            .summary()
+                            .blocks()
+                            .iter()
+                            .filter(|block| block.id() == block_id)
+                            .filter_map(|block| {
+                                Some(SymbolLocation {
+                                    document: target.key().clone(),
+                                    identity: SymbolIdentity::Block(block.id().clone()),
+                                    kind: SymbolKind::Block,
+                                    role: SymbolRole::Definition,
+                                    span: block.id_span()?.clone(),
+                                })
+                            }),
+                    );
                 }
             }
             if relevant_references && !target.participation().block_references().is_complete() {
@@ -125,17 +130,18 @@ impl AuthoringQuery<'_> {
                     .summary()
                     .block_references()
                     .iter()
-                    .filter_map(|reference| {
+                    .filter(|reference| {
                         let scope = reference.file().unwrap_or_else(|| target.key().as_str());
-                        (scope == target_key && reference.block_id() == block_id).then(|| {
-                            Some(SymbolLocation {
-                                document: target.key().clone(),
-                                identity: SymbolIdentity::Block(block_id.clone()),
-                                kind: SymbolKind::BlockReference,
-                                role: SymbolRole::Reference,
-                                span: reference.block_id_span()?.clone(),
-                            })
-                        })?
+                        scope == target_key && reference.block_id() == block_id
+                    })
+                    .filter_map(|reference| {
+                        Some(SymbolLocation {
+                            document: target.key().clone(),
+                            identity: SymbolIdentity::Block(block_id.clone()),
+                            kind: SymbolKind::BlockReference,
+                            role: SymbolRole::Reference,
+                            span: reference.block_id_span()?.clone(),
+                        })
                     }),
             );
         }

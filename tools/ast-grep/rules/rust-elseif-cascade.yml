@@ -4,8 +4,12 @@ severity: error
 files:
   - "crates/*/src/**/*.rs"
   - "crates/*/benches/**/*.rs"
+  - "crates/*/examples/**/*.rs"
   - "apps/writer/crates/*/src/**/*.rs"
+  - "apps/writer/crates/*/benches/**/*.rs"
+  - "apps/writer/crates/*/examples/**/*.rs"
   - "editors/zed/src/**/*.rs"
+  - "tools/*/src/**/*.rs"
 ignores:
   - "**/src/tests.rs"
   - "**/src/**/tests.rs"

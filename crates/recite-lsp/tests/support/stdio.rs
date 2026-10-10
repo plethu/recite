@@ -43,6 +43,8 @@ impl StdioHarness {
     ) -> Self {
         let mut child = Command::new(env!("CARGO_BIN_EXE_recite-lsp"))
             .env_clear()
+            // Keep instrumented server execution in the caller's coverage report.
+            .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|value| ("LLVM_PROFILE_FILE", value)))
             .envs(environment.iter().copied())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

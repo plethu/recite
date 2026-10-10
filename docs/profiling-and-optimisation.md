@@ -12,23 +12,34 @@ regression budget; other local measurements are investigation evidence until
 Use `mise exec -- just perf …` without shell activation. Build before collecting timings and keep
 other builds and tests out of the sampling window.
 
-| Question                                       | Command                                              |
-| ---------------------------------------------- | ---------------------------------------------------- |
-| Compiler phase, validation or encoding         | `just perf bench compiler tiny,small FILTER`         |
-| Direct runtime traversal or localisation       | `just perf bench runtime tiny,small FILTER`          |
-| Preview traversal, snapshots or retained trace | `just perf bench preview tiny,small FILTER`          |
-| In-process LSP analysis                        | `just perf bench lsp large,realistic:v1-pack FILTER` |
-| Running LSP, protocol and scheduling           | `just perf compare BASE_COMMIT`                      |
-| Growing adapter history and preview replay     | `just perf bench sessions tiny FILTER`               |
-| Real C ABI traversal, callbacks and encoding   | `just perf ffi FILTER`                               |
-| Warm adapter and preview allocations           | `just perf allocations`                              |
-| Warm C ABI allocations                         | `just perf ffi-allocations`                          |
-| Build/watch refresh under fixture pressure     | `just stress watch`                                  |
-| Execution smoke, without performance claims    | `just perf smoke`                                    |
+| Question                                       | Command                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| Compiler phase, validation or encoding         | `just perf bench compiler tiny,small FILTER`                              |
+| Direct runtime traversal or localisation       | `just perf bench runtime tiny,small FILTER`                               |
+| Preview traversal, snapshots or retained trace | `just perf bench preview tiny,small FILTER`                               |
+| In-process LSP analysis                        | `just perf bench lsp large,realistic:v1-pack FILTER`                      |
+| Running LSP, protocol and scheduling           | `just perf compare BASE_COMMIT`                                           |
+| Growing adapter history and preview replay     | `just perf bench sessions tiny FILTER`                                    |
+| Real C ABI traversal, callbacks and encoding   | `just perf ffi FILTER`                                                    |
+| Warm adapter and preview allocations           | `just perf allocations`                                                   |
+| Warm C ABI allocations                         | `just perf ffi-allocations`                                               |
+| Full compiler allocation churn                 | `cargo run --release -p recite-benchmarks --example compiler_allocations` |
+| Build/watch refresh under fixture pressure     | `just stress watch`                                                       |
+| Execution smoke, without performance claims    | `just perf smoke`                                                         |
 
 Use `just perf lsp --help` for bounded process/session probes. Its setup is `just perf setup`.
 Criterion filters match group names, for example `lsp/change_refresh` or
 `sessions/preview_condition_replay/deferred/2048`; `cargo bench -- --list` lists a target's cases.
+
+`runtime/asset_decode` measures prepared `.recitec` bytes, including validation and asset
+preparation. Use `RECITE_BENCH_SCALES` to select the compiler allocation example's existing
+fixtures. Its counts exclude fixture preparation and result disposal; byte hashes check output
+parity between runs.
+
+Batched phase benchmarks keep prepared inputs and receivers alive until timing stops. The CLI report
+also excludes prepared-session setup and returned-value disposal. Its `build.measurement_revision`
+rejects baselines from earlier timing boundaries; collect fresh baselines after this measurement
+change instead of interpreting harness corrections as speedups.
 
 The [session target](../crates/recite-benchmarks/benches/sessions.rs) owns warm-operation workload
 shape and setup/teardown. The [C ABI probes](../crates/recite-ffi/benches/) own callback/encoding

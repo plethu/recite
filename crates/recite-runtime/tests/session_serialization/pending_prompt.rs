@@ -92,6 +92,15 @@ fn restores_pending_prompt_choice_availability_reasons() {
     assert!(!choices[0].availability.is_available);
 
     let snapshot = snapshot_session(&session);
+    let unavailable = DialogueError::UnavailableChoice {
+        choice: choices[0].id.clone(),
+        availability: Box::new(choices[0].availability.clone()),
+    };
+    assert_eq!(
+        choose(&asset, &mut session, choices[0].id.clone()),
+        Err(unavailable.clone())
+    );
+    assert_eq!(snapshot_session(&session), snapshot);
     assert_eq!(
         snapshot.pending_prompt.as_ref().expect("pending").choices[0]
             .availability
@@ -101,8 +110,13 @@ fn restores_pending_prompt_choice_availability_reasons() {
         Some("innkeeper_trust_hint")
     );
 
-    let restored = restore_session(&asset, snapshot).expect("restores pending prompt");
+    let mut restored = restore_session(&asset, snapshot).expect("restores pending prompt");
     let restored_snapshot = snapshot_session(&restored);
+    assert_eq!(
+        choose(&asset, &mut restored, choices[0].id.clone()),
+        Err(unavailable)
+    );
+    assert_eq!(snapshot_session(&restored), restored_snapshot);
     let restored_choice = &restored_snapshot
         .pending_prompt
         .as_ref()

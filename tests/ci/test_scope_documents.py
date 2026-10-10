@@ -41,7 +41,7 @@ class DocumentScopeTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
-        self.assertEqual(selected(".gitignore"), {"maintainability"})
+        self.assertEqual(selected(".gitignore"), {"rust", "maintainability"})
         for path, lanes in {
             "apps/writer/justfile": {"writer", "maintainability"},
             "editors/justfile": {"rust", "editor-native", "maintainability"},
@@ -66,6 +66,7 @@ class DocumentScopeTests(unittest.TestCase):
             "crates/recite-core/Cargo.toml",
             "apps/writer/Cargo.lock",
             ".cargo/config.toml",
+            ".cargo/mutants.toml",
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), scope.RUST_BUILD)

@@ -39,3 +39,6 @@ impl Epochs {
         Some(())
     }
 }
+
+#[cfg(test)]
+mod tests;

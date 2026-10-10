@@ -30,22 +30,23 @@ impl PoDocument {
                         .strip_prefix('#')
                         .and_then(|s| s.trim_start().strip_prefix(','))
                 };
-                if let Some(flags) = flags {
-                    let flags: Vec<_> = flags.trim().split(',').map(str::trim).collect();
-                    if flags.contains(&"fuzzy") {
-                        let retained: Vec<_> =
-                            flags.into_iter().filter(|f| *f != "fuzzy").collect();
-                        if !retained.is_empty() {
-                            replacement.push_str(&format!(
-                                "{prefix} {}{}",
-                                retained.join(", "),
-                                self.line_ending
-                            ));
-                        }
-                        continue;
-                    }
+                let Some(flags) = flags else {
+                    replacement.push_str(line);
+                    continue;
+                };
+                let flags: Vec<_> = flags.trim().split(',').map(str::trim).collect();
+                if !flags.contains(&"fuzzy") {
+                    replacement.push_str(line);
+                    continue;
                 }
-                replacement.push_str(line);
+                let retained: Vec<_> = flags.into_iter().filter(|f| *f != "fuzzy").collect();
+                if !retained.is_empty() {
+                    replacement.push_str(&format!(
+                        "{prefix} {}{}",
+                        retained.join(", "),
+                        self.line_ending
+                    ));
+                }
             }
         }
         let mut candidate = self.source.clone();
