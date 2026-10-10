@@ -47,7 +47,7 @@ class DocumentScopeTests(unittest.TestCase):
             "editors/justfile": {"rust", "editor-native", "maintainability"},
             "editors/zed/justfile": {"editor-native", "maintainability"},
             "engines.just": {"hosts", "maintainability"},
-            "stress.just": scope.JUST,
+            "stress.just": scope.JUST | {"workflow-performance"},
         }.items():
             self.assertEqual(selected(path), lanes)
         for path in ("scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"):

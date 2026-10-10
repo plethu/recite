@@ -60,6 +60,7 @@ jobs:
       site: ${{ steps.scope.outputs.site }}
       editor: ${{ steps.scope.outputs.editor }}
       benchmark-smoke: ${{ steps.scope.outputs.benchmark-smoke }}
+      workflow-performance: ${{ steps.scope.outputs.workflow-performance }}
       maintainability: ${{ steps.scope.outputs.maintainability }}
       packages: ${{ steps.scope.outputs.packages }}
       lsp-sessions: ${{ steps.scope.outputs.lsp-sessions }}
@@ -342,6 +343,59 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  workflow-performance:
+    needs: changes
+    if: needs.changes.outputs.workflow-performance == 'true'
+    name: Workflow instruction and heap regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
+      RECITE_PERF_BUILD_DIR: ${{ github.workspace }}/target/workflow-performance-build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust just aqua:jqlang/jq cargo:cargo-nextest
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install external profiling tools
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+      - run: just perf regression-setup
+      - name: Compare bounded workflows
+        env:
+          EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          FULL: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.ref != '' }}
+        run: |
+          if [[ -z "$EVENT_BASE" || "$EVENT_BASE" =~ ^0+$ ]]; then
+            base="$(git rev-parse HEAD^)"
+          else
+            base="$(git merge-base "$EVENT_BASE" HEAD)"
+          fi
+          scope=pr
+          [[ "$FULL" != true ]] || scope=full
+          just perf regression "$base" "$scope" "$RUNNER_TEMP/recite-workflow-performance"
+      - name: Check comparison coverage and failure handling
+        run: |
+          CARGO_TARGET_DIR="$RECITE_PERF_BUILD_DIR/candidate-target" \
+            cargo test --locked --release -p recite-perf --features writer
+      - name: Exercise whole-project and watch recovery under fixture pressure
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.ref != ''
+        run: |
+          CARGO_TARGET_DIR="$RECITE_PERF_BUILD_DIR/candidate-target" \
+            just stress bounded 2>&1 | tee "$RUNNER_TEMP/recite-workflow-performance/evidence/stress.log"
+      - name: Retain profiles, baselines, counters and source identities
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: workflow-performance
+          path: ${{ runner.temp }}/recite-workflow-performance/evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
   maintainability:
     needs: changes
     if: needs.changes.outputs.maintainability == 'true'
@@ -446,6 +500,7 @@ jobs:
       - docs
       - site
       - benchmark-smoke
+      - workflow-performance
       - maintainability
       - windows-publisher
       - editor

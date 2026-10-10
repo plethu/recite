@@ -11,7 +11,7 @@ use semantics::{
 };
 use tables::{
     ensure_availability_reason, ensure_index, ensure_range, ensure_unique_strings,
-    validate_disjoint_ids, validate_lookup_entries,
+    validate_disjoint_lookup_ids, validate_lookup_entries,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -155,11 +155,8 @@ pub(super) fn validate_dialogue(
     }
     validate_lookup_entries(
         "block lookup",
-        dialogue
-            .blocks
-            .iter()
-            .map(|block| block.id.as_str())
-            .collect(),
+        &dialogue.blocks,
+        |block| block.id.as_str(),
         dialogue
             .block_lookup
             .as_slice()
@@ -168,7 +165,8 @@ pub(super) fn validate_dialogue(
     )?;
     validate_lookup_entries(
         "line lookup",
-        dialogue.lines.iter().map(|line| line.id.as_str()).collect(),
+        &dialogue.lines,
+        |line| line.id.as_str(),
         dialogue
             .line_lookup
             .as_slice()
@@ -177,22 +175,15 @@ pub(super) fn validate_dialogue(
     )?;
     validate_lookup_entries(
         "choice lookup",
-        dialogue
-            .choices
-            .iter()
-            .map(|choice| choice.id.as_str())
-            .collect(),
+        &dialogue.choices,
+        |choice| choice.id.as_str(),
         dialogue
             .choice_lookup
             .as_slice()
             .iter()
             .map(|entry| (entry.id.as_str(), entry.index.as_u32())),
     )?;
-    validate_disjoint_ids(
-        "line and choice ids",
-        dialogue.lines.iter().map(|line| line.id.as_str()),
-        dialogue.choices.iter().map(|choice| choice.id.as_str()),
-    )?;
+    validate_disjoint_lookup_ids(&dialogue.line_lookup, &dialogue.choice_lookup)?;
 
     Ok(())
 }

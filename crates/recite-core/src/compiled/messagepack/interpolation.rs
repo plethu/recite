@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use serde::Deserialize;
 
@@ -6,6 +6,7 @@ use super::CompiledAssetDecodeError;
 use crate::ast::InterpolationType;
 use crate::compiled::CompiledInterpolationBinding;
 use crate::compiled::{CompiledChoice, CompiledLine};
+use crate::text::decode_interpolation_text_borrowed;
 
 #[derive(Deserialize)]
 pub(crate) struct MsgInterpolationBinding(pub(crate) String, pub(crate) String, pub(crate) String);
@@ -75,7 +76,7 @@ pub(crate) fn validate_line_interpolation_rows(
     ) {
         (None, None) => Ok(()),
         (Some(source_text), Some(authored_source_text)) => {
-            if crate::decode_interpolation_text(authored_source_text) != source_text {
+            if decode_interpolation_text_borrowed(authored_source_text).as_ref() != source_text {
                 return Err(CompiledAssetDecodeError::MalformedAsset(
                     "compiled plural interpolation source text does not match authored source text"
                         .to_owned(),
@@ -169,18 +170,17 @@ fn validate_interpolation_row_inner(
     bindings: &[CompiledInterpolationBinding],
     ignored_unused: &[&str],
 ) -> Result<(), CompiledAssetDecodeError> {
-    if crate::decode_interpolation_text(authored_source_text) != source_text {
+    if decode_interpolation_text_borrowed(authored_source_text).as_ref() != source_text {
         return Err(CompiledAssetDecodeError::MalformedAsset(
             "compiled interpolation source text does not match authored source text".to_owned(),
         ));
     }
-    let occurrences =
-        crate::extract_placeholder_occurrences(authored_source_text).map_err(|error| {
-            CompiledAssetDecodeError::MalformedAsset(format!(
-                "invalid authored interpolation source text: {}",
-                error.message()
-            ))
-        })?;
+    let used_names = crate::extract_placeholder_names(authored_source_text).map_err(|error| {
+        CompiledAssetDecodeError::MalformedAsset(format!(
+            "invalid authored interpolation source text: {}",
+            error.message()
+        ))
+    })?;
     let mut declared = BTreeSet::new();
     for binding in bindings {
         if !is_interpolation_name(&binding.name) {
@@ -202,22 +202,15 @@ fn validate_interpolation_row_inner(
             )));
         }
     }
-    let occurrence_counts =
-        occurrences
-            .iter()
-            .fold(BTreeMap::<&str, usize>::new(), |mut counts, name| {
-                *counts.entry(name.as_str()).or_default() += 1;
-                counts
-            });
-    for name in occurrence_counts.keys() {
-        if !declared.contains(name) {
+    for name in &used_names {
+        if !declared.contains(name.as_str()) {
             return Err(CompiledAssetDecodeError::MalformedAsset(format!(
                 "placeholder `{name}` has no interpolation binding"
             )));
         }
     }
     for name in declared {
-        if !occurrence_counts.contains_key(name) && !ignored_unused.contains(&name) {
+        if !used_names.contains(name) && !ignored_unused.contains(&name) {
             return Err(CompiledAssetDecodeError::MalformedAsset(format!(
                 "interpolation binding `{name}` is not used in authored source text"
             )));

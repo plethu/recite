@@ -1,4 +1,7 @@
-use recite_core::compiled::{CompiledAssetDecodeError, decode_compiled_dialogue_messagepack};
+use recite_core::compiled::{
+    CompiledAssetDecodeError, decode_compiled_dialogue_messagepack,
+    encode_compiled_dialogue_messagepack,
+};
 use serde::Serialize;
 use serde::ser::SerializeTuple;
 
@@ -53,6 +56,38 @@ fn assert_rejected(asset: WireAssetRows<'_>, expected: &str) {
         error,
         CompiledAssetDecodeError::MalformedAsset(message) if message.contains(expected)
     ));
+}
+
+#[test]
+fn repeated_placeholders_share_one_binding_at_both_asset_boundaries() {
+    let mut asset = valid_wire_asset();
+    asset.line_lookup.push(WireLookupEntry {
+        id: "line",
+        index: 0,
+    });
+    let rows = WireAssetRows {
+        asset,
+        line: Some(WireCurrentLine {
+            id: "line",
+            source_text: "Hello {name}; again {name}.",
+            speaker: None,
+            metadata: WireRange(0, 0),
+            source_map: 0,
+            authored_source_text: "Hello {name}; again {name}.",
+            interpolation_bindings: vec![WireInterpolationBinding("name", "display", "string")],
+        }),
+        choice: None,
+    };
+    let bytes = rmp_serde::to_vec(&rows).expect("test wire encodes");
+    let decoded =
+        decode_compiled_dialogue_messagepack(&bytes).expect("repeated placeholders decode");
+    assert_eq!(decoded.lines[0].interpolation_bindings.len(), 1);
+    let encoded =
+        encode_compiled_dialogue_messagepack(&decoded).expect("repeated placeholders encode");
+    assert_eq!(
+        decode_compiled_dialogue_messagepack(&encoded).expect("canonical asset decodes"),
+        decoded,
+    );
 }
 
 #[test]

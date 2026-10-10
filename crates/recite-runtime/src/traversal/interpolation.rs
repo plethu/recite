@@ -1,5 +1,3 @@
-use std::collections::{BTreeMap, BTreeSet};
-
 use recite_core::{
     ScalarValue,
     ast::InterpolationType,
@@ -11,6 +9,11 @@ use super::trace::PluralLineTrace;
 use crate::DialogueError;
 use crate::event::{DialoguePlural, DialoguePluralResolution, DialoguePluralResolutionOutcome};
 use crate::locale::{InterpolationValueProvider, TextDomain};
+
+mod render;
+
+use render::{ResolvedCount, render_selected_bound_template, value_kind};
+pub(super) use render::{render_bound_template, render_template};
 
 pub(super) fn localise_text(
     id: &str,
@@ -30,25 +33,27 @@ pub(super) fn localise_text(
         if let Some(trace) = locale.trace {
             trace.record_localized_lookup(id, authored_source_text, domain, &resolved);
         }
-        if let Some(template) = resolved.template {
-            if mode == CompiledInterpolationMode::Current {
-                recite_core::validate_translation_placeholders(authored_source_text, &template)
-                    .map_err(|error| DialogueError::InvalidInterpolationSyntax {
-                        reason: error.message(),
-                    })?;
-            }
-            template
-        } else {
-            authored_source_text.to_owned()
+        if let Some(template) = resolved.template.as_deref()
+            && mode == CompiledInterpolationMode::Current
+        {
+            recite_core::validate_translation_placeholders(authored_source_text, template)
+                .map_err(|error| DialogueError::InvalidInterpolationSyntax {
+                    reason: error.message(),
+                })?;
         }
+        resolved.template
     } else {
-        authored_source_text.to_owned()
+        None
     };
     match mode {
-        CompiledInterpolationMode::Legacy => Ok(template),
-        CompiledInterpolationMode::Current => {
-            render_bound_template(&template, bindings, locale.values)
+        CompiledInterpolationMode::Legacy => {
+            Ok(template.unwrap_or_else(|| authored_source_text.to_owned()))
         }
+        CompiledInterpolationMode::Current => render_bound_template(
+            template.as_deref().unwrap_or(authored_source_text),
+            bindings,
+            locale.values,
+        ),
     }
 }
 
@@ -255,13 +260,6 @@ pub(super) struct PluralSource<'a> {
     pub(super) decoded_plural: &'a str,
 }
 
-#[derive(Clone, Copy)]
-struct ResolvedCount<'a> {
-    binding_name: &'a str,
-    value_name: &'a str,
-    value: i64,
-}
-
 fn resolve_count(
     binding: &CompiledInterpolationBinding,
     values: Option<&dyn InterpolationValueProvider>,
@@ -286,160 +284,5 @@ fn resolve_count(
             name: binding.value.clone(),
             reason: format!("expected int, got {}", value_kind(&value)),
         }),
-    }
-}
-
-/// Render a template with one scanner shared by ordinary text and reason text.
-/// Escaped braces are consumed here, and resolver values are never rescanned.
-pub(super) fn render_template(
-    template: &str,
-    mut resolve: impl FnMut(&str) -> Result<Option<String>, DialogueError>,
-) -> Result<String, DialogueError> {
-    let mut output = String::new();
-    let mut cursor = 0;
-    while cursor < template.len() {
-        let remaining = &template[cursor..];
-        if remaining.starts_with('\\') {
-            let next = remaining.get(1..).and_then(|tail| tail.chars().next());
-            if let Some(next @ ('{' | '}')) = next {
-                output.push(next);
-                cursor += 1 + next.len_utf8();
-                continue;
-            }
-        }
-        if remaining.starts_with('{') {
-            let Some(close) = remaining.find('}') else {
-                return Err(DialogueError::InvalidInterpolationSyntax {
-                    reason: "unterminated placeholder".to_owned(),
-                });
-            };
-            let name = &remaining[1..close];
-            let Some(value) = resolve(name)? else {
-                return Err(DialogueError::InvalidInterpolationSyntax {
-                    reason: format!("placeholder `{name}` has no renderable value"),
-                });
-            };
-            output.push_str(&value);
-            cursor += close + 1;
-            continue;
-        }
-        let Some(character) = remaining.chars().next() else {
-            break;
-        };
-        output.push(character);
-        cursor += character.len_utf8();
-    }
-    Ok(output)
-}
-
-pub(super) fn render_bound_template(
-    template: &str,
-    bindings: &[CompiledInterpolationBinding],
-    values: Option<&dyn InterpolationValueProvider>,
-) -> Result<String, DialogueError> {
-    render_bound_template_inner(template, bindings, values, None, None)
-}
-
-fn render_selected_bound_template(
-    template: &str,
-    bindings: &[CompiledInterpolationBinding],
-    values: Option<&dyn InterpolationValueProvider>,
-    resolved_count: Option<ResolvedCount<'_>>,
-) -> Result<String, DialogueError> {
-    let placeholders = recite_core::extract_placeholder_names(template).map_err(|error| {
-        DialogueError::InvalidInterpolationSyntax {
-            reason: error.message().to_owned(),
-        }
-    })?;
-    render_bound_template_inner(
-        template,
-        bindings,
-        values,
-        Some(&placeholders),
-        resolved_count,
-    )
-}
-
-fn render_bound_template_inner(
-    template: &str,
-    bindings: &[CompiledInterpolationBinding],
-    values: Option<&dyn InterpolationValueProvider>,
-    placeholders: Option<&BTreeSet<String>>,
-    resolved_count: Option<ResolvedCount<'_>>,
-) -> Result<String, DialogueError> {
-    let mut resolved = BTreeMap::new();
-    for binding in bindings {
-        if placeholders.is_some_and(|names| !names.contains(&binding.name)) {
-            continue;
-        }
-        let value = if let Some(resolved_count) = resolved_count.filter(|resolved| {
-            resolved.binding_name == binding.name && resolved.value_name == binding.value
-        }) {
-            ScalarValue::Integer(resolved_count.value)
-        } else {
-            let Some(values) = values else {
-                return Err(DialogueError::MissingInterpolationValue {
-                    name: binding.value.clone(),
-                });
-            };
-            values
-                .lookup_value(&binding.value)
-                .map_err(|error| DialogueError::InterpolationValueFailed {
-                    name: binding.value.clone(),
-                    reason: error.reason().to_owned(),
-                })?
-                .ok_or_else(|| DialogueError::MissingInterpolationValue {
-                    name: binding.value.clone(),
-                })?
-        };
-        if !matches_type(&value, binding.value_type) {
-            return Err(DialogueError::InterpolationValueFailed {
-                name: binding.value.clone(),
-                reason: format!(
-                    "expected {}, got {}",
-                    type_name(binding.value_type),
-                    value_kind(&value)
-                ),
-            });
-        }
-        resolved.insert(binding.name.as_str(), scalar_text(&value));
-    }
-    render_template(template, |name| Ok(resolved.get(name).cloned()))
-}
-
-fn matches_type(value: &ScalarValue, value_type: InterpolationType) -> bool {
-    matches!(
-        (value, value_type),
-        (ScalarValue::String(_), InterpolationType::String)
-            | (ScalarValue::Integer(_), InterpolationType::Integer)
-            | (ScalarValue::Float(_), InterpolationType::Float)
-            | (ScalarValue::Boolean(_), InterpolationType::Boolean)
-    )
-}
-
-fn type_name(value_type: InterpolationType) -> &'static str {
-    match value_type {
-        InterpolationType::String => "string",
-        InterpolationType::Integer => "int",
-        InterpolationType::Float => "float",
-        InterpolationType::Boolean => "bool",
-    }
-}
-
-fn value_kind(value: &ScalarValue) -> &'static str {
-    match value {
-        ScalarValue::String(_) => "string",
-        ScalarValue::Integer(_) => "int",
-        ScalarValue::Float(_) => "float",
-        ScalarValue::Boolean(_) => "bool",
-    }
-}
-
-fn scalar_text(value: &ScalarValue) -> String {
-    match value {
-        ScalarValue::String(value) => value.clone(),
-        ScalarValue::Integer(value) => value.to_string(),
-        ScalarValue::Float(value) => value.to_string(),
-        ScalarValue::Boolean(value) => value.to_string(),
     }
 }

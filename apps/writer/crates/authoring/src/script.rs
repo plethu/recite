@@ -5,6 +5,7 @@ use recite_core::{
     ast::{DivertTarget, Statement},
 };
 use recite_parser::parse;
+use std::cell::OnceCell;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ScriptBlock {
@@ -38,6 +39,16 @@ impl Document {
         let passages = self.passage_snapshot_from(&parsed, &lowered)?;
         let passages: std::collections::BTreeMap<_, _> =
             passages.iter().map(|p| (p.id.as_str(), p)).collect();
+        let source_lines = OnceCell::new();
+        let heading = |line: u32| {
+            source_lines
+                .get_or_init(|| self.source().lines().collect::<Vec<_>>())
+                .get(line.saturating_sub(1) as usize)
+                .copied()
+                .unwrap_or_default()
+                .trim()
+                .to_owned()
+        };
         Ok(lowered
             .source_file
             .blocks
@@ -45,7 +56,7 @@ impl Document {
             .map(|block| ScriptBlock {
                 id: block.id.to_string(),
                 is_default: block.is_default,
-                entries: entries(&block.statements, self.source(), &passages),
+                entries: entries(&block.statements, &heading, &passages),
             })
             .collect())
     }
@@ -53,18 +64,10 @@ impl Document {
 
 fn entries(
     statements: &[Statement],
-    source: &str,
+    heading: &impl Fn(u32) -> String,
     passages: &std::collections::BTreeMap<&str, &Passage>,
 ) -> Vec<ScriptEntry> {
     let mut result = Vec::new();
-    let heading = |line: u32| {
-        source
-            .lines()
-            .nth(line.saturating_sub(1) as usize)
-            .unwrap_or_default()
-            .trim()
-            .to_owned()
-    };
     for statement in statements {
         match statement {
             Statement::Line(line) => {
@@ -80,14 +83,14 @@ fn entries(
                         result.push(ScriptEntry::Source(plural.text.clone()));
                     }
                 }
-                result.extend(entries(&line.statements, source, passages));
+                result.extend(entries(&line.statements, heading, passages));
             }
             Statement::Choice(choice) => {
                 let mut content = Vec::new();
                 if let Some(passage) = find(&choice.source_id, passages) {
                     content.push(ScriptEntry::Passage(passage));
                 }
-                content.extend(entries(&choice.statements, source, passages));
+                content.extend(entries(&choice.statements, heading, passages));
                 if choice.availability_requirement.is_some()
                     || choice.availability_reason_override.is_some()
                 {
@@ -108,12 +111,12 @@ fn entries(
             Statement::If(branch) => {
                 result.push(ScriptEntry::Group {
                     heading: heading(branch.span.start.line()),
-                    entries: entries(&branch.then_statements, source, passages),
+                    entries: entries(&branch.then_statements, heading, passages),
                 });
                 if !branch.else_statements.is_empty() {
                     result.push(ScriptEntry::Group {
                         heading: "Otherwise".into(),
-                        entries: entries(&branch.else_statements, source, passages),
+                        entries: entries(&branch.else_statements, heading, passages),
                     });
                 }
             }
@@ -124,7 +127,7 @@ fn entries(
                     .iter()
                     .map(|arm| ScriptEntry::Group {
                         heading: heading(arm.span.start.line()),
-                        entries: entries(&arm.statements, source, passages),
+                        entries: entries(&arm.statements, heading, passages),
                     })
                     .collect(),
             }),

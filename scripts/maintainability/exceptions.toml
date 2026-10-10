@@ -7,12 +7,6 @@ issue = "#89"
 reason = "#89: retain the explicit decoder boundary while the v0 wire contract is synchronized"
 
 [[exceptions]]
-path = "crates/recite-runtime/src/traversal/interpolation.rs"
-max_lines = 445
-issue = "#179"
-reason = "#179/#180/#191: typed interpolation and plural localisation retain the provider arm-boundary handoff"
-
-[[exceptions]]
 path = "crates/recite-runtime/tests/adapter_conformance/driver.rs"
 max_lines = 1188
 issue = "#171"

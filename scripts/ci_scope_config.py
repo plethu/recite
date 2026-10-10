@@ -16,6 +16,7 @@ LANES = frozenset(
         "site",
         "editor",
         "benchmark-smoke",
+        "workflow-performance",
         "maintainability",
         "packages",
         "cli-packages",
@@ -40,7 +41,7 @@ RUST = frozenset(
     }
 )
 JS = frozenset({"docs", "site", "editor", "lsp-sessions"})
-RUST_BUILD = RUST | {"lsp-sessions", "docs", "site"}
+RUST_BUILD = RUST | {"lsp-sessions", "docs", "site", "workflow-performance"}
 JUST = frozenset({"maintainability"})
 JUST_QUALITY = LANES - DISTRIBUTION - {"windows-publisher"}
 ENGINE = frozenset({"rust", "hosts", "maintainability"})
@@ -251,6 +252,7 @@ def shared_config_lanes(path, base, head):
             "site": {"site"},
             "editor": {"editor"},
             "benchmark-smoke": {"benchmark-smoke"},
+            "workflow-performance": {"workflow-performance"},
             "maintainability": {"maintainability"},
             "packages": {"packages"},
             "cli-packages": {"cli-packages"},

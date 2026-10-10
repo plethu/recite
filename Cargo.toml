@@ -1,5 +1,6 @@
 [workspace]
 resolver = "3"
+exclude = ["apps/writer", "apps/writer/crates/*"]
 members = [
     "crates/recite-adapter",
     "crates/recite-benchmarks",
@@ -18,6 +19,7 @@ members = [
     "crates/recite-playground",
     "crates/recite-runtime",
     "crates/recite-ui",
+    "tools/recite-perf",
     "tools/recite-release",
 ]
 

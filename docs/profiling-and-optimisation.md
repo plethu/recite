@@ -3,8 +3,8 @@
 Performance work must justify its maintenance cost. A roughly 5% slowdown can be acceptable for a
 substantial simplification; compare the workloads affected by the change and preserve semantics.
 
-[Quality requirements](spec/quality.md) own performance policy. The paired LSP gate has a blocking
-regression budget; other local measurements are investigation evidence until
+[Quality requirements](spec/quality.md) own performance policy. The paired LSP and workflow gates
+have blocking regression budgets; other local measurements are investigation evidence until
 [#109](https://github.com/plethu/recite/issues/109) establishes release baselines.
 
 ## Choose the measurement
@@ -26,6 +26,7 @@ other builds and tests out of the sampling window.
 | Full compiler allocation churn                 | `cargo run --release -p recite-benchmarks --example compiler_allocations` |
 | Build/watch refresh under fixture pressure     | `just stress watch`                                                       |
 | Execution smoke, without performance claims    | `just perf smoke`                                                         |
+| Paired Linux instruction and heap regressions  | `just perf regression BASE_COMMIT pr target/workflow-performance`         |
 
 Use `just perf lsp --help` for bounded process/session probes. Its setup is `just perf setup`.
 Criterion filters match group names, for example `lsp/change_refresh` or
@@ -66,6 +67,38 @@ runs perf or bench-only DHAT instrumentation; instrumented latency is not normal
 production allocation is unchanged. Allocation bounds run in `just writer check`; investigate
 unexplained regressions before changing them. Native scale requirements belong to
 [Writer acceptance](../apps/writer/acceptance.md#scale-and-performance).
+
+## Bounded regression checks
+
+Install Valgrind with the host package manager and run `just perf regression-setup` for the pinned
+[Gungraun](https://github.com/gungraun/gungraun) runner. The private `tools/recite-perf` Rust crate
+uses upstream measurement, baselines, limits and typed summaries. The shell recipe builds the base
+and candidate before measurement and applies the current harness and fixtures to both. It preserves
+the original and resolved control locks; dependency resolution for harness additions runs offline.
+Preparation and receiver/result disposal are excluded. DHAT filters allocation stacks to the
+operation; its peak counter is operation-attributed bytes live at the whole-process heap peak, not
+an isolated operation peak or process RSS.
+
+The three runtime step cases each process 64 independent prepared sessions. Their session clones and
+output buffers are prepared outside counters; batching dilutes one-off allocator housekeeping.
+Compare both revisions with the same current harness rather than reusing older single-step counts.
+
+`pr` checks eight compiler/runtime/preview operations on small and authored realistic fixtures.
+`full` adds medium fixtures. Both include cold effect-heavy Writer script projection at 1,000 and
+10,000 entries, validating Unicode prose, authored IDs, effects and order outside the measured
+operation, and a 64-session bound-text prompt batch using the checked language-pressure fixture;
+`writer` runs just its two cases. Use a fresh output directory. Limits belong to
+[the shared configuration](../tools/recite-perf/benches/support/budget.rs); elapsed time remains a
+Criterion investigation. Missing paired measurements fail closed, including Gungraun's automatic
+creation of a missing named baseline.
+
+CI runs this lane only for measured Rust/model inputs, fixtures and shared build changes. Weekly and
+release runs use `full` and `just stress bounded` (large CLI, tiny/small watch recovery). The
+output's `evidence/` contains raw profiles, summaries, environment, binaries' hashes, locks, current
+harness and dirty source changes. The instruction/heap gate covers Linux headless workflows; it does
+not replace the existing LSP process gate or native Writer acceptance evidence in issue #109. CI
+keeps fresh evidence outside its build cache; `RECITE_PERF_BUILD_DIR` selects reusable build storage
+without reusing profiles or baselines.
 
 ## Investigation and acceptance
 

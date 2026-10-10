@@ -75,3 +75,105 @@ fn effects_only_scene_can_open_and_return_to_script() -> Result<(), Box<dyn std:
     assert_eq!(workbench.view(), &View::Block("start".into()));
     Ok(())
 }
+
+#[test]
+fn nested_script_headings_follow_source_lines_across_unicode_crlf_edit_and_undo()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = concat!(
+        "# Café — an authored heading fixture.\n",
+        ":: relay default\n",
+        ":if has_flag(ready)\n",
+        "  ! immediate set_flag(done, true)\n",
+        "  :match mood(mara)\n",
+        "    :case calm\n",
+        "      ! immediate change_disposition(mara, 1)\n",
+        "    :case _\n",
+        "      ! immediate change_disposition(mara, -1)\n",
+        ":else\n",
+        "  ! immediate change_disposition(mara, 0)\n",
+        "-> END\n",
+    );
+    let expected = vec![
+        ScriptEntry::Group {
+            heading: ":if has_flag(ready)".into(),
+            entries: vec![
+                ScriptEntry::Effect("! immediate set_flag(done, true)".into()),
+                ScriptEntry::Group {
+                    heading: ":match mood(mara)".into(),
+                    entries: vec![
+                        ScriptEntry::Group {
+                            heading: ":case calm".into(),
+                            entries: vec![ScriptEntry::Effect(
+                                "! immediate change_disposition(mara, 1)".into(),
+                            )],
+                        },
+                        ScriptEntry::Group {
+                            heading: ":case _".into(),
+                            entries: vec![ScriptEntry::Effect(
+                                "! immediate change_disposition(mara, -1)".into(),
+                            )],
+                        },
+                    ],
+                },
+            ],
+        },
+        ScriptEntry::Group {
+            heading: "Otherwise".into(),
+            entries: vec![ScriptEntry::Effect(
+                "! immediate change_disposition(mara, 0)".into(),
+            )],
+        },
+        ScriptEntry::Jump("END".into()),
+    ];
+    for newline in ["\n", "\r\n"] {
+        let source = source.replace('\n', newline);
+        let mut document = Document::new(&source)?;
+        let original = document.script_snapshot()?;
+        assert_eq!(original[0].entries, expected);
+        assert!(std::sync::Arc::ptr_eq(
+            &original,
+            &document.script_snapshot()?
+        ));
+        let edited = format!("# An extra line shifts every heading.{newline}{source}");
+        document.replace_source(document.revision(), edited)?;
+        let changed = document.script_snapshot()?;
+        assert_eq!(changed[0].entries, expected);
+        assert!(!std::sync::Arc::ptr_eq(&original, &changed));
+        assert!(document.undo()?);
+        assert_eq!(document.source(), source);
+        assert_eq!(document.script_snapshot()?, original);
+    }
+    Ok(())
+}
+
+#[test]
+fn final_multiline_prose_remains_editable_without_a_trailing_newline()
+-> Result<(), Box<dyn std::error::Error>> {
+    for newline in ["\n", "\r\n"] {
+        let source = [
+            "# Café — preserve byte positions after Unicode.",
+            ":: relay default",
+            "> courier@44000000000000000001",
+            "\tCafé 🐧",
+            "\tمرحبا",
+        ]
+        .join(newline);
+        let mut document = Document::new(&source)?;
+        let original = document.script_snapshot()?;
+        let ScriptEntry::Passage(passage) = &original[0].entries[0] else {
+            return Err("final prose passage missing".into());
+        };
+        assert_eq!(passage.text, "Café 🐧\nمرحبا");
+        document.replace_text(document.revision(), &passage.id, "Bonsoir 🐧\nأهلا")?;
+        assert_eq!(
+            document.source(),
+            source
+                .replace("Café 🐧", "Bonsoir 🐧")
+                .replace("مرحبا", "أهلا")
+        );
+        assert!(document.undo()?);
+        assert_eq!(document.source(), source);
+        assert_eq!(document.script_snapshot()?, original);
+    }
+    Ok(())
+}
