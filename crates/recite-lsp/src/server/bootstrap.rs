@@ -11,8 +11,7 @@ use super::{Server, ServerError};
 use crate::capabilities::initialize_result;
 
 pub fn run_stdio() -> Result<(), ServerError> {
-    let default_catalog = default_ui_catalog();
-    let startup = startup_from_user_config(load_user_config(), default_catalog, |locale| {
+    let startup = startup_from_user_config(load_user_config(), default_ui_catalog, |locale| {
         UiCatalog::load(locale).map_err(|error| error.to_string())
     })?;
     run_stdio_with_startup(startup)
@@ -66,7 +65,7 @@ pub(crate) fn run_connection_with_user_config(
     default_catalog: UiCatalog,
     catalog_loader: impl FnOnce(&UiLocale) -> Result<UiCatalog, String>,
 ) -> Result<(), ServerError> {
-    let startup = startup_from_user_config(loaded, default_catalog, catalog_loader)?;
+    let startup = startup_from_user_config(loaded, move || default_catalog, catalog_loader)?;
     run_connection_with_startup(connection, startup)
 }
 
@@ -142,7 +141,7 @@ impl Startup {
 
 fn startup_from_user_config(
     loaded: Result<LoadedUserConfig, ConfigError>,
-    default_catalog: UiCatalog,
+    default_catalog: impl FnOnce() -> UiCatalog,
     catalog_loader: impl FnOnce(&UiLocale) -> Result<UiCatalog, String>,
 ) -> Result<Startup, ServerError> {
     match loaded {
@@ -153,10 +152,13 @@ fn startup_from_user_config(
             let catalog = catalog_loader(locale).map_err(ServerError::UiCatalog)?;
             Ok(Startup::without_warning(catalog))
         }
-        Err(error) => Ok(Startup {
-            warning: Some(config_warning(&default_catalog, &error)),
-            catalog: default_catalog,
-        }),
+        Err(error) => {
+            let catalog = default_catalog();
+            Ok(Startup {
+                warning: Some(config_warning(&catalog, &error)),
+                catalog,
+            })
+        }
     }
 }
 
@@ -177,3 +179,6 @@ fn config_warning(catalog: &UiCatalog, error: &ConfigError) -> String {
 fn default_ui_catalog() -> UiCatalog {
     UiCatalog::load(&UiLocale::default()).expect("embedded default UI catalog must load")
 }
+
+#[cfg(test)]
+mod tests;

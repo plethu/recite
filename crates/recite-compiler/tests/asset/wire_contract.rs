@@ -1,11 +1,10 @@
 //! Shape-level conformance checks for the v0 compiled MessagePack document.
 //!
-//! The typed round-trip test exercises the encoder and decoder together, while
-//! the golden snapshot protects the selected fixture bytes. This check reads
-//! the compiler output as an untyped MessagePack value and checks every fixed
-//! array against the arity registry exported by `recite-core`. A simultaneous
-//! change to both codec mirrors therefore still has to account for the shared
-//! v0 shape before the typed round-trip can pass.
+//! Compiler output must match the canonical core encoder and the shared v0
+//! arity registry. This check also reads output as an untyped MessagePack value
+//! so every fixed array is checked independently of the typed decoder. Golden
+//! snapshots pin the bytes themselves and expose changes to the documented
+//! wire layout even when the codecs and arity constants change together.
 
 use recite_core::compiled::{
     V0_ASSET_HEADER_FIELDS, V0_AVAILABILITY_REASON_ARG_BINDING_FIELDS,
@@ -15,7 +14,7 @@ use recite_core::compiled::{
     V0_MATCH_ARM_FIELDS, V0_MATCH_STATEMENT_PAYLOAD_FIELDS, V0_METADATA_ENTRY_FIELDS,
     V0_PROMPT_STATEMENT_PAYLOAD_FIELDS, V0_RANGE_FIELDS, V0_SOURCE_FILE_FIELDS,
     V0_SOURCE_MAP_ENTRY_FIELDS, V0_SOURCE_SPAN_FIELDS, V0_SPEAKER_FIELDS, V0_STATEMENT_FIELDS,
-    V0_TAGGED_VALUE_FIELDS,
+    V0_TAGGED_VALUE_FIELDS, encode_compiled_dialogue_messagepack,
 };
 use serde_value::Value as WireValue;
 
@@ -40,6 +39,15 @@ fn compiler_output_matches_the_v0_fixed_array_shape() {
         .expect("literal-reason output decodes as an untyped MessagePack value");
     assert_dialogue_shape(&literal_reason_wire);
     assert_literal_reason_tags(&literal_reason_wire);
+
+    for output in [asset, value_asset, literal_reason_asset] {
+        let canonical = encode_compiled_dialogue_messagepack(&output.dialogue)
+            .expect("compiled fixture encodes through the canonical core codec");
+        assert_eq!(
+            output.messagepack, canonical,
+            "compiler output must preserve core's canonical bytes"
+        );
+    }
 }
 
 fn assert_literal_reason_tags(value: &WireValue) {

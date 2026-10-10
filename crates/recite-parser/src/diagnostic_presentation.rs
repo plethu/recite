@@ -4,7 +4,7 @@ use recite_core::{
     explain_diagnostic_code,
 };
 
-use crate::condition::ParseErrorKind;
+use crate::condition::{MAX_CONDITION_SYNTAX_NESTING, ParseErrorKind};
 
 pub(super) fn static_diagnostic(
     code: DiagnosticCode,
@@ -36,6 +36,9 @@ pub(super) enum DiagnosticSelector {
 impl DiagnosticSelector {
     fn presentation_id(self, code: &DiagnosticCode) -> DiagnosticPresentationId {
         match self {
+            Self::ParseError(ParseErrorKind::NestingLimitExceeded) => {
+                DiagnosticPresentationId::new_static("diagnostic-parse-013-nesting-limit")
+            }
             Self::ParseError(ParseErrorKind::UnexpectedCharacter(_)) => match code.as_str() {
                 "RECITE_PARSE012" => DiagnosticPresentationId::new_static(
                     "diagnostic-parse-012-unexpected-character",
@@ -51,6 +54,10 @@ impl DiagnosticSelector {
 
     fn arguments(self) -> Vec<(String, DiagnosticArgumentValue)> {
         match self {
+            Self::ParseError(ParseErrorKind::NestingLimitExceeded) => vec![(
+                "limit".to_owned(),
+                DiagnosticArgumentValue::Integer(i64::from(MAX_CONDITION_SYNTAX_NESTING)),
+            )],
             Self::MissingEffectMode => reason_argument("missing_mode"),
             Self::InvalidEffectMode => reason_argument("invalid_mode"),
             Self::ParseError(ParseErrorKind::UnexpectedCharacter(character)) => vec![(
@@ -108,6 +115,9 @@ fn parse_selector(error_kind: ParseErrorKind) -> &'static str {
         ParseErrorKind::ExpectedRightParen => "expected_right_paren",
         ParseErrorKind::ExpectedScalarArgument => "expected_scalar_argument",
         ParseErrorKind::UnexpectedTrailingTokens => "unexpected_trailing_tokens",
+        ParseErrorKind::NestingLimitExceeded => {
+            unreachable!("nesting limits use their exact integer presentation contract")
+        }
     }
 }
 

@@ -154,3 +154,116 @@ fn press_depth_preserves_content_names_and_explicit_accessible_names() {
         );
     }
 }
+
+fn accessible_node(button: Button) -> accesskit::Node {
+    button
+        .with_accessibility(rect())
+        .get_accessibility_data()
+        .builder
+        .clone()
+}
+
+#[test]
+fn each_role_exposes_only_its_applicable_state() {
+    for button in [Button::new(), Button::new().menu_item()] {
+        let node = accessible_node(button);
+        assert_eq!(node.is_selected(), None);
+        assert_eq!(node.toggled(), None);
+    }
+    for state in [false, true] {
+        for (button, role) in [
+            (Button::new().tab(state), AccessibilityRole::Tab),
+            (
+                Button::new().option(state),
+                AccessibilityRole::ListBoxOption,
+            ),
+        ] {
+            let node = accessible_node(button);
+            assert_eq!(node.role(), role);
+            assert_eq!(node.is_selected(), Some(state));
+            assert_eq!(node.toggled(), None);
+        }
+        for (button, role) in [
+            (Button::new().toggle(state), AccessibilityRole::Button),
+            (Button::new().checkable(state), AccessibilityRole::CheckBox),
+            (Button::new().radio(state), AccessibilityRole::RadioButton),
+        ] {
+            let node = accessible_node(button);
+            assert_eq!(node.role(), role);
+            assert_eq!(node.is_selected(), None);
+            assert_eq!(
+                node.toggled(),
+                Some(if state {
+                    accesskit::Toggled::True
+                } else {
+                    accesskit::Toggled::False
+                })
+            );
+        }
+    }
+}
+
+#[test]
+fn changing_roles_cannot_retain_a_previous_roles_state() {
+    let radio = accessible_node(Button::new().checkable(true).radio(false));
+    assert_eq!(radio.role(), AccessibilityRole::RadioButton);
+    assert_eq!(radio.toggled(), Some(accesskit::Toggled::False));
+    assert_eq!(radio.is_selected(), None);
+
+    for button in [
+        Button::new().radio(true).menu_item(),
+        Button::new().tab(true).menu_item(),
+    ] {
+        let menu_item = accessible_node(button);
+        assert_eq!(menu_item.role(), AccessibilityRole::MenuItem);
+        assert_eq!(menu_item.toggled(), None);
+        assert_eq!(menu_item.is_selected(), None);
+    }
+    let option = accessible_node(Button::new().checkable(true).option(false));
+    assert_eq!(option.role(), AccessibilityRole::ListBoxOption);
+    assert_eq!(option.is_selected(), Some(false));
+    assert_eq!(option.toggled(), None);
+}
+
+#[test]
+fn visual_highlighting_does_not_claim_or_override_accessible_state() {
+    let action = accessible_node(Button::new().highlighted(true));
+    assert_eq!(action.role(), AccessibilityRole::Button);
+    assert_eq!(action.toggled(), None);
+    assert_eq!(action.is_selected(), None);
+
+    let checkbox = accessible_node(Button::new().checkable(false).highlighted(true));
+    assert_eq!(checkbox.role(), AccessibilityRole::CheckBox);
+    assert_eq!(checkbox.toggled(), Some(accesskit::Toggled::False));
+    assert_eq!(checkbox.is_selected(), None);
+}
+
+#[test]
+fn common_accessibility_properties_remain_independent_of_the_role() {
+    let mut control = Button::new()
+        .checkable(false)
+        .enabled(false)
+        .expanded(false)
+        .shortcut("Ctrl+K".into())
+        .named("Explicit name")
+        .child(label().text("Visible caption"))
+        .with_accessibility(rect());
+    let accessibility = control.get_accessibility_data();
+    let node = &accessibility.builder;
+    assert_eq!(node.role(), AccessibilityRole::CheckBox);
+    assert!(node.is_disabled());
+    assert_eq!(accessibility.a11y_focusable, false.into());
+    assert_eq!(node.is_expanded(), Some(false));
+    assert_eq!(node.keyboard_shortcut(), Some("Ctrl+K"));
+    assert_eq!(node.label(), Some("Explicit name"));
+
+    let action = accessible_node(
+        Button::new()
+            .shortcut(String::new())
+            .child(label().text("Caption")),
+    );
+    assert!(!action.is_disabled());
+    assert_eq!(action.is_expanded(), None);
+    assert_eq!(action.keyboard_shortcut(), None);
+    assert_eq!(action.label(), Some("Caption"));
+}

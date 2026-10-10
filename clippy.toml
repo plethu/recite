@@ -1,5 +1,9 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
+# Backstops for control flow. Function length remains an audit signal:
+# cohesive exhaustive mappings can be long without hiding policy or mutable state.
+cognitive-complexity-threshold = 20
+excessive-nesting-threshold = 6
 disallowed-types = [
     { path = "std::collections::HashMap", reason = "iteration order is nondeterministic; use BTreeMap" },
     { path = "std::collections::HashSet", reason = "iteration order is nondeterministic; use BTreeSet" },

@@ -29,13 +29,9 @@ cargo bench --locked --manifest-path "$repo_root/apps/writer/Cargo.toml" \
   -p recite-writer-model --features "$features" --bench large_project \
   --no-run --message-format=json >"$output/build.json"
 executable="$(
-  python3 - "$output/build.json" <<'PY'
-import json, sys
-for line in open(sys.argv[1]):
-    message = json.loads(line)
-    if message.get('executable') and message.get('target', {}).get('name') == 'large_project':
-        print(message['executable'])
-PY
+  jq --exit-status --raw-output \
+    'select(.executable != null and .target.name == "large_project") | .executable' \
+    "$output/build.json"
 )"
 [[ -x "$executable" ]]
 {

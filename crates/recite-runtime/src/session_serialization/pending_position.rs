@@ -32,3 +32,6 @@ pub(super) fn validate_pending_statement_position(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

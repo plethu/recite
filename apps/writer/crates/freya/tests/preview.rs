@@ -23,6 +23,18 @@ fn trial_answers_conditions_and_acknowledges_effects_on_its_own_screen()
             .is_some()
     );
     support::click(&mut test, "Continue")?;
+    support::click(&mut test, "What happened in this run?")?;
+    assert!(
+        test.find(
+            |_, e| Label::try_downcast(e).filter(|l| l.text.contains("trusts(player) → True"))
+        )
+        .is_some()
+    );
+    assert!(
+        test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.contains("overlay")))
+            .is_some()
+    );
+    support::click(&mut test, "What happened in this run?")?;
     support::click(&mut test, "Acknowledge completed")?;
     support::click(&mut test, "Continue")?;
     assert!(
@@ -33,6 +45,20 @@ fn trial_answers_conditions_and_acknowledges_effects_on_its_own_screen()
     support::click(&mut test, "False")?;
     assert!(
         test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "No."))
+            .is_some()
+    );
+    support::click(&mut test, "Continue")?;
+    support::click(&mut test, "Report failure")?;
+    support::click(&mut test, "What happened in this run?")?;
+    assert!(
+        test.find(
+            |_, e| Label::try_downcast(e).filter(|l| l.text.contains("trusts(player) → False"))
+        )
+        .is_some()
+    );
+    assert!(
+        test.find(|_, e| Label::try_downcast(e)
+            .filter(|l| l.text.contains("Failure reported in the writer preview")))
             .is_some()
     );
     support::click(&mut test, "Return to writing")?;

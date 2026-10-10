@@ -4,12 +4,13 @@ use recite_core::{
 };
 
 use super::token::{Token, TokenKind, TokenKindDiscriminant};
-use super::{ParseError, ParseErrorKind};
+use super::{MAX_CONDITION_SYNTAX_NESTING, ParseError, ParseErrorKind};
 
 pub(super) struct Parser<'a> {
     path: &'a str,
     tokens: Vec<Token>,
     cursor: usize,
+    nesting: u8,
 }
 
 impl<'a> Parser<'a> {
@@ -18,6 +19,7 @@ impl<'a> Parser<'a> {
             path,
             tokens,
             cursor: 0,
+            nesting: 0,
         }
     }
 
@@ -66,7 +68,7 @@ impl<'a> Parser<'a> {
     fn parse_unary(&mut self) -> Result<ConditionExpression, ParseError> {
         if self.at(TokenKindDiscriminant::Not) {
             let not = self.bump().clone();
-            let expression = self.parse_unary()?;
+            let expression = self.parse_nested(&not.span, Self::parse_unary)?;
             let span = join_spans(self.path, &not.span, expression.span());
             return Ok(ConditionExpression::not(expression, span));
         }
@@ -77,7 +79,7 @@ impl<'a> Parser<'a> {
     fn parse_primary(&mut self) -> Result<ConditionExpression, ParseError> {
         if self.at(TokenKindDiscriminant::LeftParen) {
             let left = self.bump().clone();
-            let expression = self.parse_or()?;
+            let expression = self.parse_nested(&left.span, Self::parse_or)?;
             let right = self
                 .expect(
                     TokenKindDiscriminant::RightParen,
@@ -90,6 +92,23 @@ impl<'a> Parser<'a> {
 
         let call = self.parse_call()?;
         Ok(ConditionExpression::Call(call))
+    }
+
+    fn parse_nested(
+        &mut self,
+        span: &SourceSpan,
+        parse: fn(&mut Self) -> Result<ConditionExpression, ParseError>,
+    ) -> Result<ConditionExpression, ParseError> {
+        if self.nesting >= MAX_CONDITION_SYNTAX_NESTING {
+            return Err(ParseError::new(
+                span.clone(),
+                ParseErrorKind::NestingLimitExceeded,
+            ));
+        }
+        self.nesting += 1;
+        let result = parse(self);
+        self.nesting -= 1;
+        result
     }
 
     pub(super) fn parse_call(&mut self) -> Result<ConditionCall, ParseError> {

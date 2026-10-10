@@ -206,3 +206,73 @@ fn open_rules(test: &mut TestingRunner) -> TestResult {
     support::click(test, "Passage actions")?;
     support::click(test, "Reply rules")
 }
+
+#[test]
+fn schema_picker_adds_a_condition_and_effect_as_one_recoverable_draft() -> TestResult {
+    let dir = tempfile::tempdir()?;
+    std::fs::write(
+        dir.path().join("recite.project.toml"),
+        "format_version = 1\n[project]\nschema = 'schema.json'\n",
+    )?;
+    std::fs::write(
+        dir.path().join("schema.json"),
+        r#"{"schema_version":1,"conditions":{"ready":{"params":[{"name":"enabled","type":"bool"}]}},"effects":{"notify":{"params":[{"name":"announce","type":"bool"}],"modes":["immediate"]}}}"#,
+    )?;
+    let source = ":: start default\n? reply@22222222222222222222\n  Let me through.\n  -> accepted\n:: accepted\n-> END\n";
+    std::fs::write(dir.path().join("scene.recite"), source)?;
+    let root = dir.path().to_owned();
+    let mut test = TestingRunner::new(
+        recite_writer::editor_app,
+        (1400., 1400.).into(),
+        |runner| {
+            runner.provide_root_context(move || recite_writer::InitialProject(Some(root)));
+        },
+        1.,
+    )
+    .0;
+    test.poll_n(std::time::Duration::from_millis(16), 30);
+    support::open_beat(&mut test)?;
+    open_rules(&mut test)?;
+    support::click(&mut test, "Add condition")?;
+    support::click(&mut test, "Ready · 0")?;
+    support::click(&mut test, "Enabled · True / false")?;
+    support::click(&mut test, "true · true")?;
+    support::click(&mut test, "Condition actions: ready")?;
+    support::click(&mut test, "Require the opposite")?;
+    support::click(&mut test, "Not · remove negation")?;
+    support::click(&mut test, "Condition actions: ready")?;
+    support::click(&mut test, "Group conditions")?;
+    support::click(&mut test, "Add condition")?;
+    support::click(&mut test, "Ready · 0")?;
+    support::click(&mut test, "Add effect")?;
+    support::click(&mut test, "Notify · 0")?;
+    support::click(&mut test, "Edit effect 1")?;
+    support::click(&mut test, "Announce · True / false")?;
+    support::click(&mut test, "true · true")?;
+    support::click(&mut test, "Apply rules")?;
+    support::click(&mut test, "Edit in Source")?;
+    let draft = test
+        .find_many(|_, e| {
+            Paragraph::try_downcast(e)
+                .map(|p| p.spans.iter().map(|s| s.text.as_ref()).collect::<String>())
+        })
+        .join("\n");
+    assert!(draft.contains("ready(true) and ready(false)"), "{draft}");
+    assert!(!draft.contains("not ready"), "{draft}");
+    assert!(draft.contains("! immediate notify(true)"), "{draft}");
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("scene.recite"))?,
+        source,
+        "applying stays in the source model until Save"
+    );
+    support::click(&mut test, "Undo")?;
+    let restored = test
+        .find_many(|_, e| {
+            Paragraph::try_downcast(e)
+                .map(|p| p.spans.iter().map(|s| s.text.as_ref()).collect::<String>())
+        })
+        .join("\n");
+    assert!(!restored.contains("requires="));
+    assert!(!restored.contains("notify("));
+    Ok(())
+}

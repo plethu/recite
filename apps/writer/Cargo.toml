@@ -10,11 +10,11 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
-recite-compiler = { path = "../../crates/recite-compiler" }
-recite-core = { path = "../../crates/recite-core" }
-recite-parser = { path = "../../crates/recite-parser" }
-recite-runtime = { path = "../../crates/recite-runtime" }
-recite-writer-model = { path = "crates/authoring" }
+recite-compiler = { path = "../../crates/recite-compiler", version = "0.1.0" }
+recite-core = { path = "../../crates/recite-core", version = "0.1.0" }
+recite-parser = { path = "../../crates/recite-parser", version = "0.1.0" }
+recite-runtime = { path = "../../crates/recite-runtime", version = "0.1.0" }
+recite-writer-model = { path = "crates/authoring", version = "0.0.0" }
 thiserror = "2"
 
 [workspace.lints.clippy]

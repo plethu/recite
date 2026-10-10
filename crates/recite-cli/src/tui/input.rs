@@ -172,15 +172,7 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
         },
         PromptMode::Command => match key.code {
             KeyCode::Esc => TuiIntent::Cancel,
-            KeyCode::Enter => TuiIntent::Submit,
-            KeyCode::Char(ch) => TuiIntent::Text(ch),
-            KeyCode::Backspace => TuiIntent::Backspace,
-            KeyCode::Delete => TuiIntent::Delete,
-            KeyCode::Left => TuiIntent::MoveCursorLeft,
-            KeyCode::Right => TuiIntent::MoveCursorRight,
-            KeyCode::Home => TuiIntent::MoveCursorStart,
-            KeyCode::End => TuiIntent::MoveCursorEnd,
-            _ => TuiIntent::Ignore,
+            code => text_edit_intent(code),
         },
         PromptMode::Insert => match key.code {
             KeyCode::Esc => {
@@ -190,18 +182,10 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
                     TuiIntent::Quit
                 }
             }
-            KeyCode::Enter => TuiIntent::Submit,
             KeyCode::Char('?') => TuiIntent::ToggleHelp,
-            KeyCode::Char(ch) => TuiIntent::Text(ch),
-            KeyCode::Backspace => TuiIntent::Backspace,
-            KeyCode::Delete => TuiIntent::Delete,
-            KeyCode::Left => TuiIntent::MoveCursorLeft,
-            KeyCode::Right => TuiIntent::MoveCursorRight,
-            KeyCode::Home => TuiIntent::MoveCursorStart,
-            KeyCode::End => TuiIntent::MoveCursorEnd,
             KeyCode::Up => TuiIntent::MovePrevious,
             KeyCode::Down => TuiIntent::MoveNext,
-            _ => TuiIntent::Ignore,
+            code => text_edit_intent(code),
         },
         PromptMode::Normal => match key.code {
             KeyCode::Esc => TuiIntent::Quit,
@@ -216,5 +200,19 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
             KeyCode::Char(ch) if keymap == Keymap::Standard => TuiIntent::Text(ch),
             _ => TuiIntent::Ignore,
         },
+    }
+}
+
+fn text_edit_intent(code: KeyCode) -> TuiIntent {
+    match code {
+        KeyCode::Enter => TuiIntent::Submit,
+        KeyCode::Char(ch) => TuiIntent::Text(ch),
+        KeyCode::Backspace => TuiIntent::Backspace,
+        KeyCode::Delete => TuiIntent::Delete,
+        KeyCode::Left => TuiIntent::MoveCursorLeft,
+        KeyCode::Right => TuiIntent::MoveCursorRight,
+        KeyCode::Home => TuiIntent::MoveCursorStart,
+        KeyCode::End => TuiIntent::MoveCursorEnd,
+        _ => TuiIntent::Ignore,
     }
 }

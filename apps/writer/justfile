@@ -13,8 +13,8 @@ check:
     just writer packaging
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
-    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings
-    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-features --lib --bins -- -D warnings -D clippy::cognitive_complexity
+    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings -D clippy::excessive_nesting
+    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-features --lib --bins -- -D warnings -D clippy::cognitive_complexity -D clippy::excessive_nesting
     just writer heap
 
 # Check package metadata and runtime dependencies without a host.
@@ -22,6 +22,17 @@ packaging:
     python3 tests/writer-packaging/check.py
     python3 scripts/package-writer.py --check-config > /dev/null
     python3 scripts/check-writer-flatpak.py
+
+# Audit the separate Writer graph with the shared dependency policy.
+supply-chain:
+    cargo deny --locked --manifest-path apps/writer/Cargo.toml --all-features --config deny.toml check advisories bans licenses sources
+
+# Headless model and UI ownership have separate production-line floors.
+coverage:
+    cargo llvm-cov clean --manifest-path apps/writer/Cargo.toml --workspace
+    cargo llvm-cov test --manifest-path apps/writer/Cargo.toml --workspace --locked --no-fail-fast --no-report -- --test-threads=4
+    mkdir -p apps/writer/target/coverage
+    for package in recite-writer-model recite-writer; do cargo llvm-cov report --manifest-path apps/writer/Cargo.toml --package "$package" --json --summary-only --ignore-filename-regex '/(tests|benches|examples)/' --fail-under-lines 90 --output-path "apps/writer/target/coverage/$package.json"; done
 
 # Check keyboard, accessibility metadata, scaling, and contrast.
 accessibility:

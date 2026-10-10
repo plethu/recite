@@ -10,7 +10,7 @@ use recite_core::{
     po::PotDocument,
     schema::{ProjectSchema, load_schema_manifest_str},
 };
-use recite_parser::parse;
+use recite_parser::{Parse, parse};
 
 use crate::project::BenchmarkProject;
 use crate::{BenchmarkResult, error};
@@ -107,18 +107,21 @@ impl CompiledProject {
     }
 }
 
-pub fn parse_inputs(inputs: &[CompileInput]) -> BenchmarkResult<usize> {
-    let mut diagnostics = 0;
-    for input in inputs {
-        let parse = parse(&input.path, &input.source);
-        diagnostics += parse.diagnostics().len();
-    }
+pub fn parse_inputs(inputs: &[CompileInput]) -> BenchmarkResult<Vec<Parse>> {
+    let parses = inputs
+        .iter()
+        .map(|input| parse(&input.path, &input.source))
+        .collect::<Vec<_>>();
+    let diagnostics = parses
+        .iter()
+        .map(|parse| parse.diagnostics().len())
+        .sum::<usize>();
     if diagnostics != 0 {
         return Err(error(format!(
             "source fixtures produced {diagnostics} parse diagnostics"
         )));
     }
-    Ok(inputs.len())
+    Ok(parses)
 }
 
 pub fn lower_inputs(inputs: &[CompileInput]) -> BenchmarkResult<Vec<SourceFile>> {

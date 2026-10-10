@@ -154,7 +154,19 @@ fn bench_baseline_comparison_uses_local_json_snapshot() {
 #[test]
 fn bench_project_root_compiler_smoke() {
     let temp = TempDir::new().expect("tempdir");
-    let source = write_recite(temp.path(), "dialogue.recite", project_source());
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default speaker=hazel\n",
+            ":if ready()\n",
+            "  > gated@11111111111111111112\n    Ready.\n",
+            "> intro@11111111111111111111\n  Hello.\n",
+            "  ? proceed@21111111111111111111 requires=(ready())\n",
+            "    Continue.\n    -> END\n",
+            "-> END\n",
+        ),
+    );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     let asset_name = asset
         .file_name()
@@ -192,6 +204,7 @@ block = "start"
         "project_manifest_load"
     );
     assert_eq!(report["targets"][0]["metadata"]["counts"]["blocks"], 1);
+    assert_eq!(report["targets"][0]["metadata"]["counts"]["conditions"], 2);
 }
 
 #[test]

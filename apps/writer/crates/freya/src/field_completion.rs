@@ -172,7 +172,7 @@ impl Component for Completion {
                         .flat()
                         .width(Size::fill())
                         .named(name.clone())
-                        .selected(active == Some(row.index))
+                        .option(active == Some(row.index))
                         .on_press(move |_| {
                             let mut writer = writer;
                             if let Err(error) = apply(writer, &entries, row.index) {

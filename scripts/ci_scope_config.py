@@ -152,7 +152,15 @@ def justfile_lanes(before, after):
     if changed & {"check", "verify", "_verify"}:
         return JUST_QUALITY
     lanes = set(JUST)
-    if changed & {"test", "test-doc", "clippy", "_clippy-rust", "core-check"}:
+    if changed & {
+        "test",
+        "test-doc",
+        "clippy",
+        "_clippy-rust",
+        "core-check",
+        "coverage",
+        "mutants",
+    }:
         lanes.add("rust")
     if "host-check" in changed:
         lanes.add("hosts")
@@ -189,6 +197,8 @@ def shared_config_lanes(path, base, head):
             "cargo:cargo-deny",
             "cargo:cargo-machete",
             "cargo:cargo-nextest",
+            "cargo:cargo-llvm-cov",
+            "cargo:cargo-mutants",
             "tombi",
         }:
             return RUST_BUILD

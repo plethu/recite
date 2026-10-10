@@ -109,3 +109,6 @@ pub(super) fn kind_label(kind: &str) -> String {
         _ => String::new(),
     }
 }
+
+#[cfg(test)]
+mod tests;

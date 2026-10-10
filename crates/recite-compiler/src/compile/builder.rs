@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use recite_core::{
-    ScalarValue,
+    ScalarValue, SourceLineIndex,
     ast::{Choice, DivertTarget, Effect, IfBranch, Line},
     compiled::{
         BlockIndex, CompiledAssetHeader, CompiledAvailabilityReason,
@@ -47,54 +48,12 @@ enum StatementPlan<'a> {
     Effect(&'a Effect),
 }
 
-struct SourceDocumentIndex<'a> {
-    source: &'a str,
-    positions: SourcePositionIndex,
-}
-
-struct SourcePositionIndex {
-    line_starts: Vec<usize>,
-}
-
-impl SourcePositionIndex {
-    fn new(source: &str) -> Self {
-        let mut line_starts = vec![0];
-        for (offset, character) in source.char_indices() {
-            if character == '\n' {
-                line_starts.push(offset + character.len_utf8());
-            }
-        }
-
-        Self { line_starts }
-    }
-
-    fn byte_offset(&self, source: &str, line: u32, column: u32) -> Option<usize> {
-        let line_index = usize::try_from(line.checked_sub(1)?).ok()?;
-        let line_start = *self.line_starts.get(line_index)?;
-        let line_end = self
-            .line_starts
-            .get(line_index + 1)
-            .copied()
-            .unwrap_or(source.len());
-        let scalar = usize::try_from(column.checked_sub(1)?).ok()?;
-        let line_source = source.get(line_start..line_end)?;
-        let is_final_line = line_index + 1 == self.line_starts.len();
-        if is_final_line && scalar == line_source.chars().count() {
-            return Some(line_end);
-        }
-        line_source
-            .char_indices()
-            .nth(scalar)
-            .map(|(offset, _)| line_start + offset)
-    }
-}
-
 struct AssetBuilder<'a> {
     inputs: &'a [LoweredInput],
     options: CompileOptions,
     schema: Option<&'a ProjectSchema>,
     source_file_indices: BTreeMap<&'a str, SourceFileIndex>,
-    source_documents: BTreeMap<&'a str, SourceDocumentIndex<'a>>,
+    source_documents: BTreeMap<&'a str, SourceLineIndex>,
     block_indices: BTreeMap<&'a str, BlockIndex>,
     speakers_by_id: BTreeMap<String, SpeakerIndex>,
     blocks: Vec<CompiledBlock>,
@@ -234,10 +193,7 @@ impl<'a> AssetBuilder<'a> {
                 .insert(input.source_file.path.as_str(), index);
             self.source_documents.insert(
                 input.source_file.path.as_str(),
-                SourceDocumentIndex {
-                    source: input.source.as_str(),
-                    positions: SourcePositionIndex::new(&input.source),
-                },
+                SourceLineIndex::new(Arc::clone(&input.source)),
             );
         }
 

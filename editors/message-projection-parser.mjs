@@ -1,55 +1,30 @@
-/**
- * Parse the deliberately small Fluent subset that host projections can
- * represent. A projected message is one line with plain text and simple
- * variable placeables. Fluent continuation lines, selectors, terms,
- * attributes, and other expressions fail closed rather than being truncated.
- */
-export function parseRepresentableMessages(source, ids, host = "editor") {
-  const wanted = new Set(ids);
+import { parse } from "@fluent/syntax";
 
+/** Project only inline text and simple variables from valid canonical Fluent. */
+export function parseRepresentableMessages(source, ids, host = "editor") {
+  const canonical = canonicalMessages(source);
   const messages = new Map();
-  let currentId;
-  for (const [index, line] of source.split(/\r?\n/u).entries()) {
-    const message = /^(?<id>[a-z0-9-]+) = (?<value>[^\r\n]*)$/u.exec(line);
-    if (message) {
-      currentId = message.groups.id;
-      if (!wanted.has(currentId)) continue;
-      if (messages.has(currentId)) {
-        throw new Error(`duplicate canonical Fluent message ${currentId} at line ${index + 1}`);
-      }
-      const value = message.groups.value;
-      assertRepresentableValue(currentId, value, index + 1);
-      messages.set(currentId, value);
-      continue;
-    }
-    if (currentId && wanted.has(currentId) && line.trim() !== "") {
-      if (/^\s/u.test(line)) {
-        throw new Error(
-          `canonical Fluent message ${currentId} uses a continuation at line ${index + 1}; `
-            + `${host} projections support only single-line templates`,
-        );
-      }
-      if (line.trim().startsWith(".")) {
-        throw new Error(
-          `canonical Fluent message ${currentId} uses an unsupported attribute at line ${
-            index + 1
-          }`,
-        );
-      }
-    }
-    if (line.trim() !== "") currentId = undefined;
-  }
-  for (const id of wanted) {
-    if (!messages.has(id)) throw new Error(`canonical Fluent message is missing ${id}`);
+  for (const id of new Set(ids)) {
+    const message = canonical.get(id);
+    if (!message) throw new Error(`canonical Fluent message is missing ${id}`);
+    messages.set(id, projectTemplate(source, message, host));
   }
   return messages;
 }
 
-export function diagnosticIds(source) {
-  return source.split(/\r?\n/u).flatMap((line) => {
-    const match = /^(diagnostic-[a-z0-9-]+)\s*=\s*[^\r\n]*$/u.exec(line);
-    return match ? [match[1]] : [];
-  }).filter((id) => !/(?:-help|-related|-meaning|-cause-\d+|-remediation-\d+)$/u.test(id));
+/** Unsupported valid expressions retain the diagnostic host's fallback. */
+export function parseDiagnosticMessages(source, host = "editor") {
+  const messages = new Map();
+  for (const [id, message] of canonicalMessages(source)) {
+    if (!/^diagnostic-[a-z0-9-]+$/u.test(id)) continue;
+    if (/(?:-help|-related|-meaning|-cause-\d+|-remediation-\d+)$/u.test(id)) continue;
+    try {
+      messages.set(id, projectTemplate(source, message, host));
+    } catch (error) {
+      if (!(error instanceof UnsupportedExpression)) throw error;
+    }
+  }
+  return messages;
 }
 
 export function parseDiagnosticContracts(source) {
@@ -75,10 +50,65 @@ export function assertDiagnosticTemplate(id, template, argumentsForId) {
   }
 }
 
-function assertRepresentableValue(id, value, line) {
-  if (!/^([^{}]|\{\$[a-zA-Z][a-zA-Z0-9_-]*\})*$/u.test(value)) {
-    throw new Error(
-      `canonical Fluent message ${id} uses an unsupported expression at line ${line}`,
+function canonicalMessages(source) {
+  const messages = new Map();
+  for (const entry of parse(source).body) {
+    if (entry.type === "Junk") {
+      const annotation = entry.annotations[0];
+      throw new Error(
+        `malformed canonical Fluent at line ${
+          lineAt(source, annotation?.span.start ?? entry.span.start)
+        }: ${annotation?.message ?? "invalid syntax"}`,
+      );
+    }
+    if (entry.type !== "Message") continue;
+    if (messages.has(entry.id.name)) {
+      throw new Error(
+        `duplicate canonical Fluent message ${entry.id.name} at line ${
+          lineAt(source, entry.id.span.start)
+        }`,
+      );
+    }
+    messages.set(entry.id.name, entry);
+  }
+  return messages;
+}
+
+function projectTemplate(source, message, host) {
+  if (message.attributes.length > 0) {
+    throw new Error(messageProblem(source, message, "uses an unsupported attribute"));
+  }
+  const elements = message.value.elements;
+  if (
+    !elements.every((element) =>
+      element.type === "TextElement"
+      || (element.type === "Placeable" && element.expression.type === "VariableReference")
+    )
+  ) {
+    throw new UnsupportedExpression(
+      messageProblem(source, message, "uses an unsupported expression"),
     );
   }
+  if (/[\r\n]/u.test(source.slice(message.id.span.start, message.value.span.end))) {
+    throw new Error(
+      `${
+        messageProblem(source, message, "uses a continuation")
+      }; ${host} projections support only single-line templates`,
+    );
+  }
+  return elements.map((element) =>
+    element.type === "TextElement" ? element.value : `{$${element.expression.id.name}}`
+  ).join("");
 }
+
+function messageProblem(source, message, problem) {
+  return `canonical Fluent message ${message.id.name} ${problem} at line ${
+    lineAt(source, message.id.span.start)
+  }`;
+}
+
+function lineAt(source, offset) {
+  return source.slice(0, offset).split(/\r?\n/u).length;
+}
+
+class UnsupportedExpression extends Error {}

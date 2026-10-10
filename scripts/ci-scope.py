@@ -102,7 +102,8 @@ def lanes_for_path(path, *, base=None, head=None):
             else (JUST if path == "justfile" else LANES)
         )
     if path == ".gitignore":
-        return frozenset()
+        # Mutation sandboxes use ignore rules when copying sources and tests.
+        return frozenset({"rust"})
     if path == "apps/writer/justfile":
         return frozenset({"writer", "maintainability"})
     if path == "editors/justfile":

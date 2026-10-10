@@ -115,7 +115,7 @@ impl Component for Controls {
                 .child(
                     Button::new()
                         .flat()
-                        .selected(locale.read().is_empty())
+                        .toggle(locale.read().is_empty())
                         .on_press(move |_| locale.set(String::new()))
                         .child(text(MsgId::WriterSourceOnly)),
                 )

@@ -78,7 +78,7 @@ fn choose_with_locale(
         });
     };
 
-    if !choice.is_available {
+    if !choice.availability.is_available {
         return Err(DialogueError::UnavailableChoice {
             choice: choice.id,
             availability: Box::new(choice.availability),
@@ -140,7 +140,6 @@ pub(super) fn prompt_choices(
         pending.push(PendingPromptChoice {
             id: choice.id.clone(),
             target: choice.target.clone(),
-            is_available: availability.is_available,
             availability,
         });
     }

@@ -26,6 +26,7 @@ unicode-ident.workspace = true
 atomic-write-file.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 # Test-only isolated directories for the PO atomic-write/conflict contract.
 tempfile.workspace = true
 

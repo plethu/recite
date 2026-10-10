@@ -11,7 +11,7 @@ use super::CompileError;
 use super::builder::build_dialogue;
 use super::lowered::LoweredInput;
 use crate::validation::{
-    project::sort_diagnostics_by_source, validate_inputs, validate_source_files,
+    ProjectCompleteness, ValidationInput, project::sort_diagnostics_by_source, validate_inputs,
 };
 use crate::wire::{serialize_inspection_json, serialize_messagepack};
 
@@ -111,7 +111,7 @@ fn compile_inputs_with_optional_schema(
         diagnostics.extend(lowered.diagnostics);
         lowered_inputs.push(LoweredInput {
             input_index,
-            source: input.source,
+            source: input.source.into(),
             source_file: lowered.source_file,
         });
     }
@@ -124,21 +124,13 @@ fn compile_inputs_with_optional_schema(
         });
     }
 
-    let source_files = lowered_inputs
-        .iter()
-        .map(|input| input.source_file.clone())
-        .collect::<Vec<_>>();
-    let validation = if let Some(schema) = schema {
-        validate_inputs(
-            source_files
-                .iter()
-                .map(crate::validation::ValidationInput::all_complete),
-            Some(schema),
-            crate::validation::ProjectCompleteness::Complete,
-        )
-    } else {
-        validate_source_files(&source_files)
-    };
+    let validation = validate_inputs(
+        lowered_inputs
+            .iter()
+            .map(|input| ValidationInput::all_complete(&input.source_file)),
+        schema,
+        ProjectCompleteness::Complete,
+    );
     if !validation.is_ok() {
         return Ok(CompileReport {
             diagnostics: validation.diagnostics,

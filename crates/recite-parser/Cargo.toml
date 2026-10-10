@@ -13,6 +13,7 @@ recite-core.workspace = true
 rowan = "0.16"
 
 [dev-dependencies]
+proptest.workspace = true
 insta.workspace = true
 recite-ui.workspace = true
 

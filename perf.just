@@ -32,7 +32,7 @@ ffi *args:
     cargo bench --locked -p recite-ffi --bench sessions -- "$@"
 
 ffi-allocations:
-    cargo run --locked --release -p recite-ffi --example session_allocations
+    cargo run --locked --release -p recite-ffi --example ffi_session_allocations
 
 # Build the process probes' server and fixture generator before measurement.
 build:

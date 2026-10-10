@@ -131,7 +131,7 @@ pub fn encode_compiled_dialogue_messagepack(
     }
 }
 
-pub(crate) fn encode_compiled_dialogue_messagepack_uncached(
+pub(in crate::compiled) fn encode_compiled_dialogue_messagepack_uncached(
     dialogue: &CompiledDialogue,
 ) -> Result<Vec<u8>, CompiledAssetEncodeError> {
     if dialogue.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0

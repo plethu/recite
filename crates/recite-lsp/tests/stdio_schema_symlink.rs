@@ -65,6 +65,58 @@ fn symlink_schema_keeps_configured_uri_across_startup_overlay_and_close() {
     harness.finish();
 }
 
+#[test]
+fn closing_retired_schema_alias_clears_exact_uri_when_target_is_saved_dialogue() {
+    use std::os::unix::fs::symlink;
+
+    let temp = tempfile::tempdir().unwrap();
+    let manifest = temp.path().join("recite.project.toml");
+    let target = temp.path().join("target.recite");
+    let configured = temp.path().join("schema.json");
+    std::fs::write(&target, "{\"schema_version\":1}\n").unwrap();
+    symlink(&target, &configured).unwrap();
+    std::fs::write(
+        &manifest,
+        "format_version = 1\n[project]\nschema = \"schema.json\"\n",
+    )
+    .unwrap();
+    let configured_uri = file_uri(&configured);
+    let mut harness = StdioHarness::start(json!({
+        "capabilities": {}, "rootUri": file_uri(temp.path())
+    }));
+    assert!(harness.barrier(&configured_uri).is_empty());
+    harness.notify(
+        "textDocument/didOpen",
+        json!({ "textDocument": {
+        "uri": configured_uri, "languageId": "json", "version": 7,
+        "text": "{\"schema_version\":\"overlay\"}\n"
+    } }),
+    );
+    let opened = harness.barrier(&configured_uri);
+    assert_eq!(opened.len(), 1, "open schema messages: {opened:?}");
+    assert_schema_message(&opened[0], &configured_uri, Some(7), false);
+    std::fs::write(&manifest, "format_version = 1\n").unwrap();
+    harness.notify(
+        "workspace/didChangeWatchedFiles",
+        json!({ "changes": [
+        { "uri": file_uri(&manifest), "type": 2 }
+    ] }),
+    );
+    let retired = harness.barrier(&configured_uri);
+    assert_eq!(retired.len(), 1, "retired schema messages: {retired:?}");
+    assert_schema_message(&retired[0], &configured_uri, Some(7), true);
+
+    harness.notify(
+        "textDocument/didClose",
+        json!({ "textDocument": { "uri": configured_uri } }),
+    );
+
+    let closed = harness.barrier(&configured_uri);
+    assert_eq!(closed.len(), 1, "closed schema alias messages: {closed:?}");
+    assert_schema_message(&closed[0], &configured_uri, None, true);
+    harness.finish();
+}
+
 fn assert_schema_message(
     message: &serde_json::Value,
     uri: &str,

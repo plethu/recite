@@ -46,6 +46,7 @@ fn migrated_parser_contracts_keep_code_and_presentation_pairs_explicit() {
                 "RECITE_PARSE013",
                 "diagnostic-parse-013-unexpected-character"
             ),
+            ("RECITE_PARSE013", "diagnostic-parse-013-nesting-limit"),
             ("RECITE_PARSE014", "diagnostic-parse-014"),
             ("RECITE_PARSE015", "diagnostic-parse-015"),
             ("RECITE_PARSE016", "diagnostic-parse-016"),
@@ -96,6 +97,20 @@ fn migrated_parser_contracts_keep_code_and_presentation_pairs_explicit() {
             .map(|argument| (argument.name(), argument.argument_type()))
             .collect::<Vec<_>>(),
         [("character", DiagnosticArgumentType::String)]
+    );
+    let nesting = contracts
+        .iter()
+        .find(|contract| {
+            contract.presentation_id().as_str() == "diagnostic-parse-013-nesting-limit"
+        })
+        .expect("condition nesting contract");
+    assert_eq!(
+        nesting
+            .arguments()
+            .iter()
+            .map(|argument| (argument.name(), argument.argument_type()))
+            .collect::<Vec<_>>(),
+        [("limit", DiagnosticArgumentType::Integer)]
     );
     assert_eq!(
         contracts

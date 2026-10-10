@@ -47,11 +47,8 @@ impl SourceLineIndex {
         let index = usize::try_from(position.line().checked_sub(1)?).ok()?;
         let scalar = usize::try_from(position.column().checked_sub(1)?).ok()?;
         let line = self.line(index)?;
-        let line = if index + 1 < self.starts.len() {
-            line.strip_suffix('\r').unwrap_or(line)
-        } else {
-            line
-        };
+        // A final logical line has no terminator, so trimming is also safe there.
+        let line = line.strip_suffix('\r').unwrap_or(line);
         scalar_offset(line, scalar).map(|offset| self.starts[index] + offset)
     }
 }

@@ -27,7 +27,13 @@ fn bench_initial_index(criterion: &mut Criterion, fixture: &LspFixture) {
         .bench_function(
             BenchmarkId::from_parameter(fixture.project.fixture_label()),
             |bencher| {
-                bencher.iter(|| black_box(fixture.project.driver().memory_report()));
+                // Measure indexing, with the returned workspace disposed after
+                // the sample. Structure-size reporting has its own untimed path.
+                bencher.iter_batched(
+                    || (),
+                    |()| black_box(fixture.project.driver()),
+                    BatchSize::LargeInput,
+                );
             },
         );
 }
@@ -38,10 +44,10 @@ fn bench_open_file_parse(criterion: &mut Criterion, fixture: &LspFixture) {
         .bench_function(
             BenchmarkId::from_parameter(fixture.project.fixture_label()),
             |bencher| {
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || (fixture.project.driver(), fixture.probes.document.clone()),
-                    |(mut driver, probe)| black_box(driver.open_file(black_box(&probe))),
-                    BatchSize::SmallInput,
+                    |(driver, probe)| black_box(driver.open_file(black_box(probe))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -53,14 +59,14 @@ fn bench_change_refresh(criterion: &mut Criterion, fixture: &LspFixture) {
         .bench_function(
             BenchmarkId::from_parameter(fixture.project.fixture_label()),
             |bencher| {
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || {
                         let mut driver = fixture.project.driver();
                         let _ = driver.open_file(&fixture.probes.document);
                         (driver, fixture.probes.document.clone())
                     },
-                    |(mut driver, probe)| black_box(driver.change_file(black_box(&probe))),
-                    BatchSize::SmallInput,
+                    |(driver, probe)| black_box(driver.change_file(black_box(probe))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -72,10 +78,10 @@ fn bench_diagnostics_refresh(criterion: &mut Criterion, fixture: &LspFixture) {
         .bench_function(
             BenchmarkId::from_parameter(fixture.project.fixture_label()),
             |bencher| {
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || (fixture.project.driver(), fixture.probes.document.clone()),
-                    |(mut driver, probe)| black_box(driver.diagnostics_refresh(black_box(&probe))),
-                    BatchSize::SmallInput,
+                    |(driver, probe)| black_box(driver.diagnostics_refresh(black_box(probe))),
+                    BatchSize::LargeInput,
                 );
             },
         );
@@ -88,7 +94,11 @@ fn bench_completion(criterion: &mut Criterion, fixture: &LspFixture) {
             let mut driver = fixture.project.driver();
             let _ = driver.open_file(&fixture.probes.document);
             let probe = fixture.probes.completion.clone();
-            bencher.iter(|| black_box(driver.completion(black_box(&probe))));
+            bencher.iter_batched(
+                || (),
+                |()| black_box(driver.completion(black_box(&probe))),
+                BatchSize::LargeInput,
+            );
         },
     );
 }
@@ -99,7 +109,11 @@ fn bench_definition(criterion: &mut Criterion, fixture: &LspFixture) {
         |bencher| {
             let driver = fixture.project.driver();
             let probe = fixture.probes.definition.clone();
-            bencher.iter(|| black_box(driver.definition(black_box(&probe))));
+            bencher.iter_batched(
+                || (),
+                |()| black_box(driver.definition(black_box(&probe))),
+                BatchSize::LargeInput,
+            );
         },
     );
 }
@@ -110,7 +124,11 @@ fn bench_rename(criterion: &mut Criterion, fixture: &LspFixture) {
         |bencher| {
             let driver = fixture.project.driver();
             let probe = fixture.probes.rename.clone();
-            bencher.iter(|| black_box(driver.rename(black_box(&probe), black_box("renamed"))));
+            bencher.iter_batched(
+                || (),
+                |()| black_box(driver.rename(black_box(&probe), black_box("renamed"))),
+                BatchSize::LargeInput,
+            );
         },
     );
 }
@@ -121,12 +139,12 @@ fn bench_stale_change_suppression(criterion: &mut Criterion, fixture: &LspFixtur
         .bench_function(
             BenchmarkId::from_parameter(fixture.project.fixture_label()),
             |bencher| {
-                bencher.iter_batched(
+                bencher.iter_batched_ref(
                     || (fixture.project.driver(), fixture.probes.document.clone()),
-                    |(mut driver, probe)| {
-                        black_box(driver.stale_change_is_suppressed(black_box(&probe)))
+                    |(driver, probe)| {
+                        black_box(driver.stale_change_is_suppressed(black_box(probe)))
                     },
-                    BatchSize::SmallInput,
+                    BatchSize::LargeInput,
                 );
             },
         );

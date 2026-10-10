@@ -16,7 +16,7 @@ Conditions must support:
 - `or`;
 - `not`;
 - parenthetical grouping;
-- arbitrary nesting;
+- nested operators and grouping;
 - clear precedence rules.
 
 Example:
@@ -31,6 +31,11 @@ string literals should be reserved for values that genuinely need spaces or punc
 identifier grammar. Dialogue prose itself must never require quotes.
 
 The grammar must be formally specified and parsed into an AST.
+
+Source parsing accepts up to 128 nested `not` operators and parenthetical groups on one path.
+Further nesting produces source-spanned `RECITE_PARSE013` diagnostics rather than exhausting the
+process stack. This guard does not limit the width of `and`/`or` expressions or scalar argument
+lists. Runtime evaluation has its own depth limit; grouping is removed before execution.
 
 ### 6.2 Condition Semantics
 

@@ -94,6 +94,17 @@ impl Component for SceneNavigation {
         let scroll = use_scroll_controller(ScrollConfig::default);
         crate::design::use_list_reveal(Some(query), active, scroll, 36., 2);
         let needle = query.read().to_lowercase();
+        let selected = if writer.localisation.read().active {
+            writer
+                .buffers
+                .model
+                .read()
+                .as_ref()
+                .ok()
+                .and_then(|m| m.selected_block().ok().flatten())
+        } else {
+            writer.selection.read().clone()
+        };
         let mut rows = Vec::new();
         for scene in &self.scenes {
             let expanded = scene.active
@@ -108,19 +119,7 @@ impl Component for SceneNavigation {
                         beats.push(Row::Beat {
                             id: id.clone(),
                             caption: caption.clone(),
-                            selected: if writer.localisation.read().active {
-                                writer
-                                    .buffers
-                                    .model
-                                    .read()
-                                    .as_ref()
-                                    .ok()
-                                    .and_then(|m| m.selected_block().ok().flatten())
-                                    .as_ref()
-                                    == Some(id)
-                            } else {
-                                writer.selection.read().as_ref() == Some(id)
-                            },
+                            selected: selected.as_ref() == Some(id),
                         });
                     }
                 }
@@ -186,7 +185,7 @@ impl Component for SceneNavigation {
                                 let caption = scene.caption.clone();
                                 Button::new()
                                     .flat()
-                                    .selected(scene.active || *active == Some(index.index))
+                                    .toggle(scene.active || *active == Some(index.index))
                                     .expanded(expanded)
                                     .width(Size::fill())
                                     .named(caption.clone())

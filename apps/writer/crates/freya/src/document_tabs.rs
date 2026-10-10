@@ -66,37 +66,7 @@ impl Component for DocumentTabs {
                         .horizontal()
                         .cross_align(Alignment::Center)
                         .on_key_down(move |e: Event<KeyboardEventData>| {
-                            if !e.modifiers.is_empty() {
-                                return;
-                            }
-                            let next = match &e.key {
-                                Key::Named(NamedKey::ArrowRight) => {
-                                    Some((index + 1) % targets.len())
-                                }
-                                Key::Named(NamedKey::ArrowLeft) => {
-                                    Some((index + targets.len() - 1) % targets.len())
-                                }
-                                Key::Named(NamedKey::Home) => Some(0),
-                                Key::Named(NamedKey::End) => Some(targets.len() - 1),
-                                Key::Character(key) if vim && key == "j" => {
-                                    Some((index + 1) % targets.len())
-                                }
-                                Key::Character(key) if vim && key == "k" => {
-                                    Some((index + targets.len() - 1) % targets.len())
-                                }
-                                _ => None,
-                            };
-                            if let Some(next) = next {
-                                e.stop_propagation();
-                                e.prevent_default();
-                                let (path, id) = &targets[next];
-                                match writer.open_document(path) {
-                                    Ok(()) => {
-                                        id.request_focus();
-                                    }
-                                    Err(e) => writer.message.error(e),
-                                }
-                            }
+                            navigate_tab(writer, e, &targets, index, vim);
                         })
                         .child(
                             Button::new()
@@ -121,27 +91,7 @@ impl Component for DocumentTabs {
                                 .flat()
                                 .named(format!("{} {caption}", text(MsgId::WriterClose)))
                                 .on_press(move |_| {
-                                    // Harvest before checking: rendered dirty state can lag typing.
-                                    writer.buffers.harvest();
-                                    let dirty = {
-                                        let state = writer.buffers.model.peek();
-                                        state
-                                            .as_ref()
-                                            .ok()
-                                            .zip(writer.files.peek().as_ref())
-                                            .is_none_or(|(model, files)| {
-                                                files
-                                                    .open_documents(model)
-                                                    .iter()
-                                                    .any(|(p, d)| p == &close_target && *d)
-                                            })
-                                    };
-                                    if dirty {
-                                        closing.set(Some(close_target.clone()));
-                                        submit_id.request_focus();
-                                    } else {
-                                        close(writer, &close_target);
-                                    }
+                                    request_close(writer, &close_target, closing, submit_id);
                                 })
                                 .child("×")
                         })),
@@ -217,6 +167,69 @@ impl Component for DocumentTabs {
             .maybe_child(dialog)
     }
 }
+
+fn navigate_tab(
+    mut writer: Writer,
+    event: Event<KeyboardEventData>,
+    targets: &[(PathBuf, AccessibilityId)],
+    index: usize,
+    vim: bool,
+) {
+    if !event.modifiers.is_empty() {
+        return;
+    }
+    let next = match &event.key {
+        Key::Named(NamedKey::ArrowRight) => Some((index + 1) % targets.len()),
+        Key::Named(NamedKey::ArrowLeft) => Some((index + targets.len() - 1) % targets.len()),
+        Key::Named(NamedKey::Home) => Some(0),
+        Key::Named(NamedKey::End) => Some(targets.len() - 1),
+        Key::Character(key) if vim && key == "j" => Some((index + 1) % targets.len()),
+        Key::Character(key) if vim && key == "k" => {
+            Some((index + targets.len() - 1) % targets.len())
+        }
+        _ => None,
+    };
+    let Some(next) = next else {
+        return;
+    };
+    event.stop_propagation();
+    event.prevent_default();
+    let (path, id) = &targets[next];
+    match writer.open_document(path) {
+        Ok(()) => id.request_focus(),
+        Err(error) => writer.message.error(error),
+    }
+}
+
+fn request_close(
+    writer: Writer,
+    path: &std::path::Path,
+    mut closing: State<Option<PathBuf>>,
+    submit_id: AccessibilityId,
+) {
+    // Harvest before checking: rendered dirty state can lag typing.
+    writer.buffers.harvest();
+    let dirty = {
+        let state = writer.buffers.model.peek();
+        state
+            .as_ref()
+            .ok()
+            .zip(writer.files.peek().as_ref())
+            .is_none_or(|(model, files)| {
+                files
+                    .open_documents(model)
+                    .iter()
+                    .any(|(candidate, dirty)| candidate == path && *dirty)
+            })
+    };
+    if dirty {
+        closing.set(Some(path.to_owned()));
+        submit_id.request_focus();
+    } else {
+        close(writer, path);
+    }
+}
+
 fn close(mut writer: Writer, path: &std::path::Path) -> bool {
     let active = writer
         .files

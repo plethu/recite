@@ -116,7 +116,7 @@ impl Component for RefreshScreen {
                 list = list.child(
                     Button::new()
                         .flat()
-                        .selected(index == i)
+                        .toggle(index == i)
                         .width(Size::fill())
                         .on_press(move |_| state.write().update_index = i)
                         .child(

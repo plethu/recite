@@ -118,3 +118,6 @@ fn run(root: PathBuf, asset: Option<String>, control: &BuildControl) -> Outcome 
         inputs_changed,
     }
 }
+
+#[cfg(test)]
+mod tests;

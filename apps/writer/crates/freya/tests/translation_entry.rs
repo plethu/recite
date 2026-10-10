@@ -69,3 +69,69 @@ fn plural_entry_keeps_variant_drafts_and_submits_all_forms()
     }
     Ok(())
 }
+
+#[test]
+fn entry_context_shows_neighbours_and_notes_and_returns_from_localized_preview()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("fr.po");
+    let source = ":: start default\n> before@11111111111111111111\n  Before the translated line.\n> middle@22222222222222222222\n  Translate this line.\n> after@33333333333333333333\n  After the translated line.\n-> END\n";
+    let model = recite_writer_model::Document::new(source)?;
+    let template = model
+        .extract_catalogue()
+        .catalog
+        .ok_or("template")?
+        .to_pot_string();
+    let document = template.replace("msgid \"Translate this line.\"\nmsgstr \"\"", "# Preserve the hesitation.\nmsgid \"Translate this line.\"\nmsgstr \"Traduire cette phrase.\"");
+    let document = format!("msgid \"\"\nmsgstr \"Language: fr\\n\"\n\n{document}");
+    let catalogue = recite_core::po::PoDocument::parse(document.clone())?;
+    assert!(
+        catalogue
+            .headers()
+            .iter()
+            .any(|header| header.key() == "Language" && header.value() == "fr")
+    );
+    std::fs::write(&path, document)?;
+    let query = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("catalogue", &path.to_string_lossy())
+        .append_pair("entry", "22222222222222222222")
+        .finish();
+    let route = format!("/translation?{query}");
+    let mut test = TestingRunner::new(
+        recite_writer::regression_app,
+        Size2D::new(1400., 1200.),
+        |runner| {
+            runner.provide_root_context(move || recite_writer::InitialRoute(route));
+            runner.provide_root_context(move || recite_writer::InitialSource(source.into()));
+        },
+        1.,
+    )
+    .0;
+    test.poll_n(std::time::Duration::from_millis(16), 15);
+    support::click(&mut test, "Nearby source · source order")?;
+    for expected in [
+        "Before the translated line.",
+        "After the translated line.",
+        "Translator notes",
+        "Preserve the hesitation.",
+    ] {
+        assert!(
+            test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.contains(expected)))
+                .is_some(),
+            "{expected}"
+        );
+    }
+    support::click(&mut test, "Nearby source · source order")?;
+    support::click(&mut test, "Try this scene")?;
+    support::click(&mut test, "Restart preview")?;
+    support::click(&mut test, "Continue")?;
+    assert!(
+        test.find(
+            |_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "Traduire cette phrase.")
+        )
+        .is_some()
+    );
+    support::click(&mut test, "Return to translation")?;
+    assert!(input(&test, "Traduire cette phrase.").is_some());
+    Ok(())
+}

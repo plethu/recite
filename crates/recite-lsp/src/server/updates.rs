@@ -61,8 +61,8 @@ impl Update {
             _ => true,
         }
     }
-    pub(super) fn apply(&self, workspace: &mut LspWorkspace) -> Vec<DiagnosticRefresh> {
-        let mut refreshes = match self {
+    pub(super) fn apply(&self, workspace: &mut LspWorkspace) -> Vec<Uri> {
+        let refreshes = match self {
             Self::Open(p) => workspace.open_refreshes(
                 p.text_document.uri.clone(),
                 p.text_document.version,
@@ -91,7 +91,13 @@ impl Update {
                 .flat_map(|event| workspace.refresh_watched_uri(&event.uri))
                 .collect(),
         };
-        refreshes.extend(workspace.open_document_diagnostics_except(None));
-        refreshes
+        // Update results identify invalidations only. Diagnostics belong to
+        // the final candidate, after every accepted update has been applied.
+        let mut uris = refreshes
+            .into_iter()
+            .map(DiagnosticRefresh::into_uri)
+            .collect::<Vec<_>>();
+        uris.extend(workspace.open_diagnostic_uris().cloned());
+        uris
     }
 }

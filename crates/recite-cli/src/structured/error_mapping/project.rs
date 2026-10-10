@@ -5,6 +5,10 @@ use recite_config::ProjectSchemaError;
 
 use super::{ErrorCategory, ErrorCode, ErrorOperation, ErrorParts, generic};
 
+#[path = "project/tests.rs"]
+#[cfg(test)]
+mod tests;
+
 pub(super) fn schema<'a>(
     source: &'a ProjectSchemaError,
     fallback_path: Option<&'a Path>,

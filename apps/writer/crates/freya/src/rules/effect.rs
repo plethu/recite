@@ -106,7 +106,7 @@ impl Component for EffectControl {
                 modes = modes.child(
                     Button::new()
                         .flat()
-                        .selected(value == effect.mode)
+                        .toggle(value == effect.mode)
                         .on_press(move |_| super::change(writer, |r| r.effects[index].mode = value))
                         .child(mode(value)),
                 );
