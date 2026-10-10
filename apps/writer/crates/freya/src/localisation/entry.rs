@@ -100,7 +100,7 @@ impl Component for EntryEditor {
             variants = variants.child(
                 Button::new()
                     .flat()
-                    .selected(variant.id() == id)
+                    .toggle(variant.id() == id)
                     .on_press(move |_| state.write().entry_context = Some(next.clone()))
                     .child(caption),
             );

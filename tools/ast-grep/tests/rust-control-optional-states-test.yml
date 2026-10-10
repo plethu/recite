@@ -1,0 +1,44 @@
+id: rust-control-optional-states
+valid:
+  - |
+    struct Button {
+        enabled: bool,
+        compact: bool,
+        highlighted: bool,
+        semantics: Semantics,
+        expanded: Option<bool>,
+    }
+    enum Semantics {
+        Action,
+        CheckBox { checked: bool },
+        Tab { selected: bool },
+    }
+  - |
+    struct Toggle { pressed: bool }
+    struct Disclosure { expanded: Option<bool> }
+  - |
+    struct Control {
+        caption: Option<String>,
+        shortcut: Option<String>,
+        expanded: Option<bool>,
+    }
+invalid:
+  - |
+    struct Button {
+        selected: Option<bool>,
+        checked: Option<bool>,
+        semantics: Semantics,
+        expanded: Option<bool>,
+    }
+  - |
+    pub(crate) struct Control {
+        pub selected: Option<bool>,
+        caption: String,
+        // Visibility and intervening fields do not hide the state pair.
+        pub(crate) checked: Option<bool>,
+    }
+  - |
+    struct Control {
+        first: std::option::Option<bool>,
+        second: core::option::Option<bool>,
+    }

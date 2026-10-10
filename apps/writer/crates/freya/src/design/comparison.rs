@@ -44,7 +44,7 @@ impl Component for ComparisonView {
             .child(
                 Button::new()
                     .flat()
-                    .selected(stacked)
+                    .toggle(stacked)
                     .enabled(!*narrow.read())
                     .on_press(move |_| {
                         let next = !*unified.peek();
@@ -95,7 +95,7 @@ impl Component for ComparisonView {
             navigation = navigation.child(
                 Button::new()
                     .flat()
-                    .selected(*context.read())
+                    .toggle(*context.read())
                     .on_press(move |_| {
                         let next = !*context.peek();
                         context.set(next);

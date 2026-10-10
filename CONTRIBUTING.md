@@ -109,6 +109,11 @@ incomplete inputs can be test data. Generated files and frozen historical eviden
 explicitly in the formatter configurations; their generators or owning tests check them. Do not edit
 dependency/theme sources to satisfy our style rules.
 
+Writer control models keep role-specific selection and toggle state in enums. The existing ast-grep
+gate rejects multiple `Option<bool>` state fields in one control under `src/design`; independent
+configuration overrides remain outside that rule. Complexity and nesting limits alone do not check
+the relationships between those fields.
+
 The [site](docs-site/README.md) uses Astro/Starlight with mise-managed Node/pnpm for builds and
 checks. Its output is static HTML, CSS and browser modules; hosting needs no Node server or UI
 framework runtime. Python wheels used to distribute formatters are tools, not new application

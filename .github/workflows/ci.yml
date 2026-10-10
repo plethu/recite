@@ -347,7 +347,8 @@ jobs:
     if: needs.changes.outputs.maintainability == 'true'
     name: Maintainability
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # Cold pinned-tool installation and the complete quality lane need more than ten minutes.
+    timeout-minutes: 30
     env:
       # Lanes running structural policy checks use this scoped environment,
       # which installs ast-grep.

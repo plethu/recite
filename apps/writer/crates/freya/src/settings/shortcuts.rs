@@ -216,7 +216,7 @@ impl Shortcuts {
                     }
                     false
                 }))
-            .child(Button::new().a11y_id(self.ids[1]).checkable(separate).selected(separate)
+            .child(Button::new().a11y_id(self.ids[1]).checkable(separate).highlighted(separate)
                 .named("Choose keys separately").child("Choose keys separately")
                 .on_press(move |_| { let next = !*self.separate.peek(); self.separate.set(next); }));
         if separate {
@@ -233,7 +233,7 @@ impl Shortcuts {
                     Button::new()
                         .a11y_id(self.ids[index + 2])
                         .checkable(self.modifiers.read().contains(modifier))
-                        .selected(self.modifiers.read().contains(modifier))
+                        .highlighted(self.modifiers.read().contains(modifier))
                         .named(name)
                         .child(name)
                         .on_press(move |_| {

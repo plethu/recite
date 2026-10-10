@@ -169,7 +169,7 @@ impl Component for Palette {
                                     Item::Target(_) => String::new(),
                                 })
                                 .enabled(enabled)
-                                .selected(*active == Some(entry.index))
+                                .highlighted(*active == Some(entry.index))
                                 .on_press(move |_| item.run(writer))
                                 .child(
                                     rect()

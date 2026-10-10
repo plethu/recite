@@ -185,7 +185,7 @@ impl Component for SceneNavigation {
                                 let caption = scene.caption.clone();
                                 Button::new()
                                     .flat()
-                                    .selected(scene.active || *active == Some(index.index))
+                                    .toggle(scene.active || *active == Some(index.index))
                                     .expanded(expanded)
                                     .width(Size::fill())
                                     .named(caption.clone())

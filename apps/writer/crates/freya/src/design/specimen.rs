@@ -52,7 +52,7 @@ pub(crate) fn app() -> Element {
             Button::new()
                 .flat()
                 .checkable(*reduced.read())
-                .selected(*reduced.read())
+                .highlighted(*reduced.read())
                 .on_press(move |_| {
                     let next = !*reduced.peek();
                     reduced.set(next);

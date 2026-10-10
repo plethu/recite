@@ -124,7 +124,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             .child(
                 crate::design::Button::new()
                     .flat()
-                    .selected(*page.read() == Page::Personal)
+                    .toggle(*page.read() == Page::Personal)
                     .a11y_id(ids[0])
                     .named(crate::messages::text(
                         crate::messages::MsgId::WriterGuiUserPreferences,
@@ -137,7 +137,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             .child(
                 crate::design::Button::new()
                     .flat()
-                    .selected(on_project)
+                    .toggle(on_project)
                     .a11y_id(ids[1])
                     .named(crate::messages::text(
                         crate::messages::MsgId::WriterGuiProjectSettings,
@@ -152,7 +152,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                     .flat()
                     .a11y_id(keyboard_tab)
                     .named("Keyboard shortcuts")
-                    .selected(on_keyboard)
+                    .toggle(on_keyboard)
                     .child("Keyboard shortcuts")
                     .on_press(move |_| page.set(Page::Keyboard)),
             ),

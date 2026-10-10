@@ -1,6 +1,8 @@
 //! All button variants share focus, pointer, keyboard and disabled behaviour.
+mod semantics;
 use super::tokens as t;
 use freya::prelude::*;
+use semantics::Semantics;
 
 #[derive(Clone, Copy, PartialEq)]
 enum Kind {
@@ -12,15 +14,6 @@ enum Kind {
 #[cfg(test)]
 mod tests;
 
-#[derive(Clone, Copy, PartialEq)]
-enum Semantics {
-    Button,
-    Radio,
-    Option,
-    MenuItem,
-    Tab,
-}
-
 #[derive(Clone, PartialEq)]
 pub(crate) struct Button {
     children: Vec<Element>,
@@ -30,8 +23,7 @@ pub(crate) struct Button {
     name: Option<String>,
     shortcut: Option<String>,
     enabled: bool,
-    selected: Option<bool>,
-    checked: Option<bool>,
+    highlighted: bool,
     semantics: Semantics,
     expanded: Option<bool>,
     kind: Kind,
@@ -50,8 +42,7 @@ impl Button {
             name: None,
             shortcut: None,
             enabled: true,
-            selected: None,
-            checked: None,
+            highlighted: false,
             semantics: Semantics::Button,
             expanded: None,
             kind: Kind::Secondary,
@@ -73,8 +64,8 @@ impl Button {
         self
     }
     pub fn tab(mut self, selected: bool) -> Self {
-        self.semantics = Semantics::Tab;
-        self.selected = Some(selected);
+        self.semantics = Semantics::Tab { selected };
+        self.highlighted = selected;
         self.kind = Kind::Quiet;
         self
     }
@@ -84,17 +75,22 @@ impl Button {
         self
     }
     pub fn option(mut self, selected: bool) -> Self {
-        self.semantics = Semantics::Option;
-        self.selected = Some(selected);
+        self.semantics = Semantics::Option { selected };
+        self.highlighted = selected;
         self
     }
     pub fn radio(mut self, selected: bool) -> Self {
-        self.semantics = Semantics::Radio;
-        self.selected = Some(selected);
+        self.semantics = Semantics::Radio { selected };
+        self.highlighted = selected;
         self
     }
     pub fn checkable(mut self, checked: bool) -> Self {
-        self.checked = Some(checked);
+        self.semantics = Semantics::CheckBox { checked };
+        self
+    }
+    pub fn toggle(mut self, pressed: bool) -> Self {
+        self.semantics = Semantics::Toggle { pressed };
+        self.highlighted = pressed;
         self
     }
     pub fn on_hover_changed(mut self, action: impl Into<EventHandler<bool>>) -> Self {
@@ -109,8 +105,9 @@ impl Button {
         self.kind = Kind::Primary;
         self
     }
-    pub fn selected(mut self, selected: bool) -> Self {
-        self.selected = Some(selected);
+    /// Emphasize a surface without claiming an accessible selection or toggle.
+    pub fn highlighted(mut self, highlighted: bool) -> Self {
+        self.highlighted = highlighted;
         self
     }
     pub fn enabled(mut self, enabled: bool) -> Self {
@@ -146,9 +143,9 @@ impl KeyExt for Button {
 }
 impl Button {
     fn background(&self, colors: &super::palette::Palette, hovered: bool, pressed: bool) -> Color {
-        let selected = self.selected == Some(true);
+        let selected = self.highlighted;
         let filled = self.kind == Kind::Primary;
-        let segment = self.semantics == Semantics::Radio;
+        let segment = self.semantics.is_radio();
         if !self.enabled {
             if self.kind == Kind::Quiet {
                 Color::TRANSPARENT
@@ -185,9 +182,9 @@ impl Button {
     }
 
     fn border_color(&self, colors: &super::palette::Palette, focused: bool, down: bool) -> Color {
-        let selected = self.selected == Some(true);
+        let selected = self.highlighted;
         let filled = self.kind == Kind::Primary;
-        let segment = self.semantics == Semantics::Radio;
+        let segment = self.semantics.is_radio();
         if focused {
             if filled {
                 colors.on_accent
@@ -205,42 +202,28 @@ impl Button {
         }
     }
 
-    fn with_accessibility(&self, mut control: Rect) -> Rect {
-        let role = match self.semantics {
-            Semantics::Tab => AccessibilityRole::Tab,
-            Semantics::MenuItem => AccessibilityRole::MenuItem,
-            Semantics::Option => AccessibilityRole::ListBoxOption,
-            Semantics::Radio => AccessibilityRole::RadioButton,
-            Semantics::Button if self.checked.is_some() => AccessibilityRole::CheckBox,
-            Semantics::Button => AccessibilityRole::Button,
-        };
-        control = control.a11y_focusable(self.enabled).a11y_role(role);
-        if !self.enabled {
-            control = control.a11y_builder(|node| node.set_disabled());
-        }
-        if let Some(shortcut) = self.shortcut.clone() {
-            control =
-                control.a11y_builder(move |node| node.set_keyboard_shortcut(shortcut.clone()));
-        }
-        if let Some(name) = self.name.clone().or_else(|| content_name(&self.children)) {
-            control = control.a11y_alt(name);
-        }
-        if matches!(self.semantics, Semantics::Option | Semantics::Tab) {
-            let selected = self.selected.unwrap_or(false);
-            control = control.a11y_builder(move |node| node.set_selected(selected));
-        } else if let Some(checked) = self.checked.or(self.selected) {
-            control = control.a11y_builder(move |node| {
-                node.set_toggled(if checked {
-                    accesskit::Toggled::True
-                } else {
-                    accesskit::Toggled::False
-                })
-            });
-        }
-        if let Some(expanded) = self.expanded {
-            control = control.a11y_builder(move |node| node.set_expanded(expanded));
-        }
-        control
+    fn with_accessibility(&self, control: Rect) -> Rect {
+        let enabled = self.enabled;
+        let shortcut = self.shortcut.clone();
+        let name = self.name.clone().or_else(|| content_name(&self.children));
+        let expanded = self.expanded;
+        self.semantics
+            .apply(control)
+            .a11y_focusable(enabled)
+            .a11y_builder(move |node| {
+                if !enabled {
+                    node.set_disabled();
+                }
+                if let Some(shortcut) = shortcut {
+                    node.set_keyboard_shortcut(shortcut);
+                }
+                if let Some(name) = name {
+                    node.set_label(name);
+                }
+                if let Some(expanded) = expanded {
+                    node.set_expanded(expanded);
+                }
+            })
     }
 }
 
@@ -257,9 +240,9 @@ impl Component for Button {
         let enter = self.hover_changed.clone();
         let leave = self.hover_changed.clone();
         let focused = use_focus(id)() == Focus::Keyboard;
-        let selected = self.selected == Some(true);
+        let selected = self.highlighted;
         let filled = self.kind == Kind::Primary;
-        let segment = self.semantics == Semantics::Radio;
+        let segment = self.semantics.is_radio();
         let background = self.background(&colors, *hovered.read(), *pressed.read());
         let color = if filled && self.enabled {
             colors.on_accent
