@@ -7,25 +7,25 @@ if [[ $# -lt 1 || $# -gt 3 ]]; then
 fi
 scope="${2:-pr}"
 case "$scope" in
-pr)
-  fixtures=small,realistic:v1-pack
-  parameters=(small realistic)
-  benches=(workflows writer bound_text)
-  ;;
-full)
-  fixtures=small,medium,realistic:v1-pack
-  parameters=(small realistic medium)
-  benches=(workflows writer bound_text)
-  ;;
-writer)
-  fixtures=small,realistic:v1-pack
-  parameters=()
-  benches=(writer)
-  ;;
-*)
-  echo 'Expected pr, full, or writer scope' >&2
-  exit 2
-  ;;
+  pr)
+    fixtures=small,realistic:v1-pack
+    parameters=(small realistic)
+    benches=(workflows writer bound_text)
+    ;;
+  full)
+    fixtures=small,medium,realistic:v1-pack
+    parameters=(small realistic medium)
+    benches=(workflows writer bound_text)
+    ;;
+  writer)
+    fixtures=small,realistic:v1-pack
+    parameters=()
+    benches=(writer)
+    ;;
+  *)
+    echo 'Expected pr, full, or writer scope' >&2
+    exit 2
+    ;;
 esac
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"

@@ -149,3 +149,81 @@ fn requested(
         None => panic!("expected pending condition: {:?}", output.events()),
     }
 }
+
+#[test]
+fn rejected_and_failed_answers_preserve_nonempty_history_for_retry_and_restore()
+-> Result<(), Box<dyn std::error::Error>> {
+    let asset = preview_support::asset(include_str!(
+        "../../../fixtures/recite/valid/benchmarks/session_deferred.recite"
+    ));
+    let choice = ChoiceId::new("11111111111111111111")?;
+    let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new())?;
+    let opening = requested(&preview.step(PreviewInputs::new()));
+    preview.answer(
+        opening,
+        ConditionAnswer::Value(ConditionValue::Bool(true)),
+        PreviewInputs::new(),
+    );
+    for _ in 0..4 {
+        let pending = requested(&preview.choose(choice.clone(), PreviewInputs::new()));
+        preview.answer(
+            pending,
+            ConditionAnswer::Value(ConditionValue::Bool(true)),
+            PreviewInputs::new(),
+        );
+    }
+    let before = preview.session().clone();
+    let saved = preview.snapshot()?;
+    let saved_copy = saved.clone();
+    let bytes = saved.encode()?;
+    let pending = requested(&preview.choose(choice.clone(), PreviewInputs::new()));
+    let rejected = preview.answer(
+        pending,
+        ConditionAnswer::Value(ConditionValue::EnumVariant("wrong".to_owned())),
+        PreviewInputs::new(),
+    );
+    assert!(matches!(rejected.events(), [PreviewEvent::Error(_)]));
+    assert_eq!(preview.session(), &before);
+    let failed = preview.answer(
+        pending,
+        ConditionAnswer::Failed {
+            reason: "retry later".to_owned(),
+        },
+        PreviewInputs::new(),
+    );
+    assert!(matches!(
+        failed.events(),
+        [PreviewEvent::ConditionResult { .. }, PreviewEvent::Error(_)]
+    ));
+    assert_eq!(preview.session(), &before);
+    assert_eq!(
+        failed.state().selected_choice_history(),
+        before.selected_choice_history()
+    );
+    assert_eq!(failed.state().deferred_effects(), before.deferred_effects());
+    let pending = requested(&preview.choose(choice, PreviewInputs::new()));
+    let completed = preview.answer(
+        pending,
+        ConditionAnswer::Value(ConditionValue::Bool(true)),
+        PreviewInputs::new(),
+    );
+    assert_eq!(completed.state().selected_choice_history().len(), 5);
+    assert_eq!(completed.state().deferred_effects().len(), 6);
+    assert_eq!(
+        completed
+            .events()
+            .iter()
+            .filter(|event| matches!(event, PreviewEvent::DeferredEffectScheduled(_)))
+            .count(),
+        1
+    );
+    assert_eq!(saved, saved_copy);
+    assert_eq!(saved.encode()?, bytes);
+    assert_eq!(before.selected_choice_history().len(), 4);
+    assert_eq!(before.deferred_effects().len(), 5);
+    preview.restore(saved)?;
+    assert_eq!(preview.session(), &before);
+    assert_eq!(completed.state().selected_choice_history().len(), 5);
+    assert_eq!(completed.state().deferred_effects().len(), 6);
+    Ok(())
+}

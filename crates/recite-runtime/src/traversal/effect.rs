@@ -49,7 +49,7 @@ pub(super) fn handle_effect(
 
     match effect.mode {
         CompiledEffectMode::Deferred => {
-            session.deferred_effects.push(request);
+            session.defer_effect(request);
             Ok(None)
         }
         CompiledEffectMode::Immediate => emit_effect_for_next_trace_event(session, request),

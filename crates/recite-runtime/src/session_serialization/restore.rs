@@ -54,7 +54,9 @@ pub fn restore_session(
         "selected choice history",
         &snapshot.selected_choice_history,
     )?;
-    let deferred_effects = restore_effects(asset_view, &snapshot.deferred_effects)?;
+    let mut deferred_effects = restore_effects(asset_view, &snapshot.deferred_effects)?;
+    // Restored histories stay shared until an append; retain only their rows.
+    deferred_effects.shrink_to_fit();
     let locale = restore_locale(snapshot.locale.as_deref())?;
     let pending_prompt = restore_pending_prompt(
         asset_view,
@@ -97,7 +99,7 @@ pub fn restore_session(
         phase,
         previous_prompt_choices,
         selected_choice_history,
-        deferred_effects,
+        deferred_effects: deferred_effects.into(),
         locale,
         trace_counter: snapshot.trace_counter,
     })

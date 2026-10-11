@@ -13,7 +13,7 @@ pub(super) fn finish_scene(session: &mut DialogueSession) -> Result<DialogueEven
     }
     session.next_statement = range_end_statement(session.current_range)?;
     session.continuation_stack.clear();
-    let deferred_effects = session.deferred_effects.clone();
+    let deferred_effects = session.deferred_effects().to_vec();
     session.emit(DialogueEvent::End { deferred_effects })
 }
 

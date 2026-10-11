@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::PreviewSession;
 use super::model::{
     PreviewError, PreviewEvent, PreviewOutput, PreviewRestartRequirement, PreviewStatus,
@@ -58,15 +60,15 @@ impl<'asset> PreviewSession<'asset> {
     fn refresh_state_projection(&mut self) {
         self.state.block = self.current_block_id_opt();
         self.state.locale = self.session.locale().cloned();
-        // Both collections only append during traversal. Restart and restore
-        // install a new projection. Other events can share the immutable rows.
+        // Choice history only appends during traversal. Restart and restore
+        // install a new projection; unchanged rows can stay shared.
         if self.state.selected_choice_history.len() != self.session.selected_choice_history().len()
         {
             self.state.selected_choice_history = self.session.selected_choice_history().into();
         }
-        if self.state.deferred_effects.len() != self.session.deferred_effects().len() {
-            self.state.deferred_effects = self.session.deferred_effects().into();
-        }
+        // Deferred mutations copy shared histories, keeping earlier outputs
+        // immutable. Restore also reuses the validated session allocation.
+        self.state.deferred_effects = Arc::clone(&self.session.deferred_effects);
     }
 
     pub(super) fn error(&mut self, error: PreviewError) -> PreviewOutput {

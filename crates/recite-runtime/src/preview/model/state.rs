@@ -85,7 +85,7 @@ pub struct PreviewState {
     /// provenance; restore treats that typed projection as authoritative.
     pub(crate) status: PreviewStatus,
     pub(crate) selected_choice_history: Arc<[ChoiceId]>,
-    pub(crate) deferred_effects: Arc<[DialogueEffectRequest]>,
+    pub(crate) deferred_effects: Arc<Vec<DialogueEffectRequest>>,
     pub(crate) restart_required: Option<PreviewRestartRequirement>,
 }
 
@@ -127,7 +127,7 @@ impl PreviewState {
             locale: session.locale().cloned(),
             status,
             selected_choice_history: session.selected_choice_history().into(),
-            deferred_effects: session.deferred_effects().into(),
+            deferred_effects: Arc::clone(&session.deferred_effects),
             restart_required: None,
         }
     }
