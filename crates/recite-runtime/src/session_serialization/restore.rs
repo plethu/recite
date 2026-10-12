@@ -91,7 +91,7 @@ pub fn restore_session(
         source_map_id: asset.header.source_map_id.clone(),
         schema_fingerprint: asset.header.schema_fingerprint.clone(),
         compiled_payload_fingerprint,
-        sources: asset.sources.clone(),
+        sources: asset.sources.as_slice().into(),
         current_block,
         current_range,
         next_statement,

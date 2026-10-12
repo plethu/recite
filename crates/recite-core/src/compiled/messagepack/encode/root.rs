@@ -8,76 +8,93 @@ use crate::compiled::CompiledDialogue;
 use crate::compiled::SpeakerIndex;
 use serde::Serialize;
 
-#[derive(Serialize)]
-pub(super) struct MsgDialogue<'a>(
-    MsgHeader<'a>,
-    u32,
-    Vec<MsgSourceFile<'a>>,
-    Vec<MsgBlock<'a>>,
-    Vec<MsgStatement<'a>>,
-    Vec<MsgMatchArm<'a>>,
-    Vec<MsgLine<'a>>,
-    Vec<MsgChoice<'a>>,
-    Vec<MsgAvailabilityReason<'a>>,
-    Vec<MsgConditionAvailabilityReason<'a>>,
-    Vec<MsgSpeaker<'a>>,
-    Vec<MsgMetadataEntry<'a>>,
-    Vec<MsgEffect<'a>>,
-    Vec<MsgSourceMapEntry<'a>>,
-    Vec<MsgLookupEntry<'a>>,
-    Vec<MsgLookupEntry<'a>>,
-    Vec<MsgLookupEntry<'a>>,
-);
+pub(super) struct MsgDialogue<'a>(&'a CompiledDialogue);
 
 impl<'a> From<&'a CompiledDialogue> for MsgDialogue<'a> {
     fn from(dialogue: &'a CompiledDialogue) -> Self {
-        Self(
-            MsgHeader::from(dialogue),
-            dialogue.default_block.as_u32(),
-            dialogue.sources.iter().map(MsgSourceFile::from).collect(),
-            dialogue.blocks.iter().map(MsgBlock::from).collect(),
-            dialogue.statements.iter().map(MsgStatement::from).collect(),
-            dialogue.match_arms.iter().map(MsgMatchArm::from).collect(),
-            dialogue.lines.iter().map(MsgLine::from).collect(),
-            dialogue.choices.iter().map(MsgChoice::from).collect(),
+        Self(dialogue)
+    }
+}
+
+impl Serialize for MsgDialogue<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeTuple;
+        let dialogue = self.0;
+        let mut tuple =
+            serializer.serialize_tuple(crate::compiled::V0_COMPILED_DIALOGUE_FIELDS as usize)?;
+        tuple.serialize_element(&MsgHeader::from(dialogue))?;
+        tuple.serialize_element(&dialogue.default_block.as_u32())?;
+        tuple.serialize_element(&TableRows(dialogue.sources.iter().map(MsgSourceFile::from)))?;
+        tuple.serialize_element(&TableRows(dialogue.blocks.iter().map(MsgBlock::from)))?;
+        tuple.serialize_element(&TableRows(
+            dialogue.statements.iter().map(MsgStatement::from),
+        ))?;
+        tuple.serialize_element(&TableRows(
+            dialogue.match_arms.iter().map(MsgMatchArm::from),
+        ))?;
+        tuple.serialize_element(&TableRows(dialogue.lines.iter().map(MsgLine::from)))?;
+        tuple.serialize_element(&TableRows(dialogue.choices.iter().map(MsgChoice::from)))?;
+        tuple.serialize_element(&TableRows(
             dialogue
                 .availability_reasons
                 .iter()
-                .map(MsgAvailabilityReason::from)
-                .collect(),
+                .map(MsgAvailabilityReason::from),
+        ))?;
+        tuple.serialize_element(&TableRows(
             dialogue
                 .condition_availability_reasons
                 .iter()
-                .map(MsgConditionAvailabilityReason::from)
-                .collect(),
-            dialogue.speakers.iter().map(MsgSpeaker::from).collect(),
-            dialogue
-                .metadata
-                .iter()
-                .map(MsgMetadataEntry::from)
-                .collect(),
-            dialogue.effects.iter().map(MsgEffect::from).collect(),
-            dialogue
-                .source_maps
-                .iter()
-                .map(MsgSourceMapEntry::from)
-                .collect(),
+                .map(MsgConditionAvailabilityReason::from),
+        ))?;
+        tuple.serialize_element(&TableRows(dialogue.speakers.iter().map(MsgSpeaker::from)))?;
+        tuple.serialize_element(&TableRows(
+            dialogue.metadata.iter().map(MsgMetadataEntry::from),
+        ))?;
+        tuple.serialize_element(&TableRows(dialogue.effects.iter().map(MsgEffect::from)))?;
+        tuple.serialize_element(&TableRows(
+            dialogue.source_maps.iter().map(MsgSourceMapEntry::from),
+        ))?;
+        tuple.serialize_element(&TableRows(
             dialogue
                 .block_lookup
+                .as_slice()
                 .iter()
-                .map(|entry| MsgLookupEntry(entry.id.as_str(), entry.index.as_u32()))
-                .collect(),
+                .map(|entry| MsgLookupEntry(entry.id.as_str(), entry.index.as_u32())),
+        ))?;
+        tuple.serialize_element(&TableRows(
             dialogue
                 .line_lookup
+                .as_slice()
                 .iter()
-                .map(|entry| MsgLookupEntry(entry.id.as_str(), entry.index.as_u32()))
-                .collect(),
+                .map(|entry| MsgLookupEntry(entry.id.as_str(), entry.index.as_u32())),
+        ))?;
+        tuple.serialize_element(&TableRows(
             dialogue
                 .choice_lookup
+                .as_slice()
                 .iter()
-                .map(|entry| MsgLookupEntry(entry.id.as_str(), entry.index.as_u32()))
-                .collect(),
-        )
+                .map(|entry| MsgLookupEntry(entry.id.as_str(), entry.index.as_u32())),
+        ))?;
+        tuple.end()
+    }
+}
+
+// Project each borrowed row as it is written instead of retaining whole wire tables.
+struct TableRows<I>(I);
+
+impl<I> Serialize for TableRows<I>
+where
+    I: ExactSizeIterator + Clone,
+    I::Item: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_seq(self.0.clone())
     }
 }
 

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use recite_compiler::{
-    compile::{compile_inputs, compile_inputs_with_schema},
+    compile::{compile_inputs_to_messagepack, compile_inputs_to_messagepack_with_schema},
     pot::PotExtractionReport,
 };
 use recite_core::schema::ProjectSchema;
@@ -153,17 +153,17 @@ fn compile(args: CompileArgs) -> Result<StructuredOutcome, CliError> {
     };
     let options = compile_options(&args.output, schema.as_deref())?;
     let report = match schema.as_deref() {
-        Some(schema) => compile_inputs_with_schema(inputs, options, schema)?,
-        None => compile_inputs(inputs, options)?,
+        Some(schema) => compile_inputs_to_messagepack_with_schema(inputs, options, schema)?,
+        None => compile_inputs_to_messagepack(inputs, options)?,
     };
     let diagnostics = diagnostic_records(&report.diagnostics)?;
-    let Some(asset) = report.asset else {
+    let Some(messagepack) = report.messagepack else {
         return Ok(StructuredOutcome::content_diagnostics(
             ContentDiagnosticData::Compile { diagnostics },
         ));
     };
 
-    write_artifact(&args.output, &asset.messagepack)?;
+    write_artifact(&args.output, &messagepack)?;
     let artifact = artifact_metadata(&args.output)?;
     Ok(StructuredOutcome::success(SuccessData::Compile {
         diagnostics,

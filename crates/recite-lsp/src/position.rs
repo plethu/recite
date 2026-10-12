@@ -1,9 +1,13 @@
 use lsp_types::{Position, Range};
-use recite_compiler::authoring::SourceRange;
-use recite_core::{SourcePosition, SourceSpan, source_lines};
+use recite_compiler::authoring::{DocumentSnapshot, SourceRange};
+use recite_core::{SourceLineIndex, SourcePosition, SourceSpan, source_lines};
 
 pub(crate) fn span_to_range(text: &str, span: &SourceSpan) -> Range {
     DocumentLines::new(text).span_to_range(span)
+}
+
+pub(crate) fn document_span_to_range(document: &DocumentSnapshot, span: &SourceSpan) -> Range {
+    DocumentLines::from_document(document).span_to_range(span)
 }
 
 pub(crate) fn source_range_to_lsp(
@@ -77,14 +81,27 @@ fn utf16_offset_for_scalar_column(line: &str, column: u32) -> u32 {
 }
 
 pub(crate) struct DocumentLines<'a> {
-    lines: Vec<&'a str>,
+    lines: LineStorage<'a>,
+}
+
+enum LineStorage<'a> {
+    Collected(Vec<&'a str>),
+    Indexed(&'a SourceLineIndex),
 }
 
 impl<'a> DocumentLines<'a> {
     pub(crate) fn new(text: &'a str) -> Self {
         let lines = source_lines(text).map(|(content, _)| content).collect();
 
-        Self { lines }
+        Self {
+            lines: LineStorage::Collected(lines),
+        }
+    }
+
+    fn from_document(document: &'a DocumentSnapshot) -> Self {
+        Self {
+            lines: LineStorage::Indexed(document.source_index()),
+        }
     }
 
     pub(crate) fn span_to_range(&self, span: &SourceSpan) -> Range {
@@ -124,13 +141,25 @@ impl<'a> DocumentLines<'a> {
     }
 
     fn last_line_index(&self) -> u32 {
-        u32::try_from(self.lines.len().saturating_sub(1)).unwrap_or(u32::MAX)
+        let line_count = match &self.lines {
+            LineStorage::Collected(lines) => lines.len(),
+            LineStorage::Indexed(source) => source.line_count(),
+        };
+        u32::try_from(line_count.saturating_sub(1)).unwrap_or(u32::MAX)
     }
 
     fn line(&self, index: u32) -> &'a str {
-        usize::try_from(index)
+        let line = usize::try_from(index)
             .ok()
-            .and_then(|index| self.lines.get(index).copied())
-            .unwrap_or("")
+            .and_then(|index| match &self.lines {
+                LineStorage::Collected(lines) => lines.get(index).copied(),
+                LineStorage::Indexed(source) => source
+                    .line(index)
+                    .map(|line| line.strip_suffix('\r').unwrap_or(line)),
+            });
+        line.unwrap_or("")
     }
 }
+
+#[cfg(test)]
+mod tests;

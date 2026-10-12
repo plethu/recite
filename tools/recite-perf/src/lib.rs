@@ -44,6 +44,7 @@ fn expected(scope: Scope) -> BTreeSet<String> {
             .iter()
             .map(move |fixture| format!("{function}/{fixture}"))
     })
+    .chain(std::iter::once("adapter_choice/sources_400".to_owned()))
     .collect()
 }
 

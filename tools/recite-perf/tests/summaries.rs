@@ -61,6 +61,8 @@ fn full_scope_requires_medium_for_every_operation() {
             cases.push(summary(function, id));
         }
     }
+    assert!(check_summaries(Cursor::new(lines(&cases)), Scope::Pr).is_err());
+    cases.push(summary("adapter_choice", "sources_400"));
     let pr = lines(&cases);
     check_summaries(Cursor::new(&pr), Scope::Pr).unwrap();
     assert!(check_summaries(Cursor::new(&pr), Scope::Full).is_err());
@@ -77,6 +79,41 @@ fn full_scope_requires_medium_for_every_operation() {
         cases.push(summary(function, "medium"));
     }
     check_summaries(Cursor::new(lines(&cases)), Scope::Full).unwrap();
+}
+
+#[test]
+fn workflow_source_count_case_cannot_be_renamed_or_duplicated() {
+    for scope in [Scope::Pr, Scope::Full] {
+        let fixtures: &[&str] = if matches!(scope, Scope::Pr) {
+            &["small", "realistic"]
+        } else {
+            &["small", "realistic", "medium"]
+        };
+        let mut cases = Vec::new();
+        for function in [
+            "compile",
+            "encode",
+            "decode",
+            "next_line",
+            "localised_next",
+            "choose",
+            "traverse",
+            "preview_recovery",
+        ] {
+            for id in fixtures {
+                cases.push(summary(function, id));
+            }
+        }
+        let case = summary("adapter_choice", "sources_400");
+        cases.push(case.clone());
+        check_summaries(Cursor::new(lines(&cases)), scope).unwrap();
+        cases.push(case);
+        assert!(check_summaries(Cursor::new(lines(&cases)), scope).is_err());
+        cases.pop();
+        cases.pop();
+        cases.push(summary("adapter_choice", "sources_40"));
+        assert!(check_summaries(Cursor::new(lines(&cases)), scope).is_err());
+    }
 }
 
 #[test]

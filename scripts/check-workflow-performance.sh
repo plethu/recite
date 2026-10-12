@@ -45,7 +45,10 @@ control="$output/control-source"
 mkdir -p "$control"
 trap 'rm -rf "$control"' EXIT
 git archive "$base" | tar -x -C "$control"
-for path in tools/recite-perf crates/recite-benchmarks fixtures; do
+harness=(tools/recite-perf crates/recite-benchmarks fixtures
+  crates/recite-lsp/src/bench_support/driver.rs
+  crates/recite-compiler/src/bench_support.rs)
+for path in "${harness[@]}"; do
   rm -rf "${control:?}/$path"
   mkdir -p "$control/$(dirname "$path")"
   cp -R "$repo_root/$path" "$control/$path"
@@ -64,7 +67,7 @@ done
 git -C "$repo_root" diff --binary HEAD >"$evidence/candidate.patch"
 git ls-files --others --exclude-standard -z -- '*.rs' '*.toml' '*.sh' '*.just' >"$evidence/untracked-source-files"
 tar --null -czf "$evidence/untracked-sources.tar.gz" --files-from "$evidence/untracked-source-files"
-tar -czf "$evidence/harness.tar.gz" tools/recite-perf crates/recite-benchmarks fixtures
+tar -czf "$evidence/harness.tar.gz" "${harness[@]}"
 cp mise.perf.toml scripts/check-workflow-performance.sh "$evidence/"
 cargo build --locked --release -p recite-perf
 checker="${CARGO_TARGET_DIR:-$repo_root/target}/release/recite-perf"
@@ -98,6 +101,7 @@ failure=0
 for side in control candidate; do
   for bench in "${benches[@]}"; do
     selected=("${parameters[@]}")
+    [[ "$bench" != workflows ]] || selected+=(sources_400)
     [[ "$bench" != writer ]] || selected=(effects_1000 effects_10000)
     [[ "$bench" != bound_text ]] || selected=(authored_64)
     : >"$evidence/$side-$bench.jsonl"

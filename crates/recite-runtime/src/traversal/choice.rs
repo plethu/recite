@@ -66,12 +66,7 @@ fn choose_with_locale(
             return Err(DialogueError::NoPromptPending { choice: choice_id });
         }
     };
-    let Some(choice) = prompt
-        .choices
-        .iter()
-        .find(|choice| choice.id == choice_id)
-        .cloned()
-    else {
+    let Some(choice) = prompt.choices.iter().find(|choice| choice.id == choice_id) else {
         return Err(DialogueError::InvalidChoice {
             choice: choice_id,
             prompt_choices: prompt.choice_ids(),
@@ -80,8 +75,8 @@ fn choose_with_locale(
 
     if !choice.availability.is_available {
         return Err(DialogueError::UnavailableChoice {
-            choice: choice.id,
-            availability: Box::new(choice.availability),
+            choice: choice_id,
+            availability: Box::new(choice.availability.clone()),
         });
     }
 
@@ -94,7 +89,7 @@ fn choose_with_locale(
     };
 
     session.phase = SessionPhase::Running;
-    session.selected_choice_history.push(choice.id);
+    session.selected_choice_history.push(choice_id);
 
     if let Some((block_index, statement_index)) = next_location {
         session.current_block = block_index;
@@ -118,10 +113,11 @@ pub(super) fn prompt_choices(
     context: &dyn DialogueContext,
     locale: LocaleLookup<'_>,
 ) -> Result<PromptChoices, DialogueError> {
-    let mut events = Vec::new();
-    let mut pending = Vec::new();
+    let choices = asset.choices(range)?;
+    let mut events = Vec::with_capacity(choices.len());
+    let mut pending = Vec::with_capacity(choices.len());
 
-    for choice in asset.choices(range)? {
+    for choice in choices {
         let availability = choice_availability(
             asset,
             choice.availability_requirement.as_ref(),

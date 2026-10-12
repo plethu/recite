@@ -25,6 +25,7 @@ recite-writer-model = { path = "../../apps/writer/crates/authoring", version = "
 [dev-dependencies]
 gungraun = "=0.20.0"
 recite-benchmarks = { path = "../../crates/recite-benchmarks", version = "0.1.0" }
+recite-adapter.workspace = true
 recite-compiler.workspace = true
 recite-core.workspace = true
 recite-runtime.workspace = true

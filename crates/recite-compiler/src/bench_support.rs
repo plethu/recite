@@ -10,7 +10,7 @@ use recite_core::{
 use crate::compile::CompileError;
 use crate::validation::project::sort_diagnostics_by_source;
 use crate::validation::state::Validator;
-use crate::wire::serialize_messagepack;
+use crate::wire::{self, serialize_messagepack};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilerPhaseProbe {
@@ -100,6 +100,10 @@ pub fn validate_markup(source_files: &[SourceFile], schema: &ProjectSchema) -> C
 
 pub fn serialize_compiled_asset(dialogue: &CompiledDialogue) -> Result<Vec<u8>, CompileError> {
     serialize_messagepack(dialogue)
+}
+
+pub fn serialize_inspection_json(dialogue: &CompiledDialogue) -> Result<String, CompileError> {
+    wire::serialize_inspection_json(dialogue)
 }
 
 fn phase_probe(checked_items: usize, mut diagnostics: Vec<Diagnostic>) -> CompilerPhaseProbe {

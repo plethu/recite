@@ -1,4 +1,4 @@
-use recite_core::po::{PoDocument, PoRefreshError};
+use recite_core::po::{PoDocument, PoEdit, PoRefreshError};
 
 #[test]
 fn refresh_preserves_translations_notes_unknown_fields_and_marks_source_changes() {
@@ -117,4 +117,64 @@ fn refresh_preserves_crlf_and_existing_obsolete_records() {
         PoDocument::parse("msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n")
             .unwrap();
     assert_eq!(original.refreshed(&template).unwrap().source(), text);
+}
+
+#[test]
+fn unchanged_refresh_matches_reparse_and_returns_independent_editable_records() {
+    let text = concat!(
+        "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=n > 1;\\n\"\n\n",
+        "#. block: été\n#: dialogue/été.recite:4:2\n# Translator's note\n#, custom\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Été\"\nmsgstr \"Summer\"\nextra \"vendor\"\n\n",
+        "msgctxt \"22222222222222222222\"\nmsgid \"One\"\nmsgid_plural \"Many\"\nmsgstr[0] \"Un\"\nmsgstr[1] \"Plusieurs\"\n\n",
+        "#~ msgctxt \"33333333333333333333\"\n#~ msgid \"Old\"\n#~ msgstr \"Vieux\"\n",
+    );
+    for ending in ["\n", "\r\n"] {
+        let source = text.replace('\n', ending);
+        let original = PoDocument::parse_with_path("locale/fr.po", &source).unwrap();
+        let mut refreshed = original.refreshed(&original).unwrap();
+        let reparsed = PoDocument::parse_with_path("locale/fr.po", &source).unwrap();
+        assert_eq!(refreshed, reparsed);
+        assert_eq!(refreshed, original);
+        let singular = refreshed.find("11111111111111111111", "Été").unwrap().id();
+        let plural = refreshed.find("22222222222222222222", "One").unwrap().id();
+        refreshed
+            .apply_edits([
+                PoEdit::translation(singular, "Été traduit"),
+                PoEdit::plural_translation(plural, 1, "Beaucoup"),
+            ])
+            .unwrap();
+        assert_eq!(original.source(), source);
+        assert_eq!(original, reparsed);
+        assert_eq!(
+            refreshed.entry(singular).unwrap().translation(),
+            Some("Été traduit")
+        );
+        assert_eq!(
+            refreshed.entry(plural).unwrap().plural_translations()[1].text(),
+            "Beaucoup"
+        );
+        assert_eq!(
+            refreshed,
+            PoDocument::parse_with_path("locale/fr.po", refreshed.source()).unwrap()
+        );
+    }
+}
+
+#[test]
+fn refreshing_the_same_template_still_normalizes_extractor_comments() {
+    let original = PoDocument::parse(concat!(
+        "# Translator's note\n#. block: été\n#: dialogue/été.recite:4:2\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Été\"\nmsgstr \"Summer\"\n",
+    ))
+    .unwrap();
+    let refreshed = original.refreshed(&original).unwrap();
+    assert_eq!(
+        refreshed.source(),
+        concat!(
+            "#. block: été\n#: dialogue/été.recite:4:2\n# Translator's note\n",
+            "msgctxt \"11111111111111111111\"\nmsgid \"Été\"\nmsgstr \"Summer\"\n",
+        )
+    );
+    assert_ne!(refreshed, original);
+    assert_eq!(refreshed.refreshed(&original).unwrap(), refreshed);
 }

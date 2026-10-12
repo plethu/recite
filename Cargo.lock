@@ -3358,6 +3358,7 @@ dependencies = [
  "clap",
  "gungraun",
  "gungraun-summary",
+ "recite-adapter",
  "recite-benchmarks",
  "recite-compiler",
  "recite-core",
@@ -3397,6 +3398,7 @@ dependencies = [
 name = "recite-runtime"
 version = "0.1.0"
 dependencies = [
+ "memchr",
  "proptest",
  "recite-compiler",
  "recite-core",

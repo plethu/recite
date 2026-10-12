@@ -16,6 +16,19 @@ mod topology;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
 use layout::HEIGHT;
+use std::sync::Arc;
+
+// Scope indices and source blocks resolve against the same captured topology.
+#[derive(Clone)]
+struct MapView {
+    graph: Arc<topology::Topology>,
+    scope: Option<scope::Scope>,
+}
+impl PartialEq for MapView {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.graph, &other.graph) && self.scope == other.scope
+    }
+}
 
 #[derive(Clone)]
 pub(super) struct SceneMap {
@@ -90,30 +103,32 @@ fn render(writer: Writer, scene: String) -> Element {
     }
     let graph = use_memo(move || {
         script.read().as_ref().map(|blocks| {
-            topology::Topology::new(blocks, positions.read().positions(&current_scene.read()))
+            Arc::new(topology::Topology::new(
+                blocks.clone(),
+                positions.read().positions(&current_scene.read()),
+            ))
         })
     });
-    let scope = use_memo(move || {
-        if *whole_scene.read() {
-            return None;
-        }
-        let source = script.read();
+    let map_view = use_memo(move || {
         let graph = graph.read();
-        scope::nearby(
-            source.as_ref()?,
-            graph.as_ref()?,
-            writer.selection.read().as_deref(),
-        )
+        let graph = graph.as_ref()?;
+        let scope = if *whole_scene.read() {
+            None
+        } else {
+            scope::nearby(graph, writer.selection.read().as_deref())
+        };
+        Some(MapView {
+            graph: graph.clone(),
+            scope,
+        })
     });
-    let scope = scope.read();
-    let projected = script.read();
-    let Some(blocks) = projected.as_ref() else {
+    let map_view = map_view.read();
+    let Some(map_view) = map_view.as_ref() else {
         return rect().into_element();
     };
-    let graph = graph.read();
-    let Some(graph) = graph.as_ref() else {
-        return rect().into_element();
-    };
+    let graph = &map_view.graph;
+    let blocks = &graph.blocks;
+    let scope = &map_view.scope;
     let (links, nodes, routes) = (&graph.links, &graph.nodes, &graph.routes);
     let document_selection = writer
         .buffers
@@ -158,12 +173,9 @@ fn render(writer: Writer, scene: String) -> Element {
     let mut canvas = rect()
         .width(Size::px(viewport.read().0))
         .height(Size::px(viewport.read().1));
-    for (index, (link, route)) in links.iter().zip(routes).enumerate() {
-        if scope.as_ref().is_some_and(|scope| {
-            !scope.members.contains(&link.origin) || !scope.members.contains(&link.destination)
-        }) {
-            continue;
-        }
+    for offset in 0..scope.as_ref().map_or(links.len(), |s| s.edge_indices.len()) {
+        let index = scope.as_ref().map_or(offset, |s| s.edge_indices[offset]);
+        let (link, route) = (&links[index], &routes[index]);
         let Some(route) = route else {
             continue;
         };
@@ -189,13 +201,12 @@ fn render(writer: Writer, scene: String) -> Element {
             reduced_motion: writer.preferences.read().config.writer.reduced_motion,
         });
     }
-    for (block, node) in blocks.iter().zip(nodes.iter()) {
-        if scope
-            .as_ref()
-            .is_some_and(|scope| !scope.members.contains(&block.id))
-        {
-            continue;
-        }
+    for offset in 0..scope
+        .as_ref()
+        .map_or(blocks.len(), |s| s.node_indices.len())
+    {
+        let index = scope.as_ref().map_or(offset, |s| s.node_indices[offset]);
+        let (block, node) = (&blocks[index], &nodes[index]);
         if selected.as_ref() != Some(&block.id)
             && !topology::visible((node.x, node.y, node.width, HEIGHT), view, *viewport.read())
         {
@@ -219,17 +230,14 @@ fn render(writer: Writer, scene: String) -> Element {
             pan,
         });
     }
-    for (link, route) in links.iter().zip(routes) {
+    for offset in 0..scope.as_ref().map_or(links.len(), |s| s.edge_indices.len()) {
+        let index = scope.as_ref().map_or(offset, |s| s.edge_indices[offset]);
+        let (link, route) = (&links[index], &routes[index]);
         if view.zoom < card::DIALOGUE_ZOOM
             || (hovered.read().as_deref() != Some(&link.origin)
                 && hovered.read().as_deref() != Some(&link.destination)
                 && connection.read().as_ref() != Some(link))
         {
-            continue;
-        }
-        if scope.as_ref().is_some_and(|scope| {
-            !scope.members.contains(&link.origin) || !scope.members.contains(&link.destination)
-        }) {
             continue;
         }
         let Some(route) = route else {

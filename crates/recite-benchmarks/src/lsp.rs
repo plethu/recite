@@ -45,7 +45,10 @@ impl LspBenchmarkProject {
 
     #[must_use]
     pub fn probes(&self) -> LspBenchmarkProbes {
-        self.driver().probes()
+        let mut driver = self.driver();
+        let probes = driver.probes();
+        driver.assert_query_probes(&probes);
+        probes
     }
 
     #[must_use]
@@ -64,7 +67,6 @@ impl LspBenchmarkProject {
     }
 
     fn config(&self) -> LspBenchmarkConfig {
-        LspBenchmarkConfig::new(vec![self.root.join("src")])
-            .with_schema_path(self.schema_path.clone())
+        LspBenchmarkConfig::new(vec![self.root.clone()]).with_schema_path(self.schema_path.clone())
     }
 }

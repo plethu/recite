@@ -73,17 +73,21 @@ impl BuildEngine for ProjectBuildEngine {
             }
             let options = compile_options(target.asset_id(), request.fingerprints().schema())?;
             let report = match schema {
-                Some(schema) => recite_compiler::compile::compile_inputs_with_schema(
-                    inputs.clone(),
-                    options,
-                    schema,
-                ),
-                None => recite_compiler::compile::compile_inputs(inputs.clone(), options),
+                Some(schema) => {
+                    recite_compiler::compile::compile_inputs_to_messagepack_with_schema(
+                        inputs.clone(),
+                        options,
+                        schema,
+                    )
+                }
+                None => {
+                    recite_compiler::compile::compile_inputs_to_messagepack(inputs.clone(), options)
+                }
             }
             .map_err(|_| BuildFailure::Engine {
                 reason: BuildFailureReason::InvalidOutput,
             })?;
-            let Some(asset) = report.asset else {
+            let Some(messagepack) = report.messagepack else {
                 if !report.diagnostics.is_empty() {
                     return Err(BuildFailure::Diagnostics {
                         diagnostics: report.diagnostics,
@@ -93,10 +97,7 @@ impl BuildEngine for ProjectBuildEngine {
                     reason: BuildFailureReason::InvalidOutput,
                 });
             };
-            candidates.push(BuildCandidate::new(
-                target.target().clone(),
-                asset.messagepack,
-            ));
+            candidates.push(BuildCandidate::new(target.target().clone(), messagepack));
             if control.cancellation().is_some() {
                 break;
             }

@@ -1,5 +1,9 @@
 //! Fixed small stress and authored realistic corpora; preparation is excluded.
+#[path = "support/adapter.rs"]
+mod adapter_support;
 mod support;
+
+use adapter_support::AdapterSources;
 
 use std::hint::black_box;
 
@@ -83,6 +87,17 @@ fn traverse(project: RuntimeProject) -> (RuntimeProject, usize) {
     black_box((project, count))
 }
 
+#[library_benchmark(teardown = adapter_support::validate)]
+#[bench::sources_400(setup = adapter_support::sources_400)]
+fn adapter_choice(mut workload: AdapterSources) -> AdapterSources {
+    for driver in &mut workload.drivers {
+        workload
+            .outputs
+            .push(adapter_support::choose(driver, workload.choice.clone()));
+    }
+    black_box(workload)
+}
+
 fn preview(fixture: BenchmarkFixture) -> PreviewProject {
     must(PreviewProject::load(fixture))
 }
@@ -101,7 +116,7 @@ fn preview_recovery(project: PreviewProject) -> (PreviewProject, PreviewEvidence
 }
 
 library_benchmark_group!(name = compiler_workflows; config = budget(20.0); benchmarks = compile, encode, decode);
-library_benchmark_group!(name = runtime_workflows; config = budget(10.0); benchmarks = next_line, localised_next, choose, traverse);
+library_benchmark_group!(name = runtime_workflows; config = budget(10.0); benchmarks = next_line, localised_next, choose, traverse, adapter_choice);
 library_benchmark_group!(name = preview_workflows; config = budget(20.0); benchmarks = preview_recovery);
 main!(
     library_benchmark_groups = compiler_workflows,

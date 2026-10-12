@@ -28,6 +28,13 @@ impl SourceLineIndex {
         &self.source
     }
 
+    /// Number of logical lines, including an empty source or the empty line
+    /// after a final terminator.
+    #[must_use]
+    pub fn line_count(&self) -> usize {
+        self.starts.len()
+    }
+
     /// Returns a zero-based line, excluding the final terminator byte.
     /// A CRLF line retains its CR for compatibility with source-backed slices.
     #[must_use]

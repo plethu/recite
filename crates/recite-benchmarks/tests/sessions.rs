@@ -1,7 +1,7 @@
 #[path = "../benches/support/sessions.rs"]
 mod sessions;
 
-use sessions::{SESSION_HISTORY_SIZES, SessionWorkload};
+use sessions::{SESSION_HISTORY_SIZES, SESSION_SOURCE_COUNTS, SessionWorkload};
 
 #[test]
 fn session_workloads_preserve_growing_histories_and_deferred_queues_after_restore()
@@ -35,6 +35,28 @@ fn session_workloads_preserve_growing_histories_and_deferred_queues_after_restor
                 if deferred { history + 2 } else { 0 }
             );
         }
+    }
+    Ok(())
+}
+
+#[test]
+fn source_count_workloads_preserve_adapter_and_preview_parity()
+-> Result<(), Box<dyn std::error::Error>> {
+    for source_count in SESSION_SOURCE_COUNTS {
+        let workload = SessionWorkload::with_source_count(false, source_count)?;
+        let checkpoint = workload.adapter_checkpoint(0)?;
+        let mut adapter = workload.restore_adapter(&checkpoint)?;
+        assert!(!workload.adapter_cycle(&mut adapter)?.is_empty());
+
+        let checkpoint = workload.preview_checkpoint(0)?;
+        let mut preview = workload.restore_preview(&checkpoint)?;
+        workload.preview_cycle(&mut preview)?;
+        assert_eq!(preview.session().selected_choice_history().len(), 1);
+        assert_eq!(
+            adapter.snapshot()?,
+            recite_runtime::snapshot::encode_session_messagepack(preview.session())?,
+            "source count {source_count} must preserve adapter/preview parity"
+        );
     }
     Ok(())
 }

@@ -254,11 +254,12 @@ fn metadata(
     asset: AssetView<'_>,
     range: MetadataRange,
 ) -> Result<Vec<recite_core::MetadataEntry>, DialogueError> {
-    asset
-        .metadata_entries(range)?
-        .iter()
-        .map(|entry| metadata_entry(asset, entry))
-        .collect()
+    let entries = asset.metadata_entries(range)?;
+    let mut metadata = Vec::with_capacity(entries.len());
+    for entry in entries {
+        metadata.push(metadata_entry(asset, entry)?);
+    }
+    Ok(metadata)
 }
 
 fn metadata_entry(

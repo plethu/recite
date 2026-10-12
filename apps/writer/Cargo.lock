@@ -3999,6 +3999,7 @@ dependencies = [
 name = "recite-runtime"
 version = "0.1.0"
 dependencies = [
+ "memchr",
  "recite-core",
  "rmp-serde",
  "serde",

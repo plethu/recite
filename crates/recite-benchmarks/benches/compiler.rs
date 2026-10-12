@@ -4,11 +4,14 @@ use std::time::Duration;
 use criterion::{BatchSize, BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use recite_benchmarks::compiler::{
     CompiledProject, CompilerProject, compile_with_schema, extract_pot, lower_inputs, parse_inputs,
-    resolve_block_references, serialize_compiled_asset, validate_localisable_id_uniqueness,
-    validate_markup, validate_with_schema, validate_without_schema,
+    resolve_block_references, serialize_compiled_asset, serialize_inspection_json,
+    validate_localisable_id_uniqueness, validate_markup, validate_with_schema,
+    validate_without_schema,
 };
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::{BenchmarkFixture, BenchmarkResult};
+use recite_compiler::compile::compile_inputs_to_messagepack_with_schema;
+use recite_core::po::PoDocument;
 
 fn compiler_benchmarks(criterion: &mut Criterion) {
     for fixture in load_compiler_projects() {
@@ -20,8 +23,12 @@ fn compiler_benchmarks(criterion: &mut Criterion) {
         bench_id_uniqueness(criterion, &fixture);
         bench_markup_validation(criterion, &fixture);
         bench_compile_with_schema(criterion, &fixture);
+        bench_compile_messagepack_with_schema(criterion, &fixture);
         bench_pot_extraction_pressure(criterion, &fixture);
+        bench_pot_formatting(criterion, &fixture);
+        bench_po_refresh_unchanged(criterion, &fixture);
         bench_compiled_asset_serialization(criterion, &fixture);
+        bench_inspection_json_serialization(criterion, &fixture);
     }
 }
 
@@ -105,6 +112,34 @@ fn bench_compile_with_schema(criterion: &mut Criterion, fixture: &CompilerFixtur
         );
 }
 
+fn bench_compile_messagepack_with_schema(criterion: &mut Criterion, fixture: &CompilerFixture) {
+    criterion
+        .benchmark_group("compiler/compile_messagepack_with_schema")
+        .bench_function(
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
+            |bencher| {
+                // Input cloning and unused model disposal are timed; returned
+                // MessagePack disposal is excluded, as for other compiler cases.
+                bencher.iter_batched(
+                    || (),
+                    |()| {
+                        let report = must(compile_inputs_to_messagepack_with_schema(
+                            fixture.project.compile_inputs(),
+                            fixture.project.options(),
+                            fixture.project.schema(),
+                        ));
+                        assert!(report.is_ok(), "{:?}", report.diagnostics);
+                        let Some(bytes) = report.messagepack else {
+                            panic!("valid fixture did not emit MessagePack");
+                        };
+                        black_box(bytes)
+                    },
+                    BatchSize::LargeInput,
+                );
+            },
+        );
+}
+
 fn bench_block_reference_resolution(criterion: &mut Criterion, fixture: &CompilerFixture) {
     criterion
         .benchmark_group("compiler/block_reference_resolution")
@@ -173,6 +208,52 @@ fn bench_pot_extraction_pressure(criterion: &mut Criterion, fixture: &CompilerFi
         );
 }
 
+fn bench_pot_formatting(criterion: &mut Criterion, fixture: &CompilerFixture) {
+    criterion
+        .benchmark_group("compiler/pot_formatting")
+        .bench_function(
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
+            |bencher| {
+                let template = must(extract_pot(&fixture.project));
+                // Extraction and returned String disposal stay outside timing.
+                bencher.iter_batched(
+                    || (),
+                    |()| black_box(template.to_pot_string()),
+                    BatchSize::LargeInput,
+                );
+            },
+        );
+}
+
+fn bench_po_refresh_unchanged(criterion: &mut Criterion, fixture: &CompilerFixture) {
+    criterion
+        .benchmark_group("compiler/po_refresh_unchanged")
+        .bench_function(
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
+            |bencher| {
+                let project = must(BenchmarkProject::load_materialized_fixture(fixture.fixture));
+                let source = must(std::fs::read_to_string(
+                    project.root().join("locales/en-US.po"),
+                ));
+                let catalogue = must(PoDocument::parse_with_path("en-US.po", source));
+                let pot = must(extract_pot(&fixture.project));
+                let template = must(PoDocument::parse_with_path(
+                    "extracted.pot",
+                    pot.to_pot_string(),
+                ));
+                let catalogue = must(catalogue.refreshed(&template));
+                // File loading, parsing, extraction and first refresh prepare a
+                // normalized unchanged catalogue; returned disposal is excluded.
+                assert_eq!(catalogue, must(catalogue.refreshed(&template)));
+                bencher.iter_batched(
+                    || (),
+                    |()| black_box(must(catalogue.refreshed(black_box(&template)))),
+                    BatchSize::LargeInput,
+                );
+            },
+        );
+}
+
 fn bench_compiled_asset_serialization(criterion: &mut Criterion, fixture: &CompilerFixture) {
     let bytes = fixture.compiled.asset().messagepack.len() as u64;
     let mut group = criterion.benchmark_group("compiler/compiled_asset_serialization");
@@ -183,6 +264,29 @@ fn bench_compiled_asset_serialization(criterion: &mut Criterion, fixture: &Compi
             bencher.iter_batched(
                 || (),
                 |()| black_box(must(serialize_compiled_asset(black_box(&fixture.compiled)))),
+                BatchSize::LargeInput,
+            );
+        },
+    );
+    group.finish();
+}
+
+fn bench_inspection_json_serialization(criterion: &mut Criterion, fixture: &CompilerFixture) {
+    let bytes = fixture.compiled.asset().inspection_json.len() as u64;
+    let mut group = criterion.benchmark_group("compiler/inspection_json_serialization");
+    group.throughput(Throughput::Bytes(bytes));
+    group.bench_function(
+        BenchmarkId::from_parameter(fixture.fixture.as_str()),
+        |bencher| {
+            // Prepared dialogue and returned JSON disposal stay outside timing,
+            // matching the MessagePack serialization case above.
+            bencher.iter_batched(
+                || (),
+                |()| {
+                    black_box(must(serialize_inspection_json(black_box(
+                        &fixture.compiled,
+                    ))))
+                },
                 BatchSize::LargeInput,
             );
         },
@@ -217,7 +321,7 @@ fn load_compiler_projects_result() -> BenchmarkResult<Vec<CompilerFixture>> {
         .collect()
 }
 
-fn must<T>(result: BenchmarkResult<T>) -> T {
+fn must<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
     match result {
         Ok(value) => value,
         Err(error) => panic!("benchmark setup failed: {error}"),

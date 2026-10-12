@@ -22,7 +22,8 @@ pub(in crate::traversal) fn render_template<T: AsRef<str>>(
     let mut cursor = 0;
     while cursor < template.len() {
         let remaining = &template[cursor..];
-        let literal_end = remaining.find(['\\', '{']).unwrap_or(remaining.len());
+        let literal_end =
+            memchr::memchr2(b'\\', b'{', remaining.as_bytes()).unwrap_or(remaining.len());
         output.push_str(&remaining[..literal_end]);
         cursor += literal_end;
         let remaining = &remaining[literal_end..];

@@ -85,6 +85,11 @@ inspection form for fixtures, debugging, and CLI tooling. The MessagePack bytes 
 runtime-facing asset; the JSON form is non-authoritative and must be produced from the same
 structured model.
 
+The compiler's full-output entry points return the compiled model, canonical MessagePack bytes and
+inspection JSON. Explicit MessagePack-only entry points perform the same complete source/schema
+validation and compilation, emitting identical runtime-facing bytes without producing the inspection
+form. Build and CLI consumers that need only the runtime asset may use that capability.
+
 The [shared wire registry](../../crates/recite-core/src/compiled/wire.rs) coordinates field counts
 and numeric tags with the typed model, codecs, inspection projection, and focused fixtures. The
 accepted retention and migration policy is recorded in the

@@ -64,6 +64,36 @@ impl LspBenchmarkDriver {
         LspBenchmarkProbes::discover(&self.workspace)
     }
 
+    /// Assert that discovered query positions return meaningful responses.
+    /// Opens the completion document and evaluates requests during untimed setup.
+    pub fn assert_query_probes(&mut self, probes: &LspBenchmarkProbes) {
+        let document = LspDocumentProbe {
+            uri: probes.completion.uri.clone(),
+            path: probes.completion.path.clone(),
+            project_relative_path: probes.completion.project_relative_path.clone(),
+        };
+        let _ = self.open_file(&document);
+        let completion_has_items = match self.completion(&probes.completion) {
+            Some(CompletionResponse::Array(items)) => !items.is_empty(),
+            Some(CompletionResponse::List(list)) => !list.items.is_empty(),
+            None => false,
+        };
+        assert!(
+            completion_has_items,
+            "LSP benchmark completion probe returns items"
+        );
+        let definition_has_target = match self.definition(&probes.definition) {
+            Some(GotoDefinitionResponse::Scalar(_)) => true,
+            Some(GotoDefinitionResponse::Array(locations)) => !locations.is_empty(),
+            Some(GotoDefinitionResponse::Link(links)) => !links.is_empty(),
+            None => false,
+        };
+        assert!(
+            definition_has_target,
+            "LSP benchmark definition probe resolves a target"
+        );
+    }
+
     #[must_use]
     pub fn memory_report(&self) -> LspMemoryReport {
         LspMemoryReport::from_workspace(&self.workspace)

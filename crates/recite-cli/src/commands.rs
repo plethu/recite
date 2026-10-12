@@ -17,7 +17,7 @@ use crate::runtime_fixture::{
 };
 use crate::watch::run_watch_command;
 use recite_compiler::{
-    compile::{compile_inputs, compile_inputs_with_schema},
+    compile::{compile_inputs_to_messagepack, compile_inputs_to_messagepack_with_schema},
     pot::{extract_pot, extract_pot_with_schema},
 };
 use recite_core::{
@@ -168,17 +168,17 @@ fn compile_command(
     let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
     let options = compile_options(&args.output, schema.as_ref())?;
     let report = if let Some(schema) = &schema {
-        compile_inputs_with_schema(inputs, options, schema)?
+        compile_inputs_to_messagepack_with_schema(inputs, options, schema)?
     } else {
-        compile_inputs(inputs, options)?
+        compile_inputs_to_messagepack(inputs, options)?
     };
 
     report_diagnostics(stderr, messages, report.diagnostics.iter())?;
-    let Some(asset) = report.asset else {
+    let Some(messagepack) = report.messagepack else {
         return Err(CliError::Diagnostics);
     };
 
-    write_staged(&args.output, &asset.messagepack)?;
+    write_staged(&args.output, &messagepack)?;
     Ok(())
 }
 

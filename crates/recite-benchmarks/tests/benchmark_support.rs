@@ -127,7 +127,7 @@ fn tiny_lsp_benchmark_probes_are_deterministic() -> Result<(), Box<dyn std::erro
     let first = lsp.probes();
     let second = lsp.probes();
 
-    assert_eq!(first.document.project_relative_path, "shard-000.recite");
+    assert_eq!(first.document.project_relative_path, "src/shard-000.recite");
     assert_eq!(
         first.document.project_relative_path,
         second.document.project_relative_path
@@ -278,7 +278,7 @@ fn tiny_compiler_phase_probes_are_clean_and_count_expected_items()
 }
 
 #[test]
-fn tiny_compiled_asset_serialization_probe_matches_compiler_output()
+fn tiny_compiled_asset_serialization_probes_match_compiler_output()
 -> Result<(), Box<dyn std::error::Error>> {
     let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
     let compiler = CompilerProject::load(&project)?;
@@ -287,6 +287,9 @@ fn tiny_compiled_asset_serialization_probe_matches_compiler_output()
 
     assert_eq!(bytes, compiled.asset().messagepack);
     assert!(!bytes.is_empty());
+    let json = compiler::serialize_inspection_json(&compiled)?;
+    assert_eq!(json, compiled.asset().inspection_json);
+    assert!(!json.is_empty());
     Ok(())
 }
 

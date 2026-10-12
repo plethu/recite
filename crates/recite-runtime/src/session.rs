@@ -21,7 +21,8 @@ pub struct DialogueSession {
     pub(crate) source_map_id: SourceMapId,
     pub(crate) schema_fingerprint: SchemaFingerprint,
     pub(crate) compiled_payload_fingerprint: ContentFingerprint,
-    pub(crate) sources: Vec<CompiledSourceFile>,
+    // Trial sessions and preview checkpoints share immutable source identity.
+    pub(crate) sources: Arc<[CompiledSourceFile]>,
     pub(crate) current_block: BlockIndex,
     pub(crate) current_range: StatementRange,
     pub(crate) next_statement: StatementIndex,
@@ -47,7 +48,7 @@ pub(crate) enum SessionPhase {
 impl DialogueSession {
     pub(crate) fn new(
         header: &CompiledAssetHeader,
-        sources: Vec<CompiledSourceFile>,
+        sources: &[CompiledSourceFile],
         current_block: BlockIndex,
         current_range: StatementRange,
         compiled_payload_fingerprint: ContentFingerprint,
@@ -61,7 +62,7 @@ impl DialogueSession {
             source_map_id: header.source_map_id.clone(),
             schema_fingerprint: header.schema_fingerprint.clone(),
             compiled_payload_fingerprint,
-            sources,
+            sources: sources.into(),
             current_block,
             current_range,
             next_statement: current_range.start,

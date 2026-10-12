@@ -1,5 +1,10 @@
 pub(super) fn escape(value: &str) -> String {
     let mut output = String::new();
+    push_escaped(&mut output, value);
+    output
+}
+
+pub(super) fn push_escaped(output: &mut String, value: &str) {
     for character in value.chars() {
         match character {
             '\\' => output.push_str("\\\\"),
@@ -18,5 +23,4 @@ pub(super) fn escape(value: &str) -> String {
             character => output.push(character),
         }
     }
-    output
 }

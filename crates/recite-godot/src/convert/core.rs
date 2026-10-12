@@ -24,14 +24,6 @@ pub(crate) fn result_dictionary(
     dictionary
 }
 
-pub(crate) fn outputs_array(outputs: &[ReciteOutput]) -> VarArray {
-    let mut array = VarArray::new();
-    for output in outputs {
-        push_variant(&mut array, output_dictionary(output).to_variant());
-    }
-    array
-}
-
 pub(crate) fn output_dictionary(output: &ReciteOutput) -> VarDictionary {
     let mut dictionary = VarDictionary::new();
     match output {

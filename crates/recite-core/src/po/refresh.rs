@@ -80,6 +80,10 @@ impl PoDocument {
             source.push_str(self.line_ending);
             source.push_str(&new_entry(self, entry)?);
         }
+        if source == self.source {
+            drop(source);
+            return Ok(self.clone());
+        }
         Ok(Self::parse_with_path(self.source_name.clone(), source)?)
     }
 }

@@ -100,6 +100,46 @@ impl Document {
         Ok(document)
     }
 
+    /// Open an independent document, sharing unchanged project analysis.
+    /// The supplied context replaces every saved input; this document's open
+    /// overlay, revisions, history and projections remain private to it.
+    pub fn open_sibling_with_control(
+        &self,
+        key: DocumentKey,
+        source: impl Into<String>,
+        context: ProjectContext,
+        control: &dyn WorkControl,
+    ) -> Result<Self, EditError> {
+        if key == self.key || context.schema != self.context.schema {
+            return Self::in_project_with_control(key, source, context, control);
+        }
+        control.checkpoint().map_err(AuthoringError::from)?;
+        let source: std::sync::Arc<str> = source.into().into();
+        let version = 1;
+        let kernel = self.kernel.updated(
+            AuthoringRequest::new(
+                self.kernel.snapshot().generation(),
+                context.documents.clone(),
+                [OpenDocument::from_shared(
+                    key.clone(),
+                    DocumentVersion::new(version),
+                    source.clone(),
+                )],
+            ),
+            control,
+        )?;
+        control.checkpoint().map_err(AuthoringError::from)?;
+        Ok(Self {
+            source,
+            key,
+            version,
+            kernel,
+            context,
+            history: crate::history::History::default(),
+            projections: crate::projection_cache::ProjectionCache::default(),
+        })
+    }
+
     pub fn refresh_project(&mut self, context: ProjectContext) -> Result<(), EditError> {
         self.refresh_project_with_control(context, &CancellationToken::new())
     }
@@ -307,3 +347,6 @@ impl Document {
 }
 
 mod localisation;
+
+#[cfg(test)]
+mod tests;

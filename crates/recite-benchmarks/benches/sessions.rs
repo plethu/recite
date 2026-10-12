@@ -5,7 +5,7 @@ use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_ma
 #[path = "support/sessions.rs"]
 mod sessions;
 
-use sessions::{SESSION_HISTORY_SIZES, SessionResult, SessionWorkload};
+use sessions::{SESSION_HISTORY_SIZES, SESSION_SOURCE_COUNTS, SessionResult, SessionWorkload};
 
 fn sessions(criterion: &mut Criterion) {
     for deferred in [false, true] {
@@ -43,11 +43,27 @@ fn must<T>(result: SessionResult<T>) -> T {
     }
 }
 
+fn source_counts(criterion: &mut Criterion) {
+    let mut group = criterion.benchmark_group("sessions/adapter_source_files");
+    for count in SESSION_SOURCE_COUNTS {
+        let workload = must(SessionWorkload::with_source_count(false, count));
+        let checkpoint = must(workload.adapter_checkpoint(0));
+        group.bench_function(BenchmarkId::from_parameter(count), |bencher| {
+            bencher.iter_batched_ref(
+                || must(workload.restore_adapter(&checkpoint)),
+                |driver| black_box(must(workload.adapter_cycle(driver))),
+                BatchSize::LargeInput,
+            );
+        });
+    }
+    group.finish();
+}
+
 criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(10)
         .warm_up_time(Duration::from_millis(500))
         .measurement_time(Duration::from_secs(1));
-    targets = sessions
+    targets = sessions, source_counts
 }
 criterion_main!(benches);

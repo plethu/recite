@@ -183,6 +183,10 @@ pub fn serialize_compiled_asset(project: &CompiledProject) -> BenchmarkResult<Ve
     bench_support::serialize_compiled_asset(&project.asset.dialogue).map_err(Into::into)
 }
 
+pub fn serialize_inspection_json(project: &CompiledProject) -> BenchmarkResult<String> {
+    bench_support::serialize_inspection_json(&project.asset.dialogue).map_err(Into::into)
+}
+
 fn lower_sources(inputs: &[CompileInput]) -> BenchmarkResult<Vec<SourceFile>> {
     let mut source_files = Vec::with_capacity(inputs.len());
     for input in inputs {

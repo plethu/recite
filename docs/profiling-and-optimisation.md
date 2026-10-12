@@ -20,6 +20,7 @@ other builds and tests out of the sampling window.
 | In-process LSP analysis                        | `just perf bench lsp large,realistic:v1-pack FILTER`                      |
 | Running LSP, protocol and scheduling           | `just perf compare BASE_COMMIT`                                           |
 | Growing adapter history and preview replay     | `just perf bench sessions tiny FILTER`                                    |
+| Adapter choices across source-file counts      | `just perf bench sessions tiny sessions/adapter_source_files/400`         |
 | Real C ABI traversal, callbacks and encoding   | `just perf ffi FILTER`                                                    |
 | Warm adapter and preview allocations           | `just perf allocations`                                                   |
 | Warm C ABI allocations                         | `just perf ffi-allocations`                                               |
@@ -37,14 +38,24 @@ preparation. Use `RECITE_BENCH_SCALES` to select the compiler allocation example
 fixtures. Its counts exclude fixture preparation and result disposal; byte hashes check output
 parity between runs.
 
+The compiler Criterion target also exposes `compiler/compile_messagepack_with_schema`,
+`compiler/pot_formatting` and `compiler/po_refresh_unchanged`. For example, run `just perf bench
+compiler medium,realistic:v1-pack po_refresh_unchanged`. The payload case includes input cloning and
+disposal of the unused compiled model. POT formatting uses an extracted template; PO refresh uses a
+parsed catalogue already refreshed against that template. Their preparation and returned-value
+disposal stay outside timing. POT extraction remains a separate case.
+
 Batched phase benchmarks keep prepared inputs and receivers alive until timing stops. The CLI report
 also excludes prepared-session setup and returned-value disposal. Its `build.measurement_revision`
 rejects baselines from earlier timing boundaries; collect fresh baselines after this measurement
 change instead of interpreting harness corrections as speedups.
 
 The [session target](../crates/recite-benchmarks/benches/sessions.rs) owns warm-operation workload
-shape and setup/teardown. The [C ABI probes](../crates/recite-ffi/benches/) own callback/encoding
-parity checks and allocation boundaries; inspect those owners when interpreting a result.
+shape and setup/teardown. `sessions/adapter_source_files` varies source-file count while keeping
+history empty; its restored driver setup and returned-event disposal are outside timing. The
+allocation example reports matching source-count cases alongside history and preview cases. The
+[C ABI probes](../crates/recite-ffi/benches/) own callback/encoding parity checks and allocation
+boundaries; inspect those owners when interpreting a result.
 
 Keep allocation instrumentation separate from timing binaries. Allocated bytes/counts describe
 churn, not live heap or process RSS. Size reports describe selected structures, not observed
@@ -83,11 +94,13 @@ The three runtime step cases each process 64 independent prepared sessions. Thei
 output buffers are prepared outside counters; batching dilutes one-off allocator housekeeping.
 Compare both revisions with the same current harness rather than reusing older single-step counts.
 
-`pr` checks eight compiler/runtime/preview operations on small and authored realistic fixtures.
-`full` adds medium fixtures. Both include cold effect-heavy Writer script projection at 1,000 and
-10,000 entries, validating Unicode prose, authored IDs, effects and order outside the measured
-operation, and a 64-session bound-text prompt batch using the checked language-pressure fixture;
-`writer` runs just its two cases. Use a fresh output directory. Limits belong to
+`pr` checks eight compiler/runtime/preview operations on small and authored realistic fixtures, plus
+a prepared 64-driver adapter choice batch with 400 source files. The adapter case excludes fixture
+construction and session startup, then checks exact events and serialized snapshots outside
+counters. `full` adds medium fixtures. Both include cold effect-heavy Writer script projection at
+1,000 and 10,000 entries, validating Unicode prose, authored IDs, effects and order outside the
+measured operation, and a 64-session bound-text prompt batch using the checked language-pressure
+fixture; `writer` runs just its two cases. Use a fresh output directory. Limits belong to
 [the shared configuration](../tools/recite-perf/benches/support/budget.rs); elapsed time remains a
 Criterion investigation. Missing paired measurements fail closed, including Gungraun's automatic
 creation of a missing named baseline.

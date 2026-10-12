@@ -20,6 +20,7 @@ func _ready() -> void:
 	_run_localisation_error_conformance_check()
 	_run_po_persistence_check()
 	_run_reentrant_signal_check()
+	failures.append_array(preload("res://output_isolation.gd").run(self))
 	_run_schema_export_checks()
 	_run_information_profile()
 	if failures.is_empty():

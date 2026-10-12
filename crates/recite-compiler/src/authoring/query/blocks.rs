@@ -1,3 +1,5 @@
+use recite_core::{BlockId, DocumentKey, SourceSpan};
+
 use crate::authoring::{
     AuthoringQuery, AuthoringSnapshot, CancellationToken, QueryClass, QueryResult,
     QueryUnavailableReason, SymbolIdentity, SymbolKind, SymbolLocation, SymbolRole,
@@ -15,12 +17,20 @@ impl AuthoringQuery<'_> {
     /// Recoverable block declarations in deterministic source order.
     #[must_use]
     pub fn project_block_symbols(&self) -> QueryResult<Vec<SymbolLocation>> {
-        self.collect_blocks(false)
+        self.collect_blocks(false, block_symbol)
+    }
+
+    /// Recoverable block names borrowed from the immutable snapshot, in
+    /// document and source order. Incomplete declarations and interruption
+    /// follow the same policy as the full block-symbol projection.
+    #[must_use]
+    pub fn project_block_names(&self) -> QueryResult<Vec<&BlockId>> {
+        self.collect_blocks(false, |_, name, _| name)
     }
 
     /// Complete-project block authority required by edit planning.
     pub(crate) fn project_block_definitions(&self) -> QueryResult<Vec<SymbolLocation>> {
-        self.collect_blocks(true)
+        self.collect_blocks(true, block_symbol)
     }
     /// Check a rename destination without allocating the project's declarations.
     pub(crate) fn rename_destination_exists(
@@ -73,8 +83,12 @@ impl AuthoringQuery<'_> {
         }
     }
 
-    fn collect_blocks(&self, require_complete: bool) -> QueryResult<Vec<SymbolLocation>> {
-        let mut locations = Vec::new();
+    fn collect_blocks<'a, T>(
+        &'a self,
+        require_complete: bool,
+        project: impl Fn(&'a DocumentKey, &'a BlockId, &'a SourceSpan) -> T,
+    ) -> QueryResult<Vec<T>> {
+        let mut values = Vec::new();
         let mut unavailable = Vec::new();
         if require_complete && !self.project_complete {
             unavailable.push(QueryUnavailableReason::Incomplete(
@@ -98,25 +112,26 @@ impl AuthoringQuery<'_> {
                     return QueryResult::unavailable(QueryUnavailableReason::Interrupted);
                 }
                 if let Some(span) = block.id_span() {
-                    locations.push(SymbolLocation {
-                        document: document.key().clone(),
-                        identity: SymbolIdentity::Block(block.id().clone()),
-                        kind: SymbolKind::Block,
-                        role: SymbolRole::Definition,
-                        span: span.clone(),
-                    });
+                    values.push(project(document.key(), block.id(), span));
                 }
             }
         }
-        locations.sort_by(|left, right| {
-            left.document()
-                .cmp(right.document())
-                .then_with(|| left.span().start.cmp(&right.span().start))
-        });
+        // Snapshot documents are key-ordered; block summaries retain source
+        // order through region assembly. Both projections preserve that order.
         if unavailable.is_empty() {
-            QueryResult::Ready(locations)
+            QueryResult::Ready(values)
         } else {
-            QueryResult::partial(locations, unavailable)
+            QueryResult::partial(values, unavailable)
         }
+    }
+}
+
+fn block_symbol(document: &DocumentKey, name: &BlockId, span: &SourceSpan) -> SymbolLocation {
+    SymbolLocation {
+        document: document.clone(),
+        identity: SymbolIdentity::Block(name.clone()),
+        kind: SymbolKind::Block,
+        role: SymbolRole::Definition,
+        span: span.clone(),
     }
 }

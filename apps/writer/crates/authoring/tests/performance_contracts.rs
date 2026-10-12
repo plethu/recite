@@ -47,3 +47,27 @@ fn cold_script_and_passage_projections_agree_across_edit_and_undo()
     assert_eq!(script_first.passage_snapshot()?, original);
     Ok(())
 }
+
+#[test]
+fn search_lowercasing_preserves_unicode_and_source_order() -> Result<(), Box<dyn std::error::Error>>
+{
+    let source = concat!(
+        ":: start default speaker=İSTANBUL\n",
+        "> first@00000000000000000001\n",
+        "  Straße CAFÉ Beacon17 and courier courier.\n",
+        "? reply@00000000000000000002\n",
+        "  Couriers wait beside the café.\n",
+        "  -> END\n",
+    );
+    let document = SavedDocument::new(DocumentKey::new("Mixed_Case.recite")?, source);
+    let index = SearchIndex::build(&[document]);
+    let (count, hits) = index.search("MIXED_CASE CAFÉ", 2);
+    assert_eq!(count, 2);
+    assert_eq!(hits[0].text, "Straße CAFÉ Beacon17 and courier courier.");
+    assert_eq!(hits[1].text, "Couriers wait beside the café.");
+    assert_eq!(index.search("straße beacon17 COURIER", 10).0, 1);
+    assert_eq!(index.search("İSTANBUL café", 10).0, 1);
+    assert_eq!(index.search("istanbul", 10).0, 0);
+    assert_eq!(index.search("STRASSE", 10).0, 0);
+    Ok(())
+}

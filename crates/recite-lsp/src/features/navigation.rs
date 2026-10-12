@@ -6,7 +6,7 @@ use recite_compiler::authoring::{
 use recite_core::{DocumentKey, SourcePosition};
 
 use crate::edit_projection::{EditDocument, project_plan};
-use crate::position::span_to_range;
+use crate::position::document_span_to_range;
 
 pub(crate) type NavigationDocument<'a> = EditDocument<'a>;
 
@@ -26,7 +26,7 @@ pub(crate) fn definition(
         return None;
     };
     Some(GotoDefinitionResponse::Scalar(location_for_symbol(
-        &symbol, documents,
+        &symbol, snapshot, documents,
     )?))
 }
 
@@ -52,7 +52,7 @@ pub(crate) fn references(
     let mut references = Vec::new();
     for symbol in locations {
         snapshot.checkpoint().ok()?;
-        let location = location_for_symbol(&symbol, documents)?;
+        let location = location_for_symbol(&symbol, snapshot, documents)?;
         if symbol.role() == SymbolRole::Definition {
             declarations.push(location);
         } else {
@@ -77,7 +77,7 @@ pub(crate) fn prepare_rename(
         return None;
     }
     let document = snapshot.document(symbol.document())?;
-    let range = span_to_range(document.source_text(), symbol.span());
+    let range = document_span_to_range(document, symbol.span());
     Some(PrepareRenameResponse::RangeWithPlaceholder {
         range,
         placeholder: block_name(&symbol)?.to_owned(),
@@ -134,6 +134,7 @@ fn unique_navigation(
 
 fn location_for_symbol(
     symbol: &SymbolLocation,
+    snapshot: &AuthoringQuery<'_>,
     documents: &[NavigationDocument<'_>],
 ) -> Option<Location> {
     let document = documents
@@ -141,7 +142,7 @@ fn location_for_symbol(
         .find(|document| document.key == symbol.document())?;
     Some(Location {
         uri: document.uri.clone(),
-        range: span_to_range(document.text, symbol.span()),
+        range: document_span_to_range(snapshot.document(document.key)?, symbol.span()),
     })
 }
 
