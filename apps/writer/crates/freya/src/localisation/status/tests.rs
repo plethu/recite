@@ -48,3 +48,32 @@ fn an_unsaved_review_remains_in_attention_until_saved() -> Result<(), Box<dyn st
     );
     Ok(())
 }
+
+#[test]
+fn fuzzy_singular_entry_without_translation_stays_untranslated()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("fr.po");
+    std::fs::write(
+        &path,
+        "#, fuzzy\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\n",
+    )?;
+    let mut catalogue = Catalogue::open(&path)?;
+    let id = PoEntryId::new(0);
+    assert_eq!(
+        TranslationStatus::for_entry(&catalogue, id),
+        TranslationStatus::Untranslated
+    );
+    catalogue.update(
+        id,
+        Draft {
+            forms: vec!["Draft".into()],
+            reviewed: false,
+        },
+    );
+    assert_eq!(
+        TranslationStatus::for_entry(&catalogue, id),
+        TranslationStatus::NeedsReview
+    );
+    Ok(())
+}

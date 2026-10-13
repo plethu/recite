@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use super::{PoDocument, PoEdit, PoEntry, PoEntryField};
 use crate::po::parser;
 
@@ -54,6 +52,13 @@ impl PoDocument {
     pub fn source(&self) -> &str {
         &self.source
     }
+    /// Retain this immutable source revision without copying its text.
+    ///
+    /// Edits install a new validated source; existing snapshots stay unchanged.
+    #[must_use]
+    pub fn source_snapshot(&self) -> super::Arc<String> {
+        self.source.clone()
+    }
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         self.source.as_bytes()
@@ -100,67 +105,7 @@ impl PoDocument {
         &mut self,
         edits: impl IntoIterator<Item = PoEdit>,
     ) -> Result<(), PoEditError> {
-        let mut replacements = Vec::new();
-        for edit in edits {
-            let entry = self
-                .entries
-                .get(edit.entry.index())
-                .ok_or(PoEditError::EntryNotFound(edit.entry))?;
-            let (range, keyword, multiline, obsolete) = entry.edit_range(&edit.field)?;
-            let value = match &edit.field {
-                PoEntryField::Variant => {
-                    let context = entry
-                        .context
-                        .as_deref()
-                        .ok_or(PoEditError::MissingContext)?;
-                    let base = context.split('&').next().unwrap_or(context);
-                    if edit.value.is_empty() {
-                        base.to_owned()
-                    } else if edit.value.contains('&') || edit.value.trim().is_empty() {
-                        return Err(PoEditError::InvalidVariant(edit.value));
-                    } else {
-                        format!("{base}&{}", edit.value)
-                    }
-                }
-                _ => edit.value,
-            };
-            let inserting_context =
-                range.start == range.end && matches!(edit.field, PoEntryField::Context);
-            let mut replacement = parser::format_field(
-                &keyword,
-                &value,
-                multiline || value.contains(['\n', '\r']),
-                self.line_ending,
-                obsolete,
-            );
-            if inserting_context {
-                replacement.push_str(self.line_ending);
-            }
-            if replacements
-                .iter()
-                .any(|(existing, _): &(Range<usize>, String)| ranges_overlap(existing, &range))
-            {
-                return Err(PoEditError::OverlappingEdits);
-            }
-            replacements.push((range, replacement));
-        }
-        replacements.sort_by_key(|(range, _)| std::cmp::Reverse(range.start));
-        let mut candidate = self.source.clone();
-        for (range, replacement) in replacements {
-            candidate.replace_range(range, &replacement);
-        }
-        let parsed = Self::parse_with_path(self.source_name.clone(), candidate)
-            .map_err(PoEditError::InvalidDocument)?;
-        *self = parsed;
-        Ok(())
-    }
-}
-
-fn ranges_overlap(left: &Range<usize>, right: &Range<usize>) -> bool {
-    if left.is_empty() || right.is_empty() {
-        left.start == right.start
-    } else {
-        left.start < right.end && right.start < left.end
+        self.apply_updates(edits.into_iter().map(super::PoUpdate::Field))
     }
 }
 

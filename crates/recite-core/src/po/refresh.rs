@@ -80,7 +80,7 @@ impl PoDocument {
             source.push_str(self.line_ending);
             source.push_str(&new_entry(self, entry)?);
         }
-        if source == self.source {
+        if source == *self.source {
             drop(source);
             return Ok(self.clone());
         }

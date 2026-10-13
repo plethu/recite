@@ -137,7 +137,7 @@ pub(super) fn parse_document(name: String, source: String) -> Result<PoDocument,
     }
     Ok(PoDocument {
         source_name: name,
-        source,
+        source: super::Arc::new(source),
         entries,
         headers,
         line_ending,
