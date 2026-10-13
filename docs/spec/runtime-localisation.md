@@ -97,6 +97,11 @@ are explicitly read-only or import/export-only in v1; they must not be presented
 authoring surfaces. PO editing must remain separate from the Fluent resource contract for
 Recite-owned UI text.
 
+Atomic PO batches combine field edits and final fuzzy flags against the original document ranges,
+then validate the complete final source before adopting it. Reviewed translations retain full
+placeholder and markup validation; fuzzy entries retain their existing incomplete-draft tolerance.
+Duplicate field or review updates are rejected. Untouched source bytes remain unchanged.
+
 The current lossless PO editor retains its source representation. The bounded `polib` 0.3.0 and
 `rspolib` 0.1.2 writer probes normalized untouched catalogues, so they do not replace that owner.
 Reevaluate a dependency when it provides source-preserving edits and ranges, rather than maintaining

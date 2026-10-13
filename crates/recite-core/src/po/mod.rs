@@ -3,7 +3,7 @@
 //! This layer owns PO source representation and editing only. Locale lookup is
 //! a runtime-provider concern, and Recite-owned UI resources remain Fluent.
 
-use std::ops::Range;
+use std::{ops::Range, sync::Arc};
 
 mod document;
 mod entry;
@@ -12,6 +12,7 @@ mod parser;
 mod pot;
 mod refresh;
 mod review;
+mod updates;
 // Browser hosts use in-memory PO parsing; there is no filesystem to write.
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 mod write;
@@ -96,6 +97,14 @@ impl PoEdit {
     }
 }
 
+/// One field or review-state change in an atomic PO update batch.
+#[non_exhaustive]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PoUpdate {
+    Field(PoEdit),
+    Fuzzy { entry: PoEntryId, fuzzy: bool },
+}
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct PoDocumentFingerprint([u8; 32]);
 impl PoDocumentFingerprint {
@@ -128,7 +137,7 @@ impl std::fmt::Display for PoDocumentFingerprint {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PoDocument {
     pub(super) source_name: String,
-    pub(super) source: String,
+    pub(super) source: Arc<String>,
     pub(super) entries: Vec<PoEntry>,
     pub(super) headers: Vec<PoHeader>,
     pub(super) line_ending: &'static str,

@@ -1,4 +1,5 @@
 //! A bounded queue; opening an entry retains the full beat manuscript.
+pub(super) mod filter;
 use super::messages::{MsgId, text as wording};
 use super::navigation::Destination;
 use crate::{
@@ -7,7 +8,16 @@ use crate::{
     palette,
 };
 use freya::prelude::*;
+use std::sync::Arc;
 use t::ProseTypography;
+
+#[derive(Clone)]
+struct SnapshotIdentity<T: ?Sized>(Arc<T>);
+impl<T: ?Sized> PartialEq for SnapshotIdentity<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
 
 #[derive(Clone)]
 pub(super) struct QueueScreen {
@@ -33,7 +43,59 @@ fn render(writer: Writer) -> Element {
     let filter_id = use_a11y();
     let row_ids: [AccessibilityId; 34] = std::array::from_fn(|_| use_a11y());
     let mut row_ids = row_ids.into_iter();
-    let query = search.read().trim().to_lowercase();
+    let revision = use_memo(move || {
+        state
+            .read()
+            .catalogue
+            .as_ref()
+            .map(|catalogue| SnapshotIdentity(catalogue.revision()))
+    });
+    let passage_snapshot = use_memo(move || {
+        writer
+            .buffers
+            .model
+            .read()
+            .as_ref()
+            .ok()
+            .and_then(|session| session.document().passage_snapshot().ok())
+            .map(SnapshotIdentity)
+    });
+    let saved_source = use_memo(move || {
+        state
+            .read()
+            .catalogue
+            .as_ref()
+            .map(|catalogue| SnapshotIdentity(catalogue.saved_source()))
+    });
+    let index = use_memo(move || {
+        let _saved_source = saved_source.read();
+        let passages = passage_snapshot.read();
+        SnapshotIdentity(Arc::new(
+            state
+                .peek()
+                .catalogue
+                .as_ref()
+                .map(|catalogue| {
+                    filter::QueueIndex::new(
+                        catalogue,
+                        passages.as_ref().map(|p| p.0.as_ref()).unwrap_or_default(),
+                    )
+                })
+                .unwrap_or_default(),
+        ))
+    });
+    let matches = use_memo(move || {
+        let _revision = revision.read();
+        let index = index.read();
+        let query = search.read().trim().to_lowercase();
+        let only_attention = *attention.read();
+        state
+            .peek()
+            .catalogue
+            .as_ref()
+            .map(|catalogue| index.0.matching_entries(catalogue, &query, only_attention))
+            .unwrap_or_default()
+    });
     let only_attention = *attention.read();
     let current = state.read();
     let mut content = rect()
@@ -46,43 +108,22 @@ fn render(writer: Writer) -> Element {
                 .font_size(t::title()),
         );
     let model = writer.buffers.model.peek();
-    if let (Some(catalogue), Ok(session)) = (&current.catalogue, model.as_ref()) {
-        let passages = session.document().passage_snapshot().unwrap_or_default();
-        let matches: Vec<_> = catalogue
-            .document
-            .entries()
-            .iter()
-            .filter(|entry| {
-                if entry.is_header() || entry.is_obsolete() {
-                    return false;
-                }
-                let draft = catalogue.draft(entry.id());
-                (!only_attention
-                    || super::status::TranslationStatus::for_entry(catalogue, entry.id())
-                        .needs_attention())
-                    && (entry.source_text().to_lowercase().contains(&query)
-                        || entry
-                            .context()
-                            .is_some_and(|id| id.to_lowercase().contains(&query))
-                        || Destination::resolve(entry, &passages).is_some_and(|d| {
-                            d.caption()
-                                .to_lowercase()
-                                .contains(&query.replace('_', " "))
-                        })
-                        || draft.as_ref().is_some_and(|d| {
-                            d.forms
-                                .iter()
-                                .any(|text| text.to_lowercase().contains(&query))
-                        }))
-            })
-            .collect();
+    if let (Some(catalogue), Ok(_)) = (&current.catalogue, model.as_ref()) {
+        let passages = passage_snapshot.read();
+        let passages = passages.as_ref().map(|p| p.0.as_ref()).unwrap_or_default();
+        let matches = matches.read();
         let count = matches.len();
         let current_page = (*page.read()).min(count.saturating_sub(1) / 32);
         let destinations: Vec<_> = matches
             .iter()
             .skip(current_page * 32)
             .take(32)
-            .map(|entry| entry.context().map(str::to_owned))
+            .map(|id| {
+                catalogue
+                    .document
+                    .entry(*id)
+                    .and_then(|entry| entry.context().map(str::to_owned))
+            })
             .collect();
         content = content
             .child(crate::design::SearchField {
@@ -176,13 +217,11 @@ fn render(writer: Writer) -> Element {
                 ),
         );
         let mut rows = rect().width(Size::fill());
-        for (index, entry) in matches
-            .into_iter()
-            .skip(current_page * 32)
-            .take(32)
-            .enumerate()
-        {
-            let destination = Destination::resolve(entry, &passages);
+        for (index, entry) in matches.iter().skip(current_page * 32).take(32).enumerate() {
+            let Some(entry) = catalogue.document.entry(*entry) else {
+                continue;
+            };
+            let destination = Destination::resolve(entry, passages);
             let context = entry.context().map(str::to_owned);
             let draft = catalogue.draft(entry.id());
             let translation = draft

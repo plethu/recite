@@ -12,10 +12,14 @@ pub(super) struct Destination {
 impl Destination {
     pub fn resolve(entry: &PoEntry, passages: &[Passage]) -> Option<Self> {
         let anchor = entry.context()?.split('&').next()?;
-        if let Some(passage) = passages
+        let passage = passages
             .iter()
-            .find(|p| p.id == anchor && p.text == entry.source_text())
-        {
+            .find(|p| p.id == anchor && p.text == entry.source_text());
+        Self::with_current_passage(entry, passage)
+    }
+    pub(super) fn with_current_passage(entry: &PoEntry, passage: Option<&Passage>) -> Option<Self> {
+        let anchor = entry.context()?.split('&').next()?;
+        if let Some(passage) = passage {
             return Some(Self {
                 document: None,
                 beat: passage.section.clone(),

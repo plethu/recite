@@ -73,6 +73,7 @@ mise exec -- just writer bench --passages 100000 --linked --output target/writer
 mise exec -- just writer bench --passages 10000 --per-document 10000 --output target/writer-single-scene.json
 mise exec -- just writer bench-sessions 200000 100
 mise exec -- just writer bench-map
+mise exec -- just writer bench-catalogue 100000 20
 mise exec -- just writer profile heap 10000 target/writer-heap
 ```
 
@@ -92,6 +93,16 @@ drafts and verifies the latest durable snapshot after reopening. These workloads
 opt-in; recovery reports draft buffer preparation separately from snapshot queuing and durable
 flush. Limit build jobs and run measurements sequentially on a shared machine; record process
 resource limits and background load with the evidence.
+
+Catalogue workloads cover an authored scene and generated Unicode PO files, draft recovery capture,
+Save All, and exact-count substring filtering with a populated current scene. Index preparation and
+replacement are reported separately from warm queries; reconstruction retains the old index until
+the replacement is ready. The open queue retains one normalized index keyed by saved catalogue and
+passage snapshots. Draft revisions update matching without rebuilding saved fields, and paging or
+focus changes reuse results. Recovery shares one original source buffer and immutable draft values;
+capturing a checkpoint still copies draft IDs and handles, while cloning a checkpoint is cheap.
+Serialization and full final-source validation remain separate work. These probes exclude native
+painting and real input and do not establish the release baseline.
 
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is already memoized independently of camera and hover; this probe measures reconstruction

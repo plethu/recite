@@ -193,3 +193,63 @@ fn back_and_forward_preserve_edits_without_requiring_a_save()
     assert!(std::fs::read_to_string(&second)?.contains("Keep my changed scene."));
     Ok(())
 }
+
+#[test]
+fn queue_search_follows_unsaved_translation_then_its_saved_baseline()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("fr.po");
+    let example = recite_writer_model::WRITER_EXAMPLES[0].open()?;
+    let passages = example.document().passage_snapshot()?;
+    let first = &passages[0];
+    std::fs::write(
+        &path,
+        format!(
+            "msgctxt {:?}\nmsgid {}\nmsgstr \"seed phrase\"\n",
+            first.id,
+            serde_json::to_string(&first.text)?
+        ),
+    )?;
+    let params = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("scene", "relay_hub.recite")
+        .append_pair("catalogue", &path.to_string_lossy())
+        .append_pair("q", "seed phrase")
+        .finish();
+    let route = format!("/translations?{params}");
+    let mut test = TestingRunner::new(
+        recite_writer::app,
+        Size2D::new(1400., 1000.),
+        |runner| {
+            runner.provide_root_context(move || recite_writer::InitialRoute(route));
+        },
+        1.,
+    )
+    .0;
+    test.poll_n(std::time::Duration::from_millis(16), 15);
+    assert!(has_text(&test, "Matching entries: 1"));
+    let source_caption = first.text.chars().take(180).collect::<String>();
+    support::click(&mut test, &source_caption)?;
+    fill(&mut test, "seed phrase", "unique draft")?;
+    support::click(&mut test, "Back")?;
+    assert!(has_text(&test, "Matching entries: 0"));
+    fill(&mut test, "seed phrase", "unique draft")?;
+    assert!(has_text(&test, "Matching entries: 1"));
+    support::click(&mut test, &source_caption)?;
+    test.send_event(PlatformEvent::Keyboard {
+        name: KeyboardEventName::KeyDown,
+        key: Key::Named(NamedKey::Enter),
+        code: Code::Enter,
+        modifiers: if cfg!(target_os = "macos") {
+            Modifiers::META
+        } else {
+            Modifiers::CONTROL
+        },
+    });
+    test.poll_n(std::time::Duration::from_millis(16), 8);
+    assert!(std::fs::read_to_string(&path)?.contains("unique draft"));
+    support::click(&mut test, "Back")?;
+    assert!(has_text(&test, "Matching entries: 1"));
+    fill(&mut test, "unique draft", "seed phrase")?;
+    assert!(has_text(&test, "Matching entries: 0"));
+    Ok(())
+}

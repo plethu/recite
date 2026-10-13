@@ -74,3 +74,7 @@ bench-sessions passages="10000" visits="20":
 # Time geometry reconstruction for authored, linear and high-fan-out maps.
 bench-map:
     cargo test --release --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib scene_map::layout::tests::map_geometry_reconstruction_timing -- --ignored --nocapture --test-threads=1
+
+# Measure PO recovery, saves and queue filtering without a native window.
+bench-catalogue entries="10000" edits="20":
+    RECITE_BENCH_ENTRIES="$1" RECITE_BENCH_EDITS="$2" cargo test --release --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib catalogue_ -- --ignored --nocapture --test-threads=1

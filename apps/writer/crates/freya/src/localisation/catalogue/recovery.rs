@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub(super) struct SnapshotData {
     version: u32,
-    source: String,
-    drafts: Vec<(usize, Draft)>,
+    source: Arc<String>,
+    drafts: Arc<Vec<(usize, Arc<Draft>)>>,
 }
 impl Snapshot for SnapshotData {
     fn valid_version(&self) -> bool {
@@ -18,10 +18,11 @@ impl Catalogue {
         let mut value = Self::open(path)?;
         let store = SnapshotStore::<SnapshotData>::open(path).map_err(|e| e.to_string())?;
         if let Some(snapshot) = store.snapshot() {
-            let document = PoDocument::parse_with_path(path.to_string_lossy(), &snapshot.source)
-                .map_err(|e| e.to_string())?;
+            let document =
+                PoDocument::parse_with_path(path.to_string_lossy(), snapshot.source.as_str())
+                    .map_err(|e| e.to_string())?;
             value = Self::from_document(path, document);
-            for (index, draft) in &snapshot.drafts {
+            for (index, draft) in snapshot.drafts.iter() {
                 let id = PoEntryId::new(*index);
                 let entry = value
                     .document
@@ -30,7 +31,7 @@ impl Catalogue {
                 if entry.is_header() || entry.is_obsolete() {
                     return Err("Invalid recovered PO entry".into());
                 }
-                value.update(id, draft.clone());
+                value.update(id, draft.as_ref().clone());
             }
         }
         value.recovery = Some(store);
@@ -39,12 +40,13 @@ impl Catalogue {
     fn recovery_snapshot(&self) -> Option<SnapshotData> {
         self.dirty().then(|| SnapshotData {
             version: 1,
-            source: self.document.source().to_owned(),
-            drafts: self
-                .drafts
-                .iter()
-                .map(|(id, d)| (id.index(), d.clone()))
-                .collect(),
+            source: self.document.source_snapshot(),
+            drafts: Arc::new(
+                self.drafts
+                    .iter()
+                    .map(|(id, d)| (id.index(), d.clone()))
+                    .collect(),
+            ),
         })
     }
     pub(super) fn queue_recovery(&mut self) {
@@ -72,3 +74,6 @@ impl Catalogue {
         self.flush_recovery()
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -23,20 +23,18 @@ impl TranslationStatus {
         }
     }
     pub fn for_entry(catalogue: &Catalogue, id: PoEntryId) -> Self {
-        let Some(draft) = catalogue.draft(id) else {
+        let Some(entry) = catalogue.document.entry(id) else {
             return Self::Untranslated;
         };
-        if draft.forms.iter().any(|text| text.trim().is_empty()) {
-            Self::Untranslated
-        } else if draft.reviewed && catalogue.changed(id) {
-            Self::ReviewPending
-        } else if draft.reviewed {
-            Self::Reviewed
-        } else if catalogue
-            .document
-            .entry(id)
-            .is_some_and(|entry| !entry.previous().is_empty())
+        if (!entry.is_plural() && entry.translation().is_none() && !catalogue.changed(id))
+            || catalogue.forms(id).any(|text| text.trim().is_empty())
         {
+            Self::Untranslated
+        } else if catalogue.reviewed(id) && catalogue.changed(id) {
+            Self::ReviewPending
+        } else if catalogue.reviewed(id) {
+            Self::Reviewed
+        } else if !entry.previous().is_empty() {
             Self::SourceChanged
         } else {
             Self::NeedsReview

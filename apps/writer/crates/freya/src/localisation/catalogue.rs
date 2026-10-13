@@ -1,14 +1,16 @@
 //! File-backed PO editing. Drafts never become a parallel translation database.
 mod preview;
 mod recovery;
+mod save;
 use super::messages::{MsgId, text as wording};
-use recite_core::po::{PoDocument, PoDocumentFingerprint, PoEdit, PoEntryId};
+use recite_core::po::{PoDocument, PoDocumentFingerprint, PoEntryId};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub(super) struct Draft {
     pub forms: Vec<String>,
     pub reviewed: bool,
@@ -24,8 +26,8 @@ pub(crate) struct Catalogue {
     pub document: PoDocument,
     baseline: PoDocumentFingerprint,
     // Retained by trial runs; replacement also invalidates snapshots after reload.
-    revision: std::sync::Arc<()>,
-    drafts: BTreeMap<PoEntryId, Draft>,
+    revision: Arc<()>,
+    drafts: BTreeMap<PoEntryId, Arc<Draft>>,
     recovery: Option<crate::recovery::SnapshotStore<recovery::SnapshotData>>,
     recovery_failure: Option<String>,
     anchors: BTreeMap<String, Vec<PoEntryId>>,
@@ -47,7 +49,7 @@ impl Catalogue {
             }
         }
         Self {
-            revision: std::sync::Arc::new(()),
+            revision: Arc::new(()),
             recovery: None,
             recovery_failure: None,
             anchors,
@@ -56,6 +58,9 @@ impl Catalogue {
             document,
             drafts: BTreeMap::new(),
         }
+    }
+    pub(super) fn saved_source(&self) -> Arc<String> {
+        self.document.source_snapshot()
     }
     pub fn dirty(&self) -> bool {
         !self.drafts.is_empty()
@@ -71,7 +76,39 @@ impl Catalogue {
         matches.next().is_none().then_some(first.id())
     }
     pub(super) fn draft(&self, id: PoEntryId) -> Option<Draft> {
-        self.drafts.get(&id).cloned().or_else(|| self.saved(id))
+        self.drafts
+            .get(&id)
+            .map(|draft| draft.as_ref().clone())
+            .or_else(|| self.saved(id))
+    }
+    pub(super) fn forms(&self, id: PoEntryId) -> impl Iterator<Item = &str> {
+        let draft = self.drafts.get(&id);
+        draft
+            .into_iter()
+            .flat_map(|d| d.forms.iter().map(String::as_str))
+            .chain(
+                self.document
+                    .entry(id)
+                    .filter(|_| draft.is_none())
+                    .into_iter()
+                    .flat_map(|entry| {
+                        entry
+                            .translation()
+                            .into_iter()
+                            .chain(entry.plural_translations().iter().map(|arm| arm.text()))
+                    }),
+            )
+    }
+    pub(super) fn reviewed(&self, id: PoEntryId) -> bool {
+        self.drafts.get(&id).map_or_else(
+            || {
+                self.document.entry(id).is_some_and(|entry| {
+                    !entry.flags().iter().any(|flag| flag == "fuzzy")
+                        && self.forms(id).all(|text| !text.trim().is_empty())
+                })
+            },
+            |draft| draft.reviewed,
+        )
     }
     fn saved(&self, id: PoEntryId) -> Option<Draft> {
         let entry = self.document.entry(id)?;
@@ -103,78 +140,10 @@ impl Catalogue {
         if self.saved(id).as_ref() == Some(&draft) {
             self.drafts.remove(&id);
         } else {
-            self.drafts.insert(id, draft);
+            self.drafts.insert(id, Arc::new(draft));
         }
-        self.revision = std::sync::Arc::new(());
+        self.revision = Arc::new(());
         self.queue_recovery();
-    }
-    pub fn save(&mut self, id: PoEntryId) -> Result<(), String> {
-        self.save_entries(&[id])
-    }
-    pub(super) fn save_all(&mut self) -> Result<(), String> {
-        let ids: Vec<_> = self.drafts.keys().copied().collect();
-        self.save_entries(&ids)
-    }
-    fn save_entries(&mut self, ids: &[PoEntryId]) -> Result<(), String> {
-        if !ids.iter().any(|id| self.changed(*id)) {
-            return Ok(());
-        }
-        let mut candidate = self.document.clone();
-        for &id in ids {
-            if let Some(draft) = self.drafts.get(&id) {
-                self.apply_draft(&mut candidate, id, draft)?;
-            }
-        }
-        crate::project::read_regular(&self.path).map_err(|e| e.to_string())?;
-        let fingerprint = candidate
-            .write_atomically(&self.path, &self.baseline)
-            .map_err(|e| e.to_string())?;
-        self.revision = std::sync::Arc::new(());
-        self.document = candidate;
-        self.baseline = fingerprint;
-        for id in ids {
-            self.drafts.remove(id);
-        }
-        self.flush_recovery()
-    }
-    fn apply_draft(
-        &self,
-        candidate: &mut PoDocument,
-        id: PoEntryId,
-        draft: &Draft,
-    ) -> Result<(), String> {
-        candidate.set_fuzzy(id, true).map_err(|e| e.to_string())?;
-        let entry = candidate
-            .entry(id)
-            .ok_or_else(|| wording(MsgId::WriterNoEntry))?;
-        if entry.is_plural() {
-            let count = self
-                .plural_rule()
-                .and_then(|rule| recite_core::po::validate_plural_rule(rule).ok())
-                .ok_or_else(|| wording(MsgId::WriterEntryPluralInvalid))?;
-            if draft.forms.len() != count {
-                return Err(wording(MsgId::WriterEntryPluralInvalid));
-            }
-            for (index, value) in draft.forms.iter().enumerate() {
-                candidate
-                    .apply_edit(PoEdit::plural_translation(id, index, value))
-                    .map_err(|e| e.to_string())?;
-            }
-        } else {
-            let [value] = draft.forms.as_slice() else {
-                return Err(wording(MsgId::WriterNoEntry));
-            };
-            candidate
-                .apply_edit(PoEdit::translation(id, value))
-                .map_err(|e| e.to_string())?;
-        }
-        if draft.reviewed {
-            if draft.forms.iter().any(|text| text.trim().is_empty()) {
-                return Err(wording(MsgId::WriterEmptyReview));
-            }
-            candidate.set_fuzzy(id, false).map_err(|e| e.to_string())?;
-        }
-        Ok(())
     }
     pub fn reload(&mut self) -> Result<(), String> {
         if self.dirty() {
@@ -236,9 +205,9 @@ impl Catalogue {
             {
                 return Err(wording(MsgId::WriterExternalStructureChanged));
             }
-            let mut chosen = draft.clone();
+            let mut chosen = draft.as_ref().clone();
             chosen.reviewed = false;
-            next.drafts.insert(target, chosen);
+            next.drafts.insert(target, Arc::new(chosen));
         }
         self.adopt(next)
     }
@@ -268,7 +237,7 @@ impl Catalogue {
     }
     pub fn discard(&mut self, id: PoEntryId) {
         self.drafts.remove(&id);
-        self.revision = std::sync::Arc::new(());
+        self.revision = Arc::new(());
         self.queue_recovery();
     }
 }
