@@ -26,7 +26,7 @@ fn lower_region(source: &SourceRegion<'_>, path: &str) -> LoweredSourceFile {
     if cfg!(test) {
         PARSED_REGIONS.with(|count| count.set(count.get() + 1));
     }
-    source.parse(path).lower_source_file()
+    source.lower_source_file(path)
 }
 
 #[derive(Clone, Debug, PartialEq)]

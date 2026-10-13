@@ -1,12 +1,13 @@
 use recite_core::{Diagnostic, SourceRecovery};
-use rowan::{GreenNode, GreenNodeBuilder};
 
-use crate::body::{BodyBoundary, BodyCursor, BodyStep};
-use crate::diagnostics::expected_statement_or_prose;
+mod diagnostics;
+use rowan::{GreenNode, GreenNodeBuilder};
+use std::sync::OnceLock;
+
 use crate::layout::{ClassifiedLine, classify_line};
-use crate::lower::{LoweredSourceFile, lower_source_file, mark_all};
+use crate::lower::{LoweredSourceFile, lower_source_file as lower_ast};
 use crate::markers::StatementMarker;
-use crate::source::{LogicalLine, LogicalLines, span_for_line};
+use crate::source::{LogicalLine, LogicalLines};
 use crate::syntax::{ReciteSyntaxKind, ReciteSyntaxNode};
 
 /// Lossless parse output plus stable syntax diagnostics.
@@ -14,7 +15,7 @@ use crate::syntax::{ReciteSyntaxKind, ReciteSyntaxNode};
 pub struct Parse {
     path: String,
     source: String,
-    green: GreenNode,
+    green: OnceLock<GreenNode>,
     diagnostics: Vec<Diagnostic>,
     recovery: SourceRecovery,
     first_line: u32,
@@ -23,7 +24,16 @@ pub struct Parse {
 impl Parse {
     #[must_use]
     pub fn syntax(&self) -> ReciteSyntaxNode {
-        ReciteSyntaxNode::new_root(self.green.clone())
+        let green = self.green.get_or_init(|| {
+            let mut builder = GreenNodeBuilder::new();
+            builder.start_node(ReciteSyntaxKind::Root.into());
+            for line in LogicalLines::starting_at(&self.source, self.first_line) {
+                parse_line(line, classify_line(line), &mut builder);
+            }
+            builder.finish_node();
+            builder.finish()
+        });
+        ReciteSyntaxNode::new_root(green.clone())
     }
 
     #[must_use]
@@ -37,7 +47,7 @@ impl Parse {
     /// reported as parser-boundary diagnostics until their lowering slices land.
     #[must_use]
     pub fn lower_source_file(&self) -> LoweredSourceFile {
-        lower_source_file(
+        lower_ast(
             &self.path,
             &self.source,
             &self.diagnostics,
@@ -52,29 +62,29 @@ pub fn parse(path: impl Into<String>, source: impl Into<String>) -> Parse {
     parse_region(path.into(), source.into(), 1)
 }
 
-pub(crate) fn parse_region(path: String, source: String, first_line: u32) -> Parse {
-    let mut builder = GreenNodeBuilder::new();
-    let mut diagnostics = Vec::new();
-    let mut recovery = SourceRecovery::complete();
-    let lines = LogicalLines::starting_at(&source, first_line).collect::<Vec<_>>();
+/// Lower borrowed source with the same syntax diagnostics and recovery as [`parse`].
+/// Use [`parse`] when a caller also needs a lossless syntax tree.
+#[must_use]
+pub fn lower_source_file(path: &str, source: &str) -> LoweredSourceFile {
+    lower_region(path, source, 1)
+}
 
-    builder.start_node(ReciteSyntaxKind::Root.into());
-    for logical_line in lines.iter().copied() {
-        parse_line(
-            &path,
-            logical_line,
-            &mut builder,
-            &mut diagnostics,
-            &mut recovery,
-        );
-    }
-    builder.finish_node();
-    validate_body_indentation(&path, &lines, &mut diagnostics, &mut recovery);
+pub(crate) fn lower_region(path: &str, source: &str, first_line: u32) -> LoweredSourceFile {
+    let (diagnostics, recovery) = {
+        let lines = LogicalLines::starting_at(source, first_line).collect::<Vec<_>>();
+        diagnostics::scan(path, &lines)
+    };
+    lower_ast(path, source, &diagnostics, recovery, first_line)
+}
+
+pub(crate) fn parse_region(path: String, source: String, first_line: u32) -> Parse {
+    let lines = LogicalLines::starting_at(&source, first_line).collect::<Vec<_>>();
+    let (diagnostics, recovery) = diagnostics::scan(&path, &lines);
 
     Parse {
         path,
         source,
-        green: builder.finish(),
+        green: OnceLock::new(),
         first_line,
         diagnostics,
         recovery,
@@ -82,16 +92,12 @@ pub(crate) fn parse_region(path: String, source: String, first_line: u32) -> Par
 }
 
 fn parse_line(
-    path: &str,
     line: LogicalLine<'_>,
+    classification: ClassifiedLine,
     builder: &mut GreenNodeBuilder<'_>,
-    diagnostics: &mut Vec<Diagnostic>,
-    recovery: &mut SourceRecovery,
 ) {
-    let indent_len = line.indent_len();
     let indent = line.indentation();
     let trimmed = line.trimmed_content();
-    let classification = classify_line(line);
     let line_kind = classification.syntax_kind();
 
     builder.start_node(line_kind.into());
@@ -123,61 +129,11 @@ fn parse_line(
         ClassifiedLine::Blank | ClassifiedLine::Prose => {
             push_token(builder, ReciteSyntaxKind::Text, trimmed);
         }
-        ClassifiedLine::Error => {
-            mark_all(recovery);
-            push_token(builder, ReciteSyntaxKind::Text, trimmed);
-            if !trimmed.is_empty() {
-                diagnostics.push(expected_statement_or_prose(span_for_line(
-                    path,
-                    line.number,
-                    indent_len + 1,
-                )));
-            }
-        }
+        ClassifiedLine::Error => push_token(builder, ReciteSyntaxKind::Text, trimmed),
     }
 
     push_token(builder, ReciteSyntaxKind::Newline, line.newline);
     builder.finish_node();
-}
-
-fn validate_body_indentation(
-    path: &str,
-    lines: &[LogicalLine<'_>],
-    diagnostics: &mut Vec<Diagnostic>,
-    recovery: &mut SourceRecovery,
-) {
-    for (index, line) in lines.iter().copied().enumerate() {
-        if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Line) {
-            continue;
-        }
-
-        validate_line_body_indentation(path, lines, index, diagnostics, recovery);
-    }
-}
-
-fn validate_line_body_indentation(
-    path: &str,
-    lines: &[LogicalLine<'_>],
-    header_index: usize,
-    diagnostics: &mut Vec<Diagnostic>,
-    recovery: &mut SourceRecovery,
-) {
-    let mut cursor = BodyCursor::new(lines, header_index, BodyBoundary::HeaderIndent);
-
-    while cursor.index() < lines.len() {
-        let line = lines[cursor.index()];
-        match cursor.step(path, line, true, diagnostics) {
-            BodyStep::Content { .. } => {
-                if matches!(classify_line(line), ClassifiedLine::Statement(_)) {
-                    break;
-                }
-                cursor.advance();
-            }
-            BodyStep::Boundary => break,
-            BodyStep::Blank => {}
-            BodyStep::MixedIndent => mark_all(recovery),
-        }
-    }
 }
 
 fn parse_prefixed_line(builder: &mut GreenNodeBuilder<'_>, trimmed: &str, marker: StatementMarker) {
@@ -234,3 +190,6 @@ fn push_token(builder: &mut GreenNodeBuilder<'_>, kind: ReciteSyntaxKind, text: 
         builder.token(kind.into(), text);
     }
 }
+
+#[cfg(test)]
+mod tests;

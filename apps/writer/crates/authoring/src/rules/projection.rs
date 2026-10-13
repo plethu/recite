@@ -7,7 +7,7 @@ use recite_core::{
 
 impl Document {
     pub fn reply_rules(&self, id: &str) -> Result<ReplyRules, EditError> {
-        let parsed = recite_parser::parse(self.key().as_str(), self.source()).lower_source_file();
+        let parsed = recite_parser::lower_source_file(self.key().as_str(), self.source());
         if !parsed.diagnostics.is_empty() {
             return Err(EditError::SourceRequired("repair the syntax diagnostics"));
         }

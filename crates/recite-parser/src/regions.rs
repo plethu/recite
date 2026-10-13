@@ -37,6 +37,12 @@ impl SourceRegion<'_> {
     pub fn parse(&self, path: impl Into<String>) -> Parse {
         parse_region(path.into(), self.text.into(), self.first_line)
     }
+    /// Lowers this region without a lossless tree, preserving file-relative
+    /// diagnostics, recovery and spans just like [`Self::parse`].
+    #[must_use]
+    pub fn lower_source_file(&self, path: &str) -> crate::LoweredSourceFile {
+        crate::parser::lower_region(path, self.text, self.first_line)
+    }
 }
 
 /// Partitions source at grammar-safe top-level block boundaries.
