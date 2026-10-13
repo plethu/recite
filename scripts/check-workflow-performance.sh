@@ -45,6 +45,11 @@ control="$output/control-source"
 mkdir -p "$control"
 trap 'rm -rf "$control"' EXIT
 git archive "$base" | tar -x -C "$control"
+# Fetch both locked graphs before the overlay needs offline resolution. A clean
+# runner may lack dependencies unused by the harness helper binary.
+cp "$control/Cargo.lock" "$evidence/control-original-Cargo.lock"
+cargo fetch --locked --manifest-path "$control/Cargo.toml"
+cargo fetch --locked --manifest-path "$repo_root/Cargo.toml"
 harness=(tools/recite-perf crates/recite-benchmarks fixtures
   crates/recite-lsp/src/bench_support/driver.rs
   crates/recite-compiler/src/bench_support.rs)
@@ -73,7 +78,6 @@ cargo build --locked --release -p recite-perf
 checker="${CARGO_TARGET_DIR:-$repo_root/target}/release/recite-perf"
 "$checker" prepare "$repo_root" "$control"
 # Preserve the base lock; resolve only the current harness's additions offline.
-cp "$control/Cargo.lock" "$evidence/control-original-Cargo.lock"
 CARGO_TARGET_DIR="$build_root/control-target" cargo metadata --offline --manifest-path "$control/Cargo.toml" --format-version 1 >"$evidence/control-metadata.json"
 cp "$control/Cargo.lock" "$evidence/control-Cargo.lock"
 cp "$repo_root/Cargo.lock" "$evidence/candidate-Cargo.lock"

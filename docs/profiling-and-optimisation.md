@@ -85,10 +85,10 @@ Install Valgrind with the host package manager and run `just perf regression-set
 [Gungraun](https://github.com/gungraun/gungraun) runner. The private `tools/recite-perf` Rust crate
 uses upstream measurement, baselines, limits and typed summaries. The shell recipe builds the base
 and candidate before measurement and applies the current harness and fixtures to both. It preserves
-the original and resolved control locks; dependency resolution for harness additions runs offline.
-Preparation and receiver/result disposal are excluded. DHAT filters allocation stacks to the
-operation; its peak counter is operation-attributed bytes live at the whole-process heap peak, not
-an isolated operation peak or process RSS.
+the original and resolved control locks; dependency resolution for harness additions runs offline
+after both locked dependency sets are fetched. Preparation and receiver/result disposal are
+excluded. DHAT filters allocation stacks to the operation; its peak counter is operation-attributed
+bytes live at the whole-process heap peak, not an isolated operation peak or process RSS.
 
 The three runtime step cases each process 64 independent prepared sessions. Their session clones and
 output buffers are prepared outside counters; batching dilutes one-off allocator housekeeping.
