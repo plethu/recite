@@ -91,6 +91,42 @@ impl MessagepackCompileReport {
     }
 }
 
+/// Compiled model after complete source and optional schema validation.
+///
+/// No asset bytes, inspection JSON or canonical fingerprint are produced.
+/// Encode the model with the core codec to validate its compiled payload and
+/// produce canonical runtime bytes. Content diagnostics prevent output.
+#[non_exhaustive]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ModelCompileReport {
+    pub diagnostics: Vec<Diagnostic>,
+    pub dialogue: Option<CompiledDialogue>,
+}
+
+impl ModelCompileReport {
+    #[must_use]
+    pub fn is_ok(&self) -> bool {
+        self.diagnostics.is_empty() && self.dialogue.is_some()
+    }
+}
+
+/// Compile a model without encoding, using complete project validation.
+///
+/// Sources, diagnostics and table order match [`compile_inputs`] and
+/// [`compile_inputs_with_schema`]. Canonical compiled-payload validation and
+/// fingerprinting remain the encoder's responsibility.
+pub fn compile_inputs_to_model(
+    inputs: impl IntoIterator<Item = CompileInput>,
+    options: CompileOptions,
+    schema: Option<&ProjectSchema>,
+) -> Result<ModelCompileReport, CompileError> {
+    let report = compile_inputs_with_output(inputs, options, schema, Ok)?;
+    Ok(ModelCompileReport {
+        diagnostics: report.diagnostics,
+        dialogue: report.output,
+    })
+}
+
 /// Runtime-facing compiled asset plus deterministic inspection output.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompiledAssetOutput {

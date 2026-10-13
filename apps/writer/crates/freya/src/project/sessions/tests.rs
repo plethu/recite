@@ -1,5 +1,7 @@
 use super::*;
+use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::Document;
+use serde_json::{Value, json};
 
 fn two_scenes()
 -> Result<(tempfile::TempDir, ProjectFiles, Workbench, PathBuf), Box<dyn std::error::Error>> {
@@ -352,5 +354,108 @@ fn extraction_uses_retained_edits_and_refreshes_clean_scenes()
     current.set_draft("Unapplied".into());
     files.switch(&mut current, &b, |_| Ok(()))?;
     assert!(extract(&files, &current).is_err());
+    Ok(())
+}
+
+fn measure<T>(samples: &mut Vec<Value>, name: &str, operation: impl FnOnce() -> T) -> T {
+    let start = WallTime.start();
+    let value = operation();
+    samples.push(json!({"operation":name,"milliseconds":WallTime.end(start).as_secs_f64()*1000.}));
+    value
+}
+
+fn resources() -> Value {
+    let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
+    let mut result = serde_json::Map::new();
+    for line in status.lines() {
+        if let Some((key, value)) = line.split_once(':')
+            && matches!(key, "VmRSS" | "VmHWM" | "Threads")
+        {
+            result.insert(key.into(), json!(value.trim()));
+        }
+    }
+    result.into()
+}
+
+#[test]
+#[ignore = "explicit retained-session timing and memory workload"]
+fn retained_project_sessions_preserve_edits_and_release_closed_owners()
+-> Result<(), Box<dyn std::error::Error>> {
+    let size = |key: &str, default: usize| -> Result<usize, Box<dyn std::error::Error>> {
+        Ok(std::env::var(key)
+            .ok()
+            .map(|v| v.parse())
+            .transpose()?
+            .unwrap_or(default))
+    };
+    let passages = size("RECITE_BENCH_PASSAGES", 10_000)?;
+    let visits = size("RECITE_BENCH_VISITS", 20)?;
+    let inputs = recite_writer_model::workload::project(passages, 500)?;
+    assert!(visits > 1 && visits <= inputs.len());
+    let dir = tempfile::tempdir()?;
+    std::fs::write(
+        dir.path().join("recite.project.toml"),
+        "format_version = 1\n",
+    )?;
+    for document in &inputs {
+        std::fs::write(dir.path().join(document.key().as_str()), document.text())?;
+    }
+    let mut samples = Vec::new();
+    let initial = resources();
+    let mut files = measure(&mut samples, "discovery_and_index", || {
+        ProjectFiles::open(dir.path())
+    })?;
+    let mut current = measure(&mut samples, "initial_workbench", || files.workbench())?;
+    assert!(current.document().diagnostics().is_empty());
+    let opened = resources();
+    let paths = files.paths[..visits].to_vec();
+    for (index, path) in paths.iter().enumerate() {
+        measure(&mut samples, "first_visit", || {
+            files.switch(&mut current, path, |_| Ok(()))
+        })?;
+        current.set_draft(format!("{} Visit {index}.", current.draft()));
+        measure(&mut samples, "apply", || current.apply())?;
+    }
+    let visited = resources();
+    let history_bytes = current.document().history_bytes()
+        + files
+            .retained
+            .values()
+            .map(|session| session.model.document().history_bytes())
+            .sum::<usize>();
+    for (index, path) in paths.iter().enumerate() {
+        measure(&mut samples, "revisit", || {
+            files.switch(&mut current, path, |_| Ok(()))
+        })?;
+        assert!(current.draft().ends_with(&format!("Visit {index}.")));
+        measure(
+            &mut samples,
+            "undo_redo",
+            || -> Result<(), recite_writer_model::WorkbenchError> {
+                current.undo()?;
+                current.redo()?;
+                Ok(())
+            },
+        )?;
+        assert!(current.draft().ends_with(&format!("Visit {index}.")));
+    }
+    let revisited = resources();
+    measure(&mut samples, "save_all", || files.save_all(&mut current))?;
+    let active = files.current.clone();
+    for path in paths.iter().filter(|path| *path != &active) {
+        measure(&mut samples, "close", || {
+            files.close_document(&mut current, path)
+        })?;
+    }
+    assert!(files.retained.is_empty());
+    assert!(files.can_leave(&current));
+    let closed = resources();
+    println!(
+        "{}",
+        json!({"passages":passages,"documents":inputs.len(),"visits":visits,
+        "source_bytes":inputs.iter().map(|d| d.text().len()).sum::<usize>(),"history_bytes":history_bytes,
+        "resources":{"initial":initial,"opened":opened,"visited":visited,"revisited":revisited,"closed":closed},
+        "samples":samples,"host":std::env::consts::OS,"profile":if cfg!(debug_assertions) { "test" } else { "release" },"native_frame_pacing":false})
+    );
     Ok(())
 }

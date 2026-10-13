@@ -1,6 +1,6 @@
 use recite_compiler::authoring::SavedDocument;
 use recite_core::DocumentKey;
-use recite_writer_model::{Document, SearchIndex};
+use recite_writer_model::{Document, RecoveredDraft, SearchIndex, View, Workbench};
 use std::sync::Arc;
 
 #[test]
@@ -69,5 +69,85 @@ fn search_lowercasing_preserves_unicode_and_source_order() -> Result<(), Box<dyn
     assert_eq!(index.search("İSTANBUL café", 10).0, 1);
     assert_eq!(index.search("istanbul", 10).0, 0);
     assert_eq!(index.search("STRASSE", 10).0, 0);
+    Ok(())
+}
+
+#[test]
+fn shared_search_results_preserve_order_counts_and_their_saved_snapshot()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = ":: start default\n> first@00000000000000000001 speaker=mara\n  Café courier.\n> second@00000000000000000002\n  Another café.\n-> END\n";
+    let documents = ["a.recite", "b.recite"]
+        .into_iter()
+        .map(|key| Ok(SavedDocument::new(DocumentKey::new(key)?, source)))
+        .collect::<Result<Vec<_>, recite_core::DocumentKeyError>>()?;
+    let mut index = SearchIndex::build(&documents);
+    for query in ["CAFÉ café", "café mara", "café missing", "..."] {
+        for limit in [0, 1, 3, 100] {
+            let owned = index.search(query, limit);
+            let shared = index.search_results(query, limit);
+            assert_eq!(shared.total(), owned.0);
+            assert_eq!(shared.len(), owned.1.len());
+            for (position, hit) in owned.1.iter().enumerate() {
+                assert_eq!(shared.get(position), Some(hit));
+            }
+            assert!(shared.get(shared.len()).is_none());
+        }
+    }
+    let snapshot = index.search_results("café", 3);
+    let cloned = snapshot.clone();
+    assert!(snapshot == cloned);
+    assert!(std::ptr::eq(
+        snapshot.get(0).ok_or("first search result")?,
+        cloned.get(0).ok_or("cloned search result")?
+    ));
+    index.replace_document(SavedDocument::new(
+        documents[0].key().clone(),
+        source.replace("café", "tea").replace("Café", "Tea"),
+    ));
+    assert_eq!(index.search_results("café", 100).total(), 2);
+    drop(index);
+    assert_eq!(snapshot.total(), 4);
+    assert_eq!(
+        snapshot.get(0).ok_or("first search result")?.text,
+        "Café courier."
+    );
+    assert_eq!(
+        snapshot.get(2).ok_or("third search result")?.document,
+        "b.recite"
+    );
+    Ok(())
+}
+
+#[test]
+fn recovery_shares_immutable_drafts_and_preserves_the_existing_json_shape()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut workbench = Workbench::new(recite_writer_model::FIXTURE)?;
+    workbench.select(View::Source)?;
+    let draft = "An incomplete café draft.\n".repeat(10_000);
+    let pointer = draft.as_ptr();
+    workbench.set_draft(draft.clone());
+    let expected = serde_json::json!({
+        "source": recite_writer_model::FIXTURE,
+        "view": "Source",
+        "draft": draft,
+    });
+    let legacy: RecoveredDraft = serde_json::from_value(expected.clone())?;
+    assert_eq!(serde_json::to_value(workbench.recovery())?, expected);
+    assert_eq!(legacy, workbench.recovery());
+    workbench.set_draft(draft);
+    assert_eq!(workbench.draft().as_ptr(), pointer);
+    let captured = workbench.recovery();
+    workbench.set_draft("A later draft".into());
+    workbench.discard();
+    captured.restore(&mut workbench)?;
+    assert_eq!(workbench.draft().as_ptr(), pointer);
+    assert!(workbench.has_draft());
+    assert_eq!(serde_json::to_value(&captured)?, expected);
+    workbench.discard();
+    workbench.set_draft(workbench.draft().to_owned());
+    assert!(
+        !workbench.has_draft(),
+        "equal independently allocated drafts stay clean"
+    );
     Ok(())
 }

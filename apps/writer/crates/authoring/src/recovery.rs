@@ -5,7 +5,7 @@ use crate::{View, Workbench, WorkbenchError};
 pub struct RecoveredDraft {
     source: std::sync::Arc<str>,
     view: View,
-    draft: String,
+    draft: std::sync::Arc<String>,
 }
 
 impl RecoveredDraft {
@@ -19,7 +19,7 @@ impl RecoveredDraft {
         }
         workbench.discard();
         workbench.select(self.view.clone())?;
-        workbench.set_draft(self.draft.clone());
+        workbench.set_draft_snapshot(self.draft.clone());
         Ok(())
     }
 }
@@ -29,7 +29,7 @@ impl Workbench {
         RecoveredDraft {
             source: self.document().source_snapshot(),
             view: self.view().clone(),
-            draft: self.draft().to_owned(),
+            draft: self.draft_snapshot(),
         }
     }
 }

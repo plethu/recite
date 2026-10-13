@@ -1,6 +1,8 @@
 //! Source-ordered word index for project passage navigation; never executes dialogue.
+mod results;
 use recite_compiler::authoring::{Interrupted, SavedDocument, WorkControl};
 use recite_core::ast::Statement;
+pub use results::SearchResults;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -94,32 +96,37 @@ impl DocumentIndex {
         });
     }
     /// All query words must match. Results preserve document/source order.
-    pub fn search(&self, terms: &BTreeSet<String>, limit: usize) -> (usize, Vec<SearchHit>) {
+    fn search(&self, terms: &BTreeSet<String>, limit: usize, mut push: impl FnMut(usize)) -> usize {
         if terms.is_empty() {
-            return (0, Vec::new());
+            return 0;
         }
         let Some(mut postings) = terms
             .iter()
             .map(|word| self.words.get(word))
             .collect::<Option<Vec<_>>>()
         else {
-            return (0, Vec::new());
+            return 0;
         };
+        if postings.len() == 1 {
+            for &id in postings[0].iter().take(limit) {
+                push(id);
+            }
+            return postings[0].len();
+        }
         postings.sort_by_key(|items| items.len());
         let mut total = 0;
-        let mut hits = Vec::new();
         for &id in postings[0] {
             if postings[1..]
                 .iter()
                 .all(|items| items.binary_search(&id).is_ok())
             {
                 total += 1;
-                if hits.len() < limit {
-                    hits.push(self.hits[id].clone());
+                if total <= limit {
+                    push(id);
                 }
             }
         }
-        (total, hits)
+        total
     }
 }
 
@@ -185,13 +192,28 @@ impl SearchIndex {
         self.len() == 0
     }
     pub fn search(&self, query: &str, limit: usize) -> (usize, Vec<SearchHit>) {
+        self.search_with(query, limit, |document, id| document.hits[id].clone())
+    }
+    /// Immutable result handles retain their saved index shards, including across saves.
+    pub fn search_results(&self, query: &str, limit: usize) -> SearchResults {
+        let (total, hits) = self.search_with(query, limit, |document, id| results::SearchMatch {
+            document: document.clone(),
+            id,
+        });
+        SearchResults::new(total, hits)
+    }
+    fn search_with<T>(
+        &self,
+        query: &str,
+        limit: usize,
+        mut hit: impl FnMut(&std::sync::Arc<DocumentIndex>, usize) -> T,
+    ) -> (usize, Vec<T>) {
         let terms = words(query).collect();
         let mut count = 0;
         let mut hits = Vec::new();
         for (_, document) in &self.documents {
-            let (found, matches) = document.search(&terms, limit.saturating_sub(hits.len()));
-            count += found;
-            hits.extend(matches);
+            let remaining = limit.saturating_sub(hits.len());
+            count += document.search(&terms, remaining, |id| hits.push(hit(document, id)));
         }
         (count, hits)
     }

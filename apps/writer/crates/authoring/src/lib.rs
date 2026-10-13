@@ -29,7 +29,7 @@ mod history;
 mod projection_cache;
 
 mod search;
-pub use search::{SearchHit, SearchIndex};
+pub use search::{SearchHit, SearchIndex, SearchResults};
 
 #[cfg(feature = "benchmarks")]
 pub mod workload;

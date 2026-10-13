@@ -108,11 +108,15 @@ fn background_recovery_timing() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(&path, &source)?;
     let mut workbench = Workbench::new(&source)?;
     let baseline = workbench.document().source_snapshot();
+    workbench.select(recite_writer_model::View::Source)?;
     let mut store = RecoveryStore::open(&path)?;
+    let mut draft_ms = Vec::new();
     let mut queue_ms = Vec::new();
     for i in 0..100 {
         let start = WallTime.start();
-        workbench.set_draft(format!("An uncommitted draft {i}"));
+        workbench.set_draft(format!("{source}\nAn uncommitted café draft {i}"));
+        draft_ms.push(WallTime.end(start).as_secs_f64() * 1000.);
+        let start = WallTime.start();
         store.queue(Some(Recovery::new(baseline.clone(), workbench.recovery())))?;
         queue_ms.push(WallTime.end(start).as_secs_f64() * 1000.);
     }
@@ -124,8 +128,9 @@ fn background_recovery_timing() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(RecoveryStore::open(&path)?.snapshot(), Some(&latest));
     println!(
         "{}",
-        serde_json::json!({"passages":10_000, "source_bytes":source.len(), "drafts":100,
-        "queue_ms":queue_ms, "flush_ms":flush_ms, "reopened_latest":true, "profile":"test"})
+        serde_json::json!({"passages":10_000, "source_bytes":source.len(), "draft_bytes":workbench.draft().len(), "drafts":100,
+        "draft_ms":draft_ms, "queue_ms":queue_ms, "flush_ms":flush_ms, "reopened_latest":true,
+        "profile":if cfg!(debug_assertions) { "test" } else { "release" }})
     );
     Ok(())
 }
