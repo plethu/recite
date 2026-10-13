@@ -90,6 +90,13 @@ inspection JSON. Explicit MessagePack-only entry points perform the same complet
 validation and compilation, emitting identical runtime-facing bytes without producing the inspection
 form. Build and CLI consumers that need only the runtime asset may use that capability.
 
+The model-only entry point performs complete source/schema validation and deterministic compilation
+without encoding or fingerprinting. Canonical compiled-payload validation remains the encoder's
+responsibility. Saved-project builds compile their captured sources once, then move the compiled
+tables between fresh models with each target's header. Every target is independently validated and
+encoded by the canonical codec. Reuse ends with that build invocation; it does not cache across
+requests or change publication and cancellation authority.
+
 The [shared wire registry](../../crates/recite-core/src/compiled/wire.rs) coordinates field counts
 and numeric tags with the typed model, codecs, inspection projection, and focused fixtures. The
 accepted retention and migration policy is recorded in the

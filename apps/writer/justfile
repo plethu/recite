@@ -66,3 +66,11 @@ bench-ui beats="1000":
 # Measure background draft queue, durable flush, and reopen timings.
 bench-recovery:
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib recovery::tests::background_recovery_timing -- --ignored --nocapture
+
+# Measure retained file sessions, edit history, saves and closing without a window.
+bench-sessions passages="10000" visits="20":
+    RECITE_BENCH_PASSAGES="$1" RECITE_BENCH_VISITS="$2" cargo test --release --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib project::sessions::tests::retained_project_sessions_preserve_edits_and_release_closed_owners -- --ignored --nocapture --test-threads=1
+
+# Time geometry reconstruction for authored, linear and high-fan-out maps.
+bench-map:
+    cargo test --release --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib scene_map::layout::tests::map_geometry_reconstruction_timing -- --ignored --nocapture --test-threads=1

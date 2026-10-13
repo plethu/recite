@@ -3,11 +3,14 @@ use recite_compiler::{
         BuildCandidate, BuildCheck, BuildControl, BuildEngine, BuildFailure, BuildFailureReason,
         BuildInputKind, BuildRequest,
     },
-    compile::{CompileInput, CompileOptions},
+    compile::{CompileInput, CompileOptions, compile_inputs_to_model},
 };
 use recite_core::{
     Diagnostic,
-    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
+    compiled::{
+        CompiledAssetHeader, CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint,
+        SourceMapId, encode_compiled_dialogue_messagepack,
+    },
 };
 
 use super::request::ProjectBuildRequest;
@@ -59,44 +62,60 @@ impl BuildEngine for ProjectBuildEngine {
                 reason: BuildFailureReason::Host,
             });
         }
+        let Some(first) = self.targets.first() else {
+            return Ok(Vec::new());
+        };
+        if control.cancellation().is_some() {
+            return Ok(Vec::new());
+        }
         let schema = request
             .inputs()
             .iter()
             .find(|input| input.kind() == &BuildInputKind::Schema)
             .and_then(|input| input.schema_model());
-        let inputs = source_inputs(request);
+        let report = compile_inputs_to_model(
+            source_inputs(request),
+            compile_options(first.asset_id(), request.fingerprints().schema())?,
+            schema,
+        )
+        .map_err(|_| BuildFailure::Engine {
+            reason: BuildFailureReason::InvalidOutput,
+        })?;
+        let Some(dialogue) = report.dialogue else {
+            if !report.diagnostics.is_empty() {
+                return Err(BuildFailure::Diagnostics {
+                    diagnostics: report.diagnostics,
+                });
+            }
+            return Err(BuildFailure::Engine {
+                reason: BuildFailureReason::InvalidOutput,
+            });
+        };
+        let mut payload = dialogue.into_payload();
         let mut candidates = Vec::with_capacity(self.targets.len());
 
-        for target in &self.targets {
-            if control.cancellation().is_some() {
+        for (index, target) in self.targets.iter().enumerate() {
+            // Cancellation during compilation still completes the first candidate,
+            // matching the original boundary between whole-target operations.
+            if index != 0 && control.cancellation().is_some() {
                 break;
             }
             let options = compile_options(target.asset_id(), request.fingerprints().schema())?;
-            let report = match schema {
-                Some(schema) => {
-                    recite_compiler::compile::compile_inputs_to_messagepack_with_schema(
-                        inputs.clone(),
-                        options,
-                        schema,
-                    )
-                }
-                None => {
-                    recite_compiler::compile::compile_inputs_to_messagepack(inputs.clone(), options)
-                }
-            }
-            .map_err(|_| BuildFailure::Engine {
-                reason: BuildFailureReason::InvalidOutput,
-            })?;
-            let Some(messagepack) = report.messagepack else {
-                if !report.diagnostics.is_empty() {
-                    return Err(BuildFailure::Diagnostics {
-                        diagnostics: report.diagnostics,
-                    });
-                }
-                return Err(BuildFailure::Engine {
+            payload.header = CompiledAssetHeader::messagepack_v0(
+                options.compiler_version,
+                options.asset_id,
+                options.source_map_id,
+                options.schema_fingerprint,
+            );
+            // Moving the tables into a fresh model resets the fingerprint cache;
+            // every target still passes complete canonical payload validation.
+            let dialogue = CompiledDialogue::new(payload);
+            let messagepack = encode_compiled_dialogue_messagepack(&dialogue).map_err(|_| {
+                BuildFailure::Engine {
                     reason: BuildFailureReason::InvalidOutput,
-                });
-            };
+                }
+            })?;
+            payload = dialogue.into_payload();
             candidates.push(BuildCandidate::new(target.target().clone(), messagepack));
             if control.cancellation().is_some() {
                 break;

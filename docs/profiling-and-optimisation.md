@@ -63,14 +63,39 @@ allocations; use `memory_profile_report` or `id_memory_report` only for those qu
 
 ## Writer workloads
 
-The [Writer recipes](../apps/writer/justfile) expose project, headless UI and recovery workloads.
-The [project benchmark](../apps/writer/crates/authoring/benches/large_project.rs) owns corpus shape,
+The [Writer recipes](../apps/writer/justfile) expose project, headless UI, recovery and
+retained-session and map-geometry workloads. The
+[project benchmark](../apps/writer/crates/authoring/benches/large_project.rs) owns corpus shape,
 operations, reports and fixed-corpus allocation bounds. For example:
 
 ```sh
 mise exec -- just writer bench --passages 100000 --linked --output target/writer-linked.json
+mise exec -- just writer bench --passages 10000 --per-document 10000 --output target/writer-single-scene.json
+mise exec -- just writer bench-sessions 200000 100
+mise exec -- just writer bench-map
 mise exec -- just writer profile heap 10000 target/writer-heap
 ```
+
+Project measurements include selective, common single-word, common multiword and expanded-result
+search, plus whole-document Source draft capture and snapshot cloning. Search keeps exact counts and
+source order; result snapshots retain their saved shards across replacements. The fixed
+10,000-passage heap check bounds 100-hit searches at 20 KB and 10,000-hit expansion at 750 KB, and
+requires allocation-free result clones and Source recovery capture/clones. Existing index,
+projection, edit and peak-heap bounds remain in force. Applying Source drafts and serializing
+recovery still process the full text.
+
+The session workload runs discovery/indexing, first visits and edits, revisits with undo/redo,
+save-all and explicit closing. It checks preserved prose/history and released session owners and
+reports RSS, peak RSS and thread checkpoints where the host exposes them. RSS can retain allocator
+pages after closing; it is not a live-heap measurement. Recovery timing queues full-document Source
+drafts and verifies the latest durable snapshot after reopening. These workloads are headless and
+opt-in; recovery reports draft buffer preparation separately from snapshot queuing and durable
+flush. Limit build jobs and run measurements sequentially on a shared machine; record process
+resource limits and background load with the evidence.
+
+Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
+Topology is already memoized independently of camera and hover; this probe measures reconstruction
+after source or saved placement changes, not frame pacing.
 
 Kernel-open timing excludes filesystem discovery, indexing and painting. The
 [profile script](../scripts/profile-writer.sh) records builds/environment, refuses overwrite and

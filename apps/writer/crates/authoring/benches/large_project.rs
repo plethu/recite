@@ -1,6 +1,6 @@
 //! Run explicitly with --features benchmarks; emits timings and host memory evidence.
 use criterion::measurement::{Measurement, WallTime};
-use recite_writer_model::{Document, ProjectContext, SearchIndex, workload};
+use recite_writer_model::{Document, ProjectContext, SearchIndex, View, Workbench, workload};
 use serde_json::{Value, json};
 use std::hint::black_box;
 
@@ -84,6 +84,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let index = measure("index", &mut rows, || SearchIndex::build(&inputs));
     assert_eq!(index.len(), passages);
     for _ in 0..5 {
+        for (name, query, limit) in [
+            ("common_search", "courier", 100),
+            ("common_multiword_search", "courier mara", 100),
+            ("expanded_search", "courier", 10_000),
+        ] {
+            let hits = measure(name, &mut rows, || {
+                index.search_results(black_box(query), limit)
+            });
+            assert_eq!(hits.total(), passages);
+            assert_eq!(hits.len(), passages.min(limit));
+            measure("clone_search_results", &mut rows, || {
+                black_box(hits.clone())
+            });
+        }
+    }
+    for _ in 0..5 {
         let (count, _) = measure("search", &mut rows, || {
             index.search(black_box("mara beacon17"), 50)
         });
@@ -146,6 +162,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?;
         assert!(measure("id_undo", &mut rows, || document.undo())?);
     }
+    let history_bytes = document.history_bytes();
+    let mut workbench = Workbench::from_document(document)?;
+    workbench.select(View::Source)?;
+    workbench.set_draft(format!("{}\nRejected draft", workbench.draft()));
+    for _ in 0..100 {
+        let snapshot = measure("draft_snapshot", &mut rows, || workbench.recovery());
+        let queued = measure("clone_draft_snapshot", &mut rows, || snapshot.clone());
+        assert_eq!(queued, snapshot);
+    }
     let peak = std::fs::read_to_string("/proc/self/status")
         .ok()
         .and_then(|text| {
@@ -164,6 +189,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some("index") => Some(55_000_000),
                 Some("project_script") => Some(3_200_000),
                 Some("edit" | "undo" | "redo" | "multiline_edit" | "id_edit") => Some(4_000_000),
+                Some("common_search" | "common_multiword_search") => Some(20_000),
+                Some("expanded_search") => Some(750_000),
+                Some("clone_search_results" | "draft_snapshot" | "clone_draft_snapshot") => {
+                    dhat::assert!(row["allocations"].as_u64() == Some(0));
+                    Some(1)
+                }
                 _ => None,
             };
             if let Some(budget) = budget {
@@ -177,7 +208,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let report = json!({"os":std::env::consts::OS, "arch":std::env::consts::ARCH,
         "profile":"bench", "heap_instrumented":cfg!(feature = "heap-profile"), "shared_destination":linked, "passages":passages, "documents":inputs.len(), "source_bytes":bytes,
-        "diagnostic_count":diagnostic_count, "history_bytes":document.history_bytes(), "process_peak_rss":peak, "samples":rows});
+        "diagnostic_count":diagnostic_count, "history_bytes":history_bytes, "process_peak_rss":peak, "samples":rows});
     let text = serde_json::to_string_pretty(&report)?;
     if let Some(path) = argument("--output") {
         std::fs::write(path, &text)?;

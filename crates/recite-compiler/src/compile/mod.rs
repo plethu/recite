@@ -7,7 +7,7 @@ mod table;
 
 pub use api::{
     CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, MessagepackCompileReport,
-    compile_inputs, compile_inputs_to_messagepack, compile_inputs_to_messagepack_with_schema,
-    compile_inputs_with_schema,
+    ModelCompileReport, compile_inputs, compile_inputs_to_messagepack,
+    compile_inputs_to_messagepack_with_schema, compile_inputs_to_model, compile_inputs_with_schema,
 };
 pub use error::CompileError;

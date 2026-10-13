@@ -45,10 +45,11 @@ impl Component for ProjectSearch {
                 .read()
                 .0
                 .as_ref()
-                .map(|index| index.search(&query.read(), *limit.read()))
+                .map(|index| index.search_results(&query.read(), *limit.read()))
                 .unwrap_or_default()
         });
-        let (total, hits) = &*results.read();
+        let hits = &*results.read();
+        let total = hits.total();
         let mut content =
             rect()
                 .width(Size::fill())
@@ -63,9 +64,9 @@ impl Component for ProjectSearch {
                     vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
                     changed: EventHandler::new(move |()| limit.set(100)),
                     activate: EventHandler::new(move |index: usize| {
-                        let hit = results.peek().1.get(index).cloned();
-                        if let Some(hit) = hit {
-                            open_result(writer, files, &hit);
+                        let snapshot = results.peek().clone();
+                        if let Some(hit) = snapshot.get(index) {
+                            open_result(writer, files, hit);
                         }
                     }),
                 });
@@ -81,7 +82,8 @@ impl Component for ProjectSearch {
                         .child(result_row(
                             writer,
                             files,
-                            hits[item.index].clone(),
+                            hits.clone(),
+                            item.index,
                             *active == Some(item.index),
                         ))
                         .into_element()
@@ -104,7 +106,7 @@ impl Component for ProjectSearch {
                     crate::messages::MsgId::WriterGuiNoMatchingSavedPassagesTryFewerWords,
                 )));
             }
-            if hits.len() < *total {
+            if hits.len() < total {
                 content = content.child(
                     Button::new()
                         .on_press(move |_| {
@@ -124,9 +126,13 @@ impl Component for ProjectSearch {
 fn result_row(
     writer: Writer,
     files: State<Option<ProjectFiles>>,
-    hit: recite_writer_model::SearchHit,
+    results: recite_writer_model::SearchResults,
+    index: usize,
     active: bool,
 ) -> Element {
+    let Some(hit) = results.get(index) else {
+        return rect().into_element();
+    };
     let name = format!("{} · {} · {}", hit.document, hit.beat, hit.text);
     let caption = format!(
         "{} · {}",
@@ -139,7 +145,11 @@ fn result_row(
         .width(Size::fill())
         .toggle(active)
         .named(name)
-        .on_press(move |_| open_result(writer, files, &hit))
+        .on_press(move |_| {
+            if let Some(hit) = results.get(index) {
+                open_result(writer, files, hit);
+            }
+        })
         .child(
             rect()
                 .width(Size::fill())

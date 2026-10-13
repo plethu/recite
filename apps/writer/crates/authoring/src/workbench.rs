@@ -2,6 +2,7 @@ mod navigation;
 mod structure;
 use crate::{Document, EditError, PassageKind, Preview, PreviewError, PreviewPage};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum View {
@@ -34,8 +35,8 @@ impl From<PreviewError> for WorkbenchError {
 pub struct Workbench {
     document: Document,
     view: View,
-    draft: String,
-    loaded: String,
+    draft: Arc<String>,
+    loaded: Arc<String>,
     draft_revision: i64,
     preview: Option<Preview>,
     page: Option<PreviewPage>,
@@ -69,6 +70,7 @@ impl Workbench {
             },
         };
         let script_selection = first_block.map(|block| block.id.clone());
+        let draft = Arc::new(draft);
         Ok(Self {
             script_selection,
             document,
@@ -109,7 +111,14 @@ impl Workbench {
         &self.draft
     }
     pub fn set_draft(&mut self, draft: String) {
+        // Move the widget's buffer; snapshots share it without copying prose.
+        self.set_draft_snapshot(Arc::new(draft));
+    }
+    pub(crate) fn set_draft_snapshot(&mut self, draft: Arc<String>) {
         self.draft = draft;
+    }
+    pub(crate) fn draft_snapshot(&self) -> Arc<String> {
+        self.draft.clone()
     }
     pub fn has_draft(&self) -> bool {
         self.draft != self.loaded
@@ -119,7 +128,7 @@ impl Workbench {
             View::Block(_) => {}
             View::Source => self
                 .document
-                .replace_source(self.draft_revision, self.draft.clone())?,
+                .replace_source(self.draft_revision, self.draft.as_ref().clone())?,
             View::Passage(id) => {
                 self.document
                     .replace_text(self.draft_revision, id, &self.draft)?
@@ -260,8 +269,8 @@ impl Workbench {
         Ok(())
     }
     fn load(&mut self, text: String) {
-        self.draft = text.clone();
-        self.loaded = text;
+        self.draft = Arc::new(text);
+        self.loaded = self.draft.clone();
         self.draft_revision = self.document.revision();
     }
 }
