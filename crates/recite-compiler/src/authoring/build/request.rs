@@ -9,13 +9,14 @@ use super::identity::{
 use super::request_identity::BuildRequestIdentity;
 
 /// A complete canonical build request.
+/// Clones share the immutable input collection.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct BuildRequest {
     generation: BuildGeneration,
     snapshot_generation: SnapshotGeneration,
     policy: super::identity::BuildInputPolicy,
-    inputs: Vec<BuildInput>,
+    inputs: std::sync::Arc<Vec<BuildInput>>,
     fingerprints: BuildFingerprintSet,
     restart: RestartGuidance,
 }
@@ -64,11 +65,13 @@ impl BuildRequest {
                 .then(left.kind.cmp(&right.kind))
                 .then(left.authority.cmp(&right.authority))
         });
-        let mut effective = Vec::with_capacity(inputs.len());
+        let mut effective: Vec<BuildInput> = Vec::with_capacity(inputs.len());
         for input in inputs {
-            if let Some(previous) = effective.iter_mut().find(|previous: &&mut BuildInput| {
-                previous.key == input.key && previous.kind == input.kind
-            }) {
+            // Sorting makes equal key/kind pairs adjacent, including overlays.
+            if let Some(previous) = effective
+                .last_mut()
+                .filter(|previous| previous.key == input.key && previous.kind == input.kind)
+            {
                 if input.authority == BuildInputAuthority::Overlay
                     && previous.authority == BuildInputAuthority::Saved
                 {
@@ -95,7 +98,7 @@ impl BuildRequest {
             snapshot_generation,
             policy,
             fingerprints: default_fingerprints(&effective),
-            inputs: effective,
+            inputs: std::sync::Arc::new(effective),
             restart: RestartGuidance::NotApplicable,
         })
     }

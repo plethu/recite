@@ -148,7 +148,10 @@ fn validate_sources(
         None => AuthoringKernel::new(),
     };
     let saved = documents.iter().map(|document| {
-        recite_compiler::authoring::SavedDocument::new(document.key().clone(), document.text())
+        recite_compiler::authoring::SavedDocument::from_shared(
+            document.key().clone(),
+            std::sync::Arc::from(document.text()),
+        )
     });
     let request = AuthoringRequest::new(SnapshotGeneration::initial(), saved, std::iter::empty());
     if project_complete {

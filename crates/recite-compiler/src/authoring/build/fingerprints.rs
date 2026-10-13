@@ -42,10 +42,11 @@ impl BuildInputFingerprint {
 }
 
 /// Source, schema, and compiler values captured by one request.
+/// Clones share the canonical fingerprint entries.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct BuildFingerprintSet {
-    inputs: Vec<BuildInputFingerprint>,
+    inputs: std::sync::Arc<Vec<BuildInputFingerprint>>,
     schema: SchemaFingerprint,
     compiler_compatibility_version: u16,
 }
@@ -62,7 +63,7 @@ impl BuildFingerprintSet {
                 .then(left.authority.cmp(&right.authority))
         });
         Self {
-            inputs: entries,
+            inputs: std::sync::Arc::new(entries),
             schema: inputs
                 .iter()
                 .find_map(|input| {
