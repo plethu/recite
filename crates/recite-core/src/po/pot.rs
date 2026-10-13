@@ -1,4 +1,6 @@
-use super::escape::escape;
+use std::fmt::Write;
+
+use super::escape::push_escaped;
 
 /// Deterministic gettext POT extraction output.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,11 +27,7 @@ impl PotDocument {
             if let Some(reference) = &entry.reference {
                 output.push_str("#: ");
                 push_po_reference_text(&mut output, &reference.file);
-                output.push(':');
-                output.push_str(&reference.line.to_string());
-                output.push(':');
-                output.push_str(&reference.column.to_string());
-                output.push('\n');
+                let _ = writeln!(output, ":{}:{}", reference.line, reference.column);
             }
 
             output.push_str("msgctxt ");
@@ -74,7 +72,7 @@ pub struct PotReference {
 
 fn push_po_string(output: &mut String, value: &str) {
     output.push('"');
-    output.push_str(&escape(value));
+    push_escaped(output, value);
     output.push('"');
 }
 

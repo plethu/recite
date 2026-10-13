@@ -1,7 +1,7 @@
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
 use recite_compiler::authoring::{
     AuthoringQuery, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
-    CompletionSiteKind, QueryResult, SchemaSummary, SymbolIdentity, SymbolRole,
+    CompletionSiteKind, QueryResult, SchemaSummary,
 };
 use recite_core::DocumentKey;
 use recite_ui::{MsgId, UiCatalog};
@@ -54,25 +54,20 @@ fn extend_project_block_items(
     items: &mut Vec<CompletionItem>,
     block_detail: &str,
 ) -> Option<()> {
-    let result = snapshot.project_block_symbols();
-    let symbols = match result {
-        QueryResult::Ready(symbols) | QueryResult::Partial { value: symbols, .. } => symbols,
+    let result = snapshot.project_block_names();
+    let names = match result {
+        QueryResult::Ready(names) | QueryResult::Partial { value: names, .. } => names,
         QueryResult::NoMatch | QueryResult::Unavailable(_) | _ => return Some(()),
     };
-    items.reserve(symbols.len());
-    for symbol in symbols {
+    items.reserve(names.len());
+    for name in names {
         snapshot.checkpoint().ok()?;
-        let SymbolIdentity::Block(name) = symbol.identity() else {
-            continue;
-        };
-        if symbol.role() == SymbolRole::Definition {
-            items.push(CompletionItem {
-                label: name.as_str().to_owned(),
-                kind: Some(CompletionItemKind::REFERENCE),
-                detail: Some(block_detail.to_owned()),
-                ..CompletionItem::default()
-            });
-        }
+        items.push(CompletionItem {
+            label: name.as_str().to_owned(),
+            kind: Some(CompletionItemKind::REFERENCE),
+            detail: Some(block_detail.to_owned()),
+            ..CompletionItem::default()
+        });
     }
     Some(())
 }

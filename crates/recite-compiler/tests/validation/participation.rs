@@ -328,9 +328,29 @@ fn incomplete_project_keeps_same_file_id_duplicates_but_not_cross_file_duplicate
         ProjectCompleteness::Incomplete,
     );
     assert_eq!(codes(&local_report), ["RECITE_ID003", "RECITE_ID004"]);
+    assert_eq!(
+        local_report.diagnostics[0].related_presentations[0]
+            .span
+            .start
+            .line(),
+        2
+    );
+    assert_eq!(
+        local_report.diagnostics[1].related_presentations[0]
+            .span
+            .start
+            .line(),
+        6
+    );
 
     let complete_report = validate_inputs(&incomplete, None, ProjectCompleteness::Complete);
     assert_eq!(codes(&complete_report), ["RECITE_ID003", "RECITE_ID004"]);
+    for diagnostic in &complete_report.diagnostics {
+        assert_eq!(
+            diagnostic.related_presentations[0].span.file,
+            "dialogue/first.recite"
+        );
+    }
 }
 
 #[test]

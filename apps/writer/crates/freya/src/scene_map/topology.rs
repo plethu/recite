@@ -12,6 +12,7 @@ use std::{
 
 #[derive(Clone, PartialEq)]
 pub(super) struct Topology {
+    pub blocks: Arc<[ScriptBlock]>,
     pub links: Vec<SceneLink>,
     pub ids: BTreeMap<String, usize>,
     pub adjacency: Vec<Vec<usize>>,
@@ -23,8 +24,8 @@ pub(super) struct Topology {
     pub endings: BTreeSet<String>,
 }
 impl Topology {
-    pub fn new(blocks: &[ScriptBlock], saved: &placement::Positions) -> Self {
-        let links = recite_writer_model::scene_links(blocks);
+    pub fn new(blocks: Arc<[ScriptBlock]>, saved: &placement::Positions) -> Self {
+        let links = recite_writer_model::scene_links(&blocks);
         let ids: BTreeMap<_, _> = blocks
             .iter()
             .enumerate()
@@ -40,7 +41,7 @@ impl Topology {
                 incident[to].push(index);
             }
         }
-        let mut nodes = layout::layout(blocks, &links, WIDTH);
+        let mut nodes = layout::layout(&blocks, &links, WIDTH);
         let entry = nodes
             .get(blocks.iter().position(|b| b.is_default).unwrap_or(0))
             .map(|n| (n.x, n.y, n.width));
@@ -50,7 +51,7 @@ impl Topology {
                 node.y = y;
             }
         }
-        let routes = routing::routes(blocks, &nodes, &links);
+        let routes = routing::routes(&blocks, &nodes, &links);
         let left = nodes
             .iter()
             .map(|n| n.x)
@@ -77,6 +78,7 @@ impl Topology {
             .map(|l| l.origin.clone())
             .collect();
         Self {
+            blocks,
             links,
             ids,
             adjacency,

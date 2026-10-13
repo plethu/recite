@@ -22,7 +22,7 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
     let choice_id = ChoiceId::new("locked_choice").expect("valid choice ID");
     let mut session = DialogueSession::new(
         &asset.header,
-        asset.sources.clone(),
+        &asset.sources,
         BlockIndex::new(0),
         StatementRange::new(StatementIndex::new(0), 0),
         canonical_compiled_dialogue_fingerprint(&asset).expect("valid test fingerprint"),

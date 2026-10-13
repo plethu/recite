@@ -3,7 +3,7 @@
 use recite_core::compiled::{
     CompiledDialogue, CompiledDialoguePayload, ContentFingerprint,
     canonical_compiled_dialogue_fingerprint, canonical_source_fingerprint,
-    decode_compiled_dialogue_messagepack,
+    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack,
 };
 
 mod support;
@@ -20,6 +20,35 @@ fn prepared_payload() -> CompiledDialoguePayload {
 
 fn expected_fingerprint() -> ContentFingerprint {
     canonical_compiled_dialogue_fingerprint(&decoded_asset()).expect("valid asset fingerprints")
+}
+
+#[test]
+fn uncached_identity_matches_canonical_bytes_for_large_unicode_prose() {
+    for repetitions in [1, 10_000] {
+        let text = "Café 🦉\n".repeat(repetitions);
+        let mut wire = support::valid_wire_asset();
+        wire.lines.push(support::WireLine {
+            id: "11111111111111111111",
+            source_text: &text,
+            speaker: None,
+            metadata: support::WireRange(0, 0),
+            source_map: 0,
+        });
+        wire.line_lookup.push(support::WireLookupEntry {
+            id: "11111111111111111111",
+            index: 0,
+        });
+        let bytes = rmp_serde::to_vec(&wire).expect("wire fixture encodes");
+        let decoded = decode_compiled_dialogue_messagepack(&bytes).expect("fixture decodes");
+        let asset = CompiledDialogue::new(decoded.into_payload());
+
+        let identity = canonical_compiled_dialogue_fingerprint(&asset).expect("asset fingerprints");
+        let canonical = encode_compiled_dialogue_messagepack(&asset).expect("asset encodes");
+        assert_eq!(
+            identity.digest().as_bytes(),
+            blake3::hash(&canonical).as_bytes()
+        );
+    }
 }
 
 #[test]

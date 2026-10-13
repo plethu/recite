@@ -28,10 +28,10 @@ pub(crate) struct Validator<'a> {
     pub(super) blocks: BTreeMap<&'a str, BTreeSet<&'a str>>,
     pub(super) effective_participation: BTreeMap<&'a str, ValidationParticipation>,
     pub(super) source_paths: BTreeMap<&'a str, SourceSpan>,
-    pub(super) block_ids: BTreeMap<(&'a str, &'a str), SourceSpan>,
-    pub(super) compiled_block_ids: BTreeMap<&'a str, (&'a str, SourceSpan)>,
+    pub(super) block_ids: BTreeMap<(&'a str, &'a str), &'a SourceSpan>,
+    pub(super) compiled_block_ids: BTreeMap<&'a str, (&'a str, &'a SourceSpan)>,
     pub(super) line_ids: BTreeSet<&'a str>,
-    pub(super) localisable_ids: BTreeMap<&'a str, SourceSpan>,
+    pub(super) localisable_ids: BTreeMap<&'a str, &'a SourceSpan>,
     pub(super) first_default: Option<&'a Block>,
     pub(super) default_count: usize,
 }

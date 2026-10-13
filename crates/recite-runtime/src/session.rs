@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use recite_core::{
     ChoiceId, LocaleId,
     compiled::{
@@ -19,7 +21,8 @@ pub struct DialogueSession {
     pub(crate) source_map_id: SourceMapId,
     pub(crate) schema_fingerprint: SchemaFingerprint,
     pub(crate) compiled_payload_fingerprint: ContentFingerprint,
-    pub(crate) sources: Vec<CompiledSourceFile>,
+    // Trial sessions and preview checkpoints share immutable source identity.
+    pub(crate) sources: Arc<[CompiledSourceFile]>,
     pub(crate) current_block: BlockIndex,
     pub(crate) current_range: StatementRange,
     pub(crate) next_statement: StatementIndex,
@@ -27,7 +30,9 @@ pub struct DialogueSession {
     pub(crate) phase: SessionPhase,
     pub(crate) previous_prompt_choices: Vec<ChoiceId>,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
-    pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
+    // Trials and preview outputs share unchanged deferred history. Appends
+    // copy shared values so earlier checkpoints remain independent.
+    pub(crate) deferred_effects: Arc<Vec<DialogueEffectRequest>>,
     pub(crate) locale: Option<LocaleId>,
     pub(crate) trace_counter: u64,
 }
@@ -43,7 +48,7 @@ pub(crate) enum SessionPhase {
 impl DialogueSession {
     pub(crate) fn new(
         header: &CompiledAssetHeader,
-        sources: Vec<CompiledSourceFile>,
+        sources: &[CompiledSourceFile],
         current_block: BlockIndex,
         current_range: StatementRange,
         compiled_payload_fingerprint: ContentFingerprint,
@@ -57,7 +62,7 @@ impl DialogueSession {
             source_map_id: header.source_map_id.clone(),
             schema_fingerprint: header.schema_fingerprint.clone(),
             compiled_payload_fingerprint,
-            sources,
+            sources: sources.into(),
             current_block,
             current_range,
             next_statement: current_range.start,
@@ -65,7 +70,7 @@ impl DialogueSession {
             phase: SessionPhase::Running,
             previous_prompt_choices: Vec::new(),
             selected_choice_history: Vec::new(),
-            deferred_effects: Vec::new(),
+            deferred_effects: Arc::new(Vec::new()),
             locale: options.locale,
             trace_counter: 0,
         }
@@ -99,6 +104,18 @@ impl DialogueSession {
     #[must_use]
     pub fn deferred_effects(&self) -> &[DialogueEffectRequest] {
         &self.deferred_effects
+    }
+
+    pub(crate) fn defer_effect(&mut self, request: DialogueEffectRequest) {
+        let shared = Arc::strong_count(&self.deferred_effects) > 1;
+        let effects = Arc::make_mut(&mut self.deferred_effects);
+        if shared {
+            // Copied histories only need the next element. Avoid doubling
+            // storage retained by immutable preview outputs; unique sessions
+            // still use normal amortized vector growth.
+            effects.reserve_exact(1);
+        }
+        effects.push(request);
     }
 
     #[must_use]

@@ -1,4 +1,4 @@
-use godot::builtin::{Callable, GString, PackedByteArray, VarDictionary, Variant};
+use godot::builtin::{Callable, GString, PackedByteArray, VarArray, VarDictionary, Variant};
 use godot::classes::{INode, Node};
 use godot::prelude::*;
 use recite_runtime::{ConditionExpectedType, ConditionValue};
@@ -19,7 +19,7 @@ use crate::dialogue_resource::ReciteDialogueResource;
 pub struct ReciteDialogueNode {
     base: Base<Node>,
     driver: ReciteDialogueDriver,
-    pending_outputs: VecDeque<AdapterOutput>,
+    pending_outputs: VecDeque<VarDictionary>,
     emitting_outputs: bool,
 }
 
@@ -74,7 +74,7 @@ impl ReciteDialogueNode {
             .driver
             .set_locale_variant(optional_string(variant).as_deref())
         {
-            Ok(()) => ReciteOperationResult::success(Vec::new()),
+            Ok(()) => ReciteOperationResult::success(VarArray::new()),
             Err(error) => self.emit_error_result(error),
         }
     }
@@ -82,7 +82,7 @@ impl ReciteDialogueNode {
     #[func]
     fn clear_locale_variant(&mut self) -> Gd<ReciteOperationResult> {
         match self.driver.set_locale_variant(None) {
-            Ok(()) => ReciteOperationResult::success(Vec::new()),
+            Ok(()) => ReciteOperationResult::success(VarArray::new()),
             Err(error) => self.emit_error_result(error),
         }
     }
@@ -95,7 +95,7 @@ impl ReciteDialogueNode {
         match catalog.bind().cloned_catalog() {
             Ok(catalog) => {
                 self.driver.set_locale_catalog(catalog);
-                ReciteOperationResult::success(Vec::new())
+                ReciteOperationResult::success(VarArray::new())
             }
             Err(error) => self.emit_error_result(error),
         }
@@ -104,7 +104,7 @@ impl ReciteDialogueNode {
     #[func]
     fn clear_locale_catalog(&mut self) -> Gd<ReciteOperationResult> {
         self.driver.clear_locale_catalog();
-        ReciteOperationResult::success(Vec::new())
+        ReciteOperationResult::success(VarArray::new())
     }
 
     #[func]
@@ -169,7 +169,7 @@ impl ReciteDialogueNode {
     #[func]
     fn end_session(&mut self) -> Gd<ReciteOperationResult> {
         match self.driver.end_session() {
-            Ok(()) => ReciteOperationResult::success(Vec::new()),
+            Ok(()) => ReciteOperationResult::success(VarArray::new()),
             Err(error) => self.emit_error_result(error),
         }
     }
@@ -242,7 +242,7 @@ impl ReciteDialogueNode {
         match interpolation_values(&values) {
             Ok(values) => {
                 self.driver.set_interpolation_values(values);
-                ReciteOperationResult::success(Vec::new())
+                ReciteOperationResult::success(VarArray::new())
             }
             Err(error) => self.emit_error_result(error),
         }
@@ -254,9 +254,15 @@ impl ReciteDialogueNode {
     ) -> Gd<ReciteOperationResult> {
         match result {
             Ok(outputs) => {
-                self.pending_outputs.extend(outputs.iter().cloned());
+                let mut result_outputs = VarArray::new();
+                for output in outputs {
+                    let data = output_dictionary(&output);
+                    // Signal handlers may mutate nested payloads; the returned batch stays separate.
+                    self.pending_outputs.push_back(data.duplicate_deep());
+                    result_outputs.push(&data.to_variant());
+                }
                 self.drain_outputs();
-                ReciteOperationResult::success(outputs)
+                ReciteOperationResult::success(result_outputs)
             }
             Err(error) => self.emit_error_result(error),
         }
@@ -268,7 +274,7 @@ impl ReciteDialogueNode {
         }
         self.emitting_outputs = true;
         while let Some(output) = self.pending_outputs.pop_front() {
-            let output = ReciteOutputObject::new(output_dictionary(&output));
+            let output = ReciteOutputObject::new(output);
             self.base_mut()
                 .emit_signal("output", &[output.to_variant()]);
         }
@@ -290,7 +296,7 @@ pub(crate) fn optional_string(value: GString) -> Option<String> {
 
 pub(crate) fn catalog_result(result: AdapterResult<()>) -> Gd<ReciteOperationResult> {
     match result {
-        Ok(()) => ReciteOperationResult::success(Vec::new()),
+        Ok(()) => ReciteOperationResult::success(VarArray::new()),
         Err(error) => ReciteOperationResult::failure(error),
     }
 }

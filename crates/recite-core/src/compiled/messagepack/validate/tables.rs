@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use super::{CompiledAssetDecodeError, malformed};
-use crate::compiled::TableRange;
+use crate::compiled::{ChoiceLookupTable, LineLookupTable, TableRange};
 
 pub(super) fn ensure_availability_reason(
     dialogue: &crate::compiled::CompiledDialogue,
@@ -37,26 +37,26 @@ pub(super) fn ensure_unique_strings<'a>(
     Ok(())
 }
 
-pub(super) fn validate_disjoint_ids<'a>(
-    field: &'static str,
-    left: impl IntoIterator<Item = &'a str>,
-    right: impl IntoIterator<Item = &'a str>,
+pub(super) fn validate_disjoint_lookup_ids(
+    lines: &LineLookupTable,
+    choices: &ChoiceLookupTable,
 ) -> Result<(), CompiledAssetDecodeError> {
-    let mut left = left.into_iter().collect::<Vec<_>>();
-    let mut right = right.into_iter().collect::<Vec<_>>();
-    left.sort_unstable();
-    right.sort_unstable();
+    // Lookup constructors enforce sorted, unique IDs. The caller has already
+    // checked that these lookups cover their rows, so they can be merged directly.
+    let mut left = lines.iter().map(|entry| entry.id.as_str()).peekable();
+    let mut right = choices.iter().map(|entry| entry.id.as_str()).peekable();
 
-    let mut left_index = 0;
-    let mut right_index = 0;
-    while left_index < left.len() && right_index < right.len() {
-        match left[left_index].cmp(right[right_index]) {
-            std::cmp::Ordering::Less => left_index += 1,
-            std::cmp::Ordering::Greater => right_index += 1,
+    while let (Some(left_id), Some(right_id)) = (left.peek(), right.peek()) {
+        match left_id.cmp(right_id) {
+            std::cmp::Ordering::Less => {
+                left.next();
+            }
+            std::cmp::Ordering::Greater => {
+                right.next();
+            }
             std::cmp::Ordering::Equal => {
                 return Err(malformed(format!(
-                    "{field} must be unique, got duplicate `{}`",
-                    left[left_index]
+                    "line and choice ids must be unique, got duplicate `{left_id}`"
                 )));
             }
         }
@@ -64,28 +64,29 @@ pub(super) fn validate_disjoint_ids<'a>(
     Ok(())
 }
 
-pub(super) fn validate_lookup_entries<'a>(
+pub(super) fn validate_lookup_entries<'a, Row>(
     table: &'static str,
-    row_ids: Vec<&'a str>,
-    entries: impl IntoIterator<Item = (&'a str, u32)>,
+    rows: &'a [Row],
+    row_id: impl Fn(&'a Row) -> &'a str,
+    entries: impl ExactSizeIterator<Item = (&'a str, u32)>,
 ) -> Result<(), CompiledAssetDecodeError> {
-    let entries = entries.into_iter().collect::<Vec<_>>();
-    if entries.len() != row_ids.len() {
+    if entries.len() != rows.len() {
         return Err(malformed(format!(
             "{table} has {} entries for {} table rows",
             entries.len(),
-            row_ids.len()
+            rows.len()
         )));
     }
 
     for (id, index) in entries {
-        let Some(row_id) = row_ids.get(index as usize) else {
+        let Some(row) = rows.get(index as usize) else {
             return Err(malformed(format!(
                 "{table} index {index} is out of range for table length {}",
-                row_ids.len()
+                rows.len()
             )));
         };
-        if *row_id != id {
+        let row_id = row_id(row);
+        if row_id != id {
             return Err(malformed(format!(
                 "{table} entry `{id}` points to row `{row_id}` at index {index}"
             )));

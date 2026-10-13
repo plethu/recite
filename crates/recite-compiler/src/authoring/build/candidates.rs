@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 /// A logical output target, not a filesystem path.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[non_exhaustive]
@@ -32,14 +34,15 @@ pub enum BuildTargetError {
 #[non_exhaustive]
 pub struct BuildCandidate {
     target: BuildTarget,
-    bytes: Vec<u8>,
+    // Lifecycle states and host projections share immutable compiled bytes.
+    bytes: Arc<[u8]>,
 }
 impl BuildCandidate {
     #[must_use]
     pub fn new(target: BuildTarget, bytes: impl Into<Vec<u8>>) -> Self {
         Self {
             target,
-            bytes: bytes.into(),
+            bytes: bytes.into().into(),
         }
     }
     #[must_use]

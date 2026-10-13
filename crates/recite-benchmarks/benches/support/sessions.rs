@@ -1,19 +1,18 @@
 //! Growing session workloads; setup and snapshot restoration are not timed.
 
 use recite_adapter::{LoadedDialogue, SessionDriver, StartRequest};
-use recite_compiler::compile::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{
-    ChoiceId,
-    compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId},
-};
+use recite_core::ChoiceId;
 use recite_runtime::{
-    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueEvent,
-    DialogueSessionOptions, LocaleResolution,
+    ConditionValue, DialogueEvent, DialogueSessionOptions, LocaleResolution,
     preview::{
         ConditionAnswer, PreviewEvent, PreviewInputs, PreviewOptions, PreviewOutput,
         PreviewSession, PreviewSnapshot,
     },
 };
+
+#[path = "session_fixture.rs"]
+mod session_fixture;
+use session_fixture::ready;
 
 pub(super) type SessionResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -22,6 +21,7 @@ fn error(message: impl Into<String>) -> Box<dyn std::error::Error> {
 }
 
 pub(super) const SESSION_HISTORY_SIZES: [usize; 4] = [0, 32, 256, 2_048];
+pub(super) const SESSION_SOURCE_COUNTS: [usize; 4] = [1, 40, 400, 4_000];
 
 pub(super) struct SessionWorkload {
     asset: LoadedDialogue,
@@ -30,31 +30,15 @@ pub(super) struct SessionWorkload {
 
 impl SessionWorkload {
     pub(super) fn new(deferred_effects: bool) -> SessionResult<Self> {
-        let source = if deferred_effects {
-            include_str!("../../../../fixtures/recite/valid/benchmarks/session_deferred.recite")
-        } else {
-            include_str!("../../../../fixtures/recite/valid/benchmarks/session_history.recite")
-        };
-        let report = compile_inputs(
-            [CompileInput::new("session.recite", source)],
-            CompileOptions::new(
-                CompilerVersion::new("benchmarks")?,
-                CompiledAssetId::new("session.recitec")?,
-                SourceMapId::new("session.recitec.map")?,
-                SchemaFingerprint::NoSchema,
-            ),
-        )?;
-        if !report.diagnostics.is_empty() {
-            return Err(error(format!(
-                "session fixture diagnostics: {:?}",
-                report.diagnostics
-            )));
-        }
-        let compiled = report.asset.ok_or_else(|| error("missing session asset"))?;
-        Ok(Self {
-            asset: LoadedDialogue::from_bytes(&compiled.messagepack)?,
-            choice: ChoiceId::new("11111111111111111111")?,
-        })
+        Self::with_source_count(deferred_effects, 1)
+    }
+
+    pub(super) fn with_source_count(
+        deferred_effects: bool,
+        source_count: usize,
+    ) -> SessionResult<Self> {
+        let (asset, choice) = session_fixture::load(deferred_effects, source_count)?;
+        Ok(Self { asset, choice })
     }
 
     pub(super) fn adapter_checkpoint(&self, history: usize) -> SessionResult<Vec<u8>> {
@@ -113,16 +97,6 @@ impl SessionWorkload {
     ) -> SessionResult<PreviewOutput> {
         let output = preview.choose(self.choice.clone(), PreviewInputs::new());
         to_prompt(preview, output)
-    }
-}
-
-fn ready(query: ConditionQuery<'_>) -> Result<ConditionValue, ConditionEvaluationError> {
-    if query.function() == "ready" {
-        Ok(ConditionValue::Bool(true))
-    } else {
-        Err(ConditionEvaluationError::new(
-            "unexpected benchmark condition",
-        ))
     }
 }
 

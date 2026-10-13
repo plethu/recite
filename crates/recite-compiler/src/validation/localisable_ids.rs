@@ -30,10 +30,13 @@ impl<'a> Validator<'a> {
         if let Some(first_span) = self.localisable_ids.get(id.as_str())
             && self.duplicate_id_is_in_scope(first_span, &line.span)
         {
-            self.diagnostics
-                .push(diagnostics::duplicate_line_id(line, id, first_span.clone()));
+            self.diagnostics.push(diagnostics::duplicate_line_id(
+                line,
+                id,
+                (*first_span).clone(),
+            ));
         } else {
-            self.localisable_ids.insert(id.as_str(), line.span.clone());
+            self.localisable_ids.insert(id.as_str(), &line.span);
         }
     }
     pub(crate) fn validate_choice_localisable_id(&mut self, choice: &'a Choice) {
@@ -50,11 +53,10 @@ impl<'a> Validator<'a> {
                 self.diagnostics.push(diagnostics::duplicate_choice_id(
                     choice,
                     id,
-                    first_span.clone(),
+                    (*first_span).clone(),
                 ));
             } else {
-                self.localisable_ids
-                    .insert(id.as_str(), choice.span.clone());
+                self.localisable_ids.insert(id.as_str(), &choice.span);
             }
         } else if self.phase != ValidationPhase::Project {
             self.diagnostics.push(match &choice.source_id {

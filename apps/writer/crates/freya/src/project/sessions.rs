@@ -2,7 +2,7 @@
 use super::{FileError, ProjectFiles, read_regular};
 use crate::recovery::RecoveryStore;
 use recite_compiler::authoring::{CancellationToken, WorkControl};
-use recite_writer_model::{Document, Workbench};
+use recite_writer_model::Workbench;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -172,7 +172,9 @@ impl ProjectFiles {
             let source = recovery
                 .snapshot()
                 .map_or(baseline.as_ref(), |r| r.draft.source());
-            let document = Document::in_project_with_control(key, source, context, control)
+            let document = current
+                .document()
+                .open_sibling_with_control(key, source, context, control)
                 .map_err(recite_writer_model::WorkbenchError::from)?;
             control.checkpoint()?;
             let mut model = Workbench::from_document(document)?;

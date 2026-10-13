@@ -16,7 +16,7 @@ pub(crate) fn fields_after_prefix<'a>(
         trimmed,
         cursor: prefix.len(),
         line,
-        base_column,
+        column: base_column + prefix.chars().count(),
     }
 }
 
@@ -49,7 +49,7 @@ pub(crate) struct HeaderFields<'a> {
     trimmed: &'a str,
     cursor: usize,
     line: u32,
-    base_column: usize,
+    column: usize,
 }
 
 impl<'a> Iterator for HeaderFields<'a> {
@@ -60,6 +60,7 @@ impl<'a> Iterator for HeaderFields<'a> {
             && matches!(self.trimmed.as_bytes()[self.cursor], b' ' | b'\t')
         {
             self.cursor += 1;
+            self.column += 1;
         }
 
         if self.cursor >= self.trimmed.len() {
@@ -67,49 +68,41 @@ impl<'a> Iterator for HeaderFields<'a> {
         }
 
         let start = self.cursor;
+        let column = self.column;
         let mut quote = None;
         let mut bracket_depth = 0_u32;
         let mut paren_depth = 0_u32;
 
         while let Some(character) = self.current_char() {
+            if matches!(character, ' ' | '\t')
+                && quote.is_none()
+                && bracket_depth == 0
+                && paren_depth == 0
+            {
+                break;
+            }
+
+            self.advance_char(character);
             match character {
                 '\\' if quote.is_some() => {
-                    self.advance_char();
-                    self.advance_char();
+                    if let Some(escaped) = self.current_char() {
+                        self.advance_char(escaped);
+                    }
                 }
-                '"' if quote == Some('"') => {
-                    quote = None;
-                    self.advance_char();
-                }
-                '"' if quote.is_none() => {
-                    quote = Some('"');
-                    self.advance_char();
-                }
-                '[' if quote.is_none() => {
-                    bracket_depth += 1;
-                    self.advance_char();
-                }
-                ']' if quote.is_none() && bracket_depth > 0 => {
-                    bracket_depth -= 1;
-                    self.advance_char();
-                }
-                '(' if quote.is_none() => {
-                    paren_depth += 1;
-                    self.advance_char();
-                }
-                ')' if quote.is_none() && paren_depth > 0 => {
-                    paren_depth -= 1;
-                    self.advance_char();
-                }
-                ' ' | '\t' if quote.is_none() && bracket_depth == 0 && paren_depth == 0 => break,
-                _ => self.advance_char(),
+                '"' if quote == Some('"') => quote = None,
+                '"' if quote.is_none() => quote = Some('"'),
+                '[' if quote.is_none() => bracket_depth += 1,
+                ']' if quote.is_none() && bracket_depth > 0 => bracket_depth -= 1,
+                '(' if quote.is_none() => paren_depth += 1,
+                ')' if quote.is_none() && paren_depth > 0 => paren_depth -= 1,
+                _ => {}
             }
         }
 
         Some(HeaderField {
             text: &self.trimmed[start..self.cursor],
             line: self.line,
-            column: self.base_column + self.trimmed[..start].chars().count(),
+            column,
             offset: start,
         })
     }
@@ -120,10 +113,8 @@ impl HeaderFields<'_> {
         self.trimmed[self.cursor..].chars().next()
     }
 
-    fn advance_char(&mut self) {
-        let Some(character) = self.current_char() else {
-            return;
-        };
+    fn advance_char(&mut self, character: char) {
         self.cursor += character.len_utf8();
+        self.column += 1;
     }
 }

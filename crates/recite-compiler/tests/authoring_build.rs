@@ -1,3 +1,5 @@
+#[path = "authoring_build/candidate_ownership.rs"]
+mod candidate_ownership;
 #[path = "authoring_build/execution.rs"]
 mod execution;
 #[path = "authoring_build/external.rs"]

@@ -144,7 +144,7 @@ machine or OS.
 
 The numeric targets below guide investigation until realistic baselines establish an enforced
 budget. A missed target must be reported, but blocks acceptance only where a reviewed policy names
-the baseline, runner, threshold and enforcement point. §19.8 identifies the current paired LSP gate.
+the baseline, runner, threshold and enforcement point. §19.8 identifies the paired regression gates.
 Changes to budgets require explicit review.
 
 ### Authoring refresh layers
@@ -304,7 +304,18 @@ workloads, samples, thresholds and confirmation rounds. It requires complete cov
 output fingerprints, with raw samples and binary identities retained as CI artifacts. It covers
 those process workloads, not cross-platform rendering or long-lived memory.
 
-Outside that gate, initial review triggers are more than 10% regression in hot runtime paths, more
+The private [Rust harness](../../tools/recite-perf/) uses pinned Gungraun/Callgrind and DHAT on
+Linux to compare the change base and candidate with identical current workloads. Changed-path
+routing selects bounded compiler, runtime, preview recovery and headless Writer cases; scheduled and
+release runs add medium fixtures and whole-project/watch checks. The
+[budget owner](../../tools/recite-perf/benches/support/budget.rs) sets instruction limits of 10% for
+runtime and 20% for compiler/preview/Writer, and heap limits of 10% allocated bytes, 5% allocation
+count and 10% bytes live at the process heap peak. Coverage checks reject missing controls, counters
+or cases. CI retains profiles, locks, binary/source identities and output parity evidence even on
+failure. These counters do not establish elapsed-time or native GUI acceptance; the
+[profiling guide](../profiling-and-optimisation.md) owns local commands and boundaries.
+
+Outside those gates, initial review triggers are more than 10% regression in hot runtime paths, more
 than 20% in compiler/LSP paths, accidental O(n^2) work on medium/large fixtures, or unexplained
 hot-path allocation growth. GUI evidence must also record blocking accessibility regressions such as
 lost focus, screen-reader dead ends, unusable zoom or inaccessible high-contrast controls.

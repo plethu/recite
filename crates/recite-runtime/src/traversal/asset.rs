@@ -55,7 +55,7 @@ impl<'a> AssetView<'a> {
         if session.compiler_version != self.asset.header.compiler_version
             || session.source_map_id != self.asset.header.source_map_id
             || session.schema_fingerprint != self.asset.header.schema_fingerprint
-            || session.sources != self.asset.sources
+            || session.sources.as_ref() != self.asset.sources.as_slice()
         {
             return Err(DialogueError::AssetContentMismatch {
                 asset_id: session.asset_id.as_str().to_owned(),

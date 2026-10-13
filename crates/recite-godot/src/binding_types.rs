@@ -2,8 +2,8 @@ use godot::builtin::{GString, PackedByteArray, VarArray, VarDictionary};
 use godot::classes::{IRefCounted, RefCounted};
 use godot::prelude::*;
 
-use crate::adapter::{AdapterError, ReciteOutput as AdapterOutput};
-use crate::convert::{bytes_to_packed, error_dictionary, outputs_array, result_dictionary};
+use crate::adapter::AdapterError;
+use crate::convert::{bytes_to_packed, error_dictionary, result_dictionary};
 
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
@@ -20,25 +20,24 @@ impl IRefCounted for ReciteOperationResult {}
 
 #[godot_api]
 impl ReciteOperationResult {
-    pub(crate) fn success(outputs: Vec<AdapterOutput>) -> Gd<Self> {
+    pub(crate) fn success(outputs: VarArray) -> Gd<Self> {
         Self::new(true, outputs, Vec::new(), None)
     }
 
     pub(crate) fn success_with_snapshot(snapshot_bytes: Vec<u8>) -> Gd<Self> {
-        Self::new(true, Vec::new(), snapshot_bytes, None)
+        Self::new(true, VarArray::new(), snapshot_bytes, None)
     }
 
     pub(crate) fn failure(error: AdapterError) -> Gd<Self> {
-        Self::new(false, Vec::new(), Vec::new(), Some(error))
+        Self::new(false, VarArray::new(), Vec::new(), Some(error))
     }
 
     fn new(
         ok: bool,
-        outputs: Vec<AdapterOutput>,
+        outputs: VarArray,
         snapshot_bytes: Vec<u8>,
         error: Option<AdapterError>,
     ) -> Gd<Self> {
-        let output_array = outputs_array(&outputs);
         let snapshot_bytes = bytes_to_packed(&snapshot_bytes);
         let error_dictionary = error
             .as_ref()
@@ -46,7 +45,7 @@ impl ReciteOperationResult {
         Gd::from_init_fn(|base| Self {
             base,
             ok,
-            outputs: output_array,
+            outputs,
             snapshot_bytes,
             error: error_dictionary,
         })

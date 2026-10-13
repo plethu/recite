@@ -72,6 +72,25 @@ impl CompileReport {
     }
 }
 
+/// Result of compiling only the runtime-facing canonical MessagePack bytes.
+///
+/// Content diagnostics prevent output, just as in [`CompileReport`]. This
+/// operation performs complete compilation and validation without retaining
+/// the compiled model or producing inspection JSON.
+#[non_exhaustive]
+#[derive(Clone, Debug, PartialEq)]
+pub struct MessagepackCompileReport {
+    pub diagnostics: Vec<Diagnostic>,
+    pub messagepack: Option<Vec<u8>>,
+}
+
+impl MessagepackCompileReport {
+    #[must_use]
+    pub fn is_ok(&self) -> bool {
+        self.diagnostics.is_empty() && self.messagepack.is_some()
+    }
+}
+
 /// Runtime-facing compiled asset plus deterministic inspection output.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompiledAssetOutput {
@@ -97,11 +116,74 @@ pub fn compile_inputs_with_schema(
     compile_inputs_with_optional_schema(inputs, options, Some(schema))
 }
 
+/// Compile raw sources into canonical MessagePack without inspection output.
+///
+/// Uses the same complete validation and deterministic compilation as
+/// [`compile_inputs`]. Content failures return diagnostics with no bytes;
+/// non-content failures return [`CompileError`].
+pub fn compile_inputs_to_messagepack(
+    inputs: impl IntoIterator<Item = CompileInput>,
+    options: CompileOptions,
+) -> Result<MessagepackCompileReport, CompileError> {
+    compile_inputs_to_messagepack_with_optional_schema(inputs, options, None)
+}
+
+/// Compile canonical MessagePack against a loaded schema without inspection output.
+///
+/// Validation, diagnostics and asset bytes match [`compile_inputs_with_schema`].
+pub fn compile_inputs_to_messagepack_with_schema(
+    inputs: impl IntoIterator<Item = CompileInput>,
+    options: CompileOptions,
+    schema: &ProjectSchema,
+) -> Result<MessagepackCompileReport, CompileError> {
+    compile_inputs_to_messagepack_with_optional_schema(inputs, options, Some(schema))
+}
+
 fn compile_inputs_with_optional_schema(
     inputs: impl IntoIterator<Item = CompileInput>,
     options: CompileOptions,
     schema: Option<&ProjectSchema>,
 ) -> Result<CompileReport, CompileError> {
+    let report = compile_inputs_with_output(inputs, options, schema, |dialogue| {
+        let messagepack = serialize_messagepack(&dialogue)?;
+        let inspection_json = serialize_inspection_json(&dialogue)?;
+        Ok(CompiledAssetOutput {
+            dialogue,
+            messagepack,
+            inspection_json,
+        })
+    })?;
+    Ok(CompileReport {
+        diagnostics: report.diagnostics,
+        asset: report.output,
+    })
+}
+
+fn compile_inputs_to_messagepack_with_optional_schema(
+    inputs: impl IntoIterator<Item = CompileInput>,
+    options: CompileOptions,
+    schema: Option<&ProjectSchema>,
+) -> Result<MessagepackCompileReport, CompileError> {
+    let report = compile_inputs_with_output(inputs, options, schema, |dialogue| {
+        serialize_messagepack(&dialogue)
+    })?;
+    Ok(MessagepackCompileReport {
+        diagnostics: report.diagnostics,
+        messagepack: report.output,
+    })
+}
+
+struct PipelineReport<T> {
+    diagnostics: Vec<Diagnostic>,
+    output: Option<T>,
+}
+
+fn compile_inputs_with_output<T>(
+    inputs: impl IntoIterator<Item = CompileInput>,
+    options: CompileOptions,
+    schema: Option<&ProjectSchema>,
+    emit: impl FnOnce(CompiledDialogue) -> Result<T, CompileError>,
+) -> Result<PipelineReport<T>, CompileError> {
     let mut lowered_inputs = Vec::new();
     let mut diagnostics = Vec::new();
 
@@ -118,9 +200,9 @@ fn compile_inputs_with_optional_schema(
 
     sort_diagnostics_by_source(&mut diagnostics);
     if !diagnostics.is_empty() {
-        return Ok(CompileReport {
+        return Ok(PipelineReport {
             diagnostics,
-            asset: None,
+            output: None,
         });
     }
 
@@ -132,9 +214,9 @@ fn compile_inputs_with_optional_schema(
         ProjectCompleteness::Complete,
     );
     if !validation.is_ok() {
-        return Ok(CompileReport {
+        return Ok(PipelineReport {
             diagnostics: validation.diagnostics,
-            asset: None,
+            output: None,
         });
     }
 
@@ -146,15 +228,8 @@ fn compile_inputs_with_optional_schema(
     });
 
     let dialogue = build_dialogue(&lowered_inputs, options, schema)?;
-    let messagepack = serialize_messagepack(&dialogue)?;
-    let inspection_json = serialize_inspection_json(&dialogue)?;
-
-    Ok(CompileReport {
+    Ok(PipelineReport {
         diagnostics: Vec::new(),
-        asset: Some(CompiledAssetOutput {
-            dialogue,
-            messagepack,
-            inspection_json,
-        }),
+        output: Some(emit(dialogue)?),
     })
 }

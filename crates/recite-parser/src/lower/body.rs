@@ -33,7 +33,7 @@ impl Lowerer<'_, '_> {
                 BodyStep::Boundary => break,
                 BodyStep::Blank => {
                     if !text_lines.is_empty() && !saw_statement {
-                        text_lines.push(String::new());
+                        text_lines.push("");
                         blank_after_text = true;
                     }
                     continue;
@@ -97,7 +97,7 @@ impl Lowerer<'_, '_> {
                 text_start_line = line.number;
                 text_start_column = indent + 1;
             }
-            text_lines.push(trimmed.to_owned());
+            text_lines.push(trimmed);
             cursor.advance();
         }
 
@@ -153,8 +153,8 @@ impl Lowerer<'_, '_> {
     }
 }
 
-fn trim_trailing_blank_lines(lines: &mut Vec<String>) {
-    while lines.last().is_some_and(String::is_empty) {
+fn trim_trailing_blank_lines(lines: &mut Vec<&str>) {
+    while lines.last().is_some_and(|line| line.is_empty()) {
         lines.pop();
     }
 }

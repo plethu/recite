@@ -41,8 +41,6 @@ pub(crate) fn passages_from(
         return Err(EditError::SourceRequired("repair the syntax diagnostics"));
     }
     let nodes: Vec<_> = parsed.syntax().children().collect();
-    let mut offsets = vec![0];
-    offsets.extend(source.match_indices('\n').map(|(index, _)| index + 1));
     let mut seen = std::collections::BTreeSet::new();
     let mut result = Vec::new();
     for block in &lowered.source_file.blocks {
@@ -91,7 +89,7 @@ pub(crate) fn passages_from(
             if !seen.insert(anchor.as_str()) {
                 return Err(EditError::MissingPassage);
             }
-            let (text_range, indentation) = prose_range(source, text, &nodes, &offsets)?;
+            let (text_range, indentation) = prose_range(source, text, &nodes)?;
             result.push(Passage {
                 id: anchor.to_string(),
                 label: label.clone(),
@@ -112,7 +110,6 @@ fn prose_range(
     source: &str,
     text: &SourceText,
     nodes: &[ReciteSyntaxNode],
-    offsets: &[usize],
 ) -> Result<(Range<usize>, String), EditError> {
     if text.text.is_empty() {
         return Err(EditError::SourceRequired("empty prose needs Source view"));
@@ -127,9 +124,11 @@ fn prose_range(
     {
         return Err(EditError::SourceRequired("the prose extent is ambiguous"));
     }
-    let line_start = *offsets.get(first).ok_or(EditError::Position)?;
+    let first_node = nodes.first().ok_or(EditError::Position)?;
+    let line_range = first_node.text_range();
+    let line_start = usize::from(line_range.start());
     let header = source
-        .get(line_start..*offsets.get(first + 1).unwrap_or(&source.len()))
+        .get(line_start..usize::from(line_range.end()))
         .ok_or(EditError::Position)?;
     let column = usize::try_from(text.span.start.column() - 1).map_err(|_| EditError::Position)?;
     let start = line_start

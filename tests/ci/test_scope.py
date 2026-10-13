@@ -30,7 +30,10 @@ class ScopeTests(unittest.TestCase):
     def test_core_and_dependencies_keep_contracts_without_distribution(self):
         for crate in ("runtime", "playground"):
             self.assertEqual(
-                selected(f"crates/recite-{crate}/src/lib.rs"), scope.RUST | {"docs", "site"}
+                selected(f"crates/recite-{crate}/src/lib.rs"),
+                scope.RUST
+                | {"docs", "site"}
+                | ({"workflow-performance"} if crate == "runtime" else set()),
             )
         for path in ("Cargo.lock", "apps/writer/Cargo.lock", "crates/recite-core/src/lib.rs"):
             with self.subTest(path=path):
@@ -42,12 +45,34 @@ class ScopeTests(unittest.TestCase):
         for path in (
             "scripts/lsp.py",
             "scripts/lsp_tools/client.py",
-            "perf.just",
             "mise.lsp.toml",
             "pyproject.toml",
             "uv.lock",
         ):
             self.assertEqual(selected(path), {"benchmark-smoke", "lsp-sessions", "maintainability"})
+
+    def test_workflow_regression_checks_follow_measured_inputs(self):
+        for path in (
+            "perf.just",
+            "stress.just",
+            "mise.perf.toml",
+            "scripts/check-workflow-performance.sh",
+            "tools/recite-perf/benches/workflows.rs",
+            "crates/recite-core/src/text/interpolation.rs",
+            "crates/recite-benchmarks/src/preview.rs",
+            "apps/writer/crates/authoring/src/script.rs",
+        ):
+            with self.subTest(path=path):
+                self.assertIn("workflow-performance", selected(path))
+        for path in (
+            "docs/profiling-and-optimisation.md",
+            "apps/writer/src/app.rs",
+            "crates/recite-lsp/src/server.rs",
+            "scripts/lsp_tools/client.py",
+            "editors/vscode/src/extension.ts",
+        ):
+            with self.subTest(path=path):
+                self.assertNotIn("workflow-performance", selected(path))
 
     def test_lsp_measurement_changes_select_benchmark_lane(self):
         for path in (

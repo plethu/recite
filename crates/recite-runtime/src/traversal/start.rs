@@ -35,7 +35,7 @@ pub fn start_scene_with_options(
 
     Ok(DialogueSession::new(
         &asset.header,
-        asset.sources.clone(),
+        &asset.sources,
         block_index,
         compiled_block.statements,
         compiled_payload_fingerprint,

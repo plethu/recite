@@ -26,6 +26,10 @@ from ci_scope_config import JUST_QUALITY as JUST_QUALITY
 def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
+    if path in {"mise.perf.toml", "scripts/check-workflow-performance.sh"} or path.startswith(
+        "tools/recite-perf/"
+    ):
+        return frozenset({"workflow-performance", "maintainability"})
     if path.startswith("nix/") or path in {"flake.nix", "flake.lock"}:
         return frozenset({"nix-packages", "maintainability", "docs"})
     if path.startswith(("apps/writer/packaging/flatpak/", "tests/writer-flatpak/")) or path in {
@@ -85,7 +89,10 @@ def lanes_for_path(path, *, base=None, head=None):
         "uv.lock",
         "scripts/lsp.py",
     } or path.startswith("scripts/lsp_tools/"):
-        return frozenset({"benchmark-smoke", "lsp-sessions", "maintainability"})
+        lanes = {"benchmark-smoke", "lsp-sessions", "maintainability"}
+        if path == "perf.just":
+            lanes.add("workflow-performance")
+        return frozenset(lanes)
     if path in {"mise.maintainability.toml", "mise.godot.toml"}:
         return RUST
     if path in {
@@ -113,7 +120,7 @@ def lanes_for_path(path, *, base=None, head=None):
     if path == "engines.just":
         return frozenset({"hosts", "maintainability"})
     if path == "stress.just":
-        return JUST
+        return JUST | {"workflow-performance"}
     if path in {"scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"}:
         return RUST
     if path == "scripts/check-zed.sh":
@@ -162,17 +169,29 @@ def lanes_for_path(path, *, base=None, head=None):
             )
         )
     ):
-        return RUST | {"lsp-sessions", "docs", "site"}
+        lanes = RUST | {"lsp-sessions", "docs", "site"}
+        if not path.startswith(
+            ("crates/recite-lsp/", "crates/recite-ui/", "crates/recite-config/")
+        ):
+            lanes |= {"workflow-performance"}
+        return lanes
     if path.startswith("crates/"):
-        if path.startswith(("crates/recite-playground/", "crates/recite-runtime/")):
+        if path.startswith("crates/recite-runtime/"):
+            return RUST | {"docs", "site", "workflow-performance"}
+        if path.startswith("crates/recite-playground/"):
             return RUST | {"docs", "site"}
+        if path.startswith("crates/recite-benchmarks/"):
+            return RUST | {"workflow-performance"}
         return RUST
     if path.startswith("apps/writer/") or path in {
         "tools/ast-grep/rules/rust-writer-palette.yml",
         "tools/ast-grep/tests/rust-writer-palette-test.yml",
         "scripts/check-writer-native-accessibility.py",
     }:
-        return frozenset({"writer", "maintainability"})
+        lanes = {"writer", "maintainability"}
+        if path.startswith("apps/writer/crates/authoring/"):
+            lanes.add("workflow-performance")
+        return frozenset(lanes)
     if path.startswith(("editors/vscode/", "tests/editor-hosts/vscode/")):
         return frozenset({"editor", "lsp-sessions", "maintainability"})
     if path.startswith(("editors/helix/", "tests/editor-hosts/helix/")):

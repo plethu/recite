@@ -9,6 +9,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+memchr.workspace = true
 recite-core.workspace = true
 rmp-serde.workspace = true
 serde.workspace = true

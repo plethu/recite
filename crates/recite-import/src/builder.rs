@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_compiler::compile::{
-    CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema,
+    CompileInput, CompileOptions, compile_inputs_to_messagepack,
+    compile_inputs_to_messagepack_with_schema,
 };
 use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
 use recite_core::{DiagnosticCode, SourcePosition, SourceSpan, SpeakerId, schema::ProjectSchema};
@@ -326,16 +327,16 @@ impl Builder {
             inputs.push(CompileInput::new(*path, source));
         }
         let compiled = if let Some(schema) = schema {
-            compile_inputs_with_schema(inputs, options, schema)?
+            compile_inputs_to_messagepack_with_schema(inputs, options, schema)?
         } else {
-            compile_inputs(inputs, options)?
+            compile_inputs_to_messagepack(inputs, options)?
         };
         self.report.native_diagnostics = compiled
             .diagnostics
             .iter()
             .map(|diagnostic| diagnostic.record())
             .collect::<Result<_, _>>()?;
-        self.report.status = if compiled.asset.is_none()
+        self.report.status = if compiled.messagepack.is_none()
             || self.blocks.is_empty()
             || self
                 .report

@@ -6,7 +6,7 @@ use recite_compiler::authoring::{
 use recite_core::DocumentKey;
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
-use crate::position::span_to_range;
+use crate::position::document_span_to_range;
 
 use super::position::hover_response;
 use super::schema::schema_symbol_hover;
@@ -21,7 +21,7 @@ pub(super) fn typed_hover(
 ) -> Option<Hover> {
     let location = info.location();
     let document = snapshot.document(key)?;
-    let range = span_to_range(document.source_text(), location.span());
+    let range = document_span_to_range(document, location.span());
     match location.identity() {
         SymbolIdentity::Block(name) => info
             .facts()

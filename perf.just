@@ -9,6 +9,15 @@ setup:
 # Run LSP harness and CI contract tests; quality owns formatting and linting.
 check:
     mise -E lsp exec -- uv run --locked python -m unittest discover -s tests/ci -p 'test_*.py'
+    cargo test --locked -p recite-perf
+
+# Install the pinned native regression runner; Valgrind is an external host tool.
+regression-setup:
+    mise -E perf install cargo:gungraun-runner
+
+# Compare fixed instruction/heap workloads; full adds the medium corpus.
+regression base scope="pr" output="target/workflow-performance":
+    mise -E perf exec -- scripts/check-workflow-performance.sh "$1" "$2" "$3"
 
 # Inspect the same changed-path selection used by GitHub Actions.
 scope base="origin/main" head="HEAD":

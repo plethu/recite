@@ -1,4 +1,4 @@
-use godot::builtin::{GString, PackedByteArray, VarDictionary};
+use godot::builtin::{GString, PackedByteArray, VarArray, VarDictionary};
 use godot::classes::{FileAccess, IResource, Resource};
 use godot::prelude::*;
 
@@ -95,7 +95,7 @@ impl ReciteDialogueResource {
                 self.asset = Some(asset);
                 self.compiled_bytes = PackedByteArray::from(bytes);
                 self.last_error = VarDictionary::new();
-                ReciteOperationResult::success(Vec::new())
+                ReciteOperationResult::success(VarArray::new())
             }
             Err(error) => {
                 self.last_error = error_dictionary(&error);

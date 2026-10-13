@@ -92,3 +92,24 @@ fn source_line_iteration_preserves_every_terminator_and_final_caret_line() {
         [("", "\r\n"), ("", "\r\n"), ("", "")]
     );
 }
+
+#[test]
+fn logical_line_count_includes_empty_sources_and_final_terminators() {
+    for (source, expected) in [
+        ("", 1),
+        ("text", 1),
+        ("\n", 2),
+        ("\r", 2),
+        ("\r\n", 2),
+        ("text\n", 2),
+        ("text\r", 2),
+        ("text\r\n", 2),
+        ("one\r\ntwo\rthree\nfour", 4),
+        ("one\r\ntwo\rthree\nfour\n", 5),
+    ] {
+        let index = SourceLineIndex::new(source);
+        assert_eq!(index.line_count(), expected, "source {source:?}");
+        assert!(index.line(expected - 1).is_some(), "source {source:?}");
+        assert_eq!(index.line(expected), None, "source {source:?}");
+    }
+}

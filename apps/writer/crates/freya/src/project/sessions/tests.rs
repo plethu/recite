@@ -1,4 +1,5 @@
 use super::*;
+use recite_writer_model::Document;
 
 fn two_scenes()
 -> Result<(tempfile::TempDir, ProjectFiles, Workbench, PathBuf), Box<dyn std::error::Error>> {

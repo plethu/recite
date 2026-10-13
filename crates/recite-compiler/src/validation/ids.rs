@@ -20,10 +20,10 @@ impl<'a> Validator<'a> {
             self.diagnostics.push(diagnostics::duplicate_block_id(
                 &block.id,
                 block.span.clone(),
-                first_span.clone(),
+                (*first_span).clone(),
             ));
         } else {
-            self.block_ids.insert(key, block.span.clone());
+            self.block_ids.insert(key, &block.span);
         }
 
         if self.project_complete
@@ -34,14 +34,12 @@ impl<'a> Validator<'a> {
                     .push(diagnostics::ambiguous_compiled_block_id(
                         &block.id,
                         block.span.clone(),
-                        first_span.clone(),
+                        (*first_span).clone(),
                     ));
             }
         } else {
-            self.compiled_block_ids.insert(
-                block.id.as_str(),
-                (source_file.path.as_str(), block.span.clone()),
-            );
+            self.compiled_block_ids
+                .insert(block.id.as_str(), (source_file.path.as_str(), &block.span));
         }
     }
     pub(super) fn validate_default_block(&mut self, block: &'a Block) {

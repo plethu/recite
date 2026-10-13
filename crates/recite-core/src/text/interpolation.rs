@@ -1,4 +1,7 @@
+use std::borrow::Cow;
 use std::collections::BTreeSet;
+
+use memchr::{memchr, memchr2};
 
 /// Placeholder syntax error in localisable project text.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,6 +34,9 @@ impl PlaceholderSyntaxError {
 /// Extract Recite interpolation placeholders from localisable text.
 pub fn extract_placeholder_names(source: &str) -> Result<BTreeSet<String>, PlaceholderSyntaxError> {
     let mut placeholders = BTreeSet::new();
+    if memchr2(b'{', b'}', source.as_bytes()).is_none() {
+        return Ok(placeholders);
+    }
     let mut chars = source.char_indices().peekable();
 
     while let Some((_, character)) = chars.next() {
@@ -82,6 +88,9 @@ pub fn extract_placeholder_occurrences(
     source: &str,
 ) -> Result<Vec<String>, PlaceholderSyntaxError> {
     let mut occurrences = Vec::new();
+    if memchr2(b'{', b'}', source.as_bytes()).is_none() {
+        return Ok(occurrences);
+    }
     let mut chars = source.char_indices().peekable();
     while let Some((_, character)) = chars.next() {
         match character {
@@ -128,6 +137,13 @@ pub fn extract_placeholder_occurrences(
 
 /// Decode escaped literal braces for runtime use while preserving other text.
 pub fn decode_interpolation_text(source: &str) -> String {
+    decode_interpolation_text_borrowed(source).into_owned()
+}
+
+pub(crate) fn decode_interpolation_text_borrowed(source: &str) -> Cow<'_, str> {
+    if memchr(b'\\', source.as_bytes()).is_none() {
+        return Cow::Borrowed(source);
+    }
     let mut output = String::with_capacity(source.len());
     let mut chars = source.chars();
     while let Some(character) = chars.next() {
@@ -146,7 +162,7 @@ pub fn decode_interpolation_text(source: &str) -> String {
             output.push(character);
         }
     }
-    output
+    Cow::Owned(output)
 }
 
 fn is_placeholder_name(value: &str) -> bool {
