@@ -5,7 +5,7 @@ use recite_core::{
     },
     schema::ProjectSchema,
 };
-use recite_parser::parse;
+use recite_parser::lower_source_file;
 
 use super::CompileError;
 use super::builder::build_dialogue;
@@ -224,8 +224,7 @@ fn compile_inputs_with_output<T>(
     let mut diagnostics = Vec::new();
 
     for (input_index, input) in inputs.into_iter().enumerate() {
-        let parse = parse(&input.path, &input.source);
-        let lowered = parse.lower_source_file();
+        let lowered = lower_source_file(&input.path, &input.source);
         diagnostics.extend(lowered.diagnostics);
         lowered_inputs.push(LoweredInput {
             input_index,

@@ -1,10 +1,11 @@
 #![cfg(test)]
 
 use recite_core::{SourceRecovery, SourceRecoveryClass};
-use recite_parser::{parse, source_regions};
+use recite_parser::{lower_source_file, parse, source_regions};
 
 fn assert_equivalent(source: &str) {
     let whole = parse("scene.recite", source).lower_source_file();
+    assert_eq!(lower_source_file("scene.recite", source), whole);
     let regions = source_regions(source);
     assert_eq!(regions.iter().map(|r| r.text()).collect::<String>(), source);
     let mut blocks = Vec::new();
@@ -15,6 +16,7 @@ fn assert_equivalent(source: &str) {
         let parsed = region.parse("scene.recite");
         assert_eq!(parsed.syntax().text().to_string(), region.text());
         let lowered = parsed.lower_source_file();
+        assert_eq!(region.lower_source_file("scene.recite"), lowered);
         blocks.extend(lowered.source_file.blocks);
         diagnostics.extend(lowered.diagnostics);
         for (complete, class) in [
@@ -107,7 +109,10 @@ fn all_recite_fixtures_match_whole_file_lowering() {
             if path.is_dir() {
                 visit(&path, count);
             } else if path.extension().is_some_and(|ext| ext == "recite") {
-                assert_equivalent(&std::fs::read_to_string(&path).unwrap());
+                let source = std::fs::read_to_string(&path).unwrap();
+                assert_equivalent(&source);
+                assert_equivalent(&source.replace("\r\n", "\n").replace('\n', "\r\n"));
+                assert_equivalent(&source.replace("\r\n", "\n").replace('\n', "\r"));
                 *count += 1;
             }
         }

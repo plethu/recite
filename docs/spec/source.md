@@ -43,9 +43,12 @@ statement forms.
 ### 5.1.1 Parser Architecture
 
 The rowan parser preserves source, trivia, malformed regions and diagnostic spans, then lowers to
-the compiler-facing AST. Compiler validation owns IDs, references, schema rules and deterministic
-output. Runtime traversal does not depend on parser trivia. Editor Tree-sitter grammars provide
-syntax highlighting only; they are not another semantic parser.
+the compiler-facing AST. Syntax diagnostics are eager; the immutable lossless tree is materialised
+on first syntax access. Callers that only need the AST can lower borrowed source directly without
+constructing the lossless tree. Both paths share syntax diagnostics and recovery scanning; region
+lowering preserves original file positions. Compiler validation owns IDs, references, schema rules
+and deterministic output. Runtime traversal does not depend on parser trivia. Editor Tree-sitter
+grammars provide syntax highlighting only; they are not another semantic parser.
 
 ### 5.2 Blocks
 

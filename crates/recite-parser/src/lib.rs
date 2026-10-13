@@ -44,7 +44,7 @@ mod source;
 mod syntax;
 
 pub use lower::LoweredSourceFile;
-pub use parser::{Parse, parse};
+pub use parser::{Parse, lower_source_file, parse};
 pub use syntax::{ReciteLanguage, ReciteSyntaxKind, ReciteSyntaxNode};
 
 /// A conditional branch marker recognized at the start of a source line.

@@ -147,8 +147,7 @@ impl ReplyRules {
         let source = self.validate_draft(document)?;
         let candidate =
             Document::in_project(self.key.clone(), source.clone(), document.project_context())?;
-        if !recite_parser::parse(self.key.as_str(), &source)
-            .lower_source_file()
+        if !recite_parser::lower_source_file(self.key.as_str(), &source)
             .diagnostics
             .is_empty()
         {

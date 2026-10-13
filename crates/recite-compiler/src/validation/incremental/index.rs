@@ -77,9 +77,13 @@ impl ProjectIndex {
                 self.documents.insert(key.clone(), Arc::clone(next));
             }
         }
-        for (key, _) in &changes {
-            control.checkpoint()?;
-            self.affect_dependents(key, changed_targets.contains(key), &mut affected);
+        // Memberships only contain current document keys. When all are already
+        // affected, discovering new consumers/colliders cannot add any work.
+        if self.documents.keys().any(|key| !affected.contains(key)) {
+            for (key, _) in &changes {
+                control.checkpoint()?;
+                self.affect_dependents(key, changed_targets.contains(key), &mut affected);
+            }
         }
         let stable_complete = self
             .documents

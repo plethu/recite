@@ -35,8 +35,8 @@ impl crate::Document {
     pub fn preview_bindings(&self) -> Vec<recite_core::ast::InterpolationBinding> {
         let mut bindings = std::collections::BTreeMap::new();
         for document in self.kernel().snapshot().documents() {
-            let parsed = recite_parser::parse(document.key().as_str(), document.source_text())
-                .lower_source_file();
+            let parsed =
+                recite_parser::lower_source_file(document.key().as_str(), document.source_text());
             parsed
                 .source_file
                 .visit_statements_depth_first(&mut |statement| {

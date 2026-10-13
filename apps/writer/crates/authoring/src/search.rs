@@ -24,8 +24,7 @@ fn words(text: &str) -> impl Iterator<Item = String> + '_ {
 }
 impl DocumentIndex {
     fn build(document: &SavedDocument) -> Self {
-        let parsed = recite_parser::parse(document.key().as_str(), document.text());
-        let lowered = parsed.lower_source_file();
+        let lowered = recite_parser::lower_source_file(document.key().as_str(), document.text());
         let mut index = Self::default();
         for block in &lowered.source_file.blocks {
             for root in &block.statements {

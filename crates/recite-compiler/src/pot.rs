@@ -4,7 +4,7 @@ use recite_core::{
     po::{PotDocument, PotEntry, PotReference},
     schema::ProjectSchema,
 };
-use recite_parser::parse;
+use recite_parser::lower_source_file;
 
 use crate::compile::CompileInput;
 use crate::validation::{
@@ -50,8 +50,7 @@ fn extract_pot_with_optional_schema(
     let mut diagnostics = Vec::new();
 
     for input in inputs {
-        let parse = parse(&input.path, &input.source);
-        let lowered = parse.lower_source_file();
+        let lowered = lower_source_file(&input.path, &input.source);
         diagnostics.extend(lowered.diagnostics);
         source_files.push(lowered.source_file);
     }
