@@ -54,7 +54,10 @@ own the field layout; hosts round-trip them as an opaque unit.
 Restore validates the snapshot before constructing a live session. The runtime and preview snapshot
 formats are versioned; both currently use v1. Unknown versions and missing or mismatched compiled
 payload fingerprints are rejected, even when asset headers and source metadata match. Prepared
-assets are immutable, so advancing reuses their validated identity.
+assets are immutable, so advancing reuses their validated identity. Live session source identity is
+bound by start or validated restore. A matching full-payload fingerprint covers that immutable
+identity without rescanning source rows; independent equal assets remain equivalent, and snapshot
+validation and structured mismatch errors remain unchanged.
 [Serialization compatibility](../serialization-compatibility.md) governs unpublished snapshots and
 future format changes.
 

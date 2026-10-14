@@ -72,7 +72,22 @@ impl ProjectBuildRequest {
         generation: BuildGeneration,
         snapshot_generation: SnapshotGeneration,
     ) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
-        super::preparation::prepare(project_root.as_ref(), generation, snapshot_generation)
+        super::preparation::prepare(project_root.as_ref(), generation, snapshot_generation, None)
+    }
+
+    /// Rediscover the saved project with this request's lifecycle generations.
+    ///
+    /// Exact, complete inputs can reuse this request's successful source validation.
+    /// Changed inputs and requests with preparation diagnostics take the ordinary
+    /// validation path. Discovery, schema loading and manifest checks always run.
+    /// The returned request contains all manifest targets, even after [`Self::select_asset`].
+    pub fn reprepare(&self) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
+        super::preparation::prepare(
+            self.project_root(),
+            self.build.generation(),
+            self.build.snapshot_generation(),
+            Some(self),
+        )
     }
 
     /// The canonical compiler request carried by this project request.

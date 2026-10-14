@@ -8,7 +8,9 @@ use std::collections::BTreeMap;
 
 use crate::{DiagnosticCode, compiled::CompiledDialogue, compiled::SchemaFingerprint};
 
-pub use freshness::{validate_project_freshness, validate_project_freshness_source};
+pub use freshness::{
+    ProjectAssetFreshness, validate_project_freshness, validate_project_freshness_source,
+};
 pub use spans::project_scene_key_span;
 pub use validate::{validate_project_manifest, validate_project_manifest_source};
 

@@ -214,6 +214,11 @@ impl AssetBuilder<'_> {
     }
 
     pub(super) fn source_file_index(&self, path: &str) -> Result<SourceFileIndex, CompileError> {
+        if let Some((current, index)) = self.current_source
+            && current == path
+        {
+            return Ok(index);
+        }
         self.source_file_indices.get(path).copied().ok_or_else(|| {
             CompileError::InvalidValidatedInput(format!(
                 "validated source span referenced unindexed source file `{path}`"

@@ -1,9 +1,9 @@
 use recite_compiler::{
     authoring::{
         BuildCandidate, BuildCheck, BuildControl, BuildEngine, BuildFailure, BuildFailureReason,
-        BuildInputKind, BuildRequest,
+        BuildRequest,
     },
-    compile::{CompileInput, CompileOptions, compile_inputs_to_model},
+    compile::{CompileOptions, compile_build_request_to_model},
 };
 use recite_core::{
     Diagnostic,
@@ -68,15 +68,9 @@ impl BuildEngine for ProjectBuildEngine {
         if control.cancellation().is_some() {
             return Ok(Vec::new());
         }
-        let schema = request
-            .inputs()
-            .iter()
-            .find(|input| input.kind() == &BuildInputKind::Schema)
-            .and_then(|input| input.schema_model());
-        let report = compile_inputs_to_model(
-            source_inputs(request),
+        let report = compile_build_request_to_model(
+            request,
             compile_options(first.asset_id(), request.fingerprints().schema())?,
-            schema,
         )
         .map_err(|_| BuildFailure::Engine {
             reason: BuildFailureReason::InvalidOutput,
@@ -124,19 +118,6 @@ impl BuildEngine for ProjectBuildEngine {
 
         Ok(candidates)
     }
-}
-
-fn source_inputs(request: &BuildRequest) -> Vec<CompileInput> {
-    request
-        .inputs()
-        .iter()
-        .filter(|input| input.kind() == &BuildInputKind::Source)
-        .filter_map(|input| {
-            input
-                .content()
-                .map(|source| CompileInput::new(input.key().as_str(), source))
-        })
-        .collect()
 }
 
 fn compile_options(

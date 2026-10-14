@@ -255,6 +255,10 @@ fn decode_valid() -> CompiledDialoguePayload {
 
 fn assert_rejected(payload: CompiledDialoguePayload, expected: &str) {
     let dialogue = CompiledDialogue::new(payload);
+    assert_eq!(
+        recite_core::compiled::validate_compiled_dialogue(&dialogue).err(),
+        encode_compiled_dialogue_messagepack(&dialogue).err(),
+    );
     assert!(matches!(
         encode_compiled_dialogue_messagepack(&dialogue),
         Err(CompiledAssetEncodeError::InvalidDialogue(reason)) if reason.contains(expected)

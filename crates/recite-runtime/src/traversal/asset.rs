@@ -55,7 +55,6 @@ impl<'a> AssetView<'a> {
         if session.compiler_version != self.asset.header.compiler_version
             || session.source_map_id != self.asset.header.source_map_id
             || session.schema_fingerprint != self.asset.header.schema_fingerprint
-            || session.sources.as_ref() != self.asset.sources.as_slice()
         {
             return Err(DialogueError::AssetContentMismatch {
                 asset_id: session.asset_id.as_str().to_owned(),
@@ -63,19 +62,28 @@ impl<'a> AssetView<'a> {
             });
         }
 
-        let fingerprint = self.asset.content_fingerprint().map_err(|error| {
-            DialogueError::MalformedCompiledAsset {
-                reason: error.to_string(),
-            }
-        })?;
-        if &session.compiled_payload_fingerprint != fingerprint {
+        let fingerprint = self.asset.content_fingerprint();
+        // Start and validated restore bind both private identity fields to one
+        // immutable asset. Live sessions cannot deserialize or mutate their
+        // source identity, so a matching full-payload digest also covers sources.
+        if fingerprint.is_ok_and(|fingerprint| &session.compiled_payload_fingerprint == fingerprint)
+        {
+            return Ok(());
+        }
+        // Keep legacy error precedence for foreign or malformed assets.
+        if session.sources.as_ref() != self.asset.sources.as_slice() {
             return Err(DialogueError::AssetContentMismatch {
                 asset_id: session.asset_id.as_str().to_owned(),
-                reason: "compiled payload fingerprint differs from the session asset".to_owned(),
+                reason: "compiled asset identity fields or source fingerprints differ".to_owned(),
             });
         }
-
-        Ok(())
+        fingerprint.map_err(|error| DialogueError::MalformedCompiledAsset {
+            reason: error.to_string(),
+        })?;
+        Err(DialogueError::AssetContentMismatch {
+            asset_id: session.asset_id.as_str().to_owned(),
+            reason: "compiled payload fingerprint differs from the session asset".to_owned(),
+        })
     }
 
     pub(crate) fn lookup_block(self, block: &str) -> Result<BlockIndex, DialogueError> {

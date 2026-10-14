@@ -1,4 +1,6 @@
-use std::collections::BTreeSet;
+mod assessment;
+pub use assessment::ProjectAssetFreshness;
+use assessment::SourceIssue;
 
 use super::{
     MISSING_SOURCE_ASSET, ProjectFreshnessInput, ProjectManifestSource,
@@ -8,8 +10,7 @@ use super::{
 };
 use crate::{
     Diagnostic, DiagnosticArgumentValue, compiled::COMPILED_ASSET_FORMAT_VERSION_V0,
-    compiled::COMPILER_COMPATIBILITY_VERSION_V0, compiled::canonical_source_fingerprint,
-    toml_spans::TomlSpanIndex,
+    compiled::COMPILER_COMPATIBILITY_VERSION_V0, toml_spans::TomlSpanIndex,
 };
 
 /// Validate one decoded asset against the project scene and current source/schema state.
@@ -45,14 +46,37 @@ fn validate_project_freshness_with_spans(
     input: ProjectFreshnessInput<'_>,
     spans: Option<&TomlSpanIndex>,
 ) -> Vec<Diagnostic> {
-    let scene = input.scene;
+    let assessment = ProjectAssetFreshness::new(
+        input.asset,
+        &input.current_sources,
+        input.current_schema_fingerprint,
+    );
+    validate_scene(
+        file,
+        source,
+        spans,
+        input.scene_index,
+        input.scene,
+        &assessment,
+    )
+}
+
+fn validate_scene(
+    file: &str,
+    source: &str,
+    spans: Option<&TomlSpanIndex>,
+    scene_index: usize,
+    scene: &super::ProjectScene,
+    assessment: &ProjectAssetFreshness<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
-    if !input
+    if assessment
         .asset
         .block_lookup
-        .iter()
-        .any(|entry| entry.id.as_str() == scene.block)
+        .as_slice()
+        .binary_search_by(|entry| entry.id.as_str().cmp(scene.block.as_str()))
+        .is_err()
     {
         diagnostics.push(project_diagnostic(
             &UNKNOWN_START_BLOCK,
@@ -61,7 +85,7 @@ fn validate_project_freshness_with_spans(
                 "scene '{}' references unknown block '{}'",
                 scene.id, scene.block
             ),
-            scene_key_span(file, source, spans, input.scene_index, "block"),
+            scene_key_span(file, source, spans, scene_index, "block"),
             [
                 (
                     "scene_id",
@@ -75,14 +99,8 @@ fn validate_project_freshness_with_spans(
         ));
     }
 
-    let asset_speakers = input
-        .asset
-        .speakers
-        .iter()
-        .map(|speaker| speaker.id.as_str())
-        .collect::<BTreeSet<_>>();
     for participant in &scene.participants {
-        if !asset_speakers.is_empty() && !asset_speakers.contains(participant.as_str()) {
+        if !assessment.speakers.is_empty() && !assessment.speakers.contains(participant.as_str()) {
             diagnostics.push(project_diagnostic(
                 &UNKNOWN_PARTICIPANT,
                 "diagnostic-project-008-compiled-asset",
@@ -90,7 +108,7 @@ fn validate_project_freshness_with_spans(
                     "scene '{}' participant '{participant}' is not present in compiled asset '{}'",
                     scene.id, scene.asset
                 ),
-                scene_key_span(file, source, spans, input.scene_index, "participants"),
+                scene_key_span(file, source, spans, scene_index, "participants"),
                 [
                     (
                         "scene_id",
@@ -109,33 +127,30 @@ fn validate_project_freshness_with_spans(
         }
     }
 
-    for compiled_source in &input.asset.sources {
-        match input.current_sources.get(compiled_source.path.as_str()) {
-            Some(Some(current_source)) => {
-                let current_fingerprint = canonical_source_fingerprint(current_source);
-                if current_fingerprint != compiled_source.fingerprint {
-                    diagnostics.push(project_diagnostic(
-                        &STALE_SOURCE_FINGERPRINT,
-                        "diagnostic-fresh-001",
-                        format!(
-                            "compiled asset '{}' is stale for source '{}'",
-                            scene.asset, compiled_source.path
+    for (compiled_source, issue) in &assessment.source_issues {
+        match issue {
+            SourceIssue::Stale => {
+                diagnostics.push(project_diagnostic(
+                    &STALE_SOURCE_FINGERPRINT,
+                    "diagnostic-fresh-001",
+                    format!(
+                        "compiled asset '{}' is stale for source '{}'",
+                        scene.asset, compiled_source.path
+                    ),
+                    scene_key_span(file, source, spans, scene_index, "asset"),
+                    [
+                        (
+                            "asset",
+                            DiagnosticArgumentValue::String(scene.asset.clone()),
                         ),
-                        scene_key_span(file, source, spans, input.scene_index, "asset"),
-                        [
-                            (
-                                "asset",
-                                DiagnosticArgumentValue::String(scene.asset.clone()),
-                            ),
-                            (
-                                "source",
-                                DiagnosticArgumentValue::String(compiled_source.path.clone()),
-                            ),
-                        ],
-                    ));
-                }
+                        (
+                            "source",
+                            DiagnosticArgumentValue::String(compiled_source.path.clone()),
+                        ),
+                    ],
+                ));
             }
-            Some(None) | None => {
+            SourceIssue::Missing => {
                 diagnostics.push(project_diagnostic(
                     &MISSING_SOURCE_ASSET,
                     "diagnostic-project-006",
@@ -143,7 +158,7 @@ fn validate_project_freshness_with_spans(
                         "compiled asset '{}' references missing source '{}'",
                         scene.asset, compiled_source.path
                     ),
-                    scene_key_span(file, source, spans, input.scene_index, "asset"),
+                    scene_key_span(file, source, spans, scene_index, "asset"),
                     [
                         (
                             "asset",
@@ -159,10 +174,7 @@ fn validate_project_freshness_with_spans(
         }
     }
 
-    if input
-        .current_schema_fingerprint
-        .is_some_and(|current| input.asset.header.schema_fingerprint != current)
-    {
+    if assessment.schema_stale {
         diagnostics.push(project_diagnostic(
             &STALE_SCHEMA_FINGERPRINT,
             "diagnostic-fresh-002",
@@ -170,7 +182,7 @@ fn validate_project_freshness_with_spans(
                 "compiled asset '{}' has a stale schema fingerprint",
                 scene.asset
             ),
-            scene_key_span(file, source, spans, input.scene_index, "asset"),
+            scene_key_span(file, source, spans, scene_index, "asset"),
             [(
                 "asset",
                 DiagnosticArgumentValue::String(scene.asset.clone()),
@@ -178,17 +190,17 @@ fn validate_project_freshness_with_spans(
         ));
     }
 
-    if input.asset.header.compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0 {
+    if assessment.asset.header.compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0 {
         diagnostics.push(project_diagnostic(
             &STALE_COMPILER_COMPATIBILITY,
             "diagnostic-fresh-003",
             format!(
                 "compiled asset '{}' uses compiler compatibility version {}, expected {}",
                 scene.asset,
-                input.asset.header.compiler_compatibility_version,
+                assessment.asset.header.compiler_compatibility_version,
                 COMPILER_COMPATIBILITY_VERSION_V0
             ),
-            scene_key_span(file, source, spans, input.scene_index, "asset"),
+            scene_key_span(file, source, spans, scene_index, "asset"),
             [
                 (
                     "asset",
@@ -197,7 +209,7 @@ fn validate_project_freshness_with_spans(
                 (
                     "version",
                     DiagnosticArgumentValue::Integer(i64::from(
-                        input.asset.header.compiler_compatibility_version,
+                        assessment.asset.header.compiler_compatibility_version,
                     )),
                 ),
                 (
@@ -208,15 +220,15 @@ fn validate_project_freshness_with_spans(
         ));
     }
 
-    if input.asset.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0 {
+    if assessment.asset.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0 {
         diagnostics.push(project_diagnostic(
             &UNSUPPORTED_ASSET_VERSION,
             "diagnostic-project-007",
             format!(
                 "compiled asset '{}' uses unsupported format version {}",
-                scene.asset, input.asset.header.format_version
+                scene.asset, assessment.asset.header.format_version
             ),
-            scene_key_span(file, source, spans, input.scene_index, "asset"),
+            scene_key_span(file, source, spans, scene_index, "asset"),
             [
                 (
                     "asset",
@@ -224,7 +236,9 @@ fn validate_project_freshness_with_spans(
                 ),
                 (
                     "version",
-                    DiagnosticArgumentValue::Integer(i64::from(input.asset.header.format_version)),
+                    DiagnosticArgumentValue::Integer(i64::from(
+                        assessment.asset.header.format_version,
+                    )),
                 ),
             ],
         ));

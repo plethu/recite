@@ -53,6 +53,7 @@ struct AssetBuilder<'a> {
     options: CompileOptions,
     schema: Option<&'a ProjectSchema>,
     source_file_indices: BTreeMap<&'a str, SourceFileIndex>,
+    current_source: Option<(&'a str, SourceFileIndex)>,
     source_documents: BTreeMap<&'a str, SourceLineIndex>,
     block_indices: BTreeMap<&'a str, BlockIndex>,
     speakers_by_id: BTreeMap<String, SpeakerIndex>,
@@ -78,6 +79,7 @@ impl<'a> AssetBuilder<'a> {
             options,
             schema,
             source_file_indices: BTreeMap::new(),
+            current_source: None,
             source_documents: BTreeMap::new(),
             block_indices: BTreeMap::new(),
             speakers_by_id: BTreeMap::new(),
@@ -101,6 +103,7 @@ impl<'a> AssetBuilder<'a> {
         for input in self.inputs {
             let source_file = &input.source_file;
             let source_file_index = self.source_file_index(&source_file.path)?;
+            self.current_source = Some((&source_file.path, source_file_index));
             for block in &source_file.blocks {
                 self.compile_block(source_file_index, block)?;
             }
@@ -217,7 +220,10 @@ impl<'a> AssetBuilder<'a> {
             .map(|input| {
                 Ok(CompiledSourceFile {
                     path: input.source_file.path.clone(),
-                    fingerprint: canonical_source_fingerprint(&input.source),
+                    fingerprint: input
+                        .fingerprint
+                        .clone()
+                        .unwrap_or_else(|| canonical_source_fingerprint(&input.source)),
                 })
             })
             .collect()

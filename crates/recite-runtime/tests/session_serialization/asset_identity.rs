@@ -3,6 +3,68 @@ use recite_core::compiled::{CompiledArgument, SchemaFingerprint, canonical_sourc
 use recite_runtime::snapshot::DialogueSchemaFingerprintSnapshot;
 
 #[test]
+fn independent_equal_assets_accept_live_sessions_but_forged_sources_do_not() {
+    let source = ":: start default\n> line@11111111111111111111\n  Café.\n-> END\n";
+    let first = compile_asset("dialogue/start.recite", source);
+    let second = compile_asset("dialogue/start.recite", source);
+    assert!(!std::ptr::eq(
+        first.sources.as_ptr(),
+        second.sources.as_ptr()
+    ));
+    let mut session = start_scene(&first, None).expect("session");
+    let mut expected = session.clone();
+    assert_eq!(next(&second, &mut session), next(&first, &mut expected));
+    assert_eq!(snapshot_session(&session), snapshot_session(&expected));
+    let mut forged = snapshot_session(&session);
+    forged.sources[0].path = "forged.recite".into();
+    assert!(matches!(
+        restore_session(&first, forged),
+        Err(DialogueError::AssetContentMismatch { .. })
+    ));
+    let mut payload = first.clone().into_payload();
+    payload.sources[0].fingerprint = canonical_source_fingerprint("changed");
+    let changed = recite_core::compiled::CompiledDialogue::new(payload);
+    assert!(matches!(
+        next(&changed, &mut session),
+        Err(DialogueError::AssetContentMismatch { .. })
+    ));
+}
+
+#[test]
+fn identity_checks_preserve_error_precedence_for_uncached_foreign_assets() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        ":: start default\n> line@11111111111111111111\n  Start.\n-> END\n",
+    );
+    let session = start_scene(&asset, None).expect("session");
+    let mut malformed = asset.clone().into_payload();
+    malformed.blocks[0].statements.len = u32::MAX;
+    let invalid = recite_core::compiled::CompiledDialogue::new(malformed.clone());
+    assert!(matches!(
+        next(&invalid, &mut session.clone()),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
+    malformed.sources[0].fingerprint = canonical_source_fingerprint("changed");
+    let invalid_sources = recite_core::compiled::CompiledDialogue::new(malformed.clone());
+    assert!(
+        matches!(next(&invalid_sources, &mut session.clone()), Err(DialogueError::AssetContentMismatch { reason, .. }) if reason.contains("source fingerprints"))
+    );
+    malformed.header.asset_id = recite_core::compiled::CompiledAssetId::new("other").expect("id");
+    let invalid_header = recite_core::compiled::CompiledDialogue::new(malformed);
+    assert!(matches!(
+        next(&invalid_header, &mut session.clone()),
+        Err(DialogueError::AssetMismatch { .. })
+    ));
+    let mut changed = asset.clone().into_payload();
+    changed.lines[0].source_text = "Different.".into();
+    changed.lines[0].authored_source_text = "Different.".into();
+    let changed = recite_core::compiled::CompiledDialogue::new(changed);
+    assert!(
+        matches!(next(&changed, &mut session.clone()), Err(DialogueError::AssetContentMismatch { reason, .. }) if reason.contains("payload fingerprint"))
+    );
+}
+
+#[test]
 fn same_id_different_asset_content_is_rejected() {
     let first = compile_asset_with_id(
         "dialogue/start.recite",

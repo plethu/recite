@@ -1,26 +1,17 @@
-use std::collections::BTreeMap;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use recite_compiler::authoring::{
     AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration,
 };
 use recite_config::discover_project;
 use recite_core::{
-    Diagnostic, DiagnosticArgumentValue,
+    Diagnostic,
     compiled::SchemaFingerprint,
-    project::ProjectFreshnessInput,
-    project::ProjectManifestSource,
-    project::{
-        MISSING_COMPILED_ASSET, validate_project_freshness_source, validate_project_manifest_source,
-    },
+    project::validate_project_manifest_source,
     schema::{ProjectSchema, SchemaLoadReport},
 };
 
-use super::paths::resolve_project_path;
-use super::project_asset::decode_project_asset;
-use super::project_diagnostics::project_diagnostic;
-use super::project_sources::read_project_sources;
+use super::project_freshness::validate_project_asset_freshness;
 use crate::error::CliError;
 
 pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>, CliError> {
@@ -142,115 +133,4 @@ fn validate_project_sources(
     })?;
 
     Ok(kernel.snapshot().diagnostics().iter().cloned().collect())
-}
-
-/// Validate decoded project assets against a parsed project manifest.
-///
-/// Watch/build callers use this after compiling with the same source-backed
-/// manifest, avoiding a second TOML parse and preserving its source spans.
-pub(crate) fn validate_project_asset_freshness(
-    project_root: &Path,
-    manifest_source: &ProjectManifestSource,
-    current_schema_fingerprint: Option<SchemaFingerprint>,
-) -> Result<Vec<Diagnostic>, CliError> {
-    let manifest = manifest_source.manifest();
-    let mut diagnostics = Vec::new();
-
-    for (scene_index, scene) in manifest.scenes.iter().enumerate() {
-        let asset_path = resolve_project_path(project_root, &scene.asset);
-        match fs::metadata(&asset_path) {
-            Ok(metadata) if metadata.is_file() => {}
-            Ok(_) => return Err(CliError::AssetNotFile { path: asset_path }),
-            Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
-                diagnostics.push(project_diagnostic(
-                    &MISSING_COMPILED_ASSET,
-                    "diagnostic-project-003",
-                    format!(
-                        "scene '{}' references missing compiled asset '{}'",
-                        scene.id, scene.asset
-                    ),
-                    manifest_source.scene_key_span(scene_index, "asset"),
-                    [
-                        (
-                            "scene_id",
-                            DiagnosticArgumentValue::String(scene.id.clone()),
-                        ),
-                        (
-                            "asset",
-                            DiagnosticArgumentValue::String(scene.asset.clone()),
-                        ),
-                    ],
-                ));
-                continue;
-            }
-            Err(source) => {
-                return Err(CliError::AssetMetadata {
-                    path: asset_path,
-                    source,
-                });
-            }
-        }
-
-        let bytes = match fs::read(&asset_path) {
-            Ok(bytes) => bytes,
-            Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
-                diagnostics.push(project_diagnostic(
-                    &MISSING_COMPILED_ASSET,
-                    "diagnostic-project-003",
-                    format!(
-                        "scene '{}' references missing compiled asset '{}'",
-                        scene.id, scene.asset
-                    ),
-                    manifest_source.scene_key_span(scene_index, "asset"),
-                    [
-                        (
-                            "scene_id",
-                            DiagnosticArgumentValue::String(scene.id.clone()),
-                        ),
-                        (
-                            "asset",
-                            DiagnosticArgumentValue::String(scene.asset.clone()),
-                        ),
-                    ],
-                ));
-                continue;
-            }
-            Err(source) => {
-                return Err(CliError::Read {
-                    path: asset_path,
-                    source,
-                });
-            }
-        };
-        let asset = match decode_project_asset(
-            &bytes,
-            &scene.id,
-            &scene.asset,
-            manifest_source.scene_key_span(scene_index, "asset"),
-        ) {
-            Ok(asset) => asset,
-            Err(diagnostic) => {
-                diagnostics.push(*diagnostic);
-                continue;
-            }
-        };
-
-        let current_sources = read_project_sources(project_root, &asset_path, &asset.sources)?;
-        let current_source_map = current_sources
-            .iter()
-            .map(|(path, source)| (path.as_str(), source.as_deref()))
-            .collect::<BTreeMap<_, _>>();
-        diagnostics.extend(validate_project_freshness_source(
-            manifest_source,
-            ProjectFreshnessInput {
-                scene_index,
-                scene,
-                asset: &asset,
-                current_sources: current_source_map,
-                current_schema_fingerprint: current_schema_fingerprint.clone(),
-            },
-        ));
-    }
-
-    Ok(diagnostics)
 }

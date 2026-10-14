@@ -9,19 +9,16 @@ pub(crate) struct Change {
 }
 impl Change {
     pub fn between(before: &str, after: &str) -> Self {
-        let start = before
-            .chars()
-            .zip(after.chars())
-            .take_while(|(a, b)| a == b)
-            .map(|(c, _)| c.len_utf8())
-            .sum();
-        let suffix: usize = before[start..]
-            .chars()
-            .rev()
-            .zip(after[start..].chars().rev())
-            .take_while(|(a, b)| a == b)
-            .map(|(c, _)| c.len_utf8())
-            .sum();
+        let mut start = common_prefix(before.as_bytes(), after.as_bytes());
+        while !before.is_char_boundary(start) || !after.is_char_boundary(start) {
+            start -= 1;
+        }
+        let mut suffix = common_suffix(&before.as_bytes()[start..], &after.as_bytes()[start..]);
+        while !before.is_char_boundary(before.len() - suffix)
+            || !after.is_char_boundary(after.len() - suffix)
+        {
+            suffix -= 1;
+        }
         Self {
             start,
             removed: before[start..before.len() - suffix].into(),
@@ -84,3 +81,38 @@ impl History {
         }
     }
 }
+
+// Compare whole byte chunks first; decode no unchanged characters. The caller
+// adjusts the two boundaries before slicing valid UTF-8 replacement text.
+fn common_prefix(before: &[u8], after: &[u8]) -> usize {
+    let matched = before
+        .chunks_exact(32)
+        .zip(after.chunks_exact(32))
+        .take_while(|(a, b)| a == b)
+        .count()
+        * 32;
+    matched
+        + before[matched..]
+            .iter()
+            .zip(&after[matched..])
+            .take_while(|(a, b)| a == b)
+            .count()
+}
+fn common_suffix(before: &[u8], after: &[u8]) -> usize {
+    let matched = before
+        .rchunks_exact(32)
+        .zip(after.rchunks_exact(32))
+        .take_while(|(a, b)| a == b)
+        .count()
+        * 32;
+    matched
+        + before[..before.len() - matched]
+            .iter()
+            .rev()
+            .zip(after[..after.len() - matched].iter().rev())
+            .take_while(|(a, b)| a == b)
+            .count()
+}
+
+#[cfg(test)]
+mod tests;

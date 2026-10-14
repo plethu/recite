@@ -105,7 +105,8 @@ fn run(root: PathBuf, asset: Option<String>, control: &BuildControl) -> Outcome 
         }
     };
     let inputs_changed = result.status() == BuildTerminalStatus::Succeeded
-        && !ProjectBuildRequest::prepare(&root)
+        && !request
+            .reprepare()
             .ok()
             .and_then(|preparation| preparation.into_request())
             .is_some_and(|latest| {
