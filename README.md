@@ -16,9 +16,9 @@
 Recite is testable, reviewable, and pleasant tooling for authoring interactive narratives. It's the
 tool I've always wished I had when working on dialogue-heavy games.
 
-![The same Relay Hub scene in Neovim with Recite LSP (left) and Writer's branching graph (right), showing its greeting and four branches.](assets/readme/recite-scene.png)
+![The same Relay Hub scene in Neovim with Recite LSP (left) and Writer's branching graph (right), showing its greeting and four branches.](docs/assets/recite-scene.png)
 
-[Open image](assets/readme/recite-scene.png)
+[Open image](docs/assets/recite-scene.png)
 
 I want the tooling to hold up as a story gets ambitious: scenes you can review and
 [test](docs-site/src/content/docs/guides/testing-dialogue.md),
