@@ -9,7 +9,7 @@ fn additions_are_unique_and_undoable_without_rewriting_existing_ids()
         .document()
         .passages()?
         .into_iter()
-        .map(|p| p.id)
+        .map(|p| p.id.clone())
         .collect();
     session.add_beat()?;
     assert_eq!(session.selected_block()?.as_deref(), Some("new_beat_1"));
@@ -76,7 +76,7 @@ fn renaming_updates_incoming_returns_but_keeps_passage_ids()
         .document()
         .passages()?
         .into_iter()
-        .map(|p| p.id)
+        .map(|p| p.id.clone())
         .collect();
     session.rename_beat("front_desk")?;
     assert!(session.document().source().contains(":: front_desk"));
@@ -87,7 +87,7 @@ fn renaming_updates_incoming_returns_but_keeps_passage_ids()
             .document()
             .passages()?
             .into_iter()
-            .map(|p| p.id)
+            .map(|p| p.id.clone())
             .collect::<Vec<_>>(),
         ids
     );

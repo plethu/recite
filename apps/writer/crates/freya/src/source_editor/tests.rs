@@ -31,6 +31,7 @@ fn setup(before_layout: bool) -> (TestingRunner, (State<CodeEditorData>, EditorV
                 let mut editor = CodeEditorData::new(Rope::from_str(&source()), None);
                 editor.parse();
                 let viewport = EditorViewport {
+                    cache: State::create(None),
                     scroll: ScrollController::new(0, 0),
                     reveal: State::create(before_layout),
                     completion: State::create(false),

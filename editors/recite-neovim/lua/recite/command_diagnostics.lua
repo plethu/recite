@@ -20,23 +20,21 @@ local function read_source(path)
   return value
 end
 
-local function line_for(text, line)
+local function source_lines(text)
+  local lines = {}
   local start = 1
-  local current = 1
-  while current < line do
-    local newline = text:find("\n", start, true)
-    if not newline then
-      return nil
+  while true do
+    local finish = text:find("[\r\n]", start)
+    if not finish then
+      lines[#lines + 1] = text:sub(start)
+      return lines
     end
-    start = newline + 1
-    current = current + 1
+    lines[#lines + 1] = text:sub(start, finish - 1)
+    if text:sub(finish, finish + 1) == "\r\n" then
+      finish = finish + 1
+    end
+    start = finish + 1
   end
-  local finish = text:find("\n", start, true)
-  local value = text:sub(start, finish and finish - 1 or #text)
-  if value:sub(-1) == "\r" then
-    value = value:sub(1, -2)
-  end
-  return value
 end
 
 local function scalar_to_byte(line, column)
@@ -95,7 +93,7 @@ local function diagnostic_message(record)
   return rendered or record.compatibility_message or record.code
 end
 
-local function to_diagnostic(record, project_root)
+local function to_diagnostic(record, project_root, sources)
   if not diagnostic.valid(record) then
     error(protocol.error("invalid_diagnostic"))
   end
@@ -110,13 +108,18 @@ local function to_diagnostic(record, project_root)
   if not inside then
     error(protocol.error("diagnostic_path_outside_project"))
   end
-  local source, read_error = read_source(path)
-  if not source then
-    error(protocol.error("diagnostic_source_unavailable", read_error))
+  local lines = sources[path]
+  if not lines then
+    local source, read_error = read_source(path)
+    if not source then
+      error(protocol.error("diagnostic_source_unavailable", read_error))
+    end
+    lines = source_lines(source)
+    sources[path] = lines
   end
   local start_line = protocol.integer_raw(record.span.start.line)
   local start_line_number = tonumber(start_line)
-  local line = line_for(source, start_line_number)
+  local line = lines[start_line_number]
   if not line then
     error(protocol.error("invalid_diagnostic_start"))
   end
@@ -128,7 +131,7 @@ local function to_diagnostic(record, project_root)
   local end_line_number = start_line_number
   if record.span["end"] ~= nil and record.span["end"] ~= vim.NIL then
     end_line_number = tonumber(protocol.integer_raw(record.span["end"].line))
-    local end_line = line_for(source, end_line_number)
+    local end_line = lines[end_line_number]
     if not end_line then
       error(protocol.error("invalid_diagnostic_end"))
     end
@@ -177,8 +180,9 @@ function M.replace(namespace, records, project_root, known_buffers)
     error(protocol.error("invalid_diagnostics"))
   end
   local projected = {}
+  local sources = {}
   for _, record in ipairs(records) do
-    local value = to_diagnostic(record, project_root)
+    local value = to_diagnostic(record, project_root, sources)
     if value then
       projected[value.bufnr] = projected[value.bufnr] or {}
       projected[value.bufnr][#projected[value.bufnr] + 1] = value.diagnostic

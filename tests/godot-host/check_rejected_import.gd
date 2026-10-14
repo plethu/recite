@@ -8,11 +8,15 @@ func _initialize() -> void:
 	var imported = ResourceLoader.load(
 		"res://dialogue/basic.recitec", "", ResourceLoader.CACHE_MODE_IGNORE
 	)
+	var candidate := ReciteDialogueResource.new()
+	var rejected := candidate.load_from_path("res://dialogue/basic.recitec")
 	if (
 		last_good is ReciteDialogueResource
 		and imported is ReciteDialogueResource
 		and imported.content_identity() == last_good.content_identity()
 		and imported.last_error().get("code") == "asset_load_or_decode_error"
+		and not rejected.is_ok()
+		and imported.last_error() == rejected.error()
 		and imported.revision_info()["import_error"]["code"] == "asset_load_or_decode_error"
 	):
 		print("Godot rejected import retained last-good")

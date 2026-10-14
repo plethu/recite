@@ -9,6 +9,9 @@ pub struct SourceLineIndex {
     starts: Arc<[usize]>,
 }
 
+#[cfg(test)]
+mod tests;
+
 impl SourceLineIndex {
     #[must_use]
     pub fn new(source: impl Into<Arc<str>>) -> Self {
@@ -57,5 +60,26 @@ impl SourceLineIndex {
         // A final logical line has no terminator, so trimming is also safe there.
         let line = line.strip_suffix('\r').unwrap_or(line);
         scalar_offset(line, scalar).map(|offset| self.starts[index] + offset)
+    }
+
+    pub(crate) fn position_for_byte_offset(&self, offset: usize) -> Option<SourcePosition> {
+        let offset = self
+            .source
+            .ceil_char_boundary(offset.min(self.source.len()));
+        let line = self
+            .starts
+            .partition_point(|start| *start <= offset)
+            .checked_sub(1)?;
+        let column = self
+            .source
+            .get(self.starts[line]..offset)?
+            .chars()
+            .count()
+            .checked_add(1)?;
+        SourcePosition::new(
+            u32::try_from(line.checked_add(1)?).ok()?,
+            u32::try_from(column).ok()?,
+        )
+        .ok()
     }
 }

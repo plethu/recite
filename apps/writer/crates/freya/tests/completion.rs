@@ -79,7 +79,15 @@ fn completion_replaces_the_diagnostic_token_without_applying_the_draft()
         });
         test.poll_n(std::time::Duration::from_millis(16), 6);
     }
-    support::click(&mut test, "destination")?;
+    for key in [
+        NamedKey::ArrowDown,
+        NamedKey::ArrowDown,
+        NamedKey::ArrowUp,
+        NamedKey::Enter,
+    ] {
+        test.press_key(Key::Named(key));
+        test.poll_n(std::time::Duration::from_millis(16), 6);
+    }
     assert!(
         test.find(|_, e| Paragraph::try_downcast(e).filter(|p| p
             .spans

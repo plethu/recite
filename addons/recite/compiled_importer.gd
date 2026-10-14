@@ -44,7 +44,7 @@ func _import(
 	var file := FileAccess.open(source_file, FileAccess.READ)
 	if file == null:
 		push_error("Recite import: cannot read %s" % source_file)
-		return _retain_previous(save_path, source_file, PackedByteArray(), true)
+		return _retain_previous(save_path, source_file)
 	var bytes := file.get_buffer(file.get_length())
 	var resource := ReciteDialogueResource.new()
 	var result := resource.load_from_bytes(bytes)
@@ -55,7 +55,7 @@ func _import(
 				% [source_file, result.error().get("message", "invalid compiled dialogue")]
 			)
 		)
-		return _retain_previous(save_path, source_file, bytes, false)
+		return _retain_previous(save_path, source_file, result.error())
 	var saved := ResourceSaver.save(resource, save_path + ".res")
 	if saved != OK:
 		return saved
@@ -63,7 +63,7 @@ func _import(
 
 
 func _retain_previous(
-	save_path: String, source_file: String, rejected_bytes: PackedByteArray, unreadable: bool
+	save_path: String, source_file: String, rejected_error: Dictionary = {}
 ) -> Error:
 	var previous_bytes := FileAccess.get_file_as_bytes(save_path + ".lastgood")
 	if previous_bytes.is_empty():
@@ -71,12 +71,12 @@ func _retain_previous(
 	var resource := ReciteDialogueResource.new()
 	if not resource.load_from_bytes(previous_bytes).is_ok():
 		return ERR_FILE_CORRUPT
-	# Loading the rejected candidate sets a structured error without replacing
-	# the valid bytes. This error is stored in the imported Resource.
-	if unreadable:
+	# Preserve the error already obtained from decoding the candidate. The
+	# storage property also carries it through Resource deserialization.
+	if rejected_error.is_empty():
 		resource.load_from_path(source_file)
 	else:
-		resource.load_from_bytes(rejected_bytes)
+		resource.set("last_error", rejected_error)
 	return ResourceSaver.save(resource, save_path + ".res")
 
 

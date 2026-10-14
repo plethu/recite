@@ -85,6 +85,20 @@ requires allocation-free result clones and Source recovery capture/clones. Exist
 projection, edit and peak-heap bounds remain in force. Applying Source drafts and serializing
 recovery still process the full text.
 
+Source completion queries the accepted kernel for unchanged bytes and prepares one independent
+overlay for a changed draft, preserving accepted state and saved-document analysis. The popup and
+keyboard share a result bound to the document identity, revision, draft and cursor. Sidebar captions
+scan authored END destinations without classifying the full flow graph; unchanged ordered names and
+badges share captions across prose edits.
+
+Compiler completion and hover sites use the snapshot's line index and compute replacement spans
+within the selected line. Contextual speaker metadata walks preceding indexed lines only as far as
+the nearest beat header, preserving explicit overrides and malformed-context handling.
+Project validation stops expanding contexts once they contain every current document. Unchanged
+ordered exports retain their definitions membership while dependencies and facts still update. Stable-ID
+collision checks retain source order; the separate line-ID index is built only for eligible choice
+echo lookups.
+
 The project workload also measures a warm manuscript prose edit followed by its Script projection.
 Prose validation remains parser-owned; accepted edits reuse their checked passages and, when Script
 was already requested, construct it from that same transient parse. Raw source edits and undo/redo
@@ -94,7 +108,9 @@ paint.
 For prose edits inside one restart region, identical surrounding region bytes and ordered frozen IDs
 allow checked outputs to be reused with relocated coordinates. Uncertain mappings and plural-bearing
 Script projections fall back to whole-file projection. A single-region file still needs a whole-file
-parse; materializing the public passage and Script collections remains linear in their size.
+parse; materializing the public passage and Script collections remains linear in their size. Passage
+clones share immutable content while keeping coordinates specific to each revision. An owned copy
+uses copy-on-write when its content is changed; retained snapshots remain independent.
 
 The session workload runs discovery/indexing, first visits and edits, revisits with undo/redo,
 save-all and explicit closing. It checks preserved prose/history and released session owners and
@@ -116,8 +132,11 @@ Serialization and full final-source validation remain separate work. These probe
 painting and real input and do not establish the release baseline.
 
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
-Topology is already memoized independently of camera and hover; this probe measures reconstruction
-after source or saved placement changes, not frame pacing.
+Topology is memoized independently of camera and hover. Content refresh derives current connections
+and labels, and reuses geometry when ordered beat IDs and entry flags, ordered connection endpoints
+and return classifications, and saved placement remain identical. Other changes reconstruct layout
+and routes. The probe measures both reconstruction and content refresh after an accepted edit,
+including connection derivation and guard work; it excludes native frame pacing.
 
 Kernel-open timing excludes filesystem discovery, indexing and painting. The
 [profile script](../scripts/profile-writer.sh) records builds/environment, refuses overwrite and

@@ -7,6 +7,8 @@ use crate::workspace::{DiagnosticRefresh, WorkspaceChangeResult, WorkspaceConfig
 
 use super::support::{Harness, block_names, file_uri, full_change, test_workspace, write_file};
 
+#[cfg(unix)]
+mod cursor_aliases;
 pub(super) mod discovery_transitions;
 mod lifecycle;
 mod open_identity;
@@ -14,6 +16,8 @@ mod project_partition;
 mod schema_summary;
 mod transactions;
 
+#[cfg(unix)]
+pub(super) use cursor_aliases::cursor_queries_match_the_requested_alias_buffer;
 pub(super) use discovery_transitions::malformed_workspace_root_does_not_block_independent_root;
 pub(super) use lifecycle::{
     did_close_refreshes_saved_summary_before_falling_back,

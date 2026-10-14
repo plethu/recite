@@ -171,6 +171,26 @@ fn validates_choice_echo_can_reference_later_lines() {
 }
 
 #[test]
+fn choice_echo_finds_later_nested_ids_even_when_choice_shape_is_invalid() {
+    let files = vec![lower(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "? choose@db4d20bec509c2ac56b6 echo=line(a45a5dab466f6c482701)\n",
+            "  Choose.\n",
+            "  -> END\n",
+            "? branch@11111111111111111111\n",
+            "  Other.\n",
+            "  > echo_line@a45a5dab466f6c482701\n",
+            "    Echo.\n",
+            "  -> END\n",
+        ),
+    )];
+    let report = validate_source_files(&files);
+    assert_codes(&report, ["RECITE_VALIDATE014"]);
+}
+
+#[test]
 fn validates_metadata_floats_are_finite_for_v0_inspection_output() {
     let files = vec![lower(
         "dialogue/start.recite",

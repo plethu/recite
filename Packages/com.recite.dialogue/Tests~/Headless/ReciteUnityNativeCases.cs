@@ -164,6 +164,10 @@ internal static class ReciteUnityNativeCases
     {
         var bytes = File.ReadAllBytes(Environment.GetEnvironmentVariable("RECITE_UNITY_SAMPLE_ASSET"));
         var info = ReciteAssetInfo.Inspect(new ReciteDialogueAsset(bytes));
+        var borrowed = ReciteAssetInfo.InspectBytes(bytes);
+        Assert(borrowed.AssetId == info.AssetId && borrowed.SourceMapId == info.SourceMapId &&
+            ByteArraysEqual(borrowed.ContentFingerprint.Digest, info.ContentFingerprint.Digest),
+            "borrowed importer inspection changed native asset identity");
         Assert(!string.IsNullOrEmpty(info.AssetId), "native asset info has no asset ID");
         Assert(!string.IsNullOrEmpty(info.SourceMapId), "native asset info has no source map ID");
         Assert(info.ContentFingerprint.Digest.Length > 0, "native content fingerprint is empty");
@@ -172,6 +176,7 @@ internal static class ReciteUnityNativeCases
         Assert(mutable[0] != info.ContentFingerprint.Digest[0], "native fingerprint digest leaked mutable state");
         var invalid = (byte[])bytes.Clone();
         invalid[0] ^= 0xff;
+        ExpectStatus(() => ReciteAssetInfo.InspectBytes(invalid), ReciteStatus.AssetLoadOrDecode);
         ExpectStatus(() => ReciteAssetInfo.Inspect(new ReciteDialogueAsset(invalid)), ReciteStatus.AssetLoadOrDecode);
     }
 

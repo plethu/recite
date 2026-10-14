@@ -25,8 +25,9 @@ export function replaceDiagnostics(api, collection, records, projectRoot, knownU
 function projectDiagnostics(api, records, projectRoot) {
   if (!Array.isArray(records)) throw protocol("invalid_diagnostics");
   const values = new Map();
+  const sources = new Map();
   for (const record of records) {
-    const diagnostic = toDiagnostic(api, record, projectRoot);
+    const diagnostic = toDiagnostic(api, record, projectRoot, sources);
     if (!diagnostic) continue;
     const key = diagnostic.uri.toString();
     const entry = values.get(key) ?? { uri: diagnostic.uri, values: [] };
@@ -46,7 +47,7 @@ export function clearDiagnostics(collection, knownUris) {
   knownUris.clear();
 }
 
-function toDiagnostic(api, record, projectRoot) {
+function toDiagnostic(api, record, projectRoot, sources) {
   if (!validDiagnosticRecord(record)) {
     throw protocol("invalid_diagnostic");
   }
@@ -55,8 +56,12 @@ function toDiagnostic(api, record, projectRoot) {
     document.uri?.scheme === "file" && path.normalize(document.uri.fsPath) === fullPath
   );
   if (open?.isDirty) return undefined;
-  const text = sourceText(api, fullPath);
-  const range = rangeForSpan(api, text, record.span);
+  let lines = sources.get(fullPath);
+  if (!lines) {
+    lines = sourceText(api, fullPath).split(/\r\n|\r|\n/u);
+    sources.set(fullPath, lines);
+  }
+  const range = rangeForSpan(api, lines, record.span);
   const uri = api.Uri.file(fullPath);
   const severityName = record.severity;
   const severity = api.DiagnosticSeverity?.[
@@ -89,40 +94,32 @@ function sourceText(api, fullPath) {
   }
 }
 
-function rangeForSpan(api, text, span) {
-  const start = positionForScalar(api, text, span.start, "invalid_diagnostic_start");
+function rangeForSpan(api, lines, span) {
+  const start = positionForScalar(api, lines, span.start, "invalid_diagnostic_start", false);
   if (!span.end) return new api.Range(start, start);
-  const endPosition = advanceInclusive(text, span.end);
-  const end = positionForScalar(api, text, endPosition, "invalid_diagnostic_end");
+  const end = positionForScalar(api, lines, span.end, "invalid_diagnostic_end", true);
   if (end.line < start.line || end.line === start.line && end.character < start.character) {
     throw protocol("invalid_diagnostic_range");
   }
   return new api.Range(start, end);
 }
 
-function positionForScalar(api, text, position, errorCode) {
-  const lines = text.split("\n");
+function positionForScalar(api, lines, position, errorCode, inclusive) {
   const lineIndex = position.line - 1;
-  const line = lines[lineIndex]?.endsWith("\r") ? lines[lineIndex].slice(0, -1) : lines[lineIndex];
+  const line = lines[lineIndex];
   if (line === undefined) throw protocol(errorCode);
-  const scalarOffset = position.column - 1;
-  const values = [...line];
-  if (scalarOffset < 0 || scalarOffset > values.length) throw protocol(errorCode);
-  const character = values.slice(0, scalarOffset).reduce((total, value) => total + value.length, 0);
-  return new api.Position(lineIndex, character);
-}
-
-function advanceInclusive(text, position) {
-  const lines = text.split("\n");
-  const raw = lines[position.line - 1];
-  const line = raw?.endsWith("\r") ? raw.slice(0, -1) : raw;
-  if (line === undefined) throw protocol("invalid_diagnostic_end");
-  const scalarOffset = position.column - 1;
-  const values = [...line];
-  if (scalarOffset < 0 || scalarOffset >= values.length) {
-    throw protocol("invalid_diagnostic_end");
+  const target = position.column - 1;
+  let scalarOffset = 0;
+  let character = 0;
+  for (const value of line) {
+    if (scalarOffset === target) {
+      return new api.Position(lineIndex, character + (inclusive ? value.length : 0));
+    }
+    scalarOffset += 1;
+    character += value.length;
   }
-  return { line: position.line, column: position.column + 1 };
+  if (!inclusive && scalarOffset === target) return new api.Position(lineIndex, character);
+  throw protocol(errorCode);
 }
 
 export function validDiagnosticRecord(record) {

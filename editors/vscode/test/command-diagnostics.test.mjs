@@ -264,3 +264,43 @@ function collection(entries) {
     },
   };
 }
+
+test("one publication shares a source snapshot and the next observes changed text", async () => {
+  const root = await tempRoot("snapshot");
+  const file = path.join(root, "dialogue.recite");
+  let source = "😀ab\rnext\r\nlast\n";
+  let reads = 0;
+  const entries = new Map();
+  const api = fakeApi(entries, [{
+    uri: { scheme: "file", fsPath: file },
+    isDirty: false,
+    getText: () => {
+      reads += 1;
+      return source;
+    },
+  }]);
+  const records = Array.from(
+    { length: 50 },
+    () => diagnostic(file, { line: 1, column: 2 }, { line: 1, column: 3 }, "diagnostic-parse-001"),
+  );
+  const target = collection(entries);
+  replaceDiagnostics(api, target, records, root, new Map());
+  assert.equal(reads, 1);
+  assert.equal(entries.get(`file://${file}`).length, 50);
+  assert.equal(entries.get(`file://${file}`)[0].range.start.character, 2);
+  source = "x😀ab\rnext\r\nlast\n";
+  replaceDiagnostics(api, target, records, root, new Map());
+  assert.equal(reads, 2);
+  assert.equal(entries.get(`file://${file}`)[0].range.start.character, 1);
+  assert.equal(entries.get(`file://${file}`)[0].range.end.character, 4);
+  replaceDiagnostics(
+    api,
+    target,
+    [diagnostic(file, { line: 2, column: 1 }, { line: 2, column: 4 }, "diagnostic-parse-001")],
+    root,
+    new Map(),
+  );
+  assert.equal(entries.get(`file://${file}`)[0].range.start.line, 1);
+  assert.equal(entries.get(`file://${file}`)[0].range.end.character, 4);
+  await rm(root, { recursive: true, force: true });
+});

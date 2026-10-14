@@ -1,14 +1,17 @@
-use recite_core::{DocumentKey, SourcePosition, SourceSpan, source_lines};
+use recite_core::{DocumentKey, SourceLineIndex, SourcePosition, SourceSpan};
 
-pub(super) fn line_at(text: &str, line_number: u32) -> Option<(&str, usize)> {
-    let mut offset = 0;
-    for (index, (content, terminator)) in source_lines(text).enumerate() {
-        if u32::try_from(index + 1).ok()? == line_number {
-            return Some((content, offset));
-        }
-        offset += content.len() + terminator.len();
-    }
-    None
+#[derive(Clone, Copy)]
+pub(super) struct Line<'a> {
+    pub text: &'a str,
+    number: u32,
+}
+
+pub(super) fn line_at(index: &SourceLineIndex, number: u32) -> Option<Line<'_>> {
+    let line = index.line(usize::try_from(number.checked_sub(1)?).ok()?)?;
+    Some(Line {
+        text: line.strip_suffix('\r').unwrap_or(line),
+        number,
+    })
 }
 
 pub(super) fn byte_at_column(line: &str, column: u32) -> usize {
@@ -17,7 +20,8 @@ pub(super) fn byte_at_column(line: &str, column: u32) -> usize {
         .map_or(line.len(), |(index, _)| index)
 }
 
-pub(super) fn span(key: &DocumentKey, text: &str, start: usize, end: usize) -> SourceSpan {
+pub(super) fn span(key: &DocumentKey, source: Line<'_>, start: usize, end: usize) -> SourceSpan {
+    let text = source.text;
     let start = start.min(text.len());
     let end = end.min(text.len()).max(start);
     let end = if end == start {
@@ -30,19 +34,18 @@ pub(super) fn span(key: &DocumentKey, text: &str, start: usize, end: usize) -> S
     };
     SourceSpan::new(
         key.as_str(),
-        position(text, start),
-        Some(position(text, end)),
+        position(source, start),
+        Some(position(source, end)),
     )
 }
 
 pub(super) fn token_span(
     key: &DocumentKey,
-    text: &str,
-    line: &str,
-    line_start: usize,
+    source: Line<'_>,
     start: usize,
     cursor: usize,
 ) -> SourceSpan {
+    let line = source.text;
     let cursor = cursor.max(start).min(line.len());
     let mut token_start = cursor;
     while token_start > start {
@@ -55,14 +58,12 @@ pub(super) fn token_span(
         }
         token_start = index;
     }
-    span(key, text, line_start + token_start, line_start + cursor)
+    span(key, source, token_start, cursor)
 }
 
 pub(super) fn assignment_span(
     key: &DocumentKey,
-    text: &str,
-    line: &str,
-    line_start: usize,
+    source: Line<'_>,
     assignment: recite_parser::MetadataAssignment<'_>,
 ) -> SourceSpan {
     let key_start = assignment
@@ -70,27 +71,22 @@ pub(super) fn assignment_span(
         .saturating_sub(assignment.key.len() + 1);
     span(
         key,
-        text,
-        line_start + key_start,
-        line_start + assignment.end.min(line.len()),
+        source,
+        key_start,
+        assignment.end.min(source.text.len()),
     )
 }
 
-fn position(text: &str, offset: usize) -> SourcePosition {
-    let mut line = 1u32;
-    let mut column = 1u32;
-    for (index, character) in text[..offset.min(text.len())].char_indices() {
-        if character == '\n'
-            || (character == '\r' && text.as_bytes().get(index + 1) != Some(&b'\n'))
-        {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
-    }
-    let Ok(position) = SourcePosition::new(line, column) else {
+fn position(source: Line<'_>, offset: usize) -> SourcePosition {
+    let column = source.text[..offset].chars().count() + 1;
+    let Some(position) = u32::try_from(column)
+        .ok()
+        .and_then(|column| SourcePosition::new(source.number, column).ok())
+    else {
         unreachable!("computed source position exceeded the typed range")
     };
     position
 }
+
+#[cfg(test)]
+mod tests;

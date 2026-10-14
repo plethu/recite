@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use lsp_types::{
-    CompletionResponse, GotoDefinitionResponse, TextDocumentContentChangeEvent, WorkspaceEdit,
+    CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
+    Location, PublishDiagnosticsParams, TextDocumentContentChangeEvent, WorkspaceEdit,
 };
 use recite_ui::{UiCatalog, UiLocale};
 
@@ -134,31 +135,36 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn diagnostics_refresh(&mut self, probe: &LspDocumentProbe) -> usize {
-        // Keep the synthetic refresh at the latest probe version so repeated
-        // benchmark operations satisfy the kernel's monotonic overlay guard.
-        let Some(refresh) = self
-            .workspace
-            .open_refreshes(probe.uri.clone(), 2, read_probe_text_or_panic(probe))
-            .into_iter()
-            .next()
-        else {
-            return 0;
-        };
+        self.workspace
+            .open_refreshes(probe.uri.clone(), 2, read_probe_text_or_panic(probe));
+        self.diagnostics_publication(probe)
+            .map_or(0, |params| params.diagnostics.len())
+    }
+
+    #[must_use]
+    pub fn diagnostics_publication(
+        &self,
+        probe: &LspDocumentProbe,
+    ) -> Option<PublishDiagnosticsParams> {
+        // Project the requested document's prepared snapshot, rather than an
+        // unrelated first refresh or a suppressed byte-identical reopen.
+        let refresh = self.workspace.diagnostic_refresh_for_uri(&probe.uri);
         let DiagnosticRefresh::Publish(diagnostics) = refresh else {
-            return 0;
+            return None;
         };
-        let text = read_probe_text_or_panic(probe);
-        publish_diagnostics(
-            diagnostics.uri.clone(),
-            &text,
-            diagnostics.version,
-            &diagnostics.diagnostics,
-            &self.workspace.ui_catalog,
-            &self.workspace.diagnostic_sources_for_uri(&diagnostics.uri),
+        Some(
+            publish_diagnostics(
+                diagnostics.uri.clone(),
+                &diagnostics.text,
+                diagnostics.version,
+                &diagnostics.diagnostics,
+                &self.workspace.ui_catalog,
+                &self
+                    .workspace
+                    .diagnostic_related_sources(&diagnostics.uri, &diagnostics.diagnostics),
+            )
+            .unwrap_or_else(|error| panic!("LSP benchmark diagnostic publication failed: {error}")),
         )
-        .unwrap_or_else(|error| panic!("LSP benchmark diagnostic publication failed: {error}"))
-        .diagnostics
-        .len()
     }
 
     #[must_use]
@@ -169,6 +175,35 @@ impl LspBenchmarkDriver {
     #[must_use]
     pub fn definition(&self, probe: &LspPositionProbe) -> Option<GotoDefinitionResponse> {
         self.workspace.definition(&probe.uri, probe.position)
+    }
+
+    #[must_use]
+    pub fn hover(&self, probe: &LspPositionProbe) -> Option<Hover> {
+        self.workspace
+            .hover_with_control(&probe.uri, probe.position, &Default::default())
+    }
+
+    #[must_use]
+    pub fn references(&self, probe: &LspPositionProbe) -> Option<Vec<Location>> {
+        self.workspace.references_with_control(
+            &probe.uri,
+            probe.position,
+            true,
+            &Default::default(),
+        )
+    }
+
+    #[must_use]
+    pub fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
+        self.workspace
+            .code_action_with_control(params, &Default::default())
+    }
+
+    #[must_use]
+    pub fn fork(&self) -> Self {
+        Self {
+            workspace: self.workspace.clone(),
+        }
     }
 
     #[must_use]

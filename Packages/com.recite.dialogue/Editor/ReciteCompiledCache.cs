@@ -46,7 +46,7 @@ namespace Recite.Unity.Editor
                 var path = PathFor(assetPath);
                 if (!File.Exists(path)) return false;
                 var candidate = File.ReadAllBytes(path);
-                var inspected = ReciteAssetInfo.Inspect(new ReciteDialogueAsset(candidate));
+                var inspected = ReciteAssetInfo.InspectBytes(candidate);
                 bytes = candidate;
                 info = inspected;
                 return true;

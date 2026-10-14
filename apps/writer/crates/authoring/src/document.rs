@@ -299,6 +299,10 @@ impl Document {
         Ok(())
     }
 
+    pub(crate) fn saved_documents(&self) -> &[SavedDocument] {
+        &self.context.documents
+    }
+
     pub(crate) fn project_context(&self) -> ProjectContext {
         self.context.clone()
     }

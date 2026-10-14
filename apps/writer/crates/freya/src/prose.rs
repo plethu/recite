@@ -78,7 +78,7 @@ impl Component for ProseField {
                         .find_passage(&passage_id)
                         .ok()
                         .flatten()
-                        .map(|p| p.text)
+                        .map(|p| p.text.clone())
                 };
                 if let Some(current) = current {
                     text.set_if_modified(current);

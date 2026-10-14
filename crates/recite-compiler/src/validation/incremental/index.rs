@@ -54,19 +54,28 @@ impl ProjectIndex {
         }
         // Capture old dependencies before removing exports, including deleted
         // targets and diagnostics whose related span came from the old revision.
-        for (key, _) in &changes {
-            control.checkpoint()?;
-            self.affect_dependents(key, changed_targets.contains(key), &mut affected);
+        control.checkpoint()?;
+        if self.documents.keys().any(|key| !affected.contains(key)) {
+            for (key, _) in &changes {
+                control.checkpoint()?;
+                self.affect_dependents(key, changed_targets.contains(key), &mut affected);
+            }
         }
         for (key, next) in &changes {
             control.checkpoint()?;
             let old = self.documents.remove(key);
-            replace_membership(
-                &mut self.definitions,
-                old.iter().flat_map(|facts| facts.exports()),
-                next.iter().flat_map(|facts| facts.exports()),
-                key,
-            );
+            if !old
+                .as_ref()
+                .zip(next.as_ref())
+                .is_some_and(|(old, next)| old.same_ordered_exports(next))
+            {
+                replace_membership(
+                    &mut self.definitions,
+                    old.iter().flat_map(|facts| facts.exports()),
+                    next.iter().flat_map(|facts| facts.exports()),
+                    key,
+                );
+            }
             replace_membership(
                 &mut self.dependents,
                 old.iter().flat_map(|facts| facts.dependencies()),

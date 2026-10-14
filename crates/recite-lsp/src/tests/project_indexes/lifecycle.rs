@@ -311,7 +311,7 @@ pub(crate) fn open_alias_owner_switch_reseeds_kernel_version_state() {
     };
     assert_eq!(diagnostics.uri, real_uri);
     assert_eq!(diagnostics.version, Some(10));
-    assert_eq!(diagnostics.text, ":: canonical\n");
+    assert_eq!(diagnostics.text.as_ref(), ":: canonical\n");
 }
 
 pub(crate) fn watched_refresh_publishes_effective_open_payload() {
@@ -331,6 +331,6 @@ pub(crate) fn watched_refresh_publishes_effective_open_payload() {
     };
     assert_eq!(diagnostics.uri, uri);
     assert_eq!(diagnostics.version, Some(7));
-    assert_eq!(diagnostics.text, "oops\n");
+    assert_eq!(diagnostics.text.as_ref(), "oops\n");
     assert!(!diagnostics.diagnostics.is_empty());
 }

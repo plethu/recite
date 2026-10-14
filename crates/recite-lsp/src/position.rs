@@ -40,15 +40,13 @@ fn exact_source_position_to_lsp(
     Some(Position::new(position.line().checked_sub(1)?, character))
 }
 
-/// Converts an LSP UTF-16 position to the compiler's 1-based scalar position.
-///
-/// LSP positions may address the middle of a UTF-16 surrogate pair.  The
-/// compiler has no such position, so those cursors snap to the containing
-/// scalar's start.  CRLF's carriage return is excluded from the logical line,
-/// matching the source spans produced by the parser.
-pub(crate) fn lsp_position_to_source(text: &str, position: Position) -> Option<SourcePosition> {
-    let line_index = usize::try_from(position.line).ok()?;
-    let (line, _) = source_lines(text).nth(line_index)?;
+/// LSP cursors within a UTF-16 surrogate pair snap to the containing scalar.
+pub(crate) fn indexed_lsp_position_to_source(
+    index: &SourceLineIndex,
+    position: Position,
+) -> Option<SourcePosition> {
+    let line = index.line(usize::try_from(position.line).ok()?)?;
+    let line = line.strip_suffix('\r').unwrap_or(line);
     let column = scalar_column_for_utf16(line, position.character)?;
     SourcePosition::new(position.line.saturating_add(1), column).ok()
 }

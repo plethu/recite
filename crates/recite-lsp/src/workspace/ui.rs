@@ -59,14 +59,28 @@ impl LspWorkspace {
         Ok(workspace)
     }
 
+    pub(crate) fn diagnostic_related_sources(
+        &self,
+        uri: &lsp_types::Uri,
+        diagnostics: &[recite_core::Diagnostic],
+    ) -> Vec<DiagnosticSource<'_>> {
+        if diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.related_presentations.is_empty())
+        {
+            return Vec::new();
+        }
+        self.diagnostic_sources_for_uri(uri)
+    }
+
     pub(crate) fn diagnostic_sources_for_uri(
         &self,
         uri: &lsp_types::Uri,
     ) -> Vec<DiagnosticSource<'_>> {
-        if self.is_schema_document_uri(uri) {
+        if self.query_is_schema(uri) {
             return self.diagnostic_sources_for_partition(None);
         }
-        self.diagnostic_sources_for_partition(self.partition_id_for_uri(uri).as_deref())
+        self.diagnostic_sources_for_partition(self.query_partition_for_uri(uri).as_deref())
     }
 
     fn diagnostic_sources_for_partition(
@@ -78,7 +92,7 @@ impl LspWorkspace {
             .iter()
             .filter_map(|summary| {
                 if let Some(partition) = partition
-                    && self.partition_id_for_uri(summary.uri()).as_deref() != Some(partition)
+                    && self.query_partition_for_uri(summary.uri()).as_deref() != Some(partition)
                 {
                     return None;
                 }
@@ -99,7 +113,7 @@ impl LspWorkspace {
             .filter_map(|entry| {
                 Some(DiagnosticRefresh::Publish(super::DocumentDiagnostics {
                     uri: crate::paths::file_path_to_uri(&entry.path)?,
-                    text: entry.text.clone(),
+                    text: entry.text.clone().into(),
                     version: None,
                     diagnostics: entry.diagnostics.clone(),
                     generation: self.generation,

@@ -18,28 +18,10 @@ impl PartialEq for Completion {
         self.writer.dark == other.writer.dark
     }
 }
-fn candidates(writer: Writer) -> Option<SourceCompletions> {
-    let editor = writer.buffers.editor.read();
-    let offset = editor
-        .rope
-        .utf16_cu_to_char(editor.cursor_pos().min(editor.rope.len_utf16_cu()));
-    let line = editor.rope.char_to_line(offset);
-    let column = offset - editor.rope.line_to_char(line);
-    let position = recite_core::SourcePosition::new(
-        u32::try_from(line + 1).ok()?,
-        u32::try_from(column + 1).ok()?,
-    )
-    .ok()?;
-    writer
-        .buffers
-        .model
-        .read()
-        .as_ref()
-        .ok()?
-        .document()
-        .complete_draft(&editor.rope.to_string(), position)
-        .ok()
-}
+mod cache;
+pub(crate) use cache::SourceCompletionCache;
+use cache::candidates;
+
 pub(crate) fn keyboard(mut writer: Writer, event: &Event<KeyboardEventData>) -> bool {
     let mut state = writer.source_viewport;
     if event.code == Code::Space && event.modifiers == Modifiers::CONTROL {
@@ -102,6 +84,10 @@ impl Component for Completion {
         let scroll = use_scroll_controller(ScrollConfig::default);
         let writer = self.writer;
         let editor_id = self.editor_id;
+        use_drop(move || {
+            let mut cache = writer.source_viewport.cache;
+            cache.set(None);
+        });
         let mut state = writer.source_viewport;
         use_after_side_effect(move || {
             let opened = *state.completion.read();
@@ -113,6 +99,8 @@ impl Component for Completion {
             if *state.completion.read() {
                 candidates(writer)
             } else {
+                let mut cache = writer.source_viewport.cache;
+                cache.set(None);
                 None
             }
         });

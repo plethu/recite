@@ -27,8 +27,15 @@ impl ProjectIndex {
                 continue;
             };
             let mut next = BTreeSet::from([key.clone()]);
-            for symbol in target.exports().chain(target.dependencies()) {
-                extend_members(&self.definitions, &symbol, &mut next);
+            // Memberships contain only current keys. Once every document is
+            // present, more symbol lookups cannot enlarge this context.
+            if next.len() < self.documents.len() {
+                for symbol in target.exports().chain(target.dependencies()) {
+                    extend_members(&self.definitions, &symbol, &mut next);
+                    if next.len() == self.documents.len() {
+                        break;
+                    }
+                }
             }
             let additional = self.passage_count(next.difference(&context));
             if !targets.is_empty() && additional > 0 && passages + additional > MAX_CONTEXT_PASSAGES

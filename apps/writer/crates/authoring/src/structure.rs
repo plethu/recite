@@ -199,6 +199,6 @@ impl Document {
             .into_iter()
             .find(|passage| passage.header_line == line)
             .ok_or(EditError::MissingPassage)?;
-        Ok((next, added.id))
+        Ok((next, added.id.clone()))
     }
 }

@@ -46,7 +46,14 @@ namespace Recite.Unity
         public static ReciteAssetInfo Inspect(ReciteDialogueAsset asset)
         {
             if (asset == null) throw new ArgumentNullException(nameof(asset));
-            var bytes = asset.BytesForNative;
+            return InspectBytes(asset.BytesForNative);
+        }
+
+        // Importers own their freshly read buffer. Native load consumes it
+        // synchronously and retains decoded values rather than this array.
+        internal static ReciteAssetInfo InspectBytes(byte[] bytes)
+        {
+            if (bytes == null) throw new ArgumentNullException(nameof(bytes));
             ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.AssetLoad(bytes,
                 new UIntPtr((ulong)bytes.Length), out var handle));
             try

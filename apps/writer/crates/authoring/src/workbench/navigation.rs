@@ -35,16 +35,16 @@ impl Workbench {
                 }
                 String::new()
             }
-            View::Passage(id) => {
-                self.document
-                    .find_passage(id)?
-                    .ok_or(EditError::MissingPassage)?
-                    .text
-            }
+            View::Passage(id) => self
+                .document
+                .find_passage(id)?
+                .ok_or(EditError::MissingPassage)?
+                .text
+                .clone(),
         };
         let block = match &view {
             View::Block(block) => Some(block.clone()),
-            View::Passage(id) => self.document.find_passage(id)?.map(|p| p.section),
+            View::Passage(id) => self.document.find_passage(id)?.map(|p| p.section.clone()),
             View::Source => None,
         };
         if let Some(block) = block {
@@ -89,7 +89,7 @@ impl Workbench {
     pub fn selected_block(&self) -> Result<Option<String>, WorkbenchError> {
         match &self.view {
             View::Block(block) => Ok(Some(block.clone())),
-            View::Passage(_) => Ok(self.selected()?.map(|passage| passage.section)),
+            View::Passage(_) => Ok(self.selected()?.map(|passage| passage.section.clone())),
             View::Source => Ok(None),
         }
     }

@@ -101,13 +101,17 @@ fn render(writer: Writer, scene: String) -> Element {
         connection.set(None);
         current_scene.set(scene.clone());
     }
+    let mut previous = None::<Arc<topology::Topology>>;
     let graph = use_memo(move || {
-        script.read().as_ref().map(|blocks| {
-            Arc::new(topology::Topology::new(
+        let next = script.read().as_ref().map(|blocks| {
+            Arc::new(topology::Topology::refresh(
                 blocks.clone(),
                 positions.read().positions(&current_scene.read()),
+                previous.as_deref(),
             ))
-        })
+        });
+        previous = next.clone();
+        next
     });
     let map_view = use_memo(move || {
         let graph = graph.read();

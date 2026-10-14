@@ -14,9 +14,9 @@ mod workbench;
 
 pub use document::{Document, EditError, ProjectContext};
 pub use examples::{WRITER_EXAMPLES, WriterExample};
-pub use flow::{SceneLink, scene_links};
+pub use flow::{SceneLink, scene_endings, scene_links};
 pub use preview::{Preview, PreviewError, PreviewPage, PreviewSetup};
-pub use projection::{Passage, PassageKind};
+pub use projection::{Passage, PassageContent, PassageKind};
 pub use recovery::RecoveredDraft;
 pub use script::{ScriptBlock, ScriptEntry};
 pub use workbench::{View, Workbench, WorkbenchError};

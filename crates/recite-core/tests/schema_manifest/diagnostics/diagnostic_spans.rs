@@ -33,10 +33,10 @@ fn escaped_section_and_value_strings_keep_semantic_diagnostic_spans() {
         "fixtures/schema/invalid/escaped_section_value_spans.json",
         r#"{
   "schema_version": 1,
-  "effects": {
+  "\u0065ffects": {
     "bad_effect": {
       "modes": ["deferred"],
-      "params": [{ "name": "target", "type": "registry:missing" }]
+      "params": [{ "name": "target", "type": "registry:\u006dissing" }]
     }
   }
 }"#,

@@ -202,3 +202,21 @@ fn refused_analysis_does_not_publish_prepared_prose_projections() -> Result<(), 
     ));
     Ok(())
 }
+
+#[test]
+fn exhausted_revision_does_not_disable_read_only_draft_completion()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut document = super::Document::new(":: start default\n-> END\n")?;
+    document.version = i64::MAX;
+    let draft = ":: start default\n-> dest\n:: destination\n-> END\n";
+    let result = document.complete_draft(draft, recite_core::SourcePosition::new(2, 8)?)?;
+    assert!(
+        result
+            .candidates()
+            .iter()
+            .any(|c| c.name() == "destination")
+    );
+    assert_eq!(document.version, i64::MAX);
+    assert_eq!(document.source(), ":: start default\n-> END\n");
+    Ok(())
+}

@@ -63,7 +63,7 @@ pub(crate) fn lower_manifest_with_format(
 ) -> SchemaLoadReport {
     let mut diagnostics = Vec::new();
     let mut schema = ProjectSchema::empty_v1();
-    let mut spans = ManifestSpans::new_with_format(format, toml_spans);
+    let mut spans = ManifestSpans::new_with_format(source, format, toml_spans);
     let mut pending_type_refs = Vec::new();
     let mut pending_domain_refs = Vec::new();
     let mut pending_availability_reason_mappings = Vec::new();

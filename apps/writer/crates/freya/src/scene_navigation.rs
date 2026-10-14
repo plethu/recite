@@ -3,10 +3,12 @@ use crate::{
     controls,
     design::{Button, tokens as t},
     editing::Writer,
-    palette,
 };
 use freya::prelude::*;
 use std::sync::Arc;
+
+mod captions;
+use captions::Caption;
 
 #[derive(Clone)]
 pub(super) struct SceneBranch {
@@ -37,7 +39,7 @@ struct NavigationRows {
     selected: Option<String>,
     active: Option<usize>,
     items: Arc<[Row]>,
-    captions: Arc<[(String, String)]>,
+    captions: Arc<[Caption]>,
 }
 impl PartialEq for SceneNavigation {
     fn eq(&self, other: &Self) -> bool {
@@ -60,37 +62,15 @@ impl Component for SceneNavigation {
                 .ok()
                 .and_then(|m| m.document().script_snapshot().ok())
         });
+        let mut previous = None;
         let captions = use_memo(move || {
-            projected
+            let next = projected
                 .read()
                 .as_ref()
-                .map(|blocks| {
-                    let links = recite_writer_model::scene_links(blocks);
-                    let endings: std::collections::BTreeSet<_> = links
-                        .iter()
-                        .filter(|l| l.destination == "END")
-                        .map(|l| l.origin.as_str())
-                        .collect();
-                    blocks
-                        .iter()
-                        .map(|block| {
-                            (
-                                block.id.clone(),
-                                format!(
-                                    "{}{}{}",
-                                    if block.is_default { "Start · " } else { "" },
-                                    palette::display_name(&block.id),
-                                    if endings.contains(block.id.as_str()) {
-                                        " · end"
-                                    } else {
-                                        ""
-                                    }
-                                ),
-                            )
-                        })
-                        .collect::<Arc<[_]>>()
-                })
-                .unwrap_or_default()
+                .map(|blocks| captions::refresh(blocks, previous.as_ref()))
+                .unwrap_or_default();
+            previous = Some(next.clone());
+            next
         });
         let collapsed = use_state(|| None::<String>);
         let query = writer.vim.query;
@@ -115,26 +95,22 @@ impl Component for SceneNavigation {
         for scene in &self.scenes {
             let expanded = scene.active
                 && (!needle.is_empty() || collapsed.read().as_ref() != Some(&scene.caption));
+            let scene_matches =
+                !needle.is_empty() && scene.caption.to_lowercase().contains(&needle);
             let mut beats = Vec::new();
             if expanded {
                 if needle.is_empty() {
                     beats.reserve(captions.len());
                 }
-                for (index, (_, caption)) in captions.iter().enumerate() {
-                    if needle.is_empty()
-                        || caption.to_lowercase().contains(&needle)
-                        || scene.caption.to_lowercase().contains(&needle)
-                    {
+                for (index, caption) in captions.iter().enumerate() {
+                    if needle.is_empty() || caption.folded.contains(&needle) || scene_matches {
                         beats.push(Row::Beat {
                             caption_index: index,
                         });
                     }
                 }
             }
-            if needle.is_empty()
-                || scene.caption.to_lowercase().contains(&needle)
-                || !beats.is_empty()
-            {
+            if needle.is_empty() || scene_matches || !beats.is_empty() {
                 rows.push(Row::Scene(scene.clone(), expanded));
                 rows.extend(beats);
             }
@@ -145,7 +121,7 @@ impl Component for SceneNavigation {
         } else {
             rows.iter()
                 .filter_map(|r| match r {
-                    Row::Beat { caption_index } => Some(captions[*caption_index].0.clone()),
+                    Row::Beat { caption_index } => Some(captions[*caption_index].id.clone()),
                     _ => None,
                 })
                 .collect()
@@ -212,14 +188,15 @@ impl Component for SceneNavigation {
                                 .into_element()
                         }
                         Row::Beat { caption_index } => {
-                            let (id, caption) = &rows.captions[*caption_index];
+                            let caption = &rows.captions[*caption_index];
+                            let id = &caption.id;
                             let selected = rows.selected.as_ref() == Some(id);
                             let id = id.clone();
                             rect()
                                 .width(Size::fill())
                                 .padding((0., 0., 0., t::SPACE_XL))
                                 .child(controls::navigation_row(
-                                    caption.clone(),
+                                    caption.label.clone(),
                                     selected || rows.active == Some(index.index),
                                     writer.dark,
                                     move |_| {
@@ -266,8 +243,7 @@ fn activate_row(
             }
         }
         Some(Row::Beat { caption_index }) => {
-            let (id, _) = &rows.captions[*caption_index];
-            select_beat(writer, id);
+            select_beat(writer, &rows.captions[*caption_index].id);
         }
         None => {}
     }

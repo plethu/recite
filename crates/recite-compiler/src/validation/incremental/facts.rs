@@ -1,5 +1,7 @@
 mod positions;
 mod regions;
+#[cfg(test)]
+mod tests;
 pub(crate) use regions::FactRanges;
 // Compact project inputs. Prose and local schema syntax do not survive analysis.
 use crate::{validation::ValidationInput, validation::ValidationParticipation};
@@ -126,18 +128,35 @@ impl ProjectFacts {
                 .eq(other.blocks.iter().map(|block| &block.id))
     }
 
+    // A conservative, allocation-free proof of unchanged export membership.
+    // Other facts still update: echoes, participation and spans affect validation.
+    pub(super) fn same_ordered_exports(&self, next: &Self) -> bool {
+        self.path == next.path
+            && self
+                .blocks
+                .iter()
+                .map(|block| &block.id)
+                .eq(next.blocks.iter().map(|block| &block.id))
+            && self.exported_ids().eq(next.exported_ids())
+            && self.blocks.iter().any(|block| block.default)
+                == next.blocks.iter().any(|block| block.default)
+    }
+
+    fn exported_ids(&self) -> impl Iterator<Item = &str> {
+        self.passages
+            .iter()
+            .filter_map(|passage| match &passage.identity {
+                Identity::Line(id) => id.as_ref().map(|id| id.as_str()),
+                Identity::Choice(id, _) => id.as_ref().map(|id| id.as_str()),
+            })
+    }
+
     pub(super) fn exports(&self) -> impl Iterator<Item = Symbol> + '_ {
         let blocks = self
             .blocks
             .iter()
             .map(|block| Symbol::Block(block.id.clone()));
-        let ids = self
-            .passages
-            .iter()
-            .filter_map(|passage| match &passage.identity {
-                Identity::Line(id) => id.as_ref().map(|id| Symbol::Id(id.as_str().to_owned())),
-                Identity::Choice(id, _) => id.as_ref().map(|id| Symbol::Id(id.as_str().to_owned())),
-            });
+        let ids = self.exported_ids().map(|id| Symbol::Id(id.to_owned()));
         blocks
             .chain(ids)
             .chain(std::iter::once(Symbol::Document(self.path.clone())))
