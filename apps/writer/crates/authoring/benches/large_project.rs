@@ -128,6 +128,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let cached = measure("cached_script", &mut rows, || document.script_snapshot())?;
         assert!(std::sync::Arc::ptr_eq(&first, &cached));
     }
+    let original_source = document.source_snapshot();
+    let first_passage = document.passage_snapshot()?[0].clone();
+    for edit in 0..10 {
+        let text = format!("{} Edited {edit} 🐧.", first_passage.text);
+        let (script, selected) = measure("prose_edit_and_script", &mut rows, || {
+            document.replace_text(document.revision(), &first_passage.id, &text)?;
+            Ok::<_, recite_writer_model::EditError>((
+                document.script_snapshot()?,
+                document.find_passage(&first_passage.id)?,
+            ))
+        })?;
+        assert_eq!(selected.ok_or("missing passage")?.text, text);
+        black_box(script);
+    }
+    for _ in 0..10 {
+        assert!(document.undo()?);
+    }
+    assert_eq!(document.source(), original_source.as_ref());
     for edit in 0..10 {
         let next = document.source().replacen(
             "remains unanswered",
@@ -188,6 +206,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let budget = match row["operation"].as_str() {
                 Some("index") => Some(55_000_000),
                 Some("project_script") => Some(3_200_000),
+                Some("prose_edit_and_script") => Some(1_200_000),
                 Some("edit" | "undo" | "redo" | "multiline_edit" | "id_edit") => Some(4_000_000),
                 Some("common_search" | "common_multiword_search") => Some(20_000),
                 Some("expanded_search") => Some(750_000),

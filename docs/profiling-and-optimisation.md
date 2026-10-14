@@ -85,6 +85,17 @@ requires allocation-free result clones and Source recovery capture/clones. Exist
 projection, edit and peak-heap bounds remain in force. Applying Source drafts and serializing
 recovery still process the full text.
 
+The project workload also measures a warm manuscript prose edit followed by its Script projection.
+Prose validation remains parser-owned; accepted edits reuse their checked passages and, when Script
+was already requested, construct it from that same transient parse. Raw source edits and undo/redo
+invalidate those revision-bound projections. This headless operation excludes native input and
+paint.
+
+For prose edits inside one restart region, identical surrounding region bytes and ordered frozen IDs
+allow checked outputs to be reused with relocated coordinates. Uncertain mappings and plural-bearing
+Script projections fall back to whole-file projection. A single-region file still needs a whole-file
+parse; materializing the public passage and Script collections remains linear in their size.
+
 The session workload runs discovery/indexing, first visits and edits, revisits with undo/redo,
 save-all and explicit closing. It checks preserved prose/history and released session owners and
 reports RSS, peak RSS and thread checkpoints where the host exposes them. RSS can retain allocator

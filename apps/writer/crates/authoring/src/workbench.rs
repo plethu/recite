@@ -253,13 +253,13 @@ impl Workbench {
             View::Block(block) if self.document.sections().contains(block) => String::new(),
             View::Block(_) => return self.restore_script_selection(),
             View::Source => self.document.source().to_owned(),
-            View::Passage(id) => match self
-                .document
-                .passages()
-                .ok()
-                .and_then(|passages| passages.into_iter().find(|p| &p.id == id))
-            {
-                Some(p) => p.text,
+            View::Passage(id) => match self.document.passage_snapshot().ok().and_then(|passages| {
+                passages
+                    .iter()
+                    .find(|p| &p.id == id)
+                    .map(|p| p.text.clone())
+            }) {
+                Some(text) => text,
                 None => {
                     return self.restore_script_selection();
                 }

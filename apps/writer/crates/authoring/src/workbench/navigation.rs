@@ -4,17 +4,13 @@ use crate::{EditError, Passage};
 
 impl Workbench {
     pub(super) fn restore_script_selection(&mut self) -> Result<(), WorkbenchError> {
-        let sections = self
-            .document
-            .script()
-            .map(|blocks| blocks.into_iter().map(|b| b.id).collect::<Vec<_>>())
-            .unwrap_or_default();
+        let sections = self.document.script_snapshot().unwrap_or_default();
         let block = self
             .script_selection
             .iter()
-            .find(|id| sections.contains(id))
+            .find(|id| sections.iter().any(|block| &block.id == *id))
             .cloned()
-            .or_else(|| sections.first().cloned());
+            .or_else(|| sections.first().map(|block| block.id.clone()));
         // The old draft was already committed; history may have removed its target.
         self.load(String::new());
         match block {
@@ -73,16 +69,22 @@ impl Workbench {
         {
             return self.select(View::Block(block));
         }
-        if let Some(passage) = self.document.passages()?.into_iter().next() {
-            return self.select(View::Passage(passage.id));
+        if let Some(id) = self
+            .document
+            .passage_snapshot()?
+            .first()
+            .map(|passage| passage.id.clone())
+        {
+            return self.select(View::Passage(id));
         }
         let block = self
             .document
-            .script()?
-            .into_iter()
-            .next()
-            .ok_or(EditError::MissingPassage)?;
-        self.select(View::Block(block.id))
+            .script_snapshot()?
+            .first()
+            .ok_or(EditError::MissingPassage)?
+            .id
+            .clone();
+        self.select(View::Block(block))
     }
     pub fn selected_block(&self) -> Result<Option<String>, WorkbenchError> {
         match &self.view {

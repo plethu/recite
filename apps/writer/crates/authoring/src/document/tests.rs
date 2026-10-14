@@ -179,3 +179,26 @@ fn sibling_interruption_never_changes_the_original() -> Result<(), EditError> {
     }
     Ok(())
 }
+
+#[test]
+fn refused_analysis_does_not_publish_prepared_prose_projections() -> Result<(), EditError> {
+    let mut document = Document::new(crate::FIXTURE)?;
+    let script = document.script_snapshot()?;
+    let passages = document.passage_snapshot()?;
+    document.version = i64::MAX;
+    assert!(matches!(
+        document.replace_text(i64::MAX, &passages[0].id, "A proposed café edit."),
+        Err(EditError::RevisionExhausted)
+    ));
+    assert_eq!(document.source(), crate::FIXTURE);
+    assert!(!document.can_undo());
+    assert!(std::sync::Arc::ptr_eq(
+        &script,
+        &document.script_snapshot()?
+    ));
+    assert!(std::sync::Arc::ptr_eq(
+        &passages,
+        &document.passage_snapshot()?
+    ));
+    Ok(())
+}
