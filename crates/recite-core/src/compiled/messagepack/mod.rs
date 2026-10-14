@@ -136,6 +136,15 @@ pub fn encode_compiled_dialogue_messagepack(
 pub(in crate::compiled) fn encode_compiled_dialogue_messagepack_uncached(
     dialogue: &CompiledDialogue,
 ) -> Result<Vec<u8>, CompiledAssetEncodeError> {
+    validate_compiled_dialogue(dialogue)?;
+    encode::serialize_messagepack(dialogue)
+}
+
+/// Validate the complete canonical payload without serializing or fingerprinting.
+/// Encoding delegates to this same header and semantic validation authority.
+pub fn validate_compiled_dialogue(
+    dialogue: &CompiledDialogue,
+) -> Result<(), CompiledAssetEncodeError> {
     if dialogue.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0
         || dialogue.header.compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0
     {
@@ -144,9 +153,7 @@ pub(in crate::compiled) fn encode_compiled_dialogue_messagepack_uncached(
             compiler_compatibility_version: dialogue.header.compiler_compatibility_version,
         });
     }
-    validate_dialogue(dialogue, ValidationMode::Canonical)
-        .map_err(CompiledAssetEncodeError::from)?;
-    encode::serialize_messagepack(dialogue)
+    validate_dialogue(dialogue, ValidationMode::Canonical).map_err(CompiledAssetEncodeError::from)
 }
 
 mod encode;

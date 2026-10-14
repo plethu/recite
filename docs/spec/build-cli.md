@@ -91,11 +91,17 @@ validation and compilation, emitting identical runtime-facing bytes without prod
 form. Build and CLI consumers that need only the runtime asset may use that capability.
 
 The model-only entry point performs complete source/schema validation and deterministic compilation
-without encoding or fingerprinting. Canonical compiled-payload validation remains the encoder's
-responsibility. Saved-project builds compile their captured sources once, then move the compiled
-tables between fresh models with each target's header. Every target is independently validated and
-encoded by the canonical codec. Reuse ends with that build invocation; it does not cache across
-requests or change publication and cancellation authority.
+without encoding or fingerprinting. The core codec's explicit canonical validation operation runs
+the same header and payload checks as its encoder without producing bytes; import uses this before
+returning its report. Saved-project builds compile their captured sources once, then move the
+compiled tables between fresh models with each target's header. Every target is independently
+validated and encoded by the canonical codec. Reuse ends with that build invocation; it does not
+cache across requests or change publication and cancellation authority.
+
+Saved-project freshness re-preparation always rediscovers and reads the complete input set, loads
+the schema and checks the manifest. Exact captured inputs may reuse successful source validation;
+changed inputs, partial discovery and requests with preparation diagnostics use ordinary validation.
+Re-preparation retains both generations and restores all manifest targets after an asset selection.
 
 The [shared wire registry](../../crates/recite-core/src/compiled/wire.rs) coordinates field counts
 and numeric tags with the typed model, codecs, inspection projection, and focused fixtures. The
@@ -218,6 +224,11 @@ binary digest values; the initial algorithm is BLAKE3. The MessagePack asset sto
 directly. The compact JSON inspection form may render those bytes as stable lowercase hexadecimal
 text. A compiler version change alone does not require recompilation unless the compiler
 compatibility version changes or the writer changes any runtime-facing semantics.
+
+One filesystem freshness assessment reads, decodes and fingerprints each distinct declared asset
+once. Scenes sharing it retain their own diagnostics and spans in manifest order. Asset groups run
+in first-encounter order, preserving filesystem error precedence and asset-relative source lookup.
+This reuse ends with the assessment; published output is still checked after a successful build.
 
 ## 13. CLI
 

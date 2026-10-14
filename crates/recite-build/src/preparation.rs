@@ -2,33 +2,43 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use recite_compiler::authoring::{
-    AuthoringKernel, AuthoringRequest, BuildGeneration, BuildInput, BuildInputAuthority,
-    BuildInputKind, BuildRequest, SnapshotGeneration,
+    AuthoringKernel, AuthoringRequest, BuildGeneration, SnapshotGeneration,
 };
 use recite_config::{ProjectDiscoveryError, ProjectDiscoveryReport, discover_project};
-use recite_core::{Diagnostic, DiagnosticSeverity, DocumentKey, schema::ProjectSchema};
+use recite_core::{Diagnostic, DiagnosticSeverity, schema::ProjectSchema};
 
-use super::PROJECT_MANIFEST_FILE;
 use super::request::{
     ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
 };
+
+mod inputs;
 
 pub(super) fn prepare(
     project_root: &Path,
     generation: BuildGeneration,
     snapshot_generation: SnapshotGeneration,
+    previous: Option<&ProjectBuildRequest>,
 ) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
     let discovery = match discover_project(project_root) {
         Ok(report) => report,
         Err(error) => return classify_discovery_error(error),
     };
-    prepare_discovered(discovery, generation, snapshot_generation)
+    prepare_discovered_with_previous(discovery, generation, snapshot_generation, previous)
 }
 
 pub fn prepare_discovered(
     discovery: ProjectDiscoveryReport,
     generation: BuildGeneration,
     snapshot_generation: SnapshotGeneration,
+) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
+    prepare_discovered_with_previous(discovery, generation, snapshot_generation, None)
+}
+
+fn prepare_discovered_with_previous(
+    discovery: ProjectDiscoveryReport,
+    generation: BuildGeneration,
+    snapshot_generation: SnapshotGeneration,
+    previous: Option<&ProjectBuildRequest>,
 ) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
     let discovered = discovery.manifest();
     let project_root = discovered.project_root().to_owned();
@@ -70,10 +80,15 @@ pub fn prepare_discovered(
         &manifest,
         schema.as_ref(),
     ));
-    diagnostics.extend(
-        validate_sources(discovery.documents(), schema.as_ref(), true)
-            .map_err(|message| ProjectBuildPreparationError::Authoring { message })?,
-    );
+    let unchanged = previous.filter(|request| {
+        inputs::unchanged(request, &discovery, schema.as_ref(), schema_key.as_ref())
+    });
+    if unchanged.is_none() {
+        diagnostics.extend(
+            validate_sources(discovery.documents(), schema.as_ref(), true)
+                .map_err(|message| ProjectBuildPreparationError::Authoring { message })?,
+        );
+    }
     sort_diagnostics(&mut diagnostics);
     if has_errors(&diagnostics) {
         return Ok(ProjectBuildPreparation::Rejected { diagnostics });
@@ -83,37 +98,17 @@ pub fn prepare_discovered(
         return Err(ProjectBuildPreparationError::NoInputs);
     }
 
-    let manifest_key = DocumentKey::new(PROJECT_MANIFEST_FILE.to_owned()).map_err(|error| {
-        ProjectBuildPreparationError::InvalidInputKey {
-            key: PROJECT_MANIFEST_FILE.to_owned(),
-            reason: error.to_string(),
-        }
-    })?;
-    let mut inputs = Vec::with_capacity(discovery.documents().len() + 2);
-    inputs.push(BuildInput::new(
-        manifest_key,
-        BuildInputKind::Manifest,
-        BuildInputAuthority::Saved,
-        manifest.source_text(),
-    ));
-    for document in discovery.documents() {
-        inputs.push(BuildInput::new(
-            document.key().clone(),
-            BuildInputKind::Source,
-            BuildInputAuthority::Saved,
-            document.text(),
-        ));
-    }
-    if let (Some(schema), Some(key)) = (schema.clone(), schema_key) {
-        inputs.push(BuildInput::schema(key, BuildInputAuthority::Saved, schema));
-    }
-
-    let build = BuildRequest::new_with_policy(
-        generation,
-        snapshot_generation,
-        inputs,
-        recite_compiler::authoring::BuildInputPolicy::SavedOnly,
-    )?;
+    let build = if let Some(previous) = unchanged {
+        previous.build_request().clone()
+    } else {
+        inputs::capture(
+            &discovery,
+            schema.as_ref(),
+            schema_key,
+            generation,
+            snapshot_generation,
+        )?
+    };
     let mut targets = BTreeMap::new();
     for scene in &manifest.manifest().scenes {
         let target = ProjectBuildTarget::new(&scene.asset)?;

@@ -1,10 +1,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_compiler::compile::{
-    CompileInput, CompileOptions, compile_inputs_to_messagepack,
-    compile_inputs_to_messagepack_with_schema,
+    CompileError, CompileInput, CompileOptions, compile_inputs_to_model,
 };
-use recite_core::compiled::{CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId};
+use recite_core::compiled::{
+    CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId, validate_compiled_dialogue,
+};
 use recite_core::{DiagnosticCode, SourcePosition, SourceSpan, SpeakerId, schema::ProjectSchema};
 
 use crate::diagnostics::{INVALID, LOSS, UNSUPPORTED, item};
@@ -326,17 +327,20 @@ impl Builder {
         for (path, source) in &external_sources {
             inputs.push(CompileInput::new(*path, source));
         }
-        let compiled = if let Some(schema) = schema {
-            compile_inputs_to_messagepack_with_schema(inputs, options, schema)?
+        let compiled = compile_inputs_to_model(inputs, options, schema)?;
+        let valid_output = if let Some(dialogue) = compiled.dialogue {
+            validate_compiled_dialogue(&dialogue)
+                .map_err(|error| CompileError::Serialization(error.to_string()))?;
+            true
         } else {
-            compile_inputs_to_messagepack(inputs, options)?
+            false
         };
         self.report.native_diagnostics = compiled
             .diagnostics
             .iter()
             .map(|diagnostic| diagnostic.record())
             .collect::<Result<_, _>>()?;
-        self.report.status = if compiled.messagepack.is_none()
+        self.report.status = if !valid_output
             || self.blocks.is_empty()
             || self
                 .report

@@ -23,6 +23,25 @@ fn expected_fingerprint() -> ContentFingerprint {
 }
 
 #[test]
+fn canonical_validation_matches_encoder_header_and_payload_rejection() {
+    let asset = decoded_asset();
+    assert_eq!(
+        recite_core::compiled::validate_compiled_dialogue(&asset),
+        Ok(())
+    );
+    for (format, compatibility) in [(0, 1), (1, 0), (1, 1)] {
+        let mut payload = asset.clone().into_payload();
+        payload.header.format_version = format;
+        payload.header.compiler_compatibility_version = compatibility;
+        let changed = CompiledDialogue::new(payload);
+        assert_eq!(
+            recite_core::compiled::validate_compiled_dialogue(&changed).err(),
+            encode_compiled_dialogue_messagepack(&changed).err()
+        );
+    }
+}
+
+#[test]
 fn uncached_identity_matches_canonical_bytes_for_large_unicode_prose() {
     for repetitions in [1, 10_000] {
         let text = "Café 🦉\n".repeat(repetitions);

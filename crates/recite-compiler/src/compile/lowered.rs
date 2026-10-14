@@ -6,5 +6,6 @@ use recite_core::ast::SourceFile;
 pub(super) struct LoweredInput {
     pub(super) input_index: usize,
     pub(super) source: Arc<str>,
+    pub(super) fingerprint: Option<recite_core::compiled::ContentFingerprint>,
     pub(super) source_file: SourceFile,
 }

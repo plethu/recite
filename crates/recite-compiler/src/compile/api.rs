@@ -5,14 +5,9 @@ use recite_core::{
     },
     schema::ProjectSchema,
 };
-use recite_parser::lower_source_file;
 
 use super::CompileError;
-use super::builder::build_dialogue;
-use super::lowered::LoweredInput;
-use crate::validation::{
-    ProjectCompleteness, ValidationInput, project::sort_diagnostics_by_source, validate_inputs,
-};
+use super::pipeline::{Input, compile_inputs_with_output};
 use crate::wire::{serialize_inspection_json, serialize_messagepack};
 
 /// Raw source input for one file in a compiler invocation.
@@ -120,6 +115,31 @@ pub fn compile_inputs_to_model(
     options: CompileOptions,
     schema: Option<&ProjectSchema>,
 ) -> Result<ModelCompileReport, CompileError> {
+    let report =
+        compile_inputs_with_output(inputs.into_iter().map(Input::Raw), options, schema, Ok)?;
+    Ok(ModelCompileReport {
+        diagnostics: report.diagnostics,
+        dialogue: report.output,
+    })
+}
+
+/// Compile immutable captured build inputs without copying intermediate source strings.
+///
+/// Reuses fingerprints owned by the request while retaining complete source and
+/// schema validation. Source ordering and diagnostics match [`compile_inputs_to_model`].
+pub fn compile_build_request_to_model(
+    request: &crate::authoring::BuildRequest,
+    options: CompileOptions,
+) -> Result<ModelCompileReport, CompileError> {
+    let schema = request
+        .inputs()
+        .iter()
+        .find_map(|input| input.schema_model());
+    let inputs = request
+        .inputs()
+        .iter()
+        .filter(|input| input.kind() == &crate::authoring::BuildInputKind::Source)
+        .map(Input::Captured);
     let report = compile_inputs_with_output(inputs, options, schema, Ok)?;
     Ok(ModelCompileReport {
         diagnostics: report.diagnostics,
@@ -180,15 +200,20 @@ fn compile_inputs_with_optional_schema(
     options: CompileOptions,
     schema: Option<&ProjectSchema>,
 ) -> Result<CompileReport, CompileError> {
-    let report = compile_inputs_with_output(inputs, options, schema, |dialogue| {
-        let messagepack = serialize_messagepack(&dialogue)?;
-        let inspection_json = serialize_inspection_json(&dialogue)?;
-        Ok(CompiledAssetOutput {
-            dialogue,
-            messagepack,
-            inspection_json,
-        })
-    })?;
+    let report = compile_inputs_with_output(
+        inputs.into_iter().map(Input::Raw),
+        options,
+        schema,
+        |dialogue| {
+            let messagepack = serialize_messagepack(&dialogue)?;
+            let inspection_json = serialize_inspection_json(&dialogue)?;
+            Ok(CompiledAssetOutput {
+                dialogue,
+                messagepack,
+                inspection_json,
+            })
+        },
+    )?;
     Ok(CompileReport {
         diagnostics: report.diagnostics,
         asset: report.output,
@@ -200,71 +225,14 @@ fn compile_inputs_to_messagepack_with_optional_schema(
     options: CompileOptions,
     schema: Option<&ProjectSchema>,
 ) -> Result<MessagepackCompileReport, CompileError> {
-    let report = compile_inputs_with_output(inputs, options, schema, |dialogue| {
-        serialize_messagepack(&dialogue)
-    })?;
+    let report = compile_inputs_with_output(
+        inputs.into_iter().map(Input::Raw),
+        options,
+        schema,
+        |dialogue| serialize_messagepack(&dialogue),
+    )?;
     Ok(MessagepackCompileReport {
         diagnostics: report.diagnostics,
         messagepack: report.output,
-    })
-}
-
-struct PipelineReport<T> {
-    diagnostics: Vec<Diagnostic>,
-    output: Option<T>,
-}
-
-fn compile_inputs_with_output<T>(
-    inputs: impl IntoIterator<Item = CompileInput>,
-    options: CompileOptions,
-    schema: Option<&ProjectSchema>,
-    emit: impl FnOnce(CompiledDialogue) -> Result<T, CompileError>,
-) -> Result<PipelineReport<T>, CompileError> {
-    let mut lowered_inputs = Vec::new();
-    let mut diagnostics = Vec::new();
-
-    for (input_index, input) in inputs.into_iter().enumerate() {
-        let lowered = lower_source_file(&input.path, &input.source);
-        diagnostics.extend(lowered.diagnostics);
-        lowered_inputs.push(LoweredInput {
-            input_index,
-            source: input.source.into(),
-            source_file: lowered.source_file,
-        });
-    }
-
-    sort_diagnostics_by_source(&mut diagnostics);
-    if !diagnostics.is_empty() {
-        return Ok(PipelineReport {
-            diagnostics,
-            output: None,
-        });
-    }
-
-    let validation = validate_inputs(
-        lowered_inputs
-            .iter()
-            .map(|input| ValidationInput::all_complete(&input.source_file)),
-        schema,
-        ProjectCompleteness::Complete,
-    );
-    if !validation.is_ok() {
-        return Ok(PipelineReport {
-            diagnostics: validation.diagnostics,
-            output: None,
-        });
-    }
-
-    lowered_inputs.sort_by(|left, right| {
-        left.source_file
-            .path
-            .cmp(&right.source_file.path)
-            .then(left.input_index.cmp(&right.input_index))
-    });
-
-    let dialogue = build_dialogue(&lowered_inputs, options, schema)?;
-    Ok(PipelineReport {
-        diagnostics: Vec::new(),
-        output: Some(emit(dialogue)?),
     })
 }

@@ -13,12 +13,7 @@ pub(super) struct FreshnessResult {
 pub(super) fn assess_current_freshness(
     request: &ProjectBuildRequest,
 ) -> Result<FreshnessResult, CliError> {
-    let current = ProjectBuildRequest::prepare_with_generations(
-        request.project_root(),
-        request.build_request().generation(),
-        request.build_request().snapshot_generation(),
-    )
-    .map_err(map_preparation_error)?;
+    let current = request.reprepare().map_err(map_preparation_error)?;
     let current = match current {
         ProjectBuildPreparation::Ready(request) => *request,
         ProjectBuildPreparation::Rejected { diagnostics } => {

@@ -27,6 +27,7 @@ pub use lookup::{
 pub use messagepack::{
     CompiledAssetDecodeError, CompiledAssetEncodeError, decode_compiled_dialogue_messagepack,
     encode_compiled_dialogue_messagepack, messagepack_array_len, messagepack_u16,
+    validate_compiled_dialogue,
 };
 pub use rows::{
     CompiledArgument, CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,

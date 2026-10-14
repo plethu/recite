@@ -13,8 +13,8 @@ use recite_core::{
 use tempfile::TempDir;
 
 use super::inputs::compile_options;
-use super::project::validate_project_asset_freshness;
 use super::project_diagnostics::project_diagnostic;
+use super::project_freshness::validate_project_asset_freshness;
 
 fn span() -> SourceSpan {
     SourceSpan::point(
