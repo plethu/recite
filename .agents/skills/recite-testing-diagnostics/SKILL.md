@@ -49,3 +49,10 @@ For performance requests, read `docs/profiling-and-optimisation.md` before choos
 broad-pass workflow requires actual timing measurements, CPU and allocation discovery, and final
 implementation evidence; smoke, estimated model size and RSS alone do not satisfy it. Use a narrow
 hypothesis and focused checks for an individual fix rather than repeating the broad pass.
+
+When adding a cost case, extend its target under `tools/recite-perf/benches/` and the required cases
+in `tools/recite-perf/src/lib.rs` together. Register new targets in `Cargo.toml` and
+`scripts/check-workflow-performance.sh`. Run `mise exec -- just perf regression BASE pr OUTPUT` with
+a fresh output directory; missing cases, controls or counters must fail. Use `authoring` or `writer`
+instead of `pr` for focused work. Run `mise exec -- just writer heap` when changing the Writer
+fixed-corpus allocation contracts.

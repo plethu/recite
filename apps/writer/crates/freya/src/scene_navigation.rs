@@ -5,9 +5,10 @@ use crate::{
     editing::Writer,
 };
 use freya::prelude::*;
-use std::sync::Arc;
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 mod captions;
+mod rows;
 use captions::Caption;
 
 #[derive(Clone)]
@@ -28,18 +29,28 @@ pub(super) struct SceneNavigation {
     pub writer: Writer,
     pub scenes: Vec<SceneBranch>,
 }
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum Row {
-    Scene(SceneBranch, bool),
+    Scene { scene_index: usize, expanded: bool },
     Beat { caption_index: usize },
 }
 // Beat indices resolve only against the caption snapshot captured with these rows.
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 struct NavigationRows {
     selected: Option<String>,
     active: Option<usize>,
     items: Arc<[Row]>,
     captions: Arc<[Caption]>,
+    scenes: Arc<[SceneBranch]>,
+}
+impl PartialEq for NavigationRows {
+    fn eq(&self, other: &Self) -> bool {
+        self.selected == other.selected
+            && self.active == other.active
+            && Arc::ptr_eq(&self.items, &other.items)
+            && Arc::ptr_eq(&self.captions, &other.captions)
+            && self.scenes == other.scenes
+    }
 }
 impl PartialEq for SceneNavigation {
     fn eq(&self, other: &Self) -> bool {
@@ -78,7 +89,7 @@ impl Component for SceneNavigation {
         let id = writer.vim.search_id;
         let scroll = use_scroll_controller(ScrollConfig::default);
         crate::design::use_list_reveal(Some(query), active, scroll, 36., 2);
-        let needle = query.read().to_lowercase();
+        let cache = use_hook(|| Rc::new(RefCell::new(rows::Cache::default())));
         let selected = if writer.localisation.read().active {
             writer
                 .buffers
@@ -91,47 +102,24 @@ impl Component for SceneNavigation {
             writer.selection.read().clone()
         };
         let captions = captions.read().clone();
-        let mut rows = Vec::new();
-        for scene in &self.scenes {
-            let expanded = scene.active
-                && (!needle.is_empty() || collapsed.read().as_ref() != Some(&scene.caption));
-            let scene_matches =
-                !needle.is_empty() && scene.caption.to_lowercase().contains(&needle);
-            let mut beats = Vec::new();
-            if expanded {
-                if needle.is_empty() {
-                    beats.reserve(captions.len());
-                }
-                for (index, caption) in captions.iter().enumerate() {
-                    if needle.is_empty() || caption.folded.contains(&needle) || scene_matches {
-                        beats.push(Row::Beat {
-                            caption_index: index,
-                        });
-                    }
-                }
-            }
-            if needle.is_empty() || scene_matches || !beats.is_empty() {
-                rows.push(Row::Scene(scene.clone(), expanded));
-                rows.extend(beats);
-            }
+        let projection = cache.borrow_mut().refresh(
+            &self.scenes,
+            &captions,
+            &query.read(),
+            collapsed.read().as_deref(),
+        );
+        if let Some(next) = projection.matches {
+            let mut matches = writer.vim.matches;
+            matches.set_if_modified(next);
         }
-        let mut matches = writer.vim.matches;
-        matches.set_if_modified(if needle.is_empty() {
-            Vec::new()
-        } else {
-            rows.iter()
-                .filter_map(|r| match r {
-                    Row::Beat { caption_index } => Some(captions[*caption_index].id.clone()),
-                    _ => None,
-                })
-                .collect()
-        });
+        let rows = projection.items;
         let count = rows.len();
         let rows = NavigationRows {
             selected,
             active: *active.read(),
-            items: rows.into(),
+            items: rows,
             captions,
+            scenes: self.scenes.clone().into(),
         };
         let destinations = rows.clone();
         rect()
@@ -164,7 +152,11 @@ impl Component for SceneNavigation {
             .child(
                 VirtualScrollView::new_with_data(rows, move |index, rows| {
                     let content = match &rows.items[index.index] {
-                        Row::Scene(scene, expanded) => {
+                        Row::Scene {
+                            scene_index,
+                            expanded,
+                        } => {
+                            let scene = &rows.scenes[*scene_index];
                             let expanded = *expanded;
                             let caption = scene.caption.clone();
                             let destinations = rows.clone();
@@ -230,7 +222,11 @@ fn activate_row(
     index: usize,
 ) {
     match rows.items.get(index) {
-        Some(Row::Scene(scene, expanded)) => {
+        Some(Row::Scene {
+            scene_index,
+            expanded,
+        }) => {
+            let scene = &rows.scenes[*scene_index];
             if scene.active {
                 collapsed.set(if *expanded {
                     Some(scene.caption.clone())

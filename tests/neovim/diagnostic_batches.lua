@@ -44,6 +44,32 @@ local before = vim.diagnostic.get(bufnr, { namespace = namespace })
 record.span.start.line = 99
 local ok = pcall(command.replace, namespace, { record }, root, known)
 assert(not ok and vim.deep_equal(before, vim.diagnostic.get(bufnr, { namespace = namespace })))
+local large_source = string.rep("😀ab\r\n", 100000)
+write(large_source)
+local large_record = vim.deepcopy(record)
+large_record.span = {
+  file = file,
+  start = { line = 100000, column = 2 },
+  ["end"] = { line = 100000, column = 3 },
+}
+local large_records = {}
+for _ = 1, 250 do
+  large_records[#large_records + 1] = vim.deepcopy(large_record)
+end
+local original_find, line_scans = string.find, 0
+string.find = function(text, ...)
+  if #text == #large_source then
+    line_scans = line_scans + 1
+  end
+  return original_find(text, ...)
+end
+local before_reads = reads
+local projected_ok, projection_error = pcall(command.replace, namespace, large_records, root, known)
+string.find = original_find
+assert(projected_ok, projection_error)
+projected = vim.diagnostic.get(bufnr, { namespace = namespace })
+assert(reads == before_reads + 1 and line_scans <= 100001 and #projected == 250)
+assert(projected[250].lnum == 99999 and projected[250].col == 4 and projected[250].end_col == 6)
 io.open = original_open
 vim.api.nvim_buf_delete(bufnr, { force = true })
 os.remove(file)

@@ -11,17 +11,47 @@ pub enum Scope {
     Full,
     Writer,
     BoundText,
+    Authoring,
 }
 
 fn expected(scope: Scope) -> BTreeSet<String> {
+    if matches!(scope, Scope::Authoring) {
+        return ["json_schema", "toml_schema", "schema_workspace_fork"]
+            .into_iter()
+            .flat_map(|operation| {
+                ["declarations_100", "declarations_1000"]
+                    .map(|shape| format!("{operation}/{shape}"))
+            })
+            .chain(
+                [
+                    "lsp_completion",
+                    "lsp_definition",
+                    "lsp_references",
+                    "lsp_publication",
+                ]
+                .into_iter()
+                .flat_map(|operation| {
+                    ["wide", "dense"].map(|shape| format!("{operation}/{shape}"))
+                }),
+            )
+            .chain(["catalog_import/cold_100", "catalog_import/populated_10000"].map(str::to_owned))
+            .collect();
+    }
     if matches!(scope, Scope::BoundText) {
         return ["prompt/authored_64".to_owned()].into_iter().collect();
     }
     if matches!(scope, Scope::Writer) {
-        return ["cold_script/effects_1000", "cold_script/effects_10000"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
+        return [
+            "cold_script/effects_1000",
+            "cold_script/effects_10000",
+            "changed_draft/wide",
+            "changed_draft/dense",
+            "accepted_draft/wide",
+            "accepted_draft/dense",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
     }
     let fixtures: &[&str] = if matches!(scope, Scope::Full) {
         &["small", "realistic", "medium"]

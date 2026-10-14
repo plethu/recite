@@ -61,13 +61,14 @@ class ScopeTests(unittest.TestCase):
             "crates/recite-core/src/text/interpolation.rs",
             "crates/recite-benchmarks/src/preview.rs",
             "apps/writer/crates/authoring/src/script.rs",
+            "crates/recite-lsp/src/server.rs",
+            "crates/recite-adapter/src/catalog/import.rs",
         ):
             with self.subTest(path=path):
                 self.assertIn("workflow-performance", selected(path))
         for path in (
             "docs/profiling-and-optimisation.md",
             "apps/writer/src/app.rs",
-            "crates/recite-lsp/src/server.rs",
             "scripts/lsp_tools/client.py",
             "editors/vscode/src/extension.ts",
         ):
@@ -153,7 +154,15 @@ class ScopeTests(unittest.TestCase):
             "crates/recite-godot/src/lib.rs",
         ):
             with self.subTest(path=path):
-                self.assertEqual(selected(path), scope.RUST)
+                self.assertEqual(
+                    selected(path),
+                    scope.RUST
+                    | (
+                        {"workflow-performance"}
+                        if path.startswith("crates/recite-adapter/")
+                        else set()
+                    ),
+                )
         for path in (
             "addons/com.recite.dialogue/plugin.cfg",
             "Packages/com.recite.dialogue/Runtime/ReciteDialogueService.cs",

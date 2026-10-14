@@ -20,7 +20,7 @@ clap.workspace = true
 gungraun-summary = "=7.0.0"
 serde_json.workspace = true
 toml_edit.workspace = true
-recite-writer-model = { path = "../../apps/writer/crates/authoring", version = "0.0.0", optional = true }
+recite-writer-model = { path = "../../apps/writer/crates/authoring", version = "0.0.0", optional = true, features = ["benchmarks"] }
 
 [dev-dependencies]
 gungraun = "=0.20.0"
@@ -28,7 +28,9 @@ recite-benchmarks = { path = "../../crates/recite-benchmarks", version = "0.1.0"
 recite-adapter.workspace = true
 recite-compiler.workspace = true
 recite-core.workspace = true
+recite-lsp = { workspace = true, features = ["bench-support"] }
 recite-runtime.workspace = true
+lsp-types = "0.97.0"
 tempfile.workspace = true
 
 [[bench]]
@@ -43,6 +45,11 @@ required-features = ["writer"]
 [[bench]]
 name = "bound_text"
 harness = false
+
+[[bench]]
+name = "authoring"
+harness = false
+required-features = ["writer"]
 
 [lints]
 workspace = true

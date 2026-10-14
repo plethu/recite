@@ -1,4 +1,6 @@
 //! Run explicitly with --features benchmarks; emits timings and host memory evidence.
+#[path = "large_project/completion.rs"]
+mod completion;
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::{Document, ProjectContext, SearchIndex, View, Workbench, workload};
 use serde_json::{Value, json};
@@ -123,6 +125,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         diagnostic_count, 0,
         "generated project must validate cleanly"
     );
+    completion::run(&document, &mut rows)?;
     let first = measure("project_script", &mut rows, || document.script_snapshot())?;
     for _ in 0..5 {
         let cached = measure("cached_script", &mut rows, || document.script_snapshot())?;
@@ -207,6 +210,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some("index") => Some(55_000_000),
                 Some("project_script") => Some(3_200_000),
                 Some("prose_edit_and_script") => Some(1_200_000),
+                Some("accepted_draft_completion") => Some(35_000),
+                Some("changed_draft_completion") => Some(1_600_000),
                 Some("edit" | "undo" | "redo" | "multiline_edit" | "id_edit") => Some(4_000_000),
                 Some("common_search" | "common_multiword_search") => Some(20_000),
                 Some("expanded_search") => Some(750_000),

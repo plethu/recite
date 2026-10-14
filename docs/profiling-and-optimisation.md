@@ -93,9 +93,9 @@ badges share captions across prose edits.
 
 Compiler completion and hover sites use the snapshot's line index and compute replacement spans
 within the selected line. Contextual speaker metadata walks preceding indexed lines only as far as
-the nearest beat header, preserving explicit overrides and malformed-context handling.
-Project validation stops expanding contexts once they contain every current document. Unchanged
-ordered exports retain their definitions membership while dependencies and facts still update. Stable-ID
+the nearest beat header, preserving explicit overrides and malformed-context handling. Project
+validation stops expanding contexts once they contain every current document. Unchanged ordered
+exports retain their definitions membership while dependencies and facts still update. Stable-ID
 collision checks retain source order; the separate line-ID index is built only for eligible choice
 echo lookups.
 
@@ -165,11 +165,14 @@ a prepared 64-driver adapter choice batch with 400 source files. The adapter cas
 construction and session startup, then checks exact events and serialized snapshots outside
 counters. `full` adds medium fixtures. Both include cold effect-heavy Writer script projection at
 1,000 and 10,000 entries, validating Unicode prose, authored IDs, effects and order outside the
-measured operation, and a 64-session bound-text prompt batch using the checked language-pressure
-fixture; `writer` runs just its two cases. Use a fresh output directory. Limits belong to
-[the shared configuration](../tools/recite-perf/benches/support/budget.rs); elapsed time remains a
-Criterion investigation. Missing paired measurements fail closed, including Gungraun's automatic
-creation of a missing named baseline.
+measured operation, four accepted/changed draft completion cases on wide and dense projects, and a
+64-session bound-text prompt batch using the checked language-pressure fixture. Both also cover
+JSON/TOML schema loading, schema-backed workspace forks, LSP completion/definition/references and
+diagnostic publication on wide/dense projects, and PO imports into empty/populated catalogues.
+`writer` and `authoring` run just their respective targets. Use a fresh output directory. Limits
+belong to [the shared configuration](../tools/recite-perf/benches/support/budget.rs); elapsed time
+remains a Criterion investigation. Missing paired measurements fail closed, including Gungraun's
+automatic creation of a missing named baseline.
 
 CI runs this lane only for measured Rust/model inputs, fixtures and shared build changes. Weekly and
 release runs use `full` and `just stress bounded` (large CLI, tiny/small watch recovery). The

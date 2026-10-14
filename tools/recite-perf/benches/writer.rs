@@ -2,6 +2,8 @@
 //! Opening/validating the document and checking outputs happen outside counters.
 #[path = "support/budget.rs"]
 mod budget;
+#[path = "support/completion.rs"]
+mod completion;
 #[path = "support/writer.rs"]
 mod writer_support;
 
@@ -21,5 +23,19 @@ fn cold_script(workload: ScriptWorkload) -> ProjectedScript {
     black_box(ProjectedScript { workload, script })
 }
 
-library_benchmark_group!(name = writer_workflows; config = budget::budget(20.0); benchmarks = cold_script);
+#[library_benchmark(teardown = completion::validate)]
+#[bench::wide(args = (20), setup = completion::changed)]
+#[bench::dense(args = (2_000), setup = completion::changed)]
+fn changed_draft(workload: completion::CompletionWorkload) -> completion::Completed {
+    black_box(completion::complete(workload))
+}
+
+#[library_benchmark(teardown = completion::validate)]
+#[bench::wide(args = (20), setup = completion::accepted)]
+#[bench::dense(args = (2_000), setup = completion::accepted)]
+fn accepted_draft(workload: completion::CompletionWorkload) -> completion::Completed {
+    black_box(completion::complete(workload))
+}
+
+library_benchmark_group!(name = writer_workflows; config = budget::budget(20.0); benchmarks = cold_script, changed_draft, accepted_draft);
 main!(library_benchmark_groups = writer_workflows);

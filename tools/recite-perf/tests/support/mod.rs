@@ -78,8 +78,15 @@ pub(super) fn lines(summaries: &[BenchmarkSummary]) -> String {
 }
 
 pub(super) fn writer() -> Vec<BenchmarkSummary> {
-    ["effects_1000", "effects_10000"]
-        .into_iter()
-        .map(|id| summary("cold_script", id))
-        .collect()
+    [
+        ("cold_script", "effects_1000"),
+        ("cold_script", "effects_10000"),
+        ("changed_draft", "wide"),
+        ("changed_draft", "dense"),
+        ("accepted_draft", "wide"),
+        ("accepted_draft", "dense"),
+    ]
+    .into_iter()
+    .map(|(function, id)| summary(function, id))
+    .collect()
 }

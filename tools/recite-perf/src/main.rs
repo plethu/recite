@@ -34,6 +34,7 @@ enum SelectedScope {
     Full,
     Writer,
     BoundText,
+    Authoring,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -46,6 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 SelectedScope::Full => Scope::Full,
                 SelectedScope::Writer => Scope::Writer,
                 SelectedScope::BoundText => Scope::BoundText,
+                SelectedScope::Authoring => Scope::Authoring,
             };
             check_summaries(BufReader::new(File::open(summaries)?), scope)?;
             println!("Every required workload has paired instruction and heap evidence.");

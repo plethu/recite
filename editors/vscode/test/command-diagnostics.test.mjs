@@ -304,3 +304,45 @@ test("one publication shares a source snapshot and the next observes changed tex
   assert.equal(entries.get(`file://${file}`)[0].range.end.character, 4);
   await rm(root, { recursive: true, force: true });
 });
+
+test("large late-file diagnostic batches read and split the source once", async () => {
+  const root = await tempRoot("large-batch");
+  const file = path.join(root, "large.recite");
+  const source = "😀ab\r\n".repeat(100_000);
+  let reads = 0;
+  let splits = 0;
+  const entries = new Map();
+  const api = fakeApi(entries, [{
+    uri: { scheme: "file", fsPath: file },
+    isDirty: false,
+    getText: () => {
+      reads += 1;
+      return source;
+    },
+  }]);
+  const records = Array.from({ length: 250 }, () =>
+    diagnostic(
+      file,
+      { line: 100_000, column: 2 },
+      { line: 100_000, column: 3 },
+      "diagnostic-parse-001",
+    ));
+  const originalSplit = String.prototype.split;
+  String.prototype.split = function(...args) {
+    if (this.valueOf() === source) splits += 1;
+    return Reflect.apply(originalSplit, this, args);
+  };
+  try {
+    replaceDiagnostics(api, collection(entries), records, root, new Map());
+    assert.equal(reads, 1);
+    assert.equal(splits, 1);
+    const values = entries.get(`file://${file}`);
+    assert.equal(values.length, 250);
+    assert.equal(values[249].range.start.line, 99_999);
+    assert.equal(values[249].range.start.character, 2);
+    assert.equal(values[249].range.end.character, 4);
+  } finally {
+    String.prototype.split = originalSplit;
+    await rm(root, { recursive: true, force: true });
+  }
+});
