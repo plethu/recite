@@ -36,15 +36,15 @@ function render({ contracts, values }) {
   const rows = [...ids].sort().map((id) => {
     const definition = values.get(id);
     const argumentsForId = definition?.arguments ?? contracts.get(id) ?? [];
-    const argumentsLua = argumentsForId.map(({ name, type }) =>
-      `{ name = ${luaString(name)}, type = ${luaString(type)} }`
-    ).join(", ");
+    const argumentsLua = argumentsForId
+      .map(({ name, type }) => `{ name = ${luaString(name)}, type = ${luaString(type)} }`)
+      .join(", ");
     const template = definition ? `, template = ${luaString(definition.template)}` : "";
     return `  [${luaString(id)}] = { arguments = { ${argumentsLua} }${template} },`;
   });
-  return `-- Generated from the canonical diagnostic contracts and diagnostics.ftl.\n-- Do not edit; run diagnostic-projections.mjs --update.\nreturn {\n${
-    rows.join("\n")
-  }\n}\n`;
+  return `-- Generated from the canonical diagnostic contracts and diagnostics.ftl.\n-- Do not edit; run diagnostic-projections.mjs --update.\nreturn {\n${rows.join(
+    "\n",
+  )}\n}\n`;
 }
 
 export async function renderDiagnosticProjection() {

@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test("real compiler/runtime load on Run and both branches are playable by keyboard", async ({ page }) => {
+test("real compiler/runtime load on Run and both branches are playable by keyboard", async ({
+  page,
+}) => {
   const wasmRequests: string[] = [];
-  page.on("request", request => {
+  page.on("request", (request) => {
     if (request.url().endsWith(".wasm")) wasmRequests.push(request.url());
   });
   await page.goto("/");
@@ -10,12 +12,10 @@ test("real compiler/runtime load on Run and both branches are playable by keyboa
   await expect(source).toContainText(":: junction default");
   expect(wasmRequests).toEqual([]);
   const transcript = page.getByRole("list", { name: "Dialogue transcript" });
-  for (
-    const [choice, expected] of [
-      ["Restore auxiliary power.", "A contactor closes."],
-      ["Unfold the survey plan.", "The paper opens"],
-    ] as const
-  ) {
+  for (const [choice, expected] of [
+    ["Restore auxiliary power.", "A contactor closes."],
+    ["Unfold the survey plan.", "The paper opens"],
+  ] as const) {
     await page.getByRole("button", { name: "Run scene", exact: true }).focus();
     await page.keyboard.press("Enter");
     await expect(transcript).toContainText("N-2 is stamped");
@@ -35,7 +35,9 @@ test("real compiler/runtime load on Run and both branches are playable by keyboa
   expect(wasmRequests.length).toBeGreaterThan(0);
 });
 
-test("edited and opened Recite files execute; real diagnostics replace invalid scenes", async ({ page }) => {
+test("edited and opened Recite files execute; real diagnostics replace invalid scenes", async ({
+  page,
+}) => {
   await page.goto("/");
   const source = page.getByRole("textbox", { name: "Recite source" });
   const original = await source.inputValue();
@@ -80,10 +82,10 @@ test("cycles and oversized input recover; Stop cancels a pending WASM load", asy
   // Route worker requests so Stop and stale-response fencing are exercised
   // while real initialization is pending, without relying on a slow machine.
   let release: () => void = () => {};
-  const blocked = new Promise<void>(resolve => {
+  const blocked = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/*.wasm", async route => {
+  await page.route("**/*.wasm", async (route) => {
     await blocked;
     await route.abort().catch(() => {});
   });
@@ -123,17 +125,20 @@ test("effect integers stay exact and memory exhaustion allows a fresh scene", as
   await expect(transcript).toContainText("N-2 is stamped");
 });
 
-test("slow successful initialization has a separate loading deadline", async ({ page, context }) => {
+test("slow successful initialization has a separate loading deadline", async ({
+  page,
+  context,
+}) => {
   await page.clock.install();
   let release: () => void = () => {};
   let reached: () => void = () => {};
-  const blocked = new Promise<void>(resolve => {
+  const blocked = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const pending = new Promise<void>(resolve => {
+  const pending = new Promise<void>((resolve) => {
     reached = resolve;
   });
-  await context.route("**/*.wasm", async route => {
+  await context.route("**/*.wasm", async (route) => {
     reached();
     await blocked;
     await route.continue();

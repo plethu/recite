@@ -7,7 +7,7 @@ import english from "./content/i18n/en.json";
 import { showcaseSchema } from "./showcase-schema";
 
 // English owns the message keys; other locales may use Starlight's fallback.
-const messages = Object.fromEntries(Object.keys(english).map(key => [key, z.string()])) as Record<
+const messages = Object.fromEntries(Object.keys(english).map((key) => [key, z.string()])) as Record<
   keyof typeof english,
   z.ZodString
 >;

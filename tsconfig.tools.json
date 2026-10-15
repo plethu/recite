@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.node.json",
+  "include": [
+    "vitest.config.mts",
+    "ox*.config.mts",
+    "editors/*.mts",
+    "editors/recite-neovim/**/*.mts",
+    "editors/recite-tree-sitter/*.mts",
+    "scripts/**/*.mts"
+  ],
+  "exclude": ["node_modules", "target"]
+}

@@ -4,21 +4,21 @@ set default-list
 
 # Install the pinned build runtime and frozen workspace packages.
 setup:
-    mise install node pnpm
+    mise install node bun
     ../scripts/install-js-dependencies.sh ..
 
 # Run the site with hot reload.
 dev *args: wasm
-    pnpm dev --host 127.0.0.1 "$@"
+    bun run dev --host 127.0.0.1 "$@"
 
 # Check Astro components, browser/worker types and authored CSS.
 check: wasm
-    pnpm check
-    pnpm test:content
+    bun run check
+    bun run test:content
 
 # Build the static site.
 build: wasm
-    pnpm build
+    bun run build
 
 # Run the full documentation gate, including built links.
 verify:
@@ -26,10 +26,11 @@ verify:
 
 # Serve the existing static build locally.
 preview *args:
-    pnpm preview "$@"
+    bun run preview "$@"
 
 # Format the site source.
 fmt *args:
+    cd .. && bun run --bun oxfmt "docs-site/**/*.{ts,mts,js,mjs}" "$@"
     cd .. && mise -E quality exec -- dprint fmt docs-site "$@"
 
 # Test the built site in Chromium, Firefox, and WebKit through Compose.

@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import { test } from "vitest";
 import {
   applyDiagnostics,
   replaceDiagnostics,
   validDiagnosticRecord,
-} from "../src/command-diagnostics.js";
+} from "../src/command-diagnostics.ts";
 
 test("diagnostic spans are inclusive and project to VS Code UTF-16 ranges", async () => {
   const root = await tempRoot("ascii");
@@ -18,15 +18,17 @@ test("diagnostic spans are inclusive and project to VS Code UTF-16 ranges", asyn
   applyDiagnostics(
     api,
     collection(entries),
-    [diagnostic(
-      file,
-      {
-        line: 1,
-        column: 2,
-      },
-      { line: 1, column: 2 },
-      "diagnostic-parse-001",
-    )],
+    [
+      diagnostic(
+        file,
+        {
+          line: 1,
+          column: 2,
+        },
+        { line: 1, column: 2 },
+        "diagnostic-parse-001",
+      ),
+    ],
     root,
     new Map(),
   );
@@ -48,19 +50,21 @@ test("non-BMP scalars and CRLF use source text for stable UTF-16 columns", async
   applyDiagnostics(
     api,
     collection(entries),
-    [diagnostic(
-      file,
-      {
-        line: 1,
-        column: 2,
-      },
-      { line: 1, column: 3 },
-      "diagnostic-validate-007",
-      {
-        reference: { type: "string", value: "missing" },
-      },
-      "wrong compatibility",
-    )],
+    [
+      diagnostic(
+        file,
+        {
+          line: 1,
+          column: 2,
+        },
+        { line: 1, column: 3 },
+        "diagnostic-validate-007",
+        {
+          reference: { type: "string", value: "missing" },
+        },
+        "wrong compatibility",
+      ),
+    ],
     root,
     new Map(),
   );
@@ -90,22 +94,27 @@ test("replacement projects before clearing the previous snapshot", async () => {
   );
   assert.equal(entries.size, 1);
   assert.equal(target.calls.length, 1);
-  assert.throws(() =>
-    replaceDiagnostics(
-      api,
-      target,
-      [diagnostic(
-        "missing.recite",
-        {
-          line: 1,
-          column: 1,
-        },
-        null,
-        "diagnostic-parse-001",
-      )],
-      root,
-      knownUris,
-    ), /diagnostic_source_unavailable/);
+  assert.throws(
+    () =>
+      replaceDiagnostics(
+        api,
+        target,
+        [
+          diagnostic(
+            "missing.recite",
+            {
+              line: 1,
+              column: 1,
+            },
+            null,
+            "diagnostic-parse-001",
+          ),
+        ],
+        root,
+        knownUris,
+      ),
+    /diagnostic_source_unavailable/,
+  );
   assert.equal(entries.size, 1);
   assert.equal(target.calls.length, 1, "failed projection must not submit a replacement batch");
   await rm(root, { recursive: true, force: true });
@@ -136,10 +145,13 @@ test("replacement submits one complete batch and clears removed URIs atomically"
     knownUris,
   );
   assert.equal(target.calls.length, 2);
-  assert.deepEqual(target.calls[1].map(([uri, values]) => [uri.fsPath, values.length]), [
-    [first, 0],
-    [second, 1],
-  ]);
+  assert.deepEqual(
+    target.calls[1].map(([uri, values]) => [uri.fsPath, values.length]),
+    [
+      [first, 0],
+      [second, 1],
+    ],
+  );
   assert.equal(entries.has(`file://${first}`), false);
   assert.equal(entries.has(`file://${second}`), true);
   await rm(root, { recursive: true, force: true });
@@ -194,9 +206,16 @@ test("diagnostic argument names preserve the core wire contract", () => {
     record.presentation.arguments = { [name]: { type: "string", value: "detail" } };
     assert.equal(validDiagnosticRecord(record), true, name);
   }
-  for (
-    const name of ["Limit", "limit-name", "name-", "0limit", "_limit", "bad.name", "naïve", ""]
-  ) {
+  for (const name of [
+    "Limit",
+    "limit-name",
+    "name-",
+    "0limit",
+    "_limit",
+    "bad.name",
+    "naïve",
+    "",
+  ]) {
     record.presentation.arguments = { [name]: { type: "string", value: "detail" } };
     assert.equal(validDiagnosticRecord(record), false, name);
   }
@@ -264,3 +283,53 @@ function collection(entries) {
     },
   };
 }
+
+test("presentations validate every argument independently and retain required nullable keys", () => {
+  const record = diagnostic(
+    "dialogue.recite",
+    { line: 1, column: 1 },
+    null,
+    "diagnostic-future-example",
+    {
+      first: { type: "string", value: "value" },
+      second: { type: "integer", value: 2 },
+    },
+  );
+  assert.equal(validDiagnosticRecord(record), true);
+  assert.equal(
+    validDiagnosticRecord({
+      ...record,
+      presentation: {
+        ...record.presentation,
+        arguments: {
+          ...record.presentation.arguments,
+          second: { type: "integer", value: 1.5 },
+        },
+      },
+    }),
+    false,
+  );
+  const { help: _help, ...withoutHelp } = record;
+  assert.equal(validDiagnosticRecord(withoutHelp), false);
+});
+
+test("canonical multi-argument presentations validate their named argument types", () => {
+  const record = diagnostic("dialogue.recite", { line: 1, column: 1 }, null, "diagnostic-id-035", {
+    context: { type: "string", value: "scene" },
+    source_text: { type: "string", value: "line" },
+  });
+  assert.equal(validDiagnosticRecord(record), true);
+  assert.equal(
+    validDiagnosticRecord({
+      ...record,
+      presentation: {
+        ...record.presentation,
+        arguments: {
+          ...record.presentation.arguments,
+          source_text: { type: "boolean", value: false },
+        },
+      },
+    }),
+    false,
+  );
+});

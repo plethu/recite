@@ -15,30 +15,27 @@ function readKeyboardMarker(destination) {
   }
 }
 
-exports.runKeyboardProbe = async function runKeyboardProbe(
-  { waitFor, writeResult, writeProfileMarker },
-) {
+exports.runKeyboardProbe = async function runKeyboardProbe({
+  waitFor,
+  writeResult,
+  writeProfileMarker,
+  positionFor,
+}) {
   const workspace = vscode.Uri.file(process.env.RECITE_HOST_PROBE_WORKSPACE);
   const validUri = vscode.Uri.file(process.env.RECITE_HOST_PROBE_VALID);
   const invalidUri = vscode.Uri.file(process.env.RECITE_HOST_PROBE_INVALID);
   const extension = vscode.extensions.getExtension("plethu.recite-vscode");
 
   assert(extension, "the installed Recite VSIX is discoverable");
-  await vscode.workspace.getConfiguration("recite").update(
-    "lsp.path",
-    process.env.RECITE_HOST_PROBE_LSP,
-    vscode.ConfigurationTarget.Workspace,
-  );
-  await vscode.workspace.getConfiguration("recite").update(
-    "cli.path",
-    process.env.RECITE_HOST_PROBE_CLI,
-    vscode.ConfigurationTarget.Workspace,
-  );
-  await vscode.workspace.getConfiguration("recite").update(
-    "lsp.projectRoot",
-    workspace.fsPath,
-    vscode.ConfigurationTarget.Workspace,
-  );
+  await vscode.workspace
+    .getConfiguration("recite")
+    .update("lsp.path", process.env.RECITE_HOST_PROBE_LSP, vscode.ConfigurationTarget.Workspace);
+  await vscode.workspace
+    .getConfiguration("recite")
+    .update("cli.path", process.env.RECITE_HOST_PROBE_CLI, vscode.ConfigurationTarget.Workspace);
+  await vscode.workspace
+    .getConfiguration("recite")
+    .update("lsp.projectRoot", workspace.fsPath, vscode.ConfigurationTarget.Workspace);
   await waitFor(
     () =>
       vscode.workspace.workspaceFolders?.some((folder) => folder.uri.fsPath === workspace.fsPath),
@@ -70,10 +67,13 @@ exports.runKeyboardProbe = async function runKeyboardProbe(
   };
   writeKeyboardMarker(process.env.RECITE_HOST_PROBE_KEYBOARD_OPEN_RESULT, openObservation);
   const invalid = openedEditor.document;
-  const diagnostics = await waitFor(() =>
-    vscode.languages.getDiagnostics(invalidUri).filter(
-      (diagnostic) => diagnostic.code === "RECITE_PARSE011",
-    ), "keyboard diagnostics");
+  const diagnostics = await waitFor(
+    () =>
+      vscode.languages
+        .getDiagnostics(invalidUri)
+        .filter((diagnostic) => diagnostic.code === "RECITE_PARSE011"),
+    "keyboard diagnostics",
+  );
   writeKeyboardMarker(process.env.RECITE_HOST_PROBE_KEYBOARD_READY, {
     event: "ready",
     host: vscode.version,
@@ -86,8 +86,8 @@ exports.runKeyboardProbe = async function runKeyboardProbe(
     "diagnostic keyboard marker",
   );
   assert.equal(keyResult.event, "keyboard-probe", "real keybinding reached the host probe");
-  const keyDiagnostic = keyResult.diagnostics.find((diagnostic) =>
-    diagnostic.code === "RECITE_PARSE011"
+  const keyDiagnostic = keyResult.diagnostics.find(
+    (diagnostic) => diagnostic.code === "RECITE_PARSE011",
   );
   assert(keyDiagnostic, "keyboard marker preserves the diagnostic code");
   assert.equal(keyDiagnostic.severity, "error", "keyboard marker preserves diagnostic severity");
@@ -95,9 +95,10 @@ exports.runKeyboardProbe = async function runKeyboardProbe(
   assert.equal(keyDiagnostic.start.character, 11, "keyboard marker preserves diagnostic start");
   const navigation = {
     activeDocumentMatches: keyResult.navigation?.activeDocument === invalidUri.fsPath,
-    selectionMatches: keyResult.navigation?.selection?.line === keyDiagnostic.start.line
-      && keyResult.navigation.selection.character >= keyDiagnostic.start.character
-      && keyResult.navigation.selection.character <= keyDiagnostic.end.character,
+    selectionMatches:
+      keyResult.navigation?.selection?.line === keyDiagnostic.start.line &&
+      keyResult.navigation.selection.character >= keyDiagnostic.start.character &&
+      keyResult.navigation.selection.character <= keyDiagnostic.end.character,
     activeDocument: keyResult.navigation?.activeDocument,
     selection: keyResult.navigation?.selection,
   };

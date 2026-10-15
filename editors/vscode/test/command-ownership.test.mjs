@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import test from "node:test";
-import { CommandRegistry } from "../src/commands.js";
+import { test } from "vitest";
+import { CommandRegistry } from "../src/commands.ts";
 
 test("run and trace preserve the diagnostic snapshot", async () => {
   const h = harness();
@@ -9,9 +9,14 @@ test("run and trace preserve the diagnostic snapshot", async () => {
   const registry = new CommandRegistry(h.api, h.ui, {
     makeInvocationId: () => "run-id",
     spawnProcess: (_command, args) =>
-      finiteChild("run", "run-id", {
-        trace: { asset_id: "asset", block: "start", events: [], final_deferred_effects: [] },
-      }, args),
+      finiteChild(
+        "run",
+        "run-id",
+        {
+          trace: { asset_id: "asset", block: "start", events: [], final_deferred_effects: [] },
+        },
+        args,
+      ),
   });
   registry.register([]);
   await h.api.commands.executeCommand("recite.run", {
@@ -52,7 +57,7 @@ test("a valid terminal with an unprojectable diagnostic preserves the prior snap
     spawnProcess: () => {
       const child = new DeferredChild();
       queueMicrotask(() =>
-        child.finish("validate", "atomic-id", diagnosticResult("missing.recite"), 0)
+        child.finish("validate", "atomic-id", diagnosticResult("missing.recite"), 0),
       );
       return child;
     },
@@ -162,17 +167,19 @@ function diagnosticResult(file) {
     status: "success",
     exit_code: 0,
     data: {
-      diagnostics: [{
-        version: 1,
-        code: "RECITE_PARSE001",
-        severity: "error",
-        span: { file, start: { line: 1, column: 1 }, end: { line: 1, column: 1 } },
-        presentation: { id: "diagnostic-parse-001", arguments: {} },
-        related: [],
-        help: null,
-        explanation: null,
-        compatibility_message: "fallback",
-      }],
+      diagnostics: [
+        {
+          version: 1,
+          code: "RECITE_PARSE001",
+          severity: "error",
+          span: { file, start: { line: 1, column: 1 }, end: { line: 1, column: 1 } },
+          presentation: { id: "diagnostic-parse-001", arguments: {} },
+          related: [],
+          help: null,
+          explanation: null,
+          compatibility_message: "fallback",
+        },
+      ],
     },
   };
 }
@@ -180,7 +187,7 @@ function diagnosticResult(file) {
 function finiteChild(command, invocationId, data, _args) {
   const child = new DeferredChild();
   queueMicrotask(() =>
-    child.finish(command, invocationId, { status: "success", exit_code: 0, data }, 0)
+    child.finish(command, invocationId, { status: "success", exit_code: 0, data }, 0),
   );
   return child;
 }
@@ -218,10 +225,8 @@ function harness() {
       workspaceFolders: [{ uri: { fsPath: "/workspace" } }],
       textDocuments: docs,
       getConfiguration: () => ({
-        get: (
-          key,
-          fallback,
-        ) => ({ "cli.path": "recite", "lsp.projectRoot": "project" }[key] ?? fallback),
+        get: (key, fallback) =>
+          ({ "cli.path": "recite", "lsp.projectRoot": "project" })[key] ?? fallback,
       }),
     },
     window: { activeTextEditor: { document } },
@@ -322,15 +327,17 @@ class DeferredChild extends EventEmitter {
           event: "command.started",
           command,
           invocation_id: invocationId,
-        }) + "\n"
-          + JSON.stringify({
+        }) +
+          "\n" +
+          JSON.stringify({
             version: 1,
             sequence: 1,
             event: "command.result",
             command,
             invocation_id: invocationId,
             ...terminal,
-          }) + "\n",
+          }) +
+          "\n",
       ),
     );
     this.close(code);

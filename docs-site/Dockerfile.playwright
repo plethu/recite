@@ -13,18 +13,18 @@ ENV CI=1 \
 COPY --from=mise-tool /usr/local/bin/mise /usr/local/bin/mise
 
 WORKDIR /workspace
-COPY .mise.toml ./
-RUN mise install node pnpm
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY .mise.toml package.json ./
+RUN mise install node bun
+COPY bun.lock bunfig.toml tsconfig.base.json oxfmt.config.mts oxlint.config.mts ./
 COPY docs-site/package.json ./docs-site/package.json
 COPY editors/vscode/package.json ./editors/vscode/package.json
-RUN pnpm install --filter @recite/docs-site... --frozen-lockfile
+RUN bun install --filter @recite/docs-site --frozen-lockfile
 
 COPY docs-site/ ./docs-site/
 COPY assets/identity/ ./assets/identity/
 COPY fixtures/recite/valid/landing-junction.recite ./fixtures/recite/valid/landing-junction.recite
 COPY editors/vscode/syntaxes/recite.tmLanguage.json ./editors/vscode/syntaxes/recite.tmLanguage.json
-RUN pnpm -C docs-site build
+RUN bun run --cwd docs-site build
 
 ARG LOCAL_UID=1000
 ARG LOCAL_GID=1000
@@ -32,4 +32,4 @@ RUN chown -R "${LOCAL_UID}:${LOCAL_GID}" /workspace/docs-site/.astro \
     && chmod -R a+rX /opt/mise
 
 WORKDIR /workspace/docs-site
-CMD ["pnpm", "test:browser"]
+CMD ["bun", "run", "test:browser"]

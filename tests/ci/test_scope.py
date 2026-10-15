@@ -263,6 +263,12 @@ class ScopeTests(unittest.TestCase):
         cases = (
             (
                 ".mise.toml",
+                b'[tools]\nnode = "24.18.0"\nbun = "1.4.2"\n',
+                b'[tools]\nnode = "24.18.0"\nbun = "1.4.3"\n',
+                scope.JS,
+            ),
+            (
+                ".mise.toml",
                 b'[tools]\nnode = "22"\n',
                 b"[settings]\nexperimental = true\n",
                 scope.LANES,

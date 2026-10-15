@@ -20,12 +20,15 @@ const stage = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-package-"));
 const extension = path.join(stage, "extension");
 
 try {
-  runNode(path.join(packageRoot, "scripts", "build.mjs"));
+  runBuild(path.join(packageRoot, "scripts", "build.mjs"));
   assertSafeTree(path.join(packageRoot, "dist"), "extension package");
   await mkdir(extension, { recursive: true });
-  for (
-    const file of ["package.json", "package.nls.json", "language-configuration.json", "README.md"]
-  ) {
+  for (const file of [
+    "package.json",
+    "package.nls.json",
+    "language-configuration.json",
+    "README.md",
+  ]) {
     assertRegularFile(path.join(packageRoot, file));
     await cp(path.join(packageRoot, file), path.join(extension, file));
   }
@@ -107,13 +110,15 @@ async function packageManifestFor(entry, name) {
 }
 
 function files(directory) {
-  return readdirSync(directory).flatMap((entry) => {
-    const full = path.join(directory, entry);
-    const relative = path.relative(directory, full);
-    return statSync(full).isDirectory()
-      ? files(full).map((child) => path.join(relative, child))
-      : [relative.split(path.sep).join("/")];
-  }).sort();
+  return readdirSync(directory)
+    .flatMap((entry) => {
+      const full = path.join(directory, entry);
+      const relative = path.relative(directory, full);
+      return statSync(full).isDirectory()
+        ? files(full).map((child) => path.join(relative, child))
+        : [relative.split(path.sep).join("/")];
+    })
+    .sort();
 }
 
 async function writeText(file, text) {
@@ -146,9 +151,9 @@ function vsixManifest(packageManifest, messages) {
   return `<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="1.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
-    <Identity Language="en-US" Id="${xml(packageManifest.name)}" Version="${
-    xml(packageManifest.version)
-  }" Publisher="${xml(packageManifest.publisher)}" />
+    <Identity Language="en-US" Id="${xml(packageManifest.name)}" Version="${xml(
+      packageManifest.version,
+    )}" Publisher="${xml(packageManifest.publisher)}" />
     <DisplayName>${displayName}</DisplayName>
     <Description xml:space="preserve">${description}</Description>
     <MoreInfo>${xml(packageManifest.homepage)}</MoreInfo>
@@ -169,15 +174,19 @@ function vsixManifest(packageManifest, messages) {
 
 function localize(value, messages) {
   const match = /^%([^%]+)%$/.exec(value);
-  return match ? messages[match[1]] ?? value : value;
+  return match ? (messages[match[1]] ?? value) : value;
 }
 
 function xml(value) {
-  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;").replaceAll("'", "&apos;");
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
 }
 
-function runNode(script) {
+function runBuild(script) {
   const result = spawnSync(process.execPath, [script], { cwd: packageRoot, stdio: "inherit" });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
@@ -279,24 +288,24 @@ async function checkArchive(archive, stageRoot) {
     const compressed = archiveData.subarray(bodyStart, bodyStart + compressedSize);
     const content = inflateRawSync(compressed);
     if (
-      content.length !== uncompressedSize
-      || !content.equals(await readFile(path.join(stageRoot, name)))
+      content.length !== uncompressedSize ||
+      !content.equals(await readFile(path.join(stageRoot, name)))
     ) {
       throw new Error(`VSIX entry does not match its source bytes: ${name}`);
     }
     entries.add(name);
     cursor += 46 + filenameLength + extraLength + commentLength;
   }
-  for (
-    const expected of [
-      "[Content_Types].xml",
-      "extension.vsixmanifest",
-      "extension/package.json",
-      "extension/syntaxes/recite.tmLanguage.json",
-      "extension/dist/extension.cjs",
-      "extension/dist/extension.js",
-    ]
-  ) {
+  for (const expected of [
+    "[Content_Types].xml",
+    "extension.vsixmanifest",
+    "extension/package.json",
+    "extension/syntaxes/recite.tmLanguage.json",
+    "extension/dist/extension.cjs",
+    "extension/dist/extension.js",
+    "extension/dist/schemas/index.js",
+    "extension/dist/valibot.LICENSE",
+  ]) {
     if (!entries.has(expected)) throw new Error(`VSIX is missing ${expected}`);
   }
   if (entries.size !== files(stageRoot).length) {

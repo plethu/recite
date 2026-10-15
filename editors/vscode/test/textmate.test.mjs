@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import test from "node:test";
+import { test } from "vitest";
 import { fileURLToPath } from "node:url";
 import oniguruma from "vscode-oniguruma";
 import textmate from "vscode-textmate";
@@ -16,16 +16,10 @@ const grammarSource = await readFile(
   "utf8",
 );
 const fixtureManifest = JSON.parse(
-  await readFile(
-    path.join(repositoryRoot, "fixtures/editor-parity/textmate.json"),
-    "utf8",
-  ),
+  await readFile(path.join(repositoryRoot, "fixtures/editor-parity/textmate.json"), "utf8"),
 );
 const snapshots = JSON.parse(
-  await readFile(
-    path.join(repositoryRoot, fixtureManifest.token_snapshots),
-    "utf8",
-  ),
+  await readFile(path.join(repositoryRoot, fixtureManifest.token_snapshots), "utf8"),
 );
 const hostileSource = await readFile(
   path.join(repositoryRoot, fixtureManifest.hostile_fixture),
@@ -42,9 +36,7 @@ const registry = new Registry({
     createOnigString: (source) => new OnigString(source),
   }),
   loadGrammar: async (scopeName) =>
-    scopeName === "source.recite"
-      ? parseRawGrammar(grammarSource, "recite.tmLanguage.json")
-      : null,
+    scopeName === "source.recite" ? parseRawGrammar(grammarSource, "recite.tmLanguage.json") : null,
 });
 const grammar = await registry.loadGrammar("source.recite");
 assert.ok(grammar, "the pinned tokenizer must load the Recite grammar");
@@ -60,10 +52,7 @@ test("checked-in TextMate snapshots execute the pinned tokenizer", () => {
 });
 
 test("canonical, malformed, and incomplete fixtures remain tokenizable", async () => {
-  const paths = [
-    ...fixtureManifest.canonical_fixtures,
-    fixtureManifest.incomplete_fixture,
-  ];
+  const paths = [...fixtureManifest.canonical_fixtures, fixtureManifest.incomplete_fixture];
   for (const relative of paths) {
     const source = await readFile(path.join(repositoryRoot, relative), "utf8");
     assert.doesNotThrow(() => tokenize(source), relative);
@@ -75,10 +64,12 @@ function tokenize(source) {
   const result = [];
   for (const line of source.replace(/\r\n?/g, "\n").split("\n")) {
     const lineResult = grammar.tokenizeLine(line, state);
-    result.push(lineResult.tokens.map((token, index) => [
-      line.slice(token.startIndex, lineResult.tokens[index + 1]?.startIndex ?? line.length),
-      token.scopes,
-    ]));
+    result.push(
+      lineResult.tokens.map((token, index) => [
+        line.slice(token.startIndex, lineResult.tokens[index + 1]?.startIndex ?? line.length),
+        token.scopes,
+      ]),
+    );
     state = lineResult.ruleStack;
   }
   return source.includes("\n") ? result : result[0];

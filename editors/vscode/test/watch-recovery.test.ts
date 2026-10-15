@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import test, { type TestContext } from "node:test";
+import { afterEach, test, vi } from "vitest";
 import { envelope, FakeChild, started, watchRegistry } from "./watch-test-fixtures.mjs";
 
+afterEach(() => vi.useRealTimers());
+
 test("dispose recovers a child that never emits a terminal record", async (context) => {
-  context.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   const messages: unknown[][] = [];
   const child = new FakeChild();
   const registry = watchRegistry(messages, child, "dispose-id", 10);
@@ -17,7 +19,7 @@ test("dispose recovers a child that never emits a terminal record", async (conte
 });
 
 test("watch recovery keeps ownership until force-kill close", async (context) => {
-  context.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   const messages: unknown[][] = [];
   const child = new FakeChild();
   const registry = watchRegistry(messages, child, "tombstone-id", 5);
@@ -34,7 +36,7 @@ test("watch recovery keeps ownership until force-kill close", async (context) =>
 });
 
 test("fatal terminal enters bounded recovery without releasing a non-closing child", async (context) => {
-  context.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   const messages: unknown[][] = [];
   const child = new UncooperativeChild();
   const registry = watchRegistry(messages, child, "fatal-hung-id", 5);
@@ -43,11 +45,15 @@ test("fatal terminal enters bounded recovery without releasing a non-closing chi
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(started("fatal-hung-id", 0)) + "\n"
-        + JSON.stringify(envelope("fatal-hung-id", 1, "watch.stopped", {
-          reason: { type: "fatal" },
-          error: { category: "input", code: "missing_path", operation: "watch" },
-        })) + "\n",
+      JSON.stringify(started("fatal-hung-id", 0)) +
+        "\n" +
+        JSON.stringify(
+          envelope("fatal-hung-id", 1, "watch.stopped", {
+            reason: { type: "fatal" },
+            error: { category: "input", code: "missing_path", operation: "watch" },
+          }),
+        ) +
+        "\n",
     ),
   );
   await advance(context, 30);
@@ -71,9 +77,9 @@ class UncooperativeChild extends FakeChild {
 }
 
 // Flush promise continuations between ticks so force timers retain their order.
-async function advance(context: TestContext, milliseconds: number) {
+async function advance(_context: unknown, milliseconds: number) {
   for (let elapsed = 0; elapsed < milliseconds; elapsed++) {
-    context.mock.timers.tick(1);
+    vi.advanceTimersByTime(1);
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 }

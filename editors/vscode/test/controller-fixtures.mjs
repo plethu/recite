@@ -9,13 +9,17 @@ export function action(document, title) {
     title,
     kind: "quickfix",
     edit: {
-      documentChanges: [{
-        textDocument: { uri: document.uri.toString(), version: document.version },
-        edits: [{
-          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } },
-          newText: "# ",
-        }],
-      }],
+      documentChanges: [
+        {
+          textDocument: { uri: document.uri.toString(), version: document.version },
+          edits: [
+            {
+              range: { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } },
+              newText: "# ",
+            },
+          ],
+        },
+      ],
     },
   };
 }
@@ -139,16 +143,15 @@ export function hostApi({ isTrusted, onDidGrantWorkspaceTrust }) {
     getConfiguration: () => ({ get: (_key, fallback) => fallback }),
     applyEdit: async () => true,
   };
-  for (
-    const event of [
-      "onDidOpenTextDocument",
-      "onDidChangeTextDocument",
-      "onDidSaveTextDocument",
-      "onDidCloseTextDocument",
-      "onDidChangeConfiguration",
-      "onDidChangeWorkspaceFolders",
-    ]
-  ) workspace[event] = () => ({ dispose() {} });
+  for (const event of [
+    "onDidOpenTextDocument",
+    "onDidChangeTextDocument",
+    "onDidSaveTextDocument",
+    "onDidCloseTextDocument",
+    "onDidChangeConfiguration",
+    "onDidChangeWorkspaceFolders",
+  ])
+    workspace[event] = () => ({ dispose() {} });
   const api = {
     workspace,
     window: { activeTextEditor: undefined },

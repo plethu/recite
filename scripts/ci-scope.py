@@ -202,7 +202,17 @@ def lanes_for_path(path, *, base=None, head=None):
         return LANES - DISTRIBUTION
     if path.startswith(("examples/", "include/", "Packages/")):
         return RUST
-    if path in {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"}:
+    if path in {
+        "package.json",
+        "bun.lock",
+        "bunfig.toml",
+        "vitest.config.mts",
+        "oxfmt.config.mts",
+        "oxlint.config.mts",
+        "tsconfig.base.json",
+        "tsconfig.node.json",
+        "tsconfig.tools.json",
+    }:
         return JS
     if path == "scripts/install-js-dependencies.sh":
         return JS | {"maintainability"}

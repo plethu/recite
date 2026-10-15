@@ -7,8 +7,9 @@ test("skip link and both mobile menus work with a keyboard", async ({ page }) =>
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#_top")).toBeFocused();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth))
-    .toBeLessThanOrEqual(1);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+  ).toBeLessThanOrEqual(1);
   const menuBox = await page.getByRole("button", { name: "Site menu", exact: true }).boundingBox();
   const headerBox = await page.getByRole("banner").boundingBox();
   expect(menuBox).not.toBeNull();

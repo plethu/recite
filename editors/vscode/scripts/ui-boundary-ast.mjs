@@ -1,8 +1,12 @@
 import { parse } from "acorn";
+import { stripTypeScriptTypes } from "node:module";
 
 export function parseSource(source, file) {
   try {
-    return parse(source, { ecmaVersion: "latest", sourceType: "module", allowHashBang: true });
+    const javascript = /\.(?:ts|mts|cts)$/.test(file)
+      ? stripTypeScriptTypes(source, { mode: "strip" })
+      : source;
+    return parse(javascript, { ecmaVersion: "latest", sourceType: "module", allowHashBang: true });
   } catch (error) {
     throw new Error(`invalid JavaScript in ${file}: ${error.message}`, { cause: error });
   }
@@ -29,9 +33,12 @@ export function memberMethod(node) {
 
 export function staticMemberMethod(node) {
   if (
-    node?.type !== "MemberExpression" || !node.computed || node.property.type !== "Literal"
-    || typeof node.property.value !== "string"
-  ) return undefined;
+    node?.type !== "MemberExpression" ||
+    !node.computed ||
+    node.property.type !== "Literal" ||
+    typeof node.property.value !== "string"
+  )
+    return undefined;
   return node.property.value;
 }
 
@@ -43,21 +50,29 @@ export function staticModuleSpecifier(node) {
       "ExportAllDeclaration",
       "ImportExpression",
     ].includes(node?.type)
-  ) return undefined;
+  )
+    return undefined;
   const source = node.source;
   if (source?.type === "Literal" && typeof source.value === "string") return source.value;
   if (
-    node.type !== "ImportExpression" || source?.type !== "TemplateLiteral"
-    || source.expressions.length !== 0 || source.quasis.length !== 1
-  ) return undefined;
+    node.type !== "ImportExpression" ||
+    source?.type !== "TemplateLiteral" ||
+    source.expressions.length !== 0 ||
+    source.quasis.length !== 1
+  )
+    return undefined;
   const value = source.quasis[0]?.value?.cooked;
   return typeof value === "string" ? value : undefined;
 }
 
 export function isCallMethod(node, method) {
-  return node?.type === "CallExpression" && node.callee.type === "MemberExpression"
-    && !node.callee.computed && node.callee.property.type === "Identifier"
-    && node.callee.property.name === method;
+  return (
+    node?.type === "CallExpression" &&
+    node.callee.type === "MemberExpression" &&
+    !node.callee.computed &&
+    node.callee.property.type === "Identifier" &&
+    node.callee.property.name === method
+  );
 }
 
 export function receiverRoot(node) {
@@ -71,17 +86,24 @@ export function propertyName(node) {
   return node.key.type === "Identifier"
     ? node.key.name
     : node.key.type === "Literal" && typeof node.key.value === "string"
-    ? node.key.value
-    : undefined;
+      ? node.key.value
+      : undefined;
 }
 
 export function isMemberCall(node, root, middle, method) {
-  return node?.type === "CallExpression" && node.callee.type === "MemberExpression"
-    && !node.callee.computed && !node.callee.optional && node.callee.property.type === "Identifier"
-    && node.callee.property.name === method && node.callee.object.type === "MemberExpression"
-    && !node.callee.object.computed && !node.callee.object.optional
-    && node.callee.object.property.type === "Identifier"
-    && node.callee.object.property.name === middle
-    && node.callee.object.object.type === "Identifier"
-    && node.callee.object.object.name === root;
+  return (
+    node?.type === "CallExpression" &&
+    node.callee.type === "MemberExpression" &&
+    !node.callee.computed &&
+    !node.callee.optional &&
+    node.callee.property.type === "Identifier" &&
+    node.callee.property.name === method &&
+    node.callee.object.type === "MemberExpression" &&
+    !node.callee.object.computed &&
+    !node.callee.object.optional &&
+    node.callee.object.property.type === "Identifier" &&
+    node.callee.object.property.name === middle &&
+    node.callee.object.object.type === "Identifier" &&
+    node.callee.object.object.name === root
+  );
 }

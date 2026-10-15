@@ -34,12 +34,12 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "messages:update": "node scripts/message-projections.mjs --update",
-    "typecheck": "tsc6 --noEmit",
-    "check": "pnpm run typecheck && node scripts/build.mjs && node scripts/check-package.mjs && node scripts/check-grammar.mjs && node --test test/*.test.mjs test/*.test.ts",
-    "package": "node scripts/package.mjs",
-    "package:check": "node scripts/package.mjs --check"
+    "build": "bun scripts/build.mjs",
+    "messages:update": "bun scripts/message-projections.mjs --update",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run typecheck && bun run build && node scripts/check-package.mjs && node scripts/check-grammar.mjs && bun run --cwd ../.. js:test --project vscode",
+    "package": "bun scripts/package.mjs",
+    "package:check": "bun scripts/package.mjs --check"
   },
   "contributes": {
     "languages": [
@@ -141,10 +141,13 @@
   },
   "devDependencies": {
     "@types/node": "24.19.1",
+    "@types/vscode": "1.89.0",
+    "@typescript/native": "npm:typescript@7.0.2",
     "@vscode/test-electron": "3.1.0",
     "acorn": "8.15.0",
     "fflate": "0.8.2",
-    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "tsdown": "0.23.1",
+    "valibot": "1.5.0",
     "vscode-oniguruma": "1.7.0",
     "vscode-textmate": "9.2.0"
   },

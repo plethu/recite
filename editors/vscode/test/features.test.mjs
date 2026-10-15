@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import {
   lspCodeActionsToVscode,
   lspCompletionItems,
@@ -9,7 +9,7 @@ import {
   vscodeDiagnosticToLsp,
   workspaceEditIsCurrent,
   workspaceEditStatus,
-} from "../src/lsp-features.js";
+} from "../src/lsp-features.ts";
 
 test("diagnostics retain stable code, source, severity, and UTF-16 range", () => {
   const diagnostic = lspDiagnosticToVscode(api, {
@@ -19,46 +19,65 @@ test("diagnostics retain stable code, source, severity, and UTF-16 range", () =>
     source: "recite-lsp",
     message: "expected a statement",
   });
-  assert.deepEqual({
-    range: {
-      start: { line: diagnostic.range.start.line, character: diagnostic.range.start.character },
-      end: { line: diagnostic.range.end.line, character: diagnostic.range.end.character },
+  assert.deepEqual(
+    {
+      range: {
+        start: { line: diagnostic.range.start.line, character: diagnostic.range.start.character },
+        end: { line: diagnostic.range.end.line, character: diagnostic.range.end.character },
+      },
+      message: diagnostic.message,
+      severity: diagnostic.severity,
+      code: diagnostic.code,
+      source: diagnostic.source,
     },
-    message: diagnostic.message,
-    severity: diagnostic.severity,
-    code: diagnostic.code,
-    source: diagnostic.source,
-  }, {
-    range: { start: { line: 2, character: 11 }, end: { line: 2, character: 13 } },
-    message: "expected a statement",
-    severity: "warning",
-    code: "RECITE_PARSE007",
-    source: "recite-lsp",
-  });
+    {
+      range: { start: { line: 2, character: 11 }, end: { line: 2, character: 13 } },
+      message: "expected a statement",
+      severity: "warning",
+      code: "RECITE_PARSE007",
+      source: "recite-lsp",
+    },
+  );
 });
 
 test("versioned workspace edits are refused for a stale open document", () => {
   const uri = api.Uri.parse("file:///workspace/dialogue.recite");
-  const stale = lspWorkspaceEditToVscode(api, {
-    documentChanges: [{
-      textDocument: { uri: uri.toString(), version: 3 },
-      edits: [{
-        range: { start: { line: 1, character: 0 }, end: { line: 1, character: 4 } },
-        newText: "done",
-      }],
-    }],
-  }, () => ({ version: 4 }));
+  const stale = lspWorkspaceEditToVscode(
+    api,
+    {
+      documentChanges: [
+        {
+          textDocument: { uri: uri.toString(), version: 3 },
+          edits: [
+            {
+              range: { start: { line: 1, character: 0 }, end: { line: 1, character: 4 } },
+              newText: "done",
+            },
+          ],
+        },
+      ],
+    },
+    () => ({ version: 4 }),
+  );
   assert.equal(stale, undefined);
 
-  const current = lspWorkspaceEditToVscode(api, {
-    documentChanges: [{
-      textDocument: { uri: uri.toString(), version: 4 },
-      edits: [{
-        range: { start: { line: 1, character: 0 }, end: { line: 1, character: 4 } },
-        newText: "done",
-      }],
-    }],
-  }, () => ({ version: 4 }));
+  const current = lspWorkspaceEditToVscode(
+    api,
+    {
+      documentChanges: [
+        {
+          textDocument: { uri: uri.toString(), version: 4 },
+          edits: [
+            {
+              range: { start: { line: 1, character: 0 }, end: { line: 1, character: 4 } },
+              newText: "done",
+            },
+          ],
+        },
+      ],
+    },
+    () => ({ version: 4 }),
+  );
   assert.equal(current.replacements.length, 1);
   assert.equal(current.replacements[0].uri.toString(), uri.toString());
 });
@@ -67,29 +86,42 @@ test("workspace edits require integer versions and an open document", () => {
   const uri = api.Uri.parse("file:///workspace/dialogue.recite");
   const document = { version: 4 };
   const edit = (version) =>
-    lspWorkspaceEditToVscode(api, {
-      documentChanges: [{
-        textDocument: version === "missing"
-          ? { uri: uri.toString() }
-          : { uri: uri.toString(), version },
-        edits: [{
-          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
-          newText: "#",
-        }],
-      }],
-    }, () => document);
+    lspWorkspaceEditToVscode(
+      api,
+      {
+        documentChanges: [
+          {
+            textDocument:
+              version === "missing" ? { uri: uri.toString() } : { uri: uri.toString(), version },
+            edits: [
+              {
+                range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+                newText: "#",
+              },
+            ],
+          },
+        ],
+      },
+      () => document,
+    );
 
   for (const version of ["missing", null, 4.5, "4"]) {
     assert.equal(edit(version), undefined, `version ${String(version)} must be refused`);
   }
 
   assert.equal(
-    lspWorkspaceEditToVscode(api, {
-      documentChanges: [{
-        textDocument: { uri: uri.toString(), version: 4 },
-        edits: [],
-      }],
-    }, () => undefined),
+    lspWorkspaceEditToVscode(
+      api,
+      {
+        documentChanges: [
+          {
+            textDocument: { uri: uri.toString(), version: 4 },
+            edits: [],
+          },
+        ],
+      },
+      () => undefined,
+    ),
     undefined,
     "a zero-edit closed-document precondition must be refused",
   );
@@ -98,15 +130,23 @@ test("workspace edits require integer versions and an open document", () => {
 test("workspace edits reject reversed text ranges before host conversion", () => {
   const uri = api.Uri.parse("file:///workspace/dialogue.recite");
   assert.equal(
-    lspWorkspaceEditToVscode(api, {
-      documentChanges: [{
-        textDocument: { uri: uri.toString(), version: 4 },
-        edits: [{
-          range: { start: { line: 2, character: 0 }, end: { line: 1, character: 9 } },
-          newText: "done",
-        }],
-      }],
-    }, () => ({ version: 4 })),
+    lspWorkspaceEditToVscode(
+      api,
+      {
+        documentChanges: [
+          {
+            textDocument: { uri: uri.toString(), version: 4 },
+            edits: [
+              {
+                range: { start: { line: 2, character: 0 }, end: { line: 1, character: 9 } },
+                newText: "done",
+              },
+            ],
+          },
+        ],
+      },
+      () => ({ version: 4 }),
+    ),
     undefined,
   );
 });
@@ -118,18 +158,24 @@ test("delayed workspace edits revalidate zero-edit sibling preconditions atomica
     [primary.toString(), { version: 4 }],
     [sibling.toString(), { version: 9 }],
   ]);
-  const edit = lspWorkspaceEditToVscode(api, {
-    documentChanges: [
-      {
-        textDocument: { uri: primary.toString(), version: 4 },
-        edits: [{
-          range: { start: { line: 1, character: 0 }, end: { line: 1, character: 4 } },
-          newText: "done",
-        }],
-      },
-      { textDocument: { uri: sibling.toString(), version: 9 }, edits: [] },
-    ],
-  }, (uri) => documents.get(uri.toString()));
+  const edit = lspWorkspaceEditToVscode(
+    api,
+    {
+      documentChanges: [
+        {
+          textDocument: { uri: primary.toString(), version: 4 },
+          edits: [
+            {
+              range: { start: { line: 1, character: 0 }, end: { line: 1, character: 4 } },
+              newText: "done",
+            },
+          ],
+        },
+        { textDocument: { uri: sibling.toString(), version: 9 }, edits: [] },
+      ],
+    },
+    (uri) => documents.get(uri.toString()),
+  );
 
   assert.equal(workspaceEditIsCurrent(edit), true);
   documents.get(sibling.toString()).version = 10;
@@ -142,12 +188,18 @@ test("versioned edits require the same open document generation after close and 
   const firstGeneration = { version: 4 };
   const reopenedGeneration = { version: 4 };
   let openDocument = firstGeneration;
-  const edit = lspWorkspaceEditToVscode(api, {
-    documentChanges: [{
-      textDocument: { uri: uri.toString(), version: 4 },
-      edits: [],
-    }],
-  }, () => openDocument);
+  const edit = lspWorkspaceEditToVscode(
+    api,
+    {
+      documentChanges: [
+        {
+          textDocument: { uri: uri.toString(), version: 4 },
+          edits: [],
+        },
+      ],
+    },
+    () => openDocument,
+  );
 
   assert.equal(workspaceEditIsCurrent(edit), true);
   openDocument = undefined;
@@ -163,12 +215,18 @@ test("versioned workspace edits expose distinct document lifecycle outcomes", ()
   const firstGeneration = { version: 4 };
   const reopenedGeneration = { version: 4 };
   let openDocument = firstGeneration;
-  const edit = lspWorkspaceEditToVscode(api, {
-    documentChanges: [{
-      textDocument: { uri: uri.toString(), version: 4 },
-      edits: [],
-    }],
-  }, () => openDocument);
+  const edit = lspWorkspaceEditToVscode(
+    api,
+    {
+      documentChanges: [
+        {
+          textDocument: { uri: uri.toString(), version: 4 },
+          edits: [],
+        },
+      ],
+    },
+    () => openDocument,
+  );
 
   assert.equal(workspaceEditStatus(edit), "current");
   firstGeneration.version = 5;
@@ -186,19 +244,25 @@ test("editable code actions are projected as controller-owned commands", () => {
   const command = { title: "Apply fix", command: "recite.applyCodeAction", arguments: ["1"] };
   const actions = lspCodeActionsToVscode(
     api,
-    [{
-      title: "Apply fix",
-      kind: "quickfix",
-      edit: {
-        documentChanges: [{
-          textDocument: { uri: uri.toString(), version: 4 },
-          edits: [{
-            range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
-            newText: "#",
-          }],
-        }],
+    [
+      {
+        title: "Apply fix",
+        kind: "quickfix",
+        edit: {
+          documentChanges: [
+            {
+              textDocument: { uri: uri.toString(), version: 4 },
+              edits: [
+                {
+                  range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+                  newText: "#",
+                },
+              ],
+            },
+          ],
+        },
       },
-    }],
+    ],
     () => document,
     {
       createEditCommand: () => command,
@@ -291,11 +355,13 @@ test("completion projection preserves field identity and filter text", () => {
     },
     CompletionItemKind: { Field: field, Text: text },
   };
-  const [completion] = lspCompletionItems(completionApi, [{
-    label: "portrait",
-    kind: 5,
-    filterText: "por",
-  }]);
+  const [completion] = lspCompletionItems(completionApi, [
+    {
+      label: "portrait",
+      kind: 5,
+      filterText: "por",
+    },
+  ]);
 
   assert.equal(completion.kind, field);
   assert.equal(completion.label, "portrait");

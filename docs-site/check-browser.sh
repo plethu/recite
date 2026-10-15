@@ -11,4 +11,4 @@ LOCAL_UID="$(id -u)"
 LOCAL_GID="$(id -g)"
 export LOCAL_UID LOCAL_GID
 docker compose -f docs-site/compose.yaml run --build --quiet-build --rm browsers \
-  pnpm exec playwright test "$@"
+  bun run playwright test "$@"

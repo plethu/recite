@@ -5,8 +5,10 @@ reference documentation. It should not present every section as a documentation 
 
 Astro and Starlight build static HTML, CSS and browser modules. Authored Astro layouts supply the
 landing, how-tos and showcase; Starlight owns the reference shell, search and theme controls. The
-landing runs the Rust compiler/runtime through wasm-bindgen. Mise-managed Node/pnpm support builds
-and checks; hosting needs no Node server or hydrated UI framework. No deployment is configured.
+landing runs the Rust compiler/runtime through wasm-bindgen. Mise-managed Bun installs the frozen
+workspace and runs builds; Node runs Vitest and Playwright. Hosting needs no Node server or hydrated
+UI framework. The intended deployment is Cloudflare Workers Static Assets; no deployment is
+configured.
 
 From the repository root:
 
@@ -21,6 +23,49 @@ just web test-browser
 Prefix commands with `mise exec --` when mise is not activated. `setup` installs the pinned tools
 and frozen workspace packages. Browser checks use the versioned Compose image; `just quality
 setup-browsers` installs matching browsers for direct Playwright runs.
+
+Content tests use the shared Vitest site project (`bun run js:test --project site`). Playwright
+retains the browser, accessibility and WASM acceptance checks. Standalone Oxfmt/Oxlint
+configurations inherit the root defaults and own the site's generated-file exclusions and
+browser/worker globals. TypeScript 7 checks ordinary site TypeScript with the derived
+`tsconfig.typescript.json`; Astro checks component templates using the TypeScript 6 compiler API.
+Astro builds with upstream Vite, and the shared test runner uses standalone Vitest.
+
+On 14 October 2026, five alternating local runs compared Node 26.12.0, Node LTS 24.22.0, Bun 1.4.3
+and workerd 1.20261014.1 on a Ryzen 7 9800X3D/Linux host. Packages and WASM were prepared first;
+builds removed `dist` but reused filesystem and Astro caches. Static serving used the built landing
+HTML, declared assets and the 2.13 MB playground WASM, with exact response hash checks.
+
+| Runtime              |  Median Astro build | Static requests/s, 16 clients | Warm server RSS |
+| -------------------- | ------------------: | ----------------------------: | --------------: |
+| Node 26.12.0         |             0.842 s |                         8,685 |        86.1 MiB |
+| Node 24.22.0 LTS     |             0.898 s |                         8,522 |        84.2 MiB |
+| Bun 1.4.3            |             0.785 s |                        11,439 |        22.6 MiB |
+| workerd 1.20261014.1 | Not a build runtime |                         7,779 |        56.0 MiB |
+
+The serving comparison uses Node streams, `Bun.file` and workerd's read-only disk service with a
+warm OS page cache. It measures uncompressed HTTP/1.1 loopback traffic from a client on the same
+machine, not saturation, TLS, CDN delivery or remote Worker cold starts. The earlier RAM-cached
+probe gave similar Node/Bun throughput; the native file-serving path accounts for Bun's larger gain.
+Cloudflare's production static-asset routing is a separate deployment capability, not reproduced by
+this local workerd service. The playground still runs in the browser under every serving option.
+
+Bun's build gain over current Node was about 7%, while native static serving improved about 32%. Bun
+is now the pinned installation and build runtime. The benchmark did not compare package managers;
+the installation choice also uses its frozen lockfile, isolated workspaces, explicit script
+allow-list and release-age policy. Node already executes erasable TypeScript directly, and an
+installed VS Code extension uses its host's Node runtime. Bun and Node emitted identical CSS,
+content and WASM; search script hashes differed because Vite serializes a preload helper with
+`Function.toString()`. Browser acceptance must remain part of any switch. Both builds passed all 52
+existing browser checks in Chromium, Firefox and WebKit. CPU and heap profiles of separate
+instrumented builds are retained under `target/site-runtime-profiles/`; their different heap formats
+are not comparable allocation counts.
+
+Reproduce with `python3 scripts/benchmarks/site-runtime.py --help`, supplying explicit runtime
+binary paths and a fresh output directory. The driver forces Bun's runtime, records versions, CPU
+and process memory, checks response hashes and alternates execution order. Raw results from this run
+are local artifacts in `target/site-runtime-disk-2026-10-14/` and the earlier cached probe in
+`target/site-runtime-2026-10-14-final/`. These observations are not CI budgets.
 
 Write Markdown in `src/content/docs/`; `index.md` defines a section. Preserve existing URLs and
 fragments. How-tos use `template: splash` for the reading layout; reference pages use the native

@@ -10,6 +10,7 @@ setup:
 # Deliberately format non-Rust sources with the shared configuration.
 fmt:
     mise -E quality exec -- tombi format --offline
+    bun run js:fmt
     mise -E quality exec -- dprint fmt
     for directory in Packages/com.recite.dialogue tests/unity-project; do dotnet format whitespace "$directory" --folder --verbosity quiet; done
     for file in $(git ls-files '*justfile' '*.just'); do just --justfile "$file" --unstable --fmt; done
@@ -18,6 +19,7 @@ fmt:
 # Check formatting without rewriting source files.
 fmt-check:
     mise -E quality exec -- tombi format --offline --check
+    bun run js:fmt-check
     mise -E quality exec -- dprint check
     for directory in Packages/com.recite.dialogue tests/unity-project; do dotnet format whitespace "$directory" --folder --verify-no-changes --verbosity quiet; done
     for file in $(git ls-files '*justfile' '*.just'); do just --justfile "$file" --unstable --fmt --check; done
@@ -29,7 +31,7 @@ lint:
     mise -E quality exec -- tombi lint --offline --error-on-warnings
     mise -E quality exec -- ruff check
     mise -E quality exec -- rumdl check .
-    mise -E quality exec -- oxlint --deny-warnings .
+    bun run js:check
     mise -E quality exec -- scripts/quality/check-shell.sh
     mise -E quality exec -- gdlint $(git ls-files '*.gd')
     mise -E quality exec -- lua-language-server --check=editors/recite-neovim --configpath="$PWD/.luarc.json" --checklevel=Warning --logpath=target/lua-language-server
@@ -37,4 +39,4 @@ lint:
 
 # Install browsers matching the committed Playwright dependency.
 setup-browsers:
-    pnpm -C docs-site exec playwright install
+    bun run --cwd docs-site playwright install

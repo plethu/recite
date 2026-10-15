@@ -27,7 +27,7 @@ export default defineConfig({
   ],
   webServer: {
     // Playwright owns this process, including when Astro detects an agent.
-    command: "pnpm preview --port 4173 --ignore-lock",
+    command: "bun run preview --port 4173 --ignore-lock",
     url: "http://127.0.0.1:4173/",
     reuseExistingServer: false,
     timeout: 30_000,

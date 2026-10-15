@@ -53,9 +53,9 @@ exports.connect = async function connect(portFile) {
           const editor = editors.find(e => e.querySelector('.view-lines')?.textContent.includes('host_probe'));
           const text = editor?.querySelector('.view-lines')?.textContent ?? '';
           const marks = editor ? [...editor.querySelectorAll('.squiggly-error')].filter(e => e.getBoundingClientRect().width > 0) : [];
-          const ready = editor && (${broken} ? text.includes(${
-        JSON.stringify(missing)
-      }) && marks.length > 0 : text.includes('END') && marks.length === 0);
+          const ready = editor && (${broken} ? text.includes(${JSON.stringify(
+            missing,
+          )}) && marks.length > 0 : text.includes('END') && marks.length === 0);
           if (ready) requestAnimationFrame(() => requestAnimationFrame(() => resolve({ marks: marks.length, text })));
           else if (performance.now() > deadline) reject(new Error('visible diagnostic state timed out: ' + text.slice(-300)));
           else requestAnimationFrame(check);

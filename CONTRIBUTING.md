@@ -28,6 +28,22 @@ or `just web`, `just writer`, `just editor`, `just engines`, `just stress`, or `
 one area's commands. Each module is also callable from its own directory without the area name, for
 example `cd apps/writer && just run --project /path/to/project`.
 
+Bun installs the frozen JavaScript workspace and runs its scripts. `bun run js:fmt`, `bun run
+js:check` and `bun run js:test` run standalone Oxfmt, Oxlint/TypeScript and Vitest. Root
+`oxfmt.config.mts` and `oxlint.config.mts` own the shared defaults; package configurations import
+those defaults and own their environments and generated-file exclusions. Run the commands without
+`--config` so both tools discover the nearest derived configuration. The site and editor have named
+test projects; `bun run js:test --project site` or `--project vscode` selects one. Vitest and
+installed-editor compatibility checks use Node; tsdown builds the extension under Bun. Playwright
+owns browser acceptance, and `astro check` owns Astro component diagnostics. Dprint owns the other
+maintained languages, including Astro markup and its embedded TypeScript. Shared strict compiler
+options live in `tsconfig.base.json`; Node tooling and the editor inherit `tsconfig.node.json`,
+while the site also inherits Astro's strictest configuration. TypeScript 7 checks tooling, the
+extension and the site's ordinary TypeScript through its derived `tsconfig.typescript.json`. The
+TypeScript 6 alias remains for Astro's component-checking compiler API. `bunfig.toml` owns isolated
+dependency installation and the 24-hour release-age gate; `trustedDependencies` in the root manifest
+owns allowed build scripts.
+
 For a focused change:
 
 ```sh
@@ -42,14 +58,16 @@ just supply-chain
 `fmt` deliberately formats maintained sources; `fmt-check` checks them without rewriting. `lint`
 runs the configured language linters and Rust Clippy. The quality lane also runs for
 documentation-only contributions. Tools are version-pinned in `.mise.toml` and scoped mise
-configurations; `just setup` installs them and locked workspace dependencies. The normal test recipe
-uses nextest; doctests have their own recipe and remain part of the complete gate. The Zed extension
-is a separate Cargo workspace, covered by the format, lint, and editor gates. `supply-chain` checks
-both dependency graphs for advisories, licenses, bans, and sources. `unused-deps` checks both
-workspaces with cargo-machete. The existing Godot bindings and `option-ext` retain their MPL-2.0
-licenses; the dependency policy names those packages explicitly. Recite's own source remains MIT OR
-Apache-2.0. Distributions must retain dependency notices and the MPL source availability obligations
-described in the [Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
+configurations, with Bun owned by `package.json` and the .NET SDK owned by `global.json`, both read
+by mise's native version-file support; `just setup` installs them and locked workspace dependencies.
+The normal test recipe uses nextest; doctests have their own recipe and remain part of the complete
+gate. The Zed extension is a separate Cargo workspace, covered by the format, lint, and editor
+gates. `supply-chain` checks both dependency graphs for advisories, licenses, bans, and sources.
+`unused-deps` checks both workspaces with cargo-machete. The existing Godot bindings and
+`option-ext` retain their MPL-2.0 licenses; the dependency policy names those packages explicitly.
+Recite's own source remains MIT OR Apache-2.0. Distributions must retain dependency notices and the
+MPL source availability obligations described in the
+[Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 
 The complete check needs network access for dependency installation and the advisory database. Its
 isolated fixture builds also need temporary disk space. If `/tmp` is a small RAM-backed filesystem,
@@ -98,10 +116,9 @@ gate rejects multiple `Option<bool>` state fields in one control under `src/desi
 configuration overrides remain outside that rule. Complexity and nesting limits alone do not check
 the relationships between those fields.
 
-The [site](docs-site/README.md) uses Astro/Starlight with mise-managed Node/pnpm for builds and
-checks. Its output is static HTML, CSS and browser modules; hosting needs no Node server or UI
-framework runtime. Python wheels used to distribute formatters are tools, not new application
-modules.
+The [site](docs-site/README.md) uses Astro/Starlight with mise-managed Bun for builds and checks.
+Its output is static HTML, CSS and browser modules; hosting needs no Node server or UI framework
+runtime. Python wheels used to distribute formatters are tools, not new application modules.
 
 ## Performance tooling
 

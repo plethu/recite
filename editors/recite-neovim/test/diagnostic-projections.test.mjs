@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import test from "node:test";
+import { test } from "vitest";
 import { projectDiagnostics } from "../scripts/diagnostic-projections.mjs";
 
 test("Neovim diagnostic projection validates shared contracts with CRLF input", () => {
   const source = "diagnostic-hostile = bad {$actual}\r\n";
   const contract = "# generated\r\ndiagnostic-hostile\tactual\tstring\r\n";
 
-  assert.deepEqual(
-    projectDiagnostics(source, contract).values.get("diagnostic-hostile"),
-    { template: "bad {$actual}", arguments: [{ name: "actual", type: "string" }] },
-  );
+  assert.deepEqual(projectDiagnostics(source, contract).values.get("diagnostic-hostile"), {
+    template: "bad {$actual}",
+    arguments: [{ name: "actual", type: "string" }],
+  });
 });
 
 test("Neovim diagnostic projection lowers the canonical spaced nesting limit variable", async () => {
@@ -35,10 +35,12 @@ test("Neovim keeps contracts when valid expressions require diagnostic fallback"
   const contract = "diagnostic-fixture\tcount\tinteger\n";
   const projection = projectDiagnostics(source, contract);
   assert.equal(projection.values.has("diagnostic-fixture"), false);
-  assert.deepEqual(projection.contracts.get("diagnostic-fixture"), [{
-    name: "count",
-    type: "integer",
-  }]);
+  assert.deepEqual(projection.contracts.get("diagnostic-fixture"), [
+    {
+      name: "count",
+      type: "integer",
+    },
+  ]);
   assert.throws(
     () => projectDiagnostics("diagnostic-fixture = { $count\n", contract),
     /malformed canonical Fluent/,

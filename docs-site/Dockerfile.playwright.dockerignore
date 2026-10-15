@@ -1,7 +1,10 @@
 **
 !package.json
-!pnpm-lock.yaml
-!pnpm-workspace.yaml
+!bun.lock
+!bunfig.toml
+!tsconfig.base.json
+!oxfmt.config.mts
+!oxlint.config.mts
 !.mise.toml
 !docs-site/
 !docs-site/**

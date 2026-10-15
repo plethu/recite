@@ -35,7 +35,7 @@ if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
   exit 2
 fi
 
-for command in awk cargo cage chmod cp git node pnpm ps rm setsid sleep tar tr wtype; do
+for command in awk cargo cage chmod cp git node bun ps rm setsid sleep tar tr wtype; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "VS Code host evidence requires $command" >&2
     exit 2
@@ -220,7 +220,7 @@ echo "== build Recite binaries and deterministic VSIX =="
 (
   cd "$repo_root"
   cargo build --locked -q -p recite-lsp -p recite-cli
-  pnpm --filter recite-vscode run package
+  bun run --filter recite-vscode package
 )
 lsp_bin="${RECITE_LSP_BIN:-$repo_root/target/debug/recite-lsp}"
 cli_bin="${RECITE_CLI_BIN:-$repo_root/target/debug/recite}"

@@ -190,7 +190,7 @@ def shared_config_lanes(path, base, head):
             key: value for key, value in new.items() if key != "tools"
         }:
             return LANES
-        if changed <= {"node", "pnpm"}:
+        if changed <= {"node", "bun"}:
             return JS
         if changed <= {
             "rust",

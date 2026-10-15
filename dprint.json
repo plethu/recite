@@ -3,7 +3,7 @@
   "indentWidth": 2,
   "newLineKind": "lf",
   "includes": [
-    "**/*.{js,mjs,cjs,ts,json,yml,yaml,md,mdx,css,html,astro,svg,xml,py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}",
+    "**/*.{json,yml,yaml,md,mdx,css,html,astro,svg,xml,py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}",
     "**/Dockerfile",
     "**/Dockerfile.playwright",
     "**/*.csproj",

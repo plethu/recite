@@ -1,12 +1,32 @@
 {
+  "name": "recite-tooling",
   "private": true,
+  "workspaces": [
+    "docs-site",
+    "editors/vscode"
+  ],
   "scripts": {
-    "editor:check": "pnpm --filter recite-vscode run check",
-    "editor:package": "pnpm --filter recite-vscode run package:check"
+    "js:check": "bun run --bun oxlint --deny-warnings && tsc --noEmit -p tsconfig.tools.json && bun run --filter recite-vscode typecheck",
+    "js:fmt": "bun run --bun oxfmt \"**/*.{js,mjs,cjs,ts,mts,cts,tsx}\"",
+    "js:fmt-check": "bun run --bun oxfmt --check \"**/*.{js,mjs,cjs,ts,mts,cts,tsx}\"",
+    "js:test": "node node_modules/vitest/vitest.mjs run",
+    "editor:check": "bun run --filter recite-vscode check",
+    "editor:package": "bun run --filter recite-vscode package:check"
   },
   "devDependencies": {
     "@fluent/syntax": "0.19.0",
-    "ajv": "8.20.0"
+    "@types/node": "24.19.1",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "ajv": "8.20.0",
+    "oxfmt": "0.72.0",
+    "oxlint": "1.87.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
   },
-  "packageManager": "pnpm@11.8.0"
+  "packageManager": "bun@1.4.3",
+  "trustedDependencies": [
+    "esbuild",
+    "sharp"
+  ]
 }

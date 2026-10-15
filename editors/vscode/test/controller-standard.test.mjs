@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { ExtensionController } from "../src/controller.js";
+import { test } from "vitest";
+import { ExtensionController } from "../src/controller.ts";
 import { FakeClient, hostApi, output } from "./controller-fixtures.mjs";
 
 test("untrusted workspaces do not start a language server or command process", async () => {

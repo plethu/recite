@@ -33,7 +33,10 @@ module.exports = grammar({
 
   // Incomplete or prose-like brackets remain editable text; completed tags
   // retain their name captures. The compiler owns markup validity.
-  conflicts: ($) => [[$.markup_tag, $.prose_start], [$.markup_tag, $.prose_content]],
+  conflicts: ($) => [
+    [$.markup_tag, $.prose_start],
+    [$.markup_tag, $.prose_content],
+  ],
 
   rules: {
     source_file: ($) => seq(repeat(sourceLines($)), finalLine($)),
@@ -69,23 +72,12 @@ module.exports = grammar({
     _final_plural_line: ($) => pluralLine($),
     _final_prose_line: ($) => proseLine($),
 
-    block_attribute: ($) =>
-      seq(
-        $.hspace,
-        choice($.block_default, $.metadata_field),
-      ),
+    block_attribute: ($) => seq($.hspace, choice($.block_default, $.metadata_field)),
 
-    header_attribute: ($) =>
-      seq(
-        $.hspace,
-        $.metadata_field,
-      ),
+    header_attribute: ($) => seq($.hspace, $.metadata_field),
 
     choice_attribute: ($) =>
-      seq(
-        $.hspace,
-        choice($.requires_clause, $.reason_clause, $.metadata_field),
-      ),
+      seq($.hspace, choice($.requires_clause, $.reason_clause, $.metadata_field)),
 
     requires_clause: ($) =>
       seq(
@@ -142,22 +134,20 @@ module.exports = grammar({
       ),
 
     call: ($) =>
-      prec.right(seq(
-        field("function", $.function_name),
-        "(",
-        optional($.arguments),
-        optional($.hspace),
-        // A call may be left open while an author is typing. Because the call
-        // can end only at the current physical line, recovery cannot consume
-        // the next statement's marker.
-        optional(")"),
-      )),
+      prec.right(
+        seq(
+          field("function", $.function_name),
+          "(",
+          optional($.arguments),
+          optional($.hspace),
+          // A call may be left open while an author is typing. Because the call
+          // can end only at the current physical line, recovery cannot consume
+          // the next statement's marker.
+          optional(")"),
+        ),
+      ),
 
-    arguments: ($) =>
-      prec.right(seq(
-        $.argument,
-        repeat(seq(",", optional($.hspace), $.argument)),
-      )),
+    arguments: ($) => prec.right(seq($.argument, repeat(seq(",", optional($.hspace), $.argument)))),
 
     argument: ($) => $.value,
 
@@ -193,10 +183,7 @@ module.exports = grammar({
       ),
 
     condition_expression: ($) =>
-      prec.right(seq(
-        $.expression_part,
-        repeat(seq($.hspace, $.expression_part)),
-      )),
+      prec.right(seq($.expression_part, repeat(seq($.hspace, $.expression_part)))),
 
     // Complete statement markers at the beginning of an indented line are
     // structural; marker-like near-misses remain prose. This mirrors the
@@ -205,33 +192,14 @@ module.exports = grammar({
     // remains a divert marker.
     prose_text: ($) =>
       seq(
-        choice(
-          $.markup_tag,
-          $.interpolation,
-          $.escaped_brace,
-          $.prose_marker_text,
-          $.prose_start,
-        ),
+        choice($.markup_tag, $.interpolation, $.escaped_brace, $.prose_marker_text, $.prose_start),
         repeat(choice($.markup_tag, $.interpolation, $.escaped_brace, $.prose_content)),
       ),
 
     markup_tag: ($) =>
-      prec.dynamic(
-        1,
-        seq(
-          "[",
-          optional(token(prec(1, "/"))),
-          field("name", $.markup_name),
-          "]",
-        ),
-      ),
+      prec.dynamic(1, seq("[", optional(token(prec(1, "/"))), field("name", $.markup_name), "]")),
 
-    interpolation: ($) =>
-      seq(
-        "{",
-        field("name", $.placeholder),
-        "}",
-      ),
+    interpolation: ($) => seq("{", field("name", $.placeholder), "}"),
 
     // The production text scanner consumes a backslash with an immediately
     // following brace as one escaped literal. Keeping this token ahead of
@@ -300,12 +268,7 @@ module.exports = grammar({
     plural_marker: (_$) => "|",
     comment_marker: (_$) => "#",
 
-    inline_comment: ($) =>
-      seq(
-        $.hspace,
-        field("marker", $.comment_marker),
-        $.comment_text,
-      ),
+    inline_comment: ($) => seq($.hspace, field("marker", $.comment_marker), $.comment_text),
 
     comment_text: (_$) => /[^\r\n]*/,
     // Rust's `char::is_whitespace` is the production marker-boundary
@@ -319,13 +282,7 @@ module.exports = grammar({
     // marker-like prefix non-structural, while the one-character fallback
     // keeps ordinary colon-led prose available to the editor grammar.
     prose_start: (_$) =>
-      choice(
-        new RegExp(String.raw`[^\r\n{}\[\]?#>!:|\\]+`),
-        /\\/,
-        /:/,
-        "[",
-        "]",
-      ),
+      choice(new RegExp(String.raw`[^\r\n{}\[\]?#>!:|\\]+`), /\\/, /:/, "[", "]"),
     // Consume a marker-like near-miss through the end of its physical line so
     // punctuation cannot become stranded as fake markup or interpolation.
     // The production parser owns the whole line as prose; this rule makes no
@@ -345,13 +302,7 @@ module.exports = grammar({
         ),
       ),
     prose_content: (_$) =>
-      choice(
-        new RegExp(String.raw`[^\r\n{}\[\]\\]+`),
-        /\\/,
-        "[",
-        "]",
-        token(prec(1, "/")),
-      ),
+      choice(new RegExp(String.raw`[^\r\n{}\[\]\\]+`), /\\/, "[", "]", token(prec(1, "/"))),
     indent: (_$) => /[ \t]+/,
     hspace: (_$) => /[ \t]+/,
     newline: (_$) => /\r?\n/,

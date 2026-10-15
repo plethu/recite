@@ -25,10 +25,20 @@ class DocumentScopeTests(unittest.TestCase):
         ):
             self.assertEqual(selected(path), {"docs", "site", "maintainability"})
         self.assertEqual(selected("docs-site/README.md"), {"docs", "maintainability"})
-        for path in ("docs-site/astro.config.mjs", "docs-site/check-browser.sh"):
+        for path in ("docs-site/astro.config.ts", "docs-site/check-browser.sh"):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {"docs", "site", "maintainability"})
-        for path in ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"):
+        for path in (
+            "package.json",
+            "bun.lock",
+            "bunfig.toml",
+            "vitest.config.mts",
+            "oxfmt.config.mts",
+            "oxlint.config.mts",
+            "tsconfig.base.json",
+            "tsconfig.node.json",
+            "tsconfig.tools.json",
+        ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), scope.JS | {"maintainability"})
         self.assertEqual(

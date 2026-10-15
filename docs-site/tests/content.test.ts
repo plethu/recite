@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { showcaseSchema } from "../src/showcase-schema.ts";
 
 const project = {
@@ -24,12 +24,14 @@ test("showcase metadata requires a real HTTPS project URL", () => {
 });
 
 test("showcase images require paired nonempty alternative text", () => {
-  for (
-    const image of [{ image: "/example.svg" }, { imageAlt: "An example" }, {
+  for (const image of [
+    { image: "/example.svg" },
+    { imageAlt: "An example" },
+    {
       image: "/example.svg",
       imageAlt: "",
-    }]
-  ) {
+    },
+  ]) {
     assert.equal(showcaseSchema.safeParse({ ...project, ...image }).success, false);
   }
   assert.equal(

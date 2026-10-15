@@ -2,7 +2,7 @@ import { validateAdapter } from "./ui-boundary-adapter.mjs";
 import { parseSource } from "./ui-boundary-ast.mjs";
 import { validateOutside } from "./ui-boundary-calls.mjs";
 
-const ADAPTER_FILE = "user-interface.js";
+const ADAPTER_FILE = "user-interface.ts";
 
 /**
  * Enforce the small source/UI boundary used by the VS Code package.
@@ -26,7 +26,7 @@ export function assertUiBoundary(
 
   const contracts = validateAdapter(parseSource(adapterSource, adapterFile), adapterFile, expected);
   for (const [file, source] of entries) {
-    if (file === adapterFile || file === "messages.js") continue;
+    if (file === adapterFile || file === "messages.ts") continue;
     validateOutside(parseSource(source, file), file, contracts);
   }
 }

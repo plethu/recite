@@ -104,8 +104,8 @@ check_projection_unchanged() {
 }
 trap check_projection_unchanged EXIT
 
-if ! command -v pnpm >/dev/null 2>&1; then
-  echo "VS Code checks require pnpm from the repository toolchain" >&2
+if ! command -v bun >/dev/null 2>&1; then
+  echo "VS Code checks require Bun from the repository toolchain" >&2
   exit 2
 fi
 
@@ -118,7 +118,7 @@ echo "== VS Code/VSCodium package and live checks =="
   diff -u crates/recite-ui/resources/vscode-diagnostic-contract.tsv \
     <(cargo run --locked -q -p recite-ui --example export-vscode-diagnostic-contract)
   cargo test --locked -q -p recite-cli --lib structured::tests::error_vocabulary_projections_are_current
-  RECITE_LSP_BIN="$lsp_bin" RECITE_CLI_BIN="$cli_bin" pnpm editor:check
-  pnpm editor:package
+  RECITE_LSP_BIN="$lsp_bin" RECITE_CLI_BIN="$cli_bin" bun run editor:check
+  bun run editor:package
 )
 echo "VS Code/VSCodium checks passed"
