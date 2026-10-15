@@ -51,26 +51,33 @@ fn rejects_missing_duplicate_and_unexpected_workloads() {
 
 #[test]
 fn authoring_requires_each_schema_lsp_and_import_case_with_paired_counters() {
-    let cases = ["json_schema", "toml_schema", "schema_workspace_fork"]
+    let cases = [
+        "json_schema",
+        "toml_schema",
+        "schema_workspace_fork",
+        "lsp_schema_actions",
+        "lsp_change_saved_schema",
+        "lsp_change_open_schema",
+    ]
+    .into_iter()
+    .flat_map(|name| ["declarations_100", "declarations_1000"].map(|shape| summary(name, shape)))
+    .chain(
+        [
+            "lsp_completion",
+            "lsp_definition",
+            "lsp_references",
+            "lsp_publication",
+        ]
         .into_iter()
-        .flat_map(|name| {
-            ["declarations_100", "declarations_1000"].map(|shape| summary(name, shape))
-        })
-        .chain(
-            [
-                "lsp_completion",
-                "lsp_definition",
-                "lsp_references",
-                "lsp_publication",
-            ]
-            .into_iter()
-            .flat_map(|name| ["wide", "dense"].map(|shape| summary(name, shape))),
-        )
-        .chain([
-            summary("catalog_import", "cold_100"),
-            summary("catalog_import", "populated_10000"),
-        ])
-        .collect::<Vec<_>>();
+        .flat_map(|name| ["wide", "dense"].map(|shape| summary(name, shape))),
+    )
+    .chain([
+        summary("catalog_import", "cold_100"),
+        summary("catalog_import", "populated_10000"),
+        summary("ui_labels", "static_1000"),
+        summary("ui_labels", "parameters_1000"),
+    ])
+    .collect::<Vec<_>>();
     check_summaries(Cursor::new(lines(&cases)), Scope::Authoring).unwrap();
     for missing in 0..cases.len() {
         let mut incomplete = cases.clone();

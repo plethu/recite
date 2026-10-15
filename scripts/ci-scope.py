@@ -170,7 +170,7 @@ def lanes_for_path(path, *, base=None, head=None):
         )
     ):
         lanes = RUST | {"lsp-sessions", "docs", "site"}
-        if not path.startswith(("crates/recite-ui/", "crates/recite-config/")):
+        if not path.startswith("crates/recite-config/"):
             lanes |= {"workflow-performance"}
         return lanes
     if path.startswith("crates/"):

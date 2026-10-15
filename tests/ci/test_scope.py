@@ -62,6 +62,7 @@ class ScopeTests(unittest.TestCase):
             "crates/recite-benchmarks/src/preview.rs",
             "apps/writer/crates/authoring/src/script.rs",
             "crates/recite-lsp/src/server.rs",
+            "crates/recite-ui/src/args.rs",
             "crates/recite-adapter/src/catalog/import.rs",
         ):
             with self.subTest(path=path):

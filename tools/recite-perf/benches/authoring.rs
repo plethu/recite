@@ -9,6 +9,8 @@ mod lsp;
 mod schema;
 #[path = "support/schema_workspace.rs"]
 mod schema_workspace;
+#[path = "support/ui.rs"]
+mod ui;
 use gungraun::{library_benchmark, library_benchmark_group, main};
 use lsp_types::{CompletionResponse, GotoDefinitionResponse, Location, PublishDiagnosticsParams};
 use recite_core::schema::{
@@ -80,5 +82,35 @@ fn schema_workspace_fork(
     let fork = input.driver.fork();
     black_box((input, fork))
 }
-library_benchmark_group!(name=authoring_workflows;config=budget::budget(20.0);benchmarks=json_schema,toml_schema,catalog_import,lsp_completion,lsp_definition,lsp_references,lsp_publication,schema_workspace_fork);
+#[library_benchmark(teardown=ui::validate)]
+#[bench::static_1000(setup=ui::static_labels)]
+#[bench::parameters_1000(setup=ui::parameterized_labels)]
+fn ui_labels(input: ui::Input) -> (ui::Input, Vec<String>) {
+    black_box(ui::format(input))
+}
+#[library_benchmark(teardown=schema_workspace::validate_actions)]
+#[bench::declarations_100(args=(100),setup=schema_workspace::prepare)]
+#[bench::declarations_1000(args=(1_000),setup=schema_workspace::prepare)]
+fn lsp_schema_actions(
+    input: schema_workspace::Input,
+) -> (
+    schema_workspace::Input,
+    Option<lsp_types::CodeActionResponse>,
+) {
+    black_box(schema_workspace::actions(input))
+}
+#[library_benchmark(teardown=schema_workspace::validate_change)]
+#[bench::declarations_100(args=(100),setup=schema_workspace::prepare)]
+#[bench::declarations_1000(args=(1_000),setup=schema_workspace::prepare)]
+fn lsp_change_saved_schema(input: schema_workspace::Input) -> (schema_workspace::Input, usize) {
+    black_box(schema_workspace::change(input))
+}
+
+#[library_benchmark(teardown=schema_workspace::validate_change)]
+#[bench::declarations_100(args=(100),setup=schema_workspace::open_schema)]
+#[bench::declarations_1000(args=(1_000),setup=schema_workspace::open_schema)]
+fn lsp_change_open_schema(input: schema_workspace::Input) -> (schema_workspace::Input, usize) {
+    black_box(schema_workspace::change(input))
+}
+library_benchmark_group!(name=authoring_workflows;config=budget::budget(20.0);benchmarks=json_schema,toml_schema,catalog_import,lsp_completion,lsp_definition,lsp_references,lsp_publication,schema_workspace_fork,ui_labels,lsp_schema_actions,lsp_change_saved_schema,lsp_change_open_schema);
 main!(library_benchmark_groups = authoring_workflows);

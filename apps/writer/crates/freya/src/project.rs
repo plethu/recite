@@ -4,6 +4,7 @@ mod manifest;
 mod recovery;
 mod rename;
 pub(crate) mod save;
+mod search;
 mod sessions;
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_compiler::authoring::WorkControl;
@@ -161,8 +162,7 @@ impl ProjectFiles {
         let path = self.export(workbench)?;
         self.recovery.persist(None)?;
         self.saved = disk.into();
-        self.search =
-            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
+        self.search = self.refreshed_search(&context.documents);
         self.context = context;
         Ok((path, next))
     }
@@ -213,8 +213,7 @@ impl ProjectFiles {
             .iter()
             .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
             .collect();
-        self.search =
-            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
+        self.search = self.refreshed_search(&context.documents);
         self.context = context;
         Ok(())
     }

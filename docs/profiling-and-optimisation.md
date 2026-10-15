@@ -169,10 +169,13 @@ measured operation, four accepted/changed draft completion cases on wide and den
 64-session bound-text prompt batch using the checked language-pressure fixture. Both also cover
 JSON/TOML schema loading, schema-backed workspace forks, LSP completion/definition/references and
 diagnostic publication on wide/dense projects, and PO imports into empty/populated catalogues.
-`writer` and `authoring` run just their respective targets. Use a fresh output directory. Limits
-belong to [the shared configuration](../tools/recite-perf/benches/support/budget.rs); elapsed time
-remains a Criterion investigation. Missing paired measurements fail closed, including Gungraun's
-automatic creation of a missing named baseline.
+Schema-action responses, shared static/parameterized UI labels, and dialogue edits with saved/open
+schemas have fixed-input cases too. Prepared completion replacements are checked separately on
+wide/dense projects, with query preparation and result validation outside counters. `writer` and
+`authoring` run just their respective targets. Use a fresh output directory. Limits belong to
+[the shared configuration](../tools/recite-perf/benches/support/budget.rs); elapsed time remains a
+Criterion investigation. Missing paired measurements fail closed, including Gungraun's automatic
+creation of a missing named baseline.
 
 CI runs this lane only for measured Rust/model inputs, fixtures and shared build changes. Weekly and
 release runs use `full` and `just stress bounded` (large CLI, tiny/small watch recovery). The

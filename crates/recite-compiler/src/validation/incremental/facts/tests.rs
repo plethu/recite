@@ -33,18 +33,17 @@ fn ordered_export_guard_matches_the_owned_projection() {
 
     let mut non_export_changes = original.clone();
     non_export_changes.participation = ValidationParticipation::all_incomplete();
-    non_export_changes.passages[0].identity = Identity::Choice(
+    let passages = std::sync::Arc::make_mut(&mut non_export_changes.passages);
+    passages[0].identity = Identity::Choice(
         Some(ChoiceId::new("11111111111111111111").unwrap()),
         ChoiceEcho::SelectedText,
     );
-    non_export_changes.passages[0].frozen = !non_export_changes.passages[0].frozen;
-    let mut passages = non_export_changes.passages.into_vec();
+    passages[0].frozen = !passages[0].frozen;
     passages.push(PassageFact {
         identity: Identity::Line(None),
         frozen: false,
         span: original.passages[0].span.clone(),
     });
-    non_export_changes.passages = passages.into_boxed_slice();
     assert!(original.same_ordered_exports(&non_export_changes));
     variants.push(non_export_changes);
 

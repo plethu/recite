@@ -91,3 +91,53 @@ pub(super) fn validate(Completed { workload, result }: Completed) {
 fn must<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
     result.unwrap_or_else(|error| panic!("valid completion workload: {error}"))
 }
+
+pub(super) struct ReplacementWorkload {
+    workload: CompletionWorkload,
+    completions: SourceCompletions,
+}
+pub(super) struct Replaced {
+    workload: ReplacementWorkload,
+    range: std::ops::Range<usize>,
+    replacement_bytes: usize,
+}
+pub(super) fn replacement(per_document: usize) -> ReplacementWorkload {
+    let workload = changed(per_document);
+    let completions = workload
+        .document
+        .complete_draft(&workload.draft, workload.position)
+        .unwrap_or_else(|error| panic!("prepared replacement: {error}"));
+    ReplacementWorkload {
+        workload,
+        completions,
+    }
+}
+pub(super) fn replace(workload: ReplacementWorkload) -> Replaced {
+    let (range, text) = workload
+        .completions
+        .replacement(workload.completions.source(), 0)
+        .unwrap_or_else(|error| panic!("valid replacement: {error}"));
+    let replacement_bytes = text.len();
+    Replaced {
+        workload,
+        range,
+        replacement_bytes,
+    }
+}
+pub(super) fn validate_replacement(result: Replaced) {
+    let Replaced {
+        workload,
+        range,
+        replacement_bytes,
+    } = result;
+    assert_eq!(&workload.completions.source()[range], "beat_");
+    assert_eq!(replacement_bytes, "beat_0".len());
+    assert_eq!(
+        workload.workload.document.revision(),
+        workload.workload.revision
+    );
+    assert_eq!(
+        workload.workload.document.source(),
+        workload.workload.accepted_source
+    );
+}

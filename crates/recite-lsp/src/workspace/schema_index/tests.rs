@@ -3,6 +3,8 @@ use std::fs;
 
 const VALID: &str = r#"{"schema_version":1,"speakers":{"narrator":{"display_name":"Narrator"}}}"#;
 
+mod reuse;
+
 #[test]
 fn disk_refresh_matches_fresh_load_through_replacement_errors_and_recovery() {
     let dir = tempfile::tempdir().unwrap();

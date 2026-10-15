@@ -216,6 +216,14 @@ fn exhausted_revision_does_not_disable_read_only_draft_completion()
             .iter()
             .any(|c| c.name() == "destination")
     );
+    let index = result
+        .candidates()
+        .iter()
+        .position(|c| c.name() == "destination")
+        .ok_or("destination")?;
+    let (range, replacement) = result.replacement(draft, index)?;
+    assert_eq!(&draft[range], "dest");
+    assert_eq!(replacement, "destination");
     assert_eq!(document.version, i64::MAX);
     assert_eq!(document.source(), ":: start default\n-> END\n");
     Ok(())

@@ -16,7 +16,7 @@ impl ProjectFacts {
             && self
                 .passages
                 .iter()
-                .zip(&next.passages)
+                .zip(next.passages.iter())
                 .all(|(a, b)| a.identity == b.identity && a.frozen == b.frozen)
             && self.references.len() == next.references.len()
             && self.references.iter().zip(&next.references).all(|(a, b)| {

@@ -12,7 +12,7 @@ impl ProjectFiles {
     }
 }
 
-fn project() -> Result<(tempfile::TempDir, ProjectFiles), Box<dyn std::error::Error>> {
+pub(super) fn project() -> Result<(tempfile::TempDir, ProjectFiles), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     fs::write(
         dir.path().join("recite.project.toml"),

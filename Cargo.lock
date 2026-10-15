@@ -3365,6 +3365,7 @@ dependencies = [
  "recite-core",
  "recite-lsp",
  "recite-runtime",
+ "recite-ui",
  "recite-writer-model",
  "serde_json",
  "tempfile",

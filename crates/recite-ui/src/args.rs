@@ -2,6 +2,9 @@ use std::collections::BTreeMap;
 
 use fluent_bundle::{FluentArgs, FluentValue};
 
+#[cfg(test)]
+mod tests;
+
 // Fluent numbers are backed by f64. Keep selectors numeric while every value
 // is exactly representable, and switch to a string interpolation for larger
 // integers so the typed i64 value is never rounded at the UI boundary.
@@ -28,9 +31,9 @@ impl UiArg {
         }
     }
 
-    pub(crate) fn fluent_value(&self) -> FluentValue<'static> {
+    pub(crate) fn fluent_value(&self) -> FluentValue<'_> {
         match self {
-            Self::String(value) => FluentValue::String(value.clone().into()),
+            Self::String(value) => FluentValue::String(value.as_str().into()),
             Self::Integer(value)
                 if *value >= -MAX_EXACT_FLUENT_INTEGER && *value <= MAX_EXACT_FLUENT_INTEGER =>
             {
@@ -119,7 +122,7 @@ pub enum UiArgType {
 }
 
 pub(crate) fn fluent_args(args: &UiArgs) -> FluentArgs<'_> {
-    let mut fluent = FluentArgs::new();
+    let mut fluent = FluentArgs::with_capacity(args.len());
     for (name, value) in args {
         fluent.set(name, value.fluent_value());
     }

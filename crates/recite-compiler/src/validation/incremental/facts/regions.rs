@@ -19,19 +19,21 @@ impl ProjectFacts {
         parts: &[(&Self, &FactRanges)],
         previous: Option<&Arc<Self>>,
     ) -> Arc<Self> {
-        if let Some(previous) = previous
+        let unchanged_passages = previous.filter(|previous| {
+            region_outputs::matches(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
+                &previous.passages,
+            )
+        });
+        if let Some(previous) = unchanged_passages
             && previous.participation == participation
             && region_outputs::matches(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
                 &previous.blocks,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
-                &previous.passages,
             )
             && region_outputs::matches(
                 parts
@@ -51,12 +53,16 @@ impl ProjectFacts {
                     .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
             )
             .into_boxed_slice(),
-            passages: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
-            )
-            .into_boxed_slice(),
+            passages: unchanged_passages.map_or_else(
+                || {
+                    Arc::new(region_outputs::collect(
+                        parts
+                            .iter()
+                            .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
+                    ))
+                },
+                |previous| Arc::clone(&previous.passages),
+            ),
             references: region_outputs::collect(
                 parts
                     .iter()
@@ -76,8 +82,10 @@ impl ProjectFacts {
         for item in &mut self.blocks[ranges[0].clone()] {
             shift(&mut item.span);
         }
-        for item in &mut self.passages[ranges[1].clone()] {
-            shift(&mut item.span);
+        if !ranges[1].is_empty() {
+            for item in &mut Arc::make_mut(&mut self.passages)[ranges[1].clone()] {
+                shift(&mut item.span);
+            }
         }
         for item in &mut self.references[ranges[2].clone()] {
             shift(&mut item.span);
@@ -88,3 +96,6 @@ impl ProjectFacts {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

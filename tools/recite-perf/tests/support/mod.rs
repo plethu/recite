@@ -85,6 +85,8 @@ pub(super) fn writer() -> Vec<BenchmarkSummary> {
         ("changed_draft", "dense"),
         ("accepted_draft", "wide"),
         ("accepted_draft", "dense"),
+        ("completion_replacement", "wide"),
+        ("completion_replacement", "dense"),
     ]
     .into_iter()
     .map(|(function, id)| summary(function, id))

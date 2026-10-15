@@ -188,13 +188,10 @@ impl Component for Completion {
 fn apply(writer: Writer, items: &SourceCompletions, index: usize) -> Result<(), String> {
     let mut state = writer.buffers.editor;
     let mut editor = state.write();
-    let source = editor.rope.to_string();
-    let (range, replacement) = items
-        .replacement(&source, index)
-        .map_err(|e| e.to_string())?;
-    let start = source[..range.start].encode_utf16().count();
-    let end = source[..range.end].encode_utf16().count();
-    editor.remove(start..end);
+    let (range, replacement) =
+        utf16_replacement(&editor.rope, items, index).map_err(|e| e.to_string())?;
+    let start = range.start;
+    editor.remove(range);
     // Freya holds one pending syntax edit; consume it before the insertion.
     editor.parse();
     editor.insert(replacement, start);
@@ -205,3 +202,20 @@ fn apply(writer: Writer, items: &SourceCompletions, index: usize) -> Result<(), 
     editor.measure(t::code_size(), "monospace");
     Ok(())
 }
+
+fn utf16_replacement<'a>(
+    rope: &freya::code_editor::Rope,
+    items: &'a SourceCompletions,
+    index: usize,
+) -> Result<(std::ops::Range<usize>, &'a str), recite_writer_model::EditError> {
+    if rope.slice(..) != items.source() {
+        return Err(recite_writer_model::EditError::Stale);
+    }
+    let (range, replacement) = items.replacement(items.source(), index)?;
+    let start = rope.char_to_utf16_cu(rope.byte_to_char(range.start));
+    let end = rope.char_to_utf16_cu(rope.byte_to_char(range.end));
+    Ok((start..end, replacement))
+}
+
+#[cfg(test)]
+mod tests;

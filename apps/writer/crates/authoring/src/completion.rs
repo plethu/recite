@@ -4,18 +4,18 @@ use recite_compiler::authoring::{
     AuthoringRequest, CancellationToken, CompletionCandidate, DocumentVersion, OpenDocument,
     QueryResult,
 };
-use recite_core::SourcePosition;
+use recite_core::{SourceLineIndex, SourcePosition};
 use std::sync::Arc;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct SourceCompletions {
-    source: Arc<str>,
+    source: SourceLineIndex,
     candidates: Vec<CompletionCandidate>,
 }
 impl SourceCompletions {
     /// Exact draft bytes captured with these replacement spans.
     pub fn source(&self) -> &str {
-        &self.source
+        self.source.source()
     }
 
     pub fn candidates(&self) -> &[CompletionCandidate] {
@@ -28,14 +28,20 @@ impl SourceCompletions {
         current: &str,
         index: usize,
     ) -> Result<(std::ops::Range<usize>, &str), EditError> {
-        if current != self.source.as_ref() {
+        if !std::ptr::eq(current, self.source()) && current != self.source() {
             return Err(EditError::Stale);
         }
         let candidate = self.candidates.get(index).ok_or(EditError::Position)?;
         let span = candidate.replace_span();
-        let start = crate::projection::offset(current, span.start)?;
+        let start = self
+            .source
+            .byte_offset(span.start)
+            .ok_or(EditError::Position)?;
         let end = if let Some(position) = span.end {
-            let offset = crate::projection::offset(current, position)?;
+            let offset = self
+                .source
+                .byte_offset(position)
+                .ok_or(EditError::Position)?;
             offset
                 + current[offset..]
                     .chars()
@@ -46,6 +52,16 @@ impl SourceCompletions {
             start
         };
         Ok((start..end, candidate.name()))
+    }
+}
+
+impl std::fmt::Debug for SourceCompletions {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("SourceCompletions")
+            .field("source", &self.source())
+            .field("candidates", &self.candidates)
+            .finish()
     }
 }
 impl Document {
@@ -87,6 +103,11 @@ impl Document {
             QueryResult::Ready(value) | QueryResult::Partial { value, .. } => value,
             _ => Vec::new(),
         };
+        let source = snapshot
+            .document(self.key())
+            .ok_or(EditError::Position)?
+            .source_index()
+            .clone();
         Ok(SourceCompletions { source, candidates })
     }
 }

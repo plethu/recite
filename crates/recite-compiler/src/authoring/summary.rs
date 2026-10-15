@@ -5,6 +5,7 @@ use recite_core::{
         EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, Statement,
     },
 };
+use std::sync::Arc;
 
 mod regions;
 #[path = "types.rs"]
@@ -18,7 +19,7 @@ pub use types::*;
 pub struct AuthoringSummary {
     blocks: Vec<BlockDefinitionSummary>,
     block_references: Vec<BlockReferenceSummary>,
-    stable_ids: Vec<StableIdSummary>,
+    stable_ids: Arc<Vec<StableIdSummary>>,
     metadata: Vec<MetadataSummary>,
     condition_functions: Vec<FunctionReferenceSummary>,
     effect_functions: Vec<FunctionReferenceSummary>,
@@ -33,7 +34,7 @@ impl AuthoringSummary {
         Self {
             blocks: collector.blocks,
             block_references: collector.block_references,
-            stable_ids: collector.stable_ids,
+            stable_ids: Arc::new(collector.stable_ids),
             metadata: collector.metadata,
             condition_functions: collector.condition_functions,
             effect_functions: collector.effect_functions,

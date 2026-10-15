@@ -61,3 +61,60 @@ fn draft_queries_match_fresh_project_analysis_without_mutating_accepted_state()
     assert_eq!(document.history_bytes(), 0);
     Ok(())
 }
+
+#[test]
+fn indexed_replacements_match_scalar_scanner_and_outlive_documents()
+-> Result<(), Box<dyn std::error::Error>> {
+    for newline in ["\n", "\r\n", "\r"] {
+        for token in ["dest", ""] {
+            let source = format!(
+                ":: destination default\n> line@11111111111111111111\n  Café 🐧 שלום.\n-> {token}"
+            )
+            .replace('\n', newline);
+            let completions = {
+                let document = Document::new(&source)?;
+                document.complete_draft(
+                    &source,
+                    SourcePosition::new(4, (4 + token.len()).try_into()?)?,
+                )?
+            };
+            assert!(!completions.candidates().is_empty());
+            let independently_owned = source.clone();
+            for (index, candidate) in completions.candidates().iter().enumerate() {
+                let span = candidate.replace_span();
+                let start =
+                    recite_core::byte_offset_for_position(&source, span.start).ok_or("start")?;
+                let end = if let Some(end) = span.end {
+                    let offset =
+                        recite_core::byte_offset_for_position(&source, end).ok_or("end")?;
+                    offset
+                        + source[offset..]
+                            .chars()
+                            .next()
+                            .filter(|c| !matches!(c, '\r' | '\n'))
+                            .map_or(0, char::len_utf8)
+                } else {
+                    start
+                };
+                assert_eq!(
+                    completions.replacement(&independently_owned, index)?,
+                    (start..end, candidate.name())
+                );
+                assert_eq!(
+                    completions.replacement(completions.source(), index)?,
+                    (start..end, candidate.name())
+                );
+            }
+            let changed_same_length = independently_owned.replacen("Café", "Cafè", 1);
+            assert!(matches!(
+                completions.replacement(&changed_same_length, usize::MAX),
+                Err(recite_writer_model::EditError::Stale)
+            ));
+            assert!(matches!(
+                completions.replacement(&independently_owned, usize::MAX),
+                Err(recite_writer_model::EditError::Position)
+            ));
+        }
+    }
+    Ok(())
+}

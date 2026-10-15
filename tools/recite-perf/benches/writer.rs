@@ -37,5 +37,11 @@ fn accepted_draft(workload: completion::CompletionWorkload) -> completion::Compl
     black_box(completion::complete(workload))
 }
 
-library_benchmark_group!(name = writer_workflows; config = budget::budget(20.0); benchmarks = cold_script, changed_draft, accepted_draft);
+#[library_benchmark(teardown = completion::validate_replacement)]
+#[bench::wide(args = (20), setup = completion::replacement)]
+#[bench::dense(args = (2_000), setup = completion::replacement)]
+fn completion_replacement(workload: completion::ReplacementWorkload) -> completion::Replaced {
+    black_box(completion::replace(workload))
+}
+library_benchmark_group!(name = writer_workflows; config = budget::budget(20.0); benchmarks = cold_script, changed_draft, accepted_draft, completion_replacement);
 main!(library_benchmark_groups = writer_workflows);

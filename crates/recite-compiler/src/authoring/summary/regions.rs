@@ -21,7 +21,15 @@ impl AuthoringSummary {
         parts: &[(&Self, &SummaryRanges)],
         previous: Option<&Arc<Self>>,
     ) -> Arc<Self> {
-        if let Some(previous) = previous
+        let unchanged_ids = previous.filter(|previous| {
+            region_outputs::matches(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
+                &previous.stable_ids,
+            )
+        });
+        if let Some(previous) = unchanged_ids
             && region_outputs::matches(
                 parts
                     .iter()
@@ -33,12 +41,6 @@ impl AuthoringSummary {
                     .iter()
                     .map(|(part, ranges)| &part.block_references[ranges[1].clone()]),
                 &previous.block_references,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
-                &previous.stable_ids,
             )
             && region_outputs::matches(
                 parts
@@ -72,10 +74,15 @@ impl AuthoringSummary {
                     .iter()
                     .map(|(part, ranges)| &part.block_references[ranges[1].clone()]),
             ),
-            stable_ids: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
+            stable_ids: unchanged_ids.map_or_else(
+                || {
+                    Arc::new(region_outputs::collect(
+                        parts
+                            .iter()
+                            .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
+                    ))
+                },
+                |previous| Arc::clone(&previous.stable_ids),
             ),
             metadata: region_outputs::collect(
                 parts
@@ -111,10 +118,12 @@ impl AuthoringSummary {
             item.file_span.iter_mut().for_each(&mut shift);
             item.block_id_span.iter_mut().for_each(&mut shift);
         }
-        for item in &mut self.stable_ids[ranges[2].clone()] {
-            shift(&mut item.span);
-            item.source_id_span.iter_mut().for_each(&mut shift);
-            item.insertion_span.iter_mut().for_each(&mut shift);
+        if !ranges[2].is_empty() {
+            for item in &mut Arc::make_mut(&mut self.stable_ids)[ranges[2].clone()] {
+                shift(&mut item.span);
+                item.source_id_span.iter_mut().for_each(&mut shift);
+                item.insertion_span.iter_mut().for_each(&mut shift);
+            }
         }
         for item in &mut self.metadata[ranges[3].clone()] {
             item.source_span.iter_mut().for_each(&mut shift);
@@ -130,3 +139,6 @@ impl AuthoringSummary {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

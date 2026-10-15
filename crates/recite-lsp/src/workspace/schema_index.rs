@@ -162,7 +162,11 @@ impl SchemaIndex {
         let Some(path) = self.path.clone() else {
             return self.clone();
         };
-        let mut overlay = Self::from_text(path, self.kind, text);
+        let mut overlay = if self.text.as_deref() == Some(text) {
+            self.clone()
+        } else {
+            Self::from_text(path, self.kind, text)
+        };
         // The live owner is the exact URI whose text and version are being
         // parsed.  The configured URI remains available as the saved-state
         // authority and is restored when the final owner closes.

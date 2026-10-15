@@ -7,17 +7,16 @@ pub(crate) use regions::FactRanges;
 use crate::{validation::ValidationInput, validation::ValidationParticipation};
 use recite_core::{
     BlockId, ChoiceId, LineId, SourceId, SourceSpan,
-    ast::{
-        Block, Choice, ChoiceEcho, Divert, DivertTarget, Line, SourceFile, SourceText, Statement,
-    },
+    ast::{Block, ChoiceEcho, Divert, DivertTarget, SourceFile, Statement},
 };
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ProjectFacts {
     pub(super) path: String,
     pub(super) participation: ValidationParticipation,
     pub(super) blocks: Box<[BlockFact]>,
-    pub(super) passages: Box<[PassageFact]>,
+    pub(super) passages: Arc<Vec<PassageFact>>,
     pub(super) references: Box<[Divert]>,
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -73,50 +72,24 @@ impl ProjectFacts {
                     span: block.span.clone(),
                 })
                 .collect(),
-            passages: passages.into_boxed_slice(),
+            passages: Arc::new(passages),
             references: references.into_boxed_slice(),
         }
     }
 
-    // Only the existing project validator consumes this temporary projection.
-    // Flattening preserves passage order; local semantics use the original AST.
-    pub(super) fn project_source(&self) -> SourceFile {
-        let mut blocks: Vec<_> = self
-            .blocks
-            .iter()
-            .map(|block| {
-                Block::new(block.id.clone(), Vec::new(), block.span.clone())
-                    .with_default(block.default)
-            })
-            .collect();
-        if let Some(first) = blocks.first_mut() {
-            first.statements = self
-                .passages
+    // Block headers retain the existing validator's participation and lookup
+    // ownership; passages and references are borrowed from these compact facts.
+    pub(super) fn project_header(&self) -> SourceFile {
+        SourceFile::new(
+            &self.path,
+            self.blocks
                 .iter()
-                .map(|passage| {
-                    let text = SourceText::new(String::new(), passage.span.clone());
-                    match &passage.identity {
-                        Identity::Line(id) => {
-                            let mut line = Line::new(id.clone(), text, passage.span.clone());
-                            if !passage.frozen {
-                                line.source_id = SourceId::Missing;
-                            }
-                            Statement::Line(line)
-                        }
-                        Identity::Choice(id, echo) => {
-                            let mut choice = Choice::new(id.clone(), text, passage.span.clone());
-                            if !passage.frozen {
-                                choice.source_id = SourceId::Missing;
-                            }
-                            choice.echo = echo.clone();
-                            Statement::Choice(choice)
-                        }
-                    }
+                .map(|block| {
+                    Block::new(block.id.clone(), Vec::new(), block.span.clone())
+                        .with_default(block.default)
                 })
-                .chain(self.references.iter().cloned().map(Statement::Divert))
-                .collect();
-        }
-        SourceFile::new(&self.path, blocks)
+                .collect(),
+        )
     }
 
     pub(super) fn same_block_targets(&self, other: &Self) -> bool {

@@ -5,6 +5,7 @@ use super::{
 };
 use recite_core::{ast::Statement, schema::ProjectSchema};
 
+mod borrowed;
 mod facts;
 pub(crate) use facts::{FactRanges, ProjectFacts};
 mod index;
@@ -34,22 +35,11 @@ fn validate_context(
     complete: bool,
     stable_complete: bool,
 ) -> Vec<recite_core::Diagnostic> {
-    let sources: Vec<_> = facts.iter().map(|facts| facts.project_source()).collect();
-    let inputs = sources
-        .iter()
-        .zip(facts)
-        .map(|(source, facts)| ValidationInput::new(source, facts.participation));
-    let mut validator = Validator::for_phase(inputs, None, complete, ValidationPhase::Project);
-    validator.stable_ids_complete = stable_complete;
-    // Context includes all default declarations for default-bearing targets. The index
-    // checks the single global missing-default diagnostic separately.
-    for input in validator.source_files.clone() {
-        validator.validate_source_file(input);
-    }
+    let diagnostics = borrowed::validate(facts, complete, stable_complete);
     if cfg!(test) {
         VALIDATED_DOCUMENTS.with(|count| count.set(count.get() + facts.len()));
     }
-    validator.diagnostics
+    diagnostics
 }
 
 thread_local! {

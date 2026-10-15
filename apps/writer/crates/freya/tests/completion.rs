@@ -5,7 +5,7 @@ use freya_testing::prelude::*;
 #[test]
 fn completion_replaces_the_diagnostic_token_without_applying_the_draft()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> line@11111111111111111111\n  Hello.\n-> missing\n:: destination\n-> END\n";
+    let source = ":: start default\r\n> line@11111111111111111111\r\n  Café 🐧 שלום.\r\n-> missing\r\n:: destination\r\n-> END\r\n";
     let model = recite_writer_model::Workbench::new(source)?;
     let diagnostics = model.document().diagnostics();
     let diagnostic = diagnostics.first().ok_or("diagnostic")?;

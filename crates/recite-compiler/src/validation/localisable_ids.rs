@@ -2,7 +2,7 @@
 use super::{incremental::ValidationPhase, state::Validator};
 use crate::diagnostics;
 use recite_core::{
-    SourceId, SourceSpan,
+    ChoiceId, LineId, SourceId, SourceSpan,
     ast::{Choice, Line},
 };
 use std::collections::btree_map::Entry;
@@ -28,10 +28,7 @@ impl<'a> Validator<'a> {
             return;
         };
 
-        if let Some(first_span) = self.record_localisable_id(id.as_str(), &line.span) {
-            self.diagnostics
-                .push(diagnostics::duplicate_line_id(line, id, first_span.clone()));
-        }
+        self.validate_project_line_id(id, &line.span);
     }
     pub(crate) fn validate_choice_localisable_id(&mut self, choice: &'a Choice) {
         if let SourceId::Frozen { .. } = &choice.source_id {
@@ -41,13 +38,7 @@ impl<'a> Validator<'a> {
             let Some(id) = choice.id.as_ref() else {
                 return;
             };
-            if let Some(first_span) = self.record_localisable_id(id.as_str(), &choice.span) {
-                self.diagnostics.push(diagnostics::duplicate_choice_id(
-                    choice,
-                    id,
-                    first_span.clone(),
-                ));
-            }
+            self.validate_project_choice_id(id, &choice.span);
         } else if self.phase != ValidationPhase::Project {
             self.diagnostics.push(match &choice.source_id {
                 SourceId::Missing => diagnostics::missing_choice_id(choice),
@@ -57,6 +48,26 @@ impl<'a> Validator<'a> {
                 }
                 SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
             });
+        }
+    }
+
+    pub(super) fn validate_project_line_id(&mut self, id: &'a LineId, span: &'a SourceSpan) {
+        if let Some(first_span) = self.record_localisable_id(id.as_str(), span) {
+            self.diagnostics.push(diagnostics::duplicate_line_id(
+                span.clone(),
+                id,
+                first_span.clone(),
+            ));
+        }
+    }
+
+    pub(super) fn validate_project_choice_id(&mut self, id: &'a ChoiceId, span: &'a SourceSpan) {
+        if let Some(first_span) = self.record_localisable_id(id.as_str(), span) {
+            self.diagnostics.push(diagnostics::duplicate_choice_id(
+                span.clone(),
+                id,
+                first_span.clone(),
+            ));
         }
     }
 

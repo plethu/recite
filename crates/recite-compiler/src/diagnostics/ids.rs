@@ -86,11 +86,15 @@ pub(crate) fn malformed_choice_id(choice: &Choice, source_id: &SourceId) -> Diag
     .with_help_presentation(super::auxiliary_presentation("diagnostic-id-008-help", []))
 }
 
-pub(crate) fn duplicate_line_id(line: &Line, id: &LineId, first_span: SourceSpan) -> Diagnostic {
+pub(crate) fn duplicate_line_id(
+    span: SourceSpan,
+    id: &LineId,
+    first_span: SourceSpan,
+) -> Diagnostic {
     compiler_diagnostic(
         diagnostic_contract(&DUPLICATE_LINE_ID, "diagnostic-id-003"),
         format!("duplicate localisable id `{id}` on line"),
-        line.span.clone(),
+        span,
         vec![("id".to_owned(), string_argument(id.to_string()))],
     )
     .with_related_presentations([related_presentation(
@@ -102,14 +106,14 @@ pub(crate) fn duplicate_line_id(line: &Line, id: &LineId, first_span: SourceSpan
 }
 
 pub(crate) fn duplicate_choice_id(
-    choice: &Choice,
+    span: SourceSpan,
     id: &ChoiceId,
     first_span: SourceSpan,
 ) -> Diagnostic {
     compiler_diagnostic(
         diagnostic_contract(&DUPLICATE_CHOICE_ID, "diagnostic-id-004"),
         format!("duplicate localisable id `{id}` on choice"),
-        choice.span.clone(),
+        span,
         vec![("id".to_owned(), string_argument(id.to_string()))],
     )
     .with_related_presentations([related_presentation(
