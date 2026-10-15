@@ -110,7 +110,8 @@ mutants *args:
     jq -e --argjson expected "$critical" '($expected - ([.[].file] | unique)) as $missing | if ($missing | length) == 0 then true else error("No mutation candidates for: " + ($missing | join(", "))) end' target/mutation/critical-mutants.json > /dev/null
     # cargo-mutants' baseline omits configured downstream consumers; check them first.
     cargo nextest run --locked -p recite-core -p recite-compiler -p recite-lsp -p recite-runtime --cargo-profile mutants --test-threads 4
-    cargo mutants --workspace --output target/mutation "${file_args[@]}" "$@"
+    # Keep each mutation checkout's build cache inside that checkout.
+    env -u CARGO_TARGET_DIR cargo mutants --workspace --output target/mutation "${file_args[@]}" "$@"
 
 supply-chain:
     scripts/check-dependencies.sh

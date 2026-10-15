@@ -14,7 +14,10 @@ returns structured errors rather than panicking.
 
 The [runtime API](../../crates/recite-runtime/src/lib.rs) owns concrete types and signatures.
 Callers start a session, advance it, select by stable choice ID and acknowledge blocking effects by
-request ID. Section 9 defines locale selection.
+request ID. `DialogueSession::try_traverse` commits when its callback returns success after
+traversal and output handling; a returned error or unwind restores the prior session, including
+append-only histories. Its restricted traversal view permits session inspection and runtime
+operations while retained clones stay independent. Section 9 defines locale selection.
 
 ### 8.3 Event Model
 
