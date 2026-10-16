@@ -53,13 +53,13 @@ result, and Escape dismisses. Tab keeps its ordinary editor behaviour.
 
 Map placement is saved with personal preferences and never changes source order or conversation
 flow. Corrupt or future layout files are left untouched and reported. Renaming a beat preserves its
-placement through its first stable passage ID; effects-only beats use their block name.
+placement through its first stable line ID; effects-only beats use their block name.
 
 Hovering or focusing a beat reveals its connections and reply labels. Selection keeps a persistent
 outline. Return routes are identified from dialogue flow, independently of card positions.
 
 **Add beat** creates a separate beat and opens it for writing. **Rename** uses the compiler's rename
-operation, preserving passage IDs and updating references. Inline renames refuse cross-scene edits.
+operation, preserving line IDs and updating references. Inline renames refuse cross-scene edits.
 Source view also provides a reviewed multi-file rename that lists affected documents before applying
 the change. **Add line** inserts before the beat's branching or continuation; **Add reply** turns an
 existing unconditional continuation into a reply with the same destination. **Change destination…**
@@ -85,16 +85,16 @@ current field draft first; rejected prose remains available to repair. Opening a
 file refuses while the current document has unsaved changes.
 
 Use the sidebar icon beside the Recite name to reclaim sidebar space. Select a beat in the map or
-outline to navigate the scene. **Passage actions ▾** opens the selected passage's details and Add
-choice menu. Arrow keys move between actions; Escape or Tab returns to the trigger. Source draft
+outline to navigate the scene. **Line actions ▾** opens the selected line's or reply's details and
+the Add reply menu. Arrow keys move between actions; Escape or Tab returns to the trigger. Source draft
 actions stay beside the source editor.
 
 ## Navigation and links
 
 The common header has Back, Forward and Copy link controls. Alt+Left/Right and mouse Back/Forward
 buttons use the same history. The history covers Write, Localise and the translation queue, scenes,
-beats, passages and Source view. Queue searches replace the current history entry; each keystroke
-does not add another Back step. Returning from a passage restores the search, filter and page.
+beats, lines and Source view. Queue searches replace the current history entry; each keystroke
+does not add another Back step. Returning from a line restores the search, filter and page.
 
 Navigation commits valid prose drafts through the authoring model. Changing a saved-project scene
 requires saving its source edits and applying or discarding Source drafts first. Switching
@@ -102,7 +102,7 @@ catalogues requires saving or discarding PO drafts. A failed navigation restores
 and keeps the current screen. Temporary example sessions retain their drafts and undo history.
 
 Copy link writes a `recite://writer/...` URL to the clipboard. The routes are `/write`, `/localise`
-and `/translations`. Query parameters identify the project, scene, beat or stable passage ID,
+and `/translations`. Query parameters identify the project, scene, beat or stable line ID,
 catalogue and queue search/filter/page. They contain locations, not document contents or translation
 drafts. Catalogue paths inside the current project are relative to its root.
 
@@ -234,7 +234,7 @@ draft, and undo history. It marks an existing preview stale. A failed refresh re
 accepted context and reports the error.
 
 Preview compiles that same set of effective sources and schema. Script starts at the selected
-passage's block; Source starts at the compiled default block. Cross-file links use the normal Recite
+line's beat; Source starts at the compiled default block. Cross-file links use the normal Recite
 reference rules. Existing previews keep their compiled input until explicitly restarted. Effect
 requests are displayed without executing game operations. Conditions still require preview inputs
 before traversal can continue. Use the project build and trial controls to choose the scene and
@@ -255,7 +255,7 @@ cancels the drag. Keyboard resizing remains immediate.
 
 Large beats page their entries without flattening condition groups. Pin reference keeps a labelled
 snapshot alongside the script; Previous/Next beat retraces visits within the current scene. Project
-search matches complete words in saved passages and their document, beat and speaker context. Save
+search matches complete words in saved lines and their document, beat and speaker context. Save
 updates the affected search index; Refresh discovers new files and refreshes the full saved context.
 
 Initial project open runs in the background. Cancellation reaches compiler and search checkpoints;

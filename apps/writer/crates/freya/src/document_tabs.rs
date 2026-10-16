@@ -98,6 +98,34 @@ impl Component for DocumentTabs {
                 );
             }
         }
+        if let (None, Ok(model)) = (opened.as_ref(), model.as_ref()) {
+            // Without a project the band still names the open file, as one passive tab.
+            let key = model.document().key().as_str();
+            let caption = if key.ends_with(".recite") {
+                key.to_owned()
+            } else {
+                format!("{key}.recite")
+            };
+            tabs = tabs.child(
+                rect()
+                    .height(Size::px(t::control_height()))
+                    .padding((0., t::SPACE_SM))
+                    .main_align(Alignment::Center)
+                    .font_weight(FontWeight::MEDIUM)
+                    .border(
+                        Border::new()
+                            .width(BorderWidth {
+                                bottom: t::FOCUS_WIDTH,
+                                ..Default::default()
+                            })
+                            .alignment(BorderAlignment::Inner)
+                            .fill(t::colors().teal),
+                    )
+                    .a11y_role(AccessibilityRole::Tab)
+                    .a11y_builder(|node| node.set_selected(true))
+                    .child(label().text(caption)),
+            );
+        }
         drop(model);
         drop(opened);
         let dialog = closing.read().clone().map(|path| {
@@ -155,12 +183,23 @@ impl Component for DocumentTabs {
                 reduced_motion: writer.preferences.read().config.writer.reduced_motion,
             }
         });
+        // The row is reserved even without documents, so opening a project never moves the toolbar.
         rect()
             .width(Size::fill())
+            .height(Size::px(t::control_height() + t::SPACE_XS))
+            .padding((t::SPACE_XS, t::SPACE_SM, 0., t::SPACE_SM))
+            .border(
+                Border::new()
+                    .width(BorderWidth {
+                        bottom: 1.,
+                        ..Default::default()
+                    })
+                    .fill(t::colors().rule),
+            )
             .child(
                 ScrollView::new()
                     .direction(Direction::Horizontal)
-                    .height(Size::auto())
+                    .height(Size::fill())
                     .width(Size::fill())
                     .child(tabs),
             )

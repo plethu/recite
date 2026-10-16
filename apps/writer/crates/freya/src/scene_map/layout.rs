@@ -3,7 +3,7 @@ use recite_writer_model::{SceneLink, ScriptBlock};
 use std::collections::VecDeque;
 
 pub(super) const WIDTH: f32 = 1200.;
-pub(super) const HEIGHT: f32 = 156.;
+pub(super) const HEIGHT: f32 = crate::design::tokens::CARD_HEIGHT;
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct Node {
     pub x: f32,

@@ -275,15 +275,29 @@ fn render(writer: Writer, scene: String) -> Element {
                 ),
         );
     }
-    let map = camera::viewport(
-        camera,
-        viewport,
-        pan,
-        canvas.into_element(),
-        writer,
-        blocks.clone(),
-        nodes.clone(),
-    );
+    let map = if blocks.is_empty() {
+        rect()
+            .width(Size::fill())
+            .height(Size::flex(1.))
+            .padding(t::SPACE_XL)
+            .child(crate::design::EmptyState {
+                title: "No beats yet".into(),
+                instruction: "Add a beat, or open the Source view and type one.".into(),
+                actions: Vec::new(),
+                min_height: 240.,
+            })
+            .into_element()
+    } else {
+        camera::viewport(
+            camera,
+            viewport,
+            pan,
+            canvas.into_element(),
+            writer,
+            blocks.clone(),
+            nodes.clone(),
+        )
+    };
     let error = positions.read().error.clone();
     rect()
         .key("scene-map")

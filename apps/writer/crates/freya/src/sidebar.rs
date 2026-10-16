@@ -39,24 +39,31 @@ fn render(
     scenes: Element,
 ) -> Element {
     let constrained = *writer.layout.available.read() < 900. * t::ui_scale();
-    let colors = use_theme().read().colors.clone();
     let body = rect()
         .on_sized(move |e: Event<SizedEventData>| writer.vim.area(writer.sidebar_focus, e.area))
         .on_key_down(move |_| writer.vim.enter(writer.sidebar_focus))
         .height(Size::fill())
         .content(Content::Flex)
         .width(Size::fill())
-        .padding((4., 12.))
+        // Horizontal padding lives in each child, so selected rows can bleed to the rail edge.
+        .padding((4., 0.))
         .spacing(t::SPACE_XS)
         .a11y_role(AccessibilityRole::Group)
         .a11y_alt("Scenes and beats")
         .child(
-            label()
-                .text(crate::messages::text(
+            // A running head: the caps label over a short plum rule.
+            rect()
+                .padding((t::SPACE_XS, t::RAIL_PADDING))
+                .spacing(t::SPACE_XS)
+                .child(t::caps(&crate::messages::text(
                     crate::messages::MsgId::WriterGuiScenes,
-                ))
-                .font_size(t::small())
-                .color(colors.text_secondary),
+                )))
+                .child(
+                    rect()
+                        .width(Size::px(24.))
+                        .height(Size::px(t::STROKE_WIDTH))
+                        .background(t::colors().accent),
+                ),
         )
         .child(scenes);
     rect()
@@ -77,6 +84,8 @@ fn render(
         .height(Size::fill())
         .content(Content::Flex)
         .overflow(Overflow::Clip)
+        .background(t::colors().canvas)
+        .child(crate::design::material::grain(t::colors().ink))
         .child(
             rect()
                 .height(Size::px(t::control_height() + 16.))
@@ -86,9 +95,10 @@ fn render(
                         SvgViewer::new(Bytes::from_static(include_bytes!(
                             "../../../../../assets/identity/recite-wordmark.svg"
                         )))
-                        .width(Size::px(86. * t::ui_scale()))
+                        .width(Size::px(27. * t::WORDMARK_ASPECT * t::ui_scale()))
                         .height(Size::px(27. * t::ui_scale()))
-                        .color(t::colors().ink)
+                        .fill(t::colors().wordmark)
+                        .color(t::colors().teal)
                         .a11y_alt("Recite"),
                     )
                 }))

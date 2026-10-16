@@ -70,7 +70,10 @@ impl Component for EntryPage {
             match entry {
                 ScriptEntry::Passage(passage) => {
                     let choice = matches!(passage.kind, PassageKind::Choice { .. });
-                    if choice && !in_choices {
+                    let localising = writer.localisation.read().active;
+                    let first_reply = choice && !in_choices;
+                    // The Script view runs the "Replies" label into the margin instead.
+                    if first_reply && localising {
                         surface = surface.child(
                             label()
                                 .text(crate::messages::text(
@@ -88,21 +91,49 @@ impl Component for EntryPage {
                         .key(passage.id.clone())
                         .width(Size::fill())
                         .padding((t::SPACE_XS, 0.));
-                    let localising = writer.localisation.read().active;
-                    let prose = if localising {
-                        crate::localisation::source_passage(
-                            writer,
-                            passage,
-                            choice.then_some(reply_number),
-                        )
-                    } else {
-                        crate::prose::ProseField {
-                            writer,
-                            passage: passage.clone(),
-                            reply_number: choice.then_some(reply_number),
-                        }
-                        .into_element()
-                    };
+                    if !localising {
+                        let (trailing, below) = match &passage.kind {
+                            PassageKind::Choice {
+                                destination: Some(destination),
+                            } => {
+                                let (heading, preview) = crate::scene::jump_parts(
+                                    writer,
+                                    origin,
+                                    destination,
+                                    Some(crate::route_editor::RouteOwner::Reply(
+                                        passage.id.clone(),
+                                    )),
+                                );
+                                (Some(heading), preview)
+                            }
+                            _ => (None, None),
+                        };
+                        let margin = match &passage.kind {
+                            PassageKind::Dialogue { speaker } => Some(palette::display_name(
+                                speaker.as_deref().unwrap_or("Narration"),
+                            )),
+                            PassageKind::Choice { .. } => first_reply.then(|| {
+                                crate::messages::text(crate::messages::MsgId::WriterGuiReplies)
+                            }),
+                        };
+                        // The gap below each line holds its hover meta and actions.
+                        surface = surface.child(row.padding((0., 0., t::META_GAP, 0.)).child(
+                            crate::prose::ProseField {
+                                writer,
+                                passage: passage.clone(),
+                                reply_number: choice.then_some(reply_number),
+                                margin,
+                                trailing,
+                                below,
+                            },
+                        ));
+                        continue;
+                    }
+                    let prose = crate::localisation::source_passage(
+                        writer,
+                        passage,
+                        choice.then_some(reply_number),
+                    );
                     let mut source = rect().width(Size::fill()).spacing(t::SPACE_XS).child(prose);
                     if let PassageKind::Choice {
                         destination: Some(destination),
@@ -191,7 +222,7 @@ impl Component for EntryPage {
             let mut controls = rect().horizontal().spacing(t::SPACE_SM).child(
                 label()
                     .text(format!(
-                        "Passages {}–{} of {}",
+                        "Lines {}–{} of {}",
                         start + 1,
                         (start + PAGE_SIZE).min(entries.len()),
                         entries.len()
@@ -199,8 +230,8 @@ impl Component for EntryPage {
                     .font_size(t::small()),
             );
             for (caption, destination, enabled) in [
-                ("Previous passages", current.saturating_sub(1), current > 0),
-                ("Next passages", current + 1, current + 1 < pages),
+                ("Previous lines", current.saturating_sub(1), current > 0),
+                ("Next lines", current + 1, current + 1 < pages),
             ] {
                 controls = controls.child(
                     Button::new()

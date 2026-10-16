@@ -248,7 +248,11 @@ fn workbench(mode: AppMode) -> Element {
         Ok(session) => session,
         Err(error) => return label().text(error.to_string()).into_element(),
     };
-    let source = session.view() == &View::Source;
+    // A scene with no beats opens its model in Source, but Script and Map still show their empty
+    // states unless the writer chose Source.
+    let source = session.view() == &View::Source
+        && !(scene::has_no_beats(session)
+            && *writer.layout.view.read() != recite_config::WriterView::Source);
     let colors = theme.read().colors.clone();
     let scene_name = palette::display_name(session.document().key().as_str());
     let scenes = if let Some(chrome) = &file_chrome {
@@ -313,16 +317,18 @@ fn workbench(mode: AppMode) -> Element {
         });
     let saved = file_chrome
         .as_ref()
-        .map_or("Temporary example", |chrome| chrome.status.as_str());
-    let diagnostic_status = if diagnostics.is_empty() {
-        "No diagnostics".into()
-    } else {
-        format!("{} diagnostics", diagnostics.len())
+        .map_or("Example · edits are not saved", |chrome| {
+            chrome.status.as_str()
+        });
+    let problems = match diagnostics.len() {
+        0 => "no problems".to_owned(),
+        1 => "1 problem".to_owned(),
+        count => format!("{count} problems"),
     };
     let preview_status = if session.preview_page().is_some()
         && (session.preview_stale() || writer.trial.catalogue_stale(writer))
     {
-        " · Preview is out of date"
+        "preview is out of date"
     } else {
         ""
     };
@@ -373,28 +379,48 @@ fn workbench(mode: AppMode) -> Element {
             .child(chrome.services.clone())
             .child(chrome.project_panel.clone());
     }
-    root = root.child(body).child(
-        rect()
-            .width(Size::fill())
-            .padding(Gaps::new(8., 16., 8., 16.))
-            .spacing(t::SPACE_XS)
-            .border(
-                Border::new()
-                    .width(BorderWidth {
-                        top: 1.,
-                        ..Default::default()
-                    })
-                    .fill(palette::rule(night)),
+    let p = t::colors();
+    let status_bar = rect()
+        .horizontal()
+        .width(Size::fill())
+        .cross_align(Alignment::Center)
+        .padding(Gaps::new(6., 16., 6., 16.))
+        .spacing(t::SPACE_SM)
+        .background(p.status_bar)
+        .border(
+            Border::new()
+                .width(BorderWidth {
+                    top: 1.,
+                    ..Default::default()
+                })
+                .fill(p.status_edge),
+        )
+        .a11y_role(AccessibilityRole::Status)
+        .a11y_alt(format!("{saved}, {problems}"))
+        .child(design::material::registration(p.status_text, 12.))
+        .child(t::meta(saved).color(p.status_text))
+        .child(t::meta("·").color(p.status_text))
+        .child(t::meta(problems.clone()).color(if diagnostics.is_empty() {
+            p.status_signal
+        } else {
+            p.status_text
+        }))
+        .maybe(!preview_status.is_empty(), |bar| {
+            bar.child(t::meta("·").color(p.status_text))
+                .child(t::meta(preview_status).color(p.status_text))
+        });
+    root = root
+        .child(body)
+        .maybe(!message.is_empty() && !notice_in_localisation, |root| {
+            root.child(
+                rect()
+                    .width(Size::fill())
+                    .padding((t::SPACE_XS, t::SPACE_LG))
+                    .background(p.surface)
+                    .child(crate::feedback::NoticeView { feedback: message }),
             )
-            .child(
-                label()
-                    .text(format!("{saved} · {diagnostic_status}{preview_status}"))
-                    .color(colors.text_secondary),
-            )
-            .maybe(!message.is_empty() && !notice_in_localisation, |status| {
-                status.child(crate::feedback::NoticeView { feedback: message })
-            }),
-    );
+        })
+        .child(status_bar);
     root = root
         .child(commands::Palette { writer })
         .child(close_prompt)

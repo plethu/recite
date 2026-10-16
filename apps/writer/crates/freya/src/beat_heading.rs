@@ -1,7 +1,7 @@
 //! Named beat editing stays beside the script, with an explicit rename transaction.
 use crate::design::Button;
 use crate::design::tokens as t;
-use crate::design::tokens::ProseTypography;
+use crate::design::tokens::PrintTypography;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
 
@@ -46,8 +46,8 @@ impl Component for BeatHeading {
                 .child(
                     rect()
                         .width(Size::flex(1.))
-                        .prose_font()
-                        .font_size(t::title())
+                        .display_font()
+                        .font_size(t::display_title())
                         .child(
                             Input::new(name)
                                 .a11y_id(input_id)
@@ -93,8 +93,8 @@ impl Component for BeatHeading {
                         label()
                             .text(palette::display_name(&self.id))
                             .width(Size::fill())
-                            .prose_font()
-                            .font_size(t::title()),
+                            .display_font()
+                            .font_size(t::display_title()),
                     ),
             );
         }

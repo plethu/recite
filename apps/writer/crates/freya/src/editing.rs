@@ -3,13 +3,16 @@ use recite_writer_model::{View, Workbench, WorkbenchError};
 
 pub type Session = State<Result<Workbench, WorkbenchError>>;
 
+/// The shared query colours stable IDs like names. Writer dims them so writers read the name,
+/// not the hash; editor integrations keep the shared query unchanged.
+const STABLE_ID_CAPTURE: &str = "((stable_id) @label)";
+static HIGHLIGHTS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    recite_writer_grammar::HIGHLIGHTS.replace(STABLE_ID_CAPTURE, "((stable_id) @comment)")
+});
+
 pub fn editor_data(text: &str, source: bool, dark: bool) -> CodeEditorData {
-    let language = source.then(|| {
-        EditorLanguage::new(
-            recite_writer_grammar::LANGUAGE,
-            recite_writer_grammar::HIGHLIGHTS,
-        )
-    });
+    let language =
+        source.then(|| EditorLanguage::new(recite_writer_grammar::LANGUAGE, HIGHLIGHTS.as_str()));
     let mut data = CodeEditorData::new(Rope::from_str(text), language);
     data.set_theme(super::palette::syntax(dark));
     if source {
@@ -220,15 +223,29 @@ impl Writer {
         }
     }
     pub fn set_view(mut self, view: recite_config::WriterView) {
-        let outcome = self.try_navigate(|m| match view {
-            recite_config::WriterView::Script | recite_config::WriterView::Map => m.show_script(),
-            recite_config::WriterView::Source => m.select(View::Source),
-        });
+        // A scene with no beats has no script to show; its Script and Map are the empty states.
+        let empty = self
+            .buffers
+            .model
+            .peek()
+            .as_ref()
+            .is_ok_and(crate::scene::has_no_beats);
+        let outcome = if empty && view != recite_config::WriterView::Source {
+            Ok(())
+        } else {
+            self.try_navigate(|m| match view {
+                recite_config::WriterView::Script | recite_config::WriterView::Map => {
+                    m.show_script()
+                }
+                recite_config::WriterView::Source => m.select(View::Source),
+            })
+        };
         if outcome.is_ok() {
             self.localisation.write().active = false;
             self.layout.view.set(view);
             self.pane.set(Pane::Map);
             if view == recite_config::WriterView::Script
+                && !empty
                 && let Err(error) = self.ensure_beat()
             {
                 self.message.error(error);
@@ -294,4 +311,14 @@ pub(super) fn is_workspace_key(event: &KeyboardEventData) -> bool {
                 } else {
                     Modifiers::CONTROL
                 })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn stable_ids_are_dimmed_in_writer_only() {
+        assert!(recite_writer_grammar::HIGHLIGHTS.contains(super::STABLE_ID_CAPTURE));
+        assert!(super::HIGHLIGHTS.contains("((stable_id) @comment)"));
+        assert!(!super::HIGHLIGHTS.contains(super::STABLE_ID_CAPTURE));
+    }
 }

@@ -109,6 +109,7 @@ impl Component for Completion {
                     let name = entries.items.candidates()[row.index].name().to_owned();
                     Button::new()
                         .flat()
+                        .row_gutter()
                         .width(Size::fill())
                         .named(name.clone())
                         .option(active == Some(row.index))

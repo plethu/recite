@@ -173,7 +173,7 @@ impl FromStr for Location {
             }
         }
         if result.screen == Screen::Rules && (result.passage.is_none() || result.source) {
-            return Err("A reply-rules link needs a passage and cannot be Source view");
+            return Err("A reply-rules link needs a reply and cannot be Source view");
         }
         if result.source && (result.beat.is_some() || result.passage.is_some()) {
             return Err("Conflicting writer views");

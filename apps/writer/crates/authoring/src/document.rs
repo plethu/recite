@@ -30,7 +30,7 @@ pub enum EditError {
     InvalidRules(String),
     #[error("This content needs Source view: {0}")]
     SourceRequired(&'static str),
-    #[error("The selected passage no longer exists or has no unique frozen ID.")]
+    #[error("The selected line no longer exists or has no unique frozen ID.")]
     MissingPassage,
     #[error("The source position cannot be mapped safely.")]
     Position,

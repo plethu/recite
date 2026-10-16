@@ -122,6 +122,8 @@ impl Component for NavigationRow {
             .flat()
             .named(self.text.clone())
             .toggle(self.selected)
+            // Beat rows sit inside the rail padding and their own outline indent.
+            .plate_bleed(crate::design::tokens::RAIL_PADDING + crate::design::tokens::SPACE_XL)
             .width(Size::fill())
             .on_press(self.action.clone())
             .child(

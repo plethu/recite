@@ -36,6 +36,8 @@ pub(super) fn routes(
         })
         .collect();
     let mut lane = 0;
+    // Side routes into one beat share a single port near the rail and draw one arrowhead.
+    let mut side_arrows = std::collections::BTreeSet::new();
     links
         .iter()
         .zip(slots)
@@ -46,18 +48,24 @@ pub(super) fn routes(
             let incoming = incoming[link.destination.as_str()];
             let x1 = from.x + from.width * (out_slot + 1) as f32 / (outgoing + 1) as f32;
             let y1 = from.y + HEIGHT;
-            let x2 = to.x + to.width * (in_slot + 1) as f32 / (incoming + 1) as f32;
             let y2 = to.y;
             let side = link.returning || y2 <= y1 || y2 - y1 > 120.;
+            let x2 = if side {
+                to.x + to.width - 16.
+            } else {
+                to.x + to.width * (in_slot + 1) as f32 / (incoming + 1) as f32
+            };
             let rail = if side {
-                let x = right + lane as f32 * 24.;
+                // Lanes pack tightly beside the rail column so returns stop just past the cards.
+                let x = right + lane as f32 * 6.;
                 lane += 1;
                 x
             } else {
                 x1
             };
             let lead = 16. + out_slot as f32 * 8.;
-            let approach = 16. + in_slot as f32 * 8.;
+            let approach = if side { 16. } else { 16. + in_slot as f32 * 8. };
+            let arrow = !side || side_arrows.insert(link.destination.as_str());
             let path = if side {
                 format!(
                     "M{x1} {y1} L{x1} {} L{rail} {} L{rail} {} L{x2} {} L{x2} {y2}",
@@ -79,13 +87,17 @@ pub(super) fn routes(
             let height = y1.max(y2) + lead - top + 5.;
             Some(Route {
                 path,
-                arrow: format!(
-                    "M{} {} L{x2} {y2} L{} {}",
-                    x2 - 3.,
-                    y2 - 5.,
-                    x2 + 3.,
-                    y2 - 5.
-                ),
+                arrow: if arrow {
+                    format!(
+                        "M{} {} L{x2} {y2} L{} {}",
+                        x2 - 3.,
+                        y2 - 5.,
+                        x2 + 3.,
+                        y2 - 5.
+                    )
+                } else {
+                    String::new()
+                },
                 bounds: (left, top, width, height),
                 label: if side {
                     (rail, (y1 + lead + y2 - approach) / 2.)

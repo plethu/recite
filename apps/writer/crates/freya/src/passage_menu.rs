@@ -1,4 +1,4 @@
-//! Anchored secondary passage actions, with owned keyboard focus and dismissal.
+//! Anchored secondary line actions, with owned keyboard focus and dismissal.
 use crate::{design::Button, editing::Writer};
 use freya::prelude::*;
 use recite_writer_model::{Passage, PassageKind, Workbench};
@@ -15,21 +15,24 @@ pub(super) fn render(writer: Writer, mut details: State<bool>, passage: &Passage
             items[0].request_focus();
         }
     });
-    let mut anchor = rect().width(Size::px(148.)).child(action(
-        trigger,
-        "Passage actions ▾",
-        false,
-        move || {
-            let next = !*open.peek();
-            open.set(next);
-        },
-    ));
+    let mut anchor =
+        rect()
+            .width(Size::px(148.))
+            .child(action(trigger, "Line actions ▾", false, move || {
+                let next = !*open.peek();
+                open.set(next);
+            }));
     if *open.read() {
         anchor = anchor.child(
             rect()
-                .position(Position::new_absolute().top(38.).right(0.))
+                .position(Position::new_absolute().top(30.).right(0.))
                 .width(Size::px(232.))
                 .layer(Layer::Overlay)
+                .corner_radius(crate::design::tokens::DIALOG_RADIUS)
+                .shadow(crate::design::material::offset(
+                    crate::design::tokens::colors().teal,
+                    crate::design::tokens::SHADOW_OFFSET,
+                ))
                 .on_key_down(move |event: Event<KeyboardEventData>| {
                     let focus = *Platform::get().focused_accessibility_id.peek();
                     let current = items.iter().position(|id| *id == focus).unwrap_or(0);
@@ -64,12 +67,21 @@ pub(super) fn render(writer: Writer, mut details: State<bool>, passage: &Passage
                             open.set(false);
                             trigger.request_focus();
                         })
-                        .child(action(items[0], "Line / choice details", true, move || {
-                            let next = !*details.peek();
-                            details.set(next);
-                            open.set(false);
-                            trigger.request_focus();
-                        }))
+                        .child(action(
+                            items[0],
+                            if choice {
+                                "Reply details"
+                            } else {
+                                "Line details"
+                            },
+                            true,
+                            move || {
+                                let next = !*details.peek();
+                                details.set(next);
+                                open.set(false);
+                                trigger.request_focus();
+                            },
+                        ))
                         .maybe_child(choice.then(|| {
                             action(items[1], "Reply rules", true, move || {
                                 let mut writer = writer;
@@ -79,7 +91,7 @@ pub(super) fn render(writer: Writer, mut details: State<bool>, passage: &Passage
                                 open.set(false);
                             })
                         }))
-                        .child(action(items[count - 1], "Add choice", true, move || {
+                        .child(action(items[count - 1], "Add reply", true, move || {
                             writer.perform(Workbench::add_choice);
                             open.set(false);
                             trigger.request_focus();
@@ -105,7 +117,8 @@ fn action(
     let button = if menu_item {
         button.menu_item().width(Size::fill())
     } else {
-        button
+        // The trigger sits in the Script line's 24px meta gap.
+        button.compact()
     };
     rect()
         .min_width(Size::px(if menu_item { 210. } else { 0. }))

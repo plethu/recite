@@ -90,7 +90,7 @@ impl Component for SceneNavigation {
         let scroll = use_scroll_controller(ScrollConfig::default);
         crate::design::use_list_reveal(Some(query), active, scroll, 36., 2);
         let cache = use_hook(|| Rc::new(RefCell::new(rows::Cache::default())));
-        let selected = if writer.localisation.read().active {
+        let open_block = || {
             writer
                 .buffers
                 .model
@@ -98,8 +98,12 @@ impl Component for SceneNavigation {
                 .as_ref()
                 .ok()
                 .and_then(|m| m.selected_block().ok().flatten())
+        };
+        // The rail's one plate marks the beat being edited when nothing is selected on the map.
+        let selected = if writer.localisation.read().active {
+            open_block()
         } else {
-            writer.selection.read().clone()
+            writer.selection.read().clone().or_else(open_block)
         };
         let captions = captions.read().clone();
         let projection = cache.borrow_mut().refresh(
@@ -127,24 +131,31 @@ impl Component for SceneNavigation {
             .height(Size::flex(1.))
             .content(Content::Flex)
             .spacing(t::SPACE_XS)
-            .child(crate::design::SearchField {
-                insert_request: Some(writer.vim.insert_requested),
-                query,
-                id,
-                placeholder: "Find scene or beat…".into(),
-                active,
-                count,
-                vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
-                changed: EventHandler::new(|()| {}),
-                activate: EventHandler::new(move |index: usize| {
-                    activate_row(writer, collapsed, &destinations, index);
-                }),
-            })
+            .child(
+                rect()
+                    .width(Size::fill())
+                    .padding((0., t::RAIL_PADDING))
+                    .child(crate::design::SearchField {
+                        insert_request: Some(writer.vim.insert_requested),
+                        query,
+                        id,
+                        placeholder: "Find scene or beat…".into(),
+                        active,
+                        count,
+                        vim: writer.preferences.read().config.ui.keymap
+                            == recite_config::Keymap::Vim,
+                        changed: EventHandler::new(|()| {}),
+                        activate: EventHandler::new(move |index: usize| {
+                            activate_row(writer, collapsed, &destinations, index);
+                        }),
+                    }),
+            )
             .child(if count == 0 {
-                label()
-                    .text(crate::messages::text(
+                rect()
+                    .padding((0., t::RAIL_PADDING))
+                    .child(label().text(crate::messages::text(
                         crate::messages::MsgId::WriterGuiNoMatchingScenesOrBeats,
-                    ))
+                    )))
                     .into_element()
             } else {
                 rect().into_element()
@@ -160,9 +171,13 @@ impl Component for SceneNavigation {
                             let expanded = *expanded;
                             let caption = scene.caption.clone();
                             let destinations = rows.clone();
+                            let active_scene = scene.active;
+                            // One plate in the rail: the owning scene is plum text, not a plate.
                             Button::new()
                                 .flat()
-                                .toggle(scene.active || rows.active == Some(index.index))
+                                .toggle(active_scene)
+                                .highlighted(rows.active == Some(index.index))
+                                .plate_bleed(t::RAIL_PADDING)
                                 .expanded(expanded)
                                 .width(Size::fill())
                                 .named(caption.clone())
@@ -175,7 +190,14 @@ impl Component for SceneNavigation {
                                         .width(Size::fill())
                                         .spacing(t::SPACE_SM)
                                         .child(label().text(if expanded { "▾" } else { "▸" }))
-                                        .child(label().text(caption)),
+                                        .child(label().text(caption).maybe(
+                                            active_scene,
+                                            |caption| {
+                                                caption
+                                                    .color(t::colors().accent)
+                                                    .font_weight(FontWeight::SEMI_BOLD)
+                                            },
+                                        )),
                                 )
                                 .into_element()
                         }
@@ -202,6 +224,7 @@ impl Component for SceneNavigation {
                         .key(index.index)
                         .height(Size::px(36.))
                         .width(Size::fill())
+                        .padding((0., t::RAIL_PADDING))
                         .overflow(Overflow::Clip)
                         .child(content)
                         .into_element()
