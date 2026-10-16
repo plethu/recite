@@ -3204,6 +3204,7 @@ dependencies = [
  "tempfile",
  "toml",
  "unic-langid",
+ "unicode-width",
  "wait-timeout",
 ]
 

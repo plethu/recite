@@ -53,6 +53,36 @@ explain-common-causes = Common causes:
 explain-how-to-fix = How to fix:
 explain-list-item = - {$item}
 
+cli-help-command-check-schema-producer-freshness = Compare current schema producer fingerprints with a previously exported manifest
+cli-help-group-authoring = Authoring checks
+cli-help-group-building = Building
+cli-help-group-localisation = Localisation
+cli-help-group-running = Running
+cli-help-group-schema = Schema
+cli-help-group-help = Help
+cli-success-ok = ok
+cli-success-files = { $count ->
+        [one] { $count } file
+       *[other] { $count } files
+    }, no diagnostics
+cli-success-project = project, no diagnostics
+cli-diagnostic-errors = { $count ->
+        [one] { $count } error
+       *[other] { $count } errors
+    }
+cli-diagnostic-warnings = { $count ->
+        [one] { $count } warning
+       *[other] { $count } warnings
+    }
+cli-diagnostic-notes = { $count ->
+        [one] { $count } note
+       *[other] { $count } notes
+    }
+cli-diagnostic-summary = { $problems } in { $files ->
+        [one] { $files } file
+       *[other] { $files } files
+    }
+
 watch-building = watch: building {$path}
 watch-waiting-for-changes = watch: waiting for changes
 watch-rebuilding = watch: rebuilding
@@ -228,7 +258,7 @@ tui-help-description-open-help = open this help overlay
 tui-help-description-quit = quit the current play session
 tui-help-description-interrupt = interrupt the current play session
 tui-help-description-move-choice = move the highlighted choice
-tui-help-description-submit-choice = select the highlighted choice or typed ID/index
+tui-help-description-submit-choice = select the highlighted choice or the typed ID or number
 tui-help-description-input-choice = type a choice ID or index
 tui-help-description-move-condition = move between yes and no
 tui-help-description-shortcut-condition = select the matching answer
@@ -239,7 +269,7 @@ tui-help-description-submit-effect = acknowledge the blocking effect
 tui-help-description-finished = leave the finished play screen
 tui-help-description-command = enter command mode
 tui-help-description-queue = expand or collapse deferred effect queue
-tui-footer-command = Enter runs command | Esc cancels
+tui-footer-command = Enter runs command · Esc cancels
 
 cli-error-play-eof = reached EOF while reading {$field}
 cli-error-play-invalid-input = invalid play input: {$message}

@@ -30,7 +30,7 @@ fn non_utf8_discovery_rejects_build_without_overwriting_existing_asset() {
     );
     assert_eq!(fs::read(asset).expect("asset unchanged"), original);
     let stderr = String::from_utf8(stderr).expect("stderr");
-    assert!(stderr.contains("error RECITE_CONFIG115"), "{stderr}");
+    assert!(stderr.contains("error[RECITE_CONFIG115]"), "{stderr}");
     assert!(
         stderr.contains(&format!("{}:1:1", source.display())),
         "{stderr}"
@@ -71,12 +71,14 @@ fn partial_discovery_reports_readable_parse_errors_without_publishing() {
     assert_eq!(fs::read(asset).expect("asset unchanged"), original);
     let stderr = String::from_utf8(stderr).expect("stderr");
     assert!(
-        stderr.contains("error RECITE_PARSE013 dialogue/malformed.recite:2:12"),
+        (stderr.contains("[RECITE_PARSE013]")
+            && stderr.contains("--> dialogue/malformed.recite:2:12")),
         "{stderr}"
     );
     assert!(
-        stderr.contains("error RECITE_PARSE001 dialogue/malformed.recite:3:3"),
+        (stderr.contains("[RECITE_PARSE001]")
+            && stderr.contains("--> dialogue/malformed.recite:3:3")),
         "{stderr}"
     );
-    assert!(stderr.contains("error RECITE_CONFIG115"), "{stderr}");
+    assert!(stderr.contains("error[RECITE_CONFIG115]"), "{stderr}");
 }

@@ -58,6 +58,20 @@ macro_rules! cli_message_ids {
         | MsgId::ExplainCommonCauses
         | MsgId::ExplainHowToFix
         | MsgId::ExplainListItem
+        | MsgId::CliHelpCommandCheckSchemaProducerFreshness
+        | MsgId::CliHelpGroupAuthoring
+        | MsgId::CliHelpGroupBuilding
+        | MsgId::CliHelpGroupLocalisation
+        | MsgId::CliHelpGroupRunning
+        | MsgId::CliHelpGroupSchema
+        | MsgId::CliHelpGroupHelp
+        | MsgId::CliSuccessOk
+        | MsgId::CliSuccessFiles
+        | MsgId::CliSuccessProject
+        | MsgId::CliDiagnosticErrors
+        | MsgId::CliDiagnosticWarnings
+        | MsgId::CliDiagnosticNotes
+        | MsgId::CliDiagnosticSummary
         | MsgId::WatchBuilding
         | MsgId::WatchWaitingForChanges
         | MsgId::WatchRebuilding

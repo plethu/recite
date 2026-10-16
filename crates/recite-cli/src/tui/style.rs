@@ -26,48 +26,45 @@ impl TuiPalette {
     }
 
     pub(crate) fn line_label(self) -> Style {
-        self.label(TuiColorRole::Line)
+        self.label()
     }
 
     pub(crate) fn prompt_label(self) -> Style {
-        self.label(TuiColorRole::Prompt)
+        self.label()
     }
 
     pub(crate) fn choice_label(self) -> Style {
-        self.label(TuiColorRole::Choice)
+        self.label()
     }
 
     pub(crate) fn condition_label(self) -> Style {
-        self.label(TuiColorRole::Condition)
+        self.label()
     }
 
     pub(crate) fn effect_label(self) -> Style {
-        self.label(TuiColorRole::Effect)
+        self.label()
     }
 
+    /// Labels, IDs and status: the second ink of the terminal.
     pub(crate) fn muted(self) -> Style {
-        self.color(Color::DarkGray)
+        self.color(self.accessible(Color::DarkGray, Color::Gray))
     }
 
     pub(crate) fn title(self) -> Style {
-        self.color(Color::Cyan).add_modifier(Modifier::BOLD)
+        Style::default().add_modifier(Modifier::BOLD)
     }
 
+    /// The one coloured thing on screen: what the player acts on next.
     pub(crate) fn selected_marker(self) -> Style {
-        self.color(self.accessible(Color::Yellow, Color::White))
-            .add_modifier(Modifier::BOLD)
+        self.emphasis()
     }
 
+    /// The selected row's marker and number carry the accent; other rows stay muted.
     pub(crate) fn choice_chrome(self, is_selected: bool, is_available: bool) -> Style {
-        let style = if is_available {
-            self.color(self.accessible(Color::Cyan, Color::White))
+        if is_selected && is_available {
+            self.emphasis()
         } else {
             self.muted()
-        };
-        if is_selected {
-            style.add_modifier(Modifier::BOLD)
-        } else {
-            style
         }
     }
 
@@ -80,20 +77,9 @@ impl TuiPalette {
         Style::default()
     }
 
-    fn label(self, role: TuiColorRole) -> Style {
-        self.color(match (self.contrast, role) {
-            (TuiContrast::Standard, TuiColorRole::Line) => Color::Green,
-            (TuiContrast::Standard, TuiColorRole::Prompt) => Color::Blue,
-            (TuiContrast::Standard, TuiColorRole::Choice) => Color::Cyan,
-            (TuiContrast::Standard, TuiColorRole::Condition) => Color::Yellow,
-            (TuiContrast::Standard, TuiColorRole::Effect) => Color::Magenta,
-            (TuiContrast::Accessible, TuiColorRole::Line) => Color::LightGreen,
-            (TuiContrast::Accessible, TuiColorRole::Prompt) => Color::LightBlue,
-            (TuiContrast::Accessible, TuiColorRole::Choice) => Color::White,
-            (TuiContrast::Accessible, TuiColorRole::Condition) => Color::LightYellow,
-            (TuiContrast::Accessible, TuiColorRole::Effect) => Color::LightMagenta,
-        })
-        .add_modifier(Modifier::BOLD)
+    /// Every role label shares one muted ink; the words tell the roles apart.
+    fn label(self) -> Style {
+        self.muted().add_modifier(Modifier::BOLD)
     }
 
     fn accessible(self, standard: Color, accessible: Color) -> Color {
@@ -110,13 +96,4 @@ impl TuiPalette {
             Style::default()
         }
     }
-}
-
-#[derive(Clone, Copy)]
-enum TuiColorRole {
-    Line,
-    Prompt,
-    Choice,
-    Condition,
-    Effect,
 }

@@ -44,6 +44,89 @@ fn localise_command(command: &mut clap::Command, messages: &Messages) {
     for subcommand in command.get_subcommands_mut() {
         localise_subcommand(subcommand, messages);
     }
+    group_subcommands(command, messages);
+}
+
+/// Top-level commands grouped as on the documentation's CLI page. Clap prints one subcommand
+/// heading, so the groups are rendered into the template and the flat list is hidden.
+const COMMAND_GROUPS: [(MsgId, &[&str]); 6] = [
+    (
+        MsgId::CliHelpGroupAuthoring,
+        &[
+            "validate",
+            "check-ids",
+            "check-markup",
+            "check-metadata",
+            "import",
+        ],
+    ),
+    (
+        MsgId::CliHelpGroupBuilding,
+        &["compile", "validate-project", "check-fresh", "watch"],
+    ),
+    (MsgId::CliHelpGroupLocalisation, &["extract"]),
+    (
+        MsgId::CliHelpGroupRunning,
+        &["run", "trace", "play", "bench"],
+    ),
+    (
+        MsgId::CliHelpGroupSchema,
+        &[
+            "inspect-schema",
+            "export-schema",
+            "check-schema-producer-freshness",
+        ],
+    ),
+    (MsgId::CliHelpGroupHelp, &["explain", "help"]),
+];
+
+fn group_subcommands(command: &mut clap::Command, messages: &Messages) {
+    let abouts: Vec<(String, String)> = command
+        .get_subcommands()
+        .map(|sub| {
+            (
+                sub.get_name().to_owned(),
+                sub.get_about().map(ToString::to_string).unwrap_or_default(),
+            )
+        })
+        .collect();
+    let about = |name: &str| {
+        abouts
+            .iter()
+            .find(|(candidate, _)| candidate == name)
+            .map(|(_, about)| about.clone())
+            .unwrap_or_else(|| messages.text(MsgId::CliHelpArgHelp))
+    };
+    let width = COMMAND_GROUPS
+        .iter()
+        .flat_map(|(_, names)| names.iter())
+        .map(|name| name.len())
+        .max()
+        .unwrap_or(0);
+    let mut groups = String::new();
+    for (heading, names) in COMMAND_GROUPS {
+        groups.push_str(&format!("{}:\n", messages.text(heading)));
+        for name in names {
+            groups.push_str(&format!("  {name:<width$}  {}\n", about(name)));
+        }
+        groups.push('\n');
+    }
+    let grouped: Vec<&str> = COMMAND_GROUPS
+        .iter()
+        .flat_map(|(_, names)| names.iter().copied())
+        .collect();
+    let mut hidden = std::mem::take(command);
+    for (name, _) in &abouts {
+        if grouped.contains(&name.as_str()) {
+            hidden = hidden.mut_subcommand(name, |sub| sub.hide(true));
+        }
+    }
+    // Hidden subcommands drop `<COMMAND>` from the generated usage, so it is restated.
+    let usage = format!("{} <COMMAND>", hidden.get_name());
+    *command = hidden.override_usage(usage).help_template(format!(
+        "{{about}}\n\n{} {{usage}}\n\n{groups}{{all-args}}{{after-help}}",
+        messages.text(MsgId::CliHelpUsageHeading)
+    ));
 }
 
 fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
@@ -166,6 +249,12 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
+        "check-schema-producer-freshness" => {
+            set_about(
+                command,
+                messages.text(MsgId::CliHelpCommandCheckSchemaProducerFreshness),
+            );
+        }
         "explain" => {
             set_about(command, messages.text(MsgId::CliHelpCommandExplain));
             set_arg_help(
@@ -266,6 +355,35 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
             );
         }
         _ => {}
+    }
+    assign_headings(command, messages);
+}
+
+/// Give every argument an explicit localised heading. An argument without one lands in clap's
+/// built-in "Options" section, which printed a second, identically named heading.
+fn assign_headings(command: &mut clap::Command, messages: &Messages) {
+    let arguments = messages.text(MsgId::CliHelpArgumentsHeading);
+    let options = messages.text(MsgId::CliHelpOptionsHeading);
+    *command = std::mem::take(command).mut_args(|arg| {
+        if arg.get_help_heading().is_some() {
+            return arg;
+        }
+        let heading = if arg.is_positional() {
+            arguments.clone()
+        } else {
+            options.clone()
+        };
+        arg.help_heading(heading)
+    });
+    // Clap orders custom headings by argument order, and `mut_arg` moves an argument to the end.
+    // Touch every option once more so the Arguments section prints before Options.
+    let option_ids: Vec<String> = command
+        .get_arguments()
+        .filter(|arg| !arg.is_positional())
+        .map(|arg| arg.get_id().to_string())
+        .collect();
+    for id in option_ids {
+        *command = std::mem::take(command).mut_arg(id, |arg| arg);
     }
 }
 

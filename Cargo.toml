@@ -92,6 +92,7 @@ unicase = "=2.7.0"
 unicode-ident = "1.0.22"
 # Unicode normalization for conservative case-insensitive output identities.
 unicode-normalization = "0.1.25"
+unicode-width = "0.2.0"
 wasm-bindgen = "=0.2.128"
 
 [workspace.lints.clippy]

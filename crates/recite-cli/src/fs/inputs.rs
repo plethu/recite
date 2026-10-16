@@ -20,6 +20,7 @@ pub(crate) fn validate_inputs(
     schema: Option<&ProjectSchema>,
 ) -> Result<InputDiagnostics, CliError> {
     let inputs = read_compile_inputs(paths)?;
+    let file_count = inputs.len();
     let mut source_files = Vec::new();
     let mut parse_diagnostics = Vec::new();
 
@@ -50,6 +51,7 @@ pub(crate) fn validate_inputs(
     Ok(InputDiagnostics {
         parse_diagnostics,
         validation_diagnostics,
+        file_count,
     })
 }
 

@@ -72,7 +72,12 @@ fn report_diagnostics_uses_selected_locale_for_primary_text() {
     );
     assert_eq!(
         String::from_utf8(output).expect("UTF-8 output"),
-        "error RECITE_PARSE001 dialogue/main.recite:1:1 localized primary\n"
+        concat!(
+            "error[RECITE_PARSE001]: localized primary\n",
+            "  --> dialogue/main.recite:1:1\n",
+            "\n",
+            "1 error in 1 file\n",
+        )
     );
 }
 
@@ -93,7 +98,12 @@ fn report_diagnostics_uses_compatibility_text_when_primary_is_unavailable() {
 
     assert_eq!(
         String::from_utf8(output).expect("UTF-8 output"),
-        "error RECITE_PARSE001 dialogue/main.recite:1:1 compatibility fallback\n"
+        concat!(
+            "error[RECITE_PARSE001]: compatibility fallback\n",
+            "  --> dialogue/main.recite:1:1\n",
+            "\n",
+            "1 error in 1 file\n",
+        )
     );
 }
 
@@ -139,10 +149,13 @@ fn report_diagnostics_preserves_shared_related_and_help_order() {
     assert_eq!(
         String::from_utf8(output).expect("UTF-8 output"),
         concat!(
-            "error RECITE_PARSE001 dialogue/main.recite:1:1 localized primary\n",
-            "  related dialogue/first.recite:2:3 first related\n",
-            "  related dialogue/second.recite:8:13 second related\n",
-            "  help: shared help\n",
+            "error[RECITE_PARSE001]: localized primary\n",
+            "  --> dialogue/main.recite:1:1\n",
+            "  = related: first related (dialogue/first.recite:2:3)\n",
+            "  = related: second related (dialogue/second.recite:8:13)\n",
+            "  = help: shared help\n",
+            "\n",
+            "1 error in 1 file\n",
         )
     );
 }

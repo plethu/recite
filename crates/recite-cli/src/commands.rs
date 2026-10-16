@@ -1,7 +1,9 @@
 use std::io::Write;
 
 use crate::args::{Command, CompileArgs, ExplainArgs, ExtractArgs, RuntimeArgs, TraceArgs};
-use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
+use crate::diagnostics::{
+    Subject, report_diagnostics, report_success, report_targeted_diagnostics,
+};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
 use crate::fs::{
@@ -37,12 +39,14 @@ pub(crate) fn run_command(
 ) -> Result<(), CliError> {
     match command {
         Command::Validate(args) => {
-            let diagnostics = validate_inputs(&args.paths, None)?.into_all();
+            let inputs = validate_inputs(&args.paths, None)?;
+            let file_count = inputs.file_count;
+            let diagnostics = inputs.into_all();
             report_diagnostics(stderr, messages, diagnostics.iter())?;
-            diagnostics
-                .is_empty()
-                .then_some(())
-                .ok_or(CliError::Diagnostics)
+            if !diagnostics.is_empty() {
+                return Err(CliError::Diagnostics);
+            }
+            report_success(stderr, messages, Subject::Files(file_count))
         }
         Command::Compile(args) => compile_command(args, stderr, messages),
         Command::Extract(args) => extract_command(args, stdout, stderr, messages),
@@ -164,6 +168,7 @@ fn compile_command(
 ) -> Result<(), CliError> {
     let input_files = collect_input_files(&args.paths)?;
     reject_output_input_alias(&args.output, &input_files)?;
+    let file_count = input_files.len();
     let inputs = read_compile_inputs_for_output(&args.output, input_files)?;
     let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
     let options = compile_options(&args.output, schema.as_ref())?;
@@ -173,12 +178,15 @@ fn compile_command(
         compile_inputs_to_messagepack(inputs, options)?
     };
 
-    report_diagnostics(stderr, messages, report.diagnostics.iter())?;
+    let reported = report_diagnostics(stderr, messages, report.diagnostics.iter())?;
     let Some(messagepack) = report.messagepack else {
         return Err(CliError::Diagnostics);
     };
 
     write_staged(&args.output, &messagepack)?;
+    if reported == 0 {
+        report_success(stderr, messages, Subject::Files(file_count))?;
+    }
     Ok(())
 }
 

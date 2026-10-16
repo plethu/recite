@@ -13,6 +13,22 @@ meaning = "string"
 [arguments."explain-list-item"]
 item = "string"
 
+[arguments."cli-success-files"]
+count = "integer"
+
+[arguments."cli-diagnostic-errors"]
+count = "integer"
+
+[arguments."cli-diagnostic-warnings"]
+count = "integer"
+
+[arguments."cli-diagnostic-notes"]
+count = "integer"
+
+[arguments."cli-diagnostic-summary"]
+problems = "string"
+files = "integer"
+
 [arguments."watch-building"]
 path = "string"
 

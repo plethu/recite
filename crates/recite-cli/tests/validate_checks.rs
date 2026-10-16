@@ -17,7 +17,7 @@ fn validate_reports_diagnostics_and_success() {
         .arg("validate")
         .arg(&valid)
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  1 file, no diagnostics\n");
 
     let invalid = write_recite(
         temp.path(),
@@ -26,7 +26,7 @@ fn validate_reports_diagnostics_and_success() {
     );
     let output = run(recite().arg("validate").arg(&invalid));
     assert_diagnostic_failure(&output);
-    output.assert_stderr_contains("error RECITE_ID001");
+    output.assert_stderr_contains("error[RECITE_ID001]");
     output.assert_stderr_contains("invalid.recite:2:1");
 }
 
@@ -66,7 +66,7 @@ fn validate_renders_structured_compiler_related_diagnostics() {
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_ID003");
     output.assert_stderr_contains(&format!(
-        "related {}:2:1 first localisable ID is here",
+        "= related: first localisable ID is here ({}:2:1)",
         source.display()
     ));
     output.assert_stderr_contains("help: rename one of the duplicate localisable IDs");
@@ -107,7 +107,7 @@ fn check_ids_reports_only_id_diagnostics() {
         .arg("check-ids")
         .arg(unrelated)
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  1 file, no diagnostics\n");
 }
 
 #[test]
@@ -123,7 +123,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
         .arg("check-markup")
         .arg(&source)
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  1 file, no diagnostics\n");
 
     let malformed = write_recite(
         temp.path(),

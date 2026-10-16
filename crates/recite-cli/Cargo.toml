@@ -33,6 +33,7 @@ serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
 unic-langid.workspace = true
+unicode-width.workspace = true
 
 [dev-dependencies]
 strum = { version = "=0.28.0", features = ["derive"] }
