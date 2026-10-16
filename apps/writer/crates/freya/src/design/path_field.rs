@@ -5,6 +5,8 @@ use freya::prelude::*;
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum PathKind {
     Project,
+    /// A folder to create a project in; it may not exist yet.
+    NewProject,
     Catalogue,
     Schema,
 }
@@ -12,6 +14,7 @@ impl PathKind {
     fn title(self) -> &'static str {
         match self {
             Self::Project => "Browse for project folder",
+            Self::NewProject => "Browse for a folder for the new project",
             Self::Schema => "Browse for standalone schema source",
             Self::Catalogue => "Browse for PO catalogue",
         }
@@ -49,6 +52,7 @@ impl Component for PathField {
                     .width(Size::flex(1.))
                     .placeholder(match kind {
                         PathKind::Project => "Project folder or recite.project.toml",
+                        PathKind::NewProject => "Folder for the new project",
                         PathKind::Schema => "/path/to/schema.toml",
                         PathKind::Catalogue => "/path/to/fr.po",
                     })
@@ -100,7 +104,9 @@ impl Component for PathField {
                                 return;
                             };
                             let selected = match kind {
-                                PathKind::Project => dialog.pick_folder().await,
+                                PathKind::Project | PathKind::NewProject => {
+                                    dialog.pick_folder().await
+                                }
                                 PathKind::Schema => {
                                     dialog
                                         .add_filter("Standalone schema", &["toml"])

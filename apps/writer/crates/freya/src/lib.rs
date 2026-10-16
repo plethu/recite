@@ -25,6 +25,7 @@ mod design;
 mod editing;
 mod examples;
 mod files;
+mod new_project;
 use design::palette;
 mod passage_menu;
 mod project;

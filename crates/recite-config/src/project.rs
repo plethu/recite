@@ -9,6 +9,9 @@ mod enumerate;
 mod glob;
 mod manifest;
 mod schema;
+mod starter;
+
+pub use starter::{StarterProjectError, create_starter_project, starter_files, starter_slug};
 
 pub use schema::{LoadedProjectSchema, ProjectSchemaError};
 
