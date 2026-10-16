@@ -1,5 +1,5 @@
 //! Stateful list navigation is local to the focused list, never to text insertion.
-use super::{keyboard, tokens as t};
+use super::{keyboard, tokens as t, tokens::PrintTypography};
 use freya::prelude::*;
 #[derive(Clone, Copy)]
 pub(crate) struct ListKeys(State<Option<AccessibilityId>>);
@@ -73,7 +73,7 @@ impl ListKeys {
         };
         label()
             .text(text)
-            .font_family("monospace")
+            .meta_font()
             .font_size(t::small())
             .color(t::colors().muted)
             .a11y_role(AccessibilityRole::Status)

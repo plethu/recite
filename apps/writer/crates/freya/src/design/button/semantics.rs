@@ -14,8 +14,8 @@ pub(super) enum Semantics {
 }
 
 impl Semantics {
-    pub(super) fn is_radio(self) -> bool {
-        matches!(self, Self::Radio { .. })
+    pub(super) fn is_tab(self) -> bool {
+        matches!(self, Self::Tab { .. })
     }
 
     pub(super) fn apply(self, control: Rect) -> Rect {

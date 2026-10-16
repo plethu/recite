@@ -34,6 +34,12 @@ pub(super) fn surface(target: Color, pressed: bool) -> Color {
     } else {
         animation.get().value()
     };
+    // A fade to transparent ends on the transparent target, not a zero-alpha tint of the start.
+    let value = if value.a() == 0 && target.a() == 0 {
+        target
+    } else {
+        value
+    };
     current.set(value);
     value
 }

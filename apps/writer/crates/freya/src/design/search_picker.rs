@@ -135,6 +135,7 @@ impl Component for SearchPicker {
                 .into_element()
         } else {
             Button::new()
+                .field()
                 .a11y_id(trigger)
                 .named(self.name.clone())
                 .enabled(self.enabled)
@@ -244,6 +245,7 @@ impl Component for SearchPicker {
                         .child(
                             button
                                 .flat()
+                                .row_gutter()
                                 .option(item.index == *selected)
                                 .width(Size::fill())
                                 .named(format!("{} · {}", option.title, option.value))
@@ -270,7 +272,7 @@ impl Component for SearchPicker {
                     .height(Size::fill())
                     .background(colors.floating)
                     .padding(t::SPACE_XS)
-                    .shadow((0., 6., 20., 0., colors.shadow))
+                    .shadow(super::material::offset(colors.teal, t::SHADOW_OFFSET))
                     .border(Border::new().width(1.).fill(colors.rule))
                     .corner_radius(t::DIALOG_RADIUS)
                     .on_sized(move |event: Event<SizedEventData>| {

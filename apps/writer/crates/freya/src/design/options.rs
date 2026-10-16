@@ -79,8 +79,7 @@ impl<const N: usize> Component for Segments<N> {
             .width(Size::px(segment_width))
             .height(Size::px((size.read().height - 2. * t::SPACE_XS).max(0.)))
             .corner_radius(t::RADIUS)
-            .background(colors.selection)
-            .border(Border::new().width(1.).fill(colors.accent));
+            .background(colors.stamp);
         let ids = self.ids;
         let selected = self.selected;
         let vim = self.vim;
@@ -91,8 +90,12 @@ impl<const N: usize> Component for Segments<N> {
             .width(self.width.clone())
             .padding(t::SPACE_XS)
             .corner_radius(t::RADIUS)
-            .background(colors.inset)
-            .border(Border::new().width(1.).fill(colors.rule))
+            .border(
+                Border::new()
+                    .width(t::STROKE_WIDTH)
+                    .alignment(BorderAlignment::Inner)
+                    .fill(colors.stamp),
+            )
             .on_sized(move |event: Event<SizedEventData>| size.set_if_modified(event.area.size))
             .child(indicator)
             .a11y_role(AccessibilityRole::RadioGroup)
@@ -121,8 +124,7 @@ impl<const N: usize> Component for Segments<N> {
             let change = self.change.clone();
             group = group.child(
                 Button::new()
-                    .flat()
-                    .radio(index == selected)
+                    .segment(index == selected)
                     .width(Size::flex(1.))
                     .a11y_id(ids[index])
                     .shortcut(
