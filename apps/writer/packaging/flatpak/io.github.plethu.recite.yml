@@ -87,5 +87,9 @@ modules:
       - install -Dm644 LICENSE /app/share/licenses/io.github.plethu.recite/LICENSE
       - install -Dm644 LICENSE-MIT /app/share/licenses/io.github.plethu.recite/LICENSE-MIT
       - install -Dm644 LICENSE-APACHE /app/share/licenses/io.github.plethu.recite/LICENSE-APACHE
+      - install -Dm644 apps/writer/crates/freya/fonts/fraunces/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/Fraunces-OFL.txt
+      - install -Dm644 apps/writer/crates/freya/fonts/literata/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/Literata-OFL.txt
+      - install -Dm644 apps/writer/crates/freya/fonts/ibm-plex-sans/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/IBM-Plex-Sans-OFL.txt
+      - install -Dm644 apps/writer/crates/freya/fonts/ibm-plex-mono/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/IBM-Plex-Mono-OFL.txt
 cleanup:
   - /bin/gn
