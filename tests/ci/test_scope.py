@@ -76,6 +76,17 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertNotIn("workflow-performance", selected(path))
 
+    def test_shared_tree_sitter_inputs_check_writer_and_editor_consumers(self):
+        for path in (
+            "editors/recite-tree-sitter/grammar.js",
+            "editors/recite-tree-sitter/src/parser.c",
+            "editors/recite-tree-sitter/queries/highlights.scm",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(
+                    selected(path), {"writer", "editor-native", "editor", "maintainability"}
+                )
+
     def test_lsp_measurement_changes_select_benchmark_lane(self):
         for path in (
             "scripts/check-lsp-performance.py",

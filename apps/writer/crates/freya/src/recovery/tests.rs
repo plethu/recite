@@ -152,3 +152,48 @@ fn recovery_owner_releases_lock_even_while_a_duplicate_descriptor_exists()
     drop(duplicate);
     Ok(())
 }
+
+#[test]
+fn recovery_serialization_preserves_bytes_with_bounded_underlying_writes()
+-> Result<(), Box<dyn std::error::Error>> {
+    #[derive(Default)]
+    struct Writes {
+        calls: usize,
+        bytes: Vec<u8>,
+    }
+    impl Write for Writes {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.calls += 1;
+            self.bytes.extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+    let mut workbench = Workbench::new(recite_writer_model::FIXTURE)?;
+    workbench.set_draft("escaped \"é💬\\\n".repeat(100_000));
+    let recovery = Recovery::new(recite_writer_model::FIXTURE.into(), workbench.recovery());
+    let expected = serde_json::to_vec(&recovery)?;
+    let mut output = Writes::default();
+    let mut encoding = encoding::Encoding::default();
+    write_snapshot(&mut output, &recovery, &mut encoding)?;
+    assert_eq!(output.bytes, expected);
+    assert!(
+        output.calls <= expected.len().div_ceil(8_000),
+        "{} writes for {} bytes",
+        output.calls,
+        expected.len()
+    );
+    struct Failed;
+    impl Write for Failed {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            Err(io::Error::other("write failed"))
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::other("flush failed"))
+        }
+    }
+    assert!(write_snapshot(Failed, &recovery, &mut encoding).is_err());
+    Ok(())
+}

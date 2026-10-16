@@ -12,7 +12,10 @@ check:
     mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-palette$'
     just writer packaging
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
+    cargo fmt --manifest-path apps/writer/vendor/freya-code-editor/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
+    cargo test --locked --manifest-path apps/writer/vendor/freya-code-editor/Cargo.toml
+    cargo clippy --locked --manifest-path apps/writer/vendor/freya-code-editor/Cargo.toml --all-targets -- -D warnings
     cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings -D clippy::excessive_nesting
     cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-features --lib --bins -- -D warnings -D clippy::cognitive_complexity -D clippy::excessive_nesting
     just writer heap
@@ -63,9 +66,10 @@ bench *args:
 bench-ui beats="1000":
     RECITE_BENCH_BEATS="$1" cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test scale -- --ignored --nocapture
 
-# Measure background draft queue, durable flush, and reopen timings.
+# Measure background draft queue, durable flush/reopen, and JSON serialization.
 bench-recovery:
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib recovery::tests::background_recovery_timing -- --ignored --nocapture
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib recovery::encoding::tests::recovery_serialization_timing -- --ignored --nocapture
 
 # Measure retained file sessions, edit history, saves and closing without a window.
 bench-sessions passages="10000" visits="20":

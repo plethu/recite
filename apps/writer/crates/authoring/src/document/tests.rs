@@ -228,3 +228,35 @@ fn exhausted_revision_does_not_disable_read_only_draft_completion()
     assert_eq!(document.source(), ":: start default\n-> END\n");
     Ok(())
 }
+
+#[test]
+fn retained_analysis_does_not_publish_an_interrupted_acceptance() -> Result<(), EditError> {
+    let next = format!("{}# proposed source\n", crate::FIXTURE);
+    let mut reference = Document::new(crate::FIXTURE)?;
+    let complete = control(usize::MAX);
+    reference.accept_with_control(next.clone(), &complete)?;
+    assert!(complete.calls.get() > 1);
+    for stop_at in 0..complete.calls.get() {
+        let mut document = Document::new(crate::FIXTURE)?;
+        let retained = document.completion_snapshot();
+        let script = document.script_snapshot()?;
+        let passages = document.passage_snapshot()?;
+        assert!(matches!(
+            document.accept_with_control(next.clone(), &control(stop_at)),
+            Err(EditError::Authoring(AuthoringError::Interrupted(_)))
+        ));
+        assert!(retained.is_current(&document));
+        assert_eq!(document.source(), crate::FIXTURE);
+        assert_eq!(document.revision(), 1);
+        assert!(!document.can_undo());
+        assert!(std::sync::Arc::ptr_eq(
+            &script,
+            &document.script_snapshot()?
+        ));
+        assert!(std::sync::Arc::ptr_eq(
+            &passages,
+            &document.passage_snapshot()?
+        ));
+    }
+    Ok(())
+}

@@ -36,7 +36,18 @@ module.exports = grammar({
   conflicts: ($) => [[$.markup_tag, $.prose_start], [$.markup_tag, $.prose_content]],
 
   rules: {
-    source_file: ($) => seq(repeat(sourceLines($)), finalLine($)),
+    // Fixed hidden groups seal Tree-sitter's fragile repetition edges without
+    // changing visible nodes or assigning source ownership. A separate hidden
+    // line rule lets ambiguous prose finish before the next line is parsed.
+    // Keep the final 0..7 terminated lines and unterminated line at the root:
+    // regrouping natural blocks or blanks changes incomplete-input recovery.
+    source_file: ($) => {
+      let tail = optional($._source_line);
+      for (let i = 1; i < 7; i++) tail = optional(seq($._source_line, tail));
+      return seq(repeat($._line_group), tail, finalLine($));
+    },
+    _line_group: ($) => seq(...Array.from({ length: 8 }, () => $._source_line)),
+    _source_line: ($) => sourceLines($),
 
     blank_line: ($) => seq(optional($.indent), $.newline),
     comment_line: ($) => commentLine($, $.newline),

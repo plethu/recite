@@ -1586,9 +1586,8 @@ dependencies = [
 [[package]]
 name = "freya-code-editor"
 version = "0.5.0-rc.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44d343b1c8110d09de89bc5eaf6161ebd214ae52df09c369febd187cfeffacab"
 dependencies = [
+ "async-channel",
  "freya-components",
  "freya-core",
  "freya-edit",
@@ -4024,6 +4023,7 @@ name = "recite-writer"
 version = "0.0.0"
 dependencies = [
  "accesskit",
+ "async-channel",
  "atomic-write-file",
  "criterion",
  "freya",
@@ -4056,6 +4056,7 @@ name = "recite-writer-grammar"
 version = "0.0.0"
 dependencies = [
  "cc",
+ "tree-sitter",
  "tree-sitter-language",
 ]
 
@@ -4069,6 +4070,7 @@ dependencies = [
  "recite-core",
  "recite-parser",
  "recite-runtime",
+ "ropey",
  "self_cell 1.3.0",
  "serde",
  "serde_json",

@@ -5,6 +5,10 @@ use recite_compiler::authoring::{
 use recite_core::{CoreValueError, Diagnostic, DocumentKey, schema::ProjectSchema};
 
 use crate::{DOCUMENT_NAME, Passage};
+use std::sync::Arc;
+
+mod completion;
+pub use completion::CompletionSnapshot;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {
@@ -52,8 +56,8 @@ pub struct Document {
     source: std::sync::Arc<str>,
     key: DocumentKey,
     version: i64,
-    kernel: AuthoringKernel,
-    context: ProjectContext,
+    kernel: Arc<AuthoringKernel>,
+    context: Arc<ProjectContext>,
     history: crate::history::History,
     pub(crate) projections: crate::projection_cache::ProjectionCache,
 }
@@ -91,8 +95,8 @@ impl Document {
             source: String::new().into(),
             key,
             version: 0,
-            kernel,
-            context,
+            kernel: Arc::new(kernel),
+            context: Arc::new(context),
             history: crate::history::History::default(),
             projections: crate::projection_cache::ProjectionCache::default(),
         };
@@ -133,8 +137,8 @@ impl Document {
             source,
             key,
             version,
-            kernel,
-            context,
+            kernel: Arc::new(kernel),
+            context: Arc::new(context),
             history: crate::history::History::default(),
             projections: crate::projection_cache::ProjectionCache::default(),
         })
@@ -162,6 +166,8 @@ impl Document {
         // The open source shadows its saved slot. Saving it or switching tabs
         // alone must not invalidate the preview or rebuild project analysis.
         if same_schema && same_inputs {
+            let context = Arc::new(context);
+            control.checkpoint().map_err(AuthoringError::from)?;
             self.context = context;
             return Ok(());
         }
@@ -174,30 +180,33 @@ impl Document {
             DocumentVersion::new(version),
             self.source_snapshot(),
         );
-        if same_schema {
-            self.kernel.apply_with_control(
+        let kernel = if same_schema {
+            self.kernel.updated(
                 AuthoringRequest::new(
                     self.kernel.snapshot().generation(),
                     context.documents.clone(),
                     [open],
                 ),
                 control,
-            )?;
+            )?
         } else {
-            let mut kernel = context
+            let kernel = context
                 .schema
                 .clone()
                 .map_or_else(|| Ok(AuthoringKernel::new()), AuthoringKernel::with_schema)?;
-            kernel.apply_with_control(
+            kernel.updated(
                 AuthoringRequest::new(
                     kernel.snapshot().generation(),
                     context.documents.clone(),
                     [open],
                 ),
                 control,
-            )?;
-            self.kernel = kernel;
-        }
+            )?
+        };
+        let kernel = Arc::new(kernel);
+        let context = Arc::new(context);
+        control.checkpoint().map_err(AuthoringError::from)?;
+        self.kernel = kernel;
         self.context = context;
         self.version = version;
         Ok(())
@@ -299,12 +308,8 @@ impl Document {
         Ok(())
     }
 
-    pub(crate) fn saved_documents(&self) -> &[SavedDocument] {
-        &self.context.documents
-    }
-
     pub(crate) fn project_context(&self) -> ProjectContext {
-        self.context.clone()
+        self.context.as_ref().clone()
     }
 
     pub(crate) fn kernel(&self) -> &AuthoringKernel {
@@ -331,7 +336,7 @@ impl Document {
             .checked_add(1)
             .ok_or(EditError::RevisionExhausted)?;
         let source: std::sync::Arc<str> = source.into();
-        self.kernel.apply_with_control(
+        let kernel = self.kernel.updated(
             AuthoringRequest::new(
                 self.kernel.snapshot().generation(),
                 self.context.documents.clone(),
@@ -343,6 +348,10 @@ impl Document {
             ),
             control,
         )?;
+        let kernel = Arc::new(kernel);
+        // Preparation is immutable; cancellation must still win before publication.
+        control.checkpoint().map_err(AuthoringError::from)?;
+        self.kernel = kernel;
         self.projections = crate::projection_cache::ProjectionCache::default();
         self.source = source;
         self.version = version;

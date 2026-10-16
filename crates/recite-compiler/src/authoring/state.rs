@@ -8,7 +8,7 @@ use super::{AuthoringSummary, Interrupted, WorkControl};
 
 mod preparation;
 use crate::validation::ValidationParticipation;
-use crate::validation::incremental::{ProjectFacts, ProjectIndex};
+use crate::validation::incremental::{ProjectDiagnostics, ProjectFacts, ProjectIndex};
 use recite_core::{Diagnostic, DocumentKey, schema::ProjectSchema};
 
 /// A monotonic generation identifying one accepted authoring state.
@@ -85,7 +85,7 @@ pub struct AuthoringKernel {
     open: BTreeMap<DocumentKey, OpenDocument>,
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
-    project_diagnostics: Arc<BTreeMap<DocumentKey, Vec<Diagnostic>>>,
+    project_diagnostics: Arc<ProjectDiagnostics>,
     project_index: Arc<ProjectIndex>,
     schema: Option<Arc<ProjectSchema>>,
     project_complete: bool,

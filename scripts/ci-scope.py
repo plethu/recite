@@ -196,6 +196,8 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"editor", "lsp-sessions", "maintainability"})
     if path.startswith(("editors/helix/", "tests/editor-hosts/helix/")):
         return frozenset({"editor", "maintainability"})
+    if path.startswith("editors/recite-tree-sitter/"):
+        return frozenset({"writer", "editor-native", "editor", "maintainability"})
     if path.startswith("editors/"):
         return frozenset({"editor-native", "editor", "maintainability"})
     if path.startswith(("fixtures/", "schemas/", "tests/editor-parity/")):

@@ -6,6 +6,8 @@ use super::{
 use recite_core::{ast::Statement, schema::ProjectSchema};
 
 mod borrowed;
+mod reports;
+pub(crate) use reports::{ProjectDiagnostics, ProjectReports};
 mod facts;
 pub(crate) use facts::{FactRanges, ProjectFacts};
 mod index;
@@ -34,7 +36,7 @@ fn validate_context(
     facts: &[&ProjectFacts],
     complete: bool,
     stable_complete: bool,
-) -> Vec<recite_core::Diagnostic> {
+) -> ProjectReports {
     let diagnostics = borrowed::validate(facts, complete, stable_complete);
     if cfg!(test) {
         VALIDATED_DOCUMENTS.with(|count| count.set(count.get() + facts.len()));

@@ -1,6 +1,6 @@
 //! Share validation contexts without materializing an entire large project's AST.
 use super::{
-    BTreeMap, BTreeSet, Diagnostic, DocumentKey, Interrupted, ProjectIndex, WorkControl,
+    Arc, BTreeSet, DocumentKey, Interrupted, ProjectDiagnostics, ProjectIndex, WorkControl,
     extend_members,
 };
 use crate::validation::incremental::validate_context;
@@ -14,7 +14,7 @@ impl ProjectIndex {
     pub(super) fn revalidate(
         &self,
         affected: &BTreeSet<DocumentKey>,
-        diagnostics: &mut BTreeMap<DocumentKey, Vec<Diagnostic>>,
+        diagnostics: &mut ProjectDiagnostics,
         control: &dyn WorkControl,
     ) -> Result<(), Interrupted> {
         let mut context = BTreeSet::new();
@@ -62,7 +62,7 @@ impl ProjectIndex {
         &self,
         context: &BTreeSet<DocumentKey>,
         targets: &BTreeSet<DocumentKey>,
-        diagnostics: &mut BTreeMap<DocumentKey, Vec<Diagnostic>>,
+        diagnostics: &mut ProjectDiagnostics,
         control: &dyn WorkControl,
     ) -> Result<(), Interrupted> {
         if targets.is_empty() {
@@ -71,7 +71,7 @@ impl ProjectIndex {
         control.checkpoint()?;
         let facts: Vec<_> = context
             .iter()
-            .filter_map(|key| self.documents.get(key).map(std::sync::Arc::as_ref))
+            .filter_map(|key| self.documents.get(key).map(Arc::as_ref))
             .collect();
         if cfg!(test) {
             MAX_VALIDATED_PASSAGES.with(|count| {
@@ -80,10 +80,18 @@ impl ProjectIndex {
         }
         // Context providers may lack their own dependencies. Publish only the
         // batch's target diagnostics, whose complete contexts are present.
-        for diagnostic in validate_context(&facts, self.complete, self.stable_complete) {
-            control.checkpoint()?;
-            if let Some(key) = targets.get(diagnostic.span.file.as_str()) {
-                diagnostics.entry(key.clone()).or_default().push(diagnostic);
+        let reports = validate_context(&facts, self.complete, self.stable_complete);
+        for (references, reports) in [(false, reports.structural), (true, reports.references)] {
+            for diagnostic in Arc::unwrap_or_clone(reports) {
+                control.checkpoint()?;
+                if let Some(key) = targets.get(diagnostic.span.file.as_str()) {
+                    let reports = diagnostics.entry(key.clone()).or_default();
+                    if references {
+                        Arc::make_mut(&mut reports.references).push(diagnostic);
+                    } else {
+                        Arc::make_mut(&mut reports.structural).push(diagnostic);
+                    }
+                }
             }
         }
         Ok(())

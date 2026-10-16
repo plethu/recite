@@ -10,7 +10,7 @@ impl ProjectFacts {
             && self
                 .blocks
                 .iter()
-                .zip(&next.blocks)
+                .zip(next.blocks.iter())
                 .all(|(a, b)| a.id == b.id && a.default == b.default)
             && self.passages.len() == next.passages.len()
             && self
@@ -19,15 +19,17 @@ impl ProjectFacts {
                 .zip(next.passages.iter())
                 .all(|(a, b)| a.identity == b.identity && a.frozen == b.frozen)
             && self.references.len() == next.references.len()
-            && self.references.iter().zip(&next.references).all(|(a, b)| {
-                match (&a.target, &b.target) {
+            && self
+                .references
+                .iter()
+                .zip(next.references.iter())
+                .all(|(a, b)| match (&a.target, &b.target) {
                     (DivertTarget::End, DivertTarget::End) => true,
                     (DivertTarget::Block(a), DivertTarget::Block(b)) => {
                         a.file == b.file && a.block_id == b.block_id
                     }
                     _ => false,
-                }
-            })
+                })
     }
 
     /// Primary project diagnostic locations. Reference token spans are not used

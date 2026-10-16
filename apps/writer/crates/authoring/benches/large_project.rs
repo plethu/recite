@@ -1,6 +1,8 @@
 //! Run explicitly with --features benchmarks; emits timings and host memory evidence.
 #[path = "large_project/completion.rs"]
 mod completion;
+#[path = "large_project/drafts.rs"]
+mod drafts;
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::{Document, ProjectContext, SearchIndex, View, Workbench, workload};
 use serde_json::{Value, json};
@@ -192,6 +194,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let queued = measure("clone_draft_snapshot", &mut rows, || snapshot.clone());
         assert_eq!(queued, snapshot);
     }
+    drafts::run(&mut workbench, &mut rows)?;
     let peak = std::fs::read_to_string("/proc/self/status")
         .ok()
         .and_then(|text| {
@@ -212,10 +215,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some("prose_edit_and_script") => Some(1_200_000),
                 Some("accepted_draft_completion") => Some(35_000),
                 Some("changed_draft_completion") => Some(1_600_000),
+                Some("capture_completion_snapshot") => {
+                    dhat::assert!(row["allocations"].as_u64().is_some_and(|count| count <= 1));
+                    Some(128)
+                }
                 Some("edit" | "undo" | "redo" | "multiline_edit" | "id_edit") => Some(4_000_000),
                 Some("common_search" | "common_multiword_search") => Some(20_000),
                 Some("expanded_search") => Some(750_000),
-                Some("clone_search_results" | "draft_snapshot" | "clone_draft_snapshot") => {
+                Some("source_widget_snapshot" | "source_widget_equal_length_snapshot") => {
+                    dhat::assert!(row["allocations"].as_u64().is_some_and(|count| count <= 2));
+                    Some(256)
+                }
+                Some(
+                    "clone_search_results"
+                    | "draft_snapshot"
+                    | "clone_draft_snapshot"
+                    | "select_source_snapshot",
+                ) => {
                     dhat::assert!(row["allocations"].as_u64() == Some(0));
                     Some(1)
                 }

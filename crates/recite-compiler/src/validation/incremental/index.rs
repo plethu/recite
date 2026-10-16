@@ -1,6 +1,6 @@
 //! Incremental document dependencies, with the batch validator as policy owner.
 //! Only changed documents and consumers/colliders of their exports are checked.
-use super::{ProjectFacts, facts::Symbol};
+use super::{ProjectDiagnostics, ProjectFacts, facts::Symbol};
 use crate::authoring::{Interrupted, WorkControl};
 use crate::validation::project::first_source_span;
 use recite_core::{Diagnostic, DocumentKey, ast::SourceFile};
@@ -9,6 +9,7 @@ use std::{
     sync::Arc,
 };
 
+mod references;
 mod relocation;
 mod validation;
 
@@ -28,12 +29,17 @@ impl ProjectIndex {
         &mut self,
         changes: impl IntoIterator<Item = (DocumentKey, Option<Arc<ProjectFacts>>)>,
         complete: bool,
-        diagnostics: &mut BTreeMap<DocumentKey, Vec<Diagnostic>>,
+        diagnostics: &mut ProjectDiagnostics,
         control: &dyn WorkControl,
     ) -> Result<BTreeSet<DocumentKey>, Interrupted> {
         let changes: Vec<_> = changes.into_iter().collect();
         if changes.is_empty() && self.complete == complete {
             return Ok(BTreeSet::new());
+        }
+        if self.complete == complete
+            && let Some(affected) = self.references_only(&changes, diagnostics, control)?
+        {
+            return Ok(affected);
         }
         if self.complete == complete
             && let Some(affected) = self.relocate_only(&changes, diagnostics, control)?
@@ -117,7 +123,7 @@ impl ProjectIndex {
         }
         self.revalidate(&affected, diagnostics, control)?;
         if let Some((key, diagnostic)) = self.missing_default() {
-            diagnostics.entry(key).or_default().push(diagnostic);
+            Arc::make_mut(&mut diagnostics.entry(key).or_default().structural).push(diagnostic);
         }
         Ok(affected)
     }

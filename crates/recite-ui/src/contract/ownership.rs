@@ -100,6 +100,8 @@ pub(super) const fn clients(id: MsgId) -> &'static [Client] {
         | MsgId::WriterCompleteSource
         | MsgId::WriterFilterCompletions
         | MsgId::WriterNoCompletions
+        | MsgId::WriterFindingCompletions
+        | MsgId::WriterCompletionsUnavailable
         | MsgId::WriterReturnTranslation
         | MsgId::WriterTrialSaved
         | MsgId::WriterTrialDrafts

@@ -31,6 +31,8 @@ fn reference_only_revisions_share_exact_passages_and_keep_current_participation(
     assert_eq!(joined, fresh);
     assert!(!Arc::ptr_eq(&joined, &previous));
     assert!(Arc::ptr_eq(&joined.passages, &previous.passages));
+    assert!(Arc::ptr_eq(&joined.blocks, &previous.blocks));
+    assert!(!Arc::ptr_eq(&joined.references, &previous.references));
     let mut incomplete = fresh.as_ref().clone();
     incomplete.participation = ValidationParticipation::all_incomplete();
     let incomplete = Arc::new(incomplete);
@@ -64,6 +66,14 @@ fn changed_identity_echo_frozen_state_and_coordinates_require_new_passages() {
         let joined = join(&fresh, &previous);
         assert_eq!(joined, fresh);
         assert!(!Arc::ptr_eq(&joined.passages, &previous.passages));
+        assert_eq!(
+            Arc::ptr_eq(&joined.blocks, &previous.blocks),
+            fresh.blocks == previous.blocks
+        );
+        assert_eq!(
+            Arc::ptr_eq(&joined.references, &previous.references),
+            fresh.references == previous.references
+        );
         assert_eq!(previous.as_ref(), &original);
     }
 }

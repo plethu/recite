@@ -260,7 +260,10 @@ fn close(mut writer: Writer, path: &std::path::Path) -> bool {
             model.view() == &recite_writer_model::View::Source,
             writer.dark,
         ));
-        writer.buffers.prose.set(model.draft().into());
+        writer
+            .buffers
+            .prose
+            .set(crate::buffers::prose_draft(model).into());
     }
     writer.selection.set(None);
     true

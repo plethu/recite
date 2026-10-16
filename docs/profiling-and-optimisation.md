@@ -81,15 +81,43 @@ Project measurements include selective, common single-word, common multiword and
 search, plus whole-document Source draft capture and snapshot cloning. Search keeps exact counts and
 source order; result snapshots retain their saved shards across replacements. The fixed
 10,000-passage heap check bounds 100-hit searches at 20 KB and 10,000-hit expansion at 750 KB, and
-requires allocation-free result clones and Source recovery capture/clones. Existing index,
-projection, edit and peak-heap bounds remain in force. Applying Source drafts and serializing
+requires allocation-free result clones and Source recovery capture/clones. Source widget snapshot,
+dirty-state observation and recovery capture are additionally bounded at 256 allocated bytes,
+including equal-length replacements. Capturing completion analysis is bounded at one allocation and
+128 bytes, independent of project contents. Existing index, projection, edit and peak-heap bounds
+remain in force. Widget drafts share immutable Rope snapshots; contiguous access is explicit, and
+recovery streams the draft as the same version-1 JSON string. Applying Source drafts and serializing
 recovery still process the full text.
 
+Selecting Source shares accepted immutable bytes without allocation. Harvesting editor state retains
+the Rope snapshot until a consumer explicitly needs contiguous text; the inactive prose widget
+retains no Source text. Equal saved-baseline and discovery bytes share storage only after both
+existing reads, so a concurrent disk change keeps the two authorities distinct.
+
 Source completion queries the accepted kernel for unchanged bytes and prepares one independent
-overlay for a changed draft, preserving accepted state and saved-document analysis. The popup and
-keyboard share a result bound to the document identity, revision, draft and cursor. Sidebar captions
-scan authored END destinations without classifying the full flow graph; unchanged ordered names and
-badges share captions across prose edits.
+overlay for a changed draft, preserving accepted state and saved-document analysis. The popup uses
+one lazy worker with capacity-one request/result channels and cooperative cancellation; input never
+waits for draft flattening or completion analysis. Pending and failed queries have distinct feedback
+and no selectable results. Popup and keyboard activation recheck the request, accepted
+analysis/context, draft and cursor. Recovery retains at most two escaped static source strings to
+avoid re-encoding unchanged baseline/applied text; draft encoding and durable writes remain
+full-text work. Sidebar captions scan authored END destinations without classifying the full flow
+graph; unchanged ordered names and badges share captions across prose edits.
+
+The shared authoring kernel separates reference reports from declaration reports. A reference-only
+revision reuses declaration reports only when every changed document retains exact non-reference
+facts, participation and spans, and project completeness is unchanged. Current reference providers
+still use the batch validator's lookup rules. The fixed 10,000-ID regression requires correct
+resolved/unresolved reports without entering full project validation; differential tests cover
+provider changes, recovery, relocation and cancellation. Report families share immutable diagnostic
+payloads across speculative map copies; changed reference reports replace their storage. A fixed
+1,000-error test checks retained and untouched reports and fresh-analysis parity. Publishing a
+changed document's flat diagnostics still copies those values.
+
+Each summary and project-fact family separately shares its unchanged ordered records and source
+spans. Relocation separates only nonempty families before mutating them. A fixed 10,000-record test
+requires zero record clones and comparisons for identity-preserving joins; changed records must
+still produce exact current values without altering retained snapshots.
 
 Compiler completion and hover sites use the snapshot's line index and compute replacement spans
 within the selected line. Contextual speaker metadata walks preceding indexed lines only as far as
@@ -115,11 +143,16 @@ uses copy-on-write when its content is changed; retained snapshots remain indepe
 The session workload runs discovery/indexing, first visits and edits, revisits with undo/redo,
 save-all and explicit closing. It checks preserved prose/history and released session owners and
 reports RSS, peak RSS and thread checkpoints where the host exposes them. RSS can retain allocator
-pages after closing; it is not a live-heap measurement. Recovery timing queues full-document Source
-drafts and verifies the latest durable snapshot after reopening. These workloads are headless and
-opt-in; recovery reports draft buffer preparation separately from snapshot queuing and durable
-flush. Limit build jobs and run measurements sequentially on a shared machine; record process
-resource limits and background load with the evidence.
+pages after closing; it is not a live-heap measurement. Inactive document recovery stores drain and
+join their worker while retaining the disk lock and encoding cache; changed work restarts lazily.
+Retained persistence, including rename history, parks through one private owner. A fixed 40-store
+test checks thread release, retained locks/cache and durable values; the isolated session workload
+bounds thread growth at one above its opened checkpoint through visits, revisits and closes.
+Recovery timing queues full-document Source drafts and verifies the latest durable snapshot after
+reopening. These workloads are headless and opt-in; recovery reports draft buffer preparation
+separately from snapshot queuing and durable flush. Limit build jobs and run measurements
+sequentially on a shared machine; record process resource limits and background load with the
+evidence.
 
 Catalogue workloads cover an authored scene and generated Unicode PO files, draft recovery capture,
 Save All, and exact-count substring filtering with a populated current scene. Index preparation and

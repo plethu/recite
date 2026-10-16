@@ -1,7 +1,7 @@
 //! Preserve project diagnostics when only their source positions changed.
 use super::{
-    Arc, BTreeMap, BTreeSet, Diagnostic, DocumentKey, Interrupted, ProjectFacts, ProjectIndex,
-    WorkControl,
+    Arc, BTreeMap, BTreeSet, Diagnostic, DocumentKey, Interrupted, ProjectDiagnostics,
+    ProjectFacts, ProjectIndex, WorkControl,
 };
 use recite_core::{SourcePosition, SourceSpan};
 
@@ -15,7 +15,7 @@ impl ProjectIndex {
     pub(super) fn relocate_only(
         &mut self,
         changes: &[(DocumentKey, Option<Arc<ProjectFacts>>)],
-        diagnostics: &mut BTreeMap<DocumentKey, Vec<Diagnostic>>,
+        diagnostics: &mut ProjectDiagnostics,
         control: &dyn WorkControl,
     ) -> Result<Option<BTreeSet<DocumentKey>>, Interrupted> {
         for (key, next) in changes {
@@ -34,7 +34,7 @@ impl ProjectIndex {
             control.checkpoint()?;
             if !diagnostics
                 .values()
-                .flatten()
+                .flat_map(super::super::ProjectReports::iter)
                 .any(|diagnostic| spans(diagnostic).any(|span| span.file == key.as_str()))
             {
                 continue;
@@ -65,7 +65,12 @@ impl ProjectIndex {
                 }
             }
             // Position changes may change diagnostic ordering in a document.
-            super::super::super::project::sort_diagnostics_by_source(reports);
+            super::super::super::project::sort_diagnostics_by_source(
+                Arc::make_mut(&mut reports.structural).as_mut_slice(),
+            );
+            super::super::super::project::sort_diagnostics_by_source(
+                Arc::make_mut(&mut reports.references).as_mut_slice(),
+            );
         }
         // All validation and mapping succeeded before changing the candidate.
         for (key, next) in changes {

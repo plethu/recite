@@ -1,6 +1,7 @@
 //! Composition of region facts without retaining duplicate per-region arrays.
 use super::ProjectFacts;
 use crate::region_outputs;
+use crate::region_outputs::region_mut;
 use crate::validation::ValidationParticipation;
 use std::{ops::Range, sync::Arc};
 
@@ -19,57 +20,35 @@ impl ProjectFacts {
         parts: &[(&Self, &FactRanges)],
         previous: Option<&Arc<Self>>,
     ) -> Arc<Self> {
-        let unchanged_passages = previous.filter(|previous| {
-            region_outputs::matches(
+        let joined = Self {
+            path: path.into(),
+            participation,
+            blocks: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
+                previous.map(|old| &old.blocks),
+            ),
+            passages: region_outputs::join_shared(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
-                &previous.passages,
-            )
-        });
-        if let Some(previous) = unchanged_passages
-            && previous.participation == participation
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
-                &previous.blocks,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.references[ranges[2].clone()]),
-                &previous.references,
-            )
-        {
-            return Arc::clone(previous);
-        }
-        Arc::new(Self {
-            path: path.into(),
-            participation,
-            blocks: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
-            )
-            .into_boxed_slice(),
-            passages: unchanged_passages.map_or_else(
-                || {
-                    Arc::new(region_outputs::collect(
-                        parts
-                            .iter()
-                            .map(|(part, ranges)| &part.passages[ranges[1].clone()]),
-                    ))
-                },
-                |previous| Arc::clone(&previous.passages),
+                previous.map(|old| &old.passages),
             ),
-            references: region_outputs::collect(
+            references: region_outputs::join_shared(
                 parts
                     .iter()
                     .map(|(part, ranges)| &part.references[ranges[2].clone()]),
-            )
-            .into_boxed_slice(),
-        })
+                previous.map(|old| &old.references),
+            ),
+        };
+        if let Some(previous) = previous
+            && joined.shares_storage(previous)
+        {
+            Arc::clone(previous)
+        } else {
+            Arc::new(joined)
+        }
     }
 }
 
@@ -79,15 +58,13 @@ impl ProjectFacts {
         ranges: &FactRanges,
         mut shift: impl FnMut(&mut recite_core::SourceSpan),
     ) {
-        for item in &mut self.blocks[ranges[0].clone()] {
+        for item in region_mut(&mut self.blocks, ranges[0].clone()) {
             shift(&mut item.span);
         }
-        if !ranges[1].is_empty() {
-            for item in &mut Arc::make_mut(&mut self.passages)[ranges[1].clone()] {
-                shift(&mut item.span);
-            }
+        for item in region_mut(&mut self.passages, ranges[1].clone()) {
+            shift(&mut item.span);
         }
-        for item in &mut self.references[ranges[2].clone()] {
+        for item in region_mut(&mut self.references, ranges[2].clone()) {
             shift(&mut item.span);
             if let recite_core::ast::DivertTarget::Block(target) = &mut item.target {
                 target.file_span.iter_mut().for_each(&mut shift);

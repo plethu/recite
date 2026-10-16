@@ -687,6 +687,8 @@ writer-complete-source = Complete at cursor
 writer-filter-completions = Filter suggestions
 
 writer-no-completions = No suggestions at this position.
+writer-finding-completions = Finding suggestions…
+writer-completions-unavailable = Suggestions unavailable.
 
 writer-return-translation = Return to translation
 

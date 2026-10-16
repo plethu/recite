@@ -12,7 +12,14 @@ pub fn editor_data(text: &str, source: bool, dark: bool) -> CodeEditorData {
     });
     let mut data = CodeEditorData::new(Rope::from_str(text), language);
     data.set_theme(super::palette::syntax(dark));
-    data.parse();
+    if source {
+        if let Err(error) = data.enable_background_highlighting() {
+            eprintln!("Could not start source highlighting: {error}");
+            data.parse();
+        }
+    } else {
+        data.parse();
+    }
     data.measure(
         if source { 15. } else { 20. },
         if source { "monospace" } else { "serif" },
@@ -33,14 +40,12 @@ pub(crate) fn perform(
     let mut state = model.write();
     let outcome = match state.as_mut() {
         Ok(session) => {
-            session.set_draft(if matches!(session.view(), View::Source) {
-                editor.peek().rope.to_string()
-            } else {
-                prose.peek().clone()
-            });
+            crate::buffers::harvest_draft(session, &editor.peek().rope, &prose.peek());
             let previous_view = session.view().clone();
             action(session).map(|()| {
-                if session.view() != &previous_view || session.draft() != editor.peek().rope {
+                if session.view() != &previous_view
+                    || !session.draft_snapshot().matches_rope(&editor.peek().rope)
+                {
                     editor.set(editor_data(
                         session.draft(),
                         matches!(session.view(), View::Source),
@@ -52,7 +57,7 @@ pub(crate) fn perform(
                         .bookmarks
                         .restore(session.document().key().as_str(), &mut editor.write());
                 }
-                prose.set_if_modified(session.draft().to_owned());
+                prose.set_if_modified(crate::buffers::prose_draft(session).to_owned());
             })
         }
         Err(error) => {

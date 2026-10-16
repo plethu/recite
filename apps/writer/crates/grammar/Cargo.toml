@@ -12,6 +12,9 @@ tree-sitter-language = "0.1.8"
 [build-dependencies]
 cc = "1"
 
+[dev-dependencies]
+tree-sitter = "0.26"
+
 # This crate alone owns the standard generated tree-sitter C ABI binding.
 [lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

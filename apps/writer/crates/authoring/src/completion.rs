@@ -1,16 +1,12 @@
 //! Completion queries use the current draft without applying it to the document.
 use crate::{Document, EditError};
-use recite_compiler::authoring::{
-    AuthoringRequest, CancellationToken, CompletionCandidate, DocumentVersion, OpenDocument,
-    QueryResult,
-};
+use recite_compiler::authoring::{CancellationToken, CompletionCandidate};
 use recite_core::{SourceLineIndex, SourcePosition};
-use std::sync::Arc;
 
 #[derive(Clone, PartialEq)]
 pub struct SourceCompletions {
-    source: SourceLineIndex,
-    candidates: Vec<CompletionCandidate>,
+    pub(super) source: SourceLineIndex,
+    pub(super) candidates: Vec<CompletionCandidate>,
 }
 impl SourceCompletions {
     /// Exact draft bytes captured with these replacement spans.
@@ -70,44 +66,7 @@ impl Document {
         draft: &str,
         position: SourcePosition,
     ) -> Result<SourceCompletions, EditError> {
-        let accepted = draft == self.source();
-        let source = if accepted {
-            self.source_snapshot()
-        } else {
-            Arc::from(draft)
-        };
-        let updated;
-        let fallback;
-        let snapshot = if accepted {
-            self.kernel().snapshot()
-        } else if let Some(version) = self.revision().checked_add(1) {
-            updated = self.kernel().updated(
-                AuthoringRequest::new(
-                    self.kernel().snapshot().generation(),
-                    self.saved_documents().to_vec(),
-                    [OpenDocument::from_shared(
-                        self.key().clone(),
-                        DocumentVersion::new(version),
-                        source.clone(),
-                    )],
-                ),
-                &CancellationToken::new(),
-            )?;
-            updated.snapshot()
-        } else {
-            // A read-only draft query still works after the accepted version is exhausted.
-            fallback = Self::in_project(self.key().clone(), draft, self.project_context())?;
-            fallback.kernel().snapshot()
-        };
-        let candidates = match snapshot.complete(self.key(), position) {
-            QueryResult::Ready(value) | QueryResult::Partial { value, .. } => value,
-            _ => Vec::new(),
-        };
-        let source = snapshot
-            .document(self.key())
-            .ok_or(EditError::Position)?
-            .source_index()
-            .clone();
-        Ok(SourceCompletions { source, candidates })
+        self.completion_snapshot()
+            .complete(draft, position, &CancellationToken::new())
     }
 }

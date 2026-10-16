@@ -12,7 +12,7 @@ impl Workbench {
             .cloned()
             .or_else(|| sections.first().map(|block| block.id.clone()));
         // The old draft was already committed; history may have removed its target.
-        self.load(String::new());
+        self.load(String::new().into());
         match block {
             Some(block) => self.inspect_block(&block),
             None => self.select(View::Source),
@@ -28,19 +28,20 @@ impl Workbench {
     pub fn select(&mut self, view: View) -> Result<(), WorkbenchError> {
         self.require_applied()?;
         let text = match &view {
-            View::Source => self.document.source().to_owned(),
+            View::Source => self.document.source_snapshot().into(),
             View::Block(block) => {
                 if !self.document.sections().contains(block) {
                     return Err(EditError::Destination.into());
                 }
-                String::new()
+                String::new().into()
             }
             View::Passage(id) => self
                 .document
                 .find_passage(id)?
                 .ok_or(EditError::MissingPassage)?
                 .text
-                .clone(),
+                .clone()
+                .into(),
         };
         let block = match &view {
             View::Block(block) => Some(block.clone()),

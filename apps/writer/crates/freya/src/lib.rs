@@ -82,7 +82,7 @@ pub fn editor_app() -> Element {
 
 fn workbench(mode: AppMode) -> Element {
     let initial = use_try_consume::<InitialSource>();
-    let mut model = use_state(move || {
+    let model = use_state(move || {
         if mode == AppMode::Regression
             && let Some(initial) = initial
         {
@@ -136,27 +136,10 @@ fn workbench(mode: AppMode) -> Element {
         model
             .peek()
             .as_ref()
-            .map_or("", Workbench::draft)
+            .map_or("", buffers::prose_draft)
             .to_owned()
     });
-    use_side_effect(move || {
-        let draft = if model
-            .peek()
-            .as_ref()
-            .is_ok_and(|m| matches!(m.view(), View::Source))
-        {
-            editor.read().rope.to_string()
-        } else {
-            prose.read().clone()
-        };
-        let differs = model
-            .peek()
-            .as_ref()
-            .is_ok_and(|session| session.draft() != draft);
-        if differs && let Ok(session) = model.write().as_mut() {
-            session.set_draft(draft);
-        }
-    });
+    buffers::observe_draft(model, editor, prose);
     let editor_id = use_a11y();
     let rules = use_state(|| None);
     let buffers = buffers::Buffers {

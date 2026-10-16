@@ -198,6 +198,8 @@ resource_ids = [
     "writer-complete-source",
     "writer-filter-completions",
     "writer-no-completions",
+    "writer-finding-completions",
+    "writer-completions-unavailable",
 
     "writer-lookup-matched",
     "writer-lookup-missing",

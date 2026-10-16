@@ -16,6 +16,11 @@ pub(super) fn run(
     let draft = format!("{}-> beat_\n", &original[..last_jump]);
     let changed_position = position(&draft, last_jump)?;
     for _ in 0..5 {
+        let captured = measure("capture_completion_snapshot", rows, || {
+            document.completion_snapshot()
+        });
+        assert!(captured.is_current(document));
+        assert!(captured.same_analysis(&document.completion_snapshot()));
         for (operation, text, cursor) in [
             (
                 "accepted_draft_completion",

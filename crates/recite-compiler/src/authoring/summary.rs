@@ -17,12 +17,12 @@ pub use types::*;
 #[derive(Clone, Debug, Default, PartialEq)]
 #[non_exhaustive]
 pub struct AuthoringSummary {
-    blocks: Vec<BlockDefinitionSummary>,
-    block_references: Vec<BlockReferenceSummary>,
+    blocks: Arc<Vec<BlockDefinitionSummary>>,
+    block_references: Arc<Vec<BlockReferenceSummary>>,
     stable_ids: Arc<Vec<StableIdSummary>>,
-    metadata: Vec<MetadataSummary>,
-    condition_functions: Vec<FunctionReferenceSummary>,
-    effect_functions: Vec<FunctionReferenceSummary>,
+    metadata: Arc<Vec<MetadataSummary>>,
+    condition_functions: Arc<Vec<FunctionReferenceSummary>>,
+    effect_functions: Arc<Vec<FunctionReferenceSummary>>,
 }
 
 impl AuthoringSummary {
@@ -32,12 +32,12 @@ impl AuthoringSummary {
             collector.block(block);
         }
         Self {
-            blocks: collector.blocks,
-            block_references: collector.block_references,
+            blocks: Arc::new(collector.blocks),
+            block_references: Arc::new(collector.block_references),
             stable_ids: Arc::new(collector.stable_ids),
-            metadata: collector.metadata,
-            condition_functions: collector.condition_functions,
-            effect_functions: collector.effect_functions,
+            metadata: Arc::new(collector.metadata),
+            condition_functions: Arc::new(collector.condition_functions),
+            effect_functions: Arc::new(collector.effect_functions),
         }
     }
 

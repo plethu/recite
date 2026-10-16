@@ -183,6 +183,8 @@ message_ids! {
     WriterCompleteSource,
     WriterFilterCompletions,
     WriterNoCompletions,
+    WriterFindingCompletions,
+    WriterCompletionsUnavailable,
 
     WriterLookupMatched,
     WriterLookupMissing,

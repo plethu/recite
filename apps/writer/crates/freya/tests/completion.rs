@@ -103,3 +103,36 @@ fn completion_replaces_the_diagnostic_token_without_applying_the_draft()
     );
     Ok(())
 }
+
+#[test]
+fn empty_completion_feedback_stays_inside_its_popup() -> Result<(), Box<dyn std::error::Error>> {
+    let mut test = TestingRunner::new(
+        recite_writer::regression_app,
+        Size2D::new(1200., 900.),
+        |runner| {
+            runner.provide_root_context(|| {
+                recite_writer::InitialSource("# no suggestions here".into())
+            });
+        },
+        1.,
+    )
+    .0;
+    support::click(&mut test, "Complete at cursor")?;
+    let picker = test
+        .find(|node, e| {
+            Rect::try_downcast(e)
+                .filter(|r| r.accessibility.builder.role() == AccessibilityRole::ListBox)
+                .map(|_| node.layout().area)
+        })
+        .ok_or("empty completion picker")?;
+    let feedback = test
+        .find(|node, e| {
+            Label::try_downcast(e)
+                .filter(|label| label.text.as_ref() == "No suggestions at this position.")
+                .map(|_| node.layout().area)
+        })
+        .ok_or("empty completion feedback")?;
+    assert!(feedback.min_x() >= picker.min_x() && feedback.max_x() <= picker.max_x());
+    assert!(feedback.min_y() >= picker.min_y() && feedback.max_y() <= picker.max_y());
+    Ok(())
+}

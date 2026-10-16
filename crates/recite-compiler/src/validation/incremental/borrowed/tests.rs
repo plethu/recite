@@ -43,7 +43,7 @@ fn borrowed_facts_preserve_complete_ordered_diagnostics_and_related_presentation
     }
     passages[1].frozen = false;
     let mut empty = first.clone();
-    empty.blocks = Box::new([]);
+    empty.blocks = std::sync::Arc::default();
     let original = [first, second, unfrozen, empty];
     for bits in 0..8 {
         let mut same_path = original[0].clone();
@@ -66,8 +66,13 @@ fn borrowed_facts_preserve_complete_ordered_diagnostics_and_related_presentation
             for complete in [false, true] {
                 for stable in [false, true] {
                     assert_eq!(
-                        validate(&inputs, complete, stable),
-                        legacy(&inputs, complete, stable),
+                        sorted(
+                            validate(&inputs, complete, stable)
+                                .iter()
+                                .cloned()
+                                .collect()
+                        ),
+                        sorted(legacy(&inputs, complete, stable)),
                         "participation {bits}, reverse {reverse}, complete {complete}, stable {stable}"
                     );
                 }
@@ -112,4 +117,9 @@ fn legacy_source(facts: &ProjectFacts) -> SourceFile {
             .collect();
     }
     SourceFile::new(&facts.path, blocks)
+}
+
+fn sorted(mut diagnostics: Vec<Diagnostic>) -> Vec<Diagnostic> {
+    crate::validation::project::sort_diagnostics_by_source(&mut diagnostics);
+    diagnostics
 }

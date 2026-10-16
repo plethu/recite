@@ -2069,19 +2069,6 @@
   {
     "type": "archive",
     "archive-type": "tar-gzip",
-    "url": "https://static.crates.io/crates/freya-code-editor/freya-code-editor-0.5.0-rc.7.crate",
-    "sha256": "44d343b1c8110d09de89bc5eaf6161ebd214ae52df09c369febd187cfeffacab",
-    "dest": "cargo/vendor/freya-code-editor-0.5.0-rc.7"
-  },
-  {
-    "type": "inline",
-    "contents": "{\"package\": \"44d343b1c8110d09de89bc5eaf6161ebd214ae52df09c369febd187cfeffacab\", \"files\": {}}",
-    "dest": "cargo/vendor/freya-code-editor-0.5.0-rc.7",
-    "dest-filename": ".cargo-checksum.json"
-  },
-  {
-    "type": "archive",
-    "archive-type": "tar-gzip",
     "url": "https://static.crates.io/crates/freya-components/freya-components-0.5.0-rc.7.crate",
     "sha256": "e981d2d61e23633677f347c92525f97bfc6abf54ad5801cdc0f83ccee327c8d3",
     "dest": "cargo/vendor/freya-components-0.5.0-rc.7"

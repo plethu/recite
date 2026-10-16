@@ -2,6 +2,7 @@
 //! Parsing, validation, IDs, compilation, and preview use the real Recite crates.
 
 mod document;
+mod draft_snapshot;
 mod edits;
 mod examples;
 mod flow;
@@ -12,7 +13,8 @@ mod script;
 mod structure;
 mod workbench;
 
-pub use document::{Document, EditError, ProjectContext};
+pub use document::{CompletionSnapshot, Document, EditError, ProjectContext};
+pub use draft_snapshot::DraftSnapshot;
 pub use examples::{WRITER_EXAMPLES, WriterExample};
 pub use flow::{SceneLink, scene_endings, scene_links};
 pub use preview::{Preview, PreviewError, PreviewPage, PreviewSetup};

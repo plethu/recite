@@ -11,32 +11,62 @@ use recite_core::{
 };
 use std::sync::Arc;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ProjectFacts {
     pub(super) path: String,
     pub(super) participation: ValidationParticipation,
-    pub(super) blocks: Box<[BlockFact]>,
+    pub(super) blocks: Arc<Vec<BlockFact>>,
     pub(super) passages: Arc<Vec<PassageFact>>,
-    pub(super) references: Box<[Divert]>,
+    pub(super) references: Arc<Vec<Divert>>,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct BlockFact {
     pub(super) id: BlockId,
     pub(super) default: bool,
     pub(super) span: SourceSpan,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct PassageFact {
     pub(super) identity: Identity,
     pub(super) frozen: bool,
     pub(super) span: SourceSpan,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Identity {
     Line(Option<LineId>),
     Choice(Option<ChoiceId>, ChoiceEcho),
 }
 impl ProjectFacts {
+    pub(super) fn shares_storage(&self, previous: &Self) -> bool {
+        let Self {
+            path,
+            participation,
+            blocks,
+            passages,
+            references,
+        } = self;
+        path == &previous.path
+            && participation == &previous.participation
+            && Arc::ptr_eq(blocks, &previous.blocks)
+            && Arc::ptr_eq(passages, &previous.passages)
+            && Arc::ptr_eq(references, &previous.references)
+    }
+
+    pub(super) fn same_non_reference_facts(&self, next: &Self) -> bool {
+        // Exhaustive destructuring makes new fact families revisit this proof.
+        let Self {
+            path,
+            participation,
+            blocks,
+            passages,
+            references: _,
+        } = self;
+        path == &next.path
+            && participation == &next.participation
+            && blocks == &next.blocks
+            && passages == &next.passages
+    }
+
     pub(crate) fn collect(input: ValidationInput<'_>) -> Self {
         let file = input.source_file();
         let mut passages = Vec::new();
@@ -71,9 +101,10 @@ impl ProjectFacts {
                     default: block.is_default,
                     span: block.span.clone(),
                 })
-                .collect(),
+                .collect::<Vec<_>>()
+                .into(),
             passages: Arc::new(passages),
-            references: references.into_boxed_slice(),
+            references: Arc::new(references),
         }
     }
 
@@ -110,7 +141,8 @@ impl ProjectFacts {
                 .iter()
                 .map(|block| &block.id)
                 .eq(next.blocks.iter().map(|block| &block.id))
-            && self.exported_ids().eq(next.exported_ids())
+            && (Arc::ptr_eq(&self.passages, &next.passages)
+                || self.exported_ids().eq(next.exported_ids()))
             && self.blocks.iter().any(|block| block.default)
                 == next.blocks.iter().any(|block| block.default)
     }
@@ -151,16 +183,18 @@ impl ProjectFacts {
                 }
                 _ => None,
             });
-        let references = self
-            .references
+        echoes.chain(self.reference_dependencies())
+    }
+
+    pub(super) fn reference_dependencies(&self) -> impl Iterator<Item = Symbol> + '_ {
+        self.references
             .iter()
             .filter_map(|reference| match &reference.target {
                 DivertTarget::Block(target) => Some(Symbol::Document(
                     target.file.clone().unwrap_or_else(|| self.path.clone()),
                 )),
                 DivertTarget::End => None,
-            });
-        echoes.chain(references)
+            })
     }
 }
 
