@@ -15,6 +15,29 @@ export default defineConfig({
   },
   integrations: [starlight({
     title: "Recite",
+    // The two above-the-fold faces preload; the others load on first use (fonts.css).
+    head: [
+      {
+        tag: "link",
+        attrs: {
+          rel: "preload",
+          href: "/fonts/ibm-plex-sans-latin.woff2",
+          as: "font",
+          type: "font/woff2",
+          crossorigin: "anonymous",
+        },
+      },
+      {
+        tag: "link",
+        attrs: {
+          rel: "preload",
+          href: "/fonts/fraunces-latin.woff2",
+          as: "font",
+          type: "font/woff2",
+          crossorigin: "anonymous",
+        },
+      },
+    ],
     locales: { root: { label: "English", lang: "en" } },
     customCss: ["./src/styles/site.css", "./src/styles/adapter.css"],
     sidebar: [{ label: "Reference", items: [{ autogenerate: { directory: "reference" } }] }],

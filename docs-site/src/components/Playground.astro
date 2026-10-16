@@ -30,8 +30,10 @@ const messages = Object.fromEntries(messageNames.map(name => [name, t(`playgroun
           download="junction.recite"
         >{t("playground.download")}</a>
       </div>
-      <label for="recite-file">{t("playground.open")}</label>
-      <input id="recite-file" type="file" accept=".recite, text/plain" disabled />
+      <div class="file-pick">
+        <input id="recite-file" type="file" accept=".recite, text/plain" disabled />
+        <label for="recite-file">{t("playground.open")}</label>
+      </div>
       <noscript><p>{t("playground.noJs")}</p></noscript>
     </div>
     <div class="scene-script playground-output">

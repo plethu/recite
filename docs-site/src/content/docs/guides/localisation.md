@@ -49,3 +49,21 @@ an apparently readable translation can still violate those contracts.
 Recite Writer can edit PO entries while retaining comments, contexts and unknown fields. Translator
 review and language quality remain human work. Engine catalogue installation is covered by the
 corresponding adapter guide.
+
+## Dialogue in other scripts
+
+Recite stores dialogue as UTF-8 and leaves shaping to the host, so any script a game can render
+works in source, catalogues and the runtime. This site bundles Latin, Cyrillic and Greek faces;
+other scripts use the reader's system fonts.
+
+<div class="script-samples">
+  <p lang="ru">Если ты насчёт передатчика — возьми номерок.</p>
+  <p lang="el">Αν ήρθες για τον πομπό, πάρε αριθμό.</p>
+  <p lang="ja">送信機のことなら、番号札を取ってください。</p>
+  <p lang="zh-Hans">如果你是为了发射机来的，请先取号。</p>
+  <p lang="ko">송신기 때문에 왔다면 번호표를 뽑으세요.</p>
+  <p lang="ar" dir="rtl">إذا جئت بخصوص جهاز الإرسال، فخذ رقماً.</p>
+  <p lang="he" dir="rtl">אם באת בגלל המשדר, קח מספר.</p>
+  <p lang="hi">अगर आप ट्रांसमीटर के बारे में आए हैं, तो नंबर ले लीजिए।</p>
+  <p lang="th">ถ้าคุณมาเรื่องเครื่องส่งสัญญาณ กรุณารับบัตรคิว</p>
+</div>
