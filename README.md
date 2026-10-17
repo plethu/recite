@@ -1,10 +1,4 @@
-<picture>
-  <source
-    media="(prefers-color-scheme: dark)"
-    srcset="assets/identity/recite-wordmark-reversed.svg"
-  >
-  <img src="assets/identity/recite-wordmark.svg" alt="Recite" width="260">
-</picture>
+<img src="assets/identity/recite-wordmark-print.svg" alt="Recite" width="320">
 
 [![CI](https://github.com/plethu/recite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/plethu/recite/actions/workflows/ci.yml)
 [![MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-683e62?style=flat-square&labelColor=241f27)](LICENSE)
@@ -16,7 +10,16 @@
 Recite is testable, reviewable, and pleasant tooling for authoring interactive narratives. It's the
 tool I've always wished I had when working on dialogue-heavy games.
 
-![The same Relay Hub scene in Neovim with Recite LSP (left) and Writer's branching graph (right), showing its greeting and four branches.](docs/assets/recite-scene.png)
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="docs/assets/recite-scene-dark.png"
+  >
+  <img
+    src="docs/assets/recite-scene.png"
+    alt="Relay Hub in Writer: the scene outline, branching map and a beat open for writing, with Mara's greeting and four replies."
+  >
+</picture>
 
 [Open image](docs/assets/recite-scene.png)
 
