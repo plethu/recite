@@ -24,11 +24,13 @@ Stylelint own formatting, lint and the OKLCH palette rule.
 
 Write Markdown in `src/content/docs/`. Frontmatter requires `title` and `description`; unknown keys
 fail the build with a filename and field. `index.md` defines a section. Keep existing URLs and
-GitHub-style heading fragments. `tools/content.ts` validates and renders content; Eleventy paginates
-the resulting pages through `src/pages/all.11ty.tsx`. Reference pages include a sidebar; guides use
-a reading layout. The same Markdown renderer supplies accessible code/table scrolling and Shiki
-syntax colors through theme tokens. Maintained Markdown may contain HTML for language and direction
-metadata. It is trusted repository content, not an untrusted publishing endpoint.
+GitHub-style heading fragments. `tools/content.ts` validates and renders content. Each route family
+has its own Eleventy template in `src/pages/`; documents and projects use their own pagination.
+`tools/site.ts` prepares shared assets and reference navigation, while `tools/output.ts` writes
+redirects, sitemaps and the search index. Reference pages include a sidebar; guides use a reading
+layout. The same Markdown renderer supplies accessible code/table scrolling and Shiki syntax colors
+through theme tokens. Maintained Markdown may contain HTML for language and direction metadata. It
+is trusted repository content, not an untrusted publishing endpoint.
 
 Showcase records belong under `src/content/showcase/`. Each needs a title, summary and HTTPS
 `projectUrl`. Optional `image` and nonempty `imageAlt` must appear together. Drafts do not publish.

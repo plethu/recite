@@ -3,7 +3,7 @@ const links = [
   { href: "/showcase/", title: "Showcase" },
   { href: "/reference/", title: "Reference" },
 ];
-function Theme() {
+function ThemeSelector() {
   return (
     <label class="theme-control">
       <span class="visually-hidden">Select theme</span>
@@ -21,28 +21,30 @@ export function Header({ wordmark }: { wordmark: string }) {
       <a class="brand" href="/" aria-label="Recite home">
         <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: wordmark }} />
       </a>
-      <nav class="desktop-nav" aria-label="Main navigation">
-        {links.map(({ href, title }) => (
-          <a href={href}>{title}</a>
-        ))}
-      </nav>
+      <PrimaryNavigation className="desktop-nav" />
       <button type="button" data-search-trigger hidden>
         Search
       </button>
       <div class="desktop-theme">
-        <Theme />
+        <ThemeSelector />
       </div>
       <button class="menu-toggle" type="button" popovertarget="global-menu" aria-label="Site menu">
         Menu
       </button>
       <div id="global-menu" popover="auto">
-        <nav aria-label="Main navigation">
-          {links.map(({ href, title }) => (
-            <a href={href}>{title}</a>
-          ))}
-        </nav>
-        <Theme />
+        <PrimaryNavigation />
+        <ThemeSelector />
       </div>
     </div>
+  );
+}
+
+function PrimaryNavigation({ className }: { className?: string }) {
+  return (
+    <nav class={className} aria-label="Main navigation">
+      {links.map(({ href, title }) => (
+        <a href={href}>{title}</a>
+      ))}
+    </nav>
   );
 }

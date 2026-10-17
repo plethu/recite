@@ -11,23 +11,14 @@ const docsSchema = v.strictObject({
   title: v.pipe(v.string(), v.trim(), v.nonEmpty()),
   description: v.pipe(v.string(), v.trim(), v.nonEmpty()),
 });
-export type SitePage =
-  | {
-      kind: "document";
-      url: string;
-      title: string;
-      description: string;
-      html: string;
-      headings: Heading[];
-    }
-  | {
-      [K in "landing" | "showcase" | "missing"]: {
-        kind: K;
-        url: string;
-        title: string;
-        description: string;
-      };
-    }["landing" | "showcase" | "missing"];
+export interface DocumentContent {
+  url: string;
+  title: string;
+  description: string;
+  html: string;
+  headings: Heading[];
+  section: "guide" | "reference";
+}
 export const redirects = ["dialogue-system-for-unity", "dialogue-manager", "dialogic", "clyde"].map(
   (name) => ({ from: `/migration/${name}/`, to: `/migration/manual/#${name}` }),
 );
@@ -65,12 +56,12 @@ export async function loadContent(root: string) {
   const languages = fencedLanguages([...docs, ...showcase].map(({ content }) => content));
   const markdown = await createMarkdown(languages);
   try {
-    const documents = docs.map(({ name, data, content }) => {
+    const documents: DocumentContent[] = docs.map(({ name, data, content }) => {
       const metadata = validate(docsSchema, data, name);
       return {
-        kind: "document" as const,
         ...metadata,
         url: contentUrl(name),
+        section: name.startsWith("reference/") ? "reference" : "guide",
         ...markdown.render(content),
       };
     });

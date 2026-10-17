@@ -13,7 +13,11 @@ export async function buildAssets(root: string) {
       external: ["/fonts/*"],
     });
     if (!result.success) throw new AggregateError(result.logs, `Could not bundle ${entry}`);
-    return `/assets/${basename(result.outputs.find((output) => output.kind === "entry-point" || output.loader === "css")!.path)}`;
+    const output = result.outputs.find(
+      (asset) => asset.kind === "entry-point" || asset.loader === "css",
+    );
+    if (!output) throw new Error(`No browser asset emitted for ${entry}`);
+    return `/assets/${basename(output.path)}`;
   }
   async function copy(name: string) {
     const contents = await file(resolve(root, "src/client/generated", name)).arrayBuffer();
