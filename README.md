@@ -17,7 +17,7 @@ tool I've always wished I had when working on dialogue-heavy games.
   >
   <img
     src="docs/assets/recite-scene.png"
-    alt="Relay Hub in Writer: the scene outline, branching map and a beat open for writing, with Mara's greeting and four replies."
+    alt="Relay Hub in Writer: the scene outline and full Script view, with Mara's greeting and four replies open for writing."
   >
 </picture>
 
