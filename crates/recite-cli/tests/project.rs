@@ -31,12 +31,12 @@ participants = ["hazel"]
         .arg("validate-project")
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  project, no diagnostics\n");
     recite()
         .arg("check-fresh")
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  project, no diagnostics\n");
 }
 
 #[test]
@@ -134,7 +134,7 @@ participants = ["hazel"]
         .arg("check-fresh")
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  project, no diagnostics\n");
 }
 
 #[test]
@@ -275,7 +275,7 @@ participants = ["rhea"]
         .arg("check-fresh")
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  project, no diagnostics\n");
 
     let mut changed_schema = include_str!("../../../fixtures/schema/valid/full_manifest.json")
         .replace("dialogue-export-v1", "dialogue-export-v2");
@@ -285,7 +285,7 @@ participants = ["rhea"]
         .arg("check-fresh")
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  project, no diagnostics\n");
 }
 
 #[test]
@@ -333,4 +333,33 @@ participants = ["hazel"]
     let output = run(recite().arg("check-fresh").arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT006");
+}
+
+#[test]
+fn writer_starter_project_passes_validate_project() {
+    let temp = TempDir::new().expect("tempdir");
+    let folder = temp.path().join("night bus");
+    let scene =
+        recite_config::create_starter_project(&folder, "Night Bus").expect("starter project");
+    assert_eq!(scene, folder.join("night_bus.recite"));
+
+    recite()
+        .arg("validate-project")
+        .arg(&folder)
+        .assert_success()
+        .assert_stderr("ok  project, no diagnostics\n");
+    recite()
+        .arg("validate")
+        .arg(&scene)
+        .assert_success()
+        .assert_stderr("ok  1 file, no diagnostics\n");
+
+    let again = recite_config::create_starter_project(&folder, "Night Bus");
+    assert!(
+        matches!(
+            again,
+            Err(recite_config::StarterProjectError::AlreadyAProject { .. })
+        ),
+        "{again:?}"
+    );
 }

@@ -16,6 +16,16 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Recite",
+      head: ["ibm-plex-sans-latin", "fraunces-latin"].map((face) => ({
+        tag: "link",
+        attrs: {
+          rel: "preload",
+          href: `/fonts/${face}.woff2`,
+          as: "font",
+          type: "font/woff2",
+          crossorigin: "anonymous",
+        },
+      })),
       locales: { root: { label: "English", lang: "en" } },
       customCss: ["./src/styles/site.css", "./src/styles/adapter.css"],
       sidebar: [{ label: "Reference", items: [{ autogenerate: { directory: "reference" } }] }],

@@ -1,10 +1,15 @@
 //! Freya's stock components consume the same palette as the writer components.
-use super::{Palette, syntax};
+use super::Palette;
 use crate::design::tokens as t;
 use freya::{code_editor::*, prelude::*};
 
 pub fn theme(dark: bool) -> Theme {
-    let p = Palette::with_mode(dark, super::monochrome());
+    theme_with(dark, super::monochrome())
+}
+
+/// The specimen previews monochrome without writing the personal preference.
+pub fn theme_with(dark: bool, monochrome: bool) -> Theme {
+    let p = Palette::with_mode(dark, monochrome);
     let mut theme = if dark { dark_theme() } else { light_theme() };
     let c = &mut theme.colors;
     c.primary = p.accent;
@@ -84,6 +89,9 @@ pub fn theme(dark: bool) -> Theme {
         whitespace: p.muted,
     };
     theme.set("code_editor", EditorThemePreference::from(editor));
-    theme.set("code_editor_syntax", syntax(dark));
+    theme.set(
+        "code_editor_syntax",
+        super::syntax_with_mode(dark, monochrome),
+    );
     theme
 }

@@ -197,6 +197,12 @@ fn open_alias_owner_switch_reseeds_kernel_version_state() {
     super::project_indexes::open_alias_owner_switch_reseeds_kernel_version_state();
 }
 
+#[cfg(unix)]
+#[test]
+fn cursor_queries_match_the_requested_alias_buffer() {
+    super::project_indexes::cursor_queries_match_the_requested_alias_buffer();
+}
+
 #[test]
 fn watched_refresh_publishes_effective_open_payload() {
     super::project_indexes::watched_refresh_publishes_effective_open_payload();

@@ -41,9 +41,15 @@ impl Target {
         } else {
             writer.try_navigate(select)?;
         }
+        let empty = writer
+            .buffers
+            .model
+            .peek()
+            .as_ref()
+            .is_ok_and(crate::scene::has_no_beats);
         if let Some(beat) = &self.beat {
             writer.inspect(beat);
-        } else {
+        } else if !empty {
             writer.ensure_beat()?;
         }
         if *writer.layout.view.peek() == recite_config::WriterView::Source {

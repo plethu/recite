@@ -8,62 +8,123 @@
         {
           "type": "REPEAT",
           "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "blank_line"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "comment_line"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "block_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "line_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "choice_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "effect_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "divert_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "if_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "else_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "match_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "case_statement"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "plural_line"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "prose_line"
-              }
-            ]
+            "type": "SYMBOL",
+            "name": "_line_group"
           }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_source_line"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "_source_line"
+                        },
+                        {
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "SEQ",
+                              "members": [
+                                {
+                                  "type": "SYMBOL",
+                                  "name": "_source_line"
+                                },
+                                {
+                                  "type": "CHOICE",
+                                  "members": [
+                                    {
+                                      "type": "SEQ",
+                                      "members": [
+                                        {
+                                          "type": "SYMBOL",
+                                          "name": "_source_line"
+                                        },
+                                        {
+                                          "type": "CHOICE",
+                                          "members": [
+                                            {
+                                              "type": "SEQ",
+                                              "members": [
+                                                {
+                                                  "type": "SYMBOL",
+                                                  "name": "_source_line"
+                                                },
+                                                {
+                                                  "type": "CHOICE",
+                                                  "members": [
+                                                    {
+                                                      "type": "SEQ",
+                                                      "members": [
+                                                        {
+                                                          "type": "SYMBOL",
+                                                          "name": "_source_line"
+                                                        },
+                                                        {
+                                                          "type": "CHOICE",
+                                                          "members": [
+                                                            {
+                                                              "type": "SYMBOL",
+                                                              "name": "_source_line"
+                                                            },
+                                                            {
+                                                              "type": "BLANK"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "BLANK"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "BLANK"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "BLANK"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "BLANK"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
         },
         {
           "type": "CHOICE",
@@ -194,6 +255,100 @@
               "type": "BLANK"
             }
           ]
+        }
+      ]
+    },
+    "_line_group": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_source_line"
+        }
+      ]
+    },
+    "_source_line": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "blank_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "comment_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "block_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "line_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "choice_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "effect_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "divert_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "if_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "else_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "match_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "case_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "plural_line"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "prose_line"
         }
       ]
     },

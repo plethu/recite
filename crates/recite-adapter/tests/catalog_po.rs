@@ -127,3 +127,43 @@ fn later_conflict_does_not_partially_merge() -> Result<(), Box<dyn std::error::E
     );
     Ok(())
 }
+
+#[test]
+fn incoming_delta_preserves_first_conflict_and_rolls_back_all_changes()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut catalog = ReciteDialogueCatalog::new();
+    catalog.insert("fr", "11111111111111111111", "Hello.", "Bonjour.")?;
+    catalog.insert("fr", "33333333333333333333", "Later.", "Plus tard.")?;
+    let before = format!("{catalog:?}");
+    let error = catalog
+        .import_po(
+            "fr",
+            "conflict.po",
+            concat!(
+                "msgctxt \"22222222222222222222\"\nmsgid \"Goodbye.\"\nmsgstr \"Au revoir.\"\n\n",
+                "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Different.\"\n\n",
+                "msgctxt \"33333333333333333333\"\nmsgid \"Later.\"\nmsgstr \"Also different.\"\n"
+            ),
+        )
+        .expect_err("first conflict rejects the entire document");
+    assert!(
+        error.to_string().contains("conflicting catalogue entry"),
+        "{error}"
+    );
+    assert!(
+        error.to_string().contains("11111111111111111111"),
+        "{error}"
+    );
+    assert_eq!(format!("{catalog:?}"), before);
+    let error = catalog.import_po(
+        "fr",
+        "internal.po",
+        concat!(
+            "msgctxt \"22222222222222222222\"\nmsgid \"Goodbye.\"\nmsgstr \"One.\"\n\n",
+            "msgctxt \"22222222222222222222\"\nmsgid \"Goodbye.\"\nmsgstr \"Two.\"\n"
+        ),
+    );
+    assert!(error.is_err());
+    assert_eq!(format!("{catalog:?}"), before);
+    Ok(())
+}

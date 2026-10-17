@@ -2,7 +2,7 @@
 # The current Rust harness drives both revisions; Gungraun owns measurement and budgets.
 set -euo pipefail
 if [[ $# -lt 1 || $# -gt 3 ]]; then
-  echo 'Usage: check-workflow-performance.sh BASE_COMMIT [pr|full|writer] [OUTPUT_DIRECTORY]' >&2
+  echo 'Usage: check-workflow-performance.sh BASE_COMMIT [pr|full|writer|authoring] [OUTPUT_DIRECTORY]' >&2
   exit 2
 fi
 scope="${2:-pr}"
@@ -10,20 +10,25 @@ case "$scope" in
   pr)
     fixtures=small,realistic:v1-pack
     parameters=(small realistic)
-    benches=(workflows writer bound_text)
+    benches=(workflows writer bound_text authoring)
     ;;
   full)
     fixtures=small,medium,realistic:v1-pack
     parameters=(small realistic medium)
-    benches=(workflows writer bound_text)
+    benches=(workflows writer bound_text authoring)
     ;;
   writer)
     fixtures=small,realistic:v1-pack
     parameters=()
     benches=(writer)
     ;;
+  authoring)
+    fixtures=small
+    parameters=()
+    benches=(authoring)
+    ;;
   *)
-    echo 'Expected pr, full, or writer scope' >&2
+    echo 'Expected pr, full, writer, or authoring scope' >&2
     exit 2
     ;;
 esac
@@ -38,6 +43,12 @@ output="${3:-$repo_root/target/workflow-performance-$scope}"
 mkdir -p "$output/evidence"
 output="$(cd "$output" && pwd)"
 evidence="$output/evidence"
+if [[ "$scope" == pr || "$scope" == full ]]; then
+  cargo metadata --locked --no-deps --format-version 1 >"$evidence/candidate-workspace.json"
+  jq -S '[.packages[] | select(.name == "recite-perf") | .targets[] | select(.kind | index("bench")) | .name] | sort' "$evidence/candidate-workspace.json" >"$evidence/declared-benches.json"
+  printf '%s\n' "${benches[@]}" | jq -Rs 'split("\n")[:-1] | sort' >"$evidence/selected-benches.json"
+  diff -u "$evidence/declared-benches.json" "$evidence/selected-benches.json"
+fi
 build_root="${RECITE_PERF_BUILD_DIR:-$output}"
 mkdir -p "$build_root"
 build_root="$(cd "$build_root" && pwd)"
@@ -91,7 +102,7 @@ for side in control candidate; do
     binary="$(jq -er --arg target "$bench" 'select(.reason == "compiler-artifact" and .target.name == $target and .executable != null) | .executable' "$evidence/$side-build.jsonl")"
     cp "$binary" "$output/$side-$bench"
   done
-  if [[ "$scope" != writer ]]; then
+  if [[ "$scope" == pr || "$scope" == full ]]; then
     CARGO_TARGET_DIR="$build_root/$side-target" cargo build --locked --release --manifest-path "$root/Cargo.toml" -p recite-benchmarks --example compiler_allocations --example workflow_evidence
   fi
 done
@@ -106,27 +117,36 @@ for side in control candidate; do
   for bench in "${benches[@]}"; do
     selected=("${parameters[@]}")
     [[ "$bench" != workflows ]] || selected+=(sources_400)
-    [[ "$bench" != writer ]] || selected=(effects_1000 effects_10000)
+    # Run whole authoring targets: a newly declared case must reach the
+    # fail-closed coverage checker even when its expected-case list was not updated.
+    [[ "$bench" != writer && "$bench" != authoring ]] || selected=('')
     [[ "$bench" != bound_text ]] || selected=(authored_64)
     : >"$evidence/$side-$bench.jsonl"
     for parameter in "${selected[@]}"; do
       baseline=(--save-baseline=control)
       [[ "$side" != candidate ]] || baseline=(--baseline=control)
-      "$output/$side-$bench" --test=false --home "$evidence/profiles" "${baseline[@]}" --output-format=json --save-summary=json "*::$parameter" >>"$evidence/$side-$bench.jsonl" || failure=$?
+      filter="*::$parameter"
+      [[ "$bench" != writer && "$bench" != authoring ]] || filter='*'
+      "$output/$side-$bench" --test=false --home "$evidence/profiles" "${baseline[@]}" --output-format=json --save-summary=json "$filter" >>"$evidence/$side-$bench.jsonl" || failure=$?
     done
   done
-  if [[ "$scope" != writer ]]; then
+  if [[ "$scope" == pr || "$scope" == full ]]; then
     "$build_root/$side-target/release/examples/compiler_allocations" >"$evidence/$side-compiler-allocations.json"
     "$build_root/$side-target/release/examples/workflow_evidence" >"$evidence/$side-preview.json"
     jq -S '[.[] | {fixture, asset_hash, inspection_json_hash}] | sort_by(.fixture)' "$evidence/$side-compiler-allocations.json" >"$evidence/$side-assets.json"
     jq -S 'sort_by(.fixture)' "$evidence/$side-preview.json" >"$evidence/$side-events.json"
   fi
 done
-if [[ "$scope" != writer ]]; then
+if [[ "$scope" == pr || "$scope" == full ]]; then
   diff -u "$evidence/control-assets.json" "$evidence/candidate-assets.json"
   diff -u "$evidence/control-events.json" "$evidence/candidate-events.json"
   "$checker" check "$scope" "$evidence/candidate-workflows.jsonl"
   "$checker" check bound-text "$evidence/candidate-bound_text.jsonl"
 fi
-"$checker" check writer "$evidence/candidate-writer.jsonl"
+if [[ "$scope" != writer ]]; then
+  "$checker" check authoring "$evidence/candidate-authoring.jsonl"
+fi
+if [[ "$scope" != authoring ]]; then
+  "$checker" check writer "$evidence/candidate-writer.jsonl"
+fi
 exit "$failure"

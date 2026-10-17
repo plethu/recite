@@ -1,3 +1,4 @@
+use crate::{SourceLineIndex, SourcePosition, source_location::position_for_byte_offset};
 use std::ops::Range;
 
 use toml_edit::{Document, Item, TableLike};
@@ -14,6 +15,9 @@ mod tests;
 pub(crate) struct TomlSpanIndex {
     entries: Vec<Entry>,
     tables: Vec<TableEntry>,
+    entries_by_path: Vec<usize>,
+    tables_by_path: Vec<usize>,
+    lines: SourceLineIndex,
 }
 
 #[derive(Clone, Debug)]
@@ -44,35 +48,63 @@ impl TomlSpanIndex {
                 .map_or(usize::MAX, |range| range.start)
         });
         tables.sort_by_key(|table| table.range.as_ref().map_or(usize::MAX, |range| range.start));
-        Self { entries, tables }
+        let mut entries_by_path: Vec<_> = (0..entries.len()).collect();
+        entries_by_path.sort_by(|&left, &right| entries[left].path.cmp(&entries[right].path));
+        let mut tables_by_path: Vec<_> = (0..tables.len()).collect();
+        tables_by_path.sort_by(|&left, &right| tables[left].path.cmp(&tables[right].path));
+        Self {
+            entries,
+            tables,
+            entries_by_path,
+            tables_by_path,
+            lines: SourceLineIndex::new(document.raw()),
+        }
+    }
+
+    pub(crate) fn position(&self, offset: usize) -> SourcePosition {
+        self.lines
+            .position_for_byte_offset(offset)
+            .unwrap_or_else(|| position_for_byte_offset(self.lines.source(), offset))
+    }
+
+    pub(crate) fn line_index(&self) -> &SourceLineIndex {
+        &self.lines
+    }
+
+    fn entry(&self, path: &[String]) -> Option<&Entry> {
+        let index = self
+            .entries_by_path
+            .partition_point(|&index| self.entries[index].path.as_slice() < path);
+        let entry = &self.entries[*self.entries_by_path.get(index)?];
+        (entry.path == path).then_some(entry)
     }
 
     pub(crate) fn key_range(&self, path: &[String]) -> Option<Range<usize>> {
-        self.entries
-            .iter()
-            .find(|entry| entry.path == path)
-            .and_then(|entry| entry.key_range.clone())
+        self.entry(path).and_then(|entry| entry.key_range.clone())
     }
 
     pub(crate) fn value_range(&self, path: &[String]) -> Option<Range<usize>> {
-        self.entries
-            .iter()
-            .find(|entry| entry.path == path)
-            .and_then(|entry| entry.value_range.clone())
+        self.entry(path).and_then(|entry| entry.value_range.clone())
     }
 
     pub(crate) fn float_range(&self, path: &[String]) -> Option<Range<usize>> {
-        self.entries
+        let index = self
+            .entries_by_path
+            .partition_point(|&index| self.entries[index].path.as_slice() < path);
+        self.entries_by_path[index..]
             .iter()
-            .find(|entry| entry.path == path && entry.is_float)
+            .map(|&index| &self.entries[index])
+            .take_while(|entry| entry.path == path)
+            .find(|entry| entry.is_float)
             .and_then(|entry| entry.value_range.clone())
     }
 
     pub(crate) fn table_range(&self, path: &[String]) -> Option<Range<usize>> {
-        self.tables
-            .iter()
-            .find(|table| table.path == path)
-            .and_then(|table| table.range.clone())
+        let index = self
+            .tables_by_path
+            .partition_point(|&index| self.tables[index].path.as_slice() < path);
+        let table = &self.tables[*self.tables_by_path.get(index)?];
+        (table.path == path).then(|| table.range.clone()).flatten()
     }
 
     /// Find the next exact key or string-value occurrence in a top-level

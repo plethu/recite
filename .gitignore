@@ -58,3 +58,9 @@ Packages/com.recite.dialogue/Tests~/Headless/obj/
 .agents/local/
 .agents/private/
 .agents/tmp/
+
+# Maintained dependency patch; preserve it despite machine-wide vendor ignores.
+!apps/writer/vendor/
+!apps/writer/vendor/freya-code-editor/
+!apps/writer/vendor/freya-code-editor/**
+/apps/writer/vendor/freya-code-editor/target/

@@ -1,4 +1,4 @@
-//! Map actions reflow to the available pane width before labels are squeezed.
+//! Map tools share one row; when the pane is narrow, navigation drops to a second row.
 use super::{
     camera::{Camera, Framing},
     placement::Arrangement,
@@ -31,11 +31,14 @@ impl Toolbar {
             mut show_help,
         } = self;
         let mut pane = writer.pane;
-        let compact = viewport.read().0 < 480. * t::ui_scale();
+        let width = viewport.read().0;
+        let one_row = width >= 640. * t::ui_scale();
+        // Below this the search field takes its own row so it never shrinks under its label.
+        let stacked = width < 480. * t::ui_scale();
         let primary_actions = rect()
             .horizontal()
             .cross_align(Alignment::Center)
-            .spacing(t::SPACE_SM)
+            .spacing(t::SPACE_XS)
             .child(
                 Button::new()
                     .flat()
@@ -63,7 +66,7 @@ impl Toolbar {
             );
         let secondary_actions = rect()
             .horizontal()
-            .spacing(t::SPACE_SM)
+            .spacing(t::SPACE_XS)
             .child(
                 Button::new()
                     .flat()
@@ -91,16 +94,20 @@ impl Toolbar {
                     })
                     .child(crate::messages::text(crate::messages::MsgId::WriterGuiHelp)),
             );
-        let actions = (if compact { rect() } else { rect().horizontal() })
-            .spacing(t::SPACE_SM)
+        // Tight within a group, loose between groups.
+        let actions = rect()
+            .horizontal()
+            .cross_align(Alignment::Center)
+            .spacing(t::SPACE_LG)
             .child(primary_actions)
             .child(secondary_actions);
         let search = rect()
-            .width(if compact {
+            .width(if stacked {
                 Size::fill()
             } else {
                 Size::flex(1.)
             })
+            .min_width(Size::px(120. * t::ui_scale()))
             .max_width(Size::px(320. * t::ui_scale()))
             .child(
                 Input::new(writer.search)
@@ -117,7 +124,7 @@ impl Toolbar {
                         if event.code == Code::Enter {
                             let query = writer.search.peek().to_lowercase();
                             if let Ok(m) = writer.buffers.model.peek().as_ref()
-                                && let Ok(blocks) = m.document().script()
+                                && let Ok(blocks) = m.document().script_snapshot()
                                 && let Some(block) = blocks.iter().find(|b| {
                                     palette::display_name(&b.id).to_lowercase().contains(&query)
                                 })
@@ -139,7 +146,6 @@ impl Toolbar {
             .a11y_role(AccessibilityRole::Group)
             .a11y_alt("Map zoom")
             .corner_radius(t::RADIUS)
-            .background(colors.inset)
             .border(Border::new().width(1.).fill(colors.rule))
             .child(crate::controls::IconButton::new(
                 "Zoom out",
@@ -176,17 +182,35 @@ impl Toolbar {
                     })
                     .child(crate::messages::text(crate::messages::MsgId::WriterGuiFit)),
             );
-        let navigation = (if compact { rect() } else { rect().horizontal() })
-            .width(Size::fill())
+        let navigation = (if stacked { rect() } else { rect().horizontal() })
+            .width(if one_row {
+                Size::flex(1.)
+            } else {
+                Size::fill()
+            })
             .content(Content::Flex)
+            .cross_align(Alignment::Center)
+            .main_align(Alignment::End)
             .spacing(t::SPACE_SM)
             .child(search)
             .child(zoom_controls);
-        rect()
-            .width(Size::fill())
-            .spacing(t::SPACE_SM)
-            .child(actions)
-            .child(navigation)
-            .into_element()
+        if one_row {
+            rect()
+                .horizontal()
+                .width(Size::fill())
+                .content(Content::Flex)
+                .cross_align(Alignment::Center)
+                .spacing(t::SPACE_XL)
+                .child(actions)
+                .child(navigation)
+                .into_element()
+        } else {
+            rect()
+                .width(Size::fill())
+                .spacing(t::SPACE_SM)
+                .child(actions)
+                .child(navigation)
+                .into_element()
+        }
     }
 }

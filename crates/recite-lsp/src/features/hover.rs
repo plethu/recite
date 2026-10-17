@@ -3,7 +3,7 @@ use recite_compiler::authoring::{AuthoringQuery, QueryResult, SchemaSummary};
 use recite_core::DocumentKey;
 use recite_ui::UiCatalog;
 
-use crate::position::lsp_position_to_source;
+use crate::position::indexed_lsp_position_to_source;
 
 mod position;
 mod schema;
@@ -11,14 +11,14 @@ mod schema_values;
 mod typed;
 
 pub(super) fn hover(
-    text: &str,
     position: Position,
     key: &DocumentKey,
     snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<Hover> {
-    let source_position = lsp_position_to_source(text, position)?;
+    let index = snapshot.document(key)?.source_index();
+    let source_position = indexed_lsp_position_to_source(index, position)?;
     let query = snapshot.hover(key, source_position);
     let typed_info = match query {
         QueryResult::Ready(info) | QueryResult::Partial { value: info, .. } => Some(info),

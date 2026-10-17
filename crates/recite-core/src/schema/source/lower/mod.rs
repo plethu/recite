@@ -23,7 +23,7 @@ pub(super) fn lower_source(
     document: &DocumentMut,
     toml_spans: &TomlSpanIndex,
 ) -> (Option<ProjectSchema>, Vec<Diagnostic>) {
-    let mut diagnostics = validate_source_shape(file, source, document, toml_spans);
+    let mut diagnostics = validate_source_shape(file, document, toml_spans);
     diagnostics.extend(reject_non_finite_numbers(
         file, source, document, toml_spans,
     ));
@@ -257,7 +257,6 @@ fn arg_span(
 }
 fn validate_source_shape(
     file: &str,
-    source: &str,
     document: &DocumentMut,
     spans: &TomlSpanIndex,
 ) -> Vec<Diagnostic> {
@@ -267,7 +266,7 @@ fn validate_source_shape(
             diagnostics.push(source_diagnostic!(
                 "source-generated-field",
                 format!("generated-only field '{key}' is not accepted in authoritative TOML"),
-                super::spans::key_span(file, source, spans, &[], key, false),
+                super::spans::key_span(file, spans, &[], key, false),
                 [("key", DiagnosticArgumentValue::String((*key).to_owned()))],
             ));
         }
@@ -284,7 +283,7 @@ fn validate_source_shape(
         diagnostics.push(source_diagnostic!(
             "source-producer-id-required",
             "producer id is required",
-            super::spans::table_span(file, source, spans, &["producer".to_owned()]),
+            super::spans::table_span(file, spans, &["producer".to_owned()]),
         ));
         return diagnostics;
     };
@@ -292,7 +291,7 @@ fn validate_source_shape(
         diagnostics.push(source_diagnostic!(
             "source-producer-id-empty",
             "producer id must not be empty",
-            super::spans::key_span(file, source, spans, &["producer".to_owned()], "id", true),
+            super::spans::key_span(file, spans, &["producer".to_owned()], "id", true),
         ));
     }
     if let Some(kind) = producer.get("kind").and_then(Item::as_str)
@@ -301,7 +300,7 @@ fn validate_source_shape(
         diagnostics.push(source_diagnostic!(
             "source-producer-kind",
             "standalone TOML producer kind must be 'standalone'",
-            super::spans::key_span(file, source, spans, &["producer".to_owned()], "kind", true),
+            super::spans::key_span(file, spans, &["producer".to_owned()], "kind", true),
         ));
     }
     diagnostics

@@ -31,14 +31,44 @@ pub(crate) struct Queue {
 }
 
 pub(super) fn app(mode: AppMode) -> Element {
-    use_provide_context(move || mode);
+    let mode = use_state(move || mode);
+    use_provide_context(move || ModeSwitch(mode));
     Router::<Location>::new(RouterConfig::default).into_element()
 }
+
+/// The window's mode can change at runtime: the welcome screen opens the bundled examples.
+#[derive(Clone, Copy)]
+pub(crate) struct ModeSwitch(pub State<AppMode>);
+
+impl ModeSwitch {
+    pub(crate) fn open_examples() {
+        if let Some(mut switch) = try_consume_context::<Self>() {
+            switch.0.set(AppMode::Examples);
+        }
+    }
+}
+
 #[derive(Clone, PartialEq)]
 struct Shell;
 impl Component for Shell {
     fn render(&self) -> impl IntoElement {
-        crate::workbench(use_consume::<AppMode>())
+        let mode = *use_consume::<ModeSwitch>().0.read();
+        ModeWorkbench { mode }
+    }
+}
+
+/// Keyed by mode, so switching modes builds a fresh workbench instead of reusing its state.
+#[derive(Clone, Copy, PartialEq)]
+struct ModeWorkbench {
+    mode: AppMode,
+}
+impl Component for ModeWorkbench {
+    fn render(&self) -> impl IntoElement {
+        use_provide_context(move || self.mode);
+        crate::workbench(self.mode)
+    }
+    fn render_key(&self) -> DiffKey {
+        DiffKey::from(&(self.mode as u8))
     }
 }
 
@@ -203,7 +233,7 @@ fn select(model: &mut Workbench, location: &Location) -> Result<(), WorkbenchErr
         if model.view() != &view {
             model.select(view)?;
         }
-    } else if model.view() == &View::Source {
+    } else if model.view() == &View::Source && !crate::scene::has_no_beats(model) {
         model.show_script()?;
     }
     Ok(())
@@ -320,7 +350,7 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
         let passage = location
             .passage
             .as_deref()
-            .ok_or("A reply-rules link needs a passage.")?;
+            .ok_or("A reply-rules link needs a reply.")?;
         let retained = writer.buffers.rules.peek().as_ref().is_some_and(|r| {
             r.passage == passage
                 && writer

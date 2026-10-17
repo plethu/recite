@@ -31,3 +31,6 @@ debug = "line-tables-only"
 
 [profile.dev]
 debug = 0
+
+[patch.crates-io]
+freya-code-editor = { path = "vendor/freya-code-editor" }

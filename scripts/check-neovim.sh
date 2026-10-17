@@ -330,6 +330,7 @@ run_headless "$repo_root/tests/neovim/check.lua"
 run_headless "$repo_root/tests/neovim/recovery.lua"
 run_headless "$repo_root/tests/neovim/material.lua"
 run_headless "$repo_root/tests/neovim/commands.lua"
+run_headless "$repo_root/tests/neovim/diagnostic_batches.lua"
 if ((host_evidence)); then
   run_headless "$repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua"
 fi

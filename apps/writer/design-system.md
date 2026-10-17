@@ -20,7 +20,13 @@ buttons, segments, search, destination pickers and graph cards.
 controls. Use its tokens rather than local colour, spacing or timing constants. Dialogue typography
 is shared across writing, localisation, preview and excerpts; fonts resolve locally with fallbacks.
 
-Use quiet toolbar actions and a filled primary dialog action. Exclusive choices use `Segments`,
+Use quiet toolbar actions and a filled plum primary action. The primary fill appears once per
+screen, and a modal's primary takes precedence over anything behind it. Stamps, a 1.5-pixel ink stroke with
+3-pixel corners, are for secondary actions in dialog action rows and empty states and for segment
+groups; the active segment and switched-on toggles fill with ink. Picker and select triggers use
+input styling. List selection is the second-ink plate with a teal bar, so it reads as a different
+ink from hover. Tabs, in the document row and in Settings, mark the active tab with a 2-pixel teal
+underline. Exclusive choices use `Segments`,
 searchable bounded lists use `SearchPicker`, and modal work uses `Dialog`. Reuse button and submit
 behavior so keyboard and pointer activation agree. Enter in prose inserts a newline; the platform
 submit chord invokes the containing action. Pickers must not resize their dialog or lose manual
@@ -37,7 +43,7 @@ The token module owns window, control and pane dimensions and animation timing. 
 at the minimum window size and 200% scale. Resizing must remain available by keyboard; pointer
 resizing previews a guide and can be cancelled before reflow.
 
-Script and localisation use a reading column. Metadata and passage actions stay stable while
+Script and localisation use a reading column. Metadata and line actions stay stable while
 editing; paging preserves condition groups. Map geometry stays independent of excerpt length. Graph
 actions need an accessible textual route, with technical IDs available through details.
 

@@ -101,13 +101,17 @@ fn render(writer: Writer, scene: String) -> Element {
         connection.set(None);
         current_scene.set(scene.clone());
     }
+    let mut previous = None::<Arc<topology::Topology>>;
     let graph = use_memo(move || {
-        script.read().as_ref().map(|blocks| {
-            Arc::new(topology::Topology::new(
+        let next = script.read().as_ref().map(|blocks| {
+            Arc::new(topology::Topology::refresh(
                 blocks.clone(),
                 positions.read().positions(&current_scene.read()),
+                previous.as_deref(),
             ))
-        })
+        });
+        previous = next.clone();
+        next
     });
     let map_view = use_memo(move || {
         let graph = graph.read();
@@ -271,15 +275,29 @@ fn render(writer: Writer, scene: String) -> Element {
                 ),
         );
     }
-    let map = camera::viewport(
-        camera,
-        viewport,
-        pan,
-        canvas.into_element(),
-        writer,
-        blocks.clone(),
-        nodes.clone(),
-    );
+    let map = if blocks.is_empty() {
+        rect()
+            .width(Size::fill())
+            .height(Size::flex(1.))
+            .padding(t::SPACE_XL)
+            .child(crate::design::EmptyState {
+                title: "No beats yet".into(),
+                instruction: "Add a beat, or open the Source view and type one.".into(),
+                actions: Vec::new(),
+                min_height: 240.,
+            })
+            .into_element()
+    } else {
+        camera::viewport(
+            camera,
+            viewport,
+            pan,
+            canvas.into_element(),
+            writer,
+            blocks.clone(),
+            nodes.clone(),
+        )
+    };
     let error = positions.read().error.clone();
     rect()
         .key("scene-map")

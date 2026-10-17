@@ -41,59 +41,67 @@ impl Component for SourceField {
                         viewport: writer.source_viewport,
                         id: editor_id,
                         size: t::code_size(),
-                        content: CodeEditor::new(writer.buffers.editor, editor_id)
-                            .scroll_controller(writer.source_viewport.scroll)
-                            .font_family("monospace")
-                            .font_size(t::code_size())
-                            .line_height(t::CODE_LINE_HEIGHT)
-                            .gutter(false)
-                            .show_whitespace(false)
-                            .on_pre_key_down(move |event: Event<KeyboardEventData>| {
-                                if matches!(
-                                    event.key,
-                                    Key::Named(
-                                        NamedKey::Control
-                                            | NamedKey::Meta
-                                            | NamedKey::Alt
-                                            | NamedKey::Shift
-                                    )
-                                ) {
-                                    return false;
-                                }
-                                if crate::field_completion::keyboard(writer, &event) {
-                                    return false;
-                                }
-                                if crate::design::keyboard::submit_key(&event) {
-                                    return false;
-                                }
-                                if event.code == Code::Space
-                                    && event.modifiers == Modifiers::CONTROL
-                                {
-                                    return false;
-                                }
-                                if crate::editing::is_workspace_key(&event) {
-                                    return false;
-                                }
-                                if crate::editing::is_save_key(&event) {
-                                    return false;
-                                }
-                                if crate::closing::is_quit_key(&event) {
-                                    crate::closing::keyboard(event);
-                                    return false;
-                                }
-                                match &event.key {
-                                    Key::Named(NamedKey::Tab) => false,
-                                    Key::Named(NamedKey::Escape) => {
-                                        editor_id.request_unfocus();
-                                        event.stop_propagation();
-                                        false
-                                    }
-                                    _ => {
-                                        event.stop_propagation();
-                                        true
-                                    }
-                                }
-                            })
+                        // The editor's line rows cache their theme, so an appearance change
+                        // remounts the editor rather than leaving the previous current-line fill.
+                        content: rect()
+                            .key(format!("{:?}", t::colors().surface))
+                            .width(Size::fill())
+                            .height(Size::fill())
+                            .child(
+                                CodeEditor::new(writer.buffers.editor, editor_id)
+                                    .scroll_controller(writer.source_viewport.scroll)
+                                    .font_family("monospace")
+                                    .font_size(t::code_size())
+                                    .line_height(t::CODE_LINE_HEIGHT)
+                                    .gutter(false)
+                                    .show_whitespace(false)
+                                    .on_pre_key_down(move |event: Event<KeyboardEventData>| {
+                                        if matches!(
+                                            event.key,
+                                            Key::Named(
+                                                NamedKey::Control
+                                                    | NamedKey::Meta
+                                                    | NamedKey::Alt
+                                                    | NamedKey::Shift
+                                            )
+                                        ) {
+                                            return false;
+                                        }
+                                        if crate::field_completion::keyboard(writer, &event) {
+                                            return false;
+                                        }
+                                        if crate::design::keyboard::submit_key(&event) {
+                                            return false;
+                                        }
+                                        if event.code == Code::Space
+                                            && event.modifiers == Modifiers::CONTROL
+                                        {
+                                            return false;
+                                        }
+                                        if crate::editing::is_workspace_key(&event) {
+                                            return false;
+                                        }
+                                        if crate::editing::is_save_key(&event) {
+                                            return false;
+                                        }
+                                        if crate::closing::is_quit_key(&event) {
+                                            crate::closing::keyboard(event);
+                                            return false;
+                                        }
+                                        match &event.key {
+                                            Key::Named(NamedKey::Tab) => false,
+                                            Key::Named(NamedKey::Escape) => {
+                                                editor_id.request_unfocus();
+                                                event.stop_propagation();
+                                                false
+                                            }
+                                            _ => {
+                                                event.stop_propagation();
+                                                true
+                                            }
+                                        }
+                                    }),
+                            )
                             .into_element(),
                     }),
             );

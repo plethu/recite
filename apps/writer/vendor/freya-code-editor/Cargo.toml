@@ -1,0 +1,77 @@
+# Writer-local patch of the registry package; provenance is recorded below.
+
+[package]
+edition = "2024"
+name = "freya-code-editor"
+version = "0.5.0-rc.7"
+authors = ["Marc Espín <mespinsanz@gmail.com>"]
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "Composable Code Editor APIs for Freya"
+homepage = "https://freyaui.dev/"
+keywords = ["freya"]
+categories = ["gui"]
+license = "MIT"
+repository = "https://github.com/marc2332/freya"
+
+[package.metadata.recite]
+upstream = "freya-code-editor 0.5.0-rc.7"
+upstream-checksum = "44d343b1c8110d09de89bc5eaf6161ebd214ae52df09c369febd187cfeffacab"
+patch-purpose = "Bound native editing syntax and width work to visible and affected lines."
+removal-condition = "Replace with an upstream release preserving bounded edit work and the regression tests."
+
+[lib]
+name = "freya_code_editor"
+path = "src/lib.rs"
+
+[[test]]
+name = "scroll"
+path = "tests/scroll.rs"
+
+[dependencies.freya-components]
+version = "=0.5.0-rc.7"
+
+[dependencies.async-channel]
+version = "2.5.0"
+
+[dependencies.freya-core]
+version = "=0.5.0-rc.7"
+
+[dependencies.freya-edit]
+version = "=0.5.0-rc.7"
+
+[dependencies.freya-engine]
+version = "=0.5.0-rc.7"
+
+[dependencies.ropey]
+version = "1.6.1"
+
+[dependencies.rustc-hash]
+version = "2.1.1"
+
+[dependencies.smallvec]
+version = "1.15.1"
+
+[dependencies.torin]
+version = "=0.5.0-rc.7"
+
+[dependencies.tree-sitter]
+version = "0.26"
+
+[dev-dependencies.recite-writer-grammar]
+path = "../../crates/grammar"
+
+[dev-dependencies.freya-testing]
+version = "=0.5.0-rc.7"
+
+[dev-dependencies.tree-sitter-rust]
+version = "0.24"
+
+[lints.clippy]
+redundant_clone = "warn"
+
+[workspace]

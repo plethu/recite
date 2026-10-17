@@ -29,6 +29,10 @@ pub(crate) fn controls(
     let browse_id = use_a11y();
     let mut files = writer.files;
     let mut project_panel_open = use_state(|| path.peek().is_empty());
+    let new_project_open = use_state(|| false);
+    // A created project opens after its dialog has closed, so the open sees no modal.
+    let mut open_created = use_state(|| false);
+    let new_project_trigger = use_a11y();
     let mut project_controls = writer.layout.project_controls;
     use_hook(move || {
         project_controls.set(Some(EventHandler::new(move |()| {
@@ -36,6 +40,17 @@ pub(crate) fn controls(
         })))
     });
     let job = use_state(|| None::<crate::project_loading::LoadJob>);
+    use_after_side_effect(move || {
+        if *open_created.read() && !*new_project_open.read() && !crate::design::modal_open() {
+            open_created.set(false);
+            crate::project_loading::start(
+                job,
+                path.peek().as_str().into(),
+                message,
+                writer.buffers,
+            );
+        }
+    });
     use_hook(move || {
         if !path.peek().is_empty() {
             crate::project_loading::start(
@@ -78,25 +93,33 @@ pub(crate) fn controls(
                     crate::messages::MsgId::WriterGuiProject,
                 )),
         )
-        .child(
+        .child({
+            let model = buffers.model.read();
+            let pending = current.as_ref().zip(model.as_ref().ok());
+            let caption =
+                if pending.is_some_and(|(project, model)| project.project_edit_pending(model)) {
+                    crate::messages::text(crate::messages::MsgId::WriterSaveProject)
+                } else {
+                    "Save".into()
+                };
+            let unsaved = pending.is_some_and(|(project, model)| {
+                project
+                    .open_documents(model)
+                    .iter()
+                    .any(|(_, dirty)| *dirty)
+            });
+            // A stamp, not a primary: a modal's primary is the screen's one plum fill.
             Button::new()
-                .filled()
+                .stamp()
                 .enabled(current.is_some())
+                // The open document tab announces unsaved state; the dot here is visual.
+                .named(caption.clone())
                 .on_press(move |_| {
                     crate::commands::Command::Save.run(writer);
                 })
-                .child(
-                    if current
-                        .as_ref()
-                        .zip(buffers.model.read().as_ref().ok())
-                        .is_some_and(|(project, model)| project.project_edit_pending(model))
-                    {
-                        crate::messages::text(crate::messages::MsgId::WriterSaveProject)
-                    } else {
-                        "Save".into()
-                    },
-                ),
-        )
+                .child(caption)
+                .maybe_child(unsaved.then(|| label().text(" •")))
+        })
         .into_element();
     let services = rect()
         .child(crate::localisation::watching::CatalogueWatch { writer })
@@ -132,33 +155,78 @@ pub(crate) fn controls(
             );
         });
         let submit = open.clone();
-        panel = panel.child(
-            rect()
-                .horizontal()
-                .content(Content::Flex)
-                .width(Size::fill())
-                .spacing(t::SPACE_SM)
+
+        let path_row = rect()
+            .horizontal()
+            .content(Content::Flex)
+            .width(Size::fill())
+            .spacing(t::SPACE_SM)
+            .child(
+                rect()
+                    .width(Size::flex(1.))
+                    .child(crate::design::PathField {
+                        value: path,
+                        id: path_id,
+                        browse_id,
+                        kind: crate::design::PathKind::Project,
+                        enabled: job.read().is_none(),
+                        submit,
+                    }),
+            )
+            .child(
+                // On the welcome screen this is the one primary action.
+                Button::new()
+                    .stamp()
+                    .maybe(current.is_none(), Button::filled)
+                    .enabled(!path.read().trim().is_empty() && job.read().is_none())
+                    .on_press({
+                        let open = open.clone();
+                        move |_| open.call(())
+                    })
+                    .child(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiOpenProject,
+                    )),
+            );
+        if current.is_none() {
+            // Welcome: the hero wordmark on the grained canvas, then one frame holding the task.
+            panel = panel
+                .cross_align(Alignment::Center)
                 .child(
-                    rect()
-                        .width(Size::flex(1.))
-                        .child(crate::design::PathField {
-                            value: path,
-                            id: path_id,
-                            browse_id,
-                            kind: crate::design::PathKind::Project,
-                            enabled: job.read().is_none(),
-                            submit,
-                        }),
+                    SvgViewer::new(Bytes::from_static(include_bytes!(
+                        "../../../../../assets/identity/recite-wordmark-hero.svg"
+                    )))
+                    .width(Size::px(t::WELCOME_WORDMARK_WIDTH))
+                    .height(Size::px(
+                        t::WELCOME_WORDMARK_WIDTH / t::HERO_WORDMARK_ASPECT,
+                    ))
+                    .a11y_alt("Recite"),
                 )
-                .child(
-                    Button::new()
-                        .enabled(!path.read().trim().is_empty() && job.read().is_none())
-                        .on_press(move |_| open.call(()))
-                        .child(crate::messages::text(
-                            crate::messages::MsgId::WriterGuiOpenProject,
-                        )),
-                ),
-        );
+                .child(crate::design::EmptyState {
+                    title: "Open a project".into(),
+                    instruction:
+                        "Choose a folder that contains recite.project.toml, or type its path."
+                            .into(),
+                    actions: vec![
+                        path_row.max_width(Size::px(640.)).into_element(),
+                        welcome_secondary(writer, message, new_project_open, new_project_trigger),
+                    ],
+                    min_height: 160.,
+                })
+                .maybe_child((*new_project_open.read()).then(|| {
+                    let mut path = path;
+                    crate::new_project::NewProjectDialog {
+                        open: new_project_open,
+                        created: EventHandler::new(move |folder: String| {
+                            path.set(folder);
+                            open_created.set(true);
+                        }),
+                        return_focus: new_project_trigger,
+                        reduced_motion: writer.preferences.read().config.writer.reduced_motion,
+                    }
+                }));
+        } else {
+            panel = panel.child(path_row);
+        }
         if let Some(project) = current.as_ref() {
             panel = panel
                 .child(
@@ -275,10 +343,52 @@ pub(crate) fn controls(
             .width(Size::fill())
             .height(Size::flex(1.))
             .content(Content::Flex)
-            .child(crate::project_search::ProjectSearch { writer, files })
+            .child(
+                rect()
+                    .width(Size::fill())
+                    .padding((0., t::RAIL_PADDING))
+                    .child(crate::project_search::ProjectSearch { writer, files }),
+            )
             .child(crate::scene_navigation::SceneNavigation { writer, scenes })
             .into_element(),
         status,
         files,
     }
+}
+
+/// The welcome screen's second line: start a project, or look around the bundled examples.
+fn welcome_secondary(
+    writer: crate::editing::Writer,
+    mut message: crate::feedback::Feedback,
+    mut new_project_open: State<bool>,
+    trigger: AccessibilityId,
+) -> Element {
+    rect()
+        .horizontal()
+        .cross_align(Alignment::Center)
+        .spacing(t::SPACE_SM)
+        .child(
+            Button::new()
+                .flat()
+                .a11y_id(trigger)
+                .on_press(move |_| new_project_open.set(true))
+                .child("New project…"),
+        )
+        .child(t::meta("·"))
+        .child(
+            Button::new()
+                .flat()
+                .on_press(move |_| {
+                    if crate::project_loading::can_switch_project(writer) {
+                        crate::navigation::ModeSwitch::open_examples();
+                    } else {
+                        message.error(
+                            "Save changes and apply or discard the draft before opening the examples."
+                                .into(),
+                        );
+                    }
+                })
+                .child("Open examples"),
+        )
+        .into_element()
 }

@@ -5,6 +5,7 @@ use recite_core::{
         EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, Statement,
     },
 };
+use std::sync::Arc;
 
 mod regions;
 #[path = "types.rs"]
@@ -16,12 +17,12 @@ pub use types::*;
 #[derive(Clone, Debug, Default, PartialEq)]
 #[non_exhaustive]
 pub struct AuthoringSummary {
-    blocks: Vec<BlockDefinitionSummary>,
-    block_references: Vec<BlockReferenceSummary>,
-    stable_ids: Vec<StableIdSummary>,
-    metadata: Vec<MetadataSummary>,
-    condition_functions: Vec<FunctionReferenceSummary>,
-    effect_functions: Vec<FunctionReferenceSummary>,
+    blocks: Arc<Vec<BlockDefinitionSummary>>,
+    block_references: Arc<Vec<BlockReferenceSummary>>,
+    stable_ids: Arc<Vec<StableIdSummary>>,
+    metadata: Arc<Vec<MetadataSummary>>,
+    condition_functions: Arc<Vec<FunctionReferenceSummary>>,
+    effect_functions: Arc<Vec<FunctionReferenceSummary>>,
 }
 
 impl AuthoringSummary {
@@ -31,12 +32,12 @@ impl AuthoringSummary {
             collector.block(block);
         }
         Self {
-            blocks: collector.blocks,
-            block_references: collector.block_references,
-            stable_ids: collector.stable_ids,
-            metadata: collector.metadata,
-            condition_functions: collector.condition_functions,
-            effect_functions: collector.effect_functions,
+            blocks: Arc::new(collector.blocks),
+            block_references: Arc::new(collector.block_references),
+            stable_ids: Arc::new(collector.stable_ids),
+            metadata: Arc::new(collector.metadata),
+            condition_functions: Arc::new(collector.condition_functions),
+            effect_functions: Arc::new(collector.effect_functions),
         }
     }
 

@@ -200,6 +200,20 @@ changes identity. Changed source text requires catalogue refresh and translation
 Once an ID is written, it is frozen. Tooling must not silently rewrite existing IDs because
 localisation, fixtures, traces, and save-compatible dialogue state depend on stable identifiers.
 
+## Glossary
+
+Recite Writer names things for the people writing dialogue. The source format and the CLI name the
+same things after their syntax. Each Writer term maps to one source or CLI term:
+
+| Writer | Source format and CLI | Notes |
+| --- | --- | --- |
+| scene | a `.recite` file | One file of blocks. Writer's sidebar lists scenes. |
+| beat | block (`:: name`) | One named block; a map card in Writer. |
+| line | line (`> name@id`) | A localisable line of dialogue with an optional speaker. |
+| reply | choice (`? name@id`) | An option the player picks; its `->` target is the reply's destination. |
+| Try scene, Run scene | `recite play` | Writer's Try scene and the playground's Run scene both traverse the compiled scene, as `recite play` does. |
+| problems | diagnostics | Writer's status bar counts the open scene's diagnostics. |
+
 ## Related docs
 
 - [Production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)

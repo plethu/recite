@@ -97,7 +97,7 @@ fn tui_render_includes_header_and_choice_prompt() {
     assert!(content.contains("Welcome."));
     assert!(content.contains("help"));
     assert!(content.contains("Help."));
-    assert!(content.contains("ID/index type"));
+    assert!(content.contains("type an ID or number"));
 }
 
 #[test]
@@ -130,7 +130,8 @@ fn active_choice_prompt_uses_transcript_prompt_header_and_wrapped_text() {
 
     assert!(content.contains("prompt intro_001"));
     assert!(content.contains("| The relay board is lit up. What do you check first?"));
-    assert!(content.contains(">  1  ask_mira"));
+    assert!(content.contains(">  1  Ask Mira."));
+    assert!(content.contains("ask_mira"));
     assert!(!content.contains("Choose a branch"));
 }
 
@@ -182,7 +183,8 @@ fn wrapped_choice_prompt_allocates_height_for_visible_choices() {
 
     assert!(content.contains("| The relay board is lit up beside"));
     assert!(content.contains("| a blinking maintenance console"));
-    assert!(content.contains("  3  leave"));
+    assert!(content.contains("  3  Leave."));
+    assert!(content.contains("leave"));
     assert!(content.contains("Leave."));
 }
 
@@ -443,13 +445,13 @@ fn colorless_render_omits_foreground_colors_and_keeps_choice_affordances() {
         .collect::<String>();
 
     assert!(buffer.content.iter().all(|cell| cell.fg == Color::Reset));
-    assert!(content.contains(">  1  help"));
+    assert!(content.contains(">  1  Help."));
     assert!(content.contains("locked"));
     assert!(content.contains("unavailable: needs key"));
     assert!(content.contains("prompt intro"));
     assert!(content.contains("effect grant#1"));
     assert!(content.contains("choice id/index>"));
-    assert!(content.contains("ID/index type"));
+    assert!(content.contains("type an ID or number"));
 }
 
 #[test]
@@ -524,7 +526,7 @@ fn accessible_contrast_uses_alternate_palette_when_color_is_enabled() {
         transcript::transcript_label(TuiTranscriptKind::Choice, &messages, accessible)
             .1
             .fg,
-        Some(Color::White)
+        Some(Color::Gray)
     );
 }
 
@@ -571,7 +573,7 @@ fn compact_condition_footer_uses_only_compact_control_keys() {
     };
     let content = render_tui_content(&state, 80, 16);
 
-    assert!(content.contains("Up/Down | y / n | Enter | ?"));
+    assert!(content.contains("Up/Down · y / n · Enter · ?"));
     assert!(!content.contains("move"));
     assert!(!content.contains("submit"));
     assert!(!content.contains("help open"));
@@ -731,7 +733,7 @@ fn shared_control_filtering_matches_prompt_and_keymap() {
     let choice_standard = control_keys(&choice_prompt(false), Keymap::Standard);
     assert_eq!(
         choice_standard,
-        ["Up/Down", "Enter", "ID/index", "?", "Ctrl-C"]
+        ["Up/Down", "Enter", "an ID or number", "?", "Ctrl-C"]
     );
 
     let choice_vim = control_keys(&choice_prompt(false), Keymap::Vim);

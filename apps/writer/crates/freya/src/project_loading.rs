@@ -156,8 +156,11 @@ impl Component for Loading {
         let ready = use_try_consume::<crate::navigation::NavigationReady>();
         let mut job = self.job;
         let files = self.files;
+        let mut frames = use_state(|| 0u32);
         if tick.elapsed() {
             tick.reset();
+            let next = frames.peek().wrapping_add(1);
+            frames.set(next);
             #[cfg(target_os = "linux")]
             if let Some(inbox) = &inbox {
                 while let Some(request) = inbox.try_next() {
@@ -175,7 +178,13 @@ impl Component for Loading {
         rect().maybe_child(job.read().as_ref().map(|current| {
             rect()
                 .horizontal()
+                .cross_align(Alignment::Center)
                 .spacing(t::SPACE_XS)
+                // The diamonds trade inks about every 400 ms of polling; reduced motion holds them.
+                .child(crate::design::loading_mark(
+                    !self.writer.preferences.read().config.writer.reduced_motion
+                        && (*frames.read() / 8) % 2 == 1,
+                ))
                 .child(
                     label()
                         .text(if current.load.cancelled() {

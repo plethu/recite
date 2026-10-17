@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use lsp_types::Uri;
 use recite_core::{
@@ -23,11 +24,11 @@ pub(crate) struct SchemaIndex {
     path: Option<PathBuf>,
     kind: SchemaKind,
     active_version: Option<i32>,
-    summary: Option<SchemaSummary>,
-    schema: Option<ProjectSchema>,
-    source: Option<SchemaSource>,
-    diagnostics: Vec<Diagnostic>,
-    text: Option<String>,
+    summary: Option<Arc<SchemaSummary>>,
+    schema: Option<Arc<ProjectSchema>>,
+    source: Option<Arc<SchemaSource>>,
+    diagnostics: Arc<[Diagnostic]>,
+    text: Option<Arc<str>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -49,7 +50,7 @@ impl SchemaIndex {
             summary: None,
             schema: None,
             source: None,
-            diagnostics: Vec::new(),
+            diagnostics: Arc::default(),
             text: None,
         }
     }
@@ -70,7 +71,7 @@ impl SchemaIndex {
                 summary: None,
                 schema: None,
                 source: None,
-                diagnostics: Vec::new(),
+                diagnostics: Arc::default(),
                 text: None,
             };
         };
@@ -93,7 +94,7 @@ impl SchemaIndex {
                     summary: None,
                     schema: None,
                     source: None,
-                    diagnostics: schema_io_diagnostic(display_path, &error),
+                    diagnostics: schema_io_diagnostic(display_path, &error).into(),
                     text: None,
                 };
             }
@@ -149,11 +150,11 @@ impl SchemaIndex {
             path: Some(path),
             kind,
             active_version: None,
-            summary,
-            schema,
-            source,
-            diagnostics,
-            text: Some(text.to_owned()),
+            summary: summary.map(Arc::new),
+            schema: schema.map(Arc::new),
+            source: source.map(Arc::new),
+            diagnostics: diagnostics.into(),
+            text: Some(Arc::from(text)),
         }
     }
 
@@ -161,7 +162,11 @@ impl SchemaIndex {
         let Some(path) = self.path.clone() else {
             return self.clone();
         };
-        let mut overlay = Self::from_text(path, self.kind, text);
+        let mut overlay = if self.text.as_deref() == Some(text) {
+            self.clone()
+        } else {
+            Self::from_text(path, self.kind, text)
+        };
         // The live owner is the exact URI whose text and version are being
         // parsed.  The configured URI remains available as the saved-state
         // authority and is restored when the final owner closes.
@@ -192,11 +197,11 @@ impl SchemaIndex {
     }
 
     pub(crate) fn summary(&self) -> Option<&SchemaSummary> {
-        self.summary.as_ref()
+        self.summary.as_deref()
     }
 
     pub(crate) fn schema(&self) -> Option<&ProjectSchema> {
-        self.schema.as_ref()
+        self.schema.as_deref()
     }
 
     pub(crate) fn matches_uri(&self, uri: &Uri) -> bool {
@@ -211,12 +216,14 @@ impl SchemaIndex {
     }
 
     pub(crate) fn code_action_document(&self) -> Option<crate::features::SchemaCodeActionDocument> {
+        let version = self.active_version?;
+        let source = self.source.as_deref()?;
         Some(crate::features::SchemaCodeActionDocument {
             uri: self.uri.clone()?,
-            text: self.text.clone()?,
+            text: self.text.as_deref()?.to_owned(),
             summary: self.summary()?.clone(),
-            source: self.source.clone()?,
-            version: self.active_version?,
+            source: source.clone(),
+            version,
         })
     }
 }

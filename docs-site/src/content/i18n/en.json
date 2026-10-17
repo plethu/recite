@@ -2,6 +2,7 @@
   "landing.title": "A dialogue language for games",
   "landing.lead": "Recite turns plain-text dialogue into checked assets for a game. The runtime returns lines, choices, and typed effect requests; the game decides how to present them and what to do next.",
   "landing.release": "This page describes Recite’s v1 scope. Release preparation is still in progress; the installation and distribution guides record what you can use today.",
+  "landing.release.label": "Release status",
   "landing.release.install": "Installation",
   "landing.release.packages": "Packages and release status",
   "landing.action.firstScene": "Write a first scene",

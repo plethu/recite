@@ -11,6 +11,7 @@ pub(crate) use surface::EditorSurface;
 pub(crate) struct EditorViewport {
     pub completion: State<bool>,
     pub candidate: State<Option<usize>>,
+    pub cache: State<Option<crate::field_completion::SourceCompletionCache>>,
     pub scroll: ScrollController,
     pub reveal: State<bool>,
 }
@@ -19,6 +20,7 @@ impl EditorViewport {
         Self {
             completion: use_state(|| false),
             candidate: use_state(|| None),
+            cache: use_state(|| None),
             scroll: use_scroll_controller(ScrollConfig::default),
             reveal: use_state(|| false),
         }

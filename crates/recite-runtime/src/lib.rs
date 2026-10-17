@@ -87,7 +87,7 @@ pub use event::{
     DialogueEffectRequest, DialogueEvent, DialogueLine, DialoguePlural, DialoguePluralResolution,
     DialoguePluralResolutionOutcome, EffectAck,
 };
-pub use session::{DialogueSession, DialogueSessionOptions};
+pub use session::{DialogueSession, DialogueSessionOptions, SessionTraversal};
 pub use traversal::{
     DialogueTrace, LocaleResolution, LocalizedLookupTrace, PluralLineTrace, acknowledge_effect,
     choose, choose_with, next, next_with, start_scene, start_scene_with_options,

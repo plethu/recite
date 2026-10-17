@@ -12,7 +12,7 @@ impl AuthoringSnapshot {
         position: SourcePosition,
     ) -> Option<(String, SourceSpan, SemanticSymbolKind)> {
         let schema = self.schema.as_deref()?;
-        let (name, span) = context::token_at(key, document.source_text(), position)?;
+        let (name, span) = context::token_at(key, document.source_index(), position)?;
         let kind = schema_symbol_kind(schema, &name)?;
         Some((name, span, kind))
     }

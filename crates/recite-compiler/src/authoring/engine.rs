@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use recite_core::{Diagnostic, SourceRecovery, schema::ProjectSchema};
+use recite_core::{SourceRecovery, schema::ProjectSchema};
 mod regions;
 pub(crate) use regions::CachedRegion;
 
@@ -103,7 +103,7 @@ fn completeness(is_complete: bool) -> crate::validation::ValidationCompleteness 
 pub(super) fn build_documents(
     effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
     analyses: &BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
-    semantic: &BTreeMap<recite_core::DocumentKey, Vec<Diagnostic>>,
+    semantic: &crate::validation::incremental::ProjectDiagnostics,
     old_snapshot: &AuthoringSnapshot,
     project_changed: &BTreeSet<recite_core::DocumentKey>,
     control: &dyn WorkControl,

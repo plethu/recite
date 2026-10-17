@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    SourcePosition, SourceSpan,
+    SourceLineIndex, SourcePosition, SourceSpan,
     source_location::{point_one, position_for_byte_offset},
 };
 
+mod json_index;
 mod paths;
 
 pub(crate) use crate::toml_spans::TomlSpanIndex;
@@ -157,6 +158,8 @@ pub(crate) struct ManifestSpans {
     active_section: Option<String>,
     format: super::lower::ManifestSourceFormat,
     toml_spans: Option<TomlSpanIndex>,
+    lines: SourceLineIndex,
+    json_strings: Option<json_index::JsonStringIndex>,
 }
 
 impl ManifestSpans {
@@ -168,7 +171,7 @@ impl ManifestSpans {
         role: StringRole,
     ) -> SourceSpan {
         if self.format == super::lower::ManifestSourceFormat::Toml {
-            return self.toml_next_string_span(file, source, needle, role);
+            return self.toml_next_string_span(file, needle, role);
         }
         let range = self.active_range.unwrap_or(SourceRange {
             start: 0,
@@ -184,8 +187,10 @@ impl ManifestSpans {
             return document_start_span(file);
         }
 
-        let Some(span_range) = next_json_string_range(source, range, search_start, needle, role)
-        else {
+        let strings = self
+            .json_strings
+            .get_or_insert_with(|| json_index::JsonStringIndex::new(source, range));
+        let Some(span_range) = strings.find(needle, role, search_start) else {
             return document_start_span(file);
         };
 
@@ -193,9 +198,15 @@ impl ManifestSpans {
 
         SourceSpan::new(
             file,
-            position_for_byte_offset(source, span_range.start),
-            Some(position_for_byte_offset(source, span_range.end)),
+            self.position(span_range.start),
+            Some(self.position(span_range.end)),
         )
+    }
+
+    fn position(&self, offset: usize) -> SourcePosition {
+        self.lines
+            .position_for_byte_offset(offset)
+            .unwrap_or_else(|| position_for_byte_offset(self.lines.source(), offset))
     }
 }
 
@@ -219,44 +230,12 @@ fn next_json_string_range(
     needle: &str,
     role: StringRole,
 ) -> Option<SourceRange> {
-    let bytes = source.as_bytes();
-    let mut depth = 0usize;
-    let mut index = range.start;
-
-    while index < range.end {
-        match bytes[index] {
-            b'"' => {
-                let string_start = index;
-                let string_end = skip_json_string(bytes, string_start)?;
-                if string_end >= range.end {
-                    return None;
-                }
-
-                if string_start >= search_start
-                    && string_role_matches(source, string_end + 1, role, depth)
-                    && json_string_equals(source, string_start, string_end, needle)
-                {
-                    return Some(SourceRange {
-                        start: string_start,
-                        end: string_end + 1,
-                    });
-                }
-
-                index = string_end + 1;
-            }
-            b'{' | b'[' => {
-                depth += 1;
-                index += 1;
-            }
-            b'}' | b']' => {
-                depth = depth.checked_sub(1)?;
-                index += 1;
-            }
-            _ => index += 1,
-        }
-    }
-
-    None
+    json_index::strings(source, range).find_map(|(range, depth)| {
+        (range.start >= search_start
+            && string_role_matches(source, range.end, role, depth)
+            && json_string_equals(source, range.start, range.end - 1, needle))
+        .then_some(range)
+    })
 }
 
 fn string_role_matches(source: &str, after_string: usize, role: StringRole, depth: usize) -> bool {

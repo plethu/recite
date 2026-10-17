@@ -1,5 +1,5 @@
 use recite_core::{
-    SourceSpan,
+    SourceLineIndex, SourceSpan,
     schema::{MetadataDomainDefinition, MetadataTarget, ProjectSchema, SchemaTypeDefinition},
 };
 
@@ -119,7 +119,7 @@ pub(super) fn reason_candidates(
 
 pub(super) fn value_candidates(
     schema: &ProjectSchema,
-    text: &str,
+    source: &SourceLineIndex,
     key: &str,
     target: MetadataTarget,
     span: &SourceSpan,
@@ -157,7 +157,7 @@ pub(super) fn value_candidates(
                 }))
             }
             MetadataDomainDefinition::Contextual(domain) => {
-                let context = resolve_selector(text, &domain.selector, span.start.line(), target);
+                let context = resolve_selector(source, &domain.selector, span.start.line(), target);
                 let values = match context {
                     SelectorResolution::Value(value) => domain
                         .values_by_context

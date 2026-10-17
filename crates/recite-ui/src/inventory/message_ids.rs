@@ -183,6 +183,8 @@ message_ids! {
     WriterCompleteSource,
     WriterFilterCompletions,
     WriterNoCompletions,
+    WriterFindingCompletions,
+    WriterCompletionsUnavailable,
 
     WriterLookupMatched,
     WriterLookupMissing,
@@ -270,6 +272,7 @@ message_ids! {
     CliHelpArgKeymap, CliHelpArgDialogueLocale, CliHelpArgDialogueCatalog, CliHelpArgBenchScale, CliHelpArgBenchGroup,
     CliHelpArgBenchFormat, CliHelpArgBenchOutput, CliHelpArgBenchBaseline, CliHelpArgBenchSamples, ExplainCode,
     ExplainCategory, ExplainMeaning, ExplainCommonCauses, ExplainHowToFix, ExplainListItem,
+    CliHelpCommandCheckSchemaProducerFreshness, CliHelpGroupAuthoring, CliHelpGroupBuilding, CliHelpGroupLocalisation, CliHelpGroupRunning, CliHelpGroupSchema, CliHelpGroupHelp, CliSuccessOk, CliSuccessFiles, CliSuccessProject, CliDiagnosticErrors, CliDiagnosticWarnings, CliDiagnosticNotes, CliDiagnosticSummary,
     WatchBuilding, WatchWaitingForChanges, WatchRebuilding, WatchBuildSucceeded, WatchBuildDurationMicroseconds, WatchBuildDurationMilliseconds, WatchBuildFailedWaiting,
     WatchBuildFailed,
     WatchBuildFailedPartial, WatchBuildFailedIndeterminate, WatchBuildFailedRefused,

@@ -31,7 +31,7 @@ impl Component for EntryContext {
             .peek()
             .as_ref()
             .ok()
-            .and_then(|m| m.document().passages().ok())
+            .and_then(|m| m.document().passage_snapshot().ok())
             .unwrap_or_default();
         let destination = super::navigation::Destination::resolve(&entry, &passages);
         let mut body = rect().width(Size::fill()).spacing(t::SPACE_MD).child(

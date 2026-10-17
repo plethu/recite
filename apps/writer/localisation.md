@@ -102,3 +102,11 @@ database.
 
 The [Writer gate](justfile) checks these workflows and shared PO preservation/validation. Physical
 keyboard, IME and screen-reader checks belong to [acceptance](acceptance.md).
+
+## Scripts and fonts
+
+Writer bundles Latin, Cyrillic and Greek faces. Chinese, Japanese, Korean, Arabic, Hebrew,
+Devanagari and Thai text uses system fonts; on Linux, install the Noto families named in
+[`crates/freya/fonts/FONTS.md`](crates/freya/fonts/FONTS.md). Right-to-left text is shaped and
+ordered within a line, but paragraphs are laid out left to right: lines start at the left edge and
+trailing punctuation sits on the right.

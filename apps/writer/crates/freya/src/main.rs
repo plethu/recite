@@ -38,7 +38,7 @@ fn main() {
     };
 
     launch(
-        LaunchConfig::new().with_window(
+        LaunchConfig::new().with_fonts().with_window(
             WindowConfig::new(move || {
                 if specimen {
                     return recite_writer::design_app();
@@ -92,4 +92,70 @@ fn main() {
             .with_min_size(900., 650.),
         ),
     );
+}
+
+/// Writer ships its four OFL families so the type chains resolve without system fonts.
+/// Each name matches a family in the chains in `design/tokens.rs`; the files and their licences
+/// live in `fonts/`, described in `fonts/FONTS.md`.
+trait EmbeddedFonts {
+    fn with_fonts(self) -> Self;
+}
+
+impl EmbeddedFonts for LaunchConfig {
+    fn with_fonts(self) -> Self {
+        [
+            (
+                "Fraunces 72pt Soft",
+                &include_bytes!("../fonts/fraunces/Fraunces72ptSoft-SemiBold.ttf")[..],
+            ),
+            (
+                "Fraunces",
+                &include_bytes!("../fonts/fraunces/Fraunces-Variable.ttf")[..],
+            ),
+            (
+                "Literata",
+                &include_bytes!("../fonts/literata/Literata-Variable.ttf")[..],
+            ),
+            (
+                "Literata",
+                &include_bytes!("../fonts/literata/Literata-Italic-Variable.ttf")[..],
+            ),
+            (
+                "IBM Plex Sans",
+                &include_bytes!("../fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf")[..],
+            ),
+            (
+                "IBM Plex Sans",
+                &include_bytes!("../fonts/ibm-plex-sans/IBMPlexSans-Italic.ttf")[..],
+            ),
+            (
+                "IBM Plex Sans",
+                &include_bytes!("../fonts/ibm-plex-sans/IBMPlexSans-Medium.ttf")[..],
+            ),
+            (
+                "IBM Plex Sans",
+                &include_bytes!("../fonts/ibm-plex-sans/IBMPlexSans-MediumItalic.ttf")[..],
+            ),
+            (
+                "IBM Plex Sans",
+                &include_bytes!("../fonts/ibm-plex-sans/IBMPlexSans-SemiBold.ttf")[..],
+            ),
+            (
+                "IBM Plex Mono",
+                &include_bytes!("../fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf")[..],
+            ),
+            (
+                "IBM Plex Mono",
+                &include_bytes!("../fonts/ibm-plex-mono/IBMPlexMono-Italic.ttf")[..],
+            ),
+            (
+                "IBM Plex Mono",
+                &include_bytes!("../fonts/ibm-plex-mono/IBMPlexMono-Medium.ttf")[..],
+            ),
+        ]
+        .into_iter()
+        .fold(self, |config, (family, bytes)| {
+            config.with_font(family, bytes)
+        })
+    }
 }

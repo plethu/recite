@@ -75,7 +75,7 @@ impl SchemaIndex {
             uri,
             text: self.text.clone().unwrap_or_default(),
             version: self.active_version,
-            diagnostics: self.diagnostics.clone(),
+            diagnostics: self.diagnostics.to_vec(),
             generation,
         }))
     }

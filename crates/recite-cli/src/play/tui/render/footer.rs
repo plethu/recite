@@ -28,7 +28,7 @@ pub(super) fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> 
         if help.is_empty() {
             help = queue;
         } else {
-            help.push_str(" | ");
+            help.push_str(" · ");
             help.push_str(&queue);
         }
     }
@@ -85,12 +85,16 @@ fn footer_controls(
         })
         .map(|control| footer_control_text(control, messages, compact))
         .collect::<Vec<_>>()
-        .join(" | ")
+        .join(" · ")
 }
 
 fn footer_control_text(control: TuiControl, messages: &Messages, compact: bool) -> String {
     if compact {
         return control.keys.to_owned();
+    }
+    // A phrase such as "an ID or number" reads as an instruction after its verb.
+    if control.action == MsgId::TuiHelpActionInput && control.keys.contains(' ') {
+        return format!("{} {}", messages.text(control.action), control.keys);
     }
     format!("{} {}", control.keys, messages.text(control.action))
 }

@@ -11,6 +11,8 @@ namespace Recite.Unity.Editor
 {
     public static class ReciteSchemaExporter
     {
+        private static PendingExport active;
+
         [MenuItem("Tools/Recite/Export Schema")]
         public static void ExportSelected()
         {
@@ -26,10 +28,65 @@ namespace Recite.Unity.Editor
                 Debug.LogError("Select a ReciteSchemaRegistration asset, or keep exactly one in the project.");
                 return;
             }
-            Export(registration);
+            if (active != null)
+            {
+                Debug.LogWarning("A Recite schema export is already running.", registration);
+                return;
+            }
+            try
+            {
+                active = Prepare(registration);
+                EditorApplication.update += PollExport;
+                EditorApplication.quitting += CancelExport;
+                AssemblyReloadEvents.beforeAssemblyReload += CancelExport;
+            }
+            catch (Exception error) when (error is System.ComponentModel.Win32Exception || error is IOException)
+            {
+                Debug.LogError("Cannot start Recite schema export: " + error.Message, registration);
+            }
         }
 
+        // Synchronous automation entry point; the editor menu uses the polled job above.
         public static bool Export(ReciteSchemaRegistration registration)
+        {
+            try
+            {
+                using (var pending = Prepare(registration))
+                {
+                    while (!pending.Process.Poll()) System.Threading.Thread.Sleep(1);
+                    return Complete(pending);
+                }
+            }
+            catch (Exception error) when (error is System.ComponentModel.Win32Exception || error is IOException)
+            {
+                Debug.LogError("Cannot complete Recite schema export: " + error.Message, registration);
+                return false;
+            }
+        }
+
+        private static void PollExport()
+        {
+            if (active == null || !active.Process.Poll()) return;
+            var pending = active;
+            try { Complete(pending); }
+            catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
+            {
+                Debug.LogError("Cannot complete Recite schema export: " + error.Message, pending.Registration);
+            }
+            finally { CancelExport(); }
+        }
+
+        private static void CancelExport()
+        {
+            EditorApplication.update -= PollExport;
+            EditorApplication.quitting -= CancelExport;
+            AssemblyReloadEvents.beforeAssemblyReload -= CancelExport;
+            var pending = active;
+            active = null;
+            pending?.Dispose();
+        }
+
+        private static PendingExport Prepare(ReciteSchemaRegistration registration)
         {
             if (registration == null) throw new ArgumentNullException(nameof(registration));
             var registrationPath = AssetDatabase.GetAssetPath(registration);
@@ -52,11 +109,10 @@ namespace Recite.Unity.Editor
                 throw new ArgumentException("Schema output escapes Assets", nameof(registration));
             var sourceDir = Path.Combine(projectRoot, "Library", "Recite");
             Directory.CreateDirectory(sourceDir);
-            var sourcePath = Path.Combine(sourceDir, producerId + ".toml");
-            File.WriteAllText(sourcePath, ReciteSchemaToml.Generate(registration,
-                producerId), new UTF8Encoding(false));
+            var sourcePath = Path.Combine(sourceDir, producerId + "." + Guid.NewGuid().ToString("N") + ".toml");
+            var sourceText = ReciteSchemaToml.Generate(registration, producerId);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
-            var stagedOutputPath = outputPath + "." + Guid.NewGuid().ToString("N") + ".json";
+            var stagedOutputPath = Path.Combine(Path.GetDirectoryName(outputPath), ".recite-schema-" + Guid.NewGuid().ToString("N") + ".json");
 
             var executable = string.IsNullOrWhiteSpace(registration.reciteExecutable)
                 ? "recite" : registration.reciteExecutable;
@@ -71,59 +127,57 @@ namespace Recite.Unity.Editor
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
                 CreateNoWindow = true
             };
-            var outputLines = new List<string>();
-            var errorLines = new List<string>();
-            var childMayWrite = false;
-            try
+            return new PendingExport
             {
-                using (var process = new Process { StartInfo = start })
-                {
-                    process.OutputDataReceived += (_, args) => { if (args.Data != null) outputLines.Add(args.Data); };
-                    process.ErrorDataReceived += (_, args) => { if (args.Data != null) errorLines.Add(args.Data); };
-                    process.Start();
-                    process.BeginOutputReadLine();
-                    process.BeginErrorReadLine();
-                    if (!process.WaitForExit(120000))
-                    {
-                        try
-                        {
-                            process.Kill();
-                            childMayWrite = !process.WaitForExit(10000);
-                        }
-                        catch (InvalidOperationException)
-                        {
-                            childMayWrite = !process.HasExited;
-                        }
-                        catch (System.ComponentModel.Win32Exception)
-                        {
-                            childMayWrite = !process.HasExited;
-                        }
-                        Debug.LogError("Recite schema export timed out; its result could not be confirmed.", registration);
-                        return false;
-                    }
-                    process.WaitForExit();
-                    if (ReportResult(outputLines, errorLines, process.ExitCode, registration))
-                    {
-                        if (!File.Exists(stagedOutputPath))
-                            throw new IOException("Recite reported success without a manifest artifact");
-                        if (File.Exists(outputPath)) File.Replace(stagedOutputPath, outputPath, null);
-                        else File.Move(stagedOutputPath, outputPath);
-                        AssetDatabase.ImportAsset(output, ImportAssetOptions.ForceUpdate);
-                        return true;
-                    }
-                }
-            }
-            catch (Exception error) when (error is System.ComponentModel.Win32Exception || error is IOException)
+                Registration = registration,
+                ProducerId = producerId,
+                SourceText = sourceText,
+                OutputAssetPath = output,
+                OutputPath = outputPath,
+                StagedPath = stagedOutputPath,
+                Process = new ReciteSchemaExportProcess(start, sourcePath, stagedOutputPath, sourceText)
+            };
+        }
+
+        private static bool Complete(PendingExport pending)
+        {
+            if (pending.Process.Failure != null)
             {
-                Debug.LogError("Cannot complete Recite schema export: " + error.Message, registration);
+                Debug.LogError(pending.Process.Failure, pending.Registration);
+                return false;
             }
-            finally
+            if (!ReportResult(pending.Process.Output, pending.Process.Errors,
+                pending.Process.ExitCode, pending.Registration)) return false;
+            var registration = pending.Registration;
+            if (registration == null || registration.outputAssetPath != pending.OutputAssetPath ||
+                AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(registration)) != pending.ProducerId ||
+                ReciteSchemaToml.Generate(registration, pending.ProducerId) != pending.SourceText)
             {
-                if (!childMayWrite && File.Exists(stagedOutputPath)) File.Delete(stagedOutputPath);
+                Debug.LogError("Recite schema registration changed during export; export it again.", registration);
+                return false;
             }
-            return false;
+            if (!File.Exists(pending.StagedPath))
+                throw new IOException("Recite reported success without a manifest artifact");
+            if (File.Exists(pending.OutputPath)) File.Replace(pending.StagedPath, pending.OutputPath, null);
+            else File.Move(pending.StagedPath, pending.OutputPath);
+            AssetDatabase.ImportAsset(pending.OutputAssetPath, ImportAssetOptions.ForceUpdate);
+            return true;
+        }
+
+        private sealed class PendingExport : IDisposable
+        {
+            internal ReciteSchemaRegistration Registration;
+            internal string ProducerId;
+            internal string SourceText;
+            internal string OutputAssetPath;
+            internal string OutputPath;
+            internal string StagedPath;
+            internal ReciteSchemaExportProcess Process;
+            public void Dispose() => Process.Dispose();
         }
 
         private static bool ReportResult(List<string> output, List<string> stderr, int exitCode,
@@ -181,16 +235,16 @@ namespace Recite.Unity.Editor
         [Serializable]
         private sealed class ProtocolRecord
         {
-            public int version;
-            public int sequence;
-            public string @event;
-            public string command;
-            public string status;
-            public ProtocolData data;
-            public ProtocolError error;
+            public int version = 0;
+            public int sequence = 0;
+            public string @event = null;
+            public string command = null;
+            public string status = null;
+            public ProtocolData data = null;
+            public ProtocolError error = null;
         }
-        [Serializable] private sealed class ProtocolData { public ProtocolDiagnostic[] diagnostics; }
-        [Serializable] private sealed class ProtocolDiagnostic { public string code; public string compatibility_message; }
-        [Serializable] private sealed class ProtocolError { public string code; public string operation; }
+        [Serializable] private sealed class ProtocolData { public ProtocolDiagnostic[] diagnostics = null; }
+        [Serializable] private sealed class ProtocolDiagnostic { public string code = null; public string compatibility_message = null; }
+        [Serializable] private sealed class ProtocolError { public string code = null; public string operation = null; }
     }
 }

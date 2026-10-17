@@ -1,41 +1,72 @@
 mod positions;
 mod regions;
+#[cfg(test)]
+mod tests;
 pub(crate) use regions::FactRanges;
 // Compact project inputs. Prose and local schema syntax do not survive analysis.
 use crate::{validation::ValidationInput, validation::ValidationParticipation};
 use recite_core::{
     BlockId, ChoiceId, LineId, SourceId, SourceSpan,
-    ast::{
-        Block, Choice, ChoiceEcho, Divert, DivertTarget, Line, SourceFile, SourceText, Statement,
-    },
+    ast::{Block, ChoiceEcho, Divert, DivertTarget, SourceFile, Statement},
 };
+use std::sync::Arc;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ProjectFacts {
     pub(super) path: String,
     pub(super) participation: ValidationParticipation,
-    pub(super) blocks: Box<[BlockFact]>,
-    pub(super) passages: Box<[PassageFact]>,
-    pub(super) references: Box<[Divert]>,
+    pub(super) blocks: Arc<Vec<BlockFact>>,
+    pub(super) passages: Arc<Vec<PassageFact>>,
+    pub(super) references: Arc<Vec<Divert>>,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct BlockFact {
     pub(super) id: BlockId,
     pub(super) default: bool,
     pub(super) span: SourceSpan,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct PassageFact {
     pub(super) identity: Identity,
     pub(super) frozen: bool,
     pub(super) span: SourceSpan,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Identity {
     Line(Option<LineId>),
     Choice(Option<ChoiceId>, ChoiceEcho),
 }
 impl ProjectFacts {
+    pub(super) fn shares_storage(&self, previous: &Self) -> bool {
+        let Self {
+            path,
+            participation,
+            blocks,
+            passages,
+            references,
+        } = self;
+        path == &previous.path
+            && participation == &previous.participation
+            && Arc::ptr_eq(blocks, &previous.blocks)
+            && Arc::ptr_eq(passages, &previous.passages)
+            && Arc::ptr_eq(references, &previous.references)
+    }
+
+    pub(super) fn same_non_reference_facts(&self, next: &Self) -> bool {
+        // Exhaustive destructuring makes new fact families revisit this proof.
+        let Self {
+            path,
+            participation,
+            blocks,
+            passages,
+            references: _,
+        } = self;
+        path == &next.path
+            && participation == &next.participation
+            && blocks == &next.blocks
+            && passages == &next.passages
+    }
+
     pub(crate) fn collect(input: ValidationInput<'_>) -> Self {
         let file = input.source_file();
         let mut passages = Vec::new();
@@ -70,51 +101,26 @@ impl ProjectFacts {
                     default: block.is_default,
                     span: block.span.clone(),
                 })
-                .collect(),
-            passages: passages.into_boxed_slice(),
-            references: references.into_boxed_slice(),
+                .collect::<Vec<_>>()
+                .into(),
+            passages: Arc::new(passages),
+            references: Arc::new(references),
         }
     }
 
-    // Only the existing project validator consumes this temporary projection.
-    // Flattening preserves passage order; local semantics use the original AST.
-    pub(super) fn project_source(&self) -> SourceFile {
-        let mut blocks: Vec<_> = self
-            .blocks
-            .iter()
-            .map(|block| {
-                Block::new(block.id.clone(), Vec::new(), block.span.clone())
-                    .with_default(block.default)
-            })
-            .collect();
-        if let Some(first) = blocks.first_mut() {
-            first.statements = self
-                .passages
+    // Block headers retain the existing validator's participation and lookup
+    // ownership; passages and references are borrowed from these compact facts.
+    pub(super) fn project_header(&self) -> SourceFile {
+        SourceFile::new(
+            &self.path,
+            self.blocks
                 .iter()
-                .map(|passage| {
-                    let text = SourceText::new(String::new(), passage.span.clone());
-                    match &passage.identity {
-                        Identity::Line(id) => {
-                            let mut line = Line::new(id.clone(), text, passage.span.clone());
-                            if !passage.frozen {
-                                line.source_id = SourceId::Missing;
-                            }
-                            Statement::Line(line)
-                        }
-                        Identity::Choice(id, echo) => {
-                            let mut choice = Choice::new(id.clone(), text, passage.span.clone());
-                            if !passage.frozen {
-                                choice.source_id = SourceId::Missing;
-                            }
-                            choice.echo = echo.clone();
-                            Statement::Choice(choice)
-                        }
-                    }
+                .map(|block| {
+                    Block::new(block.id.clone(), Vec::new(), block.span.clone())
+                        .with_default(block.default)
                 })
-                .chain(self.references.iter().cloned().map(Statement::Divert))
-                .collect();
-        }
-        SourceFile::new(&self.path, blocks)
+                .collect(),
+        )
     }
 
     pub(super) fn same_block_targets(&self, other: &Self) -> bool {
@@ -126,18 +132,36 @@ impl ProjectFacts {
                 .eq(other.blocks.iter().map(|block| &block.id))
     }
 
+    // A conservative, allocation-free proof of unchanged export membership.
+    // Other facts still update: echoes, participation and spans affect validation.
+    pub(super) fn same_ordered_exports(&self, next: &Self) -> bool {
+        self.path == next.path
+            && self
+                .blocks
+                .iter()
+                .map(|block| &block.id)
+                .eq(next.blocks.iter().map(|block| &block.id))
+            && (Arc::ptr_eq(&self.passages, &next.passages)
+                || self.exported_ids().eq(next.exported_ids()))
+            && self.blocks.iter().any(|block| block.default)
+                == next.blocks.iter().any(|block| block.default)
+    }
+
+    fn exported_ids(&self) -> impl Iterator<Item = &str> {
+        self.passages
+            .iter()
+            .filter_map(|passage| match &passage.identity {
+                Identity::Line(id) => id.as_ref().map(|id| id.as_str()),
+                Identity::Choice(id, _) => id.as_ref().map(|id| id.as_str()),
+            })
+    }
+
     pub(super) fn exports(&self) -> impl Iterator<Item = Symbol> + '_ {
         let blocks = self
             .blocks
             .iter()
             .map(|block| Symbol::Block(block.id.clone()));
-        let ids = self
-            .passages
-            .iter()
-            .filter_map(|passage| match &passage.identity {
-                Identity::Line(id) => id.as_ref().map(|id| Symbol::Id(id.as_str().to_owned())),
-                Identity::Choice(id, _) => id.as_ref().map(|id| Symbol::Id(id.as_str().to_owned())),
-            });
+        let ids = self.exported_ids().map(|id| Symbol::Id(id.to_owned()));
         blocks
             .chain(ids)
             .chain(std::iter::once(Symbol::Document(self.path.clone())))
@@ -159,16 +183,18 @@ impl ProjectFacts {
                 }
                 _ => None,
             });
-        let references = self
-            .references
+        echoes.chain(self.reference_dependencies())
+    }
+
+    pub(super) fn reference_dependencies(&self) -> impl Iterator<Item = Symbol> + '_ {
+        self.references
             .iter()
             .filter_map(|reference| match &reference.target {
                 DivertTarget::Block(target) => Some(Symbol::Document(
                     target.file.clone().unwrap_or_else(|| self.path.clone()),
                 )),
                 DivertTarget::End => None,
-            });
-        echoes.chain(references)
+            })
     }
 }
 

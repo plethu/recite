@@ -62,6 +62,22 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::ExplainCommonCauses => Some("explain-common-causes"),
         super::MsgId::ExplainHowToFix => Some("explain-how-to-fix"),
         super::MsgId::ExplainListItem => Some("explain-list-item"),
+        super::MsgId::CliHelpCommandCheckSchemaProducerFreshness => {
+            Some("cli-help-command-check-schema-producer-freshness")
+        }
+        super::MsgId::CliHelpGroupAuthoring => Some("cli-help-group-authoring"),
+        super::MsgId::CliHelpGroupBuilding => Some("cli-help-group-building"),
+        super::MsgId::CliHelpGroupLocalisation => Some("cli-help-group-localisation"),
+        super::MsgId::CliHelpGroupRunning => Some("cli-help-group-running"),
+        super::MsgId::CliHelpGroupSchema => Some("cli-help-group-schema"),
+        super::MsgId::CliHelpGroupHelp => Some("cli-help-group-help"),
+        super::MsgId::CliSuccessOk => Some("cli-success-ok"),
+        super::MsgId::CliSuccessFiles => Some("cli-success-files"),
+        super::MsgId::CliSuccessProject => Some("cli-success-project"),
+        super::MsgId::CliDiagnosticErrors => Some("cli-diagnostic-errors"),
+        super::MsgId::CliDiagnosticWarnings => Some("cli-diagnostic-warnings"),
+        super::MsgId::CliDiagnosticNotes => Some("cli-diagnostic-notes"),
+        super::MsgId::CliDiagnosticSummary => Some("cli-diagnostic-summary"),
         super::MsgId::WatchEventError => Some("watch-event-error"),
         super::MsgId::CliHelpArgHelp => Some("cli-help-arg-help"),
         super::MsgId::CliHelpArgVersion => Some("cli-help-arg-version"),

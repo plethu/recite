@@ -44,8 +44,8 @@ fn map_first_and_independent_branch_previews() -> Result<(), Box<dyn std::error:
     assert!(prose(&test, "If you're here").is_none());
     capture(&mut test, "hub-map.png")?;
     support::open_beat(&mut test)?;
-    click(&mut test, "▸ Missing Courier")?;
-    click(&mut test, "▸ Station History")?;
+    click(&mut test, "→ Missing Courier")?;
+    click(&mut test, "→ Station History")?;
     for caption in ["Edit Missing Courier", "Edit Station History"] {
         assert!(
             test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == caption))

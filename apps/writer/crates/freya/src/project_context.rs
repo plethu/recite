@@ -4,6 +4,23 @@ use recite_writer_model::ProjectContext;
 
 use crate::project::FileError;
 
+pub(super) fn share_saved_source(
+    context: &mut ProjectContext,
+    key: &recite_core::DocumentKey,
+    saved: &std::sync::Arc<str>,
+) {
+    if let Some(document) = context
+        .documents
+        .iter_mut()
+        .find(|document| document.key() == key)
+        && document.text() == saved.as_ref()
+    {
+        // Discovery and the later regular-file read keep their own authority
+        // when disk changed between them. Only equal immutable bytes coalesce.
+        *document = SavedDocument::from_shared(key.clone(), saved.clone());
+    }
+}
+
 pub(super) fn load(
     report: &recite_config::ProjectDiscoveryReport,
 ) -> Result<ProjectContext, FileError> {
@@ -46,3 +63,6 @@ pub(super) fn diagnostic_messages(diagnostics: &[recite_core::Diagnostic]) -> St
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+#[cfg(test)]
+mod tests;

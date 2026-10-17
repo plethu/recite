@@ -2,6 +2,8 @@ use super::*;
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::Document;
 use serde_json::{Value, json};
+#[path = "parking/tests.rs"]
+mod parking;
 
 fn two_scenes()
 -> Result<(tempfile::TempDir, ProjectFiles, Workbench, PathBuf), Box<dyn std::error::Error>> {
@@ -450,6 +452,18 @@ fn retained_project_sessions_preserve_edits_and_release_closed_owners()
     assert!(files.retained.is_empty());
     assert!(files.can_leave(&current));
     let closed = resources();
+    // This opt-in workload runs alone; retained sessions may own locks and
+    // snapshots, but must not each retain an idle recovery thread.
+    if let Some(opened_threads) = opened["Threads"].as_str() {
+        let budget = opened_threads.parse::<usize>()? + 1;
+        for checkpoint in [&visited, &revisited, &closed] {
+            let threads = checkpoint["Threads"]
+                .as_str()
+                .ok_or("thread checkpoint")?
+                .parse::<usize>()?;
+            assert!(threads <= budget, "{threads} threads exceed {budget}");
+        }
+    }
     println!(
         "{}",
         json!({"passages":passages,"documents":inputs.len(),"visits":visits,

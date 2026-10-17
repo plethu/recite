@@ -138,6 +138,10 @@ def check_export(output: Path) -> None:
         f"share/licenses/{APP_ID}/LICENSE",
         f"share/licenses/{APP_ID}/LICENSE-MIT",
         f"share/licenses/{APP_ID}/LICENSE-APACHE",
+        f"share/licenses/{APP_ID}/fonts/Fraunces-OFL.txt",
+        f"share/licenses/{APP_ID}/fonts/Literata-OFL.txt",
+        f"share/licenses/{APP_ID}/fonts/IBM-Plex-Sans-OFL.txt",
+        f"share/licenses/{APP_ID}/fonts/IBM-Plex-Mono-OFL.txt",
     ):
         require((files / relative).is_file(), f"missing {relative}")
     metadata = (build / "metadata").read_text()

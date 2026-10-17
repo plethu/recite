@@ -10,6 +10,8 @@ use recite_core::{
 };
 
 use crate::{ChoiceAvailability, DialogueEffectRequest, DialogueError, DialogueEvent};
+mod transaction;
+pub use transaction::SessionTraversal;
 
 /// Compact, asset-free runtime session state.
 #[derive(Clone, Debug, PartialEq)]

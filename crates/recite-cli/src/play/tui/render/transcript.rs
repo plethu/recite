@@ -1,4 +1,5 @@
 use ratatui::text::{Line, Span, Text};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::i18n::{Messages, MsgId};
 use crate::tui::TuiPalette;
@@ -40,7 +41,10 @@ fn render_transcript_entry<'a>(
         TuiTranscriptKind::Condition | TuiTranscriptKind::Choice | TuiTranscriptKind::Ack => {
             if let Some(id) = entry.id.as_deref() {
                 spans.push(Span::raw(" "));
-                spans.push(Span::styled(id, palette.muted()));
+                spans.push(Span::styled(
+                    super::prompt::short_choice_id(id),
+                    palette.muted(),
+                ));
             }
             if !entry.text.is_empty() {
                 spans.push(Span::raw(" -> "));
@@ -51,7 +55,10 @@ fn render_transcript_entry<'a>(
         TuiTranscriptKind::Effect | TuiTranscriptKind::Deferred => {
             if let Some(id) = entry.id.as_deref() {
                 spans.push(Span::raw(" "));
-                spans.push(Span::styled(id, palette.muted()));
+                spans.push(Span::styled(
+                    super::prompt::short_choice_id(id),
+                    palette.muted(),
+                ));
             }
             if !entry.text.is_empty() {
                 spans.push(Span::raw(" "));
@@ -69,7 +76,10 @@ fn render_transcript_entry<'a>(
         TuiTranscriptKind::Line | TuiTranscriptKind::Prompt => {
             if let Some(id) = entry.id.as_deref() {
                 spans.push(Span::raw(" "));
-                spans.push(Span::styled(id, palette.muted()));
+                spans.push(Span::styled(
+                    super::prompt::short_choice_id(id),
+                    palette.muted(),
+                ));
             }
             let mut lines = vec![Line::from(spans)];
             lines.extend(wrap_continuation(entry.text.as_str(), width, 2));
@@ -84,27 +94,49 @@ pub(super) fn wrap_continuation(text: &str, width: usize, indent: usize) -> Vec<
     } else {
         " ".repeat(indent)
     };
-    let available = width.saturating_sub(prefix.chars().count()).max(8);
-    let mut lines = Vec::new();
+    let available = width.saturating_sub(prefix.width()).max(8);
+    if text.is_empty() {
+        return Vec::new();
+    }
+    wrap_display(text, available)
+        .into_iter()
+        .map(|row| Line::from(format!("{prefix}{row}")))
+        .collect()
+}
+
+/// Wrap by terminal display width: CJK and other wide characters take two columns, and a run
+/// with no spaces (as in Chinese or Japanese) breaks between characters.
+pub(super) fn wrap_display(text: &str, available: usize) -> Vec<String> {
+    let mut rows = Vec::new();
     let mut current = String::new();
     for word in text.split_whitespace() {
         let separator = usize::from(!current.is_empty());
-        if current.chars().count() + separator + word.chars().count() > available
-            && !current.is_empty()
-        {
-            lines.push(Line::from(format!("{prefix}{current}")));
-            current.clear();
+        if current.width() + separator + word.width() <= available {
+            if separator == 1 {
+                current.push(' ');
+            }
+            current.push_str(word);
+            continue;
         }
-        if !current.is_empty() {
+        if !current.is_empty() && word.width() <= available {
+            rows.push(std::mem::take(&mut current));
+            current.push_str(word);
+            continue;
+        }
+        if separator == 1 && current.width() + 1 < available {
             current.push(' ');
         }
-        current.push_str(word);
+        for ch in word.chars() {
+            if current.width() + ch.width().unwrap_or(0) > available {
+                rows.push(std::mem::take(&mut current));
+            }
+            current.push(ch);
+        }
     }
-    if current.is_empty() && text.is_empty() {
-        return lines;
+    if !current.is_empty() {
+        rows.push(current);
     }
-    lines.push(Line::from(format!("{prefix}{current}")));
-    lines
+    rows
 }
 
 fn transcript_label_span(
@@ -153,7 +185,10 @@ pub(super) fn prompt_header_line<'a>(
     let mut spans = vec![transcript_label_span(kind, messages, palette)];
     if let Some(id) = id {
         spans.push(Span::raw(" "));
-        spans.push(Span::styled(id.to_owned(), palette.muted()));
+        spans.push(Span::styled(
+            super::prompt::short_choice_id(id),
+            palette.muted(),
+        ));
     }
     Line::from(spans)
 }

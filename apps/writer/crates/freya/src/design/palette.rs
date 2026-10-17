@@ -1,7 +1,7 @@
 //! Semantic colour ownership for both Freya widgets and custom map painting.
 use freya::{code_editor::*, prelude::*};
 mod theme;
-pub use theme::theme;
+pub use theme::{theme, theme_with};
 
 #[derive(Clone, Copy)]
 pub(crate) struct Palette {
@@ -22,6 +22,26 @@ pub(crate) struct Palette {
     pub backdrop: Color,
     pub shadow: Color,
     pub error: Color,
+    /// Riso second ink: plates, rules and decoration only, never text in light mode.
+    pub teal: Color,
+    /// Text-safe second ink, for links and destinations only.
+    pub teal_text: Color,
+    /// Second-ink selection plate; carries ink or accent text, not `teal_text` when pressed.
+    pub plate: Color,
+    /// Wordmark letters: plum on paper, warm paper on dark surfaces.
+    pub wordmark: Color,
+    /// Filled ink for the primary action and the active segment; text on it is `on_stamp`.
+    pub stamp: Color,
+    pub on_stamp: Color,
+    /// Plum multiplied by teal: the darkest ink, used where two inks meet.
+    pub overprint: Color,
+    /// Overprint navy in light mode; on dark paper it would not separate, so dark uses `floating`.
+    pub status_bar: Color,
+    /// A hairline above the dark status bar; matches the bar in light mode.
+    pub status_edge: Color,
+    pub status_text: Color,
+    /// Mint on the status bar in both modes, for a clean diagnostics state.
+    pub status_signal: Color,
 }
 impl Palette {
     pub fn with_mode(dark: bool, monochrome: bool) -> Self {
@@ -43,6 +63,17 @@ impl Palette {
                 &mut p.hover,
                 &mut p.pressed,
                 &mut p.error,
+                &mut p.wordmark,
+                &mut p.stamp,
+                &mut p.on_stamp,
+                &mut p.teal,
+                &mut p.teal_text,
+                &mut p.plate,
+                &mut p.overprint,
+                &mut p.status_bar,
+                &mut p.status_edge,
+                &mut p.status_text,
+                &mut p.status_signal,
             ] {
                 *c = gray(*c);
             }
@@ -50,25 +81,66 @@ impl Palette {
         p
     }
     pub fn new(dark: bool) -> Self {
+        let surface = color(dark, (250, 246, 239), (42, 38, 46));
+        let ink = color(dark, (48, 36, 49), (243, 233, 223));
+        // Mint replaces riso teal on dark paper, where it is also text-safe.
+        let second_ink = color(dark, (0, 131, 138), (130, 216, 213));
+        let floating = color(dark, (255, 251, 245), (54, 48, 57));
+        let muted = color(dark, (83, 69, 81), (207, 192, 203));
+        let rule = Color::lerp(surface, ink, 0.14);
+        let overprint = Color::from_rgb(0, 32, 53);
         Self {
             canvas: color(dark, (239, 233, 225), (27, 24, 30)),
-            surface: color(dark, (250, 246, 239), (36, 32, 39)),
+            surface,
             inset: color(dark, (243, 237, 229), (29, 26, 33)),
-            floating: color(dark, (255, 251, 245), (46, 41, 49)),
-            rule: color(dark, (216, 206, 201), (65, 57, 68)),
+            floating,
+            // Hairlines are ink at 14% over the reading surface, precomputed so map painting
+            // and other opaque consumers draw the same colour.
+            rule,
             boundary: color(dark, (127, 116, 119), (153, 139, 154)),
-            ink: color(dark, (48, 36, 49), (243, 233, 223)),
-            muted: color(dark, (83, 69, 81), (207, 192, 203)),
+            ink,
+            muted,
             placeholder: color(dark, (113, 98, 109), (175, 157, 172)),
             accent: color(dark, (104, 62, 98), (212, 174, 204)),
             on_accent: color(dark, (255, 251, 245), (40, 25, 39)),
-            selection: color(dark, (234, 221, 232), (59, 44, 59)),
-            hover: color(dark, (238, 229, 231), (54, 46, 56)),
-            pressed: color(dark, (218, 203, 215), (69, 55, 69)),
+            selection: color(dark, (234, 221, 232), (72, 54, 72)),
+            hover: color(dark, (238, 229, 231), (58, 51, 61)),
+            pressed: color(dark, (218, 203, 215), (82, 66, 82)),
             backdrop: Color::from_argb(110, 0, 0, 0),
-            shadow: Color::from_argb(if dark { 85 } else { 28 }, 0, 0, 0),
+            // Soft blurred shadows are gone; elevation is a hard offset plate (`material::offset`).
+            shadow: Color::TRANSPARENT,
             error: color(dark, (137, 51, 48), (246, 191, 178)),
+            wordmark: if dark {
+                ink
+            } else {
+                Color::from_rgb(104, 62, 98)
+            },
+            stamp: ink,
+            on_stamp: surface,
+            teal: second_ink,
+            teal_text: color(dark, (15, 107, 111), (130, 216, 213)),
+            // 12% second ink on paper; on dark paper, 14% mint over the surface.
+            plate: color(dark, (214, 221, 213), (54, 63, 69)),
+            overprint,
+            status_bar: if dark { floating } else { overprint },
+            status_edge: if dark { rule } else { overprint },
+            status_text: if dark {
+                muted
+            } else {
+                Color::from_rgb(243, 233, 223)
+            },
+            status_signal: Color::from_rgb(130, 216, 213),
         }
+    }
+
+    /// Reply destinations use text-safe teal, except on a pressed fill where it fails contrast.
+    pub fn destination(&self, pressed: bool) -> Color {
+        if pressed { self.ink } else { self.teal_text }
+    }
+
+    /// Hover and press lift a filled stamp toward its text colour, keeping text readable.
+    pub fn stamp_state(&self, amount: f32) -> Color {
+        Color::lerp(self.stamp, self.on_stamp, amount)
     }
 }
 

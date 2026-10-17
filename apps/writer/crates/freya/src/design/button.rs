@@ -6,9 +6,13 @@ use semantics::Semantics;
 
 #[derive(Clone, Copy, PartialEq)]
 enum Kind {
+    /// Quiet at rest; a stamp in a `StampScope` or with `stamp()`; filled ink when switched on.
     Secondary,
+    /// List rows and toolbar text actions; selection is the second-ink plate.
     Quiet,
     Primary,
+    /// Opens a picker or acts as a select, so it looks like an input.
+    Field,
 }
 
 #[cfg(test)]
@@ -27,6 +31,11 @@ pub(crate) struct Button {
     semantics: Semantics,
     expanded: Option<bool>,
     kind: Kind,
+    segment: bool,
+    stamp: bool,
+    destination: bool,
+    plate_bleed: f32,
+    row_gutter: f32,
     width: Size,
     compact: bool,
     key: DiffKey,
@@ -46,6 +55,11 @@ impl Button {
             semantics: Semantics::Button,
             expanded: None,
             kind: Kind::Secondary,
+            segment: false,
+            stamp: false,
+            destination: false,
+            plate_bleed: 0.,
+            row_gutter: 0.,
             width: Size::auto(),
             compact: false,
             key: DiffKey::None,
@@ -84,6 +98,12 @@ impl Button {
         self.highlighted = selected;
         self
     }
+    /// A radio drawn inside `Segments`, whose shared indicator supplies the selected fill.
+    pub fn segment(mut self, selected: bool) -> Self {
+        self = self.flat().radio(selected);
+        self.segment = true;
+        self
+    }
     pub fn checkable(mut self, checked: bool) -> Self {
         self.semantics = Semantics::CheckBox { checked };
         self
@@ -103,6 +123,32 @@ impl Button {
     }
     pub fn filled(mut self) -> Self {
         self.kind = Kind::Primary;
+        self
+    }
+    /// A standalone secondary action outside a dialog action row, such as an empty state.
+    pub fn stamp(mut self) -> Self {
+        self.stamp = true;
+        self
+    }
+    /// How far a selected row's plate extends left of the row to reach its container's edge.
+    pub fn plate_bleed(mut self, bleed: f32) -> Self {
+        self.plate_bleed = bleed;
+        self
+    }
+    /// Reserve a left gutter in a list row, always, so the selection marker never moves its text.
+    pub fn row_gutter(mut self) -> Self {
+        self.row_gutter = t::ROW_GUTTER;
+        self
+    }
+    /// A route to another beat: text-safe teal, ink while pressed.
+    pub fn destination(mut self) -> Self {
+        self.kind = Kind::Quiet;
+        self.destination = true;
+        self
+    }
+    /// A select or picker trigger: inset fill, boundary stroke; callers supply the chevron.
+    pub fn field(mut self) -> Self {
+        self.kind = Kind::Field;
         self
     }
     /// Emphasize a surface without claiming an accessible selection or toggle.
@@ -141,64 +187,125 @@ impl KeyExt for Button {
         &mut self.key
     }
 }
+/// Which filled ink a control shows: plum for the one primary action, ink for switched-on state.
+#[derive(Clone, Copy, PartialEq)]
+enum Fill {
+    None,
+    Accent,
+    Ink,
+}
+
+/// Dialog action rows and empty states draw standalone secondary actions as stamps.
+#[derive(Clone, Copy)]
+pub(crate) struct StampScope;
+
 impl Button {
+    fn fill(&self) -> Fill {
+        match self.kind {
+            Kind::Primary => Fill::Accent,
+            Kind::Secondary if self.highlighted => Fill::Ink,
+            _ if self.segment && self.highlighted => Fill::Ink,
+            _ => Fill::None,
+        }
+    }
+
+    /// Quiet list rows show selection as the second-ink plate with a bar, not a grey fill.
+    fn plated(&self) -> bool {
+        self.kind == Kind::Quiet
+            && self.highlighted
+            && !self.segment
+            && !self.semantics.is_tab()
+            && self.enabled
+    }
+
+    /// The active document tab is marked by a second-ink rule along its lower edge.
+    fn underlined(&self) -> bool {
+        self.semantics.is_tab() && self.highlighted && self.enabled
+    }
+
     fn background(&self, colors: &super::palette::Palette, hovered: bool, pressed: bool) -> Color {
-        let selected = self.highlighted;
-        let filled = self.kind == Kind::Primary;
-        let segment = self.semantics.is_radio();
+        let fill = self.fill();
         if !self.enabled {
-            if self.kind == Kind::Quiet {
-                Color::TRANSPARENT
-            } else {
-                colors.inset
+            match self.kind {
+                Kind::Primary | Kind::Field => colors.inset,
+                _ => Color::TRANSPARENT,
             }
-        } else if pressed {
-            if filled {
-                Color::lerp(colors.accent, colors.on_accent, 0.16)
-            } else {
+        } else if self.segment {
+            // The group's travelling indicator is the selected segment's fill.
+            if self.highlighted {
+                Color::TRANSPARENT
+            } else if pressed {
                 colors.pressed
-            }
-        } else if segment {
-            if hovered && !selected {
-                colors.hover.with_a(100)
+            } else if hovered {
+                colors.hover
             } else {
                 Color::TRANSPARENT
-            }
-        } else if selected {
-            colors.selection
-        } else if hovered {
-            if filled {
-                Color::lerp(colors.accent, colors.on_accent, 0.08)
-            } else {
-                colors.hover
             }
         } else {
-            match self.kind {
-                Kind::Quiet => Color::TRANSPARENT,
-                Kind::Secondary => colors.inset,
-                Kind::Primary => colors.accent,
+            let lift = if pressed {
+                t::STAMP_PRESSED
+            } else if hovered {
+                t::STAMP_HOVER
+            } else {
+                0.
+            };
+            match fill {
+                Fill::Accent => Color::lerp(colors.accent, colors.on_accent, lift * 0.7),
+                Fill::Ink => colors.stamp_state(lift),
+                Fill::None if pressed => colors.pressed,
+                // The thumb-index plate is drawn as its own layer so it can bleed past the row.
+                Fill::None if self.plated() => Color::TRANSPARENT,
+                Fill::None if hovered => colors.hover,
+                Fill::None if self.kind == Kind::Field => colors.inset,
+                Fill::None => Color::TRANSPARENT,
             }
         }
     }
 
-    fn border_color(&self, colors: &super::palette::Palette, focused: bool, down: bool) -> Color {
-        let selected = self.highlighted;
-        let filled = self.kind == Kind::Primary;
-        let segment = self.semantics.is_radio();
+    fn border_color(
+        &self,
+        colors: &super::palette::Palette,
+        focused: bool,
+        stamped: bool,
+    ) -> Color {
         if focused {
-            if filled {
-                colors.on_accent
-            } else {
-                colors.accent
+            match self.fill() {
+                Fill::Accent => colors.on_accent,
+                Fill::Ink => colors.on_stamp,
+                Fill::None => colors.accent,
             }
-        } else if selected {
-            colors.accent
-        } else if down {
+        } else if self.kind == Kind::Field {
             colors.boundary
-        } else if self.kind == Kind::Secondary && !segment {
-            colors.rule
+        } else if stamped && self.kind == Kind::Secondary {
+            if self.enabled {
+                colors.stamp
+            } else {
+                colors.rule
+            }
         } else {
             Color::TRANSPARENT
+        }
+    }
+
+    fn border_width(&self, focused: bool, stamped: bool) -> f32 {
+        if focused {
+            t::FOCUS_WIDTH
+        } else if stamped && self.kind == Kind::Secondary {
+            t::STROKE_WIDTH
+        } else {
+            1.
+        }
+    }
+
+    fn text_color(&self, colors: &super::palette::Palette, pressed: bool) -> Color {
+        if !self.enabled {
+            return colors.muted;
+        }
+        match self.fill() {
+            Fill::Accent => colors.on_accent,
+            Fill::Ink => colors.on_stamp,
+            Fill::None if self.destination => colors.destination(pressed),
+            Fill::None => colors.ink,
         }
     }
 
@@ -241,14 +348,12 @@ impl Component for Button {
         let leave = self.hover_changed.clone();
         let focused = use_focus(id)() == Focus::Keyboard;
         let selected = self.highlighted;
-        let filled = self.kind == Kind::Primary;
-        let segment = self.semantics.is_radio();
+        let filled = self.fill() != Fill::None;
+        let segment = self.segment;
+        let in_stamp_scope = use_try_consume::<StampScope>().is_some();
+        let stamped = self.stamp || in_stamp_scope;
         let background = self.background(&colors, *hovered.read(), *pressed.read());
-        let color = if filled && self.enabled {
-            colors.on_accent
-        } else {
-            colors.ink
-        };
+        let color = self.text_color(&colors, *pressed.read());
         let background = super::motion::surface(background, *pressed.read());
         let down = self.enabled && *pressed.read();
         let depth = super::motion::travel(
@@ -256,7 +361,8 @@ impl Component for Button {
             if down { 0 } else { 80 },
             freya::animation::Function::Cubic,
         );
-        let border_color = self.border_color(&colors, focused, down);
+        let border_color = self.border_color(&colors, focused, stamped);
+        let border_width = self.border_width(focused, stamped);
         let mut control = rect()
             .horizontal()
             .on_sized(move |event: Event<SizedEventData>| area.set_if_modified(Some(event.area)))
@@ -268,30 +374,66 @@ impl Component for Button {
                 t::control_height()
             }))
             .font_size(t::body())
-            .font_weight(if selected || filled || segment {
+            .font_weight(if self.plated() {
+                FontWeight::SEMI_BOLD
+            } else if selected || filled || segment {
                 FontWeight::MEDIUM
             } else {
                 FontWeight::NORMAL
             })
-            .padding((0., t::SPACE_SM))
+            .padding((0., t::SPACE_SM, 0., t::SPACE_SM + self.row_gutter))
             .corner_radius(t::RADIUS)
             .main_align(Alignment::Center)
             .cross_align(Alignment::Center)
             .background(background)
             .shadow(super::material::inset(depth))
-            .color(if self.enabled { color } else { colors.muted })
-            .border(
+            .color(color)
+            .border(if self.underlined() && !focused {
                 Border::new()
-                    .width(if focused { t::FOCUS_WIDTH } else { 1. })
+                    .width(BorderWidth {
+                        bottom: t::FOCUS_WIDTH,
+                        ..Default::default()
+                    })
                     .alignment(BorderAlignment::Inner)
-                    .fill(border_color),
-            )
+                    .fill(colors.teal)
+            } else {
+                Border::new()
+                    .width(border_width)
+                    .alignment(BorderAlignment::Inner)
+                    .fill(border_color)
+            })
             .cursor(if self.enabled {
                 CursorIcon::Pointer
             } else {
                 CursorIcon::Default
             });
         control = self.with_accessibility(control);
+        if self.plated() {
+            // Thumb index: the plate runs flush to the container's left edge, square there and
+            // rounded on the right, with a teal diamond in the gutter. Absolute children are
+            // placed from the content box, so offsets start at the left padding.
+            let gutter = t::SPACE_SM + self.row_gutter + self.plate_bleed;
+            let size = (*area.read()).map(|area: Area| area.size);
+            let (width, height) = size.map_or((0., 0.), |size| (size.width, size.height));
+            control = control
+                .child(
+                    rect()
+                        .position(Position::new_absolute().left(-gutter).top(0.))
+                        .width(Size::px(width + self.plate_bleed))
+                        .height(Size::px(height))
+                        .corner_radius((0., t::RADIUS, t::RADIUS, 0.))
+                        .background(colors.plate),
+                )
+                .maybe_child((gutter >= t::ROW_GUTTER + t::SPACE_SM).then(|| {
+                    rect()
+                        .position(
+                            Position::new_absolute()
+                                .left(-gutter / 2. - t::MARKER_SIZE / 2.)
+                                .top((height - t::MARKER_SIZE) / 2.),
+                        )
+                        .child(super::material::diamond(colors.teal, t::MARKER_SIZE))
+                }));
+        }
         if self.enabled {
             control = control
                 .on_pointer_enter(move |_| { hovered.set(true); if let Some(enter) = &enter { enter.call(true); } })

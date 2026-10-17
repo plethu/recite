@@ -183,12 +183,10 @@ impl ProjectFiles {
         self.rename_review = None;
         self.checkpoint(current)?;
         for session in self.retained.values_mut() {
-            session
-                .recovery
-                .persist(Some(crate::recovery::Recovery::new(
-                    session.baseline.clone(),
-                    session.model.recovery(),
-                )))?;
+            session.persist_recovery(Some(crate::recovery::Recovery::new(
+                session.baseline.clone(),
+                session.model.recovery(),
+            )))?;
         }
         self.manifest.checkpointed()?;
         Ok(())
@@ -284,12 +282,10 @@ impl ProjectFiles {
         }
         self.checkpoint(current)?;
         for session in self.retained.values_mut() {
-            session
-                .recovery
-                .persist(Some(crate::recovery::Recovery::new(
-                    session.baseline.clone(),
-                    session.model.recovery(),
-                )))?;
+            session.persist_recovery(Some(crate::recovery::Recovery::new(
+                session.baseline.clone(),
+                session.model.recovery(),
+            )))?;
         }
         self.manifest.checkpointed()?;
         Ok(true)

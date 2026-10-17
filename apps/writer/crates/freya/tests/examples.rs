@@ -27,7 +27,7 @@ fn default_examples_switch_without_losing_field_drafts_or_applied_edits()
     support::open_beat(&mut test)?;
     assert!(
         test.find(|_, element| Label::try_downcast(element)
-            .filter(|label| label.text.contains("Replies")))
+            .filter(|label| label.text.to_lowercase().contains("replies")))
             .is_some()
     );
     test.poll_n(std::time::Duration::from_millis(16), 6);

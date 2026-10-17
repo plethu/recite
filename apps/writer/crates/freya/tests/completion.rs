@@ -5,7 +5,7 @@ use freya_testing::prelude::*;
 #[test]
 fn completion_replaces_the_diagnostic_token_without_applying_the_draft()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> line@11111111111111111111\n  Hello.\n-> missing\n:: destination\n-> END\n";
+    let source = ":: start default\r\n> line@11111111111111111111\r\n  Café 🐧 שלום.\r\n-> missing\r\n:: destination\r\n-> END\r\n";
     let model = recite_writer_model::Workbench::new(source)?;
     let diagnostics = model.document().diagnostics();
     let diagnostic = diagnostics.first().ok_or("diagnostic")?;
@@ -79,7 +79,15 @@ fn completion_replaces_the_diagnostic_token_without_applying_the_draft()
         });
         test.poll_n(std::time::Duration::from_millis(16), 6);
     }
-    support::click(&mut test, "destination")?;
+    for key in [
+        NamedKey::ArrowDown,
+        NamedKey::ArrowDown,
+        NamedKey::ArrowUp,
+        NamedKey::Enter,
+    ] {
+        test.press_key(Key::Named(key));
+        test.poll_n(std::time::Duration::from_millis(16), 6);
+    }
     assert!(
         test.find(|_, e| Paragraph::try_downcast(e).filter(|p| p
             .spans
@@ -93,5 +101,38 @@ fn completion_replaces_the_diagnostic_token_without_applying_the_draft()
         test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "Apply draft"))
             .is_some()
     );
+    Ok(())
+}
+
+#[test]
+fn empty_completion_feedback_stays_inside_its_popup() -> Result<(), Box<dyn std::error::Error>> {
+    let mut test = TestingRunner::new(
+        recite_writer::regression_app,
+        Size2D::new(1200., 900.),
+        |runner| {
+            runner.provide_root_context(|| {
+                recite_writer::InitialSource("# no suggestions here".into())
+            });
+        },
+        1.,
+    )
+    .0;
+    support::click(&mut test, "Complete at cursor")?;
+    let picker = test
+        .find(|node, e| {
+            Rect::try_downcast(e)
+                .filter(|r| r.accessibility.builder.role() == AccessibilityRole::ListBox)
+                .map(|_| node.layout().area)
+        })
+        .ok_or("empty completion picker")?;
+    let feedback = test
+        .find(|node, e| {
+            Label::try_downcast(e)
+                .filter(|label| label.text.as_ref() == "No suggestions at this position.")
+                .map(|_| node.layout().area)
+        })
+        .ok_or("empty completion feedback")?;
+    assert!(feedback.min_x() >= picker.min_x() && feedback.max_x() <= picker.max_x());
+    assert!(feedback.min_y() >= picker.min_y() && feedback.max_y() <= picker.max_y());
     Ok(())
 }

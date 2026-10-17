@@ -16,7 +16,7 @@ impl AuthoringSnapshot {
         let Some(document) = self.document(key) else {
             return QueryResult::NoMatch;
         };
-        let Some(site) = context::at(key, document.source_text(), position) else {
+        let Some(site) = context::at(key, document.source_index(), position) else {
             return QueryResult::NoMatch;
         };
         schema::complete_site(self, key, document, site)
@@ -32,7 +32,7 @@ impl AuthoringSnapshot {
         position: SourcePosition,
     ) -> Option<CompletionSite> {
         let document = self.document(key)?;
-        context::at(key, document.source_text(), position).map(|site| site.completion_site())
+        context::at(key, document.source_index(), position).map(|site| site.completion_site())
     }
 
     /// Enumerates one schema projector's typed semantic names for later adapters.

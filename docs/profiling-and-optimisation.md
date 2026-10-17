@@ -81,18 +81,78 @@ Project measurements include selective, common single-word, common multiword and
 search, plus whole-document Source draft capture and snapshot cloning. Search keeps exact counts and
 source order; result snapshots retain their saved shards across replacements. The fixed
 10,000-passage heap check bounds 100-hit searches at 20 KB and 10,000-hit expansion at 750 KB, and
-requires allocation-free result clones and Source recovery capture/clones. Existing index,
-projection, edit and peak-heap bounds remain in force. Applying Source drafts and serializing
+requires allocation-free result clones and Source recovery capture/clones. Source widget snapshot,
+dirty-state observation and recovery capture are additionally bounded at 256 allocated bytes,
+including equal-length replacements. Capturing completion analysis is bounded at one allocation and
+128 bytes, independent of project contents. Existing index, projection, edit and peak-heap bounds
+remain in force. Widget drafts share immutable Rope snapshots; contiguous access is explicit, and
+recovery streams the draft as the same version-1 JSON string. Applying Source drafts and serializing
 recovery still process the full text.
+
+Selecting Source shares accepted immutable bytes without allocation. Harvesting editor state retains
+the Rope snapshot until a consumer explicitly needs contiguous text; the inactive prose widget
+retains no Source text. Equal saved-baseline and discovery bytes share storage only after both
+existing reads, so a concurrent disk change keeps the two authorities distinct.
+
+Source completion queries the accepted kernel for unchanged bytes and prepares one independent
+overlay for a changed draft, preserving accepted state and saved-document analysis. The popup uses
+one lazy worker with capacity-one request/result channels and cooperative cancellation; input never
+waits for draft flattening or completion analysis. Pending and failed queries have distinct feedback
+and no selectable results. Popup and keyboard activation recheck the request, accepted
+analysis/context, draft and cursor. Recovery retains at most two escaped static source strings to
+avoid re-encoding unchanged baseline/applied text; draft encoding and durable writes remain
+full-text work. Sidebar captions scan authored END destinations without classifying the full flow
+graph; unchanged ordered names and badges share captions across prose edits.
+
+The shared authoring kernel separates reference reports from declaration reports. A reference-only
+revision reuses declaration reports only when every changed document retains exact non-reference
+facts, participation and spans, and project completeness is unchanged. Current reference providers
+still use the batch validator's lookup rules. The fixed 10,000-ID regression requires correct
+resolved/unresolved reports without entering full project validation; differential tests cover
+provider changes, recovery, relocation and cancellation. Report families share immutable diagnostic
+payloads across speculative map copies; changed reference reports replace their storage. A fixed
+1,000-error test checks retained and untouched reports and fresh-analysis parity. Publishing a
+changed document's flat diagnostics still copies those values.
+
+Each summary and project-fact family separately shares its unchanged ordered records and source
+spans. Relocation separates only nonempty families before mutating them. A fixed 10,000-record test
+requires zero record clones and comparisons for identity-preserving joins; changed records must
+still produce exact current values without altering retained snapshots.
+
+Compiler completion and hover sites use the snapshot's line index and compute replacement spans
+within the selected line. Contextual speaker metadata walks preceding indexed lines only as far as
+the nearest beat header, preserving explicit overrides and malformed-context handling. Project
+validation stops expanding contexts once they contain every current document. Unchanged ordered
+exports retain their definitions membership while dependencies and facts still update. Stable-ID
+collision checks retain source order; the separate line-ID index is built only for eligible choice
+echo lookups.
+
+The project workload also measures a warm manuscript prose edit followed by its Script projection.
+Prose validation remains parser-owned; accepted edits reuse their checked passages and, when Script
+was already requested, construct it from that same transient parse. Raw source edits and undo/redo
+invalidate those revision-bound projections. This headless operation excludes native input and
+paint.
+
+For prose edits inside one restart region, identical surrounding region bytes and ordered frozen IDs
+allow checked outputs to be reused with relocated coordinates. Uncertain mappings and plural-bearing
+Script projections fall back to whole-file projection. A single-region file still needs a whole-file
+parse; materializing the public passage and Script collections remains linear in their size. Passage
+clones share immutable content while keeping coordinates specific to each revision. An owned copy
+uses copy-on-write when its content is changed; retained snapshots remain independent.
 
 The session workload runs discovery/indexing, first visits and edits, revisits with undo/redo,
 save-all and explicit closing. It checks preserved prose/history and released session owners and
 reports RSS, peak RSS and thread checkpoints where the host exposes them. RSS can retain allocator
-pages after closing; it is not a live-heap measurement. Recovery timing queues full-document Source
-drafts and verifies the latest durable snapshot after reopening. These workloads are headless and
-opt-in; recovery reports draft buffer preparation separately from snapshot queuing and durable
-flush. Limit build jobs and run measurements sequentially on a shared machine; record process
-resource limits and background load with the evidence.
+pages after closing; it is not a live-heap measurement. Inactive document recovery stores drain and
+join their worker while retaining the disk lock and encoding cache; changed work restarts lazily.
+Retained persistence, including rename history, parks through one private owner. A fixed 40-store
+test checks thread release, retained locks/cache and durable values; the isolated session workload
+bounds thread growth at one above its opened checkpoint through visits, revisits and closes.
+Recovery timing queues full-document Source drafts and verifies the latest durable snapshot after
+reopening. These workloads are headless and opt-in; recovery reports draft buffer preparation
+separately from snapshot queuing and durable flush. Limit build jobs and run measurements
+sequentially on a shared machine; record process resource limits and background load with the
+evidence.
 
 Catalogue workloads cover an authored scene and generated Unicode PO files, draft recovery capture,
 Save All, and exact-count substring filtering with a populated current scene. Index preparation and
@@ -105,8 +165,11 @@ Serialization and full final-source validation remain separate work. These probe
 painting and real input and do not establish the release baseline.
 
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
-Topology is already memoized independently of camera and hover; this probe measures reconstruction
-after source or saved placement changes, not frame pacing.
+Topology is memoized independently of camera and hover. Content refresh derives current connections
+and labels, and reuses geometry when ordered beat IDs and entry flags, ordered connection endpoints
+and return classifications, and saved placement remain identical. Other changes reconstruct layout
+and routes. The probe measures both reconstruction and content refresh after an accepted edit,
+including connection derivation and guard work; it excludes native frame pacing.
 
 Kernel-open timing excludes filesystem discovery, indexing and painting. The
 [profile script](../scripts/profile-writer.sh) records builds/environment, refuses overwrite and
@@ -135,8 +198,14 @@ a prepared 64-driver adapter choice batch with 400 source files. The adapter cas
 construction and session startup, then checks exact events and serialized snapshots outside
 counters. `full` adds medium fixtures. Both include cold effect-heavy Writer script projection at
 1,000 and 10,000 entries, validating Unicode prose, authored IDs, effects and order outside the
-measured operation, and a 64-session bound-text prompt batch using the checked language-pressure
-fixture; `writer` runs just its two cases. Use a fresh output directory. Limits belong to
+measured operation, four accepted/changed draft completion cases on wide and dense projects, and a
+64-session bound-text prompt batch using the checked language-pressure fixture. Both also cover
+JSON/TOML schema loading, schema-backed workspace forks, LSP completion/definition/references and
+diagnostic publication on wide/dense projects, and PO imports into empty/populated catalogues.
+Schema-action responses, shared static/parameterized UI labels, and dialogue edits with saved/open
+schemas have fixed-input cases too. Prepared completion replacements are checked separately on
+wide/dense projects, with query preparation and result validation outside counters. `writer` and
+`authoring` run just their respective targets. Use a fresh output directory. Limits belong to
 [the shared configuration](../tools/recite-perf/benches/support/budget.rs); elapsed time remains a
 Criterion investigation. Missing paired measurements fail closed, including Gungraun's automatic
 creation of a missing named baseline.

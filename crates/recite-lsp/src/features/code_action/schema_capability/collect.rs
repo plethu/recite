@@ -1,19 +1,20 @@
 use recite_compiler::authoring::{SchemaAction, SchemaCapability, SchemaSummary};
+use std::collections::BTreeMap;
 
 pub(super) struct DeclaredAction<'a> {
-    pub(super) context: DeclarationContext,
+    pub(super) context: DeclarationContext<'a>,
     pub(super) action: &'a SchemaAction,
     pub(super) producer: Option<&'a recite_core::schema::ProducerIdentity>,
     pub(super) origin: Option<&'a recite_core::schema::ProducerOrigin>,
 }
 
-#[derive(Clone)]
-pub(super) struct DeclarationContext {
+#[derive(Clone, Copy)]
+pub(super) struct DeclarationContext<'a> {
     pub(super) kind: &'static str,
-    pub(super) name: Option<String>,
+    pub(super) name: Option<&'a str>,
 }
 
-impl DeclarationContext {
+impl<'a> DeclarationContext<'a> {
     const fn schema() -> Self {
         Self {
             kind: "schema",
@@ -21,26 +22,24 @@ impl DeclarationContext {
         }
     }
 
-    fn named(kind: &'static str, name: impl Into<String>) -> Self {
+    fn named(kind: &'static str, name: &'a str) -> Self {
         Self {
             kind,
-            name: Some(name.into()),
+            name: Some(name),
         }
     }
 }
 
 pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>> {
-    let mut declared = Vec::new();
-    add_capability(
-        &mut declared,
+    let mut collector = Collector::default();
+    collector.add(
         DeclarationContext::schema(),
         summary.capability(),
         summary.ownership().producer(),
         None,
     );
     for declaration in summary.types() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("type", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -48,8 +47,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.registries() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("registry", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -57,8 +55,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.speakers() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("speaker", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -66,8 +63,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.conditions() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("condition", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -75,8 +71,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.availability_reasons() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("reason", declaration.id().as_str()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -84,8 +79,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.effects() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("effect", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -93,8 +87,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.metadata_domains() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("metadata-domain", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -102,8 +95,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.metadata() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("metadata", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -111,8 +103,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.projection_queries() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("projection-query", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -120,8 +111,7 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.presentation_projectors() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("projector", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
@@ -129,37 +119,44 @@ pub(super) fn collect<'a>(summary: &'a SchemaSummary) -> Vec<DeclaredAction<'a>>
         );
     }
     for declaration in summary.markup() {
-        add_capability(
-            &mut declared,
+        collector.add(
             DeclarationContext::named("markup", declaration.name()),
             declaration.capability(),
             declaration.provenance().ownership().producer(),
             declaration.provenance().origin(),
         );
     }
-    declared
+    collector.declared
 }
 
-fn add_capability<'a>(
-    declared: &mut Vec<DeclaredAction<'a>>,
-    context: DeclarationContext,
-    capability: &'a SchemaCapability,
-    producer: Option<&'a recite_core::schema::ProducerIdentity>,
-    origin: Option<&'a recite_core::schema::ProducerOrigin>,
-) {
-    for action in capability.actions() {
-        if declared.iter().any(|candidate| {
-            candidate.context.kind == context.kind
-                && candidate.context.name == context.name
-                && candidate.action == action
-        }) {
-            continue;
+#[derive(Default)]
+struct Collector<'a> {
+    declared: Vec<DeclaredAction<'a>>,
+    seen: BTreeMap<(&'static str, Option<&'a str>), Vec<&'a SchemaAction>>,
+}
+
+impl<'a> Collector<'a> {
+    fn add(
+        &mut self,
+        context: DeclarationContext<'a>,
+        capability: &'a SchemaCapability,
+        producer: Option<&'a recite_core::schema::ProducerIdentity>,
+        origin: Option<&'a recite_core::schema::ProducerOrigin>,
+    ) {
+        // Names may repeat across declaration kinds. Deduplicate only the same
+        // context/action, retaining its first provenance and source order.
+        let seen = self.seen.entry((context.kind, context.name)).or_default();
+        for action in capability.actions() {
+            if seen.contains(&action) {
+                continue;
+            }
+            seen.push(action);
+            self.declared.push(DeclaredAction {
+                context,
+                action,
+                producer,
+                origin,
+            });
         }
-        declared.push(DeclaredAction {
-            context: context.clone(),
-            action,
-            producer,
-            origin,
-        });
     }
 }

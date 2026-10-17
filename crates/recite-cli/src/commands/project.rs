@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::diagnostics::report_diagnostics;
+use crate::diagnostics::{Subject, report_diagnostics, report_success};
 use crate::error::CliError;
 use crate::i18n::Messages;
 
@@ -12,10 +12,15 @@ pub(super) fn project_check(
     messages: &Messages,
 ) -> Result<(), CliError> {
     let diagnostics = validate(project_root)?;
-    report_diagnostics(stderr, messages, diagnostics.iter())?;
-    diagnostics
+    let reported = report_diagnostics(stderr, messages, diagnostics.iter())?;
+    if diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.severity != recite_core::DiagnosticSeverity::Error)
-        .then_some(())
-        .ok_or(CliError::Diagnostics)
+        .any(|diagnostic| diagnostic.severity == recite_core::DiagnosticSeverity::Error)
+    {
+        return Err(CliError::Diagnostics);
+    }
+    if reported == 0 {
+        report_success(stderr, messages, Subject::Project)?;
+    }
+    Ok(())
 }

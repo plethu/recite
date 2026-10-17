@@ -89,6 +89,10 @@ semantics or hashing. A malformed export retains the prior manifest and logs str
 diagnostics. The CLI must be available as `recite` or at the registration's configured executable
 path. Advanced schema domains can be authored as a standalone Recite schema source.
 
+The menu polls one export job while the editor remains responsive. Assembly reload and editor
+shutdown cancel it. Declarations changed during export are rejected before publication; export again
+to capture the new state. `ReciteSchemaExporter.Export` remains synchronous for automation.
+
 Build dialogue with the CLI or `recite watch`, then let Unity import the resulting `.recitec`. The
 `ScriptedImporter` validates compiled bytes through native Recite before publishing
 `ReciteCompiledAsset`. It stores a last-valid copy under `Library/Recite/CompiledCache/<asset

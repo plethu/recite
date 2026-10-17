@@ -129,11 +129,11 @@ pub(crate) fn unsupported_choice_child_statement(
     .with_help_presentation(auxiliary_presentation("diagnostic-validate-014-help", []))
 }
 
-pub(crate) fn unknown_choice_echo_line(choice: &Choice, line_id: &LineId) -> Diagnostic {
+pub(crate) fn unknown_choice_echo_line(span: SourceSpan, line_id: &LineId) -> Diagnostic {
     compiler_diagnostic(
         diagnostic_contract(&UNKNOWN_CHOICE_ECHO_LINE, "diagnostic-validate-015"),
         format!("choice echo references unknown line id `{line_id}`"),
-        choice.span.clone(),
+        span,
         vec![("line_id".to_owned(), string_argument(line_id.to_string()))],
     )
     .with_help_presentation(auxiliary_presentation("diagnostic-validate-015-help", []))

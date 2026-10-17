@@ -89,8 +89,10 @@ class PackageConfigTests(unittest.TestCase):
                     self.assertEqual("licenseFile" in config, target != "macos")
                     self.assertEqual(
                         {Path(resource["src"]).name for resource in config["resources"]},
-                        {"LICENSE", "LICENSE-MIT", "LICENSE-APACHE"},
+                        {"LICENSE", "LICENSE-MIT", "LICENSE-APACHE", "OFL.txt"},
                     )
+                    targets = [resource["target"] for resource in config["resources"]]
+                    self.assertEqual(len(targets), len(set(targets)), "licence targets collide")
                     for icon in config["icons"]:
                         self.assertTrue(Path(icon).is_file(), icon)
                     for resource in config["resources"]:

@@ -13,6 +13,7 @@ pub use renderer::{RenderedDiagnostic, RenderedRelatedDiagnostic};
 
 pub struct UiCatalog {
     requested: LanguageIdentifier,
+    fallback_keys: Vec<String>,
     bundles: BTreeMap<String, FluentBundle<FluentResource>>,
     resource_registry: ResourceRegistry,
 }
@@ -117,6 +118,10 @@ impl UiCatalog {
             }
         }
         Ok(Self {
+            fallback_keys: crate::fallback_chain(&requested)
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
             requested,
             bundles,
             resource_registry,
@@ -136,8 +141,7 @@ impl UiCatalog {
     }
 
     pub fn format_checked(&self, id: MsgId, args: &UiArgs) -> Result<String, CatalogError> {
-        let resource_id = id.resource_id();
-        self.format_resource_checked(&resource_id, args)
+        self.format_key_checked(id.key(), args)
     }
 
     pub fn text(&self, id: MsgId) -> String {

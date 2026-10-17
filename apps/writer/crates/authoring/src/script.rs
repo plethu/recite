@@ -37,29 +37,41 @@ impl Document {
             return Err(EditError::SourceRequired("repair the syntax diagnostics"));
         }
         let passages = self.passage_snapshot_from(&parsed, &lowered)?;
-        let passages: std::collections::BTreeMap<_, _> =
-            passages.iter().map(|p| (p.id.as_str(), p)).collect();
-        let source_lines = OnceCell::new();
-        let heading = |line: u32| {
-            source_lines
-                .get_or_init(|| self.source().lines().collect::<Vec<_>>())
-                .get(line.saturating_sub(1) as usize)
-                .copied()
-                .unwrap_or_default()
-                .trim()
-                .to_owned()
-        };
-        Ok(lowered
-            .source_file
-            .blocks
-            .iter()
-            .map(|block| ScriptBlock {
-                id: block.id.to_string(),
-                is_default: block.is_default,
-                entries: entries(&block.statements, &heading, &passages),
-            })
-            .collect())
+        Ok(blocks(self.source(), &lowered, &passages))
     }
+}
+
+pub(crate) fn blocks(
+    source: &str,
+    lowered: &recite_parser::LoweredSourceFile,
+    passages: &[Passage],
+) -> Vec<ScriptBlock> {
+    let passages: std::collections::BTreeMap<_, _> =
+        passages.iter().map(|p| (p.id.as_str(), p)).collect();
+    let source_lines = OnceCell::new();
+    let heading = |line: u32| {
+        source_lines
+            .get_or_init(|| {
+                recite_core::source_lines(source)
+                    .map(|(text, _)| text)
+                    .collect::<Vec<_>>()
+            })
+            .get(line.saturating_sub(1) as usize)
+            .copied()
+            .unwrap_or_default()
+            .trim()
+            .to_owned()
+    };
+    lowered
+        .source_file
+        .blocks
+        .iter()
+        .map(|block| ScriptBlock {
+            id: block.id.to_string(),
+            is_default: block.is_default,
+            entries: entries(&block.statements, &heading, &passages),
+        })
+        .collect()
 }
 
 fn entries(

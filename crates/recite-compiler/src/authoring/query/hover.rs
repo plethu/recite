@@ -121,7 +121,7 @@ impl AuthoringSnapshot {
         document: &DocumentSnapshot,
         position: SourcePosition,
     ) -> QueryResult<HoverInfo> {
-        let Some(site) = context::at(key, document.source_text(), position) else {
+        let Some(site) = context::at(key, document.source_index(), position) else {
             let Some((name, span, kind)) = self.schema_symbol_at(key, document, position) else {
                 return QueryResult::NoMatch;
             };
@@ -145,7 +145,7 @@ impl AuthoringSnapshot {
             return self.availability_reason_hover(key, value, token);
         }
         let completion = self.complete(key, position);
-        let Some((name, span)) = context::token_at(key, document.source_text(), position) else {
+        let Some((name, span)) = context::token_at(key, document.source_index(), position) else {
             return QueryResult::NoMatch;
         };
         let candidate = match &completion {
@@ -160,7 +160,7 @@ impl AuthoringSnapshot {
         };
         let fact = if candidate.kind() == super::types::CompletionCandidateKind::MetadataValue {
             let Some(fact) =
-                self.metadata_candidate_fact(key, document.source_text(), position, candidate)
+                self.metadata_candidate_fact(key, document.source_index(), position, candidate)
             else {
                 return QueryResult::NoMatch;
             };

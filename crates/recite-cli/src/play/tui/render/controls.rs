@@ -126,7 +126,7 @@ pub(super) fn controls_for_prompt(prompt: &TuiPrompt, keymap: Keymap) -> Vec<Tui
                     true,
                 ),
                 TuiControl::standard(
-                    "ID/index",
+                    "an ID or number",
                     MsgId::TuiHelpActionInput,
                     MsgId::TuiHelpDescriptionInputChoice,
                     true,

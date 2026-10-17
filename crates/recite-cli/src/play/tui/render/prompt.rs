@@ -1,3 +1,4 @@
+use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
 
 use crate::i18n::{Messages, MsgId};
@@ -10,6 +11,7 @@ use super::transcript::{prompt_header_line, wrap_continuation};
 
 pub(super) fn render_prompt<'a>(
     prompt: &'a TuiPrompt,
+    repeat_line: bool,
     keymap: Keymap,
     width: u16,
     messages: &'a Messages,
@@ -118,7 +120,9 @@ pub(super) fn render_prompt<'a>(
                     messages,
                     palette,
                 ));
-                lines.extend(wrap_continuation(line.text.as_str(), width as usize, 2));
+                if repeat_line {
+                    lines.extend(wrap_continuation(line.text.as_str(), width as usize, 2));
+                }
             } else {
                 lines.push(prompt_header_line(
                     TuiTranscriptKind::Prompt,
@@ -154,20 +158,63 @@ pub(super) fn render_prompt<'a>(
                             messages.text(MsgId::TuiChoiceUnavailable)
                         }
                     });
-                lines.push(Line::from(vec![
+                let text_style = if is_selected {
+                    style.add_modifier(Modifier::BOLD)
+                } else {
+                    style
+                };
+                let mut spans = vec![
                     Span::styled(marker, choice_chrome_style),
                     Span::raw(" "),
                     Span::styled(format!("{:>2}", choice.index), choice_chrome_style),
                     Span::raw("  "),
-                    Span::styled(format!("{:<16}", choice.id), choice_chrome_style),
-                    Span::styled(choice.text.as_str(), style),
+                    Span::styled(choice.text.as_str(), text_style),
                     Span::styled(suffix, palette.muted()),
-                ]));
+                ];
+                spans.extend(choice_id_suffix(&spans, &choice.id, width, palette));
+                lines.push(Line::from(spans));
             }
             lines.push(command_line(interaction.command(), palette));
             lines
         }
     }
+}
+
+/// The choice ID trails the text in the muted ink. It is shortened and right-aligned when the
+/// row has room; otherwise the full ID follows the text and may wrap.
+fn choice_id_suffix<'a>(
+    row: &[Span<'_>],
+    id: &str,
+    width: u16,
+    palette: TuiPalette,
+) -> Vec<Span<'a>> {
+    let used: usize = row.iter().map(Span::width).sum();
+    let short = short_choice_id(id);
+    let short_width = short.chars().count();
+    let gap = (width as usize).saturating_sub(used + short_width);
+    if gap >= 2 {
+        vec![
+            Span::raw(" ".repeat(gap)),
+            Span::styled(short, palette.muted()),
+        ]
+    } else {
+        vec![
+            Span::raw("  "),
+            Span::styled(id.to_owned(), palette.muted()),
+        ]
+    }
+}
+
+/// A stable ID such as `31000000000000000002` becomes `3100…0002`; labels, queries and other
+/// IDs stay whole.
+pub(super) fn short_choice_id(id: &str) -> String {
+    let chars: Vec<char> = id.chars().collect();
+    if chars.len() != 20 || !chars.iter().all(char::is_ascii_hexdigit) {
+        return id.to_owned();
+    }
+    let head: String = chars[..4].iter().collect();
+    let tail: String = chars[chars.len() - 4..].iter().collect();
+    format!("{head}…{tail}")
 }
 
 pub(super) fn render_deferred_queue<'a>(

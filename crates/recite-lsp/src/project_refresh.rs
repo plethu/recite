@@ -78,7 +78,13 @@ impl LspWorkspace {
         let schema_paths = schema_paths_for_saved(&saved, self.schema_override_path.as_ref());
         let mut schemas = schema_paths
             .iter()
-            .map(|(id, path)| (id.clone(), SchemaIndex::load(path.clone())))
+            .map(|(id, path)| {
+                let schema = old_schemas
+                    .get(id)
+                    .filter(|old| old.configured_path() == path.as_deref())
+                    .map_or_else(|| SchemaIndex::load(path.clone()), SchemaIndex::base);
+                (id.clone(), schema)
+            })
             .collect::<BTreeMap<_, _>>();
         carry_schema_authorities(&old_schemas, &mut schemas);
         for (id, old) in &old_schemas {

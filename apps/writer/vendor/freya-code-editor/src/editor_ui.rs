@@ -1,0 +1,337 @@
+use std::borrow::Cow;
+
+use freya_components::{
+    get_theme_or_default,
+    scrollviews::{ScrollConfig, ScrollController, VirtualScrollView, use_scroll_controller},
+};
+use freya_core::prelude::*;
+use freya_edit::EditableEvent;
+use torin::size::Size;
+
+use crate::{
+    editor_data::CodeEditorData,
+    editor_line::{EditorGutterLineUI, EditorLineUI},
+    editor_theme::{EditorTheme, EditorThemePartial, EditorThemePreference},
+};
+
+#[derive(PartialEq, Clone)]
+pub struct CodeEditor {
+    editor: Writable<CodeEditorData>,
+    font_size: f32,
+    line_height: f32,
+    read_only: bool,
+    gutter: bool,
+    show_whitespace: bool,
+    font_family: Cow<'static, str>,
+    a11y_id: AccessibilityId,
+    a11y_auto_focus: bool,
+    cursor_mode: CursorMode,
+    scroll_controller: Option<ScrollController>,
+    pub(crate) theme: Option<EditorThemePartial>,
+    on_pre_key_down: Callback<Event<KeyboardEventData>, bool>,
+}
+
+impl CodeEditor {
+    /// Creates a new editor UI component with the given writable data.
+    ///
+    /// Default values are applied for font size and line height.
+    pub fn new(editor: impl Into<Writable<CodeEditorData>>, a11y_id: AccessibilityId) -> Self {
+        Self {
+            editor: editor.into(),
+            font_size: 14.0,
+            line_height: 1.4,
+            read_only: false,
+            gutter: true,
+            show_whitespace: true,
+            font_family: Cow::Borrowed("Jetbrains Mono"),
+            a11y_id,
+            a11y_auto_focus: false,
+            cursor_mode: CursorMode::Expanded,
+            scroll_controller: None,
+            theme: None,
+            on_pre_key_down: Callback::new(|e: Event<KeyboardEventData>| {
+                e.stop_propagation();
+                if let Key::Named(NamedKey::Tab) = &e.key {
+                    e.prevent_default();
+                }
+                true
+            }),
+        }
+    }
+
+    pub fn font_size(mut self, size: f32) -> Self {
+        self.font_size = size;
+        self
+    }
+
+    /// Sets the line height multiplier (relative to font size).
+    pub fn line_height(mut self, height: f32) -> Self {
+        self.line_height = height;
+        self
+    }
+
+    /// Sets whether the editor is read-only.
+    pub fn read_only(mut self, read_only: bool) -> Self {
+        self.read_only = read_only;
+        self
+    }
+
+    /// Sets whether the gutter (line numbers) is visible.
+    pub fn gutter(mut self, gutter: bool) -> Self {
+        self.gutter = gutter;
+        self
+    }
+
+    /// Sets whether leading whitespace characters are rendered visually.
+    pub fn show_whitespace(mut self, show_whitespace: bool) -> Self {
+        self.show_whitespace = show_whitespace;
+        self
+    }
+
+    /// Sets the font family used in the editor. Defaults to `"Jetbrains Mono"`.
+    pub fn font_family(mut self, font_family: impl Into<Cow<'static, str>>) -> Self {
+        self.font_family = font_family.into();
+        self
+    }
+
+    /// Set the [`CursorMode`]. Defaults to [`CursorMode::Expanded`].
+    pub fn cursor_mode(mut self, cursor_mode: impl Into<CursorMode>) -> Self {
+        self.cursor_mode = cursor_mode.into();
+        self
+    }
+
+    /// Sets the [`ScrollController`] driving the scroll position, instead of an internal one.
+    pub fn scroll_controller(
+        mut self,
+        scroll_controller: impl Into<Option<ScrollController>>,
+    ) -> Self {
+        self.scroll_controller = scroll_controller.into();
+        self
+    }
+
+    /// Sets whether the editor automatically receives focus.
+    pub fn a11y_auto_focus(mut self, a11y_auto_focus: bool) -> Self {
+        self.a11y_auto_focus = a11y_auto_focus;
+        self
+    }
+
+    /// Sets a pre-handler called for each key event. Return `true` to let the editor process it,
+    /// `false` to skip. The callback may call `stop_propagation()` / `prevent_default()` directly.
+    pub fn on_pre_key_down(
+        mut self,
+        on_pre_key_down: impl Into<Callback<Event<KeyboardEventData>, bool>>,
+    ) -> Self {
+        self.on_pre_key_down = on_pre_key_down.into();
+        self
+    }
+}
+
+impl Component for CodeEditor {
+    fn render(&self) -> impl IntoElement {
+        let CodeEditor {
+            editor,
+            font_size,
+            line_height,
+            read_only,
+            gutter,
+            show_whitespace,
+            font_family,
+            a11y_id,
+            a11y_auto_focus,
+            cursor_mode,
+            scroll_controller,
+            theme,
+            on_pre_key_down,
+        } = self.clone();
+
+        let theme = get_theme_or_default!(&theme, EditorThemePreference, "code_editor", || {
+            EditorTheme::light().into()
+        });
+
+        let editor_data = editor.read_unchecked();
+
+        let scroll_controller =
+            scroll_controller.unwrap_or_else(|| use_scroll_controller(ScrollConfig::default));
+        let line_height = (font_size * line_height).floor();
+        let lines_len = editor_data.rope.len_lines();
+        crate::syntax_task::use_syntax_work(editor.clone(), scroll_controller, line_height);
+
+        let on_key_up = {
+            let mut editor = editor.clone();
+            let font_family = font_family.clone();
+            move |e: Event<KeyboardEventData>| {
+                editor.write_if(|mut editor| {
+                    editor.process(
+                        font_size,
+                        &font_family,
+                        EditableEvent::KeyUp { key: &e.key },
+                    )
+                });
+            }
+        };
+
+        let on_key_down = {
+            let mut editor = editor.clone();
+            let mut scroll_controller = scroll_controller;
+            let font_family = font_family.clone();
+            move |e: Event<KeyboardEventData>| {
+                const LINES_JUMP_ALT: usize = 5;
+                const LINES_JUMP_CONTROL: usize = 3;
+
+                let key = e.key.clone();
+                let modifiers = e.modifiers;
+
+                if !on_pre_key_down.call(e) {
+                    return;
+                }
+
+                editor.write_if(|mut editor| {
+                    let lines_jump = (line_height * LINES_JUMP_ALT as f32).ceil() as i32;
+                    let content_height = lines_len as f32 * line_height;
+                    let viewport_height = editor.viewport.height;
+                    let min_scroll = -(content_height - viewport_height).max(0.) as i32;
+                    let max_scroll = 0;
+                    let (_, current_scroll) = scroll_controller.into();
+
+                    let events = match &key {
+                        Key::Named(NamedKey::ArrowUp) if modifiers.contains(Modifiers::ALT) => {
+                            let jump = (current_scroll + lines_jump).clamp(min_scroll, max_scroll);
+                            scroll_controller.scroll_to_y(jump);
+                            (0..LINES_JUMP_ALT)
+                                .map(|_| EditableEvent::KeyDown {
+                                    key: &key,
+                                    modifiers,
+                                    editor_line: None,
+                                    holder: None,
+                                })
+                                .collect::<Vec<EditableEvent>>()
+                        }
+                        Key::Named(NamedKey::ArrowDown) if modifiers.contains(Modifiers::ALT) => {
+                            let jump = (current_scroll - lines_jump).clamp(min_scroll, max_scroll);
+                            scroll_controller.scroll_to_y(jump);
+                            (0..LINES_JUMP_ALT)
+                                .map(|_| EditableEvent::KeyDown {
+                                    key: &key,
+                                    modifiers,
+                                    editor_line: None,
+                                    holder: None,
+                                })
+                                .collect::<Vec<EditableEvent>>()
+                        }
+                        Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::ArrowUp)
+                            if modifiers.contains(Modifiers::CONTROL) =>
+                        {
+                            (0..LINES_JUMP_CONTROL)
+                                .map(|_| EditableEvent::KeyDown {
+                                    key: &key,
+                                    modifiers,
+                                    editor_line: None,
+                                    holder: None,
+                                })
+                                .collect::<Vec<EditableEvent>>()
+                        }
+                        _ => vec![EditableEvent::KeyDown {
+                            key: &key,
+                            modifiers,
+                            editor_line: None,
+                            holder: None,
+                        }],
+                    };
+
+                    let mut changed = false;
+
+                    for event in events {
+                        changed |= editor.process(font_size, &font_family, event);
+                    }
+
+                    if changed {
+                        editor.scroll_to_cursor(scroll_controller, line_height);
+                    }
+
+                    changed
+                });
+            }
+        };
+
+        let on_global_pointer_press = {
+            let mut editor = editor.clone();
+            let font_family = font_family.clone();
+            move |_: Event<PointerEventData>| {
+                editor.write_if(|mut editor| {
+                    editor.process(font_size, &font_family, EditableEvent::Release)
+                });
+            }
+        };
+
+        let gutter_editor = editor.clone();
+        let gutter_theme = theme.clone();
+
+        let on_sized = {
+            let mut editor = editor.clone();
+            move |e: Event<SizedEventData>| {
+                editor.write_if(|mut editor| {
+                    let changed = editor.viewport != e.area.size;
+                    editor.viewport = e.area.size;
+                    changed
+                });
+            }
+        };
+
+        rect()
+            .a11y_auto_focus(a11y_auto_focus)
+            .a11y_focusable(true)
+            .a11y_id(a11y_id)
+            .a11y_role(AccessibilityRole::TextInput)
+            .expanded()
+            .background(theme.background)
+            .maybe(!read_only, |el| {
+                el.on_key_down(on_key_down).on_key_up(on_key_up)
+            })
+            .on_global_pointer_press(on_global_pointer_press)
+            .child(
+                rect()
+                    .horizontal()
+                    .maybe_child(gutter.then(|| {
+                        let gutter_width = font_size * 5.0;
+                        VirtualScrollView::new(move |item, _| {
+                            EditorGutterLineUI {
+                                editor: gutter_editor.clone(),
+                                font_size,
+                                line_height,
+                                line_index: item.index,
+                                theme: gutter_theme.clone(),
+                            }
+                            .into()
+                        })
+                        .width(Size::px(gutter_width))
+                        .show_scrollbar(false)
+                        .scroll_controller(scroll_controller)
+                        .length(lines_len)
+                        .item_size(line_height)
+                    }))
+                    .child(
+                        VirtualScrollView::new(move |item, _| {
+                            EditorLineUI {
+                                editor: editor.clone(),
+                                font_size,
+                                line_height,
+                                line_index: item.index,
+                                read_only,
+                                show_whitespace,
+                                font_family: font_family.clone(),
+                                cursor_mode,
+                                theme: theme.clone(),
+                                a11y_id,
+                                scroll_controller,
+                            }
+                            .into()
+                        })
+                        .expanded()
+                        .scroll_controller(scroll_controller)
+                        .on_sized(on_sized)
+                        .length(lines_len)
+                        .item_size(line_height),
+                    ),
+            )
+    }
+}

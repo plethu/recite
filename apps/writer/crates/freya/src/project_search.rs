@@ -97,7 +97,7 @@ impl Component for ProjectSearch {
             content = content
                 .child(
                     label()
-                        .text(format!("{} of {total} saved passages", hits.len()))
+                        .text(format!("{} of {total} saved lines", hits.len()))
                         .font_size(t::small()),
                 )
                 .child(list);

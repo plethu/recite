@@ -6,10 +6,9 @@ use recite_compiler::authoring::{
 use recite_core::DocumentKey;
 use recite_ui::{MsgId, UiCatalog};
 
-use crate::position::lsp_position_to_source;
+use crate::position::indexed_lsp_position_to_source;
 
 pub(super) fn completion(
-    text: &str,
     position: Position,
     key: Option<&DocumentKey>,
     snapshot: &AuthoringQuery<'_>,
@@ -17,7 +16,8 @@ pub(super) fn completion(
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
     let key = key?;
-    let source_position = lsp_position_to_source(text, position)?;
+    let index = snapshot.document(key)?.source_index();
+    let source_position = indexed_lsp_position_to_source(index, position)?;
     let result = snapshot.complete(key, source_position);
     let candidates = match result {
         QueryResult::Ready(candidates)
@@ -103,10 +103,12 @@ fn completion_item(
             item.detail = Some(metadata_value_detail(candidate, catalog));
         }
         CompletionCandidateKind::Condition => {
-            let definition = schema?
-                .conditions()
-                .iter()
-                .find(|condition| condition.name() == candidate.name())?;
+            // SchemaSummary retains the schema's ordered declaration maps.
+            let conditions = schema?.conditions();
+            let index = conditions
+                .binary_search_by(|condition| condition.name().cmp(candidate.name()))
+                .ok()?;
+            let definition = &conditions[index];
             item.detail = Some(catalog.format_pairs(
                 MsgId::LspCompletionCondition,
                 [("returns", super::condition_detail(definition.returns()))],
@@ -116,10 +118,11 @@ fn completion_item(
             ));
         }
         CompletionCandidateKind::Effect => {
-            let definition = schema?
-                .effects()
-                .iter()
-                .find(|effect| effect.name() == candidate.name())?;
+            let effects = schema?.effects();
+            let index = effects
+                .binary_search_by(|effect| effect.name().cmp(candidate.name()))
+                .ok()?;
+            let definition = &effects[index];
             item.detail = Some(catalog.format_pairs(
                 MsgId::LspCompletionEffect,
                 [("modes", super::effect_detail(definition.modes()))],
@@ -209,3 +212,6 @@ fn metadata_value_detail(candidate: &CompletionCandidate, catalog: &UiCatalog) -
         _ => catalog.text(MsgId::LspCompletionMetadataKey),
     }
 }
+
+#[cfg(test)]
+mod tests;

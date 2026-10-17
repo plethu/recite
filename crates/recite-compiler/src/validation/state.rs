@@ -6,7 +6,6 @@ use recite_core::{
     schema::ProjectSchema,
 };
 
-use super::ids::collect_line_ids;
 use super::incremental::ValidationPhase;
 use super::participation::{
     ValidationCompleteness, ValidationInput, ValidationParticipation, aggregate_participation,
@@ -30,7 +29,7 @@ pub(crate) struct Validator<'a> {
     pub(super) source_paths: BTreeMap<&'a str, SourceSpan>,
     pub(super) block_ids: BTreeMap<(&'a str, &'a str), &'a SourceSpan>,
     pub(super) compiled_block_ids: BTreeMap<&'a str, (&'a str, &'a SourceSpan)>,
-    pub(super) line_ids: BTreeSet<&'a str>,
+    pub(super) line_ids: Option<BTreeSet<&'a str>>,
     pub(super) localisable_ids: BTreeMap<&'a str, &'a SourceSpan>,
     pub(super) first_default: Option<&'a Block>,
     pub(super) default_count: usize,
@@ -58,13 +57,10 @@ impl<'a> Validator<'a> {
         let mut source_files = source_files.into_iter().collect::<Vec<_>>();
         sort_validation_source_files_in_project_order(&mut source_files);
         let effective_participation = aggregate_participation(&source_files);
-        let (blocks, line_ids) = if phase == ValidationPhase::Local {
-            (BTreeMap::new(), BTreeSet::new())
+        let blocks = if phase == ValidationPhase::Local {
+            BTreeMap::new()
         } else {
-            (
-                collect_blocks(&source_files, &effective_participation),
-                collect_line_ids(&source_files, &effective_participation),
-            )
+            collect_blocks(&source_files, &effective_participation)
         };
 
         Self {
@@ -82,7 +78,7 @@ impl<'a> Validator<'a> {
             source_paths: BTreeMap::new(),
             block_ids: BTreeMap::new(),
             compiled_block_ids: BTreeMap::new(),
-            line_ids,
+            line_ids: None,
             localisable_ids: BTreeMap::new(),
             first_default: None,
             default_count: 0,
@@ -146,7 +142,7 @@ impl<'a> Validator<'a> {
             source_paths: BTreeMap::new(),
             block_ids: BTreeMap::new(),
             compiled_block_ids: BTreeMap::new(),
-            line_ids: BTreeSet::new(),
+            line_ids: None,
             localisable_ids: BTreeMap::new(),
             first_default: None,
             default_count: 0,

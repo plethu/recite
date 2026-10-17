@@ -167,7 +167,7 @@ fn assert_editor_snapshot(workspace: &LspWorkspace, model: &EditorModel) {
         match (state, refresh) {
             (Some(state), DiagnosticRefresh::Publish(published)) => {
                 assert_eq!(published.uri, uri);
-                assert_eq!(published.text, state.text);
+                assert_eq!(published.text.as_ref(), state.text);
                 assert_eq!(published.version, Some(state.version));
             }
             (

@@ -8,7 +8,7 @@ mod metadata_context;
 mod projection;
 
 use recite_core::{
-    DocumentKey, SourceSpan,
+    DocumentKey, SourceLineIndex, SourceSpan,
     schema::{MetadataDomainDefinition, MetadataTarget, ProjectSchema},
 };
 
@@ -62,7 +62,7 @@ pub(super) fn complete_site(
             ..
         } => metadata::value_candidates(
             schema,
-            document.source_text(),
+            document.source_index(),
             &metadata_key,
             target,
             &token,
@@ -83,7 +83,7 @@ pub(super) fn complete_site(
 
 pub(super) fn contextual_metadata_context(
     schema: &ProjectSchema,
-    text: &str,
+    source: &SourceLineIndex,
     key: &str,
     line_number: u32,
     target: MetadataTarget,
@@ -93,7 +93,7 @@ pub(super) fn contextual_metadata_context(
     else {
         return None;
     };
-    match metadata_context::resolve_selector(text, &domain.selector, line_number, target) {
+    match metadata_context::resolve_selector(source, &domain.selector, line_number, target) {
         metadata_context::SelectorResolution::Value(value) => Some(value.to_owned()),
         metadata_context::SelectorResolution::Missing
         | metadata_context::SelectorResolution::Malformed => None,

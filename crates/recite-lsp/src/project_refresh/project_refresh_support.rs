@@ -58,7 +58,7 @@ pub(super) fn manifest_refreshes(
             refreshes.push(DiagnosticRefresh::Publish(
                 super::super::DocumentDiagnostics {
                     uri,
-                    text: entry.text.clone(),
+                    text: entry.text.clone().into(),
                     version: None,
                     diagnostics: entry.diagnostics.clone(),
                     generation: workspace.generation,

@@ -53,7 +53,7 @@ fn long_beat_pages_commit_prose_and_keep_undo() -> Result<(), Box<dyn std::error
     )
     .0;
     support::open_beat(&mut test)?;
-    assert!(has_text(&test, "Passages 1–32"));
+    assert!(has_text(&test, "Lines 1–32"));
     let paragraph = test
         .find(|node, e| {
             Paragraph::try_downcast(e)
@@ -73,14 +73,14 @@ fn long_beat_pages_commit_prose_and_keep_undo() -> Result<(), Box<dyn std::error
     });
     test.sync_and_update();
     test.write_text("A question preserved across pages.");
-    support::click(&mut test, "Next passages")?;
-    assert!(has_text(&test, "Passages 33–64"));
+    support::click(&mut test, "Next lines")?;
+    assert!(has_text(&test, "Lines 33–64"));
     assert!(
         test.find(|_, e| Paragraph::try_downcast(e)
             .filter(|p| p.spans.iter().any(|s| s.text.contains("Beacon0 remains"))))
             .is_none()
     );
-    support::click(&mut test, "Previous passages")?;
+    support::click(&mut test, "Previous lines")?;
     let has_draft = |test: &TestingRunner| {
         test.find(|_, e| {
             Paragraph::try_downcast(e).filter(|p| {
@@ -116,8 +116,8 @@ fn long_beat_pages_commit_prose_and_keep_undo() -> Result<(), Box<dyn std::error
     });
     test.sync_and_update();
     test.write_text(":: syntax_is_not_prose");
-    support::click(&mut test, "Next passages")?;
-    assert!(has_text(&test, "Passages 1–32"));
+    support::click(&mut test, "Next lines")?;
+    assert!(has_text(&test, "Lines 1–32"));
     assert!(has_prose(&test, ":: syntax_is_not_prose"));
     Ok(())
 }

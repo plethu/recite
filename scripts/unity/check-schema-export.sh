@@ -2,6 +2,7 @@
 set -euo pipefail
 repo_root="${1:-$(git rev-parse --show-toplevel)}"
 cli="${RECITE_UNITY_CLI:-${CARGO_TARGET_DIR:-$repo_root/target}/debug/recite}"
+export RECITE_UNITY_CLI="$cli"
 [[ -x "$cli" ]] || {
   echo "missing recite CLI: $cli" >&2
   exit 1

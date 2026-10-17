@@ -167,7 +167,10 @@ fn plural_shape_explanation_preserves_stable_presentation_slots() {
 
 #[test]
 fn diagnostic_explanations_cover_emitted_codes() -> io::Result<()> {
-    let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    // Reused mutation-test binaries can outlive their build checkout.
+    let manifest = std::env::var_os("CARGO_MANIFEST_DIR")
+        .ok_or_else(|| io::Error::other("Cargo manifest directory is missing"))?;
+    let workspace = Path::new(&manifest).join("../..");
     let mut emitted = BTreeSet::new();
     for crate_path in [
         "crates/recite-core/src",

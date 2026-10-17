@@ -108,9 +108,9 @@ impl Component for Dialog {
                     .spacing(t::SPACE_XL)
                     .corner_radius(t::DIALOG_RADIUS)
                     .background(colors.floating)
-                    .shadow((0., 12., 36., 0., colors.shadow))
+                    .shadow(super::material::offset(colors.accent, t::DIALOG_SHADOW_OFFSET))
                     .color(colors.ink)
-                    .border(Border::new().width(1.).fill(colors.rule))
+                    .border(Border::new().width(t::STROKE_WIDTH).fill(colors.stamp))
                     .on_pointer_down(|e: Event<PointerEventData>| e.stop_propagation())
                     .on_all_press(|e: Event<PressEventData>| e.stop_propagation())
                     .a11y_role(AccessibilityRole::Dialog)
@@ -122,10 +122,24 @@ impl Component for Dialog {
                     .child(
                         actions()
                             .content(Content::Flex)
-                            .child(rect().width(Size::flex(1.)).child(self.actions.clone()))
+                            .child(
+                                rect()
+                                    .width(Size::flex(1.))
+                                    .child(Stamps(self.actions.clone())),
+                            )
                             .child(primary_button),
                     ),
             )
+    }
+}
+
+/// Secondary actions in a dialog's action row are stamps.
+#[derive(Clone, PartialEq)]
+struct Stamps(Element);
+impl Component for Stamps {
+    fn render(&self) -> impl IntoElement {
+        use_provide_context(|| super::StampScope);
+        self.0.clone()
     }
 }
 

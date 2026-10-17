@@ -1,6 +1,6 @@
 //! Incremental document dependencies, with the batch validator as policy owner.
 //! Only changed documents and consumers/colliders of their exports are checked.
-use super::{ProjectFacts, facts::Symbol};
+use super::{ProjectDiagnostics, ProjectFacts, facts::Symbol};
 use crate::authoring::{Interrupted, WorkControl};
 use crate::validation::project::first_source_span;
 use recite_core::{Diagnostic, DocumentKey, ast::SourceFile};
@@ -9,6 +9,7 @@ use std::{
     sync::Arc,
 };
 
+mod references;
 mod relocation;
 mod validation;
 
@@ -28,12 +29,17 @@ impl ProjectIndex {
         &mut self,
         changes: impl IntoIterator<Item = (DocumentKey, Option<Arc<ProjectFacts>>)>,
         complete: bool,
-        diagnostics: &mut BTreeMap<DocumentKey, Vec<Diagnostic>>,
+        diagnostics: &mut ProjectDiagnostics,
         control: &dyn WorkControl,
     ) -> Result<BTreeSet<DocumentKey>, Interrupted> {
         let changes: Vec<_> = changes.into_iter().collect();
         if changes.is_empty() && self.complete == complete {
             return Ok(BTreeSet::new());
+        }
+        if self.complete == complete
+            && let Some(affected) = self.references_only(&changes, diagnostics, control)?
+        {
+            return Ok(affected);
         }
         if self.complete == complete
             && let Some(affected) = self.relocate_only(&changes, diagnostics, control)?
@@ -54,19 +60,28 @@ impl ProjectIndex {
         }
         // Capture old dependencies before removing exports, including deleted
         // targets and diagnostics whose related span came from the old revision.
-        for (key, _) in &changes {
-            control.checkpoint()?;
-            self.affect_dependents(key, changed_targets.contains(key), &mut affected);
+        control.checkpoint()?;
+        if self.documents.keys().any(|key| !affected.contains(key)) {
+            for (key, _) in &changes {
+                control.checkpoint()?;
+                self.affect_dependents(key, changed_targets.contains(key), &mut affected);
+            }
         }
         for (key, next) in &changes {
             control.checkpoint()?;
             let old = self.documents.remove(key);
-            replace_membership(
-                &mut self.definitions,
-                old.iter().flat_map(|facts| facts.exports()),
-                next.iter().flat_map(|facts| facts.exports()),
-                key,
-            );
+            if !old
+                .as_ref()
+                .zip(next.as_ref())
+                .is_some_and(|(old, next)| old.same_ordered_exports(next))
+            {
+                replace_membership(
+                    &mut self.definitions,
+                    old.iter().flat_map(|facts| facts.exports()),
+                    next.iter().flat_map(|facts| facts.exports()),
+                    key,
+                );
+            }
             replace_membership(
                 &mut self.dependents,
                 old.iter().flat_map(|facts| facts.dependencies()),
@@ -108,7 +123,7 @@ impl ProjectIndex {
         }
         self.revalidate(&affected, diagnostics, control)?;
         if let Some((key, diagnostic)) = self.missing_default() {
-            diagnostics.entry(key).or_default().push(diagnostic);
+            Arc::make_mut(&mut diagnostics.entry(key).or_default().structural).push(diagnostic);
         }
         Ok(affected)
     }

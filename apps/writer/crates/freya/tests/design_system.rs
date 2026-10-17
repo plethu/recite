@@ -56,6 +56,18 @@ fn specimen_uses_live_controls_and_bounded_picklists() -> Result<(), Box<dyn std
         );
         println!("Resolved prose font: {light_font:?}");
         capture(&mut test, &format!("components-light-{width}.png"))?;
+        support::click(&mut test, "Monochrome")?;
+        capture(
+            &mut test,
+            &format!("components-monochrome-light-{width}.png"),
+        )?;
+        support::click(&mut test, "Dark appearance")?;
+        capture(
+            &mut test,
+            &format!("components-monochrome-dark-{width}.png"),
+        )?;
+        support::click(&mut test, "Light appearance")?;
+        support::click(&mut test, "Monochrome")?;
         support::click(&mut test, "Change destination")?;
         assert!(
             test.find(|_, element| Label::try_downcast(element)

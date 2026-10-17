@@ -125,7 +125,7 @@ fn speaker_and_destination_edits_touch_only_the_selected_field()
     doc.set_destination(doc.revision(), CHOICE, "garden")?;
     let passage = doc.passages()?.into_iter().find(|p| p.id == CHOICE);
     assert!(
-        matches!(passage.map(|p| p.kind), Some(PassageKind::Choice { destination: Some(target) }) if target == "garden")
+        matches!(passage.map(|p| p.kind.clone()), Some(PassageKind::Choice { destination: Some(target) }) if target == "garden")
     );
     assert!(matches!(
         doc.set_destination(doc.revision(), CHOICE, "missing"),
@@ -197,8 +197,8 @@ fn real_document_names_separate_generated_choice_ids() -> Result<(), Box<dyn std
     let mut second = recite_writer_model::Workbench::open("second.recite", FIXTURE)?;
     first.add_choice()?;
     second.add_choice()?;
-    let first_id = first.selected()?.ok_or("first choice")?.id;
-    let second_id = second.selected()?.ok_or("second choice")?.id;
+    let first_id = first.selected()?.ok_or("first choice")?.id.clone();
+    let second_id = second.selected()?.ok_or("second choice")?.id.clone();
     assert_ne!(first_id, second_id);
     let invalid = recite_writer_model::Workbench::open("invalid.recite", ":: bad\n> broken@bad\n")?;
     assert_eq!(invalid.view(), &recite_writer_model::View::Source);

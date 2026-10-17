@@ -1,4 +1,4 @@
-//! Geometry is invalidated by source or saved placement, never by camera or hover.
+//! Prose refreshes content; ordered connections and saved placement own geometry.
 use super::{
     layout::{self, HEIGHT, Node, WIDTH},
     placement,
@@ -7,6 +7,7 @@ use super::{
 use recite_writer_model::{SceneLink, ScriptBlock};
 use std::{
     collections::{BTreeMap, BTreeSet},
+    ops::Deref,
     sync::Arc,
 };
 
@@ -14,6 +15,12 @@ use std::{
 pub(super) struct Topology {
     pub blocks: Arc<[ScriptBlock]>,
     pub links: Vec<SceneLink>,
+    geometry: Arc<Geometry>,
+}
+
+#[derive(PartialEq)]
+pub(super) struct Geometry {
+    positions: placement::Positions,
     pub ids: BTreeMap<String, usize>,
     pub adjacency: Vec<Vec<usize>>,
     pub incident: Vec<Vec<usize>>,
@@ -23,9 +30,79 @@ pub(super) struct Topology {
     pub entry: Option<(f32, f32, f32)>,
     pub endings: BTreeSet<String>,
 }
+impl Deref for Topology {
+    type Target = Geometry;
+    fn deref(&self) -> &Self::Target {
+        &self.geometry
+    }
+}
+
 impl Topology {
     pub fn new(blocks: Arc<[ScriptBlock]>, saved: &placement::Positions) -> Self {
         let links = recite_writer_model::scene_links(&blocks);
+        let geometry = Arc::new(Geometry::new(&blocks, &links, saved));
+        Self {
+            blocks,
+            links,
+            geometry,
+        }
+    }
+
+    pub fn refresh(
+        blocks: Arc<[ScriptBlock]>,
+        saved: &placement::Positions,
+        previous: Option<&Self>,
+    ) -> Self {
+        if previous.is_none() {
+            return Self::new(blocks, saved);
+        }
+        let links = recite_writer_model::scene_links(&blocks);
+        let geometry = previous
+            .filter(|old| old.same_shape(&blocks, &links, saved))
+            .map_or_else(
+                || Arc::new(Geometry::new(&blocks, &links, saved)),
+                |old| old.geometry.clone(),
+            );
+        Self {
+            blocks,
+            links,
+            geometry,
+        }
+    }
+
+    fn same_shape(
+        &self,
+        blocks: &[ScriptBlock],
+        links: &[SceneLink],
+        saved: &placement::Positions,
+    ) -> bool {
+        self.positions.len() == saved.len()
+            && self
+                .positions
+                .iter()
+                .zip(saved)
+                .all(|((old_key, old), (new_key, new))| {
+                    old_key == new_key
+                        && old.0.to_bits() == new.0.to_bits()
+                        && old.1.to_bits() == new.1.to_bits()
+                })
+            && self.blocks.len() == blocks.len()
+            && self.blocks.iter().zip(blocks).all(|(old, new)| {
+                old.id == new.id
+                    && old.is_default == new.is_default
+                    && (saved.is_empty() || placement::card_key(old) == placement::card_key(new))
+            })
+            && self.links.len() == links.len()
+            && self.links.iter().zip(links).all(|(old, new)| {
+                old.origin == new.origin
+                    && old.destination == new.destination
+                    && old.returning == new.returning
+            })
+    }
+}
+
+impl Geometry {
+    fn new(blocks: &[ScriptBlock], links: &[SceneLink], saved: &placement::Positions) -> Self {
         let ids: BTreeMap<_, _> = blocks
             .iter()
             .enumerate()
@@ -41,7 +118,7 @@ impl Topology {
                 incident[to].push(index);
             }
         }
-        let mut nodes = layout::layout(&blocks, &links, WIDTH);
+        let mut nodes = layout::layout(blocks, links, WIDTH);
         let entry = nodes
             .get(blocks.iter().position(|b| b.is_default).unwrap_or(0))
             .map(|n| (n.x, n.y, n.width));
@@ -51,7 +128,7 @@ impl Topology {
                 node.y = y;
             }
         }
-        let routes = routing::routes(&blocks, &nodes, &links);
+        let routes = routing::routes(blocks, &nodes, links);
         let left = nodes
             .iter()
             .map(|n| n.x)
@@ -78,8 +155,7 @@ impl Topology {
             .map(|l| l.origin.clone())
             .collect();
         Self {
-            blocks,
-            links,
+            positions: saved.clone(),
             ids,
             adjacency,
             incident,
@@ -104,3 +180,6 @@ pub(super) fn visible(
         && y * camera.zoom + camera.y <= size.1 + margin
         && (y + h) * camera.zoom + camera.y >= -margin
 }
+
+#[cfg(test)]
+mod tests;

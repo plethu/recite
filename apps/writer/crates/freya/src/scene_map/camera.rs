@@ -136,6 +136,14 @@ pub(super) fn viewport(
             }
             e.stop_propagation();
         })
+        .child(crate::design::material::dot_grid(
+            {
+                let p = crate::design::palette::current();
+                Color::lerp(p.canvas, p.ink, 0.16)
+            },
+            24. * view.zoom,
+            (view.x, view.y),
+        ))
         .child(
             rect()
                 .position(Position::new_absolute().left(view.x).top(view.y))

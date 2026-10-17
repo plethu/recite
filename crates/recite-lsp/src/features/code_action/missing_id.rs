@@ -5,7 +5,7 @@ use recite_compiler::authoring::{
 
 use super::CodeActionDocument;
 use crate::edit_projection::{EditDocument, project_plan};
-use crate::position::lsp_position_to_source;
+use crate::position::indexed_lsp_position_to_source;
 
 pub(super) fn edit(
     document: &CodeActionDocument<'_>,
@@ -22,8 +22,14 @@ fn plan_for_range(
     document: &CodeActionDocument<'_>,
     range: Range,
 ) -> Option<AuthoringEditPlan> {
-    let start = lsp_position_to_source(document.source.text, range.start)?;
-    let end = lsp_position_to_source(document.source.text, range.end)?;
+    let start = indexed_lsp_position_to_source(
+        snapshot.document(document.source.key)?.source_index(),
+        range.start,
+    )?;
+    let end = indexed_lsp_position_to_source(
+        snapshot.document(document.source.key)?.source_index(),
+        range.end,
+    )?;
     let source_range = SourceRange::new(start, end);
     match snapshot.plan_insert_missing_ids_in_range(document.source.key, source_range) {
         Ok(plan) => Some(plan),

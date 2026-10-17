@@ -122,6 +122,9 @@ fn to_prompt(
                 _ => {}
             }
         }
+        // Consume the previous result before the next operation. Retained
+        // snapshots are a separate owner and still force copy-on-write.
+        drop(output);
         output = match condition {
             Some(id) => preview.answer(
                 id,

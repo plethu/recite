@@ -4,7 +4,7 @@ use super::{CatalogError, UiCatalog};
 use crate::{ResourceId, ResourceSpec, UiArgs, UiContract};
 
 pub(super) struct ResourceRegistry {
-    specs: BTreeMap<ResourceId, ResourceSpec>,
+    specs: BTreeMap<String, ResourceSpec>,
 }
 
 impl ResourceRegistry {
@@ -14,12 +14,12 @@ impl ResourceRegistry {
                 .resources
                 .iter()
                 .cloned()
-                .map(|spec| (spec.id.clone(), spec))
+                .map(|spec| (spec.id.as_str().to_owned(), spec))
                 .collect(),
         }
     }
 
-    pub(super) fn get(&self, id: &ResourceId) -> Option<&ResourceSpec> {
+    pub(super) fn get(&self, id: &str) -> Option<&ResourceSpec> {
         self.specs.get(id)
     }
 
@@ -61,6 +61,14 @@ impl UiCatalog {
         id: &ResourceId,
         args: &UiArgs,
     ) -> Result<String, CatalogError> {
+        self.format_key_checked(id.as_str(), args)
+    }
+
+    pub(super) fn format_key_checked(
+        &self,
+        id: &str,
+        args: &UiArgs,
+    ) -> Result<String, CatalogError> {
         let spec = self
             .resource_registry
             .get(id)
@@ -89,11 +97,11 @@ impl UiCatalog {
                 });
             }
         }
-        for locale in crate::fallback_chain(&self.requested) {
-            let Some(bundle) = self.bundles.get(&locale.to_string()) else {
+        for locale in &self.fallback_keys {
+            let Some(bundle) = self.bundles.get(locale) else {
                 continue;
             };
-            let Some(message) = bundle.get_message(id.as_str()) else {
+            let Some(message) = bundle.get_message(id) else {
                 continue;
             };
             let Some(pattern) = message.value() else {

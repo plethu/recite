@@ -1,6 +1,7 @@
 @layer starlight, tokens, reset, base, layout, components, utilities;
 
 @import url("./tokens.css");
+@import url("./fonts.css");
 
 @layer reset {
   *, *::before, *::after {
@@ -28,9 +29,27 @@
   }
 
   body {
-    background: var(--color-paper);
+    background: transparent;
     color: var(--color-ink);
     line-height: 1.65;
+  }
+
+  /* Paper grain, the same fractal noise as the identity assets, painted between the page's paper
+     and its content. Code blocks and panels have solid surface fills, so it never shows behind
+     them; as a pseudo-element it also leaves contrast checks reading the solid paper colour. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .25 0 0 0 0 .18 0 0 0 0 .2 0 0 0 .07 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  }
+
+  @media (prefers-contrast: more) {
+    body::before {
+      content: none;
+    }
   }
 
   a {
@@ -135,11 +154,17 @@
 
     .brand span {
       display: block;
-      inline-size: 7rem;
+      inline-size: 7.35rem;
       block-size: 2.2rem;
-      font-size: 0;
-      background: var(--color-plum);
-      mask: var(--wordmark) center / contain no-repeat;
+    }
+
+    /* Letters take the root fill and the colon takes currentColor, so each ink follows the theme. */
+    .brand svg {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      fill: var(--color-plum);
+      color: var(--color-teal);
     }
 
     nav {
@@ -176,6 +201,11 @@
         gap: 0.5rem;
       }
 
+      .brand span {
+        inline-size: 5.35rem;
+        block-size: 1.6rem;
+      }
+
       .desktop-nav {
         display: none;
       }
@@ -206,12 +236,28 @@
       letter-spacing: 0.08em;
     }
 
+    /* The site's one misregistration: teal at 60% beneath an opaque plum, as in the print wordmark. */
     h1 {
-      font-size: clamp(3rem, 6vw, 5.8rem);
-      font-weight: 560;
-      letter-spacing: -0.055em;
-      max-inline-size: min(15ch, 44rem);
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 6vw, 5.4rem);
+      font-weight: 500;
+      font-variation-settings: "opsz" 72, "SOFT" 50;
+      letter-spacing: -0.03em;
+      position: relative;
+      color: var(--color-plum);
+      max-inline-size: min(16ch, 46rem);
       margin-block: 0.5rem 1.5rem;
+    }
+
+    /* A decorative copy beneath the heading, with empty alternative text so it is not announced. */
+    h1::before {
+      content: attr(data-print) / "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      color: color-mix(in oklch, var(--color-teal) 45%, transparent);
+      transform: translate(-0.035em, 0.025em);
+      pointer-events: none;
     }
 
     .lead {
@@ -219,10 +265,20 @@
       font-size: clamp(1.1rem, 2vw, 1.3rem);
     }
 
+    .note-band {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem 2rem;
+      border-block-start: var(--rule-section);
+      padding-block: 1rem;
+    }
+
     .release {
       color: var(--color-muted);
       font-size: 0.9rem;
-      max-inline-size: var(--measure-lead);
+      max-inline-size: var(--measure-reading);
+      margin: 0;
     }
 
     .actions {
@@ -255,8 +311,10 @@
     }
 
     .scene-leaf {
-      border-inline-start: 1px solid var(--color-rule);
-      padding-inline-start: var(--space-step);
+      margin: 0;
+      padding: 1.25rem 1.5rem;
+      background: var(--color-surface);
+      border-radius: var(--radius-control);
     }
 
     .scene-leaf pre {
@@ -271,7 +329,7 @@
     }
 
     section {
-      border-block-start: 1px solid var(--color-rule);
+      border-block-start: var(--rule-section);
       padding-block: var(--space-section);
     }
 
@@ -289,10 +347,15 @@
 
     .workflow h3 {
       font-size: 1.5rem;
+      margin-block-end: 0.5rem;
     }
 
     .copy {
       max-inline-size: var(--measure-reading);
+    }
+
+    .copy p + p {
+      margin-block-start: 0.75rem;
     }
 
     @media (width < 55rem) {
@@ -320,8 +383,9 @@
 
     textarea {
       inline-size: 100%;
-      min-block-size: 25rem;
-      resize: vertical;
+      block-size: 25rem;
+      resize: none;
+      overflow: auto;
       background: var(--color-surface);
       color: var(--color-ink);
       border: 1px solid var(--color-rule);
@@ -338,9 +402,65 @@
       margin-block: 0.75rem 0.4rem;
     }
 
-    input[type="file"] {
-      max-inline-size: 100%;
+    /* The native file control is visually replaced by a stamp label; the input keeps focus. */
+    .file-pick {
+      position: relative;
+      margin-block: 0.75rem;
+    }
+
+    .file-pick input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+    }
+
+    .file-pick label {
+      display: inline-flex;
+      align-items: center;
       min-block-size: var(--target-min);
+      margin: 0;
+      padding: 0.4rem 0.9rem;
+      border: var(--stroke-stamp) solid var(--color-ink);
+      border-radius: var(--radius-control);
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .file-pick:has(input:focus-visible) label {
+      outline: var(--focus-ring);
+      outline-offset: 0.2rem;
+    }
+
+    .file-pick:has(input:disabled) label {
+      border-color: var(--color-rule);
+      color: var(--color-muted);
+      cursor: default;
+    }
+
+    button {
+      border: var(--stroke-stamp) solid var(--color-ink);
+      border-radius: var(--radius-control);
+      background: transparent;
+    }
+
+    button:disabled {
+      border-color: var(--color-rule);
+      color: var(--color-muted);
+      cursor: default;
+    }
+
+    .playground-output {
+      display: flex;
+      flex-direction: column;
+      min-block-size: 27.5rem;
+      padding: 1.25rem 1.5rem;
+      background: var(--color-surface);
+      border-radius: var(--radius-control);
+    }
+
+    .playground-output h3 {
+      margin-block-start: 0;
     }
 
     .playground-actions {
@@ -369,6 +489,12 @@
       overflow-wrap: anywhere;
     }
 
+    /* Before the first run the panel centres its prompt rather than leaving a bare column. */
+    .playground-output:has([data-transcript]:empty) [data-status] {
+      margin-block: auto;
+      text-align: center;
+    }
+
     [data-transcript] {
       padding-inline-start: 1.5rem;
       max-block-size: 30rem;
@@ -377,6 +503,8 @@
 
     [data-transcript] li {
       margin-block: 0.8rem;
+      font-family: var(--font-prose);
+      font-size: 1.1rem;
     }
 
     @container scene (width > 56rem) {
@@ -463,6 +591,21 @@
     td code {
       overflow-wrap: anywhere;
     }
+  }
+}
+
+@layer components {
+  /* Quoted dialogue in other scripts, in the reading face where it has the glyphs. */
+  .sl-markdown-content .script-samples {
+    padding: 1rem 1.25rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-control);
+  }
+
+  .sl-markdown-content .script-samples p {
+    margin-block: 0.5rem;
+    font-family: var(--font-prose);
+    font-size: 1.1rem;
   }
 }
 

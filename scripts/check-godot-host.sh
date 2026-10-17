@@ -198,7 +198,7 @@ run_editor_scan "registry" "$tmpdir" "$tmpdir/editor.log"
 
 echo "== run Godot host conformance ==" >&2
 if ! run_godot "$tmpdir/runtime.log" timeout 30s "${godot_env[@]}" "$godot_bin" \
-  --headless --path "$tmpdir" --quit-after 10; then
+  --headless --path "$tmpdir"; then
   cat "$tmpdir/editor.log" >&2
   cat "$tmpdir/runtime.log" >&2
   exit 1

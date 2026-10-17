@@ -84,7 +84,7 @@ impl LspWorkspace {
             DiagnosticRefresh::Publish(published) => published,
             DiagnosticRefresh::Clear { uri, .. } => DocumentDiagnostics {
                 uri,
-                text: String::new(),
+                text: String::new().into(),
                 version: None,
                 diagnostics: Vec::new(),
                 generation: self.generation,

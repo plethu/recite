@@ -7,12 +7,17 @@ use crate::{error::CliError, i18n::Messages};
 #[cfg(test)]
 mod tests;
 
+mod human;
+pub(crate) use human::{Subject, report_success, set_color};
+
+/// Render human diagnostics in a rustc-like layout, then a one-line count.
 pub(crate) fn report_diagnostics<'a>(
     writer: &mut dyn Write,
     messages: &Messages,
     diagnostics: impl Iterator<Item = &'a Diagnostic>,
 ) -> Result<usize, CliError> {
-    let mut count = 0;
+    let paint = human::Paint::current();
+    let mut summary = human::Summary::default();
     for diagnostic in diagnostics {
         let record = diagnostic
             .record()
@@ -24,37 +29,18 @@ pub(crate) fn report_diagnostics<'a>(
                 source: source.to_string(),
             }
         })?;
-        count += 1;
-        writeln!(
-            writer,
-            "{} {} {}:{}:{} {}",
-            severity_name(record.severity),
-            record.code.as_str(),
-            record.span.file,
-            record.span.start.line(),
-            record.span.start.column(),
-            rendered.primary_text
-        )?;
-        for related in rendered.related {
-            writeln!(
-                writer,
-                "  related {}:{}:{} {}",
-                related.span.file,
-                related.span.start.line(),
-                related.span.start.column(),
-                related.text
-            )?;
-        }
-        if let Some(help) = rendered.help {
-            writeln!(writer, "  help: {help}")?;
-        }
+        summary.count(record.severity, &record.span.file);
+        human::write_diagnostic(writer, paint, &record, &rendered)?;
     }
-    Ok(count)
+    summary.write(writer, paint, messages)?;
+    Ok(summary.total())
 }
 
 pub(crate) struct InputDiagnostics {
     pub(crate) parse_diagnostics: Vec<Diagnostic>,
     pub(crate) validation_diagnostics: Vec<Diagnostic>,
+    /// How many source files were read, for the human success line.
+    pub(crate) file_count: usize,
 }
 
 impl InputDiagnostics {
@@ -83,18 +69,9 @@ pub(crate) fn report_targeted_diagnostics(
         .filter(|diagnostic| is_target(diagnostic))
         .collect::<Vec<_>>();
     if targeted.is_empty() {
-        return Ok(());
+        return report_success(writer, messages, Subject::Files(diagnostics.file_count));
     }
 
     report_diagnostics(writer, messages, targeted.into_iter())?;
     Err(CliError::Diagnostics)
-}
-
-fn severity_name(severity: recite_core::DiagnosticSeverity) -> &'static str {
-    match severity {
-        recite_core::DiagnosticSeverity::Error => "error",
-        recite_core::DiagnosticSeverity::Warning => "warning",
-        recite_core::DiagnosticSeverity::Information => "info",
-        recite_core::DiagnosticSeverity::Hint => "hint",
-    }
 }

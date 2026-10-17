@@ -7,7 +7,7 @@
   </developer>
   <summary>Write and localise deterministic dialogue for games</summary>
   <metadata_license>MIT</metadata_license>
-  <project_license>MIT OR Apache-2.0</project_license>
+  <project_license>(MIT OR Apache-2.0) AND OFL-1.1</project_license>
   <description>
     <p>Recite Writer is a desktop workspace for authoring dialogue projects, exploring scene structure, and maintaining translations.</p>
   </description>

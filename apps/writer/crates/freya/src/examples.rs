@@ -76,7 +76,10 @@ pub(super) fn select_at(
             matches!(session.view(), recite_writer_model::View::Source),
             writer.dark,
         ));
-        writer.buffers.prose.set(session.draft().to_owned());
+        writer
+            .buffers
+            .prose
+            .set(crate::buffers::prose_draft(session).to_owned());
     }
     drop(state);
     writer.buffers.restore();

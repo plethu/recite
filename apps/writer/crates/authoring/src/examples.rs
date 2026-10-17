@@ -30,6 +30,19 @@ pub const WRITER_EXAMPLES: &[WriterExample] = &[
         ),
         description: "Three sentences · no choices",
     },
+    WriterExample {
+        name: "empty_beat.recite",
+        source: include_str!(
+            "../../../../../fixtures/recite/valid/writer_examples/empty_beat.recite"
+        ),
+        description: "One beat with nothing written yet",
+    },
+    // Deliberately not a valid scene: it has no default beat, so Writer reports one problem.
+    WriterExample {
+        name: "blank_scene.recite",
+        source: "# A scene with no beats yet. Add a beat, or type one in Source.\n",
+        description: "No beats yet",
+    },
 ];
 
 impl WriterExample {

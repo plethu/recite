@@ -67,3 +67,55 @@ fn raw_and_indexed_symbol_ranges_share_line_and_column_clamping()
     }
     Ok(())
 }
+
+#[test]
+fn indexed_cursors_preserve_surrogate_snapping_and_logical_newline_boundaries()
+-> Result<(), Box<dyn std::error::Error>> {
+    let index = recite_core::SourceLineIndex::new("😀a\rnext\r\nآخر\n");
+    for (line, character, expected) in [
+        (0, 0, Some((1, 1))),
+        (0, 1, Some((1, 1))),
+        (0, 2, Some((1, 2))),
+        (0, 3, Some((1, 3))),
+        (0, 4, None),
+        (1, 4, Some((2, 5))),
+        (2, 3, Some((3, 4))),
+        (3, 0, Some((4, 1))),
+        (4, 0, None),
+    ] {
+        let expected = expected
+            .map(|(line, column)| SourcePosition::new(line, column))
+            .transpose()?;
+        assert_eq!(
+            super::indexed_lsp_position_to_source(&index, Position::new(line, character)),
+            expected
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn indexed_and_text_cursors_agree_on_lf_and_crlf_sources() -> Result<(), Box<dyn std::error::Error>>
+{
+    for source in ["", "😀a\nآخر\n", "😀a\r\nآخر\r\n"] {
+        let index = recite_core::SourceLineIndex::new(source);
+        for line in 0..5 {
+            for character in 0..8 {
+                let position = Position::new(line, character);
+                assert_eq!(
+                    super::indexed_lsp_position_to_source(&index, position),
+                    text_cursor(source, position),
+                    "{source:?} at {position:?}"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn text_cursor(text: &str, position: Position) -> Option<SourcePosition> {
+    let line_index = usize::try_from(position.line).ok()?;
+    let (line, _) = recite_core::source_lines(text).nth(line_index)?;
+    let column = super::scalar_column_for_utf16(line, position.character)?;
+    SourcePosition::new(position.line.saturating_add(1), column).ok()
+}

@@ -8,17 +8,12 @@ const url = (path: string) => getRelativeLocaleUrl(Astro.currentLocale ?? "en", 
   <div class="hero">
     <div>
       <p class="eyebrow">Recite · Dialogue for games</p>
-      <h1 id="_top" tabindex="-1">{t("landing.title")}</h1>
+      <h1 id="_top" tabindex="-1" data-print={t("landing.title")}>{t("landing.title")}</h1>
       <p class="lead">{t("landing.lead")}</p>
       <p class="actions">
         <a class="primary" href="#scene-heading">{t("playground.run")}</a>
         <a href={url("getting-started/first-scene")}>{t("landing.action.firstScene")}</a>
         <a href={url("reference/source-format")}>{t("landing.action.sourceFormat")}</a>
-      </p>
-      <p class="release">{t("landing.release")}</p>
-      <p class="release-links">
-        <a href={url("getting-started/install")}>{t("landing.release.install")}</a>
-        <a href={url("guides/distribution")}>{t("landing.release.packages")}</a>
       </p>
     </div>
     <figure class="scene-leaf">
@@ -33,6 +28,13 @@ const url = (path: string) => getRelativeLocaleUrl(Astro.currentLocale ?? "en", 
   -&gt; plan</pre>
     </figure>
   </div>
+  <aside class="note-band" aria-label={t("landing.release.label")}>
+    <p class="release">{t("landing.release")}</p>
+    <p class="release-links">
+      <a href={url("getting-started/install")}>{t("landing.release.install")}</a>
+      <a href={url("guides/distribution")}>{t("landing.release.packages")}</a>
+    </p>
+  </aside>
   <section aria-labelledby="scene-heading">
     <p class="eyebrow">{t("landing.scene.kicker")}</p>
     <h2 id="scene-heading">{t("landing.scene.title")}</h2>

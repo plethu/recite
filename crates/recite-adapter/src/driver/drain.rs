@@ -1,7 +1,7 @@
 use recite_core::compiled::CompiledDialogue;
 use recite_runtime::{
     DialogueContext, DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueEvent,
-    DialogueSession, LocaleResolution, next_with,
+    LocaleResolution, SessionTraversal,
 };
 
 use crate::{AdapterError, AdapterErrorKind, AdapterResult};
@@ -12,11 +12,11 @@ const MAX_BATCH_EVENTS: usize = 10_000;
 
 pub(super) fn drain_from_next(
     asset: &CompiledDialogue,
-    session: &mut DialogueSession,
+    session: &mut SessionTraversal<'_>,
     context: &dyn DialogueContext,
     resolution: LocaleResolution<'_>,
 ) -> AdapterResult<Vec<DialogueEvent>> {
-    match next_with(asset, session, context, resolution) {
+    match session.next_with(asset, context, resolution) {
         Ok(event) => drain_after_event(asset, session, context, resolution, event),
         Err(DialogueError::PromptPending { .. } | DialogueError::EffectPending { .. }) => {
             Ok(Vec::new())
@@ -27,7 +27,7 @@ pub(super) fn drain_from_next(
 
 pub(super) fn drain_after_event(
     asset: &CompiledDialogue,
-    session: &mut DialogueSession,
+    session: &mut SessionTraversal<'_>,
     context: &dyn DialogueContext,
     resolution: LocaleResolution<'_>,
     first: DialogueEvent,
@@ -53,7 +53,7 @@ pub(super) fn drain_after_event(
                 format!("adapter operation exceeded {MAX_BATCH_EVENTS} output events"),
             ));
         }
-        match next_with(asset, session, context, resolution) {
+        match session.next_with(asset, context, resolution) {
             Ok(next) => event = next,
             Err(DialogueError::PromptPending { .. } | DialogueError::EffectPending { .. }) => {
                 return Ok(events);

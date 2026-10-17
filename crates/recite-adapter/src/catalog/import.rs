@@ -16,7 +16,14 @@ impl ReciteDialogueCatalog {
         let document = PoDocument::parse_with_path(source_name, po_text).map_err(|error| {
             AdapterError::with_detail(AdapterErrorKind::Localisation, error.to_string())
         })?;
-        let mut staged = self.clone();
+        // Stage only incoming changes. Existing rows remain untouched until
+        // every row has validated, including conflicts in source order.
+        let mut staged = Self::new();
+        if let Some(header) = self.plural_forms.get(locale.as_str()) {
+            staged
+                .plural_forms
+                .insert(locale.as_str().to_owned(), header.clone());
+        }
         if let Some(header) = document
             .headers()
             .iter()
@@ -55,7 +62,7 @@ impl ReciteDialogueCatalog {
             } else {
                 (TextDomain::Line, context)
             };
-            if let Some(plural) = entry.plural_source_text() {
+            let (key, value) = if let Some(plural) = entry.plural_source_text() {
                 if domain != TextDomain::Line {
                     return Err(AdapterError::with_detail(
                         AdapterErrorKind::Localisation,
@@ -65,7 +72,7 @@ impl ReciteDialogueCatalog {
                         ),
                     ));
                 }
-                staged.insert_plural(
+                staged.prepare_plural(
                     locale.as_str(),
                     id,
                     entry.source_text(),
@@ -76,20 +83,27 @@ impl ReciteDialogueCatalog {
                         .map(|translation| translation.text().to_owned())
                         .collect(),
                     variant,
-                )?;
+                )?
             } else {
                 let text = entry.translation().unwrap_or_default();
-                staged.insert_for_domain(
+                staged.prepare_singular(
                     locale.as_str(),
                     domain,
                     id,
                     entry.source_text(),
                     text,
                     variant,
-                )?;
-            }
+                )?
+            };
+            self.check_value(&key, &value)?;
+            staged.insert_value(key, value)?;
         }
-        *self = staged;
+        if self.translations.is_empty() {
+            self.translations = staged.translations;
+        } else {
+            self.translations.extend(staged.translations);
+        }
+        self.plural_forms.extend(staged.plural_forms);
         Ok(())
     }
 }

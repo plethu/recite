@@ -66,9 +66,11 @@ for index = 1, 23 do
   local keys =
     vim.api.nvim_replace_termcodes("Go# host edit " .. index .. "<Esc>", true, false, true)
   vim.api.nvim_feedkeys(keys, "xt", false)
+  local expected_version = vim.api.nvim_buf_get_changedtick(0)
+  assert(expected_version ~= previous, "edit must advance the document version")
   assert(
     vim.wait(10000, function()
-      return published ~= previous
+      return published == expected_version
     end, 1),
     "edit diagnostics timeout"
   )

@@ -18,7 +18,7 @@ fn localisation_keeps_full_beat_and_source_only_entry_is_optional()
     support::click(&mut test, "Close")?;
     support::click(&mut test, "Write")?;
     assert!(!has_text(&test, "Localisation is optional"));
-    assert!(has_text(&test, "Replies"));
+    assert!(has_text(&test, "REPLIES"));
     Ok(())
 }
 
@@ -77,7 +77,7 @@ fn po_open_edit_and_close_protection_are_native_interactions()
             .any(|s| s.text.contains("If you're here about the transmitter"))))
             .is_none()
     );
-    support::click(&mut test, "▸ Station History")?;
+    support::click(&mut test, "→ Station History")?;
     let preview = test
         .find(|node, e| {
             Rect::try_downcast(e)
@@ -149,7 +149,7 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     if let Ok(path) = std::env::var("RECITE_WRITER_SCREENSHOT") {
         test.render_to_file(format!("{path}.queue.png"));
     }
-    support::click(&mut test, "Read passage")?;
+    support::click(&mut test, "Read line")?;
 
     assert!(matches!(
         recite_writer::request_close(),
@@ -165,7 +165,7 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     }
     support::click(&mut test, "Keep editing")?;
     assert!(has_text(&test, "Edit translation"));
-    support::click(&mut test, "Read passage")?;
+    support::click(&mut test, "Read line")?;
     support::click(&mut test, "fr.po")?;
     support::click(&mut test, "Add language")?;
     support::click(&mut test, "Choose language")?;
@@ -189,7 +189,7 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     assert!(has_text(&test, "Unsaved translations"));
     support::click(&mut test, "Open Relay Desk")?;
     assert!(has_text(&test, "Edit translation"));
-    support::click(&mut test, "Read passage")?;
+    support::click(&mut test, "Read line")?;
 
     support::click(&mut test, "fr.po")?;
     support::click(&mut test, "Compare external changes")?;
@@ -198,7 +198,7 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     support::click(&mut test, "Save")?;
     assert!(std::fs::read_to_string(path)?.contains("A translation draft"));
     support::click(&mut test, "Edit source")?;
-    assert!(has_text(&test, "Replies"));
+    assert!(has_text(&test, "REPLIES"));
     Ok(())
 }
 
@@ -410,7 +410,7 @@ fn source_refresh_previews_cancels_and_saves_without_losing_translation()
     assert_eq!(translated.translation(), Some("Existing translation"));
     assert!(translated.flags().iter().any(|f| f == "fuzzy"));
     assert!(saved.source().contains("# Translator note"));
-    support::click(&mut test, "Read passage")?;
+    support::click(&mut test, "Read line")?;
     assert!(has_text(&test, "Translation queue"));
     Ok(())
 }

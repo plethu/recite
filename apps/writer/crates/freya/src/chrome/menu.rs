@@ -38,6 +38,7 @@ pub(super) fn render(writer: Writer, writing: bool) -> Element {
     });
     let mut anchor = rect().child(
         Button::new()
+            .field()
             .a11y_id(trigger)
             .named(text(MsgId::WriterWorkspaceMenu))
             .expanded(*open.read())
@@ -87,6 +88,11 @@ pub(super) fn render(writer: Writer, writing: bool) -> Element {
                 .position(Position::new_absolute().right(0.).top(t::control_height()))
                 .layer(Layer::Overlay)
                 .width(Size::px(280. * t::ui_scale()))
+                .corner_radius(t::DIALOG_RADIUS)
+                .shadow(crate::design::material::offset(
+                    t::colors().teal,
+                    t::SHADOW_OFFSET,
+                ))
                 .on_key_down(move |event: Event<KeyboardEventData>| {
                     let focused = *Platform::get().focused_accessibility_id.peek();
                     let current = enabled_ids

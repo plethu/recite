@@ -317,3 +317,9 @@ mod regions;
 
 #[path = "authoring_incremental_validation/full_changes.rs"]
 mod full_changes;
+
+#[path = "authoring_incremental_validation/export_membership.rs"]
+mod export_membership;
+
+#[path = "authoring_incremental_validation/references.rs"]
+mod references;
