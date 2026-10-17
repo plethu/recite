@@ -8,7 +8,6 @@ export function LandingHero() {
     <>
       <div class="hero">
         <div>
-          <p class="eyebrow">Recite · Dialogue for games</p>
           <h1 id="_top" data-pagefind-meta="title" tabindex={-1} data-print={text("landing.title")}>
             {text("landing.title")}
           </h1>
@@ -22,7 +21,8 @@ export function LandingHero() {
           </p>
         </div>
         <figure class="scene-leaf">
-          <figcaption>Junction · One source file</figcaption>
+          <span class="halftone" aria-hidden="true" />
+          <figcaption>junction.recite</figcaption>
           <pre>{example}</pre>
         </figure>
       </div>

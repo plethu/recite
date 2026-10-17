@@ -128,7 +128,7 @@
 
   .site-footer {
     padding-block: 2rem;
-    border-block-start: 1px solid var(--color-rule);
+    border-block-start: var(--rule-section);
     color: var(--color-muted);
   }
 }
@@ -227,16 +227,10 @@
       gap: var(--space-step);
       align-items: center;
       padding-block: var(--space-section);
+      isolation: isolate;
     }
 
-    .eyebrow {
-      color: var(--color-plum);
-      font-weight: 650;
-      font-size: 0.85rem;
-      letter-spacing: 0.08em;
-    }
-
-    /* The site's one misregistration: teal at 60% beneath an opaque plum, as in the print wordmark. */
+    /* The site's one misregistration: a teal offset beneath plum, as in the print wordmark. */
     h1 {
       font-family: var(--font-display);
       font-size: clamp(3rem, 6vw, 5.4rem);
@@ -311,21 +305,78 @@
     }
 
     .scene-leaf {
+      --print-bleed: 1.75rem;
+
+      position: relative;
+      min-inline-size: 0;
       margin: 0;
       padding: 1.25rem 1.5rem;
-      background: var(--color-surface);
-      border-radius: var(--radius-control);
+      background: var(--color-paper);
+      border: var(--stroke-stamp) solid var(--color-plum);
+      box-shadow: 0.5rem 0.5rem 0 var(--color-teal);
+    }
+
+    /* Three screened margins, all outside the paper and its source text. */
+    .halftone, .halftone::before, .halftone::after {
+      position: absolute;
+      background: radial-gradient(var(--color-teal) 0.8px, transparent 1px) 0 0 / 5px 5px;
+      pointer-events: none;
+    }
+
+    .scene-leaf .halftone {
+      inset-block: calc(-1 * var(--print-bleed));
+      inset-inline-start: 100%;
+      inline-size: var(--print-bleed);
+      z-index: -1;
+      opacity: 0.65;
+    }
+
+    .halftone::before, .halftone::after {
+      content: "";
+      inset-inline-end: 100%;
+      inline-size: min(12rem, 60vw);
+      block-size: var(--print-bleed);
+      mask-image: linear-gradient(to right, transparent, oklch(0% 0 0deg));
+    }
+
+    .halftone::before {
+      inset-block-start: 0;
+    }
+
+    .halftone::after {
+      inset-block-end: 0;
+    }
+
+    /* The same registration crosshair used on Writer's printed empty states. */
+    .scene-leaf::after {
+      content: "";
+      position: absolute;
+      inset-block-end: calc(-1 * var(--print-bleed));
+      inset-inline-start: calc(-1 * var(--print-bleed));
+      inline-size: 1.1rem;
+      block-size: 1.1rem;
+      color: var(--color-teal);
+      background:
+        linear-gradient(currentcolor, currentcolor) center / 1px 100% no-repeat,
+        linear-gradient(currentcolor, currentcolor) center / 100% 1px no-repeat,
+        radial-gradient(circle, transparent 4px, currentcolor 4px 5px, transparent 5px);
+      pointer-events: none;
     }
 
     .scene-leaf pre {
       white-space: pre-wrap;
-      font-size: 0.95rem;
-      color: var(--color-muted);
+      font-size: clamp(0.9rem, 4vw, 0.95rem);
+      color: var(--color-ink);
+      background: var(--color-paper);
     }
 
     .scene-leaf figcaption {
       color: var(--color-plum);
-      font-size: 0.8rem;
+      background: var(--color-paper);
+      font-family: var(--font-code);
+      font-size: 0.9rem;
+      border-block-end: 1px dotted var(--color-rule);
+      padding-block-end: 0.75rem;
     }
 
     section {
@@ -334,6 +385,8 @@
     }
 
     h2 {
+      font-family: var(--font-display);
+      font-weight: 550;
       font-size: clamp(1.8rem, 4vw, 3.2rem);
       letter-spacing: -0.035em;
       margin-block: 0.25rem 1.5rem;
@@ -364,7 +417,16 @@
       }
 
       .scene-leaf {
-        margin: 0;
+        margin: 0.75rem 1.75rem 1.75rem;
+      }
+    }
+
+    @media (width < 30rem) {
+      .scene-leaf {
+        --print-bleed: 1.25rem;
+
+        margin-inline: 0;
+        padding-inline: 0.75rem;
       }
     }
   }
@@ -456,12 +518,16 @@
       flex-direction: column;
       min-block-size: 27.5rem;
       padding: 1.25rem 1.5rem;
-      background: var(--color-surface);
-      border-radius: var(--radius-control);
+      background: var(--color-paper);
+      border: 1px solid var(--color-rule);
+      border-block-start: 3px solid var(--color-plum);
+      box-shadow: 0.35rem 0.35rem 0 var(--color-plate);
     }
 
     .playground-output h3 {
       margin-block-start: 0;
+      border-block-end: 1px dotted var(--color-rule);
+      padding-block-end: 1rem;
     }
 
     .playground-actions {

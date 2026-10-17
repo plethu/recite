@@ -16,7 +16,6 @@ export function Landing({ playground }: { playground: PlaygroundProps }) {
     <div class="recite-landing site-content" data-pagefind-body>
       <LandingHero />
       <section aria-labelledby="scene-heading">
-        <p class="eyebrow">{text("landing.scene.kicker")}</p>
         <h2 id="scene-heading">{text("landing.scene.title")}</h2>
         <Playground {...playground} />
       </section>

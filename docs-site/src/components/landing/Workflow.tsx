@@ -24,7 +24,6 @@ const steps = [
 export function Workflow() {
   return (
     <section aria-labelledby="paths-heading">
-      <p class="eyebrow">{text("landing.path.kicker")}</p>
       <h2 id="paths-heading">{text("landing.path.title")}</h2>
       <div class="workflow">
         {steps.map(({ title, body, href, label }) => (
