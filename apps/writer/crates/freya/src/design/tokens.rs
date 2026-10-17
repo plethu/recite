@@ -270,15 +270,25 @@ pub enum Slug {
 /// The mono slug line under a pane title: file, block, flags and counts.
 pub fn slug(parts: impl IntoIterator<Item = Slug>) -> Rect {
     let p = colors();
-    parts.into_iter().fold(
-        rect().horizontal().spacing(SPACE_MD * ui_scale()),
-        |row, part| {
-            row.child(match part {
-                Slug::Meta(text) => meta(text),
-                Slug::Flag(text) => meta(text).color(p.teal_text),
+    let line = parts.into_iter().enumerate().fold(
+        paragraph()
+            .width(Size::fill())
+            .meta_font()
+            .font_size(12. * ui_scale())
+            .color(p.muted),
+        |row, (index, part)| {
+            let row = if index == 0 {
+                row
+            } else {
+                row.span(Span::new("  "))
+            };
+            row.span(match part {
+                Slug::Meta(text) => Span::new(text),
+                Slug::Flag(text) => Span::new(text).color(p.teal_text),
             })
         },
-    )
+    );
+    rect().width(Size::fill()).child(line)
 }
 
 /// UI and prose frames share explicit fallback chains across every renderer.

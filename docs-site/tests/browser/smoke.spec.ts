@@ -6,7 +6,7 @@ test("landing page leads into the manual", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("A dialogue language for games");
   await expect(page.getByRole("heading", { level: 2, name: "At the junction" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Recite source" })).toContainText(
-    "N-2 is marked as a cable shaft.",
+    "N-2 is stamped",
   );
   await page.getByRole("link", { name: "Write a first scene" }).click();
   await expect(page).toHaveURL(/\/getting-started\/first-scene\/$/);

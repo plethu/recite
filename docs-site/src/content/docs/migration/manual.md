@@ -1,7 +1,6 @@
 ---
 title: Manual migrations
 description: Map existing Unity, Godot and Clyde dialogue without an automatic importer.
-template: splash
 ---
 
 Dialogue System for Unity, Dialogue Manager, Dialogic and Clyde have no automatic Recite importer.

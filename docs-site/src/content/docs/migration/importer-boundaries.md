@@ -1,7 +1,6 @@
 ---
 title: Inspecting an import
 description: Inspect source mappings and losses before writing editable Recite source.
-template: splash
 ---
 
 `recite import` reads one document and prints a JSON report. It does not write files unless you

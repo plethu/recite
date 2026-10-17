@@ -208,7 +208,6 @@ def lanes_for_path(path, *, base=None, head=None):
         "package.json",
         "bun.lock",
         "bunfig.toml",
-        "vitest.config.mts",
         "oxfmt.config.mts",
         "oxlint.config.mts",
         "tsconfig.base.json",

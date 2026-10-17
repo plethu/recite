@@ -22,7 +22,6 @@
 !fixtures/recite/valid/landing-junction.recite
 docs-site/node_modules/
 docs-site/dist/
-docs-site/.astro/
 docs-site/playwright-report/
 docs-site/test-results/
 docs-site/.browser-artifacts/

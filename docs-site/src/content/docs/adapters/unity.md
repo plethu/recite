@@ -1,7 +1,6 @@
 ---
 title: Unity
 description: Install and use the Unity GameObject adapter.
-template: splash
 ---
 
 Recite's Unity Package Manager package focuses on Unity 6.7+, with tested, best-effort Mono

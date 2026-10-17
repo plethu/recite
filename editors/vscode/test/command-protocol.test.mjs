@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { LosslessInteger, NdjsonRecordParser, parseLosslessJson } from "../src/command-protocol.ts";
 import { parseFiniteRecords } from "../src/finite-protocol.ts";
 

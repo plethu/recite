@@ -125,7 +125,7 @@ fi
 
 "$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
 "$node_bin" "$plugin_root/scripts/message-projections.mjs" --check
-(cd "$repo_root" && bun run js:test --project tooling)
+(cd "$repo_root" && bun run js:test editors/recite-neovim/test)
 "$node_bin" "$plugin_root/scripts/diagnostic-projections.mjs"
 echo "Neovim UI message projection checks passed"
 

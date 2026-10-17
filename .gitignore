@@ -10,7 +10,6 @@
 
 node_modules/
 docs-site/dist/
-docs-site/.astro/
 docs-site/src/client/generated/
 docs-site/.browser-artifacts/
 docs-site/playwright-report/

@@ -3,18 +3,15 @@ import { accessSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { CommandRegistry } from "../src/commands.ts";
 import { FakeChild } from "./child.ts";
 const packageRoot = path.resolve(import.meta.dirname, "..");
 const cliBinary =
   process.env.RECITE_CLI_BIN ?? path.resolve(packageRoot, "../../target/debug/recite");
 
-test(
+test.skipIf(process.env.RECITE_CLI_BIN === undefined)(
   "the integrated gate supplies an executable CLI",
-  {
-    skip: process.env.RECITE_CLI_BIN === undefined,
-  },
   () => {
     assert.ok(exists(cliBinary), `RECITE_CLI_BIN is not executable: ${cliBinary}`);
   },
@@ -309,12 +306,8 @@ test("runtime picker trust loss is a quiet refusal before spawn", async () => {
   assert.equal(spawned, false);
   assert.deepEqual(messages, [["untrusted"]]);
 });
-test(
+test.skipIf(process.platform !== "linux" || process.env.RECITE_CLI_BIN === undefined)(
   "a built recite CLI speaks the finite protocol through the command adapter",
-  {
-    skip: process.platform !== "linux" || process.env.RECITE_CLI_BIN === undefined,
-    timeout: 15_000,
-  },
   async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-cli-"));
     const sourcePath = path.join(root, "dialogue.recite");

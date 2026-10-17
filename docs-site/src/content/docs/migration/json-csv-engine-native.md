@@ -1,7 +1,6 @@
 ---
 title: JSON and CSV imports
 description: Map explicit fields from flat records to validated Recite source.
-template: splash
 ---
 
 The JSON reader accepts an array of flat objects. The CSV reader accepts a header row followed by

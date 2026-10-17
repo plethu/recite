@@ -12,7 +12,7 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import {
   generateMessageProjections,

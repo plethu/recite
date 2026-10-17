@@ -151,7 +151,15 @@ impl Writer {
         if *self.layout.view.peek() == recite_config::WriterView::Source {
             self.try_navigate(|m| m.select(View::Source))
         } else {
-            self.try_navigate(Workbench::show_script)?;
+            let empty = self
+                .buffers
+                .model
+                .peek()
+                .as_ref()
+                .is_ok_and(crate::scene::has_no_beats);
+            if !empty {
+                self.try_navigate(Workbench::show_script)?;
+            }
             if self.layout.standalone() {
                 self.ensure_beat()?;
             }
@@ -314,11 +322,4 @@ pub(super) fn is_workspace_key(event: &KeyboardEventData) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn stable_ids_are_dimmed_in_writer_only() {
-        assert!(recite_writer_grammar::HIGHLIGHTS.contains(super::STABLE_ID_CAPTURE));
-        assert!(super::HIGHLIGHTS.contains("((stable_id) @comment)"));
-        assert!(!super::HIGHLIGHTS.contains(super::STABLE_ID_CAPTURE));
-    }
-}
+mod tests;

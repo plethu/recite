@@ -1,15 +1,22 @@
-import { z } from "astro/zod";
+import * as v from "valibot";
 
-export const showcaseSchema = z
-  .strictObject({
-    title: z.string().min(1),
-    summary: z.string().min(1),
-    projectUrl: z.url().startsWith("https://"),
-    draft: z.boolean().default(false),
-    image: z.string().optional(),
-    imageAlt: z.string().min(1).optional(),
-  })
-  .refine((entry) => Boolean(entry.image) === Boolean(entry.imageAlt), {
-    message: "A showcase image and its alternative text must be supplied together.",
-    path: ["imageAlt"],
-  });
+const nonempty = v.pipe(v.string(), v.trim(), v.nonEmpty());
+export const showcaseSchema = v.pipe(
+  v.strictObject({
+    title: nonempty,
+    summary: nonempty,
+    projectUrl: v.pipe(v.string(), v.url(), v.startsWith("https://")),
+    draft: v.optional(v.boolean(), false),
+    image: v.optional(nonempty),
+    imageAlt: v.optional(nonempty),
+  }),
+  v.forward(
+    v.check(
+      (entry) => Boolean(entry.image) === Boolean(entry.imageAlt),
+      "A showcase image and its alternative text must be supplied together.",
+    ),
+    ["imageAlt"],
+  ),
+);
+
+export type Project = v.InferOutput<typeof showcaseSchema> & { url: string; html: string };

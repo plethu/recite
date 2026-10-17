@@ -205,14 +205,14 @@ localisation, fixtures, traces, and save-compatible dialogue state depend on sta
 Recite Writer names things for the people writing dialogue. The source format and the CLI name the
 same things after their syntax. Each Writer term maps to one source or CLI term:
 
-| Writer | Source format and CLI | Notes |
-| --- | --- | --- |
-| scene | a `.recite` file | One file of blocks. Writer's sidebar lists scenes. |
-| beat | block (`:: name`) | One named block; a map card in Writer. |
-| line | line (`> name@id`) | A localisable line of dialogue with an optional speaker. |
-| reply | choice (`? name@id`) | An option the player picks; its `->` target is the reply's destination. |
-| Try scene, Run scene | `recite play` | Writer's Try scene and the playground's Run scene both traverse the compiled scene, as `recite play` does. |
-| problems | diagnostics | Writer's status bar counts the open scene's diagnostics. |
+| Writer               | Source format and CLI | Notes                                                                                                      |
+| -------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| scene                | a `.recite` file      | One file of blocks. Writer's sidebar lists scenes.                                                         |
+| beat                 | block (`:: name`)     | One named block; a map card in Writer.                                                                     |
+| line                 | line (`> name@id`)    | A localisable line of dialogue with an optional speaker.                                                   |
+| reply                | choice (`? name@id`)  | An option the player picks; its `->` target is the reply's destination.                                    |
+| Try scene, Run scene | `recite play`         | Writer's Try scene and the playground's Run scene both traverse the compiled scene, as `recite play` does. |
+| problems             | diagnostics           | Writer's status bar counts the open scene's diagnostics.                                                   |
 
 ## Related docs
 

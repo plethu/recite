@@ -5,14 +5,14 @@
     "checkJs": false,
     "types": [
       "node",
-      "vscode"
+      "vscode",
+      "bun"
     ]
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.cts",
     "test/**/*.ts",
-    "vitest.config.ts",
     "ox*.config.mts"
   ],
   "exclude": [

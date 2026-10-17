@@ -5,7 +5,6 @@ export default defineConfig({
   ...base,
   ignorePatterns: [
     ...(base.ignorePatterns ?? []),
-    ".astro/**",
     ".browser-artifacts/**",
     "src/client/generated/**",
   ],

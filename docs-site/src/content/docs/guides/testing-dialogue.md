@@ -1,7 +1,6 @@
 ---
 title: Testing dialogue
 description: Verify source, host decisions, effects and saved sessions without rendering a game.
-template: splash
 ---
 
 Use a runtime fixture to make the game's answers explicit. In the

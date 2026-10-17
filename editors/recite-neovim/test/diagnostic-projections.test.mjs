@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { projectDiagnostics } from "../scripts/diagnostic-projections.mjs";
 
 test("Neovim diagnostic projection validates shared contracts with CRLF input", () => {

@@ -95,10 +95,14 @@ impl Toolbar {
                     .child(crate::messages::text(crate::messages::MsgId::WriterGuiHelp)),
             );
         // Tight within a group, loose between groups.
-        let actions = rect()
-            .horizontal()
-            .cross_align(Alignment::Center)
-            .spacing(t::SPACE_LG)
+        let actions = (if stacked { rect() } else { rect().horizontal() })
+            .width(if stacked { Size::fill() } else { Size::auto() })
+            .cross_align(if stacked {
+                Alignment::Start
+            } else {
+                Alignment::Center
+            })
+            .spacing(if stacked { t::SPACE_XS } else { t::SPACE_LG })
             .child(primary_actions)
             .child(secondary_actions);
         let search = rect()

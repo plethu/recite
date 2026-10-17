@@ -188,6 +188,17 @@ fn shared_buttons_use_pointer_cursors_and_modals_fit_a_small_window()
         })
         .ok_or("map help")?;
     assert!(help.height() < 24., "Help must stay on one line");
+    let metadata = test
+        .find(|node, e| {
+            Paragraph::try_downcast(e)
+                .filter(|p| p.spans.iter().any(|span| span.text == "4 replies"))
+                .map(|_| node.layout().area)
+        })
+        .ok_or("scene metadata")?;
+    assert!(
+        metadata.height() < 48.,
+        "metadata wraps as words, not a column of characters"
+    );
     let search = test
         .find(|node, e| {
             Paragraph::try_downcast(e)

@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -160,7 +160,7 @@ function assertZipArchive(data) {
       `offline VSIX is missing production dependency ${name}`,
     );
   }
-  for (const name of ["acorn", "fflate", "vscode-textmate", "vscode-oniguruma"]) {
+  for (const name of ["oxc-parser", "fflate", "vscode-textmate", "vscode-oniguruma"]) {
     assert.equal(
       entries[`extension/node_modules/${name}/package.json`],
       undefined,

@@ -1,15 +1,47 @@
-import { parse } from "acorn";
-import { stripTypeScriptTypes } from "node:module";
+import { parseSync } from "oxc-parser";
 
+// Inspect authored syntax rather than emitted JS: transpilation can normalize escaped
+// message IDs or erase branches that the source policy must still reject.
 export function parseSource(source, file) {
-  try {
-    const javascript = /\.(?:ts|mts|cts)$/.test(file)
-      ? stripTypeScriptTypes(source, { mode: "strip" })
-      : source;
-    return parse(javascript, { ecmaVersion: "latest", sourceType: "module", allowHashBang: true });
-  } catch (error) {
-    throw new Error(`invalid JavaScript in ${file}: ${error.message}`, { cause: error });
-  }
+  const result = parseSync(file, source, { sourceType: "module", preserveParens: false });
+  if (result.errors.length)
+    throw new Error(
+      `invalid source in ${file}: ${result.errors.map(({ message }) => message).join("; ")}`,
+    );
+  return runtimeSyntax(result.program);
+}
+
+function runtimeSyntax(node) {
+  if (Array.isArray(node)) return node.map(runtimeSyntax).filter((entry) => entry !== undefined);
+  if (!node || typeof node !== "object") return node;
+  if (
+    ["TSAsExpression", "TSSatisfiesExpression", "TSNonNullExpression", "TSTypeAssertion"].includes(
+      node.type,
+    )
+  )
+    return runtimeSyntax(node.expression);
+  if (
+    ["TSInterfaceDeclaration", "TSTypeAliasDeclaration", "TSDeclareFunction"].includes(node.type) ||
+    node.declare ||
+    node.importKind === "type" ||
+    node.exportKind === "type"
+  )
+    return undefined;
+  if (node.type?.startsWith("TS"))
+    throw new Error(`unsupported runtime TypeScript syntax: ${node.type}`);
+  const output = Object.fromEntries(
+    Object.entries(node)
+      .filter(
+        ([key]) =>
+          !["typeAnnotation", "returnType", "typeParameters", "typeArguments"].includes(key),
+      )
+      .map(([key, value]) => [key, runtimeSyntax(value)]),
+  );
+  if (node.type === "ImportDeclaration" && node.specifiers.length && !output.specifiers.length)
+    return undefined;
+  if (node.type === "ExportNamedDeclaration" && node.declaration && !output.declaration)
+    return undefined;
+  return output;
 }
 
 export function walkWithParents(node, visit, parent = undefined, ancestors = []) {

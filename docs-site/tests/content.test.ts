@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test } from "bun:test";
+import { parse, safeParse, getDotPath } from "valibot";
 import { showcaseSchema } from "../src/showcase-schema.ts";
 
 const project = {
@@ -9,17 +10,17 @@ const project = {
 };
 
 test("showcase defaults to public and rejects investigation-only metadata", () => {
-  assert.equal(showcaseSchema.parse(project).draft, false);
-  assert.equal(showcaseSchema.parse({ ...project, draft: true }).draft, true);
-  assert.equal(showcaseSchema.safeParse({ ...project, fixture: true }).success, false);
+  assert.equal(parse(showcaseSchema, project).draft, false);
+  assert.equal(parse(showcaseSchema, { ...project, draft: true }).draft, true);
+  assert.equal(safeParse(showcaseSchema, { ...project, fixture: true }).success, false);
 });
 
 test("showcase metadata requires a real HTTPS project URL", () => {
-  assert.equal(showcaseSchema.safeParse(project).success, true);
+  assert.equal(safeParse(showcaseSchema, project).success, true);
   for (const projectUrl of ["not-a-url", "http://example.com/", "javascript:alert(1)"]) {
-    const result = showcaseSchema.safeParse({ ...project, projectUrl });
+    const result = safeParse(showcaseSchema, { ...project, projectUrl });
     assert.equal(result.success, false);
-    if (!result.success) assert.deepEqual(result.error.issues[0]?.path, ["projectUrl"]);
+    if (!result.success) assert.deepEqual(getDotPath(result.issues[0]!), "projectUrl");
   }
 });
 
@@ -32,10 +33,11 @@ test("showcase images require paired nonempty alternative text", () => {
       imageAlt: "",
     },
   ]) {
-    assert.equal(showcaseSchema.safeParse({ ...project, ...image }).success, false);
+    assert.equal(safeParse(showcaseSchema, { ...project, ...image }).success, false);
   }
   assert.equal(
-    showcaseSchema.safeParse({ ...project, image: "/example.svg", imageAlt: "An example" }).success,
+    safeParse(showcaseSchema, { ...project, image: "/example.svg", imageAlt: "An example" })
+      .success,
     true,
   );
 });

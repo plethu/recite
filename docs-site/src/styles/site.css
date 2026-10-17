@@ -1,7 +1,7 @@
-@layer starlight, tokens, reset, base, layout, components, utilities;
-
+@import url("./layers.css");
 @import url("./tokens.css");
 @import url("./fonts.css");
+@import url("./documentation.css");
 
 @layer reset {
   *, *::before, *::after {
@@ -113,7 +113,7 @@
       color-scheme: light dark;
     }
 
-    starlight-theme-select {
+    .theme-control {
       display: none;
     }
   }
@@ -382,6 +382,7 @@
     }
 
     textarea {
+      font-family: var(--font-code);
       inline-size: 100%;
       block-size: 25rem;
       resize: none;
@@ -596,13 +597,13 @@
 
 @layer components {
   /* Quoted dialogue in other scripts, in the reading face where it has the glyphs. */
-  .sl-markdown-content .script-samples {
+  .markdown-content .script-samples {
     padding: 1rem 1.25rem;
     background: var(--color-surface);
     border-radius: var(--radius-control);
   }
 
-  .sl-markdown-content .script-samples p {
+  .markdown-content .script-samples p {
     margin-block: 0.5rem;
     font-family: var(--font-prose);
     font-size: 1.1rem;

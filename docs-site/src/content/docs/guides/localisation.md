@@ -1,7 +1,6 @@
 ---
 title: Localising dialogue
 description: Extract stable contexts and test a PO catalogue in a deterministic run.
-template: splash
 ---
 
 Start with the [complete example](/examples/headless-cli/). Its source anchors identify the lines

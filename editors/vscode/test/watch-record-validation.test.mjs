@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { validStructuredError } from "../src/watch-record-validation.ts";
 
 import { errorCategories, errorCodes, operations } from "../src/error-vocabulary.generated.js";

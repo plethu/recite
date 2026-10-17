@@ -26,8 +26,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Playwright owns this process, including when Astro detects an agent.
-    command: "bun run preview --port 4173 --ignore-lock",
+    // Playwright owns the static preview process.
+    command: "bun run preview --port 4173",
     url: "http://127.0.0.1:4173/",
     reuseExistingServer: false,
     timeout: 30_000,

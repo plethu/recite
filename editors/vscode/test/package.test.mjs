@@ -1,9 +1,8 @@
-import { stripTypeScriptTypes } from "node:module";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { SOURCE_MESSAGE_IDS } from "../scripts/message-projections.mjs";
 import { assertContainedRegularFile, assertSafeTree } from "../scripts/safety.mjs";
@@ -240,6 +239,45 @@ test("the outside policy rejects wrapper, sink, alias, and dynamic bypasses", as
   );
 });
 
+test("TypeScript source checks retain unreachable calls and ignore type-only declarations", async () => {
+  const entries = await sourceEntries();
+  assert.throws(
+    () =>
+      assertUiBoundary(
+        [
+          ...entries,
+          [
+            "hidden-call.ts",
+            `
+    import type { HostApi } from "./types.ts";
+    if (false) { (api as HostApi).window.showErrorMessage("English"); }
+  `,
+          ],
+        ],
+        SOURCE_MESSAGE_IDS,
+        projectedMessages,
+      ),
+    /outside|access|call/,
+  );
+  assert.doesNotThrow(() =>
+    assertUiBoundary(
+      [
+        ...entries,
+        [
+          "type-only.ts",
+          `
+    import type { HostApi } from "./types.ts";
+    interface Surface { window: HostApi; }
+    const value: string = "not a UI call";
+  `,
+        ],
+      ],
+      SOURCE_MESSAGE_IDS,
+      projectedMessages,
+    ),
+  );
+});
+
 test("the UI service accepts only its structural caller contracts", async () => {
   const entries = await sourceEntries();
   const valid = [
@@ -293,7 +331,7 @@ test("the adapter rejects escaped IDs, aliases, reassignment, and composed text"
     ),
   );
   rejected((source) =>
-    source.replace(/serverStderr\(message\s*\)/u, "serverStderr(clientMessage)"),
+    source.replace(/serverStderr\(message: string\)/u, "serverStderr(clientMessage)"),
   );
   rejected((source) =>
     source.replace(
@@ -316,7 +354,7 @@ test("the adapter rejects escaped IDs, aliases, reassignment, and composed text"
   );
   rejected((source) =>
     source.replace(
-      /serverLifecycleFailure\(detail\s*\) \{/u,
+      /serverLifecycleFailure\(detail: string\) \{/u,
       "async serverLifecycleFailure(detail) {",
     ),
   );
@@ -326,9 +364,7 @@ async function sourceEntries(sourceRoot = path.join(packageRoot, "src")) {
   return Promise.all(
     listSourceModules(sourceRoot).map(async ({ relativePath, absolutePath }) => [
       relativePath,
-      /\.(?:ts|cts|mts)$/u.test(relativePath)
-        ? stripTypeScriptTypes(await readFile(absolutePath, "utf8"), { mode: "strip" })
-        : await readFile(absolutePath, "utf8"),
+      await readFile(absolutePath, "utf8"),
     ]),
   );
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { initializeParams, readCliConfiguration, readConfiguration } from "../src/configuration.ts";
 
 test("CLI configuration resolves bare names through PATH and paths from the effective root", () => {

@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-358.1 -1462.7 2038.6 2038.6" width="512" height="512" role="img" aria-label="Recite Writer">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="-358.1 -1462.7 2038.6 2038.6"
+  width="512"
+  height="512"
+  role="img"
+  aria-label="Recite Writer"
+>
   <title>Recite Writer</title>
   <rect x="-358.1" y="-1462.7" width="2038.6" height="2038.6" rx="448.5" fill="#f3e9df" />
   <g fill="#00838a" transform="translate(56.0 56.0)">

@@ -2,17 +2,13 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { CommandRegistry } from "../src/commands.ts";
 
 const cliBinary = process.env.RECITE_CLI_BIN;
 
-test(
+test.skipIf(process.platform !== "linux" || cliBinary === undefined)(
   "a real recite CLI watch starts, reports a build, and cooperatively stops",
-  {
-    skip: process.platform !== "linux" || cliBinary === undefined,
-    timeout: 15_000,
-  },
   async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-watch-"));
     await mkdir(path.join(root, "dialogue"));

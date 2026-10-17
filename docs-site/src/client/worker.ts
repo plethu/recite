@@ -12,7 +12,7 @@ scope.onmessage = async ({ data }: MessageEvent<Request>) => {
     let encoded: string;
     if (command.kind === "run") {
       const bindings: typeof import("./generated/recite_playground.js") = await import(
-        /* @vite-ignore */ command.moduleUrl
+        command.moduleUrl
       );
       await bindings.default({ module_or_path: command.binaryUrl });
       host?.free();

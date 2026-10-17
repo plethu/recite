@@ -1,7 +1,6 @@
 ---
 title: Bevy
 description: Load compiled Recite dialogue and drive a single session in Bevy 0.19.
-template: splash
 ---
 
 `recite-bevy` is a Bevy 0.19.1 companion for compiled `.recitec` assets. It uses Bevy's app, ECS,

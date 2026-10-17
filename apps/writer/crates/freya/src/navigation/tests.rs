@@ -1,6 +1,8 @@
+use super::restore::{catalogue_path, select};
 use super::*;
 #[cfg(target_os = "linux")]
 use freya_testing::prelude::*;
+use recite_writer_model::WorkbenchError;
 
 #[test]
 fn inconsistent_beat_and_passage_link_does_not_change_selection() -> Result<(), WorkbenchError> {

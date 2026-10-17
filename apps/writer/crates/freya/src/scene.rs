@@ -52,7 +52,19 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
             } else {
                 "Choose a beat in the sidebar or on the map.".into()
             },
-            actions: Vec::new(),
+            actions: if blocks.is_empty() {
+                vec![
+                    Button::new()
+                        .stamp()
+                        .on_press(move |_| writer.navigate(Workbench::add_beat))
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterGuiAddBeat,
+                        ))
+                        .into_element(),
+                ]
+            } else {
+                Vec::new()
+            },
             min_height: 240.,
         });
     }
@@ -96,7 +108,9 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
             );
     }
     if !writer.localisation.read().active {
-        script = script.child(AddActions { writer });
+        if open.is_some() {
+            script = script.child(AddActions { writer });
+        }
         if let Some(index) = open
             .as_ref()
             .and_then(|id| blocks.iter().position(|block| &block.id == id))

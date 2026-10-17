@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { ExtensionController } from "../src/controller.ts";
 import { FakeClient, hostApi, output } from "./controller-fixtures.mjs";
 

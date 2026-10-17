@@ -133,9 +133,21 @@ fn the_examples_reach_an_empty_beat_and_a_scene_with_no_beats()
     support::click(&mut test, "Blank Scene")?;
     test.poll_n(std::time::Duration::from_millis(16), 12);
     assert!(has(&test, "This scene is empty"));
+    assert!(!has(
+        &test,
+        "The selected line no longer exists or has no unique frozen ID."
+    ));
     capture(&mut test, "blank-scene-script.png")?;
     support::click(&mut test, "Map")?;
     capture(&mut test, "blank-scene-map.png")?;
     assert!(has(&test, "No beats yet"));
+    support::click(&mut test, "Script")?;
+    test.poll_n(std::time::Duration::from_millis(16), 12);
+    assert!(!has(&test, "Add line"));
+    support::click(&mut test, "Add beat")?;
+    test.poll_n(std::time::Duration::from_millis(16), 12);
+    assert!(!has(&test, "This scene is empty"));
+    assert!(has(&test, "Add line"));
+    capture(&mut test, "blank-scene-added-beat.png")?;
     Ok(())
 }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { createUserInterface } from "../src/user-interface.ts";
 
 test("semantic UI operations localize source messages and keep the channel private", () => {

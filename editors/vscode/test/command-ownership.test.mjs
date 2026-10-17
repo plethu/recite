@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { CommandRegistry } from "../src/commands.ts";
 
 test("run and trace preserve the diagnostic snapshot", async () => {

@@ -1,7 +1,6 @@
 ---
 title: Complete CLI workflow
 description: Copy the maintained project and validate, compile, localise, run and trace it.
-template: splash
 ---
 
 This example uses the five-scene project in `fixtures/realistic/v1-pack`. It contains a schema,

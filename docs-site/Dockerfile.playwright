@@ -7,7 +7,6 @@ ENV CI=1 \
     MISE_CACHE_DIR=/tmp/mise-cache \
     MISE_TRUSTED_CONFIG_PATHS=/workspace \
     MISE_AUTO_INSTALL=false \
-    ASTRO_TELEMETRY_DISABLED=1 \
     PATH="/opt/mise/shims:${PATH}"
 
 COPY --from=mise-tool /usr/local/bin/mise /usr/local/bin/mise
@@ -26,10 +25,7 @@ COPY fixtures/recite/valid/landing-junction.recite ./fixtures/recite/valid/landi
 COPY editors/vscode/syntaxes/recite.tmLanguage.json ./editors/vscode/syntaxes/recite.tmLanguage.json
 RUN bun run --cwd docs-site build
 
-ARG LOCAL_UID=1000
-ARG LOCAL_GID=1000
-RUN chown -R "${LOCAL_UID}:${LOCAL_GID}" /workspace/docs-site/.astro \
-    && chmod -R a+rX /opt/mise
+RUN chmod -R a+rX /opt/mise
 
 WORKDIR /workspace/docs-site
 CMD ["bun", "run", "test:browser"]

@@ -1,7 +1,6 @@
 ---
 title: Ink imports
 description: Inspect Ink source and convert the documented knot and divert subset.
-template: splash
 ---
 
 ```sh

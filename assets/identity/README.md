@@ -10,8 +10,9 @@ outlines; the assets share the repository's MIT OR Apache-2.0 license.
   The viewBox is tight; its aspect ratio is 3.337 (width over height).
 - `recite-wordmark-reversed.svg`: the same on dark surfaces, warm-paper letters and a mint colon.
 - `recite-wordmark-print.svg`: the print wordmark for the README, social image and splash. A hard
-  teal copy of the letters sits 0.028 em right and down beneath an opaque plum, on grained paper. The
-  colon is printed once, at the same size as in the quiet wordmark. There is no translucent fringe.
+  teal copy of the letters sits 0.028 em right and down beneath an opaque plum, on grained paper.
+  The colon is printed once, at the same size as in the quiet wordmark. There is no translucent
+  fringe.
 - `recite-wordmark-hero.svg`: the same print wordmark without paper, for surfaces that already carry
   grain, such as Writer's welcome screen. Its aspect ratio is 3.251.
 - `recite-mark.svg`: the r and colon on a grained paper tile with the same print recipe, for large
@@ -25,33 +26,33 @@ outlines; the assets share the repository's MIT OR Apache-2.0 license.
 
 Outlines come from the Fraunces variable font, `Fraunces[SOFT,WONK,opsz,wght].ttf`, "Version 1.000;
 [b76b70a41]" as distributed by google/fonts. The instance is `wght` 700, `opsz` 144, `SOFT` 100 and
-`WONK` 1, set with −0.04 em letter-spacing and no kerning. Each colon square is 0.11 em on a side; the
-upper square is centred 0.06 em below the x-height, the lower 0.06 em above the baseline, and the
-pair starts 0.07 em after the e. To regenerate, instance the font with
+`WONK` 1, set with −0.04 em letter-spacing and no kerning. Each colon square is 0.11 em on a side;
+the upper square is centred 0.06 em below the x-height, the lower 0.06 em above the baseline, and
+the pair starts 0.07 em after the e. To regenerate, instance the font with
 `fontTools.varLib.instancer` and draw each glyph through `fontTools.pens.svgPathPen`; keep these
 values so the assets stay consistent.
 
 ## Inks
 
-| ink | value | use |
-| --- | --- | --- |
-| Plum | `#683e62` | letters and the only text accent |
-| Ink | `#302431` | Writer text |
-| Paper | `#f3e9df` | tiles and the reversed wordmark |
-| Riso teal | `#00838a` | the colon, plates, rules and the print offset |
-| Text-safe teal | `#0f6b6f` | links and destinations on paper |
-| Mint | `#82d8d5` | the second ink on dark surfaces, where it is also text-safe |
-| Overprint | `#002035` | plum multiplied by teal; the status bar |
+| ink            | value     | use                                                         |
+| -------------- | --------- | ----------------------------------------------------------- |
+| Plum           | `#683e62` | letters and the only text accent                            |
+| Ink            | `#302431` | Writer text                                                 |
+| Paper          | `#f3e9df` | tiles and the reversed wordmark                             |
+| Riso teal      | `#00838a` | the colon, plates, rules and the print offset               |
+| Text-safe teal | `#0f6b6f` | links and destinations on paper                             |
+| Mint           | `#82d8d5` | the second ink on dark surfaces, where it is also text-safe |
+| Overprint      | `#002035` | plum multiplied by teal; the status bar                     |
 
-Riso teal is 3.8:1 on paper, so it is a plate ink. The second ink is never text on a paper
-surface: canvas, reading surface, inset, floating panels or plates. On overprint navy, mint is
-10:1 and may be text in either mode.
+Riso teal is 3.8:1 on paper, so it is a plate ink. The second ink is never text on a paper surface:
+canvas, reading surface, inset, floating panels or plates. On overprint navy, mint is 10:1 and may
+be text in either mode.
 
 ## Print recipe
 
 Grain is SVG `feTurbulence` (`fractalNoise`, base frequency 0.9, two octaves, seed 7) mapped to ink
-`#402e33` at 7% alpha. The print offset is a hard, opaque second-ink copy beneath the top ink. Use it
-only in identity assets and hero or empty states, never on controls.
+`#402e33` at 7% alpha. The print offset is a hard, opaque second-ink copy beneath the top ink. Use
+it only in identity assets and hero or empty states, never on controls.
 
 `grain.png` is the raster equivalent, generated deterministically with ImageMagick:
 

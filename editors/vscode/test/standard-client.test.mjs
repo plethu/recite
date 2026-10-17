@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { ReciteStandardClient } from "../src/standard-client.ts";
 import { action, hostApi } from "./controller-fixtures.mjs";
 

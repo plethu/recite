@@ -29,20 +29,19 @@ one area's commands. Each module is also callable from its own directory without
 example `cd apps/writer && just run --project /path/to/project`.
 
 Bun installs the frozen JavaScript workspace and runs its scripts. `bun run js:fmt`, `bun run
-js:check` and `bun run js:test` run standalone Oxfmt, Oxlint/TypeScript and Vitest. Root
-`oxfmt.config.mts` and `oxlint.config.mts` own the shared defaults; package configurations import
-those defaults and own their environments and generated-file exclusions. Run the commands without
-`--config` so both tools discover the nearest derived configuration. The site and editor have named
-test projects; `bun run js:test --project site` or `--project vscode` selects one. Vitest and
-installed-editor compatibility checks use Node; tsdown builds the extension under Bun. Playwright
-owns browser acceptance, and `astro check` owns Astro component diagnostics. Dprint owns the other
-maintained languages, including Astro markup and its embedded TypeScript. Shared strict compiler
-options live in `tsconfig.base.json`; Node tooling and the editor inherit `tsconfig.node.json`,
-while the site also inherits Astro's strictest configuration. TypeScript 7 checks tooling, the
-extension and the site's ordinary TypeScript through its derived `tsconfig.typescript.json`. The
-TypeScript 6 alias remains for Astro's component-checking compiler API. `bunfig.toml` owns isolated
-dependency installation and the 24-hour release-age gate; `trustedDependencies` in the root manifest
-owns allowed build scripts.
+js:check` and `bun run js:test` run standalone Oxfmt, Oxlint/TypeScript and Bun’s native test
+runner. Root `oxfmt.config.mts` and `oxlint.config.mts` own the shared defaults; package
+configurations import those defaults and own their environments and generated-file exclusions. Run
+the commands without `--config` so both tools discover the nearest derived configuration. Select
+tests by path, for example `bun run js:test docs-site/tests` or `bun run js:test
+editors/vscode/test`. Bun runs unit/contract tests and tsdown builds the extension. Explicit
+compatibility probes and installed-editor checks use the host's Node runtime. Playwright owns
+browser acceptance. Eleventy renders the site from Markdown and Hono TSX under Bun. Dprint owns the
+other maintained languages. Shared strict compiler options live in `tsconfig.base.json`; Node
+tooling and the editor inherit `tsconfig.node.json`, while the site checks browser, worker and build
+code through its own `tsconfig.json`. TypeScript 7 checks all maintained TypeScript, including site
+templates. `bunfig.toml` owns isolated dependency installation and the 24-hour release-age gate;
+`trustedDependencies` in the root manifest owns allowed build scripts.
 
 For a focused change:
 
@@ -116,8 +115,8 @@ gate rejects multiple `Option<bool>` state fields in one control under `src/desi
 configuration overrides remain outside that rule. Complexity and nesting limits alone do not check
 the relationships between those fields.
 
-The [site](docs-site/README.md) uses Astro/Starlight with mise-managed Bun for builds and checks.
-Its output is static HTML, CSS and browser modules; hosting needs no Node server or UI framework
+The [site](docs-site/README.md) uses Eleventy with mise-managed Bun for builds and checks. Its
+output is static HTML, CSS and browser modules; hosting needs no Node server or UI framework
 runtime. Python wheels used to distribute formatters are tools, not new application modules.
 
 ## Performance tooling

@@ -1,6 +1,34 @@
 {
-  "extends": ["astro/tsconfigs/strictest", "../tsconfig.base.json"],
-  "compilerOptions": { "types": ["node"] },
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "node_modules", "src/client/generated"]
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": [
+      "bun"
+    ],
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tools/**/*.ts",
+    "tests/**/*.ts",
+    "*.ts",
+    "*.mts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/client/generated"
+  ]
 }

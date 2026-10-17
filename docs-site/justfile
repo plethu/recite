@@ -9,9 +9,9 @@ setup:
 
 # Run the site with hot reload.
 dev *args: wasm
-    bun run dev --host 127.0.0.1 "$@"
+    bun run dev "$@"
 
-# Check Astro components, browser/worker types and authored CSS.
+# Check TSX templates, browser/worker types and authored CSS.
 check: wasm
     bun run check
     bun run test:content
@@ -30,7 +30,7 @@ preview *args:
 
 # Format the site source.
 fmt *args:
-    cd .. && bun run --bun oxfmt "docs-site/**/*.{ts,mts,js,mjs}" "$@"
+    cd .. && bun run --bun oxfmt "docs-site/**/*.{ts,tsx,mts,js,mjs}" "$@"
     cd .. && mise -E quality exec -- dprint fmt docs-site "$@"
 
 # Test the built site in Chromium, Firefox, and WebKit through Compose.

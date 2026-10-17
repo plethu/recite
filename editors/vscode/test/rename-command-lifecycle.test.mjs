@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, test } from "vitest";
+import { describe, test } from "bun:test";
 import { RenameCommand } from "../src/rename-command.ts";
 import { createUserInterface } from "../src/user-interface.ts";
 import { harness, workspaceEdit } from "./rename-test-fixtures.mjs";

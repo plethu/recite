@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { test } from "vitest";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import oniguruma from "vscode-oniguruma";
 import textmate from "vscode-textmate";

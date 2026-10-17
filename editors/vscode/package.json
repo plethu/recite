@@ -37,7 +37,7 @@
     "build": "bun scripts/build.mjs",
     "messages:update": "bun scripts/message-projections.mjs --update",
     "typecheck": "tsc --noEmit",
-    "check": "bun run typecheck && bun run build && node scripts/check-package.mjs && node scripts/check-grammar.mjs && bun run --cwd ../.. js:test --project vscode",
+    "check": "bun run typecheck && bun run build && bun scripts/check-package.mjs && bun scripts/check-grammar.mjs && bun run --cwd ../.. js:test editors/vscode/test",
     "package": "bun scripts/package.mjs",
     "package:check": "bun scripts/package.mjs --check"
   },
@@ -144,8 +144,8 @@
     "@types/vscode": "1.89.0",
     "@typescript/native": "npm:typescript@7.0.2",
     "@vscode/test-electron": "3.1.0",
-    "acorn": "8.15.0",
     "fflate": "0.8.2",
+    "oxc-parser": "0.154.0",
     "tsdown": "0.23.1",
     "valibot": "1.5.0",
     "vscode-oniguruma": "1.7.0",

@@ -1,4 +1,4 @@
-import { stripTypeScriptTypes } from "node:module";
+import { parseSource, staticModuleSpecifier, walkWithParents } from "./ui-boundary-ast.mjs";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -209,18 +209,17 @@ assert(
 
 const sourceRoot = path.join(packageRoot, "src");
 assertSafeTree(sourceRoot, "extension source");
-const source = stripTypeScriptTypes(await readFile(path.join(sourceRoot, "extension.ts"), "utf8"), {
-  mode: "strip",
-});
+const source = await readFile(path.join(sourceRoot, "extension.ts"), "utf8");
 const entrySource = await readFile(path.join(sourceRoot, "extension.cts"), "utf8");
 assert(
   entrySource.includes('require("vscode")'),
   "the CommonJS extension entry must acquire the VS Code host API",
 );
-assert(
-  !source.match(/(?:from|import\s*\()\s*["']vscode["']/),
-  "the ESM implementation must receive the VS Code host API explicitly",
-);
+let importsHost = false;
+walkWithParents(parseSource(source, "extension.ts"), (node) => {
+  if (staticModuleSpecifier(node) === "vscode") importsHost = true;
+});
+assert(!importsHost, "the ESM implementation must receive the VS Code host API explicitly");
 assert(
   source.includes("activateWithVscode"),
   "the ESM implementation must expose the explicit VS Code activation boundary",
@@ -246,7 +245,7 @@ const sourceContents = await Promise.all(
 );
 assertUiBoundary(sourceContents, SOURCE_MESSAGE_IDS, projectedMessages);
 for (const { relativePath, absolutePath } of listSourceModules(path.join(packageRoot, "dist"))) {
-  const syntax = spawnSync(process.execPath, ["--check", absolutePath], {
+  const syntax = spawnSync("node", ["--check", absolutePath], {
     encoding: "utf8",
   });
   assert(syntax.status === 0, `invalid JavaScript in ${relativePath}: ${syntax.stderr}`);

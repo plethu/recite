@@ -1,7 +1,6 @@
 ---
 title: Godot
 description: Install the Godot 4 addon and run dialogue through native Resources and Nodes.
-template: splash
 ---
 
 Recite's Godot addon imports compiled `.recitec` files as `ReciteDialogueResource` and runs sessions

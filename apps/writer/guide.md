@@ -86,15 +86,15 @@ file refuses while the current document has unsaved changes.
 
 Use the sidebar icon beside the Recite name to reclaim sidebar space. Select a beat in the map or
 outline to navigate the scene. **Line actions ▾** opens the selected line's or reply's details and
-the Add reply menu. Arrow keys move between actions; Escape or Tab returns to the trigger. Source draft
-actions stay beside the source editor.
+the Add reply menu. Arrow keys move between actions; Escape or Tab returns to the trigger. Source
+draft actions stay beside the source editor.
 
 ## Navigation and links
 
 The common header has Back, Forward and Copy link controls. Alt+Left/Right and mouse Back/Forward
 buttons use the same history. The history covers Write, Localise and the translation queue, scenes,
-beats, lines and Source view. Queue searches replace the current history entry; each keystroke
-does not add another Back step. Returning from a line restores the search, filter and page.
+beats, lines and Source view. Queue searches replace the current history entry; each keystroke does
+not add another Back step. Returning from a line restores the search, filter and page.
 
 Navigation commits valid prose drafts through the authoring model. Changing a saved-project scene
 requires saving its source edits and applying or discarding Source drafts first. Switching
@@ -102,9 +102,9 @@ catalogues requires saving or discarding PO drafts. A failed navigation restores
 and keeps the current screen. Temporary example sessions retain their drafts and undo history.
 
 Copy link writes a `recite://writer/...` URL to the clipboard. The routes are `/write`, `/localise`
-and `/translations`. Query parameters identify the project, scene, beat or stable line ID,
-catalogue and queue search/filter/page. They contain locations, not document contents or translation
-drafts. Catalogue paths inside the current project are relative to its root.
+and `/translations`. Query parameters identify the project, scene, beat or stable line ID, catalogue
+and queue search/filter/page. They contain locations, not document contents or translation drafts.
+Catalogue paths inside the current project are relative to its root.
 
 Open a link on startup, with the corresponding project:
 
@@ -233,12 +233,12 @@ project context** rereads project sources and schema while retaining the current
 draft, and undo history. It marks an existing preview stale. A failed refresh retains the last
 accepted context and reports the error.
 
-Preview compiles that same set of effective sources and schema. Script starts at the selected
-line's beat; Source starts at the compiled default block. Cross-file links use the normal Recite
-reference rules. Existing previews keep their compiled input until explicitly restarted. Effect
-requests are displayed without executing game operations. Conditions still require preview inputs
-before traversal can continue. Use the project build and trial controls to choose the scene and
-supply condition answers; effects remain explicit requests rather than game operations.
+Preview compiles that same set of effective sources and schema. Script starts at the selected line's
+beat; Source starts at the compiled default block. Cross-file links use the normal Recite reference
+rules. Existing previews keep their compiled input until explicitly restarted. Effect requests are
+displayed without executing game operations. Conditions still require preview inputs before
+traversal can continue. Use the project build and trial controls to choose the scene and supply
+condition answers; effects remain explicit requests rather than game operations.
 
 Project localisation and catalogue editing are covered in the [localisation guide](localisation.md).
 Apply field drafts before they contribute to diagnostics or preview. Native accessibility/platform

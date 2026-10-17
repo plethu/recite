@@ -1,7 +1,6 @@
 ---
 title: Install
 description: Build the Recite CLI from source and verify the toolchain.
-template: splash
 ---
 
 Recite is pre-release. An old `recite` 0.0.1 snapshot exists on crates.io, but the current
