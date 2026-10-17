@@ -100,7 +100,16 @@ impl Document {
         } else {
             "\n"
         };
-        let mut next = format!("{}{newline}{newline}:: {id}{newline}", self.source());
+        let entry = if snapshot
+            .documents()
+            .iter()
+            .all(|document| document.summary().blocks().is_empty())
+        {
+            " default"
+        } else {
+            ""
+        };
+        let mut next = format!("{}{newline}{newline}:: {id}{entry}{newline}", self.source());
         let insertion = next.len();
         next.push_str(&format!(
             ">{newline}  New dialogue.{newline}-> END{newline}"

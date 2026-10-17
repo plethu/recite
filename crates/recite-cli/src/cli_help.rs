@@ -105,10 +105,14 @@ fn group_subcommands(command: &mut clap::Command, messages: &Messages) {
         .max()
         .unwrap_or(0);
     let mut groups = String::new();
+    let columns = crossterm::terminal::size()
+        .map(|(width, _)| usize::from(width))
+        .unwrap_or(80);
     for (heading, names) in COMMAND_GROUPS {
         groups.push_str(&format!("{}:\n", messages.text(heading)));
         for name in names {
-            groups.push_str(&format!("  {name:<width$}  {}\n", about(name)));
+            groups.push_str(&grouped_command(name, &about(name), width, columns));
+            groups.push('\n');
         }
         groups.push('\n');
     }
@@ -128,6 +132,28 @@ fn group_subcommands(command: &mut clap::Command, messages: &Messages) {
         "{{about}}\n\n{} {{usage}}\n\n{groups}{{all-args}}{{after-help}}",
         messages.text(MsgId::CliHelpUsageHeading)
     ));
+}
+
+fn grouped_command(name: &str, about: &str, name_width: usize, columns: usize) -> String {
+    let (prefix, indent) = if columns < name_width + 28 {
+        ("    ".to_owned(), "    ".to_owned())
+    } else {
+        (
+            format!("  {name:<name_width$}  "),
+            " ".repeat(name_width + 4),
+        )
+    };
+    let description = textwrap::fill(
+        about,
+        textwrap::Options::new(columns.max(1))
+            .initial_indent(&prefix)
+            .subsequent_indent(&indent),
+    );
+    if columns < name_width + 28 {
+        format!("  {name}\n{description}")
+    } else {
+        description
+    }
 }
 
 /// Give every argument an explicit localised heading. An argument without one lands in clap's
@@ -203,3 +229,6 @@ fn requests_help(args: &[OsString]) -> bool {
     }
     false
 }
+
+#[cfg(test)]
+mod tests;

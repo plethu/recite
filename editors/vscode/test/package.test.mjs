@@ -278,6 +278,31 @@ test("TypeScript source checks retain unreachable calls and ignore type-only dec
   );
 });
 
+test("UI module protection covers source, emitted and extensionless specifiers", async () => {
+  const entries = await sourceEntries();
+  const validate = (source) =>
+    assertUiBoundary([...entries, ["hostile.ts", source]], SOURCE_MESSAGE_IDS, projectedMessages);
+  for (const extension of [".ts", ".js", ""]) {
+    const messages = `./messages${extension}`;
+    const adapter = `./user-interface${extension}`;
+    for (const source of [
+      `import { clientMessage as emit } from "${messages}"; emit(api, "lsp-client-action-stale");`,
+      `export { clientMessage as emit } from "${messages}";`,
+      `export * from "${messages}";`,
+      `import("${messages}").then(({clientMessage: emit}) => emit(api, "lsp-client-action-stale"));`,
+      `require("${messages}");`,
+      `import("${adapter}");`,
+      `require("${adapter}");`,
+    ])
+      assert.throws(() => validate(source), /outside|import|load|call|re-export/);
+    assert.doesNotThrow(() =>
+      validate(
+        `import { createUserInterface } from "${adapter}"; const ui = createUserInterface(api);`,
+      ),
+    );
+  }
+});
+
 test("the UI service accepts only its structural caller contracts", async () => {
   const entries = await sourceEntries();
   const valid = [

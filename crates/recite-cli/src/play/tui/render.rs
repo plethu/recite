@@ -88,7 +88,10 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
         chunks[3],
     );
 
-    frame.render_widget(Paragraph::new(render_footer(state, messages)), chunks[4]);
+    frame.render_widget(
+        Paragraph::new(render_footer(state, messages, chunks[4].width)),
+        chunks[4],
+    );
 }
 
 fn header_lines<'a>(

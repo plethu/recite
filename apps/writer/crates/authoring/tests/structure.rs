@@ -1,6 +1,49 @@
 use recite_writer_model::{PassageKind, View, WRITER_EXAMPLES};
 
 #[test]
+fn the_first_project_beat_is_a_valid_undoable_entry() -> Result<(), Box<dyn std::error::Error>> {
+    use recite_writer_model::Document;
+    let mut document = Document::new("# A blank scene\n")?;
+    let original = document.source().to_owned();
+    document.add_beat(document.revision())?;
+    assert!(document.source().contains(":: new_beat_1 default\n"));
+    assert!(document.diagnostics().is_empty());
+    let first = document.source().to_owned();
+    document.undo()?;
+    assert_eq!(document.source(), original);
+    document.redo()?;
+    assert_eq!(document.source(), first);
+    document.add_beat(document.revision())?;
+    assert!(document.source().contains(":: new_beat_2\n"));
+    assert!(document.diagnostics().is_empty());
+    Ok(())
+}
+
+#[test]
+fn a_blank_scene_in_an_existing_project_does_not_add_another_default()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_compiler::authoring::SavedDocument;
+    use recite_core::DocumentKey;
+    use recite_writer_model::{Document, ProjectContext};
+    let mut document = Document::in_project(
+        DocumentKey::new("blank.recite")?,
+        "",
+        ProjectContext {
+            documents: vec![SavedDocument::new(
+                DocumentKey::new("entry.recite")?,
+                ":: start default\n-> END\n",
+            )],
+            schema: None,
+        },
+    )?;
+    document.add_beat(document.revision())?;
+    assert!(document.source().contains(":: new_beat_1\n"));
+    assert!(!document.source().contains("default"));
+    assert!(document.diagnostics().is_empty());
+    Ok(())
+}
+
+#[test]
 fn additions_are_unique_and_undoable_without_rewriting_existing_ids()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut session = WRITER_EXAMPLES[2].open()?;

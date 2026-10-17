@@ -4,7 +4,7 @@ import matter from "gray-matter";
 import * as v from "valibot";
 import { showcaseSchema } from "../src/showcase-schema.ts";
 import type { Project } from "../src/showcase-schema.ts";
-import { createMarkdown } from "./markdown.ts";
+import { createMarkdown, fencedLanguages } from "./markdown.ts";
 import type { Heading } from "./markdown.ts";
 
 const docsSchema = v.strictObject({
@@ -62,15 +62,7 @@ export async function loadContent(root: string) {
     sources(resolve(root, "src/content/docs")),
     sources(resolve(root, "src/content/showcase")),
   ]);
-  const languages = [
-    ...new Set(
-      [...docs, ...showcase].flatMap(({ content }) =>
-        [...content.matchAll(/^```([^\s`]+).*$/gm)]
-          .map((match) => match[1]!)
-          .filter((name) => name !== "text" && name !== "recite"),
-      ),
-    ),
-  ];
+  const languages = fencedLanguages([...docs, ...showcase].map(({ content }) => content));
   const markdown = await createMarkdown(languages);
   try {
     const documents = docs.map(({ name, data, content }) => {

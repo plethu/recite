@@ -31,7 +31,6 @@
         "@axe-core/playwright": "4.13.0",
         "@playwright/test": "1.63.0",
         "@types/bun": "1.4.3",
-        "@types/markdown-it": "14.2.0",
         "@types/node": "24.19.1",
         "@typescript/native": "npm:typescript@7.0.2",
         "stylelint": "17.15.0",

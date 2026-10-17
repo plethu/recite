@@ -41,7 +41,7 @@ test("the build validates frontmatter context and only publishes real nondraft p
   try {
     await writeFile(
       join(docs, "index.md"),
-      "---\ntitle: Manual\ndescription: Read me\n---\n## Start\n",
+      "---\ntitle: Manual\ndescription: Read me\n---\n## Start\n\n~~~bash\nrecite --help\n~~~\n\n1. Run this:\n\n   ```rust\n   fn main() {}\n   ```\n\n> ```json\n> {}\n> ```\n",
     );
     await writeFile(
       join(showcase, "game.md"),
@@ -53,6 +53,7 @@ test("the build validates frontmatter context and only publishes real nondraft p
     );
     const content = await loadContent(root);
     assert.equal(content.documents[0]?.title, "Manual");
+    assert.equal(content.documents[0]?.html.match(/<pre tabindex="0"/g)?.length, 3);
     assert.deepEqual(
       content.projects.map(({ url }) => url),
       ["/showcase/game/"],

@@ -326,10 +326,15 @@ function rootOf(node) {
 }
 
 export function isProtectedModule(value, ...modules) {
-  return (
-    typeof value === "string" &&
-    modules.some((module) => value === module || value.endsWith(`/${module.slice(2)}`))
-  );
+  if (typeof value !== "string") return false;
+  // Bun and TypeScript resolve emitted .js specifiers to .ts sources, and Bun also
+  // accepts extensionless imports. Every spelling must retain the same boundary.
+  const stem = (specifier) => specifier.replace(/\.[cm]?[jt]sx?$/, "");
+  const imported = stem(value);
+  return modules.some((module) => {
+    const protectedStem = stem(module);
+    return imported === protectedStem || imported.endsWith(`/${protectedStem.slice(2)}`);
+  });
 }
 export { MESSAGE_MODULE, ADAPTER_MODULE, MESSAGE_WRAPPER, ADAPTER_FILE, VISIBLE_METHODS };
 

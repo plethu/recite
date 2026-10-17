@@ -1,4 +1,4 @@
-import MarkdownIt from "markdown-it";
+import MarkdownIt, { type Token } from "markdown-it";
 import anchor from "markdown-it-anchor";
 import { slug } from "github-slugger";
 import { bundledLanguages, createCssVariablesTheme, createHighlighter } from "shiki";
@@ -8,6 +8,22 @@ export interface Heading {
   id: string;
   text: string;
   level: number;
+}
+
+export function fencedLanguages(sources: string[]) {
+  const md = new MarkdownIt({ html: true });
+  const languages = new Set<string>();
+  function visit(tokens: Token[]) {
+    for (const token of tokens) {
+      if (token.type === "fence") {
+        const language = md.utils.unescapeAll(token.info).trim().split(/\s+/, 1)[0];
+        if (language && language !== "text" && language !== "recite") languages.add(language);
+      }
+      if (token.children) visit(token.children);
+    }
+  }
+  for (const source of sources) visit(md.parse(source, {}));
+  return [...languages];
 }
 
 export async function createMarkdown(languages: string[]) {

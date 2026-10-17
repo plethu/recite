@@ -58,12 +58,13 @@ placement through its first stable line ID; effects-only beats use their block n
 Hovering or focusing a beat reveals its connections and reply labels. Selection keeps a persistent
 outline. Return routes are identified from dialogue flow, independently of card positions.
 
-**Add beat** creates a separate beat and opens it for writing. **Rename** uses the compiler's rename
-operation, preserving line IDs and updating references. Inline renames refuse cross-scene edits.
-Source view also provides a reviewed multi-file rename that lists affected documents before applying
-the change. **Add line** inserts before the beat's branching or continuation; **Add reply** turns an
-existing unconditional continuation into a reply with the same destination. **Change destination…**
-rewires a reply or an unconditional continuation. These changes share the document's undo history.
+**Add beat** creates a separate beat and opens it for writing. The first beat in an empty project
+becomes its default entry. **Rename** uses the compiler's rename operation, preserving line IDs and
+updating references. Inline renames refuse cross-scene edits. Source view also provides a reviewed
+multi-file rename that lists affected documents before applying the change. **Add line** inserts
+before the beat's branching or continuation; **Add reply** turns an existing unconditional
+continuation into a reply with the same destination. **Change destination…** rewires a reply or an
+unconditional continuation. These changes share the document's undo history.
 
 Prose remains a text field throughout: clicking places the caret without changing the text's layout.
 Hover and focus indicate editability without changing text geometry. Leaving a prose field or

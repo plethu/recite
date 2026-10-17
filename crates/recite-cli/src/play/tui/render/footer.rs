@@ -6,14 +6,27 @@ use crate::tui::{KeyHints, Keymap, PromptMode};
 use super::super::state::{TuiPrompt, TuiState, prompt_mode};
 use super::controls::{TuiControl, controls_for_prompt};
 
-pub(super) fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> Line<'a> {
-    let mut help = match state.key_hints {
+pub(super) fn render_footer<'a>(
+    state: &'a TuiState,
+    messages: &'a Messages,
+    width: u16,
+) -> Line<'a> {
+    let line = footer_line(state, messages, state.key_hints);
+    if line.width() > usize::from(width) && state.key_hints == KeyHints::Contextual {
+        footer_line(state, messages, KeyHints::Compact)
+    } else {
+        line
+    }
+}
+
+fn footer_line<'a>(state: &'a TuiState, messages: &'a Messages, hints: KeyHints) -> Line<'a> {
+    let mut help = match hints {
         KeyHints::Hidden => String::new(),
         KeyHints::Compact => compact_footer_controls(&state.prompt, state.keymap, messages),
         KeyHints::Contextual => contextual_footer_controls(&state.prompt, state.keymap, messages),
     };
-    if !state.deferred_queue.is_empty() && state.key_hints != KeyHints::Hidden {
-        let queue = if state.key_hints == KeyHints::Compact {
+    if !state.deferred_queue.is_empty() && hints != KeyHints::Hidden {
+        let queue = if hints == KeyHints::Compact {
             "Ctrl-D".to_owned()
         } else {
             format!(

@@ -148,6 +148,10 @@ fn the_examples_reach_an_empty_beat_and_a_scene_with_no_beats()
     test.poll_n(std::time::Duration::from_millis(16), 12);
     assert!(!has(&test, "This scene is empty"));
     assert!(has(&test, "Add line"));
+    assert!(!has(
+        &test,
+        "project must declare exactly one default block"
+    ));
     capture(&mut test, "blank-scene-added-beat.png")?;
     Ok(())
 }

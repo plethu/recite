@@ -1,6 +1,21 @@
 use super::*;
 
 #[test]
+fn narrow_footer_keeps_the_help_key_visible() {
+    let state = TuiState {
+        prompt: choice_prompt(false),
+        status: "choice".to_owned(),
+        key_hints: KeyHints::Contextual,
+        ..TuiState::default()
+    };
+    let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
+    let line = footer::render_footer(&state, &messages, 58);
+    assert!(line.width() <= 58);
+    assert!(line.to_string().ends_with('?'));
+    assert!(line.to_string().contains("Enter"));
+}
+
+#[test]
 fn vim_condition_prompt_omits_standard_yes_no_shortcut_labels() {
     let state = TuiState {
         asset: "asset".to_owned(),
