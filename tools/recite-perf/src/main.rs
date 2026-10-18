@@ -4,7 +4,7 @@ use std::io::BufReader;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use recite_perf::{Scope, check_summaries};
+use recite_perf::{Scope, check_heap_peaks, check_summaries};
 
 mod prepare;
 
@@ -49,7 +49,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 SelectedScope::BoundText => Scope::BoundText,
                 SelectedScope::Authoring => Scope::Authoring,
             };
-            check_summaries(BufReader::new(File::open(summaries)?), scope)?;
+            check_summaries(BufReader::new(File::open(&summaries)?), scope)?;
+            let profiles = summaries
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join("profiles");
+            check_heap_peaks(BufReader::new(File::open(&summaries)?), &profiles)?;
             println!("Every required workload has paired instruction and heap evidence.");
         }
     }

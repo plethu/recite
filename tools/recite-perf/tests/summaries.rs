@@ -239,3 +239,38 @@ fn reported_regressions_fail_the_check_and_leave_the_input_artifact_intact() {
     );
     assert_eq!(std::fs::read_to_string(path).unwrap(), input);
 }
+
+use recite_perf::check_heap_peaks;
+use std::fs;
+
+#[test]
+fn whole_process_peak_budget_works_when_filtered_baseline_is_zero() {
+    let directory = tempfile::tempdir().unwrap();
+    let summary = support::summary("json_schema", "declarations_100");
+    let profiles = directory.path().join("profiles");
+    let logs = profiles.join("workflows/workflows/json_schema.declarations_100");
+    fs::create_dir_all(&logs).unwrap();
+    let candidate = logs.join("dhat.json_schema.declarations_100.log");
+    let control = logs.join("dhat.json_schema.declarations_100.log.base@control");
+    let input = support::lines(&[summary]);
+    let check = || check_heap_peaks(Cursor::new(&input), &profiles);
+    fs::write(
+        &control,
+        "==9331== At t-gmax: 101,314 bytes in 1,214 blocks\n",
+    )
+    .unwrap();
+    fs::write(
+        &candidate,
+        "==9592== At t-gmax: 103,511 bytes in 592 blocks\n",
+    )
+    .unwrap();
+    check().unwrap();
+    fs::write(&candidate, "At t-gmax: 111,445 bytes in 1 blocks").unwrap();
+    check().unwrap(); // floor(101314 * 1.10)
+    fs::write(&candidate, "At t-gmax: 111,446 bytes in 1 blocks").unwrap();
+    assert!(check().unwrap_err().to_string().contains("regressed"));
+    fs::write(&candidate, "invalid profile").unwrap();
+    assert!(check().is_err());
+    fs::remove_file(&control).unwrap();
+    assert!(check().is_err());
+}

@@ -1,4 +1,7 @@
 //! Coverage checks around the upstream Gungraun measurement/report owner.
+mod heap_peak;
+pub use heap_peak::check_heap_peaks;
+
 use std::collections::BTreeSet;
 use std::io::BufRead;
 
