@@ -4,7 +4,6 @@ use recite_writer_model::{Document, ScriptEntry};
 use std::{cell::Cell, sync::Arc};
 
 thread_local! {
-    pub(super) static ENTRY_VISITS: Cell<usize> = const { Cell::new(0) };
     static ENTRIES: Cell<usize> = const { Cell::new(0) };
 }
 
@@ -89,23 +88,37 @@ fn click(test: &mut TestingRunner, caption: &str) {
 fn unrelated_parent_redraws_do_not_rescan_large_beats_and_new_snapshots_update_counts() {
     for size in [1_000, 10_000] {
         ENTRIES.set(size);
-        ENTRY_VISITS.set(0);
-        let mut test = TestingRunner::new(app, (900., 650.).into(), |_| {}, 1.).0;
+        let (mut test, scopes) = TestingRunner::new(
+            app,
+            (900., 650.).into(),
+            |runner| runner.scopes_storages.clone(),
+            1.,
+        );
+        let runs = || {
+            scopes
+                .borrow()
+                .values()
+                .map(|scope| scope.current_run)
+                .sum::<usize>()
+        };
         test.sync_and_update();
         assert!(contains(&test, "no replies"));
-        let initial = ENTRY_VISITS.get();
-        assert!(initial >= size, "the first snapshot must be counted");
+        let initial = runs();
         for _ in 0..5 {
             click(&mut test, "Redraw");
         }
         assert!(contains(&test, "Revision 5"));
         assert_eq!(
-            ENTRY_VISITS.get(),
-            initial,
-            "parent redraws must not scan the beat"
+            runs() - initial,
+            5,
+            "only the parent may render; the header must not rescan the beat"
         );
         click(&mut test, "Replace snapshot");
         assert!(contains(&test, "1 reply"));
-        assert_eq!(ENTRY_VISITS.get(), initial + size + 1);
+        assert_eq!(
+            runs() - initial,
+            7,
+            "a changed snapshot renders its parent and header once"
+        );
     }
 }

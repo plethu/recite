@@ -37,10 +37,6 @@ fn render(key: &str, block: &ScriptBlock) -> Element {
     let replies = block
         .entries
         .iter()
-        .inspect(|_| {
-            #[cfg(test)]
-            tests::ENTRY_VISITS.with(|visits| visits.set(visits.get() + 1));
-        })
         .filter(|entry| {
             matches!(entry, recite_writer_model::ScriptEntry::Passage(p)
                 if matches!(p.kind, recite_writer_model::PassageKind::Choice { .. }))
