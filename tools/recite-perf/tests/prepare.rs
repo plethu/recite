@@ -125,3 +125,63 @@ fn control_adapter_preserves_each_revisions_diagnostic_source_owner() {
         }
     }
 }
+
+#[test]
+fn control_completion_adapter_preserves_current_source_identity_fast_path() {
+    for source_accessor in [false, true] {
+        let directory = tempfile::tempdir().unwrap();
+        let candidate = directory.path().join("candidate");
+        let control = directory.path().join("control");
+        let harness = "tools/recite-perf/benches/support/completion.rs";
+        let owner = "apps/writer/crates/authoring/src/completion.rs";
+        let current = "workload.completions.source()";
+        let source = format!("{current} {current}");
+        let production = if source_accessor {
+            "pub fn source(&self) {}"
+        } else {
+            "pub fn replacement(&self) {}"
+        };
+        for root in [&candidate, &control] {
+            fs::create_dir_all(root.join(harness).parent().unwrap()).unwrap();
+            fs::create_dir_all(root.join(owner).parent().unwrap()).unwrap();
+            fs::write(
+                root.join("Cargo.toml"),
+                "[workspace.dependencies]\ntoml_edit = '0.24'\n",
+            )
+            .unwrap();
+            fs::write(root.join(harness), &source).unwrap();
+            fs::write(root.join(owner), production).unwrap();
+        }
+        let expected = if source_accessor {
+            source.clone()
+        } else {
+            source.replace(current, "workload.workload.draft.as_str()")
+        };
+        for _ in 0..2 {
+            let output = Command::new(env!("CARGO_BIN_EXE_recite-perf"))
+                .args(["prepare"])
+                .arg(&candidate)
+                .arg(&control)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(fs::read_to_string(candidate.join(harness)).unwrap(), source);
+            assert_eq!(fs::read_to_string(control.join(owner)).unwrap(), production);
+            assert_eq!(fs::read_to_string(control.join(harness)).unwrap(), expected);
+        }
+        if !source_accessor {
+            fs::write(control.join(harness), current).unwrap();
+            let status = Command::new(env!("CARGO_BIN_EXE_recite-perf"))
+                .arg("prepare")
+                .arg(&candidate)
+                .arg(&control)
+                .output()
+                .unwrap();
+            assert!(!status.status.success());
+        }
+    }
+}
