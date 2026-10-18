@@ -17,14 +17,13 @@ mod navigation;
 pub(crate) mod schema_hover;
 
 pub(crate) fn completion(
-    text: &str,
     position: Position,
     key: Option<&DocumentKey>,
     snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
-    completion::completion(text, position, key, snapshot, schema, catalog)
+    completion::completion(position, key, snapshot, schema, catalog)
 }
 
 pub(crate) use code_action::{CodeActionDocument, SchemaCodeActionDocument};
@@ -43,14 +42,13 @@ pub(crate) fn code_action(
 pub(crate) use navigation::{NavigationDocument, definition, prepare_rename, references, rename};
 
 pub(crate) fn hover(
-    text: &str,
     position: Position,
     key: &DocumentKey,
     snapshot: &AuthoringQuery<'_>,
     schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<Hover> {
-    hover::hover(text, position, key, snapshot, schema, catalog)
+    hover::hover(position, key, snapshot, schema, catalog)
 }
 
 pub(super) fn condition_detail(return_type: &ConditionReturnType) -> String {

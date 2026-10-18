@@ -24,7 +24,7 @@ fn post_publish_rejected_source_is_stale_and_keeps_diagnostics() {
         "{status:?}"
     );
     assert!(
-        stderr.contains("error RECITE_PARSE013 dialogue/main.recite:2:12"),
+        (stderr.contains("[RECITE_PARSE013]") && stderr.contains("--> dialogue/main.recite:2:12")),
         "{stderr}"
     );
     let result = state.coordinator.state().result().expect("shared result");
@@ -63,7 +63,7 @@ fn post_publish_rejected_schema_is_stale_and_keeps_diagnostics() {
         matches!(status, BuildStatus::Stale { asset_count: 1, .. }),
         "{status:?}"
     );
-    assert!(stderr.contains("error RECITE_SCHEMA001"), "{stderr}");
+    assert!(stderr.contains("error[RECITE_SCHEMA001]"), "{stderr}");
     assert!(temp.path().join("compiled/dialogue.recitec").is_file());
 }
 

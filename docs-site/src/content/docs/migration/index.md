@@ -1,7 +1,6 @@
 ---
 title: Migration
 description: Transition guides for evaluating and moving existing dialogue content into Recite.
-template: splash
 ---
 
 These guides help teams inventory existing dialogue content, decide what maps cleanly to Recite, and

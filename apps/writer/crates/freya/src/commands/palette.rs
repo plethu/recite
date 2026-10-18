@@ -162,6 +162,7 @@ impl Component for Palette {
                         .child(
                             Button::new()
                                 .flat()
+                                .row_gutter()
                                 .width(Size::fill())
                                 .named(title.clone())
                                 .shortcut(match &item {

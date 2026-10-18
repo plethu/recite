@@ -217,6 +217,8 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WriterCompleteSource => Some("writer-complete-source"),
         super::MsgId::WriterFilterCompletions => Some("writer-filter-completions"),
         super::MsgId::WriterNoCompletions => Some("writer-no-completions"),
+        super::MsgId::WriterFindingCompletions => Some("writer-finding-completions"),
+        super::MsgId::WriterCompletionsUnavailable => Some("writer-completions-unavailable"),
 
         super::MsgId::WriterLookupMatched => Some("writer-lookup-matched"),
         super::MsgId::WriterLookupMissing => Some("writer-lookup-missing"),

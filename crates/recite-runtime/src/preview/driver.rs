@@ -5,8 +5,8 @@ use super::model::{
     PreviewEvent, PreviewInputs, PreviewOutput, PreviewStatus,
 };
 use super::projection::new_deferred_events;
-use super::trial::Trial;
-use crate::{DialogueError, LocaleResolution, choose_with, next_with};
+use super::trial::{Trial, TrialFailure};
+use crate::LocaleResolution;
 
 impl<'asset> PreviewSession<'asset> {
     pub(super) fn run_operation(
@@ -120,114 +120,72 @@ impl<'asset> PreviewSession<'asset> {
         }
 
         let previous_deferred = self.session.deferred_effects().len();
-        let (result, pending_query, mismatch, trial) = {
-            let context = ReplayContext::new(&answers, &requests);
-            // The authoritative session stays unchanged until a visible event
-            // commits. Pending replay therefore needs no second saved base.
-            let mut trial = self.session.clone();
-            let result = match &operation {
-                Operation::Advance { .. } => {
-                    next_with(self.asset, &mut trial, &context, resolution)
-                }
-                Operation::Choose { choice_id, .. } => choose_with(
-                    self.asset,
-                    &mut trial,
-                    choice_id.clone(),
-                    &context,
-                    resolution,
-                ),
-            };
-            (result, context.pending_query(), context.mismatch(), trial)
-        };
-
-        if let Some(mismatch) = mismatch {
-            self.pending = None;
-            self.state.status = prior_status;
-            return self.error_with_prefix(
-                prefix,
-                PreviewError::ConditionReplayMismatch {
-                    mismatch: mismatch.to_string(),
-                },
-            );
-        }
-        if let Some(query) = pending_query {
-            let Some(block) = self.block_id_for_session(&trial) else {
+        let context = ReplayContext::new(&answers, &requests);
+        let result = super::trial::traverse(
+            &mut self.session,
+            &mut self.state.deferred_effects,
+            self.asset,
+            &operation,
+            &context,
+            resolution,
+        );
+        let (event, block) = match result {
+            Ok(committed) => committed,
+            Err(TrialFailure::Error(error)) => {
                 self.pending = None;
                 self.state.status = prior_status;
-                return self.error_with_prefix(
-                    prefix,
-                    PreviewError::Runtime(DialogueError::MalformedCompiledAsset {
-                        reason: "condition query has no active block".to_owned(),
-                    }),
-                );
-            };
-            let Some(next_id) = self
-                .next_condition_id
-                .get()
-                .checked_add(1)
-                .map(PreviewConditionRequestId::new)
-            else {
-                self.pending = None;
-                self.state.status = prior_status;
-                return self.error_with_prefix(prefix, PreviewError::ConditionRequestIdOverflow);
-            };
-            let request = PreviewConditionRequest {
-                id: self.next_condition_id,
-                block,
-                prompt: operation.prompt().cloned(),
-                query,
-            };
-            self.next_condition_id = next_id;
-            requests.push(request.clone());
-            let accepted_choice = if requests.len() == 1 {
-                match &operation {
-                    Operation::Choose {
-                        prompt: Some(prompt),
-                        choice_id,
-                    } => Some((prompt.clone(), choice_id.clone())),
-                    _ => None,
-                }
-            } else {
-                None
-            };
-            self.pending = Some(PendingOperation {
-                operation,
-                answers,
-                requests,
-                prior_status,
-                input_revision: inputs.revision,
-            });
-            self.state.status = PreviewStatus::WaitingForCondition {
-                request: request.clone(),
-            };
-            let mut events = prefix.unwrap_or_default();
-            if let Some((prompt, choice_id)) = accepted_choice {
-                events.push(PreviewEvent::ChoiceAccepted { prompt, choice_id });
+                return self.error_with_prefix(prefix, error);
             }
-            events.push(PreviewEvent::ConditionRequested(request));
-            return self.append_events(events);
-        }
-
-        let event = match result {
-            Ok(event) => event,
-            Err(error) => {
-                self.pending = None;
-                self.state.status = prior_status;
-                return self.error_with_prefix(prefix, PreviewError::Runtime(error));
+            Err(TrialFailure::Pending { query, block }) => {
+                let Some(next_id) = self
+                    .next_condition_id
+                    .get()
+                    .checked_add(1)
+                    .map(PreviewConditionRequestId::new)
+                else {
+                    self.pending = None;
+                    self.state.status = prior_status;
+                    return self
+                        .error_with_prefix(prefix, PreviewError::ConditionRequestIdOverflow);
+                };
+                let request = PreviewConditionRequest {
+                    id: self.next_condition_id,
+                    block,
+                    prompt: operation.prompt().cloned(),
+                    query,
+                };
+                self.next_condition_id = next_id;
+                requests.push(request.clone());
+                let accepted_choice = if requests.len() == 1 {
+                    match &operation {
+                        Operation::Choose {
+                            prompt: Some(prompt),
+                            choice_id,
+                        } => Some((prompt.clone(), choice_id.clone())),
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                self.pending = Some(PendingOperation {
+                    operation,
+                    answers,
+                    requests,
+                    prior_status,
+                    input_revision: inputs.revision,
+                });
+                self.state.status = PreviewStatus::WaitingForCondition {
+                    request: request.clone(),
+                };
+                let mut events = prefix.unwrap_or_default();
+                if let Some((prompt, choice_id)) = accepted_choice {
+                    events.push(PreviewEvent::ChoiceAccepted { prompt, choice_id });
+                }
+                events.push(PreviewEvent::ConditionRequested(request));
+                return self.append_events(events);
             }
         };
-        let Some(block) = self.block_id_for_session(&trial) else {
-            self.pending = None;
-            self.state.status = prior_status;
-            return self.error_with_prefix(
-                prefix,
-                PreviewError::Runtime(DialogueError::MalformedCompiledAsset {
-                    reason: "runtime event has no active block".to_owned(),
-                }),
-            );
-        };
 
-        self.session = trial;
         self.pending = None;
         self.trace.merge_runtime_trace(&runtime_trace);
         if let crate::DialogueEvent::Effect(effect) = &event

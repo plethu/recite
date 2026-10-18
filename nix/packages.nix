@@ -202,6 +202,10 @@
         cargoLock = ../apps/writer/Cargo.lock;
         extraDummyScript = ''
           cp ${../apps/writer/Cargo.lock} "$out/apps/writer/Cargo.lock"
+          # Registry Freya imports this local patch's public editor API.
+          # Keep it real while Crane stubs application-owned crates.
+          cp -Rf ${../apps/writer/vendor/freya-code-editor/src}/. \
+            "$out/apps/writer/vendor/freya-code-editor/src/"
         '';
       };
       buildPhaseCargoCommand = "cargo build --profile release ${writerArgs.cargoExtraArgs}";

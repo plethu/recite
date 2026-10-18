@@ -1,0 +1,6 @@
+[install]
+linker = "isolated"
+minimumReleaseAge = 86400
+
+[test]
+pathIgnorePatterns = ["**/target/**", "docs-site/tests/browser/**"]

@@ -239,7 +239,7 @@ fn vim_navigation_is_shared_by_settings_options_and_passage_menus()
         .ok_or("prose field")?;
     test.click_cursor((f64::from(field.min_x() + 4.), f64::from(field.min_y() + 4.)));
     test.poll_n(std::time::Duration::from_millis(16), 4);
-    support::click(&mut test, "Passage actions ▾")?;
+    support::click(&mut test, "Line actions ▾")?;
     key(
         &mut test,
         Key::Character("j".into()),
@@ -248,7 +248,7 @@ fn vim_navigation_is_shared_by_settings_options_and_passage_menus()
     );
     assert_eq!(
         platform.focused_accessibility_node.peek().label(),
-        Some("Add choice")
+        Some("Add reply")
     );
     Ok(())
 }
@@ -282,8 +282,8 @@ fn reply_destination_is_disclosed_and_escape_returns_to_its_trigger()
         Code::Enter,
         Modifiers::empty(),
     );
-    assert!(!has(&test, "▸ Missing Courier"));
-    assert!(has(&test, "▸ Station History"));
+    assert!(!has(&test, "→ Missing Courier"));
+    assert!(has(&test, "→ Station History"));
     Ok(())
 }
 

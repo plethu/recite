@@ -2,9 +2,10 @@
 use super::{incremental::ValidationPhase, state::Validator};
 use crate::diagnostics;
 use recite_core::{
-    SourceId,
+    ChoiceId, LineId, SourceId, SourceSpan,
     ast::{Choice, Line},
 };
+use std::collections::btree_map::Entry;
 
 impl<'a> Validator<'a> {
     pub(crate) fn validate_line_localisable_id(&mut self, line: &'a Line) {
@@ -27,17 +28,7 @@ impl<'a> Validator<'a> {
             return;
         };
 
-        if let Some(first_span) = self.localisable_ids.get(id.as_str())
-            && self.duplicate_id_is_in_scope(first_span, &line.span)
-        {
-            self.diagnostics.push(diagnostics::duplicate_line_id(
-                line,
-                id,
-                (*first_span).clone(),
-            ));
-        } else {
-            self.localisable_ids.insert(id.as_str(), &line.span);
-        }
+        self.validate_project_line_id(id, &line.span);
     }
     pub(crate) fn validate_choice_localisable_id(&mut self, choice: &'a Choice) {
         if let SourceId::Frozen { .. } = &choice.source_id {
@@ -47,17 +38,7 @@ impl<'a> Validator<'a> {
             let Some(id) = choice.id.as_ref() else {
                 return;
             };
-            if let Some(first_span) = self.localisable_ids.get(id.as_str())
-                && self.duplicate_id_is_in_scope(first_span, &choice.span)
-            {
-                self.diagnostics.push(diagnostics::duplicate_choice_id(
-                    choice,
-                    id,
-                    (*first_span).clone(),
-                ));
-            } else {
-                self.localisable_ids.insert(id.as_str(), &choice.span);
-            }
+            self.validate_project_choice_id(id, &choice.span);
         } else if self.phase != ValidationPhase::Project {
             self.diagnostics.push(match &choice.source_id {
                 SourceId::Missing => diagnostics::missing_choice_id(choice),
@@ -70,11 +51,48 @@ impl<'a> Validator<'a> {
         }
     }
 
-    fn duplicate_id_is_in_scope(
-        &self,
-        first_span: &recite_core::SourceSpan,
-        current_span: &recite_core::SourceSpan,
-    ) -> bool {
-        self.project_complete || first_span.file == current_span.file
+    pub(super) fn validate_project_line_id(&mut self, id: &'a LineId, span: &'a SourceSpan) {
+        if let Some(first_span) = self.record_localisable_id(id.as_str(), span) {
+            self.diagnostics.push(diagnostics::duplicate_line_id(
+                span.clone(),
+                id,
+                first_span.clone(),
+            ));
+        }
+    }
+
+    pub(super) fn validate_project_choice_id(&mut self, id: &'a ChoiceId, span: &'a SourceSpan) {
+        if let Some(first_span) = self.record_localisable_id(id.as_str(), span) {
+            self.diagnostics.push(diagnostics::duplicate_choice_id(
+                span.clone(),
+                id,
+                first_span.clone(),
+            ));
+        }
+    }
+
+    fn record_localisable_id(
+        &mut self,
+        id: &'a str,
+        span: &'a SourceSpan,
+    ) -> Option<&'a SourceSpan> {
+        match self.localisable_ids.entry(id) {
+            Entry::Occupied(mut entry) => {
+                let first = *entry.get();
+                if self.project_complete || first.file == span.file {
+                    Some(first)
+                } else {
+                    entry.insert(span);
+                    None
+                }
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(span);
+                None
+            }
+        }
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -6,14 +6,27 @@ use crate::tui::{KeyHints, Keymap, PromptMode};
 use super::super::state::{TuiPrompt, TuiState, prompt_mode};
 use super::controls::{TuiControl, controls_for_prompt};
 
-pub(super) fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> Line<'a> {
-    let mut help = match state.key_hints {
+pub(super) fn render_footer<'a>(
+    state: &'a TuiState,
+    messages: &'a Messages,
+    width: u16,
+) -> Line<'a> {
+    let line = footer_line(state, messages, state.key_hints);
+    if line.width() > usize::from(width) && state.key_hints == KeyHints::Contextual {
+        footer_line(state, messages, KeyHints::Compact)
+    } else {
+        line
+    }
+}
+
+fn footer_line<'a>(state: &'a TuiState, messages: &'a Messages, hints: KeyHints) -> Line<'a> {
+    let mut help = match hints {
         KeyHints::Hidden => String::new(),
         KeyHints::Compact => compact_footer_controls(&state.prompt, state.keymap, messages),
         KeyHints::Contextual => contextual_footer_controls(&state.prompt, state.keymap, messages),
     };
-    if !state.deferred_queue.is_empty() && state.key_hints != KeyHints::Hidden {
-        let queue = if state.key_hints == KeyHints::Compact {
+    if !state.deferred_queue.is_empty() && hints != KeyHints::Hidden {
+        let queue = if hints == KeyHints::Compact {
             "Ctrl-D".to_owned()
         } else {
             format!(
@@ -28,7 +41,7 @@ pub(super) fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> 
         if help.is_empty() {
             help = queue;
         } else {
-            help.push_str(" | ");
+            help.push_str(" · ");
             help.push_str(&queue);
         }
     }
@@ -85,12 +98,16 @@ fn footer_controls(
         })
         .map(|control| footer_control_text(control, messages, compact))
         .collect::<Vec<_>>()
-        .join(" | ")
+        .join(" · ")
 }
 
 fn footer_control_text(control: TuiControl, messages: &Messages, compact: bool) -> String {
     if compact {
         return control.keys.to_owned();
+    }
+    // A phrase such as "an ID or number" reads as an instruction after its verb.
+    if control.action == MsgId::TuiHelpActionInput && control.keys.contains(' ') {
+        return format!("{} {}", messages.text(control.action), control.keys);
     }
     format!("{} {}", control.keys, messages.text(control.action))
 }

@@ -17,11 +17,15 @@ git -C "$fixture" config commit.gpgsign false
 cat >"$fixture/dprint.json" <<'JSON'
 {"plugins":["https://plugins.dprint.dev/typescript-0.96.1.wasm"]}
 JSON
+printf '%s\n' '{"name":"formatter-replay-fixture","private":true}' >"$fixture/package.json"
+cp "$source_root/oxfmt.config.mts" "$fixture/"
+ln -s "$source_root/node_modules" "$fixture/node_modules"
 printf 'export const values=[1,2,3];\n' >"$fixture/demo.js"
 git -C "$fixture" add .
 git -C "$fixture" commit -qm base
 base="$(git -C "$fixture" rev-parse HEAD)"
-mise -E quality exec -- dprint fmt --config "$fixture/dprint.json" "$fixture/demo.js"
+mise -C "$source_root" exec -- bash -c 'cd "$1" && exec bun "$2" demo.js' \
+  _ "$fixture" "$source_root/node_modules/.bin/oxfmt"
 git -C "$fixture" add .
 git -C "$fixture" commit -qm formatted
 head="$(git -C "$fixture" rev-parse HEAD)"
@@ -39,7 +43,22 @@ if maintainability_is_format_only "$fixture" "$base" "$head" missing.js demo.js;
   echo 'formatter replay accepted a new file' >&2
   exit 1
 fi
-rm "$fixture/dprint.json"
+mkdir "$fixture/nested"
+cat >"$fixture/nested/oxfmt.config.mts" <<'TS'
+import base from "../oxfmt.config.mts";
+export default { ...base, singleQuote: true };
+TS
+printf 'export const quote="hello";\n' >"$fixture/nested/demo.ts"
+git -C "$fixture" add .
+git -C "$fixture" commit -qm nested-base
+base="$(git -C "$fixture" rev-parse HEAD)"
+mise -C "$source_root" exec -- bash -c 'cd "$1" && exec bun "$2" nested/demo.ts' \
+  _ "$fixture" "$source_root/node_modules/.bin/oxfmt"
+git -C "$fixture" add .
+git -C "$fixture" commit -qm nested-formatted
+head="$(git -C "$fixture" rev-parse HEAD)"
+maintainability_is_format_only "$fixture" "$base" "$head" nested/demo.ts nested/demo.ts
+rm "$fixture/dprint.json" "$fixture/oxfmt.config.mts"
 if maintainability_is_format_only "$fixture" "$base" "$head" demo.js demo.js; then
   echo 'formatter replay accepted missing configuration' >&2
   exit 1

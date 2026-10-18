@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { RenameCommand } from "../src/rename-command.js";
-import { createUserInterface } from "../src/user-interface.js";
+import { describe, test } from "bun:test";
+import { RenameCommand } from "../src/rename-command.ts";
+import { createUserInterface } from "../src/user-interface.ts";
 import { harness, workspaceEdit } from "./rename-test-fixtures.mjs";
 
 test("rename revalidates the active document after prepare and refuses stale edits", async () => {
@@ -161,9 +161,9 @@ test("rename refuses a client replacement while the rename response is in flight
   assert.deepEqual(h.messages, ["stale"]);
 });
 
-test("disposal during applyEdit suppresses every post-disposal outcome", async (t) => {
+describe("disposal during applyEdit suppresses every post-disposal outcome", () => {
   for (const outcome of ["true", "false", "reject"]) {
-    await t.test(outcome, async () => {
+    test(outcome, async () => {
       const h = harness();
       let resolveApply;
       let rejectApply;

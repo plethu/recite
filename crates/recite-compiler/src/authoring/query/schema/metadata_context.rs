@@ -1,5 +1,5 @@
+use recite_core::SourceLineIndex;
 use recite_core::schema::{MetadataContextSelector, MetadataTarget};
-use recite_core::source_lines;
 
 pub(super) enum SelectorResolution<'a> {
     Missing,
@@ -8,25 +8,24 @@ pub(super) enum SelectorResolution<'a> {
 }
 
 pub(super) fn resolve_selector<'a>(
-    text: &'a str,
+    source: &'a SourceLineIndex,
     selector: &MetadataContextSelector,
     line_number: u32,
     target: MetadataTarget,
 ) -> SelectorResolution<'a> {
-    let Some((line, _)) = source_lines(text).nth(line_number.saturating_sub(1) as usize) else {
+    let line_index = line_number.saturating_sub(1) as usize;
+    let Some(line) = source.line(line_index) else {
         return SelectorResolution::Missing;
     };
+    let line = line.strip_suffix('\r').unwrap_or(line);
     if matches!(selector, MetadataContextSelector::FieldSpeaker)
         && matches!(target, MetadataTarget::Line)
         && !recite_parser::metadata_assignments(line)
             .iter()
             .any(|assignment| assignment.key == "speaker")
     {
-        let prior_lines = source_lines(text)
-            .map(|(content, _)| content)
-            .take(line_number.saturating_sub(1) as usize)
-            .collect::<Vec<_>>();
-        for prior in prior_lines.into_iter().rev() {
+        for prior in (0..line_index).rev().filter_map(|line| source.line(line)) {
+            let prior = prior.strip_suffix('\r').unwrap_or(prior);
             if prior.trim_start().starts_with("::") {
                 return selector_symbol(prior, "speaker");
             }
@@ -71,3 +70,7 @@ pub(super) fn empty_values() -> &'static std::collections::BTreeSet<String> {
     static EMPTY: OnceLock<std::collections::BTreeSet<String>> = OnceLock::new();
     EMPTY.get_or_init(std::collections::BTreeSet::new)
 }
+
+#[path = "metadata_context/tests.rs"]
+#[cfg(test)]
+mod tests;

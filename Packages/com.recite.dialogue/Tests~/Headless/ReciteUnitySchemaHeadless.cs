@@ -6,6 +6,18 @@ internal static class ReciteUnitySchemaHeadless
 {
     private static void Main(string[] args)
     {
+        if (args.Length > 0 && args[0] == "export-schema")
+        {
+            ReciteSchemaExporterTests.Child(args);
+            return;
+        }
+        if (args.Length == 2 && args[0] == "--export-child")
+        {
+            ReciteSchemaExportProcessTests.Child(args[1]);
+            return;
+        }
+        ReciteSchemaExportProcessTests.Run(Path.GetDirectoryName(Path.GetFullPath(args[0])));
+        ReciteSchemaExporterTests.Run(Path.GetDirectoryName(Path.GetFullPath(args[0])));
         var registration = new ReciteSchemaRegistration
         {
             enums = new[] { new ReciteSchemaSymbols { name = "mood", values = new[] { "calm", "tense" } } },

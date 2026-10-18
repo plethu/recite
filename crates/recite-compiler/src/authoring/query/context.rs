@@ -1,4 +1,6 @@
-use recite_core::{DocumentKey, SourcePosition, SourceSpan, schema::MetadataTarget};
+use recite_core::{
+    DocumentKey, SourceLineIndex, SourcePosition, SourceSpan, schema::MetadataTarget,
+};
 
 use super::types::{BlockTarget, ClauseKind};
 
@@ -34,8 +36,13 @@ pub(super) enum Site {
     },
 }
 
-pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Option<Site> {
-    let (line, line_start) = line_at(text, position.line())?;
+pub(super) fn at(
+    key: &DocumentKey,
+    index: &SourceLineIndex,
+    position: SourcePosition,
+) -> Option<Site> {
+    let source = line_at(index, position.line())?;
+    let line = source.text;
     let cursor = byte_at_column(line, position.column());
     let prefix = &line[..cursor];
     let trimmed = prefix.trim_start();
@@ -53,7 +60,7 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         {
             start += line[start..].chars().next()?.len_utf8();
         }
-        let token = span(key, text, line_start + start, line_start + cursor);
+        let token = span(key, source, start, cursor);
         let raw = line.get(start..cursor)?.trim();
         let target = match raw.rsplit_once("::") {
             Some((file, _)) => match DocumentKey::new(file.to_owned()) {
@@ -70,21 +77,16 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         && let Some(assignment) = assignment_covering(line, cursor)
     {
         if assignment.key == "requires" {
-            let clause = assignment_span(key, text, line, line_start, assignment);
+            let clause = assignment_span(key, source, assignment);
             return Some(Site::Conditions {
-                span: token_span(key, text, line, line_start, assignment.value_start, cursor),
+                span: token_span(key, source, assignment.value_start, cursor),
                 clause: Some((ClauseKind::Requires, clause)),
             });
         }
         if assignment.key == "reason" {
             return Some(Site::AvailabilityReasons {
                 value: assignment.value.to_owned(),
-                token: span(
-                    key,
-                    text,
-                    line_start + assignment.value_start,
-                    line_start + assignment.end,
-                ),
+                token: span(key, source, assignment.value_start, assignment.end),
             });
         }
     }
@@ -97,31 +99,19 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         let clause = (matches!(marker, recite_parser::ConditionMarker::If)
             && marker_start <= cursor
             && cursor < marker_end)
-            .then(|| {
-                (
-                    ClauseKind::If,
-                    span(
-                        key,
-                        text,
-                        line_start + marker_start,
-                        line_start + marker_end,
-                    ),
-                )
-            });
+            .then(|| (ClauseKind::If, span(key, source, marker_start, marker_end)));
         return Some(Site::Conditions {
-            span: token_span(key, text, line, line_start, start, cursor),
+            span: token_span(key, source, start, cursor),
             clause,
         });
     }
     if trimmed.starts_with("!") {
         let start = trim_offset + 1;
-        return Some(Site::Effects(token_span(
-            key, text, line, line_start, start, cursor,
-        )));
+        return Some(Site::Effects(token_span(key, source, start, cursor)));
     }
     if let Some(assignment) = assignment_at(line, cursor) {
-        let token_start = line_start + assignment.value_start;
-        let token = span(key, text, token_start, line_start + cursor);
+        let token_start = assignment.value_start;
+        let token = span(key, source, token_start, cursor);
         if assignment.key == "speaker" && !trimmed.starts_with('?') {
             return Some(Site::Speakers(token));
         }
@@ -141,7 +131,7 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         && prefix.split_whitespace().count() >= 3
     {
         return Some(Site::MetadataKey {
-            span: span(key, text, line_start + token_start, line_start + cursor),
+            span: span(key, source, token_start, cursor),
             target: metadata_target(trimmed),
         });
     }
@@ -173,10 +163,11 @@ fn metadata_target(line: &str) -> MetadataTarget {
 
 pub(super) fn token_at(
     key: &DocumentKey,
-    text: &str,
+    index: &SourceLineIndex,
     position: SourcePosition,
 ) -> Option<(String, SourceSpan)> {
-    let (line, line_start) = line_at(text, position.line())?;
+    let source = line_at(index, position.line())?;
+    let line = source.text;
     let cursor = byte_at_column(line, position.column());
     let is_token =
         |character: char| character.is_alphanumeric() || matches!(character, '_' | '.' | '-');
@@ -198,8 +189,5 @@ pub(super) fn token_at(
     if start == end {
         return None;
     }
-    Some((
-        line[start..end].to_owned(),
-        span(key, text, line_start + start, line_start + end),
-    ))
+    Some((line[start..end].to_owned(), span(key, source, start, end)))
 }

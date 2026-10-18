@@ -2,20 +2,19 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
-import { CommandRegistry } from "../src/commands.js";
+import { test } from "bun:test";
+import { CommandRegistry } from "../src/commands.ts";
 
 const cliBinary = process.env.RECITE_CLI_BIN;
 
-test("a real recite CLI watch starts, reports a build, and cooperatively stops", {
-  skip: process.platform !== "linux" || cliBinary === undefined,
-  timeout: 15_000,
-}, async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-watch-"));
-  await mkdir(path.join(root, "dialogue"));
-  await writeFile(
-    path.join(root, "recite.project.toml"),
-    `format_version = 1
+test.skipIf(process.platform !== "linux" || cliBinary === undefined)(
+  "a real recite CLI watch starts, reports a build, and cooperatively stops",
+  async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-watch-"));
+    await mkdir(path.join(root, "dialogue"));
+    await writeFile(
+      path.join(root, "recite.project.toml"),
+      `format_version = 1
 
 [discovery]
 source_roots = ["dialogue"]
@@ -26,41 +25,42 @@ asset = "compiled/dialogue.recitec"
 block = "start"
 participants = ["hazel"]
 `,
-  );
-  await writeFile(
-    path.join(root, "dialogue", "main.recite"),
-    ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n",
-  );
-
-  const messages = [];
-  const api = hostApi(root, messages);
-  const registry = new CommandRegistry(api, userInterface(messages), {
-    makeInvocationId: () => "real-watch-id",
-    watchStopTimeoutMs: 5_000,
-  });
-  registry.register([]);
-  try {
-    const started = await api.commands.executeCommand("recite.watch.start");
-    assert.deepEqual(started, { invocationId: "real-watch-id" });
-    await waitFor(() =>
-      messages.some(([kind, value]) =>
-        kind === "watch"
-        && JSON.parse(value).status === "succeeded"
-      )
+    );
+    await writeFile(
+      path.join(root, "dialogue", "main.recite"),
+      ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
 
-    const stopped = await api.commands.executeCommand("recite.watch.stop");
-    assert.deepEqual(stopped, { stopped: true, exitCode: 0 });
-    assert.equal(registry.watch.active, undefined);
-    assert.ok(messages.some(([kind, value]) =>
-      kind === "watch"
-      && JSON.parse(value).reason?.type === "cancelled"
-    ));
-  } finally {
-    await registry.dispose();
-    await rm(root, { recursive: true, force: true });
-  }
-});
+    const messages = [];
+    const api = hostApi(root, messages);
+    const registry = new CommandRegistry(api, userInterface(messages), {
+      makeInvocationId: () => "real-watch-id",
+      watchStopTimeoutMs: 5_000,
+    });
+    registry.register([]);
+    try {
+      const started = await api.commands.executeCommand("recite.watch.start");
+      assert.deepEqual(started, { invocationId: "real-watch-id" });
+      await waitFor(() =>
+        messages.some(
+          ([kind, value]) => kind === "watch" && JSON.parse(value).status === "succeeded",
+        ),
+      );
+
+      const stopped = await api.commands.executeCommand("recite.watch.stop");
+      assert.deepEqual(stopped, { stopped: true, exitCode: 0 });
+      assert.equal(registry.watch.active, undefined);
+      assert.ok(
+        messages.some(
+          ([kind, value]) => kind === "watch" && JSON.parse(value).reason?.type === "cancelled",
+        ),
+      );
+    } finally {
+      await registry.dispose();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
 
 async function waitFor(predicate) {
   const deadline = Date.now() + 10_000;
@@ -79,10 +79,11 @@ function hostApi(root, _messages) {
       workspaceFolders: [{ uri: { fsPath: root } }],
       textDocuments: [],
       getConfiguration: () => ({
-        get: (key, fallback) => ({
-          "cli.path": cliBinary,
-          "lsp.projectRoot": "",
-        }[key] ?? fallback),
+        get: (key, fallback) =>
+          ({
+            "cli.path": cliBinary,
+            "lsp.projectRoot": "",
+          })[key] ?? fallback,
       }),
     },
     window: {},

@@ -310,9 +310,11 @@ routing selects bounded compiler, runtime, preview recovery and headless Writer 
 release runs add medium fixtures and whole-project/watch checks. The
 [budget owner](../../tools/recite-perf/benches/support/budget.rs) sets instruction limits of 10% for
 runtime and 20% for compiler/preview/Writer, and heap limits of 10% allocated bytes, 5% allocation
-count and 10% bytes live at the process heap peak. Coverage checks reject missing controls, counters
-or cases. CI retains profiles, locks, binary/source identities and output parity evidence even on
-failure. These counters do not establish elapsed-time or native GUI acceptance; the
+count. The [peak checker](../../tools/recite-perf/src/heap_peak.rs) enforces 10% whole-process peak
+heap from paired raw DHAT logs. Allocation totals are operation scoped; the process peak includes
+preparation and disposal. Coverage checks reject missing controls, counters or cases. CI retains
+profiles, locks, binary/source identities and output parity evidence even on failure. These counters
+do not establish elapsed-time or native GUI acceptance; the
 [profiling guide](../profiling-and-optimisation.md) owns local commands and boundaries.
 
 Outside those gates, initial review triggers are more than 10% regression in hot runtime paths, more

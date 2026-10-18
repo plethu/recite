@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   cancel,
   completed,
@@ -28,8 +28,7 @@ test("idle watch stop sends cancellation and waits for stopped plus exit", async
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(cancel("idle-id", 1)) + "\n"
-        + JSON.stringify(stopped("idle-id", 2)) + "\n",
+      JSON.stringify(cancel("idle-id", 1)) + "\n" + JSON.stringify(stopped("idle-id", 2)) + "\n",
     ),
   );
   child.close(0);
@@ -45,20 +44,27 @@ test("active watch stop accepts cancellation before the cancelled build complete
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(started("active-id", 0)) + "\n"
-        + JSON.stringify(envelope("active-id", 1, "watch.build.started", {
-          generation: 0,
-          trigger: "initial",
-        })) + "\n",
+      JSON.stringify(started("active-id", 0)) +
+        "\n" +
+        JSON.stringify(
+          envelope("active-id", 1, "watch.build.started", {
+            generation: 0,
+            trigger: "initial",
+          }),
+        ) +
+        "\n",
     ),
   );
   const stopping = registry.api.commands.executeCommand("recite.watch.stop");
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(cancel("active-id", 2)) + "\n"
-        + JSON.stringify(completed("active-id", 3)) + "\n"
-        + JSON.stringify(stopped("active-id", 4)) + "\n",
+      JSON.stringify(cancel("active-id", 2)) +
+        "\n" +
+        JSON.stringify(completed("active-id", 3)) +
+        "\n" +
+        JSON.stringify(stopped("active-id", 4)) +
+        "\n",
     ),
   );
   child.close(0);
@@ -74,10 +80,14 @@ test("recoverable control errors are visible and do not retire the watch", async
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(started("control-id", 0)) + "\n"
-        + JSON.stringify(envelope("control-id", 1, "watch.control.error", {
-          error: { type: "malformed" },
-        })) + "\n",
+      JSON.stringify(started("control-id", 0)) +
+        "\n" +
+        JSON.stringify(
+          envelope("control-id", 1, "watch.control.error", {
+            error: { type: "malformed" },
+          }),
+        ) +
+        "\n",
     ),
   );
   assert.equal(registry.watch.active !== undefined, true);
@@ -86,8 +96,10 @@ test("recoverable control errors are visible and do not retire the watch", async
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(cancel("control-id", 2)) + "\n"
-        + JSON.stringify(stopped("control-id", 3)) + "\n",
+      JSON.stringify(cancel("control-id", 2)) +
+        "\n" +
+        JSON.stringify(stopped("control-id", 3)) +
+        "\n",
     ),
   );
   child.close(0);
@@ -103,11 +115,15 @@ test("fatal watch stops are visible as command failures", async () => {
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(started("fatal-id", 0)) + "\n"
-        + JSON.stringify(envelope("fatal-id", 1, "watch.stopped", {
-          reason: { type: "fatal" },
-          error: { category: "input", code: "missing_path", operation: "watch" },
-        })) + "\n",
+      JSON.stringify(started("fatal-id", 0)) +
+        "\n" +
+        JSON.stringify(
+          envelope("fatal-id", 1, "watch.stopped", {
+            reason: { type: "fatal" },
+            error: { category: "input", code: "missing_path", operation: "watch" },
+          }),
+        ) +
+        "\n",
     ),
   );
   child.close(1);
@@ -141,8 +157,7 @@ test("watch diagnostics use the started project root authority", async () => {
   child.stdout.emit(
     "data",
     Buffer.from(
-      JSON.stringify(cancel("root-id", 1)) + "\n"
-        + JSON.stringify(stopped("root-id", 2)) + "\n",
+      JSON.stringify(cancel("root-id", 1)) + "\n" + JSON.stringify(stopped("root-id", 2)) + "\n",
     ),
   );
   child.close(0);

@@ -27,6 +27,7 @@ impl Component for RouteEditor {
     fn render(&self) -> impl IntoElement {
         let writer = self.writer;
         let mut open = use_state(|| false);
+        let mut hovered = use_state(|| false);
         let mut query = use_state(String::new);
         let id = use_a11y();
         let input_id = use_a11y();
@@ -66,33 +67,42 @@ impl Component for RouteEditor {
             )
         });
         let owner = self.owner.clone();
+        // "Change…" stays in the layout and the focus order, but shows only on hover or focus.
+        let revealed = *hovered.read() || *open.read() || id.is_focused();
         rect()
-            .width(Size::fill())
             .spacing(t::SPACE_XS)
+            .on_pointer_enter(move |_| hovered.set(true))
+            .on_pointer_leave(move |_| hovered.set(false))
             .child(
                 rect()
                     .horizontal()
-                    .width(Size::fill())
-                    .content(Content::Flex)
                     .cross_align(Alignment::Center)
                     .spacing(t::SPACE_SM)
                     .child(self.heading.clone())
                     .child(
-                        crate::design::Button::new()
-                            .flat()
-                            .a11y_id(id)
-                            .named(crate::messages::text(
-                                crate::messages::MsgId::WriterGuiChangeDestination,
-                            ))
-                            .expanded(*open.read())
-                            .on_press(move |_| {
-                                query.set(String::new());
-                                let next = !*open.peek();
-                                open.set(next);
-                            })
-                            .child(crate::messages::text(
-                                crate::messages::MsgId::WriterGuiChange,
-                            )),
+                        // Out of flow, so a hidden "Change…" never takes width from the text.
+                        rect()
+                            .position(Position::new_absolute().left(0.).top(t::control_height()))
+                            .layer(1)
+                            .on_pointer_enter(move |_| hovered.set(true))
+                            .opacity(if revealed { 1. } else { 0. })
+                            .child(
+                                crate::design::Button::new()
+                                    .flat()
+                                    .a11y_id(id)
+                                    .named(crate::messages::text(
+                                        crate::messages::MsgId::WriterGuiChangeDestination,
+                                    ))
+                                    .expanded(*open.read())
+                                    .on_press(move |_| {
+                                        query.set(String::new());
+                                        let next = !*open.peek();
+                                        open.set(next);
+                                    })
+                                    .child(crate::messages::text(
+                                        crate::messages::MsgId::WriterGuiChange,
+                                    )),
+                            ),
                     ),
             )
             .maybe_child((*open.read()).then(|| crate::design::SearchPicker {

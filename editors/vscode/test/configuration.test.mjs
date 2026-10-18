@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import test from "node:test";
-import { initializeParams, readCliConfiguration, readConfiguration } from "../src/configuration.js";
+import { test } from "bun:test";
+import { initializeParams, readCliConfiguration, readConfiguration } from "../src/configuration.ts";
 
 test("CLI configuration resolves bare names through PATH and paths from the effective root", () => {
   const api = fakeApi({
-    workspaceFolders: [{
-      name: "demo",
-      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
-    }],
+    workspaceFolders: [
+      {
+        name: "demo",
+        uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+      },
+    ],
     values: { "cli.path": "tools/recite", "lsp.projectRoot": "project" },
   });
   assert.deepEqual(readCliConfiguration(api, userInterface()), {
@@ -18,20 +20,24 @@ test("CLI configuration resolves bare names through PATH and paths from the effe
     projectRootOverridden: true,
   });
   const bare = fakeApi({
-    workspaceFolders: [{
-      name: "demo",
-      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
-    }],
+    workspaceFolders: [
+      {
+        name: "demo",
+        uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+      },
+    ],
   });
   assert.equal(readCliConfiguration(bare, userInterface()).command, "recite");
 });
 
 test("configuration resolves project-relative binaries without a shell", () => {
   const api = fakeApi({
-    workspaceFolders: [{
-      name: "demo",
-      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
-    }],
+    workspaceFolders: [
+      {
+        name: "demo",
+        uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+      },
+    ],
     values: {
       "lsp.path": "./tools/recite-lsp",
       "lsp.args": ["--local"],
@@ -50,10 +56,12 @@ test("configuration resolves project-relative binaries without a shell", () => {
 
 test("initialization advertises UTF-16, full sync, and dynamic watch registration", () => {
   const api = fakeApi({
-    workspaceFolders: [{
-      name: "demo",
-      uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
-    }],
+    workspaceFolders: [
+      {
+        name: "demo",
+        uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" },
+      },
+    ],
   });
   const params = initializeParams(api, "/workspace/demo", true);
 

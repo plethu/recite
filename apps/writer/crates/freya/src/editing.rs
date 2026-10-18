@@ -3,16 +3,26 @@ use recite_writer_model::{View, Workbench, WorkbenchError};
 
 pub type Session = State<Result<Workbench, WorkbenchError>>;
 
+/// The shared query colours stable IDs like names. Writer dims them so writers read the name,
+/// not the hash; editor integrations keep the shared query unchanged.
+const STABLE_ID_CAPTURE: &str = "((stable_id) @label)";
+static HIGHLIGHTS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    recite_writer_grammar::HIGHLIGHTS.replace(STABLE_ID_CAPTURE, "((stable_id) @comment)")
+});
+
 pub fn editor_data(text: &str, source: bool, dark: bool) -> CodeEditorData {
-    let language = source.then(|| {
-        EditorLanguage::new(
-            recite_writer_grammar::LANGUAGE,
-            recite_writer_grammar::HIGHLIGHTS,
-        )
-    });
+    let language =
+        source.then(|| EditorLanguage::new(recite_writer_grammar::LANGUAGE, HIGHLIGHTS.as_str()));
     let mut data = CodeEditorData::new(Rope::from_str(text), language);
     data.set_theme(super::palette::syntax(dark));
-    data.parse();
+    if source {
+        if let Err(error) = data.enable_background_highlighting() {
+            eprintln!("Could not start source highlighting: {error}");
+            data.parse();
+        }
+    } else {
+        data.parse();
+    }
     data.measure(
         if source { 15. } else { 20. },
         if source { "monospace" } else { "serif" },
@@ -33,14 +43,12 @@ pub(crate) fn perform(
     let mut state = model.write();
     let outcome = match state.as_mut() {
         Ok(session) => {
-            session.set_draft(if matches!(session.view(), View::Source) {
-                editor.peek().rope.to_string()
-            } else {
-                prose.peek().clone()
-            });
+            crate::buffers::harvest_draft(session, &editor.peek().rope, &prose.peek());
             let previous_view = session.view().clone();
             action(session).map(|()| {
-                if session.view() != &previous_view || session.draft() != editor.peek().rope {
+                if session.view() != &previous_view
+                    || !session.draft_snapshot().matches_rope(&editor.peek().rope)
+                {
                     editor.set(editor_data(
                         session.draft(),
                         matches!(session.view(), View::Source),
@@ -52,7 +60,7 @@ pub(crate) fn perform(
                         .bookmarks
                         .restore(session.document().key().as_str(), &mut editor.write());
                 }
-                prose.set_if_modified(session.draft().to_owned());
+                prose.set_if_modified(crate::buffers::prose_draft(session).to_owned());
             })
         }
         Err(error) => {
@@ -143,7 +151,15 @@ impl Writer {
         if *self.layout.view.peek() == recite_config::WriterView::Source {
             self.try_navigate(|m| m.select(View::Source))
         } else {
-            self.try_navigate(Workbench::show_script)?;
+            let empty = self
+                .buffers
+                .model
+                .peek()
+                .as_ref()
+                .is_ok_and(crate::scene::has_no_beats);
+            if !empty {
+                self.try_navigate(Workbench::show_script)?;
+            }
             if self.layout.standalone() {
                 self.ensure_beat()?;
             }
@@ -215,15 +231,29 @@ impl Writer {
         }
     }
     pub fn set_view(mut self, view: recite_config::WriterView) {
-        let outcome = self.try_navigate(|m| match view {
-            recite_config::WriterView::Script | recite_config::WriterView::Map => m.show_script(),
-            recite_config::WriterView::Source => m.select(View::Source),
-        });
+        // A scene with no beats has no script to show; its Script and Map are the empty states.
+        let empty = self
+            .buffers
+            .model
+            .peek()
+            .as_ref()
+            .is_ok_and(crate::scene::has_no_beats);
+        let outcome = if empty && view != recite_config::WriterView::Source {
+            Ok(())
+        } else {
+            self.try_navigate(|m| match view {
+                recite_config::WriterView::Script | recite_config::WriterView::Map => {
+                    m.show_script()
+                }
+                recite_config::WriterView::Source => m.select(View::Source),
+            })
+        };
         if outcome.is_ok() {
             self.localisation.write().active = false;
             self.layout.view.set(view);
             self.pane.set(Pane::Map);
             if view == recite_config::WriterView::Script
+                && !empty
                 && let Err(error) = self.ensure_beat()
             {
                 self.message.error(error);
@@ -290,3 +320,6 @@ pub(super) fn is_workspace_key(event: &KeyboardEventData) -> bool {
                     Modifiers::CONTROL
                 })
 }
+
+#[cfg(test)]
+mod tests;

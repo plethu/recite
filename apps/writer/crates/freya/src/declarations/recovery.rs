@@ -11,6 +11,8 @@ pub(super) struct DraftSnapshot {
     pub draft: String,
 }
 impl Snapshot for DraftSnapshot {
+    type Encoding = ();
+
     fn valid_version(&self) -> bool {
         self.version == 1
     }

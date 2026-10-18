@@ -32,8 +32,10 @@ export function assertContainedRegularFile(root, relative, label = "package entr
   const target = path.resolve(base, relative);
   const remainder = path.relative(base, target);
   if (
-    !remainder || remainder === ".." || remainder.startsWith(`..${path.sep}`)
-    || path.isAbsolute(remainder)
+    !remainder ||
+    remainder === ".." ||
+    remainder.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(remainder)
   ) {
     throw new Error(`refusing path outside ${label} root: ${relative}`);
   }

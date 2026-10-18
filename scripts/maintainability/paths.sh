@@ -43,7 +43,7 @@ maintainability_is_rust_source_path() {
 
 maintainability_is_supported_extension() {
   case "$1" in
-    *.rs | *.js | *.mjs | *.cjs | *.ts | *.tsx | *.lua | *.py | *.sh)
+    *.rs | *.js | *.mjs | *.cjs | *.ts | *.mts | *.cts | *.tsx | *.lua | *.py | *.sh)
       return 0
       ;;
     *)
@@ -146,6 +146,17 @@ maintainability_is_format_only() (
   trap 'rm -rf "$temporary"' EXIT
   git -C "$repo_root" show "$base_sha:$base_path" >"$temporary/base" || return 1
   git -C "$repo_root" show "$head_sha:$path" >"$temporary/head" || return 1
+  case "$path" in
+    *.js | *.mjs | *.cjs | *.ts | *.mts | *.cts | *.tsx)
+      if [[ -f "$repo_root/oxfmt.config.mts" ]]; then
+        mise exec -- bash -c 'cd "$1" && exec bun "$2" --stdin-filepath "$3"' \
+          _ "$repo_root" "$repo_root/node_modules/.bin/oxfmt" "$path" \
+          <"$temporary/base" >"$temporary/formatted" 2>"$temporary/errors" || return 1
+        cmp -s "$temporary/formatted" "$temporary/head"
+        return
+      fi
+      ;;
+  esac
   # Select the whole quality environment, including external formatter plugins.
   # An explicit config keeps mise resolution in the caller's real checkout.
   mise -E quality exec -- dprint fmt --config "$repo_root/dprint.json" \

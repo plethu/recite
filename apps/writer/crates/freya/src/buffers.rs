@@ -1,12 +1,24 @@
 //! Open text buffers own harvesting, save and scene-switch protection.
 mod bookmarks;
+mod drafts;
 use crate::{
     editing::{Session, editor_data},
     project::{FileError, ProjectFiles},
 };
 pub(crate) use bookmarks::Bookmarks;
+pub(crate) use drafts::harvest_draft;
+pub(crate) use drafts::observe_draft;
 use freya::{code_editor::CodeEditorData, prelude::*};
-use recite_writer_model::View;
+use recite_writer_model::{View, Workbench};
+
+/// The prose widget has no document-sized buffer while Source owns the text.
+pub(crate) fn prose_draft(model: &Workbench) -> &str {
+    if model.view() == &View::Source {
+        ""
+    } else {
+        model.draft()
+    }
+}
 #[derive(Clone, Copy)]
 pub(crate) struct Buffers {
     pub bookmarks: Bookmarks,
@@ -25,7 +37,7 @@ impl Buffers {
                 model.view() == &View::Source,
                 dark,
             ));
-            self.prose.set(model.draft().into());
+            self.prose.set(prose_draft(model).into());
         }
     }
 
@@ -35,7 +47,7 @@ impl Buffers {
             next.view() == &View::Source,
             dark,
         ));
-        self.prose.set(next.draft().to_owned());
+        self.prose.set(prose_draft(&next).to_owned());
         self.model.set(Ok(next));
     }
 
@@ -58,11 +70,7 @@ impl Buffers {
     pub(super) fn harvest(mut self) {
         self.remember();
         if let Ok(model) = self.model.write().as_mut() {
-            model.set_draft(if model.view() == &View::Source {
-                self.editor.peek().rope.to_string()
-            } else {
-                self.prose.peek().clone()
-            });
+            harvest_draft(model, &self.editor.peek().rope, &self.prose.peek());
         }
     }
 
@@ -138,7 +146,7 @@ impl Buffers {
                 .restore(model.document().key().as_str(), &mut editor.write());
         }
         let mut prose = self.prose;
-        prose.set(model.draft().into());
+        prose.set(prose_draft(model).into());
         Ok(())
     }
 

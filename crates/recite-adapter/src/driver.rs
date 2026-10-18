@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use recite_core::{ChoiceId, EffectId};
 use recite_runtime::{
     DialogueContext, DialogueError, DialogueEvent, DialogueSession, DialogueSessionOptions,
-    EffectAck, LocaleResolution, acknowledge_effect, choose_with,
+    EffectAck, LocaleResolution, SessionTraversal,
     snapshot::{decode_session_messagepack, encode_session_messagepack},
     start_scene_with_options,
 };
@@ -178,7 +178,8 @@ impl SessionDriver {
     ) -> Result<T, DriverError<E>> {
         let previously_observed = self.observed_choices.contains(&choice);
         self.run_active(context, resolution, encode, |asset, session, resolution| {
-            choose_with(asset, session, choice, context, resolution)
+            session
+                .choose_with(asset, choice, context, resolution)
                 .map(Some)
                 .map_err(|error| classify_choice_error(error, previously_observed))
         })
@@ -209,7 +210,7 @@ impl SessionDriver {
         encode: impl FnOnce(Vec<DialogueEvent>) -> Result<T, E>,
     ) -> Result<T, DriverError<E>> {
         self.run_active(context, resolution, encode, |_, session, _| {
-            acknowledge_effect(session, effect, ack)?;
+            session.acknowledge_effect(effect, ack)?;
             Ok(None)
         })
     }
@@ -291,34 +292,35 @@ impl SessionDriver {
         encode: impl FnOnce(Vec<DialogueEvent>) -> Result<T, E>,
         first: impl FnOnce(
             &recite_core::compiled::CompiledDialogue,
-            &mut DialogueSession,
+            &mut SessionTraversal<'_>,
             LocaleResolution<'_>,
         ) -> AdapterResult<Option<DialogueEvent>>,
     ) -> Result<T, DriverError<E>> {
-        let active = self.active.as_ref().ok_or_else(no_active)?.active();
-        let mut trial = active.session.clone();
+        let state = self.active.as_mut().ok_or_else(no_active)?;
+        let (SessionState::Prepared(active) | SessionState::Begun(active)) = state;
         let asset = active.asset.dialogue();
-        let first_event = first(asset, &mut trial, resolution)?;
-        let events = match first_event {
-            Some(event) => drain_after_event(asset, &mut trial, context, resolution, event)?,
-            None => drain_from_next(asset, &mut trial, context, resolution)?,
-        };
-        let observed = events
-            .iter()
-            .filter_map(|event| match event {
-                DialogueEvent::Prompt { choices, .. } => {
-                    Some(choices.iter().map(|choice| choice.id.clone()))
-                }
-                _ => None,
-            })
-            .flatten()
-            .collect::<BTreeSet<_>>();
-        let output = encode(events).map_err(DriverError::Output)?;
+        let (output, observed) = active.session.try_traverse(|trial| {
+            let first_event = first(asset, trial, resolution)?;
+            let events = match first_event {
+                Some(event) => drain_after_event(asset, trial, context, resolution, event)?,
+                None => drain_from_next(asset, trial, context, resolution)?,
+            };
+            let observed = events
+                .iter()
+                .filter_map(|event| match event {
+                    DialogueEvent::Prompt { choices, .. } => {
+                        Some(choices.iter().map(|choice| choice.id.clone()))
+                    }
+                    _ => None,
+                })
+                .flatten()
+                .collect::<BTreeSet<_>>();
+            let output = encode(events).map_err(DriverError::Output)?;
+            Ok::<_, DriverError<E>>((output, observed))
+        })?;
         let old = self.active.take().ok_or_else(no_active)?;
-        self.active = Some(SessionState::Begun(ActiveSession {
-            asset: old.active().asset.clone(),
-            session: trial,
-        }));
+        let (SessionState::Prepared(active) | SessionState::Begun(active)) = old;
+        self.active = Some(SessionState::Begun(active));
         self.observed_choices.extend(observed);
         Ok(output)
     }

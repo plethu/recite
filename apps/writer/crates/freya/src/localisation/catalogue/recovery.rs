@@ -9,6 +9,8 @@ pub(super) struct SnapshotData {
     drafts: Arc<Vec<(usize, Arc<Draft>)>>,
 }
 impl Snapshot for SnapshotData {
+    type Encoding = ();
+
     fn valid_version(&self) -> bool {
         self.version == 1
     }

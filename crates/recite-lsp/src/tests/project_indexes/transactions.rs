@@ -80,7 +80,7 @@ pub(crate) fn watched_creation_rekeys_open_overlay() {
         DiagnosticRefresh::Publish(diagnostics)
             if diagnostics.uri == uri
                 && diagnostics.version == Some(9)
-                && diagnostics.text == "oops\n:: open\n"
+                && diagnostics.text.as_ref() == "oops\n:: open\n"
     )));
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(block_names(&workspace), ["open"]);

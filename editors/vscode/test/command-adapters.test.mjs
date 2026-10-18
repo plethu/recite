@@ -3,18 +3,19 @@ import { accessSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
-import test from "node:test";
-import { CommandRegistry } from "../src/commands.js";
+import { test } from "bun:test";
+import { CommandRegistry } from "../src/commands.ts";
 import { FakeChild } from "./child.ts";
 const packageRoot = path.resolve(import.meta.dirname, "..");
-const cliBinary = process.env.RECITE_CLI_BIN
-  ?? path.resolve(packageRoot, "../../target/debug/recite");
+const cliBinary =
+  process.env.RECITE_CLI_BIN ?? path.resolve(packageRoot, "../../target/debug/recite");
 
-test("the integrated gate supplies an executable CLI", {
-  skip: process.env.RECITE_CLI_BIN === undefined,
-}, () => {
-  assert.ok(exists(cliBinary), `RECITE_CLI_BIN is not executable: ${cliBinary}`);
-});
+test.skipIf(process.env.RECITE_CLI_BIN === undefined)(
+  "the integrated gate supplies an executable CLI",
+  () => {
+    assert.ok(exists(cliBinary), `RECITE_CLI_BIN is not executable: ${cliBinary}`);
+  },
+);
 
 test("registered validate command resolves argv and cwd, maps diagnostics, and refuses untrusted workspaces", async () => {
   const calls = [];
@@ -43,32 +44,37 @@ test("registered validate command resolves argv and cwd, maps diagnostics, and r
               event: "command.started",
               command: "validate",
               invocation_id: "validate-id",
-            }) + "\n" + JSON.stringify({
-              version: 1,
-              sequence: 1,
-              event: "command.result",
-              command: "validate",
-              invocation_id: "validate-id",
-              status: "success",
-              exit_code: 0,
-              data: {
-                diagnostics: [{
-                  version: 1,
-                  code: "RECITE_PARSE001",
-                  severity: "error",
-                  span: {
-                    file: "dialogue.recite",
-                    start: { line: 1, column: 1 },
-                    end: { line: 1, column: 3 },
-                  },
-                  presentation: { id: "diagnostic-parse-001", arguments: {} },
-                  related: [],
-                  help: null,
-                  explanation: null,
-                  compatibility_message: "diagnostic",
-                }],
-              },
-            }) + "\n",
+            }) +
+              "\n" +
+              JSON.stringify({
+                version: 1,
+                sequence: 1,
+                event: "command.result",
+                command: "validate",
+                invocation_id: "validate-id",
+                status: "success",
+                exit_code: 0,
+                data: {
+                  diagnostics: [
+                    {
+                      version: 1,
+                      code: "RECITE_PARSE001",
+                      severity: "error",
+                      span: {
+                        file: "dialogue.recite",
+                        start: { line: 1, column: 1 },
+                        end: { line: 1, column: 3 },
+                      },
+                      presentation: { id: "diagnostic-parse-001", arguments: {} },
+                      related: [],
+                      help: null,
+                      explanation: null,
+                      compatibility_message: "diagnostic",
+                    },
+                  ],
+                },
+              }) +
+              "\n",
           ),
         );
         child.close(0);
@@ -115,16 +121,19 @@ test("typed finite failures stay typed at the semantic UI boundary", async () =>
               event: "command.started",
               command: "validate",
               invocation_id: "failure-id",
-            }) + "\n" + JSON.stringify({
-              version: 1,
-              sequence: 1,
-              event: "command.error",
-              command: "validate",
-              invocation_id: "failure-id",
-              status: "failure",
-              exit_code: 1,
-              error: { category: "input", code: "read", operation: "validate" },
-            }) + "\n",
+            }) +
+              "\n" +
+              JSON.stringify({
+                version: 1,
+                sequence: 1,
+                event: "command.error",
+                command: "validate",
+                invocation_id: "failure-id",
+                status: "failure",
+                exit_code: 1,
+                error: { category: "input", code: "read", operation: "validate" },
+              }) +
+              "\n",
           ),
         );
         child.close(1);
@@ -209,10 +218,11 @@ test("compile refuses a configuration authority change across an output picker",
   let call;
   const api = hostApi({ trusted: true, document: savedDocument() });
   api.workspace.getConfiguration = () => ({
-    get: (key, fallback) => ({
-      "cli.path": "recite",
-      "lsp.projectRoot": projectRoot,
-    }[key] ?? fallback),
+    get: (key, fallback) =>
+      ({
+        "cli.path": "recite",
+        "lsp.projectRoot": projectRoot,
+      })[key] ?? fallback,
   });
   const ui = userInterface(messages, api.window.activeTextEditor.document);
   ui.chooseCompileOutputPath = () =>
@@ -234,22 +244,25 @@ test("compile refuses a configuration authority change across an output picker",
               event: "command.started",
               command: "compile",
               invocation_id: "snapshot-id",
-            }) + "\n" + JSON.stringify({
-              version: 1,
-              sequence: 1,
-              event: "command.result",
-              command: "compile",
-              invocation_id: "snapshot-id",
-              status: "success",
-              exit_code: 0,
-              data: {
-                diagnostics: [],
-                artifact: {
-                  path: { encoding: "utf8", value: "/workspace/project/out.recitec" },
-                  size_bytes: 0,
+            }) +
+              "\n" +
+              JSON.stringify({
+                version: 1,
+                sequence: 1,
+                event: "command.result",
+                command: "compile",
+                invocation_id: "snapshot-id",
+                status: "success",
+                exit_code: 0,
+                data: {
+                  diagnostics: [],
+                  artifact: {
+                    path: { encoding: "utf8", value: "/workspace/project/out.recitec" },
+                    size_bytes: 0,
+                  },
                 },
-              },
-            }) + "\n",
+              }) +
+              "\n",
           ),
         );
         child.close(0);
@@ -293,41 +306,44 @@ test("runtime picker trust loss is a quiet refusal before spawn", async () => {
   assert.equal(spawned, false);
   assert.deepEqual(messages, [["untrusted"]]);
 });
-test("a built recite CLI speaks the finite protocol through the command adapter", {
-  skip: process.platform !== "linux" || process.env.RECITE_CLI_BIN === undefined,
-  timeout: 15_000,
-}, async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-cli-"));
-  const sourcePath = path.join(root, "dialogue.recite");
-  await writeFile(sourcePath, ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n");
-  const messages = [];
-  const document = {
-    languageId: "recite",
-    isUntitled: false,
-    isDirty: false,
-    uri: { scheme: "file", fsPath: sourcePath, toString: () => `file://${sourcePath}` },
-  };
-  const api = hostApi({
-    trusted: true,
-    document,
-    root,
-    projectRoot: "",
-    cliPath: cliBinary,
-  });
-  const registry = new CommandRegistry(api, userInterface(messages, document), {
-    makeInvocationId: () => "real-cli-id",
-  });
-  registry.register([]);
-  try {
-    const result = await api.commands.executeCommand("recite.validate");
-    assert.equal(result.terminal.event, "command.result");
-    assert.equal(result.terminal.status, "success");
-    assert.deepEqual(result.terminal.data.diagnostics, []);
-  } finally {
-    await registry.dispose();
-    await rm(root, { recursive: true, force: true });
-  }
-});
+test.skipIf(process.platform !== "linux" || process.env.RECITE_CLI_BIN === undefined)(
+  "a built recite CLI speaks the finite protocol through the command adapter",
+  async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-cli-"));
+    const sourcePath = path.join(root, "dialogue.recite");
+    await writeFile(
+      sourcePath,
+      ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n",
+    );
+    const messages = [];
+    const document = {
+      languageId: "recite",
+      isUntitled: false,
+      isDirty: false,
+      uri: { scheme: "file", fsPath: sourcePath, toString: () => `file://${sourcePath}` },
+    };
+    const api = hostApi({
+      trusted: true,
+      document,
+      root,
+      projectRoot: "",
+      cliPath: cliBinary,
+    });
+    const registry = new CommandRegistry(api, userInterface(messages, document), {
+      makeInvocationId: () => "real-cli-id",
+    });
+    registry.register([]);
+    try {
+      const result = await api.commands.executeCommand("recite.validate");
+      assert.equal(result.terminal.event, "command.result");
+      assert.equal(result.terminal.status, "success");
+      assert.deepEqual(result.terminal.data.diagnostics, []);
+    } finally {
+      await registry.dispose();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
 
 function savedDocument() {
   return savedDocumentAt("/workspace/project/dialogue.recite");
@@ -344,16 +360,14 @@ function savedDocumentAt(fsPath) {
   };
 }
 
-function hostApi(
-  {
-    trusted,
-    document,
-    documents = document ? [document] : [],
-    root = "/workspace",
-    projectRoot = "project",
-    cliPath = "./tools/recite",
-  },
-) {
+function hostApi({
+  trusted,
+  document,
+  documents = document ? [document] : [],
+  root = "/workspace",
+  projectRoot = "project",
+  cliPath = "./tools/recite",
+}) {
   const commands = new Map();
   const entries = new Map();
   const api = {
@@ -362,10 +376,8 @@ function hostApi(
       workspaceFolders: [{ uri: { fsPath: root, toString: () => `file://${root}` } }],
       textDocuments: documents,
       getConfiguration: () => ({
-        get: (
-          key,
-          fallback,
-        ) => ({ "cli.path": cliPath, "lsp.projectRoot": projectRoot }[key] ?? fallback),
+        get: (key, fallback) =>
+          ({ "cli.path": cliPath, "lsp.projectRoot": projectRoot })[key] ?? fallback,
       }),
     },
     window: { activeTextEditor: { document }, showSaveDialog: async () => undefined },

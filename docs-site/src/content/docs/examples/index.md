@@ -1,7 +1,6 @@
 ---
 title: Examples
 description: Copyable projects and checks for Recite authoring and engine integration.
-template: splash
 ---
 
 Start with the [complete CLI workflow](/examples/headless-cli/). Its maintained project includes

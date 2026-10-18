@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    SourceSpan,
+    LineId, SourceSpan,
     ast::{Block, BlockReference, Choice, ChoiceEcho, DivertTarget, SourceFile, Statement},
 };
 
@@ -58,19 +58,23 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_choice_echo(&mut self, choice: &'a Choice) {
-        if self.phase == ValidationPhase::Local {
+        if let ChoiceEcho::Line(line_id) = &choice.echo {
+            self.validate_echo_line(line_id, &choice.span);
+        }
+    }
+    pub(super) fn validate_echo_line(&mut self, line_id: &LineId, span: &SourceSpan) {
+        if self.phase == ValidationPhase::Local
+            || self.stable_ids_incomplete()
+            || !self.project_complete
+        {
             return;
         }
-        let ChoiceEcho::Line(line_id) = &choice.echo else {
-            return;
-        };
-
-        if self.stable_ids_incomplete() || !self.project_complete {
-            return;
-        }
-        if !self.line_ids.contains(line_id.as_str()) {
+        let line_ids = self.line_ids.get_or_insert_with(|| {
+            collect_line_ids(&self.source_files, &self.effective_participation)
+        });
+        if !line_ids.contains(line_id.as_str()) {
             self.diagnostics
-                .push(diagnostics::unknown_choice_echo_line(choice, line_id));
+                .push(diagnostics::unknown_choice_echo_line(span.clone(), line_id));
         }
     }
     pub(crate) fn validate_reference(

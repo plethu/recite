@@ -221,7 +221,7 @@ impl DiagnosticRefresh {
     ) -> Self {
         Self::Publish(DocumentDiagnostics {
             uri: document.identity().uri.clone(),
-            text: document.text().to_owned(),
+            text: document.shared_text(),
             version: Some(document.version()),
             diagnostics,
             generation,
@@ -235,7 +235,7 @@ impl DiagnosticRefresh {
     ) -> Self {
         Self::Publish(DocumentDiagnostics {
             uri: document.identity.uri.clone(),
-            text: document.text.to_string(),
+            text: document.text.clone(),
             version: None,
             diagnostics,
             generation,
@@ -253,7 +253,7 @@ impl DiagnosticRefresh {
 #[derive(Clone, Debug)]
 pub(crate) struct DocumentDiagnostics {
     pub(crate) uri: Uri,
-    pub(crate) text: String,
+    pub(crate) text: std::sync::Arc<str>,
     pub(crate) version: Option<i32>,
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(crate) generation: SnapshotGeneration,

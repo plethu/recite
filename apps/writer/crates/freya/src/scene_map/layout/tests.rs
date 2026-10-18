@@ -30,7 +30,7 @@ fn map_geometry_reconstruction_timing() -> Result<(), Box<dyn std::error::Error>
     let authored = recite_writer_model::WRITER_EXAMPLES[0].open()?;
     let mut cases = vec![(
         "authored_hub".to_owned(),
-        authored.document().script_snapshot()?,
+        recite_writer_model::Document::new(authored.document().source())?,
     )];
     for beats in [100, 1000, 10_000] {
         let document = recite_writer_model::Document::new(recite_writer_model::workload::source(
@@ -38,7 +38,7 @@ fn map_geometry_reconstruction_timing() -> Result<(), Box<dyn std::error::Error>
             0,
             5,
         ))?;
-        cases.push((format!("linear_{beats}"), document.script_snapshot()?));
+        cases.push((format!("linear_{beats}"), document));
     }
     let mut source = String::from(":: hub default\n");
     for index in 0..1000 {
@@ -51,16 +51,35 @@ fn map_geometry_reconstruction_timing() -> Result<(), Box<dyn std::error::Error>
     }
     let fanout = recite_writer_model::Document::new(&source)?;
     assert!(fanout.diagnostics().is_empty());
-    cases.push(("fanout_1000".into(), fanout.script_snapshot()?));
-    for (name, blocks) in cases {
-        for _ in 0..20 {
-            let start = WallTime.start();
-            let graph = Topology::new(blocks.clone(), &Default::default());
-            let milliseconds = WallTime.end(start).as_secs_f64() * 1000.;
-            assert_eq!(graph.nodes.len(), blocks.len());
-            samples.push(serde_json::json!({"shape":name,"beats":blocks.len(),
-                "links":graph.links.len(),"milliseconds":milliseconds}));
-            std::hint::black_box(graph);
+    cases.push(("fanout_1000".into(), fanout));
+    for (name, mut document) in cases {
+        let saved = Default::default();
+        let previous = Topology::new(document.script_snapshot()?, &saved);
+        let passage = document
+            .passage_snapshot()?
+            .first()
+            .ok_or("missing prose")?
+            .clone();
+        document.replace_text(
+            document.revision(),
+            &passage.id,
+            &format!("{} Edited.", passage.text),
+        )?;
+        let blocks = document.script_snapshot()?;
+        for operation in ["reconstruction", "content_refresh"] {
+            for _ in 0..20 {
+                let start = WallTime.start();
+                let graph = if operation == "content_refresh" {
+                    Topology::refresh(blocks.clone(), &saved, Some(&previous))
+                } else {
+                    Topology::new(blocks.clone(), &saved)
+                };
+                let milliseconds = WallTime.end(start).as_secs_f64() * 1000.;
+                assert_eq!(graph.nodes.len(), blocks.len());
+                samples.push(serde_json::json!({"shape":name,"beats":blocks.len(),
+                    "links":graph.links.len(),"milliseconds":milliseconds,"operation":operation}));
+                std::hint::black_box(graph);
+            }
         }
     }
     println!(

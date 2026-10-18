@@ -10,7 +10,7 @@ impl Document {
         destination: &str,
     ) -> Result<(), EditError> {
         self.check_revision(expected)?;
-        self.script()?;
+        self.script_snapshot()?;
         let snapshot = self.kernel().snapshot();
         let blocks = snapshot
             .document(self.key())
@@ -79,7 +79,7 @@ impl Document {
 
     pub fn add_beat(&mut self, expected: i64) -> Result<String, EditError> {
         self.check_revision(expected)?;
-        self.script()?;
+        self.script_snapshot()?;
         let snapshot = self.kernel().snapshot();
         let mut number = 1;
         let id = loop {
@@ -100,7 +100,16 @@ impl Document {
         } else {
             "\n"
         };
-        let mut next = format!("{}{newline}{newline}:: {id}{newline}", self.source());
+        let entry = if snapshot
+            .documents()
+            .iter()
+            .all(|document| document.summary().blocks().is_empty())
+        {
+            " default"
+        } else {
+            ""
+        };
+        let mut next = format!("{}{newline}{newline}:: {id}{entry}{newline}", self.source());
         let insertion = next.len();
         next.push_str(&format!(
             ">{newline}  New dialogue.{newline}-> END{newline}"
@@ -113,7 +122,7 @@ impl Document {
     /// Inserts before the beat's first top-level choice or divert, or at its end.
     pub fn add_line(&mut self, expected: i64, section: &str) -> Result<String, EditError> {
         self.check_revision(expected)?;
-        self.passages()?;
+        self.passage_snapshot()?;
         let snapshot = self.kernel().snapshot();
         let blocks = snapshot
             .document(self.key())
@@ -199,6 +208,6 @@ impl Document {
             .into_iter()
             .find(|passage| passage.header_line == line)
             .ok_or(EditError::MissingPassage)?;
-        Ok((next, added.id))
+        Ok((next, added.id.clone()))
     }
 }

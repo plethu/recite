@@ -1,17 +1,22 @@
 {
+  "extends": "../../tsconfig.node.json",
   "compilerOptions": {
-    "strict": true,
-    "noEmit": true,
     "allowJs": true,
     "checkJs": false,
-    "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "allowImportingTsExtensions": true,
-    "erasableSyntaxOnly": true,
-    "verbatimModuleSyntax": true,
-    "types": ["node"],
-    "skipLibCheck": true
+    "types": [
+      "node",
+      "vscode",
+      "bun"
+    ]
   },
-  "include": ["test/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.cts",
+    "test/**/*.ts",
+    "ox*.config.mts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
 }

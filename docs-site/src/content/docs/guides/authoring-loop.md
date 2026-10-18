@@ -1,7 +1,6 @@
 ---
 title: Authoring dialogue
 description: Work from source edits through diagnostics, compilation and engine refresh.
-template: splash
 ---
 
 Keep `.recite` source, schema declarations, PO catalogues and runtime fixtures in version control.

@@ -1,7 +1,10 @@
 **
 !package.json
-!pnpm-lock.yaml
-!pnpm-workspace.yaml
+!bun.lock
+!bunfig.toml
+!tsconfig.base.json
+!oxfmt.config.mts
+!oxlint.config.mts
 !.mise.toml
 !docs-site/
 !docs-site/**
@@ -19,7 +22,6 @@
 !fixtures/recite/valid/landing-junction.recite
 docs-site/node_modules/
 docs-site/dist/
-docs-site/.astro/
 docs-site/playwright-report/
 docs-site/test-results/
 docs-site/.browser-artifacts/

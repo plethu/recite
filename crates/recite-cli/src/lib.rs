@@ -20,7 +20,7 @@
 //! ```
 
 use std::ffi::OsString;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::process::ExitCode;
 
 mod args;
@@ -72,6 +72,15 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
         };
     }
 
+    // Human diagnostics are coloured only on a terminal, under the same NO_COLOR/CLICOLOR and
+    // configured colour mode as the TUI.
+    diagnostics::set_color(
+        io::stderr().is_terminal()
+            && TuiSettings::load(None).map_or_else(
+                |_| TuiSettings::default().color_enabled(),
+                |settings| settings.color_enabled(),
+            ),
+    );
     let result = commands::run_command(cli.command, &mut stdout, &mut stderr, &error_messages);
 
     match result {

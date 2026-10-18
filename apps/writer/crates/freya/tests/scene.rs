@@ -288,16 +288,16 @@ fn line_details_can_be_opened_and_closed_without_panicking()
         .ok_or("prose field")?;
     test.click_cursor((f64::from(field.min_x() + 2.), f64::from(field.min_y() + 2.)));
     test.poll_n(std::time::Duration::from_millis(16), 15);
-    click_label(&mut test, "Passage actions ▾")?;
-    click_label(&mut test, "Line / choice details")?;
+    click_label(&mut test, "Line actions ▾")?;
+    click_label(&mut test, "Line details")?;
     capture(&mut test, "passage-inspector.png")?;
     assert!(
         test.find(|_, element| Label::try_downcast(element)
             .filter(|label| label.text.contains("7701ceab59d2adfa057a")))
             .is_some()
     );
-    click_label(&mut test, "Passage actions ▾")?;
-    click_label(&mut test, "Line / choice details")?;
+    click_label(&mut test, "Line actions ▾")?;
+    click_label(&mut test, "Line details")?;
     assert!(
         test.find(|_, element| Label::try_downcast(element)
             .filter(|label| label.text.contains("7701ceab59d2adfa057a")))
@@ -334,7 +334,7 @@ fn sidebar_and_menu_dismissal_preserve_the_draft() -> Result<(), Box<dyn std::er
     test.click_cursor((f64::from(area.min_x() + 4.), f64::from(area.min_y() + 4.)));
     test.write_text("Draft ");
     let before_menu = field_area(&test);
-    click_label(&mut test, "Passage actions ▾")?;
+    click_label(&mut test, "Line actions ▾")?;
     assert_eq!(
         field_area(&test),
         before_menu,
@@ -358,8 +358,12 @@ fn sidebar_and_menu_dismissal_preserve_the_draft() -> Result<(), Box<dyn std::er
     });
     test.poll_n(std::time::Duration::from_millis(16), 15);
     assert!(
-        test.find(|_, el| Label::try_downcast(el).filter(|l| l.text.as_ref() == "Add choice"))
-            .is_none()
+        // The Script footer also has "Add reply"; only the menu's item must close.
+        test.find(|_, el| Rect::try_downcast(el).filter(|r| {
+            r.accessibility.builder.role() == AccessibilityRole::MenuItem
+                && r.accessibility.builder.label() == Some("Add reply")
+        }))
+        .is_none()
     );
     let trigger = *platform.focused_accessibility_id.peek();
     test.send_event(PlatformEvent::Keyboard {
@@ -373,8 +377,12 @@ fn sidebar_and_menu_dismissal_preserve_the_draft() -> Result<(), Box<dyn std::er
     test.click_cursor((10., 790.));
     test.poll_n(std::time::Duration::from_millis(16), 15);
     assert!(
-        test.find(|_, el| Label::try_downcast(el).filter(|l| l.text.as_ref() == "Add choice"))
-            .is_none()
+        // The Script footer also has "Add reply"; only the menu's item must close.
+        test.find(|_, el| Rect::try_downcast(el).filter(|r| {
+            r.accessibility.builder.role() == AccessibilityRole::MenuItem
+                && r.accessibility.builder.label() == Some("Add reply")
+        }))
+        .is_none()
     );
     click_label(&mut test, "Show scenes")?;
     Ok(())

@@ -1,7 +1,6 @@
 ---
 title: Preparing and checking packages
 description: Find package procedures and release acceptance requirements.
-template: splash
 ---
 
 Use the package's own installation and upgrade instructions. Record the source revision, artifact

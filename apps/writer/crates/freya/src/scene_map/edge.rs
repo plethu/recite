@@ -58,8 +58,10 @@ impl Component for Edge {
         let curve = Path::from_svg(&self.route.path);
         let arrow = Path::from_svg(&self.route.arrow);
         let p = crate::design::palette::current();
-        let base = crate::design::palette::skia_opaque(p.boundary);
-        let accent = crate::design::palette::skia_opaque(p.accent);
+        // Forward flow is the plum ink; returns are the second ink, so the two read apart.
+        let ink = if self.returning { p.teal } else { p.accent };
+        let base = crate::design::palette::skia_opaque(ink);
+        let accent = base;
         let layer = |color: Color, thickness: f32| {
             let curve = curve.clone();
             let arrow = arrow.clone();
@@ -98,7 +100,8 @@ impl Component for Edge {
             .width(Size::px(width * zoom))
             .height(Size::px(height * zoom))
             .opacity(opacity.get().value())
-            .child(layer(base, 1.))
+            // Weight carries the hierarchy as well as ink: forward flow is heavier than returns.
+            .child(layer(base, if self.returning { 1. } else { 1.5 }))
             .child(
                 rect()
                     .position(Position::new_absolute().left(0.).top(0.))

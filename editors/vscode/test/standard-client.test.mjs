@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { ReciteStandardClient } from "../src/standard-client.js";
+import { test } from "bun:test";
+import { ReciteStandardClient } from "../src/standard-client.ts";
 import { action, hostApi } from "./controller-fixtures.mjs";
 
 class FakeLanguageClient {
@@ -27,6 +27,14 @@ class FakeLanguageClient {
   }
 }
 const load = async () => ({
+  CancellationToken: {
+    None: {
+      isCancellationRequested: false,
+      onCancellationRequested() {
+        return { dispose() {} };
+      },
+    },
+  },
   LanguageClient: FakeLanguageClient,
   State: { Stopped: 3 },
   ErrorAction: { Shutdown: 2 },
@@ -53,10 +61,10 @@ test("standard client delegates synchronization and language features to the lib
     args: ["--stdio"],
     options: { cwd: "/project", shell: false },
   });
-  assert.deepEqual(implementation.options.documentSelector.map((entry) => entry.scheme), [
-    "file",
-    "untitled",
-  ]);
+  assert.deepEqual(
+    implementation.options.documentSelector.map((entry) => entry.scheme),
+    ["file", "untitled"],
+  );
   assert.equal(implementation.options.workspaceFolder.uri.toString(), "file:///project");
   assert.equal(api.registeredProviders.length, 0);
   assert.equal(implementation.options.middleware.provideRenameEdits(), undefined);
@@ -125,4 +133,41 @@ test("code actions keep version guards and cancellation at the Recite boundary",
   assert.equal(edits[0].reciteVersionStatus(), "document-stale");
   assert.equal(implementation.requests[0].method, "textDocument/codeAction");
   await client.stop();
+});
+
+test("dynamic registration retains standard providers and suppresses native rename", async () => {
+  const adapter = new ReciteStandardClient(
+    hostApi({ isTrusted: () => true }),
+    { command: "recite-lsp", args: [] },
+    {},
+    load,
+  );
+  await adapter.start();
+  let registered;
+  let token;
+  await FakeLanguageClient.current.options.middleware.handleRegisterCapability(
+    {
+      registrations: [
+        { id: "rename", method: "textDocument/rename" },
+        { id: "completion", method: "textDocument/completion" },
+      ],
+    },
+    async (params, cancellationToken) => {
+      registered = params;
+      token = cancellationToken;
+    },
+  );
+  assert.deepEqual(registered.registrations, [
+    { id: "completion", method: "textDocument/completion" },
+  ]);
+  assert.equal(token.isCancellationRequested, false);
+  const failure = new Error("registration failed");
+  await assert.rejects(
+    FakeLanguageClient.current.options.middleware.handleRegisterCapability(
+      { registrations: [] },
+      async () => failure,
+    ),
+    (error) => error === failure,
+  );
+  await adapter.stop();
 });

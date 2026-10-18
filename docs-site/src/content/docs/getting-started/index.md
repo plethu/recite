@@ -1,7 +1,6 @@
 ---
 title: Getting started
 description: Install Recite, write a scene, and run it before connecting a game engine.
-template: splash
 ---
 
 Start with a small scene you can read in full. You will give its lines and choices stable IDs,

@@ -32,7 +32,7 @@ fn indicator(test: &TestingRunner) -> Area {
     test.find(|node, element| {
         Rect::try_downcast(element)
             .filter(|rect| {
-                rect.style.background.as_color() == Some(palette::Palette::new(true).selection)
+                rect.style.background.as_color() == Some(palette::Palette::new(true).stamp)
             })
             .map(|_| node.layout().area)
     })

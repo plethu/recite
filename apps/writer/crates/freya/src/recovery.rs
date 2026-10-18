@@ -1,10 +1,11 @@
+mod encoding;
 mod worker;
 pub(crate) use worker::SnapshotStore;
 pub(crate) type RecoveryStore = SnapshotStore<Recovery>;
 // A locked, atomic recovery snapshot beside each edited document.
 use std::{
     fs::{self, File, OpenOptions},
-    io::{self, Write},
+    io::{self, BufWriter, Write},
     path::{Path, PathBuf},
 };
 
@@ -33,11 +34,31 @@ impl Recovery {
 pub(crate) trait Snapshot:
     Clone + PartialEq + Serialize + serde::de::DeserializeOwned + Send + 'static
 {
+    type Encoding: Default + Send + 'static;
+
     fn valid_version(&self) -> bool;
+
+    fn encode(
+        &self,
+        output: impl Write,
+        _encoding: &mut Self::Encoding,
+    ) -> Result<(), serde_json::Error> {
+        serde_json::to_writer(output, self)
+    }
 }
 impl Snapshot for Recovery {
+    type Encoding = encoding::Encoding;
+
     fn valid_version(&self) -> bool {
         self.version == 1
+    }
+
+    fn encode(
+        &self,
+        output: impl Write,
+        encoding: &mut Self::Encoding,
+    ) -> Result<(), serde_json::Error> {
+        encoding.write(self, output)
     }
 }
 
@@ -46,6 +67,7 @@ struct RecoveryDisk<T: Snapshot> {
     // OS lock is released even after a process crash; the empty lock file remains.
     lock: File,
     persisted: Option<T>,
+    encoding: T::Encoding,
 }
 
 impl<T: Snapshot> Drop for RecoveryDisk<T> {
@@ -92,6 +114,7 @@ impl<T: Snapshot> RecoveryDisk<T> {
             path,
             lock,
             persisted,
+            encoding: T::Encoding::default(),
         })
     }
 
@@ -101,13 +124,15 @@ impl<T: Snapshot> RecoveryDisk<T> {
 
     pub fn persist(&mut self, recovery: Option<T>) -> Result<(), FileError> {
         if recovery == self.persisted {
+            if recovery.is_none() {
+                self.encoding = T::Encoding::default();
+            }
             return Ok(());
         }
         let parent = self.path.parent().ok_or(FileError::Selection)?;
         if let Some(recovery) = &recovery {
             let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-            serde_json::to_writer(&mut temporary, recovery)?;
-            temporary.flush()?;
+            write_snapshot(&mut temporary, recovery, &mut self.encoding)?;
             temporary.as_file().sync_all()?;
             temporary.persist(&self.path).map_err(|error| error.error)?;
         } else {
@@ -119,9 +144,23 @@ impl<T: Snapshot> RecoveryDisk<T> {
         }
         #[cfg(unix)]
         File::open(parent)?.sync_all()?;
+        if recovery.is_none() {
+            self.encoding = T::Encoding::default();
+        }
         self.persisted = recovery;
         Ok(())
     }
+}
+
+fn write_snapshot<T: Snapshot>(
+    output: impl Write,
+    snapshot: &T,
+    encoding: &mut T::Encoding,
+) -> Result<(), FileError> {
+    let mut output = BufWriter::new(output);
+    snapshot.encode(&mut output, encoding)?;
+    output.flush()?;
+    Ok(())
 }
 
 fn sidecar(source: &Path, suffix: &str) -> PathBuf {

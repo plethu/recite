@@ -100,10 +100,7 @@ const pluralLine = ($, terminator) =>
     field("text", $.prose_text),
   ]);
 const proseLine = ($, terminator) =>
-  terminated($, terminator, [
-    $.indent,
-    field("text", $.prose_text),
-  ]);
+  terminated($, terminator, [$.indent, field("text", $.prose_text)]);
 
 const sourceLines = ($) =>
   choice(
@@ -122,21 +119,23 @@ const sourceLines = ($) =>
     $.prose_line,
   );
 const finalLine = ($) =>
-  optional(choice(
-    alias($._final_blank_line, $.blank_line),
-    alias($._final_comment_line, $.comment_line),
-    alias($._final_block_statement, $.block_statement),
-    alias($._final_line_statement, $.line_statement),
-    alias($._final_choice_statement, $.choice_statement),
-    alias($._final_effect_statement, $.effect_statement),
-    alias($._final_divert_statement, $.divert_statement),
-    alias($._final_if_statement, $.if_statement),
-    alias($._final_else_statement, $.else_statement),
-    alias($._final_match_statement, $.match_statement),
-    alias($._final_case_statement, $.case_statement),
-    alias($._final_plural_line, $.plural_line),
-    alias($._final_prose_line, $.prose_line),
-  ));
+  optional(
+    choice(
+      alias($._final_blank_line, $.blank_line),
+      alias($._final_comment_line, $.comment_line),
+      alias($._final_block_statement, $.block_statement),
+      alias($._final_line_statement, $.line_statement),
+      alias($._final_choice_statement, $.choice_statement),
+      alias($._final_effect_statement, $.effect_statement),
+      alias($._final_divert_statement, $.divert_statement),
+      alias($._final_if_statement, $.if_statement),
+      alias($._final_else_statement, $.else_statement),
+      alias($._final_match_statement, $.match_statement),
+      alias($._final_case_statement, $.case_statement),
+      alias($._final_plural_line, $.plural_line),
+      alias($._final_prose_line, $.prose_line),
+    ),
+  );
 
 module.exports = {
   directiveNonWhitespace,

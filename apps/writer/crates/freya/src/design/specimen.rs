@@ -1,22 +1,31 @@
 //! Runnable native specimen of production controls. No project or preferences are written.
+mod panels;
 use super::{
-    BeatCard, Button, PickerOption, ReducedMotion, SearchField, SearchPicker, Segments, palette,
-    tokens as t,
+    Button, PickerOption, ReducedMotion, SearchField, SearchPicker, Segments, palette, tokens as t,
 };
 use freya::prelude::*;
 use std::sync::Arc;
 
+fn tier(name: &str, control: Button) -> Rect {
+    rect()
+        .spacing(t::SPACE_XS)
+        .child(t::caps(name))
+        .child(control)
+}
+
 pub(crate) fn app() -> Element {
     let mut dark = use_state(|| true);
-    let mut theme = use_init_theme(|| palette::theme(true));
+    let mut monochrome = use_state(|| false);
+    let mut theme = use_init_theme(|| palette::theme_with(true, false));
     let mut reduced = use_state(|| false);
     use_provide_context(|| ReducedMotion(reduced));
     let query = use_state(String::new);
     let active = use_state(|| None);
     let picker_query = use_state(String::new);
-    let mut picker_open = use_state(|| false);
+    let picker_open = use_state(|| false);
     let mut destination = use_state(|| "Missing Courier".to_owned());
     let mut view = use_state(|| 0);
+    let mut row = use_state(|| 1);
     let mut message = use_state(|| "Try the controls, then compare both appearances.".to_owned());
     let options = use_memo(move || {
         let needle = picker_query.read().to_lowercase();
@@ -41,12 +50,16 @@ pub(crate) fn app() -> Element {
         .cross_align(Alignment::Center)
         .spacing(t::SPACE_SM)
         .child(
-            label()
-                .text("recite.")
-                .font_size(26.)
-                .font_weight(FontWeight::MEDIUM),
+            SvgViewer::new(Bytes::from_static(include_bytes!(
+                "../../../../../../assets/identity/recite-wordmark.svg"
+            )))
+            .width(Size::px(28. * t::WORDMARK_ASPECT))
+            .height(Size::px(28.))
+            .fill(p.wordmark)
+            .color(p.teal)
+            .a11y_alt("Recite"),
         )
-        .child(label().text("Native component specimen").color(p.muted))
+        .child(t::meta("native component specimen"))
         .child(rect().width(Size::flex(1.)))
         .child(
             Button::new()
@@ -64,45 +77,58 @@ pub(crate) fn app() -> Element {
                 .on_press(move |_| {
                     let next = !*dark.peek();
                     dark.set(next);
-                    theme.set(palette::theme(next));
+                    theme.set(palette::theme_with(next, *monochrome.peek()));
                 })
                 .child(if *dark.read() {
                     "Light appearance"
                 } else {
                     "Dark appearance"
                 }),
+        )
+        .child(
+            Button::new()
+                .toggle(*monochrome.read())
+                .on_press(move |_| {
+                    let next = !*monochrome.peek();
+                    monochrome.set(next);
+                    theme.set(palette::theme_with(*dark.peek(), next));
+                })
+                .child("Monochrome"),
         );
     let controls = rect()
         .width(Size::fill())
         .spacing(t::SPACE_MD)
-        .child(
-            label()
-                .text("Actions and navigation")
-                .font_weight(FontWeight::MEDIUM),
-        )
+        .child(t::caps("Actions and navigation"))
         .child(
             rect()
                 .horizontal()
-                .cross_align(Alignment::Center)
-                .spacing(t::SPACE_SM)
-                .child(
+                .cross_align(Alignment::End)
+                .spacing(t::SPACE_LG)
+                .child(tier(
+                    "Primary",
                     Button::new()
                         .filled()
                         .on_press(move |_| message.set("Primary action activated.".into()))
                         .child("Try scene"),
-                )
-                .child(
+                ))
+                .child(tier(
+                    "Stamp",
                     Button::new()
+                        .stamp()
                         .on_press(move |_| message.set("Secondary action activated.".into()))
                         .child("Add beat"),
-                )
-                .child(
+                ))
+                .child(tier(
+                    "Quiet",
                     Button::new()
                         .flat()
                         .on_press(move |_| message.set("Quiet action activated.".into()))
                         .child("Arrange automatically"),
-                )
-                .child(Button::new().enabled(false).child("Save changes"))
+                ))
+                .child(tier(
+                    "Disabled",
+                    Button::new().stamp().enabled(false).child("Save changes"),
+                ))
                 .child(Segments {
                     shortcuts: None,
                     name: "Writing view".into(),
@@ -112,7 +138,8 @@ pub(crate) fn app() -> Element {
                     vim: false,
                     width: Size::px(180.),
                     change: EventHandler::new(move |index| view.set(index)),
-                }),
+                })
+                .child(t::meta("⌘↵ try · ⌘B add")),
         )
         .child(
             rect()
@@ -177,30 +204,51 @@ pub(crate) fn app() -> Element {
                 .font_size(t::small())
                 .color(p.muted),
         );
-    let manuscript = rect().width(Size::fill()).horizontal().content(Content::Flex).spacing(t::SPACE_XL)
-        .child(rect().width(Size::flex(1.)).spacing(t::SPACE_MD)
-            .child(label().text("Relay Desk").font_size(t::title()).font_weight(FontWeight::MEDIUM))
-            .child(rect().width(Size::fill()).spacing(t::SPACE_XS)
-                .child(label().text("Mara").font_size(t::small()).color(p.muted))
-            .child(t::prose().width(Size::fill()).child(label()
-                .text("If you're here about the transmitter, take a number. If you're here about the smoke, take a bucket.")
-                .line_height(1.5))))
-            .child(rect().width(Size::fill()).spacing(t::SPACE_XS)
-                .child(label().text("Reply 1").font_size(t::small()).color(p.muted))
-            .child(t::prose().child(label().text("Anything I can do to help?").line_height(1.5))))
-            .child(Button::new().flat().on_press(move |_| picker_open.set(true)).child("Missing Courier →")))
-        .child(rect().width(Size::px(320.)).spacing(t::SPACE_MD)
-            .child(label().text("Graph cards").font_size(t::small()).color(p.muted))
-            .child(rect().width(Size::fill()).height(Size::px(156.)).child(BeatCard {
-                title: "Relay Desk".into(), speaker: "Mara".into(),
-                excerpt: "If you're here about the transmitter, take a number. If you're here about the smoke, take a bucket.".into(),
-                annotations: String::new(), selected: true, active: false, zoom: 1.,
-            }))
-            .child(rect().width(Size::fill()).height(Size::px(156.)).child(BeatCard {
-                title: "Missing Courier".into(), speaker: "Mara".into(),
-                excerpt: "Our courier is two days late. Everyone keeps asking about the battery she was carrying.".into(),
-                annotations: String::new(), selected: false, active: false, zoom: 1.,
-            })));
+    let rows = ["Relay Hub", "Start · Relay Desk", "Missing Courier"];
+    let mut list = rect()
+        .width(Size::px(240.))
+        .spacing(t::SPACE_XS)
+        .child(t::caps("Scenes"));
+    for (index, caption) in rows.into_iter().enumerate() {
+        list = list.child(
+            Button::new()
+                .flat()
+                .row_gutter()
+                .toggle(index == *row.read())
+                .width(Size::fill())
+                .on_press(move |_| row.set(index))
+                .child(rect().width(Size::fill()).child(label().text(caption))),
+        );
+    }
+    let lists = rect()
+        .width(Size::fill())
+        .horizontal()
+        .spacing(t::SPACE_XL)
+        .child(list)
+        .child(
+            rect()
+                .width(Size::flex(1.))
+                .spacing(t::SPACE_SM)
+                .child(t::caps("Meta"))
+                .child(t::meta(
+                    "relay_hub.recite  :: relay_desk  default  4 replies",
+                ))
+                .child(t::meta("@7701ceab59d2adfa057a"))
+                .child(
+                    rect()
+                        .width(Size::fill())
+                        .height(Size::px(1.))
+                        .background(p.rule),
+                )
+                .child(
+                    label()
+                        .text("Hairlines are ink at 14%; selection is the second-ink plate.")
+                        .font_size(t::small())
+                        .color(p.muted),
+                ),
+        );
+    let print = panels::elevation(&p);
+    let manuscript = panels::manuscript(picker_open);
     t::interface()
         .expanded()
         .background(p.canvas)
@@ -222,6 +270,22 @@ pub(crate) fn app() -> Element {
                                 .corner_radius(t::DIALOG_RADIUS)
                                 .background(p.surface)
                                 .child(controls),
+                        )
+                        .child(
+                            rect()
+                                .width(Size::fill())
+                                .padding(t::PANEL_PADDING)
+                                .corner_radius(t::DIALOG_RADIUS)
+                                .background(p.surface)
+                                .child(lists),
+                        )
+                        .child(
+                            rect()
+                                .width(Size::fill())
+                                .padding(t::PANEL_PADDING)
+                                .corner_radius(t::DIALOG_RADIUS)
+                                .background(p.surface)
+                                .child(print),
                         )
                         .child(
                             rect()

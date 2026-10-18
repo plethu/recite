@@ -1,13 +1,16 @@
 //! Writer design system: semantic tokens and shared interaction primitives.
 mod button;
 pub(crate) mod tokens;
-pub(crate) use button::Button;
+pub(crate) use button::{Button, StampScope};
 
 mod checkbox;
 mod dialog;
 mod focus_scroll;
 pub(crate) use checkbox::checkbox;
 pub(crate) use dialog::{Dialog, ModalState, actions, modal_open};
+
+mod empty;
+pub(crate) use empty::EmptyState;
 
 mod splitter;
 pub(crate) use splitter::Splitter;
@@ -42,7 +45,8 @@ pub(crate) use beat_card::{BeatCard, DIALOGUE_ZOOM};
 
 pub(crate) mod specimen;
 
-mod material;
+pub(crate) mod material;
+pub(crate) use material::loading_mark;
 
 mod search_scroll;
 pub(crate) use search_scroll::use_list_reveal;

@@ -1,5 +1,5 @@
 export { FakeChild } from "./child.ts";
-import { CommandRegistry } from "../src/commands.js";
+import { CommandRegistry } from "../src/commands.ts";
 
 export function watchRegistry(
   messages,
@@ -17,7 +17,7 @@ export function watchRegistry(
       workspaceFolders: [{ uri: { fsPath: "/project" } }],
       textDocuments: documents,
       getConfiguration: () => ({
-        get: (key, fallback) => ({ "lsp.projectRoot": projectRoot }[key] ?? fallback),
+        get: (key, fallback) => ({ "lsp.projectRoot": projectRoot })[key] ?? fallback,
       }),
     },
     languages: {
@@ -38,35 +38,39 @@ export function watchRegistry(
       executeCommand: (id, ...args) => commands.get(id)?.(...args),
     },
   };
-  return new CommandRegistry(api, {
-    commandNotTrusted: () => messages.push(["untrusted"]),
-    commandDocumentRequired: () => new Error("document"),
-    commandDocumentUnsaved: () => new Error("unsaved"),
-    commandUntitledDocument: () => new Error("untitled"),
-    commandWorkspaceRequired: () => new Error("workspace"),
-    cliPathInvalid: () => new Error("path"),
-    commandInputInvalid: () => new Error("input"),
-    commandWatchRunning: () => messages.push(["running"]),
-    commandWatchNotRunning: () => messages.push(["not-running"]),
-    commandWatchStopTimeout: () => messages.push(["timeout"]),
-    commandResult() {},
-    commandContentDiagnostics() {},
-    commandFailure: (value) => messages.push(["failure", value]),
-    commandProtocolFailure: (value) => messages.push(["protocol", value]),
-    commandWatchStatus: (value) => messages.push(["watch", value]),
-    activeDocument: () => undefined,
-    documentIsOpen: () => true,
-    chooseCompileOutputPath: async () => undefined,
-    chooseExtractOutputPath: async () => undefined,
-    chooseAssetPath: async () => undefined,
-    chooseBlock: async () => undefined,
-    chooseFixturePath: async () => undefined,
-  }, {
-    makeInvocationId: () => invocationId,
-    spawnProcess: () => child,
-    watchStopTimeoutMs,
-    watchForceKillDelayMs: 10,
-  });
+  return new CommandRegistry(
+    api,
+    {
+      commandNotTrusted: () => messages.push(["untrusted"]),
+      commandDocumentRequired: () => new Error("document"),
+      commandDocumentUnsaved: () => new Error("unsaved"),
+      commandUntitledDocument: () => new Error("untitled"),
+      commandWorkspaceRequired: () => new Error("workspace"),
+      cliPathInvalid: () => new Error("path"),
+      commandInputInvalid: () => new Error("input"),
+      commandWatchRunning: () => messages.push(["running"]),
+      commandWatchNotRunning: () => messages.push(["not-running"]),
+      commandWatchStopTimeout: () => messages.push(["timeout"]),
+      commandResult() {},
+      commandContentDiagnostics() {},
+      commandFailure: (value) => messages.push(["failure", value]),
+      commandProtocolFailure: (value) => messages.push(["protocol", value]),
+      commandWatchStatus: (value) => messages.push(["watch", value]),
+      activeDocument: () => undefined,
+      documentIsOpen: () => true,
+      chooseCompileOutputPath: async () => undefined,
+      chooseExtractOutputPath: async () => undefined,
+      chooseAssetPath: async () => undefined,
+      chooseBlock: async () => undefined,
+      chooseFixturePath: async () => undefined,
+    },
+    {
+      makeInvocationId: () => invocationId,
+      spawnProcess: () => child,
+      watchStopTimeoutMs,
+      watchForceKillDelayMs: 10,
+    },
+  );
 }
 
 export function watchDiagnostic(file) {

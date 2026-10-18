@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { RenameCommand } from "../src/rename-command.js";
+import { describe, test } from "bun:test";
+import { RenameCommand } from "../src/rename-command.ts";
 import { document, harness, range, workspaceEdit } from "./rename-test-fixtures.mjs";
 
 test("explicit rename captures the client and applies a current versioned workspace edit", async () => {
@@ -20,10 +20,10 @@ test("explicit rename captures the client and applies a current versioned worksp
 
   assert.equal(await command.execute(), true);
   assert.equal(promptOptions, "work");
-  assert.deepEqual(requests.map(({ method }) => method), [
-    "textDocument/prepareRename",
-    "textDocument/rename",
-  ]);
+  assert.deepEqual(
+    requests.map(({ method }) => method),
+    ["textDocument/prepareRename", "textDocument/rename"],
+  );
   assert.deepEqual(requests[0].params, {
     textDocument: { uri: h.primary.uri.toString() },
     position: { line: 1, character: 4 },
@@ -48,19 +48,17 @@ test("rename input cancellation is a no-op and does not send rename", async () =
   assert.deepEqual(h.messages, []);
 });
 
-test("rename accepts only the three LSP prepareRename response shapes", async (t) => {
+describe("rename accepts only the three LSP prepareRename response shapes", () => {
   const valid = [
     ["bare range", range()],
     ["range with placeholder", { range: range(), placeholder: "work" }],
     ["default behavior", { defaultBehavior: true }],
   ];
   for (const [label, prepared] of valid) {
-    await t.test(label, async () => {
+    test(label, async () => {
       const h = harness();
       h.client.request = async (method) =>
-        method === "textDocument/prepareRename"
-          ? prepared
-          : workspaceEdit(h.primary, h.sibling);
+        method === "textDocument/prepareRename" ? prepared : workspaceEdit(h.primary, h.sibling);
       h.ui.chooseRenameName = async () => "renamed";
       const command = new RenameCommand(h.api, h.ui, () => h.client);
       assert.equal(await command.execute(), true);
@@ -71,10 +69,13 @@ test("rename accepts only the three LSP prepareRename response shapes", async (t
     ["missing placeholder", { range: range() }],
     ["non-string placeholder", { range: range(), placeholder: 1 }],
     ["reversed bare range", { start: { line: 2, character: 0 }, end: { line: 1, character: 9 } }],
-    ["reversed range result", {
-      range: { start: { line: 2, character: 0 }, end: { line: 1, character: 9 } },
-      placeholder: "work",
-    }],
+    [
+      "reversed range result",
+      {
+        range: { start: { line: 2, character: 0 }, end: { line: 1, character: 9 } },
+        placeholder: "work",
+      },
+    ],
     ["false default behavior", { defaultBehavior: false }],
     ["mixed range and default behavior", { range: range(), defaultBehavior: true }],
     ["extra range result field", { range: range(), placeholder: "work", extra: true }],
@@ -82,7 +83,7 @@ test("rename accepts only the three LSP prepareRename response shapes", async (t
     ["default behavior with extra field", { defaultBehavior: true, placeholder: "work" }],
   ];
   for (const [label, prepared] of invalid) {
-    await t.test(label, async () => {
+    test(label, async () => {
       const h = harness();
       h.client.request = async () => prepared;
       const command = new RenameCommand(h.api, h.ui, () => h.client);
@@ -93,9 +94,9 @@ test("rename accepts only the three LSP prepareRename response shapes", async (t
   }
 });
 
-test("rename refuses null and malformed prepare responses", async (t) => {
+describe("rename refuses null and malformed prepare responses", () => {
   for (const prepared of [null, { range: { start: { line: 0 } } }]) {
-    await t.test(JSON.stringify(prepared), async () => {
+    test(JSON.stringify(prepared), async () => {
       const h = harness();
       h.client.request = async () => prepared;
       const command = new RenameCommand(h.api, h.ui, () => h.client);
@@ -107,24 +108,22 @@ test("rename refuses null and malformed prepare responses", async (t) => {
   }
 });
 
-test("rename rejects an unversioned or closed sibling before apply", async (t) => {
-  for (
-    const [label, siblingChange, removeSibling] of [
-      ["unversioned", { textDocument: { uri: "file:///sibling.recite" }, edits: [] }, false],
-      ["closed", { textDocument: { uri: "file:///sibling.recite", version: 3 }, edits: [] }, true],
-    ]
-  ) {
-    await t.test(label, async () => {
+describe("rename rejects an unversioned or closed sibling before apply", () => {
+  for (const [label, siblingChange, removeSibling] of [
+    ["unversioned", { textDocument: { uri: "file:///sibling.recite" }, edits: [] }, false],
+    ["closed", { textDocument: { uri: "file:///sibling.recite", version: 3 }, edits: [] }, true],
+  ]) {
+    test(label, async () => {
       const h = harness();
       h.client.request = async (method) =>
         method === "textDocument/prepareRename"
           ? { defaultBehavior: true }
           : {
-            documentChanges: [
-              workspaceEdit(h.primary, h.sibling).documentChanges[0],
-              siblingChange,
-            ],
-          };
+              documentChanges: [
+                workspaceEdit(h.primary, h.sibling).documentChanges[0],
+                siblingChange,
+              ],
+            };
       if (removeSibling) h.documents.splice(1, 1);
       h.ui.chooseRenameName = async () => "renamed";
       const command = new RenameCommand(h.api, h.ui, () => h.client);
@@ -195,18 +194,22 @@ test("rename checks document generations immediately before apply", async () => 
   assert.equal(h.applied.length, 1);
 });
 
-test("rename refuses a sibling that becomes stale or reopens before apply", async (t) => {
-  for (
-    const [label, mutate] of [
-      ["stale", (h) => {
+describe("rename refuses a sibling that becomes stale or reopens before apply", () => {
+  for (const [label, mutate] of [
+    [
+      "stale",
+      (h) => {
         h.sibling.version = 4;
-      }],
-      ["reopened", (h) => {
+      },
+    ],
+    [
+      "reopened",
+      (h) => {
         h.documents[1] = document("sibling.recite", h.sibling.version);
-      }],
-    ]
-  ) {
-    await t.test(label, async () => {
+      },
+    ],
+  ]) {
+    test(label, async () => {
       const h = harness();
       h.client.request = async (method) =>
         method === "textDocument/prepareRename"
@@ -216,8 +219,8 @@ test("rename refuses a sibling that becomes stale or reopens before apply", asyn
       let lookups = 0;
       const command = new RenameCommand(h.api, h.ui, () => h.client, {
         getOpenDocument: (uri) => {
-          const found = h.documents.find((candidate) =>
-            candidate.uri.toString() === uri.toString()
+          const found = h.documents.find(
+            (candidate) => candidate.uri.toString() === uri.toString(),
           );
           // Two lookups occur while translating the edit; the first status
           // lookup is where a close/reopen or edit race is introduced.
@@ -262,8 +265,8 @@ test("rename reports a host apply exception", async () => {
   assert.deepEqual(h.messages, ["apply-failed"]);
 });
 
-test("rename reports prepare and rename request failures", async (t) => {
-  await t.test("prepare", async () => {
+describe("rename reports prepare and rename request failures", () => {
+  test("prepare", async () => {
     const h = harness();
     h.client.request = async () => {
       throw new Error("prepare failed");
@@ -272,7 +275,7 @@ test("rename reports prepare and rename request failures", async (t) => {
     assert.equal(await command.execute(), false);
     assert.deepEqual(h.messages, [["request-failed", "prepare failed"]]);
   });
-  await t.test("rename", async () => {
+  test("rename", async () => {
     const h = harness();
     h.client.request = async (method) => {
       if (method === "textDocument/prepareRename") return { defaultBehavior: true };

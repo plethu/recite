@@ -17,8 +17,10 @@ fn validate_project_reports_discovered_source_diagnostics_with_project_key() {
 
     let output = run(recite().arg("validate-project").arg(temp.path()));
     assert_diagnostic_failure(&output);
-    output.assert_stderr_contains("error RECITE_PARSE013 dialogue/malformed.recite:2:12");
-    output.assert_stderr_contains("error RECITE_PARSE001 dialogue/malformed.recite:3:3");
+    output.assert_stderr_contains("[RECITE_PARSE013]");
+    output.assert_stderr_contains("--> dialogue/malformed.recite:2:12");
+    output.assert_stderr_contains("[RECITE_PARSE001]");
+    output.assert_stderr_contains("--> dialogue/malformed.recite:3:3");
 }
 
 #[test]
@@ -41,8 +43,10 @@ fn validate_project_reports_deterministic_cross_file_diagnostics() {
     let second = run(recite().arg("validate-project").arg(temp.path()));
     assert_diagnostic_failure(&first);
     assert_eq!(stderr(&first), stderr(&second));
+    first.assert_stderr_contains("[RECITE_VALIDATE007]");
+    first.assert_stderr_contains("--> dialogue/start.recite:4:1");
     first.assert_stderr_contains(
-        "error RECITE_VALIDATE007 dialogue/start.recite:4:1 unknown block reference `target.recite::missing`",
+        "[RECITE_VALIDATE007]: unknown block reference `target.recite::missing`",
     );
 }
 
@@ -67,7 +71,7 @@ fn validate_project_stops_project_checks_after_non_utf8_source_discovery() {
     let output = run(recite().arg("validate-project").arg(temp.path()));
     assert_diagnostic_failure(&output);
     let stderr = stderr(&output);
-    assert!(stderr.contains("error RECITE_CONFIG115"), "{stderr}");
+    assert!(stderr.contains("error[RECITE_CONFIG115]"), "{stderr}");
     assert!(
         stderr.contains(&format!("{}:1:1", unreadable.display())),
         "{stderr}"
@@ -99,18 +103,18 @@ fn validate_project_keeps_readable_parse_diagnostics_with_non_utf8_discovery() {
     assert_diagnostic_failure(&output);
     let stderr = stderr(&output);
     assert!(
-        stderr.contains("error RECITE_PARSE013 dialogue/malformed.recite:2:12"),
+        (stderr.contains("[RECITE_PARSE013]")
+            && stderr.contains("--> dialogue/malformed.recite:2:12")),
         "{stderr}"
     );
     assert!(
-        stderr.contains("error RECITE_PARSE001 dialogue/malformed.recite:3:3"),
+        (stderr.contains("[RECITE_PARSE001]")
+            && stderr.contains("--> dialogue/malformed.recite:3:3")),
         "{stderr}"
     );
     assert!(
-        stderr.contains(&format!(
-            "error RECITE_CONFIG115 {}:1:1",
-            unreadable.display()
-        )),
+        stderr.contains("[RECITE_CONFIG115]")
+            && stderr.contains(&format!("--> {}:1:1", unreadable.display())),
         "{stderr}"
     );
 }
@@ -134,7 +138,7 @@ fn validate_project_ignores_malformed_excluded_source() {
         .arg("validate-project")
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  project, no diagnostics\n");
 }
 
 #[test]
@@ -149,11 +153,12 @@ fn check_fresh_does_not_emit_discovered_source_diagnostics() {
 
     let validate = run(recite().arg("validate-project").arg(temp.path()));
     assert_diagnostic_failure(&validate);
-    validate.assert_stderr_contains("RECITE_PARSE013 dialogue/malformed.recite:2:12");
+    validate.assert_stderr_contains("[RECITE_PARSE013]");
+    validate.assert_stderr_contains("--> dialogue/malformed.recite:2:12");
 
     recite()
         .arg("check-fresh")
         .arg(temp.path())
         .assert_success()
-        .assert_stderr("");
+        .assert_stderr("ok  project, no diagnostics\n");
 }

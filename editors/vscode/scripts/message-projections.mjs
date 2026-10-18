@@ -49,16 +49,19 @@ export function lowerRuntimeMessage(id, value, arguments_) {
 }
 
 export function projectMessages(fluent) {
-  const canonical = parseRepresentableMessages(fluent, [
-    ...RUNTIME_MESSAGE_IDS,
-    ...PACKAGE_MESSAGE_IDS,
-  ], "VS Code and Neovim");
+  const canonical = parseRepresentableMessages(
+    fluent,
+    [...RUNTIME_MESSAGE_IDS, ...PACKAGE_MESSAGE_IDS],
+    "VS Code and Neovim",
+  );
   const projection = (ids, transform = (value) => value) =>
-    Object.fromEntries(ids.map((id) => {
-      const value = canonical.get(id);
-      if (value === undefined) throw new Error(`canonical Fluent message is missing ${id}`);
-      return [id, transform(value, id)];
-    }));
+    Object.fromEntries(
+      ids.map((id) => {
+        const value = canonical.get(id);
+        if (value === undefined) throw new Error(`canonical Fluent message is missing ${id}`);
+        return [id, transform(value, id)];
+      }),
+    );
   return {
     runtime: projection(RUNTIME_MESSAGE_IDS, (value, id) => projectRuntimeMessage(id, value)),
     package: projection(PACKAGE_MESSAGE_IDS),
@@ -77,13 +80,17 @@ function parseProjectionInventory(source, name) {
   const packageIds = array(section, "package_ids");
   const runtimeArguments = argumentMap(section, "runtime_arguments");
   if (
-    !sourceResource || !runtimeOutput || !packageOutput || !runtimeIds.length || !packageIds.length
+    !sourceResource ||
+    !runtimeOutput ||
+    !packageOutput ||
+    !runtimeIds.length ||
+    !packageIds.length
   ) {
     throw new Error(`${marker} must declare source, outputs, and IDs`);
   }
   if (
-    JSON.stringify(Object.keys(runtimeArguments).sort())
-      !== JSON.stringify(runtimeIds.slice().sort())
+    JSON.stringify(Object.keys(runtimeArguments).sort()) !==
+    JSON.stringify(runtimeIds.slice().sort())
   ) {
     throw new Error(`${marker} runtime arguments must cover runtime IDs exactly`);
   }
@@ -109,8 +116,8 @@ function argumentMap(section, key) {
   for (const entry of match[1].matchAll(/"([a-z0-9-]+)"\s*=\s*\[([^\]]*)\]/gu)) {
     const id = entry[1];
     if (result[id]) throw new Error(`${key} contains duplicate IDs`);
-    const arguments_ = [...entry[2].matchAll(/"([a-zA-Z][a-zA-Z0-9_-]*)"/gu)].map((value) =>
-      value[1]
+    const arguments_ = [...entry[2].matchAll(/"([a-zA-Z][a-zA-Z0-9_-]*)"/gu)].map(
+      (value) => value[1],
     );
     if (new Set(arguments_).size !== arguments_.length) {
       throw new Error(`${key} contains duplicate arguments for ${id}`);
@@ -141,10 +148,11 @@ export function renderMessageProjections(projections) {
     path.resolve(packageRoot, "../../", vscodeProjection.packageOutput),
   );
   return {
-    [runtimeOutput]:
-      `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${
-        JSON.stringify(projections.runtime, null, 2)
-      });\n`,
+    [runtimeOutput]: `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${JSON.stringify(
+      projections.runtime,
+      null,
+      2,
+    )});\n`,
     [packageOutput]: `${JSON.stringify(projections.package, null, 2)}\n`,
   };
 }
@@ -264,8 +272,10 @@ async function assertSafeDestination(packageRoot, relative, fileSystem) {
   const target = path.resolve(root, relative);
   const remainder = path.relative(root, target);
   if (
-    !remainder || remainder === ".." || remainder.startsWith(`..${path.sep}`)
-    || path.isAbsolute(remainder)
+    !remainder ||
+    remainder === ".." ||
+    remainder.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(remainder)
   ) {
     throw new Error(`refusing projection path outside package root: ${relative}`);
   }

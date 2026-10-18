@@ -1,3 +1,4 @@
+mod subcommands;
 use std::ffi::OsString;
 
 use clap::{Arg, ArgAction, CommandFactory, Error, FromArgMatches};
@@ -42,290 +43,145 @@ fn localise_command(command: &mut clap::Command, messages: &Messages) {
         .arg(version_arg(messages));
 
     for subcommand in command.get_subcommands_mut() {
-        localise_subcommand(subcommand, messages);
+        subcommands::localise(subcommand, messages);
     }
+    group_subcommands(command, messages);
 }
 
-fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
-    *command = std::mem::take(command)
-        .help_template(help_template(messages))
-        .next_help_heading(messages.text(MsgId::CliHelpOptionsHeading))
-        .disable_help_flag(true)
-        .arg(help_arg(messages));
+/// Top-level commands grouped as on the documentation's CLI page. Clap prints one subcommand
+/// heading, so the groups are rendered into the template and the flat list is hidden.
+const COMMAND_GROUPS: [(MsgId, &[&str]); 6] = [
+    (
+        MsgId::CliHelpGroupAuthoring,
+        &[
+            "validate",
+            "check-ids",
+            "check-markup",
+            "check-metadata",
+            "import",
+        ],
+    ),
+    (
+        MsgId::CliHelpGroupBuilding,
+        &["compile", "validate-project", "check-fresh", "watch"],
+    ),
+    (MsgId::CliHelpGroupLocalisation, &["extract"]),
+    (
+        MsgId::CliHelpGroupRunning,
+        &["run", "trace", "play", "bench"],
+    ),
+    (
+        MsgId::CliHelpGroupSchema,
+        &[
+            "inspect-schema",
+            "export-schema",
+            "check-schema-producer-freshness",
+        ],
+    ),
+    (MsgId::CliHelpGroupHelp, &["explain", "help"]),
+];
 
-    match command.get_name() {
-        "import" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandImport));
-            set_positional_arg_help(
-                command,
-                "input",
-                messages.text(MsgId::CliHelpArgImportInput),
-                messages,
-            );
-            localise_schema(command, messages);
-            for (id, message) in [
-                ("from", MsgId::CliHelpArgImportFrom),
-                ("mapping", MsgId::CliHelpArgImportMapping),
-                ("output_dir", MsgId::CliHelpArgImportOutputDir),
-                ("accept_partial", MsgId::CliHelpArgImportAcceptPartial),
-            ] {
-                set_arg_help(command, id, messages.text(message), messages);
-            }
-        }
-        "validate" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandValidate));
-            localise_paths(command, messages);
-        }
-        "compile" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCompile));
-            set_arg_help(
-                command,
-                "output",
-                messages.text(MsgId::CliHelpArgOutputCompile),
-                messages,
-            );
-            localise_schema(command, messages);
-            localise_paths(command, messages);
-        }
-        "extract" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandExtract));
-            set_arg_help(
-                command,
-                "output",
-                messages.text(MsgId::CliHelpArgOutputExtract),
-                messages,
-            );
-            localise_schema(command, messages);
-            localise_paths(command, messages);
-        }
-        "check-ids" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckIds));
-            localise_paths(command, messages);
-        }
-        "check-markup" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckMarkup));
-            localise_schema(command, messages);
-            localise_paths(command, messages);
-        }
-        "check-metadata" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckMetadata));
-            localise_schema(command, messages);
-            localise_paths(command, messages);
-        }
-        "validate-project" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandValidateProject));
-            set_arg_help(
-                command,
-                "project_root",
-                messages.text(MsgId::CliHelpArgProjectRoot),
-                messages,
-            );
-        }
-        "check-fresh" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandCheckFresh));
-            set_arg_help(
-                command,
-                "project_root",
-                messages.text(MsgId::CliHelpArgProjectRoot),
-                messages,
-            );
-        }
-        "inspect-schema" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandInspectSchema));
-            set_positional_arg_help(
-                command,
-                "schema",
-                messages.text(MsgId::CliHelpArgSchemaInspection),
-                messages,
-            );
-        }
-        "export-schema" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandExportSchema));
-            set_arg_help(
-                command,
-                "schema",
-                messages.text(MsgId::CliHelpArgSchemaInspection),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "output",
-                messages.text(MsgId::CliHelpArgOutputSchema),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "producer_kind",
-                messages.text(MsgId::CliHelpArgProducerKind),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "producer_id",
-                messages.text(MsgId::CliHelpArgProducerId),
-                messages,
-            );
-        }
-        "explain" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandExplain));
-            set_arg_help(
-                command,
-                "code",
-                messages.text(MsgId::CliHelpArgDiagnosticCode),
-                messages,
-            );
-        }
-        "watch" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandWatch));
-            set_arg_help(
-                command,
-                "project_root",
-                messages.text(MsgId::CliHelpArgProjectRoot),
-                messages,
-            );
-        }
-        "run" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandRun));
-            localise_runtime_args(command, messages, MsgId::CliHelpArgAssetRun);
-        }
-        "trace" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandTrace));
-            localise_runtime_args(command, messages, MsgId::CliHelpArgAssetRun);
-        }
-        "play" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandPlay));
-            set_arg_help(
-                command,
-                "asset",
-                messages.text(MsgId::CliHelpArgAssetPlay),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "block",
-                messages.text(MsgId::CliHelpArgBlock),
-                messages,
-            );
-            set_arg_help(command, "ui", messages.text(MsgId::CliHelpArgUi), messages);
-            set_arg_help(
-                command,
-                "keymap",
-                messages.text(MsgId::CliHelpArgKeymap),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "dialogue_locale",
-                messages.text(MsgId::CliHelpArgDialogueLocale),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "dialogue_catalog",
-                messages.text(MsgId::CliHelpArgDialogueCatalog),
-                messages,
-            );
-        }
-        "bench" => {
-            set_about(command, messages.text(MsgId::CliHelpCommandBench));
-            set_arg_help(
-                command,
-                "scale",
-                messages.text(MsgId::CliHelpArgBenchScale),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "group",
-                messages.text(MsgId::CliHelpArgBenchGroup),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "format",
-                messages.text(MsgId::CliHelpArgBenchFormat),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "output",
-                messages.text(MsgId::CliHelpArgBenchOutput),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "baseline",
-                messages.text(MsgId::CliHelpArgBenchBaseline),
-                messages,
-            );
-            set_arg_help(
-                command,
-                "samples",
-                messages.text(MsgId::CliHelpArgBenchSamples),
-                messages,
-            );
-        }
-        _ => {}
-    }
-}
-
-fn localise_paths(command: &mut clap::Command, messages: &Messages) {
-    set_arg_help(
-        command,
-        "paths",
-        messages.text(MsgId::CliHelpArgPaths),
-        messages,
-    );
-}
-
-fn localise_schema(command: &mut clap::Command, messages: &Messages) {
-    set_arg_help(
-        command,
-        "schema",
-        messages.text(MsgId::CliHelpArgSchema),
-        messages,
-    );
-}
-
-fn localise_runtime_args(command: &mut clap::Command, messages: &Messages, asset: MsgId) {
-    set_arg_help(command, "asset", messages.text(asset), messages);
-    set_arg_help(
-        command,
-        "block",
-        messages.text(MsgId::CliHelpArgBlock),
-        messages,
-    );
-    set_arg_help(
-        command,
-        "fixture",
-        messages.text(MsgId::CliHelpArgFixture),
-        messages,
-    );
-}
-
-fn set_arg_help(command: &mut clap::Command, id: &'static str, help: String, messages: &Messages) {
-    let heading = if id == "paths" || id == "project_root" || id == "asset" || id == "code" {
-        messages.text(MsgId::CliHelpArgumentsHeading)
-    } else {
-        messages.text(MsgId::CliHelpOptionsHeading)
+fn group_subcommands(command: &mut clap::Command, messages: &Messages) {
+    let abouts: Vec<(String, String)> = command
+        .get_subcommands()
+        .map(|sub| {
+            (
+                sub.get_name().to_owned(),
+                sub.get_about().map(ToString::to_string).unwrap_or_default(),
+            )
+        })
+        .collect();
+    let about = |name: &str| {
+        abouts
+            .iter()
+            .find(|(candidate, _)| candidate == name)
+            .map(|(_, about)| about.clone())
+            .unwrap_or_else(|| messages.text(MsgId::CliHelpArgHelp))
     };
-    *command = std::mem::take(command).mut_arg(id, |arg| arg.help(help).help_heading(heading));
+    let width = COMMAND_GROUPS
+        .iter()
+        .flat_map(|(_, names)| names.iter())
+        .map(|name| name.len())
+        .max()
+        .unwrap_or(0);
+    let mut groups = String::new();
+    let columns = crossterm::terminal::size()
+        .map(|(width, _)| usize::from(width))
+        .unwrap_or(80);
+    for (heading, names) in COMMAND_GROUPS {
+        groups.push_str(&format!("{}:\n", messages.text(heading)));
+        for name in names {
+            groups.push_str(&grouped_command(name, &about(name), width, columns));
+            groups.push('\n');
+        }
+        groups.push('\n');
+    }
+    let grouped: Vec<&str> = COMMAND_GROUPS
+        .iter()
+        .flat_map(|(_, names)| names.iter().copied())
+        .collect();
+    let mut hidden = std::mem::take(command);
+    for (name, _) in &abouts {
+        if grouped.contains(&name.as_str()) {
+            hidden = hidden.mut_subcommand(name, |sub| sub.hide(true));
+        }
+    }
+    // Hidden subcommands drop `<COMMAND>` from the generated usage, so it is restated.
+    let usage = format!("{} <COMMAND>", hidden.get_name());
+    *command = hidden.override_usage(usage).help_template(format!(
+        "{{about}}\n\n{} {{usage}}\n\n{groups}{{all-args}}{{after-help}}",
+        messages.text(MsgId::CliHelpUsageHeading)
+    ));
 }
 
-fn set_positional_arg_help(
-    command: &mut clap::Command,
-    id: &'static str,
-    help: String,
-    messages: &Messages,
-) {
-    *command = std::mem::take(command).mut_arg(id, |arg| {
-        arg.help(help)
-            .help_heading(messages.text(MsgId::CliHelpArgumentsHeading))
+fn grouped_command(name: &str, about: &str, name_width: usize, columns: usize) -> String {
+    let (prefix, indent) = if columns < name_width + 28 {
+        ("    ".to_owned(), "    ".to_owned())
+    } else {
+        (
+            format!("  {name:<name_width$}  "),
+            " ".repeat(name_width + 4),
+        )
+    };
+    let description = textwrap::fill(
+        about,
+        textwrap::Options::new(columns.max(1))
+            .initial_indent(&prefix)
+            .subsequent_indent(&indent),
+    );
+    if columns < name_width + 28 {
+        format!("  {name}\n{description}")
+    } else {
+        description
+    }
+}
+
+/// Give every argument an explicit localised heading. An argument without one lands in clap's
+/// built-in "Options" section, which printed a second, identically named heading.
+fn assign_headings(command: &mut clap::Command, messages: &Messages) {
+    let arguments = messages.text(MsgId::CliHelpArgumentsHeading);
+    let options = messages.text(MsgId::CliHelpOptionsHeading);
+    *command = std::mem::take(command).mut_args(|arg| {
+        if arg.get_help_heading().is_some() {
+            return arg;
+        }
+        let heading = if arg.is_positional() {
+            arguments.clone()
+        } else {
+            options.clone()
+        };
+        arg.help_heading(heading)
     });
-}
-
-fn set_about(command: &mut clap::Command, about: String) {
-    *command = std::mem::take(command).about(about);
+    // Clap orders custom headings by argument order, and `mut_arg` moves an argument to the end.
+    // Touch every option once more so the Arguments section prints before Options.
+    let option_ids: Vec<String> = command
+        .get_arguments()
+        .filter(|arg| !arg.is_positional())
+        .map(|arg| arg.get_id().to_string())
+        .collect();
+    for id in option_ids {
+        *command = std::mem::take(command).mut_arg(id, |arg| arg);
+    }
 }
 
 fn help_template(messages: &Messages) -> String {
@@ -373,3 +229,6 @@ fn requests_help(args: &[OsString]) -> bool {
     }
     false
 }
+
+#[cfg(test)]
+mod tests;

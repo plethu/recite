@@ -10,11 +10,11 @@ use crate::position::document_span_to_range;
 
 pub(crate) type NavigationDocument<'a> = EditDocument<'a>;
 
-pub(crate) fn definition(
+pub(crate) fn definition<'a>(
     key: &DocumentKey,
     position: SourcePosition,
     snapshot: &AuthoringQuery<'_>,
-    documents: &[NavigationDocument<'_>],
+    uri_for_key: impl Fn(&DocumentKey) -> Option<&'a lsp_types::Uri>,
 ) -> Option<GotoDefinitionResponse> {
     let result = snapshot.navigate(key, position);
     let (QueryResult::Ready(NavigationResult::Unique(symbol))
@@ -26,16 +26,18 @@ pub(crate) fn definition(
         return None;
     };
     Some(GotoDefinitionResponse::Scalar(location_for_symbol(
-        &symbol, snapshot, documents,
+        &symbol,
+        snapshot,
+        &uri_for_key,
     )?))
 }
 
-pub(crate) fn references(
+pub(crate) fn references<'a>(
     key: &DocumentKey,
     position: SourcePosition,
     include_declaration: bool,
     snapshot: &AuthoringQuery<'_>,
-    documents: &[NavigationDocument<'_>],
+    uri_for_key: impl Fn(&DocumentKey) -> Option<&'a lsp_types::Uri>,
 ) -> Option<Vec<Location>> {
     let QueryResult::Ready(NavigationResult::Unique(_)) = snapshot.navigate(key, position) else {
         return None;
@@ -52,7 +54,7 @@ pub(crate) fn references(
     let mut references = Vec::new();
     for symbol in locations {
         snapshot.checkpoint().ok()?;
-        let location = location_for_symbol(&symbol, snapshot, documents)?;
+        let location = location_for_symbol(&symbol, snapshot, &uri_for_key)?;
         if symbol.role() == SymbolRole::Definition {
             declarations.push(location);
         } else {
@@ -132,17 +134,14 @@ fn unique_navigation(
     }
 }
 
-fn location_for_symbol(
+fn location_for_symbol<'a>(
     symbol: &SymbolLocation,
     snapshot: &AuthoringQuery<'_>,
-    documents: &[NavigationDocument<'_>],
+    uri_for_key: &impl Fn(&DocumentKey) -> Option<&'a lsp_types::Uri>,
 ) -> Option<Location> {
-    let document = documents
-        .iter()
-        .find(|document| document.key == symbol.document())?;
     Some(Location {
-        uri: document.uri.clone(),
-        range: document_span_to_range(snapshot.document(document.key)?, symbol.span()),
+        uri: uri_for_key(symbol.document())?.clone(),
+        range: document_span_to_range(snapshot.document(symbol.document())?, symbol.span()),
     })
 }
 

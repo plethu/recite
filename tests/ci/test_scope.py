@@ -61,18 +61,31 @@ class ScopeTests(unittest.TestCase):
             "crates/recite-core/src/text/interpolation.rs",
             "crates/recite-benchmarks/src/preview.rs",
             "apps/writer/crates/authoring/src/script.rs",
+            "crates/recite-lsp/src/server.rs",
+            "crates/recite-ui/src/args.rs",
+            "crates/recite-adapter/src/catalog/import.rs",
         ):
             with self.subTest(path=path):
                 self.assertIn("workflow-performance", selected(path))
         for path in (
             "docs/profiling-and-optimisation.md",
             "apps/writer/src/app.rs",
-            "crates/recite-lsp/src/server.rs",
             "scripts/lsp_tools/client.py",
             "editors/vscode/src/extension.ts",
         ):
             with self.subTest(path=path):
                 self.assertNotIn("workflow-performance", selected(path))
+
+    def test_shared_tree_sitter_inputs_check_writer_and_editor_consumers(self):
+        for path in (
+            "editors/recite-tree-sitter/grammar.js",
+            "editors/recite-tree-sitter/src/parser.c",
+            "editors/recite-tree-sitter/queries/highlights.scm",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(
+                    selected(path), {"writer", "editor-native", "editor", "maintainability"}
+                )
 
     def test_lsp_measurement_changes_select_benchmark_lane(self):
         for path in (
@@ -153,7 +166,15 @@ class ScopeTests(unittest.TestCase):
             "crates/recite-godot/src/lib.rs",
         ):
             with self.subTest(path=path):
-                self.assertEqual(selected(path), scope.RUST)
+                self.assertEqual(
+                    selected(path),
+                    scope.RUST
+                    | (
+                        {"workflow-performance"}
+                        if path.startswith("crates/recite-adapter/")
+                        else set()
+                    ),
+                )
         for path in (
             "addons/com.recite.dialogue/plugin.cfg",
             "Packages/com.recite.dialogue/Runtime/ReciteDialogueService.cs",
@@ -261,6 +282,12 @@ class ScopeTests(unittest.TestCase):
 
     def test_shared_config_changes_select_the_affected_surface(self):
         cases = (
+            (
+                ".mise.toml",
+                b'[tools]\nnode = "24.18.0"\nbun = "1.4.2"\n',
+                b'[tools]\nnode = "24.18.0"\nbun = "1.4.3"\n',
+                scope.JS,
+            ),
             (
                 ".mise.toml",
                 b'[tools]\nnode = "22"\n',

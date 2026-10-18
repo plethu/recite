@@ -1,7 +1,6 @@
 ---
 title: Choosing dialogue tools
 description: Compare authoring and integration approaches, then test a small part of your own project.
-template: splash
 ---
 
 A dialogue tool affects how people write, how a game reads their work, and what must change when

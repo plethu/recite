@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   optionalSavePath,
   requiredBlock,
   requiredFixturePath,
   requiredOpenPath,
-} from "../src/command-inputs.js";
+} from "../src/command-inputs.ts";
 
 test("runtime picker cancellation is a quiet no-op", async () => {
   const ui = {

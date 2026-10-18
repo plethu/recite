@@ -34,6 +34,11 @@ fn bound_text_requires_the_authored_prompt_batch() {
 #[test]
 fn rejects_missing_duplicate_and_unexpected_workloads() {
     let cases = writer();
+    for missing in 0..cases.len() {
+        let mut incomplete = cases.clone();
+        incomplete.remove(missing);
+        assert!(check_summaries(Cursor::new(lines(&incomplete)), Scope::Writer).is_err());
+    }
     for incomplete in [
         Vec::new(),
         cases[..1].to_vec(),
@@ -42,6 +47,46 @@ fn rejects_missing_duplicate_and_unexpected_workloads() {
     ] {
         assert!(check_summaries(Cursor::new(lines(&incomplete)), Scope::Writer).is_err());
     }
+}
+
+#[test]
+fn authoring_requires_each_schema_lsp_and_import_case_with_paired_counters() {
+    let cases = [
+        "json_schema",
+        "toml_schema",
+        "schema_workspace_fork",
+        "lsp_schema_actions",
+        "lsp_change_saved_schema",
+        "lsp_change_open_schema",
+    ]
+    .into_iter()
+    .flat_map(|name| ["declarations_100", "declarations_1000"].map(|shape| summary(name, shape)))
+    .chain(
+        [
+            "lsp_completion",
+            "lsp_definition",
+            "lsp_references",
+            "lsp_publication",
+        ]
+        .into_iter()
+        .flat_map(|name| ["wide", "dense"].map(|shape| summary(name, shape))),
+    )
+    .chain([
+        summary("catalog_import", "cold_100"),
+        summary("catalog_import", "populated_10000"),
+        summary("ui_labels", "static_1000"),
+        summary("ui_labels", "parameters_1000"),
+    ])
+    .collect::<Vec<_>>();
+    check_summaries(Cursor::new(lines(&cases)), Scope::Authoring).unwrap();
+    for missing in 0..cases.len() {
+        let mut incomplete = cases.clone();
+        incomplete.remove(missing);
+        assert!(check_summaries(Cursor::new(lines(&incomplete)), Scope::Authoring).is_err());
+    }
+    let mut extra = cases;
+    extra.push(summary("lsp_unregistered", "wide"));
+    assert!(check_summaries(Cursor::new(lines(&extra)), Scope::Authoring).is_err());
 }
 
 #[test]
@@ -193,4 +238,39 @@ fn reported_regressions_fail_the_check_and_leave_the_input_artifact_intact() {
             .contains("regression")
     );
     assert_eq!(std::fs::read_to_string(path).unwrap(), input);
+}
+
+use recite_perf::check_heap_peaks;
+use std::fs;
+
+#[test]
+fn whole_process_peak_budget_works_when_filtered_baseline_is_zero() {
+    let directory = tempfile::tempdir().unwrap();
+    let summary = support::summary("json_schema", "declarations_100");
+    let profiles = directory.path().join("profiles");
+    let logs = profiles.join("workflows/workflows/json_schema.declarations_100");
+    fs::create_dir_all(&logs).unwrap();
+    let candidate = logs.join("dhat.json_schema.declarations_100.log");
+    let control = logs.join("dhat.json_schema.declarations_100.log.base@control");
+    let input = support::lines(&[summary]);
+    let check = || check_heap_peaks(Cursor::new(&input), &profiles);
+    fs::write(
+        &control,
+        "==9331== At t-gmax: 101,314 bytes in 1,214 blocks\n",
+    )
+    .unwrap();
+    fs::write(
+        &candidate,
+        "==9592== At t-gmax: 103,511 bytes in 592 blocks\n",
+    )
+    .unwrap();
+    check().unwrap();
+    fs::write(&candidate, "At t-gmax: 111,445 bytes in 1 blocks").unwrap();
+    check().unwrap(); // floor(101314 * 1.10)
+    fs::write(&candidate, "At t-gmax: 111,446 bytes in 1 blocks").unwrap();
+    assert!(check().unwrap_err().to_string().contains("regressed"));
+    fs::write(&candidate, "invalid profile").unwrap();
+    assert!(check().is_err());
+    fs::remove_file(&control).unwrap();
+    assert!(check().is_err());
 }

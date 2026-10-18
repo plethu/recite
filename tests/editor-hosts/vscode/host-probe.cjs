@@ -100,21 +100,15 @@ async function runHostProbe() {
   const extension = vscode.extensions.getExtension("plethu.recite-vscode");
 
   assert(extension, "the installed Recite VSIX is discoverable");
-  await vscode.workspace.getConfiguration("recite").update(
-    "lsp.path",
-    process.env.RECITE_HOST_PROBE_LSP,
-    vscode.ConfigurationTarget.Workspace,
-  );
-  await vscode.workspace.getConfiguration("recite").update(
-    "cli.path",
-    process.env.RECITE_HOST_PROBE_CLI,
-    vscode.ConfigurationTarget.Workspace,
-  );
-  await vscode.workspace.getConfiguration("recite").update(
-    "lsp.projectRoot",
-    workspace.fsPath,
-    vscode.ConfigurationTarget.Workspace,
-  );
+  await vscode.workspace
+    .getConfiguration("recite")
+    .update("lsp.path", process.env.RECITE_HOST_PROBE_LSP, vscode.ConfigurationTarget.Workspace);
+  await vscode.workspace
+    .getConfiguration("recite")
+    .update("cli.path", process.env.RECITE_HOST_PROBE_CLI, vscode.ConfigurationTarget.Workspace);
+  await vscode.workspace
+    .getConfiguration("recite")
+    .update("lsp.projectRoot", workspace.fsPath, vscode.ConfigurationTarget.Workspace);
 
   const diagnosticEvents = [];
   const diagnosticSubscription = vscode.languages.onDidChangeDiagnostics(() => {
@@ -269,9 +263,9 @@ async function runHostProbe() {
   await vscode.window.showTextDocument(invalid);
   await waitFor(
     () =>
-      vscode.languages.getDiagnostics(invalidUri).some((diagnostic) =>
-        diagnostic.code === "RECITE_PARSE011"
-      ),
+      vscode.languages
+        .getDiagnostics(invalidUri)
+        .some((diagnostic) => diagnostic.code === "RECITE_PARSE011"),
     "LSP diagnostics",
   );
   const diagnostics = vscode.languages.getDiagnostics(invalidUri);
@@ -284,8 +278,8 @@ async function runHostProbe() {
     "validate exposes typed content-diagnostic failure status",
   );
   assert(
-    failedValidation.terminal.data.diagnostics.some((diagnostic) =>
-      diagnostic.code === "RECITE_PARSE011"
+    failedValidation.terminal.data.diagnostics.some(
+      (diagnostic) => diagnostic.code === "RECITE_PARSE011",
     ),
     "validate retains the stable diagnostic code",
   );
@@ -308,9 +302,9 @@ async function runHostProbe() {
   const overlayEditor = await vscode.window.showTextDocument(overlay);
   await waitFor(
     () =>
-      vscode.languages.getDiagnostics(overlayUri).some((diagnostic) =>
-        diagnostic.code === "RECITE_PARSE011"
-      ),
+      vscode.languages
+        .getDiagnostics(overlayUri)
+        .some((diagnostic) => diagnostic.code === "RECITE_PARSE011"),
     "malformed overlay diagnostics",
   );
   await replaceDocument(overlay, overlayEditor, ":: marker_probe default\n>");
@@ -326,10 +320,13 @@ async function runHostProbe() {
 
   const unicode = await vscode.workspace.openTextDocument(unicodeUri);
   await vscode.window.showTextDocument(unicode);
-  const unicodeDiagnostic = await waitFor(() =>
-    vscode.languages.getDiagnostics(unicodeUri).find(
-      (diagnostic) => diagnostic.range.start.line === 2,
-    ), "UTF-16/non-BMP diagnostics");
+  const unicodeDiagnostic = await waitFor(
+    () =>
+      vscode.languages
+        .getDiagnostics(unicodeUri)
+        .find((diagnostic) => diagnostic.range.start.line === 2),
+    "UTF-16/non-BMP diagnostics",
+  );
   assert.equal(
     unicodeDiagnostic.range.start.character,
     13,
@@ -345,9 +342,9 @@ async function runHostProbe() {
   await vscode.window.showTextDocument(repair);
   await waitFor(
     () =>
-      vscode.languages.getDiagnostics(repairUri).filter((diagnostic) =>
-        diagnostic.code === "RECITE_ID001"
-      ),
+      vscode.languages
+        .getDiagnostics(repairUri)
+        .filter((diagnostic) => diagnostic.code === "RECITE_ID001"),
     "stable-ID repair diagnostics",
   );
   const actions = await vscode.commands.executeCommand(
@@ -357,8 +354,8 @@ async function runHostProbe() {
     "quickfix",
   );
   assert(Array.isArray(actions), "code actions return host-projected actions");
-  const repairAction = actions.find((action) =>
-    action.command?.command === "recite.applyCodeAction"
+  const repairAction = actions.find(
+    (action) => action.command?.command === "recite.applyCodeAction",
   );
   assert(
     repairAction?.command?.command === "recite.applyCodeAction",
@@ -369,10 +366,7 @@ async function runHostProbe() {
     ...(repairAction.command.arguments ?? []),
   );
   assert.equal(repairApplied, true, "host applies the guarded stable-ID repair command");
-  await waitFor(
-    () => /line@[0-9a-f]{20}/u.test(repair.getText()),
-    "stable-ID repair edit",
-  );
+  await waitFor(() => /line@[0-9a-f]{20}/u.test(repair.getText()), "stable-ID repair edit");
 
   const renameEditor = await vscode.window.showTextDocument(valid);
   renameEditor.selection = new vscode.Selection(targetPosition, targetPosition);
@@ -382,9 +376,8 @@ async function runHostProbe() {
     targetPosition,
     "finished",
   );
-  const nativeRenameEntries = typeof nativeRename?.entries === "function"
-    ? nativeRename.entries()
-    : [];
+  const nativeRenameEntries =
+    typeof nativeRename?.entries === "function" ? nativeRename.entries() : [];
   assert(
     nativeRename === undefined || nativeRenameEntries.length === 0,
     "native rename stays unsupported without projected edits",
@@ -435,10 +428,7 @@ function positionFor(source, needle, offset = needle.length) {
   const lines = prefix.split("\n");
   return new vscode.Position(
     lines.length - 1,
-    [...lines.at(-1)].reduce(
-      (units, scalar) => units + scalar.length,
-      0,
-    ),
+    [...lines.at(-1)].reduce((units, scalar) => units + scalar.length, 0),
   );
 }
 
@@ -454,7 +444,7 @@ exports.run = async function run(_testDirectory, callback) {
   try {
     if (process.env.RECITE_HOST_PROBE_INSTALL_ONLY === "1") await installVsix();
     else if (process.env.RECITE_HOST_PROBE_KEYBOARD === "1") {
-      await runKeyboardProbe({ waitFor, writeResult, writeProfileMarker });
+      await runKeyboardProbe({ waitFor, writeResult, writeProfileMarker, positionFor });
     } else await runHostProbe();
     callback();
   } catch (error) {

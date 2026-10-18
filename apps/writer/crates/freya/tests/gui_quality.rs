@@ -65,17 +65,17 @@ fn project_search_can_continue_past_one_hundred_and_clear_without_losing_input()
     }
     assert!(has(&test, "Project opened."));
     fill(&mut test, "Search project words", "Lantern")?;
-    assert!(has(&test, "100 of 106 saved passages"));
+    assert!(has(&test, "100 of 106 saved lines"));
     support::click(&mut test, "Show more results")?;
-    assert!(has(&test, "106 of 106 saved passages"));
+    assert!(has(&test, "106 of 106 saved lines"));
     support::click(&mut test, "Clear Search project words…")?;
     test.write_text("no-such-passage");
     test.poll_n(std::time::Duration::from_millis(16), 5);
-    assert!(has(&test, "No matching saved passages"));
+    assert!(has(&test, "No matching saved lines"));
     support::click(&mut test, "Clear Search project words…")?;
     test.write_text("Lantern");
     test.poll_n(std::time::Duration::from_millis(16), 5);
-    assert!(has(&test, "100 of 106 saved passages"));
+    assert!(has(&test, "100 of 106 saved lines"));
     key(&mut test, NamedKey::ArrowDown);
     key(&mut test, NamedKey::Enter);
     assert!(
@@ -112,15 +112,15 @@ fn destination_picker_search_changes_only_the_reply_and_supports_undo()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1400., 1000.), |_| {}, 1.).0;
     support::open_beat(&mut test)?;
-    assert!(has(&test, "▸ Missing Courier"));
+    assert!(has(&test, "→ Missing Courier"));
     support::click(&mut test, "Change destination…")?;
     test.write_text("end");
     test.poll_n(std::time::Duration::from_millis(16), 5);
     support::click(&mut test, "End conversation · END")?;
-    assert!(!has(&test, "▸ Missing Courier"));
-    assert!(has(&test, "▸ Station History"));
+    assert!(!has(&test, "→ Missing Courier"));
+    assert!(has(&test, "→ Station History"));
     support::click(&mut test, "Undo")?;
-    assert!(has(&test, "▸ Missing Courier"));
+    assert!(has(&test, "→ Missing Courier"));
     Ok(())
 }
 

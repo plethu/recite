@@ -185,7 +185,8 @@ impl Document {
         let text = self
             .find_passage(id)?
             .ok_or(EditError::MissingPassage)?
-            .text;
+            .text
+            .clone();
         Ok(ReplyRules {
             passage: id.into(),
             destination: destination.map(|block| block.id.to_string()),

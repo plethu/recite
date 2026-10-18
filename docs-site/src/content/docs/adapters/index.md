@@ -1,7 +1,6 @@
 ---
 title: Engine adapters
 description: Use Recite dialogue in Bevy, Godot, or Unity.
-template: splash
 ---
 
 Recite compiles dialogue to `.recitec` assets. The adapters load those assets, deliver lines and

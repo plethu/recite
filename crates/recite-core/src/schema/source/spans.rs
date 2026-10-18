@@ -24,7 +24,6 @@ pub(super) fn error_span(file: &str, source: &str, range: Option<Range<usize>>) 
 /// Resolve a key or value through the immutable TOML CST index.
 pub(super) fn key_span(
     file: &str,
-    source: &str,
     spans: &TomlSpanIndex,
     table_path: &[String],
     key: &str,
@@ -32,9 +31,9 @@ pub(super) fn key_span(
 ) -> SourceSpan {
     let mut path = table_path.to_vec();
     path.push(key.to_owned());
-    error_span(
+    indexed_span(
         file,
-        source,
+        spans,
         if value {
             spans.value_range(&path)
         } else {
@@ -43,13 +42,21 @@ pub(super) fn key_span(
     )
 }
 
-pub(super) fn table_span(
-    file: &str,
-    source: &str,
-    spans: &TomlSpanIndex,
-    table_path: &[String],
-) -> SourceSpan {
-    error_span(file, source, spans.key_range(table_path))
+pub(super) fn table_span(file: &str, spans: &TomlSpanIndex, table_path: &[String]) -> SourceSpan {
+    indexed_span(file, spans, spans.key_range(table_path))
+}
+
+fn indexed_span(file: &str, spans: &TomlSpanIndex, range: Option<Range<usize>>) -> SourceSpan {
+    range.map_or_else(
+        || document_span(file),
+        |range| {
+            SourceSpan::new(
+                file,
+                spans.position(range.start),
+                Some(spans.position(range.end.max(range.start + 1))),
+            )
+        },
+    )
 }
 
 pub(super) fn document_span(file: &str) -> SourceSpan {

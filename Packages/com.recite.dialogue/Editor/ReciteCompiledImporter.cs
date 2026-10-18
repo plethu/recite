@@ -15,7 +15,7 @@ namespace Recite.Unity.Editor
             try
             {
                 bytes = File.ReadAllBytes(context.assetPath);
-                info = ReciteAssetInfo.Inspect(new ReciteDialogueAsset(bytes));
+                info = ReciteAssetInfo.InspectBytes(bytes);
                 ReciteCompiledCache.Save(context.assetPath, bytes);
                 Publish(context, bytes, info, false, ReciteStatus.Ok, null);
                 return;

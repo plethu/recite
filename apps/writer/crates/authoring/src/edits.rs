@@ -17,19 +17,35 @@ impl Document {
             .collect::<Vec<_>>()
             .join(&format!("{newline}{}", passage.indentation));
         let mut next = self.source().to_owned();
-        next.replace_range(passage.text_range, &replacement);
+        next.replace_range(passage.text_range.clone(), &replacement);
         // The parser, not a GUI-side grammar, decides whether the field is still prose.
-        let projected = crate::projection::passages(&next).map_err(|_| EditError::NotProse)?;
-        if !projected
-            .iter()
-            .any(|item| item.id == id && item.text == text)
+        let projections = if let Some(projections) =
+            self.prose_region_projection(&next, &passage.text_range, id, text)
         {
-            return Err(EditError::NotProse);
+            projections
+        } else {
+            let parsed = parse(self.key().as_str(), &next);
+            let lowered = parsed.lower_source_file();
+            let projected = crate::projection::passages_from(&next, &parsed, &lowered)
+                .map_err(|_| EditError::NotProse)?;
+            if !projected
+                .iter()
+                .any(|item| item.id == id && item.text == text)
+                || projected.len() != self.passage_snapshot()?.len()
+            {
+                return Err(EditError::NotProse);
+            }
+            if next == self.source() {
+                return Ok(());
+            }
+            self.projections.for_prose_edit(&next, &lowered, projected)
+        };
+        // Drop the transient syntax before analysis; publish only after acceptance.
+        self.replace_source(expected, next)?;
+        if self.revision() != expected {
+            self.projections = projections;
         }
-        if projected.len() != self.passages()?.len() {
-            return Err(EditError::NotProse);
-        }
-        self.replace_source(expected, next)
+        Ok(())
     }
 
     pub fn set_speaker(&mut self, expected: i64, id: &str, speaker: &str) -> Result<(), EditError> {
@@ -107,7 +123,7 @@ impl Document {
     /// Adds one choice to a section; the existing compiler planner freezes its ID.
     pub fn add_choice(&mut self, expected: i64, section: &str) -> Result<String, EditError> {
         self.check_revision(expected)?;
-        self.passages()?;
+        self.passage_snapshot()?;
         let blocks = self
             .kernel()
             .snapshot()

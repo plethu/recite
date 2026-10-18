@@ -31,8 +31,10 @@ recite-ui.workspace = true
 same-file = "1.0.6"
 serde.workspace = true
 serde_json.workspace = true
+textwrap = { version = "0.16.2", default-features = false, features = ["unicode-width"] }
 toml.workspace = true
 unic-langid.workspace = true
+unicode-width.workspace = true
 
 [dev-dependencies]
 strum = { version = "=0.28.0", features = ["derive"] }

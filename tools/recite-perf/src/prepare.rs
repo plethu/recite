@@ -30,5 +30,56 @@ pub(super) fn workspace(
             current["workspace"]["dependencies"]["toml_edit"].clone();
     }
     fs::write(control.join("Cargo.toml"), manifest.to_string())?;
+    adapt_lsp_driver(control)?;
+    adapt_completion_workload(control)?;
     Ok(())
+}
+
+// Keep the current harness on the historical diagnostic-publication path when
+// that revision predates the related-source fast path; never overlay its owner.
+fn adapt_lsp_driver(control: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let path = control.join("crates/recite-lsp/src/bench_support/driver.rs");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let owner = fs::read_to_string(control.join("crates/recite-lsp/src/workspace/ui.rs"))?;
+    if owner.contains("fn diagnostic_related_sources(") {
+        return Ok(());
+    }
+    let source = fs::read_to_string(&path)?;
+    let current = ".diagnostic_related_sources(&diagnostics.uri, &diagnostics.diagnostics)";
+    let historical = ".diagnostic_sources_for_uri(&diagnostics.uri)";
+    match source.matches(current).count() {
+        0 if source.matches(historical).count() == 1 => Ok(()),
+        1 => {
+            fs::write(path, source.replace(current, historical))?;
+            Ok(())
+        }
+        _ => Err("unrecognized control LSP diagnostic publication adapter".into()),
+    }
+}
+
+fn adapt_completion_workload(control: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let path = control.join("tools/recite-perf/benches/support/completion.rs");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let owner = fs::read_to_string(control.join("apps/writer/crates/authoring/src/completion.rs"))?;
+    if owner.contains("pub fn source(&self)") {
+        return Ok(());
+    }
+    let source = fs::read_to_string(&path)?;
+    let current = "workload.completions.source()";
+    let historical = "workload.workload.draft.as_str()";
+    match (
+        source.matches(current).count(),
+        source.matches(historical).count(),
+    ) {
+        (0, 2) => Ok(()),
+        (2, 0) => {
+            fs::write(path, source.replace(current, historical))?;
+            Ok(())
+        }
+        _ => Err("unrecognized control completion replacement adapter".into()),
+    }
 }

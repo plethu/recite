@@ -191,8 +191,9 @@ export function validateCommandMethod(property, contract, file) {
   }
   if (contract.kind === "host-membership") {
     assert(
-      property.value.params.length === 1 && property.value.params[0].type === "Identifier"
-        && property.value.params[0].name === contract.argument,
+      property.value.params.length === 1 &&
+        property.value.params[0].type === "Identifier" &&
+        property.value.params[0].name === contract.argument,
       `UI method ${propertyName(property)} has the wrong argument (${file})`,
     );
     const statement = oneStatement(property.value, file, propertyName(property));
@@ -205,24 +206,25 @@ export function validateCommandMethod(property, contract, file) {
   }
   if (contract.kind === "host-input-projection") {
     assert(
-      property.value.params.length === 1 && property.value.params[0].type === "Identifier"
-        && property.value.params[0].name === contract.argument,
+      property.value.params.length === 1 &&
+        property.value.params[0].type === "Identifier" &&
+        property.value.params[0].name === contract.argument,
       `UI method ${propertyName(property)} has the wrong argument (${file})`,
     );
     const statement = oneStatement(property.value, file, propertyName(property));
     const call = statement.type === "ReturnStatement" ? statement.argument : undefined;
     assert(
       isWindowHostCall(call, contract.host),
-      `UI method ${
-        propertyName(property)
-      } must return the localized input host capability (${file})`,
+      `UI method ${propertyName(
+        property,
+      )} must return the localized input host capability (${file})`,
     );
     const options = call.arguments[0];
     assert(
-      options?.type === "ObjectExpression"
-        && isOptionMessage(options, "title", contract.id)
-        && isOptionMessage(options, "prompt", contract.promptId)
-        && isPlaceholderOption(options, contract.placeholderId, contract.argument),
+      options?.type === "ObjectExpression" &&
+        isOptionMessage(options, "title", contract.id) &&
+        isOptionMessage(options, "prompt", contract.promptId) &&
+        isPlaceholderOption(options, contract.placeholderId, contract.argument),
       `UI method ${propertyName(property)} must localize its input options (${file})`,
     );
     return true;
@@ -231,12 +233,20 @@ export function validateCommandMethod(property, contract, file) {
 }
 
 function isWindowHostCall(node, method) {
-  return node?.type === "CallExpression" && node.arguments.length === 1
-    && node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional
-    && node.callee.object.type === "MemberExpression" && !node.callee.object.computed
-    && !node.callee.object.optional && node.callee.object.object.type === "Identifier"
-    && node.callee.object.object.name === "api" && memberMethod(node.callee.object) === "window"
-    && memberMethod(node.callee) === method;
+  return (
+    node?.type === "CallExpression" &&
+    node.arguments.length === 1 &&
+    node.callee.type === "MemberExpression" &&
+    !node.callee.computed &&
+    !node.callee.optional &&
+    node.callee.object.type === "MemberExpression" &&
+    !node.callee.object.computed &&
+    !node.callee.object.optional &&
+    node.callee.object.object.type === "Identifier" &&
+    node.callee.object.object.name === "api" &&
+    memberMethod(node.callee.object) === "window" &&
+    memberMethod(node.callee) === method
+  );
 }
 
 function isProjectedWindowHostCall(node, method, id, argument) {
@@ -260,76 +270,116 @@ function isLocalizedFilter(options, id, extension) {
   const filters = property?.value;
   if (filters?.type !== "ObjectExpression" || filters.properties.length !== 1) return false;
   const filter = filters.properties[0];
-  return filter.computed && isCanonicalMessage(filter.key, id)
-    && filter.value.type === "ArrayExpression" && filter.value.elements.length === 1
-    && filter.value.elements[0].type === "Literal" && filter.value.elements[0].value === extension;
+  return (
+    filter.computed &&
+    isCanonicalMessage(filter.key, id) &&
+    filter.value.type === "ArrayExpression" &&
+    filter.value.elements.length === 1 &&
+    filter.value.elements[0].type === "Literal" &&
+    filter.value.elements[0].value === extension
+  );
 }
 
 function isCanonicalMessage(node, id) {
-  return node?.type === "CallExpression" && node.callee.type === "Identifier"
-    && node.callee.name === "clientMessage" && node.arguments.length === 2
-    && node.arguments[0].type === "Identifier" && node.arguments[0].name === "api"
-    && node.arguments[1].type === "Literal" && node.arguments[1].value === id;
+  return (
+    node?.type === "CallExpression" &&
+    node.callee.type === "Identifier" &&
+    node.callee.name === "clientMessage" &&
+    node.arguments.length === 2 &&
+    node.arguments[0].type === "Identifier" &&
+    node.arguments[0].name === "api" &&
+    node.arguments[1].type === "Literal" &&
+    node.arguments[1].value === id
+  );
 }
 
 function isActiveDocumentValue(node) {
-  return node?.type === "ChainExpression" && node.expression.type === "MemberExpression"
-    && node.expression.optional && !node.expression.computed
-    && node.expression.property.type === "Identifier"
-    && node.expression.property.name === "document"
-    && node.expression.object.type === "MemberExpression" && !node.expression.object.computed
-    && node.expression.object.property.type === "Identifier"
-    && node.expression.object.property.name === "activeTextEditor"
-    && node.expression.object.object.type === "MemberExpression"
-    && !node.expression.object.object.computed
-    && node.expression.object.object.object.type === "Identifier"
-    && node.expression.object.object.object.name === "api"
-    && memberMethod(node.expression.object.object) === "window";
+  return (
+    node?.type === "ChainExpression" &&
+    node.expression.type === "MemberExpression" &&
+    node.expression.optional &&
+    !node.expression.computed &&
+    node.expression.property.type === "Identifier" &&
+    node.expression.property.name === "document" &&
+    node.expression.object.type === "MemberExpression" &&
+    !node.expression.object.computed &&
+    node.expression.object.property.type === "Identifier" &&
+    node.expression.object.property.name === "activeTextEditor" &&
+    node.expression.object.object.type === "MemberExpression" &&
+    !node.expression.object.object.computed &&
+    node.expression.object.object.object.type === "Identifier" &&
+    node.expression.object.object.object.name === "api" &&
+    memberMethod(node.expression.object.object) === "window"
+  );
 }
 
 function isActiveEditorValue(node) {
-  return node?.type === "ChainExpression" && node.expression.type === "MemberExpression"
-    && node.expression.optional && !node.expression.computed
-    && node.expression.property.type === "Identifier"
-    && node.expression.property.name === "activeTextEditor"
-    && node.expression.object.type === "MemberExpression" && !node.expression.object.computed
-    && node.expression.object.property.type === "Identifier"
-    && node.expression.object.property.name === "window"
-    && node.expression.object.object.type === "Identifier"
-    && node.expression.object.object.name === "api";
+  return (
+    node?.type === "ChainExpression" &&
+    node.expression.type === "MemberExpression" &&
+    node.expression.optional &&
+    !node.expression.computed &&
+    node.expression.property.type === "Identifier" &&
+    node.expression.property.name === "activeTextEditor" &&
+    node.expression.object.type === "MemberExpression" &&
+    !node.expression.object.computed &&
+    node.expression.object.property.type === "Identifier" &&
+    node.expression.object.property.name === "window" &&
+    node.expression.object.object.type === "Identifier" &&
+    node.expression.object.object.name === "api"
+  );
 }
 
 function isPlaceholderOption(options, id, argument) {
-  const property = options.properties.find((candidate) =>
-    propertyName(candidate) === "placeHolder"
+  const property = options.properties.find(
+    (candidate) => propertyName(candidate) === "placeHolder",
   );
   const value = property?.value;
-  return value?.type === "LogicalExpression" && value.operator === "||"
-    && value.left.type === "Identifier" && value.left.name === argument
-    && isCanonicalMessage(value.right, id);
+  return (
+    value?.type === "LogicalExpression" &&
+    value.operator === "||" &&
+    value.left.type === "Identifier" &&
+    value.left.name === argument &&
+    isCanonicalMessage(value.right, id)
+  );
 }
 
 function isDocumentOpenValue(node, parameter) {
   if (
-    node?.type !== "LogicalExpression" || node.operator !== "??"
-    || node.right?.type !== "Literal" || node.right.value !== true
-  ) return false;
+    node?.type !== "LogicalExpression" ||
+    node.operator !== "??" ||
+    node.right?.type !== "Literal" ||
+    node.right.value !== true
+  )
+    return false;
   const chain = node.left?.type === "ChainExpression" ? node.left.expression : node.left;
   if (
-    chain?.type !== "CallExpression" || chain.arguments.length !== 1
-    || chain.arguments[0].type !== "Identifier" || chain.arguments[0].name !== parameter
-  ) return false;
+    chain?.type !== "CallExpression" ||
+    chain.arguments.length !== 1 ||
+    chain.arguments[0].type !== "Identifier" ||
+    chain.arguments[0].name !== parameter
+  )
+    return false;
   const includes = chain.callee;
-  const documents = includes?.type === "MemberExpression" && !includes.computed
-      && includes.property.type === "Identifier" && includes.property.name === "includes"
-    ? includes.object
-    : undefined;
-  return documents?.type === "MemberExpression" && !documents.computed
-    && documents.property.type === "Identifier" && documents.property.name === "textDocuments"
-    && documents.object?.type === "MemberExpression" && !documents.object.computed
-    && documents.object.property.type === "Identifier"
-    && documents.object.property.name === "workspace"
-    && documents.object.object?.type === "Identifier" && documents.object.object.name === "api";
+  const documents =
+    includes?.type === "MemberExpression" &&
+    !includes.computed &&
+    includes.property.type === "Identifier" &&
+    includes.property.name === "includes"
+      ? includes.object
+      : undefined;
+  return (
+    documents?.type === "MemberExpression" &&
+    !documents.computed &&
+    documents.property.type === "Identifier" &&
+    documents.property.name === "textDocuments" &&
+    documents.object?.type === "MemberExpression" &&
+    !documents.object.computed &&
+    documents.object.property.type === "Identifier" &&
+    documents.object.property.name === "workspace" &&
+    documents.object.object?.type === "Identifier" &&
+    documents.object.object.name === "api"
+  );
 }
 
 function oneStatement(method, file, name) {

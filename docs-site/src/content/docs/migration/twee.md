@@ -1,7 +1,6 @@
 ---
 title: Twee and Twine source imports
 description: Inspect passages and convert plain text with standalone static links.
-template: splash
 ---
 
 ```sh

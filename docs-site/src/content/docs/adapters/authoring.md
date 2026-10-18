@@ -1,7 +1,6 @@
 ---
 title: Edit and refresh dialogue
 description: Try source diagnostics, watch builds, and a new dialogue revision in your engine.
-template: splash
 ---
 
 An edit becomes playable after Recite compiles it and the engine imports the result. A running

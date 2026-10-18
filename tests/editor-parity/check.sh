@@ -193,7 +193,6 @@ before = selected_target_digest(context, "recite-lsp")
 # Generated documentation/editor output is ignored and must not invalidate the
 # evidence executable merely because a packaging or docs command touched it.
 ignored_outputs = [
-    repo / "docs-site/.astro/types.d.ts",
     repo / "docs-site/src/client/generated/recite_playground.js",
     repo / "docs-site/dist/index.html",
     repo / "editors/vscode/dist/extension.js",

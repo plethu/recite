@@ -12,7 +12,7 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import {
   generateMessageProjections,
@@ -30,10 +30,7 @@ test("VS Code lowers typed canonical placeables to positional placeholders", asy
     "utf8",
   );
   const projected = projectMessages(source).runtime["lsp-client-restart-scheduled"];
-  assert.equal(
-    projected,
-    "Recite language server restart scheduled in {0} milliseconds.",
-  );
+  assert.equal(projected, "Recite language server restart scheduled in {0} milliseconds.");
   assert.equal(
     projectRuntimeMessage("lsp-client-restart-scheduled", "restart in {$milliseconds} ms"),
     "restart in {0} ms",
@@ -91,10 +88,7 @@ test("message verification rejects a mutation without rewriting its projection",
     const projection = path.join(fixtureSource, "messages.generated.js");
     const mutated = `${await readFile(projection, "utf8")}\n// mutation fixture\n`;
     await writeFile(projection, mutated, "utf8");
-    await assert.rejects(
-      verifyMessageProjections(fixturePackage),
-      /message projection is stale/,
-    );
+    await assert.rejects(verifyMessageProjections(fixturePackage), /message projection is stale/);
     assert.equal(await readFile(projection, "utf8"), mutated);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -112,10 +106,7 @@ test("message projection updates refuse symlinked destinations before writing", 
     await rm(packageProjection);
     await symlink(outside, packageProjection);
 
-    await assert.rejects(
-      generateMessageProjections(fixturePackage),
-      /refusing symlink/,
-    );
+    await assert.rejects(generateMessageProjections(fixturePackage), /refusing symlink/);
     assert.equal(await readFile(outside, "utf8"), "outside\n");
     assert.equal(await readFile(runtimeProjection, "utf8"), originalRuntime);
   } finally {
@@ -136,10 +127,7 @@ test("message projection updates refuse symlinked projection parents before writ
     await rm(fixtureSource, { recursive: true });
     await symlink(outsideSource, fixtureSource);
 
-    await assert.rejects(
-      generateMessageProjections(fixturePackage),
-      /refusing symlink/,
-    );
+    await assert.rejects(generateMessageProjections(fixturePackage), /refusing symlink/);
     assert.equal(await readFile(outsideProjection, "utf8"), outsideOriginal);
     assert.equal(await readFile(packageProjection, "utf8"), originalPackage);
   } finally {
@@ -156,7 +144,7 @@ test("message projection updates restore missing projections", async () => {
     await assert.doesNotReject(verifyMessageProjections(fixturePackage));
     assert.deepEqual(
       (await readdir(fixturePackage)).filter((entry) =>
-        entry.startsWith(".recite-message-projections-")
+        entry.startsWith(".recite-message-projections-"),
       ),
       [],
     );
@@ -194,7 +182,7 @@ test("missing projections remain absent when a later install fails", async () =>
     assert.equal(await readFile(packageProjection, "utf8"), originalPackage);
     assert.deepEqual(
       (await readdir(fixturePackage)).filter((entry) =>
-        entry.startsWith(".recite-message-projections-")
+        entry.startsWith(".recite-message-projections-"),
       ),
       [],
     );
@@ -210,7 +198,7 @@ test("message projection updates install verified projections as a pair", async 
     await assert.doesNotReject(verifyMessageProjections(fixturePackage));
     assert.deepEqual(
       (await readdir(fixturePackage)).filter((entry) =>
-        entry.startsWith(".recite-message-projections-")
+        entry.startsWith(".recite-message-projections-"),
       ),
       [],
     );
@@ -247,21 +235,18 @@ test("message projection updates roll back a partial commit and clean staging", 
       "rollback should restore the first projection after the failed install",
     );
     assert.deepEqual(
-      await Promise.all([
-        readFile(runtimeProjection, "utf8"),
-        readFile(packageProjection, "utf8"),
-      ]),
+      await Promise.all([readFile(runtimeProjection, "utf8"), readFile(packageProjection, "utf8")]),
       originals,
     );
     assert.deepEqual(
       (await readdir(fixturePackage)).filter((entry) =>
-        entry.startsWith(".recite-message-projections-")
+        entry.startsWith(".recite-message-projections-"),
       ),
       [],
     );
     assert.deepEqual(
       (await readdir(path.join(fixturePackage, "src"))).filter((entry) =>
-        entry.includes(".backup-")
+        entry.includes(".backup-"),
       ),
       [],
     );

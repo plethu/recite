@@ -1,5 +1,6 @@
 //! Independent line-number gutter avoids rc.7's shared horizontal scroll bounds.
 use super::EditorViewport;
+use crate::design::tokens::PrintTypography;
 use freya::{
     code_editor::{CodeEditorData, EditorSyntaxTheme},
     prelude::*,
@@ -101,7 +102,7 @@ impl Component for Gutter {
                                 label()
                                     .text((index + 1).to_string())
                                     .font_size(self.size)
-                                    .font_family("monospace")
+                                    .meta_font()
                                     .color(colors.muted),
                             )
                             .into_element()

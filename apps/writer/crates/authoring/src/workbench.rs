@@ -1,8 +1,7 @@
 mod navigation;
 mod structure;
-use crate::{Document, EditError, PassageKind, Preview, PreviewError, PreviewPage};
+use crate::{Document, DraftSnapshot, EditError, PassageKind, Preview, PreviewError, PreviewPage};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
-use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum View {
@@ -35,8 +34,9 @@ impl From<PreviewError> for WorkbenchError {
 pub struct Workbench {
     document: Document,
     view: View,
-    draft: Arc<String>,
-    loaded: Arc<String>,
+    draft: DraftSnapshot,
+    loaded: DraftSnapshot,
+    dirty: bool,
     draft_revision: i64,
     preview: Option<Preview>,
     page: Option<PreviewPage>,
@@ -55,7 +55,6 @@ impl Workbench {
     }
 
     pub fn from_document(document: Document) -> Result<Self, WorkbenchError> {
-        let source = document.source();
         // Script construction also fills the passage cache from its parse.
         let script = document.script_snapshot().ok();
         let passages = document.passage_snapshot().ok();
@@ -63,20 +62,29 @@ impl Workbench {
         let first_block = script.as_ref().and_then(|blocks| blocks.first());
         let revision = document.revision();
         let (view, draft) = match first {
-            Some(first) => (View::Passage(first.id.clone()), first.text.clone()),
+            Some(first) => (
+                View::Passage(first.id.clone()),
+                DraftSnapshot::from(first.text.clone()),
+            ),
             None => match first_block {
-                Some(block) => (View::Block(block.id.clone()), String::new()),
-                None => (View::Source, source.to_owned()),
+                Some(block) => (
+                    View::Block(block.id.clone()),
+                    DraftSnapshot::from(String::new()),
+                ),
+                None => (
+                    View::Source,
+                    DraftSnapshot::from(document.source_snapshot()),
+                ),
             },
         };
         let script_selection = first_block.map(|block| block.id.clone());
-        let draft = Arc::new(draft);
         Ok(Self {
             script_selection,
             document,
             view,
             loaded: draft.clone(),
             draft,
+            dirty: false,
             draft_revision: revision,
             preview: None,
             page: None,
@@ -108,38 +116,47 @@ impl Workbench {
         &self.view
     }
     pub fn draft(&self) -> &str {
-        &self.draft
+        self.draft.as_str()
     }
     pub fn set_draft(&mut self, draft: String) {
         // Move the widget's buffer; snapshots share it without copying prose.
-        self.set_draft_snapshot(Arc::new(draft));
+        self.set_draft_snapshot(draft.into());
     }
-    pub(crate) fn set_draft_snapshot(&mut self, draft: Arc<String>) {
+    /// Replace the field draft without applying it to the accepted document.
+    pub fn set_draft_snapshot(&mut self, draft: DraftSnapshot) {
+        self.dirty = draft != self.loaded;
         self.draft = draft;
     }
-    pub(crate) fn draft_snapshot(&self) -> Arc<String> {
-        self.draft.clone()
+    /// Borrow the immutable draft without requiring contiguous source text.
+    pub const fn draft_snapshot(&self) -> &DraftSnapshot {
+        &self.draft
     }
-    pub fn has_draft(&self) -> bool {
-        self.draft != self.loaded
+    pub const fn has_draft(&self) -> bool {
+        self.dirty
     }
     pub fn apply(&mut self) -> Result<(), WorkbenchError> {
         match &self.view {
             View::Block(_) => {}
             View::Source => self
                 .document
-                .replace_source(self.draft_revision, self.draft.as_ref().clone())?,
+                .replace_source(self.draft_revision, self.draft.as_str().to_owned())?,
             View::Passage(id) => {
                 self.document
-                    .replace_text(self.draft_revision, id, &self.draft)?
+                    .replace_text(self.draft_revision, id, self.draft.as_str())?
             }
         }
+        if self.view == View::Source {
+            // Acceptance owns these bytes now; release the flattened Rope draft.
+            self.draft = self.document.source_snapshot().into();
+        }
         self.loaded = self.draft.clone();
+        self.dirty = false;
         self.draft_revision = self.document.revision();
         Ok(())
     }
     pub fn discard(&mut self) {
         self.draft = self.loaded.clone();
+        self.dirty = false;
     }
     pub fn undo(&mut self) -> Result<(), WorkbenchError> {
         self.require_applied()?;
@@ -250,16 +267,16 @@ impl Workbench {
     }
     fn refresh(&mut self) -> Result<(), WorkbenchError> {
         let next = match &self.view {
-            View::Block(block) if self.document.sections().contains(block) => String::new(),
+            View::Block(block) if self.document.sections().contains(block) => String::new().into(),
             View::Block(_) => return self.restore_script_selection(),
-            View::Source => self.document.source().to_owned(),
-            View::Passage(id) => match self
-                .document
-                .passages()
-                .ok()
-                .and_then(|passages| passages.into_iter().find(|p| &p.id == id))
-            {
-                Some(p) => p.text,
+            View::Source => self.document.source_snapshot().into(),
+            View::Passage(id) => match self.document.passage_snapshot().ok().and_then(|passages| {
+                passages
+                    .iter()
+                    .find(|p| &p.id == id)
+                    .map(|p| p.text.clone())
+            }) {
+                Some(text) => text.into(),
                 None => {
                     return self.restore_script_selection();
                 }
@@ -268,9 +285,10 @@ impl Workbench {
         self.load(next);
         Ok(())
     }
-    fn load(&mut self, text: String) {
-        self.draft = Arc::new(text);
+    fn load(&mut self, text: DraftSnapshot) {
+        self.draft = text;
         self.loaded = self.draft.clone();
+        self.dirty = false;
         self.draft_revision = self.document.revision();
     }
 }

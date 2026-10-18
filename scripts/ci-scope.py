@@ -170,12 +170,12 @@ def lanes_for_path(path, *, base=None, head=None):
         )
     ):
         lanes = RUST | {"lsp-sessions", "docs", "site"}
-        if not path.startswith(
-            ("crates/recite-lsp/", "crates/recite-ui/", "crates/recite-config/")
-        ):
+        if not path.startswith("crates/recite-config/"):
             lanes |= {"workflow-performance"}
         return lanes
     if path.startswith("crates/"):
+        if path.startswith("crates/recite-adapter/"):
+            return RUST | {"workflow-performance"}
         if path.startswith("crates/recite-runtime/"):
             return RUST | {"docs", "site", "workflow-performance"}
         if path.startswith("crates/recite-playground/"):
@@ -196,13 +196,24 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"editor", "lsp-sessions", "maintainability"})
     if path.startswith(("editors/helix/", "tests/editor-hosts/helix/")):
         return frozenset({"editor", "maintainability"})
+    if path.startswith("editors/recite-tree-sitter/"):
+        return frozenset({"writer", "editor-native", "editor", "maintainability"})
     if path.startswith("editors/"):
         return frozenset({"editor-native", "editor", "maintainability"})
     if path.startswith(("fixtures/", "schemas/", "tests/editor-parity/")):
         return LANES - DISTRIBUTION
     if path.startswith(("examples/", "include/", "Packages/")):
         return RUST
-    if path in {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"}:
+    if path in {
+        "package.json",
+        "bun.lock",
+        "bunfig.toml",
+        "oxfmt.config.mts",
+        "oxlint.config.mts",
+        "tsconfig.base.json",
+        "tsconfig.node.json",
+        "tsconfig.tools.json",
+    }:
         return JS
     if path == "scripts/install-js-dependencies.sh":
         return JS | {"maintainability"}

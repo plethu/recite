@@ -42,7 +42,7 @@ pub(crate) fn actions(
                         ),
                         (
                             "declaration_name".to_owned(),
-                            UiArg::from(declared.context.name.clone().unwrap_or_default()),
+                            UiArg::from(declared.context.name.unwrap_or_default()),
                         ),
                     ]),
                 ),

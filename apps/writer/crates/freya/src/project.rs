@@ -4,6 +4,7 @@ mod manifest;
 mod recovery;
 mod rename;
 pub(crate) mod save;
+mod search;
 mod sessions;
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_compiler::authoring::WorkControl;
@@ -58,9 +59,12 @@ impl ProjectFiles {
             .map(|d| d.path().to_owned())
             .collect();
         let current = paths.first().ok_or(FileError::Empty)?.clone();
-        let saved = read_regular(&current)?.into();
+        let saved: std::sync::Arc<str> = read_regular(&current)?.into();
         let recovery = RecoveryStore::open(&current)?;
-        let context = crate::project_context::load(&report)?;
+        let mut context = crate::project_context::load(&report)?;
+        if let Some(document) = report.documents().first() {
+            crate::project_context::share_saved_source(&mut context, document.key(), &saved);
+        }
         control.checkpoint()?;
         let search = std::sync::Arc::new(recite_writer_model::SearchIndex::build_with_control(
             &context.documents,
@@ -161,8 +165,7 @@ impl ProjectFiles {
         let path = self.export(workbench)?;
         self.recovery.persist(None)?;
         self.saved = disk.into();
-        self.search =
-            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
+        self.search = self.refreshed_search(&context.documents);
         self.context = context;
         Ok((path, next))
     }
@@ -213,8 +216,7 @@ impl ProjectFiles {
             .iter()
             .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
             .collect();
-        self.search =
-            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
+        self.search = self.refreshed_search(&context.documents);
         self.context = context;
         Ok(())
     }

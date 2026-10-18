@@ -6,7 +6,7 @@ use recite_ui::{MsgId, UiCatalog};
 
 use super::CodeActionDocument;
 use crate::edit_projection::{EditDocument, project_plan};
-use crate::position::lsp_position_to_source;
+use crate::position::indexed_lsp_position_to_source;
 
 pub(super) fn actions(
     params: &CodeActionParams,
@@ -41,8 +41,14 @@ fn plan_for_range(
     document: &CodeActionDocument<'_>,
     range: lsp_types::Range,
 ) -> Option<AuthoringEditPlan> {
-    let start = lsp_position_to_source(document.source.text, range.start)?;
-    let end = lsp_position_to_source(document.source.text, range.end)?;
+    let start = indexed_lsp_position_to_source(
+        snapshot.document(document.source.key)?.source_index(),
+        range.start,
+    )?;
+    let end = indexed_lsp_position_to_source(
+        snapshot.document(document.source.key)?.source_index(),
+        range.end,
+    )?;
     let source_range = SourceRange::new(start, end);
     snapshot
         .plan_create_block_stub_in_range(document.source.key, source_range)

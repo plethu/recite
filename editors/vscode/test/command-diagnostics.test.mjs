@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   applyDiagnostics,
   replaceDiagnostics,
   validDiagnosticRecord,
-} from "../src/command-diagnostics.js";
+} from "../src/command-diagnostics.ts";
 
 test("diagnostic spans are inclusive and project to VS Code UTF-16 ranges", async () => {
   const root = await tempRoot("ascii");
@@ -18,15 +18,17 @@ test("diagnostic spans are inclusive and project to VS Code UTF-16 ranges", asyn
   applyDiagnostics(
     api,
     collection(entries),
-    [diagnostic(
-      file,
-      {
-        line: 1,
-        column: 2,
-      },
-      { line: 1, column: 2 },
-      "diagnostic-parse-001",
-    )],
+    [
+      diagnostic(
+        file,
+        {
+          line: 1,
+          column: 2,
+        },
+        { line: 1, column: 2 },
+        "diagnostic-parse-001",
+      ),
+    ],
     root,
     new Map(),
   );
@@ -48,19 +50,21 @@ test("non-BMP scalars and CRLF use source text for stable UTF-16 columns", async
   applyDiagnostics(
     api,
     collection(entries),
-    [diagnostic(
-      file,
-      {
-        line: 1,
-        column: 2,
-      },
-      { line: 1, column: 3 },
-      "diagnostic-validate-007",
-      {
-        reference: { type: "string", value: "missing" },
-      },
-      "wrong compatibility",
-    )],
+    [
+      diagnostic(
+        file,
+        {
+          line: 1,
+          column: 2,
+        },
+        { line: 1, column: 3 },
+        "diagnostic-validate-007",
+        {
+          reference: { type: "string", value: "missing" },
+        },
+        "wrong compatibility",
+      ),
+    ],
     root,
     new Map(),
   );
@@ -90,22 +94,27 @@ test("replacement projects before clearing the previous snapshot", async () => {
   );
   assert.equal(entries.size, 1);
   assert.equal(target.calls.length, 1);
-  assert.throws(() =>
-    replaceDiagnostics(
-      api,
-      target,
-      [diagnostic(
-        "missing.recite",
-        {
-          line: 1,
-          column: 1,
-        },
-        null,
-        "diagnostic-parse-001",
-      )],
-      root,
-      knownUris,
-    ), /diagnostic_source_unavailable/);
+  assert.throws(
+    () =>
+      replaceDiagnostics(
+        api,
+        target,
+        [
+          diagnostic(
+            "missing.recite",
+            {
+              line: 1,
+              column: 1,
+            },
+            null,
+            "diagnostic-parse-001",
+          ),
+        ],
+        root,
+        knownUris,
+      ),
+    /diagnostic_source_unavailable/,
+  );
   assert.equal(entries.size, 1);
   assert.equal(target.calls.length, 1, "failed projection must not submit a replacement batch");
   await rm(root, { recursive: true, force: true });
@@ -136,10 +145,13 @@ test("replacement submits one complete batch and clears removed URIs atomically"
     knownUris,
   );
   assert.equal(target.calls.length, 2);
-  assert.deepEqual(target.calls[1].map(([uri, values]) => [uri.fsPath, values.length]), [
-    [first, 0],
-    [second, 1],
-  ]);
+  assert.deepEqual(
+    target.calls[1].map(([uri, values]) => [uri.fsPath, values.length]),
+    [
+      [first, 0],
+      [second, 1],
+    ],
+  );
   assert.equal(entries.has(`file://${first}`), false);
   assert.equal(entries.has(`file://${second}`), true);
   await rm(root, { recursive: true, force: true });
@@ -194,9 +206,16 @@ test("diagnostic argument names preserve the core wire contract", () => {
     record.presentation.arguments = { [name]: { type: "string", value: "detail" } };
     assert.equal(validDiagnosticRecord(record), true, name);
   }
-  for (
-    const name of ["Limit", "limit-name", "name-", "0limit", "_limit", "bad.name", "naïve", ""]
-  ) {
+  for (const name of [
+    "Limit",
+    "limit-name",
+    "name-",
+    "0limit",
+    "_limit",
+    "bad.name",
+    "naïve",
+    "",
+  ]) {
     record.presentation.arguments = { [name]: { type: "string", value: "detail" } };
     assert.equal(validDiagnosticRecord(record), false, name);
   }
@@ -264,3 +283,139 @@ function collection(entries) {
     },
   };
 }
+
+test("presentations validate every argument independently and retain required nullable keys", () => {
+  const record = diagnostic(
+    "dialogue.recite",
+    { line: 1, column: 1 },
+    null,
+    "diagnostic-future-example",
+    {
+      first: { type: "string", value: "value" },
+      second: { type: "integer", value: 2 },
+    },
+  );
+  assert.equal(validDiagnosticRecord(record), true);
+  assert.equal(
+    validDiagnosticRecord({
+      ...record,
+      presentation: {
+        ...record.presentation,
+        arguments: {
+          ...record.presentation.arguments,
+          second: { type: "integer", value: 1.5 },
+        },
+      },
+    }),
+    false,
+  );
+  const { help: _help, ...withoutHelp } = record;
+  assert.equal(validDiagnosticRecord(withoutHelp), false);
+});
+
+test("canonical multi-argument presentations validate their named argument types", () => {
+  const record = diagnostic("dialogue.recite", { line: 1, column: 1 }, null, "diagnostic-id-035", {
+    context: { type: "string", value: "scene" },
+    source_text: { type: "string", value: "line" },
+  });
+  assert.equal(validDiagnosticRecord(record), true);
+  assert.equal(
+    validDiagnosticRecord({
+      ...record,
+      presentation: {
+        ...record.presentation,
+        arguments: {
+          ...record.presentation.arguments,
+          source_text: { type: "boolean", value: false },
+        },
+      },
+    }),
+    false,
+  );
+});
+
+test("one publication shares a source snapshot and the next observes changed text", async () => {
+  const root = await tempRoot("snapshot");
+  const file = path.join(root, "dialogue.recite");
+  let source = "😀ab\rnext\r\nlast\n";
+  let reads = 0;
+  const entries = new Map();
+  const api = fakeApi(entries, [
+    {
+      uri: { scheme: "file", fsPath: file },
+      isDirty: false,
+      getText: () => {
+        reads += 1;
+        return source;
+      },
+    },
+  ]);
+  const records = Array.from({ length: 50 }, () =>
+    diagnostic(file, { line: 1, column: 2 }, { line: 1, column: 3 }, "diagnostic-parse-001"),
+  );
+  const target = collection(entries);
+  replaceDiagnostics(api, target, records, root, new Map());
+  assert.equal(reads, 1);
+  assert.equal(entries.get(`file://${file}`).length, 50);
+  assert.equal(entries.get(`file://${file}`)[0].range.start.character, 2);
+  source = "x😀ab\rnext\r\nlast\n";
+  replaceDiagnostics(api, target, records, root, new Map());
+  assert.equal(reads, 2);
+  assert.equal(entries.get(`file://${file}`)[0].range.start.character, 1);
+  assert.equal(entries.get(`file://${file}`)[0].range.end.character, 4);
+  replaceDiagnostics(
+    api,
+    target,
+    [diagnostic(file, { line: 2, column: 1 }, { line: 2, column: 4 }, "diagnostic-parse-001")],
+    root,
+    new Map(),
+  );
+  assert.equal(entries.get(`file://${file}`)[0].range.start.line, 1);
+  assert.equal(entries.get(`file://${file}`)[0].range.end.character, 4);
+  await rm(root, { recursive: true, force: true });
+});
+
+test("large late-file diagnostic batches read and split the source once", async () => {
+  const root = await tempRoot("large-batch");
+  const file = path.join(root, "large.recite");
+  const source = "😀ab\r\n".repeat(100_000);
+  let reads = 0;
+  let splits = 0;
+  const entries = new Map();
+  const api = fakeApi(entries, [
+    {
+      uri: { scheme: "file", fsPath: file },
+      isDirty: false,
+      getText: () => {
+        reads += 1;
+        return source;
+      },
+    },
+  ]);
+  const records = Array.from({ length: 250 }, () =>
+    diagnostic(
+      file,
+      { line: 100_000, column: 2 },
+      { line: 100_000, column: 3 },
+      "diagnostic-parse-001",
+    ),
+  );
+  const originalSplit = String.prototype.split;
+  String.prototype.split = function (...args) {
+    if (this.valueOf() === source) splits += 1;
+    return Reflect.apply(originalSplit, this, args);
+  };
+  try {
+    replaceDiagnostics(api, collection(entries), records, root, new Map());
+    assert.equal(reads, 1);
+    assert.equal(splits, 1);
+    const values = entries.get(`file://${file}`);
+    assert.equal(values.length, 250);
+    assert.equal(values[249].range.start.line, 99_999);
+    assert.equal(values[249].range.start.character, 2);
+    assert.equal(values[249].range.end.character, 4);
+  } finally {
+    String.prototype.split = originalSplit;
+    await rm(root, { recursive: true, force: true });
+  }
+});

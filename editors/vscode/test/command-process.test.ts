@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { runFiniteCommand } from "../src/command-process.js";
+import { test } from "bun:test";
+import { runFiniteCommand } from "../src/command-process.ts";
 import { FakeChild } from "./child.ts";
 
 test("finite adapters accept content diagnostics and typed failures", async () => {
@@ -16,15 +16,22 @@ test("finite adapters accept content diagnostics and typed failures", async () =
     exit_code: 1,
     error: { category: "input", code: "read", operation: "validate" },
   });
+  assert(failure.terminal.event === "command.error");
   assert.equal(failure.terminal.error.category, "input");
 });
 
 test("finite adapters accept a producer-valid asset-load failure", async () => {
-  const failure = await runFinite("command.error", 1, {
-    status: "failure",
-    exit_code: 1,
-    error: { category: "asset", code: "decode_asset", operation: "load_asset" },
-  }, "run");
+  const failure = await runFinite(
+    "command.error",
+    1,
+    {
+      status: "failure",
+      exit_code: 1,
+      error: { category: "asset", code: "decode_asset", operation: "load_asset" },
+    },
+    "run",
+  );
+  assert(failure.terminal.event === "command.error");
   assert.equal(failure.terminal.error.operation, "load_asset");
 });
 
@@ -61,14 +68,17 @@ async function runFinite(
           event: "command.started",
           command,
           invocation_id: "id",
-        }) + "\n" + JSON.stringify({
-          version: 1,
-          sequence: 1,
-          event,
-          command,
-          invocation_id: "id",
-          ...terminal,
-        }) + "\n",
+        }) +
+          "\n" +
+          JSON.stringify({
+            version: 1,
+            sequence: 1,
+            event,
+            command,
+            invocation_id: "id",
+            ...terminal,
+          }) +
+          "\n",
       ),
     );
     child.close(exitCode);

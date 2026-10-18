@@ -1,14 +1,19 @@
 //! Completion queries use the current draft without applying it to the document.
 use crate::{Document, EditError};
-use recite_compiler::authoring::{CompletionCandidate, QueryResult};
-use recite_core::SourcePosition;
+use recite_compiler::authoring::{CancellationToken, CompletionCandidate};
+use recite_core::{SourceLineIndex, SourcePosition};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct SourceCompletions {
-    source: String,
-    candidates: Vec<CompletionCandidate>,
+    pub(super) source: SourceLineIndex,
+    pub(super) candidates: Vec<CompletionCandidate>,
 }
 impl SourceCompletions {
+    /// Exact draft bytes captured with these replacement spans.
+    pub fn source(&self) -> &str {
+        self.source.source()
+    }
+
     pub fn candidates(&self) -> &[CompletionCandidate] {
         &self.candidates
     }
@@ -19,14 +24,20 @@ impl SourceCompletions {
         current: &str,
         index: usize,
     ) -> Result<(std::ops::Range<usize>, &str), EditError> {
-        if current != self.source {
+        if !std::ptr::eq(current, self.source()) && current != self.source() {
             return Err(EditError::Stale);
         }
         let candidate = self.candidates.get(index).ok_or(EditError::Position)?;
         let span = candidate.replace_span();
-        let start = crate::projection::offset(current, span.start)?;
+        let start = self
+            .source
+            .byte_offset(span.start)
+            .ok_or(EditError::Position)?;
         let end = if let Some(position) = span.end {
-            let offset = crate::projection::offset(current, position)?;
+            let offset = self
+                .source
+                .byte_offset(position)
+                .ok_or(EditError::Position)?;
             offset
                 + current[offset..]
                     .chars()
@@ -39,20 +50,23 @@ impl SourceCompletions {
         Ok((start..end, candidate.name()))
     }
 }
+
+impl std::fmt::Debug for SourceCompletions {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("SourceCompletions")
+            .field("source", &self.source())
+            .field("candidates", &self.candidates)
+            .finish()
+    }
+}
 impl Document {
     pub fn complete_draft(
         &self,
         draft: &str,
         position: SourcePosition,
     ) -> Result<SourceCompletions, EditError> {
-        let overlay = Self::in_project(self.key().clone(), draft, self.project_context())?;
-        let candidates = match overlay.kernel().snapshot().complete(self.key(), position) {
-            QueryResult::Ready(value) | QueryResult::Partial { value, .. } => value,
-            _ => Vec::new(),
-        };
-        Ok(SourceCompletions {
-            source: draft.into(),
-            candidates,
-        })
+        self.completion_snapshot()
+            .complete(draft, position, &CancellationToken::new())
     }
 }

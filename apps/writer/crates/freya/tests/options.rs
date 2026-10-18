@@ -12,6 +12,11 @@ fn key(test: &mut TestingRunner, key: NamedKey, code: Code) {
     test.poll_n(std::time::Duration::from_millis(16), 4);
 }
 
+/// The toolbar's own view switch can sit behind the dialog, so match the preference column.
+fn in_settings_column(dialog: Area, area: Area) -> bool {
+    dialog.contains(area.center()) && area.min_x() > dialog.center().x
+}
+
 #[test]
 fn options_select_explicitly_and_arrow_keys_keep_tab_order_in_the_dialog()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -65,7 +70,7 @@ fn options_select_explicitly_and_arrow_keys_keep_tab_order_in_the_dialog()
             Rect::try_downcast(e)
                 .filter(|r| {
                     r.accessibility.builder.label() == Some("Writing view: Map")
-                        && dialog.contains(node.layout().area.center())
+                        && in_settings_column(dialog, node.layout().area)
                 })
                 .map(|_| node.layout().area)
         })
@@ -77,7 +82,7 @@ fn options_select_explicitly_and_arrow_keys_keep_tab_order_in_the_dialog()
         test.find(|node, e| {
             Rect::try_downcast(e).filter(|r| {
                 r.accessibility.builder.label() == Some("Writing view: Map")
-                    && dialog.contains(node.layout().area.center())
+                    && in_settings_column(dialog, node.layout().area)
                     && r.accessibility.builder.toggled() == Some(accesskit::Toggled::True)
             })
         })

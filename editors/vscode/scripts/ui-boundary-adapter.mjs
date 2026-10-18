@@ -3,7 +3,7 @@ import {
   COMMAND_UI_METHOD_CONTRACTS,
   validateCommandMethod,
 } from "./ui-boundary-command-contracts.mjs";
-const MESSAGE_MODULE = "./messages.js";
+const MESSAGE_MODULE = "./messages.ts";
 const MESSAGE_WRAPPER = "clientMessage";
 
 // This is the UI service contract. The adapter validator and the outside
@@ -62,8 +62,9 @@ export const UI_METHOD_CONTRACTS = Object.freeze({
 });
 export function validateAdapter(ast, file, expected) {
   assert(
-    ast.body.length === 2 && ast.body[0].type === "ImportDeclaration"
-      && ast.body[1].type === "ExportNamedDeclaration",
+    ast.body.length === 2 &&
+      ast.body[0].type === "ImportDeclaration" &&
+      ast.body[1].type === "ExportNamedDeclaration",
     `UI adapter must contain only its canonical import and factory (${file})`,
   );
   const imports = ast.body.filter((node) => node.type === "ImportDeclaration");
@@ -74,40 +75,47 @@ export function validateAdapter(ast, file, expected) {
   );
   const messageImport = imports[0];
   assert(
-    messageImport.source.value === MESSAGE_MODULE && messageImport.specifiers.length === 1
-      && (messageImport.attributes?.length ?? 0) === 0
-      && messageImport.specifiers[0].type === "ImportSpecifier"
-      && messageImport.specifiers[0].imported.name === MESSAGE_WRAPPER
-      && messageImport.specifiers[0].local.name === MESSAGE_WRAPPER,
+    messageImport.source.value === MESSAGE_MODULE &&
+      messageImport.specifiers.length === 1 &&
+      (messageImport.attributes?.length ?? 0) === 0 &&
+      messageImport.specifiers[0].type === "ImportSpecifier" &&
+      messageImport.specifiers[0].imported.name === MESSAGE_WRAPPER &&
+      messageImport.specifiers[0].local.name === MESSAGE_WRAPPER,
     `UI adapter must use the canonical ${MESSAGE_WRAPPER} import (${file})`,
   );
   const declaration = exports[0].declaration;
   assert(
-    exports[0].specifiers.length === 0 && exports[0].source === null
-      && declaration?.type === "FunctionDeclaration"
-      && declaration.id?.name === "createUserInterface"
-      && !declaration.async && !declaration.generator,
+    exports[0].specifiers.length === 0 &&
+      exports[0].source === null &&
+      declaration?.type === "FunctionDeclaration" &&
+      declaration.id?.name === "createUserInterface" &&
+      !declaration.async &&
+      !declaration.generator,
     `UI adapter must export only createUserInterface (${file})`,
   );
   const factory = declaration;
   assert(
-    factory.params.length === 1 && factory.params[0].type === "Identifier"
-      && factory.params[0].name === "api" && factory.body.body.length === 2,
+    factory.params.length === 1 &&
+      factory.params[0].type === "Identifier" &&
+      factory.params[0].name === "api" &&
+      factory.body.body.length === 2,
     `UI adapter factory must accept only api and have an exact body (${file})`,
   );
 
   const outputStatement = factory.body.body[0];
   assert(
-    outputStatement.type === "VariableDeclaration" && outputStatement.kind === "const"
-      && outputStatement.declarations.length === 1
-      && outputStatement.declarations[0].id.type === "Identifier"
-      && outputStatement.declarations[0].id.name === "output",
+    outputStatement.type === "VariableDeclaration" &&
+      outputStatement.kind === "const" &&
+      outputStatement.declarations.length === 1 &&
+      outputStatement.declarations[0].id.type === "Identifier" &&
+      outputStatement.declarations[0].id.name === "output",
     `UI factory must declare one private output channel (${file})`,
   );
   const output = outputStatement.declarations[0];
   assert(
-    isMemberCall(output.init, "api", "window", "createOutputChannel")
-      && output.init.arguments.length === 1 && isCanonicalCall(output.init.arguments[0]),
+    isMemberCall(output.init, "api", "window", "createOutputChannel") &&
+      output.init.arguments.length === 1 &&
+      isCanonicalCall(output.init.arguments[0]),
     `UI output must be created directly from the canonical display projection (${file})`,
   );
   assertMessageCall(output.init.arguments[0], file, "lsp-client-display-name");
@@ -125,8 +133,11 @@ export function validateAdapter(ast, file, expected) {
   for (const property of service.properties) {
     const name = propertyName(property);
     assert(
-      property.type === "Property" && property.method === true && name
-        && Object.hasOwn(UI_METHOD_CONTRACTS, name) && !seen.has(name),
+      property.type === "Property" &&
+        property.method === true &&
+        name &&
+        Object.hasOwn(UI_METHOD_CONTRACTS, name) &&
+        !seen.has(name),
       `UI service contains an unsupported or duplicate method: ${name ?? "computed"} (${file})`,
     );
     seen.add(name);
@@ -143,7 +154,8 @@ export function validateAdapter(ast, file, expected) {
   const ids = [
     "lsp-client-display-name",
     ...Object.values(UI_METHOD_CONTRACTS)
-      .filter((contract) => contract.id).map((contract) => contract.id),
+      .filter((contract) => contract.id)
+      .map((contract) => contract.id),
   ];
   assert(
     ids.every((id) => expected.has(id)),
@@ -154,8 +166,10 @@ export function validateAdapter(ast, file, expected) {
 function validateMethod(property, contract, file) {
   const method = property.value;
   assert(
-    method.type === "FunctionExpression" && !method.async && !method.generator
-      && method.params.every((param) => param.type === "Identifier"),
+    method.type === "FunctionExpression" &&
+      !method.async &&
+      !method.generator &&
+      method.params.every((param) => param.type === "Identifier"),
     `UI adapter method parameters must be simple identifiers (${file})`,
   );
   if (contract.kind === "projection") {
@@ -193,8 +207,8 @@ function validateMethod(property, contract, file) {
     assertMessageCall(append.expression.arguments[0], file, contract.id, contract.argument);
     const notify = method.body.body[1];
     assert(
-      notify.type === "ExpressionStatement"
-        && isWindowMessageCall(notify.expression, contract.host),
+      notify.type === "ExpressionStatement" &&
+        isWindowMessageCall(notify.expression, contract.host),
       `UI method ${propertyName(property)} must notify through the declared host API (${file})`,
     );
     assertMessageCall(notify.expression.arguments[0], file, contract.id, contract.argument);
@@ -208,9 +222,11 @@ function validateMethod(property, contract, file) {
     const statement = oneStatement(method, file, propertyName(property));
     const error = statement.type === "ReturnStatement" ? statement.argument : undefined;
     assert(
-      error?.type === "NewExpression" && error.callee.type === "Identifier"
-        && error.callee.name === "Error" && error.arguments.length === 1
-        && isCanonicalCall(error.arguments[0]),
+      error?.type === "NewExpression" &&
+        error.callee.type === "Identifier" &&
+        error.callee.name === "Error" &&
+        error.arguments.length === 1 &&
+        isCanonicalCall(error.arguments[0]),
       `UI method ${propertyName(property)} must return a canonical Error (${file})`,
     );
     assertMessageCall(error.arguments[0], file, contract.id);
@@ -250,8 +266,8 @@ function validateMethod(property, contract, file) {
     assertDirectPayload(append.expression.arguments[0], method.params[0], file);
     const notify = method.body.body[1];
     assert(
-      notify.type === "ExpressionStatement"
-        && isWindowMessageCall(notify.expression, contract.host),
+      notify.type === "ExpressionStatement" &&
+        isWindowMessageCall(notify.expression, contract.host),
       `UI method ${propertyName(property)} must notify through the declared host API (${file})`,
     );
     assertDirectPayload(notify.expression.arguments[0], method.params[0], file);
@@ -273,16 +289,18 @@ function validateMethod(property, contract, file) {
 }
 function assertMessageCall(node, file, id, argument) {
   assert(
-    node.arguments.length === (argument ? 3 : 2)
-      && node.arguments[0].type === "Identifier" && node.arguments[0].name === "api",
+    node.arguments.length === (argument ? 3 : 2) &&
+      node.arguments[0].type === "Identifier" &&
+      node.arguments[0].name === "api",
     `canonical projection ${id} must receive api directly (${file})`,
   );
   const literal = node.arguments[1];
   assert(
-    literal.type === "Literal" && typeof literal.value === "string"
-      && /^[a-z0-9-]+$/.test(literal.value)
-      && (literal.raw === JSON.stringify(literal.value) || literal.raw === `'${literal.value}'`)
-      && literal.value === id,
+    literal.type === "Literal" &&
+      typeof literal.value === "string" &&
+      /^[a-z0-9-]+$/.test(literal.value) &&
+      (literal.raw === JSON.stringify(literal.value) || literal.raw === `'${literal.value}'`) &&
+      literal.value === id,
     `canonical projection must use the registered unescaped ID ${id} (${file})`,
   );
   if (argument) {
@@ -293,18 +311,32 @@ function assertMessageCall(node, file, id, argument) {
   }
 }
 function isOutputCall(node, method) {
-  return node?.type === "CallExpression" && node.arguments.length === 1 - (method === "dispose")
-    && node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional
-    && node.callee.object.type === "Identifier" && node.callee.object.name === "output"
-    && memberMethod(node.callee) === method;
+  return (
+    node?.type === "CallExpression" &&
+    node.arguments.length === 1 - (method === "dispose") &&
+    node.callee.type === "MemberExpression" &&
+    !node.callee.computed &&
+    !node.callee.optional &&
+    node.callee.object.type === "Identifier" &&
+    node.callee.object.name === "output" &&
+    memberMethod(node.callee) === method
+  );
 }
 function isWindowMessageCall(node, method) {
-  return node?.type === "CallExpression" && node.arguments.length === 1
-    && node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional
-    && node.callee.object.type === "MemberExpression" && !node.callee.object.computed
-    && !node.callee.object.optional && node.callee.object.object.type === "Identifier"
-    && node.callee.object.object.name === "api" && memberMethod(node.callee.object) === "window"
-    && memberMethod(node.callee) === method;
+  return (
+    node?.type === "CallExpression" &&
+    node.arguments.length === 1 &&
+    node.callee.type === "MemberExpression" &&
+    !node.callee.computed &&
+    !node.callee.optional &&
+    node.callee.object.type === "MemberExpression" &&
+    !node.callee.object.computed &&
+    !node.callee.object.optional &&
+    node.callee.object.object.type === "Identifier" &&
+    node.callee.object.object.name === "api" &&
+    memberMethod(node.callee.object) === "window" &&
+    memberMethod(node.callee) === method
+  );
 }
 function assertDirectPayload(node, parameter, file) {
   assert(
@@ -314,18 +346,29 @@ function assertDirectPayload(node, parameter, file) {
 }
 
 function isCanonicalCall(node) {
-  return node?.type === "CallExpression" && node.callee.type === "Identifier"
-    && node.callee.name === MESSAGE_WRAPPER && !node.optional;
+  return (
+    node?.type === "CallExpression" &&
+    node.callee.type === "Identifier" &&
+    node.callee.name === MESSAGE_WRAPPER &&
+    !node.optional
+  );
 }
 
 function isObjectFreeze(node) {
-  return node?.type === "CallExpression" && node.arguments.length === 1
-    && node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional
-    && node.callee.object.type === "Identifier" && node.callee.object.name === "Object"
-    && memberMethod(node.callee) === "freeze" && node.arguments[0].type === "ObjectExpression"
-    && node.arguments[0].properties.every((property) =>
-      property.type === "Property" && !property.computed
-    );
+  return (
+    node?.type === "CallExpression" &&
+    node.arguments.length === 1 &&
+    node.callee.type === "MemberExpression" &&
+    !node.callee.computed &&
+    !node.callee.optional &&
+    node.callee.object.type === "Identifier" &&
+    node.callee.object.name === "Object" &&
+    memberMethod(node.callee) === "freeze" &&
+    node.arguments[0].type === "ObjectExpression" &&
+    node.arguments[0].properties.every(
+      (property) => property.type === "Property" && !property.computed,
+    )
+  );
 }
 
 function oneStatement(method, file, name) {

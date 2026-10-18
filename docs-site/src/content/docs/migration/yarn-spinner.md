@@ -1,7 +1,6 @@
 ---
 title: Yarn Spinner imports
 description: Inspect Yarn source and convert plain nodes, line IDs and static jumps.
-template: splash
 ---
 
 ```sh

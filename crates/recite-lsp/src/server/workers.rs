@@ -206,7 +206,7 @@ fn project_refresh(
             d.version,
             &d.diagnostics,
             &workspace.ui_catalog,
-            &workspace.diagnostic_sources_for_uri(&d.uri),
+            &workspace.diagnostic_related_sources(&d.uri, &d.diagnostics),
         )
         .map_err(|error| AnalysisError::Projection(error.to_string())),
         DiagnosticRefresh::Clear { uri, version, .. } => Ok(clear_diagnostics(uri, version)),

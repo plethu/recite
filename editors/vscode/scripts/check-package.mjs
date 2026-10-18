@@ -1,3 +1,4 @@
+import { parseSource, staticModuleSpecifier, walkWithParents } from "./ui-boundary-ast.mjs";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -53,18 +54,16 @@ assert(
   manifest.activationEvents?.includes("onLanguage:recite"),
   "activation must be tied to Recite files",
 );
-for (
-  const command of [
-    "recite.validate",
-    "recite.compile",
-    "recite.extract",
-    "recite.watch.start",
-    "recite.watch.stop",
-    "recite.run",
-    "recite.trace",
-    "recite.renameBlock",
-  ]
-) {
+for (const command of [
+  "recite.validate",
+  "recite.compile",
+  "recite.extract",
+  "recite.watch.start",
+  "recite.watch.stop",
+  "recite.run",
+  "recite.trace",
+  "recite.renameBlock",
+]) {
   assert(
     manifest.activationEvents?.includes(`onCommand:${command}`),
     `activation must include ${command}`,
@@ -76,12 +75,13 @@ assert(
   "restricted workspaces must be supported without starting a server",
 );
 assert(
-  JSON.stringify(trust.restrictedConfigurations?.slice().sort()) === JSON.stringify([
-    "recite.cli.path",
-    "recite.lsp.args",
-    "recite.lsp.path",
-    "recite.lsp.projectRoot",
-  ]),
+  JSON.stringify(trust.restrictedConfigurations?.slice().sort()) ===
+    JSON.stringify([
+      "recite.cli.path",
+      "recite.lsp.args",
+      "recite.lsp.path",
+      "recite.lsp.projectRoot",
+    ]),
   "all process-affecting settings must be restricted in untrusted workspaces",
 );
 
@@ -99,8 +99,9 @@ assert(
 const grammars = manifest.contributes?.grammars ?? [];
 assert(grammars.length === 1, "the Recite TextMate grammar contribution is required");
 assert(
-  grammars[0].language === "recite" && grammars[0].scopeName === "source.recite"
-    && grammars[0].path === "./syntaxes/recite.tmLanguage.json",
+  grammars[0].language === "recite" &&
+    grammars[0].scopeName === "source.recite" &&
+    grammars[0].path === "./syntaxes/recite.tmLanguage.json",
   "the Recite TextMate grammar contribution must use the checked-in source grammar",
 );
 assert(
@@ -108,45 +109,46 @@ assert(
   "the TextMate grammar must be included in the extension package",
 );
 assert(
-  grammar.name === "Recite" && grammar.scopeName === "source.recite"
-    && Array.isArray(grammar.fileTypes) && grammar.fileTypes.length === 1
-    && grammar.fileTypes[0] === "recite",
+  grammar.name === "Recite" &&
+    grammar.scopeName === "source.recite" &&
+    Array.isArray(grammar.fileTypes) &&
+    grammar.fileTypes.length === 1 &&
+    grammar.fileTypes[0] === "recite",
   "the TextMate grammar must declare the Recite source scope and .recite file type",
 );
 assert(
   grammar.repository && typeof grammar.repository === "object",
   "the TextMate grammar repository is required",
 );
-for (
-  const rule of [
-    "comment-line",
-    "block-statement",
-    "line-statement",
-    "choice-statement",
-    "effect-statement",
-    "divert-statement",
-    "conditional-statement",
-    "plural-statement",
-    "prose-line",
-    "markup-tag",
-    "interpolation",
-    "invalid-lexical",
-  ]
-) {
+for (const rule of [
+  "comment-line",
+  "block-statement",
+  "line-statement",
+  "choice-statement",
+  "effect-statement",
+  "divert-statement",
+  "conditional-statement",
+  "plural-statement",
+  "prose-line",
+  "markup-tag",
+  "interpolation",
+  "invalid-lexical",
+]) {
   assert(grammar.repository[rule], `TextMate grammar is missing lexical rule ${rule}`);
 }
 const commands = manifest.contributes?.commands ?? [];
 assert(
-  JSON.stringify(commands.map(({ command }) => command)) === JSON.stringify([
-    "recite.validate",
-    "recite.compile",
-    "recite.extract",
-    "recite.watch.start",
-    "recite.watch.stop",
-    "recite.run",
-    "recite.trace",
-    "recite.renameBlock",
-  ]),
+  JSON.stringify(commands.map(({ command }) => command)) ===
+    JSON.stringify([
+      "recite.validate",
+      "recite.compile",
+      "recite.extract",
+      "recite.watch.start",
+      "recite.watch.stop",
+      "recite.run",
+      "recite.trace",
+      "recite.renameBlock",
+    ]),
   "command contributions must remain stable and complete",
 );
 assert(
@@ -161,8 +163,8 @@ assert(
 const properties = manifest.contributes.configuration?.properties ?? {};
 assert(properties["recite.lsp.path"]?.type === "string", "server path must be a string setting");
 assert(
-  properties["recite.lsp.args"]?.type === "array"
-    && properties["recite.lsp.args"].items?.type === "string",
+  properties["recite.lsp.args"]?.type === "array" &&
+    properties["recite.lsp.args"].items?.type === "string",
   "server arguments must be an explicit string array",
 );
 assert(
@@ -170,8 +172,8 @@ assert(
   "project root must be a string setting",
 );
 assert(
-  properties["recite.cli.path"]?.type === "string"
-    && properties["recite.cli.path"].default === "recite",
+  properties["recite.cli.path"]?.type === "string" &&
+    properties["recite.cli.path"].default === "recite",
   "CLI path must be a string setting defaulting to recite",
 );
 
@@ -207,16 +209,17 @@ assert(
 
 const sourceRoot = path.join(packageRoot, "src");
 assertSafeTree(sourceRoot, "extension source");
-const source = await readFile(path.join(sourceRoot, "extension.js"), "utf8");
-const entrySource = await readFile(path.join(sourceRoot, "extension.cjs"), "utf8");
+const source = await readFile(path.join(sourceRoot, "extension.ts"), "utf8");
+const entrySource = await readFile(path.join(sourceRoot, "extension.cts"), "utf8");
 assert(
-  entrySource.includes("require(\"vscode\")"),
+  entrySource.includes('require("vscode")'),
   "the CommonJS extension entry must acquire the VS Code host API",
 );
-assert(
-  !source.match(/(?:from|import\s*\()\s*["']vscode["']/),
-  "the ESM implementation must receive the VS Code host API explicitly",
-);
+let importsHost = false;
+walkWithParents(parseSource(source, "extension.ts"), (node) => {
+  if (staticModuleSpecifier(node) === "vscode") importsHost = true;
+});
+assert(!importsHost, "the ESM implementation must receive the VS Code host API explicitly");
 assert(
   source.includes("activateWithVscode"),
   "the ESM implementation must expose the explicit VS Code activation boundary",
@@ -231,16 +234,18 @@ assert(
 );
 const sourceFiles = listSourceModules(sourceRoot);
 assert(
-  sourceFiles.some(({ relativePath }) => relativePath === "extension.cjs"),
+  sourceFiles.some(({ relativePath }) => relativePath === "extension.cts"),
   "the CommonJS extension entry shim is required",
 );
-const sourceContents = await Promise.all(sourceFiles.map(async ({ relativePath, absolutePath }) => [
-  relativePath,
-  await readFile(absolutePath, "utf8"),
-]));
+const sourceContents = await Promise.all(
+  sourceFiles.map(async ({ relativePath, absolutePath }) => [
+    relativePath,
+    await readFile(absolutePath, "utf8"),
+  ]),
+);
 assertUiBoundary(sourceContents, SOURCE_MESSAGE_IDS, projectedMessages);
-for (const { relativePath, absolutePath } of sourceFiles) {
-  const syntax = spawnSync(process.execPath, ["--check", absolutePath], {
+for (const { relativePath, absolutePath } of listSourceModules(path.join(packageRoot, "dist"))) {
+  const syntax = spawnSync("node", ["--check", absolutePath], {
     encoding: "utf8",
   });
   assert(syntax.status === 0, `invalid JavaScript in ${relativePath}: ${syntax.stderr}`);
@@ -265,8 +270,9 @@ function localizableManifestValues(packageManifest) {
     packageManifest.description,
     packageManifest.capabilities?.untrustedWorkspaces?.description,
     packageManifest.contributes?.configuration?.title,
-    ...Object.values(packageManifest.contributes?.configuration?.properties ?? {})
-      .map((property) => property.description),
+    ...Object.values(packageManifest.contributes?.configuration?.properties ?? {}).map(
+      (property) => property.description,
+    ),
     ...(packageManifest.contributes?.commands ?? []).map((command) => command.title),
   ].filter((value) => value !== undefined);
 }

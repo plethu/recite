@@ -6,7 +6,7 @@ usage() {
 Usage:
   check-docs.sh [repo-root]
 
-Installs the pinned workspace packages from pnpm-lock.yaml and verifies the
+Installs the pinned workspace packages from bun.lock and verifies the
 documentation site with its type check and production build.
 EOF
 }

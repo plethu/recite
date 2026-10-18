@@ -56,17 +56,19 @@ function canonicalMessages(source) {
     if (entry.type === "Junk") {
       const annotation = entry.annotations[0];
       throw new Error(
-        `malformed canonical Fluent at line ${
-          lineAt(source, annotation?.span.start ?? entry.span.start)
-        }: ${annotation?.message ?? "invalid syntax"}`,
+        `malformed canonical Fluent at line ${lineAt(
+          source,
+          annotation?.span.start ?? entry.span.start,
+        )}: ${annotation?.message ?? "invalid syntax"}`,
       );
     }
     if (entry.type !== "Message") continue;
     if (messages.has(entry.id.name)) {
       throw new Error(
-        `duplicate canonical Fluent message ${entry.id.name} at line ${
-          lineAt(source, entry.id.span.start)
-        }`,
+        `duplicate canonical Fluent message ${entry.id.name} at line ${lineAt(
+          source,
+          entry.id.span.start,
+        )}`,
       );
     }
     messages.set(entry.id.name, entry);
@@ -80,9 +82,10 @@ function projectTemplate(source, message, host) {
   }
   const elements = message.value.elements;
   if (
-    !elements.every((element) =>
-      element.type === "TextElement"
-      || (element.type === "Placeable" && element.expression.type === "VariableReference")
+    !elements.every(
+      (element) =>
+        element.type === "TextElement" ||
+        (element.type === "Placeable" && element.expression.type === "VariableReference"),
     )
   ) {
     throw new UnsupportedExpression(
@@ -91,20 +94,25 @@ function projectTemplate(source, message, host) {
   }
   if (/[\r\n]/u.test(source.slice(message.id.span.start, message.value.span.end))) {
     throw new Error(
-      `${
-        messageProblem(source, message, "uses a continuation")
-      }; ${host} projections support only single-line templates`,
+      `${messageProblem(
+        source,
+        message,
+        "uses a continuation",
+      )}; ${host} projections support only single-line templates`,
     );
   }
-  return elements.map((element) =>
-    element.type === "TextElement" ? element.value : `{$${element.expression.id.name}}`
-  ).join("");
+  return elements
+    .map((element) =>
+      element.type === "TextElement" ? element.value : `{$${element.expression.id.name}}`,
+    )
+    .join("");
 }
 
 function messageProblem(source, message, problem) {
-  return `canonical Fluent message ${message.id.name} ${problem} at line ${
-    lineAt(source, message.id.span.start)
-  }`;
+  return `canonical Fluent message ${message.id.name} ${problem} at line ${lineAt(
+    source,
+    message.id.span.start,
+  )}`;
 }
 
 function lineAt(source, offset) {

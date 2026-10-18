@@ -1,6 +1,6 @@
 //! Retained documents preserve drafts, undo history and recovery ownership on navigation.
 use super::{FileError, ProjectFiles, read_regular};
-use crate::recovery::RecoveryStore;
+use crate::recovery::{Recovery, RecoveryStore};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
 use recite_writer_model::Workbench;
 use std::{
@@ -11,7 +11,7 @@ use std::{
 pub(super) struct Retained {
     pub(super) model: Workbench,
     pub(super) baseline: Arc<str>,
-    pub(super) recovery: RecoveryStore,
+    recovery: RecoveryStore,
 }
 impl ProjectFiles {
     /// Every session still owns its history and recovery state until it closes.
@@ -107,7 +107,7 @@ impl ProjectFiles {
         // A clean closed tab has no draft to recover. Release its worker, lock,
         // compiler caches and local undo history only after cleanup succeeds.
         let session = self.retained.get_mut(path).ok_or(FileError::Selection)?;
-        session.recovery.persist(None)?;
+        session.persist_recovery(None)?;
         self.forget_rename_history(path);
         self.retained.remove(path);
         Ok(())
@@ -154,6 +154,7 @@ impl ProjectFiles {
         }
         // Navigation cannot leave a draft without a confirmed recovery snapshot.
         self.checkpoint(current)?;
+        self.recovery.park()?;
         let mut context = self.retained_context(self.context.clone());
         overlay(&mut context, current);
         let mut next = if let Some(session) = self.retained.get_mut(path) {
@@ -218,6 +219,13 @@ impl ProjectFiles {
 }
 
 impl Retained {
+    pub(super) fn persist_recovery(&mut self, recovery: Option<Recovery>) -> Result<(), FileError> {
+        let persisted = self.recovery.persist(recovery);
+        // Failed writes retain their error and lock, but need no idle thread.
+        let parked = self.recovery.park();
+        persisted.and(parked)
+    }
+
     fn has_edits(&self) -> bool {
         self.model.has_draft() || self.model.document().source() != self.baseline.as_ref()
     }
@@ -238,7 +246,7 @@ impl Retained {
             .model
             .has_draft()
             .then(|| crate::recovery::Recovery::new(self.baseline.clone(), self.model.recovery()));
-        self.recovery.persist(recovery)
+        self.persist_recovery(recovery)
     }
 }
 

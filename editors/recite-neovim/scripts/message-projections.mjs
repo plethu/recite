@@ -27,10 +27,12 @@ export async function projectMessages({ sourceOverride } = {}) {
     throw new Error("Neovim UI projection must declare a source, output, and IDs");
   }
 
-  const source = sourceOverride ?? await readFile(
-    path.join(repositoryRoot, "crates", "recite-ui", "resources", sourceResource),
-    "utf8",
-  );
+  const source =
+    sourceOverride ??
+    (await readFile(
+      path.join(repositoryRoot, "crates", "recite-ui", "resources", sourceResource),
+      "utf8",
+    ));
   const canonical = parseRepresentableMessages(source, ids, "Neovim");
   const messages = ids.map((id) => {
     const value = canonical.get(id);
@@ -57,9 +59,9 @@ async function assertCallsites(ids) {
       }
     }
     if (
-      /\bhealth\.(?:start|ok|error|warn|info)\(\s*["']/.test(source)
-      || /vim\.notify\(\s*["']/.test(source)
-      || /\bdesc\s*=\s*["']/.test(source)
+      /\bhealth\.(?:start|ok|error|warn|info)\(\s*["']/.test(source) ||
+      /vim\.notify\(\s*["']/.test(source) ||
+      /\bdesc\s*=\s*["']/.test(source)
     ) {
       throw new Error(
         `${path.relative(repositoryRoot, file)} contains a hard-coded Recite-owned UI string`,
@@ -85,13 +87,13 @@ export function renderMessages(messages) {
     "function M.format(id, arguments)",
     "  local template = templates[id]",
     "  if template == nil then",
-    "    error(\"unknown Recite UI message: \" .. tostring(id), 2)",
+    '    error("unknown Recite UI message: " .. tostring(id), 2)',
     "  end",
     "  arguments = arguments or {}",
-    "  return (template:gsub(\"{%$([A-Za-z][A-Za-z0-9_%-]*)}\", function(name)",
+    '  return (template:gsub("{%$([A-Za-z][A-Za-z0-9_%-]*)}", function(name)',
     "    local value = arguments[name]",
     "    if value == nil then",
-    "      error(\"missing argument for Recite UI message \" .. id .. \".$\" .. name, 2)",
+    '      error("missing argument for Recite UI message " .. id .. ".$" .. name, 2)',
     "    end",
     "    return tostring(value)",
     "  end))",
@@ -111,9 +113,10 @@ if (path.resolve(process.argv[1] ?? "") === path.resolve(fileURLToPath(import.me
     const current = await readFile(destination, "utf8").catch(() => null);
     if (current !== generated) {
       throw new Error(
-        `${
-          path.relative(repositoryRoot, destination)
-        } is stale; run the message projection generator`,
+        `${path.relative(
+          repositoryRoot,
+          destination,
+        )} is stale; run the message projection generator`,
       );
     }
   } else {

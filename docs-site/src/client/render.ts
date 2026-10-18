@@ -23,10 +23,9 @@ export function renderOutput(output: Output, view: View) {
     append(value.speaker ? `${value.speaker}: ${value.text}` : value.text);
   const effect = (value: Effect) =>
     append(
-      `${messages.effect} ${value.mode} ${value.function}(${
-        value.args.map(arg => arg.type === "string" ? JSON.stringify(arg.value) : String(arg.value))
-          .join(", ")
-      })`,
+      `${messages.effect} ${value.mode} ${value.function}(${value.args
+        .map((arg) => (arg.type === "string" ? JSON.stringify(arg.value) : String(arg.value)))
+        .join(", ")})`,
     );
   const button = (label: string, command: Command, disabled = false) => {
     const control = document.createElement("button");
@@ -45,10 +44,14 @@ export function renderOutput(output: Output, view: View) {
     case "prompt":
       if (output.line) line(output.line);
       for (const choice of output.choices) {
-        button(choice.reason ? `${choice.text} (${choice.reason})` : choice.text, {
-          kind: "select",
-          id: choice.id,
-        }, !choice.available);
+        button(
+          choice.reason ? `${choice.text} (${choice.reason})` : choice.text,
+          {
+            kind: "select",
+            id: choice.id,
+          },
+          !choice.available,
+        );
       }
       status.textContent = messages.choose;
       break;

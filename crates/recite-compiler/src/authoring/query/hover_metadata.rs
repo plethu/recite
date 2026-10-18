@@ -1,4 +1,4 @@
-use recite_core::{DocumentKey, SourcePosition};
+use recite_core::{DocumentKey, SourceLineIndex, SourcePosition};
 
 use super::super::snapshot::{AuthoringSnapshot, DocumentSnapshot};
 use super::super::summary::{MetadataScalar, MetadataSummary, MetadataValue};
@@ -15,7 +15,7 @@ impl AuthoringSnapshot {
         position: SourcePosition,
         metadata: &MetadataSummary,
     ) -> Option<(String, MetadataValueDetail)> {
-        let (metadata_key, target) = match context::at(key, document.source_text(), position)? {
+        let (metadata_key, target) = match context::at(key, document.source_index(), position)? {
             context::Site::MetadataValue {
                 key: metadata_key,
                 target,
@@ -30,7 +30,7 @@ impl AuthoringSnapshot {
         if metadata_key != metadata.key() {
             return None;
         }
-        let (value, _) = context::token_at(key, document.source_text(), position)?;
+        let (value, _) = context::token_at(key, document.source_index(), position)?;
         let completion = self.complete(key, position);
         let candidate = match completion {
             QueryResult::Ready(candidates)
@@ -56,7 +56,7 @@ impl AuthoringSnapshot {
                     context: self.schema.as_deref().and_then(|schema| {
                         super::schema::contextual_metadata_context(
                             schema,
-                            document.source_text(),
+                            document.source_index(),
                             metadata.key(),
                             position.line(),
                             target,
@@ -78,7 +78,7 @@ impl AuthoringSnapshot {
     pub(super) fn metadata_candidate_fact(
         &self,
         key: &DocumentKey,
-        text: &str,
+        source: &SourceLineIndex,
         position: SourcePosition,
         candidate: &CompletionCandidate,
     ) -> Option<SemanticFact> {
@@ -87,7 +87,7 @@ impl AuthoringSnapshot {
             value: raw_value,
             target,
             ..
-        } = context::at(key, text, position)?
+        } = context::at(key, source, position)?
         else {
             return None;
         };
@@ -112,7 +112,7 @@ impl AuthoringSnapshot {
                 context: self.schema.as_deref().and_then(|schema| {
                     super::schema::contextual_metadata_context(
                         schema,
-                        text,
+                        source,
                         &metadata_key,
                         position.line(),
                         target,

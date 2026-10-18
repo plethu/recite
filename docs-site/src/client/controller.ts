@@ -16,7 +16,15 @@ function setup(root: HTMLElement) {
   const controls = root.querySelector<HTMLElement>("[data-controls]");
   const config = root.querySelector<HTMLScriptElement>("[data-messages]");
   if (
-    !source || !run || !stop || !reset || !file || !status || !transcript || !controls || !config
+    !source ||
+    !run ||
+    !stop ||
+    !reset ||
+    !file ||
+    !status ||
+    !transcript ||
+    !controls ||
+    !config
   ) {
     throw new Error("Incomplete playground template.");
   }

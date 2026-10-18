@@ -7,8 +7,9 @@ test("skip link and both mobile menus work with a keyboard", async ({ page }) =>
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#_top")).toBeFocused();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth))
-    .toBeLessThanOrEqual(1);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+  ).toBeLessThanOrEqual(1);
   const menuBox = await page.getByRole("button", { name: "Site menu", exact: true }).boundingBox();
   const headerBox = await page.getByRole("banner").boundingBox();
   expect(menuBox).not.toBeNull();
@@ -29,12 +30,12 @@ test("skip link and both mobile menus work with a keyboard", async ({ page }) =>
   const referenceMenu = page.getByRole("button", { name: "Reference menu", exact: true });
   await referenceMenu.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator("#starlight__sidebar")).toBeVisible();
+  await expect(page.locator("#reference-menu")).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.locator("#starlight__sidebar")).toBeHidden();
+  await expect(page.locator("#reference-menu")).toBeHidden();
   await expect(referenceMenu).toBeFocused();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator("#starlight__sidebar")).toBeVisible();
+  await expect(page.locator("#reference-menu")).toBeVisible();
 });
 
 test("search recovers after a miss and leads to the manual", async ({ page }) => {

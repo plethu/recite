@@ -48,6 +48,20 @@ impl ReciteDialogueCatalog {
         translation: impl Into<String>,
         variant: Option<&str>,
     ) -> AdapterResult<()> {
+        let (key, value) =
+            self.prepare_singular(locale, domain, id, source_text, translation, variant)?;
+        self.insert_value(key, value)
+    }
+
+    fn prepare_singular(
+        &self,
+        locale: &str,
+        domain: TextDomain,
+        id: &str,
+        source_text: &str,
+        translation: impl Into<String>,
+        variant: Option<&str>,
+    ) -> AdapterResult<(CatalogKey, CatalogValue)> {
         let locale = self.validate_entry(locale, id, source_text, variant)?;
         let translation = translation.into();
         validate_catalog_text(&translation, "translation")?;
@@ -62,7 +76,7 @@ impl ReciteDialogueCatalog {
             )?;
         }
         let key = CatalogKey::singular(locale.as_str(), domain, id, source_text, variant);
-        self.insert_value(key, CatalogValue::singular(translation))
+        Ok((key, CatalogValue::singular(translation)))
     }
 
     /// Adds a gettext plural entry. Empty arms intentionally remain missing
@@ -76,6 +90,26 @@ impl ReciteDialogueCatalog {
         translations: Vec<String>,
         variant: Option<&str>,
     ) -> AdapterResult<()> {
+        let (key, value) = self.prepare_plural(
+            locale,
+            id,
+            source_singular,
+            source_plural,
+            translations,
+            variant,
+        )?;
+        self.insert_value(key, value)
+    }
+
+    fn prepare_plural(
+        &self,
+        locale: &str,
+        id: &str,
+        source_singular: &str,
+        source_plural: &str,
+        translations: Vec<String>,
+        variant: Option<&str>,
+    ) -> AdapterResult<(CatalogKey, CatalogValue)> {
         let locale = self.validate_entry(locale, id, source_singular, variant)?;
         if source_plural.is_empty() || translations.is_empty() {
             return Err(AdapterError::with_detail(
@@ -128,7 +162,7 @@ impl ReciteDialogueCatalog {
             source_plural,
             variant,
         );
-        self.insert_value(key, CatalogValue { translations })
+        Ok((key, CatalogValue { translations }))
     }
 
     /// Installs and validates the locale's gettext `Plural-Forms` header.
@@ -189,15 +223,20 @@ impl ReciteDialogueCatalog {
     }
 
     fn insert_value(&mut self, key: CatalogKey, value: CatalogValue) -> AdapterResult<()> {
-        if let Some(existing) = self.translations.get(&key)
-            && existing != &value
+        self.check_value(&key, &value)?;
+        self.translations.insert(key, value);
+        Ok(())
+    }
+
+    fn check_value(&self, key: &CatalogKey, value: &CatalogValue) -> AdapterResult<()> {
+        if let Some(existing) = self.translations.get(key)
+            && existing != value
         {
             return Err(AdapterError::with_detail(
                 AdapterErrorKind::Localisation,
                 format!("conflicting catalogue entry for `{}`", key.context),
             ));
         }
-        self.translations.insert(key, value);
         Ok(())
     }
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { createUserInterface } from "../src/user-interface.js";
+import { test } from "bun:test";
+import { createUserInterface } from "../src/user-interface.ts";
 
 test("semantic UI operations localize source messages and keep the channel private", () => {
   const lines = [];
@@ -9,7 +9,7 @@ test("semantic UI operations localize source messages and keep the channel priva
   let disposed = false;
   const api = {
     l10n: {
-      t: (template, detail) => detail === undefined ? `[${template}]` : `[${template}] ${detail}`,
+      t: (template, detail) => (detail === undefined ? `[${template}]` : `[${template}] ${detail}`),
     },
     window: {
       createOutputChannel: (name) => {
@@ -95,30 +95,42 @@ test("runtime input pickers localize prompts and constrain file types", async ()
   await ui.chooseRenameName("work");
   await ui.chooseFixturePath();
   assert.deepEqual(calls, [
-    ["open", {
-      title: "Choose the compiled Recite asset",
-      filters: { "Recite compiled assets": ["recitec"] },
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-    }],
-    ["input", {
-      title: "Enter the Recite block name",
-      prompt: "Block name used by the fixture",
-      placeHolder: "For example, start",
-    }],
-    ["input", {
-      title: "Recite: Rename block",
-      prompt: "New block name",
-      placeHolder: "work",
-    }],
-    ["open", {
-      title: "Choose the runtime fixture",
-      filters: { "Recite runtime fixtures": ["toml"] },
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-    }],
+    [
+      "open",
+      {
+        title: "Choose the compiled Recite asset",
+        filters: { "Recite compiled assets": ["recitec"] },
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+      },
+    ],
+    [
+      "input",
+      {
+        title: "Enter the Recite block name",
+        prompt: "Block name used by the fixture",
+        placeHolder: "For example, start",
+      },
+    ],
+    [
+      "input",
+      {
+        title: "Recite: Rename block",
+        prompt: "New block name",
+        placeHolder: "work",
+      },
+    ],
+    [
+      "open",
+      {
+        title: "Choose the runtime fixture",
+        filters: { "Recite runtime fixtures": ["toml"] },
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+      },
+    ],
   ]);
   ui.dispose();
 });

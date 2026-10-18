@@ -3,7 +3,11 @@ use recite_core::{
     ast::{DivertTarget, SourceText, Statement},
 };
 use recite_parser::{ReciteSyntaxKind, ReciteSyntaxNode, parse};
-use std::ops::Range;
+use std::{
+    fmt,
+    ops::{Deref, DerefMut, Range},
+    sync::Arc,
+};
 
 use crate::{DOCUMENT_NAME, EditError};
 
@@ -14,16 +18,52 @@ pub enum PassageKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Passage {
+pub struct PassageContent {
     pub id: String,
     pub label: String,
     pub section: String,
     pub text: String,
     pub kind: PassageKind,
+    pub(crate) indentation: String,
+}
+
+/// Coordinates belong to one revision; clones share immutable passage content.
+/// Mutating an owned copy separates its content from other snapshots.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Passage {
+    content: Arc<PassageContent>,
     pub(crate) header_line: u32,
     pub(crate) text_range: Range<usize>,
-    pub(crate) indentation: String,
     pub(crate) target_line: Option<u32>,
+}
+
+impl Deref for Passage {
+    type Target = PassageContent;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+
+impl DerefMut for Passage {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        Arc::make_mut(&mut self.content)
+    }
+}
+
+impl fmt::Debug for Passage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Passage")
+            .field("id", &self.id)
+            .field("label", &self.label)
+            .field("section", &self.section)
+            .field("text", &self.text)
+            .field("kind", &self.kind)
+            .field("header_line", &self.header_line)
+            .field("text_range", &self.text_range)
+            .field("indentation", &self.indentation)
+            .field("target_line", &self.target_line)
+            .finish()
+    }
 }
 
 pub(crate) fn passages(source: &str) -> Result<Vec<Passage>, EditError> {
@@ -91,14 +131,16 @@ pub(crate) fn passages_from(
             }
             let (text_range, indentation) = prose_range(source, text, &nodes)?;
             result.push(Passage {
-                id: anchor.to_string(),
-                label: label.clone(),
-                section: block.id.to_string(),
-                text: text.text.clone(),
-                kind,
+                content: Arc::new(PassageContent {
+                    id: anchor.to_string(),
+                    label: label.clone(),
+                    section: block.id.to_string(),
+                    text: text.text.clone(),
+                    kind,
+                    indentation,
+                }),
                 header_line,
                 text_range,
-                indentation,
                 target_line,
             });
         }

@@ -121,10 +121,12 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         rect()
             .horizontal()
             .spacing(t::SPACE_SM)
+            .a11y_role(AccessibilityRole::TabList)
+            .a11y_alt("Settings pages")
             .child(
                 crate::design::Button::new()
                     .flat()
-                    .toggle(*page.read() == Page::Personal)
+                    .tab(*page.read() == Page::Personal)
                     .a11y_id(ids[0])
                     .named(crate::messages::text(
                         crate::messages::MsgId::WriterGuiUserPreferences,
@@ -137,7 +139,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             .child(
                 crate::design::Button::new()
                     .flat()
-                    .toggle(on_project)
+                    .tab(on_project)
                     .a11y_id(ids[1])
                     .named(crate::messages::text(
                         crate::messages::MsgId::WriterGuiProjectSettings,
@@ -152,7 +154,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                     .flat()
                     .a11y_id(keyboard_tab)
                     .named("Keyboard shortcuts")
-                    .toggle(on_keyboard)
+                    .tab(on_keyboard)
                     .child("Keyboard shortcuts")
                     .on_press(move |_| page.set(Page::Keyboard)),
             ),

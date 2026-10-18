@@ -12,7 +12,7 @@ use super::{
 use crate::documents::OpenDocument;
 use crate::edit_projection::EditDocument;
 use crate::features;
-use crate::position::lsp_position_to_source;
+use crate::position::indexed_lsp_position_to_source;
 use crate::summary::FileSummary;
 
 impl LspWorkspace {
@@ -23,14 +23,12 @@ impl LspWorkspace {
         control: &CancellationToken,
     ) -> Option<CompletionResponse> {
         control.checkpoint().ok()?;
-        let document = self.documents.document(uri)?;
-        let key = document_key_for_open(document);
-        let partition = self.partition_id_for_open(document)?;
+        self.documents.document(uri)?;
+        let (partition, key) = self.source_document(uri)?;
         let kernel = self.partition(&partition)?.kernel.snapshot().query(control);
         features::completion(
-            document.text(),
             position,
-            key.as_ref(),
+            Some(&key),
             &kernel,
             self.effective_schema_for_partition(&partition)
                 .as_ref()
@@ -46,12 +44,10 @@ impl LspWorkspace {
         control: &CancellationToken,
     ) -> Option<Hover> {
         control.checkpoint().ok()?;
-        let document = self.documents.document(uri)?;
-        let key = document_key_for_open(document)?;
-        let partition = self.partition_id_for_open(document)?;
+        self.documents.document(uri)?;
+        let (partition, key) = self.source_document(uri)?;
         let kernel = self.partition(&partition)?.kernel.snapshot().query(control);
         features::hover(
-            document.text(),
             position,
             &key,
             &kernel,
@@ -69,15 +65,19 @@ impl LspWorkspace {
         control: &CancellationToken,
     ) -> Option<GotoDefinitionResponse> {
         control.checkpoint().ok()?;
-        let (partition, key, text) = self.source_document(uri)?;
-        let position = lsp_position_to_source(text, position)?;
+        let (partition, key) = self.source_document(uri)?;
+        let source = self
+            .partition(&partition)?
+            .kernel
+            .snapshot()
+            .document(&key)?;
+        let position = indexed_lsp_position_to_source(source.source_index(), position)?;
         let partition_state = self.partition(&partition)?;
-        let documents = self.navigation_documents(&partition);
         features::definition(
             &key,
             position,
             &partition_state.kernel.snapshot().query(control),
-            &documents,
+            |key| self.uri_for_document_key(&partition, key),
         )
     }
 
@@ -89,16 +89,20 @@ impl LspWorkspace {
         control: &CancellationToken,
     ) -> Option<Vec<Location>> {
         control.checkpoint().ok()?;
-        let (partition, key, text) = self.source_document(uri)?;
-        let position = lsp_position_to_source(text, position)?;
+        let (partition, key) = self.source_document(uri)?;
+        let source = self
+            .partition(&partition)?
+            .kernel
+            .snapshot()
+            .document(&key)?;
+        let position = indexed_lsp_position_to_source(source.source_index(), position)?;
         let partition_state = self.partition(&partition)?;
-        let documents = self.navigation_documents(&partition);
         features::references(
             &key,
             position,
             include_declaration,
             &partition_state.kernel.snapshot().query(control),
-            &documents,
+            |key| self.uri_for_document_key(&partition, key),
         )
     }
 
@@ -109,8 +113,13 @@ impl LspWorkspace {
         control: &CancellationToken,
     ) -> Option<PrepareRenameResponse> {
         control.checkpoint().ok()?;
-        let (partition, key, text) = self.source_document(uri)?;
-        let position = lsp_position_to_source(text, position)?;
+        let (partition, key) = self.source_document(uri)?;
+        let source = self
+            .partition(&partition)?
+            .kernel
+            .snapshot()
+            .document(&key)?;
+        let position = indexed_lsp_position_to_source(source.source_index(), position)?;
         features::prepare_rename(
             &key,
             position,
@@ -126,8 +135,13 @@ impl LspWorkspace {
         control: &CancellationToken,
     ) -> Option<WorkspaceEdit> {
         control.checkpoint().ok()?;
-        let (partition, key, text) = self.source_document(uri)?;
-        let position = lsp_position_to_source(text, position)?;
+        let (partition, key) = self.source_document(uri)?;
+        let source = self
+            .partition(&partition)?
+            .kernel
+            .snapshot()
+            .document(&key)?;
+        let position = indexed_lsp_position_to_source(source.source_index(), position)?;
         let partition_state = self.partition(&partition)?;
         let documents = self.navigation_documents(&partition);
         features::rename(
@@ -185,20 +199,32 @@ impl LspWorkspace {
             .collect()
     }
 
-    fn source_document(&self, uri: &Uri) -> Option<(String, DocumentKey, &str)> {
-        if let Some(document) = self.documents.document(uri) {
-            return Some((
+    fn source_document(&self, uri: &Uri) -> Option<(String, DocumentKey)> {
+        let (partition, key, text) = if let Some(document) = self.documents.document(uri) {
+            (
                 self.partition_id_for_open(document)?,
                 document_key_for_open(document)?,
                 document.text(),
-            ));
-        }
-        let document = self.query_saved_document(uri)?;
-        Some((
-            self.partition_id_for_saved(document)?,
-            document_key_for_saved(document)?,
-            document.text.as_ref(),
-        ))
+            )
+        } else {
+            let document = self.query_saved_document(uri)?;
+            (
+                self.partition_id_for_saved(document)?,
+                document_key_for_saved(document)?,
+                document.text.as_ref(),
+            )
+        };
+        let source = self
+            .partition(&partition)?
+            .kernel
+            .snapshot()
+            .document(&key)?;
+        // Aliases can have independent buffers and versions. Coordinates may
+        // use the canonical owner's index only when its bytes match this URI.
+        // Shared source allocations avoid the byte scan; independent buffers
+        // still require exact bytes.
+        let indexed_text = source.source_text();
+        (std::ptr::eq(text, indexed_text) || text == indexed_text).then_some((partition, key))
     }
 
     fn uri_for_document_key(&self, partition: &str, key: &DocumentKey) -> Option<&Uri> {

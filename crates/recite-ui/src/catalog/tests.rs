@@ -59,13 +59,9 @@ fn resource_registry_uses_one_owned_lookup_path() {
     let contract = UiContract::default();
     let registry = ResourceRegistry::from_contract(&contract);
     let id = ResourceId::new("diagnostic-parse-001-meaning").expect("resource ID");
-    assert!(registry.get(&id).is_some());
+    assert!(registry.get(id.as_str()).is_some());
     assert_eq!(registry.len(), contract.resources.len());
-    assert!(
-        registry
-            .get(&ResourceId::new("diagnostic-not-inventory").expect("resource ID"))
-            .is_none()
-    );
+    assert!(registry.get("diagnostic-not-inventory").is_none());
 }
 
 #[test]

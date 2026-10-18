@@ -53,6 +53,36 @@ explain-common-causes = Common causes:
 explain-how-to-fix = How to fix:
 explain-list-item = - {$item}
 
+cli-help-command-check-schema-producer-freshness = Compare current schema producer fingerprints with a previously exported manifest
+cli-help-group-authoring = Authoring checks
+cli-help-group-building = Building
+cli-help-group-localisation = Localisation
+cli-help-group-running = Running
+cli-help-group-schema = Schema
+cli-help-group-help = Help
+cli-success-ok = ok
+cli-success-files = { $count ->
+        [one] { $count } file
+       *[other] { $count } files
+    }, no diagnostics
+cli-success-project = project, no diagnostics
+cli-diagnostic-errors = { $count ->
+        [one] { $count } error
+       *[other] { $count } errors
+    }
+cli-diagnostic-warnings = { $count ->
+        [one] { $count } warning
+       *[other] { $count } warnings
+    }
+cli-diagnostic-notes = { $count ->
+        [one] { $count } note
+       *[other] { $count } notes
+    }
+cli-diagnostic-summary = { $problems } in { $files ->
+        [one] { $files } file
+       *[other] { $files } files
+    }
+
 watch-building = watch: building {$path}
 watch-waiting-for-changes = watch: waiting for changes
 watch-rebuilding = watch: rebuilding
@@ -228,7 +258,7 @@ tui-help-description-open-help = open this help overlay
 tui-help-description-quit = quit the current play session
 tui-help-description-interrupt = interrupt the current play session
 tui-help-description-move-choice = move the highlighted choice
-tui-help-description-submit-choice = select the highlighted choice or typed ID/index
+tui-help-description-submit-choice = select the highlighted choice or the typed ID or number
 tui-help-description-input-choice = type a choice ID or index
 tui-help-description-move-condition = move between yes and no
 tui-help-description-shortcut-condition = select the matching answer
@@ -239,7 +269,7 @@ tui-help-description-submit-effect = acknowledge the blocking effect
 tui-help-description-finished = leave the finished play screen
 tui-help-description-command = enter command mode
 tui-help-description-queue = expand or collapse deferred effect queue
-tui-footer-command = Enter runs command | Esc cancels
+tui-footer-command = Enter runs command · Esc cancels
 
 cli-error-play-eof = reached EOF while reading {$field}
 cli-error-play-invalid-input = invalid play input: {$message}
@@ -552,15 +582,15 @@ writer-close-drafts = Save or discard PO translation drafts before closing Recit
 writer-open-drafts = Save or discard translation drafts before changing catalogue.
 writer-reload-drafts = Save or discard catalogue drafts before loading external changes.
 writer-empty-review = An empty translation cannot be reviewed.
-writer-queue-scope = Catalogue passages · open a passage in its full beat
+writer-queue-scope = Catalogue lines · open a line in its full beat
 writer-search = Search source, translation, scene or ID
 writer-attention = Untranslated or awaiting review
-writer-no-matches = No matching passages.
+writer-no-matches = No matching lines.
 writer-previous = Previous
 writer-next = Next
 
 writer-compare = Compare external changes
-writer-compare-help = For each changed passage: source, your draft, then the current file version. Keeping drafts does not save them.
+writer-compare-help = For each changed line: source, your draft, then the current file version. Keeping drafts does not save them.
 writer-keep-drafts = Keep my drafts
 writer-use-file = Discard drafts and use file
 writer-compared = External version accepted. Review your drafts before saving.
@@ -594,11 +624,11 @@ writer-create-empty = There is no localisable text to extract yet. Add dialogue 
 
 writer-choose-language = Choose language
 
-writer-read-passage = Read passage
+writer-read-passage = Read line
 
 writer-no-languages = No matching languages. Try a name or a registered locale code.
 
-writer-unavailable-passage = No matching passage in this project
+writer-unavailable-passage = No matching line in this project
 
 writer-cofi-language = Welsh (Cofi)
 
@@ -624,9 +654,9 @@ writer-translator-notes = Translator notes
 
 writer-source-changed = Source changed · needs review
 
-writer-change-new = New passage
+writer-change-new = New line
 writer-change-changed = Source changed
-writer-change-removed = Removed passage
+writer-change-removed = Removed line
 
 writer-unified = Unified view
 writer-side-by-side = Side by side
@@ -687,6 +717,8 @@ writer-complete-source = Complete at cursor
 writer-filter-completions = Filter suggestions
 
 writer-no-completions = No suggestions at this position.
+writer-finding-completions = Finding suggestions…
+writer-completions-unavailable = Suggestions unavailable.
 
 writer-return-translation = Return to translation
 
@@ -777,7 +809,7 @@ writer-build-cancelling = Cancelling build…
 writer-rename-project = Rename beat
 writer-rename-review = Review rename
 writer-rename-apply = Apply rename
-writer-rename-hint = Review every affected document before applying. Passage IDs stay unchanged. Changes remain unsaved and can be undone together.
+writer-rename-hint = Review every affected document before applying. Line IDs stay unchanged. Changes remain unsaved and can be undone together.
 writer-rename-name = New beat name
 writer-rename-from = Beat to rename
 writer-rename-applied = Rename applied across the project. Save when ready.
@@ -864,7 +896,7 @@ writer-gui-keep-recovery-copy-and-reload-disk = Keep recovery copy and reload di
 
 writer-gui-map-help = Map help
 
-writer-gui-no-matching-saved-passages-try-fewer-words = No matching saved passages. Try fewer words.
+writer-gui-no-matching-saved-passages-try-fewer-words = No matching saved lines. Try fewer words.
 
 writer-gui-no-matching-scenes-or-beats = No matching scenes or beats
 
@@ -878,7 +910,7 @@ writer-gui-open-project = Open project
 
 writer-gui-open-unsaved-translations = Open unsaved translations
 
-writer-gui-passage-actions = Passage actions
+writer-gui-passage-actions = Line actions
 
 writer-gui-preview-limit = Preview limited to 32 entries · open the beat to read more
 

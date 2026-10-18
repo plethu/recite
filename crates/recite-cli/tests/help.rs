@@ -183,7 +183,13 @@ fn help_ignores_malformed_ui_config() {
         .env("RECITE_CONFIG", &malformed_config));
     output.assert_success().assert_stderr("");
     output.assert_stdout_contains("Recite dialogue compiler and validation CLI.");
-    output.assert_stdout_contains("Compile dialogue source to a MessagePack .recitec asset");
+    assert!(
+        stdout(&output)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .contains("Compile dialogue source to a MessagePack .recitec asset")
+    );
 
     let invalid_locale_config = write_file(
         temp.path(),
@@ -196,11 +202,23 @@ locale = "not a locale"
         .arg("--help")
         .env("RECITE_CONFIG", &invalid_locale_config));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("Compile dialogue source to a MessagePack .recitec asset");
+    assert!(
+        stdout(&output)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .contains("Compile dialogue source to a MessagePack .recitec asset")
+    );
 
     let output = run(recite().arg("--help").env("RECITE_CONFIG", temp.path()));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("Compile dialogue source to a MessagePack .recitec asset");
+    assert!(
+        stdout(&output)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .contains("Compile dialogue source to a MessagePack .recitec asset")
+    );
 }
 
 #[test]

@@ -4,7 +4,6 @@ exclude = [
     "**/node_modules/**",
     "**/target/**",
     "docs-site/dist/**",
-    "docs-site/.astro/**",
 ]
 
 [MD013]
@@ -23,6 +22,7 @@ allowed-elements = [
     "div",
     "span",
     "img",
+    "p",
     "picture",
     "source",
 ]

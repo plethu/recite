@@ -44,7 +44,11 @@ canonical schema field names. Set `recite/schema_resource` to its `res://` path,
 `recite/schema_manifest` to the desired output path, and optionally `recite/cli_path` to the
 `recite` CLI executable in Project Settings. Run **Project → Tools → Export Recite Schema**. The
 addon writes temporary TOML and asks the CLI to validate and export the canonical JSON with `godot`
-producer identity and fingerprint. Failed exports leave the previous manifest in place.
+producer identity and fingerprint. Failed exports leave the previous manifest in place. The menu
+polls one child job while normal exports run, drains both output pipes, and cancels the job when the
+plugin unloads. Declarations changed during export require another export; the stale result does not
+replace the prior manifest. The synchronous `export_resource` helper remains available for
+automation.
 
 ## Localisation
 

@@ -13,8 +13,10 @@ async function measure() {
     vscode.ConfigurationTarget.Workspace,
   );
   await configuration.update("lsp.projectRoot", root, vscode.ConfigurationTarget.Workspace);
-  const source =
-    fs.readdirSync(path.join(root, "src")).filter((name) => name.endsWith(".recite")).sort()[0];
+  const source = fs
+    .readdirSync(path.join(root, "src"))
+    .filter((name) => name.endsWith(".recite"))
+    .sort()[0];
   const document = await vscode.workspace.openTextDocument(
     vscode.Uri.file(path.join(root, "src", source)),
   );
@@ -34,9 +36,10 @@ async function measure() {
     platform: process.platform,
     architecture: process.arch,
     project: root,
-    binarySha256: crypto.createHash("sha256").update(
-      fs.readFileSync(process.env.RECITE_PERF_BINARY),
-    ).digest("hex"),
+    binarySha256: crypto
+      .createHash("sha256")
+      .update(fs.readFileSync(process.env.RECITE_PERF_BINARY))
+      .digest("hex"),
     sourceSha256: crypto.createHash("sha256").update(original).digest("hex"),
     extensionVersion: extension.packageJSON.version,
     sourceBytes: Buffer.byteLength(original),
@@ -81,7 +84,7 @@ async function measure() {
               document.positionAt(document.getText().length),
             ),
             `\n:: host_probe\n-> ${broken ? missing : "END"}\n`,
-          )
+          ),
         ),
       );
       if (renderer) {
@@ -92,9 +95,10 @@ async function measure() {
       const elapsed = await published;
       if (index >= 2) report.semanticEditToDiagnosticStoreMs.push(elapsed);
       if (renderer) {
-        const destination = index === 2 || index === 3
-          ? `${process.env.RECITE_PERF_OUTPUT}.${broken ? "error" : "clear"}.png`
-          : null;
+        const destination =
+          index === 2 || index === 3
+            ? `${process.env.RECITE_PERF_OUTPUT}.${broken ? "error" : "clear"}.png`
+            : null;
         const state = await renderer.capture(missing, broken, destination);
         if (index >= 2) {
           report.visibleDecorationFrameMs.push(state.readyAt - started);

@@ -125,9 +125,7 @@ fi
 
 "$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
 "$node_bin" "$plugin_root/scripts/message-projections.mjs" --check
-"$node_bin" --test \
-  "$plugin_root/test/message-projections.test.mjs" \
-  "$plugin_root/test/diagnostic-projections.test.mjs"
+(cd "$repo_root" && bun run js:test editors/recite-neovim/test)
 "$node_bin" "$plugin_root/scripts/diagnostic-projections.mjs"
 echo "Neovim UI message projection checks passed"
 
@@ -332,6 +330,7 @@ run_headless "$repo_root/tests/neovim/check.lua"
 run_headless "$repo_root/tests/neovim/recovery.lua"
 run_headless "$repo_root/tests/neovim/material.lua"
 run_headless "$repo_root/tests/neovim/commands.lua"
+run_headless "$repo_root/tests/neovim/diagnostic_batches.lua"
 if ((host_evidence)); then
   run_headless "$repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua"
 fi

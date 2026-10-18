@@ -14,10 +14,37 @@ transport and ships with production dependencies for offline use.
 From the repository root:
 
 ```text
-pnpm --filter recite-vscode run check
-pnpm --filter recite-vscode run package:check
-pnpm --filter recite-vscode run messages:update  # after changing the canonical Fluent resources
+bun run --filter recite-vscode check
+bun run --filter recite-vscode package:check
+bun run --filter recite-vscode messages:update  # after changing the canonical Fluent resources
 ```
+
+The extension implementation is strict TypeScript. tsdown erases its types into JavaScript for the
+editor's Node extension host; the CommonJS shim acquires `vscode` and injects it into the ESM
+implementation. Node or Bun used for development cannot replace the installed editor's runtime.
+Vitest runs the adapter tests, including a fresh Node process that loads the built entry point.
+Generated projections, packaging scripts and host probes retain their native JavaScript formats.
+
+CLI/watch/trace and guarded LSP inputs are checked against Valibot schemas before use. Types are
+inferred from those schemas; watch sequencing and document authority remain in their owners. The
+wire schemas reject unknown fields and preserve lossless integers, without coercion or defaults.
+Valibot is bundled from a development dependency, with its MIT notice in `dist/valibot.LICENSE`.
+
+The 14 October 2026 selection compared Valibot 1.5.0, Zod Mini 4.6.5 and ArkType 2.2.8 on strict
+watch records with 0, 10 and 100 diagnostics, malformed fields, unknown keys, integer bounds and
+cross-field constraints. Candidate bundles were 10.5, 25.5 and 157.6 KB respectively; these sizes
+cover the representative subset, excluding shared generated vocabularies. ArkType was faster for
+large records but imported much more slowly and introduced three transitive packages. Valibot and
+Zod had no runtime dependencies. Valibot met this adapter's small startup/bundle needs without
+paying for transforms, defaults or rich validation reports we do not consume.
+
+The complete schema bundle, including finite commands and guarded LSP inputs, is about 31 KB (6.7 KB
+gzip). In the final local comparison, valid records with 0/10/100 diagnostics took 2.6/15.0/124.5
+microseconds versus 2.7/19.4/154.3 for the old checks. V8 allocation sampling, including collected
+objects, estimated about 65% less churn across the same prepared workloads; process RSS peaked
+higher during the long stress run, so this is not a claim of lower peak memory. Raw timings and
+profiles are local investigation artifacts under `target/toolchain-migration/`. Reopen the choice if
+schema import cost or frequent large records become visible in editor latency.
 
 Build and verification never rewrite the checked-in message projections. Use the explicit update
 command when the canonical English Fluent resources change, then run the checks to review the
@@ -33,11 +60,12 @@ output channel; exhausted recovery is shown as an error notification.
 Build the extension and produce a deterministic VSIX with:
 
 ```text
-pnpm --filter recite-vscode run package
+bun run --filter recite-vscode package
 ```
 
-The package uses the repository's pinned Node and pnpm versions and creates the VSIX archive with
-Node's standard library; no system archive utility, Electron runtime, or browser binary is required.
+The package uses the repository's pinned Bun version; Node checks the installed extension boundary
+and Bun creates the VSIX archive with Node-compatible APIs; no system archive utility, Electron
+runtime, or browser binary is required.
 
 ## Language-server configuration
 

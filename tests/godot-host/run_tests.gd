@@ -22,6 +22,7 @@ func _ready() -> void:
 	_run_reentrant_signal_check()
 	failures.append_array(preload("res://output_isolation.gd").run(self))
 	_run_schema_export_checks()
+	failures.append_array(await preload("res://schema_export_jobs.gd").run(self))
 	_run_information_profile()
 	if failures.is_empty():
 		print("Godot host conformance passed")
@@ -651,6 +652,11 @@ func _run_schema_export_checks() -> void:
 	if not result.ok:
 		return
 	var before := FileAccess.get_file_as_string(output_path)
+	var repeated: Dictionary = Exporter.export_resource(declaration, output_path, cli_path)
+	_require(
+		repeated.ok and FileAccess.get_file_as_string(output_path) == before,
+		"unique export transports must preserve canonical manifest bytes"
+	)
 	var manifest = JSON.parse_string(before)
 	_require(manifest is Dictionary, "schema manifest should be JSON")
 	if manifest is Dictionary:

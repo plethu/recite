@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::{SourceSpan, source_location::position_for_byte_offset};
+use crate::SourceSpan;
 
 use super::super::lower::ManifestSourceFormat;
 use super::{
@@ -19,6 +19,7 @@ pub(crate) fn top_level_toml_number_token<'a>(
 
 impl ManifestSpans {
     pub(crate) fn new_with_format(
+        source: &str,
         format: ManifestSourceFormat,
         toml_spans: Option<&TomlSpanIndex>,
     ) -> Self {
@@ -28,6 +29,11 @@ impl ManifestSpans {
             active_section: None,
             format,
             toml_spans: toml_spans.cloned(),
+            lines: toml_spans.map_or_else(
+                || crate::SourceLineIndex::new(source),
+                |spans| spans.line_index().clone(),
+            ),
+            json_strings: None,
         }
     }
 
@@ -38,6 +44,7 @@ impl ManifestSpans {
             ManifestSourceFormat::Toml => None,
         };
         self.next_offsets.clear();
+        self.json_strings = None;
     }
 
     pub(crate) fn root_key_span(&self, file: &str, source: &str, key: &str) -> SourceSpan {
@@ -48,7 +55,7 @@ impl ManifestSpans {
                 .and_then(|spans| spans.key_range(&[key.to_owned()]))
                 .map_or_else(
                     || document_start_span(file),
-                    |range| source_span(file, source, range),
+                    |range| self.source_span(file, range),
                 );
         }
         top_level_key_span(file, source, key)
@@ -69,7 +76,7 @@ impl ManifestSpans {
                 .and_then(|spans| spans.value_range(&path))
                 .map_or_else(
                     || document_start_span(file),
-                    |range| source_span(file, source, range),
+                    |range| self.source_span(file, range),
                 );
         }
         top_level_object_value_span(file, source, object_key, value_key)
@@ -130,7 +137,7 @@ impl ManifestSpans {
                 })
                 .map_or_else(
                     || document_start_span(file),
-                    |range| source_span(file, source, range),
+                    |range| self.source_span(file, range),
                 );
         }
         self.next_string_span(file, source, fallback, role)
@@ -139,7 +146,6 @@ impl ManifestSpans {
     pub(super) fn toml_next_string_span(
         &mut self,
         file: &str,
-        source: &str,
         needle: &str,
         role: StringRole,
     ) -> SourceSpan {
@@ -157,14 +163,14 @@ impl ManifestSpans {
             return document_start_span(file);
         };
         self.next_offsets.insert(search_key, span_range.end);
-        source_span(file, source, span_range)
+        self.source_span(file, span_range)
     }
-}
 
-fn source_span(file: &str, source: &str, range: Range<usize>) -> SourceSpan {
-    SourceSpan::new(
-        file,
-        position_for_byte_offset(source, range.start),
-        Some(position_for_byte_offset(source, range.end)),
-    )
+    fn source_span(&self, file: &str, range: Range<usize>) -> SourceSpan {
+        SourceSpan::new(
+            file,
+            self.position(range.start),
+            Some(self.position(range.end)),
+        )
+    }
 }

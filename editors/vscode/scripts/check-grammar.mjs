@@ -61,34 +61,32 @@ for (const rule of requiredRules) {
 }
 
 const scopes = JSON.stringify(grammar.repository);
-for (
-  const scope of [
-    "comment.line.number-sign.recite",
-    "keyword.control.recite",
-    "keyword.control.conditional.recite",
-    "punctuation.definition.line.recite",
-    "punctuation.definition.choice.recite",
-    "punctuation.definition.effect.recite",
-    "punctuation.definition.divert.recite",
-    "entity.name.section.recite",
-    "entity.name.label.recite",
-    "constant.other.anchor.recite",
-    "variable.other.reference.recite",
-    "constant.language.recite",
-    "variable.parameter.recite",
-    "keyword.operator.assignment.recite",
-    "constant.other.symbol.recite",
-    "string.quoted.double.recite",
-    "constant.numeric.recite",
-    "constant.language.boolean.recite",
-    "variable.other.runtime.recite",
-    "support.function.recite",
-    "string.unquoted.prose.recite",
-    "entity.name.tag.recite",
-    "variable.other.placeholder.recite",
-    "invalid.illegal.recite",
-  ]
-) {
+for (const scope of [
+  "comment.line.number-sign.recite",
+  "keyword.control.recite",
+  "keyword.control.conditional.recite",
+  "punctuation.definition.line.recite",
+  "punctuation.definition.choice.recite",
+  "punctuation.definition.effect.recite",
+  "punctuation.definition.divert.recite",
+  "entity.name.section.recite",
+  "entity.name.label.recite",
+  "constant.other.anchor.recite",
+  "variable.other.reference.recite",
+  "constant.language.recite",
+  "variable.parameter.recite",
+  "keyword.operator.assignment.recite",
+  "constant.other.symbol.recite",
+  "string.quoted.double.recite",
+  "constant.numeric.recite",
+  "constant.language.boolean.recite",
+  "variable.other.runtime.recite",
+  "support.function.recite",
+  "string.unquoted.prose.recite",
+  "entity.name.tag.recite",
+  "variable.other.placeholder.recite",
+  "invalid.illegal.recite",
+]) {
   assert(scopes.includes(scope), `TextMate grammar is missing lexical scope ${scope}`);
 }
 
@@ -147,8 +145,8 @@ async function readRepositoryFile(relative, label) {
   );
   const candidate = path.resolve(repositoryRoot, relative);
   assert(
-    candidate === path.normalize(candidate)
-      && (candidate === repositoryRoot || candidate.startsWith(`${repositoryRoot}${path.sep}`)),
+    candidate === path.normalize(candidate) &&
+      (candidate === repositoryRoot || candidate.startsWith(`${repositoryRoot}${path.sep}`)),
     `${label} path escapes repository: ${relative}`,
   );
   await assertRegularFile(candidate, label);

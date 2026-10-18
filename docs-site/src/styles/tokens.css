@@ -13,15 +13,31 @@
     --color-success: light-dark(oklch(40% 0.09 150deg), oklch(81% 0.08 150deg));
     --color-warning: light-dark(oklch(43% 0.1 75deg), oklch(83% 0.09 75deg));
     --color-shadow: oklch(0% 0 0deg / 14%);
-    --font-reading: system-ui, sans-serif;
-    --font-code: ui-monospace, "Cascadia Code", monospace;
+
+    /* Riso second ink: rules, plates and decoration. Never text on paper in light mode. */
+    --color-teal: light-dark(oklch(55.5% 0.094 201deg), oklch(82.7% 0.084 193deg));
+
+    /* Text-safe second ink, for links and destinations only. */
+    --color-teal-text: light-dark(oklch(48.1% 0.078 200deg), oklch(82.7% 0.084 193deg));
+
+    /* Plum multiplied by teal: the darkest ink. */
+    --color-overprint: oklch(23.3% 0.055 242deg);
+    --color-plate: light-dark(oklch(89% 0.013 142deg), oklch(36.2% 0.016 237deg));
+
+    /* Self-hosted faces (fonts.css); the stacks after them are the fallbacks while they load. */
+    --font-reading: "IBM Plex Sans", system-ui, sans-serif;
+    --font-code: "IBM Plex Mono", ui-monospace, "Cascadia Code", monospace;
+    --font-display: fraunces, literata, georgia, serif;
+    --font-prose: literata, georgia, serif;
     --measure-reading: min(70ch, 44rem);
     --measure-lead: min(52ch, 36rem);
     --measure-site: min(100%, 76rem);
     --space-step: clamp(1.5rem, 4vw, 4rem);
     --space-section: clamp(3rem, 6vw, 6rem);
     --target-min: 2.75rem;
-    --radius-control: 0.25rem;
+    --radius-control: 3px;
+    --stroke-stamp: 1.5px;
+    --rule-section: 1.5px solid var(--color-plum);
     --focus-ring: 2px solid var(--color-plum);
   }
 

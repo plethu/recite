@@ -6,7 +6,11 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../Editor/ReciteSchemaRegistration.cs;../../Editor/ReciteSchemaToml.cs" />
-    <Compile Include="UnitySchemaStubs.cs;ReciteUnitySchemaHeadless.cs" />
+    <Compile
+      Include="../../Editor/ReciteSchemaRegistration.cs;../../Editor/ReciteSchemaToml.cs;../../Editor/ReciteSchemaExportProcess.cs;../../Editor/ReciteSchemaExporter.cs"
+    />
+    <Compile
+      Include="UnitySchemaStubs.cs;UnityEditorSchemaStubs.cs;ReciteUnitySchemaHeadless.cs;ReciteSchemaExportProcessTests.cs;ReciteSchemaExporterTests.cs"
+    />
   </ItemGroup>
 </Project>

@@ -179,3 +179,84 @@ fn sibling_interruption_never_changes_the_original() -> Result<(), EditError> {
     }
     Ok(())
 }
+
+#[test]
+fn refused_analysis_does_not_publish_prepared_prose_projections() -> Result<(), EditError> {
+    let mut document = Document::new(crate::FIXTURE)?;
+    let script = document.script_snapshot()?;
+    let passages = document.passage_snapshot()?;
+    document.version = i64::MAX;
+    assert!(matches!(
+        document.replace_text(i64::MAX, &passages[0].id, "A proposed café edit."),
+        Err(EditError::RevisionExhausted)
+    ));
+    assert_eq!(document.source(), crate::FIXTURE);
+    assert!(!document.can_undo());
+    assert!(std::sync::Arc::ptr_eq(
+        &script,
+        &document.script_snapshot()?
+    ));
+    assert!(std::sync::Arc::ptr_eq(
+        &passages,
+        &document.passage_snapshot()?
+    ));
+    Ok(())
+}
+
+#[test]
+fn exhausted_revision_does_not_disable_read_only_draft_completion()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut document = super::Document::new(":: start default\n-> END\n")?;
+    document.version = i64::MAX;
+    let draft = ":: start default\n-> dest\n:: destination\n-> END\n";
+    let result = document.complete_draft(draft, recite_core::SourcePosition::new(2, 8)?)?;
+    assert!(
+        result
+            .candidates()
+            .iter()
+            .any(|c| c.name() == "destination")
+    );
+    let index = result
+        .candidates()
+        .iter()
+        .position(|c| c.name() == "destination")
+        .ok_or("destination")?;
+    let (range, replacement) = result.replacement(draft, index)?;
+    assert_eq!(&draft[range], "dest");
+    assert_eq!(replacement, "destination");
+    assert_eq!(document.version, i64::MAX);
+    assert_eq!(document.source(), ":: start default\n-> END\n");
+    Ok(())
+}
+
+#[test]
+fn retained_analysis_does_not_publish_an_interrupted_acceptance() -> Result<(), EditError> {
+    let next = format!("{}# proposed source\n", crate::FIXTURE);
+    let mut reference = Document::new(crate::FIXTURE)?;
+    let complete = control(usize::MAX);
+    reference.accept_with_control(next.clone(), &complete)?;
+    assert!(complete.calls.get() > 1);
+    for stop_at in 0..complete.calls.get() {
+        let mut document = Document::new(crate::FIXTURE)?;
+        let retained = document.completion_snapshot();
+        let script = document.script_snapshot()?;
+        let passages = document.passage_snapshot()?;
+        assert!(matches!(
+            document.accept_with_control(next.clone(), &control(stop_at)),
+            Err(EditError::Authoring(AuthoringError::Interrupted(_)))
+        ));
+        assert!(retained.is_current(&document));
+        assert_eq!(document.source(), crate::FIXTURE);
+        assert_eq!(document.revision(), 1);
+        assert!(!document.can_undo());
+        assert!(std::sync::Arc::ptr_eq(
+            &script,
+            &document.script_snapshot()?
+        ));
+        assert!(std::sync::Arc::ptr_eq(
+            &passages,
+            &document.passage_snapshot()?
+        ));
+    }
+    Ok(())
+}

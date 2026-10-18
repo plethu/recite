@@ -1,6 +1,7 @@
 //! Compact offsets into a document summary; cached regions do not duplicate it.
 use super::AuthoringSummary;
 use crate::region_outputs;
+use crate::region_outputs::region_mut;
 use std::{ops::Range, sync::Arc};
 
 pub(crate) type SummaryRanges = [Range<usize>; 6];
@@ -21,78 +22,67 @@ impl AuthoringSummary {
         parts: &[(&Self, &SummaryRanges)],
         previous: Option<&Arc<Self>>,
     ) -> Arc<Self> {
+        let joined = Self {
+            blocks: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
+                previous.map(|old| &old.blocks),
+            ),
+            block_references: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.block_references[ranges[1].clone()]),
+                previous.map(|old| &old.block_references),
+            ),
+            stable_ids: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
+                previous.map(|old| &old.stable_ids),
+            ),
+            metadata: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.metadata[ranges[3].clone()]),
+                previous.map(|old| &old.metadata),
+            ),
+            condition_functions: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.condition_functions[ranges[4].clone()]),
+                previous.map(|old| &old.condition_functions),
+            ),
+            effect_functions: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.effect_functions[ranges[5].clone()]),
+                previous.map(|old| &old.effect_functions),
+            ),
+        };
         if let Some(previous) = previous
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
-                &previous.blocks,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.block_references[ranges[1].clone()]),
-                &previous.block_references,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
-                &previous.stable_ids,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.metadata[ranges[3].clone()]),
-                &previous.metadata,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.condition_functions[ranges[4].clone()]),
-                &previous.condition_functions,
-            )
-            && region_outputs::matches(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.effect_functions[ranges[5].clone()]),
-                &previous.effect_functions,
-            )
+            && joined.shares_storage(previous)
         {
-            return Arc::clone(previous);
+            Arc::clone(previous)
+        } else {
+            Arc::new(joined)
         }
-        Arc::new(Self {
-            blocks: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.blocks[ranges[0].clone()]),
-            ),
-            block_references: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.block_references[ranges[1].clone()]),
-            ),
-            stable_ids: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.stable_ids[ranges[2].clone()]),
-            ),
-            metadata: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.metadata[ranges[3].clone()]),
-            ),
-            condition_functions: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.condition_functions[ranges[4].clone()]),
-            ),
-            effect_functions: region_outputs::collect(
-                parts
-                    .iter()
-                    .map(|(part, ranges)| &part.effect_functions[ranges[5].clone()]),
-            ),
-        })
+    }
+    fn shares_storage(&self, previous: &Self) -> bool {
+        let Self {
+            blocks,
+            block_references,
+            stable_ids,
+            metadata,
+            condition_functions,
+            effect_functions,
+        } = self;
+        Arc::ptr_eq(blocks, &previous.blocks)
+            && Arc::ptr_eq(block_references, &previous.block_references)
+            && Arc::ptr_eq(stable_ids, &previous.stable_ids)
+            && Arc::ptr_eq(metadata, &previous.metadata)
+            && Arc::ptr_eq(condition_functions, &previous.condition_functions)
+            && Arc::ptr_eq(effect_functions, &previous.effect_functions)
     }
 }
 
@@ -102,31 +92,34 @@ impl AuthoringSummary {
         ranges: &SummaryRanges,
         mut shift: impl FnMut(&mut recite_core::SourceSpan),
     ) {
-        for item in &mut self.blocks[ranges[0].clone()] {
+        for item in region_mut(&mut self.blocks, ranges[0].clone()) {
             shift(&mut item.span);
             item.id_span.iter_mut().for_each(&mut shift);
         }
-        for item in &mut self.block_references[ranges[1].clone()] {
+        for item in region_mut(&mut self.block_references, ranges[1].clone()) {
             shift(&mut item.span);
             item.file_span.iter_mut().for_each(&mut shift);
             item.block_id_span.iter_mut().for_each(&mut shift);
         }
-        for item in &mut self.stable_ids[ranges[2].clone()] {
+        for item in region_mut(&mut self.stable_ids, ranges[2].clone()) {
             shift(&mut item.span);
             item.source_id_span.iter_mut().for_each(&mut shift);
             item.insertion_span.iter_mut().for_each(&mut shift);
         }
-        for item in &mut self.metadata[ranges[3].clone()] {
+        for item in region_mut(&mut self.metadata, ranges[3].clone()) {
             item.source_span.iter_mut().for_each(&mut shift);
             item.key_span.iter_mut().for_each(&mut shift);
             item.value_span.iter_mut().for_each(&mut shift);
             item.value_element_spans.iter_mut().for_each(&mut shift);
         }
-        for item in self.condition_functions[ranges[4].clone()]
+        for item in region_mut(&mut self.condition_functions, ranges[4].clone())
             .iter_mut()
-            .chain(&mut self.effect_functions[ranges[5].clone()])
+            .chain(region_mut(&mut self.effect_functions, ranges[5].clone()))
         {
             shift(&mut item.span);
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -138,23 +138,21 @@ impl Component for RenameScreen {
                 }),
             }
         } else {
+            let normalized_query = query.read().trim().to_lowercase();
             let options = writer
                 .buffers
                 .model
                 .read()
                 .as_ref()
                 .ok()
-                .and_then(|m| m.document().script().ok())
+                .and_then(|m| m.document().script_snapshot().ok())
                 .unwrap_or_default()
-                .into_iter()
-                .filter(|b| {
-                    b.id.to_lowercase()
-                        .contains(&query.read().trim().to_lowercase())
-                })
+                .iter()
+                .filter(|b| b.id.to_lowercase().contains(&normalized_query))
                 .map(|b| PickerOption {
                     annotation: String::new(),
                     title: b.id.clone(),
-                    value: b.id,
+                    value: b.id.clone(),
                     detail: String::new(),
                 })
                 .collect();

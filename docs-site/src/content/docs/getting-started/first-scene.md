@@ -1,7 +1,6 @@
 ---
 title: First Scene
 description: Write, validate, compile, play, and headlessly run a minimal Recite scene.
-template: splash
 ---
 
 This walkthrough takes one scene from source to a deterministic headless run using only the CLI. It

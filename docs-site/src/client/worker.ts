@@ -12,7 +12,7 @@ scope.onmessage = async ({ data }: MessageEvent<Request>) => {
     let encoded: string;
     if (command.kind === "run") {
       const bindings: typeof import("./generated/recite_playground.js") = await import(
-        /* @vite-ignore */ command.moduleUrl
+        command.moduleUrl
       );
       await bindings.default({ module_or_path: command.binaryUrl });
       host?.free();
@@ -38,9 +38,10 @@ scope.onmessage = async ({ data }: MessageEvent<Request>) => {
     // authored source or a remote response. Rust tests cover its projection.
     response = { id, kind: "output", output: JSON.parse(encoded) as Output };
   } catch (error) {
-    response = error instanceof WebAssembly.RuntimeError
-      ? { id, kind: "trap" }
-      : { id, kind: "error", message: String(error) };
+    response =
+      error instanceof WebAssembly.RuntimeError
+        ? { id, kind: "trap" }
+        : { id, kind: "error", message: String(error) };
   }
   scope.postMessage(response);
 };

@@ -155,7 +155,7 @@ fn pane_sequence_moves_focus_and_escape_cancels() -> Result {
         1.,
     );
     vim(&mut test)?;
-    support::click(&mut test, "Beat editor")?;
+    click_pane_background(&mut test)?;
     key(
         &mut test,
         Key::Character("w".into()),
@@ -222,7 +222,7 @@ fn slash_and_repeat_search_preserve_the_query() -> Result {
         1.,
     );
     vim(&mut test)?;
-    support::click(&mut test, "Beat editor")?;
+    click_pane_background(&mut test)?;
     key(
         &mut test,
         Key::Character("/".into()),
@@ -342,5 +342,19 @@ fn quit_alias_uses_the_existing_confirmation() -> Result {
     support::click(&mut test, "Close Recite?")?;
     colon(&mut test);
     assert!(!palette(&test));
+    Ok(())
+}
+
+/// Click empty pane space below the script, so the click focuses the pane, not a text field.
+fn click_pane_background(test: &mut TestingRunner) -> Result {
+    let pane = test
+        .find(|node, element| {
+            Rect::try_downcast(element)
+                .filter(|r| r.accessibility.builder.label() == Some("Beat editor"))
+                .map(|_| node.layout().area)
+        })
+        .ok_or("beat editor")?;
+    test.click_cursor((f64::from(pane.center().x), f64::from(pane.max_y() - 12.)));
+    test.poll_n(std::time::Duration::from_millis(16), 15);
     Ok(())
 }

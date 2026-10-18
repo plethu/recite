@@ -11,8 +11,7 @@ for (const theme of ["light", "dark"] as const) {
       (xml) =>
         Array.from(
           new DOMParser().parseFromString(xml, "application/xml").querySelectorAll("url > loc"),
-        )
-          .map((node) => new URL(node.textContent!, location.href).pathname),
+        ).map((node) => new URL(node.textContent!, location.href).pathname),
       sitemap,
     );
     expect(paths.length).toBeGreaterThan(1);
@@ -27,8 +26,8 @@ for (const theme of ["light", "dark"] as const) {
             .evaluateAll((blocks) =>
               blocks.every(
                 (block) => block.scrollWidth <= block.clientWidth || block.tabIndex === 0,
-              )
-            )
+              ),
+            ),
         )
         .toBe(true);
       const results = await new AxeBuilder({ page })
@@ -41,7 +40,7 @@ for (const theme of ["light", "dark"] as const) {
       });
       expect(results.violations).toEqual([]);
       // Same foreground/background colors can appear as incomplete, not violations.
-      expect(results.incomplete.filter(result => result.id === "color-contrast")).toEqual([]);
+      expect(results.incomplete.filter((result) => result.id === "color-contrast")).toEqual([]);
     }
   });
 }
@@ -49,9 +48,8 @@ for (const theme of ["light", "dark"] as const) {
 test("dark static pages pass axe without site scripts", async ({ browser }) => {
   const context = await browser.newContext({ colorScheme: "dark" });
   try {
-    await context.route(
-      "**/*",
-      (route) => route.request().resourceType() === "script" ? route.abort() : route.continue(),
+    await context.route("**/*", (route) =>
+      route.request().resourceType() === "script" ? route.abort() : route.continue(),
     );
     const page = await context.newPage();
     await page.goto("/getting-started/first-scene/");
@@ -75,24 +73,20 @@ test("playground prompts and compiler diagnostics pass axe", async ({ page }) =>
   }
   await expect(page.getByRole("status")).toHaveText("Choose a reply.");
   expect(
-    (await new AxeBuilder({ page }).withTags([
-      "wcag2a",
-      "wcag2aa",
-      "wcag21aa",
-      "wcag22aa",
-      "best-practice",
-    ]).analyze()).violations,
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa", "best-practice"])
+        .analyze()
+    ).violations,
   ).toEqual([]);
   await page.getByRole("textbox", { name: "Recite source" }).fill(":: start default\n-> missing\n");
   await page.getByRole("button", { name: "Run scene", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("could not compile");
   expect(
-    (await new AxeBuilder({ page }).withTags([
-      "wcag2a",
-      "wcag2aa",
-      "wcag21aa",
-      "wcag22aa",
-      "best-practice",
-    ]).analyze()).violations,
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa", "best-practice"])
+        .analyze()
+    ).violations,
   ).toEqual([]);
 });
