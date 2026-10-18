@@ -185,9 +185,9 @@ Install Valgrind with the host package manager and run `just perf regression-set
 uses upstream measurement, baselines, limits and typed summaries. The shell recipe builds the base
 and candidate before measurement and applies the current harness and fixtures to both. It preserves
 the original and resolved control locks; dependency resolution for harness additions runs offline
-after both locked dependency sets are fetched. Preparation and receiver/result disposal are
-excluded from operation counters. DHAT filters allocation totals to the operation. The unchanged
-10% peak-heap budget uses paired whole-process peaks from its raw logs, including preparation and
+after both locked dependency sets are fetched. Preparation and receiver/result disposal are excluded
+from operation counters. DHAT filters allocation totals to the operation. The unchanged 10%
+peak-heap budget uses paired whole-process peaks from its raw logs, including preparation and
 disposal. The filtered peak counter remains evidence only: the global peak may occur outside the
 operation, leaving its attributed bytes zero. Neither counter measures process RSS or an isolated
 operation peak.
