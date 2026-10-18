@@ -1,6 +1,6 @@
 //! File ownership for the retained editor.
 mod external;
-mod manifest;
+pub(crate) mod manifest;
 mod recovery;
 mod rename;
 pub(crate) mod save;
@@ -9,6 +9,8 @@ mod sessions;
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_compiler::authoring::WorkControl;
 use recite_writer_model::{Document, ProjectContext, Workbench};
+pub(crate) use sessions::checkpoint::{Checkpoint, ReadyCheckpoint};
+pub(crate) use sessions::preparing::{PreparedSwitch, SwitchRequest};
 
 use std::{
     fs,
@@ -19,6 +21,7 @@ mod error;
 pub use error::FileError;
 
 pub struct ProjectFiles {
+    pub(crate) saving: bool,
     manifest: manifest::ManifestDraft,
     pub watch: Result<crate::external::Watch, String>,
     pub handoff: Option<crate::external::Handoff>,
@@ -80,6 +83,7 @@ impl ProjectFiles {
         let watch = crate::external::Watch::new(&root);
         control.checkpoint()?;
         Ok(Self {
+            saving: false,
             manifest,
             watch,
             external: None,
@@ -127,10 +131,11 @@ impl ProjectFiles {
     }
 
     pub fn checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
-        let recovery = (workbench.has_draft()
-            || self.saved.as_ref() != workbench.document().source())
-        .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
-        self.recovery.persist(recovery)
+        self.recovery.persist(self.recovery_value(workbench))
+    }
+    fn recovery_value(&self, workbench: &Workbench) -> Option<Recovery> {
+        (workbench.has_draft() || self.saved.as_ref() != workbench.document().source())
+            .then(|| Recovery::new(self.saved.clone(), workbench.recovery()))
     }
 
     pub fn recovery_error(&self) -> Option<String> {
@@ -142,13 +147,12 @@ impl ProjectFiles {
         })
     }
     pub fn queue_checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
-        let recovery = (workbench.has_draft()
-            || self.saved.as_ref() != workbench.document().source())
-        .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
-        self.recovery.queue(recovery)
+        self.recovery.queue(self.recovery_value(workbench))
     }
+
     /// Preserve the complete local session before accepting the disk version.
     pub fn reload(&mut self, workbench: &Workbench) -> Result<(PathBuf, Workbench), FileError> {
+        self.require_idle_save()?;
         let report = recite_config::discover_project(&self.root)?;
         if !report.is_complete() {
             return Err(FileError::Incomplete);
@@ -161,7 +165,7 @@ impl ProjectFiles {
         let document =
             Document::in_project(key, disk.clone(), self.retained_context(context.clone()))
                 .map_err(recite_writer_model::WorkbenchError::from)?;
-        let next = Workbench::from_document(document)?;
+        let next = Workbench::from_document(document, None)?;
         let path = self.export(workbench)?;
         self.recovery.persist(None)?;
         self.saved = disk.into();
@@ -171,6 +175,7 @@ impl ProjectFiles {
     }
 
     pub fn refresh(&mut self, workbench: &mut Workbench) -> Result<(), FileError> {
+        self.require_idle_save()?;
         let report = recite_config::discover_project(&self.root)?;
         if !report.is_complete() {
             return Err(FileError::Incomplete);

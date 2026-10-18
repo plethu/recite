@@ -25,6 +25,7 @@ impl ProjectFiles {
         model: &mut Workbench,
         keep: bool,
     ) -> Result<PathBuf, FileError> {
+        self.require_idle_save()?;
         let comparison = self.external.as_ref().ok_or(FileError::Selection)?;
         if comparison.path != self.current
             || model.view() != &View::Source

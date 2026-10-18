@@ -80,7 +80,7 @@ impl Component for DocumentTabs {
                                         String::new()
                                     }
                                 ))
-                                .on_press(move |_| match writer.open_document(&target) {
+                                .on_press(move |_| match writer.open_document(&target, None) {
                                     Ok(()) => {}
                                     Err(e) => writer.message.error(e),
                                 })
@@ -148,34 +148,25 @@ impl Component for DocumentTabs {
                 primary: SubmitAction {
                     id: submit_id,
                     caption: text(MsgId::WriterSaveCloseDocument),
-                    enabled: true,
+                    enabled: !writer.files.read().as_ref().is_some_and(|p| p.saving),
                     action: EventHandler::new(move |()| {
-                        let result = if writer
-                            .files
-                            .peek()
-                            .as_ref()
-                            .is_some_and(|files| files.current == path)
-                        {
-                            writer.buffers.save(writer.files)
-                        } else {
-                            writer.buffers.harvest();
-                            let mut state = writer.buffers.model.write();
-                            let mut files = writer.files.write();
-                            match (state.as_mut(), files.as_mut()) {
-                                (Ok(model), Some(files)) => files
-                                    .save_document(model, &path)
-                                    .map_err(|error| error.to_string()),
-                                _ => Err("Open a project first.".into()),
-                            }
-                        };
-                        match result {
-                            Ok(()) => {
-                                if close(writer, &path) {
-                                    closing.set(None);
+                        let saved_path = path.clone();
+                        crate::editor_work::start(
+                            writer,
+                            crate::editor_work::SaveScope::Document(path.clone()),
+                            EventHandler::new(move |result| match result {
+                                Ok(()) => {
+                                    if closing
+                                        .try_peek()
+                                        .is_none_or(|c| c.as_ref() != Some(&saved_path))
+                                    {
+                                        return;
+                                    }
+                                    close(writer, &saved_path, closing);
                                 }
-                            }
-                            Err(e) => writer.message.error(e),
-                        }
+                                Err(error) => writer.message.error(error),
+                            }),
+                        );
                     }),
                 },
                 focus_order: vec![cancel_id, submit_id],
@@ -234,8 +225,8 @@ fn navigate_tab(
     event.stop_propagation();
     event.prevent_default();
     let (path, id) = &targets[next];
-    match writer.open_document(path) {
-        Ok(()) => id.request_focus(),
+    match writer.open_document(path, Some(*id)) {
+        Ok(()) => {}
         Err(error) => writer.message.error(error),
     }
 }
@@ -246,6 +237,9 @@ fn request_close(
     mut closing: State<Option<PathBuf>>,
     submit_id: AccessibilityId,
 ) {
+    if writer.files.peek().as_ref().is_some_and(|p| p.saving) {
+        return;
+    }
     // Harvest before checking: rendered dirty state can lag typing.
     writer.buffers.harvest();
     let dirty = {
@@ -265,45 +259,70 @@ fn request_close(
         closing.set(Some(path.to_owned()));
         submit_id.request_focus();
     } else {
-        close(writer, path);
+        close(writer, path, closing);
     }
 }
 
-fn close(mut writer: Writer, path: &std::path::Path) -> bool {
-    let active = writer
-        .files
-        .peek()
-        .as_ref()
-        .is_some_and(|files| files.current == path);
-    let result = {
-        let mut state = writer.buffers.model.write();
-        let mut files = writer.files.write();
-        match (state.as_mut(), files.as_mut()) {
-            (Ok(model), Some(files)) => {
-                files.close_document(model, path).map_err(|e| e.to_string())
-            }
-            _ => return false,
+fn close(mut writer: Writer, path: &std::path::Path, mut closing: State<Option<PathBuf>>) {
+    writer.buffers.harvest();
+    let result = (|| {
+        let state = writer.buffers.model.peek();
+        let files = writer.files.peek();
+        let (Ok(model), Some(files)) = (state.as_ref(), files.as_ref()) else {
+            return Err("Project is no longer open.".to_string());
+        };
+        files
+            .require_saved_document(model, path)
+            .map_err(|e| e.to_string())?;
+        if files.current != path {
+            return Ok(None);
+        }
+        files
+            .open_documents(model)
+            .into_iter()
+            .find(|(p, _)| p != path)
+            .map(|(next, _)| Some(next))
+            .ok_or_else(|| "Keep at least one document open.".to_string())
+    })();
+    let next = match result {
+        Ok(next) => next,
+        Err(error) => {
+            writer.message.error(error);
+            return;
         }
     };
-    if let Err(e) = result {
-        writer.message.error(e);
-        return false;
+    let expected = closing.peek().clone();
+    let path = path.to_owned();
+    let complete = EventHandler::new(move |result: Result<(), String>| {
+        if closing.try_peek().is_none_or(|c| *c != expected) {
+            return;
+        }
+        let result = result.and_then(|()| {
+            let mut state = writer.buffers.model.write();
+            let mut files = writer.files.write();
+            let (Ok(model), Some(files)) = (state.as_mut(), files.as_mut()) else {
+                return Err("Project is no longer open.".to_string());
+            };
+            if files.current == path {
+                return Err("The document is still active; retry closing.".into());
+            }
+            files
+                .close_document(model, &path)
+                .map_err(|e| e.to_string())
+        });
+        match result {
+            Ok(()) => {
+                writer.close_scene(&path);
+                closing.set(None);
+            }
+            Err(error) => writer.message.error(error),
+        }
+    });
+    if let Some(next) = next {
+        if let Err(error) = writer.open_document_then(&next, complete) {
+            writer.message.error(error);
+        }
+    } else {
+        complete.call(Ok(()));
     }
-    if !active {
-        return true;
-    }
-    let model = writer.buffers.model.peek();
-    if let Ok(model) = model.as_ref() {
-        writer.buffers.editor.set(crate::editing::editor_data(
-            model.draft(),
-            model.view() == &recite_writer_model::View::Source,
-            writer.dark,
-        ));
-        writer
-            .buffers
-            .prose
-            .set(crate::buffers::prose_draft(model).into());
-    }
-    writer.selection.set(None);
-    true
 }

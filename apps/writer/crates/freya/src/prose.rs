@@ -3,7 +3,8 @@ use crate::design::Button;
 use crate::design::tokens as t;
 use crate::{editing::Writer, palette};
 use freya::{animation::use_animation, prelude::*};
-use recite_writer_model::{Passage, PassageKind, View, Workbench};
+use recite_writer_model::{Passage, PassageKind, View};
+pub(crate) mod focus;
 
 #[derive(Clone)]
 pub(super) struct ProseField {
@@ -62,16 +63,8 @@ impl Component for ProseField {
             let focused = id.is_focused();
             if focused && !*was_focused.peek() {
                 focus_ink.start();
-                writer.navigate(|m| m.select(focus_target.clone()));
-            } else if !focused && *was_focused.peek() {
-                let selected = writer
-                    .buffers
-                    .model
-                    .peek()
-                    .as_ref()
-                    .is_ok_and(|m| m.view() == &focus_target && m.has_draft());
-                if selected {
-                    writer.perform(Workbench::apply);
+                if let View::Passage(passage) = &focus_target {
+                    focus::select(writer, passage.clone(), id);
                 }
             }
             was_focused.set_if_modified(focused);
@@ -80,7 +73,10 @@ impl Component for ProseField {
         let passage_id = passage.id.clone();
         use_side_effect(move || {
             let state = writer.buffers.model.read();
-            if let Ok(session) = state.as_ref() {
+            // Outgoing widgets must not project the next Source document before unmounting.
+            if let Ok(session) = state.as_ref()
+                && session.view() != &View::Source
+            {
                 let current = if session.view() == &sync_target {
                     Some(session.draft().to_owned())
                 } else {
@@ -137,6 +133,7 @@ impl Component for ProseField {
         });
         let field = t::prose().child(
             Input::new(text)
+                .enabled(!writer.work.busy() || selected)
                 .a11y_id(id)
                 .multiline(true)
                 .width(Size::fill())
@@ -156,8 +153,8 @@ impl Component for ProseField {
                         .peek()
                         .as_ref()
                         .is_ok_and(|m| m.view() == &target);
-                    if !selected {
-                        writer.navigate(|m| m.select(target.clone()));
+                    if !selected && let View::Passage(passage) = &target {
+                        focus::select(writer, passage.clone(), id);
                     }
                     if let Ok(session) = buffers.model.write().as_mut() {
                         if session.view() == &target {

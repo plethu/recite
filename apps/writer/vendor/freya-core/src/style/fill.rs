@@ -1,0 +1,220 @@
+use std::{
+    fmt::{
+        self,
+        Pointer,
+    },
+    hash::{
+        Hash,
+        Hasher,
+    },
+    mem::discriminant,
+};
+
+use freya_engine::prelude::{
+    Paint,
+    SkColor,
+    TextStyle,
+};
+use torin::prelude::Area;
+
+use crate::{
+    prelude::Color,
+    style::{
+        gradient::{
+            ConicGradient,
+            LinearGradient,
+            RadialGradient,
+        },
+        render_callback::RenderCallback,
+        shader::ShaderFill,
+    },
+};
+
+/// A paint source for backgrounds and text: a solid [`Color`], a gradient or a custom shader.
+///
+/// A [`Color`], [`LinearGradient`], [`RadialGradient`], [`ConicGradient`] or [`ShaderFill`]
+/// all convert into a [`Fill`] automatically, so APIs that take an `impl Into<Fill>` accept
+/// any of them directly:
+///
+/// ```
+/// # use freya::prelude::*;
+/// let gradient: Fill = LinearGradient::new()
+///     .stop((Color::RED, 0.0))
+///     .stop((Color::BLUE, 100.0))
+///     .into();
+/// ```
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+pub enum Fill {
+    /// A solid [`Color`].
+    Color(Color),
+    /// A custom SkSL shader. See [`ShaderFill`].
+    Shader(Box<ShaderFill>),
+    /// A [`LinearGradient`].
+    LinearGradient(Box<LinearGradient>),
+    /// A [`RadialGradient`].
+    RadialGradient(Box<RadialGradient>),
+    /// A [`ConicGradient`].
+    ConicGradient(Box<ConicGradient>),
+    /// Custom drawing for rect backgrounds and label or paragraph overlays.
+    /// Span fills do not invoke callbacks.
+    Callback(#[cfg_attr(feature = "serde", serde(skip))] RenderCallback),
+}
+
+impl Fill {
+    pub fn set_a(&mut self, a: u8) {
+        if let Fill::Color(color) = self {
+            *color = color.with_a(a);
+        }
+    }
+
+    /// Returns the inner [Color] when this is a [Fill::Color].
+    pub fn as_color(&self) -> Option<Color> {
+        match self {
+            Fill::Color(color) => Some(*color),
+            _ => None,
+        }
+    }
+
+    /// Applies this fill as a text color.
+    pub fn apply_to_text_style(&self, text_style: &mut TextStyle, area: Area) {
+        if let Some(color) = self.as_color() {
+            text_style.set_color(color);
+            return;
+        }
+
+        let mut paint = Paint::default();
+        paint.set_anti_alias(true);
+        self.apply_to_paint(&mut paint, area);
+        text_style.set_foreground_paint(&paint);
+    }
+
+    pub fn render_callback(&self) -> Option<&RenderCallback> {
+        match self {
+            Self::Callback(callback) => Some(callback),
+            _ => None,
+        }
+    }
+
+    pub fn apply_to_paint(&self, paint: &mut Paint, area: Area) {
+        match &self {
+            Fill::Color(color) => {
+                paint.set_color(*color);
+            }
+            Fill::LinearGradient(gradient) => {
+                paint.set_shader(gradient.prepare_shader(area));
+            }
+            Fill::RadialGradient(gradient) => {
+                paint.set_shader(gradient.prepare_shader(area));
+            }
+            Fill::ConicGradient(gradient) => {
+                paint.set_shader(gradient.prepare_shader(area));
+            }
+            Fill::Shader(shader) => {
+                paint.set_shader(shader.prepare_shader(area));
+            }
+            Fill::Callback(_) => {
+                paint.set_color(Color::TRANSPARENT);
+            }
+        }
+    }
+}
+
+impl Default for Fill {
+    fn default() -> Self {
+        Self::Color(Color::default())
+    }
+}
+
+impl Hash for Fill {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        discriminant(self).hash(state);
+        match self {
+            Fill::Color(color) => color.hash(state),
+            Fill::Shader(shader) => shader.hash(state),
+            Fill::LinearGradient(gradient) => gradient.hash(state),
+            Fill::RadialGradient(gradient) => gradient.hash(state),
+            Fill::ConicGradient(gradient) => gradient.hash(state),
+            Fill::Callback(callback) => callback.hash(state),
+        }
+    }
+}
+
+impl From<RenderCallback> for Fill {
+    fn from(callback: RenderCallback) -> Self {
+        Self::Callback(callback)
+    }
+}
+
+impl From<Color> for Fill {
+    fn from(color: Color) -> Self {
+        Fill::Color(color)
+    }
+}
+
+impl From<(u8, u8, u8)> for Fill {
+    fn from(color: (u8, u8, u8)) -> Self {
+        Fill::Color(color.into())
+    }
+}
+
+impl From<(u8, u8, u8, f32)> for Fill {
+    fn from(color: (u8, u8, u8, f32)) -> Self {
+        Fill::Color(color.into())
+    }
+}
+
+impl From<(u8, u8, u8, u8)> for Fill {
+    fn from(color: (u8, u8, u8, u8)) -> Self {
+        Fill::Color(color.into())
+    }
+}
+
+impl From<u32> for Fill {
+    fn from(color: u32) -> Self {
+        Fill::Color(color.into())
+    }
+}
+
+impl From<SkColor> for Fill {
+    fn from(color: SkColor) -> Self {
+        Fill::Color(color.into())
+    }
+}
+
+impl From<LinearGradient> for Fill {
+    fn from(gradient: LinearGradient) -> Self {
+        Fill::LinearGradient(Box::new(gradient))
+    }
+}
+
+impl From<RadialGradient> for Fill {
+    fn from(gradient: RadialGradient) -> Self {
+        Fill::RadialGradient(Box::new(gradient))
+    }
+}
+
+impl From<ConicGradient> for Fill {
+    fn from(gradient: ConicGradient) -> Self {
+        Fill::ConicGradient(Box::new(gradient))
+    }
+}
+
+impl From<ShaderFill> for Fill {
+    fn from(shader: ShaderFill) -> Self {
+        Fill::Shader(Box::new(shader))
+    }
+}
+
+impl fmt::Display for Fill {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Color(color) => color.fmt(f),
+            Self::Shader(shader) => shader.as_ref().fmt(f),
+            Self::LinearGradient(gradient) => gradient.as_ref().fmt(f),
+            Self::RadialGradient(gradient) => gradient.as_ref().fmt(f),
+            Self::ConicGradient(gradient) => gradient.as_ref().fmt(f),
+            Self::Callback(callback) => callback.fmt(f),
+        }
+    }
+}

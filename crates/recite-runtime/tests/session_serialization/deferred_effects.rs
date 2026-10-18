@@ -23,6 +23,7 @@ fn restores_deferred_effects_collected_before_save_and_continues_in_order() {
     };
     assert_effect_functions(session.deferred_effects(), ["entered_start"]);
 
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores deferred state");
     let effects = assert_end_effects(

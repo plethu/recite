@@ -5,6 +5,7 @@ fn language() -> crate::languages::EditorLanguage {
         recite_writer_grammar::LANGUAGE,
         recite_writer_grammar::HIGHLIGHTS,
     )
+    .with_line_isolated_highlighting()
 }
 fn settle(data: &mut CodeEditorData) {
     for _ in 0..10_000 {

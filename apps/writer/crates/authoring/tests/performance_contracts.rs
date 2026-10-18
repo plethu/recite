@@ -15,10 +15,10 @@ fn repeated_words_across_fields_and_query_do_not_duplicate_search_hits()
     let (count, hits) = index.search("COURIER café courier CAFÉ", 3);
     assert_eq!(count, 4);
     assert_eq!(hits.len(), 3);
-    assert_eq!(hits[0].document, "courier.recite");
+    assert_eq!(hits[0].document.as_ref(), "courier.recite");
     assert_eq!(hits[0].text, "Courier café courier.");
     assert_eq!(hits[1].text, "Café courier.");
-    assert_eq!(hits[2].document, "other.recite");
+    assert_eq!(hits[2].document.as_ref(), "other.recite");
     assert_eq!(index.search("courier", 0), (4, vec![]));
     assert_eq!(index.search("courier missing", 10), (0, vec![]));
     assert_eq!(index.search("...", 10), (0, vec![]));
@@ -112,7 +112,11 @@ fn shared_search_results_preserve_order_counts_and_their_saved_snapshot()
         "Café courier."
     );
     assert_eq!(
-        snapshot.get(2).ok_or("third search result")?.document,
+        snapshot
+            .get(2)
+            .ok_or("third search result")?
+            .document
+            .as_ref(),
         "b.recite"
     );
     Ok(())
@@ -149,5 +153,22 @@ fn recovery_shares_immutable_drafts_and_preserves_the_existing_json_shape()
         !workbench.has_draft(),
         "equal independently allocated drafts stay clean"
     );
+    Ok(())
+}
+
+#[test]
+fn search_hits_share_immutable_context_without_retaining_source()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source =
+        ":: start default speaker=Mara\n> first\n  First courier.\n> second\n  Second courier.\n";
+    let index = SearchIndex::build(&[SavedDocument::new(DocumentKey::new("a.recite")?, source)]);
+    let hits = index.search_results("courier mara", 2);
+    let first = hits.get(0).ok_or("first")?;
+    let second = hits.get(1).ok_or("second")?;
+    assert_eq!(first.text, "First courier.");
+    assert_eq!(second.text, "Second courier.");
+    assert!(Arc::ptr_eq(&first.document, &second.document));
+    assert!(Arc::ptr_eq(&first.beat, &second.beat));
+    assert!(Arc::ptr_eq(&first.speaker, &second.speaker));
     Ok(())
 }

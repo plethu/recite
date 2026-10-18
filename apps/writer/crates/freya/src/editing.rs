@@ -1,6 +1,9 @@
 use freya::{code_editor::*, prelude::*};
 use recite_writer_model::{View, Workbench, WorkbenchError};
 
+mod continuation;
+pub(crate) use continuation::Presentation;
+
 pub type Session = State<Result<Workbench, WorkbenchError>>;
 
 /// The shared query colours stable IDs like names. Writer dims them so writers read the name,
@@ -11,8 +14,10 @@ static HIGHLIGHTS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
 });
 
 pub fn editor_data(text: &str, source: bool, dark: bool) -> CodeEditorData {
-    let language =
-        source.then(|| EditorLanguage::new(recite_writer_grammar::LANGUAGE, HIGHLIGHTS.as_str()));
+    let language = source.then(|| {
+        EditorLanguage::new(recite_writer_grammar::LANGUAGE, HIGHLIGHTS.as_str())
+            .with_line_isolated_highlighting()
+    });
     let mut data = CodeEditorData::new(Rope::from_str(text), language);
     data.set_theme(super::palette::syntax(dark));
     if source {
@@ -92,6 +97,9 @@ pub(crate) struct Writer {
     pub source_viewport: crate::source_editor::EditorViewport,
     pub layout: crate::presentation::Layout,
     pub trial: crate::preview_panel::TrialInputs,
+    pub work: crate::editor_work::EditorWork,
+    pub declaration_buffer: State<Option<crate::declarations::SourceBuffer>>,
+    pub projections: State<Option<crate::projections::Work>>,
     pub localisation: State<crate::localisation::Localisation>,
     pub files: State<Option<crate::project::ProjectFiles>>,
     pub examples: State<std::collections::BTreeMap<String, Workbench>>,
@@ -115,24 +123,21 @@ pub(crate) struct Writer {
 }
 
 impl Writer {
-    pub fn inspect(mut self, block: &str) {
-        self.navigate(|m| m.inspect_block(block));
-        if self
-            .buffers
-            .model
-            .peek()
-            .as_ref()
-            .is_ok_and(|m| m.selected_block().ok().flatten().as_deref() == Some(block))
-        {
-            self.selection.set(Some(block.to_owned()));
-            self.pane.set(Pane::Script);
-            self.inspector_focus.request_focus();
-            self.scroll
+    pub fn inspect(self, block: &str) {
+        let block = block.to_owned();
+        self.after_prose(move |mut writer| {
+            writer.try_navigate(|m| m.inspect_block(&block))?;
+            writer.selection.set(Some(block));
+            writer.pane.set(Pane::Script);
+            writer.inspector_focus.request_focus();
+            writer
+                .scroll
                 .scroll_to(ScrollPosition::Start, Direction::Vertical);
-        }
+            Ok(())
+        });
     }
 
-    pub fn scene_opened(mut self) -> Result<(), String> {
+    pub fn scene_opened(mut self, view: recite_config::WriterView) -> Result<(), String> {
         let recovered_source = self
             .buffers
             .model
@@ -144,27 +149,33 @@ impl Writer {
             self.pane.set(Pane::Map);
             return Ok(());
         }
-        self.selection.set(None);
-        self.layout
-            .view
-            .set(self.preferences.peek().config.writer.view);
-        if *self.layout.view.peek() == recite_config::WriterView::Source {
-            self.try_navigate(|m| m.select(View::Source))
+        if view == recite_config::WriterView::Source {
+            self.try_navigate(|m| m.select(View::Source))?;
         } else {
-            let empty = self
+            if !self
                 .buffers
                 .model
                 .peek()
                 .as_ref()
-                .is_ok_and(crate::scene::has_no_beats);
-            if !empty {
+                .is_ok_and(crate::scene::has_no_beats)
+            {
                 self.try_navigate(Workbench::show_script)?;
             }
-            if self.layout.standalone() {
-                self.ensure_beat()?;
-            }
-            Ok(())
         }
+        self.selection.set(None);
+        self.layout.view.set(view);
+        if view != recite_config::WriterView::Source
+            && self.layout.standalone()
+            && !self
+                .buffers
+                .model
+                .peek()
+                .as_ref()
+                .is_ok_and(crate::scene::has_no_beats)
+        {
+            self.ensure_beat()?;
+        }
+        Ok(())
     }
     pub fn ensure_beat(mut self) -> Result<(), String> {
         if self
@@ -208,30 +219,48 @@ impl Writer {
     pub fn history_step(self, forward: bool) {
         crate::navigation::step(self, forward);
     }
-    pub fn pin(mut self) {
-        if self.try_navigate(|_| Ok(())).is_err() {
-            return;
-        }
-        if let Ok(session) = self.buffers.model.peek().as_ref()
-            && let Ok(Some(id)) = session.selected_block()
-            && let Ok(blocks) = session.document().script_snapshot()
-            && let Some(block) = blocks.iter().find(|b| b.id == id)
-        {
-            self.reference.set(Some(crate::reading_context::Reference {
-                document: session.document().key().to_string(),
-                block: block.clone(),
-            }));
-        }
+    pub fn pin(self) {
+        self.after_prose(move |mut writer| {
+            writer.try_navigate(|_| Ok(()))?;
+            if let Ok(session) = writer.buffers.model.peek().as_ref()
+                && let Ok(Some(id)) = session.selected_block()
+                && let Ok(blocks) = session.document().script_snapshot()
+                && let Some(block) = blocks.iter().find(|b| b.id == id)
+            {
+                writer
+                    .reference
+                    .set(Some(crate::reading_context::Reference {
+                        document: session.document().key().to_string(),
+                        block: block.clone(),
+                    }));
+            }
+            Ok(())
+        });
     }
-    pub fn close_editor(mut self) {
-        if self.try_navigate(|_| Ok(())).is_ok() {
-            self.layout.view.set(recite_config::WriterView::Map);
-            self.pane.set(Pane::Map);
-            self.map_focus.request_focus();
-        }
+    pub fn close_editor(self) {
+        self.after_prose(move |mut writer| {
+            writer.try_navigate(|_| Ok(()))?;
+            writer.layout.view.set(recite_config::WriterView::Map);
+            writer.pane.set(Pane::Map);
+            writer.map_focus.request_focus();
+            Ok(())
+        });
     }
-    pub fn set_view(mut self, view: recite_config::WriterView) {
-        // A scene with no beats has no script to show; its Script and Map are the empty states.
+    pub fn set_view(self, view: recite_config::WriterView) {
+        self.change_view(view, None);
+    }
+    pub fn set_view_split(self, split: bool) {
+        self.change_view(recite_config::WriterView::Script, Some(split));
+    }
+    fn change_view(self, view: recite_config::WriterView, split: Option<bool>) {
+        self.after_prose(move |writer| {
+            if !crate::projections::defer_view(writer, view, split) {
+                writer.finish_view(view, split);
+            }
+            Ok(())
+        });
+    }
+    pub(crate) fn finish_view(mut self, view: recite_config::WriterView, split: Option<bool>) {
         let empty = self
             .buffers
             .model
@@ -265,11 +294,18 @@ impl Writer {
             {
                 self.message.error(e);
             }
+            if let Some(split) = split {
+                let presentation = self.preferences.peek().config.writer.presentation;
+                crate::presentation::persist(self, presentation.with_split(split));
+            }
         }
     }
     /// Commit a prose editing session before changing context; source drafts stay explicit.
-    pub fn navigate(self, action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>) {
-        let _ = self.try_navigate(action);
+    pub fn navigate(
+        self,
+        action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError> + 'static,
+    ) {
+        self.after_prose(move |writer| writer.try_navigate(action));
     }
 
     pub fn try_navigate(
@@ -278,7 +314,7 @@ impl Writer {
     ) -> Result<(), String> {
         self.try_perform(|session| {
             if matches!(session.view(), View::Passage(_)) && session.has_draft() {
-                session.apply()?;
+                return Err(WorkbenchError::DraftPending);
             }
             action(session)
         })
@@ -292,6 +328,7 @@ impl Writer {
         self,
         action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
     ) -> Result<(), String> {
+        self.work.require_idle()?;
         perform(self.buffers, self.message, self.dark, action)
     }
 }

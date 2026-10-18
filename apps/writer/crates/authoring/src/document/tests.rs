@@ -55,7 +55,7 @@ fn sibling_uses_authoritative_inputs_and_independent_history() -> Result<(), Edi
         ":: start default\n-> END\n",
         context()?,
     )?;
-    original.replace_source(original.revision(), ":: renamed default\n-> END\n".into())?;
+    original.replace_source(original.revision(), ":: renamed default\n-> END\n")?;
     let accepted = original.kernel.snapshot().clone();
     let mut updated = context()?;
     updated.documents.pop();
@@ -127,7 +127,7 @@ fn sibling_schema_change_and_same_key_match_cold_opening() -> Result<(), Box<dyn
         ":: start default\n-> END\n",
         context()?,
     )?;
-    original.replace_source(original.revision(), ":: edited default\n-> END\n".into())?;
+    original.replace_source(original.revision(), ":: edited default\n-> END\n")?;
     let accepted = original.kernel.snapshot().clone();
     let report = recite_core::schema::load_schema_manifest_str(
         "schema.json",
@@ -234,7 +234,7 @@ fn retained_analysis_does_not_publish_an_interrupted_acceptance() -> Result<(), 
     let next = format!("{}# proposed source\n", crate::FIXTURE);
     let mut reference = Document::new(crate::FIXTURE)?;
     let complete = control(usize::MAX);
-    reference.accept_with_control(next.clone(), &complete)?;
+    reference.accept_with_control(next.clone().into(), &complete)?;
     assert!(complete.calls.get() > 1);
     for stop_at in 0..complete.calls.get() {
         let mut document = Document::new(crate::FIXTURE)?;
@@ -242,7 +242,7 @@ fn retained_analysis_does_not_publish_an_interrupted_acceptance() -> Result<(), 
         let script = document.script_snapshot()?;
         let passages = document.passage_snapshot()?;
         assert!(matches!(
-            document.accept_with_control(next.clone(), &control(stop_at)),
+            document.accept_with_control(next.clone().into(), &control(stop_at)),
             Err(EditError::Authoring(AuthoringError::Interrupted(_)))
         ));
         assert!(retained.is_current(&document));

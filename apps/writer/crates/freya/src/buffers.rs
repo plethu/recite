@@ -3,7 +3,7 @@ mod bookmarks;
 mod drafts;
 use crate::{
     editing::{Session, editor_data},
-    project::{FileError, ProjectFiles},
+    project::ProjectFiles,
 };
 pub(crate) use bookmarks::Bookmarks;
 pub(crate) use drafts::harvest_draft;
@@ -29,6 +29,25 @@ pub(crate) struct Buffers {
 }
 
 impl Buffers {
+    pub(crate) fn sync_navigation(mut self, previous: &View, changed_scene: bool, dark: bool) {
+        let state = self.model.peek();
+        if let Ok(model) = state.as_ref() {
+            if changed_scene
+                || model.view() != previous
+                || !model
+                    .draft_snapshot()
+                    .matches_rope(&self.editor.peek().rope)
+            {
+                self.editor.set(editor_data(
+                    model.draft(),
+                    model.view() == &View::Source,
+                    dark,
+                ));
+            }
+            self.prose.set_if_modified(prose_draft(model).to_owned());
+        }
+        self.restore();
+    }
     pub(crate) fn sync(mut self, dark: bool) {
         let state = self.model.peek();
         if let Ok(model) = state.as_ref() {
@@ -74,86 +93,6 @@ impl Buffers {
         }
     }
 
-    pub(super) fn save(self, files: State<Option<ProjectFiles>>) -> Result<(), String> {
-        self.save_with(files, ProjectFiles::save_current)
-    }
-
-    fn save_with(
-        mut self,
-        mut files: State<Option<ProjectFiles>>,
-        save: impl FnOnce(
-            &mut ProjectFiles,
-            &mut recite_writer_model::Workbench,
-        ) -> Result<(), FileError>,
-    ) -> Result<(), String> {
-        self.harvest();
-        let mut model = self.model;
-        let mut state = model.write();
-        let workbench = state.as_mut().map_err(|error| error.to_string())?;
-        let mut opened = files.write();
-        let project = opened.as_mut().ok_or("Open a project before saving.")?;
-        if let Some(rules) = self.rules.peek().as_ref()
-            && rules.belongs_to(workbench.document())
-            && rules.changed()
-            && rules
-                .source()
-                .is_ok_and(|source| source == workbench.draft())
-        {
-            rules
-                .validate(workbench.document())
-                .map_err(|error| error.to_string())?;
-        }
-        let outcome = save(project, workbench).map_err(|error| error.to_string());
-        let reply = self
-            .rules
-            .peek()
-            .as_ref()
-            .map(|rules| rules.passage.clone());
-        if let Some(reply) = reply {
-            self.rules
-                .set(workbench.document().reply_rules(&reply).ok());
-        }
-        outcome
-    }
-
-    pub(super) fn switch(
-        self,
-        mut files: State<Option<ProjectFiles>>,
-        path: &std::path::Path,
-        dark: bool,
-        select: impl FnOnce(
-            &mut recite_writer_model::Workbench,
-        ) -> Result<(), recite_writer_model::WorkbenchError>,
-    ) -> Result<(), String> {
-        self.harvest();
-        let mut state = self.model;
-        let mut model = state.write();
-        let model = model.as_mut().map_err(|e| e.to_string())?;
-        files
-            .write()
-            .as_mut()
-            .ok_or("Open a project first.")?
-            .switch(model, path, select)
-            .map_err(|e| e.to_string())?;
-        let mut editor = self.editor;
-        editor.set(editor_data(
-            model.draft(),
-            model.view() == &View::Source,
-            dark,
-        ));
-        if model.view() == &View::Source {
-            self.bookmarks
-                .restore(model.document().key().as_str(), &mut editor.write());
-        }
-        let mut prose = self.prose;
-        prose.set(prose_draft(model).into());
-        Ok(())
-    }
-
-    pub(super) fn save_all(self, files: State<Option<ProjectFiles>>) -> Result<(), String> {
-        self.save_with(files, ProjectFiles::save_all)
-    }
-
     pub(super) fn can_leave(self, files: Option<&ProjectFiles>) -> bool {
         self.harvest();
         self.model
@@ -162,3 +101,6 @@ impl Buffers {
             .is_ok_and(|m| !m.has_draft() && files.is_none_or(|f| f.can_leave(m)))
     }
 }
+
+#[cfg(test)]
+mod tests;

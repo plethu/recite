@@ -1,3 +1,4 @@
+use super::TableRows;
 use super::rows::{MsgChoice, MsgLine};
 use super::tables::*;
 use super::tags::{
@@ -79,22 +80,6 @@ impl Serialize for MsgDialogue<'_> {
                 .map(|entry| MsgLookupEntry(entry.id.as_str(), entry.index.as_u32())),
         ))?;
         tuple.end()
-    }
-}
-
-// Project each borrowed row as it is written instead of retaining whole wire tables.
-struct TableRows<I>(I);
-
-impl<I> Serialize for TableRows<I>
-where
-    I: ExactSizeIterator + Clone,
-    I::Item: Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.collect_seq(self.0.clone())
     }
 }
 

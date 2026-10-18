@@ -6,6 +6,28 @@ use crate::{DOCUMENT_NAME, Document, EditError, Passage, PassageKind, projection
 impl Document {
     pub fn replace_text(&mut self, expected: i64, id: &str, text: &str) -> Result<(), EditError> {
         self.check_revision(expected)?;
+        let (next, projections) = self.prepare_text(id, text)?;
+        self.replace_source(expected, next)?;
+        if self.revision() != expected
+            && let Some(projections) = projections
+        {
+            self.projections = projections;
+        }
+        Ok(())
+    }
+
+    /// Reuse parser-owned prose validation and warm projection demand in worker preparation.
+    pub(crate) fn prepare_text(
+        &self,
+        id: &str,
+        text: &str,
+    ) -> Result<
+        (
+            std::sync::Arc<str>,
+            Option<crate::projection_cache::ProjectionCache>,
+        ),
+        EditError,
+    > {
         let passage = self.passage(id)?;
         let newline = if self.source().contains("\r\n") {
             "\r\n"
@@ -36,16 +58,11 @@ impl Document {
                 return Err(EditError::NotProse);
             }
             if next == self.source() {
-                return Ok(());
+                return Ok((self.source_snapshot(), None));
             }
             self.projections.for_prose_edit(&next, &lowered, projected)
         };
-        // Drop the transient syntax before analysis; publish only after acceptance.
-        self.replace_source(expected, next)?;
-        if self.revision() != expected {
-            self.projections = projections;
-        }
-        Ok(())
+        Ok((next.into(), Some(projections)))
     }
 
     pub fn set_speaker(&mut self, expected: i64, id: &str, speaker: &str) -> Result<(), EditError> {

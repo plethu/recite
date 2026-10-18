@@ -246,6 +246,7 @@ fn queue_search_follows_unsaved_translation_then_its_saved_baseline()
         },
     });
     test.poll_n(std::time::Duration::from_millis(16), 8);
+    support::wait_editor_work(&mut test)?;
     assert!(std::fs::read_to_string(&path)?.contains("unique draft"));
     support::click(&mut test, "Back")?;
     assert!(has_text(&test, "Matching entries: 1"));

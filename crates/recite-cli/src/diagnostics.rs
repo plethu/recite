@@ -7,6 +7,7 @@ use crate::{error::CliError, i18n::Messages};
 #[cfg(test)]
 mod tests;
 
+mod excerpts;
 mod human;
 pub(crate) use human::{Subject, report_success, set_color};
 
@@ -18,6 +19,9 @@ pub(crate) fn report_diagnostics<'a>(
 ) -> Result<usize, CliError> {
     let paint = human::Paint::current();
     let mut summary = human::Summary::default();
+    let diagnostics = diagnostics.collect::<Vec<_>>();
+    let mut excerpts =
+        excerpts::Excerpts::new(diagnostics.iter().map(|diagnostic| &diagnostic.span));
     for diagnostic in diagnostics {
         let record = diagnostic
             .record()
@@ -30,7 +34,13 @@ pub(crate) fn report_diagnostics<'a>(
             }
         })?;
         summary.count(record.severity, &record.span.file);
-        human::write_diagnostic(writer, paint, &record, &rendered)?;
+        human::write_diagnostic(
+            writer,
+            paint,
+            &record,
+            &rendered,
+            excerpts.line(&record.span),
+        )?;
     }
     summary.write(writer, paint, messages)?;
     Ok(summary.total())

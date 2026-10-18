@@ -132,7 +132,7 @@ fn rejected_and_unchanged_prose_preserve_revision_history_and_snapshots()
         Err(EditError::Stale)
     ));
     matches_reopened(&document)?;
-    document.replace_source(document.revision(), "broken syntax".into())?;
+    document.replace_source(document.revision(), "broken syntax")?;
     assert!(document.script_snapshot().is_err());
     assert!(document.passage_snapshot().is_err());
     assert!(document.undo()?);

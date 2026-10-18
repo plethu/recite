@@ -7,8 +7,15 @@ use recite_core::{CoreValueError, Diagnostic, DocumentKey, schema::ProjectSchema
 use crate::{DOCUMENT_NAME, Passage};
 use std::sync::Arc;
 
+mod preview;
+pub use preview::{PreparedPreview, PreviewRequest};
+mod source_edit;
+pub use source_edit::EditOperation;
+pub(crate) use source_edit::{PreparedSourceEdit, SourceEditRequest};
 mod completion;
 pub use completion::CompletionSnapshot;
+mod diagnostics;
+pub use diagnostics::DiagnosticSnapshot;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {
@@ -100,6 +107,7 @@ impl Document {
             history: crate::history::History::default(),
             projections: crate::projection_cache::ProjectionCache::default(),
         };
+        let source: String = source.into();
         document.accept_with_control(source.into(), control)?;
         Ok(document)
     }
@@ -207,6 +215,7 @@ impl Document {
         let context = Arc::new(context);
         control.checkpoint().map_err(AuthoringError::from)?;
         self.kernel = kernel;
+        self.projections.invalidate_project();
         self.context = context;
         self.version = version;
         Ok(())
@@ -233,14 +242,27 @@ impl Document {
             .collect()
     }
     pub fn sections(&self) -> Vec<String> {
-        self.kernel
-            .snapshot()
-            .documents()
+        self.block_summaries()
             .iter()
-            .filter(|document| document.key() == &self.key)
-            .flat_map(|document| document.summary().blocks())
             .map(|block| block.id().as_str().to_owned())
             .collect()
+    }
+
+    /// Source-order navigation facts already prepared by accepted analysis.
+    pub fn block_summaries(&self) -> &[recite_compiler::authoring::BlockDefinitionSummary] {
+        self.kernel
+            .snapshot()
+            .document(&self.key)
+            .map(|document| document.summary().blocks())
+            .unwrap_or_default()
+    }
+
+    /// Shared accepted analysis for reactive consumers; draft changes keep its identity.
+    pub fn summary_snapshot(&self) -> Option<Arc<recite_compiler::authoring::AuthoringSummary>> {
+        self.kernel
+            .snapshot()
+            .document(&self.key)
+            .map(|document| document.summary_snapshot())
     }
 
     /// Project navigation uses the accepted compiler summaries, including this
@@ -265,11 +287,16 @@ impl Document {
     }
 
     /// Source editing preserves invalid buffers so the writer can repair them.
-    pub fn replace_source(&mut self, expected: i64, source: String) -> Result<(), EditError> {
+    pub fn replace_source(
+        &mut self,
+        expected: i64,
+        source: impl AsRef<str> + Into<Arc<str>>,
+    ) -> Result<(), EditError> {
         self.check_revision(expected)?;
-        if source == self.source.as_ref() {
+        if source.as_ref() == self.source.as_ref() {
             return Ok(());
         }
+        let source = source.into();
         let change = crate::history::Change::between(&self.source, &source);
         self.accept(source)?;
         self.history.record(change);
@@ -284,7 +311,7 @@ impl Document {
         let Some(source) = self.history.undo_source(&self.source) else {
             return Ok(false);
         };
-        self.accept(source)?;
+        self.accept(source.into())?;
         self.history.did_undo();
         Ok(true)
     }
@@ -292,7 +319,7 @@ impl Document {
         let Some(source) = self.history.redo_source(&self.source) else {
             return Ok(false);
         };
-        self.accept(source)?;
+        self.accept(source.into())?;
         self.history.did_redo();
         Ok(true)
     }
@@ -322,20 +349,19 @@ impl Document {
         &self.key
     }
 
-    fn accept(&mut self, source: String) -> Result<(), EditError> {
+    fn accept(&mut self, source: Arc<str>) -> Result<(), EditError> {
         self.accept_with_control(source, &CancellationToken::new())
     }
 
     fn accept_with_control(
         &mut self,
-        source: String,
+        source: Arc<str>,
         control: &dyn WorkControl,
     ) -> Result<(), EditError> {
         let version = self
             .version
             .checked_add(1)
             .ok_or(EditError::RevisionExhausted)?;
-        let source: std::sync::Arc<str> = source.into();
         let kernel = self.kernel.updated(
             AuthoringRequest::new(
                 self.kernel.snapshot().generation(),

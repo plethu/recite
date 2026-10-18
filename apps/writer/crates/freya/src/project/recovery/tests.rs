@@ -58,7 +58,7 @@ fn interrupted_replay_preserves_both_drafts_at_every_checkpoint()
 -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files) = pending_project()?;
     let complete = Control::new(usize::MAX);
-    files.workbench_with_control(&complete)?;
+    files.workbench_with_control(None, &complete)?;
     assert!(complete.calls.get() > 2);
     for stop_at in 0..complete.calls.get() {
         let (dir, mut files) = pending_project()?;
@@ -68,7 +68,7 @@ fn interrupted_replay_preserves_both_drafts_at_every_checkpoint()
             .collect::<Result<Vec<_>, _>>()?;
         assert!(
             files
-                .workbench_with_control(&Control::new(stop_at))
+                .workbench_with_control(None, &Control::new(stop_at))
                 .is_err()
         );
         drop(files);

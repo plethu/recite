@@ -77,6 +77,7 @@ fn interrupted_refresh_preserves_draft_preview_and_analysis()
         let mut workbench = Workbench::new(recite_writer_model::FIXTURE)?;
         workbench.start_preview()?;
         workbench.set_draft("Unapplied prose.".into());
+        let bindings = workbench.document().preview_bindings();
         let revision = workbench.document().revision();
         let diagnostics = workbench.document().diagnostics();
         let sections = workbench.document().project_sections();
@@ -87,6 +88,10 @@ fn interrupted_refresh_preserves_draft_preview_and_analysis()
             Err(WorkbenchError::Edit(EditError::Authoring(
                 AuthoringError::Interrupted(_)
             )))
+        ));
+        assert!(std::sync::Arc::ptr_eq(
+            &bindings,
+            &workbench.document().preview_bindings()
         ));
         assert_eq!(workbench.document().revision(), revision);
         assert_eq!(workbench.document().diagnostics(), diagnostics);

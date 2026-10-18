@@ -1,13 +1,14 @@
-//! Share validation contexts without materializing an entire large project's AST.
+//! Share borrowed validation contexts while bounding their temporary lookup indexes.
 use super::{
     Arc, BTreeSet, DocumentKey, Interrupted, ProjectDiagnostics, ProjectIndex, WorkControl,
     extend_members,
 };
 use crate::validation::incremental::validate_context;
 
-// Compact facts expand into temporary AST statements during validation. Bound
-// shared batches by passage count, not file count: one file may contain a novel.
-// An individual target's required context is never truncated to fit the budget.
+// Bound ordinary batches by passage count, not file count. When one required
+// provider already exceeds the bound, permit one bounded batch of additional
+// passages so each tiny dependent does not revalidate that same provider.
+// Required contexts are never truncated; oversized providers still bound memory.
 const MAX_CONTEXT_PASSAGES: usize = 3_072;
 
 impl ProjectIndex {
@@ -20,6 +21,7 @@ impl ProjectIndex {
         let mut context = BTreeSet::new();
         let mut targets = BTreeSet::new();
         let mut passages = 0;
+        let mut limit = MAX_CONTEXT_PASSAGES;
         for key in affected {
             control.checkpoint()?;
             diagnostics.remove(key);
@@ -38,12 +40,19 @@ impl ProjectIndex {
                 }
             }
             let additional = self.passage_count(next.difference(&context));
-            if !targets.is_empty() && additional > 0 && passages + additional > MAX_CONTEXT_PASSAGES
-            {
+            if !targets.is_empty() && additional > 0 && passages + additional > limit {
                 self.validate_batch(&context, &targets, diagnostics, control)?;
                 context.clear();
                 targets.clear();
                 passages = 0;
+            }
+            if targets.is_empty() {
+                let required = self.passage_count(next.iter());
+                limit = if required > MAX_CONTEXT_PASSAGES {
+                    required.saturating_add(MAX_CONTEXT_PASSAGES)
+                } else {
+                    MAX_CONTEXT_PASSAGES
+                };
             }
             passages += self.passage_count(next.difference(&context));
             context.extend(next);
@@ -74,6 +83,7 @@ impl ProjectIndex {
             .filter_map(|key| self.documents.get(key).map(Arc::as_ref))
             .collect();
         if cfg!(test) {
+            VALIDATED_BATCHES.with(|count| count.set(count.get() + 1));
             MAX_VALIDATED_PASSAGES.with(|count| {
                 count.set(count.get().max(self.passage_count(context.iter())));
             });
@@ -100,6 +110,7 @@ impl ProjectIndex {
 
 thread_local! {
     static MAX_VALIDATED_PASSAGES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static VALIDATED_BATCHES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 #[cfg(test)]

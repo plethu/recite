@@ -61,6 +61,11 @@ pub(super) const fn clients(id: MsgId) -> &'static [Client] {
     match id {
         MsgId::WriterPreview
         | MsgId::WriterRestartPreview
+        | MsgId::WriterSaving
+        | MsgId::WriterPreparingScript
+        | MsgId::WriterNewerEditsRemain
+        | MsgId::WriterPreparingPreview
+        | MsgId::WriterPreviewInputsChanged
         | MsgId::WriterClosePreview
         | MsgId::WriterContinue
         | MsgId::WriterTrue
@@ -102,6 +107,7 @@ pub(super) const fn clients(id: MsgId) -> &'static [Client] {
         | MsgId::WriterNoCompletions
         | MsgId::WriterFindingCompletions
         | MsgId::WriterCompletionsUnavailable
+        | MsgId::WriterDiagnostics
         | MsgId::WriterReturnTranslation
         | MsgId::WriterTrialSaved
         | MsgId::WriterTrialDrafts

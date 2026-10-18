@@ -1,6 +1,8 @@
 use std::io;
 #[derive(Debug, thiserror::Error)]
 pub enum FileError {
+    #[error("A save is still finishing. Keep editing, or wait for it before changing files.")]
+    SavePending,
     #[error("Project opening was cancelled.")]
     Interrupted(#[from] recite_compiler::authoring::Interrupted),
     #[error(transparent)]

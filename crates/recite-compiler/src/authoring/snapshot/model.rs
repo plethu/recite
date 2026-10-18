@@ -115,6 +115,11 @@ impl DocumentSnapshot {
     pub fn summary(&self) -> &AuthoringSummary {
         &self.summary
     }
+    /// Retain prepared analysis without retaining the source text or reparsing it.
+    #[must_use]
+    pub fn summary_snapshot(&self) -> Arc<AuthoringSummary> {
+        Arc::clone(&self.summary)
+    }
     #[must_use]
     pub fn source_index(&self) -> &recite_core::SourceLineIndex {
         &self.source

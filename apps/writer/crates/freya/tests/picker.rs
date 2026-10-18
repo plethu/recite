@@ -151,7 +151,7 @@ fn keyboard_reaches_results_beyond_eight_and_tab_leaves_the_picker()
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(900., 650.),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     start(&mut test)?;
@@ -208,7 +208,7 @@ fn vim_navigation_is_shared_by_settings_options_and_passage_menus()
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(1000., 800.),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     support::click(&mut test, "Settings")?;
@@ -293,7 +293,7 @@ fn settings_discloses_technical_details_and_contextual_keymap_help()
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(1000., 900.),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     support::click(&mut test, "Settings")?;

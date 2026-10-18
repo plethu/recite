@@ -31,6 +31,26 @@ impl SourceRegion<'_> {
         self.first_line
     }
 
+    /// Lowers roots in source order, dropping each root after the visitor returns.
+    /// The block carries its header/context and an empty statement list. Nested
+    /// statements remain attached to their root. Diagnostics, recovery and spans
+    /// match full lowering; an interrupted visitor publishes no final report.
+    pub fn try_visit_statements<E>(
+        &self,
+        path: &str,
+        visit: impl FnMut(&recite_core::ast::Block, &recite_core::ast::Statement) -> Result<(), E>,
+    ) -> Result<crate::SourceVisitReport, E> {
+        let (diagnostics, recovery) = crate::parser::scan_region(path, self.text, self.first_line);
+        crate::lower::visit_source_roots(
+            path,
+            self.text,
+            self.first_line,
+            diagnostics,
+            recovery,
+            visit,
+        )
+    }
+
     /// Parses this region, keeping diagnostics and lowered spans file-relative.
     /// The lossless syntax tree contains only this region's text.
     #[must_use]

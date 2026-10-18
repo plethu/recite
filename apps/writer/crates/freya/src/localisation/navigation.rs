@@ -46,7 +46,17 @@ impl Destination {
             |document| format!("{document} · {}", crate::palette::display_name(&self.beat)),
         )
     }
-    pub fn open(&self, writer: Writer) -> bool {
-        crate::navigation::open_passage(writer, self.document.as_deref(), &self.beat, &self.anchor)
+    pub fn open(
+        &self,
+        writer: Writer,
+        completed: freya::prelude::EventHandler<Result<(), String>>,
+    ) {
+        crate::navigation::open_passage(
+            writer,
+            self.document.as_deref(),
+            &self.beat,
+            &self.anchor,
+            completed,
+        )
     }
 }

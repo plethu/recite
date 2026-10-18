@@ -50,7 +50,7 @@ fn rejects_missing_duplicate_and_unexpected_workloads() {
 }
 
 #[test]
-fn authoring_requires_each_schema_lsp_and_import_case_with_paired_counters() {
+fn authoring_requires_each_schema_lsp_and_catalogue_case_with_paired_counters() {
     let cases = [
         "json_schema",
         "toml_schema",
@@ -72,8 +72,14 @@ fn authoring_requires_each_schema_lsp_and_import_case_with_paired_counters() {
         .flat_map(|name| ["wide", "dense"].map(|shape| summary(name, shape))),
     )
     .chain([
+        summary("lsp_change", "files_40"),
+        summary("lsp_change", "files_400"),
+        summary("project_build", "files_40"),
+        summary("project_build", "files_400"),
         summary("catalog_import", "cold_100"),
         summary("catalog_import", "populated_10000"),
+        summary("catalog_coverage", "entries_100"),
+        summary("catalog_coverage", "entries_1000"),
         summary("ui_labels", "static_1000"),
         summary("ui_labels", "parameters_1000"),
     ])

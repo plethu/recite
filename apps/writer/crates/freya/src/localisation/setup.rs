@@ -43,6 +43,7 @@ impl Component for Setup {
             }
         });
         let mut pending = use_state(|| None::<Pending>);
+        let mut submission = use_state(|| None::<std::sync::Arc<()>>);
         let ids: [AccessibilityId; 4] = std::array::from_fn(|_| use_a11y());
         let mut was_open = use_state(|| false);
         let mut tick = freya::sdk::use_timeout(|| std::time::Duration::from_millis(50));
@@ -60,7 +61,7 @@ impl Component for Setup {
             tick.reset();
             poll_creation(writer, files, pending, locale, choosing);
         }
-        let busy = pending.read().is_some();
+        let busy = pending.read().is_some() || writer.work.busy();
         let root = files
             .peek()
             .as_ref()
@@ -120,6 +121,7 @@ impl Component for Setup {
             content = content.child(crate::feedback::NoticeView { feedback: message });
         }
         let close = EventHandler::new(move |()| {
+            submission.set(None);
             pending.set(None);
             state.write().panel = None;
             message.clear();
@@ -167,17 +169,33 @@ impl Component for Setup {
                 caption: wording(MsgId::WriterCreateCatalogue),
                 enabled,
                 action: EventHandler::new(move |()| {
-                    let result = begin(writer, files, &locale.peek());
-                    match result {
-                        Ok(job) => {
-                            pending.set(Some(job));
-                            message.clear();
-                            ids[2].request_focus();
+                    let locale = locale.peek().clone();
+                    let token = std::sync::Arc::new(());
+                    submission.set(Some(token.clone()));
+                    writer.after_prose(move |writer| {
+                        if !state.peek().active
+                            || state.peek().panel != Some(Panel::Create)
+                            || !submission.try_peek().is_some_and(|slot| {
+                                slot.as_ref()
+                                    .is_some_and(|current| std::sync::Arc::ptr_eq(current, &token))
+                            })
+                        {
+                            return Ok(());
                         }
-                        Err(error) => {
-                            report_creation_error(writer, error);
+                        submission.set(None);
+                        let result = begin(writer, files, &locale);
+                        match result {
+                            Ok(job) => {
+                                pending.set(Some(job));
+                                message.clear();
+                                ids[2].request_focus();
+                            }
+                            Err(error) => {
+                                report_creation_error(writer, error);
+                            }
                         }
-                    }
+                        Ok(())
+                    });
                 }),
             },
         }

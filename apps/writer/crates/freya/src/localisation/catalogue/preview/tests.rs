@@ -13,7 +13,7 @@ fn catalogue_mutations_invalidate_localised_trials_only() -> Result<(), String> 
     let source = Snapshot::capture(String::new(), false, Some(&catalogue));
     let id = PoEntryId::new(0);
     let saved = capture(&catalogue);
-    let running = catalogue.preview_document(true)?;
+    let running = catalogue.preview_input(true).prepare()?;
     catalogue.update(
         id,
         Draft {
@@ -25,7 +25,8 @@ fn catalogue_mutations_invalidate_localised_trials_only() -> Result<(), String> 
     assert!(running.source().contains("Bonjour {name}"));
     assert!(
         catalogue
-            .preview_document(true)?
+            .preview_input(true)
+            .prepare()?
             .source()
             .contains("Salut {name}")
     );

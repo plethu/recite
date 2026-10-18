@@ -1,0 +1,408 @@
+//! Draw text with [label()]. Its a simplified version of [crate::elements::paragraph].
+
+use std::{
+    any::Any,
+    borrow::Cow,
+    rc::Rc,
+};
+
+use freya_engine::prelude::{
+    ClipOp,
+    ParagraphBuilder,
+    ParagraphStyle,
+    SkParagraph,
+    SkRect,
+};
+use torin::prelude::{
+    Area,
+    Size2D,
+    SizeModel,
+};
+
+use crate::{
+    data::{
+        AccessibilityData,
+        EffectData,
+        LayoutData,
+        StyleState,
+        TextStyleData,
+    },
+    diff_key::DiffKey,
+    element::{
+        ClipContext,
+        Element,
+        ElementExt,
+        EventHandlers,
+        LayoutContext,
+        RenderContext,
+    },
+    elements::paragraph::ParagraphPaintExt,
+    layers::Layer,
+    prelude::{
+        AccessibilityExt,
+        ContainerExt,
+        EffectExt,
+        EventHandlersExt,
+        KeyExt,
+        LayerExt,
+        LayoutExt,
+        MaybeExt,
+        Span,
+        TextAlign,
+        TextStyleExt,
+    },
+    style::render_callback::RenderContext as FillRenderContext,
+    text_cache::CachedParagraph,
+    tree::DiffModifies,
+};
+
+/// Draw text with [label()]. Its a simplified version of [crate::elements::paragraph].
+///
+/// See the available methods in [Label].
+///
+/// ```rust
+/// # use freya::prelude::*;
+/// fn app() -> impl IntoElement {
+///     label().text("Hello, world!").font_size(16.0)
+/// }
+/// ```
+pub fn label() -> Label {
+    Label::default()
+}
+
+impl From<&str> for Element {
+    fn from(value: &str) -> Self {
+        label().text(value.to_string()).into()
+    }
+}
+
+impl From<String> for Element {
+    fn from(value: String) -> Self {
+        label().text(value).into()
+    }
+}
+
+/// Whether text sizes itself to its content or expands to the available width.
+pub enum TextWidth {
+    /// Shrink to fit the text content.
+    Fit,
+    /// Expand to the maximum available width.
+    Max,
+}
+
+#[derive(PartialEq, Clone)]
+pub struct LabelElement {
+    pub text: Cow<'static, str>,
+    pub accessibility: AccessibilityData,
+    pub text_style_data: TextStyleData,
+    pub layout: LayoutData,
+    pub event_handlers: EventHandlers,
+    pub max_lines: Option<usize>,
+    pub line_height: Option<f32>,
+    pub relative_layer: Layer,
+    pub effect: Option<EffectData>,
+}
+
+impl Default for LabelElement {
+    fn default() -> Self {
+        let mut accessibility = AccessibilityData::default();
+        accessibility.builder.set_role(accesskit::Role::Label);
+        Self {
+            text: Default::default(),
+            accessibility,
+            text_style_data: Default::default(),
+            layout: Default::default(),
+            event_handlers: Default::default(),
+            max_lines: None,
+            line_height: None,
+            relative_layer: Layer::default(),
+            effect: None,
+        }
+    }
+}
+
+impl ElementExt for LabelElement {
+    fn changed(&self, other: &Rc<dyn ElementExt>) -> bool {
+        let Some(label) = (other.as_ref() as &dyn Any).downcast_ref::<LabelElement>() else {
+            return false;
+        };
+        self != label
+    }
+
+    fn diff(&self, other: &Rc<dyn ElementExt>) -> DiffModifies {
+        let Some(label) = (other.as_ref() as &dyn Any).downcast_ref::<LabelElement>() else {
+            return DiffModifies::all();
+        };
+
+        let mut diff = DiffModifies::empty();
+
+        if self.text != label.text {
+            diff.insert(DiffModifies::STYLE);
+            diff.insert(DiffModifies::LAYOUT);
+            diff.insert(DiffModifies::ACCESSIBILITY);
+        }
+
+        if self.accessibility != label.accessibility {
+            diff.insert(DiffModifies::ACCESSIBILITY);
+        }
+
+        if self.relative_layer != label.relative_layer {
+            diff.insert(DiffModifies::LAYER);
+        }
+
+        if self.effect != label.effect {
+            diff.insert(DiffModifies::EFFECT);
+        }
+
+        if self.text_style_data != label.text_style_data
+            || self.line_height != label.line_height
+            || self.max_lines != label.max_lines
+        {
+            diff.insert(DiffModifies::TEXT_STYLE);
+            diff.insert(DiffModifies::LAYOUT);
+        }
+        if self.layout != label.layout {
+            diff.insert(DiffModifies::LAYOUT);
+        }
+
+        if self.event_handlers != label.event_handlers {
+            diff.insert(DiffModifies::EVENT_HANDLERS);
+        }
+
+        diff
+    }
+
+    fn layout(&'_ self) -> Cow<'_, LayoutData> {
+        Cow::Borrowed(&self.layout)
+    }
+
+    fn effect(&'_ self) -> Option<Cow<'_, EffectData>> {
+        self.effect.as_ref().map(Cow::Borrowed)
+    }
+
+    fn style(&'_ self) -> Cow<'_, StyleState> {
+        Cow::Owned(StyleState::default())
+    }
+
+    fn is_transparent(&self) -> bool {
+        false
+    }
+
+    fn text_style(&'_ self) -> Cow<'_, TextStyleData> {
+        Cow::Borrowed(&self.text_style_data)
+    }
+
+    fn accessibility(&'_ self) -> Cow<'_, AccessibilityData> {
+        Cow::Borrowed(&self.accessibility)
+    }
+
+    fn finish_accessibility(&self, builder: &mut accesskit::Node) {
+        builder.set_value(self.text.clone());
+    }
+
+    fn layer(&self) -> Layer {
+        self.relative_layer
+    }
+
+    fn events_handlers(&'_ self) -> Option<Cow<'_, EventHandlers>> {
+        Some(Cow::Borrowed(&self.event_handlers))
+    }
+
+    fn measure(&self, context: LayoutContext) -> Option<(Size2D, Rc<dyn Any>)> {
+        let content_area_size =
+            (*context.area_size - context.torin_node.padding.into()).max(Size2D::zero());
+        let cached_paragraph = CachedParagraph {
+            text_style_state: context.text_style_state,
+            spans: &[Span::new(&*self.text)],
+            max_lines: self.max_lines,
+            line_height: self.line_height,
+            width: content_area_size.width,
+        };
+        let paragraph = context
+            .text_cache
+            .utilize(context.node_id, &cached_paragraph)
+            .unwrap_or_else(|| {
+                let build = |fill_area: Area| {
+                    let mut paragraph_style = ParagraphStyle::default();
+
+                    if let Some(ellipsis) = context.text_style_state.text_overflow.get_ellipsis() {
+                        paragraph_style.set_ellipsis(ellipsis);
+                    }
+
+                    let text_style = context.text_style_state.to_text_style(
+                        context.fallback_fonts,
+                        context.scale_factor,
+                        self.line_height,
+                        fill_area,
+                    );
+                    paragraph_style.set_text_style(&text_style);
+                    paragraph_style.set_max_lines(self.max_lines);
+                    paragraph_style.set_text_align(context.text_style_state.text_align.into());
+
+                    let mut paragraph_builder =
+                        ParagraphBuilder::new(&paragraph_style, &*context.font_collection);
+
+                    paragraph_builder.push_style(&text_style);
+                    paragraph_builder.add_text(&self.text);
+
+                    let mut paragraph = paragraph_builder.build();
+                    paragraph.layout(
+                        if self.max_lines == Some(1)
+                            && context.text_style_state.text_align == TextAlign::default()
+                            && !paragraph_style.ellipsized()
+                        {
+                            f32::MAX
+                        } else {
+                            content_area_size.width + 1.0
+                        },
+                    );
+                    paragraph
+                };
+
+                let mut paragraph = build(Area::default());
+
+                if context.text_style_state.color.as_color().is_none() {
+                    paragraph = build(paragraph.fill_area());
+                }
+
+                context
+                    .text_cache
+                    .insert(context.node_id, &cached_paragraph, paragraph)
+            });
+
+        let size = Size2D::new(paragraph.longest_line(), paragraph.height())
+            .max(Size2D::zero())
+            .with_gaps(&context.torin_node.padding);
+
+        Some((size, paragraph))
+    }
+
+    fn should_hook_measurement(&self) -> bool {
+        true
+    }
+
+    fn should_measure_inner_children(&self) -> bool {
+        false
+    }
+
+    fn clip(&self, context: ClipContext) {
+        let area = context.visible_area;
+        context.canvas.clip_rect(
+            SkRect::new(area.min_x(), area.min_y(), area.max_x(), area.max_y()),
+            ClipOp::Intersect,
+            true,
+        );
+    }
+
+    fn render(&self, context: RenderContext) {
+        let layout_data = context.layout_node.data.as_ref().unwrap();
+        let paragraph = layout_data.downcast_ref::<SkParagraph>().unwrap();
+
+        let origin = context.layout_node.inner_area.origin;
+        paragraph.paint_at(context.canvas, origin.cast_unit());
+        if let Some(callback) = context.text_style_state.color.render_callback() {
+            let layer = context.canvas.save();
+            context.canvas.translate(origin.to_tuple());
+            context
+                .canvas
+                .scale((context.scale_factor as f32, context.scale_factor as f32));
+            callback.call(&mut FillRenderContext {
+                canvas: context.canvas,
+                font_collection: context.font_collection,
+                origin: (origin / context.scale_factor as f32).cast_unit(),
+                size: paragraph.fill_area().size / context.scale_factor as f32,
+                text_style_state: context.text_style_state,
+            });
+            context.canvas.restore_to_count(layer);
+        }
+    }
+}
+
+impl From<Label> for Element {
+    fn from(value: Label) -> Self {
+        Element::Element {
+            key: value.key,
+            element: Rc::new(value.element),
+            elements: vec![],
+        }
+    }
+}
+
+impl KeyExt for Label {
+    fn write_key(&mut self) -> &mut DiffKey {
+        &mut self.key
+    }
+}
+
+impl EventHandlersExt for Label {
+    fn get_event_handlers(&mut self) -> &mut EventHandlers {
+        &mut self.element.event_handlers
+    }
+}
+
+impl AccessibilityExt for Label {
+    fn get_accessibility_data(&mut self) -> &mut AccessibilityData {
+        &mut self.element.accessibility
+    }
+}
+
+impl TextStyleExt for Label {
+    fn get_text_style_data(&mut self) -> &mut TextStyleData {
+        &mut self.element.text_style_data
+    }
+}
+
+impl EffectExt for Label {
+    fn get_effect(&mut self) -> &mut EffectData {
+        self.element.effect.get_or_insert_with(EffectData::default)
+    }
+}
+
+impl LayerExt for Label {
+    fn get_layer(&mut self) -> &mut Layer {
+        &mut self.element.relative_layer
+    }
+}
+
+impl MaybeExt for Label {}
+
+#[derive(Default, Clone)]
+pub struct Label {
+    key: DiffKey,
+    element: LabelElement,
+}
+
+impl Label {
+    pub fn try_downcast(element: &dyn ElementExt) -> Option<LabelElement> {
+        (element as &dyn Any)
+            .downcast_ref::<LabelElement>()
+            .cloned()
+    }
+
+    /// Set the text content of the label.
+    pub fn text(mut self, text: impl Into<Cow<'static, str>>) -> Self {
+        let text = text.into();
+        self.element.text = text;
+        self
+    }
+
+    /// Limit the label to at most this many lines, truncating the rest. Pass `None` for no limit.
+    pub fn max_lines(mut self, max_lines: impl Into<Option<usize>>) -> Self {
+        self.element.max_lines = max_lines.into();
+        self
+    }
+
+    /// Override the height of each line as a multiple of the font size. Pass `None` for the default.
+    pub fn line_height(mut self, line_height: impl Into<Option<f32>>) -> Self {
+        self.element.line_height = line_height.into();
+        self
+    }
+}
+
+impl LayoutExt for Label {
+    fn get_layout(&mut self) -> &mut LayoutData {
+        &mut self.element.layout
+    }
+}
+
+impl ContainerExt for Label {}

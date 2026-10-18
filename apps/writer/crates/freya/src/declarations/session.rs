@@ -2,8 +2,11 @@
 use crate::project::{FileError, read_regular, save::replace_checked};
 use recite_core::schema::{ProjectSchema, SchemaSource};
 use std::path::{Path, PathBuf};
+mod saving;
+pub(crate) use saving::DeclarationSave;
 
 pub(crate) struct Session {
+    saving: bool,
     pub output: PathBuf,
     pub schema: ProjectSchema,
     output_baseline: String,
@@ -20,6 +23,16 @@ pub(crate) struct Source {
     pub(super) revision: u64,
 }
 impl Session {
+    pub(crate) fn set_saving(&mut self, saving: bool) {
+        self.saving = saving;
+    }
+    fn require_idle_save(&self) -> Result<(), FileError> {
+        if self.saving {
+            Err(FileError::SavePending)
+        } else {
+            Ok(())
+        }
+    }
     pub fn open(root: &Path) -> Result<Self, FileError> {
         let report = recite_config::discover_project(root)?;
         let relative = report
@@ -41,6 +54,7 @@ impl Session {
             .ok_or(FileError::Validation(loaded.diagnostics))?;
         let registration = Self::registration(root, &schema);
         Ok(Self {
+            saving: false,
             registration,
             job: None,
             root: root.to_owned(),
@@ -91,6 +105,7 @@ impl Session {
         Ok(())
     }
     pub fn reload_generated(&mut self) -> Result<(), FileError> {
+        self.require_idle_save()?;
         if self.busy() {
             return Err(FileError::UnsavedDocument);
         }
@@ -111,6 +126,7 @@ impl Session {
         }
     }
     pub fn start_generation(&mut self) -> Result<(), String> {
+        self.require_idle_save().map_err(|e| e.to_string())?;
         if self.job.is_some() {
             return Err("Generation is already running.".into());
         }
@@ -162,6 +178,7 @@ impl Session {
         self.source.as_ref().is_some_and(|s| s.draft != s.baseline)
     }
     pub fn bind(&mut self, path: &Path) -> Result<(), FileError> {
+        self.require_idle_save()?;
         if self.busy() {
             return Err(FileError::UnsavedDocument);
         }
@@ -201,31 +218,9 @@ impl Session {
         }
         Ok(())
     }
-    /// Save the validated source first. If publishing fails, the old output and
-    /// the saved source remain available and generation can be retried.
-    pub fn save_and_generate(&mut self) -> Result<(), FileError> {
-        if self.busy() {
-            return Err(FileError::UnsavedDocument);
-        }
-        let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
-        let parsed = parse(&source.path, &source.draft)?;
-        self.check_owner(parsed.schema())?;
-        // Refuse known stale output before saving source, then check again at publication.
-        if read_regular(&self.output)? != self.output_baseline {
-            return Err(FileError::Conflict);
-        }
-        let source = self.source.as_mut().ok_or(FileError::SchemaOwnership)?;
-        replace_checked(&source.path, &source.baseline, &source.draft)?;
-        source.baseline = source.draft.clone();
-        source.flush_recovery()?;
-        let generated = parsed.export_json();
-        replace_checked(&self.output, &self.output_baseline, &generated)?;
-        self.output_baseline = generated;
-        self.schema = parsed.schema().clone();
-        Ok(())
-    }
     /// Explicit reload keeps the previous draft as a source file before rebasing.
     pub fn reload_source(&mut self) -> Result<PathBuf, FileError> {
+        self.require_idle_save()?;
         use std::io::Write;
         let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
         let disk = read_regular(&source.path)?;
@@ -255,6 +250,7 @@ impl Session {
         Ok(path)
     }
     pub fn discard(&mut self) -> Result<(), FileError> {
+        self.require_idle_save()?;
         if let Some(source) = &mut self.source {
             source.draft = source.baseline.clone();
             source.revision = source.revision.wrapping_add(1);

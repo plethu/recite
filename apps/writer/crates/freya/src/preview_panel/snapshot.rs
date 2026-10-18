@@ -2,11 +2,13 @@
 use crate::localisation::catalogue::Catalogue;
 use std::sync::Arc;
 
+#[derive(Clone)]
 enum CatalogueInput {
     SourceOnly,
     Localised(Option<Arc<()>>),
 }
 
+#[derive(Clone)]
 pub(crate) struct Snapshot {
     pub caption: String,
     catalogue: CatalogueInput,

@@ -1,6 +1,6 @@
 use super::*;
 use freya::prelude::EventHandler;
-use recite_writer_model::{ScriptBlock, ScriptEntry};
+use recite_writer_model::Document;
 use std::{cell::Cell, rc::Rc};
 
 fn scene(name: &str, active: bool) -> SceneBranch {
@@ -11,14 +11,16 @@ fn scene(name: &str, active: bool) -> SceneBranch {
     }
 }
 fn captions(count: usize) -> Arc<[Caption]> {
-    let blocks = (0..count)
-        .map(|i| ScriptBlock {
-            id: format!("beat_{i}"),
-            is_default: i == 0,
-            entries: vec![ScriptEntry::Jump("END".into())],
+    let source = (0..count)
+        .map(|i| {
+            format!(
+                ":: beat_{i}{}\n-> END\n",
+                if i == 0 { " default" } else { "" }
+            )
         })
-        .collect::<Vec<_>>();
-    super::super::captions::refresh(&blocks, None)
+        .collect::<String>();
+    let document = Document::new(source).expect("generated beats");
+    super::super::captions::refresh(document.block_summaries(), None)
 }
 
 #[test]

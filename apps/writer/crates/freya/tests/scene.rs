@@ -28,6 +28,9 @@ fn click_label(test: &mut TestingRunner, caption: &str) -> Result<(), Box<dyn st
     assert_eq!(test.cursor_icon(), CursorIcon::Pointer, "{caption} cursor");
     test.click_cursor((f64::from(area.min_x() + 2.), f64::from(area.min_y() + 2.)));
     test.poll_n(std::time::Duration::from_millis(16), 15);
+    if caption == "Save" {
+        support::wait_editor_work(test)?;
+    }
     Ok(())
 }
 
@@ -166,7 +169,7 @@ fn project_open_save_and_conflict_keep_the_authored_text() -> Result<(), Box<dyn
     let (mut test, platform) = TestingRunner::new(
         recite_writer::editor_app,
         Size2D::new(1200., 800.),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     let path_field = test
@@ -245,7 +248,7 @@ fn project_open_save_and_conflict_keep_the_authored_text() -> Result<(), Box<dyn
         code: Code::KeyS,
         modifiers: Modifiers::CONTROL,
     });
-    test.poll_n(std::time::Duration::from_millis(16), 15);
+    support::wait_editor_work(&mut test)?;
     assert!(!recovery_path.exists());
     assert_eq!(recite_writer::request_close(), CloseDecision::KeepOpen);
     test.poll_n(std::time::Duration::from_millis(16), 15);
@@ -311,7 +314,7 @@ fn sidebar_and_menu_dismissal_preserve_the_draft() -> Result<(), Box<dyn std::er
     let (mut test, platform) = TestingRunner::new(
         recite_writer::regression_app,
         Size2D::new(1200., 800.),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     support::open_beat(&mut test)?;

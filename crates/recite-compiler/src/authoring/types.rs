@@ -9,9 +9,21 @@ pub struct BlockDefinitionSummary {
     pub(super) id: BlockId,
     pub(super) id_span: Option<SourceSpan>,
     pub(super) span: SourceSpan,
+    pub(super) is_default: bool,
+    pub(super) has_end_destination: bool,
 }
 
 impl BlockDefinitionSummary {
+    #[must_use]
+    pub const fn is_default(&self) -> bool {
+        self.is_default
+    }
+    /// An authored END destination, including inside a choice or conditional.
+    /// This is a structural badge, not a reachability result.
+    #[must_use]
+    pub const fn has_end_destination(&self) -> bool {
+        self.has_end_destination
+    }
     #[must_use]
     pub fn id(&self) -> &BlockId {
         &self.id

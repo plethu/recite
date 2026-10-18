@@ -237,12 +237,7 @@ impl Component for EntryPage {
                     Button::new()
                         .flat()
                         .enabled(enabled)
-                        .on_press(move |_| {
-                            if writer.try_navigate(|_| Ok(())).is_ok() {
-                                page.set(destination);
-                                writer.inspector_focus.request_focus();
-                            }
-                        })
+                        .on_press(move |_| select_page(writer, page, destination))
                         .child(caption),
                 );
             }
@@ -254,6 +249,18 @@ impl Component for EntryPage {
         }
         surface.into_element()
     }
+}
+
+fn select_page(writer: Writer, mut page: State<usize>, destination: usize) {
+    writer.after_prose(move |writer| {
+        if page.try_peek().is_none() {
+            return Ok(());
+        }
+        writer.try_navigate(|_| Ok(()))?;
+        page.set(destination);
+        writer.inspector_focus.request_focus();
+        Ok(())
+    });
 }
 
 fn contains_passage(entry: &ScriptEntry, id: &str) -> bool {

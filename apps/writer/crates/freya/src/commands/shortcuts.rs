@@ -80,7 +80,7 @@ pub(crate) fn hint(binding: &str, area: Option<Area>) -> Option<Element> {
     let p = crate::design::tokens::colors();
     let size = crate::design::tokens::small();
     let width = binding.len() as f32 * size * 0.65 + 10.;
-    let window = *Platform::get().root_size.read();
+    let window = *Platform::get().current_window().root_size.read();
     let left = area.min_x().min((window.width - width - 4.).max(0.));
     let top = if area.max_y() + size + 8. > window.height {
         area.min_y() - size - 8.

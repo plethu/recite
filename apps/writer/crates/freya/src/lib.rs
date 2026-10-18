@@ -22,9 +22,11 @@ mod closing;
 mod controls;
 mod design;
 mod editing;
+mod editor_work;
 mod examples;
 mod files;
 mod new_project;
+mod projections;
 use design::palette;
 mod passage_menu;
 mod project;
@@ -91,3 +93,6 @@ mod field_actions;
 pub fn design_app() -> Element {
     design::specimen::app()
 }
+
+#[cfg(test)]
+mod tests;

@@ -102,7 +102,7 @@ pub(super) fn viewport(
                 drag.set(Some((p.x, p.y)));
             }
         })
-        .on_capture_global_pointer_press(move |event: Event<PointerEventData>| {
+        .on_capture_global_pointer_up(move |event: Event<PointerEventData>| {
             if drag.peek().is_some() {
                 event.stop_propagation();
                 event.prevent_default();

@@ -1,5 +1,7 @@
 //! Retained documents preserve drafts, undo history and recovery ownership on navigation.
-use super::{FileError, ProjectFiles, read_regular};
+pub(super) mod checkpoint;
+pub(super) mod preparing;
+use super::{FileError, ProjectFiles};
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
 use recite_writer_model::Workbench;
@@ -11,7 +13,7 @@ use std::{
 pub(super) struct Retained {
     pub(super) model: Workbench,
     pub(super) baseline: Arc<str>,
-    recovery: RecoveryStore,
+    pub(super) recovery: RecoveryStore,
 }
 impl ProjectFiles {
     /// Every session still owns its history and recovery state until it closes.
@@ -78,11 +80,33 @@ impl ProjectFiles {
         current: &mut Workbench,
         path: &Path,
     ) -> Result<(), FileError> {
+        self.require_saved_document(current, path)?;
         let documents = self.open_documents(current);
-        documents
-            .iter()
-            .find(|(p, _)| p == path)
-            .ok_or(FileError::Selection)?;
+        if path == self.current {
+            let next = documents
+                .iter()
+                .find(|(p, _)| p != path)
+                .ok_or(FileError::Selection)?;
+            // A cleanup error must leave the old document active.
+            self.recovery.persist(None)?;
+            self.switch(current, &next.0, None, |_| Ok(()))?;
+        }
+        let session = self.retained.get_mut(path).ok_or(FileError::Selection)?;
+        session.persist_recovery(None)?;
+        self.forget_rename_history(path);
+        self.retained.remove(path);
+        Ok(())
+    }
+
+    pub(crate) fn require_saved_document(
+        &self,
+        current: &Workbench,
+        path: &Path,
+    ) -> Result<(), FileError> {
+        self.require_idle_save()?;
+        if !self.open_documents(current).iter().any(|(p, _)| p == path) {
+            return Err(FileError::Selection);
+        }
         let edits = if path == self.current {
             current.has_draft() || self.saved.as_ref() != current.document().source()
         } else {
@@ -94,22 +118,6 @@ impl ProjectFiles {
         if edits || (self.project_edit_pending(current) && self.project_edit_includes(path)) {
             return Err(FileError::UnsavedDocument);
         }
-        if path == self.current {
-            let next = documents
-                .iter()
-                .find(|(p, _)| p != path)
-                .ok_or(FileError::Selection)?;
-            // A cleanup error must leave the old document active: the widgets
-            // still contain its text until the caller receives a successful close.
-            self.recovery.persist(None)?;
-            self.switch(current, &next.0, |_| Ok(()))?;
-        }
-        // A clean closed tab has no draft to recover. Release its worker, lock,
-        // compiler caches and local undo history only after cleanup succeeds.
-        let session = self.retained.get_mut(path).ok_or(FileError::Selection)?;
-        session.persist_recovery(None)?;
-        self.forget_rename_history(path);
-        self.retained.remove(path);
         Ok(())
     }
 
@@ -118,7 +126,8 @@ impl ProjectFiles {
     }
 
     pub(crate) fn can_leave(&self, current: &Workbench) -> bool {
-        !current.has_draft()
+        !self.saving
+            && !current.has_draft()
             && !self.dirty(current.document().source())
             && !self.retained_dirty()
             && !self.builds.busy()
@@ -132,18 +141,21 @@ impl ProjectFiles {
         &mut self,
         current: &mut Workbench,
         path: &Path,
+        initial: Option<recite_writer_model::View>,
         select: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
     ) -> Result<(), FileError> {
-        self.switch_with_control(current, path, select, &CancellationToken::new())
+        self.switch_with_control(current, path, initial, select, &CancellationToken::new())
     }
 
     pub(super) fn switch_with_control(
         &mut self,
         current: &mut Workbench,
         path: &Path,
+        initial: Option<recite_writer_model::View>,
         select: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
         control: &dyn WorkControl,
     ) -> Result<(), FileError> {
+        self.require_idle_save()?;
         control.checkpoint()?;
         if path == self.current {
             select(current)?;
@@ -152,68 +164,12 @@ impl ProjectFiles {
         if !self.paths.iter().any(|candidate| candidate == path) {
             return Err(FileError::Selection);
         }
-        // Navigation cannot leave a draft without a confirmed recovery snapshot.
-        self.checkpoint(current)?;
-        self.recovery.park()?;
-        let mut context = self.retained_context(self.context.clone());
-        overlay(&mut context, current);
-        let mut next = if let Some(session) = self.retained.get_mut(path) {
-            session
-                .model
-                .refresh_project_with_control(context, control)?;
-            select(&mut session.model)?;
-            self.retained.remove(path).ok_or(FileError::Selection)?
-        } else {
-            let mut baseline: Arc<str> = read_regular(path)?.into();
-            let recovery = RecoveryStore::open(path)?;
-            let key =
-                recite_core::DocumentKey::new(self.names.get(path).ok_or(FileError::Selection)?)
-                    .map_err(recite_writer_model::EditError::from)
-                    .map_err(recite_writer_model::WorkbenchError::from)?;
-            let source = recovery
-                .snapshot()
-                .map_or(baseline.as_ref(), |r| r.draft.source());
-            let document = current
-                .document()
-                .open_sibling_with_control(key, source, context, control)
-                .map_err(recite_writer_model::WorkbenchError::from)?;
-            control.checkpoint()?;
-            let mut model = Workbench::from_document(document)?;
-            control.checkpoint()?;
-            if let Some(snapshot) = recovery.snapshot() {
-                snapshot.draft.restore(&mut model)?;
-                baseline = snapshot.baseline.clone();
-            }
-            control.checkpoint()?;
-            select(&mut model)?;
-            Retained {
-                model,
-                baseline,
-                recovery,
-            }
-        };
-        std::mem::swap(current, &mut next.model);
-        std::mem::swap(&mut self.saved, &mut next.baseline);
-        std::mem::swap(&mut self.recovery, &mut next.recovery);
-        let previous = std::mem::replace(&mut self.current, path.to_owned());
-        self.retained.insert(previous, next);
-        Ok(())
-    }
-
-    /// Every retained session was checkpointed before it stopped being active.
-    /// Saving one failure leaves the remaining sessions and current selection intact.
-    pub fn save_retained(&mut self) -> Result<(), FileError> {
-        let paths: Vec<PathBuf> = self.retained.keys().cloned().collect();
-        for path in paths {
-            let session = self.retained.get_mut(&path).ok_or(FileError::Selection)?;
-            let outcome = session.save(&path);
-            let source = session.baseline.clone();
-            let record = self.record_saved(&path, &source);
-            outcome.and(record)?;
-        }
-        if self.manifest.dirty() {
-            self.manifest.save()?;
-        }
+        let mut prepared = self
+            .switch_request(current, path, initial)?
+            .prepare(control, select)?;
+        let checkpoint = self.begin_navigation_checkpoint(current)?.wait()?;
+        control.checkpoint()?;
+        self.accept_switch(current, &mut prepared, &checkpoint)?;
         Ok(())
     }
 }
@@ -232,21 +188,6 @@ impl Retained {
 
     fn dirty(&self) -> bool {
         self.has_edits() || self.recovery.pending()
-    }
-
-    pub(super) fn save(&mut self, path: &Path) -> Result<(), FileError> {
-        self.model.apply()?;
-        self.save_applied(path)
-    }
-
-    pub(super) fn save_applied(&mut self, path: &Path) -> Result<(), FileError> {
-        super::save::replace_checked(path, &self.baseline, self.model.document().source())?;
-        self.baseline = self.model.document().source_snapshot();
-        let recovery = self
-            .model
-            .has_draft()
-            .then(|| crate::recovery::Recovery::new(self.baseline.clone(), self.model.recovery()));
-        self.persist_recovery(recovery)
     }
 }
 

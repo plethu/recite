@@ -206,6 +206,8 @@
           # Keep it real while Crane stubs application-owned crates.
           cp -Rf ${../apps/writer/vendor/freya-code-editor/src}/. \
             "$out/apps/writer/vendor/freya-code-editor/src/"
+          cp -Rf ${../apps/writer/vendor/freya-core/src}/. \
+            "$out/apps/writer/vendor/freya-core/src/"
         '';
       };
       buildPhaseCargoCommand = "cargo build --profile release ${writerArgs.cargoExtraArgs}";

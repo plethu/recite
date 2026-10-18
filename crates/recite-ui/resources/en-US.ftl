@@ -673,6 +673,10 @@ writer-compare-return = Use as editable draft
 
 writer-preview = Try this scene
 writer-restart-preview = Restart preview
+writer-saving = Saving… You can keep editing.
+writer-newer-edits-remain = New edits remain open. Save again or keep editing.
+writer-preparing-preview = Preparing preview… You can keep editing.
+writer-preview-inputs-changed = The scene or catalogue changed while preparing. Restart to preview the current version.
 writer-close-preview = Return to writing
 writer-continue = Continue
 writer-true = True
@@ -719,6 +723,7 @@ writer-filter-completions = Filter suggestions
 writer-no-completions = No suggestions at this position.
 writer-finding-completions = Finding suggestions…
 writer-completions-unavailable = Suggestions unavailable.
+writer-diagnostics = Diagnostics
 
 writer-return-translation = Return to translation
 
@@ -1010,3 +1015,5 @@ cli-help-arg-import-from = Explicit source family: json, csv, twee, ink or yarn
 cli-help-arg-import-mapping = JSON field mapping file, required for JSON and CSV inputs
 cli-help-arg-import-output-dir = New directory for the report and validated source; omit to inspect only
 cli-help-arg-import-accept-partial = Allow writing a partial conversion after reviewing its skipped or lossy items
+
+writer-preparing-script = Preparing Script… You can keep editing.

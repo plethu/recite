@@ -50,6 +50,7 @@ pub(super) fn select_at(
     if current == example.name {
         return Ok(());
     }
+    let previous_scene = writer.scene_key();
     writer.remember_scene();
     writer.buffers.harvest();
     let next = {
@@ -82,6 +83,7 @@ pub(super) fn select_at(
             .set(crate::buffers::prose_draft(session).to_owned());
     }
     drop(state);
+    writer.switch_rules(previous_scene);
     writer.buffers.restore();
     writer.message.clear();
     Ok(())

@@ -34,8 +34,33 @@ pub fn canonical_compiled_dialogue_fingerprint(
 pub(super) fn compute_canonical_compiled_dialogue_fingerprint(
     dialogue: &CompiledDialogue,
 ) -> Result<ContentFingerprint, CompiledAssetEncodeError> {
-    let bytes = super::messagepack::encode_compiled_dialogue_messagepack_uncached(dialogue)?;
-    Ok(canonical_blake3_fingerprint(&bytes))
+    let mut writer = std::io::BufWriter::with_capacity(
+        fingerprint_buffer_capacity(dialogue),
+        blake3::Hasher::new(),
+    );
+    super::messagepack::write_compiled_dialogue_messagepack(dialogue, &mut writer)?;
+    let hasher = writer
+        .into_inner()
+        .map_err(|error| CompiledAssetEncodeError::MessagePack(error.to_string()))?;
+    Ok(ContentFingerprint {
+        algorithm: FingerprintAlgorithm::blake3(),
+        digest: FingerprintDigest(hasher.finalize().as_bytes().to_vec()),
+    })
+}
+
+fn fingerprint_buffer_capacity(dialogue: &CompiledDialogue) -> usize {
+    // Measured scratch heuristic: 64 bytes per row batches hashing for SIMD
+    // while keeping single-passage previews at 1 KiB.
+    let rows = [
+        dialogue.statements.len(),
+        dialogue.lines.len(),
+        dialogue.choices.len(),
+        dialogue.source_maps.len(),
+    ]
+    .into_iter()
+    .fold(0usize, usize::saturating_add)
+    .saturating_mul(64);
+    1usize << rows.clamp(1024, 64 * 1024).ilog2()
 }
 
 macro_rules! define_non_empty_string {

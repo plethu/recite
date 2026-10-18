@@ -49,10 +49,19 @@ pub(crate) fn open_editor(mut writer: Writer) {
     {
         return;
     }
-    if let Err(e) = writer.buffers.save(writer.files) {
-        writer.message.error(e);
-        return;
-    }
+    crate::editor_work::start(
+        writer,
+        crate::editor_work::SaveScope::Current,
+        freya::prelude::EventHandler::new(move |result| {
+            if let Err(error) = result {
+                writer.message.error(error);
+                return;
+            }
+            launch(writer);
+        }),
+    );
+}
+fn launch(mut writer: Writer) {
     let mut files = writer.files.write();
     let Some(project) = files.as_mut() else {
         return;

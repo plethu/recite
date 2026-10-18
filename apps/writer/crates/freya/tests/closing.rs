@@ -25,7 +25,7 @@ fn quit_shortcut_from_prose_opens_a_named_confirmation_and_escape_cancels()
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(1200., 800.),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     open_script(&mut test)?;
@@ -73,7 +73,7 @@ fn escape_never_opens_exit_confirmation_with_or_without_focus()
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(1200., 800.),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     assert_eq!(platform.focused_accessibility_id.peek().0, 0);
@@ -117,7 +117,7 @@ fn quit_shortcut_reaches_confirmation_from_source_editor() -> Result<(), Box<dyn
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(1200., 800.),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     let source = test

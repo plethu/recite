@@ -64,7 +64,14 @@ impl Component for SearchPicker {
             }
         });
         use_after_side_effect(move || {
-            if *open.read() && Platform::get().focused_accessibility_id.read().0 == 0 {
+            if *open.read()
+                && Platform::get()
+                    .current_window()
+                    .focused_accessibility_id
+                    .read()
+                    .0
+                    == 0
+            {
                 id.request_focus();
             }
         });
@@ -216,7 +223,7 @@ impl Component for SearchPicker {
                 } else {
                     0.
                 };
-            let window_size = *Platform::get().root_size.read();
+            let window_size = *Platform::get().current_window().root_size.read();
             let window = window_size.height;
             let width = area
                 .width()
@@ -278,7 +285,7 @@ impl Component for SearchPicker {
                     .on_sized(move |event: Event<SizedEventData>| {
                         popup.set_if_modified(Some(event.area))
                     })
-                    .on_global_pointer_press(move |event: Event<PointerEventData>| {
+                    .on_global_pointer_up(move |event: Event<PointerEventData>| {
                         let point = event.global_location().to_f32();
                         if !anchor.peek().is_some_and(|a| a.contains(point))
                             && !popup.peek().is_some_and(|a| a.contains(point))

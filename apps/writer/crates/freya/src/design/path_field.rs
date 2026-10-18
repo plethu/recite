@@ -81,6 +81,7 @@ impl Component for PathField {
                         busy.set(true);
                         let path = value.peek().clone();
                         let platform = Platform::get();
+                        let window_id = Platform::window_id();
                         spawn(async move {
                             let mut dialog = rfd::AsyncFileDialog::new().set_title(kind.title());
                             if !path.is_empty() {
@@ -92,8 +93,8 @@ impl Component for PathField {
                                 });
                             }
                             let parented = platform
-                                .post_callback(move |id, renderer| {
-                                    match renderer.windows().get(&id) {
+                                .post_callback(move |renderer| {
+                                    match renderer.windows().get(&window_id) {
                                         Some(window) => dialog.set_parent(window.window()),
                                         None => dialog,
                                     }

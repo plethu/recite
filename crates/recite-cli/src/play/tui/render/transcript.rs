@@ -7,27 +7,32 @@ use crate::tui::TuiPalette;
 use super::super::state::{TuiTranscriptEntry, TuiTranscriptKind};
 
 pub(super) fn render_transcript<'a>(
-    entries: &'a [TuiTranscriptEntry],
+    entries: impl DoubleEndedIterator<Item = &'a TuiTranscriptEntry>,
     width: u16,
     height: u16,
     messages: &'a Messages,
     palette: TuiPalette,
 ) -> Text<'a> {
+    if height == 0 {
+        return Text::from(Vec::<Line<'a>>::new());
+    }
     let mut lines = Vec::new();
-    for entry in entries {
-        lines.extend(render_transcript_entry(
-            entry,
-            width as usize,
-            messages,
-            palette,
-        ));
-        lines.push(Line::from(""));
+    for entry in entries.rev() {
+        if !lines.is_empty() {
+            lines.push(Line::from(""));
+        }
+        lines.extend(
+            render_transcript_entry(entry, width as usize, messages, palette)
+                .into_iter()
+                .rev(),
+        );
+        if lines.len() >= usize::from(height) {
+            break;
+        }
     }
-    if !lines.is_empty() {
-        lines.pop();
-    }
-    let visible_start = lines.len().saturating_sub(height as usize);
-    Text::from(lines.split_off(visible_start))
+    lines.truncate(usize::from(height));
+    lines.reverse();
+    Text::from(lines)
 }
 
 fn render_transcript_entry<'a>(
@@ -192,3 +197,6 @@ pub(super) fn prompt_header_line<'a>(
     }
     Line::from(spans)
 }
+
+#[cfg(test)]
+mod tests;

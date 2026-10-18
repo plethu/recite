@@ -88,7 +88,7 @@ fn render(writer: Writer, scene: String) -> Element {
             .read()
             .as_ref()
             .ok()
-            .and_then(|session| session.document().script_snapshot().ok())
+            .and_then(|session| session.document().cached_script())
     });
     if *current_scene.peek() != scene {
         positions.write().ensure_scene(&scene);

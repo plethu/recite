@@ -45,7 +45,7 @@ fn command(test: &mut TestingRunner, name: &str) {
     named_key(test, NamedKey::Enter, Code::Enter);
 }
 
-fn tab_to(test: &mut TestingRunner, platform: &Platform, name: &str) {
+fn tab_to(test: &mut TestingRunner, platform: &PlatformWindow, name: &str) {
     for _ in 0..100 {
         if platform.focused_accessibility_node.peek().label() == Some(name) {
             return;
@@ -83,7 +83,7 @@ fn dialog_viewport(test: &TestingRunner) -> Result<Area> {
     Err("dialog scroll viewport".into())
 }
 
-fn focused_control_is_visible(test: &TestingRunner, platform: &Platform) -> Result<bool> {
+fn focused_control_is_visible(test: &TestingRunner, platform: &PlatformWindow) -> Result<bool> {
     let focused = platform.focused_accessibility_node.peek();
     let bounds = focused.bounds().ok_or("focused control bounds")?;
     let dialog_area = dialog(test)?;
@@ -143,7 +143,7 @@ fn settings_keyboard_cycle_stays_visible_and_returns_focus_at_large_sizes() -> R
             (900., 650.).into(),
             move |runner| {
                 let _store = runner.provide_root_context(move || Ok::<_, String>(store));
-                runner.provide_root_context(Platform::get)
+                runner.provide_root_context(|| Platform::get().current_window())
             },
             1.,
         );
@@ -229,7 +229,7 @@ fn settings_from_workspace_menu_returns_to_the_menu_trigger() -> Result {
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         (1200., 900.).into(),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     tab_to(&mut test, &platform, "Workspace");
@@ -252,7 +252,7 @@ fn source_can_be_replaced_applied_and_read_without_a_pointer() {
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         (1200., 900.).into(),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     command(&mut test, "Source");

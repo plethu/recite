@@ -119,7 +119,8 @@ impl Component for RouteEditor {
                 enabled: true,
                 vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
                 choose: EventHandler::new(move |option: crate::design::PickerOption| {
-                    writer.navigate(|model| match &owner {
+                    let owner = owner.clone();
+                    writer.navigate(move |model| match &owner {
                         RouteOwner::Reply(id) => {
                             model.select(View::Passage(id.clone()))?;
                             model.attribute(&option.value)

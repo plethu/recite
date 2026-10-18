@@ -94,7 +94,10 @@ pub(super) fn render(writer: Writer, writing: bool) -> Element {
                     t::SHADOW_OFFSET,
                 ))
                 .on_key_down(move |event: Event<KeyboardEventData>| {
-                    let focused = *Platform::get().focused_accessibility_id.peek();
+                    let focused = *Platform::get()
+                        .current_window()
+                        .focused_accessibility_id
+                        .peek();
                     let current = enabled_ids
                         .iter()
                         .position(|id| *id == focused)

@@ -1,5 +1,3 @@
-use recite_core::po::PoEntry;
-
 use recite_core::po::PotEntry;
 
 /// The expected identity of a localisable gettext entry.
@@ -60,12 +58,5 @@ impl CatalogEntryKey {
     #[must_use]
     pub const fn is_plural(&self) -> bool {
         self.plural_source_text.is_some()
-    }
-
-    pub(crate) fn matches(&self, entry: &PoEntry, context: &str) -> bool {
-        !entry.is_header()
-            && entry.context() == Some(context)
-            && entry.source_text() == self.source_text
-            && entry.plural_source_text() == self.plural_source_text()
     }
 }

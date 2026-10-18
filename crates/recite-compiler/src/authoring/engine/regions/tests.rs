@@ -17,6 +17,63 @@ fn request(kernel: &AuthoringKernel, source: &str) -> AuthoringRequest {
 }
 
 #[test]
+fn metadata_line_counts_exclude_only_the_synthetic_empty_line() {
+    for (source, lines) in [
+        ("", 0),
+        ("\n", 1),
+        ("\r", 1),
+        ("\r\n", 1),
+        ("a", 1),
+        ("a\n", 1),
+        ("a\rb", 2),
+        ("a\r\nb\r\n", 2),
+        ("\n\n", 2),
+    ] {
+        let mut kernel = AuthoringKernel::new();
+        kernel.apply(request(&kernel, source)).unwrap();
+        assert_eq!(
+            kernel.snapshot().documents()[0].metadata().line_count(),
+            lines,
+            "{source:?}"
+        );
+    }
+}
+
+#[test]
+fn relocation_shares_spanless_bindings_without_mutating_retained_snapshots() {
+    let mut source = String::from(":: a default\n-> b\n:: b\n");
+    for index in 0..1_000 {
+        source.push_str(&format!(
+            "> line@{index:020x} bind=(name:string=$value_{index})\n  Hello {{name}}.\n"
+        ));
+    }
+    let key = DocumentKey::new("a.recite").unwrap();
+    let mut kernel = AuthoringKernel::new();
+    kernel.apply(request(&kernel, &source)).unwrap();
+    let before = kernel.snapshot().clone();
+    let edited = format!("\n{source}");
+    kernel.apply(request(&kernel, &edited)).unwrap();
+    let old = before.document(&key).unwrap();
+    let next = kernel.snapshot().document(&key).unwrap();
+    assert_eq!(old.summary().interpolation_bindings().len(), 1_000);
+    assert!(std::ptr::eq(
+        old.summary().interpolation_bindings(),
+        next.summary().interpolation_bindings()
+    ));
+    assert_eq!(old.source_text(), source);
+    let mut cold = AuthoringKernel::new();
+    cold.apply(request(&cold, &edited)).unwrap();
+    assert_eq!(
+        next.summary(),
+        cold.snapshot().document(&key).unwrap().summary()
+    );
+    assert_eq!(
+        next.diagnostics(),
+        cold.snapshot().document(&key).unwrap().diagnostics()
+    );
+}
+
+#[test]
 fn invalid_cached_coordinates_fall_back_to_cold_analysis() {
     use super::EffectiveDocument;
     use crate::authoring::{CancellationToken, DocumentLayer};

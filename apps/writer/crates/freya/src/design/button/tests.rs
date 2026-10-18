@@ -134,7 +134,7 @@ fn press_depth_preserves_content_names_and_explicit_accessible_names() {
                 .child(Button::new().named("Save all documents").child("Save all"))
         },
         (300., 200.).into(),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     test.poll_n(Duration::from_millis(16), 4);
@@ -266,4 +266,56 @@ fn common_accessibility_properties_remain_independent_of_the_role() {
     assert_eq!(action.is_expanded(), None);
     assert_eq!(action.keyboard_shortcut(), None);
     assert_eq!(action.label(), Some("Caption"));
+}
+
+#[test]
+fn native_accessibility_focus_and_click_are_separate_and_activate_once() {
+    let (mut test, platform) = TestingRunner::new(
+        || {
+            let mut calls = use_state(|| 0usize);
+            rect()
+                .child(
+                    Button::new()
+                        .named("Activate trial")
+                        .on_press(move |_| *calls.write() += 1)
+                        .child("Activate"),
+                )
+                .child(label().text(format!("Calls: {}", calls.read())))
+        },
+        (400., 200.).into(),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
+        1.,
+    );
+    let id = test
+        .find(|_, element| {
+            let a11y = element.accessibility();
+            (a11y.builder.label() == Some("Activate trial"))
+                .then_some(a11y.a11y_id)
+                .flatten()
+        })
+        .unwrap();
+    for action in [AccessibilityAction::Focus, AccessibilityAction::Click] {
+        assert!(
+            test.send_accessibility_action(AccessibilityActionEventData {
+                action,
+                target_tree: accesskit::TreeId::ROOT,
+                target_node: id,
+                data: None
+            })
+        );
+        test.sync_and_update();
+        assert_eq!(*platform.focused_accessibility_id.peek(), id);
+        let expected = if action == AccessibilityAction::Focus {
+            "Calls: 0"
+        } else {
+            "Calls: 1"
+        };
+        assert!(
+            test.find(
+                |_, element| Label::try_downcast(element).filter(|label| label.text == expected)
+            )
+            .is_some(),
+            "{action:?}"
+        );
+    }
 }

@@ -13,7 +13,7 @@ struct IndexedEntry {
 }
 #[derive(Default)]
 pub(in crate::localisation) struct QueueIndex {
-    entries: Vec<IndexedEntry>,
+    entries: Vec<Option<IndexedEntry>>,
 }
 impl QueueIndex {
     pub(in crate::localisation) fn new(catalogue: &Catalogue, passages: &[Passage]) -> Self {
@@ -27,13 +27,16 @@ impl QueueIndex {
             .document
             .entries()
             .iter()
-            .filter(|entry| !entry.is_header() && !entry.is_obsolete())
             .map(|entry| {
+                if entry.is_header() || entry.is_obsolete() {
+                    return None;
+                }
+
                 let passage = entry
                     .context()
                     .and_then(|context| context.split('&').next())
                     .and_then(|anchor| current.get(&(anchor, entry.source_text())).copied());
-                IndexedEntry {
+                Some(IndexedEntry {
                     id: entry.id(),
                     source: entry.source_text().to_lowercase(),
                     context: entry.context().map(str::to_lowercase),
@@ -45,10 +48,20 @@ impl QueueIndex {
                         .chain(entry.plural_translations().iter().map(|arm| arm.text()))
                         .map(str::to_lowercase)
                         .collect(),
-                }
+                })
             })
             .collect();
         Self { entries }
+    }
+    pub(in crate::localisation) fn replace_forms(
+        &mut self,
+        updates: &mut [(PoEntryId, Vec<String>)],
+    ) {
+        for (id, forms) in updates {
+            if let Some(entry) = self.entries.get_mut(id.index()).and_then(Option::as_mut) {
+                std::mem::swap(&mut entry.forms, forms);
+            }
+        }
     }
     pub(in crate::localisation) fn matching_entries(
         &self,
@@ -59,6 +72,7 @@ impl QueueIndex {
         let caption_query = query.replace('_', " ");
         self.entries
             .iter()
+            .flatten()
             .filter(|entry| {
                 (!only_attention
                     || TranslationStatus::for_entry(catalogue, entry.id).needs_attention())

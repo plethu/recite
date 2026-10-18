@@ -187,6 +187,9 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     assert!(has_text(&test, "Could not save"));
     assert!(has_text(&test, "Your drafts are still available"));
     assert!(has_text(&test, "Unsaved translations"));
+    if let Ok(path) = std::env::var("RECITE_WRITER_SCREENSHOT") {
+        test.render_to_file(format!("{path}.save-failure.png"));
+    }
     support::click(&mut test, "Open Relay Desk")?;
     assert!(has_text(&test, "Edit translation"));
     support::click(&mut test, "Read line")?;

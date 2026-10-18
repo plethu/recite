@@ -1,9 +1,13 @@
 mod api;
 mod builder;
+mod catalogue;
+pub use catalogue::{CataloguedModel, CataloguedModelCompileReport, compile_inputs_with_catalogue};
 mod convert;
 mod error;
 mod lowered;
 mod pipeline;
+mod validation;
+pub use validation::validate_build_request;
 mod table;
 
 pub use api::{

@@ -122,6 +122,30 @@ impl Component for SourceEditor {
             editor.set(data(&source.draft, writer.dark));
             revision.set(source.revision);
         }
+        use_hook(move || {
+            let buffer = writer
+                .files
+                .peek()
+                .as_ref()
+                .and_then(|p| p.declarations.as_ref())
+                .and_then(|s| s.source.as_ref())
+                .map(|source| SourceBuffer {
+                    path: source.path.clone(),
+                    editor,
+                    revision,
+                });
+            writer.declaration_buffer.set(buffer);
+        });
+        use_drop(move || {
+            harvest(writer);
+            if let Some(mut slot) = writer.declaration_buffer.try_write()
+                && slot
+                    .as_ref()
+                    .is_some_and(|current| current.editor == editor)
+            {
+                *slot = None;
+            }
+        });
         let mut dark = use_state(move || writer.dark);
         if *dark.peek() != writer.dark {
             editor
@@ -135,43 +159,23 @@ impl Component for SourceEditor {
         let submit_id = use_a11y();
         let mut narrow = use_state(|| false);
         use_side_effect(move || {
-            let draft = editor.read().rope.to_string();
-            let mut files = writer.files.write();
-            if let Some(source) = files
-                .as_mut()
-                .and_then(|f| f.declarations.as_mut())
-                .and_then(|s| s.source.as_mut())
-            {
-                source.draft = draft;
-                if let Err(error) = source.queue_recovery() {
-                    writer.message.error(error.to_string());
-                }
-            }
+            let _editor = editor.read();
+            harvest(writer);
         });
         let submit = SubmitAction {
             id: submit_id,
             caption: text(MsgId::WriterGenerateSchema),
             enabled: true,
             action: EventHandler::new(move |()| {
-                let result = (|| {
-                    let mut files = writer.files.write();
-                    let project = files.as_mut().ok_or("Open a project first.".to_owned())?;
-                    let session = project
-                        .declarations
-                        .as_mut()
-                        .ok_or("Open the declaration source first.".to_owned())?;
-                    if let Some(source) = &mut session.source {
-                        source.draft = editor.peek().rope.to_string();
-                    }
-                    session.save_and_generate().map_err(|e| e.to_string())?;
-                    if let Ok(model) = writer.buffers.model.write().as_mut() {
-                        project.refresh(model).map_err(|e| e.to_string())?;
-                    }
-                    Ok(())
-                })();
-                writer
-                    .message
-                    .report(result, text(MsgId::WriterSourceSaved));
+                crate::editor_work::start(
+                    writer,
+                    crate::editor_work::SaveScope::Declarations,
+                    EventHandler::new(move |result| {
+                        writer
+                            .message
+                            .report(result, text(MsgId::WriterSourceSaved));
+                    }),
+                );
             }),
         };
         let keyboard = submit.clone();
@@ -206,6 +210,10 @@ impl Component for SourceEditor {
                                 if crate::design::keyboard::submit_key(&e)
                                     || crate::editing::is_save_key(&e)
                                 {
+                                    return false;
+                                }
+                                if crate::closing::is_quit_key(&e) {
+                                    crate::closing::keyboard(e);
                                     return false;
                                 }
                                 if e.key == Key::Named(NamedKey::Tab) {
@@ -246,6 +254,7 @@ impl Component for SourceEditor {
                                         Ok(copy) => {
                                             if let Some(source) = &session.source {
                                                 editor.set(data(&source.draft, writer.dark));
+                                                revision.set(source.revision);
                                             }
                                             writer.message.info(format!(
                                                 "Source reloaded. Previous draft retained at {}",
@@ -271,6 +280,7 @@ impl Component for SourceEditor {
                                     }
                                     if let Some(source) = &session.source {
                                         editor.set(data(&source.draft, writer.dark));
+                                        revision.set(source.revision);
                                     }
                                 }
                             })
@@ -279,7 +289,10 @@ impl Component for SourceEditor {
                     .child(
                         Button::new()
                             .flat()
-                            .on_press(move |_| editing.set(false))
+                            .on_press(move |_| {
+                                harvest(writer);
+                                editing.set(false);
+                            })
                             .child(text(MsgId::WriterBackDeclarations)),
                     ),
             )

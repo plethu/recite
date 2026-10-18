@@ -5,6 +5,39 @@ type TestResult = Result<(), Box<dyn std::error::Error>>;
 const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n? reply@22222222222222222222 requires=(standing(3) and has_key(gate))\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n! blocking mark_map(floodgate)\n-> END\n";
 
 #[test]
+fn reloading_rules_keeps_back_and_forward_on_valid_completed_locations() -> TestResult {
+    let mut test = TestingRunner::new(
+        recite_writer::regression_app,
+        (1400., 1100.).into(),
+        |runner| {
+            runner.provide_root_context(|| recite_writer::InitialSource(SOURCE.into()));
+        },
+        1.,
+    )
+    .0;
+    support::open_beat(&mut test)?;
+    open_rules(&mut test)?;
+    for _ in 0..3 {
+        support::click(&mut test, "Discard rule changes")?;
+    }
+    support::click(&mut test, "Back")?;
+    assert!(
+        test.find(
+            |_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "Destination effects")
+        )
+        .is_none()
+    );
+    support::click(&mut test, "Forward")?;
+    assert!(
+        test.find(
+            |_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "Destination effects")
+        )
+        .is_some()
+    );
+    Ok(())
+}
+
+#[test]
 fn reply_rules_apply_discard_and_history_use_the_source_draft() -> TestResult {
     let mut test = TestingRunner::new(
         recite_writer::regression_app,

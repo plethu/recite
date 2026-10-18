@@ -165,3 +165,106 @@ fn parked_panic_is_distinct_from_idle_and_drop_releases_the_failed_owner()
     reopened.persist(Some(Draft(42)))?;
     Ok(())
 }
+
+#[test]
+fn detached_durability_fence_waits_without_borrowing_the_live_store()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("scene.recite");
+    let mut store = SnapshotStore::<Draft>::open(&path)?;
+    // Hold real disk ownership so the recovery write cannot finish yet.
+    let disk = store.disk.clone();
+    let guard = disk.lock().unwrap();
+    let ticket = store.begin_persist(Some(Draft(1)))?;
+    let (done, result) = std::sync::mpsc::sync_channel(1);
+    let waiter = std::thread::spawn(move || done.send(ticket.wait()).unwrap());
+    assert!(matches!(
+        result.try_recv(),
+        Err(std::sync::mpsc::TryRecvError::Empty)
+    ));
+    // The UI owner remains free to queue newer content while durability waits.
+    store.queue(Some(Draft(2)))?;
+    drop(guard);
+    result.recv_timeout(std::time::Duration::from_secs(5))??;
+    waiter.join().unwrap();
+    store.park()?;
+    drop(store);
+    drop(disk);
+    assert_eq!(
+        SnapshotStore::<Draft>::open(&path)?.snapshot(),
+        Some(&Draft(2))
+    );
+    Ok(())
+}
+
+#[test]
+fn async_parking_coalesces_without_reviving_worker_and_retains_latest_on_drop()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("scene.recite");
+    let mut store = SnapshotStore::<Draft>::open(&path)?;
+    let disk = store.disk.clone();
+    let guard = disk.lock().unwrap();
+    store.queue(Some(Draft(1)))?;
+    let parking = store.begin_park();
+    assert!(store.worker.is_none());
+    store.queue(Some(Draft(2)))?;
+    assert!(
+        store.worker.is_none(),
+        "parking must not start a second worker"
+    );
+    assert!(matches!(
+        store.pending.0.lock().unwrap().phase,
+        Phase::Parking
+    ));
+    let waiter = std::thread::spawn(move || parking.wait());
+    drop(guard);
+    waiter.join().map_err(|_| "parking panicked")??;
+    assert!(!store.pending());
+    assert!(matches!(
+        store.pending.0.lock().unwrap().phase,
+        Phase::Parked
+    ));
+    assert_eq!(disk.lock().unwrap().snapshot(), Some(&Draft(2)));
+    // The old worker already exited. A newer snapshot must own a real successor,
+    // and dropping the store without another queue must still drain that value.
+    store.queue(Some(Draft(3)))?;
+    assert!(store.worker.is_some());
+    drop(store);
+    drop(disk);
+    assert_eq!(
+        SnapshotStore::<Draft>::open(&path)?.snapshot(),
+        Some(&Draft(3))
+    );
+    Ok(())
+}
+
+#[test]
+fn dropping_parking_receipt_does_not_discard_a_queued_recovery()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("scene.recite");
+    let mut store = SnapshotStore::<Draft>::open(&path)?;
+    let disk = store.disk.clone();
+    let guard = disk.lock().unwrap();
+    store.queue(Some(Draft(7)))?;
+    let parking = store.begin_park();
+    store.queue(Some(Draft(8)))?;
+    drop(parking);
+    drop(guard);
+    // A detached worker keeps the disk lease and drains even if the UI tears down.
+    // Holding our disk Arc lets the test wait for its acknowledged phase explicitly.
+    let pending = store.pending.clone();
+    drop(store);
+    let mut state = pending.0.lock().unwrap();
+    while state.completed < 2 && state.phase != Phase::Failed {
+        let (next, timeout) = pending
+            .1
+            .wait_timeout(state, std::time::Duration::from_secs(5))
+            .unwrap();
+        state = next;
+        assert!(!timeout.timed_out(), "recovery did not drain");
+    }
+    assert_eq!(disk.lock().unwrap().snapshot(), Some(&Draft(8)));
+    Ok(())
+}

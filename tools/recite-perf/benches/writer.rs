@@ -4,6 +4,8 @@
 mod budget;
 #[path = "support/completion.rs"]
 mod completion;
+#[path = "support/preview.rs"]
+mod preview;
 #[path = "support/writer.rs"]
 mod writer_support;
 
@@ -43,5 +45,15 @@ fn accepted_draft(workload: completion::CompletionWorkload) -> completion::Compl
 fn completion_replacement(workload: completion::ReplacementWorkload) -> completion::Replaced {
     black_box(completion::replace(workload))
 }
-library_benchmark_group!(name = writer_workflows; config = budget::budget(20.0); benchmarks = cold_script, changed_draft, accepted_draft, completion_replacement);
+#[library_benchmark(teardown = preview::validate)]
+#[bench::passages_1000(args = (1_000), setup = preview::prepare)]
+#[bench::passages_10000(args = (10_000), setup = preview::prepare)]
+fn preview_start(
+    document: recite_writer_model::Document,
+) -> (recite_writer_model::Document, recite_writer_model::Preview) {
+    let preview = recite_writer_model::Preview::new(&document)
+        .unwrap_or_else(|error| panic!("preview fixture compilation: {error}"));
+    black_box((document, preview))
+}
+library_benchmark_group!(name = writer_workflows; config = budget::budget(20.0); benchmarks = preview_start, cold_script, changed_draft, accepted_draft, completion_replacement);
 main!(library_benchmark_groups = writer_workflows);

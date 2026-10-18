@@ -29,8 +29,26 @@ pub(super) fn compile_inputs_with_output<'a, T>(
     inputs: impl IntoIterator<Item = Input<'a>>,
     options: CompileOptions,
     schema: Option<&ProjectSchema>,
-    emit: impl FnOnce(CompiledDialogue) -> Result<T, CompileError>,
+    emit: impl FnOnce(CompiledDialogue, &[LoweredInput]) -> Result<T, CompileError>,
 ) -> Result<PipelineReport<T>, CompileError> {
+    let prepared = prepare_inputs(inputs, schema);
+    let Some(lowered_inputs) = prepared.output else {
+        return Ok(PipelineReport {
+            diagnostics: prepared.diagnostics,
+            output: None,
+        });
+    };
+    let dialogue = build_dialogue(&lowered_inputs, options, schema)?;
+    Ok(PipelineReport {
+        diagnostics: Vec::new(),
+        output: Some(emit(dialogue, &lowered_inputs)?),
+    })
+}
+
+pub(super) fn prepare_inputs<'a>(
+    inputs: impl IntoIterator<Item = Input<'a>>,
+    schema: Option<&ProjectSchema>,
+) -> PipelineReport<Vec<LoweredInput>> {
     let mut lowered_inputs = Vec::new();
     let mut diagnostics = Vec::new();
 
@@ -63,10 +81,10 @@ pub(super) fn compile_inputs_with_output<'a, T>(
 
     sort_diagnostics_by_source(&mut diagnostics);
     if !diagnostics.is_empty() {
-        return Ok(PipelineReport {
+        return PipelineReport {
             diagnostics,
             output: None,
-        });
+        };
     }
 
     let validation = validate_inputs(
@@ -77,10 +95,10 @@ pub(super) fn compile_inputs_with_output<'a, T>(
         ProjectCompleteness::Complete,
     );
     if !validation.is_ok() {
-        return Ok(PipelineReport {
+        return PipelineReport {
             diagnostics: validation.diagnostics,
             output: None,
-        });
+        };
     }
 
     lowered_inputs.sort_by(|left, right| {
@@ -90,9 +108,8 @@ pub(super) fn compile_inputs_with_output<'a, T>(
             .then(left.input_index.cmp(&right.input_index))
     });
 
-    let dialogue = build_dialogue(&lowered_inputs, options, schema)?;
-    Ok(PipelineReport {
+    PipelineReport {
         diagnostics: Vec::new(),
-        output: Some(emit(dialogue)?),
-    })
+        output: Some(lowered_inputs),
+    }
 }

@@ -204,6 +204,28 @@ fn successful_source_apply_releases_the_materialized_rope_draft() {
 }
 
 #[test]
+fn applying_a_retained_rope_shares_text_and_preserves_history() {
+    let mut model = crate::Workbench::new(crate::FIXTURE).unwrap();
+    model.select(crate::View::Source).unwrap();
+    let text = format!("{}# Applied 🦊\r\n", crate::FIXTURE);
+    let draft = DraftSnapshot::from_rope(Rope::from_str(&text));
+    let retained = draft.clone();
+    model.set_draft_snapshot(draft);
+    assert_lazy(&retained);
+    model.apply().unwrap();
+    let accepted = model.document().source_snapshot();
+    assert!(Arc::ptr_eq(&retained.text_snapshot(), &accepted));
+    assert_eq!(retained.as_str().as_ptr(), accepted.as_ptr());
+    assert_eq!(accepted.as_ref(), text);
+    assert!(!model.has_draft());
+    model.undo().unwrap();
+    assert_eq!(model.document().source(), crate::FIXTURE);
+    model.redo().unwrap();
+    assert_eq!(model.document().source(), text);
+    assert_eq!(retained.as_str(), text);
+}
+
+#[test]
 fn streaming_write_failure_leaves_snapshot_lazy_and_retryable() -> Result<(), serde_json::Error> {
     struct Failed;
     impl Write for Failed {

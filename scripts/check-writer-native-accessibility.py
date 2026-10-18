@@ -219,6 +219,11 @@ def run_specimen(binary, bus, registry, require_actions):
                     "named primary button",
                     process,
                 )
+                wait_for(
+                    lambda: find_named("Try the controls, then compare both appearances."),
+                    "initial action status",
+                    process,
+                )
                 interfaces = call(bus, button, ACCESSIBLE, "GetInterfaces")[0]
                 action_available = "org.a11y.atspi.Action" in interfaces
                 focus_requested = call(bus, button, "org.a11y.atspi.Component", "GrabFocus")[0]
@@ -237,6 +242,8 @@ def run_specimen(binary, bus, registry, require_actions):
                     except RuntimeError:
                         if process.poll() is not None:
                             raise
+                if find_named("Primary action activated."):
+                    raise RuntimeError("Focus unexpectedly activated the primary action")
                 activated = False
                 if action_available:
                     accepted = call(

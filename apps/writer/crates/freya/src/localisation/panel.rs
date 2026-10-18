@@ -19,6 +19,7 @@ pub(super) fn render(
     let open_drafts = use_a11y();
     let mut focus = vec![ids[0], ids[9], ids[1], ids[3]];
     let mut was_open = use_state(|| false);
+    let mut submission = use_state(|| None::<std::sync::Arc<()>>);
     use_after_side_effect(move || {
         let open = state.read().panel == Some(super::Panel::Files);
         if open && !*was_open.peek() {
@@ -78,10 +79,13 @@ pub(super) fn render(
                         crate::messages::MsgId::WriterGuiSaveAllTranslationDrafts,
                     ))
                     .on_press(move |_| {
-                        let result = state.write().catalogue.as_mut().map(Catalogue::save_all);
-                        if let Some(result) = result {
-                            message.report(result, "Translations saved".into());
-                        }
+                        crate::editor_work::translations(
+                            writer,
+                            None,
+                            EventHandler::new(move |result: Result<(), String>| {
+                                message.report(result, "Translations saved".into())
+                            }),
+                        );
                     }),
             )
             .child(
@@ -125,6 +129,7 @@ pub(super) fn render(
                 .a11y_id(ids[7])
                 .on_press(move |_| {
                     message.clear();
+                    submission.set(None);
                     state.write().panel = Some(super::Panel::Create);
                 })
                 .child(wording(MsgId::WriterAddLanguage)),
@@ -137,17 +142,51 @@ pub(super) fn render(
                 .a11y_id(ids[8])
                 .on_press(move |_| {
                     message.clear();
-                    match super::refresh::Preview::prepare(writer, files) {
-                        Ok(preview) => {
-                            let mut current = state.write();
-                            current.refresh = Some(preview);
-                            current.update_index = 0;
-                            current.view = super::CatalogueView::Updates;
-                            current.panel = None;
-                            writer.inspector_focus.request_focus();
+                    let token = std::sync::Arc::new(());
+                    submission.set(Some(token.clone()));
+                    let catalogue = state
+                        .peek()
+                        .catalogue
+                        .as_ref()
+                        .map(|c| (c.path.clone(), c.revision()));
+                    writer.after_prose(move |writer| {
+                        let current = state
+                            .peek()
+                            .catalogue
+                            .as_ref()
+                            .map(|c| (c.path.clone(), c.revision()));
+                        let same_catalogue = match (&catalogue, &current) {
+                            (Some((path, revision)), Some((current_path, current_revision))) => {
+                                path == current_path
+                                    && std::sync::Arc::ptr_eq(revision, current_revision)
+                            }
+                            (None, None) => true,
+                            _ => false,
+                        };
+                        if !state.peek().active
+                            || state.peek().panel != Some(super::Panel::Files)
+                            || !same_catalogue
+                            || !submission.try_peek().is_some_and(|slot| {
+                                slot.as_ref()
+                                    .is_some_and(|current| std::sync::Arc::ptr_eq(current, &token))
+                            })
+                        {
+                            return Ok(());
                         }
-                        Err(error) => message.error(error),
-                    }
+                        submission.set(None);
+                        match super::refresh::Preview::prepare(writer, files) {
+                            Ok(preview) => {
+                                let mut current = state.write();
+                                current.refresh = Some(preview);
+                                current.update_index = 0;
+                                current.view = super::CatalogueView::Updates;
+                                current.panel = None;
+                                writer.inspector_focus.request_focus();
+                            }
+                            Err(error) => message.error(error),
+                        }
+                        Ok(())
+                    });
                 })
                 .child(wording(MsgId::WriterRefresh)),
         );
@@ -162,6 +201,7 @@ pub(super) fn render(
         content: content.into_element(),
         reduced_motion: writer.preferences.read().config.writer.reduced_motion,
         close: EventHandler::new(move |()| {
+            submission.set(None);
             state.write().panel = None;
             writer.inspector_focus.request_focus();
         }),
@@ -171,6 +211,7 @@ pub(super) fn render(
                 Button::new()
                     .a11y_id(ids[3])
                     .on_press(move |_| {
+                        submission.set(None);
                         state.write().panel = None;
                         writer.inspector_focus.request_focus();
                     })

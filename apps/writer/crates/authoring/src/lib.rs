@@ -13,7 +13,10 @@ mod script;
 mod structure;
 mod workbench;
 
-pub use document::{CompletionSnapshot, Document, EditError, ProjectContext};
+pub use document::{
+    CompletionSnapshot, DiagnosticSnapshot, Document, EditError, EditOperation, PreparedPreview,
+    PreviewRequest, ProjectContext,
+};
 pub use draft_snapshot::DraftSnapshot;
 pub use examples::{WRITER_EXAMPLES, WriterExample};
 pub use flow::{SceneLink, scene_endings, scene_links};
@@ -21,7 +24,10 @@ pub use preview::{Preview, PreviewError, PreviewPage, PreviewSetup};
 pub use projection::{Passage, PassageContent, PassageKind};
 pub use recovery::RecoveredDraft;
 pub use script::{ScriptBlock, ScriptEntry};
-pub use workbench::{View, Workbench, WorkbenchError};
+pub use workbench::{
+    EditRequest, NavigationRequest, PreparedEdit, PreparedNavigation, View, Workbench,
+    WorkbenchError,
+};
 
 pub const FIXTURE: &str =
     include_str!("../../../../../fixtures/recite/valid/gui_bakeoff/crossroads.recite");
@@ -29,6 +35,7 @@ pub const DOCUMENT_NAME: &str = "crossroads.recite";
 
 mod history;
 mod projection_cache;
+pub use projection_cache::{PreparedProjection, ProjectionRequest};
 
 mod search;
 pub use search::{SearchHit, SearchIndex, SearchResults};
@@ -42,7 +49,7 @@ mod completion;
 pub use completion::SourceCompletions;
 
 mod rules;
-pub use rules::{ReplyRules, RuleArgument, RuleEffect, RuleExpression};
+pub use rules::{ReplyRules, ReplyRulesRequest, RuleArgument, RuleEffect, RuleExpression};
 
 mod rename;
 pub use rename::{ProjectRename, RenameChange, rename_manifest_source};

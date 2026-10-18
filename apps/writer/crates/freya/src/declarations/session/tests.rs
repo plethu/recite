@@ -9,6 +9,7 @@ fn session() -> Result<(tempfile::TempDir, Session), Box<dyn std::error::Error>>
     std::fs::write(&output, &output_baseline)?;
     std::fs::write(dir.path().join("schema.toml"), SOURCE)?;
     let mut session = Session {
+        saving: false,
         registration: Ok(None),
         job: None,
         root: dir.path().to_owned(),
@@ -201,4 +202,53 @@ fn dirty_declarations_refuse_schema_replacement_and_removal()
     session.discard()?;
     session.check_project_settings(removed)?;
     Ok(())
+}
+
+#[test]
+fn declaration_receipts_keep_newer_drafts_and_saved_prefix_on_output_conflict()
+-> Result<(), Box<dyn std::error::Error>> {
+    let (dir, mut session) = session()?;
+    let requested = SOURCE.replace("Mara", "Saved Mara");
+    session.source.as_mut().unwrap().draft = requested.clone();
+    let request = session.prepare_save()?;
+    request.write_source()?;
+    let newer = SOURCE.replace("Mara", "Unfinished Mara");
+    session.source.as_mut().unwrap().draft = newer.clone();
+    session.accept_saved_source(&request)?.wait()?;
+    std::fs::write(&session.output, "external generated output")?;
+    assert!(matches!(request.write_output(), Err(FileError::Conflict)));
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("schema.toml"))?,
+        requested
+    );
+    assert_eq!(session.source.as_ref().unwrap().baseline, requested);
+    assert_eq!(session.source.as_ref().unwrap().draft, newer);
+    assert!(session.dirty());
+    assert_eq!(
+        std::fs::read_to_string(&session.output)?,
+        "external generated output"
+    );
+    session.saving = true;
+    assert!(matches!(session.discard(), Err(FileError::SavePending)));
+    assert!(matches!(
+        session.reload_source(),
+        Err(FileError::SavePending)
+    ));
+    assert!(matches!(
+        session.bind(&dir.path().join("schema.toml")),
+        Err(FileError::SavePending)
+    ));
+    Ok(())
+}
+
+impl Session {
+    pub fn save_and_generate(&mut self) -> Result<(), FileError> {
+        self.require_idle_save()?;
+        let request = self.prepare_save()?;
+        request.write_source()?;
+        self.accept_saved_source(&request)?.wait()?;
+        request.write_output()?;
+        self.accept_saved_output(request);
+        Ok(())
+    }
 }

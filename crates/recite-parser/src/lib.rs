@@ -43,7 +43,7 @@ pub use regions::{SourceRegion, source_regions};
 mod source;
 mod syntax;
 
-pub use lower::LoweredSourceFile;
+pub use lower::{LoweredSourceFile, SourceVisitReport};
 pub use parser::{Parse, lower_source_file, parse};
 pub use syntax::{ReciteLanguage, ReciteSyntaxKind, ReciteSyntaxNode};
 

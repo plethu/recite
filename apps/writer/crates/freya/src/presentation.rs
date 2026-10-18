@@ -3,6 +3,7 @@ mod sessions;
 use crate::{editing::Writer, preferences::Preferences};
 use freya::prelude::*;
 use recite_config::{UserConfigEdit, WriterPresentation, WriterPresentationField, WriterView};
+pub(crate) use sessions::RetiredPresentation;
 
 #[derive(Clone, Copy)]
 pub(crate) struct Typography(pub State<Preferences>);

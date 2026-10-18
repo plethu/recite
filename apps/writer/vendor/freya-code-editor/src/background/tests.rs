@@ -135,3 +135,55 @@ fn completion_notifications_coalesce_and_survive_late_attachment() {
     wait_for(|| receiver.is_closed());
     assert!(receiver.try_recv().is_err());
 }
+
+#[test]
+fn viewport_work_does_not_cancel_parsing_or_clear_text_cancellation() {
+    let mailbox = Arc::new(Mailbox::default());
+    let gate = Arc::new(Barrier::new(2));
+    let shared = Arc::clone(&mailbox);
+    let worker_gate = Arc::clone(&gate);
+    let (notify, ready) = async_channel::bounded(1);
+    let worker = thread::spawn(move || {
+        worker_gate.wait();
+        run(&shared, notify);
+    });
+    let background = BackgroundSyntax {
+        mailbox,
+        worker,
+        ready,
+    };
+    let rope = Rope::from_str(":: current\n  Text.\n");
+    let language = Some(EditorLanguage::new(
+        recite_writer_grammar::LANGUAGE,
+        recite_writer_grammar::HIGHLIGHTS,
+    ));
+    background.mailbox.slots.lock().unwrap().active = Some(Active {
+        rope: rope.clone(),
+        language: language.clone(),
+    });
+    let viewport = || Request {
+        rope: rope.clone(),
+        language: language.clone(),
+        rows: 1..2,
+        ..request(None, Arc::new(()), Some(Vec::new()))
+    };
+    assert!(background.submit(viewport()));
+    assert!(!background.mailbox.superseded.load(Ordering::Relaxed));
+    let mut changed = viewport();
+    changed.rope.insert(0, "# changed\n");
+    assert!(background.submit(changed));
+    assert!(background.mailbox.superseded.load(Ordering::Relaxed));
+    assert!(background.submit(viewport()));
+    assert!(background.mailbox.superseded.load(Ordering::Relaxed));
+    background
+        .mailbox
+        .superseded
+        .store(false, Ordering::Relaxed);
+    let mut changed = viewport();
+    changed.language = None;
+    assert!(background.submit(changed));
+    assert!(background.mailbox.superseded.load(Ordering::Relaxed));
+    background.close();
+    gate.wait();
+    wait_for(|| background.worker.is_finished());
+}

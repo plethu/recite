@@ -4,7 +4,7 @@ use crate::region_outputs;
 use crate::region_outputs::region_mut;
 use std::{ops::Range, sync::Arc};
 
-pub(crate) type SummaryRanges = [Range<usize>; 6];
+pub(crate) type SummaryRanges = [Range<usize>; 7];
 
 impl AuthoringSummary {
     pub(crate) fn region_ranges(&self) -> SummaryRanges {
@@ -15,6 +15,7 @@ impl AuthoringSummary {
             0..self.metadata.len(),
             0..self.condition_functions.len(),
             0..self.effect_functions.len(),
+            0..self.bindings.len(),
         ]
     }
 
@@ -59,6 +60,12 @@ impl AuthoringSummary {
                     .map(|(part, ranges)| &part.effect_functions[ranges[5].clone()]),
                 previous.map(|old| &old.effect_functions),
             ),
+            bindings: region_outputs::join_shared(
+                parts
+                    .iter()
+                    .map(|(part, ranges)| &part.bindings[ranges[6].clone()]),
+                previous.map(|old| &old.bindings),
+            ),
         };
         if let Some(previous) = previous
             && joined.shares_storage(previous)
@@ -76,6 +83,7 @@ impl AuthoringSummary {
             metadata,
             condition_functions,
             effect_functions,
+            bindings,
         } = self;
         Arc::ptr_eq(blocks, &previous.blocks)
             && Arc::ptr_eq(block_references, &previous.block_references)
@@ -83,6 +91,7 @@ impl AuthoringSummary {
             && Arc::ptr_eq(metadata, &previous.metadata)
             && Arc::ptr_eq(condition_functions, &previous.condition_functions)
             && Arc::ptr_eq(effect_functions, &previous.effect_functions)
+            && Arc::ptr_eq(bindings, &previous.bindings)
     }
 }
 

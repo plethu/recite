@@ -41,7 +41,7 @@ fn catalogue_scale_timing() -> Result<(), Box<dyn std::error::Error>> {
         std::hint::black_box(&snapshot);
     }
     let index_started = WallTime.start();
-    let index = crate::localisation::queue::filter::QueueIndex::new(&catalogue, &[]);
+    let index = catalogue.queue_index(None);
     let index_ms = WallTime.end(index_started).as_secs_f64() * 1000.;
     let rebuild_started = WallTime.start();
     let replacement = crate::localisation::queue::filter::QueueIndex::new(&catalogue, &[]);
@@ -54,7 +54,7 @@ fn catalogue_scale_timing() -> Result<(), Box<dyn std::error::Error>> {
         let mut count = 0;
         for _ in 0..5 {
             let started = WallTime.start();
-            let matches = index.matching_entries(&catalogue, query, false);
+            let matches = index.borrow().matching_entries(&catalogue, query, false);
             times.push(WallTime.end(started).as_secs_f64() * 1000.);
             count = matches.len();
             std::hint::black_box(&matches);
@@ -62,8 +62,19 @@ fn catalogue_scale_timing() -> Result<(), Box<dyn std::error::Error>> {
         filtering.push(serde_json::json!({"query":query,"count":count,"ms":times}));
     }
     let started = WallTime.start();
-    catalogue.save_all()?;
-    let save_ms = WallTime.end(started).as_secs_f64() * 1000.;
+    let mut request = catalogue.begin_save(None)?;
+    let save_prepare_ms = WallTime.end(started).as_secs_f64() * 1000.;
+    let started = WallTime.start();
+    let saved = request.execute()?;
+    let save_worker_ms = WallTime.end(started).as_secs_f64() * 1000.;
+    let started = WallTime.start();
+    let ticket = catalogue.accept_save(&mut request, saved)?;
+    let save_accept_ms = WallTime.end(started).as_secs_f64() * 1000.;
+    if let Some(ticket) = ticket {
+        ticket.wait()?;
+    }
+    catalogue.finish_save();
+    let save_ms = save_prepare_ms + save_worker_ms + save_accept_ms;
     assert!(!catalogue.dirty());
     let reopened = Catalogue::open(&path)?;
     assert_eq!(reopened.document.entries().len(), entries);
@@ -74,7 +85,7 @@ fn catalogue_scale_timing() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!(
         "{}",
-        serde_json::json!({"entries":entries,"edits":edits,"source_bytes":source.len(),"update_ms":update_ms,"snapshot_ms":snapshot_ms,"index_ms":index_ms,"index_rebuild_ms":index_rebuild_ms,"filtering":filtering,"save_ms":save_ms,"profile":if cfg!(debug_assertions) { "test" } else { "release-test" }})
+        serde_json::json!({"entries":entries,"edits":edits,"source_bytes":source.len(),"update_ms":update_ms,"snapshot_ms":snapshot_ms,"index_ms":index_ms,"index_rebuild_ms":index_rebuild_ms,"filtering":filtering,"save_ms":save_ms,"save_prepare_ms":save_prepare_ms,"save_worker_ms":save_worker_ms,"save_accept_ms":save_accept_ms,"profile":if cfg!(debug_assertions) { "test" } else { "release-test" }})
     );
     Ok(())
 }

@@ -141,6 +141,8 @@ class ScopeTests(unittest.TestCase):
             "apps/writer/crates/freya/src/app.rs",
             "scripts/check-writer-native-accessibility.py",
             "tools/ast-grep/rules/rust-writer-palette.yml",
+            "tools/ast-grep/rules/rust-writer-cold-projections.yml",
+            "tools/ast-grep/tests/rust-writer-cold-projections-test.yml",
             "tools/ast-grep/tests/rust-writer-palette-test.yml",
         ):
             self.assertEqual(selected(path), {"writer", "maintainability"})

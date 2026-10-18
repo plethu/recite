@@ -4,6 +4,8 @@ mod expression;
 pub use effect::RuleEffect;
 pub use expression::RuleExpression;
 mod projection;
+mod request;
+pub use request::ReplyRulesRequest;
 mod values;
 use crate::{Document, EditError, Workbench, WorkbenchError, projection::offset};
 use recite_core::{DocumentKey, SourceSpan};
@@ -25,7 +27,7 @@ pub struct ReplyRules {
     pub available_effects: Vec<RuleEffect>,
     key: DocumentKey,
     revision: i64,
-    source: String,
+    source: std::sync::Arc<str>,
     original_condition: Option<RuleExpression>,
     condition_range: Option<Range<usize>>,
     header_end: usize,
@@ -34,16 +36,49 @@ pub struct ReplyRules {
     effect_ranges: Vec<Range<usize>>,
 }
 impl ReplyRules {
+    pub(crate) fn refresh_revision(&mut self, original: &Document, current: &Document) -> bool {
+        if !self.belongs_to(original)
+            || original.key() != current.key()
+            || !std::sync::Arc::ptr_eq(&self.source, &current.source_snapshot())
+        {
+            return false;
+        }
+        self.revision = current.revision();
+        true
+    }
     pub fn belongs_to(&self, document: &Document) -> bool {
-        document.key() == &self.key && document.revision() == self.revision
+        document.key() == &self.key
+            && document.revision() == self.revision
+            && std::sync::Arc::ptr_eq(&self.source, &document.source_snapshot())
     }
     pub fn changed(&self) -> bool {
-        self.source().is_ok_and(|source| source != self.source)
-            || self.condition != self.original_condition
+        if self.condition != self.original_condition
             || self
                 .effects
                 .iter()
                 .any(|effect| effect.arguments.iter().any(RuleArgument::changed))
+        {
+            return true;
+        }
+        // Pristine controls need no whole-document reconstruction. Structural
+        // changes retain the checked source comparison, including rejected edits.
+        if self.effects.len() == self.effect_ranges.len()
+            && self
+                .effects
+                .iter()
+                .zip(&self.effect_ranges)
+                .all(|(effect, range)| {
+                    effect
+                        .original
+                        .as_ref()
+                        .is_some_and(|original| original.mode == effect.mode)
+                        && self.source.get(range.clone()) == Some(effect.raw.as_str())
+                })
+        {
+            return false;
+        }
+        self.source()
+            .is_ok_and(|source| source.as_str() != self.source.as_ref())
     }
     pub fn source(&self) -> Result<String, EditError> {
         let mut patches = Vec::new();
@@ -129,10 +164,9 @@ impl ReplyRules {
     }
     /// Cheap validation for editing feedback; Apply also runs project diagnostics.
     pub fn validate_draft(&self, document: &Document) -> Result<String, EditError> {
-        if document.key() != &self.key {
+        if !self.belongs_to(document) {
             return Err(EditError::Stale);
         }
-        document.check_revision(self.revision)?;
         if let Some(condition) = &self.condition {
             condition.validate()?;
         }
@@ -204,3 +238,6 @@ fn span_range(source: &str, span: &SourceSpan) -> Result<Range<usize>, EditError
             .len_utf8();
     Ok(start..end)
 }
+
+#[cfg(test)]
+mod tests;

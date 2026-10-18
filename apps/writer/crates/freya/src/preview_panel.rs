@@ -1,8 +1,11 @@
 //! A deliberate runtime trial. Requests are answered by the author, never the game.
 mod controls;
 mod prepare;
+mod request;
 mod snapshot;
+mod task;
 mod trace;
+mod worker;
 use crate::design::tokens::ProseTypography;
 use crate::messages::{MsgId, text};
 use crate::{
@@ -12,6 +15,7 @@ use crate::{
 use freya::prelude::*;
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
 pub(crate) use snapshot::Snapshot;
+pub(crate) use task::{start, use_preview_work};
 
 #[derive(Clone)]
 pub(super) struct PreviewScreen {
@@ -44,7 +48,10 @@ impl Component for PreviewScreen {
                 crate::design::actions().child(
                     Button::new()
                         .flat()
-                        .on_press(move |_| pane.set(Pane::Script))
+                        .on_press(move |_| {
+                            task::cancel(writer);
+                            pane.set(Pane::Script);
+                        })
                         .child(text(MsgId::WriterClosePreview)),
                 ),
             );
@@ -62,6 +69,25 @@ impl Component for PreviewScreen {
             );
         }
         panel = panel.child(controls::Controls { writer });
+        let pending = task::pending(writer);
+        if pending {
+            panel = panel
+                .child(
+                    rect()
+                        .a11y_role(AccessibilityRole::Status)
+                        .a11y_alt(text(MsgId::WriterPreparingPreview))
+                        .a11y_builder(|node| node.set_live(accesskit::Live::Polite))
+                        .child(label().text(text(MsgId::WriterPreparingPreview))),
+                )
+                .child(
+                    Button::new()
+                        .on_press(move |_| {
+                            task::cancel(writer);
+                            writer.trial.restart_focus.request_focus();
+                        })
+                        .child(text(MsgId::WriterCancel)),
+                );
+        }
         if let Some(caption) = writer.trial.snapshot.read().as_ref() {
             panel = panel.child(label().text(caption.caption.clone()).font_size(t::small()));
         }
@@ -81,6 +107,13 @@ impl Component for PreviewScreen {
                 .prose_font()
                 .font_size(t::prose_size()),
         );
+        if pending {
+            return ScrollView::new()
+                .width(Size::fill())
+                .height(Size::flex(1.))
+                .child(panel)
+                .into_element();
+        }
         if let Some(request) = &page.condition {
             panel = panel
                 .child(label().text(text(MsgId::WriterConditionInput)))
@@ -190,6 +223,8 @@ pub(crate) struct TrialInputs {
     pub include_drafts: State<bool>,
     pub values: State<std::collections::BTreeMap<String, String>>,
     pub snapshot: State<Option<Snapshot>>,
+    work: State<Option<task::Work>>,
+    restart_focus: AccessibilityId,
 }
 impl TrialInputs {
     pub(crate) fn catalogue_stale(&self, writer: Writer) -> bool {
@@ -201,6 +236,8 @@ impl TrialInputs {
     pub fn new() -> Self {
         Self {
             snapshot: use_state(|| None),
+            work: use_state(|| None),
+            restart_focus: use_a11y(),
             locale: use_state(String::new),
             variant: use_state(String::new),
             include_drafts: use_state(|| false),
@@ -208,3 +245,6 @@ impl TrialInputs {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

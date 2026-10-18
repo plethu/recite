@@ -1,17 +1,19 @@
 //! Freya owns history; the workspace validates locations before accepting them.
 #[cfg(target_os = "linux")]
 pub(crate) mod activation;
-mod location;
-mod restore;
+mod apply;
+pub(crate) mod location;
+pub(crate) mod request;
+pub(crate) mod worker;
 use crate::{
     AppMode,
     editing::{Pane, Writer},
     localisation::CatalogueView,
 };
+
 use freya::{prelude::*, router::*};
 use location::{Location, Screen};
 use recite_writer_model::View;
-use restore::apply;
 
 /// Initial workspace link for native hosts. Project links resolve within the opened project.
 #[derive(Clone)]
@@ -23,6 +25,25 @@ pub(crate) struct NavigationReady(pub(crate) State<bool>);
 pub(crate) fn project_from_route(route: &str) -> Result<Option<std::path::PathBuf>, String> {
     let location = route.parse::<Location>().map_err(str::to_owned)?;
     Ok(location.project.map(std::path::PathBuf::from))
+}
+
+/// A matching initial route can avoid constructing a view that will never be shown.
+/// Route application still owns validation, navigation and draft protection.
+pub(crate) fn initial_view(
+    route: Option<&str>,
+    document: &str,
+) -> Option<recite_config::WriterView> {
+    let location = route?.parse::<Location>().ok()?;
+    if location.screen != Screen::Write
+        || (!location.document.is_empty() && location.document != document)
+    {
+        return None;
+    }
+    if location.source {
+        Some(recite_config::WriterView::Source)
+    } else {
+        location.view
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -74,7 +95,7 @@ impl Component for ModeWorkbench {
     }
 }
 
-fn snapshot(writer: Writer) -> Location {
+pub(crate) fn snapshot(writer: Writer) -> Location {
     let model = writer.buffers.model.read();
     let state = writer.localisation.read();
     let files = writer.files.read();
@@ -138,6 +159,15 @@ fn snapshot(writer: Writer) -> Location {
     location
 }
 
+fn settled_snapshot(writer: Writer) -> Option<Location> {
+    if writer.work.busy() {
+        return None;
+    }
+    let location = snapshot(writer);
+    // Failed Rules reloads can also leave the screen without a reply.
+    (location.screen != Screen::Rules || location.passage.is_some()).then_some(location)
+}
+
 /// Observe accepted editor transitions, including scene navigation outside the toolbar.
 /// Queue edits and focus within a beat replace the current location, so typing
 /// does not flood Back history.
@@ -146,6 +176,7 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
     let startup_project = use_try_consume::<crate::InitialProject>();
     let mut pending = use_state(move || initial.map(|r| r.0));
     let mut started = use_state(|| false);
+    let mut starting = use_state(|| false);
     #[cfg(target_os = "linux")]
     use_provide_context(move || NavigationReady(started));
     use_after_side_effect(move || {
@@ -158,20 +189,35 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
             return;
         }
         let router = RouterContext::get();
-        if !*started.peek() {
-            started.set(true);
+        if !*started.read() {
+            if *starting.read() {
+                return;
+            }
             if let Some(link) = pending.write().take() {
+                starting.set(true);
+                let completed = EventHandler::new(move |result: Result<(), String>| {
+                    if let Err(error) = result {
+                        report_error(writer, error);
+                    }
+                    starting.set(false);
+                    started.set(true);
+                    let _ = RouterContext::get().replace(snapshot(writer));
+                });
                 let result = link
                     .parse::<Location>()
                     .map_err(str::to_owned)
-                    .and_then(|location| apply(writer, &location));
+                    .and_then(|location| route(writer, location, None, completed.clone()));
                 if let Err(error) = result {
-                    report_error(writer, error);
+                    completed.call(Err(error));
                 }
+            } else {
+                started.set(true);
+                let _ = router.replace(snapshot(writer));
             }
-            let _ = router.replace(snapshot(writer));
         } else {
-            let next = snapshot(writer);
+            let Some(next) = settled_snapshot(writer) else {
+                return;
+            };
             let current = router.current::<Location>();
             if next != current {
                 if next.same_place(&current) {
@@ -185,7 +231,8 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
 }
 
 pub(super) fn step(writer: Writer, forward: bool) {
-    if writer.localisation.peek().modal_open() || *writer.settings_open.peek() {
+    if writer.work.busy() || writer.localisation.peek().modal_open() || *writer.settings_open.peek()
+    {
         return;
     }
     let router = RouterContext::get();
@@ -198,13 +245,19 @@ pub(super) fn step(writer: Writer, forward: bool) {
         router.go_back();
     }
     let target = router.current::<Location>();
-    if let Err(error) = apply(writer, &target) {
-        if forward {
-            router.go_back();
-        } else {
-            router.go_forward();
+    let completed = EventHandler::new(move |result: Result<(), String>| {
+        if let Err(error) = result {
+            let router = RouterContext::get();
+            if forward {
+                router.go_back();
+            } else {
+                router.go_forward();
+            }
+            report_error(writer, error);
         }
-        report_error(writer, error);
+    });
+    if let Err(error) = route(writer, target, None, completed.clone()) {
+        completed.call(Err(error));
     }
 }
 
@@ -213,7 +266,8 @@ pub(super) fn open_passage(
     document: Option<&str>,
     beat: &str,
     passage: &str,
-) -> bool {
+    completed: EventHandler<Result<(), String>>,
+) {
     let mut location = snapshot(writer);
     location.screen = Screen::Localise;
     if let Some(document) = document {
@@ -222,13 +276,29 @@ pub(super) fn open_passage(
     location.beat = Some(beat.into());
     location.passage = Some(passage.into());
     location.source = false;
-    match apply(writer, &location) {
-        Ok(()) => true,
-        Err(error) => {
-            report_error(writer, error);
-            false
-        }
+    if let Err(error) = route(writer, location, None, completed.clone()) {
+        completed.call(Err(error));
     }
+}
+
+pub(super) fn route(
+    writer: Writer,
+    location: Location,
+    cancelled: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    completed: EventHandler<Result<(), String>>,
+) -> Result<(), String> {
+    writer.work.require_idle()?;
+    crate::projections::cancel_view(writer);
+    writer.remember_scene();
+    writer.buffers.harvest();
+    crate::editor_work::navigate(
+        writer,
+        request::Request {
+            target: request::Target::Location(location),
+            cancelled,
+        },
+        completed,
+    )
 }
 
 pub(super) fn buttons(mut writer: Writer) -> Element {
@@ -240,7 +310,7 @@ pub(super) fn buttons(mut writer: Writer) -> Element {
             crate::controls::IconButton::new("Back", crate::controls::Icon::Back, move || {
                 step(writer, false)
             })
-            .enabled(router.can_go_back()),
+            .enabled(router.can_go_back() && !writer.work.busy()),
         )
         .child(
             crate::controls::IconButton::new(
@@ -248,19 +318,25 @@ pub(super) fn buttons(mut writer: Writer) -> Element {
                 crate::controls::Icon::Forward,
                 move || step(writer, true),
             )
-            .enabled(router.can_go_forward()),
+            .enabled(router.can_go_forward() && !writer.work.busy()),
         )
-        .child(crate::controls::IconButton::new(
-            "Copy link to this view",
-            crate::controls::Icon::Link,
-            move || {
-                let link = format!("recite://writer{}", snapshot(writer));
-                writer.message.report(
-                    Clipboard::set(link).map_err(|e| format!("Could not copy link: {e:?}")),
-                    "Link copied.".into(),
-                );
-            },
-        ))
+        .child(
+            crate::controls::IconButton::new(
+                "Copy link to this view",
+                crate::controls::Icon::Link,
+                move || {
+                    let Some(location) = settled_snapshot(writer) else {
+                        return;
+                    };
+                    let link = format!("recite://writer{location}");
+                    writer.message.report(
+                        Clipboard::set(link).map_err(|e| format!("Could not copy link: {e:?}")),
+                        "Link copied.".into(),
+                    );
+                },
+            )
+            .enabled(settled_snapshot(writer).is_some()),
+        )
         .into_element()
 }
 

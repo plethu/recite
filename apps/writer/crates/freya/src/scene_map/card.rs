@@ -81,6 +81,8 @@ impl Component for Card {
             zoom,
         };
         rect()
+            // Above both nested connection drawing layers.
+            .layer(3)
             .position(
                 Position::new_absolute()
                     .left(self.node.x * zoom)

@@ -128,11 +128,7 @@ impl SavedProjectIndex {
             return None;
         }
         let key = self.workspace_relative_path(path)?;
-        let key = if let Some(existing) = self
-            .documents
-            .values()
-            .find(|document| document.identity.canonical_path == path)
-        {
+        let key = if let Some(existing) = self.documents.get(path) {
             existing.identity.project_relative_path.clone()
         } else if self
             .documents

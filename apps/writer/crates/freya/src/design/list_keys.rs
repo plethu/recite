@@ -7,7 +7,10 @@ impl ListKeys {
     pub fn new() -> Self {
         let mut pending = use_state(|| None);
         use_after_side_effect(move || {
-            let focus = *Platform::get().focused_accessibility_id.read();
+            let focus = *Platform::get()
+                .current_window()
+                .focused_accessibility_id
+                .read();
             if pending.peek().is_some_and(|id| id != focus) {
                 pending.set(None);
             }
@@ -43,8 +46,12 @@ impl ListKeys {
             if pending {
                 return Some((count > 0).then_some(0));
             }
-            self.0
-                .set(Some(*Platform::get().focused_accessibility_id.peek()));
+            self.0.set(Some(
+                *Platform::get()
+                    .current_window()
+                    .focused_accessibility_id
+                    .peek(),
+            ));
             return Some(None);
         }
         if normal

@@ -25,7 +25,7 @@ fn cross_file_preview_uses_the_current_document_and_its_unsaved_overlay()
         "{:?}",
         document.diagnostics()
     );
-    let mut workbench = Workbench::from_document(document)?;
+    let mut workbench = Workbench::from_document(document, None)?;
     workbench.start_preview()?;
     assert_eq!(
         workbench.preview_page().ok_or("page")?.text,
@@ -49,7 +49,7 @@ fn unchanged_effective_project_preserves_preview_revision_and_undo()
         schema: None,
     };
     let document = Document::in_project(key.clone(), source, context.clone())?;
-    let mut workbench = Workbench::from_document(document)?;
+    let mut workbench = Workbench::from_document(document, None)?;
     workbench.set_draft("An applied edit.".into());
     workbench.apply()?;
     workbench.start_preview()?;

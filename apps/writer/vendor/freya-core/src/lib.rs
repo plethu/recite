@@ -1,0 +1,225 @@
+pub mod accessibility;
+pub mod animation_clock;
+pub mod current_context;
+pub mod data;
+pub mod debug;
+pub mod diff_key;
+pub mod element;
+pub mod elements;
+pub mod event_handler;
+pub mod events;
+pub mod events_combos;
+pub mod extended_hashmap;
+pub mod fifo_cache;
+pub mod helpers;
+pub mod hooks;
+pub mod io;
+pub mod layers;
+pub mod lifecycle;
+pub mod lru_cache;
+pub mod metrics;
+pub mod node_id;
+pub mod notify;
+pub mod path_element;
+pub mod platform;
+pub mod reactive_context;
+pub mod render_pipeline;
+pub mod rendering_ticker;
+pub mod runner;
+pub mod scope;
+pub mod scope_id;
+pub mod style;
+pub mod text_cache;
+pub mod tree;
+pub mod tree_layout_adapter;
+pub mod user_event;
+
+#[cfg(feature = "hotreload")]
+pub mod hotreload {
+    pub use dioxus_devtools::*;
+}
+
+/// Used by all end users.
+pub mod prelude {
+    pub use bytes::Bytes;
+    pub use cursor_icon::CursorIcon;
+    pub use keyboard_types::{
+        Code,
+        Key,
+        Modifiers,
+        NamedKey,
+    };
+
+    pub use crate::{
+        accessibility::{
+            focus::*,
+            focus_strategy::*,
+            focusable::*,
+            id::{
+                AccessibilityId,
+                AccessibilityRole,
+            },
+            screen_reader::*,
+        },
+        animation_clock::AnimationClock,
+        data::*,
+        debug::*,
+        diff_key::DiffKey,
+        element::{
+            App,
+            Component,
+            ComponentKey,
+            ComponentOwned,
+            Element,
+            EventHandlers,
+            IntoElement,
+            RenderContext,
+        },
+        elements::{
+            extensions::*,
+            image::{
+                AspectRatio,
+                ImageCover,
+                SamplingMode,
+                image,
+            },
+            label::{
+                Label,
+                TextWidth,
+                label,
+            },
+            paragraph::{
+                Paragraph,
+                ParagraphHolder,
+                Span,
+                paragraph,
+            },
+            rect::{
+                Rect,
+                rect,
+            },
+        },
+        event_handler::{
+            Callback,
+            EventHandler,
+            NoArgCallback,
+        },
+        events::{
+            data::*,
+            modifiers::*,
+            *,
+        },
+        events_combos::*,
+        hooks::{
+            previous_and_current::*,
+            use_id::*,
+        },
+        io::{
+            thread::thread,
+            timer::timer,
+        },
+        layers::Layer,
+        lifecycle::{
+            base::*,
+            context::*,
+            effect::*,
+            future_task::*,
+            global_context::*,
+            memo::*,
+            reactive::*,
+            readable::*,
+            state::*,
+            task::*,
+            writable::*,
+            writable_utils::*,
+        },
+        platform::*,
+        reactive_context::ReactiveContext,
+        rendering_ticker::RenderingTicker,
+        scope_id::ScopeId,
+        style::{
+            border::*,
+            color::*,
+            corner_radius::*,
+            cursor::*,
+            fill::*,
+            font_feature::*,
+            font_size::*,
+            font_slant::*,
+            font_weight::*,
+            font_width::*,
+            gradient::*,
+            letter_spacing::*,
+            render_callback::{
+                RenderCallback,
+                RenderContext as FillRenderContext,
+            },
+            scale::*,
+            shader::*,
+            shadow::*,
+            text_align::*,
+            text_decoration::*,
+            text_height::*,
+            text_overflow::*,
+            text_shadow::*,
+            transform_origin::*,
+            vertical_align::*,
+        },
+        user_event::{
+            GlobalUserEvent,
+            UserEvent,
+        },
+    };
+}
+
+/// Used by renderers such as freya-testing, freya-winit or just integration crates.
+pub mod integration {
+    pub use ragnarok::NodesState;
+    pub use rustc_hash::*;
+
+    pub use crate::{
+        accessibility::{
+            dirty_nodes::*,
+            focus_strategy::*,
+            id::*,
+            ime::*,
+            screen_reader::*,
+            tree::*,
+        },
+        animation_clock::AnimationClock,
+        data::*,
+        element::*,
+        elements::extensions::*,
+        events::{
+            data::*,
+            executor::*,
+            measurer::*,
+            modifiers::*,
+            name::*,
+            platform::*,
+        },
+        lifecycle::{
+            global_context::GlobalContexts,
+            state::State,
+            writable_utils::WritableUtils,
+        },
+        node_id::NodeId,
+        platform::*,
+        render_pipeline::RenderPipeline,
+        rendering_ticker::*,
+        runner::{
+            Runner,
+            TasksPollStage,
+        },
+        scope_id::ScopeId,
+        style::default_fonts::{
+            default_fonts,
+            default_monospace_fonts,
+        },
+        tree::{
+            DiffModifies,
+            Tree,
+        },
+        user_event::*,
+    };
+}

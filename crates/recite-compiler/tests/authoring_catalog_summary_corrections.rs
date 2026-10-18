@@ -1,8 +1,10 @@
 #![cfg(test)]
 
-use recite_compiler::authoring::{
-    CatalogCoverageSummary, CatalogIdentity, CatalogInput, TranslationStatus,
-};
+#[path = "support/catalog_resolution.rs"]
+mod catalog_resolution;
+use catalog_resolution::build;
+
+use recite_compiler::authoring::{CatalogIdentity, CatalogInput, TranslationStatus};
 use recite_core::{
     LocaleId,
     po::PoDocument,
@@ -66,8 +68,7 @@ fn locale_truncation_precedes_default_and_named_variant_is_major() {
             .collect::<Vec<_>>(),
         [Some("formal"), None]
     );
-    let summary = CatalogCoverageSummary::build(&expected(), [input("pt", "pt", variant)], policy)
-        .expect("summary");
+    let summary = build(&expected(), [input("pt", "pt", variant)], policy).expect("summary");
     let candidates = summary.resolution().candidates();
     assert_eq!(
         candidates
@@ -93,7 +94,7 @@ fn locale_identity_is_canonical_and_po_language_must_match() {
     let identity = CatalogIdentity::new("fr", locale("FR_fr")).expect("canonical identity");
     assert_eq!(identity.locale().as_str(), "fr-FR");
     let canonical = input("fr", "FR_fr", &translated_po("FR-fr"));
-    let summary = CatalogCoverageSummary::build(
+    let summary = build(
         &expected(),
         [canonical],
         recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr-fr"))),
@@ -101,7 +102,7 @@ fn locale_identity_is_canonical_and_po_language_must_match() {
     .expect("canonical summary");
     assert_eq!(summary.catalogs()[0].locale().as_str(), "fr-FR");
 
-    let mislabeled = CatalogCoverageSummary::build(
+    let mislabeled = build(
         &expected(),
         [input("de", "de", &translated_po("fr"))],
         recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("de"))),
@@ -127,7 +128,7 @@ fn same_locale_resolution_searches_later_catalogue_sources() {
             reference: None,
         }],
     };
-    let summary = CatalogCoverageSummary::build(
+    let summary = build(
         &expected,
         [
             input(
@@ -164,7 +165,7 @@ fn same_locale_catalogues_reject_conflicting_plural_forms() {
         "fr",
         "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=3; plural=(n == 0 ? 0 : 1);\\n\"\n",
     );
-    let result = CatalogCoverageSummary::build(
+    let result = build(
         &expected(),
         [first, second],
         recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
@@ -193,7 +194,7 @@ fn stale_fuzzy_and_obsolete_plural_records_remain_in_lossless_inventory() {
         "#~ msgid \"Removed one\"\n#~ msgid_plural \"Removed many\"\n",
         "#~ msgstr[0] \"Retire\"\n#~ msgstr[1] \"Retires\"\n",
     );
-    let summary = CatalogCoverageSummary::build(
+    let summary = build(
         &expected(),
         [input("fr", "fr", source)],
         recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),

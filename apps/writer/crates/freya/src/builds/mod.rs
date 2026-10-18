@@ -59,10 +59,34 @@ pub(crate) fn try_open(mut writer: Writer) -> Result<(), String> {
     Ok(())
 }
 fn start(mut writer: Writer, save: bool) {
-    if save && let Err(e) = writer.buffers.save_all(writer.files) {
-        writer.message.error(e);
+    let selected = writer
+        .files
+        .peek()
+        .as_ref()
+        .and_then(|p| p.builds.selected.clone());
+    if save {
+        crate::editor_work::start(
+            writer,
+            crate::editor_work::SaveScope::All,
+            EventHandler::new(move |result| {
+                if let Err(error) = result {
+                    writer.message.error(error);
+                    return;
+                }
+                start_selected(writer, selected.clone());
+            }),
+        );
         return;
     }
+    if writer.files.peek().as_ref().is_some_and(|p| p.saving) {
+        writer
+            .message
+            .error(crate::project::FileError::SavePending.to_string());
+        return;
+    }
+    start_selected(writer, selected);
+}
+fn start_selected(mut writer: Writer, selected: Option<String>) {
     let mut files = writer.files.write();
     let Some(project) = files.as_mut() else {
         return;
@@ -70,7 +94,7 @@ fn start(mut writer: Writer, save: bool) {
     if project.builds.busy() {
         return;
     }
-    match job::Job::start(project.root().to_owned(), project.builds.selected.clone()) {
+    match job::Job::start(project.root().to_owned(), selected) {
         Ok(job) => {
             project.builds.job = Some(job);
             project.builds.result = None;

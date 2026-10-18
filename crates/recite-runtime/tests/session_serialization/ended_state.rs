@@ -16,6 +16,7 @@ fn restores_end_state_without_replaying_scene() {
     assert_line(next(&asset, &mut session), "b8b013bec1c39b26b36a", "Start.");
     assert_end_effects(next(&asset, &mut session), ["finished"]);
 
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores ended state");
     assert_eq!(

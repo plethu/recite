@@ -1,7 +1,9 @@
 use std::alloc::System;
 use std::hint::black_box;
 
-use recite_core::compiled::decode_compiled_dialogue_messagepack;
+use recite_core::compiled::{
+    CompiledDialogue, canonical_compiled_dialogue_fingerprint, decode_compiled_dialogue_messagepack,
+};
 use recite_runtime::{DialogueEvent, DialogueSession};
 use serde::Serialize;
 use stats_alloc::{Region, Stats, StatsAlloc};
@@ -90,10 +92,22 @@ fn build_fixture_report(
     let compiled = compiler.compile_with_schema()?;
     let runtime = RuntimeProject::load(&project, &compiled)?;
     let driver = runtime.driver();
+    let cold = CompiledDialogue::new(compiled.asset().dialogue.clone().into_payload());
     let mut operations = vec![measure_operation(allocator, "asset_decode", || {
         decode_compiled_dialogue_messagepack(&compiled.asset().messagepack)
             .map_err(|error| crate::error(format!("invalid allocation-probe asset: {error}")))
     })?];
+    operations.push(measure_operation(allocator, "asset_fingerprint", || {
+        canonical_compiled_dialogue_fingerprint(&cold)
+            .map_err(|error| crate::error(format!("invalid fingerprint-probe asset: {error}")))
+    })?);
+    assert_eq!(
+        cold.content_fingerprint()
+            .map_err(|error| crate::error(error.to_string()))?
+            .digest()
+            .as_bytes(),
+        blake3::hash(&compiled.asset().messagepack).as_bytes(),
+    );
     operations.extend(runtime_operations(&driver, allocator)?);
 
     Ok(FixtureRuntimeAllocationReport {

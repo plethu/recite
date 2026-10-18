@@ -20,6 +20,7 @@ pub(crate) fn controls(
 ) -> FileChrome {
     let buffers = writer.buffers;
     let initial = use_try_consume::<crate::InitialProject>();
+    let initial_route = use_try_consume::<crate::InitialRoute>();
     let path = use_state(move || {
         initial
             .and_then(|value| value.0)
@@ -43,12 +44,7 @@ pub(crate) fn controls(
     use_after_side_effect(move || {
         if *open_created.read() && !*new_project_open.read() && !crate::design::modal_open() {
             open_created.set(false);
-            crate::project_loading::start(
-                job,
-                path.peek().as_str().into(),
-                message,
-                writer.buffers,
-            );
+            crate::project_loading::start(job, path.peek().as_str().into(), writer, None);
         }
     });
     use_hook(move || {
@@ -56,8 +52,8 @@ pub(crate) fn controls(
             crate::project_loading::start(
                 job,
                 path.peek().as_str().into(),
-                message,
-                writer.buffers,
+                writer,
+                initial_route.map(|route| route.0),
             );
         }
     });
@@ -74,7 +70,7 @@ pub(crate) fn controls(
             message.error_with_action(
                 format!("Draft recovery failed: {error}. Keep this window open and retry Save."),
                 "Retry save".into(),
-                EventHandler::new(move |()| message.report(buffers.save(files), "Saved.".into())),
+                EventHandler::new(move |()| crate::editor_work::save(writer, false)),
             );
         }
     });
@@ -111,8 +107,7 @@ pub(crate) fn controls(
             // A stamp, not a primary: a modal's primary is the screen's one plum fill.
             Button::new()
                 .stamp()
-                .enabled(current.is_some())
-                // The open document tab announces unsaved state; the dot here is visual.
+                .enabled(current.as_ref().is_some_and(|p| !p.saving))
                 .named(caption.clone())
                 .on_press(move |_| {
                     crate::commands::Command::Save.run(writer);
@@ -147,12 +142,7 @@ pub(crate) fn controls(
                 );
                 return;
             }
-            crate::project_loading::start(
-                job,
-                path.peek().as_str().into(),
-                message,
-                writer.buffers,
-            );
+            crate::project_loading::start(job, path.peek().as_str().into(), writer, None);
         });
         let submit = open.clone();
 
@@ -313,10 +303,8 @@ pub(crate) fn controls(
             scenes.push(crate::scene_navigation::SceneBranch {
                 caption,
                 active: target == project.current,
-                open: EventHandler::new(move |()| match writer.open_document(&target) {
-                    Ok(()) => {
-                        message.info("Scene opened.".into());
-                    }
+                open: EventHandler::new(move |()| match writer.open_document(&target, None) {
+                    Ok(()) => {}
                     Err(error) => message.error(error),
                 }),
             });
@@ -326,15 +314,16 @@ pub(crate) fn controls(
             .read()
             .as_ref()
             .is_ok_and(|m| m.has_draft() || project.dirty(m.document().source()));
-        if dirty {
-            "Unsaved changes"
+        if project.saving {
+            crate::messages::text(crate::messages::MsgId::WriterSaving)
+        } else if dirty {
+            "Unsaved changes".into()
         } else {
-            "Saved to disk"
+            "Saved to disk".into()
         }
     } else {
-        "Example · Open a project to save"
-    }
-    .to_owned();
+        "Example · Open a project to save".into()
+    };
     FileChrome {
         actions,
         services,

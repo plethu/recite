@@ -25,54 +25,15 @@ impl Component for Controls {
         let mut include_drafts = writer.trial.include_drafts;
         let values = writer.trial.values;
         let mut open = use_state(|| false);
-        let id = use_a11y();
+        let id = writer.trial.restart_focus;
         let draft_id = use_a11y();
         let restart = SubmitAction {
             id,
             caption: text(MsgId::WriterRestartPreview),
             enabled: true,
             action: EventHandler::new(move |()| {
-                let setup = super::prepare::prepare(
-                    writer,
-                    &locale.peek(),
-                    &variant.peek(),
-                    *include_drafts.peek(),
-                    &values.peek(),
-                );
-                match setup {
-                    Ok(setup) => {
-                        if writer
-                            .try_navigate(|model| model.start_preview_with(setup))
-                            .is_ok()
-                        {
-                            let revision = writer
-                                .buffers
-                                .model
-                                .peek()
-                                .as_ref()
-                                .map(|m| m.document().revision())
-                                .unwrap_or_default();
-                            writer.trial.snapshot.set(Some(super::Snapshot::capture(
-                                format!(
-                                    "{} · {} · {} {revision}",
-                                    if locale.peek().is_empty() {
-                                        text(MsgId::WriterSourceOnly)
-                                    } else {
-                                        locale.peek().clone()
-                                    },
-                                    text(if *include_drafts.peek() {
-                                        MsgId::WriterTrialDrafts
-                                    } else {
-                                        MsgId::WriterTrialSaved
-                                    }),
-                                    text(MsgId::WriterSourceRevision)
-                                ),
-                                !locale.peek().is_empty(),
-                                writer.localisation.peek().catalogue.as_ref(),
-                            )));
-                        }
-                    }
-                    Err(error) => writer.message.error(error),
+                if let Err(error) = super::start(writer, true) {
+                    writer.message.error(error);
                 }
             }),
         };
@@ -142,7 +103,7 @@ impl Component for Controls {
                 .as_ref()
                 .map(|m| m.document().preview_bindings())
                 .unwrap_or_default();
-            for binding in bindings {
+            for binding in bindings.iter() {
                 let name = binding.value.trim_start_matches('$').to_owned();
                 body = body.child(
                     rect()

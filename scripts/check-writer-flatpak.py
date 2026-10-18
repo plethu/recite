@@ -64,7 +64,7 @@ def check_builder_manifest() -> None:
         for source in writer["sources"]
         if isinstance(source, dict) and source.get("dest") == "skia"
     )
-    require(skia["commit"] == "41382841f36aa208e7433f3c46d14237a1b15054", "wrong Skia revision")
+    require(skia["commit"] == "61e7ca4e99062cdd0ab69445d5963fb3365778f6", "wrong Skia revision")
     externals = {
         source.get("dest"): source.get("commit")
         for source in writer["sources"]

@@ -28,7 +28,7 @@ impl Component for Context {
                 .read()
                 .as_ref()
                 .ok()
-                .and_then(|m| m.document().script_snapshot().ok())
+                .and_then(|m| m.document().cached_script())
         });
         let links = use_memo(move || {
             script

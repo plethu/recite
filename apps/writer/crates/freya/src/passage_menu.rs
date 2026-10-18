@@ -34,7 +34,10 @@ pub(super) fn render(writer: Writer, mut details: State<bool>, passage: &Passage
                     crate::design::tokens::SHADOW_OFFSET,
                 ))
                 .on_key_down(move |event: Event<KeyboardEventData>| {
-                    let focus = *Platform::get().focused_accessibility_id.peek();
+                    let focus = *Platform::get()
+                        .current_window()
+                        .focused_accessibility_id
+                        .peek();
                     let current = items.iter().position(|id| *id == focus).unwrap_or(0);
                     let vim =
                         writer.preferences.peek().config.ui.keymap == recite_config::Keymap::Vim;

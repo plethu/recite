@@ -1,9 +1,11 @@
 //! Project declarations keep generated output and source ownership separate.
+mod buffer;
+pub(crate) use buffer::{SourceBuffer, harvest};
 mod entries;
 mod producer;
 mod producer_controls;
 pub(crate) use producer_controls::ProducerPoll;
-mod recovery;
+pub(crate) mod recovery;
 mod session;
 use entries::entries;
 mod source;
@@ -14,7 +16,7 @@ use crate::{
     messages::{MsgId, text},
 };
 use freya::prelude::*;
-pub(crate) use session::Session;
+pub(crate) use session::{DeclarationSave, Session};
 
 pub(crate) fn open(mut writer: Writer) {
     if let Err(error) = try_open(writer) {
@@ -25,6 +27,7 @@ pub(crate) fn try_open(mut writer: Writer) -> Result<(), String> {
     (|| {
         let mut files = writer.files.write();
         let project = files.as_mut().ok_or("Open a project first.".to_owned())?;
+        project.require_idle_save().map_err(|e| e.to_string())?;
         if project.declarations.is_none() {
             project.declarations = Some(Session::open(project.root()).map_err(|e| e.to_string())?);
         }
@@ -70,7 +73,10 @@ impl Component for Declarations {
                     .child(
                         Button::new()
                             .flat()
-                            .on_press(move |_| writer.pane.set(Pane::Map))
+                            .on_press(move |_| {
+                                harvest(writer);
+                                writer.pane.set(Pane::Map);
+                            })
                             .child(text(MsgId::WriterReturnWriting)),
                     ),
             );

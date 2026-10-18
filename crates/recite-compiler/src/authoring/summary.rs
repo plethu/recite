@@ -2,10 +2,11 @@ use recite_core::{
     BlockId, SourceSpan,
     ast::{
         Block, BlockReference, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect,
-        EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, Statement,
+        EffectMode, IfBranch, InterpolationBinding, Line, MatchBranch, SourceFile, SourceMetadata,
+        Statement,
     },
 };
-use std::sync::Arc;
+use std::{collections::BTreeSet, sync::Arc};
 
 mod regions;
 #[path = "types.rs"]
@@ -23,6 +24,7 @@ pub struct AuthoringSummary {
     metadata: Arc<Vec<MetadataSummary>>,
     condition_functions: Arc<Vec<FunctionReferenceSummary>>,
     effect_functions: Arc<Vec<FunctionReferenceSummary>>,
+    bindings: Arc<Vec<InterpolationBinding>>,
 }
 
 impl AuthoringSummary {
@@ -38,7 +40,16 @@ impl AuthoringSummary {
             metadata: Arc::new(collector.metadata),
             condition_functions: Arc::new(collector.condition_functions),
             effect_functions: Arc::new(collector.effect_functions),
+            bindings: Arc::new(collector.bindings),
         }
+    }
+
+    /// First definition per caller value in each block, in source order.
+    /// Regions retain their own definitions so removing an earlier region can
+    /// reveal a later definition without reparsing it.
+    #[must_use]
+    pub fn interpolation_bindings(&self) -> &[InterpolationBinding] {
+        &self.bindings
     }
 
     #[must_use]
@@ -80,14 +91,19 @@ struct Collector {
     metadata: Vec<MetadataSummary>,
     condition_functions: Vec<FunctionReferenceSummary>,
     effect_functions: Vec<FunctionReferenceSummary>,
+    bindings: Vec<InterpolationBinding>,
+    binding_values: BTreeSet<String>,
 }
 
 impl Collector {
     fn block(&mut self, block: &Block) {
+        self.binding_values.clear();
         self.blocks.push(BlockDefinitionSummary {
             id: block.id.clone(),
             id_span: block.id_span.clone(),
             span: block.span.clone(),
+            is_default: block.is_default,
+            has_end_destination: false,
         });
         self.metadata(&block.metadata);
         for statement in &block.statements {
@@ -108,6 +124,7 @@ impl Collector {
     }
 
     fn line(&mut self, enclosing_block: &BlockId, line: &Line) {
+        self.bindings(&line.interpolation_bindings);
         self.stable_ids.push(StableIdSummary {
             kind: StableIdKind::Line,
             source_id: line.source_id.clone(),
@@ -123,6 +140,7 @@ impl Collector {
     }
 
     fn choice(&mut self, enclosing_block: &BlockId, choice: &Choice) {
+        self.bindings(&choice.interpolation_bindings);
         self.stable_ids.push(StableIdSummary {
             kind: StableIdKind::Choice,
             source_id: choice.source_id.clone(),
@@ -147,6 +165,11 @@ impl Collector {
     }
 
     fn divert(&mut self, target: &DivertTarget, span: &SourceSpan) {
+        if matches!(target, DivertTarget::End)
+            && let Some(block) = self.blocks.last_mut()
+        {
+            block.has_end_destination = true;
+        }
         if let DivertTarget::Block(BlockReference {
             file,
             file_span,
@@ -229,6 +252,15 @@ impl Collector {
             argument_count: effect.args.len(),
             kind,
         });
+    }
+
+    fn bindings(&mut self, bindings: &[InterpolationBinding]) {
+        for binding in bindings {
+            if !self.binding_values.contains(&binding.value) {
+                self.binding_values.insert(binding.value.clone());
+                self.bindings.push(binding.clone());
+            }
+        }
     }
 
     fn metadata(&mut self, metadata: &SourceMetadata) {

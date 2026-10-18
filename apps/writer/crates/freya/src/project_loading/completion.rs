@@ -51,7 +51,11 @@ pub(super) fn poll(loading: &Loading) {
         );
         return;
     }
-    let (project, workbench) = match loaded {
+    let super::worker::LoadedProject {
+        files: project,
+        workbench,
+        view,
+    } = match loaded {
         Ok(loaded) => loaded,
         Err(error) => {
             panel.set(true);
@@ -76,12 +80,15 @@ pub(super) fn poll(loading: &Loading) {
         reply_error(activation, error);
         return;
     }
+    loading.writer.reset_scenes();
     loading
         .writer
         .buffers
         .install(workbench, loading.writer.dark);
     files.set(Some(project));
-    if let Err(error) = loading.writer.scene_opened() {
+    // An explicit route is fixed intent; preferences may change during the load.
+    let view = view.unwrap_or(loading.writer.preferences.peek().config.writer.view);
+    if let Err(error) = loading.writer.scene_opened(view) {
         let error =
             format!("Project {opened_root} opened, but its initial scene could not open: {error}");
         message.error(error.clone());
@@ -100,19 +107,14 @@ pub(super) fn poll(loading: &Loading) {
     );
     #[cfg(target_os = "linux")]
     if let Some(request) = activation {
-        let result = crate::navigation::activation::receive(
-            loading.writer,
-            request.route.as_deref(),
-            &request.cancelled,
-            true,
-        )
-        .map_err(|error| {
-            format!("Project {opened_root} opened, but the target location could not open: {error}")
-        });
-        if let Err(error) = &result {
+        let reply = request.reply.clone();
+        if let Err(error) = crate::navigation::activation::receive(loading.writer, request, true) {
+            let error = format!(
+                "Project {opened_root} opened, but the target location could not open: {error}"
+            );
             message.error(error.clone());
+            let _ = reply.send(Err(error));
         }
-        let _ = request.reply.send(result);
     }
 }
 

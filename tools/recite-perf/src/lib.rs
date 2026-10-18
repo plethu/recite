@@ -42,6 +42,22 @@ fn expected(scope: Scope) -> BTreeSet<String> {
             .flat_map(|operation| ["wide", "dense"].map(|shape| format!("{operation}/{shape}"))),
         )
         .chain(["catalog_import/cold_100", "catalog_import/populated_10000"].map(str::to_owned))
+        .chain(
+            [
+                "lsp_change/files_40",
+                "lsp_change/files_400",
+                "project_build/files_40",
+                "project_build/files_400",
+            ]
+            .map(str::to_owned),
+        )
+        .chain(
+            [
+                "catalog_coverage/entries_100",
+                "catalog_coverage/entries_1000",
+            ]
+            .map(str::to_owned),
+        )
         .chain(["ui_labels/static_1000", "ui_labels/parameters_1000"].map(str::to_owned))
         .collect();
     }
@@ -50,6 +66,8 @@ fn expected(scope: Scope) -> BTreeSet<String> {
     }
     if matches!(scope, Scope::Writer) {
         return [
+            "preview_start/passages_1000",
+            "preview_start/passages_10000",
             "cold_script/effects_1000",
             "cold_script/effects_10000",
             "changed_draft/wide",

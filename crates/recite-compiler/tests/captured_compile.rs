@@ -2,6 +2,7 @@ use recite_compiler::{
     authoring::{BuildGeneration, BuildInput, BuildRequest, SnapshotGeneration},
     compile::{
         CompileInput, CompileOptions, compile_build_request_to_model, compile_inputs_to_model,
+        validate_build_request,
     },
 };
 use recite_core::{
@@ -19,10 +20,10 @@ fn immutable_captured_sources_match_raw_compilation_including_failures()
             [BuildInput::saved_source(DocumentKey::new("dialogue.recite")?, &source)],
         )?;
         let options = CompileOptions::new(CompilerVersion::new("captured-test")?, CompiledAssetId::new("dialogue")?, SourceMapId::new("dialogue.map")?, SchemaFingerprint::NoSchema);
-        assert_eq!(
-            compile_build_request_to_model(&request, options.clone())?,
-            compile_inputs_to_model([CompileInput::new("dialogue.recite", source)], options, None)?,
-        );
+        let expected = compile_inputs_to_model([CompileInput::new("dialogue.recite", source)], options.clone(), None)?;
+        assert_eq!(compile_build_request_to_model(&request, options.clone())?, expected);
+        assert_eq!(validate_build_request(&request), expected.diagnostics);
+        assert_eq!(validate_build_request(&request.clone()), expected.diagnostics);
     }
     Ok(())
 }

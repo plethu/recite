@@ -240,7 +240,7 @@ fn settings_keyboard_focus_reveals_lower_controls_and_monochrome_updates_live() 
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         (1000., 700.).into(),
-        |runner| runner.provide_root_context(Platform::get),
+        |runner| runner.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     support::click(&mut test, "Settings")?;

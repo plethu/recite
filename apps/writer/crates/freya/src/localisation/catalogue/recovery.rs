@@ -3,7 +3,7 @@ use super::*;
 use crate::recovery::{Snapshot, SnapshotStore};
 use serde::{Deserialize, Serialize};
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
-pub(super) struct SnapshotData {
+pub(crate) struct SnapshotData {
     version: u32,
     source: Arc<String>,
     drafts: Arc<Vec<(usize, Arc<Draft>)>>,
@@ -39,7 +39,7 @@ impl Catalogue {
         value.recovery = Some(store);
         Ok(value)
     }
-    fn recovery_snapshot(&self) -> Option<SnapshotData> {
+    pub(super) fn recovery_snapshot(&self) -> Option<SnapshotData> {
         self.dirty().then(|| SnapshotData {
             version: 1,
             source: self.document.source_snapshot(),
@@ -58,6 +58,7 @@ impl Catalogue {
         }
     }
     pub(crate) fn flush_recovery(&mut self) -> Result<(), String> {
+        self.require_idle_save()?;
         let snapshot = self.recovery_snapshot();
         if let Some(store) = &mut self.recovery {
             store.persist(snapshot).map_err(|e| e.to_string())?;
@@ -71,6 +72,7 @@ impl Catalogue {
             .or_else(|| self.recovery.as_ref().and_then(SnapshotStore::error))
     }
     pub(super) fn adopt(&mut self, mut next: Self) -> Result<(), String> {
+        self.require_idle_save()?;
         next.recovery = self.recovery.take();
         *self = next;
         self.flush_recovery()

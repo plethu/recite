@@ -88,7 +88,7 @@ if source.get("git") != "https://github.com/plethu/recite":
     raise SystemExit(f"recite grammar source drifted: {source!r}")
 if source.get("subpath") != "editors/recite-tree-sitter":
     raise SystemExit(f"recite grammar subpath drifted: {source!r}")
-approved_revision = "cb0e34a94709df290ebadcf371bcfd4e3ad587b1"
+approved_revision = "074ced2aec7549d5c9e2b86f04ca2f2fab6d7e9c"
 if source.get("rev") != approved_revision:
     raise SystemExit(
         "recite grammar revision must be the approved public base "

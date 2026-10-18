@@ -17,6 +17,36 @@ fn assert_equivalent(source: &str) {
         assert_eq!(parsed.syntax().text().to_string(), region.text());
         let lowered = parsed.lower_source_file();
         assert_eq!(region.lower_source_file("scene.recite"), lowered);
+        let mut roots = Vec::new();
+        let report = region
+            .try_visit_statements("scene.recite", |block, statement| {
+                assert!(block.statements.is_empty());
+                roots.push((
+                    block.id.clone(),
+                    block.default_speaker.clone(),
+                    statement.clone(),
+                ));
+                Ok::<_, std::convert::Infallible>(())
+            })
+            .unwrap();
+        let expected = lowered
+            .source_file
+            .blocks
+            .iter()
+            .flat_map(|block| {
+                block.statements.iter().map(|statement| {
+                    (
+                        block.id.clone(),
+                        block.default_speaker.clone(),
+                        statement.clone(),
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(roots, expected, "streamed roots: {source:?}");
+        assert_eq!(report.diagnostics, lowered.diagnostics);
+        assert_eq!(report.recovery, lowered.recovery);
+
         blocks.extend(lowered.source_file.blocks);
         diagnostics.extend(lowered.diagnostics);
         for (complete, class) in [
@@ -123,4 +153,16 @@ fn all_recite_fixtures_match_whole_file_lowering() {
         &mut count,
     );
     assert!(count > 0);
+}
+
+#[test]
+fn root_visitor_stops_at_the_requested_boundary() {
+    let source = ":: start default\n> first\n  Hello.\n> second\n  Goodbye.\n";
+    let mut visited = 0;
+    let result = source_regions(source)[0].try_visit_statements("scene.recite", |_, _| {
+        visited += 1;
+        Err::<(), _>("cancelled")
+    });
+    assert_eq!(result, Err("cancelled"));
+    assert_eq!(visited, 1);
 }

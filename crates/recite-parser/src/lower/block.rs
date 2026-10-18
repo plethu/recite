@@ -15,42 +15,49 @@ impl Lowerer<'_, '_> {
     pub(super) fn lower_blocks(&mut self) -> Vec<Block> {
         let mut blocks = Vec::new();
         let mut index = 0;
-
-        while index < self.lines.len() {
-            let line = self.lines[index];
-            let trimmed = line.trimmed_content();
-
-            if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Block) {
-                self.report_statement_before_block(line, trimmed);
-                index += 1;
-                continue;
-            }
-
-            let (block, next_index) = self.lower_block(index);
-            if let Some(block) = block {
-                blocks.push(block);
-            }
-            index = next_index;
+        while let Some((header_index, header)) = self.next_block_header(&mut index) {
+            let mut statements = Vec::new();
+            let result = self.visit_block_statements(header_index, |statement, sole| {
+                if sole {
+                    statements.reserve_exact(1);
+                }
+                statements.push(statement);
+                Ok::<(), std::convert::Infallible>(())
+            });
+            index = match result {
+                Ok(index) => index,
+                Err(impossible) => match impossible {},
+            };
+            blocks.push(header.into_block(statements));
         }
-
         blocks
     }
 
-    fn lower_block(&mut self, header_index: usize) -> (Option<Block>, usize) {
-        let Some(header) = self.lower_block_header(header_index) else {
-            return (None, header_index + 1);
-        };
-
-        let (statements, next_index) = self.lower_block_statements(header_index);
-        let mut block = Block::new(header.id, statements, header.span)
-            .with_id_span(header.id_span)
-            .with_default(header.is_default)
-            .with_metadata(header.metadata);
-        if let Some(default_speaker) = header.default_speaker {
-            block = block.with_default_speaker(default_speaker);
+    pub(super) fn visit_roots<E>(
+        &mut self,
+        mut visit: impl FnMut(&Block, &Statement) -> Result<(), E>,
+    ) -> Result<(), E> {
+        let mut index = 0;
+        while let Some((header_index, header)) = self.next_block_header(&mut index) {
+            let block = header.into_block(Vec::new());
+            index = self
+                .visit_block_statements(header_index, |statement, _| visit(&block, &statement))?;
         }
+        Ok(())
+    }
 
-        (Some(block), next_index)
+    fn next_block_header(&mut self, index: &mut usize) -> Option<(usize, BlockHeader)> {
+        while *index < self.lines.len() {
+            let header_index = *index;
+            let line = self.lines[header_index];
+            *index += 1;
+            if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Block) {
+                self.report_statement_before_block(line, line.trimmed_content());
+            } else if let Some(header) = self.lower_block_header(header_index) {
+                return Some((header_index, header));
+            }
+        }
+        None
     }
 
     fn lower_block_header(&mut self, header_index: usize) -> Option<BlockHeader> {
@@ -117,8 +124,12 @@ impl Lowerer<'_, '_> {
         })
     }
 
-    fn lower_block_statements(&mut self, header_index: usize) -> (Vec<Statement>, usize) {
-        let mut statements = Vec::new();
+    fn visit_block_statements<E>(
+        &mut self,
+        header_index: usize,
+        mut visit: impl FnMut(Statement, bool) -> Result<(), E>,
+    ) -> Result<usize, E> {
+        let mut emitted = false;
         let mut cursor = BodyCursor::new(&self.lines, header_index, BodyBoundary::NextBlock);
 
         while cursor.index() < self.lines.len() {
@@ -135,13 +146,18 @@ impl Lowerer<'_, '_> {
 
             let (statement, next_index) = self.lower_statement(index);
             if let Some(statement) = statement {
-                self.reserve_single_statement(&mut statements, &cursor, next_index);
-                statements.push(statement);
+                let sole = !emitted
+                    && self.lines[next_index..]
+                        .iter()
+                        .find(|line| !line.trimmed_content().is_empty())
+                        .is_none_or(|line| cursor.is_boundary(*line));
+                visit(statement, sole)?;
+                emitted = true;
             }
             cursor.set_index(next_index);
         }
 
-        (statements, cursor.index())
+        Ok(cursor.index())
     }
 
     fn report_statement_before_block(&mut self, line: LogicalLine<'_>, trimmed: &str) {
@@ -157,5 +173,18 @@ impl Lowerer<'_, '_> {
             1,
         )));
         super::mark_all(self.recovery);
+    }
+}
+
+impl BlockHeader {
+    fn into_block(self, statements: Vec<Statement>) -> Block {
+        let mut block = Block::new(self.id, statements, self.span)
+            .with_id_span(self.id_span)
+            .with_default(self.is_default)
+            .with_metadata(self.metadata);
+        if let Some(speaker) = self.default_speaker {
+            block = block.with_default_speaker(speaker);
+        }
+        block
     }
 }

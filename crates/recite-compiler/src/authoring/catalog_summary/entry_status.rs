@@ -1,4 +1,5 @@
-use recite_core::po::{PoDocument, PoEntry};
+use super::super::types::CatalogInput;
+use recite_core::po::PoEntry;
 
 use super::entry::CatalogEntryKey;
 
@@ -126,13 +127,11 @@ impl CatalogEntryStatus {
 
     pub(crate) fn build(
         key: &CatalogEntryKey,
-        document: &PoDocument,
+        input: &CatalogInput,
         plural_forms: Option<usize>,
     ) -> Self {
-        let matching = document
-            .entries()
-            .iter()
-            .filter(|entry| key.matches(entry, key.context()))
+        let matching = input
+            .matching_entries(key.context(), key.source_text(), key.plural_source_text())
             .collect::<Vec<_>>();
         let active = matching.iter().copied().find(|entry| {
             !entry.is_obsolete() && !entry.flags().iter().any(|flag| flag == "fuzzy")

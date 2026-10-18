@@ -41,6 +41,29 @@ pub(crate) fn lower_source_file(
     }
 }
 
+/// Syntax/lowering diagnostics and recovery after streaming all root statements.
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub struct SourceVisitReport {
+    pub diagnostics: Vec<Diagnostic>,
+    pub recovery: SourceRecovery,
+}
+
+pub(crate) fn visit_source_roots<E>(
+    path: &str,
+    source: &str,
+    first_line: u32,
+    mut diagnostics: Vec<Diagnostic>,
+    mut recovery: SourceRecovery,
+    visit: impl FnMut(&recite_core::ast::Block, &Statement) -> Result<(), E>,
+) -> Result<SourceVisitReport, E> {
+    Lowerer::new(path, source, &mut diagnostics, &mut recovery, first_line).visit_roots(visit)?;
+    Ok(SourceVisitReport {
+        diagnostics,
+        recovery,
+    })
+}
+
 pub(super) struct Lowerer<'source, 'diagnostics> {
     path: &'source str,
     lines: Vec<LogicalLine<'source>>,

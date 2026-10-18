@@ -12,7 +12,18 @@ use std::{
     thread::JoinHandle,
 };
 
-type LoadResult = Result<(ProjectFiles, Workbench), FileError>;
+pub(super) struct OpenProject {
+    pub path: PathBuf,
+    pub view: recite_config::WriterView,
+    pub route: Option<String>,
+}
+
+pub(super) struct LoadedProject {
+    pub files: ProjectFiles,
+    pub workbench: Workbench,
+    pub view: Option<recite_config::WriterView>,
+}
+type LoadResult = Result<LoadedProject, FileError>;
 
 #[derive(Clone)]
 struct Control {
@@ -41,7 +52,10 @@ pub(super) struct Load {
 }
 
 impl Load {
-    pub(super) fn open(path: PathBuf, forwarded: Option<Arc<AtomicBool>>) -> std::io::Result<Self> {
+    pub(super) fn open(
+        request: OpenProject,
+        forwarded: Option<Arc<AtomicBool>>,
+    ) -> std::io::Result<Self> {
         let control = Control {
             stop: CancellationToken::new(),
             forwarded,
@@ -51,12 +65,24 @@ impl Load {
         let worker = std::thread::Builder::new()
             .name("recite-project-open".into())
             .spawn(move || {
-                let loaded =
-                    ProjectFiles::open_with_control(&path, &work).and_then(|mut project| {
-                        let workbench = project.workbench_with_control(&work)?;
+                let loaded = ProjectFiles::open_with_control(&request.path, &work).and_then(
+                    |mut project| {
+                        let view = crate::navigation::initial_view(
+                            request.route.as_deref(),
+                            project.document_name()?,
+                        );
+                        let initial = (view.unwrap_or(request.view)
+                            == recite_config::WriterView::Source)
+                            .then_some(recite_writer_model::View::Source);
+                        let workbench = project.workbench_with_control(initial, &work)?;
                         work.checkpoint()?;
-                        Ok((project, workbench))
-                    });
+                        Ok(LoadedProject {
+                            files: project,
+                            workbench,
+                            view,
+                        })
+                    },
+                );
                 let _ = sender.send(loaded);
             })?;
         Ok(Self {

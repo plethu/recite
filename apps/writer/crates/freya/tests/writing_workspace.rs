@@ -61,7 +61,10 @@ fn command_search_navigates_and_cancels_without_changing_view() -> Result {
     test.poll_n(std::time::Duration::from_millis(16), 5);
     test.press_key(Key::Named(NamedKey::ArrowDown));
     test.press_key(Key::Named(NamedKey::Enter));
-    test.poll_n(std::time::Duration::from_millis(16), 6);
+    support::wait_for(&mut test, "Source editor", |test| {
+        named(test, "Source editor").is_some()
+    })?;
+    support::wait_editor_work(&mut test)?;
     assert!(named(&test, "Source editor").is_some());
     support::click(&mut test, "Commands")?;
     test.press_key(Key::Named(NamedKey::Escape));
@@ -181,6 +184,10 @@ fn returning_to_a_scene_preserves_its_source_draft_and_view() -> Result {
 #[test]
 fn keyboard_opens_selected_map_card_and_go_to_finds_a_beat() -> Result {
     let mut test = TestingRunner::new(recite_writer::app, (1440., 1000.).into(), |_| {}, 1.).0;
+    let captures = std::env::var_os("RECITE_WRITER_CAPTURE_DIR").map(std::path::PathBuf::from);
+    if let Some(directory) = &captures {
+        std::fs::create_dir_all(directory)?;
+    }
     support::click(&mut test, "Map")?;
     support::click(&mut test, "Select Relay Desk")?;
     test.send_event(PlatformEvent::Keyboard {
@@ -204,16 +211,26 @@ fn keyboard_opens_selected_map_card_and_go_to_finds_a_beat() -> Result {
     test.poll_n(std::time::Duration::from_millis(16), 6);
     test.write_text("Missing Courier");
     test.poll_n(std::time::Duration::from_millis(16), 6);
+    if let Some(directory) = &captures {
+        test.render_to_file(directory.join("go-to-palette.png"));
+    }
     test.press_key(Key::Named(NamedKey::ArrowDown));
     test.press_key(Key::Named(NamedKey::Enter));
-    test.poll_n(std::time::Duration::from_millis(16), 6);
-    assert!(
-        test.find(|_, e| Paragraph::try_downcast(e).filter(|p| p
-            .spans
-            .iter()
-            .any(|s| s.text.contains("Our courier is two days late"))))
-            .is_some()
-    );
+    support::wait_for(&mut test, "Missing Courier dialogue", |test| {
+        test.find(|_, e| {
+            Paragraph::try_downcast(e).filter(|p| {
+                p.spans
+                    .iter()
+                    .any(|s| s.text.contains("Our courier is two days late"))
+            })
+        })
+        .is_some()
+    })?;
+    support::wait_editor_work(&mut test)?;
+    if let Some(directory) = &captures {
+        test.poll_n(std::time::Duration::from_millis(16), 16);
+        test.render_to_file(directory.join("go-to-ready.png"));
+    }
     Ok(())
 }
 

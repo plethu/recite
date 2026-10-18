@@ -23,7 +23,7 @@ fn captured_completion_is_thread_safe_and_survives_mutation_and_drop()
         &CancellationToken::new(),
     )?;
     assert_eq!(original.source(), ACCEPTED);
-    document.replace_source(document.revision(), ":: changed default\n-> END\n".into())?;
+    document.replace_source(document.revision(), ":: changed default\n-> END\n")?;
     assert!(!snapshot.is_current(&document));
     assert!(!snapshot.same_analysis(&document.completion_snapshot()));
     drop(document);

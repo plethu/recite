@@ -139,23 +139,32 @@ impl Component for RenameScreen {
             }
         } else {
             let normalized_query = query.read().trim().to_lowercase();
-            let options = writer
-                .buffers
-                .model
-                .read()
-                .as_ref()
-                .ok()
-                .and_then(|m| m.document().script_snapshot().ok())
-                .unwrap_or_default()
-                .iter()
-                .filter(|b| b.id.to_lowercase().contains(&normalized_query))
-                .map(|b| PickerOption {
-                    annotation: String::new(),
-                    title: b.id.clone(),
-                    value: b.id.clone(),
-                    detail: String::new(),
-                })
-                .collect();
+            let options = {
+                let model = writer.buffers.model.read();
+                model
+                    .as_ref()
+                    .map(|model| {
+                        model
+                            .document()
+                            .block_summaries()
+                            .iter()
+                            .filter(|block| {
+                                block
+                                    .id()
+                                    .as_str()
+                                    .to_lowercase()
+                                    .contains(&normalized_query)
+                            })
+                            .map(|block| PickerOption {
+                                annotation: String::new(),
+                                title: block.id().as_str().to_owned(),
+                                value: block.id().as_str().to_owned(),
+                                detail: String::new(),
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            };
             body = body
                 .child(SearchPicker {
                     id: picker_id,
@@ -223,6 +232,12 @@ impl Component for RenameScreen {
 
 pub(crate) fn history(mut writer: Writer, redo: bool) {
     writer.buffers.harvest();
+    if let Err(error) = writer.work.require_idle() {
+        writer.message.error(error);
+        return;
+    }
+
+    let mut deferred = false;
     let result = {
         let mut files = writer.files.write();
         let mut state = writer.buffers.model.write();
@@ -233,7 +248,8 @@ pub(crate) fn history(mut writer: Writer, redo: bool) {
             match grouped {
                 Ok(true) => Ok(()),
                 Ok(false) => {
-                    if redo { model.redo() } else { model.undo() }.map_err(|e| e.to_string())
+                    deferred = true;
+                    Ok(())
                 }
                 Err(e) => Err(e),
             }
@@ -241,6 +257,20 @@ pub(crate) fn history(mut writer: Writer, redo: bool) {
             Err("No document is open.".into())
         }
     };
-    writer.buffers.sync(writer.dark);
-    writer.message.report(result, String::new());
+    if deferred {
+        let result = crate::editor_work::edit(
+            writer,
+            if redo {
+                recite_writer_model::EditOperation::Redo
+            } else {
+                recite_writer_model::EditOperation::Undo
+            },
+        );
+        if let Err(error) = result {
+            writer.message.error(error);
+        }
+    } else {
+        writer.buffers.sync(writer.dark);
+        writer.message.report(result, String::new());
+    }
 }

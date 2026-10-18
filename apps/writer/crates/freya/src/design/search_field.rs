@@ -42,7 +42,13 @@ impl Component for SearchField {
         // Input's outside-click handler can clear focus after the clear button runs.
         // Retain this request until the next pointer/key interaction, without a timer.
         use_after_side_effect(move || {
-            if *refocus.read() && *Platform::get().focused_accessibility_id.read() != id {
+            if *refocus.read()
+                && *Platform::get()
+                    .current_window()
+                    .focused_accessibility_id
+                    .read()
+                    != id
+            {
                 id.request_focus();
             }
         });

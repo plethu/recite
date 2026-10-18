@@ -3,6 +3,8 @@ mod document_tabs;
 #[path = "project_workflows/closing.rs"]
 mod project_closing;
 mod support;
+#[path = "project_workflows/toolbar.rs"]
+mod toolbar;
 use freya::prelude::*;
 use freya_testing::prelude::*;
 fn fill(
@@ -168,6 +170,14 @@ fn rename_review_changes_both_documents_and_undo_restores_them()
     let dir = fixture()?;
     let mut test = open(dir.path())?;
     support::click(&mut test, "Source")?;
+    let original = std::fs::read_to_string(dir.path().join("a.recite"))?;
+    fill(
+        &mut test,
+        "Hello.",
+        &format!("{original}\n# Local history\n"),
+    )?;
+    support::click(&mut test, "Apply draft")?;
+    support::click(&mut test, "Undo")?;
     support::click(&mut test, "Rename beat")?;
     support::click(&mut test, "Beat to rename")?;
     support::click(&mut test, "start")?;
@@ -204,6 +214,14 @@ fn rename_review_changes_both_documents_and_undo_restores_them()
     );
     assert!(std::fs::read_to_string(dir.path().join("a.recite"))?.contains(":: start"));
     assert!(std::fs::read_to_string(dir.path().join("b.recite"))?.contains("a.recite::start"));
+    // Grouped Redo must win over the restored document's local redo entry.
+    support::click(&mut test, "Redo")?;
+    support::click(&mut test, "Save project")?;
+    let source = std::fs::read_to_string(dir.path().join("a.recite"))?;
+    assert!(source.contains(":: renamed"));
+    assert!(!source.contains("# Local history"));
+    assert!(std::fs::read_to_string(dir.path().join("b.recite"))?.contains("a.recite::renamed"));
+    assert!(std::fs::read_to_string(manifest)?.contains("block = \"renamed\""));
     Ok(())
 }
 

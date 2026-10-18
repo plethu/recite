@@ -177,7 +177,7 @@ fn generated_beat_names_respect_other_project_documents() -> Result<(), Box<dyn 
         ":: start default\n-> END\n",
         context,
     )?;
-    let mut session = Workbench::from_document(document)?;
+    let mut session = Workbench::from_document(document, None)?;
     for expected in ["new_beat_2", "new_beat_4"] {
         session.add_beat()?;
         assert_eq!(session.selected_block()?.as_deref(), Some(expected));

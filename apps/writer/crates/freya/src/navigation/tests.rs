@@ -1,44 +1,6 @@
-use super::restore::{catalogue_path, select};
 use super::*;
 #[cfg(target_os = "linux")]
 use freya_testing::prelude::*;
-use recite_writer_model::WorkbenchError;
-
-#[test]
-fn inconsistent_beat_and_passage_link_does_not_change_selection() -> Result<(), WorkbenchError> {
-    let mut model = recite_writer_model::WRITER_EXAMPLES[0].open()?;
-    let before = model.view().clone();
-    let passage = model.document().passage_snapshot()?[0].id.clone();
-    let location = Location {
-        beat: Some("not_the_passage_beat".into()),
-        passage: Some(passage),
-        ..Location::default()
-    };
-    assert!(select(&mut model, &location).is_err());
-    assert_eq!(model.view(), &before);
-    Ok(())
-}
-#[test]
-fn linked_catalogue_must_stay_inside_its_project() -> Result<(), Box<dyn std::error::Error>> {
-    let root = tempfile::tempdir()?;
-    let outside = tempfile::tempdir()?;
-    std::fs::create_dir(root.path().join("locale"))?;
-    let inside = root.path().join("locale/fr.po");
-    std::fs::write(&inside, "")?;
-    std::fs::write(outside.path().join("outside.po"), "")?;
-    assert_eq!(catalogue_path(root.path(), "locale/fr.po")?, inside);
-    assert!(catalogue_path(root.path(), "../outside.po").is_err());
-    assert!(catalogue_path(root.path(), outside.path().to_str().ok_or("path")?).is_err());
-    #[cfg(unix)]
-    {
-        std::os::unix::fs::symlink(
-            outside.path().join("outside.po"),
-            root.path().join("locale/link.po"),
-        )?;
-        assert!(catalogue_path(root.path(), "locale/link.po").is_err());
-    }
-    Ok(())
-}
 
 #[cfg(target_os = "linux")]
 fn linked_project() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
@@ -358,5 +320,50 @@ fn route_less_project_switch_clears_clean_catalogue() -> Result<(), Box<dyn std:
     test.poll_n(std::time::Duration::from_millis(16), 40);
     assert_eq!(result.try_recv()?, Ok(()));
     assert!(!contains_paragraph(&test, "Bonjour"));
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_source_route_cannot_replace_recovered_invalid_prose() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = linked_project()?;
+    let root = dir.path().to_path_buf();
+    let mut files = crate::project::ProjectFiles::open(&root)?;
+    let mut model = files.workbench()?;
+    let rejected = "> intruder\n  Preserve this rejected draft.";
+    model.set_draft(rejected.into());
+    assert!(model.apply().is_err());
+    files.checkpoint(&model)?;
+    drop(files);
+    let (sender, receiver) = std::sync::mpsc::sync_channel(16);
+    let inbox = crate::ActivationInbox::new(receiver);
+    let route = "recite://writer/write?scene=a.recite&view=source".to_string();
+    let initial = route.clone();
+    let (mut test, _) = TestingRunner::new(
+        crate::editor_app,
+        Size2D::new(1400., 1000.),
+        move |runner| {
+            runner.provide_root_context(move || crate::InitialProject(Some(root)));
+            runner.provide_root_context(move || InitialRoute(initial));
+            runner.provide_root_context(move || inbox);
+        },
+        1.,
+    );
+    test.poll_n(std::time::Duration::from_millis(16), 40);
+    assert!(contains_paragraph(&test, "Preserve this rejected draft."));
+    let refused = submitted_route(&sender, route)?;
+    test.poll_n(std::time::Duration::from_millis(16), 10);
+    assert!(refused.try_recv()?.unwrap_err().contains("was not applied"));
+    assert!(contains_paragraph(&test, "Preserve this rejected draft."));
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("a.recite"))?,
+        recite_writer_model::FIXTURE
+    );
+    let saved: serde_json::Value = serde_json::from_slice(&std::fs::read(
+        dir.path().join("a.recite.recite-editor-recovery.json"),
+    )?)?;
+    assert_eq!(saved["draft"]["draft"], rejected);
+    assert!(saved["draft"]["view"].get("Passage").is_some());
     Ok(())
 }

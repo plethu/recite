@@ -185,6 +185,8 @@ def lanes_for_path(path, *, base=None, head=None):
         return RUST
     if path.startswith("apps/writer/") or path in {
         "tools/ast-grep/rules/rust-writer-palette.yml",
+        "tools/ast-grep/rules/rust-writer-cold-projections.yml",
+        "tools/ast-grep/tests/rust-writer-cold-projections-test.yml",
         "tools/ast-grep/tests/rust-writer-palette-test.yml",
         "scripts/check-writer-native-accessibility.py",
     }:

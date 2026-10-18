@@ -60,6 +60,14 @@ pub(crate) struct Localisation {
 }
 impl Localisation {
     pub(crate) fn install(&mut self, catalogue: Option<Catalogue>) -> Result<(), String> {
+        self.prepare_install()?;
+        self.install_prepared(catalogue);
+        Ok(())
+    }
+    pub(crate) fn prepare_install(&mut self) -> Result<(), String> {
+        if let Some(current) = &self.catalogue {
+            current.require_idle_save()?;
+        }
         if self.dirty() {
             return Err(
                 "Save or discard translation drafts before opening another catalogue.".into(),
@@ -68,12 +76,14 @@ impl Localisation {
         if let Some(current) = self.catalogue.as_mut() {
             current.flush_recovery()?;
         }
+        Ok(())
+    }
+    pub(crate) fn install_prepared(&mut self, catalogue: Option<Catalogue>) {
         self.catalogue = catalogue;
         self.refresh = None;
         self.comparison = None;
         self.entry_context = None;
         self.view = CatalogueView::Passage;
-        Ok(())
     }
     pub fn translating(&self) -> bool {
         self.active && self.catalogue.is_some()
@@ -117,7 +127,12 @@ pub(super) fn switch(writer: Writer) -> Element {
 }
 
 /// Enter through the selected beat, whether invoked by the switch or Commands.
-pub(crate) fn enter(mut writer: Writer) -> Result<(), String> {
+pub(crate) fn enter(writer: Writer) -> Result<(), String> {
+    writer.work.require_idle()?;
+    writer.after_prose(enter_applied);
+    Ok(())
+}
+fn enter_applied(mut writer: Writer) -> Result<(), String> {
     writer.try_navigate(|_| Ok(()))?;
     let beat = writer.selection.peek().clone().or_else(|| {
         writer

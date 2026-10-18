@@ -1,17 +1,16 @@
 mod blocks;
 mod config;
+mod linewise;
+mod projection;
 pub use blocks::{SyntaxBlocks, SyntaxLine, TextNode};
 use config::LangConfig;
+pub use projection::{RopeChunkIter, RopeTextProvider};
+use projection::{build_plain_blocks, build_syntax_blocks};
 
-use std::{
-    ops::{ControlFlow, Range},
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::ops::{ControlFlow, Range};
 
-use freya_core::prelude::Color;
 use ropey::Rope;
-use smallvec::SmallVec;
-use tree_sitter::{InputEdit, Parser, Point, QueryCursor, StreamingIterator, Tree};
+use tree_sitter::{InputEdit, Parser, Point, QueryCursor, Tree};
 
 use crate::{editor_theme::EditorSyntaxTheme, languages::EditorLanguage};
 
@@ -20,6 +19,13 @@ pub struct SyntaxHighlighter {
     tree: Option<Tree>,
     config: Option<LangConfig>,
     cursor: QueryCursor,
+    // An edited tree has current coordinates, but cannot be queried until parsed.
+    tree_current: bool,
+    input: Option<Rope>,
+    pending_edits: bool,
+    linewise: Option<linewise::Linewise>,
+    #[cfg(test)]
+    incremental_parses: usize,
 }
 
 impl Default for SyntaxHighlighter {
@@ -35,6 +41,12 @@ impl SyntaxHighlighter {
             tree: None,
             config: None,
             cursor: QueryCursor::new(),
+            tree_current: false,
+            input: None,
+            pending_edits: false,
+            linewise: None,
+            #[cfg(test)]
+            incremental_parses: 0,
         }
     }
 
@@ -42,26 +54,54 @@ impl SyntaxHighlighter {
     pub fn set_language(&mut self, language: Option<&EditorLanguage>, theme: &EditorSyntaxTheme) {
         self.parser.reset();
         self.tree = None;
+        self.tree_current = false;
+        self.input = None;
+        self.pending_edits = false;
+        self.linewise = language
+            .filter(|language| language.line_isolated)
+            .map(|language| linewise::Linewise::new(language, theme));
         self.config = language.and_then(|language| language.lang_config(theme));
         if let Some(cfg) = &self.config {
             let _ = self.parser.set_language(&cfg.language);
         }
     }
 
+    pub(crate) fn has_tree(&self) -> bool {
+        self.tree.is_some()
+    }
+
+    pub(crate) fn has_current_tree(&self) -> bool {
+        self.tree_current
+    }
+
     /// Discard the cached parse tree, forcing a full re-parse next time.
     pub fn invalidate_tree(&mut self) {
         self.parser.reset();
         self.tree = None;
+        self.tree_current = false;
+        self.input = None;
+        self.pending_edits = false;
+        if let Some(lines) = &mut self.linewise {
+            lines.invalidate();
+        }
     }
 
     /// Discard interrupted parser work before changing its input, then update
     /// the retained tree immediately. Multiple edits preserve their order.
     pub fn reset_parse(&mut self) {
         self.parser.reset();
+        if let Some(lines) = &mut self.linewise {
+            lines.invalidate();
+        }
     }
 
     pub fn edit(&mut self, edit: &InputEdit) {
         self.parser.reset();
+        self.tree_current = false;
+        self.pending_edits = true;
+        if let Some(lines) = &mut self.linewise {
+            lines.edit(edit);
+        }
         if let Some(tree) = &mut self.tree {
             tree.edit(edit);
         }
@@ -76,6 +116,16 @@ impl SyntaxHighlighter {
     ) {
         let start = rows.start.min(rope.len_lines());
         let rows = start..rows.end.max(start).min(rope.len_lines());
+        if self.tree.is_some()
+            && (!self.tree_current
+                || self
+                    .input
+                    .as_ref()
+                    .is_some_and(|old| !old.is_instance(rope)))
+        {
+            self.parse_cancellable(rope, blocks, theme, rows, || false);
+            return;
+        }
         blocks.clear();
         if let (Some(tree), Some(cfg)) = (&self.tree, &self.config) {
             build_syntax_blocks(tree, cfg, &mut self.cursor, rope, blocks, theme, rows);
@@ -107,17 +157,17 @@ impl SyntaxHighlighter {
         if let Some(edit) = edit {
             self.edit(&edit);
         }
-        self.parse_cancellable(rope, syntax_blocks, theme, rows, None);
+        self.parse_cancellable(rope, syntax_blocks, theme, rows, || false);
     }
 
-    /// Worker shutdown interrupts parsing without blocking the UI on joining.
+    /// Interrupt obsolete work or shutdown without blocking the editor thread.
     pub(crate) fn parse_cancellable(
         &mut self,
         rope: &Rope,
         blocks: &mut SyntaxBlocks,
         theme: &EditorSyntaxTheme,
         rows: Range<usize>,
-        closed: Option<&AtomicBool>,
+        cancelled: impl Fn() -> bool,
     ) -> bool {
         let rows = rows.start.min(rope.len_lines())..rows.end.min(rope.len_lines());
         if self.config.is_none() {
@@ -125,15 +175,39 @@ impl SyntaxHighlighter {
             build_plain_blocks(rope, blocks, theme, rows);
             return true;
         }
+        if !self.pending_edits
+            && self
+                .input
+                .as_ref()
+                .is_some_and(|old| !old.is_instance(rope))
+        {
+            self.invalidate_tree();
+        }
+        self.input = Some(rope.clone());
+        self.pending_edits = false;
+        if let Some(lines) = &mut self.linewise {
+            if lines.highlight(rope, blocks, theme, rows.clone(), &cancelled) {
+                return true;
+            }
+            lines.invalidate();
+        }
+        if cancelled() {
+            self.reset_parse();
+            return false;
+        }
         let mut interrupted = false;
         let mut progress = |_: &tree_sitter::ParseState| {
-            if closed.is_some_and(|closed| closed.load(Ordering::Relaxed)) {
+            if cancelled() {
                 interrupted = true;
                 ControlFlow::Break(())
             } else {
                 ControlFlow::Continue(())
             }
         };
+        #[cfg(test)]
+        if self.tree.is_some() {
+            self.incremental_parses += 1;
+        }
         let len = rope.len_bytes();
         let new_tree = self.parser.parse_with_options(
             &mut |byte: usize, _: Point| {
@@ -147,6 +221,10 @@ impl SyntaxHighlighter {
             Some(tree_sitter::ParseOptions::new().progress_callback(&mut progress)),
         );
         if let Some(tree) = new_tree {
+            self.tree_current = true;
+            if let Some(lines) = &mut self.linewise {
+                lines.seed(rope, &tree);
+            }
             self.tree = Some(tree);
             self.highlight_rows(rope, blocks, theme, rows);
             true
@@ -191,203 +269,5 @@ impl InputEditExt for InputEdit {
     }
 }
 
-struct Span {
-    start_byte: usize,
-    end_byte: usize,
-    color: Color,
-}
-
-fn build_syntax_blocks(
-    tree: &Tree,
-    cfg: &LangConfig,
-    cursor: &mut QueryCursor,
-    rope: &Rope,
-    syntax_blocks: &mut SyntaxBlocks,
-    theme: &EditorSyntaxTheme,
-    rows: Range<usize>,
-) {
-    let root = tree.root_node();
-    cursor.set_byte_range(rope.line_to_byte(rows.start)..rope.line_to_byte(rows.end));
-
-    let mut spans: Vec<Span> = Vec::new();
-    let mut captures = cursor.captures(&cfg.query, root, RopeTextProvider { rope });
-
-    while let Some((match_result, capture_idx)) = {
-        captures.advance();
-        captures.get()
-    } {
-        let capture = &match_result.captures[*capture_idx];
-        let node = capture.node;
-        let color = cfg.capture_colors[capture.index as usize];
-        spans.push(Span {
-            start_byte: node.start_byte(),
-            end_byte: node.end_byte(),
-            color,
-        });
-    }
-
-    spans.sort_by_key(|s| s.start_byte);
-    build_lines_from_spans(rope, &spans, syntax_blocks, theme, rows);
-}
-
-fn build_lines_from_spans(
-    rope: &Rope,
-    spans: &[Span],
-    syntax_blocks: &mut SyntaxBlocks,
-    theme: &EditorSyntaxTheme,
-    rows: Range<usize>,
-) {
-    let mut span_idx = 0;
-
-    for line_idx in rows {
-        let line_start_byte = rope.line_to_byte(line_idx);
-        let line_slice = rope.line(line_idx);
-        let line_byte_len = line_slice.len_bytes();
-        let line_end_byte = line_start_byte + line_byte_len;
-
-        let content_end_byte = {
-            let chars = line_slice.len_chars();
-            let mut end = line_end_byte;
-            if chars > 0 && line_slice.char(chars - 1) == '\n' {
-                end -= 1;
-                if chars > 1 && line_slice.char(chars - 2) == '\r' {
-                    end -= 1;
-                }
-            }
-            end
-        };
-
-        while span_idx < spans.len() && spans[span_idx].end_byte <= line_start_byte {
-            span_idx += 1;
-        }
-
-        let content_bytes = content_end_byte - line_start_byte;
-        if content_bytes == 0 {
-            syntax_blocks.blocks.insert(line_idx, SmallVec::new());
-            continue;
-        }
-
-        let mut byte_colors: SmallVec<[Color; 256]> =
-            smallvec::smallvec![theme.text; content_bytes];
-
-        let mut si = span_idx;
-        while si < spans.len() && spans[si].start_byte < content_end_byte {
-            let span = &spans[si];
-            si += 1;
-            if span.end_byte <= line_start_byte {
-                continue;
-            }
-            let s = span.start_byte.max(line_start_byte) - line_start_byte;
-            let e = span.end_byte.min(content_end_byte) - line_start_byte;
-            if s < e {
-                for c in &mut byte_colors[s..e] {
-                    *c = span.color;
-                }
-            }
-        }
-
-        let mut line_spans: SyntaxLine = SyntaxLine::new();
-        let mut beginning_of_line = true;
-        let mut run_start: usize = 0;
-
-        while run_start < content_bytes {
-            let run_color = byte_colors[run_start];
-            let mut run_end = run_start + 1;
-            while run_end < content_bytes && byte_colors[run_end] == run_color {
-                run_end += 1;
-            }
-
-            let abs_start_byte = line_start_byte + run_start;
-            let abs_end_byte = line_start_byte + run_end;
-            let start_char = rope.byte_to_char(abs_start_byte);
-            let end_char = rope.byte_to_char(abs_end_byte);
-
-            if beginning_of_line {
-                let slice = rope.slice(start_char..end_char);
-                let is_whitespace = slice.chars().all(|c| c.is_whitespace() && c != '\n');
-                if is_whitespace {
-                    let len = end_char - start_char;
-                    line_spans.push((
-                        theme.whitespace,
-                        TextNode::LineOfChars {
-                            len,
-                            char: '\u{00B7}',
-                        },
-                    ));
-                    run_start = run_end;
-                    continue;
-                }
-                beginning_of_line = false;
-            }
-
-            line_spans.push((run_color, TextNode::Range(start_char..end_char)));
-            run_start = run_end;
-        }
-
-        syntax_blocks.blocks.insert(line_idx, line_spans);
-    }
-}
-
-fn build_plain_blocks(
-    rope: &Rope,
-    syntax_blocks: &mut SyntaxBlocks,
-    theme: &EditorSyntaxTheme,
-    rows: Range<usize>,
-) {
-    for n in rows {
-        let line = rope.line(n);
-        let mut line_blocks = SmallVec::default();
-        let start = rope.line_to_char(n);
-        let end = line.len_chars();
-        if end > 0 {
-            line_blocks.push((theme.text, TextNode::Range(start..start + end)));
-        }
-        syntax_blocks.blocks.insert(n, line_blocks);
-    }
-}
-
-pub struct RopeTextProvider<'a> {
-    rope: &'a Rope,
-}
-
-impl<'a> tree_sitter::TextProvider<&'a [u8]> for RopeTextProvider<'a> {
-    type I = RopeChunkIter<'a>;
-
-    fn text(&mut self, node: tree_sitter::Node) -> Self::I {
-        let start = node.start_byte();
-        let end = node.end_byte();
-        RopeChunkIter {
-            rope: self.rope,
-            byte_offset: start,
-            end_byte: end,
-        }
-    }
-}
-
-pub struct RopeChunkIter<'a> {
-    rope: &'a Rope,
-    byte_offset: usize,
-    end_byte: usize,
-}
-
-impl<'a> Iterator for RopeChunkIter<'a> {
-    type Item = &'a [u8];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.byte_offset >= self.end_byte {
-            return None;
-        }
-        let (chunk, chunk_start, _, _) = self.rope.chunk_at_byte(self.byte_offset);
-        let chunk_bytes = chunk.as_bytes();
-        let offset_in_chunk = self.byte_offset - chunk_start;
-        let available = &chunk_bytes[offset_in_chunk..];
-        let remaining = self.end_byte - self.byte_offset;
-        let slice = if available.len() > remaining {
-            &available[..remaining]
-        } else {
-            available
-        };
-        self.byte_offset += slice.len();
-        Some(slice)
-    }
-}
+#[cfg(test)]
+mod tests;

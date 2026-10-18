@@ -1,6 +1,8 @@
 //! One disk owner, one pending snapshot. Explicit persistence waits for durability.
+mod parking;
 use super::{RecoveryDisk, Snapshot};
 use crate::project::FileError;
+pub(crate) use parking::Parking;
 use std::{
     path::Path,
     sync::{Arc, Condvar, Mutex},
@@ -11,6 +13,7 @@ use std::{
 enum Phase {
     Running,
     Parked,
+    Parking,
     Failed,
     Closed,
 }
@@ -27,7 +30,53 @@ pub(crate) struct SnapshotStore<T: Snapshot> {
     disk: Arc<Mutex<RecoveryDisk<T>>>,
     worker: Option<JoinHandle<()>>,
 }
+/// A fixed durability fence. Later coalesced snapshots also satisfy this sequence.
+pub(crate) struct Durability<T: Snapshot> {
+    pending: Arc<(Mutex<Pending<T>>, Condvar)>,
+    sequence: u64,
+}
+impl<T: Snapshot> Durability<T> {
+    pub(crate) fn wait(self) -> Result<(), FileError> {
+        let mut state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
+        while state.completed < self.sequence && state.phase != Phase::Failed {
+            state = self
+                .pending
+                .1
+                .wait(state)
+                .unwrap_or_else(|e| e.into_inner());
+        }
+        state
+            .error
+            .clone()
+            .map_or(Ok(()), |error| Err(FileError::BackgroundRecovery(error)))
+    }
+}
 impl<T: Snapshot> SnapshotStore<T> {
+    pub(crate) fn parked_at(&self, sequence: u64) -> bool {
+        let state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
+        self.sequence == sequence
+            && self.worker.is_none()
+            && state.phase == Phase::Parked
+            && state.next.is_none()
+            && state.completed >= sequence
+            && state.error.is_none()
+    }
+    pub(crate) fn sequence(&self) -> u64 {
+        self.sequence
+    }
+    pub(crate) fn durability(&self) -> Durability<T> {
+        Durability {
+            pending: self.pending.clone(),
+            sequence: self.sequence,
+        }
+    }
+    pub(crate) fn begin_persist(
+        &mut self,
+        snapshot: Option<T>,
+    ) -> Result<Durability<T>, FileError> {
+        self.submit(snapshot)?;
+        Ok(self.durability())
+    }
     pub fn open(source: &Path) -> Result<Self, FileError> {
         let disk = RecoveryDisk::open(source)?;
         let snapshot = disk.snapshot().cloned();
@@ -69,8 +118,7 @@ impl<T: Snapshot> SnapshotStore<T> {
     }
     /// Drain work before releasing the thread; retain the disk lock and encoding cache.
     pub fn park(&mut self) -> Result<(), FileError> {
-        self.stop(Phase::Parked);
-        self.flush()
+        self.begin_park().wait()
     }
     fn stop(&mut self, phase: Phase) {
         let mut state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
@@ -126,7 +174,9 @@ impl<T: Snapshot> SnapshotStore<T> {
             let sequence = self.sequence.checked_add(1).ok_or_else(|| {
                 FileError::BackgroundRecovery("Recovery sequence exhausted".into())
             })?;
-            self.start(&mut state)?;
+            if state.phase != Phase::Parking {
+                self.start(&mut state)?;
+            }
             self.sequence = sequence;
             self.snapshot = snapshot.clone();
             state.next = Some((self.sequence, snapshot));
@@ -139,25 +189,15 @@ impl<T: Snapshot> SnapshotStore<T> {
         self.flush()
     }
     fn flush(&self) -> Result<(), FileError> {
-        let mut state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
-        while state.completed < self.sequence && state.phase != Phase::Failed {
-            state = self
-                .pending
-                .1
-                .wait(state)
-                .unwrap_or_else(|e| e.into_inner());
-        }
-        state
-            .error
-            .clone()
-            .map_or(Ok(()), |error| Err(FileError::BackgroundRecovery(error)))
+        self.durability().wait()
     }
 }
 impl<T: Snapshot> Drop for SnapshotStore<T> {
     fn drop(&mut self) {
         // Save/close call persist explicitly to report errors. Drop still drains queued work.
         self.stop(Phase::Closed);
-        // The disk owner drops after the joined worker, releasing the OS lock before return.
+        // A transferred Parking receipt keeps the disk lease until its worker exits.
+        // Otherwise stop joins here before the disk owner releases the OS lock.
     }
 }
 fn fail<T: Snapshot>(shared: &(Mutex<Pending<T>>, Condvar)) {
@@ -175,6 +215,12 @@ fn run<T: Snapshot>(disk: &Mutex<RecoveryDisk<T>>, shared: &(Mutex<Pending<T>>, 
             state = shared.1.wait(state).unwrap_or_else(|e| e.into_inner());
         }
         let Some((sequence, snapshot)) = state.next.take() else {
+            // Publish exit while holding the queue lock. A later submit can start
+            // a successor, but cannot revive this already-returning worker.
+            if state.phase == Phase::Parking {
+                state.phase = Phase::Parked;
+            }
+            shared.1.notify_all();
             return;
         };
         drop(state);

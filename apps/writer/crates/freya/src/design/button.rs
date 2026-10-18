@@ -27,6 +27,7 @@ pub(crate) struct Button {
     hover_changed: Option<EventHandler<bool>>,
     id: Option<AccessibilityId>,
     name: Option<String>,
+    description: Option<String>,
     shortcut: Option<String>,
     enabled: bool,
     highlighted: bool,
@@ -51,6 +52,7 @@ impl Button {
             hover_changed: None,
             id: None,
             name: None,
+            description: None,
             shortcut: None,
             enabled: true,
             highlighted: false,
@@ -174,6 +176,11 @@ impl Button {
         self.name = Some(name.into());
         self
     }
+
+    pub fn described(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
     pub fn on_press(mut self, action: impl Into<EventHandler<Event<PressEventData>>>) -> Self {
         self.action = Some(action.into());
         self
@@ -198,6 +205,7 @@ impl Button {
         let enabled = self.enabled;
         let shortcut = self.shortcut.clone();
         let name = self.name.clone().or_else(|| content_name(&self.children));
+        let description = self.description.clone();
         let expanded = self.expanded;
         self.semantics
             .apply(control)
@@ -211,6 +219,9 @@ impl Button {
                 }
                 if let Some(name) = name {
                     node.set_label(name);
+                }
+                if let Some(description) = description {
+                    node.set_description(description);
                 }
                 if let Some(expanded) = expanded {
                     node.set_expanded(expanded);
@@ -326,7 +337,7 @@ impl Component for Button {
                 .on_pointer_down(move |event: Event<PointerEventData>| {
                     if event.is_primary() { pressed.set(true); event.stop_propagation(); }
                 })
-                .on_global_pointer_press(move |_| { pressed.set_if_modified(false); })
+                .on_global_pointer_up(move |_| { pressed.set_if_modified(false); })
                 .on_global_key_up(move |event: Event<KeyboardEventData>| {
                     if event.is_press_event() { pressed.set_if_modified(false); }
                 })

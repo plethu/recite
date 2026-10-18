@@ -8,7 +8,7 @@ impl ProjectFiles {
     }
 
     pub(crate) fn workbench(&mut self) -> Result<recite_writer_model::Workbench, super::FileError> {
-        self.workbench_with_control(&CancellationToken::new())
+        self.workbench_with_control(None, &CancellationToken::new())
     }
 }
 
@@ -151,7 +151,7 @@ fn failed_file_switch_keeps_the_current_session_and_its_recovery()
     let original = files.current.clone();
     let mut model = files.workbench()?;
     files.refresh(&mut model)?;
-    assert!(files.switch(&mut model, &other, |_| Ok(())).is_err());
+    assert!(files.switch(&mut model, &other, None, |_| Ok(())).is_err());
     assert_eq!(files.current, original);
     assert_eq!(
         files.workbench()?.document().source(),
@@ -174,11 +174,13 @@ fn saved_search_updates_without_rediscovering_scenes() -> Result<(), Box<dyn std
     fs::write(&other, ":: second\n-> END\n")?;
     let mut workbench = files.workbench()?;
     assert!(
-        files.switch(&mut workbench, &other, |_| Ok(())).is_err(),
+        files
+            .switch(&mut workbench, &other, None, |_| Ok(()))
+            .is_err(),
         "discovery is an explicit refresh"
     );
     files.refresh(&mut workbench)?;
-    files.switch(&mut workbench, &other, |_| Ok(()))?;
+    files.switch(&mut workbench, &other, None, |_| Ok(()))?;
     assert_eq!(files.search_index().search("zeppelin", 10).0, 1);
     Ok(())
 }
@@ -201,9 +203,9 @@ fn switching_retains_source_drafts_and_applied_undo_history()
     model.apply()?;
     model.set_draft(format!("{applied}\n# retained draft\n"));
     let draft = model.draft().to_owned();
-    files.switch(&mut model, &other, |_| Ok(()))?;
+    files.switch(&mut model, &other, None, |_| Ok(()))?;
     assert!(files.retained_dirty());
-    files.switch(&mut model, &original, |_| Ok(()))?;
+    files.switch(&mut model, &original, None, |_| Ok(()))?;
     assert_eq!(model.draft(), draft);
     assert_eq!(model.document().source(), applied);
     model.discard();
@@ -224,7 +226,7 @@ fn save_all_refuses_external_changes_in_a_retained_document()
     model.select(recite_writer_model::View::Source)?;
     let draft = format!("{}\n# unsaved\n", model.document().source());
     model.set_draft(draft.clone());
-    files.switch(&mut model, &other, |_| Ok(()))?;
+    files.switch(&mut model, &other, None, |_| Ok(()))?;
     fs::write(&original, "# changed outside Recite\n")?;
     assert!(matches!(
         files.save_retained(),
@@ -232,7 +234,7 @@ fn save_all_refuses_external_changes_in_a_retained_document()
     ));
     assert_eq!(files.current, other);
     assert!(files.retained_dirty());
-    files.switch(&mut model, &original, |_| Ok(()))?;
+    files.switch(&mut model, &original, None, |_| Ok(()))?;
     assert_eq!(model.document().source(), draft);
     assert_eq!(fs::read_to_string(&original)?, "# changed outside Recite\n");
     Ok(())
@@ -250,7 +252,7 @@ fn tabs_close_only_saved_sessions_and_restore_the_remaining_draft()
     model.select(recite_writer_model::View::Source)?;
     model.set_draft(format!("{}\n# unfinished\n", model.document().source()));
     let draft = model.draft().to_owned();
-    files.switch(&mut model, &other, |_| Ok(()))?;
+    files.switch(&mut model, &other, None, |_| Ok(()))?;
     assert_eq!(files.open_documents(&model).len(), 2);
     assert!(matches!(
         files.close_document(&mut model, &original),
@@ -278,7 +280,7 @@ fn project_rename_reviews_references_and_undoes_every_file_together()
     fs::write(&second, reference)?;
     let mut files = ProjectFiles::open(dir.path())?;
     let mut model = files.workbench()?;
-    files.switch(&mut model, &first, |_| Ok(()))?;
+    files.switch(&mut model, &first, None, |_| Ok(()))?;
     files.review_rename(&mut model, "old", "new")?;
     assert_eq!(
         files
@@ -299,11 +301,11 @@ fn project_rename_reviews_references_and_undoes_every_file_together()
             .contains("line@11111111111111111111")
     );
     assert_eq!(fs::read_to_string(&first)?, before);
-    files.switch(&mut model, &second, |_| Ok(()))?;
+    files.switch(&mut model, &second, None, |_| Ok(()))?;
     assert!(model.document().source().contains("scene.recite::new"));
     assert!(files.rename_history(&mut model, false)?);
     assert_eq!(model.document().source(), reference);
-    files.switch(&mut model, &first, |_| Ok(()))?;
+    files.switch(&mut model, &first, None, |_| Ok(()))?;
     assert_eq!(model.document().source(), before);
     assert!(files.rename_history(&mut model, true)?);
     assert!(model.document().source().contains(":: new"));
@@ -381,7 +383,9 @@ fn renamed_project_reopens_all_affected_unsaved_documents() -> Result<(), Box<dy
     )?;
     let mut files = ProjectFiles::open(dir.path())?;
     let mut model = files.workbench()?;
-    files.switch(&mut model, &dir.path().join("scene.recite"), |_| Ok(()))?;
+    files.switch(&mut model, &dir.path().join("scene.recite"), None, |_| {
+        Ok(())
+    })?;
     files.review_rename(&mut model, "start", "renamed")?;
     files.apply_rename(&mut model)?;
     drop(files);
@@ -427,7 +431,9 @@ fn interrupted_project_checkpoint_restores_every_recorded_document()
     let mut files = ProjectFiles::open(dir.path())?;
     let mut model = files.workbench()?;
     assert!(model.document().source().contains("renamed"));
-    files.switch(&mut model, &dir.path().join("scene.recite"), |_| Ok(()))?;
+    files.switch(&mut model, &dir.path().join("scene.recite"), None, |_| {
+        Ok(())
+    })?;
     assert!(model.document().source().contains(":: renamed"));
     assert_eq!(fs::read_to_string(dir.path().join("scene.recite"))?, first);
     assert_eq!(fs::read_to_string(dir.path().join("other.recite"))?, second);

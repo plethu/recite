@@ -7,6 +7,7 @@
 mod builder;
 mod coverage;
 mod error;
+mod index;
 mod locale;
 mod record_status;
 mod resolution;
@@ -22,3 +23,5 @@ pub use resolution::{
 };
 pub use summary::CatalogCoverageSummary;
 pub use types::{CatalogIdentity, CatalogInput, CatalogSummary};
+
+mod validation;

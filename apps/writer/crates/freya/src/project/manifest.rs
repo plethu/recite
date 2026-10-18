@@ -131,22 +131,26 @@ impl ManifestDraft {
             };
         }
     }
-    pub fn save(&mut self) -> Result<(), FileError> {
-        self.save_with_cleanup_sync(sync_directory)
-    }
 
-    fn save_with_cleanup_sync(
-        &mut self,
-        sync: impl FnOnce(&Path) -> io::Result<()>,
-    ) -> Result<(), FileError> {
-        replace_checked(&self.path, &self.draft.baseline, &self.draft.text)?;
-        self.draft.baseline = self.draft.text.clone();
-        self.draft.affected.clear();
-        self.draft.documents.clear();
-        self.state = PersistenceState::RecoveryCleanupPending;
-        self.remove_recovery(sync)?;
-        self.state = PersistenceState::Editable;
-        Ok(())
+    pub(crate) fn save_request(&self) -> ManifestSave {
+        ManifestSave {
+            path: self.path.clone(),
+            recovery: self.recovery.clone(),
+            baseline: self.draft.baseline.clone(),
+            text: self.draft.text.clone(),
+        }
+    }
+    pub(crate) fn accept_save(&mut self, outcome: ManifestOutcome) -> Result<(), FileError> {
+        if outcome.replaced {
+            self.draft.baseline = self.draft.text.clone();
+            self.draft.affected.clear();
+            self.draft.documents.clear();
+            self.state = PersistenceState::RecoveryCleanupPending;
+            if outcome.result.is_ok() {
+                self.state = PersistenceState::Editable;
+            }
+        }
+        outcome.result
     }
 
     fn remove_recovery(&self, sync: impl FnOnce(&Path) -> io::Result<()>) -> Result<(), FileError> {
@@ -162,3 +166,34 @@ impl ManifestDraft {
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) struct ManifestSave {
+    path: PathBuf,
+    recovery: PathBuf,
+    baseline: String,
+    text: String,
+}
+pub(crate) struct ManifestOutcome {
+    replaced: bool,
+    result: Result<(), FileError>,
+}
+impl ManifestSave {
+    pub(crate) fn execute(self) -> ManifestOutcome {
+        self.execute_with_sync(sync_directory)
+    }
+    fn execute_with_sync(self, sync: impl FnOnce(&Path) -> io::Result<()>) -> ManifestOutcome {
+        let mut replaced = false;
+        let result = (|| {
+            replace_checked(&self.path, &self.baseline, &self.text)?;
+            replaced = true;
+            match std::fs::remove_file(&self.recovery) {
+                Ok(()) => {}
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            }
+            sync(self.path.parent().ok_or(FileError::Selection)?)?;
+            Ok(())
+        })();
+        ManifestOutcome { replaced, result }
+    }
+}

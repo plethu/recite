@@ -34,3 +34,4 @@ debug = 0
 
 [patch.crates-io]
 freya-code-editor = { path = "vendor/freya-code-editor" }
+freya-core = { path = "vendor/freya-core" }

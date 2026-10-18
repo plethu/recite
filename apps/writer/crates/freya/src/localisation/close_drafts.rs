@@ -42,7 +42,7 @@ impl Component for CloseDrafts {
             .read()
             .as_ref()
             .ok()
-            .and_then(|m| m.document().passage_snapshot().ok())
+            .and_then(|m| m.document().cached_passages())
             .unwrap_or_default();
         let entries: Vec<_> = catalogue
             .document
@@ -50,6 +50,7 @@ impl Component for CloseDrafts {
             .iter()
             .filter(|e| catalogue.changed(e.id()))
             .collect();
+        let saving = catalogue.saving;
         let count = entries.len();
         let drafts = if count == 1 { "draft" } else { "drafts" };
         let first = entries.first().and_then(|e| e.context()).map(str::to_owned);
@@ -66,6 +67,15 @@ impl Component for CloseDrafts {
             .spacing(t::SPACE_SM)
             .child(label().text(format!("{count} unsaved translation {drafts} · {language}")))
             .child(label().text(path.clone()).font_size(t::small()));
+        if !writer.message.is_empty() {
+            content = content.child(crate::feedback::NoticeView {
+                feedback: writer.message,
+            });
+        }
+        if saving {
+            content = content
+                .child(label().text(crate::messages::text(crate::messages::MsgId::WriterSaving)));
+        }
         if let Some(error) = failure.read().as_ref() {
             content = content.child(label().text(error.clone()));
         }
@@ -134,6 +144,7 @@ impl Component for CloseDrafts {
                 .child(
                     Button::new()
                         .a11y_id(discard)
+                        .enabled(!saving)
                         .child(format!("Discard {count} {drafts} and quit"))
                         .on_press(move |_| {
                             if let Some(catalogue) = state.write().catalogue.as_mut() {
@@ -159,16 +170,16 @@ impl Component for CloseDrafts {
             primary: SubmitAction {
                 id: save,
                 caption: "Save all and quit".into(),
-                enabled: true,
+                enabled: !saving,
                 action: EventHandler::new(move |()| {
-                    let result = state.write().catalogue.as_mut().map(|c| c.save_all());
-                    match result {
-                        Some(Ok(())) => resolved.call(()),
-                        Some(Err(error)) => failure.set(Some(format!(
-                            "Could not save {path}: {error}. Your drafts are still available."
-                        ))),
-                        None => failure.set(Some("The catalogue is no longer open.".into())),
-                    }
+                    let resolved=resolved.clone();
+                    crate::editor_work::translations(writer,None,EventHandler::new(move |result:Result<(),String>| {
+                        match result {
+                            Ok(()) if !writer.localisation.peek().dirty()=>resolved.call(()),
+                            Ok(())=> { let mut message=writer.message; message.info(crate::messages::text(crate::messages::MsgId::WriterNewerEditsRemain)); },
+                            Err(error)=> { let mut message=writer.message; message.error(format!("Could not save translations. {error}. Your drafts are still available.")); },
+                        }
+                    }));
                 }),
             },
             focus_order: order,

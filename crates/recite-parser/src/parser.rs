@@ -70,11 +70,17 @@ pub fn lower_source_file(path: &str, source: &str) -> LoweredSourceFile {
 }
 
 pub(crate) fn lower_region(path: &str, source: &str, first_line: u32) -> LoweredSourceFile {
-    let (diagnostics, recovery) = {
-        let lines = LogicalLines::starting_at(source, first_line).collect::<Vec<_>>();
-        diagnostics::scan(path, &lines)
-    };
+    let (diagnostics, recovery) = scan_region(path, source, first_line);
     lower_ast(path, source, &diagnostics, recovery, first_line)
+}
+
+pub(crate) fn scan_region(
+    path: &str,
+    source: &str,
+    first_line: u32,
+) -> (Vec<Diagnostic>, SourceRecovery) {
+    let lines = LogicalLines::starting_at(source, first_line).collect::<Vec<_>>();
+    diagnostics::scan(path, &lines)
 }
 
 pub(crate) fn parse_region(path: String, source: String, first_line: u32) -> Parse {

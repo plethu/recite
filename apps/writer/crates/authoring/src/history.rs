@@ -1,5 +1,5 @@
 //! UTF-8 replacement transactions; retained text has an explicit memory budget.
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 const BUDGET: usize = 32 * 1024 * 1024;
 
 pub(crate) struct Change {
@@ -25,7 +25,7 @@ impl Change {
             inserted: after[start..after.len() - suffix].into(),
         }
     }
-    fn apply(&self, source: &str, undo: bool) -> String {
+    pub(crate) fn apply(&self, source: &str, undo: bool) -> String {
         let (old, new) = if undo {
             (&self.inserted, &self.removed)
         } else {
@@ -36,13 +36,17 @@ impl Change {
         source
     }
     fn bytes(&self) -> usize {
-        std::mem::size_of::<Self>() + self.removed.capacity() + self.inserted.capacity()
+        std::mem::size_of::<Self>()
+            + std::mem::size_of::<Arc<Self>>()
+            + 2 * std::mem::size_of::<usize>()
+            + self.removed.capacity()
+            + self.inserted.capacity()
     }
 }
 #[derive(Default)]
 pub(crate) struct History {
-    undo: VecDeque<Change>,
-    redo: Vec<Change>,
+    undo: VecDeque<Arc<Change>>,
+    redo: Vec<Arc<Change>>,
     bytes: usize,
 }
 impl History {
@@ -50,16 +54,27 @@ impl History {
         !self.undo.is_empty()
     }
     pub fn record(&mut self, change: Change) {
-        self.bytes -= self.redo.iter().map(Change::bytes).sum::<usize>();
-        self.redo.clear();
+        drop(self.record_retained(change));
+    }
+    pub(crate) fn record_retained(&mut self, change: Change) -> Vec<Arc<Change>> {
+        self.bytes -= self.redo.iter().map(|change| change.bytes()).sum::<usize>();
+        let mut retired = std::mem::take(&mut self.redo);
         self.bytes += change.bytes();
-        self.undo.push_back(change);
+        self.undo.push_back(Arc::new(change));
         // Always retain the latest transaction, including a whole-file replacement.
         while self.bytes > BUDGET && self.undo.len() > 1 {
             if let Some(old) = self.undo.pop_front() {
                 self.bytes -= old.bytes();
+                retired.push(old);
             }
         }
+        retired
+    }
+    pub(crate) fn undo_change(&self) -> Option<Arc<Change>> {
+        self.undo.back().cloned()
+    }
+    pub(crate) fn redo_change(&self) -> Option<Arc<Change>> {
+        self.redo.last().cloned()
     }
     pub fn bytes(&self) -> usize {
         self.bytes

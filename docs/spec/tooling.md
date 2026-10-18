@@ -51,7 +51,10 @@ project inputs rather than guessed defaults.
 Writer is a standalone source-first surface over the shared authoring kernel. It must preserve text
 workflows, comments, unknown metadata and stable IDs; edits are explicit and undoable. Graphs have
 an equivalent accessible list/outline. Automatic layout is the default; local viewport or stable-ID
-sidecar layout never becomes dialogue semantics.
+sidecar layout never becomes dialogue semantics. The beat outline uses accepted compiler summaries,
+including recognized headers in incomplete source; selecting an entry still uses the normal Script
+validation. Its default and END badges describe authored syntax, not reachability. Unapplied Source
+drafts do not change this accepted outline.
 
 The workbench supports project opening, editing, diagnostics, completion, search/navigation,
 recovery, conflict-aware saving, schema inspection and producer actions, lossless gettext PO

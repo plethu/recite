@@ -140,6 +140,14 @@ pub(in crate::compiled) fn encode_compiled_dialogue_messagepack_uncached(
     encode::serialize_messagepack(dialogue)
 }
 
+pub(in crate::compiled) fn write_compiled_dialogue_messagepack(
+    dialogue: &CompiledDialogue,
+    writer: &mut impl std::io::Write,
+) -> Result<(), CompiledAssetEncodeError> {
+    validate_compiled_dialogue(dialogue)?;
+    encode::write_messagepack(dialogue, writer)
+}
+
 /// Validate the complete canonical payload without serializing or fingerprinting.
 /// Encoding delegates to this same header and semantic validation authority.
 pub fn validate_compiled_dialogue(
