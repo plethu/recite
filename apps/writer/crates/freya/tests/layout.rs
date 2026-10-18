@@ -120,6 +120,22 @@ fn pane_resize_is_bounded_and_script_side_changes_without_losing_the_beat()
             expected
         );
     }
+    test.poll_n(std::time::Duration::from_millis(16), 6);
+    let reply = test
+        .find(|node, e| {
+            Paragraph::try_downcast(e)
+                .filter(|p| {
+                    p.spans
+                        .iter()
+                        .any(|s| s.text.contains("Anything I can do to help?"))
+                })
+                .map(|_| node.layout().area)
+        })
+        .ok_or("reply prose")?;
+    assert!(
+        reply.width() >= 180.,
+        "narrow reply must retain readable text width: {reply:?}"
+    );
     if let Ok(dir) = std::env::var("RECITE_WRITER_CAPTURE_DIR") {
         std::fs::create_dir_all(&dir)?;
         test.render_to_file(std::path::Path::new(&dir).join("script-left.png"));
