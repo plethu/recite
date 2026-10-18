@@ -88,6 +88,7 @@ cp mise.perf.toml scripts/check-workflow-performance.sh "$evidence/"
 cargo build --locked --release -p recite-perf
 checker="${CARGO_TARGET_DIR:-$repo_root/target}/release/recite-perf"
 "$checker" prepare "$repo_root" "$control"
+cp "$control/crates/recite-lsp/src/bench_support/driver.rs" "$evidence/control-lsp-driver.rs"
 # Preserve the base lock; resolve only the current harness's additions offline.
 CARGO_TARGET_DIR="$build_root/control-target" cargo metadata --offline --manifest-path "$control/Cargo.toml" --format-version 1 >"$evidence/control-metadata.json"
 cp "$control/Cargo.lock" "$evidence/control-Cargo.lock"

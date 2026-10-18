@@ -1,4 +1,4 @@
-import { cp, rm, readFile, writeFile } from "node:fs/promises";
+import { cp, rm, readFile, readdir, writeFile } from "node:fs/promises";
 import { build } from "tsdown";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,7 +16,9 @@ await verifyDiagnosticProjection();
 assertSafeTree(sourceRoot, "extension source");
 await build({
   config: false,
-  entry: [path.join(sourceRoot, "*.ts")],
+  entry: (await readdir(sourceRoot, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))
+    .map((entry) => path.join(sourceRoot, entry.name)),
   outDir: outputRoot,
   platform: "node",
   target: "es2023",

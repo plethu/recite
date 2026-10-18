@@ -25,7 +25,11 @@ fn harness_overlay_preserves_control_dependency_and_workspace_owners() {
             .arg(&control)
             .output()
             .unwrap();
-        assert!(output.status.success(), "{:?}", output.stderr);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         fs::read_to_string(control.join("Cargo.toml")).unwrap()
     };
     let first = prepare();
@@ -59,4 +63,65 @@ fn harness_overlay_preserves_control_dependency_and_workspace_owners() {
             .any(|value| value.as_str() == Some("custom"))
     );
     assert_eq!(prepare(), first);
+}
+
+#[test]
+fn control_adapter_preserves_each_revisions_diagnostic_source_owner() {
+    for related_sources in [false, true] {
+        let directory = tempfile::tempdir().unwrap();
+        let candidate = directory.path().join("candidate");
+        let control = directory.path().join("control");
+        let driver = "crates/recite-lsp/src/bench_support/driver.rs";
+        let owner = "crates/recite-lsp/src/workspace/ui.rs";
+        let current = ".diagnostic_related_sources(&diagnostics.uri, &diagnostics.diagnostics)";
+        let historical = ".diagnostic_sources_for_uri(&diagnostics.uri)";
+        let production = if related_sources {
+            "fn diagnostic_related_sources() {}"
+        } else {
+            "fn diagnostic_sources_for_uri() {}"
+        };
+        for root in [&candidate, &control] {
+            fs::create_dir_all(root.join(driver).parent().unwrap()).unwrap();
+            fs::create_dir_all(root.join(owner).parent().unwrap()).unwrap();
+            fs::write(
+                root.join("Cargo.toml"),
+                "[workspace]\n[workspace.dependencies]\ntoml_edit = '0.24'\n",
+            )
+            .unwrap();
+            fs::write(root.join(driver), current).unwrap();
+            fs::write(root.join(owner), production).unwrap();
+        }
+        for _ in 0..2 {
+            let output = Command::new(env!("CARGO_BIN_EXE_recite-perf"))
+                .arg("prepare")
+                .arg(&candidate)
+                .arg(&control)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(fs::read_to_string(candidate.join(driver)).unwrap(), current);
+            assert_eq!(fs::read_to_string(control.join(owner)).unwrap(), production);
+            assert_eq!(
+                fs::read_to_string(control.join(driver)).unwrap(),
+                if related_sources { current } else { historical }
+            );
+        }
+        if !related_sources {
+            for unknown in ["no diagnostic adapter", &format!("{current} {current}")] {
+                fs::write(control.join(driver), unknown).unwrap();
+                let status = Command::new(env!("CARGO_BIN_EXE_recite-perf"))
+                    .arg("prepare")
+                    .arg(&candidate)
+                    .arg(&control)
+                    .output()
+                    .unwrap();
+                assert!(!status.status.success());
+                assert_eq!(fs::read_to_string(control.join(driver)).unwrap(), unknown);
+            }
+        }
+    }
 }
