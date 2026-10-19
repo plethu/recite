@@ -36,7 +36,7 @@ jobs:
           workspaces: ${{ inputs.lane == 'writer' && 'apps/writer -> target' || '. -> target' }}
       - name: Install native Writer dependencies
         if: inputs.lane == 'writer'
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config gettext cmake libgtk-3-dev libclang-dev libxkbcommon-x11-0 xvfb dbus-x11 python3-gi gir1.2-atspi-2.0 at-spi2-core
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config gettext cmake libgtk-3-dev libclang-dev libxkbcommon-x11-0 xvfb xdotool cage wtype dbus-x11 python3-gi gir1.2-atspi-2.0 at-spi2-core
       - name: Check selected contracts
         env:
           LANE: ${{ inputs.lane }}
@@ -45,7 +45,7 @@ jobs:
             core) just core-check; just coverage ;;
             hosts) just host-check ;;
             editor-native) just editor-native-check ;;
-            writer) just writer check; just writer coverage; xvfb-run -a just writer probe-accessibility ;;
+            writer) just writer check; just writer coverage; xvfb-run -a just writer probe-accessibility --headless-host x11; just writer probe-accessibility-wayland ;;
             *) echo "Unknown contract lane: $LANE" >&2; exit 1 ;;
           esac
       - name: Retain coverage evidence
