@@ -8,15 +8,15 @@ mod writer 'apps/writer/justfile'
 # Editor extensions and installed-host checks.
 mod editor 'editors/justfile'
 # Engine companion and end-to-end workflow checks.
-mod engines 'engines.just'
+mod engines '.config/just/engines.just'
 # Expensive CLI stress checks.
-mod stress 'stress.just'
+mod stress '.config/just/stress.just'
 # Criterion, LSP process measurements and tooling checks.
-mod perf 'perf.just'
+mod perf '.config/just/perf.just'
 # Formatting and linting across maintained source languages.
-mod quality 'quality.just'
+mod quality '.config/just/quality.just'
 # Release preparation, distribution planning and candidate verification.
-mod release 'release.just'
+mod release '.config/just/release.just'
 
 default:
     @just --list

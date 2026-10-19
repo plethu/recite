@@ -1,3 +1,4 @@
+set working-directory := '../..'
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
 set default-list

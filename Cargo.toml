@@ -41,6 +41,23 @@ critical_mutation_files = [
     "crates/recite-runtime/src/session_serialization/pending_position.rs",
 ]
 
+[workspace.metadata.typos.default]
+# Stable dialogue IDs are hexadecimal data, including in JSON and PO strings.
+extend-ignore-re = ["[0-9a-f]{20}"]
+
+[workspace.metadata.typos.default.extend-words]
+ratatui = "ratatui"
+# French catalogue example and intentionally incomplete LSP completion input.
+registre = "registre"
+sav = "sav"
+
+# French text in the localisation workflow specimen.
+reste = "reste"
+
+[workspace.metadata.typos.default.extend-identifiers]
+# Published crate name in archived dependency-probe lockfile evidence.
+writeable = "writeable"
+
 [workspace.dependencies]
 # Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.
 atomic-write-file = "0.3.1"

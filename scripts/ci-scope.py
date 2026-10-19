@@ -26,9 +26,10 @@ from ci_scope_config import JUST_QUALITY as JUST_QUALITY
 def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
-    if path in {"mise.perf.toml", "scripts/check-workflow-performance.sh"} or path.startswith(
-        "tools/recite-perf/"
-    ):
+    if path in {
+        ".config/mise/config.perf.toml",
+        "scripts/check-workflow-performance.sh",
+    } or path.startswith("tools/recite-perf/"):
         return frozenset({"workflow-performance", "maintainability"})
     if path.startswith("nix/") or path in {"flake.nix", "flake.lock"}:
         return frozenset({"nix-packages", "maintainability", "docs"})
@@ -40,8 +41,8 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"flatpak-packages", "maintainability", "docs"})
     if path in {
         "dist-workspace.toml",
-        "mise.release.toml",
-        "release.just",
+        ".config/mise/config.release.toml",
+        ".config/just/release.just",
         ".github/workflows/cli-packages.yml",
     }:
         return frozenset({"cli-packages", "rust", "release-plan", "maintainability", "docs"})
@@ -80,20 +81,22 @@ def lanes_for_path(path, *, base=None, head=None):
         "scripts/lsp_fanout.py",
     }:
         return frozenset({"lsp-sessions", "benchmark-smoke", "maintainability"})
+    if path in {".config/tombi.toml", "clippy.toml", ".cargo/deny.toml"}:
+        return frozenset({"rust", "maintainability"})
     if name in {"Cargo.toml", "Cargo.lock"} or path.startswith(".cargo/"):
         return RUST_BUILD
     if path in {
-        "perf.just",
-        "mise.lsp.toml",
+        ".config/just/perf.just",
+        ".config/mise/config.lsp.toml",
         "pyproject.toml",
         "uv.lock",
         "scripts/lsp.py",
     } or path.startswith("scripts/lsp_tools/"):
         lanes = {"benchmark-smoke", "lsp-sessions", "maintainability"}
-        if path == "perf.just":
+        if path == ".config/just/perf.just":
             lanes.add("workflow-performance")
         return frozenset(lanes)
-    if path in {"mise.maintainability.toml", "mise.godot.toml"}:
+    if path in {".config/mise/config.maintainability.toml", ".config/mise/config.godot.toml"}:
         return RUST
     if path in {
         "scripts/ci-scope.py",
@@ -102,7 +105,7 @@ def lanes_for_path(path, *, base=None, head=None):
     } or path.startswith("tests/ci/"):
         # The unconditional git-policy job runs these contracts on every PR.
         return frozenset({"maintainability"})
-    if path in {".mise.toml", "justfile", ".github/workflows/ci.yml"}:
+    if path in {".config/mise/config.toml", "justfile", ".github/workflows/ci.yml"}:
         return (
             shared_config_lanes(path, base, head)
             if base and head
@@ -117,9 +120,9 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"rust", "editor-native", "maintainability"})
     if path == "editors/zed/justfile":
         return frozenset({"editor-native", "maintainability"})
-    if path == "engines.just":
+    if path == ".config/just/engines.just":
         return frozenset({"hosts", "maintainability"})
-    if path == "stress.just":
+    if path == ".config/just/stress.just":
         return JUST | {"workflow-performance"}
     if path in {"scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"}:
         return RUST
@@ -150,7 +153,7 @@ def lanes_for_path(path, *, base=None, head=None):
     }:
         return WRITER_DISTRIBUTION | {"writer", "maintainability", "docs", "site"}
     if path.startswith(PACKAGING_PREFIXES) or path in {
-        "mise.packaging.toml",
+        ".config/mise/config.packaging.toml",
         "scripts/check-writer-desktop-links.py",
     }:
         return frozenset({"packages", "maintainability", "docs"})
@@ -237,8 +240,6 @@ def lanes_for_path(path, *, base=None, head=None):
         )
     ):
         return frozenset({"benchmark-smoke", "maintainability"})
-    if path in {"_typos.toml", "tombi.toml", "clippy.toml", "deny.toml"}:
-        return frozenset({"rust", "maintainability"})
     return LANES
 
 

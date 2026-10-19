@@ -56,13 +56,13 @@ just supply-chain
 
 `fmt` deliberately formats maintained sources; `fmt-check` checks them without rewriting. `lint`
 runs the configured language linters and Rust Clippy. The quality lane also runs for
-documentation-only contributions. Tools are version-pinned in `.mise.toml` and scoped mise
-configurations, with Bun owned by `package.json` and the .NET SDK owned by `global.json`, both read
-by mise's native version-file support; `just setup` installs them and locked workspace dependencies.
-The normal test recipe uses nextest; doctests have their own recipe and remain part of the complete
-gate. The Zed extension is a separate Cargo workspace, covered by the format, lint, and editor
-gates. `supply-chain` checks both dependency graphs for advisories, licenses, bans, and sources.
-`unused-deps` checks both workspaces with cargo-machete. The existing Godot bindings and
+documentation-only contributions. Tools are version-pinned in `.config/mise/config.toml` and scoped
+mise configurations, with Bun owned by `package.json` and the .NET SDK owned by `global.json`, both
+read by mise's native version-file support; `just setup` installs them and locked workspace
+dependencies. The normal test recipe uses nextest; doctests have their own recipe and remain part of
+the complete gate. The Zed extension is a separate Cargo workspace, covered by the format, lint, and
+editor gates. `supply-chain` checks both dependency graphs for advisories, licenses, bans, and
+sources. `unused-deps` checks both workspaces with cargo-machete. The existing Godot bindings and
 `option-ext` retain their MPL-2.0 licenses; the dependency policy names those packages explicitly.
 Recite's own source remains MIT OR Apache-2.0. Distributions must retain dependency notices and the
 MPL source availability obligations described in the
@@ -73,9 +73,9 @@ isolated fixture builds also need temporary disk space. If `/tmp` is a small RAM
 use `TMPDIR=/var/tmp just check`; the temporary directory must be outside the checkout so isolation
 checks and editor project discovery retain their intended boundaries. Rust and Unity headless tests
 require no database or running game. The complete adapter gate also runs a temporary headless Godot
-project; its pinned 4.6.3 host is provisioned by the scoped `mise.godot.toml` environment. That host
-lane currently requires Linux x86_64. Other platform-host and expensive stress evidence have
-explicit commands:
+project; its pinned 4.6.3 host is provisioned by the scoped `.config/mise/config.godot.toml`
+environment. That host lane currently requires Linux x86_64. Other platform-host and expensive
+stress evidence have explicit commands:
 
 ```sh
 just stress scale --nocapture
@@ -118,6 +118,10 @@ the relationships between those fields.
 The [site](docs-site/README.md) uses Eleventy with mise-managed Bun for builds and checks. Its
 output is static HTML, CSS and browser modules; hosting needs no Node server or UI framework
 runtime. Python wheels used to distribute formatters are tools, not new application modules.
+
+Shared formatter and Markdown lint settings live in `.config/`; Cargo-deny uses `.cargo/deny.toml`,
+and spelling settings live in `Cargo.toml` workspace metadata. Tools discover these files
+automatically. The root `justfile` loads shared command modules from `.config/just/`.
 
 ## Performance tooling
 

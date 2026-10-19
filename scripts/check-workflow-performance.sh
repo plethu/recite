@@ -84,7 +84,7 @@ git -C "$repo_root" diff --binary HEAD >"$evidence/candidate.patch"
 git ls-files --others --exclude-standard -z -- '*.rs' '*.toml' '*.sh' '*.just' >"$evidence/untracked-source-files"
 tar --null -czf "$evidence/untracked-sources.tar.gz" --files-from "$evidence/untracked-source-files"
 tar -czf "$evidence/harness.tar.gz" "${harness[@]}"
-cp mise.perf.toml scripts/check-workflow-performance.sh "$evidence/"
+cp .config/mise/config.perf.toml scripts/check-workflow-performance.sh "$evidence/"
 cargo build --locked --release -p recite-perf
 checker="${CARGO_TARGET_DIR:-$repo_root/target}/release/recite-perf"
 "$checker" prepare "$repo_root" "$control"

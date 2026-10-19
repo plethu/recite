@@ -9,4 +9,4 @@ fi
 cd "$repo_root"
 cargo deny --locked --all-features check advisories bans licenses sources
 cargo deny --locked --manifest-path editors/zed/Cargo.toml --all-features \
-  --config "$repo_root/deny.toml" check advisories bans licenses sources
+  check advisories bans licenses sources

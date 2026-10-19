@@ -9,12 +9,12 @@ export PATH
 temporary="$(mktemp -d)"
 trap 'rm -rf "$temporary"' EXIT
 fixture="$temporary/repo"
-mkdir -p "$fixture"
+mkdir -p "$fixture/.config/mise"
 git -C "$fixture" init -q -b main
 git -C "$fixture" config user.name Fixture
 git -C "$fixture" config user.email fixture@example.invalid
 git -C "$fixture" config commit.gpgsign false
-cat >"$fixture/dprint.json" <<'JSON'
+cat >"$fixture/.config/dprint.json" <<'JSON'
 {"plugins":["https://plugins.dprint.dev/typescript-0.96.1.wasm"]}
 JSON
 printf '%s\n' '{"name":"formatter-replay-fixture","private":true}' >"$fixture/package.json"
@@ -58,19 +58,20 @@ git -C "$fixture" add .
 git -C "$fixture" commit -qm nested-formatted
 head="$(git -C "$fixture" rev-parse HEAD)"
 maintainability_is_format_only "$fixture" "$base" "$head" nested/demo.ts nested/demo.ts
-rm "$fixture/dprint.json" "$fixture/oxfmt.config.mts"
+rm "$fixture/.config/dprint.json" "$fixture/oxfmt.config.mts"
 if maintainability_is_format_only "$fixture" "$base" "$head" demo.js demo.js; then
   echo 'formatter replay accepted missing configuration' >&2
   exit 1
 fi
 mise -E quality exec -- jq '.exec.commands |= map(select(.exts == ["lua"]))' \
-  "$source_root/dprint.json" >"$fixture/dprint.json"
-cp "$source_root/stylua.toml" "$source_root/mise.quality.toml" "$fixture/"
+  "$source_root/.config/dprint.json" >"$fixture/.config/dprint.json"
+cp "$source_root/stylua.toml" "$fixture/"
+cp "$source_root/.config/mise/config.quality.toml" "$fixture/.config/mise/"
 printf 'local values={1,2,3}\n' >"$fixture/demo.lua"
 git -C "$fixture" add .
 git -C "$fixture" commit -qm lua-base
 base="$(git -C "$fixture" rev-parse HEAD)"
-mise -E quality exec -- dprint fmt --config "$fixture/dprint.json" "$fixture/demo.lua"
+mise -E quality exec -- bash -c 'cd "$1/nested" && exec dprint fmt ../demo.lua' _ "$fixture"
 git -C "$fixture" add .
 git -C "$fixture" commit -qm lua-formatted
 head="$(git -C "$fixture" rev-parse HEAD)"

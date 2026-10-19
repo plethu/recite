@@ -55,8 +55,8 @@ class DocumentScopeTests(unittest.TestCase):
             "apps/writer/justfile": {"writer", "maintainability"},
             "editors/justfile": {"rust", "editor-native", "maintainability"},
             "editors/zed/justfile": {"editor-native", "maintainability"},
-            "engines.just": {"hosts", "maintainability"},
-            "stress.just": scope.JUST | {"workflow-performance"},
+            ".config/just/engines.just": {"hosts", "maintainability"},
+            ".config/just/stress.just": scope.JUST | {"workflow-performance"},
         }.items():
             self.assertEqual(selected(path), lanes)
         for path in ("scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"):
@@ -79,6 +79,11 @@ class DocumentScopeTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), scope.RUST_BUILD)
+
+    def test_shared_rust_policy_configs_keep_their_consumers(self):
+        for path in ("clippy.toml", ".config/tombi.toml", ".cargo/deny.toml"):
+            with self.subTest(path=path):
+                self.assertEqual(selected(path), {"rust", "maintainability"})
 
     def test_executable_documentation_selects_its_rust_test_owner(self):
         for path in (

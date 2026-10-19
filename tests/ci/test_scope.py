@@ -45,7 +45,7 @@ class ScopeTests(unittest.TestCase):
         for path in (
             "scripts/lsp.py",
             "scripts/lsp_tools/client.py",
-            "mise.lsp.toml",
+            ".config/mise/config.lsp.toml",
             "pyproject.toml",
             "uv.lock",
         ):
@@ -53,9 +53,9 @@ class ScopeTests(unittest.TestCase):
 
     def test_workflow_regression_checks_follow_measured_inputs(self):
         for path in (
-            "perf.just",
-            "stress.just",
-            "mise.perf.toml",
+            ".config/just/perf.just",
+            ".config/just/stress.just",
+            ".config/mise/config.perf.toml",
             "scripts/check-workflow-performance.sh",
             "tools/recite-perf/benches/workflows.rs",
             "crates/recite-core/src/text/interpolation.rs",
@@ -211,7 +211,7 @@ class ScopeTests(unittest.TestCase):
             ("tests/writer-flatpak/check.py", "flatpak-packages"),
             ("apps/writer/packaging/icons/recite-writer.svg", "flatpak-packages"),
             ("scripts/package-writer.py", "packages"),
-            ("mise.packaging.toml", "packages"),
+            (".config/mise/config.packaging.toml", "packages"),
             ("scripts/check-writer-package-windows.ps1", "packages"),
             ("tests/writer-packaging/check.py", "packages"),
             ("apps/writer/packaging/common.json", "packages"),
@@ -220,14 +220,14 @@ class ScopeTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertEqual(selected(path), {lane, "maintainability", "docs"})
-        for path in (".mise.toml", ".github/workflows/ci.yml"):
+        for path in (".config/mise/config.toml", ".github/workflows/ci.yml"):
             self.assertEqual(selected(path), scope.LANES)
 
     def test_release_owners_validate_plans_and_shared_rust_workflow_validates_callers(self):
         for path, builds_archives in {
             "dist-workspace.toml": True,
-            "mise.release.toml": True,
-            "release.just": True,
+            ".config/mise/config.release.toml": True,
+            ".config/just/release.just": True,
             ".github/workflows/cli-packages.yml": True,
             "release.toml": False,
             ".github/workflows/release.yml": False,
@@ -286,13 +286,13 @@ class ScopeTests(unittest.TestCase):
     def test_shared_config_changes_select_the_affected_surface(self):
         cases = (
             (
-                ".mise.toml",
+                ".config/mise/config.toml",
                 b'[tools]\nnode = "24.18.0"\nbun = "1.4.2"\n',
                 b'[tools]\nnode = "24.18.0"\nbun = "1.4.3"\n',
                 scope.JS,
             ),
             (
-                ".mise.toml",
+                ".config/mise/config.toml",
                 b'[tools]\nnode = "22"\n',
                 b"[settings]\nexperimental = true\n",
                 scope.LANES,
@@ -360,7 +360,9 @@ class ScopeTests(unittest.TestCase):
                 self.subTest(tool=tool),
                 patch("ci_scope_config.file_at", side_effect=[old, new]),
             ):
-                self.assertEqual(scope.shared_config_lanes(".mise.toml", "base", "head"), expected)
+                self.assertEqual(
+                    scope.shared_config_lanes(".config/mise/config.toml", "base", "head"), expected
+                )
         workflow = ".github/workflows/ci.yml"
         for lane in scope.LANES - {"docs"}:
             old = f"name: CI\n\njobs:\n  {lane}:\n    old\n".encode()

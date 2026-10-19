@@ -28,7 +28,7 @@ packaging:
 
 # Audit the separate Writer graph with the shared dependency policy.
 supply-chain:
-    cargo deny --locked --manifest-path apps/writer/Cargo.toml --all-features --config deny.toml check advisories bans licenses sources
+    cargo deny --locked --manifest-path apps/writer/Cargo.toml --all-features check advisories bans licenses sources
 
 # Headless model and UI ownership have separate production-line floors.
 coverage:

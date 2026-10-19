@@ -176,7 +176,7 @@ def shared_config_lanes(path, base, head):
     before, after = file_at(base, path), file_at(head, path)
     if before is None or after is None:
         return LANES
-    if path == ".mise.toml":
+    if path == ".config/mise/config.toml":
         old, new = tomllib.loads(before.decode()), tomllib.loads(after.decode())
         old_tools, new_tools = old.get("tools"), new.get("tools")
         if not isinstance(old_tools, dict) or not isinstance(new_tools, dict):
