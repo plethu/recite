@@ -73,7 +73,7 @@ if ! grep -Fq "positive Recite highlight query" "$negative_output"; then
   exit 1
 fi
 
-sed -i 's/074ced2aec7549d5c9e2b86f04ca2f2fab6d7e9c/0000000000000000000000000000000000000000/' \
+sed -i 's/65afc5933d71ac8af40037232bf755f823608536/0000000000000000000000000000000000000000/' \
   "$fixture/editors/helix/languages.toml"
 revision_output="$test_root/revision-output"
 if "$checker" "$fixture" >"$revision_output" 2>&1; then

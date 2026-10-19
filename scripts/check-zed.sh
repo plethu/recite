@@ -42,7 +42,7 @@ fi
 extension_dir="$repo_root/editors/zed"
 query="$extension_dir/languages/recite/highlights.scm"
 fixture="$repo_root/fixtures/editor-parity/zed/incomplete.recite"
-grammar_revision="074ced2aec7549d5c9e2b86f04ca2f2fab6d7e9c"
+grammar_revision="65afc5933d71ac8af40037232bf755f823608536"
 assert_lsp_log_test="$repo_root/tests/editor-hosts/zed/test_assert_lsp_log.py"
 
 if [[ ! -f "$assert_lsp_log_test" || -L "$assert_lsp_log_test" ]]; then

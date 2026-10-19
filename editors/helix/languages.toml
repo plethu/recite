@@ -27,4 +27,4 @@ indent = { tab-width = 2, unit = "  " }
 
 [[grammar]]
 name = "recite"
-source = { git = "https://github.com/plethu/recite", rev = "074ced2aec7549d5c9e2b86f04ca2f2fab6d7e9c", subpath = "editors/recite-tree-sitter" }
+source = { git = "https://github.com/plethu/recite", rev = "65afc5933d71ac8af40037232bf755f823608536", subpath = "editors/recite-tree-sitter" }

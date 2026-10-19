@@ -8,7 +8,7 @@ repository = "https://github.com/plethu/recite"
 
 [grammars.recite]
 repository = "https://github.com/plethu/recite"
-rev = "074ced2aec7549d5c9e2b86f04ca2f2fab6d7e9c"
+rev = "65afc5933d71ac8af40037232bf755f823608536"
 path = "editors/recite-tree-sitter"
 
 [language_servers.recite-lsp]

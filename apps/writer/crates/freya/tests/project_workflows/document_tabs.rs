@@ -251,6 +251,7 @@ fn closing_a_saved_sibling_restores_applicable_staged_rules()
     test.click_cursor(field.center().to_f64());
     test.poll_n(std::time::Duration::from_millis(16), 6);
     support::click(&mut test, "Line actions")?;
+    support::wait_for(&mut test, "reply actions", |test| has(test, "Reply rules"))?;
     support::click(&mut test, "Reply rules")?;
     support::click(&mut test, "Make always available")?;
     support::click(&mut test, "B")?;
