@@ -8,15 +8,15 @@ mod writer 'apps/writer/justfile'
 # Editor extensions and installed-host checks.
 mod editor 'editors/justfile'
 # Engine companion and end-to-end workflow checks.
-mod engines 'engines.just'
+mod engines '.config/just/engines.just'
 # Expensive CLI stress checks.
-mod stress 'stress.just'
+mod stress '.config/just/stress.just'
 # Criterion, LSP process measurements and tooling checks.
-mod perf 'perf.just'
+mod perf '.config/just/perf.just'
 # Formatting and linting across maintained source languages.
-mod quality 'quality.just'
+mod quality '.config/just/quality.just'
 # Release preparation, distribution planning and candidate verification.
-mod release 'release.just'
+mod release '.config/just/release.just'
 
 default:
     @just --list
@@ -134,6 +134,10 @@ check:
 [private]
 _verify:
     just _check-quality
+    just unused-deps
+    just supply-chain
+    just perf setup
+    just perf check
     scripts/check-git-policy.sh
     bash tests/git-policy/check-integration.sh
     bash tests/trusted-policy/check.sh
@@ -156,11 +160,8 @@ _check-quality:
     just fmt-check
     just quality lint
     just spelling
-    just unused-deps
-    just supply-chain
+    python3 tests/maintainability/config-discovery.py
     actionlint -shellcheck= -pyflakes=
-    just perf setup
-    just perf check
     tests/maintainability/check.sh
     tests/maintainability/format-replay.sh
     tests/ast-grep/check.sh

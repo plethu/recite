@@ -5,7 +5,9 @@
 !tsconfig.base.json
 !oxfmt.config.mts
 !oxlint.config.mts
-!.mise.toml
+!.config/
+!.config/mise/
+!.config/mise/config.toml
 !docs-site/
 !docs-site/**
 !editors/

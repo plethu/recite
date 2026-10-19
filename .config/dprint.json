@@ -8,30 +8,30 @@
     "**/Dockerfile.playwright",
     "**/*.csproj",
     "**/NuGet.Config",
-    "gdlintrc",
-    ".clang-format"
+    "../gdlintrc",
+    "../.clang-format"
   ],
   "excludes": [
     "**/node_modules/**",
     "**/target/**",
-    "docs-site/dist/**",
-    "docs-site/.browser-artifacts/**",
-    "docs-site/src/client/generated/**",
+    "../docs-site/dist/**",
+    "../docs-site/.browser-artifacts/**",
+    "../docs-site/src/client/generated/**",
     "**/__pycache__/**",
-    ".venv/**",
-    "fixtures/schema/invalid/**",
-    "fixtures/schema/valid/unsorted_manifest.json",
-    "fixtures/synthetic/tiny/**",
-    "fixtures/realistic/v1-pack/**",
-    "fixtures/recite/invalid/**",
-    "editors/recite-tree-sitter/src/**",
-    "editors/vscode/src/*.generated.js",
-    "editors/vscode/package.nls.json",
-    "editors/recite-neovim/lua/recite_messages.lua",
-    "editors/recite-neovim/lua/recite_diagnostics.lua",
-    "apps/writer/packaging/flatpak/cargo-sources.json",
-    "apps/writer/packaging/flatpak/last_commit_position.h",
-    "include/recite.h"
+    "../.venv/**",
+    "../fixtures/schema/invalid/**",
+    "../fixtures/schema/valid/unsorted_manifest.json",
+    "../fixtures/synthetic/tiny/**",
+    "../fixtures/realistic/v1-pack/**",
+    "../fixtures/recite/invalid/**",
+    "../editors/recite-tree-sitter/src/**",
+    "../editors/vscode/src/*.generated.js",
+    "../editors/vscode/package.nls.json",
+    "../editors/recite-neovim/lua/recite_messages.lua",
+    "../editors/recite-neovim/lua/recite_diagnostics.lua",
+    "../apps/writer/packaging/flatpak/cargo-sources.json",
+    "../apps/writer/packaging/flatpak/last_commit_position.h",
+    "../include/recite.h"
   ],
   "json": {
     "trailingCommas": "never"
@@ -57,7 +57,7 @@
     "associations": [
       "**/*.{py,sh,lua,gd,c,cpp,h,nix,ps1,psd1}"
     ],
-    "cwd": "${configDir}",
+    "cwd": "${configDir}/..",
     "cacheKey": "1",
     "commands": [
       {
@@ -66,8 +66,8 @@
           "py"
         ],
         "cacheKeyFiles": [
-          "pyproject.toml",
-          "mise.quality.toml"
+          "${configDir}/../pyproject.toml",
+          "${configDir}/../.config/mise/config.quality.toml"
         ]
       },
       {
@@ -76,8 +76,8 @@
           "sh"
         ],
         "cacheKeyFiles": [
-          ".editorconfig",
-          "mise.quality.toml"
+          "${configDir}/../.editorconfig",
+          "${configDir}/../.config/mise/config.quality.toml"
         ]
       },
       {
@@ -86,8 +86,8 @@
           "lua"
         ],
         "cacheKeyFiles": [
-          "stylua.toml",
-          "mise.quality.toml"
+          "${configDir}/../stylua.toml",
+          "${configDir}/../.config/mise/config.quality.toml"
         ]
       },
       {
@@ -97,8 +97,8 @@
           "gd"
         ],
         "cacheKeyFiles": [
-          "gdlintrc",
-          "mise.quality.toml"
+          "${configDir}/../gdlintrc",
+          "${configDir}/../.config/mise/config.quality.toml"
         ]
       },
       {
@@ -109,8 +109,8 @@
           "h"
         ],
         "cacheKeyFiles": [
-          ".clang-format",
-          "mise.quality.toml"
+          "${configDir}/../.clang-format",
+          "${configDir}/../.config/mise/config.quality.toml"
         ]
       },
       {
@@ -119,7 +119,7 @@
           "nix"
         ],
         "cacheKeyFiles": [
-          "mise.quality.toml"
+          "${configDir}/../.config/mise/config.quality.toml"
         ]
       },
       {
@@ -129,9 +129,9 @@
           "psd1"
         ],
         "cacheKeyFiles": [
-          "scripts/quality/powershell.ps1",
-          "scripts/quality/PSScriptAnalyzerSettings.psd1",
-          "mise.quality.toml"
+          "${configDir}/../scripts/quality/powershell.ps1",
+          "${configDir}/../scripts/quality/PSScriptAnalyzerSettings.psd1",
+          "${configDir}/../.config/mise/config.quality.toml"
         ]
       }
     ]

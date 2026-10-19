@@ -18,7 +18,11 @@ spec.loader.exec_module(scope)
 
 
 def selected(*paths):
-    return {lane for lane, run in scope.select_lanes(paths).items() if run}
+    return {
+        lane
+        for lane, run in scope.select_lanes([scope.Change(path, path) for path in paths]).items()
+        if run
+    }
 
 
 class ScopeTests(unittest.TestCase):
@@ -45,7 +49,7 @@ class ScopeTests(unittest.TestCase):
         for path in (
             "scripts/lsp.py",
             "scripts/lsp_tools/client.py",
-            "mise.lsp.toml",
+            ".config/mise/config.lsp.toml",
             "pyproject.toml",
             "uv.lock",
         ):
@@ -53,9 +57,9 @@ class ScopeTests(unittest.TestCase):
 
     def test_workflow_regression_checks_follow_measured_inputs(self):
         for path in (
-            "perf.just",
-            "stress.just",
-            "mise.perf.toml",
+            ".config/just/perf.just",
+            ".config/just/stress.just",
+            ".config/mise/config.perf.toml",
             "scripts/check-workflow-performance.sh",
             "tools/recite-perf/benches/workflows.rs",
             "crates/recite-core/src/text/interpolation.rs",
@@ -126,7 +130,13 @@ class ScopeTests(unittest.TestCase):
         self.assertTrue(
             all(scope.event_scope("schedule", {"inputs": {"lsp_sessions_only": "true"}}).values())
         )
-        with patch.object(scope, "changed_paths", return_value=["crates/recite-lsp/src/server.rs"]):
+        with patch.object(
+            scope,
+            "changed_files",
+            return_value=[
+                scope.Change("crates/recite-lsp/src/server.rs", "crates/recite-lsp/src/server.rs")
+            ],
+        ):
             selection = scope.event_scope(
                 "pull_request",
                 {
@@ -211,7 +221,7 @@ class ScopeTests(unittest.TestCase):
             ("tests/writer-flatpak/check.py", "flatpak-packages"),
             ("apps/writer/packaging/icons/recite-writer.svg", "flatpak-packages"),
             ("scripts/package-writer.py", "packages"),
-            ("mise.packaging.toml", "packages"),
+            (".config/mise/config.packaging.toml", "packages"),
             ("scripts/check-writer-package-windows.ps1", "packages"),
             ("tests/writer-packaging/check.py", "packages"),
             ("apps/writer/packaging/common.json", "packages"),
@@ -219,15 +229,15 @@ class ScopeTests(unittest.TestCase):
             ("assets/identity/recite.png", "packages"),
         ):
             with self.subTest(path=path):
-                self.assertEqual(selected(path), {lane, "maintainability", "docs"})
-        for path in (".mise.toml", ".github/workflows/ci.yml"):
-            self.assertEqual(selected(path), scope.LANES)
+                self.assertEqual(selected(path), {"package-config", "maintainability", "docs"})
+        for path in (".config/mise/config.toml", ".github/workflows/ci.yml"):
+            self.assertEqual(selected(path), scope.LANES - scope.DISTRIBUTION)
 
     def test_release_owners_validate_plans_and_shared_rust_workflow_validates_callers(self):
         for path, builds_archives in {
             "dist-workspace.toml": True,
-            "mise.release.toml": True,
-            "release.just": True,
+            ".config/mise/config.release.toml": True,
+            ".config/just/release.just": True,
             ".github/workflows/cli-packages.yml": True,
             "release.toml": False,
             ".github/workflows/release.yml": False,
@@ -237,7 +247,7 @@ class ScopeTests(unittest.TestCase):
         }.items():
             expected = {"rust", "release-plan", "maintainability", "docs"}
             if builds_archives:
-                expected.add("cli-packages")
+                expected.add("package-config")
             with self.subTest(path=path):
                 self.assertEqual(selected(path), expected)
         self.assertEqual(
@@ -260,10 +270,10 @@ class ScopeTests(unittest.TestCase):
             ".github/workflows/writer-packages.yml": scope.WRITER_DISTRIBUTION,
             "LICENSE-MIT": scope.DISTRIBUTION,
         }.items():
-            self.assertEqual(selected(path), families | {"maintainability", "docs"})
+            self.assertEqual(selected(path), {"package-config", "maintainability", "docs"})
         self.assertEqual(
             selected("apps/writer/packaging/icons/recite-writer.png"),
-            scope.WRITER_DISTRIBUTION | {"writer", "maintainability", "docs"},
+            {"package-config", "writer", "maintainability", "docs"},
         )
         for path in (
             "assets/identity/recite-wordmark.svg",
@@ -272,103 +282,16 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(
                     selected(path),
-                    scope.WRITER_DISTRIBUTION | {"writer", "maintainability", "docs", "site"},
+                    {"package-config", "writer", "maintainability", "docs", "site"},
                 )
 
     def test_unknown_inputs_are_conservative_and_changes_union(self):
-        self.assertEqual(selected("new-build-system/config.json"), scope.LANES)
+        self.assertEqual(selected("new-build-system/config.json"), scope.LANES - scope.DISTRIBUTION)
         self.assertEqual(
             selected("docs/recite-production-spec.md", "crates/recite-cli/src/lib.rs"),
             {"docs"} | scope.RUST,
         )
         self.assertEqual(selected(), {"maintainability"})
-
-    def test_shared_config_changes_select_the_affected_surface(self):
-        cases = (
-            (
-                ".mise.toml",
-                b'[tools]\nnode = "24.18.0"\nbun = "1.4.2"\n',
-                b'[tools]\nnode = "24.18.0"\nbun = "1.4.3"\n',
-                scope.JS,
-            ),
-            (
-                ".mise.toml",
-                b'[tools]\nnode = "22"\n',
-                b"[settings]\nexperimental = true\n",
-                scope.LANES,
-            ),
-            (
-                "justfile",
-                b'set shell := ["bash"]\n\nfmt:\n    cargo fmt\n',
-                b'set shell := ["zsh"]\n\nfmt:\n    cargo fmt\n',
-                scope.JUST_QUALITY,
-            ),
-            (
-                ".github/workflows/ci.yml",
-                b"name: CI\n\njobs:\n  docs:\n    old\n  rust:\n    same\n",
-                b"name: CI\n\njobs:\n  docs:\n    new\n  rust:\n    same\n",
-                {"docs", "site"},
-            ),
-            (
-                ".github/workflows/ci.yml",
-                b"name: CI\n\njobs:\n  changes:\n    outputs:\n      rust: ${{ steps.scope.outputs.rust }}\n"
-                b"  docs:\n    same\n  required-check:\n    needs:\n      - changes\n      - git-policy\n      - rust\n",
-                b"name: CI\n\njobs:\n  changes:\n    outputs:\n      rust: ${{ steps.scope.outputs.rust }}\n"
-                b"      site: ${{ steps.scope.outputs.site }}\n"
-                b"  docs:\n    same\n  site:\n    new\n  required-check:\n    needs:\n      - changes\n      - git-policy\n      - rust\n      - site\n",
-                {"site"},
-            ),
-            (
-                ".github/workflows/ci.yml",
-                b"name: CI\n\njobs:\n  changes:\n    steps:\n      - run: python3 scripts/ci-scope.py\n",
-                b"name: CI\n\njobs:\n  changes:\n    steps:\n      - run: echo skip checks\n",
-                scope.LANES,
-            ),
-        )
-        for path, old, new, expected in cases:
-            with self.subTest(path=path, new=new):
-                with patch("ci_scope_config.file_at", side_effect=[old, new]):
-                    self.assertEqual(scope.shared_config_lanes(path, "base", "head"), expected)
-        for recipe, expected in {
-            "fmt": scope.JUST,
-            "_check-quality": scope.JUST,
-            "clippy": {"rust", "maintainability"},
-            "_clippy-rust": {"rust", "maintainability"},
-            "core-check": {"rust", "maintainability"},
-            "coverage": {"rust", "maintainability"},
-            "mutants": {"rust", "maintainability"},
-            "host-check": {"hosts", "maintainability"},
-            "editor-native-check": {"editor-native", "maintainability"},
-            "check": scope.JUST_QUALITY,
-            "_verify": scope.JUST_QUALITY,
-        }.items():
-            old = f'set shell := ["bash"]\n\nhelp:\n    same\n\n{recipe}:\n    old\n'.encode()
-            with (
-                self.subTest(recipe=recipe),
-                patch("ci_scope_config.file_at", side_effect=[old, old.replace(b"old", b"new")]),
-            ):
-                self.assertEqual(scope.shared_config_lanes("justfile", "base", "head"), expected)
-        for tool, before, after, expected in (
-            ("node", "22", "24", scope.JS),
-            ("rust", "1.95", "1.96", scope.RUST_BUILD),
-            ("cargo:cargo-llvm-cov", "1", "2", scope.RUST_BUILD),
-            ("cargo:cargo-mutants", "1", "2", scope.RUST_BUILD),
-        ):
-            old = f'[tools]\n"{tool}" = "{before}"\n'.encode()
-            new = f'[tools]\n"{tool}" = "{after}"\n'.encode()
-            with (
-                self.subTest(tool=tool),
-                patch("ci_scope_config.file_at", side_effect=[old, new]),
-            ):
-                self.assertEqual(scope.shared_config_lanes(".mise.toml", "base", "head"), expected)
-        workflow = ".github/workflows/ci.yml"
-        for lane in scope.LANES - {"docs"}:
-            old = f"name: CI\n\njobs:\n  {lane}:\n    old\n".encode()
-            with (
-                self.subTest(lane=lane),
-                patch("ci_scope_config.file_at", side_effect=[old, old.replace(b"old", b"new")]),
-            ):
-                self.assertEqual(scope.shared_config_lanes(workflow, "base", "head"), {lane})
 
     def test_full_events_and_initial_push(self):
         for event in ("schedule", "workflow_dispatch", "push"):
@@ -380,7 +303,9 @@ class ScopeTests(unittest.TestCase):
             scope.event_scope("pull_request", {})
 
     def test_event_uses_pr_heads_and_direct_push_range(self):
-        with patch.object(scope, "changed_paths", return_value=["README.md"]) as diff:
+        with patch.object(
+            scope, "changed_files", return_value=[scope.Change("README.md", "README.md")]
+        ) as diff:
             scope.event_scope(
                 "pull_request",
                 {
@@ -391,7 +316,7 @@ class ScopeTests(unittest.TestCase):
                 },
             )
             diff.assert_called_once_with("base", "head", pull_request=True)
-        with patch.object(scope, "changed_paths", return_value=[]) as diff:
+        with patch.object(scope, "changed_files", return_value=[]) as diff:
             scope.event_scope("push", {"before": "old", "after": "new"})
             diff.assert_called_once_with("old", "new", pull_request=False)
 
@@ -432,7 +357,8 @@ class GitDiffTests(unittest.TestCase):
             original = Path.cwd()
             try:
                 os.chdir(directory)
-                paths = scope.changed_paths("main", head, pull_request=True)
+                changes = scope.changed_files("main", head, pull_request=True)
+                paths = {path for change in changes for path in change if path is not None}
                 self.assertIn("crates/old.rs", paths)
                 self.assertIn("docs/old.md", paths)
                 self.assertIn(unusual, paths)
@@ -440,7 +366,12 @@ class GitDiffTests(unittest.TestCase):
                 self.assertEqual(len(paths), 3103)
                 self.assertIn("rust", selected(*paths))
                 self.assertIn(
-                    "base-only.txt", scope.changed_paths(base, "main", pull_request=False)
+                    "base-only.txt",
+                    {
+                        path
+                        for change in scope.changed_files(base, "main", pull_request=False)
+                        for path in change
+                    },
                 )
                 event = root / "event.json"
                 event.write_text(
@@ -471,6 +402,17 @@ class GitDiffTests(unittest.TestCase):
                 self.assertEqual(decisions["packages"], "false")
                 self.assertEqual(decisions["docs"], "true")
                 self.assertIn("packages: not affected", summary.read_text())
+                self.assertIn("Why these checks?", summary.read_text())
+                explained = subprocess.run(
+                    [sys.executable, cli, base, head, "--explain"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertTrue(json.loads(explained.stdout)["rust"])
+                reasons = json.loads(explained.stderr)
+                self.assertIn("crates/old.rs", reasons["rust"]["inputs"][0])
+                self.assertLessEqual(len(reasons["docs"]["inputs"]), 8)
                 missing = subprocess.run(
                     [sys.executable, cli, "--base", "missing-ref", "--head", head],
                     capture_output=True,

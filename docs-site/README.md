@@ -44,8 +44,9 @@ content, excluding navigation and playground controls.
 
 The playground uses `fixtures/recite/valid/landing-junction.recite` and Recite's real Rust compiler
 and runtime. `just web wasm` generates the ignored bridge and binary; keep wasm-bindgen versions
-aligned in `mise.site.toml` and Cargo. The worker and WASM load on Run. Source stays in the browser;
-resource limits, exact integers, cancellation and recovery have browser and Rust coverage.
+aligned in `.config/mise/config.site.toml` and Cargo. The worker and WASM load on Run. Source stays
+in the browser; resource limits, exact integers, cancellation and recovery have browser and Rust
+coverage.
 
 Canonical identity assets come from `assets/identity`. The shared print palette and self-hosted
 fonts come from the Writer/site redesign. Keep colors in `src/styles/tokens.css`, explicit CSS

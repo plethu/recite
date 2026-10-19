@@ -1,11 +1,12 @@
+set working-directory := '../..'
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
 set default-list
 
 # Provision language quality tools and the exact PowerShell analyzer module.
 setup:
-    mise -E quality install
-    mise -E quality run quality-powershell-setup
+    mise install python
+    "$(mise which python)" scripts/setup-quality.py
 
 # Deliberately format non-Rust sources with the shared configuration.
 fmt:
@@ -27,7 +28,7 @@ fmt-check:
 
 # Run language linters; engine/parser contract checks remain in their own lanes.
 lint:
-    just web check
+    bun run --cwd docs-site lint:css
     mise -E quality exec -- tombi lint --offline --error-on-warnings
     mise -E quality exec -- ruff check
     mise -E quality exec -- rumdl check .

@@ -1,7 +1,7 @@
 name: Writer package previews
 
-# Called by CI for packaging/build inputs and its weekly complete run.
-# Maintainers can also dispatch this workflow before a release.
+# Full native builds run during complete scheduled/manual/release verification.
+# Ordinary contributions use the package configuration and build-plan lane.
 on:
   workflow_call:
     inputs:

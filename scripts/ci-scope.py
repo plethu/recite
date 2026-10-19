@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Select CI lanes from a complete Git diff; unknown paths receive full coverage."""
+"""Select affected PR checks; complete events also build native distributions."""
 
 import argparse
 import json
 import os
-import subprocess
+import sys
 from pathlib import Path
 
 from ci_scope_config import (
@@ -21,14 +21,16 @@ from ci_scope_config import (
     shared_config_lanes,
 )
 from ci_scope_config import JUST_QUALITY as JUST_QUALITY
+from ci_scope_inputs import Change as Change
+from ci_scope_inputs import changed_files, config_change_lanes, tooling_owners
 
 
 def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
-    if path in {"mise.perf.toml", "scripts/check-workflow-performance.sh"} or path.startswith(
-        "tools/recite-perf/"
-    ):
+    if (owners := tooling_owners(path)) is not None:
+        return owners
+    if path == "scripts/check-workflow-performance.sh" or path.startswith("tools/recite-perf/"):
         return frozenset({"workflow-performance", "maintainability"})
     if path.startswith("nix/") or path in {"flake.nix", "flake.lock"}:
         return frozenset({"nix-packages", "maintainability", "docs"})
@@ -40,8 +42,6 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"flatpak-packages", "maintainability", "docs"})
     if path in {
         "dist-workspace.toml",
-        "mise.release.toml",
-        "release.just",
         ".github/workflows/cli-packages.yml",
     }:
         return frozenset({"cli-packages", "rust", "release-plan", "maintainability", "docs"})
@@ -80,29 +80,28 @@ def lanes_for_path(path, *, base=None, head=None):
         "scripts/lsp_fanout.py",
     }:
         return frozenset({"lsp-sessions", "benchmark-smoke", "maintainability"})
+    if path == "clippy.toml":
+        return frozenset({"rust", "maintainability"})
+    if path == "scripts/check-dependencies.sh":
+        return frozenset({"dependencies", "maintainability"})
     if name in {"Cargo.toml", "Cargo.lock"} or path.startswith(".cargo/"):
         return RUST_BUILD
     if path in {
-        "perf.just",
-        "mise.lsp.toml",
         "pyproject.toml",
         "uv.lock",
         "scripts/lsp.py",
     } or path.startswith("scripts/lsp_tools/"):
-        lanes = {"benchmark-smoke", "lsp-sessions", "maintainability"}
-        if path == "perf.just":
-            lanes.add("workflow-performance")
-        return frozenset(lanes)
-    if path in {"mise.maintainability.toml", "mise.godot.toml"}:
-        return RUST
+        return frozenset({"benchmark-smoke", "lsp-sessions", "maintainability"})
     if path in {
         "scripts/ci-scope.py",
         "scripts/ci_scope_config.py",
+        "scripts/ci_scope_inputs.py",
         "scripts/check-ci-results.py",
+        "scripts/setup-quality.py",
     } or path.startswith("tests/ci/"):
         # The unconditional git-policy job runs these contracts on every PR.
         return frozenset({"maintainability"})
-    if path in {".mise.toml", "justfile", ".github/workflows/ci.yml"}:
+    if path in {".config/mise/config.toml", "justfile", ".github/workflows/ci.yml"}:
         return (
             shared_config_lanes(path, base, head)
             if base and head
@@ -117,10 +116,6 @@ def lanes_for_path(path, *, base=None, head=None):
         return frozenset({"rust", "editor-native", "maintainability"})
     if path == "editors/zed/justfile":
         return frozenset({"editor-native", "maintainability"})
-    if path == "engines.just":
-        return frozenset({"hosts", "maintainability"})
-    if path == "stress.just":
-        return JUST | {"workflow-performance"}
     if path in {"scripts/check-project-gates.sh", "scripts/check-ffi-header.sh"}:
         return RUST
     if path == "scripts/check-zed.sh":
@@ -150,7 +145,6 @@ def lanes_for_path(path, *, base=None, head=None):
     }:
         return WRITER_DISTRIBUTION | {"writer", "maintainability", "docs", "site"}
     if path.startswith(PACKAGING_PREFIXES) or path in {
-        "mise.packaging.toml",
         "scripts/check-writer-desktop-links.py",
     }:
         return frozenset({"packages", "maintainability", "docs"})
@@ -195,6 +189,22 @@ def lanes_for_path(path, *, base=None, head=None):
         if path.startswith("apps/writer/crates/authoring/"):
             lanes.add("workflow-performance")
         return frozenset(lanes)
+    if path.startswith(
+        (
+            "scripts/maintainability/",
+            "scripts/quality/",
+            "tests/maintainability/",
+            "tests/ast-grep/",
+            "tests/lint-suppressions/",
+            "tools/ast-grep/",
+        )
+    ) or path in {
+        "scripts/check-source-policy.sh",
+        "scripts/check-maintainability.sh",
+        "scripts/check-lint-suppressions.sh",
+        "scripts/check-test-organization.sh",
+    }:
+        return JUST
     if path.startswith(("editors/vscode/", "tests/editor-hosts/vscode/")):
         return frozenset({"editor", "lsp-sessions", "maintainability"})
     if path.startswith(("editors/helix/", "tests/editor-hosts/helix/")):
@@ -237,32 +247,40 @@ def lanes_for_path(path, *, base=None, head=None):
         )
     ):
         return frozenset({"benchmark-smoke", "maintainability"})
-    if path in {"_typos.toml", "tombi.toml", "clippy.toml", "deny.toml"}:
-        return frozenset({"rust", "maintainability"})
     return LANES
 
 
-def select_lanes(paths, *, base=None, head=None):
+def select_lanes(changes, *, base=None, head=None, reasons=None):
     # Every contribution shares the same source formatting and lint baseline.
     selected = {"maintainability"}
-    for path in paths:
-        selected.update(lanes_for_path(path, base=base, head=head))
+    if reasons is not None:
+        reasons["maintainability"] = {"count": 1, "inputs": ["shared formatting and source policy"]}
+    for before, after in changes:
+        focused = config_change_lanes(before, after, base, head) if base and head else None
+        lanes = set()
+        if focused is not None:
+            lanes.update(focused)
+        else:
+            for path in {before, after} - {None}:
+                lanes.update(lanes_for_path(path, base=base, head=head))
+        # Ordinary contributions validate plans; complete events prove installability.
+        if lanes & DISTRIBUTION:
+            lanes.add("package-config")
+        lanes.difference_update(DISTRIBUTION)
+        selected.update(lanes)
+        if reasons is not None:
+            label = (
+                f"{before} -> {after}" if before and after and before != after else before or after
+            )
+            for lane in lanes:
+                reason = reasons.setdefault(lane, {"count": 0, "inputs": []})
+                reason["count"] += 1
+                if len(reason["inputs"]) < 8:
+                    reason["inputs"].append(label[:240])
     return {lane: lane in selected for lane in sorted(LANES)}
 
 
-def changed_paths(base, head, *, pull_request):
-    # Disable rename detection: both the old and new paths must select coverage.
-    # NUL delimiters preserve spaces/newlines; no API pagination or path-filter cap.
-    revision = f"{base}...{head}" if pull_request else f"{base}..{head}"
-    result = subprocess.run(
-        ["git", "diff", "--name-only", "--no-renames", "-z", revision, "--"],
-        check=True,
-        stdout=subprocess.PIPE,
-    )
-    return [os.fsdecode(path) for path in result.stdout.split(b"\0") if path]
-
-
-def event_scope(event_name, event):
+def event_scope(event_name, event, *, reasons=None):
     if event_name == "workflow_dispatch" and event.get("inputs", {}).get("lsp_sessions_only") in (
         True,
         "true",
@@ -282,23 +300,44 @@ def event_scope(event_name, event):
     if not base or not head:
         raise ValueError("CI diff requires both commit references")
     return select_lanes(
-        changed_paths(base, head, pull_request=event_name == "pull_request"), base=base, head=head
+        changed_files(base, head, pull_request=event_name == "pull_request"),
+        base=base,
+        head=head,
+        reasons=reasons,
     )
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("base_ref", nargs="?", help="local PR base (defaults to origin/main)")
+    parser.add_argument("head_ref", nargs="?", help="local PR head (defaults to HEAD)")
     parser.add_argument("--base", help="inspect a local PR diff instead of the Actions event")
     parser.add_argument("--head", default="HEAD")
+    parser.add_argument("--explain", action="store_true", help="explain selected lanes on stderr")
     args = parser.parse_args()
+    args.base = args.base_ref or args.base
+    args.head = args.head_ref or args.head
+    reasons = {}
     if args.base:
         scope = select_lanes(
-            changed_paths(args.base, args.head, pull_request=True), base=args.base, head=args.head
+            changed_files(args.base, args.head, pull_request=True),
+            base=args.base,
+            head=args.head,
+            reasons=reasons,
         )
     else:
         event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
-        scope = event_scope(os.environ["GITHUB_EVENT_NAME"], event)
+        scope = event_scope(os.environ["GITHUB_EVENT_NAME"], event, reasons=reasons)
+    if not reasons:
+        reasons = {
+            lane: {"count": 1, "inputs": ["explicit complete or diagnostic event"]}
+            for lane, run in scope.items()
+            if run
+        }
     print(json.dumps(scope, indent=2))
+    explanation = json.dumps(reasons, indent=2, sort_keys=True)
+    if args.explain:
+        print(explanation, file=sys.stderr)
     if output := os.environ.get("GITHUB_OUTPUT"):
         with open(output, "a") as stream:
             for lane, selected in scope.items():
@@ -308,6 +347,7 @@ def main():
             stream.write("## Selected CI coverage\n\n")
             for lane, selected in scope.items():
                 stream.write(f"- {lane}: {'run' if selected else 'not affected'}\n")
+            stream.write(f"\n## Why these checks?\n\n```json\n{explanation}\n```\n")
 
 
 if __name__ == "__main__":

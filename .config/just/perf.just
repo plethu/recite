@@ -1,3 +1,4 @@
+set working-directory := '../..'
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set positional-arguments
 set default-list
@@ -20,8 +21,8 @@ regression base scope="pr" output="target/workflow-performance":
     mise -E perf exec -- scripts/check-workflow-performance.sh "$1" "$2" "$3"
 
 # Inspect the same changed-path selection used by GitHub Actions.
-scope base="origin/main" head="HEAD":
-    mise -E lsp exec -- uv run --locked python scripts/ci-scope.py --base "$1" --head "$2"
+scope *args:
+    mise -E lsp exec -- uv run --locked python scripts/ci-scope.py --base origin/main "$@"
 
 # Measure a Criterion target on selected fixture scales; trailing arguments go to Criterion.
 bench target scales="tiny,small" *args:

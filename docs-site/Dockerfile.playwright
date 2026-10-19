@@ -12,7 +12,8 @@ ENV CI=1 \
 COPY --from=mise-tool /usr/local/bin/mise /usr/local/bin/mise
 
 WORKDIR /workspace
-COPY .mise.toml package.json ./
+COPY .config/mise/config.toml ./.config/mise/config.toml
+COPY package.json ./
 RUN mise install node bun
 COPY bun.lock bunfig.toml tsconfig.base.json oxfmt.config.mts oxlint.config.mts ./
 COPY docs-site/package.json ./docs-site/package.json

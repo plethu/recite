@@ -5,8 +5,8 @@ description: Build the Recite CLI from source and verify the toolchain.
 
 Recite is pre-release. An old `recite` 0.0.1 snapshot exists on crates.io, but the current
 `recite-cli` and `recite-lsp` packages are not published, so install them from source. The workspace
-requires Rust 1.96 or newer; use the pinned `.mise.toml` toolchain when reproducing checks.
-[rustup](https://rustup.rs/) is the usual way to get one.
+requires Rust 1.96 or newer; use the pinned `.config/mise/config.toml` toolchain when reproducing
+checks. [rustup](https://rustup.rs/) is the usual way to get one.
 
 Install the `recite` binary straight from the repository:
 

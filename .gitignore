@@ -31,6 +31,8 @@ __pycache__/
 .envrc.local
 .mise.local.toml
 mise.local.toml
+/.config/mise/config.local.toml
+/.config/mise/config.*.local.toml
 
 # Editor-local files
 .idea/

@@ -3,7 +3,7 @@
   crane,
 }: let
   inherit (pkgs) lib stdenv;
-  rustVersion = (builtins.fromTOML (builtins.readFile ../.mise.toml)).tools.rust.version;
+  rustVersion = (builtins.fromTOML (builtins.readFile ../.config/mise/config.toml)).tools.rust.version;
   cliVersion = (builtins.fromTOML (builtins.readFile ../Cargo.toml)).workspace.package.version;
   writerVersion = (builtins.fromTOML (builtins.readFile ../apps/writer/Cargo.toml)).workspace.package.version;
   rustToolchain = pkgs.rust-bin.stable.${rustVersion}.default;

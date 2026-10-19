@@ -140,7 +140,7 @@ maintainability_line_count_at() {
 # formatter must reproduce the head bytes exactly; failures retain size policy.
 maintainability_is_format_only() (
   local repo_root="$1" base_sha="$2" head_sha="$3" base_path="$4" path="$5"
-  [[ -f "$repo_root/dprint.json" ]] || return 1
+  [[ -f "$repo_root/.config/dprint.json" ]] || return 1
   local temporary
   temporary="$(mktemp -d)" || return 1
   trap 'rm -rf "$temporary"' EXIT
@@ -159,13 +159,13 @@ maintainability_is_format_only() (
   esac
   # Select the whole quality environment, including external formatter plugins.
   # An explicit config keeps mise resolution in the caller's real checkout.
-  mise -E quality exec -- dprint fmt --config "$repo_root/dprint.json" \
+  mise -E quality exec -- dprint fmt --config "$repo_root/.config/dprint.json" \
     --stdin "$repo_root/$path" <"$temporary/base" \
     >"$temporary/formatted" 2>"$temporary/errors" || return 1
   cmp -s "$temporary/formatted" "$temporary/head" && return 0
   # StyLua can settle nested call/table layout on its second pass. Both passes
   # must still reproduce exact head bytes; substantive changes fail closed.
-  mise -E quality exec -- dprint fmt --config "$repo_root/dprint.json" \
+  mise -E quality exec -- dprint fmt --config "$repo_root/.config/dprint.json" \
     --stdin "$repo_root/$path" <"$temporary/formatted" \
     >"$temporary/settled" 2>"$temporary/errors" || return 1
   cmp -s "$temporary/settled" "$temporary/head"
