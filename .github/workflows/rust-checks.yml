@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      MISE_ENV: maintainability
+      MISE_ENV: ${{ inputs.lane == 'hosts' && 'godot' || 'maintainability' }}
+      MISE_EXEC_AUTO_INSTALL: "false"
       PROPTEST_CASES: "256"
       RECITE_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
       RECITE_HEAD_REF: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
@@ -30,6 +31,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          # Versions stay in Mise; each lane provisions only its command dependencies.
+          install_args: >-
+            ${{ inputs.lane == 'core' && 'rust just cargo:cargo-nextest cargo:cargo-llvm-cov'
+            || inputs.lane == 'hosts' && 'rust just python dotnet cargo:cbindgen cargo:cargo-nextest aqua:BurntSushi/ripgrep aqua:jqlang/jq godot'
+            || inputs.lane == 'editor-native' && 'rust just python node bun aqua:BurntSushi/ripgrep aqua:tree-sitter/tree-sitter aqua:neovim/neovim cargo:ast-grep'
+            || inputs.lane == 'writer' && 'rust just python cargo:ast-grep cargo:cargo-llvm-cov'
+            || 'rust just' }}
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: contracts
@@ -68,6 +77,7 @@ jobs:
       matrix:
         shard: [0, 1]
     env:
+      MISE_EXEC_AUTO_INSTALL: "false"
       PROPTEST_CASES: "256"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -75,6 +85,8 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
       - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust just aqua:jqlang/jq cargo:cargo-nextest cargo:cargo-mutants
       - name: Check the complete critical scope
         env:
           SHARD: ${{ matrix.shard }}/2
