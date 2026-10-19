@@ -37,7 +37,9 @@ JUST_MODULES = {
     ),
     "release.just": frozenset({"rust", "release-plan", "cli-packages", "maintainability", "docs"}),
 }
-LOCAL_MISE = {
+LOCAL_TOOL_STATE = {
+    "/.turbo/",
+    "/.jj/",
     ".mise.local.toml",
     "mise.local.toml",
     "/.config/mise/config.local.toml",
@@ -141,7 +143,7 @@ def config_change_lanes(before_path, after_path, base, head):
             return [
                 raw
                 for raw in content.decode().splitlines()
-                if raw.strip() and not raw.startswith("#") and raw not in LOCAL_MISE
+                if raw.strip() and not raw.startswith("#") and raw not in LOCAL_TOOL_STATE
             ]
 
         return JUST if source_rules(before) == source_rules(after) else frozenset({"rust"})
@@ -175,10 +177,13 @@ class Change(NamedTuple):
     after: str | None
 
 
-def changed_files(base, head, *, pull_request):
+def changed_files(base, head, *, pull_request, working_tree=False):
     # Retain both sides of renames. Known configuration moves can compare their
     # actual settings; all other moves still select both consumers.
-    revision = f"{base}...{head}" if pull_request else f"{base}..{head}"
+    if working_tree:
+        revision = subprocess.check_output(["git", "merge-base", base, head], text=True).strip()
+    else:
+        revision = f"{base}...{head}" if pull_request else f"{base}..{head}"
     result = subprocess.run(
         ["git", "diff", "--name-status", "--find-renames", "-z", revision, "--"],
         check=True,
@@ -192,4 +197,9 @@ def changed_files(base, head, *, pull_request):
             changes.append(Change(path, next(fields)))
         else:
             changes.append(Change(None if status == "A" else path, None if status == "D" else path))
+    if working_tree:
+        untracked = subprocess.check_output(
+            ["git", "ls-files", "--others", "--exclude-standard", "-z"]
+        )
+        changes.extend(Change(None, os.fsdecode(path)) for path in untracked.split(b"\0") if path)
     return changes

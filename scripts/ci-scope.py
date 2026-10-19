@@ -17,6 +17,7 @@ from ci_scope_config import (
     PACKAGING_PREFIXES,
     RUST,
     RUST_BUILD,
+    WORKING_TREE,
     WRITER_DISTRIBUTION,
     shared_config_lanes,
 )
@@ -28,6 +29,12 @@ from ci_scope_inputs import changed_files, config_change_lanes, tooling_owners
 def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
+    if path in {
+        "turbo.json",
+        "scripts/run-checks.py",
+        ".github/workflows/cache-cleanup.yml",
+    }:
+        return frozenset({"maintainability"})
     if (owners := tooling_owners(path)) is not None:
         return owners
     if path == "scripts/check-workflow-performance.sh" or path.startswith("tools/recite-perf/"):
@@ -313,16 +320,25 @@ def main():
     parser.add_argument("head_ref", nargs="?", help="local PR head (defaults to HEAD)")
     parser.add_argument("--base", help="inspect a local PR diff instead of the Actions event")
     parser.add_argument("--head", default="HEAD")
+    parser.add_argument(
+        "--working-tree",
+        action="store_true",
+        help="include staged, unstaged and untracked source in the local plan",
+    )
     parser.add_argument("--explain", action="store_true", help="explain selected lanes on stderr")
     args = parser.parse_args()
     args.base = args.base_ref or args.base
     args.head = args.head_ref or args.head
+    if args.working_tree:
+        args.base = args.base or "origin/main"
+        if args.head != "HEAD":
+            parser.error("--working-tree requires --head HEAD")
     reasons = {}
     if args.base:
         scope = select_lanes(
-            changed_files(args.base, args.head, pull_request=True),
+            changed_files(args.base, args.head, pull_request=True, working_tree=args.working_tree),
             base=args.base,
-            head=args.head,
+            head=WORKING_TREE if args.working_tree else args.head,
             reasons=reasons,
         )
     else:

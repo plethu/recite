@@ -1,0 +1,20 @@
+name: Retire closed PR caches
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # Base-owned workflow: never check out or execute contributor code.
+      - name: Remove only this closed pull request's cache scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_CACHE_REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: gh cache delete --all --ref "$PR_CACHE_REF" --succeed-on-no-caches --repo plethu/recite

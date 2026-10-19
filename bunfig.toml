@@ -1,3 +1,6 @@
+# Check results must not depend on implicitly loaded, ignored dotenv files.
+env = false
+
 [install]
 linker = "isolated"
 minimumReleaseAge = 86400

@@ -9,7 +9,7 @@ setup:
 
 # Run LSP harness and CI contract tests; quality owns formatting and linting.
 check:
-    mise -E lsp exec -- uv run --locked python -m unittest discover -s tests/ci -p 'test_*.py'
+    mise -E lsp exec -- uv run --locked python scripts/run-checks.py ci-contracts
     cargo test --locked -p recite-perf
 
 # Install the pinned native regression runner; Valgrind is an external host tool.

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "envMode": "strict",
+  "concurrency": "1",
+  "cacheMaxAge": "7d",
+  "cacheMaxSize": "512MB",
+  "noUpdateNotifier": true,
+  "remoteCache": {
+    "enabled": false
+  },
+  "globalDependencies": [
+    ".config/mise/config.toml",
+    "scripts/run-checks.py",
+    "justfile"
+  ],
+  "tasks": {
+    "//#check:fmt-rust": {
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "env": [
+        "RECITE_CHECK_RUST"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "//#check:fmt-zed": {
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "env": [
+        "RECITE_CHECK_RUST"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "//#check:fmt-other": {
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "env": [
+        "RECITE_CHECK_QUALITY"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "//#check:lint-other": {
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "env": [
+        "RECITE_CHECK_QUALITY"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "//#check:spelling": {
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "env": [
+        "RECITE_CHECK_SPELLING"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "//#check:workflows": {
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "env": [
+        "RECITE_CHECK_WORKFLOWS"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "//#check:ci-contracts": {
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "env": [
+        "RECITE_CHECK_CONTRACTS"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    }
+  },
+  "globalPassThroughEnv": [
+    "MISE_ENV",
+    "MISE_EXEC_AUTO_INSTALL",
+    "MISE_TRUSTED_CONFIG_PATHS",
+    "MISE_DATA_DIR",
+    "MISE_CACHE_DIR",
+    "MISE_STATE_DIR",
+    "DPRINT_CACHE_DIR",
+    "RECITE_PSSA_VERSION",
+    "XDG_CACHE_HOME",
+    "XDG_RUNTIME_DIR",
+    "TMPDIR",
+    "RUSTUP_HOME",
+    "CARGO_HOME",
+    "DOTNET_ROOT"
+  ]
+}

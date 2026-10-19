@@ -3,6 +3,9 @@
 import re
 import subprocess
 import tomllib
+from pathlib import Path
+
+WORKING_TREE = "WORKING_TREE"
 
 LANES = frozenset(
     {
@@ -70,6 +73,11 @@ ENGINE_COMPANION_PREFIXES = (
 
 
 def file_at(revision, path):
+    if revision == WORKING_TREE:
+        try:
+            return Path(path).read_bytes()
+        except FileNotFoundError:
+            return None
     result = subprocess.run(
         ["git", "show", f"{revision}:{path}"],
         stdout=subprocess.PIPE,
@@ -207,6 +215,8 @@ def mise_lanes(old, new):
         key: value for key, value in new.items() if key != "tools"
     }:
         return LANES
+    if changed <= {"github:vercel/turborepo"}:
+        return JUST
     if changed <= {"node", "bun"}:
         return JS
     if changed <= {

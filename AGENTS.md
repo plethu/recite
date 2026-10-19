@@ -12,7 +12,8 @@ proprietary content or copied private material.
   requests and merges must stay within the authorized delivery stages.
 - Run `scripts/check-git-policy.sh` locally. The complete gate is `just check` (`mise run verify` is
   an alias; use `mise exec -- just check` without shell activation). Use focused checks for narrow
-  changes and the complete gate for broad or high-risk changes.
+  changes and the complete gate for broad or high-risk changes. Plan dirty local source with `just
+  perf scope --working-tree --explain`; let supported commands reuse matching cached results.
 - GitHub owns outstanding tasks and milestone state. Verify linked issue and milestone state after
   an authorized merge.
 - Repository guidance must work from a fresh checkout without personal skills or machine-local

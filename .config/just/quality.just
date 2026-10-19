@@ -19,24 +19,32 @@ fmt:
 
 # Check formatting without rewriting source files.
 fmt-check:
-    mise -E quality exec -- tombi format --offline --check
-    bun run js:fmt-check
-    mise -E quality exec -- dprint check
+    mise -E quality exec -- python scripts/run-checks.py fmt-other
+
+[private]
+_fmt-check:
+    tombi format --offline --check
+    bun run --no-env-file js:fmt-check
+    dprint check
     for directory in Packages/com.recite.dialogue tests/unity-project; do dotnet format whitespace "$directory" --folder --verify-no-changes --verbosity quiet; done
     for file in $(git ls-files '*justfile' '*.just'); do just --justfile "$file" --unstable --fmt --check; done
-    mise -E quality exec -- editorconfig-checker
+    editorconfig-checker
 
 # Run language linters; engine/parser contract checks remain in their own lanes.
 lint:
-    bun run --cwd docs-site lint:css
-    mise -E quality exec -- tombi lint --offline --error-on-warnings
-    mise -E quality exec -- ruff check
-    mise -E quality exec -- rumdl check .
-    bun run js:check
-    mise -E quality exec -- scripts/quality/check-shell.sh
-    mise -E quality exec -- gdlint $(git ls-files '*.gd')
-    mise -E quality exec -- lua-language-server --check=editors/recite-neovim --configpath="$PWD/.luarc.json" --checklevel=Warning --logpath=target/lua-language-server
-    mise -E quality exec -- pwsh -NoProfile -File scripts/quality/powershell.ps1 lint
+    mise -E quality exec -- python scripts/run-checks.py lint-other
+
+[private]
+_lint:
+    bun run --no-env-file --cwd docs-site lint:css
+    tombi lint --offline --error-on-warnings
+    ruff check
+    rumdl check .
+    bun run --no-env-file js:check
+    scripts/quality/check-shell.sh
+    gdlint $(git ls-files '*.gd')
+    lua-language-server --check=editors/recite-neovim --configpath="$PWD/.luarc.json" --checklevel=Warning --logpath=target/lua-language-server
+    pwsh -NoProfile -File scripts/quality/powershell.ps1 lint
 
 # Install browsers matching the committed Playwright dependency.
 setup-browsers:

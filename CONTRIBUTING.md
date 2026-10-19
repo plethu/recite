@@ -99,6 +99,28 @@ failure seeds; CI uses 256 cases per property. See
 [testing policy](docs/spec/quality.md#175-enforced-rust-test-assurance) for the enforced targets and
 scope. Run the affected assurance command before committing changes to these contracts or tests.
 
+### Local check reuse
+
+During editing, run the affected commands above. `just perf scope --working-tree --explain` plans
+coverage from committed, staged, unstaged and untracked source using the CI selector; it ignores
+build output and does not execute checks. Use `just check` at a complete integration checkpoint.
+Repeat a check when its inputs change or a failure still needs investigation.
+
+Formatting, language linting, spelling, workflow syntax and CI harness tests use the pinned native
+Turborepo runner through their existing Just commands. Git-aware input hashes include dirty and
+untracked source, repository configuration, resolved tool versions and the supported execution
+environment. The runner shares disposable results between linked Git worktrees. `turbo.json` owns
+cache policy; `package.json` scripts and the referenced Just recipes own commands. Mise provisions
+tools. Successful tasks remain reusable when a later task fails.
+
+Cached tasks use a bounded environment and repository-owned settings. Bun does not implicitly load
+ignored dotenv files; explicit `bun --env-file PATH` remains available for other workflows. For a
+fresh quality run, use `mise -E quality exec -- python scripts/run-checks.py quality --force`. The
+cache keeps up to 512 MB for seven days. Git policy, advisories, Rust tests, coverage, mutations,
+native acceptance and performance measurements still execute fresh. CI restores its own scoped
+result cache; local results do not establish protected merge checks. Cache uploads after
+cancellation are best effort. No hosted cache account is required.
+
 ## Formatting and validation
 
 Versioned configurations own formatter/linter selection and coverage. Use the common commands above;
@@ -178,6 +200,35 @@ gh pr merge PR --repo plethu/recite --squash --delete-branch --match-head-commit
 Merge only when authorized, against the reviewed head. Optional automated reviews are advisory; they
 do not replace maintainer approval or cover later changes. Verify linked issue and milestone state
 after merging. Do not bypass protection with direct pushes to `main`.
+
+### Optional Jujutsu workflow
+
+Git remains supported. With jj 0.45.1 or later, start a separate colocated clone with `jj git clone
+--colocate https://github.com/plethu/recite.git recite-jj`. Existing linked Git worktrees need no
+conversion. Configure jj's user identity and signing backend/key explicitly; Git's `commit.gpgsign`
+does not configure jj signing. For example, use `jj config set --repo signing.backend gpg` and `jj
+config set --repo signing.key YOUR_KEY` for an existing OpenPGP key.
+
+After `jj new main@origin`, edit and run focused checks, then prepare one delivery revision:
+
+```sh
+jj describe -m '[REC-N] ci: describe the change'
+jj bookmark set ci/topic -r @
+jj new
+jj sign -r ci/topic
+revision=$(git rev-parse refs/heads/ci/topic)
+git verify-commit "$revision"
+RECITE_BRANCH_NAME=ci/topic RECITE_HEAD_REF="$revision" scripts/check-git-policy.sh
+```
+
+The empty child initially has the delivery tree. Before making further edits, use the same
+`RECITE_BRANCH_NAME` and `RECITE_HEAD_REF` overrides for `mise exec -- just check`. Checks read the
+current working tree; after subsequent edits, return to the delivery tree before verifying that SHA.
+Once publication is authorized, push the verified revision with `git push origin
+"$revision:refs/heads/ci/topic"` and follow the protected PR workflow above. Review and merge the
+SHA resolved after signing; rewriting or signing again changes it. jj change IDs help track edits,
+but check reuse follows source inputs rather than change IDs. jj 0.45.1 does not support `jj
+workspace add --colocate`.
 
 ## Instructions and skills
 

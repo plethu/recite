@@ -11,7 +11,14 @@
     "js:fmt-check": "bun run --bun oxfmt --check \"**/*.{js,mjs,cjs,ts,mts,cts,tsx}\"",
     "js:test": "bun test --timeout 30000",
     "editor:check": "bun run --filter recite-vscode check",
-    "editor:package": "bun run --filter recite-vscode package:check"
+    "editor:package": "bun run --filter recite-vscode package:check",
+    "check:fmt-rust": "cargo fmt --all -- --check",
+    "check:fmt-zed": "just editor zed fmt-check",
+    "check:fmt-other": "just quality _fmt-check",
+    "check:lint-other": "just quality _lint",
+    "check:spelling": "typos",
+    "check:workflows": "actionlint -shellcheck= -pyflakes=",
+    "check:ci-contracts": "uv run --locked --no-python-downloads python -m unittest discover -s tests/ci -p 'test_*.py'"
   },
   "devDependencies": {
     "@fluent/syntax": "0.19.0",
