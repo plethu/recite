@@ -113,6 +113,10 @@ environment. The runner shares disposable results between linked Git worktrees. 
 cache policy; `package.json` scripts and the referenced Just recipes own commands. Mise provisions
 tools. Successful tasks remain reusable when a later task fails.
 
+Mise prefers upstream prebuilt Cargo tools and falls back to source builds when no compatible binary
+is available. CI installs only each lane's declared tools; nested setup commands must also name
+their tools so they do not provision the complete development environment.
+
 Cached tasks use a bounded environment and repository-owned settings. Bun does not implicitly load
 ignored dotenv files; explicit `bun --env-file PATH` remains available for other workflows. For a
 fresh quality run, use `mise -E quality exec -- python scripts/run-checks.py quality --force`. The

@@ -24,6 +24,8 @@ RUST_BACKTRACE = "1"
 ASTRO_TELEMETRY_DISABLED = "1"
 
 [settings]
+# Prefer upstream binaries for Cargo tools; retain source fallback when unavailable.
+cargo.binstall_native = true
 idiomatic_version_file_enable_tools = ["bun", "dotnet"]
 dotnet.isolated = true
 

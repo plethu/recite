@@ -15,7 +15,7 @@ bevy:
 
 # Exercise the Godot addon in its pinned native host.
 godot:
-    mise -E godot install
+    mise -E godot install godot
     mise -E godot exec -- scripts/check-godot-host.sh
 
 # Check the Unity package and managed/native bridge.
