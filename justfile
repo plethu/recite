@@ -134,6 +134,10 @@ check:
 [private]
 _verify:
     just _check-quality
+    just unused-deps
+    just supply-chain
+    just perf setup
+    just perf check
     scripts/check-git-policy.sh
     bash tests/git-policy/check-integration.sh
     bash tests/trusted-policy/check.sh
@@ -156,11 +160,8 @@ _check-quality:
     just fmt-check
     just quality lint
     just spelling
-    just unused-deps
-    just supply-chain
+    python3 tests/maintainability/config-discovery.py
     actionlint -shellcheck= -pyflakes=
-    just perf setup
-    just perf check
     tests/maintainability/check.sh
     tests/maintainability/format-replay.sh
     tests/ast-grep/check.sh

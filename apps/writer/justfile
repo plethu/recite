@@ -21,10 +21,10 @@ check:
     just writer heap
 
 # Check package metadata and runtime dependencies without a host.
-packaging:
+packaging *args:
     python3 tests/writer-packaging/check.py
     python3 scripts/package-writer.py --check-config > /dev/null
-    python3 scripts/check-writer-flatpak.py
+    python3 scripts/check-writer-flatpak.py "$@"
 
 # Audit the separate Writer graph with the shared dependency policy.
 supply-chain:

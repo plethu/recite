@@ -81,9 +81,13 @@ class DocumentScopeTests(unittest.TestCase):
                 self.assertEqual(selected(path), scope.RUST_BUILD)
 
     def test_shared_rust_policy_configs_keep_their_consumers(self):
-        for path in ("clippy.toml", ".config/tombi.toml", ".cargo/deny.toml"):
+        for path, lanes in {
+            "clippy.toml": {"rust", "maintainability"},
+            ".config/tombi.toml": {"maintainability"},
+            ".cargo/deny.toml": {"dependencies", "maintainability"},
+        }.items():
             with self.subTest(path=path):
-                self.assertEqual(selected(path), {"rust", "maintainability"})
+                self.assertEqual(selected(path), lanes)
 
     def test_executable_documentation_selects_its_rust_test_owner(self):
         for path in (

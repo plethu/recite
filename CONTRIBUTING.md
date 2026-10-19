@@ -193,13 +193,20 @@ maintainer's home-directory instructions, or copy a general skill collection int
 ## CI coverage
 
 [`scripts/ci-scope.py`](scripts/ci-scope.py) and its tests own affected-lane selection. Inspect it
-with `just perf scope` and verify it with `just perf check`. The unconditional `required-check`
-rollup rejects missing, failed, cancelled and unexpected skipped results. Trusted policy executes
-base-owned code with read-only permissions, separately from ordinary untrusted CI.
+with `just perf scope --explain` to see triggering files, and verify it with `just perf check`. The
+unconditional `required-check` rollup rejects missing, failed, cancelled and unexpected skipped
+results. Trusted policy executes base-owned code with read-only permissions, separately from
+ordinary untrusted CI.
 
 Workflow definitions own lanes, schedules and manual complete/package runs. Run package previews
 before release or after platform-dependent changes. Installed package and native accessibility
 acceptance require their own evidence.
+
+Ordinary PRs and main pushes run affected source checks and validate package metadata and all
+supported Nix build plans without building installers. Full native, Nix, Flatpak and CLI archive
+matrices run on scheduled, manual and release verification. Config moves compare settings across
+both paths; spelling metadata and formatter changes do not select runtime tests. Dependency checks
+have their own lane, and source formatting/linting does not build the site's WASM bridge.
 
 ## Preparing and publishing releases
 

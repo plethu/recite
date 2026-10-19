@@ -18,6 +18,8 @@ LANES = frozenset(
         "benchmark-smoke",
         "workflow-performance",
         "maintainability",
+        "dependencies",
+        "package-config",
         "packages",
         "cli-packages",
         "nix-packages",
@@ -37,6 +39,7 @@ RUST = frozenset(
         "benchmark-smoke",
         "editor",
         "maintainability",
+        "dependencies",
         "release-plan",
     }
 )
@@ -125,7 +128,7 @@ def lane_wiring_changes(before, after, pattern, fixed):
     return frozenset(changed)
 
 
-def justfile_lanes(before, after):
+def justfile_lanes(before, after, *, default_lanes=JUST, root=True):
     pattern = r"^([a-z_][a-z0-9_-]*)(?: [^:\n]*)?:(?!=)[^\n]*$"
 
     def without_comments(source):
@@ -148,11 +151,27 @@ def justfile_lanes(before, after):
         ]
 
     if shared_preamble(old_preamble) != shared_preamble(new_preamble):
-        return JUST_QUALITY
+        return JUST_QUALITY if root else default_lanes | JUST
     changed = changed_sections(before, after, pattern) - {"__preamble__"}
-    if changed & {"check", "verify", "_verify"}:
-        return JUST_QUALITY
+    # Local check/verify/_verify aggregate these capabilities. CI calls their
+    # owners independently; contract tests preserve the complete local gate.
     lanes = set(JUST)
+    if changed & {"supply-chain", "unused-deps"}:
+        lanes.add("dependencies")
+    if "packaging" in changed:
+        lanes.add("package-config")
+    if not root:
+        if changed - {
+            "fmt",
+            "fmt-check",
+            "spelling",
+            "supply-chain",
+            "unused-deps",
+            "scope",
+            "packaging",
+        }:
+            lanes.update(default_lanes)
+        return frozenset(lanes)
     if changed & {
         "test",
         "test-doc",
@@ -172,38 +191,44 @@ def justfile_lanes(before, after):
     return frozenset(lanes)
 
 
+def mise_lanes(old, new):
+    """Route tool changes separately from comments or a config relocation."""
+    if old == new:
+        return JUST
+    old_tools, new_tools = old.get("tools"), new.get("tools")
+    if not isinstance(old_tools, dict) or not isinstance(new_tools, dict):
+        return LANES
+    changed = {
+        key
+        for key in old_tools.keys() | new_tools.keys()
+        if old_tools.get(key) != new_tools.get(key)
+    }
+    if {key: value for key, value in old.items() if key != "tools"} != {
+        key: value for key, value in new.items() if key != "tools"
+    }:
+        return LANES
+    if changed <= {"node", "bun"}:
+        return JS
+    if changed <= {
+        "rust",
+        "cargo:cbindgen",
+        "cargo:cargo-deny",
+        "cargo:cargo-machete",
+        "cargo:cargo-nextest",
+        "cargo:cargo-llvm-cov",
+        "cargo:cargo-mutants",
+        "tombi",
+    }:
+        return RUST_BUILD
+    return LANES
+
+
 def shared_config_lanes(path, base, head):
     before, after = file_at(base, path), file_at(head, path)
     if before is None or after is None:
         return LANES
     if path == ".config/mise/config.toml":
-        old, new = tomllib.loads(before.decode()), tomllib.loads(after.decode())
-        old_tools, new_tools = old.get("tools"), new.get("tools")
-        if not isinstance(old_tools, dict) or not isinstance(new_tools, dict):
-            return LANES
-        changed = {
-            key
-            for key in old_tools.keys() | new_tools.keys()
-            if old_tools.get(key) != new_tools.get(key)
-        }
-        if {key: value for key, value in old.items() if key != "tools"} != {
-            key: value for key, value in new.items() if key != "tools"
-        }:
-            return LANES
-        if changed <= {"node", "bun"}:
-            return JS
-        if changed <= {
-            "rust",
-            "cargo:cbindgen",
-            "cargo:cargo-deny",
-            "cargo:cargo-machete",
-            "cargo:cargo-nextest",
-            "cargo:cargo-llvm-cov",
-            "cargo:cargo-mutants",
-            "tombi",
-        }:
-            return RUST_BUILD
-        return LANES
+        return mise_lanes(tomllib.loads(before.decode()), tomllib.loads(after.decode()))
     if path == "justfile":
         return justfile_lanes(before.decode(), after.decode())
     if path == ".github/workflows/ci.yml":
@@ -254,6 +279,8 @@ def shared_config_lanes(path, base, head):
             "benchmark-smoke": {"benchmark-smoke"},
             "workflow-performance": {"workflow-performance"},
             "maintainability": {"maintainability"},
+            "dependencies": {"dependencies"},
+            "package-config": {"package-config"},
             "packages": {"packages"},
             "cli-packages": {"cli-packages"},
             "nix-packages": {"nix-packages"},

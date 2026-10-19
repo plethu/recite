@@ -62,6 +62,8 @@ jobs:
       benchmark-smoke: ${{ steps.scope.outputs.benchmark-smoke }}
       workflow-performance: ${{ steps.scope.outputs.workflow-performance }}
       maintainability: ${{ steps.scope.outputs.maintainability }}
+      dependencies: ${{ steps.scope.outputs.dependencies }}
+      package-config: ${{ steps.scope.outputs.package-config }}
       packages: ${{ steps.scope.outputs.packages }}
       lsp-sessions: ${{ steps.scope.outputs.lsp-sessions }}
     steps:
@@ -381,6 +383,8 @@ jobs:
       - name: Check comparison coverage and failure handling
         run: |
           CARGO_TARGET_DIR="$RECITE_PERF_BUILD_DIR/candidate-target" \
+            cargo test --locked --release -p recite-perf
+          CARGO_TARGET_DIR="$RECITE_PERF_BUILD_DIR/candidate-target" \
             cargo test --locked --release -p recite-perf --features writer
       - name: Exercise whole-project and watch recovery under fixture pressure
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.ref != ''
@@ -396,17 +400,64 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  dependencies:
+    needs: changes
+    if: needs.changes.outputs.dependencies == 'true'
+    name: Dependency contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust just cargo:cargo-deny cargo:cargo-machete
+      - name: Check declared and used dependencies
+        run: |
+          just unused-deps
+          just supply-chain
+
+  package-config:
+    needs: changes
+    if: needs.changes.outputs.package-config == 'true'
+    name: Package configuration and build plans
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: python just
+      - name: Validate native and Flatpak package contracts
+        run: |
+          sudo apt-get update && sudo apt-get install -y flatpak-builder appstream desktop-file-utils
+          just writer packaging --builder
+          desktop-file-validate apps/writer/packaging/flatpak/io.github.plethu.recite.desktop
+          appstreamcli validate --no-net apps/writer/packaging/flatpak/io.github.plethu.recite.metainfo.xml
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+      - name: Evaluate every supported Nix build plan
+        run: nix flake check --no-build --all-systems --no-write-lock-file --option allow-import-from-derivation false
+
   maintainability:
     needs: changes
     if: needs.changes.outputs.maintainability == 'true'
     name: Maintainability
     runs-on: ubuntu-24.04
-    # Cold pinned-tool installation and the complete quality lane need more than ten minutes.
     timeout-minutes: 30
     env:
       # Lanes running structural policy checks use this scoped environment,
       # which installs ast-grep.
       MISE_ENV: maintainability,quality
+      MISE_EXEC_AUTO_INSTALL: "false"
       RECITE_BASE_REF: >-
         ${{ github.event_name == 'pull_request' &&
             format('origin/{0}', github.base_ref) || github.event.before }}
@@ -422,6 +473,8 @@ jobs:
 
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust node bun dotnet python uv just typos aqua:BurntSushi/ripgrep aqua:jqlang/jq aqua:rhysd/actionlint cargo:ast-grep
 
       - name: Check Just command layout
         run: |
@@ -433,6 +486,7 @@ jobs:
           just --dry-run stress scale
           just --dry-run perf bench lsp
           just --dry-run perf check
+          just --dry-run release plan
 
       - name: Run maintainability checks
         run: just _check-quality
@@ -502,6 +556,8 @@ jobs:
       - benchmark-smoke
       - workflow-performance
       - maintainability
+      - dependencies
+      - package-config
       - windows-publisher
       - editor
       - packages
