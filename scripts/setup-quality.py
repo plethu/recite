@@ -24,7 +24,7 @@ if len(profiles) != 1 or not profiles[0]["tools"]:
 tools = profiles[0]["tools"]
 subprocess.run(["mise", "-E", "quality", "install", *tools], cwd=root, check=True)
 subprocess.run(
-    ["mise", "-E", "quality", "run", "quality-powershell-setup"],
+    ["mise", "-E", "quality", "run", "--skip-tools", "quality-powershell-setup"],
     cwd=root,
     env={**os.environ, "MISE_EXEC_AUTO_INSTALL": "false"},
     check=True,

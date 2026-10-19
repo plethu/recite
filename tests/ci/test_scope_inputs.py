@@ -1,8 +1,11 @@
 """Configuration edits select their consumers without building unrelated products."""
 
 import os
+import re
 import subprocess
+import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -237,6 +240,51 @@ class ConfigInputTests(unittest.TestCase):
         self.assertIn("--check-config", packaging)
         self.assertNotIn("cargo build", packaging)
         self.assertNotIn("package-writer-flatpak.sh", packaging)
+
+    def test_quality_profile_tools_are_installed_before_the_action_saves_its_cache(self):
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+        job = workflow.split("\n  maintainability:\n", 1)[1].split("\n  packages:\n", 1)[0]
+        install = re.search(r"install_args: >-\n((?:            [^\n]+\n)+)", job)
+        self.assertIsNotNone(install)
+        installed = set(install[1].split())
+        profile = tomllib.loads((ROOT / ".config/mise/config.quality.toml").read_text())
+        self.assertTrue(set(profile["tools"]) <= installed)
+        self.assertFalse(
+            {"cargo:cargo-deny", "cargo:cargo-machete", "cargo:cargo-mutants"} & installed
+        )
+
+    def test_native_quality_setup_leaves_unrelated_missing_tools_uninstalled(self):
+        tools = tomllib.loads((ROOT / ".config/mise/config.toml").read_text())["tools"]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            configs = root / ".config/mise"
+            configs.mkdir(parents=True)
+            (configs / "config.toml").write_text(
+                '[tools]\nnode = "0.0.0"\n'
+                '[tasks.quality-powershell-setup]\nrun = "echo scoped-profile-only"\n'
+            )
+            (configs / "config.quality.toml").write_text(f"[tools]\njust = {tools['just']!r}\n")
+            scripts = root / "scripts"
+            scripts.mkdir()
+            script = scripts / "setup-quality.py"
+            script.write_bytes((ROOT / "scripts/setup-quality.py").read_bytes())
+            result = subprocess.run(
+                [sys.executable, str(script)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                env={
+                    **os.environ,
+                    "MISE_TRUSTED_CONFIG_PATHS": temporary,
+                    "MISE_OFFLINE": "true",
+                    "MISE_AUTO_INSTALL": "true",
+                    "MISE_EXEC_AUTO_INSTALL": "false",
+                    "MISE_TASK_RUN_AUTO_INSTALL": "true",
+                },
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertIn("scoped-profile-only", result.stdout)
 
     def test_package_plan_gate_evaluates_all_platforms_without_native_builds(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text()
