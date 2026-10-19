@@ -102,6 +102,7 @@ impl AuthoringSummary {
         mut shift: impl FnMut(&mut recite_core::SourceSpan),
     ) {
         for item in region_mut(&mut self.blocks, ranges[0].clone()) {
+            let item = Arc::make_mut(&mut item.data);
             shift(&mut item.span);
             item.id_span.iter_mut().for_each(&mut shift);
         }

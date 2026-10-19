@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tomllib
@@ -12,11 +13,23 @@ from pathlib import Path
 APP_ID = "io.github.plethu.recite"
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "apps/writer/packaging/flatpak" / f"{APP_ID}.yml"
+SKIA_REVISION = "61e7ca4e99062cdd0ab69445d5963fb3365778f6"
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise ValueError(message)
+
+
+def check_nix_skia_revision(source: str) -> None:
+    blocks = re.findall(
+        r"^\s*skiaRepo\s*=\s*pkgs\.fetchFromGitHub\s*\{(.*?)^\s*\};",
+        source,
+        re.MULTILINE | re.DOTALL,
+    )
+    require(len(blocks) == 1, "expected one Nix Skia source declaration")
+    revisions = re.findall(r'^\s*rev\s*=\s*"([^"]+)";', blocks[0], re.MULTILINE)
+    require(revisions == [SKIA_REVISION], "Nix and Flatpak must use the same Skia revision")
 
 
 def check_builder_manifest() -> None:
@@ -64,7 +77,7 @@ def check_builder_manifest() -> None:
         for source in writer["sources"]
         if isinstance(source, dict) and source.get("dest") == "skia"
     )
-    require(skia["commit"] == "61e7ca4e99062cdd0ab69445d5963fb3365778f6", "wrong Skia revision")
+    require(skia["commit"] == SKIA_REVISION, "wrong Skia revision")
     externals = {
         source.get("dest"): source.get("commit")
         for source in writer["sources"]
@@ -82,6 +95,7 @@ def check_builder_manifest() -> None:
 
 
 def check_sources_and_metadata() -> None:
+    check_nix_skia_revision((ROOT / "nix/packages.nix").read_text())
     sources = json.loads((MANIFEST.parent / "cargo-sources.json").read_text())
     cargo_lock = tomllib.loads((ROOT / "apps/writer/Cargo.lock").read_text())
     expected = {

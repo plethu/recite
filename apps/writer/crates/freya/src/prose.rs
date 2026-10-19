@@ -51,7 +51,7 @@ impl Component for ProseField {
         });
         let mut hovered = use_state(|| false);
         let mut width = use_state(|| f32::INFINITY);
-        let mut line_area = use_state(|| (0f32, 0f32));
+        let mut field_area = use_state(|| (0f32, 0f32));
         let initial = passage.text.clone();
         let mut text = use_state(move || initial);
         // Colour feedback only: no text, panel, or camera movement is animated.
@@ -115,8 +115,8 @@ impl Component for ProseField {
         let meta = (*hovered.read() || selected).then(|| {
             rect()
                 // Offset from the top by the measured line, below the text in the gap.
-                .position(Position::new_absolute().left(0.).top(line_area.read().1))
-                .width(Size::px(line_area.read().0))
+                .position(Position::new_absolute().left(0.).top(field_area.read().1))
+                .width(Size::px(field_area.read().0))
                 .height(Size::px(t::META_GAP))
                 .horizontal()
                 .content(Content::Flex)
@@ -181,6 +181,13 @@ impl Component for ProseField {
                     padding: Some(Preference::Specific(t::SPACE_XS.into())),
                 }),
         );
+        let field = rect()
+            .width(Size::flex(1.))
+            .on_sized(move |event: Event<SizedEventData>| {
+                field_area.set_if_modified((event.area.width(), event.area.height()));
+            })
+            .child(field)
+            .maybe_child(meta);
         let line = rect()
             .horizontal()
             .width(Size::fill())
@@ -188,16 +195,13 @@ impl Component for ProseField {
             .spacing(t::SPACE_MD)
             .on_pointer_enter(move |_| hovered.set(true))
             .on_pointer_leave(move |_| hovered.set(false))
-            .on_sized(move |event: Event<SizedEventData>| {
-                line_area.set_if_modified((event.area.width(), event.area.height()));
-            })
             .maybe_child(self.reply_number.map(|number| {
                 rect()
                     .width(Size::px(22. * t::ui_scale()))
                     .padding((t::SPACE_SM, 0., 0., 0.))
                     .child(t::meta(number.to_string()))
             }))
-            .child(rect().width(Size::flex(1.)).child(field))
+            .child(field)
             .maybe_child(
                 wide.then(|| self.trailing.clone())
                     .flatten()
@@ -206,8 +210,7 @@ impl Component for ProseField {
                             .padding((t::SPACE_XS, 0., 0., t::SPACE_SM))
                             .child(trailing)
                     }),
-            )
-            .maybe_child(meta);
+            );
         let caption = self
             .margin
             .as_deref()

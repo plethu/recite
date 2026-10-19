@@ -12,6 +12,7 @@ mod regions;
 #[path = "types.rs"]
 mod types;
 pub(crate) use regions::SummaryRanges;
+use types::BlockDefinitionData;
 pub use types::*;
 
 /// A deterministic, host-neutral summary of one lowered source file.
@@ -99,11 +100,13 @@ impl Collector {
     fn block(&mut self, block: &Block) {
         self.binding_values.clear();
         self.blocks.push(BlockDefinitionSummary {
-            id: block.id.clone(),
-            id_span: block.id_span.clone(),
-            span: block.span.clone(),
-            is_default: block.is_default,
-            has_end_destination: false,
+            data: Arc::new(BlockDefinitionData {
+                id: block.id.clone(),
+                id_span: block.id_span.clone(),
+                span: block.span.clone(),
+                is_default: block.is_default,
+                has_end_destination: false,
+            }),
         });
         self.metadata(&block.metadata);
         for statement in &block.statements {
@@ -168,7 +171,7 @@ impl Collector {
         if matches!(target, DivertTarget::End)
             && let Some(block) = self.blocks.last_mut()
         {
-            block.has_end_destination = true;
+            Arc::make_mut(&mut block.data).has_end_destination = true;
         }
         if let DivertTarget::Block(BlockReference {
             file,

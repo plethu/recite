@@ -236,7 +236,7 @@ fn open_rules(test: &mut TestingRunner) -> TestResult {
         .ok_or("reply text")?;
     test.click_cursor((f64::from(area.center().x), f64::from(area.center().y)));
     test.poll_n(std::time::Duration::from_millis(16), 6);
-    support::click(test, "Line actions")?;
+    support::click(test, "Line actions ▾")?;
     support::click(test, "Reply rules")
 }
 

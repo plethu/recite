@@ -1,5 +1,32 @@
 use super::*;
 
+pub(super) fn set_fonts(test: &mut TestingRunner) {
+    #[expect(
+        clippy::disallowed_types,
+        reason = "Freya TestingRunner::set_fonts requires HashMap."
+    )]
+    let fonts = std::collections::HashMap::from([
+        (
+            "Fraunces 72pt Soft",
+            &include_bytes!("../../fonts/fraunces/Fraunces72ptSoft-SemiBold.ttf")[..],
+        ),
+        (
+            "IBM Plex Sans",
+            &include_bytes!("../../fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf")[..],
+        ),
+        (
+            "IBM Plex Mono",
+            &include_bytes!("../../fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf")[..],
+        ),
+        (
+            "Literata",
+            &include_bytes!("../../fonts/literata/Literata-Variable.ttf")[..],
+        ),
+    ]);
+    test.set_fonts(fonts);
+    test.sync_and_update();
+}
+
 #[test]
 fn project_toolbar_controls_do_not_overlap_with_bundled_fonts()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -12,30 +39,7 @@ fn project_toolbar_controls_do_not_overlap_with_bundled_fonts()
             1.,
         )
         .0;
-        #[expect(
-            clippy::disallowed_types,
-            reason = "Freya TestingRunner::set_fonts requires HashMap."
-        )]
-        let fonts = std::collections::HashMap::from([
-            (
-                "Fraunces 72pt Soft",
-                &include_bytes!("../../fonts/fraunces/Fraunces72ptSoft-SemiBold.ttf")[..],
-            ),
-            (
-                "IBM Plex Sans",
-                &include_bytes!("../../fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf")[..],
-            ),
-            (
-                "IBM Plex Mono",
-                &include_bytes!("../../fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf")[..],
-            ),
-            (
-                "Literata",
-                &include_bytes!("../../fonts/literata/Literata-Variable.ttf")[..],
-            ),
-        ]);
-        test.set_fonts(fonts);
-        test.sync_and_update();
+        set_fonts(&mut test);
         fill(&mut test, "Project folder", &dir.path().to_string_lossy())?;
         support::click(&mut test, "Open project")?;
         support::wait_editor_work(&mut test)?;

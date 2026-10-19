@@ -7,6 +7,26 @@ fn summary(source: &str) -> Arc<AuthoringSummary> {
 }
 
 #[test]
+fn end_badge_changes_keep_the_previous_summary_and_share_unchanged_block_data() {
+    let source: String = (0..400)
+        .map(|index| format!(":: beat_{index}\n-> END\n"))
+        .collect();
+    let previous = summary(&source);
+    let mut changed = previous.as_ref().clone();
+    let blocks = Arc::make_mut(&mut changed.blocks);
+    Arc::make_mut(&mut blocks[399].data).has_end_destination = false;
+    let joined =
+        AuthoringSummary::join_regions(&[(&changed, &changed.region_ranges())], Some(&previous));
+    assert!(previous.blocks[399].has_end_destination());
+    assert!(!joined.blocks[399].has_end_destination());
+    assert_eq!(joined.as_ref(), &changed);
+    for (old, new) in previous.blocks[..399].iter().zip(&joined.blocks[..399]) {
+        assert!(Arc::ptr_eq(&old.data, &new.data));
+        assert_eq!(old.span(), new.span());
+    }
+}
+
+#[test]
 fn reference_changes_share_all_unchanged_record_families() {
     let source = ":: a default\n> a@11111111111111111111\n  One.\n-> b\n:: b\n> b@22222222222222222222\n  Two.\n-> END\n";
     let previous = summary(source);

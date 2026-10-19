@@ -45,8 +45,8 @@
   skiaRepo = pkgs.fetchFromGitHub {
     owner = "rust-skia";
     repo = "skia";
-    rev = "41382841f36aa208e7433f3c46d14237a1b15054"; # m152-0.100.0
-    hash = "sha256-h1N5drad9FPGsdI1lzFWa5q2JDyAPuZ6w3ieCV6NtWs=";
+    rev = "61e7ca4e99062cdd0ab69445d5963fb3365778f6"; # m153-0.101.2
+    hash = "sha256-xKCkvQoTAMlLvKdVzzSxTST6kER4kRUIDjvTRZ9z72o=";
   };
   # Skia's DEPS pins these sources. The system-library switches below cover
   # the other active third-party dependencies, but these three remain in the

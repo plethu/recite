@@ -250,7 +250,54 @@ fn closing_a_saved_sibling_restores_applicable_staged_rules()
         .ok_or("reply field")?;
     test.click_cursor(field.center().to_f64());
     test.poll_n(std::time::Duration::from_millis(16), 6);
-    support::click(&mut test, "Line actions")?;
+    let button_area = |caption| {
+        test.find(|node, element| {
+            Rect::try_downcast(element)
+                .filter(|rect| rect.accessibility.builder.label() == Some(caption))
+                .map(|_| node.layout().area)
+        })
+        .ok_or("reply control")
+    };
+    let actions = button_area("Line actions ▾")?;
+    let destination = button_area("Change destination…")?;
+    assert!(
+        actions.max_x() <= destination.min_x()
+            || actions.min_x() >= destination.max_x()
+            || actions.max_y() <= destination.min_y()
+            || actions.min_y() >= destination.max_y(),
+        "reply controls overlap: {actions:?}, {destination:?}"
+    );
+    support::click(&mut test, "Change destination…")?;
+    let query = test
+        .find(|node, element| {
+            Rect::try_downcast(element)
+                .filter(|rect| rect.accessibility.builder.label() == Some("Find a destination…"))
+                .map(|_| node.layout().area)
+        })
+        .ok_or("destination query")?;
+    assert!(
+        query.min_y() >= actions.max_y(),
+        "destination query covers reply actions"
+    );
+    let revealed = test
+        .find(|node, element| {
+            Paragraph::try_downcast(element)
+                .filter(|p| p.spans.iter().any(|s| s.text.contains("Continue through.")))
+                .map(|_| node.layout().area)
+        })
+        .ok_or("reply text after opening destination picker")?;
+    assert_eq!(
+        field, revealed,
+        "destination picker reflowed the reply text"
+    );
+    if let Ok(directory) = std::env::var("RECITE_REPLY_CONTROLS_SCREENSHOTS") {
+        test.render_to_file(format!("{directory}/destination-picker.png"));
+    }
+    key(&mut test, NamedKey::Escape, Code::Escape);
+    support::click(&mut test, "Line actions ▾")?;
+    if let Ok(directory) = std::env::var("RECITE_REPLY_CONTROLS_SCREENSHOTS") {
+        test.render_to_file(format!("{directory}/reply-menu.png"));
+    }
     support::wait_for(&mut test, "reply actions", |test| has(test, "Reply rules"))?;
     support::click(&mut test, "Reply rules")?;
     support::click(&mut test, "Make always available")?;

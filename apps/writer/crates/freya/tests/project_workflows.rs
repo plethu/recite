@@ -83,6 +83,7 @@ fn open(dir: &std::path::Path) -> Result<TestingRunner, Box<dyn std::error::Erro
         1.,
     )
     .0;
+    toolbar::set_fonts(&mut test);
     fill(&mut test, "Project folder", &dir.to_string_lossy())?;
     support::click(&mut test, "Open project")?;
     test.poll_n(std::time::Duration::from_millis(25), 30);
