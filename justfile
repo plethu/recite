@@ -33,9 +33,7 @@ fmt:
     just quality fmt
 
 fmt-check:
-    cargo fmt --all -- --check
-    just editor zed fmt-check
-    just quality fmt-check
+    mise -E quality exec -- python scripts/run-checks.py fmt
 
 lint:
     just quality lint
@@ -120,7 +118,7 @@ unused-deps:
     cargo machete crates tools editors/zed apps/writer/crates
 
 spelling:
-    typos
+    python3 scripts/run-checks.py spelling
 
 # Check source size, structural rules and lint-suppression regressions.
 maintainability:
@@ -157,11 +155,8 @@ _verify:
 _check-quality:
     scripts/install-js-dependencies.sh
     just quality setup
-    just fmt-check
-    just quality lint
-    just spelling
+    mise -E quality exec -- python scripts/run-checks.py quality
     python3 tests/maintainability/config-discovery.py
-    actionlint -shellcheck= -pyflakes=
     tests/maintainability/check.sh
     tests/maintainability/format-replay.sh
     tests/ast-grep/check.sh
