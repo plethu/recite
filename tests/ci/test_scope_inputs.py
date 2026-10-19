@@ -171,6 +171,13 @@ class ConfigInputTests(unittest.TestCase):
         self.assertEqual(
             routed(".gitignore", ".gitignore", "*.rs\n!keep.rs\n", "!keep.rs\n*.rs\n"), {"rust"}
         )
+        for before, after in (
+            ("source/\n", " source/\n"),
+            ("file\\ \n", "file\\\n"),
+            ("# comment\n", " # pattern\n"),
+            (".mise.local.toml\n", " .mise.local.toml\n"),
+        ):
+            self.assertEqual(routed(".gitignore", ".gitignore", before, after), {"rust"})
 
     def test_large_source_diff_does_not_spawn_git_reads_for_every_file(self):
         changes = [

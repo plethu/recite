@@ -139,9 +139,9 @@ def config_change_lanes(before_path, after_path, base, head):
 
         def source_rules(content):
             return [
-                line
+                raw
                 for raw in content.decode().splitlines()
-                if (line := raw.strip()) and not line.startswith("#") and line not in LOCAL_MISE
+                if raw.strip() and not raw.startswith("#") and raw not in LOCAL_MISE
             ]
 
         return JUST if source_rules(before) == source_rules(after) else frozenset({"rust"})
