@@ -189,6 +189,7 @@ def lanes_for_path(path, *, base=None, head=None):
         "tools/ast-grep/tests/rust-writer-cold-projections-test.yml",
         "tools/ast-grep/tests/rust-writer-palette-test.yml",
         "scripts/check-writer-native-accessibility.py",
+        "scripts/writer_accessibility_host.py",
     }:
         lanes = {"writer", "maintainability"}
         if path.startswith("apps/writer/crates/authoring/"):

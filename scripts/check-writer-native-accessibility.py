@@ -13,11 +13,12 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 from importlib import import_module
 from pathlib import Path
 
 import gi
+from writer_accessibility_host import child_process, focus_x11_window
 
 gi.require_version("Gio", "2.0")
 gi.require_version("Atspi", "2.0")
@@ -85,20 +86,6 @@ def descendants(bus, application):
         name = property_value(bus, address, ACCESSIBLE, "Name")
         yield address, name
         pending.extend(call(bus, address, ACCESSIBLE, "GetChildren")[0])
-
-
-@contextmanager
-def child_process(arguments, **kwargs):
-    process = subprocess.Popen(arguments, **kwargs)
-    try:
-        yield process
-    finally:
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
 
 
 def probe(binary, require_actions, headless_host):
@@ -237,26 +224,7 @@ def run_specimen(binary, bus, registry, require_actions, headless_host):
                     process,
                 )
                 if headless_host == "x11":
-                    # Bare Xvfb has no window manager to focus the specimen.
-                    # Select only our PID; native Wayland probes do not use this option.
-                    subprocess.run(
-                        [
-                            "xdotool",
-                            "search",
-                            "--sync",
-                            "--onlyvisible",
-                            "--limit",
-                            "1",
-                            "--pid",
-                            str(process.pid),
-                            ".",
-                            "windowfocus",
-                            "--sync",
-                        ],
-                        check=True,
-                        capture_output=True,
-                        timeout=20,
-                    )
+                    focus_x11_window(process.pid)
                     wait_for(
                         lambda: any(
                             call(bus, node, ACCESSIBLE, "GetRole")[0] == int(Atspi.Role.FRAME)

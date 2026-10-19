@@ -140,6 +140,7 @@ class ScopeTests(unittest.TestCase):
         for path in (
             "apps/writer/crates/freya/src/app.rs",
             "scripts/check-writer-native-accessibility.py",
+            "scripts/writer_accessibility_host.py",
             "tools/ast-grep/rules/rust-writer-palette.yml",
             "tools/ast-grep/rules/rust-writer-cold-projections.yml",
             "tools/ast-grep/tests/rust-writer-cold-projections-test.yml",
