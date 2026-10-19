@@ -54,7 +54,7 @@ impl Component for Splitter {
                     drag.set_if_modified(Some((x, initial, proposed)));
                 }
             })
-            .on_capture_global_pointer_press(move |e: Event<PointerEventData>| {
+            .on_capture_global_pointer_up(move |e: Event<PointerEventData>| {
                 let current = *drag.peek();
                 if let Some((_, _, proposed)) = current {
                     width.set_if_modified(proposed);

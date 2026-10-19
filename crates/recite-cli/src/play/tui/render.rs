@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::Modifier,
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Paragraph, Wrap},
 };
 
@@ -35,7 +35,14 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
     let transcript_room = area
         .height
         .saturating_sub(2 + queue_height + prompt_height + 1 + 1);
-    let transcript_rows = transcript_height(state, messages, area.width, transcript_room);
+    let transcript = transcript::render_transcript(
+        state.transcript.iter(),
+        area.width,
+        transcript_room,
+        messages,
+        state.palette,
+    );
+    let transcript_rows = transcript_height(&transcript, area.width, transcript_room);
     let gap = u16::from(transcript_rows > 0);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -56,13 +63,6 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
         chunks[0],
     );
 
-    let transcript = transcript::render_transcript(
-        &state.transcript,
-        chunks[1].width,
-        chunks[1].height,
-        messages,
-        state.palette,
-    );
     frame.render_widget(
         Paragraph::new(transcript).wrap(Wrap { trim: false }),
         chunks[1],
@@ -123,12 +123,10 @@ fn header_lines<'a>(
 }
 
 /// Rows the transcript needs at this width, capped by the room left above the prompt.
-fn transcript_height(state: &TuiState, messages: &Messages, width: u16, room: u16) -> u16 {
-    if room == 0 || state.transcript.is_empty() {
+fn transcript_height(lines: &Text<'_>, width: u16, room: u16) -> u16 {
+    if room == 0 || lines.lines.is_empty() {
         return 0;
     }
-    let lines =
-        transcript::render_transcript(&state.transcript, width, u16::MAX, messages, state.palette);
     let width = usize::from(width.max(1));
     let rows: usize = lines
         .lines

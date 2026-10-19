@@ -302,12 +302,13 @@ fn trial_snapshots_neither_save_nor_review_and_reject_stale_drafts() -> Result<(
     );
     assert_eq!(
         catalogue
-            .preview_document(false)?
+            .preview_input(false)
+            .prepare()?
             .entry(id)
             .and_then(|e| e.translation()),
         Some("Bonjour {name}")
     );
-    let snapshot = catalogue.preview_document(true)?;
+    let snapshot = catalogue.preview_input(true).prepare()?;
     assert_eq!(
         snapshot.entry(id).and_then(|e| e.translation()),
         Some("Salut {name}")
@@ -319,10 +320,11 @@ fn trial_snapshots_neither_save_nor_review_and_reject_stale_drafts() -> Result<(
         SOURCE
     );
     std::fs::write(&path, SOURCE.replace("Bonjour", "Bonsoir")).map_err(|e| e.to_string())?;
-    assert!(catalogue.preview_document(true).is_err());
+    assert!(catalogue.preview_input(true).prepare().is_err());
     assert_eq!(
         catalogue
-            .preview_document(false)?
+            .preview_input(false)
+            .prepare()?
             .entry(id)
             .and_then(|e| e.translation()),
         Some("Bonsoir {name}")

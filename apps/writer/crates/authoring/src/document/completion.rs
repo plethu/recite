@@ -10,11 +10,11 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct CompletionSnapshot {
-    source: Arc<str>,
-    key: DocumentKey,
-    version: i64,
-    kernel: Arc<AuthoringKernel>,
-    context: Arc<ProjectContext>,
+    pub(super) source: Arc<str>,
+    pub(super) key: DocumentKey,
+    pub(super) version: i64,
+    pub(super) kernel: Arc<AuthoringKernel>,
+    pub(super) context: Arc<ProjectContext>,
 }
 impl Document {
     pub fn completion_snapshot(&self) -> CompletionSnapshot {
@@ -27,7 +27,64 @@ impl Document {
         }
     }
 }
+impl Document {
+    pub(crate) fn navigation_analysis_is_current(
+        &self,
+        base: &CompletionSnapshot,
+        candidate: &Document,
+    ) -> bool {
+        base.is_current(self)
+            && self.key == candidate.key
+            && Arc::ptr_eq(&self.source, &candidate.source)
+            && (candidate.version == self.version
+                || Some(candidate.version) == self.version.checked_add(1))
+    }
+    pub(crate) fn accept_navigation_analysis(
+        &mut self,
+        base: &CompletionSnapshot,
+        candidate: &mut Document,
+    ) -> Result<(), EditError> {
+        if !self.navigation_analysis_is_current(base, candidate) {
+            return Err(EditError::Stale);
+        }
+        std::mem::swap(&mut self.kernel, &mut candidate.kernel);
+        std::mem::swap(&mut self.context, &mut candidate.context);
+        std::mem::swap(&mut self.projections, &mut candidate.projections);
+        std::mem::swap(&mut self.version, &mut candidate.version);
+        Ok(())
+    }
+}
 impl CompletionSnapshot {
+    pub(crate) fn rules_revision(&self, candidate: &Document) -> Option<i64> {
+        (self.key == candidate.key
+            && Arc::ptr_eq(&self.source, &candidate.source)
+            && self.context.schema == candidate.context.schema)
+            .then_some(candidate.version)
+    }
+    /// Open a sibling from captured analysis without borrowing a live UI document.
+    pub fn open_sibling_with_control(
+        &self,
+        key: DocumentKey,
+        source: impl Into<String>,
+        context: ProjectContext,
+        control: &dyn WorkControl,
+    ) -> Result<Document, EditError> {
+        self.projection_document()
+            .open_sibling_with_control(key, source, context, control)
+    }
+
+    pub(crate) fn projection_document(&self) -> Document {
+        Document {
+            source: self.source.clone(),
+            key: self.key.clone(),
+            version: self.version,
+            kernel: self.kernel.clone(),
+            context: self.context.clone(),
+            history: crate::history::History::default(),
+            projections: crate::projection_cache::ProjectionCache::default(),
+        }
+    }
+
     /// Identity covers schema and saved inputs even when accepted bytes did not change.
     pub fn is_current(&self, document: &Document) -> bool {
         self.version == document.version

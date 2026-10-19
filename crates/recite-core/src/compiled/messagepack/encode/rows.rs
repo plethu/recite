@@ -15,7 +15,7 @@ pub(super) struct MsgLineCurrent<'a>(
     MsgRange,
     u32,
     &'a str,
-    Vec<MsgInterpolationBinding<'a>>,
+    #[serde(serialize_with = "interpolation_bindings")] &'a [CompiledInterpolationBinding],
     Option<&'a str>,
     Option<&'a str>,
 );
@@ -50,10 +50,7 @@ impl<'a> From<&'a CompiledLine> for MsgLine<'a> {
                 super::tables::metadata_range(line.metadata),
                 line.source_map.as_u32(),
                 line.authored_source_text.as_str(),
-                line.interpolation_bindings
-                    .iter()
-                    .map(MsgInterpolationBinding::from)
-                    .collect(),
+                &line.interpolation_bindings,
                 line.plural_source_text.as_deref(),
                 line.authored_plural_source_text.as_deref(),
             )),
@@ -80,7 +77,7 @@ pub(super) struct MsgChoiceCurrent<'a>(
     MsgChoiceEcho<'a>,
     u32,
     &'a str,
-    Vec<MsgInterpolationBinding<'a>>,
+    #[serde(serialize_with = "interpolation_bindings")] &'a [CompiledInterpolationBinding],
 );
 
 #[derive(Serialize)]
@@ -133,11 +130,7 @@ impl<'a> From<&'a CompiledChoice> for MsgChoice<'a> {
                 MsgChoiceEcho(&choice.echo),
                 choice.source_map.as_u32(),
                 choice.authored_source_text.as_str(),
-                choice
-                    .interpolation_bindings
-                    .iter()
-                    .map(MsgInterpolationBinding::from)
-                    .collect(),
+                &choice.interpolation_bindings,
             )
         };
         match choice.interpolation_mode {
@@ -176,4 +169,12 @@ impl<'a> From<&'a CompiledInterpolationBinding> for MsgInterpolationBinding<'a> 
         };
         Self(&binding.name, &binding.value, value_type)
     }
+}
+
+// Borrow nested rows too; canonical encoding needs no per-line scratch vector.
+fn interpolation_bindings<S: Serializer>(
+    bindings: &[CompiledInterpolationBinding],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.collect_seq(bindings.iter().map(MsgInterpolationBinding::from))
 }

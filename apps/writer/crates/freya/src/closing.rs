@@ -91,7 +91,7 @@ enum Prompt {
 pub(super) fn controls(
     writer: crate::editing::Writer,
     files: State<Option<ProjectFiles>>,
-) -> Element {
+) -> (Element, bool) {
     let buffers = writer.buffers;
     let mut preferences = writer.preferences;
     let localisation = writer.localisation;
@@ -101,7 +101,7 @@ pub(super) fn controls(
     let mut dont_ask = use_state(|| false);
     let mut previous_focus = use_state(|| None::<AccessibilityId>);
     let actions = [use_a11y(), use_a11y(), use_a11y()];
-    let platform = Platform::get();
+    let platform = Platform::get().current_window();
     let mut cancel = move || {
         pending.set(None);
         dont_ask.set(false);
@@ -117,6 +117,10 @@ pub(super) fn controls(
     use_hook(move || {
         CLOSE.with(|handler| {
             *handler.borrow_mut() = Some(Box::new(move || {
+                if writer.work.busy() {
+                    return CloseDecision::KeepOpen;
+                }
+                crate::declarations::harvest(writer);
                 if files.peek().as_ref().is_some_and(|p| {
                     p.builds.busy()
                         || p.declarations
@@ -138,6 +142,7 @@ pub(super) fn controls(
                 let mut dirty = files.peek().is_some() && !buffers.can_leave(files.peek().as_ref());
                 let mut close_error = None;
                 if !dirty && !preferences.peek().config.writer.confirm_exit {
+                    crate::declarations::harvest(writer);
                     match flush_recovery(buffers, files, localisation) {
                         Ok(()) => return CloseDecision::Close,
                         Err(error) => {
@@ -159,41 +164,53 @@ pub(super) fn controls(
         });
     });
     let Some(prompt) = *pending.read() else {
-        return rect().into_element();
+        return (rect().into_element(), false);
     };
     if prompt == Prompt::Blockers {
-        return blockers::Blockers {
-            writer,
-            cancel: EventHandler::new(move |()| cancel()),
-            retry: EventHandler::new(move |()| {
-                pending.set(None);
-                if matches!(request_close(), CloseDecision::Close) {
-                    close_window();
-                }
-            }),
-        }
-        .into_element();
+        return (
+            blockers::Blockers {
+                writer,
+                cancel: EventHandler::new(move |()| cancel()),
+                retry: EventHandler::new(move |()| {
+                    pending.set(None);
+                    if matches!(request_close(), CloseDecision::Close) {
+                        close_window();
+                    }
+                }),
+            }
+            .into_element(),
+            false,
+        );
     }
     if prompt == Prompt::Translations {
-        return crate::localisation::CloseDrafts {
-            writer,
-            cancel: EventHandler::new(move |()| cancel()),
-            resolved: EventHandler::new(move |()| {
-                if files.peek().is_some() && !buffers.can_leave(files.peek().as_ref()) {
-                    pending.set(Some(Prompt::Unsaved));
-                } else {
-                    match flush_recovery(buffers, files, localisation) {
-                        Ok(()) => close_window(),
-                        Err(error) => {
-                            failure.set(Some(error));
-                            pending.set(Some(Prompt::Unsaved));
+        return (
+            crate::localisation::CloseDrafts {
+                writer,
+                cancel: EventHandler::new(move |()| cancel()),
+                resolved: EventHandler::new(move |()| {
+                    if *pending.peek() != Some(Prompt::Translations) || localisation.peek().dirty()
+                    {
+                        return;
+                    }
+                    if files.peek().is_some() && !buffers.can_leave(files.peek().as_ref()) {
+                        pending.set(Some(Prompt::Unsaved));
+                    } else {
+                        crate::declarations::harvest(writer);
+                        match flush_recovery(buffers, files, localisation) {
+                            Ok(()) => close_window(),
+                            Err(error) => {
+                                failure.set(Some(error));
+                                pending.set(Some(Prompt::Unsaved));
+                            }
                         }
                     }
-                }
-            }),
-        }
-        .into_element();
+                }),
+            }
+            .into_element(),
+            true,
+        );
     }
+    let saving = files.read().as_ref().is_some_and(|p| p.saving);
     let mut content =
         rect()
             .spacing(t::SPACE_MD)
@@ -206,6 +223,10 @@ pub(super) fn controls(
                     "Your project is saved.".into()
                 }
             })));
+    if saving {
+        content = content
+            .child(label().text(crate::messages::text(crate::messages::MsgId::WriterSaving)));
+    }
     let mut footer =
         crate::design::actions().child(action_button(actions[0], "Keep editing", cancel));
     let primary;
@@ -215,6 +236,7 @@ pub(super) fn controls(
             "Keep recovery and close",
             move || {
                 buffers.harvest();
+                crate::declarations::harvest(writer);
                 match flush_recovery(buffers, files, localisation) {
                     Ok(()) => close_window(),
                     Err(error) => failure.set(Some(error)),
@@ -224,15 +246,27 @@ pub(super) fn controls(
         primary = crate::design::SubmitAction {
             id: actions[2],
             caption: "Save and close".into(),
-            enabled: true,
+            enabled: !files.read().as_ref().is_some_and(|p| p.saving),
             action: EventHandler::new(move |()| {
-                match buffers
-                    .save_all(files)
-                    .and_then(|_| flush_recovery(buffers, files, localisation))
-                {
-                    Ok(()) => close_window(),
-                    Err(error) => failure.set(Some(error)),
-                }
+                crate::editor_work::start(
+                    writer,
+                    crate::editor_work::SaveScope::All,
+                    EventHandler::new(move |result: Result<(), String>| {
+                        if *pending.peek() != Some(Prompt::Unsaved) {
+                            return;
+                        }
+                        if result.is_ok() && !buffers.can_leave(files.peek().as_ref()) {
+                            failure.set(Some(crate::messages::text(
+                                crate::messages::MsgId::WriterNewerEditsRemain,
+                            )));
+                            return;
+                        }
+                        match result.and_then(|_| flush_recovery(buffers, files, localisation)) {
+                            Ok(()) => close_window(),
+                            Err(error) => failure.set(Some(error)),
+                        }
+                    }),
+                );
             }),
         };
     } else {
@@ -248,7 +282,7 @@ pub(super) fn controls(
         primary = crate::design::SubmitAction {
             id: actions[2],
             caption: "Close Recite".into(),
-            enabled: true,
+            enabled: !files.read().as_ref().is_some_and(|p| p.saving),
             action: EventHandler::new(move |()| {
                 if *dont_ask.peek()
                     && let Err(error) = preferences
@@ -258,6 +292,7 @@ pub(super) fn controls(
                     failure.set(Some(error));
                     return;
                 }
+                crate::declarations::harvest(writer);
                 match flush_recovery(buffers, files, localisation) {
                     Ok(()) => close_window(),
                     Err(error) => failure.set(Some(error)),
@@ -265,21 +300,24 @@ pub(super) fn controls(
             }),
         };
     }
-    crate::design::Dialog {
-        dismissal_only: false,
-        primary,
-        title: if prompt == Prompt::Unsaved {
-            "Unsaved changes".into()
-        } else {
-            "Close Recite?".into()
-        },
-        reduced_motion: preferences.read().config.writer.reduced_motion,
-        close: EventHandler::new(move |()| cancel()),
-        content: content.into_element(),
-        focus_order: actions.to_vec(),
-        actions: footer.into_element(),
-    }
-    .into_element()
+    (
+        crate::design::Dialog {
+            dismissal_only: false,
+            primary,
+            title: if prompt == Prompt::Unsaved {
+                "Unsaved changes".into()
+            } else {
+                "Close Recite?".into()
+            },
+            reduced_motion: preferences.read().config.writer.reduced_motion,
+            close: EventHandler::new(move |()| cancel()),
+            content: content.into_element(),
+            focus_order: actions.to_vec(),
+            actions: footer.into_element(),
+        }
+        .into_element(),
+        false,
+    )
 }
 
 fn action_button(
@@ -302,6 +340,9 @@ fn flush_recovery(
     mut files: State<Option<ProjectFiles>>,
     mut localisation: State<crate::localisation::Localisation>,
 ) -> Result<(), String> {
+    if files.peek().as_ref().is_some_and(|p| p.saving) {
+        return Err(crate::project::FileError::SavePending.to_string());
+    }
     if let Some(catalogue) = localisation.write().catalogue.as_mut() {
         catalogue.flush_recovery()?;
     }

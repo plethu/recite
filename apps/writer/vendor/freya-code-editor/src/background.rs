@@ -1,9 +1,6 @@
 //! One worker, one replaceable request, and one replaceable result per editor.
-use crate::{
-    editor_theme::EditorSyntaxTheme,
-    languages::EditorLanguage,
-    syntax::{SyntaxBlocks, SyntaxHighlighter},
-};
+mod parsing;
+use crate::{editor_theme::EditorSyntaxTheme, languages::EditorLanguage, syntax::SyntaxBlocks};
 use ropey::Rope;
 use std::{
     io,
@@ -33,8 +30,13 @@ pub(crate) struct Output {
     pub stamp: Stamp,
     pub blocks: SyntaxBlocks,
 }
+struct Active {
+    rope: Rope,
+    language: Option<EditorLanguage>,
+}
 #[derive(Default)]
 struct Slots {
+    active: Option<Active>,
     pending: Option<Request>,
     ready: Option<Output>,
 }
@@ -43,6 +45,7 @@ struct Mailbox {
     slots: Mutex<Slots>,
     wake: Condvar,
     closed: AtomicBool,
+    superseded: AtomicBool,
 }
 
 pub(crate) struct BackgroundSyntax {
@@ -78,6 +81,12 @@ impl BackgroundSyntax {
             .slots
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if slots.active.as_ref().is_some_and(|active| {
+            !active.rope.is_instance(&request.rope)
+                || !language_eq(&active.language, &request.language)
+        }) {
+            self.mailbox.superseded.store(true, Ordering::Relaxed);
+        }
         let mut obsolete = slots.pending.take();
         if let Some(old) = obsolete.as_mut() {
             let continuous = same(&request.base, &Some(Arc::clone(&old.stamp)));
@@ -138,17 +147,17 @@ fn same(a: &Option<Stamp>, b: &Option<Stamp>) -> bool {
 }
 fn language_eq(a: &Option<EditorLanguage>, b: &Option<EditorLanguage>) -> bool {
     match (a, b) {
-        (Some(a), Some(b)) => a.language == b.language && a.highlights_query == b.highlights_query,
+        (Some(a), Some(b)) => {
+            a.language == b.language
+                && a.highlights_query == b.highlights_query
+                && a.line_isolated == b.line_isolated
+        }
         (None, None) => true,
         _ => false,
     }
 }
 fn run(mailbox: &Mailbox, notify: async_channel::Sender<()>) {
-    let mut highlighter = SyntaxHighlighter::new();
-    let mut stamp = None;
-    let mut source: Option<Rope> = None;
-    let mut language = None;
-    let mut theme = None;
+    let mut syntax = parsing::Parsing::default();
     loop {
         let request = {
             let mut slots = mailbox
@@ -164,57 +173,26 @@ fn run(mailbox: &Mailbox, notify: async_channel::Sender<()>) {
             if mailbox.closed.load(Ordering::Relaxed) {
                 break;
             }
-            slots.pending.take()
+            let Some(request) = slots.pending.take() else {
+                continue;
+            };
+            mailbox.superseded.store(false, Ordering::Relaxed);
+            let obsolete = slots.active.replace(Active {
+                rope: request.rope.clone(),
+                language: request.language.clone(),
+            });
+            drop(slots);
+            drop(obsolete);
+            request
         };
-        let Some(request) = request else {
+        let Some(output) = syntax.highlight(request, mailbox) else {
             continue;
         };
-        let changed_config =
-            !language_eq(&language, &request.language) || theme.as_ref() != Some(&request.theme);
-        let unchanged = source
-            .as_ref()
-            .is_some_and(|old| old.is_instance(&request.rope));
-        if changed_config {
-            highlighter.set_language(request.language.as_ref(), &request.theme);
-        } else if !same(&request.base, &stamp) || request.edits.is_none() {
-            highlighter.invalidate_tree();
-        } else if let Some(edits) = &request.edits {
-            if edits.is_empty() && !unchanged {
-                highlighter.invalidate_tree();
-            } else {
-                for edit in edits {
-                    highlighter.edit(edit);
-                }
-            }
-        }
-        let mut blocks = SyntaxBlocks::default();
-        if unchanged
-            && !changed_config
-            && same(&request.base, &stamp)
-            && request.edits.as_ref().is_some_and(Vec::is_empty)
-        {
-            highlighter.highlight_rows(&request.rope, &mut blocks, &request.theme, request.rows);
-        } else if !highlighter.parse_cancellable(
-            &request.rope,
-            &mut blocks,
-            &request.theme,
-            request.rows,
-            Some(&mailbox.closed),
-        ) {
-            break;
-        }
-        stamp = Some(Arc::clone(&request.stamp));
-        source = Some(request.rope);
-        language = request.language;
-        theme = Some(request.theme);
         let mut slots = mailbox
             .slots
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let obsolete = slots.ready.replace(Output {
-            stamp: request.stamp,
-            blocks,
-        });
+        let obsolete = slots.ready.replace(output);
         drop(slots);
         drop(obsolete);
         // One queued wake already covers the latest replaceable output.

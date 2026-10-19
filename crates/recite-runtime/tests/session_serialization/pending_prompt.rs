@@ -35,6 +35,7 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
     );
 
     let snapshot = snapshot_session(&session);
+    assert_snapshot_encoding(&session);
     assert_eq!(
         snapshot
             .pending_prompt
@@ -92,6 +93,7 @@ fn restores_pending_prompt_choice_availability_reasons() {
     assert!(!choices[0].availability.is_available);
 
     let snapshot = snapshot_session(&session);
+    assert_snapshot_encoding(&session);
     let unavailable = DialogueError::UnavailableChoice {
         choice: choices[0].id.clone(),
         availability: Box::new(choices[0].availability.clone()),
@@ -112,6 +114,7 @@ fn restores_pending_prompt_choice_availability_reasons() {
 
     let mut restored = restore_session(&asset, snapshot).expect("restores pending prompt");
     let restored_snapshot = snapshot_session(&restored);
+    assert_snapshot_encoding(&restored);
     assert_eq!(
         choose(&asset, &mut restored, choices[0].id.clone()),
         Err(unavailable)
@@ -193,6 +196,7 @@ fn restores_selected_choice_history_after_choice_continuation() {
         "Work waits.",
     );
 
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores after choice");
     assert_eq!(

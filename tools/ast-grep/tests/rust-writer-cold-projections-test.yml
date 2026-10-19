@@ -1,0 +1,10 @@
+id: rust-writer-cold-projections
+valid:
+  - "fn render(document: Document) { document.cached_script(); document.cached_passages(); }"
+  - "fn render(document: Document) { document.projection_request(); }"
+invalid:
+  - "fn render(document: Document) { document.script(); }"
+  - "fn render(document: Document) { document.passages(); }"
+  - "fn render(document: Document) { document.script_snapshot(); }"
+  - "fn render(document: Document) { document.passage_snapshot(); }"
+  - "fn render(model: Model) { use_memo(move || model.document().script_snapshot().ok()); }"

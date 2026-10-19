@@ -70,14 +70,6 @@ impl Workbench {
         {
             return self.select(View::Block(block));
         }
-        if let Some(id) = self
-            .document
-            .passage_snapshot()?
-            .first()
-            .map(|passage| passage.id.clone())
-        {
-            return self.select(View::Passage(id));
-        }
         let block = self
             .document
             .script_snapshot()?

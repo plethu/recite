@@ -71,7 +71,7 @@ pub(crate) fn source_passage(writer: Writer, passage: &Passage, reply: Option<us
         .into_element()
 }
 
-pub(super) fn header(mut writer: Writer) -> Element {
+pub(super) fn header(writer: Writer) -> Element {
     let beat = writer
         .buffers
         .model
@@ -113,11 +113,13 @@ pub(super) fn header(mut writer: Writer) -> Element {
                     crate::messages::MsgId::WriterGuiEditSource,
                 ))
                 .on_press(move |_| {
-                    if writer.try_navigate(|_| Ok(())).is_ok() {
+                    writer.after_prose(move |mut writer| {
+                        writer.try_navigate(|_| Ok(()))?;
                         writer.localisation.write().active = false;
                         writer.pane.set(crate::editing::Pane::Script);
                         writer.inspector_focus.request_focus();
-                    }
+                        Ok(())
+                    });
                 })
                 .child(crate::messages::text(
                     crate::messages::MsgId::WriterGuiEditSource,

@@ -6,7 +6,7 @@ use crate::{
     messages::{MsgId, text},
 };
 use freya::prelude::*;
-use recite_writer_model::Workbench;
+
 #[derive(Clone)]
 pub(super) struct SourceActions {
     pub writer: Writer,
@@ -30,8 +30,15 @@ impl Component for SourceActions {
         let primary = SubmitAction {
             id: use_a11y(),
             caption: text(MsgId::WriterApplyDraft),
-            enabled: changed,
-            action: EventHandler::new(move |()| writer.perform(Workbench::apply)),
+            enabled: changed && !writer.work.busy(),
+            action: EventHandler::new(move |()| {
+                let mut message = writer.message;
+                if let Err(error) =
+                    crate::editor_work::edit(writer, recite_writer_model::EditOperation::Apply)
+                {
+                    message.error(error);
+                }
+            }),
         };
         let shortcut = primary.clone();
         crate::design::actions()
@@ -56,7 +63,7 @@ impl Component for SourceActions {
             .child(
                 Button::new()
                     .named(text(MsgId::WriterDiscardDraft))
-                    .enabled(changed)
+                    .enabled(changed && !writer.work.busy())
                     .on_press(move |_| {
                         writer.perform(|m| {
                             m.discard();

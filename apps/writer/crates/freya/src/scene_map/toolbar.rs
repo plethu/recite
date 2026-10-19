@@ -128,7 +128,7 @@ impl Toolbar {
                         if event.code == Code::Enter {
                             let query = writer.search.peek().to_lowercase();
                             if let Ok(m) = writer.buffers.model.peek().as_ref()
-                                && let Ok(blocks) = m.document().script_snapshot()
+                                && let Some(blocks) = m.document().cached_script()
                                 && let Some(block) = blocks.iter().find(|b| {
                                     palette::display_name(&b.id).to_lowercase().contains(&query)
                                 })

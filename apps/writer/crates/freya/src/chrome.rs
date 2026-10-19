@@ -32,11 +32,11 @@ pub(super) fn toolbar(writer: Writer, actions: Option<Element>) -> Element {
     };
     // Wide content gets one toolbar row: crumbs, views, actions, then the workspace controls.
     // The window width is known on the first frame, so the row count never flips after layout.
-    // Layout sizes are device pixels; the threshold and rail width are logical.
+    // Window size, thresholds and rail width use logical pixels.
     let platform = Platform::get();
-    let window = platform.root_size.read().width / *platform.scale_factor.read() as f32;
+    let window = platform.current_window().root_size.read().width;
     let one_row =
-        !focus_mode(writer) && t::ui_scale() <= 1.25 && window - rail >= 1000. * t::ui_scale();
+        !focus_mode(writer) && t::ui_scale() <= 1.25 && window - rail >= 1100. * t::ui_scale();
     let focus = *writer.layout.focus.read();
     let view = *writer.layout.view.read();
     let scene = palette::display_name(session.document().key().as_str());
@@ -125,10 +125,8 @@ pub(super) fn toolbar(writer: Writer, actions: Option<Element>) -> Element {
             .padding((t::SPACE_SM, t::SPACE_LG))
             .spacing(t::SPACE_SM)
             .child(crate::navigation::buttons(writer))
-            .child(title.max_width(Size::px(280. * t::ui_scale())))
-            .child(rect().width(Size::flex(1.)))
+            .child(title.width(Size::flex(1.)))
             .child(views.width(Size::auto()).child(actions_row))
-            .child(rect().width(Size::flex(1.)))
             .child(Command::Commands.button(writer))
             .child(activity)
             .child(options)

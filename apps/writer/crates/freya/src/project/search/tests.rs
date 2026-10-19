@@ -61,10 +61,52 @@ fn search_input_identity_includes_document_order_and_membership()
             .search_results("tell", 10)
             .get(0)
             .ok_or("hit")?
-            .document,
+            .document
+            .as_ref(),
         "extra.recite"
     );
     documents.clear();
     assert!(files.refreshed_search(&documents).is_empty());
+    Ok(())
+}
+
+#[test]
+fn sparse_refresh_retains_unchanged_shards_and_saved_result_snapshots()
+-> Result<(), Box<dyn std::error::Error>> {
+    let (_dir, mut files) = super::super::tests::project()?;
+    let documents = recite_writer_model::workload::project(10_000, 500)?;
+    files.context.documents = documents.clone();
+    files.search = Arc::new(recite_writer_model::SearchIndex::build(&documents));
+    let before = files.search.search_results("courier", 10_000);
+    let mut changed = documents.clone();
+    for index in [4, 18] {
+        changed[index] = recite_compiler::authoring::SavedDocument::new(
+            documents[index].key().clone(),
+            documents[index].text().replace("courier", "zeppelin"),
+        );
+    }
+    let refreshed = files.refreshed_search(&changed);
+    let after = refreshed.search_results("mara", 10_000);
+    let expected = recite_writer_model::SearchIndex::build(&changed);
+    assert_eq!(
+        refreshed.search("mara", 10_000),
+        expected.search("mara", 10_000)
+    );
+    assert_eq!(
+        refreshed.search("zeppelin", 10_000),
+        expected.search("zeppelin", 10_000)
+    );
+    assert_eq!(refreshed.search("courier", 10_000).0, 9_000);
+    assert_eq!(before.total(), 10_000);
+    for index in 0..10_000 {
+        let old = before.get(index).ok_or("old hit")?;
+        let next = after.get(index).ok_or("new hit")?;
+        if [4, 18].contains(&(index / 500)) {
+            assert!(old.text.contains("courier"));
+            assert!(next.text.contains("zeppelin"));
+        } else {
+            assert!(std::ptr::eq(old, next), "unchanged saved shard was rebuilt");
+        }
+    }
     Ok(())
 }

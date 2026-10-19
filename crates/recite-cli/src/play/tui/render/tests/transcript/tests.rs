@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn transcript_entries_render_as_separated_stacked_blocks() {
-    let entries = vec![
+    let entries = [
         TuiTranscriptEntry {
             kind: TuiTranscriptKind::Prompt,
             id: Some("intro_001".to_owned()),
@@ -26,7 +26,7 @@ fn transcript_entries_render_as_separated_stacked_blocks() {
     ];
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
     let rendered =
-        transcript::render_transcript(&entries, 40, 10, &messages, TuiPalette::default());
+        transcript::render_transcript(entries.iter(), 40, 10, &messages, TuiPalette::default());
     let debug = format!("{rendered:?}");
 
     assert!(debug.contains("prompt"));

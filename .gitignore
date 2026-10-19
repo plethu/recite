@@ -63,3 +63,7 @@ Packages/com.recite.dialogue/Tests~/Headless/obj/
 !apps/writer/vendor/freya-code-editor/
 !apps/writer/vendor/freya-code-editor/**
 /apps/writer/vendor/freya-code-editor/target/
+
+!apps/writer/vendor/freya-core/
+!apps/writer/vendor/freya-core/**
+/apps/writer/vendor/freya-core/target/

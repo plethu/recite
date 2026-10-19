@@ -6,7 +6,7 @@ use crate::{
     editing::Writer,
 };
 use freya::prelude::*;
-pub(super) fn render(change: &Change, writer: Writer) -> Element {
+pub(super) fn render(change: &Change, mut writer: Writer) -> Element {
     let mut detail = rect()
         .width(Size::fill())
         .spacing(t::SPACE_LG)
@@ -55,7 +55,14 @@ pub(super) fn render(change: &Change, writer: Writer) -> Element {
             Button::new()
                 .flat()
                 .on_press(move |_| {
-                    destination.open(writer);
+                    destination.open(
+                        writer,
+                        EventHandler::new(move |result: Result<(), String>| {
+                            if let Err(error) = result {
+                                writer.message.error(error);
+                            }
+                        }),
+                    );
                 })
                 .child(wording(MsgId::WriterReadPassage)),
         );

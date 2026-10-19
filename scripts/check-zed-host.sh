@@ -52,7 +52,7 @@ fi
 extension_dir="$repo_root/editors/zed"
 fixture="$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite"
 capability_fixture="$repo_root/fixtures/recite/valid/core_language_spike.recite"
-grammar_revision="209ea23195f674a18be0b8f87e037273fb3296bd"
+grammar_revision="65afc5933d71ac8af40037232bf755f823608536"
 timeout_seconds="${RECITE_ZED_TIMEOUT:-90}"
 keep_probe="${RECITE_ZED_KEEP:-}"
 if ! [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then

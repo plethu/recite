@@ -29,6 +29,8 @@ gungraun = "=0.20.0"
 recite-benchmarks = { path = "../../crates/recite-benchmarks", version = "0.1.0" }
 recite-adapter.workspace = true
 recite-compiler.workspace = true
+recite-build.workspace = true
+recite-config.workspace = true
 recite-core.workspace = true
 recite-lsp = { workspace = true, features = ["bench-support"] }
 recite-runtime.workspace = true

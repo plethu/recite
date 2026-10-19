@@ -24,9 +24,17 @@ fn failed_or_cancelled_navigation_restarts_the_original_recovery_owner()
         current.set_draft(accepted.clone());
         current.apply()?;
         let result = if cancel {
-            files.switch_with_control(&mut current, &other, |_| Ok(()), &AfterFirst(Cell::new(1)))
+            files.switch_with_control(
+                &mut current,
+                &other,
+                None,
+                |_| Ok(()),
+                &AfterFirst(Cell::new(1)),
+            )
         } else {
-            files.switch(&mut current, &other, |_| Err(EditError::Destination.into()))
+            files.switch(&mut current, &other, None, |_| {
+                Err(EditError::Destination.into())
+            })
         };
         assert!(result.is_err());
         assert_eq!(files.current, original);

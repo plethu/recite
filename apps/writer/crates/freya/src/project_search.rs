@@ -7,11 +7,11 @@ use crate::{
 use freya::prelude::*;
 
 #[derive(Clone)]
-struct SearchSnapshot(Option<std::sync::Arc<recite_writer_model::SearchIndex>>);
+struct SearchSnapshot(Option<std::sync::Weak<recite_writer_model::SearchIndex>>);
 impl PartialEq for SearchSnapshot {
     fn eq(&self, other: &Self) -> bool {
         match (&self.0, &other.0) {
-            (Some(a), Some(b)) => std::sync::Arc::ptr_eq(a, b),
+            (Some(a), Some(b)) => std::sync::Weak::ptr_eq(a, b),
             (None, None) => true,
             _ => false,
         }
@@ -38,13 +38,21 @@ impl Component for ProjectSearch {
         crate::design::use_list_reveal(Some(query), active, scroll, 84., 1);
         let writer = self.writer;
         let files = self.files;
-        let index =
-            use_memo(move || SearchSnapshot(files.read().as_ref().map(ProjectFiles::search_index)));
+        // Identity invalidates results without retaining the old project-sized index.
+        let index = use_memo(move || {
+            SearchSnapshot(
+                files
+                    .read()
+                    .as_ref()
+                    .map(|files| std::sync::Arc::downgrade(&files.search_index())),
+            )
+        });
         let results = use_memo(move || {
             index
                 .read()
                 .0
                 .as_ref()
+                .and_then(std::sync::Weak::upgrade)
                 .map(|index| index.search_results(&query.read(), *limit.read()))
                 .unwrap_or_default()
         });
@@ -123,6 +131,9 @@ impl Component for ProjectSearch {
     }
 }
 
+#[cfg(test)]
+mod tests;
+
 fn result_row(
     writer: Writer,
     files: State<Option<ProjectFiles>>,
@@ -171,18 +182,27 @@ fn open_result(
     let Some(path) = path else {
         return;
     };
-    let same = files.peek().as_ref().is_some_and(|p| p.current == path);
-    if !same
-        && let Err(error) = writer.buffers.switch(files, &path, writer.dark, |m| {
-            if m.view() == &recite_writer_model::View::Block(hit.beat.clone()) {
-                Ok(())
-            } else {
-                m.inspect_block(&hit.beat)
+    let _ = path;
+    let location = crate::navigation::location::Location {
+        screen: crate::navigation::location::Screen::Write,
+        document: hit.document.to_string(),
+        beat: Some(hit.beat.to_string()),
+        passage: None,
+        source: false,
+        view: Some(recite_config::WriterView::Script),
+        ..crate::navigation::snapshot(writer)
+    };
+    let result = crate::navigation::route(
+        writer,
+        location,
+        None,
+        EventHandler::new(move |result: Result<(), String>| {
+            if let Err(error) = result {
+                writer.message.error(error);
             }
-        })
-    {
+        }),
+    );
+    if let Err(error) = result {
         writer.message.error(error);
-        return;
     }
-    writer.inspect(&hit.beat);
 }

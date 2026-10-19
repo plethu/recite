@@ -7,6 +7,7 @@ use recite_writer_model::{Document, Workbench};
 impl ProjectFiles {
     pub(crate) fn workbench_with_control(
         &mut self,
+        initial: Option<recite_writer_model::View>,
         control: &dyn WorkControl,
     ) -> Result<Workbench, FileError> {
         control.checkpoint()?;
@@ -30,7 +31,10 @@ impl ProjectFiles {
             Document::in_project_with_control(key, source, self.context.clone(), control)
                 .map_err(recite_writer_model::WorkbenchError::from)?;
         control.checkpoint()?;
-        let mut workbench = Workbench::from_document(document)?;
+        let view = recovered
+            .map(|recovery| recovery.draft.view().clone())
+            .or(initial);
+        let mut workbench = Workbench::from_document(document, view)?;
         control.checkpoint()?;
         if let Some(recovery) = recovered {
             recovery.draft.restore(&mut workbench)?;
@@ -42,9 +46,9 @@ impl ProjectFiles {
         for name in affected {
             control.checkpoint()?;
             let path = self.path_for_document(&name).ok_or(FileError::Selection)?;
-            self.switch_with_control(&mut workbench, &path, |_| Ok(()), control)?;
+            self.switch_with_control(&mut workbench, &path, None, |_| Ok(()), control)?;
         }
-        self.switch_with_control(&mut workbench, &original, |_| Ok(()), control)?;
+        self.switch_with_control(&mut workbench, &original, None, |_| Ok(()), control)?;
         if !self.manifest.pending().is_empty() {
             self.manifest.checkpointed()?;
         }

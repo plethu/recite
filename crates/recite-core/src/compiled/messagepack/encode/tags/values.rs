@@ -1,4 +1,4 @@
-use super::super::{scalar_value_tag, value_tag};
+use super::super::{TableRows, scalar_value_tag, value_tag};
 use super::{
     MsgArgument, MsgConditionCall, MsgConditionExpression, MsgScalarValue, MsgSourceSpan, MsgValue,
 };
@@ -22,18 +22,12 @@ impl Serialize for MsgConditionExpression<'_> {
             CompiledConditionExpression::And(expressions) => serialize_tagged!(
                 serializer,
                 crate::compiled::V0_CONDITION_TAG_AND,
-                expressions
-                    .iter()
-                    .map(MsgConditionExpression)
-                    .collect::<Vec<_>>()
+                TableRows(expressions.iter().map(MsgConditionExpression))
             ),
             CompiledConditionExpression::Or(expressions) => serialize_tagged!(
                 serializer,
                 crate::compiled::V0_CONDITION_TAG_OR,
-                expressions
-                    .iter()
-                    .map(MsgConditionExpression)
-                    .collect::<Vec<_>>()
+                TableRows(expressions.iter().map(MsgConditionExpression))
             ),
             CompiledConditionExpression::Not(expression) => serialize_tagged!(
                 serializer,
@@ -52,7 +46,7 @@ impl Serialize for MsgConditionCall<'_> {
         let mut tuple =
             serializer.serialize_tuple(crate::compiled::V0_CONDITION_CALL_FIELDS as usize)?;
         tuple.serialize_element(self.0.function.as_str())?;
-        tuple.serialize_element(&self.0.args.iter().map(MsgArgument).collect::<Vec<_>>())?;
+        tuple.serialize_element(&TableRows(self.0.args.iter().map(MsgArgument)))?;
         tuple.end()
     }
 }
@@ -91,7 +85,7 @@ impl Serialize for MsgValue<'_> {
             Value::Array(values) => serialize_tagged!(
                 serializer,
                 value_tag(self.0),
-                values.iter().map(MsgScalarValue).collect::<Vec<_>>()
+                TableRows(values.iter().map(MsgScalarValue))
             ),
         }
     }

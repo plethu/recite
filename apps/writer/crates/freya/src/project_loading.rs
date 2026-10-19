@@ -10,6 +10,7 @@ mod completion;
 mod worker;
 
 pub(crate) fn can_switch_project(writer: Writer) -> bool {
+    crate::declarations::harvest(writer);
     !writer.localisation.peek().dirty()
         && !writer.localisation.peek().modal_open()
         && !*writer.settings_open.peek()
@@ -53,21 +54,12 @@ fn receive_activation(
                         .into(),
                 );
             }
-            return start_forwarded(job, target.clone(), writer.buffers, request).map(|()| true);
+            return start_forwarded(job, target.clone(), writer, request);
         }
-        crate::navigation::activation::receive(
-            writer,
-            request.route.as_deref(),
-            &request.cancelled,
-            ready,
-        )
-        .map(|()| false)
+        crate::navigation::activation::receive(writer, request, ready)
     })();
     match result {
-        Ok(false) => {
-            let _ = reply.send(Ok(()));
-        }
-        Ok(true) => {}
+        Ok(()) => {}
         Err(error) => {
             let _ = reply.send(Err(error.clone()));
             let mut message = writer.message;
@@ -85,10 +77,16 @@ pub(crate) struct LoadJob {
 pub(crate) fn start(
     job: State<Option<LoadJob>>,
     path: PathBuf,
-    mut message: crate::feedback::Feedback,
-    buffers: crate::buffers::Buffers,
+    writer: Writer,
+    route: Option<String>,
 ) {
-    if let Err(error) = start_inner(job, path, buffers, None) {
+    let request = worker::OpenProject {
+        path,
+        view: writer.preferences.peek().config.writer.view,
+        route,
+    };
+    if let Err(error) = start_inner(job, request, writer.buffers, None) {
+        let mut message = writer.message;
         message.info(error);
     }
 }
@@ -97,15 +95,20 @@ pub(crate) fn start(
 pub(crate) fn start_forwarded(
     job: State<Option<LoadJob>>,
     path: PathBuf,
-    buffers: crate::buffers::Buffers,
+    writer: Writer,
     activation: crate::activation::IncomingRoute,
 ) -> Result<(), String> {
-    start_inner(job, path, buffers, Some(activation))
+    let request = worker::OpenProject {
+        path,
+        view: writer.preferences.peek().config.writer.view,
+        route: activation.route.clone(),
+    };
+    start_inner(job, request, writer.buffers, Some(activation))
 }
 
 fn start_inner(
     mut job: State<Option<LoadJob>>,
-    path: PathBuf,
+    request: worker::OpenProject,
     buffers: crate::buffers::Buffers,
     #[cfg(target_os = "linux")] activation: Option<crate::activation::IncomingRoute>,
     #[cfg(not(target_os = "linux"))] _activation: Option<()>,
@@ -117,7 +120,7 @@ fn start_inner(
     let forwarded = activation.as_ref().map(|request| request.cancelled.clone());
     #[cfg(not(target_os = "linux"))]
     let forwarded = None;
-    match worker::Load::open(path, forwarded) {
+    match worker::Load::open(request, forwarded) {
         Ok(load) => {
             job.set(Some(LoadJob {
                 load,

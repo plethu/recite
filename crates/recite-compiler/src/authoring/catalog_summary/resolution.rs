@@ -55,7 +55,7 @@ impl CatalogEntryResolution {
         let matched = resolution.candidates().iter().find_map(|candidate| {
             let catalog = catalogs.iter().find(|catalog| {
                 catalog.identity().locale() == candidate.locale()
-                    && catalogs_entry_is_translated(catalog.document(), key, candidate.variant())
+                    && catalogs_entry_is_translated(catalog, key, candidate.variant())
             })?;
             Some(CatalogMatch {
                 catalog: catalog.identity().clone(),
@@ -102,17 +102,18 @@ impl CatalogEntryResolution {
 }
 
 fn catalogs_entry_is_translated(
-    document: &PoDocument,
+    input: &CatalogInput,
     key: &CatalogEntryKey,
     variant: &CatalogVariant,
 ) -> bool {
     let context = candidate_context(key.context(), variant);
-    document.entries().iter().any(|entry| {
-        key_matches(entry, key, &context)
-            && !entry.is_obsolete()
-            && !entry.flags().iter().any(|flag| flag == "fuzzy")
-            && entry_translation_is_complete(entry, document)
-    })
+    input
+        .matching_entries(&context, key.source_text(), key.plural_source_text())
+        .any(|entry| {
+            !entry.is_obsolete()
+                && !entry.flags().iter().any(|flag| flag == "fuzzy")
+                && entry_translation_is_complete(entry, input.document())
+        })
 }
 
 fn candidate_context(context: &str, variant: &CatalogVariant) -> String {
@@ -121,13 +122,6 @@ fn candidate_context(context: &str, variant: &CatalogVariant) -> String {
         CatalogVariant::Base => context.to_owned(),
         CatalogVariant::Named(name) => format!("{base}&{name}"),
     }
-}
-
-fn key_matches(entry: &PoEntry, key: &CatalogEntryKey, context: &str) -> bool {
-    !entry.is_header()
-        && entry.context() == Some(context)
-        && entry.source_text() == key.source_text()
-        && entry.plural_source_text() == key.plural_source_text()
 }
 
 fn entry_translation_is_complete(entry: &PoEntry, document: &PoDocument) -> bool {

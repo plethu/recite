@@ -75,7 +75,7 @@ impl Component for EntryEditor {
         let primary = crate::design::SubmitAction {
             id: save_id,
             caption: text(MsgId::WriterSave),
-            enabled: changed && valid,
+            enabled: changed && valid && !catalogue.saving,
             action: EventHandler::new(move |()| save(writer, id)),
         };
         let shortcut = primary.clone();
@@ -191,7 +191,7 @@ impl Component for EntryEditor {
                 .child(
                     Button::new()
                         .flat()
-                        .enabled(changed)
+                        .enabled(changed && !catalogue.saving)
                         .on_press(move |_| {
                             if let Some(c) = state.write().catalogue.as_mut() {
                                 c.discard(id);
@@ -269,16 +269,14 @@ impl Component for Arm {
             )
     }
 }
-fn save(mut writer: Writer, id: PoEntryId) {
-    let result = writer
-        .localisation
-        .write()
-        .catalogue
-        .as_mut()
-        .map(|c| c.save(id));
-    if let Some(result) = result {
-        writer
-            .message
-            .report(result, text(MsgId::WriterTranslationSaved));
-    }
+pub(super) fn save(mut writer: Writer, id: PoEntryId) {
+    crate::editor_work::translations(
+        writer,
+        Some(&[id]),
+        EventHandler::new(move |result: Result<(), String>| {
+            writer
+                .message
+                .report(result, text(MsgId::WriterTranslationSaved));
+        }),
+    );
 }

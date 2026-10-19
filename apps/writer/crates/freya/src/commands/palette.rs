@@ -1,4 +1,5 @@
 //! Search is a transient dialog; cancelling returns to its invoker.
+mod handoff;
 use super::{Command, SearchMode, targets};
 use crate::commands::CommandExt;
 use crate::{
@@ -36,7 +37,6 @@ impl Item {
         }
     }
     fn run(&self, mut writer: Writer) {
-        writer.command_search.close();
         match self {
             Self::Command(Command::Settings) => {
                 crate::settings::open(writer, *writer.command_search.return_focus.peek());
@@ -53,6 +53,7 @@ impl Item {
 impl Component for Palette {
     fn render(&self) -> impl IntoElement {
         let writer = self.writer;
+        let handoff = handoff::use_handoff(writer);
         let mut query = use_state(String::new);
         let active = use_state(|| None::<usize>);
         let input = use_a11y();
@@ -126,7 +127,7 @@ impl Component for Palette {
                     if let Some(item) = items.peek().get(index).cloned()
                         && item.enabled(writer)
                     {
-                        item.run(writer);
+                        handoff.submit(item, writer);
                     }
                 }),
             });
@@ -171,7 +172,7 @@ impl Component for Palette {
                                 })
                                 .enabled(enabled)
                                 .highlighted(*active == Some(entry.index))
-                                .on_press(move |_| item.run(writer))
+                                .on_press(move |_| handoff.submit(item.clone(), writer))
                                 .child(
                                     rect()
                                         .horizontal()
@@ -189,25 +190,26 @@ impl Component for Palette {
             .height(Size::px(320.))
             .scroll_controller(scroll),
         );
-        Dialog {
-            title: text(if mode == SearchMode::Commands {
-                MsgId::WriterWorkspaceCommands
-            } else {
-                MsgId::WriterWorkspaceGoTo
-            }),
-            content: content.into_element(),
-            actions: rect().into_element(),
-            primary: SubmitAction {
-                id: close_id,
-                caption: text(MsgId::WriterWorkspaceCloseCommands),
-                enabled: true,
-                action: EventHandler::new(move |()| writer.command_search.close()),
-            },
-            focus_order: vec![input, close_id],
-            close: EventHandler::new(move |()| writer.command_search.close()),
-            reduced_motion: writer.preferences.read().config.writer.reduced_motion,
-            dismissal_only: true,
-        }
-        .into_element()
+        handoff
+            .dialog(Dialog {
+                title: text(if mode == SearchMode::Commands {
+                    MsgId::WriterWorkspaceCommands
+                } else {
+                    MsgId::WriterWorkspaceGoTo
+                }),
+                content: content.into_element(),
+                actions: rect().into_element(),
+                primary: SubmitAction {
+                    id: close_id,
+                    caption: text(MsgId::WriterWorkspaceCloseCommands),
+                    enabled: true,
+                    action: EventHandler::new(move |()| handoff.dismiss(writer)),
+                },
+                focus_order: vec![input, close_id],
+                close: EventHandler::new(move |()| handoff.dismiss(writer)),
+                reduced_motion: writer.preferences.read().config.writer.reduced_motion,
+                dismissal_only: true,
+            })
+            .into_element()
     }
 }

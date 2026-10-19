@@ -8,8 +8,7 @@ use recite_parser::lower_source_file;
 
 use crate::compile::CompileInput;
 use crate::validation::{
-    project::{sort_diagnostics_by_source, source_files_in_project_order},
-    validate_inputs, validate_source_files,
+    project::sort_diagnostics_by_source, validate_inputs, validate_source_files,
 };
 
 /// Result of extracting gettext POT entries from raw Recite inputs.
@@ -87,9 +86,13 @@ fn extract_pot_with_optional_schema(
     }
 }
 
-fn collect_pot(source_files: &[SourceFile], schema: Option<&ProjectSchema>) -> PotDocument {
+pub(crate) fn collect_pot<'a>(
+    source_files: impl IntoIterator<Item = &'a SourceFile>,
+    schema: Option<&ProjectSchema>,
+) -> PotDocument {
     let mut entries = Vec::new();
-    let ordered_files = source_files_in_project_order(source_files);
+    let mut ordered_files = source_files.into_iter().collect::<Vec<_>>();
+    ordered_files.sort_by(|a, b| a.path.cmp(&b.path));
 
     for source_file in ordered_files {
         for block in &source_file.blocks {

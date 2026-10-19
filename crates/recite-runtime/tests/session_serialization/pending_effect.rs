@@ -6,6 +6,7 @@ fn restores_pending_effect_and_reemits_same_request_once() {
     let mut session = start_scene(&asset, None).expect("starts");
     let effect = assert_effect(next(&asset, &mut session), "grant_item");
     let snapshot = snapshot_session(&session);
+    assert_snapshot_encoding(&session);
 
     assert_eq!(
         snapshot
@@ -19,10 +20,12 @@ fn restores_pending_effect_and_reemits_same_request_once() {
     let mut restored = restore_session(&asset, snapshot).expect("restores pending effect");
     assert_eq!(restored.pending_effect(), Some(&effect));
     let before_reemit = snapshot_session(&restored);
+    assert_snapshot_encoding(&restored);
 
     let reemitted = assert_effect(next(&asset, &mut restored), "grant_item");
     assert_eq!(reemitted, effect);
     let after_reemit = snapshot_session(&restored);
+    assert_snapshot_encoding(&restored);
     assert_eq!(after_reemit.trace_counter, before_reemit.trace_counter);
     assert_eq!(after_reemit.next_statement, before_reemit.next_statement);
     assert_eq!(
@@ -54,6 +57,7 @@ fn completed_acknowledgement_after_restore_resumes_traversal() {
     let mut session = start_scene(&asset, None).expect("starts");
     let effect = assert_effect(next(&asset, &mut session), "grant_item");
 
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores pending effect");
     acknowledge_effect(&mut restored, effect.id, EffectAck::Completed)
@@ -73,6 +77,7 @@ fn failed_acknowledgement_after_restore_resumes_traversal() {
     let mut session = start_scene(&asset, None).expect("starts");
     let effect = assert_effect(next(&asset, &mut session), "grant_item");
 
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores pending effect");
     acknowledge_effect(
@@ -97,6 +102,7 @@ fn wrong_acknowledgement_after_restore_keeps_pending_effect_blocked() {
     let asset = blocking_asset();
     let mut session = start_scene(&asset, None).expect("starts");
     let effect = assert_effect(next(&asset, &mut session), "grant_item");
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores pending effect");
 

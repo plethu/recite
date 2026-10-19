@@ -3,12 +3,13 @@ mod setup;
 pub use setup::PreviewSetup;
 
 use recite_compiler::compile::{
-    CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema,
+    CompileError, CompileInput, CompileOptions, compile_inputs_with_catalogue,
 };
 use recite_core::{
     ChoiceId,
     compiled::{
         CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint, SourceMapId,
+        validate_compiled_dialogue,
     },
     schema::ProjectSchema,
 };
@@ -80,14 +81,17 @@ impl Preview {
         block: Option<&str>,
         setup: PreviewSetup,
     ) -> Result<Self, PreviewError> {
+        crate::PreviewRequest::capture(document, block.map(str::to_owned)).compile(setup)
+    }
+
+    pub(crate) fn from_request(
+        request: &crate::PreviewRequest,
+        block: Option<&str>,
+        revision: i64,
+        setup: PreviewSetup,
+    ) -> Result<Self, PreviewError> {
         let trial_options = setup.options();
-        let expected = document
-            .extract_catalogue()
-            .catalog
-            .ok_or(PreviewError::InvalidSource)?;
-        let catalogues =
-            catalogue::TrialCatalogues::new(setup.catalogues, &setup.policy, &expected)?;
-        let snapshot = document.kernel().snapshot();
+        let snapshot = request.kernel.snapshot();
         let inputs = snapshot
             .documents()
             .iter()
@@ -96,21 +100,24 @@ impl Preview {
             CompilerVersion::new("0.1.0")?,
             CompiledAssetId::new("workbench/preview.recitec")?,
             SourceMapId::new("workbench/preview.map")?,
-            document.schema().map_or(
+            request.context.schema.as_ref().map_or(
                 SchemaFingerprint::NoSchema,
                 ProjectSchema::canonical_fingerprint,
             ),
         );
-        let report = match document.schema() {
-            Some(schema) => compile_inputs_with_schema(inputs, options, schema)?,
-            None => compile_inputs(inputs, options)?,
-        };
-        let asset = report.asset.ok_or(PreviewError::InvalidSource)?.dialogue;
+        let report =
+            compile_inputs_with_catalogue(inputs, options, request.context.schema.as_ref())?;
+        let output = report.output.ok_or(PreviewError::InvalidSource)?;
+        let catalogues =
+            catalogue::TrialCatalogues::new(setup.catalogues, &setup.policy, &output.catalogue)?;
+        let asset = output.dialogue;
+        validate_compiled_dialogue(&asset)
+            .map_err(|error| CompileError::Serialization(error.to_string()))?;
         Ok(Self {
             session: OwnedPreview::try_new(asset, |asset| {
                 PreviewSession::new(asset, block, trial_options)
             })?,
-            revision: document.revision(),
+            revision,
             catalogues,
             values: setup.values,
         })

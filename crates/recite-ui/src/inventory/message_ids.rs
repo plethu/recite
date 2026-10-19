@@ -185,6 +185,7 @@ message_ids! {
     WriterNoCompletions,
     WriterFindingCompletions,
     WriterCompletionsUnavailable,
+    WriterDiagnostics,
 
     WriterLookupMatched,
     WriterLookupMissing,
@@ -241,6 +242,11 @@ message_ids! {
 
     WriterPreview,
     WriterRestartPreview,
+    WriterSaving,
+    WriterPreparingScript,
+    WriterNewerEditsRemain,
+    WriterPreparingPreview,
+    WriterPreviewInputsChanged,
     WriterClosePreview,
     WriterContinue,
     WriterTrue,

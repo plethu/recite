@@ -2,10 +2,12 @@ use super::*;
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::Document;
 use serde_json::{Value, json};
+#[path = "opening/tests.rs"]
+mod opening;
 #[path = "parking/tests.rs"]
 mod parking;
 
-fn two_scenes()
+pub(super) fn two_scenes()
 -> Result<(tempfile::TempDir, ProjectFiles, Workbench, PathBuf), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     std::fs::write(
@@ -28,10 +30,10 @@ fn grouped_inactive_save_preserves_an_unrelated_active_field_draft()
     let reference = dir.path().join("c.recite");
     std::fs::write(&reference, ":: reference\n-> b.recite::other\n")?;
     files.refresh(&mut current)?;
-    files.switch(&mut current, &other, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
     files.review_rename(&mut current, "other", "renamed")?;
     files.apply_rename(&mut current)?;
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft("unfinished active source".into());
     let original_source = current.document().source_snapshot();
@@ -54,11 +56,11 @@ fn failed_scene_save_cleanup_blocks_leaving_until_retry() -> Result<(), Box<dyn 
 {
     let (_dir, mut files, mut current, other) = two_scenes()?;
     let original = files.current.clone();
-    files.switch(&mut current, &other, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     let changed = ":: changed\n> line@11111111111111111111\n  Changed text.\n-> END\n";
     current.set_draft(changed.into());
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     let recovery = other.with_file_name("b.recite.recite-editor-recovery.json");
     std::fs::remove_file(&recovery)?;
     std::fs::create_dir(&recovery)?;
@@ -96,10 +98,10 @@ fn save_all_refreshes_navigation_after_applying_retained_source_drafts()
 -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files, mut current, other) = two_scenes()?;
     let original = files.current.clone();
-    files.switch(&mut current, &other, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft(":: renamed\n-> END\n".into());
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     files.save_all(&mut current)?;
     assert_eq!(
         current.document().project_sections(),
@@ -119,13 +121,13 @@ fn failed_save_all_projects_applied_but_unsaved_retained_edits()
     let later = dir.path().join("c.recite");
     std::fs::write(&later, ":: later\n-> END\n")?;
     files.refresh(&mut current)?;
-    files.switch(&mut current, &other, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft(":: renamed\n-> END\n".into());
-    files.switch(&mut current, &later, |_| Ok(()))?;
+    files.switch(&mut current, &later, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft(":: changed_later\n-> END\n".into());
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     std::fs::write(&later, ":: external\n-> END\n")?;
     assert!(matches!(
         files.save_all(&mut current),
@@ -151,10 +153,10 @@ fn inactive_save_conflict_preserves_active_draft_and_both_sessions()
 -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files, mut current, other) = two_scenes()?;
     let original = files.current.clone();
-    files.switch(&mut current, &other, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft(":: changed\n-> END\n".into());
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft("active unfinished draft".into());
     std::fs::write(&other, ":: external\n-> END\n")?;
@@ -181,10 +183,10 @@ fn inactive_save_and_close_releases_ownership_without_disturbing_the_active_draf
 -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files, mut current, other) = two_scenes()?;
     let original = files.current.clone();
-    files.switch(&mut current, &other, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft(":: changed\n-> END\n".into());
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft("active unfinished draft".into());
     files.save_document(&mut current, &other)?;
@@ -195,7 +197,7 @@ fn inactive_save_and_close_releases_ownership_without_disturbing_the_active_draf
     drop(RecoveryStore::open(&other)?);
     std::fs::write(&other, ":: external\n-> END\n")?;
     files.save_retained()?;
-    files.switch(&mut current, &other, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
     assert_eq!(current.document().source(), ":: external\n-> END\n");
     Ok(())
 }
@@ -205,8 +207,8 @@ fn active_close_cleanup_failure_preserves_the_model_and_selection()
 -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files, mut current, other) = two_scenes()?;
     let original = files.current.clone();
-    files.switch(&mut current, &other, |_| Ok(()))?;
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     let view = current.view().clone();
     let source = current.document().source_snapshot();
     files.recovery.persist(Some(crate::recovery::Recovery::new(
@@ -236,8 +238,8 @@ fn close_cleanup_failure_retains_the_session_and_lease_until_retry()
 -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files, mut current, other) = two_scenes()?;
     let original = files.current.clone();
-    files.switch(&mut current, &other, |_| Ok(()))?;
-    files.switch(&mut current, &original, |_| Ok(()))?;
+    files.switch(&mut current, &other, None, |_| Ok(()))?;
+    files.switch(&mut current, &original, None, |_| Ok(()))?;
     let session = files.retained.get_mut(&other).ok_or("retained scene")?;
     session
         .recovery
@@ -281,7 +283,7 @@ fn excluded_retained_scene_keeps_its_draft_navigation_and_save_path()
     let mut current = files.workbench()?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft(changed.clone());
-    files.switch(&mut current, &b, |_| Ok(()))?;
+    files.switch(&mut current, &b, None, |_| Ok(()))?;
     let tabs = files.open_documents(&current);
     std::fs::write(
         &manifest,
@@ -296,17 +298,17 @@ fn excluded_retained_scene_keeps_its_draft_navigation_and_save_path()
     assert_eq!(files.open_documents(&current), tabs);
     assert_eq!(files.manifest.text(), original_manifest);
     assert_eq!(std::fs::read_to_string(&a)?, source);
-    files.switch(&mut current, &a, |_| Ok(()))?;
+    files.switch(&mut current, &a, None, |_| Ok(()))?;
     assert!(current.has_draft());
     assert_eq!(current.draft(), changed);
-    files.switch(&mut current, &b, |_| Ok(()))?;
+    files.switch(&mut current, &b, None, |_| Ok(()))?;
     files.save_retained()?;
     assert_eq!(std::fs::read_to_string(&a)?, changed);
     assert!(!files.retained_dirty());
 
     std::fs::write(&manifest, original_manifest)?;
     files.refresh(&mut current)?;
-    files.switch(&mut current, &a, |_| Ok(()))?;
+    files.switch(&mut current, &a, None, |_| Ok(()))?;
     assert_eq!(current.document().source(), changed);
     assert!(!current.has_draft());
     Ok(())
@@ -331,7 +333,7 @@ fn extraction_uses_retained_edits_and_refreshes_clean_scenes()
     current.select(recite_writer_model::View::Source)?;
     current.set_draft(source.replace("Original.", "Unsaved."));
     current.apply()?;
-    files.switch(&mut current, &b, |_| Ok(()))?;
+    files.switch(&mut current, &b, None, |_| Ok(()))?;
     let extract =
         |files: &ProjectFiles, current: &Workbench| -> Result<String, Box<dyn std::error::Error>> {
             let discovered = recite_config::discover_project(&root)?;
@@ -351,10 +353,10 @@ fn extraction_uses_retained_edits_and_refreshes_clean_scenes()
     files.save_retained()?;
     std::fs::write(&a, source.replace("Original.", "External."))?;
     assert!(extract(&files, &current)?.contains("External."));
-    files.switch(&mut current, &a, |_| Ok(()))?;
+    files.switch(&mut current, &a, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
     current.set_draft("Unapplied".into());
-    files.switch(&mut current, &b, |_| Ok(()))?;
+    files.switch(&mut current, &b, None, |_| Ok(()))?;
     assert!(extract(&files, &current).is_err());
     Ok(())
 }
@@ -392,7 +394,8 @@ fn retained_project_sessions_preserve_edits_and_release_closed_owners()
     };
     let passages = size("RECITE_BENCH_PASSAGES", 10_000)?;
     let visits = size("RECITE_BENCH_VISITS", 20)?;
-    let inputs = recite_writer_model::workload::project(passages, 500)?;
+    let per_document = size("RECITE_BENCH_PER_DOCUMENT", 500)?;
+    let inputs = recite_writer_model::workload::project(passages, per_document)?;
     assert!(visits > 1 && visits <= inputs.len());
     let dir = tempfile::tempdir()?;
     std::fs::write(
@@ -410,66 +413,85 @@ fn retained_project_sessions_preserve_edits_and_release_closed_owners()
     let mut current = measure(&mut samples, "initial_workbench", || files.workbench())?;
     assert!(current.document().diagnostics().is_empty());
     let opened = resources();
-    let paths = files.paths[..visits].to_vec();
-    for (index, path) in paths.iter().enumerate() {
-        measure(&mut samples, "first_visit", || {
-            files.switch(&mut current, path, |_| Ok(()))
-        })?;
-        current.set_draft(format!("{} Visit {index}.", current.draft()));
-        measure(&mut samples, "apply", || current.apply())?;
-    }
-    let visited = resources();
-    let history_bytes = current.document().history_bytes()
-        + files
-            .retained
-            .values()
-            .map(|session| session.model.document().history_bytes())
-            .sum::<usize>();
-    for (index, path) in paths.iter().enumerate() {
-        measure(&mut samples, "revisit", || {
-            files.switch(&mut current, path, |_| Ok(()))
-        })?;
-        assert!(current.draft().ends_with(&format!("Visit {index}.")));
-        measure(
-            &mut samples,
-            "undo_redo",
-            || -> Result<(), recite_writer_model::WorkbenchError> {
-                current.undo()?;
-                current.redo()?;
-                Ok(())
-            },
-        )?;
-        assert!(current.draft().ends_with(&format!("Visit {index}.")));
-    }
-    let revisited = resources();
-    measure(&mut samples, "save_all", || files.save_all(&mut current))?;
-    let active = files.current.clone();
-    for path in paths.iter().filter(|path| *path != &active) {
-        measure(&mut samples, "close", || {
-            files.close_document(&mut current, path)
-        })?;
-    }
-    assert!(files.retained.is_empty());
-    assert!(files.can_leave(&current));
-    let closed = resources();
-    // This opt-in workload runs alone; retained sessions may own locks and
-    // snapshots, but must not each retain an idle recovery thread.
-    if let Some(opened_threads) = opened["Threads"].as_str() {
-        let budget = opened_threads.parse::<usize>()? + 1;
-        for checkpoint in [&visited, &revisited, &closed] {
-            let threads = checkpoint["Threads"]
-                .as_str()
-                .ok_or("thread checkpoint")?
-                .parse::<usize>()?;
-            assert!(threads <= budget, "{threads} threads exceed {budget}");
+    let cycles = size("RECITE_BENCH_CYCLES", 1)?;
+    let mut checkpoints = Vec::new();
+    for cycle in 0..cycles {
+        let paths = files.paths[..visits].to_vec();
+        for (index, path) in paths.iter().enumerate() {
+            measure(&mut samples, "first_visit", || {
+                files.switch(&mut current, path, None, |_| Ok(()))
+            })?;
+            current.set_draft(format!("{} Visit {index} cycle {cycle}.", current.draft()));
+            measure(&mut samples, "apply", || current.apply())?;
         }
+        let visited = resources();
+        let history_bytes = current.document().history_bytes()
+            + files
+                .retained
+                .values()
+                .map(|session| session.model.document().history_bytes())
+                .sum::<usize>();
+        for (index, path) in paths.iter().enumerate() {
+            measure(&mut samples, "revisit", || {
+                files.switch(&mut current, path, None, |_| Ok(()))
+            })?;
+            assert!(
+                current
+                    .draft()
+                    .ends_with(&format!("Visit {index} cycle {cycle}."))
+            );
+            measure(
+                &mut samples,
+                "undo_redo",
+                || -> Result<(), recite_writer_model::WorkbenchError> {
+                    current.undo()?;
+                    current.redo()?;
+                    Ok(())
+                },
+            )?;
+            assert!(
+                current
+                    .draft()
+                    .ends_with(&format!("Visit {index} cycle {cycle}."))
+            );
+        }
+        let revisited = resources();
+        measure(&mut samples, "save_all", || files.save_all(&mut current))?;
+        let active = files.current.clone();
+        for path in paths.iter().filter(|path| *path != &active) {
+            measure(&mut samples, "close", || {
+                files.close_document(&mut current, path)
+            })?;
+        }
+        assert!(files.retained.is_empty());
+        assert!(files.can_leave(&current));
+        let closed = resources();
+        // This opt-in workload runs alone; retained sessions may own locks and
+        // snapshots, but must not each retain an idle recovery thread.
+        if let Some(opened_threads) = opened["Threads"].as_str() {
+            let budget = opened_threads.parse::<usize>()? + 1;
+            for checkpoint in [&visited, &revisited, &closed] {
+                let threads = checkpoint["Threads"]
+                    .as_str()
+                    .ok_or("thread checkpoint")?
+                    .parse::<usize>()?;
+                assert!(threads <= budget, "{threads} threads exceed {budget}");
+            }
+        }
+        checkpoints.push(json!({"cycle":cycle,"history_bytes":history_bytes,"visited":visited,"revisited":revisited,"closed":closed}));
     }
     println!(
         "{}",
-        json!({"passages":passages,"documents":inputs.len(),"visits":visits,
-        "source_bytes":inputs.iter().map(|d| d.text().len()).sum::<usize>(),"history_bytes":history_bytes,
-        "resources":{"initial":initial,"opened":opened,"visited":visited,"revisited":revisited,"closed":closed},
+        json!({"passages":passages,"per_document":per_document,"documents":inputs.len(),"visits":visits,
+        "source_bytes":inputs.iter().map(|d| d.text().len()).sum::<usize>(),
+        "resources":{"initial":initial,"opened":opened,"cycles":checkpoints},
         "samples":samples,"host":std::env::consts::OS,"profile":if cfg!(debug_assertions) { "test" } else { "release" },"native_frame_pacing":false})
     );
     Ok(())
 }
+
+#[path = "saving/tests.rs"]
+mod saving;
+
+#[path = "performance/tests.rs"]
+mod performance;

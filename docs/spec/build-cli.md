@@ -91,12 +91,18 @@ validation and compilation, emitting identical runtime-facing bytes without prod
 form. Build and CLI consumers that need only the runtime asset may use that capability.
 
 The model-only entry point performs complete source/schema validation and deterministic compilation
-without encoding or fingerprinting. The core codec's explicit canonical validation operation runs
-the same header and payload checks as its encoder without producing bytes; import uses this before
-returning its report. Saved-project builds compile their captured sources once, then move the
-compiled tables between fresh models with each target's header. Every target is independently
-validated and encoded by the canonical codec. Reuse ends with that build invocation; it does not
-cache across requests or change publication and cancellation authority.
+without encoding or fingerprinting. The model-plus-catalogue entry point extracts the same POT from
+those validated inputs, sharing source lowering and validation with compilation. The core codec's
+explicit canonical validation operation runs the same header and payload checks as its encoder
+without producing bytes; import uses this before returning its report. Saved-project builds compile
+their captured sources once, then move the compiled tables between fresh models with each target's
+header. Every target is independently validated and encoded by the canonical codec. Reuse ends with
+that build invocation; it does not cache across requests or change publication and cancellation
+authority.
+
+Diagnostic-only captured-input validation uses the compiler's source/schema validation without
+building authoring projections. Successful project preparation retains captured inputs rather than
+lowered syntax; malformed or incomplete preparation preserves authoring diagnostics.
 
 Saved-project freshness re-preparation always rediscovers and reads the complete input set, loads
 the schema and checks the manifest. Exact captured inputs may reuse successful source validation;

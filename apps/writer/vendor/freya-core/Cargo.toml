@@ -1,0 +1,137 @@
+[package]
+edition = "2024"
+name = "freya-core"
+version = "0.5.0-rc.10"
+authors = ["Marc Espín <mespinsanz@gmail.com>"]
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "Reactivity runtime, tree management, accessibility integration, rendering pipeline and more, for Freya"
+homepage = "https://freyaui.dev/"
+license = "MIT"
+repository = "https://github.com/marc2332/freya"
+
+[package.metadata.recite]
+upstream-revision = "50ef783a256dcfc847e161bd3d4e8423bb7d289c"
+upstream = "freya-core 0.5.0-rc.10"
+upstream-checksum = "950f0dbe30cb96bf50f84ed3333b9c821866ce5fb5aebdfd1a8ebe99b0a6524a"
+patch-purpose = "Publish changed accessibility properties for existing nodes; omit upstream lint suppressions."
+removal-condition = "Use an upstream release passing the Writer stable-node accessibility update and native action gates."
+
+[features]
+debug-integrity = []
+devtools = ["serde"]
+hotpath = [
+    "hotpath/hotpath",
+    "ragnarok/hotpath",
+]
+hotpath-alloc = ["hotpath/hotpath-alloc"]
+hotpath-cloud = ["hotpath/hotpath-cloud"]
+hotreload = [
+    "dep:subsecond",
+    "dep:dioxus-devtools",
+]
+serde = [
+    "dep:serde",
+    "cursor-icon/serde",
+]
+test = []
+
+[lib]
+name = "freya_core"
+path = "src/lib.rs"
+
+[dependencies.accesskit]
+version = "0.24.0"
+
+[dependencies.bitflags]
+version = "2.9.3"
+
+[dependencies.bytes]
+version = "1.10.1"
+
+[dependencies.cursor-icon]
+version = "1.2.0"
+
+[dependencies.dioxus-devtools]
+version = "0.7.4"
+optional = true
+
+[dependencies.freya-engine]
+version = "0.5.0-rc.10"
+
+[dependencies.futures-channel]
+version = "0.3.31"
+
+[dependencies.futures-lite]
+version = "2.6.1"
+
+[dependencies.futures-util]
+version = "0.3.31"
+
+[dependencies.generational-box]
+version = "0.7"
+
+[dependencies.hotpath]
+version = "0.28"
+
+[dependencies.itertools]
+version = "0.14.0"
+
+[dependencies.keyboard-types]
+version = "0.8.0"
+
+[dependencies.mundy]
+version = "0.2.3"
+features = [
+    "async-io",
+    "callback",
+    "accent-color",
+]
+default-features = false
+
+[dependencies.paste]
+version = "1.0.15"
+
+[dependencies.pathgraph]
+version = "0.5.0-rc.10"
+
+[dependencies.ragnarok]
+version = "0.5.0-rc.10"
+
+[dependencies.rustc-hash]
+version = "2.1.1"
+
+[dependencies.serde]
+version = "1"
+optional = true
+
+[dependencies.smallvec]
+version = "1.15.1"
+
+[dependencies.subsecond]
+version = "0.7.4"
+optional = true
+
+[dependencies.torin]
+version = "0.5.0-rc.10"
+
+[dependencies.tracing]
+version = "0.1.41"
+
+[dependencies.unicode-segmentation]
+version = "1.11"
+
+[target.'cfg(not(target_os = "emscripten"))'.dependencies.async-io]
+version = "2.5.0"
+
+[target.'cfg(not(target_os = "emscripten"))'.dependencies.blocking]
+version = "1.6.2"
+
+[lints.clippy]
+redundant_clone = "warn"
+
+[workspace]

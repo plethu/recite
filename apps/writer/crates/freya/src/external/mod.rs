@@ -166,6 +166,9 @@ impl Component for WatchPoll {
 }
 
 fn poll_external_changes(mut writer: Writer) {
+    if writer.files.peek().as_ref().is_some_and(|p| p.saving) {
+        return;
+    }
     let result = writer
         .files
         .peek()
@@ -211,12 +214,15 @@ fn poll_external_changes(mut writer: Writer) {
 }
 
 fn compare_changed_document(mut writer: Writer, target: &std::path::Path) {
-    match writer
-        .buffers
-        .switch(writer.files, target, writer.dark, |_| Ok(()))
-    {
-        Ok(()) => open(writer),
-        Err(error) => writer.message.error(error),
+    if let Err(error) = writer.open_document_then(
+        target,
+        EventHandler::new(move |result: Result<(), String>| match result {
+            Ok(()) => open(writer),
+            Err(error) => writer.message.error(error),
+        }),
+    ) {
+        writer.message.error(error);
     }
 }
+
 pub(crate) use handoff::open_editor;

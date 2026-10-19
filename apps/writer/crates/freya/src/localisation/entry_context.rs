@@ -31,7 +31,7 @@ impl Component for EntryContext {
             .peek()
             .as_ref()
             .ok()
-            .and_then(|m| m.document().passage_snapshot().ok())
+            .and_then(|m| m.document().cached_passages())
             .unwrap_or_default();
         let destination = super::navigation::Destination::resolve(&entry, &passages);
         let mut body = rect().width(Size::fill()).spacing(t::SPACE_MD).child(
@@ -69,13 +69,19 @@ impl Component for EntryContext {
                                 .trial
                                 .variant
                                 .set(entry.variant().unwrap_or_default().into());
-                            if let Some(destination) = &destination
-                                && !destination.open(writer)
-                            {
-                                return;
+                            let completed = EventHandler::new(move |result: Result<(), String>| {
+                                if let Err(error) = result {
+                                    writer.message.error(error);
+                                    return;
+                                }
+                                writer.localisation.write().active = false;
+                                writer.pane.set(Pane::Preview);
+                            });
+                            if let Some(destination) = &destination {
+                                destination.open(writer, completed);
+                            } else {
+                                completed.call(Ok(()));
                             }
-                            writer.localisation.write().active = false;
-                            writer.pane.set(Pane::Preview);
                         })
                         .child(text(MsgId::WriterPreview)),
                 ),

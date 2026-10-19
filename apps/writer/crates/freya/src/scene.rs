@@ -1,4 +1,5 @@
 //! A beat's script and explicit links to its neighbouring beats.
+mod slug;
 use crate::design::Button;
 use crate::design::tokens as t;
 use crate::{editing::Writer, palette};
@@ -11,8 +12,8 @@ pub(super) fn has_no_beats(session: &recite_writer_model::Workbench) -> bool {
     try_consume_context::<crate::AppMode>() == Some(crate::AppMode::Examples)
         && session
             .document()
-            .script_snapshot()
-            .is_ok_and(|blocks| blocks.is_empty())
+            .summary_snapshot()
+            .is_some_and(|summary| summary.blocks().is_empty())
 }
 
 pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
@@ -27,9 +28,9 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
     {
         return active;
     }
-    let blocks = match session.document().script_snapshot() {
-        Ok(blocks) => blocks,
-        Err(error) => return label().text(error.to_string()).into_element(),
+    let blocks = match session.document().cached_script() {
+        Some(blocks) => blocks,
+        None => return crate::projections::placeholder(writer),
     };
     let mut script = rect()
         .width(Size::fill())
@@ -68,10 +69,11 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
             min_height: 240.,
         });
     }
-    for id in open.iter() {
-        let Some(index) = blocks.iter().position(|block| &block.id == id) else {
-            continue;
-        };
+    let open_index = open
+        .as_ref()
+        .and_then(|id| blocks.iter().position(|block| &block.id == id));
+    if let Some(index) = open_index {
+        let id = &blocks[index].id;
         script =
             script.child(
                 rect()
@@ -84,10 +86,11 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
                             id: id.clone(),
                         }
                     }))
-                    .maybe_child(
-                        (!writer.localisation.read().active)
-                            .then(|| slug(session.document().key().as_str(), &blocks[index])),
-                    )
+                    .maybe_child((!writer.localisation.read().active).then(|| slug::Slug {
+                        key: session.document().key().as_str().to_owned(),
+                        blocks: std::sync::Arc::downgrade(&blocks),
+                        index,
+                    }))
                     .maybe_child(blocks[index].entries.is_empty().then(|| {
                         crate::design::EmptyState {
                             title: "This beat is empty".into(),
@@ -111,10 +114,7 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
         if open.is_some() {
             script = script.child(AddActions { writer });
         }
-        if let Some(index) = open
-            .as_ref()
-            .and_then(|id| blocks.iter().position(|block| &block.id == id))
-        {
+        if let Some(index) = open_index {
             script = script.child(folio(
                 session.document().key().as_str(),
                 &blocks[index].id,
@@ -223,37 +223,6 @@ fn folio(key: &str, block: &str, index: usize, count: usize) -> Element {
         .into_element()
 }
 
-/// The mono slug line under a beat title: file, block, flags, reply count.
-fn slug(key: &str, block: &recite_writer_model::ScriptBlock) -> Element {
-    use t::Slug::{Flag, Meta};
-    let file = if key.ends_with(".recite") {
-        key.to_owned()
-    } else {
-        format!("{key}.recite")
-    };
-    let replies = block
-        .entries
-        .iter()
-        .filter(|entry| {
-            matches!(entry, recite_writer_model::ScriptEntry::Passage(p)
-                if matches!(p.kind, recite_writer_model::PassageKind::Choice { .. }))
-        })
-        .count();
-    let mut parts = vec![Meta(file), Meta(format!(":: {}", block.id))];
-    if block.is_default {
-        parts.push(Flag("default".into()));
-    }
-    parts.push(Meta(match replies {
-        0 => "no replies".into(),
-        1 => "1 reply".into(),
-        n => format!("{n} replies"),
-    }));
-    rect()
-        .padding((0., 0., t::SPACE_LG, t::SPACE_XS))
-        .child(t::slug(parts))
-        .into_element()
-}
-
 pub(super) fn jump(
     writer: Writer,
     origin: &str,
@@ -322,8 +291,7 @@ pub(super) fn jump_parts(
     }
     let block = session
         .document()
-        .script_snapshot()
-        .ok()
+        .cached_script()
         .and_then(|blocks| blocks.iter().find(|block| block.id == target).cloned());
     let preview = if let Some(block) = block {
         crate::branch_preview::BranchPreview { writer, block }.into_element()
@@ -354,3 +322,6 @@ fn route_heading(
         heading
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -19,11 +19,14 @@ checks verify model transitions and accessibility metadata; native announcements
 usability still require the drills below. Use the [packaging matrix](packaging.md) for install,
 upgrade, uninstall and desktop activation.
 
+The Linux AT-SPI probe requires native Focus and Click to pass separately: focus must change without
+activation, then Click must publish the changed action status. It needs a focused window; a headless
+Wayland compositor also needs an active virtual keyboard seat. The local Freya core patch publishes
+changed accessibility properties for stable nodes. Passing this probe does not establish
+screen-reader usability.
+
 ## Known limits
 
-- The Linux AT-SPI probe finds the named button but cannot focus or invoke it. Freya 0.5.0-rc.7
-  ignores native `ActionRequested` events. The probe reports `limited`; `--require-actions` fails
-  until focus and invocation affect the application. This is a known blocker, not a skipped test.
 - The pinned CodeEditor exposes an unnamed inner TextInput and does not display IME preedit.
   `probe_records_missing_code_editor_preedit_presentation` records the gap; a passing test does not
   mean IME support passes. After upgrading Freya, replace it with a positive assertion once fixed.

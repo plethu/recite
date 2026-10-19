@@ -1,4 +1,6 @@
-use recite_core::po::{PoDocument, PoDocumentFingerprint};
+use super::index::CatalogDocument;
+use recite_core::po::{PoDocument, PoDocumentFingerprint, PoEntry};
+use std::sync::Arc;
 
 use super::coverage::{CatalogCoverage, CatalogEntryStatus};
 use super::error::CatalogSummaryError;
@@ -44,6 +46,7 @@ impl CatalogIdentity {
 }
 
 /// A lossless PO document paired with its explicit authoring identity.
+/// Clones share immutable PO records and their exact-key lookup index.
 ///
 /// One explicit locale may be represented by multiple inputs, for example when
 /// a project loads several PO paths for the same locale. A `Language` header is
@@ -53,13 +56,16 @@ impl CatalogIdentity {
 #[non_exhaustive]
 pub struct CatalogInput {
     pub(super) identity: CatalogIdentity,
-    pub(super) document: PoDocument,
+    document: Arc<CatalogDocument>,
 }
 
 impl CatalogInput {
     #[must_use]
-    pub const fn new(identity: CatalogIdentity, document: PoDocument) -> Self {
-        Self { identity, document }
+    pub fn new(identity: CatalogIdentity, document: PoDocument) -> Self {
+        Self {
+            identity,
+            document: Arc::new(CatalogDocument::new(document)),
+        }
     }
 
     /// Convenience constructor using the document's source name as identity.
@@ -77,8 +83,18 @@ impl CatalogInput {
     }
 
     #[must_use]
-    pub const fn document(&self) -> &PoDocument {
-        &self.document
+    pub fn document(&self) -> &PoDocument {
+        &self.document.document
+    }
+    /// Exact gettext-key matches in original PO record order, including fuzzy
+    /// and obsolete records. Consumers retain their own translation policy.
+    pub fn matching_entries<'a>(
+        &'a self,
+        context: &str,
+        source: &str,
+        plural: Option<&str>,
+    ) -> impl Iterator<Item = &'a PoEntry> + use<'a> {
+        self.document.matching_entries(context, source, plural)
     }
 }
 

@@ -88,3 +88,16 @@ fn recovery_cleanup_does_not_discard_a_draft_when_disk_changed_again()
     assert_eq!(draft.text(), "format_version = 1\n# edited\n");
     Ok(())
 }
+
+impl ManifestDraft {
+    pub fn save(&mut self) -> Result<(), FileError> {
+        self.save_with_cleanup_sync(super::sync_directory)
+    }
+    fn save_with_cleanup_sync(
+        &mut self,
+        sync: impl FnOnce(&std::path::Path) -> io::Result<()>,
+    ) -> Result<(), FileError> {
+        let outcome = self.save_request().execute_with_sync(sync);
+        self.accept_save(outcome)
+    }
+}

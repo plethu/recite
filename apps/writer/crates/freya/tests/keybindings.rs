@@ -80,7 +80,7 @@ fn modifiers_can_be_chosen_one_at_a_time() -> Result {
     let (mut test, _platform) = TestingRunner::new(
         recite_writer::app,
         (1200., 1000.).into(),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     open(&mut test)?;
@@ -135,7 +135,7 @@ fn binding_can_be_changed_entirely_with_keyboard_and_focus_returns_to_row() -> R
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         (1200., 1000.).into(),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     support::click(&mut test, "Settings")?;

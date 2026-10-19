@@ -37,7 +37,13 @@ impl Component for Completion {
         let mut state = writer.source_viewport;
         use_after_side_effect(move || {
             let opened = *state.completion.read();
-            if opened && *Platform::get().focused_accessibility_id.read() != editor_id {
+            if opened
+                && *Platform::get()
+                    .current_window()
+                    .focused_accessibility_id
+                    .read()
+                    != editor_id
+            {
                 editor_id.request_focus();
             }
         });

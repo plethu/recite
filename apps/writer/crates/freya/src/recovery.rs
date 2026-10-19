@@ -1,5 +1,5 @@
 mod encoding;
-mod worker;
+pub(crate) mod worker;
 pub(crate) use worker::SnapshotStore;
 pub(crate) type RecoveryStore = SnapshotStore<Recovery>;
 // A locked, atomic recovery snapshot beside each edited document.

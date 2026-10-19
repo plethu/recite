@@ -3,11 +3,13 @@ use super::{
     tags::{MsgArgument, MsgEffectMode, MsgSourceSpan, MsgValue},
 };
 use crate::{
-    compiled::ChoiceIndex, compiled::MatchArmIndex, compiled::MetadataIndex,
-    compiled::SourceMapIndex, compiled::StatementIndex, compiled::TableRange,
+    compiled::ChoiceIndex, compiled::CompiledArgument,
+    compiled::CompiledAvailabilityReasonArgBinding, compiled::MatchArmIndex,
+    compiled::MetadataIndex, compiled::SourceMapIndex, compiled::StatementIndex,
+    compiled::TableRange,
 };
-use serde::Serialize;
 use serde::ser::SerializeTuple;
+use serde::{Serialize, Serializer};
 
 #[derive(Serialize)]
 pub(super) struct MsgAvailabilityReason<'a>(pub(super) &'a str, pub(super) &'a str);
@@ -22,7 +24,7 @@ impl<'a> From<&'a crate::compiled::CompiledAvailabilityReason> for MsgAvailabili
 pub(super) struct MsgConditionAvailabilityReason<'a>(
     &'a str,
     &'a str,
-    Vec<MsgAvailabilityReasonArgBinding<'a>>,
+    #[serde(serialize_with = "reason_arguments")] &'a [CompiledAvailabilityReasonArgBinding],
 );
 
 impl<'a> From<&'a crate::compiled::CompiledConditionAvailabilityReason>
@@ -32,11 +34,7 @@ impl<'a> From<&'a crate::compiled::CompiledConditionAvailabilityReason>
         Self(
             mapping.function.as_str(),
             mapping.reason.as_str(),
-            mapping
-                .args
-                .iter()
-                .map(MsgAvailabilityReasonArgBinding::from)
-                .collect(),
+            &mapping.args,
         )
     }
 }
@@ -138,7 +136,7 @@ pub(super) struct MsgEffect<'a>(
     pub(super) &'a str,
     pub(super) MsgEffectMode,
     pub(super) &'a str,
-    pub(super) Vec<MsgArgument<'a>>,
+    #[serde(serialize_with = "effect_arguments")] pub(super) &'a [CompiledArgument],
     pub(super) u32,
 );
 
@@ -148,7 +146,7 @@ impl<'a> From<&'a crate::compiled::CompiledEffect> for MsgEffect<'a> {
             effect.id.as_str(),
             MsgEffectMode(effect.mode),
             effect.function.as_str(),
-            effect.args.iter().map(MsgArgument).collect(),
+            &effect.args,
             effect.source_map.as_u32(),
         )
     }
@@ -187,4 +185,18 @@ pub(super) fn choice_range(range: TableRange<ChoiceIndex>) -> MsgRange {
 pub(super) fn metadata_range(range: TableRange<MetadataIndex>) -> MsgRange {
     let (start, len) = range_to_u32(range, MetadataIndex::as_u32);
     MsgRange(start, len)
+}
+
+fn reason_arguments<S: Serializer>(
+    arguments: &[CompiledAvailabilityReasonArgBinding],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.collect_seq(arguments.iter().map(MsgAvailabilityReasonArgBinding::from))
+}
+
+fn effect_arguments<S: Serializer>(
+    arguments: &[CompiledArgument],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.collect_seq(arguments.iter().map(MsgArgument))
 }

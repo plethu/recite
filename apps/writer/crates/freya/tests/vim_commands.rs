@@ -151,7 +151,7 @@ fn pane_sequence_moves_focus_and_escape_cancels() -> Result {
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         (1400., 1000.).into(),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     vim(&mut test)?;
@@ -218,7 +218,7 @@ fn slash_and_repeat_search_preserve_the_query() -> Result {
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         (1400., 1000.).into(),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     vim(&mut test)?;

@@ -22,9 +22,25 @@ check_spec = importlib.util.spec_from_file_location(
 )
 package_check = importlib.util.module_from_spec(check_spec)
 check_spec.loader.exec_module(package_check)
+flatpak_spec = importlib.util.spec_from_file_location(
+    "check_writer_flatpak", ROOT / "scripts/check-writer-flatpak.py"
+)
+flatpak_check = importlib.util.module_from_spec(flatpak_spec)
+flatpak_spec.loader.exec_module(flatpak_check)
 
 
 class PackageConfigTests(unittest.TestCase):
+    def test_skia_revision_mismatch_fails_before_native_build(self):
+        source = (ROOT / "nix/packages.nix").read_text()
+        flatpak_check.check_nix_skia_revision(source)
+        stale = source.replace(
+            flatpak_check.SKIA_REVISION, "41382841f36aa208e7433f3c46d14237a1b15054"
+        )
+        with self.assertRaisesRegex(ValueError, "same Skia revision"):
+            flatpak_check.check_nix_skia_revision(stale)
+        with self.assertRaisesRegex(ValueError, "one Nix Skia source"):
+            flatpak_check.check_nix_skia_revision("")
+
     def test_numbered_prereleases_preserve_app_identity_and_debian_upgrade_order(self):
         versions = ["0.2.0-beta.1", "0.2.0-beta.2", "0.2.0-rc.1", "0.2.0"]
         templates = package_writer.CONFIG

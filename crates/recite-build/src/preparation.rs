@@ -12,6 +12,8 @@ use super::request::{
 };
 
 mod inputs;
+#[cfg(test)]
+mod tests;
 
 pub(super) fn prepare(
     project_root: &Path,
@@ -83,7 +85,25 @@ fn prepare_discovered_with_previous(
     let unchanged = previous.filter(|request| {
         inputs::unchanged(request, &discovery, schema.as_ref(), schema_key.as_ref())
     });
-    if unchanged.is_none() {
+    let mut captured = unchanged.map(|previous| previous.build_request().clone());
+    if unchanged.is_none() && diagnostics.is_empty() && !discovery.documents().is_empty() {
+        let build = inputs::capture(
+            &discovery,
+            schema.as_ref(),
+            schema_key.clone(),
+            generation,
+            snapshot_generation,
+        )?;
+        let validation = recite_compiler::compile::validate_build_request(&build);
+        captured = Some(build);
+        if !validation.is_empty() {
+            // Preserve the authoring diagnostic boundary for malformed sources.
+            diagnostics.extend(
+                validate_sources(discovery.documents(), schema.as_ref(), true)
+                    .map_err(|message| ProjectBuildPreparationError::Authoring { message })?,
+            );
+        }
+    } else if unchanged.is_none() {
         diagnostics.extend(
             validate_sources(discovery.documents(), schema.as_ref(), true)
                 .map_err(|message| ProjectBuildPreparationError::Authoring { message })?,
@@ -98,8 +118,8 @@ fn prepare_discovered_with_previous(
         return Err(ProjectBuildPreparationError::NoInputs);
     }
 
-    let build = if let Some(previous) = unchanged {
-        previous.build_request().clone()
+    let build = if let Some(captured) = captured {
+        captured
     } else {
         inputs::capture(
             &discovery,

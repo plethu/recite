@@ -141,6 +141,18 @@ impl Component for Blockers {
 }
 
 fn resolve_declaration_draft(mut writer: Writer, save: bool, mut failure: State<Option<String>>) {
+    if save {
+        crate::editor_work::start(
+            writer,
+            crate::editor_work::SaveScope::Declarations,
+            EventHandler::new(move |result| {
+                if let Err(error) = result {
+                    failure.set(Some(error));
+                }
+            }),
+        );
+        return;
+    }
     let mut files = writer.files.write();
     let Some(session) = files
         .as_mut()
@@ -148,11 +160,7 @@ fn resolve_declaration_draft(mut writer: Writer, save: bool, mut failure: State<
     else {
         return;
     };
-    let result = if save {
-        session.save_and_generate()
-    } else {
-        session.discard()
-    };
+    let result = session.discard();
     drop(files);
     if let Err(error) = result {
         failure.set(Some(error.to_string()));

@@ -218,7 +218,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             primary = crate::design::SubmitAction {
                 id: ids[8],
                 caption: "Apply project changes".into(),
-                enabled: true,
+                enabled: !files.read().as_ref().is_some_and(|p| p.saving),
                 action: EventHandler::new(move |()| {
                     let text = draft.peek().rope.to_string();
                     let result = project
@@ -228,6 +228,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                         .and_then(|p| {
                             let files = files.peek();
                             let files = files.as_ref().ok_or("No project")?;
+                            files.require_idle_save().map_err(|e| e.to_string())?;
                             let model = writer.buffers.model.peek();
                             let model = model.as_ref().map_err(|e| e.to_string())?;
                             if files.project_edit_pending(model) {

@@ -1,16 +1,18 @@
-//! Mounted Writer state and workspace composition.
+//! Root workbench state, service lifetimes and visible workspace composition.
+mod status;
+
 use crate::design::tokens as t;
 use crate::{
-    AppMode, InitialSource, buffers, chrome, closing, commands, design, diagnostics, editing,
-    examples, field, files, localisation, navigation, palette, preferences, presentation,
-    preview_panel, reading_context, scene, scene_map, scene_navigation, settings, source_editor,
-    workspace,
+    AppMode, InitialSource, buffers, chrome, closing, commands, design, diagnostics,
+    editing::{self, editor_data},
+    editor_work, examples, field, files, localisation, messages, navigation, palette, preferences,
+    presentation, preview_panel, projections, reading_context, scene, scene_map, scene_navigation,
+    settings, source_editor, workspace,
 };
-use editing::editor_data;
 use freya::prelude::*;
 use recite_writer_model::{FIXTURE, View, WRITER_EXAMPLES, Workbench};
 
-pub(super) fn render(mode: AppMode) -> Element {
+pub(crate) fn render(mode: AppMode) -> Element {
     let initial = use_try_consume::<InitialSource>();
     let model = use_state(move || {
         if mode == AppMode::Regression
@@ -35,7 +37,7 @@ pub(super) fn render(mode: AppMode) -> Element {
     let mut shortcut_modifiers = use_state(Modifiers::empty);
     use_provide_context(|| commands::Hints(shortcut_modifiers));
     use_side_effect(move || {
-        if !*Platform::get().is_app_focused.read() {
+        if !*Platform::get().current_window().is_app_focused.read() {
             shortcut_modifiers.set_if_modified(Modifiers::empty());
         }
     });
@@ -44,7 +46,12 @@ pub(super) fn render(mode: AppMode) -> Element {
     let mut dark = use_state(move || initially_dark);
     let mut theme = use_init_theme(move || palette::theme(initially_dark));
     let settings_open = use_state(|| false);
-    let settings_return_focus = use_state(|| *Platform::get().focused_accessibility_id.peek());
+    let settings_return_focus = use_state(|| {
+        *Platform::get()
+            .current_window()
+            .focused_accessibility_id
+            .peek()
+    });
     let modal_count = use_state(|| 0usize);
     use_provide_context(move || design::ModalState(modal_count));
     let map_focus = use_a11y();
@@ -122,12 +129,16 @@ pub(super) fn render(mode: AppMode) -> Element {
     };
     let reference = use_state(|| None::<reading_context::Reference>);
     let localisation = use_state(localisation::Localisation::default);
+    let status_a11y = use_a11y();
     let writer = editing::Writer {
         vim: commands::Navigation::new(),
         command_search: commands::Search::new(),
         source_viewport: source_editor::EditorViewport::new(),
         layout: presentation::Layout::new(preferences),
         trial: preview_panel::TrialInputs::new(),
+        work: editor_work::EditorWork::new(),
+        declaration_buffer: use_state(|| None),
+        projections: use_state(|| None),
         localisation,
         files,
         examples,
@@ -149,6 +160,9 @@ pub(super) fn render(mode: AppMode) -> Element {
         selection,
         search,
     };
+    preview_panel::use_preview_work(writer);
+    editor_work::use_work(writer);
+    projections::use_work(writer);
     use_after_side_effect(move || {
         if *modal_count.read() > 0
             || writer.preferences.read().config.ui.keymap != recite_config::Keymap::Vim
@@ -164,10 +178,10 @@ pub(super) fn render(mode: AppMode) -> Element {
     let example_scenes = (mode == AppMode::Examples).then(|| examples::navigation(writer, message));
     let empty_files = use_state(|| None);
     use_hook(move || {
-        let _ = writer.scene_opened();
+        let _ = writer.scene_opened(writer.preferences.peek().config.writer.view);
     });
     navigation::track(writer, mode);
-    let close_prompt = closing::controls(
+    let (close_prompt, notice_in_close) = closing::controls(
         writer,
         file_chrome
             .as_ref()
@@ -214,20 +228,32 @@ pub(super) fn render(mode: AppMode) -> Element {
                 .map(|files| format!("file:{:?}", files.current))
         })
         .unwrap_or_else(|| format!("example:{}", session.document().key().as_str()));
-    let map = scene_map::SceneMap {
-        writer,
-        scene: map_identity,
-    }
-    .into_element();
+    let needs_projection = projections::needed(writer);
+    let prepared = !needs_projection || projections::ready(writer);
+    let map = if prepared {
+        scene_map::SceneMap {
+            writer,
+            scene: map_identity,
+        }
+        .into_element()
+    } else {
+        projections::placeholder(writer)
+    };
     let active = field::render(writer, editor_id);
     let mut reading = rect()
         .width(Size::fill())
         .padding((design::tokens::SPACE_XS, design::tokens::SPACE_SM))
         .spacing(t::SPACE_SM)
-        .child(scene::reading_surface(writer, active.clone()));
-    let diagnostics = session.document().diagnostics();
-    for diagnostic in &diagnostics {
-        reading = reading.child(diagnostics::row(writer, editor_id, diagnostic));
+        .child(if !prepared {
+            projections::placeholder(writer)
+        } else if needs_projection {
+            scene::reading_surface(writer, active.clone())
+        } else {
+            active.clone()
+        });
+    let diagnostics = session.document().diagnostic_snapshot();
+    if !source {
+        reading = reading.child(diagnostics::Panel { writer, editor_id });
     }
     let body = rect()
         .content(Content::Flex)
@@ -238,6 +264,7 @@ pub(super) fn render(mode: AppMode) -> Element {
             writer,
             files: file_chrome.as_ref().map_or(empty_files, |c| c.files),
             source,
+            prepared,
             navigation_visible,
             scenes,
             toolbar,
@@ -267,6 +294,13 @@ pub(super) fn render(mode: AppMode) -> Element {
         localisation.modal_open()
             || (localisation.active && localisation.view == localisation::CatalogueView::Updates)
     };
+    let saved = if let Some(caption) = writer.work.caption() {
+        caption
+    } else if projections::pending_view(writer) {
+        messages::text(messages::MsgId::WriterPreparingScript)
+    } else {
+        saved.to_owned()
+    };
     let mut root = t::interface()
         .expanded()
         .on_key_down(move |event: Event<KeyboardEventData>| commands::vim_keyboard(writer, &event))
@@ -276,7 +310,13 @@ pub(super) fn render(mode: AppMode) -> Element {
         })
         .on_global_key_down(move |event: Event<KeyboardEventData>| {
             shortcut_modifiers.set_if_modified(event.modifiers);
-            if Platform::get().focused_accessibility_id.peek().0 == 0 {
+            if Platform::get()
+                .current_window()
+                .focused_accessibility_id
+                .peek()
+                .0
+                == 0
+            {
                 commands::vim_keyboard(writer, &event);
             }
             commands::keyboard(writer, source, editor_id, event);
@@ -309,47 +349,28 @@ pub(super) fn render(mode: AppMode) -> Element {
             .child(chrome.services.clone())
             .child(chrome.project_panel.clone());
     }
+    let status_bar = status::render(
+        status_a11y,
+        saved,
+        problems,
+        preview_status,
+        diagnostics.len(),
+    );
     let p = t::colors();
-    let status_bar = rect()
-        .horizontal()
-        .width(Size::fill())
-        .cross_align(Alignment::Center)
-        .padding(Gaps::new(6., 16., 6., 16.))
-        .spacing(t::SPACE_SM)
-        .background(p.status_bar)
-        .border(
-            Border::new()
-                .width(BorderWidth {
-                    top: 1.,
-                    ..Default::default()
-                })
-                .fill(p.status_edge),
-        )
-        .a11y_role(AccessibilityRole::Status)
-        .a11y_alt(format!("{saved}, {problems}"))
-        .child(design::material::registration(p.status_text, 12.))
-        .child(t::meta(saved).color(p.status_text))
-        .child(t::meta("·").color(p.status_text))
-        .child(t::meta(problems.clone()).color(if diagnostics.is_empty() {
-            p.status_signal
-        } else {
-            p.status_text
-        }))
-        .maybe(!preview_status.is_empty(), |bar| {
-            bar.child(t::meta("·").color(p.status_text))
-                .child(t::meta(preview_status).color(p.status_text))
-        });
     root = root
         .child(body)
-        .maybe(!message.is_empty() && !notice_in_localisation, |root| {
-            root.child(
-                rect()
-                    .width(Size::fill())
-                    .padding((t::SPACE_XS, t::SPACE_LG))
-                    .background(p.surface)
-                    .child(crate::feedback::NoticeView { feedback: message }),
-            )
-        })
+        .maybe(
+            !message.is_empty() && !notice_in_localisation && !notice_in_close,
+            |root| {
+                root.child(
+                    rect()
+                        .width(Size::fill())
+                        .padding((t::SPACE_XS, t::SPACE_LG))
+                        .background(p.surface)
+                        .child(crate::feedback::NoticeView { feedback: message }),
+                )
+            },
+        )
         .child(status_bar);
     root = root
         .child(commands::Palette { writer })

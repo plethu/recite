@@ -23,7 +23,6 @@ impl Component for TranslationField {
     fn render(&self) -> impl IntoElement {
         let writer = self.writer;
         let mut state = writer.localisation;
-        let mut message = writer.message;
         let input_id = use_a11y();
         let review_id = use_a11y();
         let anchor = self.passage.id.clone();
@@ -35,8 +34,8 @@ impl Component for TranslationField {
                         m.view() == &recite_writer_model::View::Passage(anchor.clone())
                     });
                 if !selected {
-                    writer
-                        .navigate(|m| m.select(recite_writer_model::View::Passage(anchor.clone())));
+                    let anchor = anchor.clone();
+                    writer.navigate(move |m| m.select(recite_writer_model::View::Passage(anchor)));
                 }
             }
         });
@@ -81,15 +80,11 @@ impl Component for TranslationField {
         }
         let reviewed = draft.reviewed;
         let status = super::status::TranslationStatus::entry_label(catalogue, entry_id);
+        let saving = catalogue.saving;
         drop(current);
-        let save = move || {
-            let result = state.write().catalogue.as_mut().map(|c| c.save(entry_id));
-            if let Some(result) = result {
-                message.report(result, wording(MsgId::WriterTranslationSaved));
-            }
-        };
-        let mut save_key = save;
-        let mut save_button = save;
+        let save = move || super::entry::save(writer, entry_id);
+        let save_key = save;
+        let save_button = save;
         let mut body = rect()
             .width(Size::fill())
             .spacing(t::SPACE_XS)
@@ -163,12 +158,14 @@ impl Component for TranslationField {
                 .child(
                     Button::new()
                         .filled()
+                        .enabled(!saving)
                         .on_press(move |_| save_button())
                         .child(wording(MsgId::WriterSave)),
                 )
                 .child(
                     Button::new()
                         .flat()
+                        .enabled(!saving)
                         .on_press(move |_| {
                             if let Some(catalogue) = state.write().catalogue.as_mut() {
                                 catalogue.discard(entry_id);

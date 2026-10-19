@@ -2,13 +2,13 @@ use recite_core::compiled::{CompiledDialogue, messagepack_array_len, messagepack
 use serde::Deserialize;
 use std::io::Cursor;
 
-use crate::session_snapshot::{DialogueSessionSnapshot, snapshot_session};
+use crate::session_snapshot::{DialogueSessionSnapshot, SessionSnapshotRef};
 use crate::{DialogueError, DialogueSession};
 
 use super::restore::restore_session;
 
 pub fn encode_session_messagepack(session: &DialogueSession) -> Result<Vec<u8>, DialogueError> {
-    rmp_serde::to_vec(&snapshot_session(session)).map_err(|error| {
+    rmp_serde::to_vec(&SessionSnapshotRef::new(session)).map_err(|error| {
         DialogueError::SessionSnapshotEncodeFailed {
             reason: error.to_string(),
         }

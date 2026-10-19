@@ -1,7 +1,5 @@
 //! Immutable PO inputs for one trial. Files and editable drafts stay with the host.
-use recite_compiler::authoring::{
-    CatalogCoverageSummary, CatalogInput, CatalogResolution, CatalogResolutionPolicy,
-};
+use recite_compiler::authoring::{CatalogInput, CatalogResolution, CatalogResolutionPolicy};
 use recite_core::{
     LocaleId,
     po::{PoEntry, PotDocument},
@@ -21,13 +19,10 @@ impl TrialCatalogues {
         policy: &CatalogResolutionPolicy,
         expected: &PotDocument,
     ) -> Result<Self, LocaleError> {
-        let summary = CatalogCoverageSummary::build(expected, inputs.clone(), policy.clone())
+        let resolution = CatalogResolution::build(expected, inputs.clone(), policy.clone())
             .map_err(|e| LocaleError::new(e.to_string()))?;
         inputs.sort_by(|a, b| a.identity().cmp(b.identity()));
-        Ok(Self {
-            inputs,
-            resolution: summary.resolution().clone(),
-        })
+        Ok(Self { inputs, resolution })
     }
     fn entry(
         &self,
@@ -41,17 +36,11 @@ impl TrialCatalogues {
             .filter(|input| input.identity().locale() == locale)
             .flat_map(|input| {
                 input
-                    .document()
-                    .entries()
-                    .iter()
+                    .matching_entries(context, source, plural)
                     .map(move |entry| (entry, input))
             })
             .find(|(entry, _)| {
-                !entry.is_obsolete()
-                    && entry.context() == Some(context)
-                    && entry.source_text() == source
-                    && entry.plural_source_text() == plural
-                    && !entry.flags().iter().any(|flag| flag == "fuzzy")
+                !entry.is_obsolete() && !entry.flags().iter().any(|flag| flag == "fuzzy")
             })
     }
     fn rule(&self, locale: &LocaleId) -> Option<&str> {

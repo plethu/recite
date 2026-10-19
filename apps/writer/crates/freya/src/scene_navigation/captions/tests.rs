@@ -1,35 +1,36 @@
 use super::*;
-use recite_writer_model::{Document, ScriptEntry};
+use recite_writer_model::Document;
 
 #[test]
 fn prose_and_labels_reuse_captions_while_names_badges_and_order_invalidate()
 -> Result<(), Box<dyn std::error::Error>> {
-    let blocks = Document::new(
-        ":: first default\n> line@11111111111111111111\n  Before.\n-> second\n:: second\n-> END\n",
-    )?
-    .script()?;
-    let original = refresh(&blocks, None);
+    let source =
+        ":: first default\n> line@11111111111111111111\n  Before.\n-> second\n:: second\n-> END\n";
+    let document = Document::new(source)?;
+    let original = refresh(document.block_summaries(), None);
     assert_eq!(original[0].label, "Start · First");
     assert_eq!(original[1].label, "Second · end");
-    let prose = Document::new(
-        ":: first default\n> line@11111111111111111111\n  Changed.\n-> second\n:: second\n-> END\n",
-    )?
-    .script()?;
-    assert!(Arc::ptr_eq(&original, &refresh(&prose, Some(&original))));
-    let mut changed = blocks.clone();
-    changed[1].entries = vec![ScriptEntry::Jump("first".into())];
-    assert!(!Arc::ptr_eq(&original, &refresh(&changed, Some(&original))));
-    changed = blocks.clone();
-    changed[0].is_default = false;
-    assert!(!Arc::ptr_eq(&original, &refresh(&changed, Some(&original))));
-    changed = blocks.clone();
-    changed[0].id = "ÉLAN_😀".into();
-    let renamed = refresh(&changed, Some(&original));
-    assert_eq!(renamed[0].folded, renamed[0].label.to_lowercase());
-    assert!(!Arc::ptr_eq(&original, &renamed));
-    changed = blocks;
-    changed.reverse();
-    assert!(!Arc::ptr_eq(&original, &refresh(&changed, Some(&original))));
+    let prose = Document::new(source.replace("Before.", "Changed."))?;
+    assert!(Arc::ptr_eq(
+        &original,
+        &refresh(prose.block_summaries(), Some(&original))
+    ));
+    for changed in [
+        source.replace("-> END", "-> first"),
+        source.replace(" default", ""),
+        source.replace("first", "ÉLAN_😀"),
+        ":: second\n-> END\n:: first default\n> line@11111111111111111111\n  Before.\n-> second\n"
+            .into(),
+    ] {
+        let document = Document::new(changed)?;
+        let refreshed = refresh(document.block_summaries(), Some(&original));
+        assert!(!Arc::ptr_eq(&original, &refreshed));
+        assert!(
+            refreshed
+                .iter()
+                .all(|caption| caption.folded == caption.label.to_lowercase())
+        );
+    }
     assert!(refresh(&[], Some(&original)).is_empty());
     Ok(())
 }
@@ -44,18 +45,23 @@ fn caption_refresh_timing() {
         Current(Arc<[Caption]>),
     }
     for count in [1_000, 10_000] {
-        let blocks: Vec<_> = (0..count)
-            .map(|i| ScriptBlock {
-                id: format!("beat_{i}"),
-                is_default: i == 0,
-                entries: vec![ScriptEntry::Jump(if i + 1 == count {
-                    "END".into()
-                } else {
-                    format!("beat_{}", i + 1)
-                })],
+        let source = (0..count)
+            .map(|i| {
+                format!(
+                    ":: beat_{i}{}\n-> {}\n",
+                    if i == 0 { " default" } else { "" },
+                    if i + 1 == count {
+                        "END".into()
+                    } else {
+                        format!("beat_{}", i + 1)
+                    }
+                )
             })
-            .collect();
-        let previous = refresh(&blocks, None);
+            .collect::<String>();
+        let document = Document::new(source).expect("generated document");
+        let blocks = document.script().expect("valid Script");
+        let summaries = document.block_summaries();
+        let previous = refresh(summaries, None);
         for operation in ["previous", "cold", "warm"] {
             let mut elapsed = Vec::new();
             for _ in 0..5 {
@@ -89,8 +95,8 @@ fn caption_refresh_timing() {
                                 .collect::<Vec<_>>(),
                         )
                     }
-                    "cold" => Snapshot::Current(refresh(&blocks, None)),
-                    _ => Snapshot::Current(refresh(&blocks, Some(&previous))),
+                    "cold" => Snapshot::Current(refresh(summaries, None)),
+                    _ => Snapshot::Current(refresh(summaries, Some(&previous))),
                 };
                 elapsed.push(WallTime.end(start).as_secs_f64() * 1_000.);
                 let actual = match &result {
@@ -118,4 +124,72 @@ fn caption_refresh_timing() {
             );
         }
     }
+}
+
+#[test]
+fn summaries_preserve_script_badges_and_recoverable_outline()
+-> Result<(), Box<dyn std::error::Error>> {
+    for source in [
+        ":: same default\n-> END\n:: same\n-> other\n:: other\n-> END\n",
+        include_str!("../../../../../../../fixtures/recite/valid/core_language_spike.recite"),
+        ":: start default\n:if ready()\n  -> END\n:else\n  -> next\n:: next\n:match mood()\n  :case _\n    -> END\n",
+    ] {
+        let document = Document::new(source)?;
+        let script = document.script()?;
+        let endings = recite_writer_model::scene_endings(&script);
+        let captions = refresh(document.block_summaries(), None);
+        for (caption, block) in captions.iter().zip(&script) {
+            assert_eq!(caption.id, block.id);
+            assert_eq!(caption.is_default, block.is_default);
+            assert_eq!(caption.ending, endings.contains(block.id.as_str()));
+        }
+        assert_eq!(captions.len(), script.len());
+    }
+    for source in [
+        ":: repair\n> line\n  Unfrozen.\n-> END\n",
+        ":: repair\n-> END\n::\n",
+    ] {
+        let document = Document::new(source)?;
+        assert!(document.script().is_err());
+        let captions = refresh(document.block_summaries(), None);
+        assert_eq!(captions[0].id, "repair");
+        assert!(captions[0].ending);
+    }
+    Ok(())
+}
+
+#[test]
+fn draft_notifications_keep_summary_identity_but_acceptance_and_replacement_refresh()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_writer_model::{View, Workbench};
+    let source = ":: first default\n-> END\n";
+    let mut model = Workbench::from_document(Document::new(source)?, Some(View::Source))?;
+    let initial = SummarySnapshot(model.document().summary_snapshot());
+    let original = refresh(model.document().block_summaries(), None);
+    for text in ["unfinished", ":: first\n-> other\n"] {
+        model.set_draft(text.into());
+        assert!(initial == SummarySnapshot(model.document().summary_snapshot()));
+    }
+    model.apply()?;
+    let accepted = SummarySnapshot(model.document().summary_snapshot());
+    assert!(initial != accepted);
+    assert_eq!(
+        refresh(model.document().block_summaries(), Some(&original))[0].label,
+        "First"
+    );
+    let replacement = Document::new(source)?;
+    assert_eq!(replacement.revision(), 1);
+    let replaced = SummarySnapshot(replacement.summary_snapshot());
+    assert_eq!(
+        initial.0, replaced.0,
+        "equal values can belong to a replacement document"
+    );
+    assert!(
+        initial != replaced,
+        "replacement identity must invalidate the memo"
+    );
+    assert_eq!(original[0].label, "Start · First · end");
+    assert!(SummarySnapshot(None) == SummarySnapshot(None));
+    assert!(initial != SummarySnapshot(None));
+    Ok(())
 }

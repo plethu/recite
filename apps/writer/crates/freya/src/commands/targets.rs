@@ -1,6 +1,5 @@
 //! Scene and beat lookup uses the same loaded documents as the workbench.
 use crate::editing::Writer;
-use freya::prelude::WritableUtils;
 use recite_writer_model::WRITER_EXAMPLES;
 
 #[derive(Clone, PartialEq)]
@@ -15,47 +14,36 @@ impl Target {
             |beat| format!("{} · {}", self.document, crate::palette::display_name(beat)),
         )
     }
-    pub fn open(&self, mut writer: Writer) -> Result<(), String> {
-        writer.remember_scene();
-        let select = |model: &mut recite_writer_model::Workbench| {
-            if let Some(beat) = &self.beat {
-                model.inspect_block(beat)
-            } else {
-                model.show_script()
-            }
+    pub fn open(&self, writer: Writer) -> Result<(), String> {
+        let location = crate::navigation::location::Location {
+            screen: crate::navigation::location::Screen::Write,
+            passage: None,
+            source: false,
+            document: self.document.clone(),
+            beat: self.beat.clone(),
+            view: Some(recite_config::WriterView::Script),
+            ..crate::navigation::snapshot(writer)
         };
-        let path = writer
-            .files
-            .peek()
-            .as_ref()
-            .and_then(|files| files.path_for_document(&self.document));
-        if let Some(path) = path {
-            writer
-                .buffers
-                .switch(writer.files, &path, writer.dark, select)?;
-        } else if let Some(index) = WRITER_EXAMPLES
-            .iter()
-            .position(|example| example.name == self.document)
-        {
-            crate::examples::select_at(writer, index, select)?;
-        } else {
-            writer.try_navigate(select)?;
-        }
-        let empty = writer
-            .buffers
-            .model
-            .peek()
-            .as_ref()
-            .is_ok_and(crate::scene::has_no_beats);
-        if let Some(beat) = &self.beat {
-            writer.inspect(beat);
-        } else if !empty {
-            writer.ensure_beat()?;
-        }
-        if *writer.layout.view.peek() == recite_config::WriterView::Source {
-            writer.layout.view.set(recite_config::WriterView::Script);
-        }
-        Ok(())
+        crate::navigation::route(
+            writer,
+            location,
+            None,
+            freya::prelude::EventHandler::new(move |result: Result<(), String>| {
+                let mut message = writer.message;
+                if let Err(error) = result {
+                    message.error(error);
+                } else if !writer
+                    .buffers
+                    .model
+                    .peek()
+                    .as_ref()
+                    .is_ok_and(crate::scene::has_no_beats)
+                    && let Err(error) = writer.ensure_beat()
+                {
+                    message.error(error);
+                }
+            }),
+        )
     }
 }
 pub(super) fn all(writer: Writer) -> Vec<Target> {

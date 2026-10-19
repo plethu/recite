@@ -1,10 +1,16 @@
 //! Compiler/schema, LSP and engine-shared import boundaries under the existing budgets.
 #[path = "support/budget.rs"]
 mod budget;
+#[path = "support/project_build.rs"]
+mod build;
 #[path = "support/catalog.rs"]
 mod catalog;
+#[path = "support/catalog_coverage.rs"]
+mod coverage;
 #[path = "support/lsp.rs"]
 mod lsp;
+#[path = "support/lsp_change.rs"]
+mod lsp_change_support;
 #[path = "support/schema.rs"]
 mod schema;
 #[path = "support/schema_workspace.rs"]
@@ -41,6 +47,18 @@ fn catalog_import(mut input: catalog::Import) -> catalog::Import {
         .import_po("fr", "incoming.po", &input.po)
         .unwrap_or_else(|error| panic!("valid import: {error}"));
     black_box(input)
+}
+#[library_benchmark(teardown=coverage::validate)]
+#[bench::entries_100(args=(100),setup=coverage::prepare)]
+#[bench::entries_1000(args=(1_000),setup=coverage::prepare)]
+fn catalog_coverage(
+    input: coverage::Input,
+) -> (
+    coverage::Input,
+    recite_compiler::authoring::CatalogCoverageSummary,
+) {
+    let summary = coverage::summarize(&input);
+    black_box((input, summary))
 }
 #[library_benchmark(teardown=lsp::validate_completion)]
 #[bench::wide(args=(10),setup=lsp::prepare)]
@@ -112,5 +130,19 @@ fn lsp_change_saved_schema(input: schema_workspace::Input) -> (schema_workspace:
 fn lsp_change_open_schema(input: schema_workspace::Input) -> (schema_workspace::Input, usize) {
     black_box(schema_workspace::change(input))
 }
-library_benchmark_group!(name=authoring_workflows;config=budget::budget(20.0);benchmarks=json_schema,toml_schema,catalog_import,lsp_completion,lsp_definition,lsp_references,lsp_publication,schema_workspace_fork,ui_labels,lsp_schema_actions,lsp_change_saved_schema,lsp_change_open_schema);
+#[library_benchmark(teardown=lsp_change_support::validate)]
+#[bench::files_40(args=(40),setup=lsp_change_support::prepare)]
+#[bench::files_400(args=(400),setup=lsp_change_support::prepare)]
+fn lsp_change(mut input: lsp_change_support::Input) -> (lsp_change_support::Input, usize) {
+    let count = input.driver.change_file(&input.document);
+    black_box((input, count))
+}
+#[library_benchmark(teardown=build::validate)]
+#[bench::files_40(args=(40),setup=build::prepare)]
+#[bench::files_400(args=(400),setup=build::prepare)]
+fn project_build(input: build::Input) -> build::Built {
+    black_box(build::run(input))
+}
+
+library_benchmark_group!(name=authoring_workflows;config=budget::budget(20.0);benchmarks=json_schema,toml_schema,catalog_import,catalog_coverage,lsp_completion,lsp_definition,lsp_references,lsp_publication,schema_workspace_fork,ui_labels,lsp_schema_actions,lsp_change_saved_schema,lsp_change_open_schema,lsp_change,project_build);
 main!(library_benchmark_groups = authoring_workflows);

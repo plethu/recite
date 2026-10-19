@@ -19,6 +19,7 @@ pub(super) struct Workspace {
     pub writer: Writer,
     pub files: State<Option<crate::project::ProjectFiles>>,
     pub source: bool,
+    pub prepared: bool,
     pub navigation_visible: State<bool>,
     pub scenes: Element,
     pub toolbar: Element,
@@ -30,6 +31,7 @@ impl PartialEq for Workspace {
     fn eq(&self, other: &Self) -> bool {
         self.writer.dark == other.writer.dark
             && self.source == other.source
+            && self.prepared == other.prepared
             && self.scenes == other.scenes
             && self.toolbar == other.toolbar
             && self.map == other.map
@@ -101,6 +103,7 @@ impl Component for Workspace {
             Pane::Declarations => editor.child(crate::declarations::Declarations { writer }),
             Pane::Rules => editor.child(crate::rules::RulesScreen { writer }),
             Pane::Preview => editor.child(crate::preview_panel::PreviewScreen { writer }),
+            Pane::Map | Pane::Script if !self.prepared => editor.child(self.reading.clone()),
             Pane::Map | Pane::Script if writer.localisation.read().active => {
                 editor.child(crate::localisation::Surface {
                     writer,

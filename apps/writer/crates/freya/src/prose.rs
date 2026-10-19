@@ -3,7 +3,8 @@ use crate::design::Button;
 use crate::design::tokens as t;
 use crate::{editing::Writer, palette};
 use freya::{animation::use_animation, prelude::*};
-use recite_writer_model::{Passage, PassageKind, View, Workbench};
+use recite_writer_model::{Passage, PassageKind, View};
+pub(crate) mod focus;
 
 #[derive(Clone)]
 pub(super) struct ProseField {
@@ -50,7 +51,7 @@ impl Component for ProseField {
         });
         let mut hovered = use_state(|| false);
         let mut width = use_state(|| f32::INFINITY);
-        let mut line_area = use_state(|| (0f32, 0f32));
+        let mut field_area = use_state(|| (0f32, 0f32));
         let initial = passage.text.clone();
         let mut text = use_state(move || initial);
         // Colour feedback only: no text, panel, or camera movement is animated.
@@ -62,16 +63,8 @@ impl Component for ProseField {
             let focused = id.is_focused();
             if focused && !*was_focused.peek() {
                 focus_ink.start();
-                writer.navigate(|m| m.select(focus_target.clone()));
-            } else if !focused && *was_focused.peek() {
-                let selected = writer
-                    .buffers
-                    .model
-                    .peek()
-                    .as_ref()
-                    .is_ok_and(|m| m.view() == &focus_target && m.has_draft());
-                if selected {
-                    writer.perform(Workbench::apply);
+                if let View::Passage(passage) = &focus_target {
+                    focus::select(writer, passage.clone(), id);
                 }
             }
             was_focused.set_if_modified(focused);
@@ -80,7 +73,10 @@ impl Component for ProseField {
         let passage_id = passage.id.clone();
         use_side_effect(move || {
             let state = writer.buffers.model.read();
-            if let Ok(session) = state.as_ref() {
+            // Outgoing widgets must not project the next Source document before unmounting.
+            if let Ok(session) = state.as_ref()
+                && session.view() != &View::Source
+            {
                 let current = if session.view() == &sync_target {
                     Some(session.draft().to_owned())
                 } else {
@@ -119,8 +115,8 @@ impl Component for ProseField {
         let meta = (*hovered.read() || selected).then(|| {
             rect()
                 // Offset from the top by the measured line, below the text in the gap.
-                .position(Position::new_absolute().left(0.).top(line_area.read().1))
-                .width(Size::px(line_area.read().0))
+                .position(Position::new_absolute().left(0.).top(field_area.read().1))
+                .width(Size::px(field_area.read().0))
                 .height(Size::px(t::META_GAP))
                 .horizontal()
                 .content(Content::Flex)
@@ -137,6 +133,7 @@ impl Component for ProseField {
         });
         let field = t::prose().child(
             Input::new(text)
+                .enabled(!writer.work.busy() || selected)
                 .a11y_id(id)
                 .multiline(true)
                 .width(Size::fill())
@@ -156,8 +153,8 @@ impl Component for ProseField {
                         .peek()
                         .as_ref()
                         .is_ok_and(|m| m.view() == &target);
-                    if !selected {
-                        writer.navigate(|m| m.select(target.clone()));
+                    if !selected && let View::Passage(passage) = &target {
+                        focus::select(writer, passage.clone(), id);
                     }
                     if let Ok(session) = buffers.model.write().as_mut() {
                         if session.view() == &target {
@@ -184,6 +181,13 @@ impl Component for ProseField {
                     padding: Some(Preference::Specific(t::SPACE_XS.into())),
                 }),
         );
+        let field = rect()
+            .width(Size::flex(1.))
+            .on_sized(move |event: Event<SizedEventData>| {
+                field_area.set_if_modified((event.area.width(), event.area.height()));
+            })
+            .child(field)
+            .maybe_child(meta);
         let line = rect()
             .horizontal()
             .width(Size::fill())
@@ -191,16 +195,13 @@ impl Component for ProseField {
             .spacing(t::SPACE_MD)
             .on_pointer_enter(move |_| hovered.set(true))
             .on_pointer_leave(move |_| hovered.set(false))
-            .on_sized(move |event: Event<SizedEventData>| {
-                line_area.set_if_modified((event.area.width(), event.area.height()));
-            })
             .maybe_child(self.reply_number.map(|number| {
                 rect()
                     .width(Size::px(22. * t::ui_scale()))
                     .padding((t::SPACE_SM, 0., 0., 0.))
                     .child(t::meta(number.to_string()))
             }))
-            .child(rect().width(Size::flex(1.)).child(field))
+            .child(field)
             .maybe_child(
                 wide.then(|| self.trailing.clone())
                     .flatten()
@@ -209,8 +210,7 @@ impl Component for ProseField {
                             .padding((t::SPACE_XS, 0., 0., t::SPACE_SM))
                             .child(trailing)
                     }),
-            )
-            .maybe_child(meta);
+            );
         let caption = self
             .margin
             .as_deref()

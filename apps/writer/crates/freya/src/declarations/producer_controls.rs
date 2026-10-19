@@ -175,6 +175,9 @@ impl Component for ProducerPoll {
 }
 
 fn poll_generation(mut writer: Writer) {
+    if writer.files.peek().as_ref().is_some_and(|p| p.saving) {
+        return;
+    }
     let result = writer
         .files
         .peek()

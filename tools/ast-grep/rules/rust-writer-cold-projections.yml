@@ -1,0 +1,19 @@
+id: rust-writer-cold-projections
+language: Rust
+severity: error
+files:
+  - "apps/writer/crates/freya/src/**/*.rs"
+ignores:
+  - "**/tests.rs"
+  - "apps/writer/crates/freya/src/editing.rs"
+message: Read cached projections in Writer surfaces; request cold preparation through projections.
+note: |
+  Reactive memos may run before their parent unmounts them. Even guarded renderers
+  must use cached_script or cached_passages. editing.rs retains explicit navigation
+  operations; headless model getters remain synchronous.
+rule:
+  any:
+    - pattern: $DOCUMENT.script_snapshot()
+    - pattern: $DOCUMENT.passage_snapshot()
+    - pattern: $DOCUMENT.script()
+    - pattern: $DOCUMENT.passages()

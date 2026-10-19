@@ -51,6 +51,7 @@ toml.workspace = true
 
 [dev-dependencies]
 recite-adapter.workspace = true
+rmp-serde.workspace = true
 criterion.workspace = true
 tempfile.workspace = true
 

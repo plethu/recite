@@ -194,3 +194,50 @@ fn cancelling_a_registered_producer_does_not_replace_the_generated_manifest() ->
     assert!(has(&test, "Mara"));
     Ok(())
 }
+
+#[test]
+fn declaration_edit_and_close_in_one_event_batch_preserve_the_unsaved_draft() -> TestResult {
+    let dir = project()?;
+    let path = dir.path().join("schema.toml");
+    let original = std::fs::read_to_string(&path)?;
+    let mut test = open(dir.path())?;
+    replace(&mut test, "/path/to/schema.toml", &path.to_string_lossy())?;
+    support::click(&mut test, "Open standalone source")?;
+    let area = test
+        .find(|node, e| {
+            Paragraph::try_downcast(e)
+                .filter(|p| p.spans.iter().any(|s| s.text.contains("schema_version")))
+                .map(|_| node.layout().area)
+        })
+        .ok_or("Missing declaration source editor")?;
+    test.click_cursor((f64::from(area.min_x() + 4.), f64::from(area.min_y() + 4.)));
+    // Do not poll between editing the Rope and Close: the observer is still queued.
+    test.send_event(PlatformEvent::Keyboard {
+        name: KeyboardEventName::KeyDown,
+        key: Key::Character("x".into()),
+        code: Code::KeyX,
+        modifiers: Modifiers::empty(),
+    });
+    test.send_event(PlatformEvent::Keyboard {
+        name: KeyboardEventName::KeyDown,
+        key: Key::Character("q".into()),
+        code: Code::KeyQ,
+        modifiers: if cfg!(target_os = "macos") {
+            Modifiers::META
+        } else {
+            Modifiers::CONTROL
+        },
+    });
+    test.sync_and_update();
+    assert!(has(&test, "Unsaved declaration source"));
+    assert_eq!(std::fs::read_to_string(&path)?, original);
+    support::click(&mut test, "Discard declaration draft")?;
+    support::click(&mut test, "Keep editing")?;
+    assert!(matches!(
+        recite_writer::request_close(),
+        CloseDecision::KeepOpen
+    ));
+    test.sync_and_update();
+    assert!(!has(&test, "Unsaved declaration source"));
+    Ok(())
+}

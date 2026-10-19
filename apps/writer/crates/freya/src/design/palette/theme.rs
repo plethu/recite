@@ -66,7 +66,12 @@ pub fn theme_with(dark: bool, monochrome: bool) -> Theme {
             thumb_background: Preference::Specific(p.boundary),
             hover_thumb_background: Preference::Specific(p.muted),
             active_thumb_background: Preference::Specific(p.accent),
-            size: Preference::Specific(8.),
+            thumb_cross_size: Preference::Specific(8.),
+            expanded_thumb_cross_size: Preference::Specific(8.),
+            opacity: Preference::Specific(1.),
+            expanded_opacity: Preference::Specific(1.),
+            cross_gap: Preference::Specific(0.),
+            expanded_cross_gap: Preference::Specific(0.),
         },
     );
     theme.set(

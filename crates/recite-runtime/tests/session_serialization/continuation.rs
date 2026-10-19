@@ -26,6 +26,7 @@ fn restores_continuation_stack_inside_conditional_branch() {
         "eedc6e8ea24b3e6809f8",
         "Inside.",
     );
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores branch state");
 
@@ -65,6 +66,7 @@ fn restores_end_state_reached_inside_conditional_branch() {
         ["branch_done"],
     );
 
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores branch end state");
     assert_eq!(
@@ -104,6 +106,7 @@ fn restores_continuation_stack_inside_match_arm() {
         "2faca4e74f3382336ff7",
         "Inside.",
     );
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores match state");
 
@@ -154,6 +157,7 @@ fn restores_nested_match_and_if_continuations() {
         "fb4f4bf0d1d3c7ee0a26",
         "Deep.",
     );
+    assert_snapshot_encoding(&session);
     let mut restored =
         restore_session(&asset, snapshot_session(&session)).expect("restores nested state");
 

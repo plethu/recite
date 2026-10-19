@@ -18,7 +18,13 @@ enum Contents {
 
 struct RopeDraft {
     source: Rope,
-    text: OnceLock<String>,
+    text: OnceLock<Arc<str>>,
+}
+
+impl RopeDraft {
+    fn text(&self) -> &Arc<str> {
+        self.text.get_or_init(|| String::from(&self.source).into())
+    }
 }
 
 impl DraftSnapshot {
@@ -34,10 +40,16 @@ impl DraftSnapshot {
         match &self.0 {
             Contents::Text(text) => text.as_str(),
             Contents::Shared(text) => text.as_ref(),
-            Contents::Rope(draft) => draft
-                .text
-                .get_or_init(|| String::from(&draft.source))
-                .as_str(),
+            Contents::Rope(draft) => draft.text().as_ref(),
+        }
+    }
+
+    /// Materialize for acceptance; Rope snapshots share these bytes with the document.
+    pub fn text_snapshot(&self) -> Arc<str> {
+        match &self.0 {
+            Contents::Text(text) => Arc::from(text.as_str()),
+            Contents::Shared(text) => Arc::clone(text),
+            Contents::Rope(draft) => Arc::clone(draft.text()),
         }
     }
 

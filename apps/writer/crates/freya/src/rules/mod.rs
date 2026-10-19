@@ -13,34 +13,31 @@ use crate::{
 use freya::prelude::*;
 use recite_writer_model::{ReplyRules, View};
 
-pub(super) fn open(mut writer: Writer, passage: &str) -> Result<(), String> {
-    writer.try_navigate(|_| Ok(()))?;
-    if writer
-        .buffers
-        .model
-        .peek()
-        .as_ref()
-        .is_ok_and(|m| m.has_draft())
-    {
-        return Err("Apply or discard the current draft before opening reply rules.".into());
-    }
-    let rules = writer
-        .buffers
-        .model
-        .peek()
-        .as_ref()
-        .map_err(|e| e.to_string())?
-        .document()
-        .reply_rules(passage)
-        .map_err(|e| e.to_string())?;
-    writer.try_navigate(|m| m.select(View::Source))?;
-    writer.buffers.rules.set(Some(rules));
-    writer.localisation.write().active = false;
-    writer.pane.set(Pane::Rules);
-    Ok(())
+pub(super) fn open(writer: Writer, passage: &str) -> Result<(), String> {
+    let location = crate::navigation::location::Location {
+        screen: crate::navigation::location::Screen::Rules,
+        passage: Some(passage.to_owned()),
+        source: false,
+        beat: None,
+        ..crate::navigation::snapshot(writer)
+    };
+    crate::navigation::route(
+        writer,
+        location,
+        None,
+        EventHandler::new(move |result: Result<(), String>| {
+            if let Err(error) = result {
+                let mut message = writer.message;
+                message.error(error);
+            }
+        }),
+    )
 }
 
 fn change(mut writer: Writer, edit: impl FnOnce(&mut ReplyRules)) {
+    if writer.work.busy() {
+        return;
+    }
     let result = (|| {
         let mut state = writer.buffers.rules.write();
         let rules = state.as_mut().ok_or("Open a reply first.")?;
@@ -67,14 +64,10 @@ fn change(mut writer: Writer, edit: impl FnOnce(&mut ReplyRules)) {
 }
 
 fn reload(mut writer: Writer, id: &str) {
-    let next = writer
-        .buffers
-        .model
-        .peek()
-        .as_ref()
-        .ok()
-        .and_then(|m| m.document().reply_rules(id).ok());
-    writer.buffers.rules.set(next);
+    if !writer.work.busy() {
+        writer.buffers.rules.set(None);
+        let _ = crate::editor_work::rules(writer, id);
+    }
 }
 
 #[derive(Clone)]
@@ -105,12 +98,27 @@ impl Component for RulesScreen {
                 reload(writer, &passage);
             }
         });
+        if writer.work.busy() {
+            let caption = writer.work.caption().unwrap_or_default();
+            return rect()
+                .width(Size::fill())
+                .padding(t::SPACE_MD)
+                .a11y_role(AccessibilityRole::Status)
+                .a11y_alt(caption.clone())
+                .child(label().text(caption))
+                .into_element();
+        }
         let state = writer.buffers.rules.read();
         let Some(rules) = state.as_ref() else {
-            return label().text(text(MsgId::WriterRulesOpen)).into_element();
+            return label()
+                .text(if writer.work.busy() {
+                    "Preparing reply rules…".into()
+                } else {
+                    text(MsgId::WriterRulesOpen)
+                })
+                .into_element();
         };
         let rules = rules.clone();
-        let current_source = writer.buffers.editor.read().rope.to_string();
         let validation = writer
             .buffers
             .model
@@ -126,20 +134,19 @@ impl Component for RulesScreen {
                         other => Some(other.to_string()),
                     })
             });
-        let consistent = rules.source().is_ok_and(|source| source == current_source);
-        let enabled = rules.changed() && validation.is_ok() && consistent;
-        let apply_rules = rules.clone();
-        let id = rules.passage.clone();
+        let consistent = validation
+            .as_ref()
+            .is_ok_and(|source| writer.buffers.editor.read().rope == source.as_str());
+        let enabled = rules.changed() && validation.is_ok() && consistent && !writer.work.busy();
         let primary = SubmitAction {
             id: apply_id,
             caption: text(MsgId::WriterRulesApply),
             enabled,
             action: EventHandler::new(move |()| {
-                if writer
-                    .try_perform(|m| m.apply_reply_rules(&apply_rules))
-                    .is_ok()
+                if let Err(error) =
+                    crate::editor_work::edit(writer, recite_writer_model::EditOperation::Apply)
                 {
-                    reload(writer, &id);
+                    writer.message.error(error);
                 }
             }),
         };
@@ -272,7 +279,7 @@ impl Component for RulesScreen {
                 .child(primary.button())
                 .child(
                     Button::new()
-                        .enabled(rules.changed())
+                        .enabled(rules.changed() && !writer.work.busy())
                         .on_press(move |_| {
                             writer.perform(|m| {
                                 m.discard();

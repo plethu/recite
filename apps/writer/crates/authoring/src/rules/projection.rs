@@ -7,7 +7,16 @@ use recite_core::{
 
 impl Document {
     pub fn reply_rules(&self, id: &str) -> Result<ReplyRules, EditError> {
-        let parsed = recite_parser::lower_source_file(self.key().as_str(), self.source());
+        // Cold Rules needs the same checked passage projection as Script. Share
+        // its parse/lowering instead of lowering once here and again for prose.
+        let syntax = self
+            .cached_passages()
+            .is_none()
+            .then(|| recite_parser::parse(self.key().as_str(), self.source()));
+        let parsed = syntax.as_ref().map_or_else(
+            || recite_parser::lower_source_file(self.key().as_str(), self.source()),
+            recite_parser::Parse::lower_source_file,
+        );
         if !parsed.diagnostics.is_empty() {
             return Err(EditError::SourceRequired("repair the syntax diagnostics"));
         }
@@ -40,6 +49,9 @@ impl Document {
             let block = matches.next()?;
             matches.next().is_none().then_some(block)
         });
+        if let Some(syntax) = &syntax {
+            self.passage_snapshot_from(syntax, &parsed)?;
+        }
         self.project_reply(id, choice, destination)
     }
     fn project_reply(
@@ -202,7 +214,7 @@ impl Document {
             effect_insertion,
             key: self.key().clone(),
             revision: self.revision(),
-            source: self.source().into(),
+            source: self.source_snapshot(),
             condition_range,
             header_end: header_start + header.trim_end_matches('\r').len(),
             effect_ranges: ranges,

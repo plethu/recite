@@ -219,6 +219,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WriterNoCompletions => Some("writer-no-completions"),
         super::MsgId::WriterFindingCompletions => Some("writer-finding-completions"),
         super::MsgId::WriterCompletionsUnavailable => Some("writer-completions-unavailable"),
+        super::MsgId::WriterDiagnostics => Some("writer-diagnostics"),
 
         super::MsgId::WriterLookupMatched => Some("writer-lookup-matched"),
         super::MsgId::WriterLookupMissing => Some("writer-lookup-missing"),
@@ -238,6 +239,11 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
 
         super::MsgId::WriterPreview => Some("writer-preview"),
         super::MsgId::WriterRestartPreview => Some("writer-restart-preview"),
+        super::MsgId::WriterSaving => Some("writer-saving"),
+        super::MsgId::WriterPreparingScript => Some("writer-preparing-script"),
+        super::MsgId::WriterNewerEditsRemain => Some("writer-newer-edits-remain"),
+        super::MsgId::WriterPreparingPreview => Some("writer-preparing-preview"),
+        super::MsgId::WriterPreviewInputsChanged => Some("writer-preview-inputs-changed"),
         super::MsgId::WriterClosePreview => Some("writer-close-preview"),
         super::MsgId::WriterContinue => Some("writer-continue"),
         super::MsgId::WriterTrue => Some("writer-true"),

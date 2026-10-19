@@ -6,17 +6,35 @@ impl Catalogue {
     pub(crate) fn revision(&self) -> std::sync::Arc<()> {
         self.revision.clone()
     }
-    pub(crate) fn preview_document(&self, include_drafts: bool) -> Result<PoDocument, String> {
-        let disk = Self::open(&self.path)?;
-        if !include_drafts {
-            return Ok(disk.document);
+    pub(crate) fn preview_input(&self, include_drafts: bool) -> PreviewInput {
+        PreviewInput {
+            path: self.path.clone(),
+            baseline: self.baseline.clone(),
+            drafts: include_drafts.then(|| self.drafts.clone()),
         }
-        if disk.baseline != self.baseline {
+    }
+}
+
+pub(crate) struct PreviewInput {
+    path: PathBuf,
+    baseline: PoDocumentFingerprint,
+    drafts: Option<BTreeMap<PoEntryId, Arc<Draft>>>,
+}
+impl PreviewInput {
+    pub(crate) fn prepare(&self) -> Result<PoDocument, String> {
+        let text = crate::project::read_regular(&self.path).map_err(|e| e.to_string())?;
+        let mut document = PoDocument::parse_with_path(self.path.to_string_lossy(), text)
+            .map_err(|e| e.to_string())?;
+        let Some(drafts) = &self.drafts else {
+            return Ok(document);
+        };
+        if document.fingerprint() != self.baseline {
             return Err(wording(MsgId::WriterCompare));
         }
-        let mut document = self.document.clone();
+        // Equal fingerprints mean captured entry IDs still address these bytes.
+        // Reuse the parsed disk document; no second PO parse or navigation index.
         let mut updates = Vec::new();
-        for (id, draft) in &self.drafts {
+        for (id, draft) in drafts {
             let plural = document.entry(*id).is_some_and(|entry| entry.is_plural());
             for (index, value) in draft.forms.iter().enumerate() {
                 let edit = if plural {

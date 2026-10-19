@@ -1,8 +1,8 @@
-use super::{DocumentIndex, SearchHit};
+use super::{SearchHit, region::RegionIndex};
 use std::sync::Arc;
 
 pub(super) struct SearchMatch {
-    pub document: Arc<DocumentIndex>,
+    pub document: Arc<RegionIndex>,
     pub id: usize,
 }
 

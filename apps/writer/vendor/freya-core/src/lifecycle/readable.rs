@@ -1,0 +1,213 @@
+//! Type-erased readable state that hides generic type parameters.
+
+use std::{
+    cell::Ref,
+    rc::Rc,
+};
+
+use crate::prelude::*;
+
+/// A type-erased readable state that only exposes the value type `T`.
+///
+/// This abstraction allows components to accept read-only state from any source without
+/// knowing whether it comes from local state ([`use_state`]) or
+/// global state (Freya Radio). Unlike [`Writable`], this only
+/// provides read access to the underlying value.
+///
+/// # Sources
+///
+/// `Readable` can be created from:
+/// - [`State<T>`] via [`From`] or [`IntoReadable`]
+/// - `RadioSlice` via `IntoReadable`
+/// - [`Writable<T>`] via [`From<Writable<T>>`]
+///
+/// # Example
+///
+/// ```rust, ignore
+/// #[derive(PartialEq)]
+/// struct Counter {
+///     count: Readable<i32>,
+/// }
+///
+/// impl Component for Counter {
+///     fn render(&self) -> impl IntoElement {
+///         // The component only reads the value, never modifies it
+///         format!("Count: {}", self.count.read())
+///     }
+/// }
+///
+/// fn app() -> impl IntoElement {
+///     let local = use_state(|| 0);
+///     let radio = use_radio(AppChannel::Count);
+///     let slice = radio.slice_current(|s| &s.count);
+///
+///     rect()
+///         // Pass local state as Readable
+///         .child(Counter { count: local.into_readable() })
+///         // Pass global radio slice as Readable
+///         .child(Counter { count: slice.into_readable() })
+/// }
+/// ```
+pub struct Readable<T: 'static> {
+    pub(crate) read_fn: Rc<dyn Fn() -> ReadableRef<T>>,
+    pub(crate) peek_fn: Rc<dyn Fn() -> ReadableRef<T>>,
+    pub(crate) equal_fn: Rc<dyn Fn(&T) -> bool>,
+}
+
+impl<T: 'static> Clone for Readable<T> {
+    fn clone(&self) -> Self {
+        Self {
+            read_fn: self.read_fn.clone(),
+            peek_fn: self.peek_fn.clone(),
+            equal_fn: self.equal_fn.clone(),
+        }
+    }
+}
+
+impl<T: 'static> PartialEq for Readable<T> {
+    fn eq(&self, other: &Self) -> bool {
+        (self.equal_fn)(&*other.peek())
+    }
+}
+
+impl<T: PartialEq> From<T> for Readable<T> {
+    fn from(value: T) -> Self {
+        Readable::from_value(value)
+    }
+}
+
+impl<T: 'static + PartialEq> Readable<T> {
+    /// Create from an owned value.
+    pub fn from_value(value: T) -> Self {
+        let value = Rc::new(value);
+        Self {
+            read_fn: Rc::new({
+                let value = value.clone();
+                move || ReadableRef::Borrowed(value.clone())
+            }),
+            peek_fn: Rc::new({
+                let value = value.clone();
+                move || ReadableRef::Borrowed(value.clone())
+            }),
+            equal_fn: Rc::new(move |other| other == &*value),
+        }
+    }
+}
+impl<T: 'static> Readable<T> {
+    /// Create from local `State<T>`.
+    pub fn from_state(state: State<T>) -> Self {
+        Self {
+            read_fn: Rc::new(move || ReadableRef::Ref(state.read_unchecked())),
+            peek_fn: Rc::new(move || ReadableRef::Ref(state.peek_unchecked())),
+            equal_fn: Rc::new(move |_| true),
+        }
+    }
+
+    /// Create a new `Readable` with custom read and peek functions.
+    pub fn new(
+        read_fn: impl Fn() -> ReadableRef<T> + 'static,
+        peek_fn: impl Fn() -> ReadableRef<T> + 'static,
+        equal_fn: impl Fn(&T) -> bool + 'static,
+    ) -> Self {
+        Self {
+            read_fn: Rc::new(read_fn),
+            peek_fn: Rc::new(peek_fn),
+            equal_fn: Rc::new(equal_fn),
+        }
+    }
+
+    /// Read the value, subscribing to changes if the underlying source supports it.
+    ///
+    /// Whether this actually subscribes depends on how the `Readable` was created:
+    /// - From [`State<T>`]: subscribes to state changes.
+    /// - From a `RadioSlice`: subscribes to radio channel changes.
+    /// - From a plain value ([`from_value`](Self::from_value)): no subscription, just returns the value.
+    pub fn read(&self) -> ReadableRef<T> {
+        (self.read_fn)()
+    }
+
+    /// Read the value without subscribing to changes.
+    pub fn peek(&self) -> ReadableRef<T> {
+        (self.peek_fn)()
+    }
+
+    /// Derive a new `Readable` that exposes only a part of the value.
+    ///
+    /// # Example
+    ///
+    /// ```rust, ignore
+    /// let user = use_state(|| (String::from("Alice"), 30));
+    /// let user: Readable<(String, u32)> = user.into_readable();
+    ///
+    /// let name = user.map(|user| &user.0, |name| name == "Alice");
+    /// ```
+    pub fn map<O>(
+        &self,
+        map_fn: impl Fn(&T) -> &O + 'static,
+        equal_fn: impl Fn(&O) -> bool + 'static,
+    ) -> Readable<O> {
+        let readable = self.clone();
+        let map_fn = Rc::new(map_fn);
+        Readable {
+            read_fn: Rc::new({
+                let map_fn = map_fn.clone();
+                let readable = readable.clone();
+                move || {
+                    let ReadableRef::Ref(r) = readable.read() else {
+                        unreachable!("Unsupported")
+                    };
+
+                    ReadableRef::Ref(r.map(|r| Ref::map(r, |v| (map_fn)(v))))
+                }
+            }),
+            peek_fn: Rc::new(move || {
+                let ReadableRef::Ref(r) = readable.peek() else {
+                    unreachable!("Unsupported")
+                };
+
+                ReadableRef::Ref(r.map(|r| Ref::map(r, |v| (map_fn)(v))))
+            }),
+            equal_fn: Rc::new(equal_fn),
+        }
+    }
+}
+
+pub trait IntoReadable<T: 'static> {
+    fn into_readable(self) -> Readable<T>;
+}
+
+impl<T: 'static> IntoReadable<T> for Readable<T> {
+    fn into_readable(self) -> Readable<T> {
+        self
+    }
+}
+
+impl<T: 'static> IntoReadable<T> for State<T> {
+    fn into_readable(self) -> Readable<T> {
+        Readable::from_state(self)
+    }
+}
+
+impl<T: 'static + PartialEq> IntoReadable<T> for T {
+    fn into_readable(self) -> Readable<T> {
+        Readable::from_value(self)
+    }
+}
+
+impl<T: 'static> IntoReadable<T> for Memo<T> {
+    fn into_readable(self) -> Readable<T> {
+        Readable::from_state(self.state)
+    }
+}
+
+impl<T> From<State<T>> for Readable<T> {
+    fn from(value: State<T>) -> Self {
+        value.into_readable()
+    }
+}
+
+impl<T> From<Memo<T>> for Readable<T> {
+    fn from(value: Memo<T>) -> Self {
+        value.into_readable()
+    }
+}

@@ -59,8 +59,8 @@ modules:
       - cargo-sources.json
       - type: git
         url: https://github.com/rust-skia/skia.git
-        tag: m152-0.100.0
-        commit: 41382841f36aa208e7433f3c46d14237a1b15054
+        tag: m153-0.101.2
+        commit: 61e7ca4e99062cdd0ab69445d5963fb3365778f6
         dest: skia
       # Skia's DEPS-pinned sources used by Wuffs and the Vulkan backend.
       - type: git

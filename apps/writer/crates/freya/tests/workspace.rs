@@ -24,7 +24,7 @@ fn keyboard_and_vim_share_selection_editing_and_focus_return()
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(1440., 1000.),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     support::click(&mut test, "Settings")?;
@@ -125,7 +125,7 @@ fn personal_preferences_survive_a_new_window_and_settings_keep_focus()
         Size2D::new(1440., 1000.),
         move |r| {
             let _ = r.provide_root_context(move || Ok::<_, String>(context));
-            r.provide_root_context(Platform::get)
+            r.provide_root_context(|| Platform::get().current_window())
         },
         1.,
     );

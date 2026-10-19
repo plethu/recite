@@ -31,12 +31,21 @@ impl Search {
     pub fn new() -> Self {
         Self {
             mode: use_state(|| None),
-            return_focus: use_state(|| *Platform::get().focused_accessibility_id.peek()),
+            return_focus: use_state(|| {
+                *Platform::get()
+                    .current_window()
+                    .focused_accessibility_id
+                    .peek()
+            }),
         }
     }
     pub fn open(mut self, mode: SearchMode) {
-        self.return_focus
-            .set(*Platform::get().focused_accessibility_id.peek());
+        self.return_focus.set(
+            *Platform::get()
+                .current_window()
+                .focused_accessibility_id
+                .peek(),
+        );
         self.mode.set(Some(mode));
     }
     pub fn close(mut self) {
@@ -114,6 +123,13 @@ impl CommandExt for Command {
             )
     }
     fn enabled(self, writer: Writer) -> bool {
+        if matches!(
+            self,
+            Self::Save | Self::SaveAll | Self::OpenProject | Self::Rename | Self::Declarations
+        ) && writer.files.read().as_ref().is_some_and(|p| p.saving)
+        {
+            return false;
+        }
         if matches!(
             self,
             Self::Save | Self::SaveAll | Self::Declarations | Self::Build | Self::Rename

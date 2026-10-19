@@ -115,8 +115,12 @@ pub fn compile_inputs_to_model(
     options: CompileOptions,
     schema: Option<&ProjectSchema>,
 ) -> Result<ModelCompileReport, CompileError> {
-    let report =
-        compile_inputs_with_output(inputs.into_iter().map(Input::Raw), options, schema, Ok)?;
+    let report = compile_inputs_with_output(
+        inputs.into_iter().map(Input::Raw),
+        options,
+        schema,
+        |dialogue, _| Ok(dialogue),
+    )?;
     Ok(ModelCompileReport {
         diagnostics: report.diagnostics,
         dialogue: report.output,
@@ -140,7 +144,7 @@ pub fn compile_build_request_to_model(
         .iter()
         .filter(|input| input.kind() == &crate::authoring::BuildInputKind::Source)
         .map(Input::Captured);
-    let report = compile_inputs_with_output(inputs, options, schema, Ok)?;
+    let report = compile_inputs_with_output(inputs, options, schema, |dialogue, _| Ok(dialogue))?;
     Ok(ModelCompileReport {
         diagnostics: report.diagnostics,
         dialogue: report.output,
@@ -204,7 +208,7 @@ fn compile_inputs_with_optional_schema(
         inputs.into_iter().map(Input::Raw),
         options,
         schema,
-        |dialogue| {
+        |dialogue, _| {
             let messagepack = serialize_messagepack(&dialogue)?;
             let inspection_json = serialize_inspection_json(&dialogue)?;
             Ok(CompiledAssetOutput {
@@ -229,7 +233,7 @@ fn compile_inputs_to_messagepack_with_optional_schema(
         inputs.into_iter().map(Input::Raw),
         options,
         schema,
-        |dialogue| serialize_messagepack(&dialogue),
+        |dialogue, _| serialize_messagepack(&dialogue),
     )?;
     Ok(MessagepackCompileReport {
         diagnostics: report.diagnostics,

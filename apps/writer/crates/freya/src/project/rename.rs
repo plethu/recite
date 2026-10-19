@@ -70,6 +70,7 @@ impl ProjectFiles {
         block: &str,
         name: &str,
     ) -> Result<(), FileError> {
+        self.require_idle_save()?;
         if model.has_draft() || self.retained.values().any(|s| s.model.has_draft()) {
             return Err(FileError::UnsavedDocument);
         }
@@ -100,6 +101,7 @@ impl ProjectFiles {
         Ok(())
     }
     pub fn apply_rename(&mut self, current: &mut Workbench) -> Result<(), FileError> {
+        self.require_idle_save()?;
         if current.has_draft() || self.retained.values().any(|s| s.model.has_draft()) {
             return Err(FileError::UnsavedDocument);
         }
@@ -131,12 +133,12 @@ impl ProjectFiles {
             let path = self
                 .path_for_document(change.document.as_str())
                 .ok_or(FileError::Selection)?;
-            if let Err(e) = self.switch(current, &path, |_| Ok(())) {
-                self.switch(current, &original, |_| Ok(()))?;
+            if let Err(e) = self.switch(current, &path, None, |_| Ok(())) {
+                self.switch(current, &original, None, |_| Ok(()))?;
                 return Err(e);
             }
         }
-        self.switch(current, &original, |_| Ok(()))?;
+        self.switch(current, &original, None, |_| Ok(()))?;
         let mut context = self.retained_context(self.context.clone());
         for change in &latest.changes {
             if let Some(source) = context
@@ -159,8 +161,8 @@ impl ProjectFiles {
             let document =
                 Document::in_project(change.document.clone(), &change.after, context.clone())
                     .map_err(recite_writer_model::WorkbenchError::from)?;
-            let mut model = Workbench::from_document(document)?;
-            model.select(recite_writer_model::View::Source)?;
+            let model =
+                Workbench::from_document(document, Some(recite_writer_model::View::Source))?;
             expected.insert(path.clone(), change.after.clone());
             models.insert(path, model);
         }
@@ -217,6 +219,7 @@ impl ProjectFiles {
         {
             return Ok(false);
         }
+        self.require_idle_save()?;
         if self.manifest.text() != journal.expected_manifest {
             return Err(FileError::StaleRename);
         }

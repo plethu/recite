@@ -1,6 +1,6 @@
 use std::{ops::Range, sync::Arc};
 
-use recite_core::{SourceLineIndex, source_lines};
+use recite_core::SourceLineIndex;
 
 use super::{
     AnalyzedRegion, AnalyzedRegions, AuthoringSummary, DocumentAnalysis, EffectiveDocument,
@@ -27,9 +27,6 @@ pub(super) fn assemble(
     let relocated = regions.iter().any(|region| {
         matches!(&region.output, RegionAnalysis::Reused(_, cached) if cached.first_line != region.cache.first_line)
     });
-    // Shifted output needs a fresh allocation even when unshifted slices match.
-    // Never mutate an earlier immutable snapshot.
-    let previous = previous.filter(|_| !relocated);
     let summaries: Vec<_> = regions
         .iter()
         .map(|region| (region.output.summary(), &region.cache.summary))
@@ -46,12 +43,15 @@ pub(super) fn assemble(
         previous.map(|old| &old.project_facts),
     );
     rebase_ranges(&mut regions);
+    let source = Arc::new(SourceLineIndex::new(Arc::clone(document.text)));
+    let trailing_empty = document.text.is_empty() || document.text.ends_with(['\r', '\n']);
+    let line_count = source.line_count() - usize::from(trailing_empty);
     let mut analysis = DocumentAnalysis {
         regions: regions.iter().map(|region| region.cache.clone()).collect(),
         summary,
         project_facts,
         participation,
-        source: Arc::new(SourceLineIndex::new(Arc::clone(document.text))),
+        source,
         source_fingerprint: SourceFingerprint::for_source(document.text),
         parse_diagnostics: regions
             .iter()
@@ -62,9 +62,7 @@ pub(super) fn assemble(
             .flat_map(|region| region.output.local().iter().cloned())
             .collect(),
         byte_len: document.text.len(),
-        line_count: source_lines(document.text)
-            .filter(|(content, terminator)| !content.is_empty() || !terminator.is_empty())
-            .count(),
+        line_count,
     };
     if relocated && !relocation::apply(&mut analysis, &regions, document.key.as_str(), control)? {
         return Ok(AssemblyOutcome::NeedsFullAnalysis);

@@ -1,9 +1,13 @@
+//! Validate and apply one location to document, catalogue and presentation owners.
 use super::location::{Location, Screen};
 use crate::editing::{Pane, Writer};
-use freya::prelude::{AccessibilityIdExt, WritableUtils};
+use freya::prelude::*;
 use recite_writer_model::{View, Workbench, WorkbenchError};
 
-pub(super) fn select(model: &mut Workbench, location: &Location) -> Result<(), WorkbenchError> {
+pub(super) fn select(
+    model: &mut Workbench,
+    location: &Location,
+) -> Result<Option<recite_writer_model::ReplyRules>, WorkbenchError> {
     if let (Some(passage), Some(beat)) = (&location.passage, &location.beat)
         && model
             .document()
@@ -12,13 +16,18 @@ pub(super) fn select(model: &mut Workbench, location: &Location) -> Result<(), W
     {
         return Err(recite_writer_model::EditError::Destination.into());
     }
-    if location.screen == Screen::Rules {
+    let rules = if location.screen == Screen::Rules {
+        if model.has_draft() {
+            return Err(WorkbenchError::DraftPending);
+        }
         let passage = location
             .passage
             .as_deref()
             .ok_or(recite_writer_model::EditError::Destination)?;
-        model.document().reply_rules(passage)?;
-    }
+        Some(model.document().reply_rules(passage)?)
+    } else {
+        None
+    };
     let view = if location.source || location.screen == Screen::Rules {
         Some(View::Source)
     } else if let Some(passage) = &location.passage {
@@ -30,92 +39,35 @@ pub(super) fn select(model: &mut Workbench, location: &Location) -> Result<(), W
         if model.view() != &view {
             model.select(view)?;
         }
-    } else if model.view() == &View::Source && !crate::scene::has_no_beats(model) {
+    } else if model.view() == &View::Source {
         model.show_script()?;
     }
-    Ok(())
+    Ok(rules)
 }
 
-pub(super) fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
-    let files = writer.files.peek();
-    if let Some(project) = &location.project {
-        let linked_root = recite_config::discover_project(project)
-            .map_err(|error| format!("The linked project is unavailable: {error}"))?
-            .manifest()
-            .project_root()
-            .to_owned();
-        if files.as_ref().is_none_or(|f| f.root() != linked_root) {
-            return Err(format!("Open the linked project first: {project}"));
-        }
+pub(super) fn select_reusing_rules(
+    model: &mut Workbench,
+    location: &Location,
+) -> Result<(), WorkbenchError> {
+    let mut selection = location.clone();
+    selection.screen = Screen::Write;
+    selection.source = true;
+    selection.passage = None;
+    // Validate the linked beat/passage pair even when preserving staged Rules.
+    if let (Some(passage), Some(beat)) = (&location.passage, &location.beat)
+        && model
+            .document()
+            .find_passage(passage)?
+            .is_none_or(|p| &p.section != beat)
+    {
+        return Err(recite_writer_model::EditError::Destination.into());
     }
-    let path = location
-        .catalogue
-        .as_ref()
-        .map(|catalogue| {
-            files.as_ref().map_or_else(
-                || Ok(std::path::PathBuf::from(catalogue)),
-                |files| catalogue_path(files.root(), catalogue),
-            )
-        })
-        .transpose()?;
-    drop(files);
-    writer.remember_scene();
-    writer.try_navigate(|_| Ok(()))?;
-    let current_catalogue = writer
-        .localisation
-        .peek()
-        .catalogue
-        .as_ref()
-        .map(|c| c.path.clone());
-    let catalogue_changed = current_catalogue != path;
-    let catalogue = if catalogue_changed {
-        if writer.localisation.peek().dirty() {
-            return Err(crate::localisation::close_drafts_message());
-        }
-        if let Some(current) = writer.localisation.write().catalogue.as_mut() {
-            current.flush_recovery()?;
-        }
-        path.as_ref()
-            .map(|p| crate::localisation::catalogue::Catalogue::open_recoverable(p))
-            .transpose()?
-    } else {
-        None
-    };
-    let current = writer
-        .buffers
-        .model
-        .peek()
-        .as_ref()
-        .map_err(|e| e.to_string())?
-        .document()
-        .key()
-        .to_string();
-    if !location.document.is_empty() && location.document != current {
-        if writer.files.peek().is_some() {
-            let path = writer
-                .files
-                .peek()
-                .as_ref()
-                .and_then(|project| project.path_for_document(&location.document))
-                .ok_or("The linked scene is not in this project.")?;
-            writer
-                .buffers
-                .switch(writer.files, &path, writer.dark, |m| select(m, location))?;
-        } else {
-            let index = recite_writer_model::WRITER_EXAMPLES
-                .iter()
-                .position(|e| e.name == location.document)
-                .ok_or("The linked scene is not open.")?;
-            crate::examples::select_at(writer, index, |model| select(model, location))?;
-        }
-    } else {
-        writer.try_navigate(|m| select(m, location))?;
-    }
+    select(model, &selection).map(|_| ())
+}
+
+pub(super) fn present(mut writer: Writer, location: &Location) -> Result<(), String> {
     {
         let mut state = writer.localisation.write();
-        if catalogue_changed {
-            state.install(catalogue)?;
-        }
         state.active = !matches!(
             location.screen,
             Screen::Write
@@ -142,26 +94,6 @@ pub(super) fn apply(mut writer: Writer, location: &Location) -> Result<(), Strin
     writer.queue.attention.set(location.attention);
     if location.screen != Screen::Updates {
         writer.queue.page.set(location.page);
-    }
-    if location.screen == Screen::Rules {
-        let passage = location
-            .passage
-            .as_deref()
-            .ok_or("A reply-rules link needs a reply.")?;
-        let retained = writer.buffers.rules.peek().as_ref().is_some_and(|r| {
-            r.passage == passage
-                && writer
-                    .buffers
-                    .model
-                    .peek()
-                    .as_ref()
-                    .is_ok_and(|m| r.belongs_to(m.document()))
-                && r.source()
-                    .is_ok_and(|source| source == writer.buffers.editor.peek().rope)
-        });
-        if !retained {
-            crate::rules::open(writer, passage)?;
-        }
     }
     if location.screen == Screen::Declarations {
         crate::declarations::try_open(writer)?;
@@ -215,3 +147,6 @@ pub(super) fn catalogue_path(
     }
     Ok(path)
 }
+
+#[cfg(test)]
+mod tests;

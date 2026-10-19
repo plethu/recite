@@ -20,7 +20,7 @@ fn projections_follow_revision_and_unicode_history_retains_only_changed_text()
     assert_eq!(document.source(), original);
     assert!(document.redo()?);
     assert_eq!(document.source(), changed);
-    document.replace_source(document.revision(), "broken syntax".into())?;
+    document.replace_source(document.revision(), "broken syntax")?;
     assert!(document.undo()?);
     assert_eq!(document.source(), changed);
     Ok(())
@@ -37,7 +37,7 @@ fn search_replaces_one_document_and_combines_speaker_with_unicode_words()
     let mut index = SearchIndex::build(&[a, b]);
     let (count, hits) = index.search("alice café", 1);
     assert_eq!(count, 1);
-    assert_eq!(hits[0].document, "b.recite");
+    assert_eq!(hits[0].document.as_ref(), "b.recite");
     index.replace_document(SavedDocument::new(
         DocumentKey::new("b.recite")?,
         recite_writer_model::FIXTURE,

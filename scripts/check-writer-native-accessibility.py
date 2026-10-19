@@ -13,11 +13,12 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import nullcontext
 from importlib import import_module
 from pathlib import Path
 
 import gi
+from writer_accessibility_host import child_process, focus_x11_window
 
 gi.require_version("Gio", "2.0")
 gi.require_version("Atspi", "2.0")
@@ -87,25 +88,15 @@ def descendants(bus, application):
         pending.extend(call(bus, address, ACCESSIBLE, "GetChildren")[0])
 
 
-@contextmanager
-def child_process(arguments, **kwargs):
-    process = subprocess.Popen(arguments, **kwargs)
-    try:
-        yield process
-    finally:
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
-
-
-def probe(binary, require_actions):
+def probe(binary, require_actions, headless_host):
     # The enclosing command creates this bus; do not toggle the desktop user's
     # accessibility settings or connect to their registry.
     if os.environ.get("RECITE_PRIVATE_A11Y_BUS") != "1":
         raise RuntimeError("Use the just writer probe-accessibility recipe")
+    if headless_host == "wayland" and (
+        not os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")
+    ):
+        raise RuntimeError("Headless Wayland requires WAYLAND_DISPLAY and no X11 DISPLAY")
     session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     status = ("org.a11y.Bus", "/org/a11y/bus")
     call(
@@ -157,10 +148,18 @@ def probe(binary, require_actions):
             "private AT-SPI registry",
             registry_process,
         )
-        run_specimen(binary, bus, registry, require_actions)
+        # A headless compositor has no physical keyboard. Keep a private virtual
+        # keyboard alive for the probe without sending input or activating a control.
+        keyboard = (
+            child_process(["wtype", "-s", "300000"])
+            if headless_host == "wayland"
+            else nullcontext()
+        )
+        with keyboard:
+            run_specimen(binary, bus, registry, require_actions, headless_host)
 
 
-def run_specimen(binary, bus, registry, require_actions):
+def run_specimen(binary, bus, registry, require_actions, headless_host):
     before = {tuple(child) for child in call(bus, registry, ACCESSIBLE, "GetChildren")[0]}
     with tempfile.TemporaryDirectory(prefix="recite-native-a11y-") as temporary:
         env = dict(os.environ, XDG_CONFIG_HOME=temporary, XDG_STATE_HOME=temporary)
@@ -219,6 +218,23 @@ def run_specimen(binary, bus, registry, require_actions):
                     "named primary button",
                     process,
                 )
+                wait_for(
+                    lambda: find_named("Try the controls, then compare both appearances."),
+                    "initial action status",
+                    process,
+                )
+                if headless_host == "x11":
+                    focus_x11_window(process.pid)
+                    wait_for(
+                        lambda: any(
+                            call(bus, node, ACCESSIBLE, "GetRole")[0] == int(Atspi.Role.FRAME)
+                            and call(bus, node, ACCESSIBLE, "GetState")[0][0]
+                            & (1 << int(Atspi.StateType.ACTIVE))
+                            for node, _ in descendants(bus, application)
+                        ),
+                        "specimen host window active",
+                        process,
+                    )
                 interfaces = call(bus, button, ACCESSIBLE, "GetInterfaces")[0]
                 action_available = "org.a11y.atspi.Action" in interfaces
                 focus_requested = call(bus, button, "org.a11y.atspi.Component", "GrabFocus")[0]
@@ -237,6 +253,8 @@ def run_specimen(binary, bus, registry, require_actions):
                     except RuntimeError:
                         if process.poll() is not None:
                             raise
+                if find_named("Primary action activated."):
+                    raise RuntimeError("Focus unexpectedly activated the primary action")
                 activated = False
                 if action_available:
                     accepted = call(
@@ -261,8 +279,13 @@ def run_specimen(binary, bus, registry, require_actions):
                         {
                             "platform": "linux",
                             "bridge": "AT-SPI",
+                            "display_environment": {
+                                "wayland": bool(os.environ.get("WAYLAND_DISPLAY")),
+                                "x11": bool(os.environ.get("DISPLAY")),
+                            },
                             "status": "passed" if complete else "limited",
                             "named_button": True,
+                            "focus_requested": focus_requested,
                             "focus_observed": focused,
                             "action_available": action_available,
                             "action_observed": activated,
@@ -297,6 +320,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Fail unless native focus and activation both change the application",
     )
+    parser.add_argument(
+        "--headless-host",
+        choices=("x11", "wayland"),
+        help="Prepare the private test host: x11 needs xdotool; wayland needs wtype",
+    )
     args = parser.parse_args()
     binary = args.binary.resolve(strict=True)
     if os.environ.get("RECITE_PRIVATE_A11Y_BUS") == "1":
@@ -327,7 +355,7 @@ if __name__ == "__main__":
                 "private accessibility bus",
                 bus_process,
             )
-            probe(binary, args.require_actions)
+            probe(binary, args.require_actions, args.headless_host)
     else:
         with tempfile.TemporaryDirectory(prefix="recite-a11y-session-") as temporary:
             env = dict(
@@ -356,7 +384,8 @@ if __name__ == "__main__":
                     str(Path(__file__).resolve()),
                     str(binary),
                 ]
-                + (["--require-actions"] if args.require_actions else []),
+                + (["--require-actions"] if args.require_actions else [])
+                + (["--headless-host", args.headless_host] if args.headless_host else []),
                 env=env,
             )
             sys.exit(result.returncode)

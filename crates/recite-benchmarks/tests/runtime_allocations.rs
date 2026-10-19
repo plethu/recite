@@ -35,6 +35,7 @@ fn tiny_runtime_allocation_report_covers_hot_path_operations()
         BTreeSet::from([
             "acknowledge_blocking",
             "asset_decode",
+            "asset_fingerprint",
             "choose_first",
             "condition_dispatch",
             "effect_blocking",
@@ -86,4 +87,28 @@ fn allocation_test_guard() -> MutexGuard<'static, ()> {
     ALLOCATION_TEST_LOCK
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[test]
+fn cold_fingerprint_does_not_allocate_a_second_asset_buffer()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_benchmarks::{compiler::CompilerProject, project::BenchmarkProject};
+    use recite_core::compiled::{CompiledDialogue, canonical_compiled_dialogue_fingerprint};
+    let _guard = allocation_test_guard();
+    let project =
+        BenchmarkProject::load_fixture(BenchmarkFixture::Synthetic(BenchmarkScale::Medium))?;
+    let compiled = CompilerProject::load(&project)?.compile_with_schema()?;
+    let expected = blake3::hash(&compiled.asset().messagepack);
+    let cold = CompiledDialogue::new(compiled.asset().dialogue.clone().into_payload());
+    let region = stats_alloc::Region::new(GLOBAL);
+    let fingerprint = canonical_compiled_dialogue_fingerprint(&cold)?;
+    let cost = region.change();
+    assert_eq!(fingerprint.digest().as_bytes(), expected.as_bytes());
+    assert!(
+        cost.bytes_allocated <= 100_000,
+        "fingerprint allocation: {cost:?}"
+    );
+    assert_eq!(cost.reallocations, 0);
+    assert!(compiled.asset().messagepack.len() > cost.bytes_allocated * 5);
+    Ok(())
 }

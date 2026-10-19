@@ -79,6 +79,8 @@ pub(super) fn lines(summaries: &[BenchmarkSummary]) -> String {
 
 pub(super) fn writer() -> Vec<BenchmarkSummary> {
     [
+        ("preview_start", "passages_1000"),
+        ("preview_start", "passages_10000"),
         ("cold_script", "effects_1000"),
         ("cold_script", "effects_10000"),
         ("changed_draft", "wide"),

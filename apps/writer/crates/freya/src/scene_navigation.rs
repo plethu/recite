@@ -64,21 +64,24 @@ impl Component for SceneNavigation {
             let mut matches = writer.vim.matches;
             matches.set(Vec::new());
         });
-        let projected = use_memo(move || {
-            writer
-                .buffers
-                .model
-                .read()
-                .as_ref()
-                .ok()
-                .and_then(|m| m.document().script_snapshot().ok())
+        let summary = use_memo(move || {
+            captions::SummarySnapshot(
+                writer
+                    .buffers
+                    .model
+                    .read()
+                    .as_ref()
+                    .ok()
+                    .and_then(|model| model.document().summary_snapshot()),
+            )
         });
         let mut previous = None;
         let captions = use_memo(move || {
-            let next = projected
+            let next = summary
                 .read()
+                .0
                 .as_ref()
-                .map(|blocks| captions::refresh(blocks, previous.as_ref()))
+                .map(|summary| captions::refresh(summary.blocks(), previous.as_ref()))
                 .unwrap_or_default();
             previous = Some(next.clone());
             next

@@ -1,0 +1,496 @@
+use std::{
+    any::{
+        Any,
+        TypeId,
+    },
+    borrow::Cow,
+    fmt::Debug,
+    rc::Rc,
+};
+
+use freya_engine::prelude::{
+    Canvas,
+    FontCollection,
+    FontMgr,
+    SkRRect,
+    SkRect,
+};
+use rustc_hash::FxHashMap;
+use torin::{
+    prelude::{
+        Area,
+        LayoutNode,
+        PostMeasure,
+        Size2D,
+    },
+    scaled::Scaled,
+    torin::Torin,
+};
+
+use crate::{
+    data::{
+        AccessibilityData,
+        EffectData,
+        LayoutData,
+        StyleState,
+        TextStyleData,
+        TextStyleState,
+    },
+    diff_key::DiffKey,
+    event_handler::EventHandler,
+    events::{
+        data::{
+            AccessibilityActionEventData,
+            Event,
+            KeyboardEventData,
+            MouseEventData,
+            PointerEventData,
+            SizedEventData,
+            StyledEventData,
+            TouchEventData,
+            VisibleEventData,
+            WheelEventData,
+        },
+        name::EventName,
+    },
+    layers::Layer,
+    node_id::NodeId,
+    prelude::{
+        Color,
+        FileEventData,
+        ImePreeditEventData,
+        MaybeExt,
+    },
+    style::fill::Fill,
+    text_cache::TextCache,
+    tree::{
+        DiffModifies,
+        Tree,
+    },
+};
+
+/// Tells Freya how to lay out, handle events for, describe accessibility and draw an element.
+///
+/// To make your own element, implement this trait and override what you need. For example,
+/// [`render`](Self::render) draws it, [`layout`](Self::layout) supplies its layout,
+/// [`measure`](Self::measure) gives it a custom size, and [`is_point_inside`](Self::is_point_inside)
+/// changes how pointer hits are detected. Everything has a default, so you can start with just
+/// the methods your element needs. Override [`changed`](Self::changed) and [`diff`](Self::diff)
+/// when changes to its data need to update the UI.
+///
+/// To put it in the UI tree, implement `From<YourElement> for Element` (or otherwise make it
+/// convertible into [`Element`]). You can also implement builder traits like `LayoutExt` to let
+/// callers set its properties. Freya stores elements as `Rc<dyn ElementExt>`, so they must be
+/// `'static` through the [`Any`].
+///
+/// See [`feature_element.rs`](https://github.com/marc2332/freya/blob/main/examples/feature_element.rs)
+/// for a full example.
+pub trait ElementExt: Any {
+    /// Converts this value into an [`Element`] if it implements `Into<Element>`.
+    fn into_element(self) -> Element
+    where
+        Self: Sized + Into<Element>,
+    {
+        self.into()
+    }
+
+    /// Returns whether this element has changed compared to another one.
+    fn changed(&self, _other: &Rc<dyn ElementExt>) -> bool {
+        false
+    }
+
+    /// Tells Freya what needs updating when this element changes.
+    fn diff(&self, _other: &Rc<dyn ElementExt>) -> DiffModifies {
+        DiffModifies::empty()
+    }
+
+    /// Returns layout properties used to position and size this element.
+    fn layout(&'_ self) -> Cow<'_, LayoutData> {
+        Cow::Owned(Default::default())
+    }
+
+    /// Returns accessibility properties for this element.
+    fn accessibility(&'_ self) -> Cow<'_, AccessibilityData> {
+        Cow::Owned(Default::default())
+    }
+
+    /// Returns optional effect properties for this element.
+    fn effect(&'_ self) -> Option<Cow<'_, EffectData>> {
+        None
+    }
+
+    /// Returns visual style properties for this element.
+    fn style(&'_ self) -> Cow<'_, StyleState> {
+        Cow::Owned(Default::default())
+    }
+
+    /// Whether the element paints nothing, letting events fall through to
+    /// non-ancestor elements behind it.
+    fn is_transparent(&self) -> bool {
+        self.style().background == Fill::Color(Color::TRANSPARENT)
+    }
+
+    /// Returns text styling inherited by text content in this element.
+    fn text_style(&'_ self) -> Cow<'_, TextStyleData> {
+        Cow::Owned(Default::default())
+    }
+
+    /// Returns the drawing layer assigned to this element.
+    fn layer(&self) -> Layer {
+        Layer::default()
+    }
+
+    /// Returns event handlers registered on this element.
+    fn events_handlers(&'_ self) -> Option<Cow<'_, EventHandlers>> {
+        None
+    }
+
+    /// Measures the element and optionally returns measurement data for later layout stages.
+    fn measure(&self, _context: LayoutContext) -> Option<(Size2D, Rc<dyn Any>)> {
+        None
+    }
+
+    /// Returns whether this element hooks into layout measurement.
+    fn should_hook_measurement(&self) -> bool {
+        false
+    }
+
+    /// Returns whether to measure this element's children.
+    fn should_measure_inner_children(&self) -> bool {
+        true
+    }
+
+    /// Whether this element needs a [ElementExt::post_measure] step after the layout pass.
+    fn needs_post_measure(&self) -> bool {
+        false
+    }
+
+    /// Runs after this element and its children are measured.
+    fn post_measure(&self, _context: PostMeasureContext) -> PostMeasure<NodeId> {
+        PostMeasure::default()
+    }
+
+    /// Tests whether the pointer position is inside this element's hit area.
+    fn is_point_inside(&self, context: EventMeasurementContext) -> bool {
+        context
+            .layout_node
+            .visible_area()
+            .contains(context.cursor.to_f32())
+    }
+
+    /// Applies clipping for this element before it and its children are rendered.
+    fn clip(&self, _context: ClipContext) {}
+
+    /// Renders this element using the supplied canvas and layout context.
+    fn render(&self, _context: RenderContext) {}
+
+    /// Creates a rounded rectangle from an area using this element's corner radius.
+    fn render_rect(&self, area: &Area, scale_factor: f32) -> SkRRect {
+        let style = self.style();
+        let corner_radius = style.corner_radius.with_scale(scale_factor);
+        SkRRect::new_rect_radii(
+            SkRect::new(area.min_x(), area.min_y(), area.max_x(), area.max_y()),
+            &[
+                (corner_radius.top_left(), corner_radius.top_left()).into(),
+                (corner_radius.top_right(), corner_radius.top_right()).into(),
+                (corner_radius.bottom_right(), corner_radius.bottom_right()).into(),
+                (corner_radius.bottom_left(), corner_radius.bottom_left()).into(),
+            ],
+        )
+    }
+
+    /// Mutates the accessibility node immediately before it enters the accessibility tree.
+    fn finish_accessibility(&self, _builder: &mut accesskit::Node) {}
+}
+pub struct LayoutContext<'a> {
+    pub node_id: NodeId,
+    pub torin_node: &'a torin::node::Node,
+    pub area_size: &'a Size2D,
+    pub font_collection: &'a mut FontCollection,
+    pub font_manager: &'a FontMgr,
+    pub text_style_state: &'a TextStyleState,
+    pub fallback_fonts: &'a [Cow<'static, str>],
+    pub scale_factor: f64,
+    pub text_cache: &'a mut TextCache,
+}
+pub struct RenderContext<'a> {
+    pub font_collection: &'a mut FontCollection,
+    pub canvas: &'a Canvas,
+    pub layout_node: &'a LayoutNode,
+    pub text_style_state: &'a TextStyleState,
+    pub tree: &'a Tree,
+    pub scale_factor: f64,
+}
+
+pub struct EventMeasurementContext<'a> {
+    pub cursor: ragnarok::CursorPoint,
+    pub layout_node: &'a LayoutNode,
+    pub scale_factor: f64,
+}
+
+pub struct PostMeasureContext<'a> {
+    pub node_layout: &'a LayoutNode,
+    pub children: &'a [NodeId],
+    pub layout: &'a Torin<NodeId>,
+    pub font_collection: &'a mut FontCollection,
+    pub text_style_state: &'a TextStyleState,
+    pub fallback_fonts: &'a [Cow<'static, str>],
+    pub scale_factor: f64,
+}
+
+pub struct ClipContext<'a> {
+    pub canvas: &'a Canvas,
+    pub visible_area: &'a Area,
+    pub scale_factor: f64,
+}
+
+impl<T: Any + PartialEq> ComponentProps for T {
+    fn changed(&self, other: &dyn ComponentProps) -> bool {
+        (other as &dyn Any)
+            .downcast_ref::<T>()
+            .is_none_or(|other| self != other)
+    }
+}
+
+pub trait ComponentProps: Any {
+    fn changed(&self, other: &dyn ComponentProps) -> bool;
+}
+
+#[derive(Clone)]
+pub enum Element {
+    Component {
+        key: DiffKey,
+        comp: Rc<dyn Fn(Rc<dyn ComponentProps>) -> Element>,
+        props: Rc<dyn ComponentProps>,
+    },
+    Element {
+        key: DiffKey,
+        element: Rc<dyn ElementExt>,
+        elements: Vec<Element>,
+    },
+}
+
+impl Debug for Element {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Element { key, elements, .. } => {
+                f.write_str(&format!("Element {{ key: {:?} }}", key))?;
+                elements.fmt(f)
+            }
+            Self::Component { key, .. } => f.write_str(&format!("Component {{ key: {:?} }}", key)),
+        }
+    }
+}
+
+pub trait IntoElement {
+    fn into_element(self) -> Element;
+}
+
+impl<T: Into<Element>> IntoElement for T {
+    fn into_element(self) -> Element {
+        self.into()
+    }
+}
+
+/// [App] is a trait for root-level application components.
+/// Types implementing [App] automatically implement [Component] and have a
+/// blanket [PartialEq] implementation that always returns true.
+pub trait App: 'static {
+    fn render(&self) -> impl IntoElement;
+}
+
+/// [AppComponent] is a wrapper for [App] components that returns true in equality checks.
+#[derive(Clone)]
+pub struct AppComponent {
+    render: Rc<dyn Fn() -> Element + 'static>,
+}
+
+impl AppComponent {
+    pub fn new(render: impl App + 'static) -> Self {
+        Self {
+            render: Rc::new(move || render.render().into_element()),
+        }
+    }
+}
+
+impl PartialEq for AppComponent {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+#[cfg(feature = "hotreload")]
+impl<F, E> From<F> for AppComponent
+where
+    F: Fn() -> E + Clone + 'static,
+    E: IntoElement,
+{
+    fn from(render: F) -> Self {
+        AppComponent {
+            render: Rc::new(move || {
+                crate::hotreload::subsecond::HotFn::current(render.clone())
+                    .call(())
+                    .into_element()
+            }),
+        }
+    }
+}
+
+#[cfg(not(feature = "hotreload"))]
+impl<F, E> From<F> for AppComponent
+where
+    F: Fn() -> E + 'static,
+    E: IntoElement,
+{
+    fn from(render: F) -> Self {
+        AppComponent {
+            render: Rc::new(move || render().into_element()),
+        }
+    }
+}
+
+impl Component for AppComponent {
+    fn render(&self) -> impl IntoElement {
+        (self.render)()
+    }
+}
+
+/// Encapsulate reusable pieces of UI by using the [Component] trait.
+/// Every [Component] creates a new layer of state in the app,
+/// meaning that implementors of [Component] can make use of hooks in their [Component::render] method.
+/// ```rust, no_run
+/// # use freya::prelude::*;
+/// #[derive(PartialEq)]
+/// struct ReusableCounter {
+///     pub init_number: u8,
+/// }
+///
+/// impl Component for ReusableCounter {
+///     fn render(&self) -> impl IntoElement {
+///         let mut number = use_state(|| self.init_number);
+///         label()
+///             .on_press(move |_| {
+///                 *number.write() += 1;
+///             })
+///             .text(number.read().to_string())
+///     }
+/// }
+/// ```
+pub trait Component: ComponentKey + PartialEq + 'static {
+    fn render(&self) -> impl IntoElement;
+
+    fn render_key(&self) -> DiffKey {
+        self.default_key()
+    }
+}
+
+pub trait ComponentOwned: ComponentKey + PartialEq + 'static {
+    fn render(self) -> impl IntoElement;
+
+    fn render_key(&self) -> DiffKey {
+        self.default_key()
+    }
+}
+
+pub trait ComponentKey {
+    fn default_key(&self) -> DiffKey;
+}
+
+impl<T> Component for T
+where
+    T: ComponentOwned + Clone + PartialEq,
+{
+    fn render(&self) -> impl IntoElement {
+        <Self as ComponentOwned>::render(self.clone())
+    }
+    fn render_key(&self) -> DiffKey {
+        <Self as ComponentOwned>::render_key(self)
+    }
+}
+
+impl<T> ComponentKey for T
+where
+    T: Component,
+{
+    fn default_key(&self) -> DiffKey {
+        use std::hash::{
+            Hash,
+            Hasher,
+        };
+        let mut hasher = rustc_hash::FxHasher::default();
+        TypeId::of::<T>().hash(&mut hasher);
+        DiffKey::DefaultU64(hasher.finish())
+    }
+}
+
+impl<T> MaybeExt for T where T: Component {}
+
+impl<T: Component> From<T> for Element {
+    fn from(value: T) -> Self {
+        let key = value.render_key();
+        Element::Component {
+            key,
+            #[cfg(feature = "hotreload")]
+            comp: Rc::new(move |props| {
+                let props = (&*props as &dyn Any).downcast_ref::<T>().unwrap();
+                crate::hotreload::subsecond::HotFn::current(|v: &T| v.render().into_element())
+                    .call((props,))
+            }),
+            #[cfg(not(feature = "hotreload"))]
+            comp: Rc::new(move |props| {
+                let props = (&*props as &dyn Any).downcast_ref::<T>().unwrap();
+                props.render().into_element()
+            }),
+            props: Rc::new(value),
+        }
+    }
+}
+
+impl PartialEq for Element {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::Component {
+                    key: key1,
+                    props: props1,
+                    ..
+                },
+                Self::Component {
+                    key: key2,
+                    props: props2,
+                    ..
+                },
+            ) => key1 == key2 && !props1.changed(props2.as_ref()),
+            (
+                Self::Element {
+                    key: key1,
+                    element: element1,
+                    elements: elements1,
+                },
+                Self::Element {
+                    key: key2,
+                    element: element2,
+                    elements: elements2,
+                },
+            ) => key1 == key2 && !element1.changed(element2) && elements1 == elements2,
+            _ => false,
+        }
+    }
+}
+
+pub type EventHandlers = FxHashMap<EventName, EventHandlerType>;
+
+#[derive(Clone, PartialEq)]
+pub enum EventHandlerType {
+    AccessibilityAction(EventHandler<Event<AccessibilityActionEventData>>),
+    Mouse(EventHandler<Event<MouseEventData>>),
+    Keyboard(EventHandler<Event<KeyboardEventData>>),
+    Sized(EventHandler<Event<SizedEventData>>),
+    Visible(EventHandler<Event<VisibleEventData>>),
+    Styled(EventHandler<Event<StyledEventData>>),
+    Wheel(EventHandler<Event<WheelEventData>>),
+    Touch(EventHandler<Event<TouchEventData>>),
+    Pointer(EventHandler<Event<PointerEventData>>),
+    ImePreedit(EventHandler<Event<ImePreeditEventData>>),
+    File(EventHandler<Event<FileEventData>>),
+}

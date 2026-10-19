@@ -9,7 +9,7 @@ run *args:
 
 # Verify the maintained writer and its source-editing model.
 check:
-    mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-palette$'
+    mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-(palette|cold-projections)$'
     just writer packaging
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo fmt --manifest-path apps/writer/vendor/freya-code-editor/Cargo.toml --all -- --check
@@ -39,15 +39,26 @@ coverage:
 
 # Check keyboard, accessibility metadata, scaling, and contrast.
 accessibility:
-    mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-palette$'
+    mise -E maintainability exec -- ast-grep scan --config tools/ast-grep/sgconfig.yml --filter '^rust-writer-(palette|cold-projections)$'
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test accessibility --test commands --test keybindings --test options --test picker --test text_input --test writing_workspace
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib design::
     cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib feedback::
 
-# Probe Linux AT-SPI; needs python3-gi, dbus-run-session and a display or Xvfb.
+# Probe Linux AT-SPI; needs python3-gi, dbus-run-session and a display. Bare Xvfb also needs xdotool and --headless-host x11.
 probe-accessibility *args:
     cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
-    /usr/bin/python3 scripts/check-writer-native-accessibility.py apps/writer/target/debug/recite-writer "$@"
+    /usr/bin/python3 scripts/check-writer-native-accessibility.py apps/writer/target/debug/recite-writer --require-actions "$@"
+
+# Probe native Wayland AT-SPI on a private software compositor; needs Cage and wtype.
+probe-accessibility-wayland *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    runtime=$(mktemp -d /tmp/recite-wl.XXXXXXXX)
+    trap 'rm -rf "$runtime"' EXIT
+    env -u DISPLAY -u WAYLAND_DISPLAY -u WINIT_UNIX_BACKEND \
+        XDG_RUNTIME_DIR="$runtime" WLR_BACKENDS=headless WLR_HEADLESS_OUTPUTS=1 \
+        WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman \
+        cage -- env -u DISPLAY just writer probe-accessibility --headless-host wayland "$@"
 
 # Check fixed-corpus allocation counts, without a wall-clock budget.
 heap:

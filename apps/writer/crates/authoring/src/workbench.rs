@@ -1,4 +1,10 @@
+mod edit;
+mod preparing;
+pub use preparing::{NavigationRequest, PreparedNavigation};
 mod navigation;
+mod opening;
+mod preview;
+pub use edit::{EditRequest, PreparedEdit};
 mod structure;
 use crate::{Document, DraftSnapshot, EditError, PassageKind, Preview, PreviewError, PreviewPage};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
@@ -44,52 +50,6 @@ pub struct Workbench {
 }
 
 impl Workbench {
-    pub fn new(source: &str) -> Result<Self, WorkbenchError> {
-        Self::open(crate::DOCUMENT_NAME, source)
-    }
-
-    pub fn open(name: &str, source: &str) -> Result<Self, WorkbenchError> {
-        let key = recite_core::DocumentKey::new(name).map_err(EditError::from)?;
-        let document = Document::open(key, source)?;
-        Self::from_document(document)
-    }
-
-    pub fn from_document(document: Document) -> Result<Self, WorkbenchError> {
-        // Script construction also fills the passage cache from its parse.
-        let script = document.script_snapshot().ok();
-        let passages = document.passage_snapshot().ok();
-        let first = passages.as_ref().and_then(|passages| passages.first());
-        let first_block = script.as_ref().and_then(|blocks| blocks.first());
-        let revision = document.revision();
-        let (view, draft) = match first {
-            Some(first) => (
-                View::Passage(first.id.clone()),
-                DraftSnapshot::from(first.text.clone()),
-            ),
-            None => match first_block {
-                Some(block) => (
-                    View::Block(block.id.clone()),
-                    DraftSnapshot::from(String::new()),
-                ),
-                None => (
-                    View::Source,
-                    DraftSnapshot::from(document.source_snapshot()),
-                ),
-            },
-        };
-        let script_selection = first_block.map(|block| block.id.clone());
-        Ok(Self {
-            script_selection,
-            document,
-            view,
-            loaded: draft.clone(),
-            draft,
-            dirty: false,
-            draft_revision: revision,
-            preview: None,
-            page: None,
-        })
-    }
     pub fn refresh_project(
         &mut self,
         context: crate::ProjectContext,
@@ -135,18 +95,21 @@ impl Workbench {
         self.dirty
     }
     pub fn apply(&mut self) -> Result<(), WorkbenchError> {
+        if !self.dirty && self.view != View::Source {
+            return Ok(());
+        }
         match &self.view {
             View::Block(_) => {}
             View::Source => self
                 .document
-                .replace_source(self.draft_revision, self.draft.as_str().to_owned())?,
+                .replace_source(self.draft_revision, self.draft.text_snapshot())?,
             View::Passage(id) => {
                 self.document
                     .replace_text(self.draft_revision, id, self.draft.as_str())?
             }
         }
         if self.view == View::Source {
-            // Acceptance owns these bytes now; release the flattened Rope draft.
+            // Acceptance shares these bytes now; release the Rope draft owner.
             self.draft = self.document.source_snapshot().into();
         }
         self.loaded = self.draft.clone();
@@ -188,18 +151,6 @@ impl Workbench {
         let block = self.selected_block()?.ok_or(EditError::Destination)?;
         let id = self.document.add_choice(self.document.revision(), &block)?;
         self.select(View::Passage(id))
-    }
-    pub fn start_preview(&mut self) -> Result<(), WorkbenchError> {
-        self.start_preview_with(crate::PreviewSetup::default())
-    }
-    pub fn start_preview_with(&mut self, setup: crate::PreviewSetup) -> Result<(), WorkbenchError> {
-        self.require_applied()?;
-        let selected = self.selected_block()?;
-        let mut preview = Preview::configured(&self.document, selected.as_deref(), setup)?;
-        let page = preview.advance(None)?;
-        self.preview = Some(preview);
-        self.page = Some(page);
-        Ok(())
     }
     pub fn advance_preview(&mut self, choice_index: Option<usize>) -> Result<(), WorkbenchError> {
         let choice = choice_index

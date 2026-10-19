@@ -1,9 +1,11 @@
 //! Retarget colour fades from the current frame, even during rapid pointer movement.
+mod path;
 use freya::{
     animation::{OnChange, use_animation_with_dependencies},
     prelude::*,
 };
-use skia_safe::{Color, Paint, PaintStyle, Path, PathEffect};
+use path::EdgePath;
+use skia_safe::{Color, Paint, PaintStyle, Path};
 use std::{cell::Cell, rc::Rc};
 
 #[derive(Clone, PartialEq)]
@@ -55,8 +57,12 @@ impl Component for Edge {
             (false, true) => &[4., 3.],
             (false, false) => &[],
         };
-        let curve = Path::from_svg(&self.route.path);
-        let arrow = Path::from_svg(&self.route.arrow);
+        let route = use_reactive(&self.route);
+        let paths = use_memo(move || {
+            let route = route.read();
+            (EdgePath::parse(&route.path), Path::from_svg(&route.arrow))
+        });
+        let (curve, arrow) = paths.read().clone();
         let p = crate::design::palette::current();
         // Forward flow is the plum ink; returns are the second ink, so the two read apart.
         let ink = if self.returning { p.teal } else { p.accent };
@@ -65,34 +71,34 @@ impl Component for Edge {
         let layer = |color: Color, thickness: f32| {
             let curve = curve.clone();
             let arrow = arrow.clone();
-            canvas(RenderCallback::new(move |context| {
-                let canvas = context.canvas;
-                canvas.save();
-                canvas.scale((zoom, zoom));
-                canvas.translate((-left, -top));
-                let mut paint = Paint::default();
-                paint.set_anti_alias(true);
-                paint.set_style(PaintStyle::Stroke);
-                paint.set_color(color);
-                paint.set_stroke_width(thickness / zoom.max(0.25));
-                paint.set_stroke_cap(skia_safe::paint::Cap::Round);
-                paint.set_stroke_join(skia_safe::paint::Join::Round);
-                paint.set_path_effect(PathEffect::dash(dash, 0.));
-                if let Some(curve) = &curve {
-                    canvas.draw_path(curve, &paint);
-                }
-                paint.set_path_effect(None);
-                if let Some(arrow) = &arrow {
-                    canvas.draw_path(arrow, &paint);
-                }
-                canvas.restore();
-            }))
-            .key(format!(
-                "{color:?}:{}:{}",
-                self.route.path, self.route.arrow
-            ))
-            .width(Size::px(width * zoom))
-            .height(Size::px(height * zoom))
+            rect()
+                .background(RenderCallback::new(move |context| {
+                    let canvas = context.canvas;
+                    canvas.save();
+                    canvas.scale((zoom, zoom));
+                    canvas.translate((-left, -top));
+                    let mut paint = Paint::default();
+                    paint.set_anti_alias(true);
+                    paint.set_style(PaintStyle::Stroke);
+                    paint.set_color(color);
+                    paint.set_stroke_width(thickness / zoom.max(0.25));
+                    paint.set_stroke_cap(skia_safe::paint::Cap::Round);
+                    paint.set_stroke_join(skia_safe::paint::Join::Round);
+                    if let Some(curve) = &curve {
+                        curve.draw(canvas, &mut paint, dash);
+                    }
+                    paint.set_path_effect(None);
+                    if let Some(arrow) = &arrow {
+                        canvas.draw_path(arrow, &paint);
+                    }
+                    canvas.restore();
+                }))
+                .key(format!(
+                    "{color:?}:{}:{}",
+                    self.route.path, self.route.arrow
+                ))
+                .width(Size::px(width * zoom))
+                .height(Size::px(height * zoom))
         };
         // Draw vector paths directly. Panning never creates or resizes raster assets.
         rect()

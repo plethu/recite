@@ -105,39 +105,7 @@ impl Component for SourceField {
                             .into_element(),
                     }),
             );
-        let diagnostics = writer
-            .buffers
-            .model
-            .read()
-            .as_ref()
-            .map(|model| model.document().diagnostics())
-            .unwrap_or_default();
-        if !diagnostics.is_empty() {
-            field = field.child(
-                ScrollView::new()
-                    .width(Size::fill())
-                    .height(Size::px((diagnostics.len().min(3) as f32 * 48.).max(48.)))
-                    .child(
-                        rect()
-                            .width(Size::fill())
-                            .padding(t::SPACE_SM)
-                            .background(crate::design::palette::current().inset)
-                            .border(
-                                Border::new()
-                                    .width(1.)
-                                    .fill(crate::design::palette::current().rule),
-                            )
-                            .children(
-                                diagnostics
-                                    .iter()
-                                    .map(|diagnostic| {
-                                        crate::diagnostics::row(writer, editor_id, diagnostic)
-                                    })
-                                    .collect::<Vec<_>>(),
-                            ),
-                    ),
-            );
-        }
+        field = field.child(crate::diagnostics::Panel { writer, editor_id });
         field
             .child(crate::field_actions::SourceActions {
                 writer,

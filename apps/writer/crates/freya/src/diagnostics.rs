@@ -1,13 +1,20 @@
 //! Diagnostics keep their source coordinates and navigate through the draft guard.
+mod panel;
+pub(crate) use panel::Panel;
+
 use crate::{
     design::{Button, tokens as t},
-    editing::{Pane, Writer},
+    editing::Writer,
 };
 use freya::{code_editor::*, prelude::*, text_edit::TextEditor};
 use recite_core::{Diagnostic, SourcePosition};
-use recite_writer_model::View;
 
-pub(crate) fn row(writer: Writer, editor_id: AccessibilityId, diagnostic: &Diagnostic) -> Element {
+fn row(
+    writer: Writer,
+    editor_id: AccessibilityId,
+    id: AccessibilityId,
+    diagnostic: &Diagnostic,
+) -> Element {
     let span = diagnostic.span.clone();
     let available = writer
         .buffers
@@ -32,64 +39,68 @@ pub(crate) fn row(writer: Writer, editor_id: AccessibilityId, diagnostic: &Diagn
             span.start.line(),
             span.start.column()
         ))
-        .on_press(move |_| {
-            let mut writer = writer;
-            let current = writer
-                .buffers
-                .model
-                .peek()
-                .as_ref()
-                .ok()
-                .map(|m| m.document().key().to_string());
-            let select = |model: &mut recite_writer_model::Workbench| {
-                if model.view() == &View::Source {
-                    Ok(())
-                } else {
-                    model.select(View::Source)
-                }
-            };
-            let result = if current.as_deref() == Some(span.file.as_str()) {
-                writer.try_navigate(select)
-            } else {
-                let path = writer
-                    .files
-                    .peek()
-                    .as_ref()
-                    .and_then(|files| files.path_for_document(&span.file));
-                match path {
-                    Some(path) => writer
-                        .buffers
-                        .switch(writer.files, &path, writer.dark, select),
-                    None => Err("The diagnostic document is not in this project.".into()),
-                }
-            };
+        .a11y_id(id)
+        .described(diagnostic.message.clone())
+        .on_press(move |_| open(writer, editor_id, &span))
+        .child(
+            rect()
+                .width(Size::fill())
+                .child(
+                    label()
+                        .text(diagnostic.message.clone())
+                        .max_lines(1)
+                        .text_overflow(TextOverflow::Ellipsis),
+                )
+                .child(
+                    label()
+                        .max_lines(1)
+                        .text_overflow(TextOverflow::Ellipsis)
+                        .font_size(t::small())
+                        .text(format!(
+                            "{} · {}:{}:{}",
+                            diagnostic.code,
+                            caption_file,
+                            diagnostic.span.start.line(),
+                            diagnostic.span.start.column()
+                        )),
+                ),
+        )
+        .into_element()
+}
+
+fn open(writer: Writer, editor_id: AccessibilityId, span: &recite_core::SourceSpan) {
+    let position = span.start;
+    let location = crate::navigation::location::Location {
+        screen: crate::navigation::location::Screen::Write,
+        beat: None,
+        passage: None,
+        document: span.file.clone(),
+        source: true,
+        ..crate::navigation::snapshot(writer)
+    };
+    let mut message = writer.message;
+    let result = crate::navigation::route(
+        writer,
+        location,
+        None,
+        EventHandler::new(move |result: Result<(), String>| {
             if let Err(error) = result {
-                writer.message.error(error);
+                message.error(error);
                 return;
             }
-            writer.pane.set(Pane::Map);
-            writer.layout.view.set(recite_config::WriterView::Source);
-            let mut editor = writer.buffers.editor.write();
-            let offset = position_offset(&editor.rope, span.start);
+            let mut editor_state = writer.buffers.editor;
+            let mut editor = editor_state.write();
+            let offset = position_offset(&editor.rope, position);
             editor.clear_selection();
             editor.move_cursor_to(offset);
             writer.source_viewport.request();
             drop(editor);
             editor_id.request_focus();
-        })
-        .child(
-            rect()
-                .width(Size::fill())
-                .child(label().text(diagnostic.message.clone()))
-                .child(label().font_size(t::small()).text(format!(
-                    "{} · {}:{}:{}",
-                    diagnostic.code,
-                    caption_file,
-                    span.start.line(),
-                    span.start.column()
-                ))),
-        )
-        .into_element()
+        }),
+    );
+    if let Err(error) = result {
+        message.error(error);
+    }
 }
 
 fn position_offset(rope: &Rope, position: SourcePosition) -> usize {

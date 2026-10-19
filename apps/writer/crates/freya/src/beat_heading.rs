@@ -29,10 +29,18 @@ impl Component for BeatHeading {
             }
         });
         let apply = move || {
-            if writer.try_navigate(|m| m.rename_beat(&name.peek())).is_ok() {
+            let submitted = name.peek().clone();
+            writer.after_prose(move |writer| {
+                if open.try_peek().is_none_or(|open| !*open)
+                    || name.try_peek().is_none_or(|name| *name != submitted)
+                {
+                    return Ok(());
+                }
+                writer.try_navigate(|m| m.rename_beat(&submitted))?;
                 open.set(false);
                 writer.inspector_focus.request_focus();
-            }
+                Ok(())
+            });
         };
         let mut row = rect()
             .horizontal()
@@ -41,7 +49,7 @@ impl Component for BeatHeading {
             .width(Size::fill())
             .spacing(t::SPACE_XS);
         if *open.read() {
-            let mut commit = apply;
+            let commit = apply;
             row = row
                 .child(
                     rect()

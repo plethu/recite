@@ -3,6 +3,10 @@
 mod completion;
 #[path = "large_project/drafts.rs"]
 mod drafts;
+#[path = "large_project/preview.rs"]
+mod preview;
+#[path = "large_project/rules.rs"]
+mod rules;
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::{Document, ProjectContext, SearchIndex, View, Workbench, workload};
 use serde_json::{Value, json};
@@ -85,7 +89,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
     })?;
     let bytes: usize = inputs.iter().map(|doc| doc.text().len()).sum();
-    let index = measure("index", &mut rows, || SearchIndex::build(&inputs));
+    let index = measure("index", &mut rows, || {
+        SearchIndex::build_with_control(
+            &inputs,
+            &recite_compiler::authoring::CancellationToken::new(),
+        )
+    })?;
     assert_eq!(index.len(), passages);
     for _ in 0..5 {
         for (name, query, limit) in [
@@ -112,6 +121,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             black_box(inputs.clone())
         });
     }
+    let mut replaced = index.clone();
+    let replacement = recite_compiler::authoring::SavedDocument::new(
+        inputs[0].key().clone(),
+        inputs[0].text().replacen("courier", "zeppelin", 1),
+    );
+    measure("replace_search_region", &mut rows, || {
+        replaced.replace_document(replacement)
+    });
+    assert_eq!(replaced.search_results("zeppelin", 1).total(), 1);
+    drop(replaced);
+    let preview_source = workload::source(500, 0, 5);
+    let preview_document = Document::new(&preview_source)?;
+    for _ in 0..3 {
+        let mut preview = measure("preview_start", &mut rows, || {
+            recite_writer_model::Preview::new(&preview_document).map_err(Box::new)
+        })?;
+        assert!(preview.advance(None)?.text.contains("courier"));
+    }
+    drop(preview_document);
     let mut document = measure("open_project_document", &mut rows, || {
         Document::in_project(
             inputs[0].key().clone(),
@@ -128,6 +156,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "generated project must validate cleanly"
     );
     completion::run(&document, &mut rows)?;
+    for _ in 0..5 {
+        let (count, endings) = measure("source_navigation_facts", &mut rows, || {
+            let blocks = document.block_summaries();
+            (
+                blocks.len(),
+                blocks
+                    .iter()
+                    .filter(|block| block.has_end_destination())
+                    .count(),
+            )
+        });
+        assert_eq!(count, per_document.min(passages).div_ceil(5));
+        assert_eq!(endings, usize::from(!linked));
+    }
+    for _ in 0..5 {
+        let summary = measure("capture_navigation_summary", &mut rows, || {
+            document.summary_snapshot()
+        })
+        .ok_or("missing accepted summary")?;
+        assert_eq!(summary.blocks(), document.block_summaries());
+        assert!(std::sync::Arc::ptr_eq(
+            &summary,
+            &document.summary_snapshot().ok_or("missing summary")?
+        ));
+    }
+    for _ in 0..5 {
+        let snapshot = measure("capture_diagnostics", &mut rows, || {
+            document.diagnostic_snapshot()
+        });
+        let cloned = measure("clone_diagnostics", &mut rows, || snapshot.clone());
+        assert!(snapshot == cloned);
+        assert_eq!(snapshot.len(), diagnostic_count);
+        assert!(snapshot.get(diagnostic_count).is_none());
+    }
+    let bindings = measure("preview_bindings", &mut rows, || {
+        document.preview_bindings()
+    });
+    assert!(bindings.is_empty()); // This fixed prose corpus has no caller variables.
+    for _ in 0..5 {
+        let cached = measure("capture_preview_bindings", &mut rows, || {
+            document.preview_bindings()
+        });
+        assert!(std::sync::Arc::ptr_eq(&bindings, &cached));
+    }
     let first = measure("project_script", &mut rows, || document.script_snapshot())?;
     for _ in 0..5 {
         let cached = measure("cached_script", &mut rows, || document.script_snapshot())?;
@@ -186,7 +258,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert!(measure("id_undo", &mut rows, || document.undo())?);
     }
     let history_bytes = document.history_bytes();
-    let mut workbench = Workbench::from_document(document)?;
+    let mut workbench = measure("open_source_workbench", &mut rows, || {
+        Workbench::from_document(document, Some(View::Source))
+    })?;
     workbench.select(View::Source)?;
     workbench.set_draft(format!("{}\nRejected draft", workbench.draft()));
     for _ in 0..100 {
@@ -195,6 +269,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(queued, snapshot);
     }
     drafts::run(&mut workbench, &mut rows)?;
+    rules::run(&mut rows)?;
+    preview::catalogue(&mut rows)?;
+    preview::bindings(&mut rows)?;
     let peak = std::fs::read_to_string("/proc/self/status")
         .ok()
         .and_then(|text| {
@@ -210,11 +287,67 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dhat::assert!(peak_bytes < 20_000_000);
         for row in &rows {
             let budget = match row["operation"].as_str() {
-                Some("index") => Some(55_000_000),
+                Some("index") => {
+                    // Lower one grammar-safe region at a time, rather than
+                    // retaining a whole document's transient lowered AST.
+                    dhat::assert!(
+                        row["peak_live_bytes"]
+                            .as_u64()
+                            .is_some_and(|bytes| bytes < 6_000_000)
+                    );
+                    dhat::assert!(
+                        row["live_bytes"]
+                            .as_u64()
+                            .is_some_and(|bytes| bytes < 5_300_000),
+                        "retained index bytes={}",
+                        row["live_bytes"]
+                    );
+                    Some(26_000_000)
+                }
+                Some("replace_search_region") => Some(350_000),
+                Some("preview_start") => Some(3_900_000),
+                Some("preview_bindings") => Some(128),
+                Some("first_preview_bindings") => Some(512),
+                Some("preview_catalogue_start") => {
+                    dhat::assert!(
+                        row["allocations"]
+                            .as_u64()
+                            .is_some_and(|count| count <= 250)
+                    );
+                    Some(25_000)
+                }
                 Some("project_script") => Some(3_200_000),
                 Some("prose_edit_and_script") => Some(1_200_000),
                 Some("accepted_draft_completion") => Some(35_000),
                 Some("changed_draft_completion") => Some(1_600_000),
+                Some("source_rope_apply") => {
+                    dhat::assert!(
+                        row["allocations"]
+                            .as_u64()
+                            .is_some_and(|count| count <= 350)
+                    );
+                    Some(325_000)
+                }
+                Some("rules_clean_changed" | "rules_condition_changed") => {
+                    dhat::assert!(row["allocations"].as_u64() == Some(0));
+                    Some(1)
+                }
+                Some("rules_snapshot") => Some(2_000),
+                Some("source_edit_capture") => {
+                    dhat::assert!(row["allocations"].as_u64().is_some_and(|count| count <= 1));
+                    Some(128)
+                }
+                Some("source_edit_accept") => Some(1024),
+                Some("passage_history_capture") => {
+                    dhat::assert!(row["allocations"].as_u64().is_some_and(|count| count <= 3));
+                    Some(128)
+                }
+                Some("passage_history_accept") => {
+                    dhat::assert!(row["allocations"].as_u64().is_some_and(|count| count <= 1));
+                    Some(128)
+                }
+                Some("passage_history_prepare") => Some(3_300_000),
+                Some("source_edit_prepare") => Some(325_000),
                 Some("capture_completion_snapshot") => {
                     dhat::assert!(row["allocations"].as_u64().is_some_and(|count| count <= 1));
                     Some(128)
@@ -228,26 +361,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Some(
                     "clone_search_results"
+                    | "capture_diagnostics"
+                    | "clone_diagnostics"
                     | "draft_snapshot"
                     | "clone_draft_snapshot"
-                    | "select_source_snapshot",
+                    | "select_source_snapshot"
+                    | "open_source_workbench"
+                    | "source_navigation_facts"
+                    | "capture_navigation_summary"
+                    | "capture_preview_bindings",
                 ) => {
                     dhat::assert!(row["allocations"].as_u64() == Some(0));
                     Some(1)
                 }
-                _ => None,
+                _ => drafts::budget(row),
             };
             if let Some(budget) = budget {
                 dhat::assert!(
                     row["allocated_bytes"]
                         .as_u64()
-                        .is_some_and(|bytes| bytes < budget)
+                        .is_some_and(|bytes| bytes < budget),
+                    "operation={} allocated_bytes={} budget={budget}",
+                    row["operation"],
+                    row["allocated_bytes"]
                 );
             }
         }
     }
     let report = json!({"os":std::env::consts::OS, "arch":std::env::consts::ARCH,
-        "profile":"bench", "heap_instrumented":cfg!(feature = "heap-profile"), "shared_destination":linked, "passages":passages, "documents":inputs.len(), "source_bytes":bytes,
+        "profile":"bench", "search_index_builder":"cooperative", "heap_instrumented":cfg!(feature = "heap-profile"), "shared_destination":linked, "passages":passages, "documents":inputs.len(), "source_bytes":bytes,
         "diagnostic_count":diagnostic_count, "history_bytes":history_bytes, "process_peak_rss":peak, "samples":rows});
     let text = serde_json::to_string_pretty(&report)?;
     if let Some(path) = argument("--output") {

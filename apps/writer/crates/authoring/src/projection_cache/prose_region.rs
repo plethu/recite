@@ -101,6 +101,7 @@ impl Document {
             // Ordered editable IDs are unchanged, so indexes still name the
             // same slots in the newly owned passage array.
             ids: self.projections.ids.clone(),
+            bindings: OnceCell::new(),
         })
     }
 }

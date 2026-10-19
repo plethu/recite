@@ -23,7 +23,7 @@ fn options_select_explicitly_and_arrow_keys_keep_tab_order_in_the_dialog()
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
         Size2D::new(1000., 800.),
-        |r| r.provide_root_context(Platform::get),
+        |r| r.provide_root_context(|| Platform::get().current_window()),
         1.,
     );
     support::click(&mut test, "Settings")?;

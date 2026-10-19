@@ -1,0 +1,214 @@
+//! Type-erased writable state that hides generic type parameters.
+
+use std::{
+    cell::{
+        Ref,
+        RefMut,
+    },
+    rc::Rc,
+};
+
+use crate::prelude::*;
+
+/// A type-erased writable state that only exposes the value type `T`.
+///
+/// This abstraction allows components to accept state from any source without knowing
+/// whether it comes from local state ([`use_state`]) or
+/// global state (Freya Radio). It hides the implementation details, providing a
+/// uniform interface for reading and writing values.
+///
+/// # Sources
+///
+/// `Writable` can be created from:
+/// - [`State<T>`] via [`From`] or [`IntoWritable`]
+/// - `RadioSliceMut` via `IntoWritable`
+///
+/// # Example
+///
+/// ```rust, ignore
+/// #[derive(PartialEq)]
+/// struct NameInput {
+///     name: Writable<String>,
+/// }
+///
+/// impl Component for NameInput {
+///     fn render(&self) -> impl IntoElement {
+///         // The component doesn't care if this is local or global state
+///         Input::new(self.name.clone())
+///     }
+/// }
+///
+/// fn app() -> impl IntoElement {
+///     let local = use_state(|| "Alice".to_string());
+///     let radio = use_radio(AppChannel::Name);
+///     let slice = radio.slice_mut_current(|s| &mut s.name);
+///
+///     rect()
+///         // Pass local state
+///         .child(NameInput { name: local.into_writable() })
+///         // Pass global radio slice
+///         .child(NameInput { name: slice.into_writable() })
+/// }
+/// ```
+pub struct Writable<T: 'static> {
+    pub(crate) peek_fn: Rc<dyn Fn() -> ReadRef<'static, T>>,
+    pub(crate) write_fn: Rc<dyn Fn() -> WriteRef<'static, T>>,
+    pub(crate) subscribe_fn: Rc<dyn Fn()>,
+    pub(crate) notify_fn: Rc<dyn Fn()>,
+}
+
+impl<T: 'static> PartialEq for Writable<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<T: 'static> Clone for Writable<T> {
+    fn clone(&self) -> Self {
+        Self {
+            peek_fn: self.peek_fn.clone(),
+            write_fn: self.write_fn.clone(),
+            subscribe_fn: self.subscribe_fn.clone(),
+            notify_fn: self.notify_fn.clone(),
+        }
+    }
+}
+
+impl<T: 'static> Writable<T> {
+    /// Create from local `State<T>`.
+    pub fn from_state(state: State<T>) -> Self {
+        Self {
+            peek_fn: Rc::new(move || state.peek_unchecked()),
+            write_fn: Rc::new(move || state.write_silently()),
+            subscribe_fn: Rc::new(move || state.subscribe()),
+            notify_fn: Rc::new(move || state.notify()),
+        }
+    }
+
+    /// Create a new `Writable` with custom peek, write, subscribe, and notify functions.
+    pub fn new(
+        peek_fn: impl Fn() -> ReadRef<'static, T> + 'static,
+        write_fn: impl Fn() -> WriteRef<'static, T> + 'static,
+        subscribe_fn: impl Fn() + 'static,
+        notify_fn: impl Fn() + 'static,
+    ) -> Self {
+        Self {
+            peek_fn: Rc::new(peek_fn),
+            write_fn: Rc::new(write_fn),
+            subscribe_fn: Rc::new(subscribe_fn),
+            notify_fn: Rc::new(notify_fn),
+        }
+    }
+
+    /// Read the value and subscribe to changes.
+    #[track_caller]
+    pub fn read(&self) -> ReadRef<'_, T> {
+        self.subscribe();
+        self.peek()
+    }
+
+    /// Read the value without subscribing.
+    #[track_caller]
+    pub fn peek(&self) -> ReadRef<'_, T> {
+        (self.peek_fn)()
+    }
+
+    /// Read the value and subscribe to changes, returning a static guard.
+    ///
+    /// This bypasses the borrow of the [`Writable`] handle, but the underlying
+    /// storage still checks for conflicting runtime borrows.
+    #[track_caller]
+    pub fn read_unchecked(&self) -> ReadRef<'static, T> {
+        self.subscribe();
+        (self.peek_fn)()
+    }
+
+    /// Write the value and notify subscribers.
+    #[track_caller]
+    pub fn write(&mut self) -> WriteRef<'_, T> {
+        self.notify();
+        (self.write_fn)()
+    }
+
+    #[track_caller]
+    pub fn write_if(&mut self, with: impl FnOnce(WriteRef<'_, T>) -> bool) -> bool {
+        let changed = with((self.write_fn)());
+        if changed {
+            self.notify();
+        }
+        changed
+    }
+
+    /// Subscribe to changes.
+    fn subscribe(&self) {
+        (self.subscribe_fn)()
+    }
+
+    /// Notify subscribers.
+    fn notify(&self) {
+        (self.notify_fn)()
+    }
+
+    /// Derive a new `Writable` that reads and writes only a part of the value.
+    ///
+    /// # Example
+    ///
+    /// ```rust, ignore
+    /// let user = use_state(|| (String::from("Alice"), 30));
+    /// let user: Writable<(String, u32)> = user.into_writable();
+    ///
+    /// let name = user.map(|user| &user.0, |user| &mut user.0);
+    /// ```
+    pub fn map<O>(
+        &self,
+        get: impl Fn(&T) -> &O + 'static,
+        get_mut: impl Fn(&mut T) -> &mut O + 'static,
+    ) -> Writable<O> {
+        let peek_fn = self.peek_fn.clone();
+        let write_fn = self.write_fn.clone();
+        Writable {
+            peek_fn: Rc::new(move || (peek_fn)().map(|r| Ref::map(r, |v| get(v)))),
+            write_fn: Rc::new(move || (write_fn)().map(|r| RefMut::map(r, |v| get_mut(v)))),
+            subscribe_fn: self.subscribe_fn.clone(),
+            notify_fn: self.notify_fn.clone(),
+        }
+    }
+}
+
+pub trait IntoWritable<T: 'static> {
+    fn into_writable(self) -> Writable<T>;
+}
+
+impl<T: 'static> IntoWritable<T> for Writable<T> {
+    fn into_writable(self) -> Writable<T> {
+        self
+    }
+}
+
+impl<T: 'static> IntoWritable<T> for State<T> {
+    fn into_writable(self) -> Writable<T> {
+        Writable::from_state(self)
+    }
+}
+
+impl<T> From<State<T>> for Writable<T> {
+    fn from(value: State<T>) -> Self {
+        value.into_writable()
+    }
+}
+
+impl<T> From<Writable<T>> for Readable<T> {
+    fn from(value: Writable<T>) -> Self {
+        Readable {
+            read_fn: Rc::new({
+                let value = value.clone();
+                move || {
+                    value.subscribe();
+                    ReadableRef::Ref((value.peek_fn)())
+                }
+            }),
+            peek_fn: Rc::new(move || ReadableRef::Ref((value.peek_fn)())),
+            equal_fn: Rc::new(move |_| true),
+        }
+    }
+}

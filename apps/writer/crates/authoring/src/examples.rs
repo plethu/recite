@@ -60,6 +60,6 @@ impl WriterExample {
                 schema: Some(schema),
             },
         )?;
-        Workbench::from_document(document)
+        Workbench::from_document(document, None)
     }
 }

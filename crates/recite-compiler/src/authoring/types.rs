@@ -2,27 +2,45 @@ use recite_core::{
     BlockId, SourceId, SourceSpan,
     ast::{SourceMetadataScalar, SourceMetadataValue},
 };
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct BlockDefinitionSummary {
+    pub(super) data: Arc<BlockDefinitionData>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct BlockDefinitionData {
     pub(super) id: BlockId,
     pub(super) id_span: Option<SourceSpan>,
     pub(super) span: SourceSpan,
+    pub(super) is_default: bool,
+    pub(super) has_end_destination: bool,
 }
 
 impl BlockDefinitionSummary {
     #[must_use]
+    pub fn is_default(&self) -> bool {
+        self.data.is_default
+    }
+    /// An authored END destination, including inside a choice or conditional.
+    /// This is a structural badge, not a reachability result.
+    #[must_use]
+    pub fn has_end_destination(&self) -> bool {
+        self.data.has_end_destination
+    }
+    #[must_use]
     pub fn id(&self) -> &BlockId {
-        &self.id
+        &self.data.id
     }
     #[must_use]
     pub fn span(&self) -> &SourceSpan {
-        &self.span
+        &self.data.span
     }
     #[must_use]
     pub fn id_span(&self) -> Option<&SourceSpan> {
-        self.id_span.as_ref()
+        self.data.id_span.as_ref()
     }
 }
 

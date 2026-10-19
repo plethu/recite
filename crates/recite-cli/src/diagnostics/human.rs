@@ -5,7 +5,7 @@ use std::io::Write;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use recite_core::{DiagnosticRecord, DiagnosticSeverity, SourceSpan, source_lines};
+use recite_core::{DiagnosticRecord, DiagnosticSeverity, SourceSpan};
 use recite_ui::RenderedDiagnostic;
 
 use crate::error::CliError;
@@ -72,6 +72,7 @@ pub(super) fn write_diagnostic(
     paint: Paint,
     record: &DiagnosticRecord,
     rendered: &RenderedDiagnostic,
+    source_line: Option<&str>,
 ) -> Result<(), CliError> {
     let line = record.span.start.line();
     let gutter = " ".repeat(line.to_string().len());
@@ -89,7 +90,7 @@ pub(super) fn write_diagnostic(
         paint.dim("-->"),
         paint.path(&location(&record.span))
     )?;
-    if let Some((text, start, width)) = excerpt(&record.span) {
+    if let Some((text, start, width)) = source_line.and_then(|text| excerpt(&record.span, text)) {
         writeln!(writer, "{gutter} {}", paint.dim("|"))?;
         writeln!(
             writer,
@@ -232,10 +233,7 @@ fn display_path(file: &str) -> String {
 }
 
 /// The span's source line, the caret's start column and its width, when the file is readable.
-fn excerpt(span: &SourceSpan) -> Option<(String, usize, usize)> {
-    let source = std::fs::read_to_string(&span.file).ok()?;
-    let line_number = usize::try_from(span.start.line()).ok()?;
-    let (text, _) = source_lines(&source).nth(line_number.checked_sub(1)?)?;
+fn excerpt(span: &SourceSpan, text: &str) -> Option<(String, usize, usize)> {
     let start = usize::try_from(span.start.column()).ok()?.checked_sub(1)?;
     let length = text.chars().count();
     let width = span

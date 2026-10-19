@@ -5,7 +5,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
-pub(super) struct DraftSnapshot {
+pub(crate) struct DraftSnapshot {
     version: u32,
     pub baseline: String,
     pub draft: String,
@@ -24,6 +24,11 @@ impl super::session::Source {
             baseline: self.baseline.clone(),
             draft: self.draft.clone(),
         })
+    }
+    pub(crate) fn begin_saved_recovery(
+        &mut self,
+    ) -> Result<crate::recovery::worker::Durability<DraftSnapshot>, FileError> {
+        self.recovery.begin_persist(self.snapshot())
     }
     pub(super) fn queue_recovery(&mut self) -> Result<(), FileError> {
         self.recovery.queue(self.snapshot())

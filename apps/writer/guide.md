@@ -23,6 +23,10 @@ preferences remain valid. Each open scene retains its view and selection within 
 shows the selected beat, with an optional **Script + Map** split. **Focus writing** hides the
 surrounding controls until **Exit focus writing** restores them.
 
+Cold Script and Map projections prepare in the background when their surfaces need them. A view
+command from Source leaves Source editable during preparation; newer drafts or navigation keep that
+command from changing your view when preparation finishes.
+
 In Map, click a card to select it; use **Open script**, Enter or a double click to open its writing
 pane; the **Close beat editor** icon or Escape returns to the map. Select the title to rename the
 beat in place; Enter applies and Escape cancels. Renaming uses the shared undo history and updates
@@ -196,6 +200,12 @@ Neither recovery path overwrites externally changed files: the original baseline
 conflict boundary. Background snapshots are coalesced, so a crash can lose the latest edit that has
 not reached disk. Explicit save, discard and close wait for recovery cleanup.
 
+Manuscript and declaration saves perform durable writes on a background worker. Manuscript saves
+also prepare the changed search index there. You can keep editing while **Saving…** is shown; newer
+edits remain unsaved after the captured version reaches disk. Switching files or projects waits
+until that save finishes. Save-and-close actions close only after durability succeeds and no newer
+edits remain; cancelling their dialog keeps the accepted save running and leaves the editor open.
+
 Closing with translation drafts lists the affected entries and offers direct navigation, save-all
 and discard-all actions. Declaration drafts and running jobs have a separate close dialog with save,
 discard, cancellation and navigation controls. Failures leave the app open.
@@ -258,6 +268,11 @@ Large beats page their entries without flattening condition groups. Pin referenc
 snapshot alongside the script; Previous/Next beat retraces visits within the current scene. Project
 search matches complete words in saved lines and their document, beat and speaker context. Save
 updates the affected search index; Refresh discovers new files and refreshes the full saved context.
+
+Preview startup prepares catalogues and compiles on one background worker. Restart captures its
+inputs; later control edits belong to the next run. The previous page stays visible while its
+controls pause. Cancel or leave the preview to reject the result. A changed scene or catalogue also
+rejects preparation; the compiler phase already in progress finishes on its worker.
 
 Initial project open runs in the background. Cancellation reaches compiler and search checkpoints;
 an individual filesystem operation or parse finishes before its next checkpoint. Recovery writes are

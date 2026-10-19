@@ -87,7 +87,7 @@ impl Component for Dialog {
                     e.prevent_default();
                     close.call(());
                 } else if e.key == Key::Named(NamedKey::Tab) && !order.is_empty() {
-                    let current = *Platform::get().focused_accessibility_id.peek();
+                    let current = *Platform::get().current_window().focused_accessibility_id.peek();
                     let index = order.iter().position(|id| *id == current).unwrap_or(0);
                     let step = if e.modifiers.contains(Modifiers::SHIFT) {
                         order.len() - 1

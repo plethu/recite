@@ -35,7 +35,10 @@ pub(crate) fn keyboard(
         if regions.is_empty() {
             return;
         }
-        let focused = *Platform::get().focused_accessibility_id.peek();
+        let focused = *Platform::get()
+            .current_window()
+            .focused_accessibility_id
+            .peek();
         let index = regions.iter().position(|id| *id == focused).unwrap_or(0);
         let step = if event.modifiers.contains(Modifiers::SHIFT) {
             regions.len() - 1

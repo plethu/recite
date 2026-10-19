@@ -25,6 +25,7 @@ pub(crate) fn app() -> Element {
     let picker_open = use_state(|| false);
     let mut destination = use_state(|| "Missing Courier".to_owned());
     let mut view = use_state(|| 0);
+    let status = use_a11y();
     let mut row = use_state(|| 1);
     let mut message = use_state(|| "Try the controls, then compare both appearances.".to_owned());
     let options = use_memo(move || {
@@ -199,10 +200,17 @@ pub(crate) fn app() -> Element {
                 ),
         )
         .child(
-            label()
-                .text(message.read().clone())
-                .font_size(t::small())
-                .color(p.muted),
+            rect()
+                .a11y_id(status)
+                .a11y_role(AccessibilityRole::Status)
+                .a11y_alt(message.read().clone())
+                .a11y_builder(|node| node.set_live(accesskit::Live::Polite))
+                .child(
+                    label()
+                        .text(message.read().clone())
+                        .font_size(t::small())
+                        .color(p.muted),
+                ),
         );
     let rows = ["Relay Hub", "Start · Relay Desk", "Missing Courier"];
     let mut list = rect()
@@ -299,3 +307,6 @@ pub(crate) fn app() -> Element {
         )
         .into_element()
 }
+
+#[cfg(test)]
+mod tests;

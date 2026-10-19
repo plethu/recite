@@ -71,10 +71,12 @@ fn dispatch(mut writer: Writer, event: &Event<KeyboardEventData>) {
             Key::Character(k) if k.eq_ignore_ascii_case("o") => Some(Command::Back),
             Key::Character(k) if k.eq_ignore_ascii_case("i") => Some(Command::Forward),
             Key::Character(k) if k.eq_ignore_ascii_case("w") => {
-                writer
-                    .vim
-                    .pending
-                    .set(Some(*Platform::get().focused_accessibility_id.peek()));
+                writer.vim.pending.set(Some(
+                    *Platform::get()
+                        .current_window()
+                        .focused_accessibility_id
+                        .peek(),
+                ));
                 event.stop_propagation();
                 event.prevent_default();
                 return;

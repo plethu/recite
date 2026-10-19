@@ -12,8 +12,10 @@ use crate::session::{PendingEffect, PendingPrompt, SessionPhase, StatementFrame}
 
 pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = 1;
 
+mod borrowed;
 mod conversion;
 
+pub(crate) use borrowed::SessionSnapshotRef;
 pub use conversion::DialogueSessionSnapshotConversionError;
 pub(crate) use conversion::{availability_from_snapshot, availability_snapshot};
 

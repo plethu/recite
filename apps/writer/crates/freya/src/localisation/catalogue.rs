@@ -1,9 +1,12 @@
 //! File-backed PO editing. Drafts never become a parallel translation database.
 mod preview;
+mod queue;
+pub(crate) use preview::PreviewInput;
 mod recovery;
 mod save;
 use super::messages::{MsgId, text as wording};
 use recite_core::po::{PoDocument, PoDocumentFingerprint, PoEntryId};
+pub(crate) use save::{CatalogueDurability, CatalogueSave, CatalogueSaved};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -23,7 +26,8 @@ pub(super) struct Comparison {
 
 pub(crate) struct Catalogue {
     pub path: PathBuf,
-    pub document: PoDocument,
+    pub document: Arc<PoDocument>,
+    pub(crate) saving: bool,
     baseline: PoDocumentFingerprint,
     // Retained by trial runs; replacement also invalidates snapshots after reload.
     revision: Arc<()>,
@@ -31,6 +35,7 @@ pub(crate) struct Catalogue {
     recovery: Option<crate::recovery::SnapshotStore<recovery::SnapshotData>>,
     recovery_failure: Option<String>,
     anchors: BTreeMap<String, Vec<PoEntryId>>,
+    queue_cache: std::cell::RefCell<Option<queue::QueueCache>>,
 }
 impl Catalogue {
     pub fn open(path: &Path) -> Result<Self, String> {
@@ -53,14 +58,19 @@ impl Catalogue {
             recovery: None,
             recovery_failure: None,
             anchors,
+            queue_cache: Default::default(),
             path: path.to_owned(),
             baseline: document.fingerprint(),
-            document,
+            document: Arc::new(document),
+            saving: false,
             drafts: BTreeMap::new(),
         }
     }
     pub(super) fn saved_source(&self) -> Arc<String> {
         self.document.source_snapshot()
+    }
+    pub(crate) fn saved_fingerprint(&self) -> &PoDocumentFingerprint {
+        &self.baseline
     }
     pub fn dirty(&self) -> bool {
         !self.drafts.is_empty()
@@ -146,6 +156,7 @@ impl Catalogue {
         self.queue_recovery();
     }
     pub fn reload(&mut self) -> Result<(), String> {
+        self.require_idle_save()?;
         if self.dirty() {
             return Err(wording(MsgId::WriterReloadDrafts));
         }
@@ -180,6 +191,7 @@ impl Catalogue {
         keep_drafts: bool,
         expected: &PoDocumentFingerprint,
     ) -> Result<(), String> {
+        self.require_idle_save()?;
         let mut next = Self::open(&self.path)?;
         if &next.baseline != expected {
             return Err(wording(MsgId::WriterCompare));
@@ -216,6 +228,7 @@ impl Catalogue {
         document: PoDocument,
         expected: &PoDocumentFingerprint,
     ) -> Result<(), String> {
+        self.require_idle_save()?;
         if self.dirty() {
             return Err(wording(MsgId::WriterReloadDrafts));
         }
@@ -236,6 +249,9 @@ impl Catalogue {
             .map(|h| h.value())
     }
     pub fn discard(&mut self, id: PoEntryId) {
+        if self.saving {
+            return;
+        }
         self.drafts.remove(&id);
         self.revision = Arc::new(());
         self.queue_recovery();

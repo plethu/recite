@@ -51,6 +51,9 @@ fn alias(test: &mut TestingRunner, alias: &str) -> Result {
         Code::Enter,
         Modifiers::empty(),
     );
+    if matches!(alias, "w" | "wa") {
+        support::wait_editor_work(test)?;
+    }
     Ok(())
 }
 #[test]

@@ -23,7 +23,7 @@ impl Navigation {
         let mut pending = use_state(|| None);
         let sequence_id = use_a11y();
         use_after_side_effect(move || {
-            if !*Platform::get().is_app_focused.read() {
+            if !*Platform::get().current_window().is_app_focused.read() {
                 pending.set_if_modified(None);
             }
         });
@@ -35,7 +35,10 @@ impl Navigation {
         let query = use_state(String::new);
         let mut selected = use_state(|| None);
         use_after_side_effect(move || {
-            let focused = *Platform::get().focused_accessibility_id.read();
+            let focused = *Platform::get()
+                .current_window()
+                .focused_accessibility_id
+                .read();
             if pending
                 .peek()
                 .is_some_and(|id| id != focused && focused != sequence_id)
@@ -60,7 +63,11 @@ impl Navigation {
         }
     }
     pub fn owns_keyboard(self) -> bool {
-        *Platform::get().focused_accessibility_id.peek() == self.sequence_id
+        *Platform::get()
+            .current_window()
+            .focused_accessibility_id
+            .peek()
+            == self.sequence_id
     }
     pub fn area(mut self, id: AccessibilityId, area: Area) {
         if self
