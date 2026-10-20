@@ -19,6 +19,26 @@ impl Snapshot for DraftSnapshot {
     }
 }
 impl super::session::Source {
+    pub(super) fn begin_replacement_recovery(
+        &mut self,
+        baseline: &str,
+        draft: &str,
+    ) -> Result<worker::Durability<DraftSnapshot>, FileError> {
+        self.recovery
+            .begin_persist((baseline != draft).then(|| DraftSnapshot {
+                version: 1,
+                baseline: baseline.to_owned(),
+                draft: draft.to_owned(),
+            }))
+    }
+    /// Draft changes retain the mounted buffer identity; rebasing advances it separately.
+    pub fn set_draft(&mut self, draft: String) -> Result<(), FileError> {
+        if self.draft != draft {
+            self.draft = draft;
+            self.queue_recovery()?;
+        }
+        Ok(())
+    }
     fn snapshot(&self) -> Option<DraftSnapshot> {
         (self.draft != self.baseline).then(|| DraftSnapshot {
             version: 1,

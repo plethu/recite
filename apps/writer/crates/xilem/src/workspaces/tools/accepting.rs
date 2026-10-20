@@ -1,6 +1,6 @@
 use super::*;
 impl Writer {
-    pub(super) fn accept_tool(&mut self, mut completed: Completed) -> Option<Value> {
+    pub(super) fn accept_tool(&mut self, mut completed: Completed) -> Retirement {
         let current = self
             .workspaces
             .tools
@@ -8,7 +8,7 @@ impl Writer {
             .as_ref()
             .is_some_and(|request| Arc::ptr_eq(request, &completed.request));
         if !current {
-            return completed.result.ok();
+            return Retirement::Drop(completed.result.ok());
         }
         self.workspaces.tools.pending = None;
         let project_matches = self
@@ -17,7 +17,7 @@ impl Writer {
             .is_some_and(|project| project.root() == completed.request.root);
         if !project_matches {
             self.status = "The project changed while its tool was running.".into();
-            return completed.result.ok();
+            return Retirement::Drop(completed.result.ok());
         }
         let result = match &mut completed.result {
             Ok(Value::Started(receipt)) => self
@@ -31,7 +31,7 @@ impl Writer {
                 .and_then(|session| session.accept_generation(receipt))
                 .map(|()| {
                     self.workspaces.declarations.replace(std::mem::take(rows));
-                    self.workspaces.schema_needs_refresh = true;
+                    self.workspaces.schema_refresh = Some(super::super::SchemaUpdate::Published);
                     self.refresh_schema_context();
                 }),
             Ok(Value::Refreshed(prepared)) => self
@@ -44,7 +44,7 @@ impl Writer {
                         .map_err(|error| error.to_string())
                 })
                 .map(|()| {
-                    self.workspaces.schema_needs_refresh = false;
+                    let update = self.workspaces.schema_refresh.take().map(super::super::SchemaUpdate::message).unwrap_or("Schema updated");
                     self.reading.prepare(self.session.model());
                     let stale_rule_draft = self.session.model().has_draft() && self.rules.as_ref().is_some_and(|reply| !reply.projection().belongs_to(self.session.model().document()));
                     if stale_rule_draft { self.retire_rules(); }
@@ -52,19 +52,33 @@ impl Writer {
                     self.invalidate_map();
                     self.refresh_map_if_needed();
                     self.status = if stale_rule_draft {
-                        "Schema published; project analysis refreshed. The staged reply draft is retained for external repair."
-                    } else { "Schema published; project analysis refreshed." }.into();
+                        format!("{update}; project analysis refreshed. The staged reply draft is retained for external repair.")
+                    } else { format!("{update}; project analysis refreshed.") };
                 }),
+            Ok(Value::Source(prepared)) => {
+                let result = self.accept_source_tool(prepared);
+                match result {
+                    Ok(work) => {
+                        self.workspaces.tools.pending = Some(completed.request.clone());
+                        let value = completed.result.ok();
+                        return Retirement::Recover(Box::new(work), value);
+                    },
+                    Err(error) => Err(error),
+                }
+            }
+            Ok(Value::SourceRecovered(receipt)) => self.finish_source_tool(receipt),
             Err(error) => Err(error.clone()),
         };
         if let Err(error) = result {
-            let message = if self.workspaces.schema_needs_refresh {
-                format!("Schema published; context refresh failed: {error}")
+            let message = if completed.request.kind == ToolKind::Refresh
+                && let Some(update) = self.workspaces.schema_refresh
+            {
+                format!("{}; context refresh failed: {error}", update.message())
             } else {
                 error
             };
             self.schema_feedback(message);
         }
-        completed.result.ok()
+        Retirement::Drop(completed.result.ok())
     }
 }

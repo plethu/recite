@@ -30,11 +30,38 @@ fn default_editor_retry_keeps_the_repair_artifact_target_and_import_guidance() {
     writer.open_system_editor();
     let request = launches.try_recv().unwrap();
     assert_eq!(request.path(), source);
-    assert_eq!(request.document(), document);
+    assert!(request.is_current(writer.session.project().unwrap()));
     assert!(request.editor.is_none());
     writer.accept_editor(request, Some(Ok(())));
     assert!(writer.status.contains("Import repaired source"));
     assert!(!writer.status.contains("Reload to inspect"));
+}
+
+#[test]
+fn declaration_editor_targets_follow_the_project_while_dialogue_targets_follow_the_document() {
+    let directory = project(recite_writer_model::FIXTURE).unwrap();
+    let other_path = directory.path().join("other.recite");
+    std::fs::write(&other_path, ":: other default\n-> END\n").unwrap();
+    let mut writer = open(&directory).unwrap();
+    let project = writer.session.project().unwrap();
+    let source = Request::source(project.current().path().to_owned(), None);
+    let draft = Request::declaration_draft(project, directory.path().join("draft.toml"), None);
+    writer
+        .session
+        .project_mut()
+        .unwrap()
+        .switch(&other_path)
+        .unwrap();
+    assert!(draft.is_current(writer.session.project().unwrap()));
+    assert!(!source.is_current(writer.session.project().unwrap()));
+    let foreign = self::project(recite_writer_model::FIXTURE).unwrap();
+    let other = open(&foreign).unwrap();
+    assert!(!draft.is_current(other.session.project().unwrap()));
+    assert!(
+        draft
+            .next_step()
+            .contains("Import repaired declaration draft")
+    );
 }
 
 #[test]

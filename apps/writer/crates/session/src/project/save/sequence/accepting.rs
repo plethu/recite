@@ -26,6 +26,16 @@ impl SaveSequence {
             (Some(Pending::Manifest), Receipt::Manifest(outcome)) => {
                 files.accept_manifest_save(outcome)
             }
+            (Some(Pending::PrepareDeclaration), Receipt::DeclarationPrepared(result)) => {
+                match result {
+                    Ok(request) => {
+                        self.queued =
+                            Some((Work::DeclarationSource(request), Pending::DeclarationSource))
+                    }
+                    Err(error) => self.record(error),
+                }
+                Ok(())
+            }
             (Some(Pending::DeclarationSource), Receipt::DeclarationSource(request, result)) => {
                 self.accept_source(files, request, result);
                 Ok(())
@@ -120,24 +130,33 @@ impl SaveSequence {
         &mut self,
         files: &mut ProjectFiles,
         current: &mut Workbench,
-        request: Box<crate::declarations::DeclarationSave>,
+        mut request: Box<crate::declarations::DeclarationSave>,
         result: Result<(), FileError>,
     ) -> Result<(), FileError> {
+        let result = result.and_then(|()| {
+            files
+                .declarations
+                .as_mut()
+                .ok_or(FileError::Selection)?
+                .accept_saved_output(&mut request)
+        });
         if let Err(error) = result {
             self.record(error);
             self.retire(Work::RetireDeclaration(request), None);
             return Ok(());
         }
-        files
-            .declarations
-            .as_mut()
-            .ok_or(FileError::Selection)?
-            .accept_saved_output(*request);
         // Refresh validates the published schema while preserving newer source drafts.
         files.set_saving(false);
         let result = files.refresh_request(current);
         files.set_saving(true);
-        self.queued = Some((Work::Refresh(Box::new(result?)), Pending::Refresh));
+        let next = match result {
+            Ok(work) => Some((Work::Refresh(Box::new(work)), Pending::Refresh)),
+            Err(error) => {
+                self.record(error);
+                None
+            }
+        };
+        self.retire(Work::RetireDeclaration(request), next);
         Ok(())
     }
 }

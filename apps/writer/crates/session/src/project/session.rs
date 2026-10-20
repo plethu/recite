@@ -112,6 +112,14 @@ impl ProjectSession {
             });
             session.persist_recovery(recovery)?;
         }
+        if let Some(source) = self
+            .files
+            .declarations
+            .as_mut()
+            .and_then(|session| session.source.as_mut())
+        {
+            source.flush_recovery()?;
+        }
         Ok(())
     }
     pub fn save_all(&mut self) -> Result<(), FileError> {

@@ -50,11 +50,11 @@ impl Writer {
             return;
         }
         if let Some(failed) = &self.external.failed
-            && failed.is_repair()
+            && failed.is_separate_file()
             && self
                 .session
                 .project()
-                .is_some_and(|project| project.current().path() == failed.document())
+                .is_some_and(|project| failed.is_current(project))
         {
             let request = Arc::new(failed.with_system_editor());
             self.launch_editor(request);
@@ -92,11 +92,9 @@ impl Writer {
             || self
                 .session
                 .project()
-                .is_none_or(|project| project.current().path() != request.document())
+                .is_none_or(|project| !request.is_current(project))
         {
-            self.status =
-                "Saved accepted source; editor launch cancelled because the document changed."
-                    .into();
+            self.status = "Editor launch cancelled because its source context changed.".into();
             return;
         }
         let sent = self
@@ -128,7 +126,7 @@ impl Writer {
         let current = self
             .session
             .project()
-            .is_some_and(|project| project.current().path() == request.document());
+            .is_some_and(|project| request.is_current(project));
         let document = self
             .session
             .project()
@@ -139,11 +137,9 @@ impl Writer {
             None => {
                 format!("Editor launch requested for {document}; Writer drafts remain recoverable.")
             }
-            Some(Ok(())) if current && request.is_repair() => format!(
-                "Editor launcher finished for {document}. Choose Import repaired source to validate its changes; your original draft remains recoverable."
-            ),
             Some(Ok(())) if current => format!(
-                "Editor launcher finished for {document}. Reload to inspect external changes; Writer drafts remain recoverable."
+                "Editor launcher finished for {document}. {}; Writer drafts remain recoverable.",
+                request.next_step()
             ),
             Some(Ok(())) => format!(
                 "Editor launcher finished for {document}. Return to that document to inspect external changes."

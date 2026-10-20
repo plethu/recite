@@ -8,7 +8,7 @@ use xilem::{
 
 struct Output {
     completed: Completed,
-    retire: mpsc::SyncSender<Option<Value>>,
+    retire: mpsc::SyncSender<Retirement>,
 }
 impl std::fmt::Debug for Output {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -28,11 +28,21 @@ async fn serve(proxy: MessageProxy<Output>, mut requests: UnboundedReceiver<Job>
     while let Some(job) = requests.recv().await {
         let proxy = proxy.clone();
         let _ = tokio::task::spawn_blocking(move || {
-            let completed = job.execute();
-            let (retire, retired) = mpsc::sync_channel(1);
-            if proxy.message(Output { completed, retire }).is_ok() {
-                // Retire displaced analyses on the worker after the UI accepts their receipt.
-                let _ = retired.recv();
+            let mut completed = job.execute();
+            loop {
+                let request = completed.request.clone();
+                let (retire, retired) = mpsc::sync_channel(1);
+                if proxy.message(Output { completed, retire }).is_err() {
+                    break;
+                }
+                let next = retired
+                    .recv()
+                    .ok()
+                    .and_then(|retirement| retirement.finish(request));
+                match next {
+                    Some(next) => completed = next,
+                    None => break,
+                }
             }
         })
         .await;

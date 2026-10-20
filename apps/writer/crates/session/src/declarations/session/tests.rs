@@ -11,11 +11,13 @@ pub(super) fn session() -> Result<(tempfile::TempDir, Session), Box<dyn std::err
     let mut session = Session {
         saving: false,
         registration: Ok(None),
-        generation: Generation::Idle,
+        activity: Activity::Idle,
         root: dir.path().to_owned(),
         output,
-        output_baseline,
-        schema: parsed.schema().clone(),
+        schema_output: Arc::new(SchemaOutput::Ready(super::super::producer::Generated {
+            text: output_baseline,
+            schema: parsed.schema().clone().into(),
+        })),
         source: None,
     };
     session.bind(&dir.path().join("schema.toml"))?;

@@ -24,6 +24,7 @@ enum AfterSave {
     Stay,
     Close,
     Build(Option<String>),
+    Declarations,
     OpenEditor(std::sync::Arc<crate::external_editor::Request>),
 }
 pub(super) struct EditorWork {
@@ -55,6 +56,9 @@ impl Writer {
     }
     pub(super) fn save_all(&mut self) {
         self.start_save(Scope::All, AfterSave::Stay);
+    }
+    pub(crate) fn save_declarations(&mut self) {
+        self.start_save(Scope::Declarations, AfterSave::Declarations);
     }
     pub(super) fn save_and_close(&mut self) {
         self.start_save(Scope::All, AfterSave::Close);
@@ -187,6 +191,12 @@ impl Writer {
             AfterSave::Close => self.phase = Phase::ConfirmClose,
             AfterSave::OpenEditor(request) if result.is_ok() => self.launch_editor(request),
             AfterSave::Build(asset) if result.is_ok() => self.build_selected(asset),
+            AfterSave::Declarations if result.is_ok() => self.refresh_declaration_rows(),
+            AfterSave::Declarations => {
+                if let Err(error) = &result {
+                    self.schema_feedback(error.to_string());
+                }
+            }
             AfterSave::Stay | AfterSave::OpenEditor(_) | AfterSave::Build(_) => {}
         }
         if self.phase == Phase::Writing {

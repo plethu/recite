@@ -19,6 +19,19 @@ pub(crate) enum Screen {
     Declarations,
     Build,
 }
+#[derive(Clone, Copy)]
+enum SchemaUpdate {
+    Published,
+    Reloaded,
+}
+impl SchemaUpdate {
+    fn message(self) -> &'static str {
+        match self {
+            Self::Published => "Schema published",
+            Self::Reloaded => "Schema reloaded",
+        }
+    }
+}
 #[derive(Default)]
 pub(crate) struct Workspaces {
     pub screen: Screen,
@@ -27,7 +40,7 @@ pub(crate) struct Workspaces {
     build_feedback: Vec<String>,
     feedback_page: usize,
     tools: tools::Tools,
-    schema_needs_refresh: bool,
+    schema_refresh: Option<SchemaUpdate>,
     schema_feedback: Vec<String>,
     schema_feedback_page: usize,
 }

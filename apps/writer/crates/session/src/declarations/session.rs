@@ -1,13 +1,24 @@
 //! Explicit standalone source association; generated manifests are never edited.
 use crate::project::{FileError, read_regular, save::replace_checked};
 use recite_core::schema::{ProjectSchema, SchemaSource};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 mod generation;
+mod output;
+use output::SchemaOutput;
+pub use output::SchemaOutputStatus;
 mod saving;
+mod source_work;
 mod starting;
-use generation::Generation;
+pub use source_work::{
+    SourceAction, SourceReceipt, SourceRecovered, SourceRecovery, SourceStatus, SourceWork,
+};
+mod activity;
+use activity::Activity;
 pub use generation::{GenerationReceipt, GenerationWork};
-pub use saving::DeclarationSave;
+pub use saving::{DeclarationSave, DeclarationSaveRequest};
 pub use starting::{GenerationStart, GenerationStarted};
 
 /// Freshness of the mounted declaration source buffer, separate from recovery ordering.
@@ -22,11 +33,10 @@ impl DeclarationRevision {
 pub struct Session {
     saving: bool,
     pub output: PathBuf,
-    pub schema: ProjectSchema,
-    output_baseline: String,
+    schema_output: Arc<SchemaOutput>,
     pub source: Option<Source>,
     pub registration: Result<Option<recite_config::ProducerRegistration>, String>,
-    generation: Generation,
+    activity: Activity,
     root: PathBuf,
 }
 pub struct Source {
@@ -74,11 +84,13 @@ impl Session {
         Ok(Self {
             saving: false,
             registration,
-            generation: Generation::Idle,
+            activity: Activity::Idle,
             root: root.to_owned(),
             output,
-            schema,
-            output_baseline,
+            schema_output: Arc::new(SchemaOutput::Ready(super::producer::Generated {
+                schema: schema.into(),
+                text: output_baseline,
+            })),
             source: None,
         })
     }
@@ -141,119 +153,60 @@ impl Session {
             .schema
             .ok_or(FileError::Validation(loaded.diagnostics))?;
         self.check_owner(&schema)?;
-        self.schema = schema;
-        self.output_baseline = text;
+        self.schema_output = Arc::new(SchemaOutput::Ready(super::producer::Generated {
+            schema: schema.into(),
+            text,
+        }));
         Ok(())
     }
     pub fn reload_registration(&mut self) {
         if !self.busy() {
-            self.registration = Self::registration(&self.root, &self.schema);
+            self.registration = Self::registration(&self.root, self.last_valid_schema());
         }
     }
     pub fn cancel(&self) {
-        self.generation.cancel();
+        self.activity.cancel();
     }
     pub fn busy(&self) -> bool {
-        !matches!(self.generation, Generation::Idle)
+        !matches!(self.activity, Activity::Idle)
     }
     pub fn dirty(&self) -> bool {
-        self.source.as_ref().is_some_and(|s| s.draft != s.baseline)
-    }
-    pub fn bind(&mut self, path: &Path) -> Result<(), FileError> {
-        self.require_idle_save()?;
-        if self.busy() {
-            return Err(FileError::UnsavedDocument);
-        }
-        if self.dirty() {
-            return Err(FileError::UnsavedDocument);
-        }
-        if path.canonicalize()? == self.output.canonicalize()? {
-            return Err(FileError::SchemaOwnership);
-        }
-        let baseline = read_regular(path)?;
-        let source = parse(path, &baseline)?;
-        self.check_owner(source.schema())?;
-        let recovery = super::recovery::Store::open(path)?;
-        let (baseline, draft) = recovery
-            .snapshot()
-            .map(|s| (s.baseline.clone(), s.draft.clone()))
-            .unwrap_or_else(|| (baseline.clone(), baseline));
-        self.check_owner(parse(path, &baseline)?.schema())?;
-        self.source = Some(Source {
-            path: path.to_owned(),
-            baseline,
-            draft,
-            recovery,
-            revision: DeclarationRevision::default(),
-        });
-        Ok(())
+        self.source
+            .as_ref()
+            .is_some_and(|s| s.draft != s.baseline || s.recovery.pending())
     }
     fn check_owner(&self, candidate: &ProjectSchema) -> Result<(), FileError> {
-        let producer = |s: &ProjectSchema| {
-            s.producer_metadata
-                .as_ref()
-                .and_then(|m| m.producer.clone())
-        };
-        let expected = producer(&self.schema);
-        if expected.is_none() || expected != producer(candidate) {
-            return Err(FileError::SchemaOwnership);
-        }
-        Ok(())
+        check_owner(self.last_valid_schema(), candidate)
     }
-    /// Explicit reload keeps the previous draft as a source file before rebasing.
-    pub fn reload_source(&mut self) -> Result<PathBuf, FileError> {
-        self.require_idle_save()?;
-        if self.busy() {
-            return Err(FileError::UnsavedDocument);
-        }
-        use std::io::Write;
-        let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
-        let disk = read_regular(&source.path)?;
-        let output = read_regular(&self.output)?;
-        let loaded =
-            recite_core::schema::load_schema_manifest_str(self.output.to_string_lossy(), &output);
-        if let Some(schema) = &loaded.schema {
-            self.check_owner(schema)?;
-        }
-        let mut copy = tempfile::Builder::new()
-            .prefix(".recite-schema-recovered-")
-            .suffix(".toml")
-            .tempfile_in(source.path.parent().ok_or(FileError::Selection)?)?;
-        copy.write_all(source.draft.as_bytes())?;
-        copy.as_file().sync_all()?;
-        let (_, path) = copy.keep().map_err(|e| e.error)?;
-        if let Some(source) = &mut self.source {
-            source.baseline = disk.clone();
-            source.draft = disk;
-            source.revision.advance();
-            source.flush_recovery()?;
-        }
-        self.output_baseline = output;
-        if let Some(schema) = loaded.schema {
-            self.schema = schema;
-        }
-        Ok(path)
+    /// Last validated declarations; consult `output_status` before presenting them as current.
+    pub fn last_valid_schema(&self) -> &ProjectSchema {
+        self.schema_output.last_valid_schema()
     }
-    pub fn discard(&mut self) -> Result<(), FileError> {
-        self.require_idle_save()?;
-        if self.busy() {
-            return Err(FileError::UnsavedDocument);
-        }
-        if let Some(source) = &mut self.source {
-            source.draft = source.baseline.clone();
-            source.revision.advance();
-            source.flush_recovery()?;
-        }
-        Ok(())
+    pub fn last_valid_schema_snapshot(&self) -> Arc<ProjectSchema> {
+        self.schema_output.last_valid_schema().clone()
+    }
+    pub fn output_status(&self) -> SchemaOutputStatus {
+        self.schema_output.status()
     }
     pub fn current(&self) -> bool {
-        self.source.as_ref().is_some_and(|s| {
-            parse(&s.path, &s.draft).is_ok_and(|source| {
-                source.schema_fingerprint()
-                    == recite_core::schema::canonical_schema_fingerprint(&self.schema)
-            })
+        self.source.as_ref().is_some_and(|source| {
+            source_work::inspect_source(&self.schema_output, &source.path, &source.draft)
+                .is_ok_and(|status| status == SourceStatus::Current)
         })
     }
+}
+fn check_owner(expected: &ProjectSchema, candidate: &ProjectSchema) -> Result<(), FileError> {
+    let producer = |schema: &ProjectSchema| {
+        schema
+            .producer_metadata
+            .as_ref()
+            .and_then(|m| m.producer.clone())
+    };
+    let expected = producer(expected);
+    if expected.is_none() || expected != producer(candidate) {
+        return Err(FileError::SchemaOwnership);
+    }
+    Ok(())
 }
 fn parse(path: &Path, text: &str) -> Result<SchemaSource, FileError> {
     let loaded = SchemaSource::load_str(path.to_string_lossy(), text);

@@ -47,7 +47,7 @@ impl Work {
         match self.action {
             Open::Declarations => {
                 let session = Session::open(&self.root).map_err(|error| error.to_string())?;
-                let rows = entries::entries(&session.schema)
+                let rows = entries::entries(session.last_valid_schema())
                     .into_iter()
                     .map(declarations::Row::new)
                     .collect();

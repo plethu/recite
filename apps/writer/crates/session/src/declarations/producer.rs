@@ -15,8 +15,8 @@ use std::{
 use wait_timeout::ChildExt;
 
 pub struct Generated {
-    pub text: String,
-    pub schema: ProjectSchema,
+    pub(super) text: String,
+    pub(super) schema: Arc<ProjectSchema>,
 }
 pub struct Job {
     cancel: Arc<AtomicBool>,
@@ -176,7 +176,10 @@ fn generate(
             "Generated schema belongs to a different producer. Previous schema retained.".into(),
         );
     }
-    Ok(Generated { text, schema })
+    Ok(Generated {
+        text,
+        schema: schema.into(),
+    })
 }
 #[cfg(test)]
 mod tests;

@@ -71,7 +71,7 @@ pub(super) fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     || registration.is_none()
                     || session.is_some_and(|session| session.dirty()),
             ),
-            writer.workspaces.schema_needs_refresh.then(|| {
+            writer.workspaces.schema_refresh.is_some().then(|| {
                 text_button(
                     scale,
                     "Retry schema analysis",
@@ -80,35 +80,7 @@ pub(super) fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                 .disabled(writer.workspaces.tools.busy() || writer.work.busy())
             }),
         )),
-        feedback(writer),
+        super::outcome::panel(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-}
-fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    let page = writer
-        .workspaces
-        .schema_feedback
-        .get(writer.workspaces.schema_feedback_page)?;
-    let scale = writer.ui_scale();
-    Some(
-        flex_col((
-            label(scale, "Schema operation result").text_size(18. * scale),
-            paragraph(scale, page.clone(), 640.),
-            flex_row((
-                text_button(scale, "Previous schema result", |writer: &mut Writer| {
-                    writer.workspaces.schema_feedback_page =
-                        writer.workspaces.schema_feedback_page.saturating_sub(1)
-                })
-                .disabled(writer.workspaces.schema_feedback_page == 0),
-                text_button(scale, "More schema result", |writer: &mut Writer| {
-                    writer.workspaces.schema_feedback_page += 1
-                })
-                .disabled(
-                    writer.workspaces.schema_feedback_page + 1
-                        >= writer.workspaces.schema_feedback.len(),
-                ),
-            )),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start),
-    )
 }

@@ -1,88 +1,47 @@
 //! A process completion is still busy until checked output publication is reconciled.
-use super::Session;
-use crate::declarations::producer::{Generated, Job};
-use crate::project::save::replace_checked;
-use std::{
-    path::PathBuf,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+use super::{
+    SchemaOutput, Session,
+    activity::{Activity, ActivityToken},
 };
-
-pub(super) enum Generation {
-    Idle,
-    Starting(GenerationToken),
-    Running(Job),
-    Publishing(GenerationToken),
-}
-impl Generation {
-    pub fn cancel(&self) {
-        match self {
-            Self::Idle => (),
-            Self::Running(job) => job.cancel(),
-            Self::Starting(publication) | Self::Publishing(publication) => publication.cancel(),
-        }
-    }
-}
-impl Drop for Generation {
-    fn drop(&mut self) {
-        self.cancel();
-    }
-}
-/// Identity belongs to this publication, independently of the visible screen or draft.
-#[derive(Clone)]
-pub(super) struct GenerationToken(Arc<AtomicBool>);
-impl GenerationToken {
-    pub fn new() -> Self {
-        Self(Arc::new(AtomicBool::new(false)))
-    }
-    pub fn cancel(&self) {
-        self.0.store(true, Ordering::Release);
-    }
-    pub fn cancelled(&self) -> bool {
-        self.0.load(Ordering::Acquire)
-    }
-    pub fn matches(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
-    }
-}
+use crate::declarations::producer::Generated;
+use crate::project::save::replace_checked;
+use std::{path::PathBuf, sync::Arc};
 
 /// Immutable capture for a worker. The live Session retains its recovery lease.
 pub struct GenerationWork {
-    publication: GenerationToken,
+    publication: ActivityToken,
     output: PathBuf,
-    baseline: String,
+    baseline: Arc<SchemaOutput>,
     generated: Generated,
 }
 /// A terminal receipt is consumed once, only by the originating Session.
 pub struct GenerationReceipt {
-    publication: GenerationToken,
+    publication: ActivityToken,
     result: Option<Result<Generated, String>>,
-    retired: Option<Generated>,
+    retired: Option<Arc<SchemaOutput>>,
 }
 impl Session {
     /// Polling never publishes to disk. Successful process output starts publication.
     pub fn poll_generation(&mut self) -> Option<Result<GenerationWork, String>> {
-        let Generation::Running(job) = &self.generation else {
+        let Activity::Generating(job) = &self.activity else {
             return None;
         };
         let result = job.poll()?;
-        self.generation = Generation::Idle;
+        self.activity = Activity::Idle;
         Some(result.map(|generated| self.begin_publication(generated)))
     }
     fn begin_publication(&mut self, generated: Generated) -> GenerationWork {
-        let publication = GenerationToken::new();
-        self.generation = Generation::Publishing(publication.clone());
+        let publication = ActivityToken::new();
+        self.activity = Activity::PublishingGeneration(publication.clone());
         GenerationWork {
             publication,
             output: self.output.clone(),
-            baseline: self.output_baseline.clone(),
+            baseline: self.schema_output.clone(),
             generated,
         }
     }
     pub fn accept_generation(&mut self, receipt: &mut GenerationReceipt) -> Result<(), String> {
-        let Generation::Publishing(publication) = &self.generation else {
+        let Activity::PublishingGeneration(publication) = &self.activity else {
             return Err("This generation is no longer awaiting publication.".into());
         };
         if !publication.matches(&receipt.publication) {
@@ -92,12 +51,13 @@ impl Session {
             .result
             .take()
             .ok_or("This generation receipt was already accepted.")?;
-        self.generation = Generation::Idle;
-        let mut generated = result?;
+        self.activity = Activity::Idle;
+        let generated = result?;
         // Cancellation after the write cannot undo a successful publication.
-        std::mem::swap(&mut self.output_baseline, &mut generated.text);
-        std::mem::swap(&mut self.schema, &mut generated.schema);
-        receipt.retired = Some(generated);
+        receipt.retired = Some(std::mem::replace(
+            &mut self.schema_output,
+            Arc::new(SchemaOutput::Ready(generated)),
+        ));
         Ok(())
     }
     /// Compatibility path for hosts that already perform synchronous project refreshes.
@@ -114,7 +74,7 @@ impl GenerationWork {
             if self.publication.cancelled() {
                 return Err("Generation cancelled. Previous schema retained.".into());
             }
-            replace_checked(&self.output, &self.baseline, &self.generated.text)
+            replace_checked(&self.output, self.baseline.baseline(), &self.generated.text)
                 .map_err(|error| error.to_string())?;
             Ok(())
         }))
@@ -130,7 +90,7 @@ impl GenerationWork {
         GenerationReceipt {
             publication: self.publication,
             result: Some(Err(error)),
-            retired: Some(self.generated),
+            retired: Some(Arc::new(SchemaOutput::Ready(self.generated))),
         }
     }
 }
@@ -140,7 +100,7 @@ impl GenerationReceipt {
             .as_ref()?
             .as_ref()
             .ok()
-            .map(|generated| &generated.schema)
+            .map(|generated| generated.schema.as_ref())
     }
 }
 

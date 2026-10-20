@@ -86,6 +86,14 @@ Save all consider inactive documents too. It uses an external editor for source 
 embedding a second source editor. This does not establish parity for the remaining workspaces or
 remove the existing Freya Source workflow.
 
+Standalone declaration TOML uses the same external-editor boundary in Xilem. A bound source can
+restore an invalid recovered draft; export preserves it in a separate editable TOML file, and
+explicit import validates its producer before staging it. The original source changes only on Save
+and generate. Source replacement stays busy through its fixed recovery fence, while manuscript
+typing and history remain independent. Malformed generated JSON is an explicit damaged-output state:
+inspectors identify the last validated declarations as such, retain the observed bytes for conflict
+checks, and allow the standalone source to regenerate the output.
+
 Native Map geometry, synopsis, spatial selection and personal-placement format have shared owners.
 Its accepted projection is prepared on workers and checked against source identity before adoption;
 placement writes reconcile even when presentation is cancelled. Camera and local layout never add a

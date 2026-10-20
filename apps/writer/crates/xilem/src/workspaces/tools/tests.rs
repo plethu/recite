@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 #[path = "visual/tests.rs"]
 mod visual;
 
-fn fixture() -> (tempfile::TempDir, Writer, mpsc::UnboundedReceiver<Job>) {
+pub(super) fn fixture() -> (tempfile::TempDir, Writer, mpsc::UnboundedReceiver<Job>) {
     fixture_source(None)
 }
 fn fixture_source(
@@ -28,6 +28,7 @@ fn fixture_source(
             .export_json()
     };
     fs::write(directory.path().join("schema.json"), export(source)).unwrap();
+    fs::write(directory.path().join("schema.toml"), source).unwrap();
     fs::write(
         directory.path().join("fixture.json"),
         export(&source.replace("Mara", "Updated")),
@@ -83,10 +84,18 @@ fn schema_refresh_retires_stale_rule_controls_and_preserves_the_repairable_draft
     assert!(writer.source_repair_pending());
     assert!(writer.status.contains("staged reply draft"));
 }
-fn finish(writer: &mut Writer, jobs: &mut mpsc::UnboundedReceiver<Job>) {
+pub(super) fn finish(writer: &mut Writer, jobs: &mut mpsc::UnboundedReceiver<Job>) {
     for _ in 0..200 {
         if let Ok(job) = jobs.try_recv() {
-            writer.accept_tool(job.execute());
+            let mut completed = job.execute();
+            loop {
+                let request = completed.request.clone();
+                let retirement = writer.accept_tool(completed);
+                match retirement.finish(request) {
+                    Some(next) => completed = next,
+                    None => break,
+                }
+            }
         }
         writer.poll_project_jobs();
         if !writer.project_jobs_busy() {
@@ -129,7 +138,11 @@ fn hidden_generation_retains_newer_typing_undo_and_close_guard_until_analysis_is
             .unwrap()
             .contains("Updated")
     );
-    assert!(!writer.workspaces.schema_needs_refresh, "{}", writer.status);
+    assert!(
+        writer.workspaces.schema_refresh.is_none(),
+        "{}",
+        writer.status
+    );
     let (_, model) = writer.session.parts_mut().unwrap();
     model.discard();
     model.undo().unwrap();
@@ -155,14 +168,18 @@ fn published_schema_survives_failed_context_refresh_and_can_be_retried() {
         "{}",
         writer.status
     );
-    assert!(writer.workspaces.schema_needs_refresh);
+    assert!(writer.workspaces.schema_refresh.is_some());
     assert!(
         fs::read_to_string(directory.path().join("schema.json"))
             .unwrap()
             .contains("Updated")
     );
     assert!(
-        writer.declaration_session().unwrap().schema.speakers["mara"]
+        writer
+            .declaration_session()
+            .unwrap()
+            .last_valid_schema()
+            .speakers["mara"]
             .display_name
             .as_deref()
             == Some("Updated")
@@ -174,7 +191,11 @@ fn published_schema_survives_failed_context_refresh_and_can_be_retried() {
     .unwrap();
     writer.refresh_schema_context();
     finish(&mut writer, &mut jobs);
-    assert!(!writer.workspaces.schema_needs_refresh, "{}", writer.status);
+    assert!(
+        writer.workspaces.schema_refresh.is_none(),
+        "{}",
+        writer.status
+    );
 }
 
 #[cfg(unix)]

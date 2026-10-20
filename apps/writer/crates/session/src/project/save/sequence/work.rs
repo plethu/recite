@@ -1,7 +1,7 @@
 //! Owned requests run without borrowing a frontend or its live document.
 use super::super::ordered::Write;
 use crate::{
-    declarations::{DeclarationSave, recovery::DraftSnapshot},
+    declarations::{DeclarationSave, DeclarationSaveRequest, recovery::DraftSnapshot},
     project::{
         FileError, PreparedRefresh, RefreshRequest,
         manifest::{ManifestOutcome, ManifestSave},
@@ -17,6 +17,7 @@ pub enum Work {
     RetireWrite(Write),
     Recovery(Durability<Recovery>),
     Manifest(ManifestSave),
+    PrepareDeclaration(Box<DeclarationSaveRequest>),
     DeclarationSource(Box<DeclarationSave>),
     DeclarationRecovery(Box<DeclarationSave>, Durability<DraftSnapshot>),
     DeclarationOutput(Box<DeclarationSave>),
@@ -29,6 +30,7 @@ pub enum Receipt {
     Written(Write, Result<(), FileError>),
     Recovered(Result<(), FileError>),
     Manifest(ManifestOutcome),
+    DeclarationPrepared(Result<Box<DeclarationSave>, FileError>),
     DeclarationSource(Box<DeclarationSave>, Result<(), FileError>),
     DeclarationRecovered(Box<DeclarationSave>, Result<(), FileError>),
     DeclarationOutput(Box<DeclarationSave>, Result<(), FileError>),
@@ -57,6 +59,9 @@ impl Work {
             }
             Self::Recovery(ticket) => Receipt::Recovered(ticket.wait()),
             Self::Manifest(request) => Receipt::Manifest(request.execute()),
+            Self::PrepareDeclaration(request) => {
+                Receipt::DeclarationPrepared(request.prepare().map(Box::new))
+            }
             Self::DeclarationSource(request) => {
                 let result = request.write_source();
                 Receipt::DeclarationSource(request, result)

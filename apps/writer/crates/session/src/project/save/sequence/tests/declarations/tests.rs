@@ -137,7 +137,7 @@ fn successful_output_refresh_keeps_typing_that_arrived_during_publication() {
     assert!(!files.saving);
     assert!(
         session
-            .schema
+            .last_valid_schema()
             .speakers
             .values()
             .any(|speaker| speaker.display_name.as_deref() == Some("Saved name"))

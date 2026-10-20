@@ -1,8 +1,11 @@
 //! Bounded declaration inspection; the shared Session remains the canonical schema/source owner.
 use super::*;
+mod outcome;
 mod producer;
+mod source;
 use crate::attention::{Pane, Region};
 use crate::presentation::{label, paragraph, radio_button, text_button};
+use recite_writer_session::declarations::SchemaOutputStatus;
 use xilem::{
     WidgetView,
     masonry::layout::AsUnit,
@@ -15,9 +18,13 @@ const PAGE: usize = 5;
 enum Mode {
     #[default]
     Inspect,
+    Source,
     Producer,
 }
 impl Writer {
+    pub(crate) fn show_declaration_source(&mut self) {
+        self.workspaces.declarations.mode = Mode::Source;
+    }
     pub(crate) fn show_declaration_producer(&mut self) {
         self.workspaces.declarations.mode = Mode::Producer;
     }
@@ -43,6 +50,7 @@ impl Row {
 pub(super) struct Panel {
     mode: Mode,
     producer: producer::Panel,
+    pub(in crate::workspaces) source: source::Panel,
     rows: Vec<Row>,
     query: String,
     matches: Vec<usize>,
@@ -93,14 +101,27 @@ pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             ),
             radio_button(
                 scale,
+                "Declaration source",
+                writer.workspaces.declarations.mode == Mode::Source,
+                Writer::show_declaration_source,
+            ),
+            radio_button(
+                scale,
                 "Producer",
                 writer.workspaces.declarations.mode == Mode::Producer,
                 Writer::show_declaration_producer,
             ),
         ))),
-        xilem::view::indexed_stack((inspection(writer), producer::controls(writer))).active(
-            usize::from(writer.workspaces.declarations.mode == Mode::Producer),
-        ),
+        xilem::view::indexed_stack((
+            inspection(writer),
+            source::panel(writer),
+            producer::controls(writer),
+        ))
+        .active(match writer.workspaces.declarations.mode {
+            Mode::Inspect => 0,
+            Mode::Source => 1,
+            Mode::Producer => 2,
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
@@ -110,6 +131,16 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations;
     flex_col((
+        writer
+            .declaration_session()
+            .filter(|session| session.output_status() == SchemaOutputStatus::Damaged)
+            .map(|_| {
+                paragraph(
+                    scale,
+                    "Generated schema is damaged; showing the last valid declarations.",
+                    640.,
+                )
+            }),
         label(scale, "Search declarations"),
         text_input(panel.query.clone(), |writer: &mut Writer, query| {
             writer.workspaces.declarations.filter(query)

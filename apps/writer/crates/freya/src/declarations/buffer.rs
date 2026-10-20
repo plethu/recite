@@ -35,9 +35,8 @@ pub(crate) fn harvest(mut writer: Writer) {
     };
     let draft = editor.rope.to_string();
     if source.draft != draft {
-        source.draft = draft;
         // Recovery failure must not veto a rescue Save of the captured draft.
-        if let Err(error) = source.queue_recovery() {
+        if let Err(error) = source.set_draft(draft) {
             writer.message.error(error.to_string());
         }
     }

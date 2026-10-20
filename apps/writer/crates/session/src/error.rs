@@ -51,9 +51,15 @@ pub enum FileError {
     )]
     SchemaOwnership,
     #[error(
-        "Save or discard declaration changes and wait for generation to finish before changing the project schema."
+        "Save or discard declaration changes and wait for active declaration work before changing the project schema."
     )]
     SchemaSessionActive,
+    #[error(
+        "The declaration source changed while this action was preparing. Your newer draft remains open."
+    )]
+    DeclarationSourceChanged,
+    #[error("Declaration action cancelled. Your current source remains open.")]
+    DeclarationActionCancelled,
     #[error("Save this document before closing it. Your draft remains open.")]
     UnsavedDocument,
     #[error(

@@ -12,6 +12,7 @@ enum Pending {
     Write(PathBuf),
     Recovery(PathBuf),
     Manifest,
+    PrepareDeclaration,
     DeclarationSource,
     DeclarationRecovery,
     DeclarationOutput,
@@ -120,8 +121,8 @@ impl SaveSequence {
                     .filter(|session| force || session.dirty())
                 {
                     self.queued = Some((
-                        Work::DeclarationSource(Box::new(session.prepare_save()?)),
-                        Pending::DeclarationSource,
+                        Work::PrepareDeclaration(Box::new(session.save_request()?)),
+                        Pending::PrepareDeclaration,
                     ));
                 }
             }

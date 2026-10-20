@@ -65,7 +65,7 @@ fn project_workspaces_open_on_worker_without_applying_or_discarding_manuscript_d
             .declarations
             .as_ref()
             .unwrap()
-            .schema
+            .last_valid_schema()
             .speakers
             .len(),
         1

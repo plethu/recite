@@ -1,10 +1,12 @@
 //! One project-tool operation owns its terminal receipt across screen changes.
 mod accepting;
+mod job;
+mod source;
 mod worker;
 use super::{Phase, Writer, declarations::Row};
 use recite_writer_session::{
     declarations::{
-        Session, entries,
+        Session, SourceAction, SourceReceipt, SourceRecovered, SourceRecovery, SourceWork, entries,
         session::{GenerationReceipt, GenerationStart, GenerationStarted, GenerationWork},
     },
     project::{PreparedRefresh, RefreshRequest},
@@ -20,6 +22,12 @@ pub(super) struct Tools {
 }
 struct Request {
     root: PathBuf,
+    kind: ToolKind,
+}
+#[derive(PartialEq, Eq)]
+enum ToolKind {
+    Refresh,
+    Other,
 }
 pub(super) struct Job {
     request: Arc<Request>,
@@ -29,6 +37,7 @@ pub(super) enum Work {
     Start(Box<GenerationStart>),
     Publish(Box<GenerationWork>),
     Refresh(Box<RefreshRequest>),
+    Source(Box<SourceWork>),
 }
 enum Value {
     Started(GenerationStarted),
@@ -37,10 +46,33 @@ enum Value {
         rows: Vec<Row>,
     },
     Refreshed(Box<PreparedRefresh>),
+    Source(Box<source::Prepared>),
+    SourceRecovered(SourceRecovered),
 }
 struct Completed {
     request: Arc<Request>,
     result: Result<Value, String>,
+}
+enum Retirement {
+    Drop(Option<Value>),
+    Recover(Box<SourceRecovery>, Option<Value>),
+}
+impl Retirement {
+    fn finish(self, request: Arc<Request>) -> Option<Completed> {
+        match self {
+            Self::Drop(value) => {
+                drop(value);
+                None
+            }
+            Self::Recover(work, value) => {
+                drop(value);
+                Some(Completed {
+                    request,
+                    result: Ok(Value::SourceRecovered(work.execute())),
+                })
+            }
+        }
+    }
 }
 impl Tools {
     pub fn busy(&self) -> bool {
@@ -99,7 +131,7 @@ impl Writer {
             None => (),
         }
     }
-    fn schema_feedback(&mut self, message: String) {
+    pub(crate) fn schema_feedback(&mut self, message: String) {
         self.status = message
             .lines()
             .next()
@@ -137,12 +169,18 @@ impl Writer {
         };
         let request = Arc::new(Request {
             root: project.root().to_owned(),
+            kind: if matches!(&work, Work::Refresh(_)) {
+                ToolKind::Refresh
+            } else {
+                ToolKind::Other
+            },
         });
         self.workspaces.tools.pending = Some(request.clone());
         self.status = match &work {
             Work::Start(_) => "Checking the reviewed producer command…",
             Work::Publish(_) => "Publishing generated schema… You can keep writing.",
             Work::Refresh(_) => "Refreshing schema analysis… You can keep writing.",
+            Work::Source(_) => "Preparing declaration source… Your current draft stays open.",
         }
         .into();
         let job = Job { request, work };
@@ -157,45 +195,6 @@ impl Writer {
             if let Some(runtime) = &self.navigation.runtime {
                 runtime.spawn_blocking(move || drop(retired));
             }
-        }
-    }
-}
-impl Job {
-    fn not_started(self, error: String) -> Completed {
-        let result = match self.work {
-            Work::Start(work) => Ok(Value::Started(work.not_started(error))),
-            Work::Publish(work) => Ok(Value::Published {
-                receipt: Box::new(work.not_started(error)),
-                rows: vec![],
-            }),
-            Work::Refresh(_) => Err(error),
-        };
-        Completed {
-            request: self.request,
-            result,
-        }
-    }
-    fn execute(self) -> Completed {
-        let result = match self.work {
-            Work::Start(work) => Ok(Value::Started(work.execute())),
-            Work::Publish(work) => {
-                let receipt = Box::new(work.execute());
-                let rows = receipt
-                    .schema()
-                    .map(|schema| entries::entries(schema).into_iter().map(Row::new).collect())
-                    .unwrap_or_default();
-                Ok(Value::Published { receipt, rows })
-            }
-            Work::Refresh(work) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                work.prepare(&recite_compiler::authoring::CancellationToken::new())
-                    .map(|prepared| Value::Refreshed(Box::new(prepared)))
-                    .map_err(|error| error.to_string())
-            }))
-            .unwrap_or_else(|_| Err("Project analysis stopped unexpectedly.".into())),
-        };
-        Completed {
-            request: self.request,
-            result,
         }
     }
 }

@@ -36,7 +36,7 @@ impl Component for ProducerActions {
             Ok(Some(registration)) => registration,
             Ok(None)
                 if session
-                    .schema
+                    .last_valid_schema()
                     .producer_metadata
                     .as_ref()
                     .and_then(|m| m.producer.as_ref())

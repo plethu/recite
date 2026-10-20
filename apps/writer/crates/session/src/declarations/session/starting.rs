@@ -1,19 +1,19 @@
 //! Validate the displayed command and spawn the producer away from the event loop.
 use super::{
     Session,
-    generation::{Generation, GenerationToken},
+    activity::{Activity, ActivityToken},
 };
 use crate::declarations::producer::Job;
 use recite_config::ProducerRegistration;
 use std::path::PathBuf;
 
 pub struct GenerationStart {
-    publication: GenerationToken,
+    publication: ActivityToken,
     root: PathBuf,
     registration: ProducerRegistration,
 }
 pub struct GenerationStarted {
-    publication: GenerationToken,
+    publication: ActivityToken,
     result: Option<Result<Job, String>>,
 }
 impl Session {
@@ -33,8 +33,8 @@ impl Session {
             .as_ref()
             .ok_or("No producer registered.")?
             .clone();
-        let publication = GenerationToken::new();
-        self.generation = Generation::Starting(publication.clone());
+        let publication = ActivityToken::new();
+        self.activity = Activity::StartingGeneration(publication.clone());
         Ok(GenerationStart {
             publication,
             root: self.root.clone(),
@@ -45,7 +45,7 @@ impl Session {
         &mut self,
         receipt: &mut GenerationStarted,
     ) -> Result<(), String> {
-        let Generation::Starting(publication) = &self.generation else {
+        let Activity::StartingGeneration(publication) = &self.activity else {
             return Err("This generation is no longer awaiting its process.".into());
         };
         if !publication.matches(&receipt.publication) {
@@ -60,8 +60,8 @@ impl Session {
         {
             job.cancel();
         }
-        self.generation = Generation::Idle;
-        self.generation = Generation::Running(result?);
+        self.activity = Activity::Idle;
+        self.activity = Activity::Generating(result?);
         Ok(())
     }
     pub fn start_generation(&mut self) -> Result<(), String> {

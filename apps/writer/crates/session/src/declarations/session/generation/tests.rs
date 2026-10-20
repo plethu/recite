@@ -9,7 +9,7 @@ fn generated() -> Generated {
     let parsed = parse(Path::new("schema.toml"), &SOURCE.replace("Mara", "Updated")).unwrap();
     Generated {
         text: parsed.export_json(),
-        schema: parsed.schema().clone(),
+        schema: parsed.schema().clone().into(),
     }
 }
 
@@ -43,7 +43,7 @@ fn cancellation_before_write_retains_output_until_terminal_receipt() {
     assert!(session.accept_generation(&mut receipt).is_err());
     assert!(!session.busy());
     assert_eq!(std::fs::read_to_string(&session.output).unwrap(), previous);
-    assert_eq!(session.output_baseline, previous);
+    assert_eq!(session.schema_output.baseline(), previous);
 }
 
 #[test]
@@ -54,20 +54,20 @@ fn cancellation_after_write_reconciles_the_successful_prefix() {
     session.cancel();
     assert!(session.busy());
     session.accept_generation(&mut receipt).unwrap();
-    assert_eq!(session.output_baseline, expected);
+    assert_eq!(session.schema_output.baseline(), expected);
     assert_eq!(std::fs::read_to_string(&session.output).unwrap(), expected);
-    assert!(session.schema.speakers.contains_key("mara"));
+    assert!(session.last_valid_schema().speakers.contains_key("mara"));
     assert!(!session.busy());
 }
 
 #[test]
 fn output_conflict_and_dispatch_failure_both_release_publication() {
     let (_dir, mut session) = session().unwrap();
-    let baseline = session.output_baseline.clone();
+    let baseline = session.schema_output.baseline().to_owned();
     let work = session.begin_publication(generated());
     std::fs::write(&session.output, "external edit").unwrap();
     assert!(session.accept_generation(&mut work.execute()).is_err());
-    assert_eq!(session.output_baseline, baseline);
+    assert_eq!(session.schema_output.baseline(), baseline);
     assert_eq!(
         std::fs::read_to_string(&session.output).unwrap(),
         "external edit"

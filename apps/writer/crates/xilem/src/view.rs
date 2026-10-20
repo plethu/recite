@@ -75,7 +75,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             .then(|| text_button(state.ui_scale(), "Cancel build", Writer::cancel_build)),
         state
             .declaration_session()
-            .is_some_and(|session| session.busy())
+            .is_some_and(|session| session.generation_active())
             .then(|| {
                 text_button(
                     state.ui_scale(),

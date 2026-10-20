@@ -83,7 +83,7 @@ impl Component for Declarations {
             return body;
         };
         let owner = session
-            .schema
+            .last_valid_schema()
             .producer_metadata
             .as_ref()
             .and_then(|m| m.producer.as_ref())
@@ -104,11 +104,16 @@ impl Component for Declarations {
                 )
                 .color(t::colors().muted),
         );
+        if session.output_status() == session::SchemaOutputStatus::Damaged {
+            body = body.child(
+                label().text("Generated schema is damaged; showing the last valid declarations."),
+            );
+        }
         if *editing.read() {
             return body.child(source::SourceEditor { writer, editing });
         }
         if session
-            .schema
+            .last_valid_schema()
             .producer_metadata
             .as_ref()
             .and_then(|m| m.producer.as_ref())
@@ -117,7 +122,7 @@ impl Component for Declarations {
             body = body.child(source::SourceActions { writer, editing });
         }
         body = body.child(producer_controls::ProducerActions { writer });
-        let rows = entries(&session.schema);
+        let rows = entries(session.last_valid_schema());
         let active = rows
             .iter()
             .find(|(name, kind, _)| format!("{kind}:{name}") == selected.read().as_str())
