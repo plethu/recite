@@ -161,4 +161,3 @@ export const traceSchema = v.strictObject({
   dialogue_locale_fallbacks: v.optional(v.array(nonemptyString)),
   metrics: v.optional(metrics),
 });
-export type Trace = v.InferInput<typeof traceSchema>;

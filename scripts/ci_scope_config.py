@@ -215,7 +215,7 @@ def mise_lanes(old, new):
         key: value for key, value in new.items() if key != "tools"
     }:
         return LANES
-    if changed <= {"github:vercel/turborepo"}:
+    if changed <= {"github:vercel/turborepo", "aqua:rhysd/actionlint", "aqua:zizmorcore/zizmor"}:
         return JUST
     if changed <= {"node", "bun"}:
         return JS

@@ -2,14 +2,14 @@ import * as v from "valibot";
 import diagnosticContracts from "../diagnostic-contract.generated.js";
 import { scalarPositionSchema, signedInteger, nonemptyString } from "./common.ts";
 
-export const diagnosticArgumentSchema = v.variant("type", [
+const diagnosticArgumentSchema = v.variant("type", [
   v.strictObject({ type: v.literal("string"), value: v.string() }),
   v.strictObject({ type: v.literal("integer"), value: signedInteger }),
   v.strictObject({ type: v.literal("float"), value: v.pipe(v.number(), v.finite()) }),
   v.strictObject({ type: v.literal("boolean"), value: v.boolean() }),
 ]);
 const definitions = new Map(Object.entries(diagnosticContracts));
-export const presentationSchema = v.pipe(
+const presentationSchema = v.pipe(
   v.strictObject({
     id: v.pipe(v.string(), v.regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u)),
     arguments: v.record(
@@ -26,7 +26,7 @@ export const presentationSchema = v.pipe(
     );
   }),
 );
-export const diagnosticSpanSchema = v.pipe(
+const diagnosticSpanSchema = v.pipe(
   v.strictObject({
     file: nonemptyString,
     start: scalarPositionSchema,
@@ -65,5 +65,4 @@ export const diagnosticRecordSchema = v.pipe(
 export type DiagnosticRecord = v.InferInput<typeof diagnosticRecordSchema>;
 export type DiagnosticSpan = v.InferInput<typeof diagnosticSpanSchema>;
 export type Presentation = v.InferInput<typeof presentationSchema>;
-export type DiagnosticArgument = v.InferInput<typeof diagnosticArgumentSchema>;
 export type ScalarPosition = v.InferInput<typeof scalarPositionSchema>;

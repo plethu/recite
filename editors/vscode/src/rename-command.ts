@@ -3,7 +3,7 @@ import { errorMessage } from "./errors.ts";
 import type { HostApi, UserInterface, EditorOptions, StandardClient } from "./types.ts";
 import { lspWorkspaceEditToVscode, workspaceEditStatus } from "./lsp-features.ts";
 
-export const RENAME_BLOCK_COMMAND = "recite.renameBlock";
+const RENAME_BLOCK_COMMAND = "recite.renameBlock";
 
 /**
  * The native VS Code rename provider cannot retain LSP document versions until

@@ -51,6 +51,31 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(context("1.50.1"), context("1.50.1"))
         self.assertNotEqual(context("1.50.1"), context("1.49.0"))
 
+    def test_workflow_scanner_version_is_bound_once_per_request(self):
+        def context(version):
+            metadata = {
+                tool: [{"active": True, "installed": True, "version": value}]
+                for tool, value in [
+                    ("aqua:zizmorcore/zizmor", version),
+                    ("aqua:rhysd/actionlint", "1.7.12"),
+                    ("bun", "1.4.3"),
+                    ("github:vercel/turborepo", "2.11.9"),
+                ]
+            }
+            with (
+                patch.dict(os.environ, {}, clear=True),
+                patch.object(runner, "tool_bound", return_value="/tools/bin/tool"),
+                patch.object(
+                    runner, "output", side_effect=[json.dumps(metadata), "mise", "git"]
+                ) as calls,
+            ):
+                result = runner.contexts({"workflows"})
+            self.assertEqual(calls.call_count, 3)
+            return result
+
+        self.assertEqual(context("1.31.1"), context("1.31.1"))
+        self.assertNotEqual(context("1.31.1"), context("1.30.0"))
+
     def test_missing_or_system_tools_cannot_create_reusable_success(self):
         for version, installed in [("system", True), ("1.50.1", False)]:
             with (
@@ -138,6 +163,7 @@ class NativeCacheTests(unittest.TestCase):
             (root / "text.txt").write_text("hello world\n")
             (root / "scripts/probe.py").write_text(
                 "from pathlib import Path\nimport os, subprocess\np=Path('runs')\n"
+                f"assert os.environ.get('RUSTUP_TOOLCHAIN') == {tools['rust']['version']!r}\n"
                 "assert not any(name in os.environ for name in ['SHELLCHECK_OPTS', 'DPRINT_CONFIG_DISCOVERY', 'RIPGREP_CONFIG_PATH'])\n"
                 "p.write_text((p.read_text() if p.exists() else '')+'run\\n')\n"
                 "subprocess.run(['bun', 'run', '--no-env-file', '--cwd', 'nested', 'probe'], check=True)\n"
@@ -145,6 +171,7 @@ class NativeCacheTests(unittest.TestCase):
             )
             environment = {
                 **os.environ,
+                "RUSTUP_TOOLCHAIN": tools["rust"]["version"],
                 "MISE_TRUSTED_CONFIG_PATHS": temporary,
                 "MISE_ENV": "",
                 "TURBO_TELEMETRY_DISABLED": "1",

@@ -30,7 +30,7 @@ import { parseFiniteRecords } from "./finite-protocol.ts";
 
 const MAX_STDERR_BYTES = 4 * 1024 * 1024;
 
-export class CommandProcessError extends Error {
+class CommandProcessError extends Error {
   declare kind: ProcessErrorKind;
 
   constructor(kind: ProcessErrorKind, detail?: string, cause?: unknown) {
@@ -232,7 +232,7 @@ function endStdin(child: CommandChild) {
   }
 }
 
-export function terminateChild(child: CommandChild | undefined, { force = false } = {}) {
+function terminateChild(child: CommandChild | undefined, { force = false } = {}) {
   try {
     child?.stdin?.destroy?.();
   } catch {

@@ -1,10 +1,1 @@
-export type {
-  WatchRecord,
-  MachinePath,
-  BuildStart,
-  BuildCompleted,
-  Cancellation,
-  StructuredError,
-  WatchStop,
-  Artifact,
-} from "./schemas/index.js";
+export type { WatchRecord, MachinePath } from "./schemas/index.js";

@@ -11,7 +11,7 @@ import {
 } from "./common.ts";
 import { diagnosticRecordSchema } from "./diagnostic.ts";
 
-export const cancellationSchema = v.variant("type", [
+const cancellationSchema = v.variant("type", [
   v.strictObject({ type: v.picklist(["user", "unknown"]) }),
   v.strictObject({ type: v.literal("superseded"), by_generation: unsignedInteger }),
 ]);
@@ -171,7 +171,7 @@ const failureSchema = v.variant("type", [
     type: v.picklist(["diagnostics", "invalid_publication", "freshness", "unknown"]),
   }),
 ]);
-export const buildStartSchema = v.strictObject({
+const buildStartSchema = v.strictObject({
   generation: unsignedInteger,
   trigger: v.picklist(["initial", "input_changed"]),
 });
@@ -189,7 +189,7 @@ const outcomesByStatus = {
   superseded: new Set<string>(["superseded"]),
   unknown: new Set<string>(["unknown"]),
 };
-export const buildCompletedSchema = v.pipe(
+const buildCompletedSchema = v.pipe(
   v.strictObject({
     generation: unsignedInteger,
     snapshot_generation: v.nullable(unsignedInteger),
@@ -214,7 +214,7 @@ export const buildCompletedSchema = v.pipe(
       (value.outcome.type !== "diagnostics" || value.failure?.type === "diagnostics"),
   ),
 );
-export const watchStopSchema = v.union([
+const watchStopSchema = v.union([
   v.strictObject({
     reason: v.strictObject({ type: v.literal("cancelled") }),
     error: v.optional(v.undefined()),
@@ -272,9 +272,4 @@ export const watchRecordSchema = v.variant("event", [
 ]);
 export type WatchRecord = v.InferInput<typeof watchRecordSchema>;
 export type MachinePath = v.InferInput<typeof machinePathSchema>;
-export type BuildStart = v.InferInput<typeof buildStartSchema>;
-export type BuildCompleted = v.InferInput<typeof buildCompletedSchema>;
-export type Cancellation = v.InferInput<typeof cancellationSchema>;
 export type StructuredError = v.InferInput<typeof structuredErrorSchema>;
-export type WatchStop = v.InferInput<typeof watchStopSchema>;
-export type Artifact = v.InferInput<typeof artifactSchema>;

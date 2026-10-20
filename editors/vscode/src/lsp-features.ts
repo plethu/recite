@@ -12,26 +12,15 @@ type GetOpenDocument = (uri: VS.Uri) => VS.TextDocument | undefined;
 type DiagnosticInput = Omit<LSP.Diagnostic, "code"> & {
   code?: string | number | { value?: unknown; target?: unknown } | null;
 };
-export function lspRangeToVscode(api: HostApi, range: LSP.Range) {
+function lspRangeToVscode(api: HostApi, range: LSP.Range) {
   return new api.Range(
     new api.Position(range.start.line, range.start.character),
     new api.Position(range.end.line, range.end.character),
   );
 }
 
-export function isValidLspRange(range: unknown): range is LSP.Range {
+function isValidLspRange(range: unknown): range is LSP.Range {
   return is(lspRangeSchema, range);
-}
-
-export function lspLocationToVscode(api: HostApi, location: LSP.Location | LSP.LocationLink) {
-  if ("targetUri" in location && location.targetRange) {
-    return new api.Location(
-      api.Uri.parse(location.targetUri),
-      lspRangeToVscode(api, location.targetRange),
-    );
-  }
-  if (!("uri" in location) || !location.uri || !location.range) return undefined;
-  return new api.Location(api.Uri.parse(location.uri), lspRangeToVscode(api, location.range));
 }
 
 export function lspDiagnosticToVscode(api: HostApi, diagnostic: DiagnosticInput) {
@@ -113,15 +102,6 @@ export function lspCompletionItems(
     }
     return completion;
   });
-}
-
-export function lspHoverToVscode(api: HostApi, result: LSP.Hover | null) {
-  if (!result) return undefined;
-  const contents = Array.isArray(result.contents)
-    ? result.contents.map((content) => markup(api, content))
-    : [markup(api, result.contents)];
-  const range = result.range ? lspRangeToVscode(api, result.range) : undefined;
-  return new api.Hover(contents, range);
 }
 
 export function lspWorkspaceEditToVscode(

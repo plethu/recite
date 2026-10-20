@@ -98,6 +98,16 @@ class ConfigInputTests(unittest.TestCase):
             ),
         )
 
+    def test_workflow_tool_updates_do_not_select_product_builds(self):
+        for tool in ("aqua:rhysd/actionlint", "aqua:zizmorcore/zizmor"):
+            before = f'[tools]\n"{tool}" = "1"\n'
+            after = before.replace('"1"', '"2"')
+            self.assertEqual(
+                routed(".config/mise/config.toml", ".config/mise/config.toml", before, after),
+                {"maintainability"},
+            )
+        self.assertEqual(selected(".github/renovate.json"), {"maintainability"})
+
     def test_command_moves_preserve_effective_working_directory(self):
         before = 'set shell := ["bash"]\n\nworkflow:\n    cargo test\n'
         self.assertEqual(

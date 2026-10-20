@@ -27,11 +27,11 @@ export class LosslessInteger {
   }
 }
 
-export function isLosslessInteger(value: unknown): value is LosslessInteger {
+function isLosslessInteger(value: unknown): value is LosslessInteger {
   return value instanceof LosslessInteger;
 }
 
-export function isIntegerValue(value: unknown): value is IntegerValue {
+function isIntegerValue(value: unknown): value is IntegerValue {
   return Number.isSafeInteger(value) || isLosslessInteger(value);
 }
 

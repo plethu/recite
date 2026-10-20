@@ -36,4 +36,3 @@ export async function buildAssets(root: string) {
   ]);
   return { site, controller, worker, css, module, binary };
 }
-export type Assets = Awaited<ReturnType<typeof buildAssets>>;
