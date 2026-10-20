@@ -1,11 +1,12 @@
 use super::*;
+use crate::attention::PaneMotion;
 use crate::tests::support::NoProxy;
 use xilem::masonry::theme;
 use xilem::{core::DynMessage, masonry::testing::TestHarness};
 
 #[test]
 fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_after_rebuild() {
-    for change in 0..6 {
+    for change in 0..10 {
         let writer = Writer::from_session(Session::examples().unwrap(), None);
         let mut app = App::with_writer(writer);
         if change == 5 {
@@ -43,13 +44,17 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                     "Primary+Alt+S".to_owned().try_into().unwrap(),
                 )
                 .unwrap(),
-            _ => app.open_picker(picker::Search::Commands),
+            5 => app.open_picker(picker::Search::Commands),
+            6 => app.writer.as_mut().unwrap().toggle_focus(),
+            7 => app.preferences.config.ui.keymap = recite_config::Keymap::Vim,
+            8 => app.writer.as_mut().unwrap().focus_pane(PaneMotion::Left),
+            _ => app.writer.as_mut().unwrap().phase = Phase::ConfirmClose,
         }
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),
             Vec::new(),
             DynMessage::new(Invocation {
-                command: WriterCommand::Close,
+                action: Action::Command(WriterCommand::Close),
                 generation: CommandGeneration::default(),
             }),
         );
@@ -67,7 +72,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             std::mem::take(ctx.environment()),
             Vec::new(),
             DynMessage::new(Invocation {
-                command: WriterCommand::Close,
+                action: Action::Command(WriterCommand::Close),
                 generation: CommandGeneration::default(),
             }),
         );
@@ -80,11 +85,11 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             std::mem::take(ctx.environment()),
             Vec::new(),
             DynMessage::new(Invocation {
-                command: if change == 5 {
+                action: Action::Command(if change == 5 {
                     WriterCommand::Close
                 } else {
                     WriterCommand::Settings
-                },
+                }),
                 generation: state.generation,
             }),
         );
@@ -94,6 +99,9 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         ));
         if change == 5 {
             assert!(app.picker.is_none());
+        } else if change == 9 {
+            assert!(!app.settings_open);
+            assert!(app.status.contains("Choose how to close"));
         } else {
             assert!(app.settings_open);
         }

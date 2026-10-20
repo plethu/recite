@@ -1,4 +1,5 @@
 use super::*;
+use crate::attention::{Pane, Region};
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::button;
 const PAGE: usize = 8;
@@ -15,6 +16,7 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .gap(12.px()),
     )
     .width(state.navigation_width().px())
+    .prop(Region(Some(Pane::Navigation)))
 }
 fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();

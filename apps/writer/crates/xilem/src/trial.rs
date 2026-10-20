@@ -73,6 +73,7 @@ impl Trial {
 
 impl Writer {
     pub(super) fn start_trial(&mut self) {
+        self.attention.leave_focus();
         self.trial.visible = true;
         if self.trial.busy() {
             return;

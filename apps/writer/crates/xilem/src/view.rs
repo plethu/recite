@@ -6,7 +6,9 @@ use xilem::masonry::core;
 use xilem::masonry::layout::AsUnit;
 use xilem::masonry::widgets;
 use xilem::style::Style;
-use xilem::view::{CrossAxisAlignment, flex_col, flex_row, portal, sized_box, text_input};
+use xilem::view::{
+    CrossAxisAlignment, flex_col, flex_row, indexed_stack, portal, sized_box, text_input,
+};
 use xilem::{InsertNewline, WidgetView};
 
 mod manuscript;
@@ -31,10 +33,16 @@ mod document_actions;
 mod source_repair;
 use document_actions::{close_prompt, header, recovery_copy};
 
+fn retained<V: WidgetView<Writer>>(child: V, visible: bool) -> impl WidgetView<Writer> {
+    indexed_stack((child, sized_box(label(1., "")).dims((0.px(), 0.px()))))
+        .active(usize::from(!visible))
+}
+
 pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> + use<> {
     let surface = surface::Surface::resolve(state);
     let content = flex_col((
-        header(state),
+        indexed_stack((header(state), document_actions::focus_header(state)))
+            .active(usize::from(state.attention.is_focused())),
         paragraph(
             state.ui_scale(),
             state.status.clone(),
@@ -50,7 +58,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
         }),
         recovery_copy(state),
         close_prompt(state),
-        (state.map.workspace != crate::map::Workspace::Map
+        (state.visible_workspace() != crate::map::Workspace::Map
             && matches!(surface, surface::Surface::SourceRepair { import: true, .. }))
         .then(|| source_repair::panel(state)),
         workspace(state, &surface),

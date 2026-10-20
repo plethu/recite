@@ -1,5 +1,6 @@
 //! A tagged immutable keyboard context routes native host messages through Xilem.
 use super::*;
+use crate::attention::PaneMotion;
 use recite_config::{WriterCommand, WriterShortcuts};
 use xilem::{
     Pod, ViewCtx, WidgetView,
@@ -35,16 +36,24 @@ pub(crate) struct Context {
     pub generation: CommandGeneration,
     pub writer_active: bool,
     pub picker_open: bool,
+    pub attention: crate::attention::Attention,
+    pub keymap: recite_config::Keymap,
     pub proxy: MessageProxy<Invocation>,
 }
 pub(crate) struct Invocation {
-    pub command: WriterCommand,
+    pub action: Action,
     pub generation: CommandGeneration,
+}
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum Action {
+    Command(WriterCommand),
+    PaneHint(bool),
+    CyclePane { forward: bool },
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandInvocation")
-            .field("command", &self.command)
+            .field("action", &self.action)
             .finish_non_exhaustive()
     }
 }
@@ -54,12 +63,15 @@ struct Scope {
     welcome: bool,
     settings: bool,
     picker: Option<(picker::PickerInstance, picker::Mode, picker::PickerRevision)>,
+    keymap: recite_config::Keymap,
 }
 struct DocumentScope {
     window: WindowId,
     view: recite_writer_model::View,
     workspace: crate::map::Workspace,
     stamp: recite_writer_model::AnalysisStamp,
+    attention: crate::attention::Attention,
+    writing: bool,
 }
 impl PartialEq for DocumentScope {
     fn eq(&self, other: &Self) -> bool {
@@ -67,6 +79,8 @@ impl PartialEq for DocumentScope {
             && self.view == other.view
             && self.workspace == other.workspace
             && self.stamp == other.stamp
+            && self.attention == other.attention
+            && self.writing == other.writing
     }
 }
 impl Scope {
@@ -79,10 +93,13 @@ impl Scope {
                     view: model.view().clone(),
                     workspace: writer.map.workspace,
                     stamp: model.document().analysis_stamp(),
+                    attention: writer.attention.clone(),
+                    writing: writer.phase == Phase::Writing,
                 }
             }),
             welcome: app.show_welcome,
             settings: app.settings_open,
+            keymap: app.preferences.config.ui.keymap,
             picker: app
                 .picker
                 .as_ref()
@@ -112,10 +129,21 @@ impl<V> Host<V> {
         KeyboardContext(Some(Arc::new(Context {
             shortcuts: self.shortcuts.clone(),
             generation: state.generation,
-            writer_active: self.scope.writer.is_some()
+            writer_active: self
+                .scope
+                .writer
+                .as_ref()
+                .is_some_and(|writer| writer.writing)
                 && !self.scope.welcome
                 && !self.scope.settings,
             picker_open: self.scope.picker.is_some(),
+            attention: self
+                .scope
+                .writer
+                .as_ref()
+                .map(|writer| writer.attention.clone())
+                .unwrap_or_default(),
+            keymap: self.scope.keymap,
             proxy: state.proxy.clone(),
         })))
     }
@@ -195,7 +223,19 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         {
             return MessageResult::Stale;
         }
-        app.run_command(invocation.command);
+        match invocation.action {
+            Action::Command(command) => app.run_command(command),
+            Action::PaneHint(pending) => app.pane_hint = pending,
+            Action::CyclePane { forward } => {
+                if let Some(writer) = &mut app.writer {
+                    writer.focus_pane(if forward {
+                        PaneMotion::Next
+                    } else {
+                        PaneMotion::Previous
+                    });
+                }
+            }
+        }
         MessageResult::Action(())
     }
 }

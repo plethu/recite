@@ -76,6 +76,12 @@ and selecting a beat restores a readable native card. Script stays mounted acros
 so its native typing history survives. Geometry and personal placement I/O run on workers; checked
 receipts preserve newer typing and reconcile completed writes after cancellation.
 
+Focus writing hides surrounding panes while preserving the mounted manuscript and its native text
+history. Exit focus restores the workspace and reveals the previous native focus target. F6 and
+Shift+F6 cycle visible panes; in Vim mode, Ctrl+W then h/j/k/l moves by direction and Escape
+cancels. Text fields retain ordinary character input. The pane hint and focus changes publish
+without waiting for another input event.
+
 Personal settings and desktop activation also use the shared owners. Localisation, configured
 preview inputs, schema tooling and remaining workspace commands are still in progress. The default
 launcher continues to use Freya. See [acceptance](acceptance.md) for evidence limits.

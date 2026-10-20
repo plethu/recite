@@ -33,13 +33,16 @@ struct Host<D> {
     driver: D,
     keyboard: Keyboard,
 }
-impl<D> Host<D> {
-    fn synchronize_focus(&mut self) {
+impl<D: AppDriver> Host<D> {
+    fn synchronize_focus(&mut self, event_loop: &ActiveEventLoop) {
         if !self.masonry.is_suspended() {
-            let mut roots = self.masonry.roots();
-            if let (Some(root), None) = (roots.next(), roots.next()) {
-                self.keyboard.synchronize(root);
+            {
+                let mut roots = self.masonry.roots();
+                if let (Some(root), None) = (roots.next(), roots.next()) {
+                    self.keyboard.synchronize(root);
+                }
             }
+            self.masonry.flush_signals(event_loop, &mut self.driver);
         }
     }
 }
@@ -48,11 +51,20 @@ impl<D: AppDriver> ApplicationHandler<MasonryUserEvent> for Host<D> {
         self.masonry.handle_resumed(event_loop, &mut self.driver);
     }
     fn suspended(&mut self, event_loop: &ActiveEventLoop) {
-        self.keyboard.reset();
+        if !self.masonry.is_suspended() {
+            let mut roots = self.masonry.roots();
+            if let (Some(root), None) = (roots.next(), roots.next()) {
+                self.keyboard.blur(root);
+            } else {
+                self.keyboard.reset();
+            }
+        } else {
+            self.keyboard.reset();
+        }
         self.masonry.handle_suspended(event_loop);
     }
     fn window_event(&mut self, event_loop: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
-        self.synchronize_focus();
+        self.synchronize_focus(event_loop);
         let consumed = if self.masonry.is_suspended() {
             false
         } else {
@@ -67,21 +79,21 @@ impl<D: AppDriver> ApplicationHandler<MasonryUserEvent> for Host<D> {
             self.masonry
                 .handle_window_event(event_loop, id, event, &mut self.driver);
         }
-        self.synchronize_focus();
+        self.synchronize_focus(event_loop);
     }
     fn device_event(&mut self, event_loop: &ActiveEventLoop, id: DeviceId, event: DeviceEvent) {
         self.masonry
             .handle_device_event(event_loop, id, event, &mut self.driver);
     }
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: MasonryUserEvent) {
-        self.synchronize_focus();
+        self.synchronize_focus(event_loop);
         self.masonry
             .handle_user_event(event_loop, event, &mut self.driver);
-        self.synchronize_focus();
+        self.synchronize_focus(event_loop);
     }
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         self.masonry.handle_about_to_wait(event_loop);
-        self.synchronize_focus();
+        self.synchronize_focus(event_loop);
     }
     fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
         self.masonry.handle_new_events(event_loop, cause);

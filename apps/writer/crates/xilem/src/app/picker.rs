@@ -234,7 +234,8 @@ impl App {
                     || writer.session.model().document().can_undo())
             }
             C::Redo => idle && writer.session.model().document().can_redo(),
-            C::Script | C::Map | C::Split | C::AddBeat => idle,
+            C::Script | C::Map | C::Split | C::AddBeat | C::Focus => idle,
+            C::PaneLeft | C::PaneRight | C::PaneUp | C::PaneDown => true,
             C::AddLine | C::AddReply => {
                 idle && writer
                     .session

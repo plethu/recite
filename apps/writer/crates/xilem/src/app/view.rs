@@ -79,6 +79,13 @@ fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
             ))
             .gap(12.px()),
             (!app.status.is_empty()).then(|| paragraph(scale, app.status.clone(), 800.)),
+            app.pane_hint.then(|| {
+                paragraph(
+                    scale,
+                    "Pane navigation · h left · j down · k up · l right · Esc cancel",
+                    900.,
+                )
+            }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(8.px()),

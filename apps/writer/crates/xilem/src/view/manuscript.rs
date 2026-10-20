@@ -1,5 +1,6 @@
 use super::surface::Surface;
 use super::*;
+use crate::attention::{Pane, Region};
 use crate::rules;
 use recite_writer_model::{EditOperation, StructuralCommand};
 use xilem::AnyWidgetView;
@@ -9,8 +10,11 @@ use xilem::masonry::properties;
 pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetView<Writer> + use<> {
     flex_col((
         label(state.ui_scale(), surface.title()),
-        actions(state),
-        destination(state, surface),
+        retained(actions(state), !state.attention.is_focused()),
+        retained(
+            flex_col((destination(state, surface),)),
+            !state.attention.is_focused(),
+        ),
         content(state, surface),
         diagnostics(state),
         (!matches!(surface, Surface::Reply(_)))
@@ -18,6 +22,7 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+    .prop(Region(Some(Pane::Script)))
 }
 fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> {
     match surface {

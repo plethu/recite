@@ -70,7 +70,7 @@ fn vim_alias_runs_the_shared_save_path_and_unavailable_commands_leave_search_ope
         Ok(())
     });
     app.open_picker(Search::Commands);
-    app.filter_picker("Focus".into());
+    app.filter_picker("Localise".into());
     app.activate_picker(0);
     assert!(app.picker.is_some());
     app.filter_picker(":w".into());

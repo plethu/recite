@@ -14,6 +14,7 @@ pub(super) enum Kind {
     Manuscript,
     Query,
     ActiveResult,
+    Text,
 }
 #[derive(Default)]
 pub(super) struct Focus {
@@ -104,7 +105,7 @@ fn role(widget: WidgetRef<'_, dyn Widget>) -> Kind {
     {
         Kind::Manuscript
     } else {
-        Kind::Other
+        Kind::Text
     }
 }
 fn find(root: &RenderRoot, kind: Kind) -> Option<WidgetId> {

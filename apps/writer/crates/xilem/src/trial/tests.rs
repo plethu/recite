@@ -42,6 +42,10 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
     let directory = project(SOURCE).unwrap();
     let mut writer = open(&directory).unwrap();
     install(&mut writer).unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let (sender, mut navigation) = async_mpsc::unbounded_channel();
+    writer.navigation.sender = Some(sender);
+    writer.navigation.runtime = Some(runtime.handle().clone());
     for invalidate in 0..5 {
         let request = begin(&mut writer).unwrap();
         match invalidate {
@@ -52,7 +56,10 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
                 model.set_draft("Draft".into());
                 Ok(())
             }),
-            _ => writer.reload(),
+            _ => {
+                writer.reload();
+                support::finish_navigation(&mut writer, &mut navigation).unwrap();
+            }
         }
         assert!(matches!(
             finish(&mut writer, request).unwrap(),

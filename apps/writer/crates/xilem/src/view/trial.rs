@@ -1,5 +1,6 @@
 //! Source-language runtime controls; all traversal stays in the shared model.
 use super::*;
+use crate::attention::{Pane, Region};
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck, PreviewPage};
 use xilem::masonry::properties;
 mod captions;
@@ -56,6 +57,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+    .prop(Region(Some(Pane::Preview)))
 }
 
 fn playback(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetView<Writer> + use<> {

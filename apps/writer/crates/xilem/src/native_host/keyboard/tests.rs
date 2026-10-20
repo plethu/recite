@@ -18,7 +18,7 @@ impl RawProxy for Recorder {
         self
     }
 }
-fn context() -> (Context, mpsc::Receiver<SendMessage>) {
+pub(super) fn context() -> (Context, mpsc::Receiver<SendMessage>) {
     let (sender, receiver) = mpsc::channel();
     (
         Context {
@@ -26,6 +26,8 @@ fn context() -> (Context, mpsc::Receiver<SendMessage>) {
             generation: Default::default(),
             writer_active: true,
             picker_open: false,
+            attention: Default::default(),
+            keymap: recite_config::Keymap::default(),
             proxy: MessageProxy::new(Arc::new(Recorder(sender)), Arc::from([])),
         },
         receiver,
@@ -57,7 +59,7 @@ fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_act
         .unwrap()
         .downcast::<Invocation>()
         .unwrap();
-    assert_eq!(action.command, WriterCommand::Save);
+    assert_eq!(action.action, Action::Command(WriterCommand::Save));
     assert_eq!(action.generation, context.generation);
     let mut repeat = stroke(Key::Character("s"));
     repeat.first_press = false;
@@ -80,8 +82,8 @@ fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_act
             .unwrap()
             .downcast::<Invocation>()
             .unwrap()
-            .command,
-        WriterCommand::Save
+            .action,
+        Action::Command(WriterCommand::Save)
     );
     for character in ["z", "y", "c", "v", "x", "a"] {
         assert!(!keyboard.dispatch(&context, None, false, stroke(Key::Character(character))));
@@ -123,8 +125,8 @@ fn apply_belongs_to_the_active_manuscript_and_composition_bypasses_commands() {
                     .unwrap()
                     .downcast::<Invocation>()
                     .unwrap()
-                    .command,
-                WriterCommand::Apply
+                    .action,
+                Action::Command(WriterCommand::Apply)
             );
         } else {
             assert!(receiver.try_recv().is_err());
@@ -135,4 +137,35 @@ fn apply_belongs_to_the_active_manuscript_and_composition_bypasses_commands() {
     keyboard.reset();
     assert_eq!(keyboard.normalized_modifiers(), Modifiers::default());
     assert!(matches!(keyboard.composition, Composition::Idle));
+}
+
+#[test]
+fn standard_f6_cycles_panes_in_both_directions_and_releases_do_not_repeat() {
+    let (context, messages) = context();
+    let mut keyboard = Keyboard::default();
+    for shift in [false, true] {
+        let mut input = stroke(Key::Function(6));
+        input.input.modifiers = Modifiers {
+            shift,
+            ..Modifiers::default()
+        };
+        assert!(keyboard.dispatch(&context, None, false, input));
+        assert_eq!(
+            messages
+                .try_recv()
+                .unwrap()
+                .downcast::<Invocation>()
+                .unwrap()
+                .action,
+            Action::CyclePane { forward: !shift }
+        );
+        let mut release = stroke(Key::Function(6));
+        release.input.modifiers = Modifiers {
+            shift,
+            ..Modifiers::default()
+        };
+        release.first_press = false;
+        assert!(keyboard.dispatch(&context, None, false, release));
+        assert!(messages.try_recv().is_err());
+    }
 }

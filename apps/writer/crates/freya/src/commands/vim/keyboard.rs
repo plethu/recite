@@ -1,5 +1,6 @@
 //! Navigation defaults and aliases dispatch through the shared command registry.
 use super::*;
+use recite_writer_session::commands::vim::{self, Action, Chord};
 pub(crate) fn modifier_key(event: &KeyboardEventData) -> bool {
     event.modifiers == Modifiers::CONTROL
         && matches!(&event.key, Key::Character(k) if ["o", "i", "w"].iter().any(|key| k.eq_ignore_ascii_case(key)))
@@ -42,21 +43,7 @@ fn dispatch(mut writer: Writer, event: &Event<KeyboardEventData>) {
     if let Some(invoker) = pending {
         writer.vim.cancel();
         invoker.request_focus();
-        let command = if (event.modifiers - Modifiers::CONTROL).is_empty() {
-            match &event.key {
-                Key::Character(k) => match k.as_str() {
-                    "h" => Some(Command::PaneLeft),
-                    "j" => Some(Command::PaneDown),
-                    "k" => Some(Command::PaneUp),
-                    "l" => Some(Command::PaneRight),
-                    _ => None,
-                },
-                _ => None,
-            }
-        } else {
-            None
-        };
-        if let Some(command) = command {
+        if let Some(Action::Command(command)) = vim::navigation(chord(event), true) {
             command.run(writer);
         }
         event.stop_propagation();
@@ -66,41 +53,26 @@ fn dispatch(mut writer: Writer, event: &Event<KeyboardEventData>) {
     if crate::commands::shortcut(event).is_some() {
         return;
     }
-    let command = if event.modifiers == Modifiers::CONTROL {
-        match &event.key {
-            Key::Character(k) if k.eq_ignore_ascii_case("o") => Some(Command::Back),
-            Key::Character(k) if k.eq_ignore_ascii_case("i") => Some(Command::Forward),
-            Key::Character(k) if k.eq_ignore_ascii_case("w") => {
-                writer.vim.pending.set(Some(
-                    *Platform::get()
-                        .current_window()
-                        .focused_accessibility_id
-                        .peek(),
-                ));
-                event.stop_propagation();
-                event.prevent_default();
-                return;
-            }
-            _ => None,
+    match vim::navigation(chord(event), false) {
+        Some(Action::PanePrefix) => {
+            writer.vim.pending.set(Some(
+                *Platform::get()
+                    .current_window()
+                    .focused_accessibility_id
+                    .peek(),
+            ));
         }
-    } else if (event.modifiers - Modifiers::SHIFT).is_empty() {
-        match &event.key {
-            Key::Character(k) => match k.as_str() {
-                ":" => Some(Command::Commands),
-                "/" => Some(Command::Find),
-                "n" => Some(Command::NextMatch),
-                "N" => Some(Command::PreviousMatch),
-                _ => None,
-            },
-            _ => None,
-        }
-    } else {
-        None
-    };
-    if let Some(command) = command {
-        command.run(writer);
-        event.stop_propagation();
-        event.prevent_default();
+        Some(Action::Command(command)) => command.run(writer),
+        None => return,
+    }
+    event.stop_propagation();
+    event.prevent_default();
+}
+fn chord(event: &KeyboardEventData) -> Chord<'_> {
+    match &event.key {
+        Key::Character(key) if event.modifiers == Modifiers::CONTROL => Chord::Control(key),
+        Key::Character(key) if (event.modifiers - Modifiers::SHIFT).is_empty() => Chord::Plain(key),
+        _ => Chord::Other,
     }
 }
 

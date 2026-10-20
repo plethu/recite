@@ -11,7 +11,13 @@ pub(crate) struct Layout {
 }
 impl Layout {
     pub fn resolve(state: &Writer) -> Self {
-        let available = (state.viewport.width - state.navigation_width() - 68.).max(280.);
+        let navigation = if state.attention.is_focused() {
+            0.
+        } else {
+            state.navigation_width() + 20.
+        };
+        let available = (state.viewport.width - navigation - 48.).max(280.);
+        let workspace = state.visible_workspace();
         let preferred = f64::from(
             state
                 .config
@@ -21,9 +27,8 @@ impl Layout {
         );
         let script = preferred.min(available);
         let minimum_map = 320. * f64::from(state.ui_scale());
-        let stacked =
-            state.map.workspace == Workspace::Split && available < script + minimum_map + 20.;
-        let map = if state.map.workspace == Workspace::Split && !stacked {
+        let stacked = workspace == Workspace::Split && available < script + minimum_map + 20.;
+        let map = if workspace == Workspace::Split && !stacked {
             available - script - 20.
         } else {
             available
@@ -41,17 +46,21 @@ pub(super) fn workspace(
     surface: &surface::Surface<'_>,
 ) -> impl WidgetView<Writer> + use<> {
     let layout = Layout::resolve(state);
-    let map = state.map.workspace.has_map();
-    let script = state.map.workspace != Workspace::Map;
+    let workspace = state.visible_workspace();
+    let map = workspace.has_map();
+    let script = workspace != Workspace::Map;
     let map_stack = indexed_stack((
         crate::map::panel(state),
         sized_box(label(1., "")).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!map));
     let script_stack = indexed_stack((
-        flex_col((manuscript(state, surface), trial::panel(state)))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(20.px()),
+        flex_col((
+            manuscript(state, surface),
+            retained(trial::panel(state), !state.attention.is_focused()),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(20.px()),
         sized_box(label(1., "")).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!script));
@@ -87,10 +96,21 @@ pub(super) fn workspace(
         GridTrackSize::Fixed(if layout.stacked { gap.px() } else { 0.px() }),
         GridTrackSize::Auto,
     ]);
-    let body = flex_row((navigation(state), panes))
+    let navigation = indexed_stack((
+        navigation(state),
+        sized_box(label(1., "")).dims((0.px(), 0.px())),
+    ))
+    .active(usize::from(state.attention.is_focused()));
+    let body = flex_row((navigation, panes))
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(20.px());
-    flex_col((tabs(state), body))
+        .gap(if state.attention.is_focused() {
+            0.px()
+        } else {
+            20.px()
+        });
+    let tabs = indexed_stack((tabs(state), sized_box(label(1., "")).dims((0.px(), 0.px()))))
+        .active(usize::from(state.attention.is_focused()));
+    flex_col((tabs, body))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(16.px())
 }

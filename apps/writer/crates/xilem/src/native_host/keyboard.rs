@@ -1,5 +1,7 @@
 mod focus;
-use crate::app::keyboard::{Context, Invocation, KeyboardContext, TAG};
+mod panes;
+mod vim;
+use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
 use recite_config::WriterCommand;
 use recite_writer_session::commands::keybindings::{self, Input, Key, Modifiers, PhysicalKey};
 use xilem::winit::keyboard;
@@ -22,10 +24,23 @@ pub(super) struct Keyboard {
     modifiers: ModifiersState,
     composition: Composition,
     focus: focus::Focus,
+    attention: panes::Attention,
+    vim: vim::Vim,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
-        *self = Self::default();
+        self.modifiers = ModifiersState::default();
+        self.composition = Composition::Idle;
+        self.vim = vim::Vim::default();
+    }
+    pub fn blur(&mut self, root: &RenderRoot) {
+        if let Some(context) = root
+            .get_widget_with_tag(TAG)
+            .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone())
+        {
+            self.vim.cancel(&context);
+        }
+        self.reset();
     }
     pub fn event(&mut self, root: &RenderRoot, event: &WindowEvent) -> bool {
         match event {
@@ -40,7 +55,7 @@ impl Keyboard {
             WindowEvent::Ime(Ime::Commit(_) | Ime::Disabled) => {
                 self.composition = Composition::Idle
             }
-            WindowEvent::Focused(false) => self.reset(),
+            WindowEvent::Focused(false) => self.blur(root),
             WindowEvent::KeyboardInput {
                 event,
                 is_synthetic: false,
@@ -71,7 +86,10 @@ impl Keyboard {
                     None
                 };
                 let manuscript = enter && kind == focus::Kind::Manuscript;
-                return self.dispatch(
+                if self.vim.release(event.physical_key, event.state) {
+                    return true;
+                }
+                let consumed = self.dispatch(
                     &context,
                     root.focused_widget(),
                     manuscript,
@@ -85,6 +103,17 @@ impl Keyboard {
                         picker,
                         first_press: event.state == ElementState::Pressed && !event.repeat,
                     },
+                );
+                if consumed || !matches!(self.composition, Composition::Idle) {
+                    self.vim.cancel(&context);
+                    return consumed;
+                }
+                return self.vim.event(
+                    &context,
+                    root.focused_widget(),
+                    kind,
+                    event,
+                    self.modifiers,
                 );
             }
             _ => {}
@@ -112,19 +141,31 @@ impl Keyboard {
                     primary: true,
                     ..Modifiers::default()
                 };
-        let command = if stroke.picker.is_some() {
-            stroke.picker
+        let action = if stroke.picker.is_some() {
+            stroke.picker.map(Action::Command)
         } else if apply {
-            Some(WriterCommand::Apply)
+            Some(Action::Command(WriterCommand::Apply))
+        } else if context.writer_active
+            && !context.picker_open
+            && stroke.input.key == Key::Function(6)
+            && !stroke.input.modifiers.primary
+            && !stroke.input.modifiers.alt
+            && !stroke.input.modifiers.other
+        {
+            Some(Action::CyclePane {
+                forward: !stroke.input.modifiers.shift,
+            })
         } else {
-            keybindings::command(&context.shortcuts, stroke.input)
+            keybindings::command(&context.shortcuts, stroke.input).map(Action::Command)
         };
-        let Some(command) = command else {
+        let Some(action) = action else {
             return false;
         };
+        // Clear the hint before a command can retire this keyboard scope.
+        self.vim.cancel(context);
         if stroke.first_press {
             let _ = context.proxy.message(Invocation {
-                command,
+                action,
                 generation: context.generation,
             });
         }
@@ -135,8 +176,14 @@ impl Keyboard {
             .get_widget_with_tag(TAG)
             .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone());
         if let Some(context) = context {
+            if matches!(self.composition, Composition::Idle) {
+                self.vim.synchronize(&context, root.focused_widget());
+            } else {
+                self.vim.cancel(&context);
+            }
             self.focus
                 .synchronize(root, context.picker_open, context.generation);
+            self.attention.synchronize(root, &context);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {

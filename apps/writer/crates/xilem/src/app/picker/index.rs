@@ -11,7 +11,7 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
             .iter()
             .map(|command| Entry {
                 item: Item::Command(*command),
-                title: commands::label(*command, false),
+                title: commands::label(*command, writer.attention.is_focused()),
                 detail: if *command == WriterCommand::Source {
                     "Open in your preferred editor".into()
                 } else {

@@ -106,6 +106,14 @@ manuscript. Composition bypasses application shortcuts; document, screen and bin
 invalidate queued commands. Unbound Control/Meta chords cannot become literal text. This does not
 establish physical IME or keyboard-layout acceptance on every platform.
 
+Writing Focus overlays the selected workspace without replacing its manuscript widgets or native
+text history. Leaving Focus restores and reveals the previous valid native focus target, with a
+writing-pane fallback when that target has retired. F6/Shift+F6 cycle visible panes; Vim's
+directional pane prefix is scoped to its originating focus and keyboard context. Composition, focus
+loss and context changes cancel it, and consumed terminal releases cannot activate underlying
+controls. Pane focus, redraw and accessibility updates must publish without requiring another input
+event.
+
 Xilem prepares file/selection navigation and applied edit history on workers. File switches retain
 field drafts; linked navigation applies captured prose first and stops if newer typing remains.
 Publication requires the same document and exact outgoing recovery checkpoint. A Save requested

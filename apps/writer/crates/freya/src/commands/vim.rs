@@ -1,5 +1,5 @@
 //! Vim navigation owns sequences; writing fields continue to own text editing.
-use super::{Command, CommandExt};
+use super::CommandExt;
 mod keyboard;
 use crate::{design::tokens as t, editing::Writer};
 use freya::prelude::*;

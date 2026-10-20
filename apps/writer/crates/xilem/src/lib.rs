@@ -1,4 +1,5 @@
 mod app;
+mod attention;
 mod choices;
 mod editor_work;
 mod external_editor;
@@ -34,6 +35,7 @@ struct Writer {
     trial: trial::Trial,
     reading: reading::Reading,
     map: map::MapSession,
+    attention: attention::Attention,
     work: editor_work::EditorWork,
     navigation: navigation::Navigation,
     repair: navigation::repair::Repair,
@@ -95,6 +97,7 @@ impl Writer {
             trial: trial::Trial::new(),
             reading,
             map: map::MapSession::new(),
+            attention: Default::default(),
             work: editor_work::EditorWork::new(),
             navigation: navigation::Navigation::new(),
             repair: navigation::repair::Repair::default(),

@@ -56,6 +56,14 @@ search. Result controls are paged and scroll independently from the query and pa
 Placeholder scaling and serif reading typography have separate 100/200% render checks; those
 captures do not establish assistive-technology usability.
 
+Native Focus writing stashes surrounding panes without replacing manuscript widgets. Its Script, Map
+and Split lifetime regression preserves native undo at 100/200%. The owned Wayland focus drill
+covers undo/redo, nested lookup restoration, directional Vim panes, prefix cancellation, standard F6
+cycling, window blur and revealing the previous focus target after outer scrolling. A host signal
+delivery regression requires F6's visible and AT-SPI focus to update without additional input. These
+Focus and prefix states have separate render review. Repeat-search commands remain part of the
+unfinished command port.
+
 Xilem saves, cold project loads and editor handoff use workers and retain newer typing;
 save-and-close timing is recorded by the native probe. Preferred-application lookup, an
 independently open editor, checked-save conflict refusal and missing-executable retry also pass the

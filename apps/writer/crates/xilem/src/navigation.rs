@@ -153,7 +153,7 @@ impl Writer {
             },
             ..self.location.clone()
         };
-        if self.map.workspace.has_map() {
+        if self.visible_workspace().has_map() {
             location.view = Some(recite_config::WriterView::Map);
             if self.map.workspace == crate::map::Workspace::Map {
                 location.beat = self.map_selected().map(str::to_owned);

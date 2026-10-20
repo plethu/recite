@@ -1,4 +1,5 @@
 use super::*;
+use crate::attention::PaneMotion;
 use recite_config::WriterCommand;
 use recite_writer_model::StructuralCommand;
 
@@ -43,6 +44,11 @@ impl App {
                     WriterCommand::Script => writer.show_workspace(crate::map::Workspace::Script),
                     WriterCommand::Map => writer.show_workspace(crate::map::Workspace::Map),
                     WriterCommand::Split => writer.show_workspace(crate::map::Workspace::Split),
+                    WriterCommand::Focus => writer.toggle_focus(),
+                    WriterCommand::PaneLeft => writer.focus_pane(PaneMotion::Left),
+                    WriterCommand::PaneRight => writer.focus_pane(PaneMotion::Right),
+                    WriterCommand::PaneUp => writer.focus_pane(PaneMotion::Up),
+                    WriterCommand::PaneDown => writer.focus_pane(PaneMotion::Down),
                     WriterCommand::Save => writer.save(),
                     WriterCommand::SaveAll => writer.save_all(),
                     WriterCommand::Source => writer.open_editor(),

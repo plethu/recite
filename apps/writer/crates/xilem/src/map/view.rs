@@ -1,6 +1,7 @@
 //! Cards remain ordinary native controls; canvas drawing carries only route geometry.
 use super::interaction::Source;
 use super::*;
+use crate::attention::{Pane, Region};
 use crate::view::workspace;
 use xilem::masonry::kurbo;
 use xilem::masonry::properties;
@@ -85,6 +86,7 @@ pub(crate) fn panel(state: &Writer) -> Box<AnyWidgetView<Writer>> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+    .prop(Region(Some(Pane::Map)))
     .boxed()
 }
 fn scope_control(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use<> {

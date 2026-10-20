@@ -1,6 +1,31 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
 
+pub(super) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    flex_col((
+        label(state.ui_scale(), document_caption(state)),
+        temporary_notice(state),
+        flex_row((
+            text_button(state.ui_scale(), "Exit focus", Writer::toggle_focus).disabled(
+                state.phase != Phase::Writing || state.navigation.busy() || state.work.busy(),
+            ),
+            state.session.project().map(|_| {
+                text_button(state.ui_scale(), "Save file", Writer::save).disabled(
+                    state.phase != Phase::Writing
+                        || state.navigation.busy()
+                        || state.work.busy()
+                        || state.source_repair_pending(),
+                )
+            }),
+            text_button(state.ui_scale(), "Close", Writer::request_close)
+                .disabled(state.phase != Phase::Writing),
+        ))
+        .gap(8.px()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(8.px())
+}
+
 pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing;
@@ -10,24 +35,8 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
             history_buttons(state),
         ))
         .gap(24.px()),
-        label(
-            scale,
-            format!(
-                "{}{}",
-                state.session.model().document().key().as_str(),
-                if state.session.current_dirty() {
-                    " · Unsaved"
-                } else {
-                    ""
-                }
-            ),
-        ),
-        state.session.project().is_none().then(|| {
-            label(
-                scale,
-                "Temporary example · changes are discarded when this window closes",
-            )
-        }),
+        label(scale, document_caption(state)),
+        temporary_notice(state),
         flex_row((
             state.session.project().is_some().then(|| {
                 text_button(scale, "Save file", |state: &mut Writer| {
@@ -78,12 +87,33 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 text_button(scale, "Reload (keep recovery copy)", Writer::reload)
                     .disabled(closing || state.work.busy() || state.navigation.busy())
             }),
+            text_button(scale, "Focus writing", Writer::toggle_focus)
+                .disabled(closing || state.work.busy() || state.navigation.busy()),
             text_button(scale, "Close", Writer::request_close).disabled(closing),
         ))
         .gap(8.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+}
+fn document_caption(state: &Writer) -> String {
+    format!(
+        "{}{}",
+        state.session.model().document().key(),
+        if state.session.current_dirty() {
+            " · Unsaved"
+        } else {
+            ""
+        }
+    )
+}
+fn temporary_notice(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    state.session.project().is_none().then(|| {
+        label(
+            state.ui_scale(),
+            "Temporary example · changes are discarded when this window closes",
+        )
+    })
 }
 
 fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {

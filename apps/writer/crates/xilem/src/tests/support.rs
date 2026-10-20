@@ -192,7 +192,7 @@ pub(crate) fn native_label<W: masonry::core::Widget>(
     }
     None
 }
-fn flush_native<V: WidgetView<Writer, Widget: Sized>>(
+pub(crate) fn flush_native<V: WidgetView<Writer, Widget: Sized>>(
     writer: &mut Writer,
     harness: &mut TestHarness<V::Widget>,
     context: &mut ViewCtx,
