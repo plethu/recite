@@ -140,6 +140,29 @@ fn poll_generation(session: &mut Session) -> Option<Result<(), String>> {
 }
 
 #[test]
+fn opening_declarations_rejects_an_ancestor_manifest_after_the_project_root_changes()
+-> Result<(), Box<dyn std::error::Error>> {
+    let (directory, session) = session()?;
+    drop(session);
+    let manifest = "format_version=1\n[project]\nschema='schema.json'\n";
+    std::fs::write(directory.path().join("recite.project.toml"), manifest)?;
+    let child = directory.path().join("child");
+    std::fs::create_dir(&child)?;
+    std::fs::copy(
+        directory.path().join("schema.json"),
+        child.join("schema.json"),
+    )?;
+    std::fs::write(child.join("recite.project.toml"), manifest)?;
+    drop(Session::open(&child)?);
+    std::fs::remove_file(child.join("recite.project.toml"))?;
+    assert!(matches!(
+        Session::open(&child),
+        Err(FileError::ProjectRootChanged)
+    ));
+    Ok(())
+}
+
+#[test]
 fn declaration_recovery_restores_invalid_drafts_and_keeps_disk_conflicts()
 -> Result<(), Box<dyn std::error::Error>> {
     let (dir, mut session) = session()?;

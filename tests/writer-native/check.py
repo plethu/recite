@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "focus":
+        if scenario == "project-tools":
+            from project_tools_interactions import run
+        elif scenario == "focus":
             from focus_interactions import run
         elif scenario == "reload":
             from reload_interactions import run
@@ -134,6 +136,7 @@ def main():
             "map",
             "reload",
             "focus",
+            "project-tools",
         ),
         default="all",
     )

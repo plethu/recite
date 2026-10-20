@@ -119,6 +119,16 @@ lookup retains only its accepted query and semantic scene/beat target; each invo
 fresh location and advances the cursor only after checked navigation succeeds. Cancelling another
 lookup leaves that accepted search intact. Saved-project-text lookup does not replace it.
 
+Native project-tool screens retain the mounted writing surface and its text history. Declaration
+inspection is paged; generated schemas remain read-only. Build saved uses disk inputs, while Save
+all and build completes the shared ordered save sequence first. Build jobs and terminal polling
+outlive the selected screen. Cancellation keeps close and project replacement guarded until the
+terminal result is collected.
+
+Queued accessibility actions are checked against current native widget identity before dispatch;
+retired controls cannot crash the host or act on a replacement widget. The current host bridge owns
+one native window and its base layer.
+
 Xilem prepares file/selection navigation and applied edit history on workers. File switches retain
 field drafts; linked navigation applies captured prose first and stops if newer typing remains.
 Publication requires the same document and exact outgoing recovery checkpoint. A Save requested

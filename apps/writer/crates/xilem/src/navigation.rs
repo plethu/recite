@@ -33,6 +33,7 @@ pub(super) enum Target {
     Workspace(crate::map::Workspace),
     MapRefresh,
     Reload,
+    ProjectWorkspace(crate::workspaces::Open),
     Repair(repair::Action),
 }
 
@@ -269,6 +270,16 @@ impl Writer {
             && matches!(request.target, Target::Workspace(_) | Target::MapRefresh)
         {
             request.cancel.interrupt();
+        }
+    }
+    pub(crate) fn cancel_project_workspace_open(&mut self) {
+        if self
+            .navigation
+            .pending
+            .as_ref()
+            .is_some_and(|request| matches!(request.target, Target::ProjectWorkspace(_)))
+        {
+            self.cancel_navigation();
         }
     }
     fn send_navigation(&mut self, request: Arc<Request>, work: worker::Work) -> Result<(), String> {

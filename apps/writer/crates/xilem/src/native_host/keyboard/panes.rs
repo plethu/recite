@@ -1,6 +1,7 @@
 //! Native pane geometry and focus history stay outside product commands.
 use super::*;
 use crate::attention::{Pane, PaneMotion, PaneRequest, Region};
+use crate::workspaces::Screen;
 use xilem::masonry::{
     accesskit,
     core::{Widget, WidgetRef},
@@ -21,6 +22,8 @@ pub(super) struct Attention {
     writing: WritingFocus,
     request: Option<PaneRequest>,
     last: Option<WidgetId>,
+    screen: Option<Screen>,
+    writing_target: Option<WidgetId>,
 }
 struct Target {
     pane: Pane,
@@ -30,9 +33,36 @@ struct Target {
 }
 impl Attention {
     pub fn synchronize(&mut self, root: &mut RenderRoot, context: &Context) {
-        if !context.writer_active || context.picker_open {
+        if context.picker_open {
             return;
         }
+        let Some(screen) = context.screen else {
+            return;
+        };
+        if self.screen != Some(screen) {
+            if screen == Screen::Write {
+                if self
+                    .writing_target
+                    .is_none_or(|target| !reveal(root, target))
+                {
+                    focus_script(root);
+                }
+            } else {
+                let pane = match screen {
+                    Screen::Declarations => Pane::Declarations,
+                    Screen::Build => Pane::Build,
+                    Screen::Write => Pane::Script,
+                };
+                if let Some(target) = targets(root).iter().find(|target| target.pane == pane) {
+                    reveal(root, target.widget);
+                }
+            }
+            self.screen = Some(screen);
+        }
+        if screen != Screen::Write {
+            return;
+        }
+        self.writing_target = root.focused_widget().or(self.writing_target);
         if matches!(self.writing, WritingFocus::Workspace) && !context.attention.is_focused() {
             self.last = root.focused_widget().or(self.last);
         }

@@ -262,6 +262,7 @@ impl App {
                     .is_some()
             }
             C::Preview => idle,
+            C::Declarations | C::Build => idle && writer.session.project().is_some(),
             C::Back | C::Forward => {
                 idle && writer
                     .navigation

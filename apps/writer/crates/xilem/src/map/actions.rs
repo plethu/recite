@@ -10,6 +10,7 @@ impl Writer {
     }
     pub(crate) fn refresh_map_if_needed(&mut self) {
         if self.navigation.busy()
+            || self.workspaces.screen != crate::workspaces::Screen::Write
             || self.attention.is_focused()
             || self.work.busy()
             || self.phase != crate::Phase::Writing
@@ -36,6 +37,8 @@ impl Writer {
         }
     }
     pub(crate) fn show_workspace(&mut self, workspace: Workspace) {
+        self.cancel_project_workspace_open();
+        self.workspaces.screen = crate::workspaces::Screen::Write;
         self.attention.leave_focus();
         if workspace.has_map()
             && workspace == self.map.workspace

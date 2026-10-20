@@ -23,6 +23,7 @@ enum AfterSave {
     #[default]
     Stay,
     Close,
+    Build(Option<String>),
     OpenEditor(std::sync::Arc<crate::external_editor::Request>),
 }
 pub(super) struct EditorWork {
@@ -57,6 +58,16 @@ impl Writer {
     }
     pub(super) fn save_and_close(&mut self) {
         self.start_save(Scope::All, AfterSave::Close);
+    }
+    pub(crate) fn save_and_build(&mut self) {
+        if self.phase != Phase::Writing {
+            return;
+        }
+        let selected = self
+            .session
+            .project()
+            .and_then(|project| project.files().builds.selected.clone());
+        self.start_save(Scope::All, AfterSave::Build(selected));
     }
     pub(super) fn save_for_editor(
         &mut self,
@@ -175,7 +186,8 @@ impl Writer {
             }
             AfterSave::Close => self.phase = Phase::ConfirmClose,
             AfterSave::OpenEditor(request) if result.is_ok() => self.launch_editor(request),
-            AfterSave::Stay | AfterSave::OpenEditor(_) => {}
+            AfterSave::Build(asset) if result.is_ok() => self.build_selected(asset),
+            AfterSave::Stay | AfterSave::OpenEditor(_) | AfterSave::Build(_) => {}
         }
         if self.phase == Phase::Writing {
             self.refresh_rules();

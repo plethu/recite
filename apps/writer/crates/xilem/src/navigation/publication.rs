@@ -35,6 +35,13 @@ impl Writer {
             _ if request.checkpoint().is_err() => {
                 Err("Navigation cancelled; your current work stays open.".into())
             }
+            ResultValue::ProjectWorkspace(prepared) => {
+                if request.origin.window != self.window || self.phase != crate::Phase::Writing {
+                    Err("The project window changed while its workspace was opening.".into())
+                } else {
+                    self.accept_project_workspace(prepared)
+                }
+            }
             ResultValue::Map(prepared) => {
                 let current = match request.target {
                     Target::MapRefresh => request.origin.presentation_is_current(self),
@@ -133,6 +140,7 @@ impl Writer {
         self.invalidate_map();
         self.remember_location();
         self.status = "Structural edit updated. Save when ready.".into();
+        self.workspaces.screen = crate::workspaces::Screen::Write;
         Ok(())
     }
     fn publish_navigation(
@@ -192,6 +200,7 @@ impl Writer {
             self.retire_rules();
         }
         self.beat_page = 0;
+        self.workspaces.screen = crate::workspaces::Screen::Write;
         self.remember_location();
         self.reading.prepare(self.session.model());
         self.sync_map_selection();

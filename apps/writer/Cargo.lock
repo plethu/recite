@@ -4957,6 +4957,7 @@ name = "recite-writer-xilem"
 version = "0.0.0"
 dependencies = [
  "accesskit_atspi_common 0.18.1",
+ "accesskit_winit 0.32.2",
  "atspi-common",
  "masonry",
  "masonry_winit",

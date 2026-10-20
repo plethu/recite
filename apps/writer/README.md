@@ -85,9 +85,15 @@ commands (n/N in Vim navigation) repeat that query against current accepted targ
 new lookup preserves the previous search; a failed navigation does not advance it. Saved project
 text lookup remains a separate search.
 
+Declarations inspection and Build scenes open from Commands without applying manuscript drafts.
+Declaration results and details are paged. Build saved reads disk inputs; Save all and build uses
+the shared ordered save path first. Jobs continue after returning to writing; cancellation stays
+pending until the terminal result is collected. Declaration source and producer actions are still in
+progress.
+
 Personal settings and desktop activation also use the shared owners. Localisation, configured
-preview inputs, schema tooling and remaining workspace commands are still in progress. The default
-launcher continues to use Freya. See [acceptance](acceptance.md) for evidence limits.
+preview inputs and remaining workspace commands are still in progress. The default launcher
+continues to use Freya. See [acceptance](acceptance.md) for evidence limits.
 
 ## Build requirements
 

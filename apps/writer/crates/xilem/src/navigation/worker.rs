@@ -16,6 +16,7 @@ pub(crate) struct Job {
     pub work: Work,
 }
 pub(crate) enum Work {
+    ProjectWorkspace(crate::workspaces::Work),
     Reload(Box<ReloadRequest>),
     Map(Box<crate::map::Preparation>),
     Repair(Box<repair::Work>),
@@ -30,6 +31,7 @@ pub(crate) enum Work {
     },
 }
 pub(crate) enum ResultValue {
+    ProjectWorkspace(crate::workspaces::Prepared),
     Reload(Box<PreparedReload>),
     Map(Box<crate::map::Prepared>),
     Repair(Box<repair::ResultValue>),
@@ -83,6 +85,10 @@ impl Job {
 impl Work {
     fn execute(self, control: &dyn WorkControl) -> Result<ResultValue, String> {
         match self {
+            Self::ProjectWorkspace(work) => {
+                control.checkpoint().map_err(|error| error.to_string())?;
+                work.execute().map(ResultValue::ProjectWorkspace)
+            }
             Self::Reload(reload) => reload
                 .prepare(control)
                 .map(|prepared| ResultValue::Reload(Box::new(prepared)))

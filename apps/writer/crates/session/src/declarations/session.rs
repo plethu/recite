@@ -43,7 +43,11 @@ impl Session {
         }
     }
     pub fn open(root: &Path) -> Result<Self, FileError> {
-        let report = recite_config::discover_project(root)?;
+        let root = root.canonicalize()?;
+        let report = recite_config::discover_project(&root)?;
+        if report.manifest().project_root() != root {
+            return Err(FileError::ProjectRootChanged);
+        }
         let relative = report
             .manifest()
             .source()
@@ -61,7 +65,7 @@ impl Session {
         let schema = loaded
             .schema
             .ok_or(FileError::Validation(loaded.diagnostics))?;
-        let registration = Self::registration(root, &schema);
+        let registration = Self::registration(&root, &schema);
         Ok(Self {
             saving: false,
             registration,

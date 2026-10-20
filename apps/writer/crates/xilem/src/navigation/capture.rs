@@ -82,6 +82,16 @@ impl Writer {
         if matches!(target, Target::Reload) {
             return self.submit_reload();
         }
+        if let Target::ProjectWorkspace(action) = target {
+            let work = crate::workspaces::Work::capture(self, action)?;
+            let request = Arc::new(Request {
+                target,
+                origin: Origin::capture(self),
+                cancel: CancellationToken::new(),
+                forwarded: None,
+            });
+            return self.send_navigation(request, worker::Work::ProjectWorkspace(work));
+        }
         let model = self.session.model();
         let location = match &target {
             Target::Location(location)
@@ -116,6 +126,7 @@ impl Writer {
             | Target::Structure(_)
             | Target::Workspace(_)
             | Target::Reload
+            | Target::ProjectWorkspace(_)
             | Target::MapRefresh => {
                 return Err("Invalid navigation target.".into());
             }

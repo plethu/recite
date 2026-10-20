@@ -67,6 +67,18 @@ ordered wrapping/fallback selection. Native checked publication preserves the cu
 cancellation, failed Apply or newer typing, and cancelling another picker preserves the query.
 Saved-text results do not replace this cursor because individual text hits have no stable identity.
 
+Native project tools load declarations/build targets on the navigation worker and retain unapplied
+manuscript drafts. A fixed 1,026-declaration fixture mounts five result controls within 128 native
+accessibility nodes at 100/200%; details and build reports also bound a single long Unicode line.
+The owned Wayland drill covers declaration query focus, selected detail, returning with native text
+undo, disk-only builds, ordered save-all/build, and cancellation retirement before closing. These
+inspection/build states have separate render review, including scrolled 200% declaration detail.
+Declaration source binding/editing and registered producer actions remain unfinished.
+
+A queued accessibility action may outlive its native widget. Recite checks the live owned base layer
+before dispatch; the stale-click regression also requires replacement focus/click actions to work
+before another redraw. This bridge currently assumes one native window and its base layer.
+
 Xilem saves, cold project loads and editor handoff use workers and retain newer typing;
 save-and-close timing is recorded by the native probe. Preferred-application lookup, an
 independently open editor, checked-save conflict refusal and missing-executable retry also pass the

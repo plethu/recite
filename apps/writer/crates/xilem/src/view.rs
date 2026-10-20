@@ -41,8 +41,18 @@ fn retained<V: WidgetView<Writer>>(child: V, visible: bool) -> impl WidgetView<W
 pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> + use<> {
     let surface = surface::Surface::resolve(state);
     let content = flex_col((
-        indexed_stack((header(state), document_actions::focus_header(state)))
-            .active(usize::from(state.attention.is_focused())),
+        indexed_stack((
+            header(state),
+            document_actions::focus_header(state),
+            document_actions::project_header(state),
+        ))
+        .active(
+            if state.workspaces.screen != crate::workspaces::Screen::Write {
+                2
+            } else {
+                usize::from(state.attention.is_focused())
+            },
+        ),
         paragraph(
             state.ui_scale(),
             state.status.clone(),
@@ -58,10 +68,20 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
         }),
         recovery_copy(state),
         close_prompt(state),
-        (state.visible_workspace() != crate::map::Workspace::Map
+        state
+            .session
+            .project()
+            .is_some_and(|project| project.files().builds.busy())
+            .then(|| text_button(state.ui_scale(), "Cancel build", Writer::cancel_build)),
+        (state.workspaces.screen == crate::workspaces::Screen::Write
+            && state.visible_workspace() != crate::map::Workspace::Map
             && matches!(surface, surface::Surface::SourceRepair { import: true, .. }))
         .then(|| source_repair::panel(state)),
-        workspace(state, &surface),
+        workspace::workspace_tabs(state),
+        xilem::view::indexed_stack((workspace(state, &surface), crate::workspaces::panel(state)))
+            .active(usize::from(
+                state.workspaces.screen != crate::workspaces::Screen::Write,
+            )),
         recovery_failure(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -81,6 +101,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             crate::editor_work::worker(),
             crate::external_editor::worker(),
             crate::navigation::worker(),
+            crate::workspaces::jobs(state),
         ),
     )
 }

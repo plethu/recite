@@ -35,6 +35,7 @@ pub(crate) struct Context {
     pub shortcuts: WriterShortcuts,
     pub generation: CommandGeneration,
     pub writer_active: bool,
+    pub screen: Option<crate::workspaces::Screen>,
     pub picker_open: bool,
     pub attention: crate::attention::Attention,
     pub keymap: recite_config::Keymap,
@@ -72,6 +73,7 @@ struct DocumentScope {
     stamp: recite_writer_model::AnalysisStamp,
     attention: crate::attention::Attention,
     writing: bool,
+    screen: crate::workspaces::Screen,
 }
 impl PartialEq for DocumentScope {
     fn eq(&self, other: &Self) -> bool {
@@ -81,6 +83,7 @@ impl PartialEq for DocumentScope {
             && self.stamp == other.stamp
             && self.attention == other.attention
             && self.writing == other.writing
+            && self.screen == other.screen
     }
 }
 impl Scope {
@@ -95,6 +98,7 @@ impl Scope {
                     stamp: model.document().analysis_stamp(),
                     attention: writer.attention.clone(),
                     writing: writer.phase == Phase::Writing,
+                    screen: writer.workspaces.screen,
                 }
             }),
             welcome: app.show_welcome,
@@ -129,14 +133,17 @@ impl<V> Host<V> {
         KeyboardContext(Some(Arc::new(Context {
             shortcuts: self.shortcuts.clone(),
             generation: state.generation,
-            writer_active: self
+            writer_active: self.scope.writer.as_ref().is_some_and(|writer| {
+                writer.writing && writer.screen == crate::workspaces::Screen::Write
+            }) && !self.scope.welcome
+                && !self.scope.settings,
+            picker_open: self.scope.picker.is_some(),
+            screen: self
                 .scope
                 .writer
                 .as_ref()
-                .is_some_and(|writer| writer.writing)
-                && !self.scope.welcome
-                && !self.scope.settings,
-            picker_open: self.scope.picker.is_some(),
+                .filter(|writer| writer.writing && !self.scope.welcome && !self.scope.settings)
+                .map(|writer| writer.screen),
             attention: self
                 .scope
                 .writer

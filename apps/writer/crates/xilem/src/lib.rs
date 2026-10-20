@@ -18,6 +18,7 @@ mod session;
 mod tests;
 mod trial;
 mod view;
+mod workspaces;
 pub use recite_writer_session::startup::{HELP, LaunchOptions};
 use xilem::masonry::kurbo;
 
@@ -47,6 +48,7 @@ struct Writer {
     pending_choice: Option<choices::Request>,
     pending_search: Option<app::picker::Search>,
     lookup: Option<lookup::Search>,
+    workspaces: workspaces::Workspaces,
     viewport: kurbo::Size,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
@@ -110,6 +112,7 @@ impl Writer {
             pending_choice: None,
             pending_search: None,
             lookup: None,
+            workspaces: Default::default(),
             viewport: kurbo::Size::new(1280., 800.),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),
@@ -173,7 +176,7 @@ impl Writer {
         self.navigate(navigation::Target::Reload);
     }
     fn request_close(&mut self) {
-        if self.work.busy() || self.navigation.busy() {
+        if self.work.busy() || self.navigation.busy() || self.project_jobs_busy() {
             self.status = "An editor action is still finishing. Your work remains open.".into();
             return;
         }
@@ -186,7 +189,7 @@ impl Writer {
         }
     }
     fn close_with_recovery(&mut self) {
-        if self.work.busy() || self.navigation.busy() {
+        if self.work.busy() || self.navigation.busy() || self.project_jobs_busy() {
             self.status = "Wait for the current editor action before closing.".into();
             return;
         }

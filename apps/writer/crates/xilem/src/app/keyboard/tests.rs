@@ -6,7 +6,7 @@ use xilem::{core::DynMessage, masonry::testing::TestHarness};
 
 #[test]
 fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_after_rebuild() {
-    for change in 0..10 {
+    for change in 0..11 {
         let writer = Writer::from_session(Session::examples().unwrap(), None);
         let mut app = App::with_writer(writer);
         if change == 5 {
@@ -48,7 +48,8 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             6 => app.writer.as_mut().unwrap().toggle_focus(),
             7 => app.preferences.config.ui.keymap = recite_config::Keymap::Vim,
             8 => app.writer.as_mut().unwrap().focus_pane(PaneMotion::Left),
-            _ => app.writer.as_mut().unwrap().phase = Phase::ConfirmClose,
+            9 => app.writer.as_mut().unwrap().phase = Phase::ConfirmClose,
+            _ => app.writer.as_mut().unwrap().workspaces.screen = crate::workspaces::Screen::Build,
         }
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),

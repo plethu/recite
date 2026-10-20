@@ -101,18 +101,21 @@ pub(super) fn workspace(
         sized_box(label(1., "")).dims((0.px(), 0.px())),
     ))
     .active(usize::from(state.attention.is_focused()));
-    let body = flex_row((navigation, panes))
+    flex_row((navigation, panes))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(if state.attention.is_focused() {
             0.px()
         } else {
             20.px()
-        });
-    let tabs = indexed_stack((tabs(state), sized_box(label(1., "")).dims((0.px(), 0.px()))))
-        .active(usize::from(state.attention.is_focused()));
-    flex_col((tabs, body))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(16.px())
+        })
+}
+pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    indexed_stack((tabs(state), sized_box(label(1., "")).dims((0.px(), 0.px())))).active(
+        usize::from(
+            state.attention.is_focused()
+                || state.workspaces.screen != crate::workspaces::Screen::Write,
+        ),
+    )
 }
 fn tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
     xilem::view::radio_group(

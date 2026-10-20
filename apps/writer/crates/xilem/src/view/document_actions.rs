@@ -1,6 +1,31 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
 
+pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
+    flex_col((
+        label(
+            state.ui_scale(),
+            format!("Recite Writer · {}", document_caption(state)),
+        ),
+        flex_row((
+            text_button(
+                state.ui_scale(),
+                "Return to writing",
+                Writer::return_to_writing,
+            )
+            .disabled(state.phase != Phase::Writing),
+            text_button(state.ui_scale(), "Save all", Writer::save_all)
+                .disabled(blocked || state.source_repair_pending()),
+            text_button(state.ui_scale(), "Close", Writer::request_close)
+                .disabled(blocked || state.project_jobs_busy()),
+        ))
+        .gap(8.px()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(12.px())
+}
+
 pub(super) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         label(state.ui_scale(), document_caption(state)),

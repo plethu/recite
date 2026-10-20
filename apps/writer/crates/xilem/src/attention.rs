@@ -18,6 +18,8 @@ pub(crate) enum Pane {
     Map,
     Script,
     Preview,
+    Declarations,
+    Build,
 }
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct Region(pub Option<Pane>);
@@ -71,6 +73,7 @@ impl Writer {
             return;
         }
         self.cancel_map_gesture();
+        self.workspaces.screen = crate::workspaces::Screen::Write;
         self.attention.focused = !self.attention.focused;
         self.status = if self.attention.focused {
             "Writing focus"

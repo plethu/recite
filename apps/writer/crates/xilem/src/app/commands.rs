@@ -45,6 +45,12 @@ impl App {
                     WriterCommand::Map => writer.show_workspace(crate::map::Workspace::Map),
                     WriterCommand::Split => writer.show_workspace(crate::map::Workspace::Split),
                     WriterCommand::Focus => writer.toggle_focus(),
+                    WriterCommand::Declarations => {
+                        writer.open_project_workspace(crate::workspaces::Open::Declarations)
+                    }
+                    WriterCommand::Build => {
+                        writer.open_project_workspace(crate::workspaces::Open::Build)
+                    }
                     WriterCommand::NextMatch | WriterCommand::PreviousMatch => {
                         writer.repeat_lookup(command == WriterCommand::NextMatch)
                     }

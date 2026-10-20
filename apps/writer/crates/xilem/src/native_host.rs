@@ -1,4 +1,5 @@
 //! Single-window host forwarding; command chords are handled before native text input.
+mod accessibility;
 mod keyboard;
 use keyboard::Keyboard;
 use masonry_winit::{
@@ -87,8 +88,10 @@ impl<D: AppDriver> ApplicationHandler<MasonryUserEvent> for Host<D> {
     }
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: MasonryUserEvent) {
         self.synchronize_focus(event_loop);
-        self.masonry
-            .handle_user_event(event_loop, event, &mut self.driver);
+        if accessibility::accepts(&mut self.masonry, &event) {
+            self.masonry
+                .handle_user_event(event_loop, event, &mut self.driver);
+        }
         self.synchronize_focus(event_loop);
     }
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {

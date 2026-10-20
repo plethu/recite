@@ -6,6 +6,7 @@ use crate::{
     messages::{MsgId, text},
 };
 use freya::prelude::*;
+use recite_writer_session::builds;
 use recite_writer_session::builds::job;
 pub(crate) fn open(mut writer: Writer) {
     if let Err(error) = try_open(writer) {
@@ -16,16 +17,9 @@ pub(crate) fn try_open(mut writer: Writer) -> Result<(), String> {
     let mut files = writer.files.write();
     let project = files.as_mut().ok_or("Open a project first.")?;
     if !project.builds.busy() {
-        match recite_config::discover_project(project.root()) {
-            Ok(report) => {
-                let mut targets = std::collections::BTreeMap::<String, Vec<String>>::new();
-                for scene in &report.manifest().source().manifest().scenes {
-                    targets
-                        .entry(scene.asset.clone())
-                        .or_default()
-                        .push(scene.id.clone());
-                }
-                project.builds.targets = targets.into_iter().collect();
+        match builds::targets(project.root()) {
+            Ok(targets) => {
+                project.builds.targets = targets;
                 if project.builds.selected.as_ref().is_some_and(|selected| {
                     !project
                         .builds

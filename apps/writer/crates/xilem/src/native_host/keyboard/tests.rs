@@ -25,6 +25,7 @@ pub(super) fn context() -> (Context, mpsc::Receiver<SendMessage>) {
             shortcuts: Default::default(),
             generation: Default::default(),
             writer_active: true,
+            screen: Some(crate::workspaces::Screen::Write),
             picker_open: false,
             attention: Default::default(),
             keymap: recite_config::Keymap::default(),
