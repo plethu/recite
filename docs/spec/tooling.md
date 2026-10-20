@@ -91,6 +91,12 @@ temporary examples and project creation use shared launch/session owners. Its pe
 apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
 validation. Ordinary exit confirmation never weakens the unsaved-work guard.
 
+Configured native shortcuts use the same validated chord matcher in both frontends. Xilem routes
+commands before text input, retains native text undo/redo, and scopes Apply to the focused
+manuscript. Composition bypasses application shortcuts; document, screen and binding changes
+invalidate queued commands. Unbound Control/Meta chords cannot become literal text. This does not
+establish physical IME or keyboard-layout acceptance on every platform.
+
 The Xilem editor handoff saves accepted source and recovery in the background without accepting the
 active field draft. It uses the OS preferred application or literal configured arguments. Cancelling
 the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's

@@ -5,6 +5,7 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
     let closing = state.phase != Phase::Writing;
     let model = state.session.model();
     let editing = matches!(model.view(), View::Passage(_));
+    let has_draft = model.has_draft();
     let editor = if !editing {
         Either::A(super::reading::inspection(state))
     } else {
@@ -22,7 +23,8 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
                 .text_size(state.reading_size())
                 .placeholder("Manuscript")
                 .disabled(closing)
-                .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript")),
+                .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript"))
+                .prop(Manuscript(true)),
             ))
             .dims((
                 state.script_width().px(),
@@ -48,14 +50,14 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
             text_button(scale, "Apply draft", |state: &mut Writer| {
                 state.change(Workbench::apply)
             })
-            .disabled(closing || !editing),
+            .disabled(closing || !editing || !has_draft),
             text_button(scale, "Discard draft", |state: &mut Writer| {
                 state.change(|model| {
                     model.discard();
                     Ok(())
                 })
             })
-            .disabled(closing),
+            .disabled(closing || !has_draft),
             text_button(scale, "Undo applied", |state: &mut Writer| {
                 state.change(Workbench::undo)
             })

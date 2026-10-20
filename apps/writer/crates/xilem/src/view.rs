@@ -8,6 +8,15 @@ use xilem::view::{CrossAxisAlignment, flex_col, flex_row, portal, sized_box, tex
 use xilem::{InsertNewline, WidgetView};
 
 mod manuscript;
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(super) struct Manuscript(pub bool);
+impl xilem::masonry::core::UsesProperty<Manuscript> for xilem::masonry::widgets::TextInput {}
+impl xilem::masonry::core::Property for Manuscript {
+    fn static_default() -> &'static Self {
+        static OTHER: Manuscript = Manuscript(false);
+        &OTHER
+    }
+}
 mod navigation;
 mod reading;
 use manuscript::manuscript;

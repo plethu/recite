@@ -54,6 +54,48 @@ fn text(harness: &TestHarness<TextArea<true>>) -> String {
 }
 
 #[test]
+fn unbound_command_chords_do_not_insert_text_but_option_and_alt_graph_do() {
+    let mut harness = area("Start");
+    for modifiers in [
+        Modifiers::CONTROL,
+        Modifiers::META,
+        Modifiers::CONTROL | Modifiers::ALT,
+    ] {
+        for name in ["s", " "] {
+            harness.process_text_event(TextEvent::Keyboard(KeyboardEvent {
+                state: KeyState::Down,
+                key: Key::Character(name.into()),
+                modifiers,
+                ..KeyboardEvent::default()
+            }));
+        }
+    }
+    assert_eq!(text(&harness), "Start");
+    for modifiers in [Modifiers::ALT, Modifiers::CONTROL | Modifiers::ALT_GRAPH] {
+        harness.process_text_event(TextEvent::Keyboard(KeyboardEvent {
+            state: KeyState::Down,
+            key: Key::Character("€".into()),
+            modifiers,
+            ..KeyboardEvent::default()
+        }));
+    }
+    assert_eq!(text(&harness), "Start€€");
+    harness.process_text_event(TextEvent::Keyboard(KeyboardEvent {
+        state: KeyState::Down,
+        key: Key::Character("z".into()),
+        modifiers: Modifiers::CONTROL | Modifiers::ALT_GRAPH,
+        ..KeyboardEvent::default()
+    }));
+    assert_eq!(text(&harness), "Start€€z");
+    shortcut(&mut harness, "z", false);
+    assert_eq!(text(&harness), "Start€€");
+    shortcut(&mut harness, "z", false);
+    assert_eq!(text(&harness), "Start€");
+    shortcut(&mut harness, "z", false);
+    assert_eq!(text(&harness), "Start");
+}
+
+#[test]
 fn typing_undo_redo_and_new_branch_preserve_edits() {
     let mut harness = area("Start");
     harness.keyboard_type_chars("xy");

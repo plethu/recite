@@ -14,6 +14,8 @@ pub use source_edit::EditOperation;
 pub(crate) use source_edit::{PreparedSourceEdit, SourceEditRequest};
 mod completion;
 pub use completion::CompletionSnapshot;
+mod identity;
+pub use identity::AnalysisStamp;
 mod diagnostics;
 pub use diagnostics::DiagnosticSnapshot;
 mod blocks;

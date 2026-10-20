@@ -4959,6 +4959,7 @@ dependencies = [
  "accesskit_atspi_common 0.18.1",
  "atspi-common",
  "masonry",
+ "masonry_winit",
  "recite-compiler",
  "recite-config",
  "recite-core",

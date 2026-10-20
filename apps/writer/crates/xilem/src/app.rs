@@ -1,6 +1,8 @@
 //! Window ownership, welcome and cold project loading live outside active authoring sessions.
 #[cfg(target_os = "linux")]
 mod activation;
+mod commands;
+pub(super) mod keyboard;
 mod opening;
 mod settings;
 mod slot;
@@ -39,6 +41,14 @@ pub(super) struct App {
     sender: Option<UnboundedSender<Job>>,
     _host: Option<ActivationHost>,
     inbox: Option<ActivationInbox>,
+}
+pub(super) fn run(app: App) -> Result<(), xilem::winit::error::EventLoopError> {
+    let defaults = app.theme.initial_properties();
+    let event_loop = xilem::EventLoop::with_user_event().build()?;
+    let proxy = event_loop.create_proxy();
+    let (driver, windows) = application(app)
+        .into_driver_and_windows(move |event| proxy.send_event(event).map_err(|error| error.0));
+    crate::native_host::run(event_loop, windows, driver, defaults)
 }
 impl AppState for App {
     fn keep_running(&self) -> bool {
@@ -90,16 +100,6 @@ impl App {
             sender: None,
             _host: None,
             inbox: None,
-        }
-    }
-    #[cfg(test)]
-    pub fn with_writer(writer: Writer) -> Self {
-        Self {
-            window: writer.window,
-            writer: Some(writer),
-            show_welcome: false,
-            status: String::new(),
-            ..Self::empty()
         }
     }
     fn can_replace(&self) -> bool {
@@ -244,3 +244,6 @@ pub(super) fn application(
     .with_default_properties(defaults)
     .with_font(include_bytes!("../../freya/fonts/literata/Literata-Variable.ttf").to_vec())
 }
+
+#[cfg(test)]
+mod tests;

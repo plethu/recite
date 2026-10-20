@@ -1,4 +1,5 @@
 //! Shared command wording for menus, search and personal shortcuts.
+pub mod keybindings;
 use crate::messages::{MsgId, text};
 use recite_config::WriterCommand;
 

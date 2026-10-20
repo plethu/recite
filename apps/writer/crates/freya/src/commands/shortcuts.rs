@@ -28,38 +28,55 @@ pub(crate) fn shortcut(event: &KeyboardEventData) -> Option<Command> {
 }
 
 fn matches_binding(binding: &str, event: &KeyboardEventData) -> bool {
-    if binding.is_empty() {
-        return false;
-    }
-    let mut parts = binding.rsplit('+');
-    let key = parts.next().unwrap_or_default();
-    let mut modifiers = Modifiers::empty();
-    for part in parts {
-        modifiers |= match part {
-            "Primary" => primary(),
-            "Alt" => Modifiers::ALT,
-            "Shift" => Modifiers::SHIFT,
-            _ => return false,
-        };
-    }
-    if event.modifiers != modifiers {
-        return false;
-    }
-    // Shifted digit/punctuation chords still name the base key printed in settings.
-    if event.modifiers.contains(Modifiers::SHIFT)
-        && (key == "," || key.bytes().all(|c| c.is_ascii_digit()))
-    {
-        let code = if key == "," {
-            "Comma".to_owned()
-        } else {
-            format!("Digit{key}")
-        };
-        return code.parse::<Code>().is_ok_and(|code| code == event.code);
-    }
-    match &event.key {
-        Key::Character(value) => value.eq_ignore_ascii_case(key),
-        Key::Named(named) => key.parse::<NamedKey>().is_ok_and(|key| key == *named),
-    }
+    use recite_writer_session::commands::keybindings::{
+        self, Input, Key as ShortcutKey, Modifiers as ShortcutModifiers, PhysicalKey,
+    };
+    let key = match &event.key {
+        Key::Character(value) => ShortcutKey::Character(value),
+        Key::Named(named) => match named {
+            NamedKey::F1 => ShortcutKey::Function(1),
+            NamedKey::F2 => ShortcutKey::Function(2),
+            NamedKey::F3 => ShortcutKey::Function(3),
+            NamedKey::F4 => ShortcutKey::Function(4),
+            NamedKey::F5 => ShortcutKey::Function(5),
+            NamedKey::F6 => ShortcutKey::Function(6),
+            NamedKey::F7 => ShortcutKey::Function(7),
+            NamedKey::F8 => ShortcutKey::Function(8),
+            NamedKey::F9 => ShortcutKey::Function(9),
+            NamedKey::F10 => ShortcutKey::Function(10),
+            NamedKey::F11 => ShortcutKey::Function(11),
+            NamedKey::F12 => ShortcutKey::Function(12),
+            _ => ShortcutKey::Other,
+        },
+    };
+    let physical = match event.code {
+        Code::Digit0 => PhysicalKey::Digit(0),
+        Code::Digit1 => PhysicalKey::Digit(1),
+        Code::Digit2 => PhysicalKey::Digit(2),
+        Code::Digit3 => PhysicalKey::Digit(3),
+        Code::Digit4 => PhysicalKey::Digit(4),
+        Code::Digit5 => PhysicalKey::Digit(5),
+        Code::Digit6 => PhysicalKey::Digit(6),
+        Code::Digit7 => PhysicalKey::Digit(7),
+        Code::Digit8 => PhysicalKey::Digit(8),
+        Code::Digit9 => PhysicalKey::Digit(9),
+        Code::Comma => PhysicalKey::Comma,
+        _ => PhysicalKey::Other,
+    };
+    keybindings::matches(
+        binding,
+        Input {
+            key,
+            physical,
+            modifiers: ShortcutModifiers {
+                primary: event.modifiers.contains(primary()),
+                alt: event.modifiers.contains(Modifiers::ALT),
+                shift: event.modifiers.contains(Modifiers::SHIFT),
+                other: !(event.modifiers & !(primary() | Modifiers::ALT | Modifiers::SHIFT))
+                    .is_empty(),
+            },
+        },
+    )
 }
 
 pub(crate) fn hint(binding: &str, area: Option<Area>) -> Option<Element> {

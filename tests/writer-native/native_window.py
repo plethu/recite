@@ -108,13 +108,14 @@ class NativeWindow:
         self.wait(lambda: self.call(node, "Accessible", "GetState")[0][0] & bit, "editor focus")
 
 
-def key(name, control=False):
+def key(name, control=False, shift=False, alt=False):
     arguments = ["wtype"]
-    if control:
-        arguments += ["-M", "ctrl"]
+    modifiers = [name for name, active in [("ctrl", control), ("shift", shift), ("alt", alt)] if active]
+    for modifier in modifiers:
+        arguments += ["-M", modifier]
     arguments += ["-k", name]
-    if control:
-        arguments += ["-m", "ctrl"]
+    for modifier in reversed(modifiers):
+        arguments += ["-m", modifier]
     subprocess.run(arguments, check=True, timeout=5, capture_output=True)
 
 

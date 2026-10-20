@@ -3,6 +3,7 @@ mod editor_work;
 mod external_editor;
 mod feedback;
 mod keyed;
+mod native_host;
 mod navigation;
 mod presentation;
 mod reading;
@@ -189,7 +190,5 @@ pub fn run_launch(options: LaunchOptions) -> Result<(), String> {
     let Some(app) = app::App::new(options)? else {
         return Ok(());
     };
-    app::application(app)
-        .run_in(xilem::EventLoop::with_user_event())
-        .map_err(|error| error.to_string())
+    app::run(app).map_err(|error| error.to_string())
 }

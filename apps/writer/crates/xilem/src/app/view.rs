@@ -11,20 +11,23 @@ use xilem::{
 };
 pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
     let slot = slot::writer_slot(app);
-    xilem::core::fork(
-        flex_col((
-            app_bar(app),
-            indexed_stack((welcome(app), slot, settings::settings(app)))
-                .active(if app.settings_open {
-                    2
-                } else {
-                    usize::from(!app.show_welcome)
-                })
-                .flex(1.),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .background_color(app.theme.palette.canvas),
-        opening::worker(),
+    keyboard::host(
+        app,
+        xilem::core::fork(
+            flex_col((
+                app_bar(app),
+                indexed_stack((welcome(app), slot, settings::settings(app)))
+                    .active(if app.settings_open {
+                        2
+                    } else {
+                        usize::from(!app.show_welcome)
+                    })
+                    .flex(1.),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .background_color(app.theme.palette.canvas),
+            opening::worker(),
+        ),
     )
 }
 fn app_bar(app: &App) -> impl WidgetView<App> + use<> {

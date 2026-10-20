@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "editor":
+        if scenario == "keyboard":
+            from keyboard_interactions import run
+        elif scenario == "editor":
             from editor_interactions import run
         elif scenario == "preferences":
             from preferences_interactions import run
@@ -99,7 +101,7 @@ def main():
     parser.add_argument("binary", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--child", action="store_true")
-    parser.add_argument("--scenario", choices=("all", "structure", "startup", "preferences", "editor"), default="all")
+    parser.add_argument("--scenario", choices=("all", "structure", "startup", "preferences", "editor", "keyboard"), default="all")
     args = parser.parse_args()
     binary = args.binary.resolve(strict=True)
     output = args.output.resolve()

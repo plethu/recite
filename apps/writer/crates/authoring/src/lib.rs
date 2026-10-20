@@ -14,8 +14,8 @@ mod structure;
 mod workbench;
 
 pub use document::{
-    CompletionSnapshot, DiagnosticSnapshot, Document, EditError, EditOperation, PreparedPreview,
-    PreviewRequest, ProjectContext,
+    AnalysisStamp, CompletionSnapshot, DiagnosticSnapshot, Document, EditError, EditOperation,
+    PreparedPreview, PreviewRequest, ProjectContext,
 };
 pub use draft_snapshot::DraftSnapshot;
 pub use examples::{WRITER_EXAMPLES, WriterExample};
