@@ -1,0 +1,108 @@
+diff --git a/masonry/src/properties/mod.rs b/masonry/src/properties/mod.rs
+--- a/masonry/src/properties/mod.rs
++++ b/masonry/src/properties/mod.rs
+@@ -12,6 +12,7 @@
+ mod line_breaking;
+ mod object_fit;
+ mod placeholder_color;
++mod placeholder_text_size;
+ mod portal;
+ mod progress_bar;
+ mod scroll_bar;
+@@ -30,6 +31,7 @@
+ pub use line_breaking::*;
+ pub use object_fit::*;
+ pub use placeholder_color::*;
++pub use placeholder_text_size::*;
+ pub use portal::*;
+ pub use progress_bar::*;
+ pub use scroll_bar::*;
+diff --git a/masonry/src/properties/placeholder_text_size.rs b/masonry/src/properties/placeholder_text_size.rs
+new file mode 100644
+--- /dev/null
++++ b/masonry/src/properties/placeholder_text_size.rs
+@@ -0,0 +1,21 @@
++// SPDX-License-Identifier: Apache-2.0
++
++use crate::core::Property;
++
++/// Font size for a text input's placeholder label, independently of its colour.
++#[derive(Clone, Copy, Debug, PartialEq)]
++pub struct PlaceholderTextSize {
++    /// Size in logical pixels.
++    pub size: f32,
++}
++static DEFAULT: PlaceholderTextSize = PlaceholderTextSize { size: 14.0 };
++impl Default for PlaceholderTextSize {
++    fn default() -> Self {
++        DEFAULT
++    }
++}
++impl Property for PlaceholderTextSize {
++    fn static_default() -> &'static Self {
++        &DEFAULT
++    }
++}
+diff --git a/masonry/src/widgets/text_input.rs b/masonry/src/widgets/text_input.rs
+--- a/masonry/src/widgets/text_input.rs
++++ b/masonry/src/widgets/text_input.rs
+@@ -10,13 +10,16 @@
+ use crate::core::{
+     AccessCtx, ArcStr, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget, NoAction, PaintCtx,
+     PointerButton, PointerButtonEvent, PointerEvent, PrePaintProps, PropertiesMut, PropertiesRef,
+-    RegisterCtx, TextEvent, Update, UpdateCtx, UsesProperty, Widget, WidgetId, WidgetMut,
+-    WidgetPod, paint_background, paint_border, paint_box_shadow,
++    RegisterCtx, StyleProperty, TextEvent, Update, UpdateCtx, UsesProperty, Widget, WidgetId,
++    WidgetMut, WidgetPod, paint_background, paint_border, paint_box_shadow,
+ };
+ use crate::imaging::Painter;
+ use crate::kurbo::{Axis, Point, Size};
+ use crate::layout::{LayoutSize, LenReq, Length};
+-use crate::properties::{CaretColor, ContentColor, LineBreaking, PlaceholderColor, SelectionColor, TextAreaLabel};
++use crate::properties::{
++    CaretColor, ContentColor, LineBreaking, PlaceholderColor, PlaceholderTextSize, SelectionColor,
++    TextAreaLabel,
++};
+ use crate::widgets::{Label, TextArea};
+
+ /// The text input widget displays text which can be edited by the user,
+@@ -164,6 +167,7 @@
+
+ impl UsesProperty<CaretColor> for TextInput {}
+ impl UsesProperty<PlaceholderColor> for TextInput {}
++impl UsesProperty<PlaceholderTextSize> for TextInput {}
+ impl UsesProperty<SelectionColor> for TextInput {}
+ impl UsesProperty<TextAreaLabel> for TextInput {}
+
+@@ -214,6 +218,16 @@
+     }
+
+     fn property_changed(&mut self, ctx: &mut UpdateCtx<'_>, property_type: TypeId) {
++        if property_type == TypeId::of::<PlaceholderTextSize>() {
++            ctx.mutate_self_later(|mut input| {
++                let mut input = input.downcast::<Self>();
++                let size = input.get_prop::<PlaceholderTextSize>().size;
++                Label::insert_style(
++                    &mut Self::placeholder_mut(&mut input),
++                    StyleProperty::FontSize(size),
++                );
++            });
++        }
+         if property_type == TypeId::of::<TextAreaLabel>() {
+             ctx.mutate_self_later(|mut input| {
+                 let mut input = input.downcast::<Self>();
+@@ -249,6 +263,14 @@
+     fn update(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, event: &Update) {
+         match event {
+             Update::WidgetAdded => {
++                ctx.mutate_self_later(|mut input| {
++                    let mut input = input.downcast::<Self>();
++                    let size = input.get_prop::<PlaceholderTextSize>().size;
++                    Label::insert_style(
++                        &mut Self::placeholder_mut(&mut input),
++                        StyleProperty::FontSize(size),
++                    );
++                });
+                 ctx.mutate_self_later(|mut input| {
+                     let mut input = input.downcast::<Self>();
+                     let label = input.get_prop::<TextAreaLabel>().clone();

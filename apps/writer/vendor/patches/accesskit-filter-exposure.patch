@@ -1,0 +1,355 @@
+--- a/src/adapter.rs
++++ b/src/adapter.rs
+@@ -29,0 +30,2 @@
++mod exposure;
++
+@@ -35,0 +38 @@
++    exposure: exposure::ExposureChanges,
+@@ -45,0 +49 @@
++            exposure: exposure::ExposureChanges::default(),
+@@ -83,7 +86,0 @@
+-    fn add_subtree(&mut self, node: &Node) {
+-        self.add_node(node);
+-        for child in node.filtered_children(&filter) {
+-            self.add_subtree(&child);
+-        }
+-    }
+-
+@@ -110,7 +106,0 @@
+-    }
+-
+-    fn remove_subtree(&mut self, node: &Node) {
+-        for child in node.filtered_children(&filter) {
+-            self.remove_subtree(&child);
+-        }
+-        self.remove_node(node);
+@@ -287,32 +277,4 @@
+-        let filter_old = filter(old_node);
+-        let filter_new = filter(new_node);
+-        if filter_new != filter_old {
+-            if filter_new == FilterResult::Include {
+-                if filter_old == FilterResult::ExcludeSubtree {
+-                    self.add_subtree(new_node);
+-                } else {
+-                    self.add_node(new_node);
+-                }
+-            } else if filter_old == FilterResult::Include {
+-                if filter_new == FilterResult::ExcludeSubtree {
+-                    self.remove_subtree(old_node);
+-                } else {
+-                    self.remove_node(old_node);
+-                }
+-            }
+-        } else if filter_new == FilterResult::Include {
+-            let old_wrapper = NodeWrapper(old_node);
+-            let new_wrapper = NodeWrapper(new_node);
+-            let old_interfaces = old_wrapper.interfaces();
+-            let new_interfaces = new_wrapper.interfaces();
+-            let kept_interfaces = old_interfaces & new_interfaces;
+-            self.adapter
+-                .unregister_interfaces(new_wrapper.id(), old_interfaces ^ kept_interfaces);
+-            self.adapter
+-                .register_interfaces(new_node.id(), new_interfaces ^ kept_interfaces);
+-            let bounds = *self.adapter.context.read_root_window_bounds();
+-            new_wrapper.notify_changes(&bounds, self.adapter, &old_wrapper);
+-            self.emit_text_selection_change(Some(old_node), new_node);
+-            if new_node.is_selected() != old_node.is_selected() {
+-                self.enqueue_selection_changed_if_needed(new_node);
+-            }
++        if exposure::dependencies_changed(old_node, new_node) {
++            self.reconcile_exposure(old_node, new_node);
++        } else {
++            self.update_exposed_node(old_node, new_node);
+@@ -520,0 +483 @@
++        handler.emit_children_changed();
+@@ -527,0 +491,3 @@
++        drop(tree);
++        handler.emit_children_changed();
++        handler.emit_selection_changed();
+--- a/src/node.rs
++++ b/src/node.rs
+@@ -527 +526,0 @@
+-        self.notify_children_changes(adapter, old);
+@@ -610,14 +609,19 @@
+-    fn notify_children_changes(&self, adapter: &Adapter, old: &NodeWrapper<'_>) {
+-        let old_filtered_children = old.filtered_child_ids().collect::<Vec<NodeId>>();
+-        let new_filtered_children = self.filtered_child_ids().collect::<Vec<NodeId>>();
+-        for (index, child) in new_filtered_children.iter().enumerate() {
+-            if !old_filtered_children.contains(child) {
+-                adapter.emit_object_event(self.id(), ObjectEvent::ChildAdded(index, *child));
+-            }
+-        }
+-        for child in old_filtered_children.into_iter() {
+-            if !new_filtered_children.contains(&child) {
+-                adapter.emit_object_event(self.id(), ObjectEvent::ChildRemoved(child));
+-            }
+-        }
+-    }
++    pub(crate) fn children_changes(&self, old: &NodeWrapper<'_>) -> Vec<ObjectEvent> {
++        let old_children = old.filtered_child_ids().collect::<Vec<_>>();
++        let new_children = self.filtered_child_ids().collect::<Vec<_>>();
++        let old_ids = old_children.iter().copied().collect::<std::collections::HashSet<_>>();
++        let new_ids = new_children.iter().copied().collect::<std::collections::HashSet<_>>();
++        let mut events = Vec::new();
++        for (index, child) in new_children.into_iter().enumerate() {
++            if !old_ids.contains(&child) {
++                events.push(ObjectEvent::ChildAdded(index, child));
++            }
++        }
++        for child in old_children {
++            if !new_ids.contains(&child) {
++                events.push(ObjectEvent::ChildRemoved(child));
++            }
++        }
++        events
++    }
++
+--- /dev/null
++++ b/src/adapter/exposure.rs
+@@ -0,0 +1,138 @@
++//! Reconcile geometry-dependent filtering without scanning unrelated text updates.
++use super::*;
++
++#[derive(Default)]
++pub(super) struct ExposureChanges {
++    old_subtrees: HashSet<NodeId>,
++    new_subtrees: HashSet<NodeId>,
++    updated: HashSet<NodeId>,
++    parents: HashSet<NodeId>,
++    children_events: Vec<(NodeId, ObjectEvent)>,
++}
++
++#[cfg(test)]
++mod tests;
++
++pub(super) fn dependencies_changed(old: &Node, new: &Node) -> bool {
++    old.raw_bounds() != new.raw_bounds()
++        || old.direct_transform() != new.direct_transform()
++        || old.clips_children() != new.clips_children()
++        || old.is_hidden() != new.is_hidden()
++        || old.role() != new.role()
++        || old.is_graft() != new.is_graft()
++        || old.parent_id() != new.parent_id()
++        || !old.child_ids().eq(new.child_ids())
++        || old.is_focused() != new.is_focused()
++}
++
++fn affected_region<'a>(node: &Node<'a>) -> Node<'a> {
++    let mut parent = node.parent();
++    while let Some(ancestor) = parent {
++        if ancestor.clips_children() {
++            return ancestor;
++        }
++        parent = ancestor.parent();
++    }
++    *node
++}
++
++fn collect_region(node: Node, visited: &mut HashSet<NodeId>, ids: &mut Vec<NodeId>) {
++    if !visited.insert(node.id()) {
++        return;
++    }
++    ids.push(node.id());
++    for child in node.children() {
++        collect_region(child, visited, ids);
++    }
++}
++
++impl AdapterChangeHandler<'_> {
++    pub(super) fn reconcile_exposure(&mut self, old: &Node, new: &Node) {
++        let mut ids = Vec::new();
++        collect_region(
++            affected_region(old),
++            &mut self.exposure.old_subtrees,
++            &mut ids,
++        );
++        collect_region(
++            affected_region(new),
++            &mut self.exposure.new_subtrees,
++            &mut ids,
++        );
++        for id in ids {
++            let old_node = old.tree_state.node_by_id(id);
++            let new_node = new.tree_state.node_by_id(id);
++            match (old_node, new_node) {
++                (Some(old), Some(new)) => self.update_exposed_node(&old, &new),
++                (None, Some(new)) if filter(&new) == FilterResult::Include => self.add_node(&new),
++                (Some(old), None) if filter(&old) == FilterResult::Include => {
++                    self.remove_node(&old)
++                }
++                _ => {}
++            }
++            for parent in old_node
++                .and_then(|node| node.filtered_parent(&filter))
++                .into_iter()
++                .chain(new_node.and_then(|node| node.filtered_parent(&filter)))
++            {
++                if let (Some(old_parent), Some(new_parent)) = (
++                    old.tree_state.node_by_id(parent.id()),
++                    new.tree_state.node_by_id(parent.id()),
++                ) {
++                    self.queue_children_changes(&old_parent, &new_parent);
++                }
++            }
++        }
++    }
++
++    pub(super) fn update_exposed_node(&mut self, old: &Node, new: &Node) {
++        if !self.exposure.updated.insert(new.id()) {
++            return;
++        }
++        match (filter(old), filter(new)) {
++            (FilterResult::Include, FilterResult::Include) => {
++                let old_wrapper = NodeWrapper(old);
++                let new_wrapper = NodeWrapper(new);
++                let old_interfaces = old_wrapper.interfaces();
++                let new_interfaces = new_wrapper.interfaces();
++                let kept = old_interfaces & new_interfaces;
++                self.adapter
++                    .unregister_interfaces(new.id(), old_interfaces ^ kept);
++                self.adapter
++                    .register_interfaces(new.id(), new_interfaces ^ kept);
++                let bounds = *self.adapter.context.read_root_window_bounds();
++                new_wrapper.notify_changes(&bounds, self.adapter, &old_wrapper);
++                self.emit_text_selection_change(Some(old), new);
++                if new.is_selected() != old.is_selected() {
++                    self.enqueue_selection_changed_if_needed(new);
++                }
++                self.queue_children_changes(old, new);
++            }
++            (_, FilterResult::Include) => self.add_node(new),
++            (FilterResult::Include, _) => self.remove_node(old),
++            _ => {}
++        }
++    }
++
++    fn queue_children_changes(&mut self, old: &Node, new: &Node) {
++        if filter(old) != FilterResult::Include
++            || filter(new) != FilterResult::Include
++            || !self.exposure.parents.insert(new.id())
++        {
++            return;
++        }
++        self.exposure.children_events.extend(
++            NodeWrapper(new)
++                .children_changes(&NodeWrapper(old))
++                .into_iter()
++                .map(|event| (new.id(), event)),
++        );
++    }
++
++    pub(super) fn emit_children_changed(&mut self) {
++        // The backend's callback queue observes registrations before these new edges.
++        for (id, event) in self.exposure.children_events.drain(..) {
++            self.adapter.emit_object_event(id, event);
++        }
++    }
++}
+--- /dev/null
++++ b/src/adapter/exposure/tests.rs
+@@ -0,0 +1,82 @@
++use super::*;
++use accesskit::{
++    ActionRequest, Node as NodeData, NodeId as LocalId, Rect, Tree as TreeData, TreeId,
++};
++use std::sync::Mutex;
++
++struct Callback(Arc<Mutex<usize>>);
++impl AdapterCallback for Callback {
++    fn register_interfaces(&self, _: &Adapter, _: NodeId, _: InterfaceSet) {}
++    fn unregister_interfaces(&self, _: &Adapter, _: NodeId, _: InterfaceSet) {}
++    fn emit_event(&self, _: &Adapter, event: Event) {
++        if matches!(
++            event,
++            Event::Object {
++                event: ObjectEvent::PropertyChanged(crate::Property::Name(_)),
++                ..
++            }
++        ) {
++            *self.0.lock().unwrap() += 1;
++        }
++    }
++}
++struct Actions;
++impl ActionHandler for Actions {
++    fn do_action(&mut self, _: ActionRequest) {}
++}
++
++#[test]
++fn same_bounds_text_edit_does_not_walk_the_thousand_control_region() {
++    let mut root = NodeData::new(Role::Window);
++    root.set_children(vec![LocalId(1)]);
++    let mut viewport = NodeData::new(Role::ScrollView);
++    viewport.set_clips_children();
++    viewport.set_bounds(Rect::new(0., 0., 100., 100.));
++    viewport.set_children((2..1002).map(LocalId).collect::<Vec<_>>());
++    let mut nodes = vec![(LocalId(0), root), (LocalId(1), viewport)];
++    for index in 2..1002 {
++        let mut button = NodeData::new(Role::Button);
++        button.set_bounds(Rect::new(
++            0.,
++            (index - 2) as f64 * 40.,
++            100.,
++            (index - 1) as f64 * 40.,
++        ));
++        nodes.push((LocalId(index), button));
++    }
++    let names = Arc::new(Mutex::new(0));
++    let adapter = Adapter::new(
++        &AppContext::new(None),
++        Callback(Arc::clone(&names)),
++        TreeUpdate {
++            nodes: nodes.clone(),
++            tree: Some(TreeData::new(LocalId(0))),
++            tree_id: TreeId::ROOT,
++            focus: LocalId(0),
++        },
++        false,
++        WindowBounds::default(),
++        Actions,
++    );
++    let mut handler = AdapterChangeHandler::new(&adapter);
++    let mut tree = adapter.context.tree.write().unwrap();
++    let mut button = nodes[2].1.clone();
++    button.set_label("Edited control");
++    tree.update_and_process_changes(
++        TreeUpdate {
++            nodes: vec![(LocalId(2), button)],
++            tree: None,
++            tree_id: TreeId::ROOT,
++            focus: LocalId(0),
++        },
++        &mut handler,
++    );
++    assert!(handler.exposure.old_subtrees.is_empty());
++    assert!(handler.exposure.new_subtrees.is_empty());
++    assert_eq!(handler.exposure.updated.len(), 1);
++    assert_eq!(
++        *names.lock().unwrap(),
++        1,
++        "the label change still reaches the platform"
++    );
++}
+--- a/src/filters.rs
++++ b/src/filters.rs
+@@ -6 +6,19 @@
+-pub(crate) use accesskit_consumer::common_filter as filter;
++use accesskit_consumer::{common_filter, FilterResult, Node};
++
++/// A node is exposed only when the filtered traversal can reach it from the root.
++pub(crate) fn filter(node: &Node) -> FilterResult {
++    let result = common_filter(node);
++    if result == FilterResult::ExcludeSubtree {
++        return result;
++    }
++    // The upstream base cases for transparent and focused nodes return before
++    // checking ancestors. Initial registration still prunes those ancestor branches.
++    let mut parent = node.parent();
++    while let Some(ancestor) = parent {
++        if common_filter(&ancestor) == FilterResult::ExcludeSubtree {
++            return FilterResult::ExcludeSubtree;
++        }
++        parent = ancestor.parent();
++    }
++    result
++}

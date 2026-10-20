@@ -1,0 +1,287 @@
+--- a/masonry/src/widgets/text_area.rs
++++ b/masonry/src/widgets/text_area.rs
+@@ -18,12 +18,15 @@
+ use crate::kurbo::{Affine, Axis, Point, Rect, Size};
+ use crate::layout::{AsUnit, LenReq, Length};
+ use crate::parley::PlainEditor;
++
++mod history;
+ use crate::parley::editing::{Generation, SplitString};
+ use crate::properties::{CaretColor, ContentColor, SelectionColor};
+ use crate::theme::default_text_styles;
+ use crate::util::bounding_box_to_rect;
+ use crate::util::debug_panic;
+ use crate::{TextAlign, theme};
++use history::{History, Snapshot};
+ 
+ /// `TextArea` implements the core of interactive text.
+ ///
+@@ -47,6 +50,8 @@
+ pub struct TextArea<const USER_EDITABLE: bool> {
+     /// The underlying `PlainEditor`, which provides a high-level interface for us to dispatch into.
+     editor: PlainEditor<BrushIndex>,
++    history: History,
++    composition_start: Option<Snapshot>,
+     /// Placeholder text exposed to accessibility APIs by an editable text area.
+     placeholder: ArcStr,
+     /// The generation of `editor` which we have rendered.
+@@ -119,6 +124,8 @@
+         editor.set_text(text);
+         Self {
+             editor,
++            history: History::default(),
++            composition_start: None,
+             placeholder: "".into(),
+             rendered_generation: Generation::default(),
+             word_wrap: true,
+@@ -336,6 +343,8 @@
+             let (fctx, lctx) = this.ctx.text_contexts();
+             this.widget.editor.driver(fctx, lctx).clear_compose();
+         }
++        this.widget.history = History::default();
++        this.widget.composition_start = None;
+         this.widget.editor.set_text(new_text);
+ 
+         let (fctx, lctx) = this.ctx.text_contexts();
+@@ -431,6 +440,39 @@
+ }
+ 
+ // --- MARK: IMPL WIDGET
++impl<const EDITABLE: bool> TextArea<EDITABLE> {
++    fn history_snapshot(&self) -> Snapshot {
++        Snapshot {
++            text: self.editor.raw_text().to_owned(),
++            selection: self.history_selection(),
++        }
++    }
++
++    fn history_selection(&self) -> [usize; 2] {
++        let selection = self.editor.raw_selection();
++        [selection.anchor().index(), selection.focus().index()]
++    }
++
++    fn replay_history(&mut self, ctx: &mut EventCtx<'_>, redo: bool) {
++        let replay = if redo {
++            self.history.redo()
++        } else {
++            self.history.undo()
++        };
++        let Some(replay) = replay else {
++            return;
++        };
++        let (fctx, lctx) = ctx.text_contexts();
++        let mut driver = self.editor.driver(fctx, lctx);
++        driver.select_byte_range(replay.range.start, replay.range.end);
++        driver.insert_or_replace_selection(&replay.text);
++        driver.select_byte_range(replay.selection[0], replay.selection[1]);
++        self.rendered_generation = self.editor.generation();
++        ctx.submit_action::<TextAction>(TextAction::Changed(self.editor.raw_text().to_owned()));
++        ctx.request_layout();
++    }
++}
++
+ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
+     type Action = TextAction;
+ 
+@@ -551,6 +593,47 @@
+         self.anim_prev_interval = 0;
+         self.anim_elapsed = 0;
+         ctx.request_anim_frame();
++
++        // Store only committed changes. A composition is one transaction, regardless of preedit updates.
++        let before = if EDITABLE {
++            match event {
++                TextEvent::Keyboard(key)
++                    if key.state == KeyState::Down && !self.editor.is_composing() =>
++                {
++                    let action_mod = if cfg!(target_os = "macos") {
++                        key.modifiers.meta()
++                    } else {
++                        key.modifiers.ctrl()
++                    };
++                    if let Key::Character(character) = &key.key {
++                        let undo = action_mod && character.eq_ignore_ascii_case("z");
++                        let redo = action_mod && character.eq_ignore_ascii_case("y");
++                        if undo || redo {
++                            self.replay_history(ctx, redo || key.modifiers.shift());
++                            ctx.set_handled();
++                            return;
++                        }
++                    }
++                    self.composition_start = None;
++                    Some(self.history_snapshot())
++                }
++                TextEvent::Ime(Ime::Preedit(text, _)) => {
++                    if !text.is_empty() && !self.editor.is_composing() {
++                        self.composition_start = Some(self.history_snapshot());
++                    }
++                    None
++                }
++                TextEvent::Ime(Ime::Disabled) => None,
++                TextEvent::Ime(Ime::Commit(_)) | TextEvent::ClipboardPaste(_) => Some(
++                    self.composition_start
++                        .take()
++                        .unwrap_or_else(|| self.history_snapshot()),
++                ),
++                _ => None,
++            }
++        } else {
++            None
++        };
+ 
+         match event {
+             TextEvent::Keyboard(key_event) => {
+@@ -768,16 +851,31 @@
+                 match e {
+                     Ime::Disabled => {
+                         self.editor.driver(fctx, lctx).clear_compose();
++                        if let Some(start) = self.composition_start.take() {
++                            self.editor.set_text(&start.text);
++                            self.editor
++                                .driver(fctx, lctx)
++                                .select_byte_range(start.selection[0], start.selection[1]);
++                            edited = true;
++                        }
+                     }
+                     Ime::Preedit(text, cursor) => {
+                         if text.is_empty() {
+                             self.editor.driver(fctx, lctx).clear_compose();
++                            if let Some(start) = self.composition_start.as_ref() {
++                                self.editor.set_text(&start.text);
++                                self.editor
++                                    .driver(fctx, lctx)
++                                    .select_byte_range(start.selection[0], start.selection[1]);
++                                edited = true;
++                            }
+                         } else {
+                             self.editor.driver(fctx, lctx).set_compose(text, *cursor);
+                             edited = true;
+                         }
+                     }
+                     Ime::Commit(text) => {
++                        self.editor.driver(fctx, lctx).clear_compose();
+                         self.editor
+                             .driver(fctx, lctx)
+                             .insert_or_replace_selection(text);
+@@ -817,6 +915,11 @@
+                     }
+                 }
+             }
++        }
++        if let Some(before) = before {
++            let selection = self.history_selection();
++            self.history
++                .record(before, self.editor.raw_text(), selection);
+         }
+     }
+ 
+--- /dev/null
++++ b/masonry/src/widgets/text_area/history.rs
+@@ -0,0 +1,107 @@
++// Copyright 2026 the Xilem Authors
++// SPDX-License-Identifier: Apache-2.0
++// Local Recite experiment: basic bounded committed-text history, without timed grouping.
++use std::collections::VecDeque;
++use std::ops::Range;
++
++const MAX_EDITS: usize = 100;
++const MAX_BYTES: usize = 2 * 1024 * 1024;
++
++pub(super) struct Snapshot {
++    pub(super) text: String,
++    pub(super) selection: [usize; 2],
++}
++
++struct Edit {
++    start: usize,
++    removed: String,
++    inserted: String,
++    before: [usize; 2],
++    after: [usize; 2],
++}
++
++impl Edit {
++    fn bytes(&self) -> usize {
++        self.removed.len() + self.inserted.len()
++    }
++}
++
++pub(super) struct Replay {
++    pub(super) range: Range<usize>,
++    pub(super) text: String,
++    pub(super) selection: [usize; 2],
++}
++
++#[derive(Default)]
++pub(super) struct History {
++    undo: VecDeque<Edit>,
++    redo: Vec<Edit>,
++    bytes: usize,
++}
++
++impl History {
++    pub(super) fn record(&mut self, before: Snapshot, after: &str, selection: [usize; 2]) {
++        if before.text == after {
++            return;
++        }
++        let mut start = before
++            .text
++            .bytes()
++            .zip(after.bytes())
++            .take_while(|(a, b)| a == b)
++            .count();
++        while !before.text.is_char_boundary(start) || !after.is_char_boundary(start) {
++            start -= 1;
++        }
++        let mut suffix = before.text[start..]
++            .bytes()
++            .rev()
++            .zip(after[start..].bytes().rev())
++            .take_while(|(a, b)| a == b)
++            .count();
++        while !before.text.is_char_boundary(before.text.len() - suffix)
++            || !after.is_char_boundary(after.len() - suffix)
++        {
++            suffix -= 1;
++        }
++        let edit = Edit {
++            start,
++            removed: before.text[start..before.text.len() - suffix].to_owned(),
++            inserted: after[start..after.len() - suffix].to_owned(),
++            before: before.selection,
++            after: selection,
++        };
++        for retired in self.redo.drain(..) {
++            self.bytes -= retired.bytes();
++        }
++        self.bytes += edit.bytes();
++        self.undo.push_back(edit);
++        while self.undo.len() > MAX_EDITS || self.bytes > MAX_BYTES {
++            if let Some(retired) = self.undo.pop_front() {
++                self.bytes -= retired.bytes();
++            }
++        }
++    }
++
++    pub(super) fn undo(&mut self) -> Option<Replay> {
++        let edit = self.undo.pop_back()?;
++        let replay = Replay {
++            range: edit.start..edit.start + edit.inserted.len(),
++            text: edit.removed.clone(),
++            selection: edit.before,
++        };
++        self.redo.push(edit);
++        Some(replay)
++    }
++
++    pub(super) fn redo(&mut self) -> Option<Replay> {
++        let edit = self.redo.pop()?;
++        let replay = Replay {
++            range: edit.start..edit.start + edit.removed.len(),
++            text: edit.inserted.clone(),
++            selection: edit.after,
++        };
++        self.undo.push_back(edit);
++        Some(replay)
++    }
++}

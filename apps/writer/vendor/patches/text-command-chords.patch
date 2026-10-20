@@ -1,0 +1,40 @@
+--- a/masonry/src/widgets/text_area.rs
++++ b/masonry/src/widgets/text_area.rs
+@@ -10 +10 @@ use tracing::{Span, trace_span};
+-use crate::core::keyboard::{Key, KeyState, NamedKey};
++use crate::core::keyboard::{Key, KeyState, Modifiers, NamedKey};
+@@ -603,5 +603,6 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
+-                    let action_mod = if cfg!(target_os = "macos") {
+-                        key.modifiers.meta()
+-                    } else {
+-                        key.modifiers.ctrl()
+-                    };
++                    let action_mod = !key.modifiers.contains(Modifiers::ALT_GRAPH)
++                        && if cfg!(target_os = "macos") {
++                            key.modifiers.meta()
++                        } else {
++                            key.modifiers.ctrl()
++                        };
+@@ -645,5 +646,6 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
+-                    if cfg!(target_os = "macos") {
+-                        key_event.modifiers.meta()
+-                    } else {
+-                        key_event.modifiers.ctrl()
+-                    },
++                    !key_event.modifiers.contains(Modifiers::ALT_GRAPH)
++                        && if cfg!(target_os = "macos") {
++                            key_event.modifiers.meta()
++                        } else {
++                            key_event.modifiers.ctrl()
++                        },
+@@ -650,0 +653,4 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
++                // Unhandled command chords must not fall through to literal text.
++                // Option text and explicit AltGraph remain text-producing input.
++                let inserts_text = key_event.modifiers.contains(Modifiers::ALT_GRAPH)
++                    || !(key_event.modifiers.ctrl() || key_event.modifiers.meta());
+@@ -779 +785 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
+-                    Key::Character(sp) if EDITABLE && sp.as_str() == " " => {
++                    Key::Character(sp) if EDITABLE && inserts_text && sp.as_str() == " " => {
+@@ -812 +818 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
+-                    Key::Character(text) if EDITABLE => {
++                    Key::Character(text) if EDITABLE && inserts_text => {

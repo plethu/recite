@@ -1,0 +1,124 @@
+diff --git a/src/adapter/exposure.rs b/src/adapter/exposure.rs
+index 861170d9..32a3cded 100644
+--- a/src/adapter/exposure.rs
++++ b/src/adapter/exposure.rs
+@@ -115,7 +115,10 @@ impl AdapterChangeHandler<'_> {
+     }
+
+     fn queue_children_changes(&mut self, old: &Node, new: &Node) {
+-        if filter(old) != FilterResult::Include
++        // A transformed region reaches the same parent through many descendants.
++        // Its children diff has already been queued, including the exposure checks.
++        if self.exposure.parents.contains(&new.id())
++            || filter(old) != FilterResult::Include
+             || filter(new) != FilterResult::Include
+             || !self.exposure.parents.insert(new.id())
+         {
+diff --git a/src/adapter/exposure/tests.rs b/src/adapter/exposure/tests.rs
+index eaac3205..4597cb8f 100644
+--- a/src/adapter/exposure/tests.rs
++++ b/src/adapter/exposure/tests.rs
+@@ -80,3 +80,63 @@ fn same_bounds_text_edit_does_not_walk_the_thousand_control_region() {
+         "the label change still reaches the platform"
+     );
+ }
++
++#[test]
++fn camera_transform_reconciles_a_control_region_with_bounded_filter_work() {
++    const CONTROLS: u64 = 128;
++    let mut root = NodeData::new(Role::Window);
++    root.set_children(vec![LocalId(1)]);
++    let mut viewport = NodeData::new(Role::ScrollView);
++    viewport.set_clips_children();
++    viewport.set_bounds(Rect::new(0., 0., 1000., 1000.));
++    viewport.set_children(vec![LocalId(2)]);
++    let mut camera = NodeData::new(Role::GenericContainer);
++    camera.set_children((3..3 + CONTROLS).map(LocalId).collect::<Vec<_>>());
++    let mut nodes = vec![
++        (LocalId(0), root),
++        (LocalId(1), viewport),
++        (LocalId(2), camera.clone()),
++    ];
++    for index in 3..3 + CONTROLS {
++        let mut button = NodeData::new(Role::Button);
++        button.set_label(format!("Beat {index}"));
++        button.set_bounds(Rect::new(0., 0., 100., 100.));
++        nodes.push((LocalId(index), button));
++    }
++    let adapter = Adapter::new(
++        &AppContext::new(None),
++        Callback(Arc::new(Mutex::new(0))),
++        TreeUpdate {
++            nodes,
++            tree: Some(TreeData::new(LocalId(0))),
++            tree_id: TreeId::ROOT,
++            focus: LocalId(0),
++        },
++        false,
++        WindowBounds::default(),
++        Actions,
++    );
++    let mut handler = AdapterChangeHandler::new(&adapter);
++    let mut tree = adapter.context.tree.write().unwrap();
++    camera.set_transform(accesskit::Affine::translate((20., 10.)));
++    crate::filters::take_filter_calls();
++    tree.update_and_process_changes(
++        TreeUpdate {
++            nodes: vec![(LocalId(2), camera)],
++            tree: None,
++            tree_id: TreeId::ROOT,
++            focus: LocalId(0),
++        },
++        &mut handler,
++    );
++    let calls = crate::filters::take_filter_calls();
++    assert_eq!(handler.exposure.updated.len(), 2 + CONTROLS as usize);
++    assert_eq!(handler.exposure.parents.len(), 2 + CONTROLS as usize);
++    assert!(
++        handler.exposure.children_events.is_empty(),
++        "panning preserves the exposed child edges"
++    );
++    // The original repeated parent checks made 4,150 calls for this exact input.
++    // Deduplication reduces that to 3,112 without dropping exposed controls.
++    assert!(calls <= 3_200, "camera filter work regressed: {calls}");
++}
+diff --git a/src/filters.rs b/src/filters.rs
+index 784afdf8..69b89927 100644
+--- a/src/filters.rs
++++ b/src/filters.rs
+@@ -3,22 +3,20 @@
+ // the LICENSE-APACHE file) or the MIT license (found in
+ // the LICENSE-MIT file), at your option.
+
+-use accesskit_consumer::{common_filter, FilterResult, Node};
++use accesskit_consumer::{FilterResult, Node, common_filter_reachable};
++
++#[cfg(test)]
++std::thread_local! {
++    static FILTER_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
++}
++#[cfg(test)]
++pub(crate) fn take_filter_calls() -> usize {
++    FILTER_CALLS.with(|calls| calls.replace(0))
++}
+
+ /// A node is exposed only when the filtered traversal can reach it from the root.
+ pub(crate) fn filter(node: &Node) -> FilterResult {
+-    let result = common_filter(node);
+-    if result == FilterResult::ExcludeSubtree {
+-        return result;
+-    }
+-    // The upstream base cases for transparent and focused nodes return before
+-    // checking ancestors. Initial registration still prunes those ancestor branches.
+-    let mut parent = node.parent();
+-    while let Some(ancestor) = parent {
+-        if common_filter(&ancestor) == FilterResult::ExcludeSubtree {
+-            return FilterResult::ExcludeSubtree;
+-        }
+-        parent = ancestor.parent();
+-    }
+-    result
++    #[cfg(test)]
++    FILTER_CALLS.with(|calls| calls.set(calls.get() + 1));
++    common_filter_reachable(node)
+ }

@@ -1,0 +1,29 @@
+image: freebsd/latest
+
+packages:
+  - lang/python3
+  - lang/gcc
+  - x11/libxcb
+  - x11/libxkbcommon
+
+sources:
+  - https://github.com/alacritty/copypasta
+
+environment:
+  PATH: /home/build/.cargo/bin:/bin:/usr/bin:/usr/local/bin
+  RUSTFLAGS: -L /usr/local/lib
+
+tasks:
+  - rustup: |
+      curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable --profile minimal
+  - test: |
+      cd copypasta
+      cargo test
+  - clippy: |
+      cd copypasta
+      rustup component add clippy
+      cargo clippy --all-targets
+  - oldstable: |
+      cd copypasta
+      rustup toolchain install --profile minimal 1.71.0
+      cargo +1.71.0 test

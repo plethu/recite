@@ -1,0 +1,91 @@
+--- /dev/null
++++ b/masonry_winit/src/clipboard.rs
+@@ -0,0 +1,20 @@
++// Copyright 2026 the Xilem Authors
++// SPDX-License-Identifier: Apache-2.0
++
++use copypasta::{ClipboardContext, ClipboardProvider};
++use winit::event_loop::OwnedDisplayHandle;
++use winit::raw_window_handle::{HasDisplayHandle, RawDisplayHandle};
++
++type Error = Box<dyn std::error::Error + Send + Sync>;
++
++pub(crate) fn connect(display: OwnedDisplayHandle) -> Result<Box<dyn ClipboardProvider>, Error> {
++    match display.display_handle()?.as_raw() {
++        RawDisplayHandle::Wayland(_) => {
++            let (_, clipboard) =
++                copypasta::wayland_clipboard::create_clipboards_from_display(display)?;
++            Ok(Box::new(clipboard))
++        }
++        _ => ClipboardContext::new()
++            .map(|clipboard| -> Box<dyn ClipboardProvider> { Box::new(clipboard) }),
++    }
++}
+--- a/masonry_winit/src/lib.rs
++++ b/masonry_winit/src/lib.rs
+@@ -89,6 +89,8 @@
+ use vello as _;
+ 
+ mod app_driver;
++#[cfg(target_os = "linux")]
++mod clipboard;
+ mod convert_winit_event;
+ mod event_loop_runner;
+ mod vello_util;
+--- a/masonry_winit/src/event_loop_runner.rs
++++ b/masonry_winit/src/event_loop_runner.rs
+@@ -8,7 +8,9 @@
+ 
+ use accesskit_winit::Adapter;
+ use copypasta::nop_clipboard::NopClipboardContext;
+-use copypasta::{ClipboardContext, ClipboardProvider};
++#[cfg(not(target_os = "linux"))]
++use copypasta::ClipboardContext;
++use copypasta::ClipboardProvider;
+ use masonry_core::app::{
+     RenderRoot, RenderRootOptions, RenderRootSignal, VisualLayerKind, WindowSizePolicy,
+ };
+@@ -401,15 +403,11 @@
+ 
+         let (signal_sender, signal_receiver) = mpsc::channel::<(WindowId, RenderRootSignal)>();
+ 
+-        let clipboard_cx =
+-            ClipboardContext::new().map(|cx| -> Box<dyn ClipboardProvider> { Box::new(cx) });
+-        let clipboard_cx = if cfg!(target_os = "linux") {
+-            // If we're running on Linux, we might fail to get the clipboard context because
+-            // we're using Wayland, so we fall back to NopClipboardContext to be safe.
+-            clipboard_cx.unwrap_or_else(|_| Box::new(NopClipboardContext))
+-        } else {
+-            clipboard_cx.unwrap()
+-        };
++        // Wayland needs the event loop's owned display, available when resuming.
++        #[cfg(target_os = "linux")]
++        let clipboard_cx: Box<dyn ClipboardProvider> = Box::new(NopClipboardContext);
++        #[cfg(not(target_os = "linux"))]
++        let clipboard_cx: Box<dyn ClipboardProvider> = Box::new(ClipboardContext::new().unwrap());
+ 
+         Self {
+             is_suspended: true,
+@@ -487,6 +485,11 @@
+         }
+ 
+         self.is_suspended = false;
++        #[cfg(target_os = "linux")]
++        match crate::clipboard::connect(event_loop.owned_display_handle()) {
++            Ok(clipboard) => self.clipboard_cx = clipboard,
++            Err(error) => tracing::warn!(?error, "Unable to initialize clipboard"),
++        }
+ 
+         // Surfaces for existing windows will be recreated on-demand in the redraw method
+ 
+@@ -1069,7 +1072,9 @@
+                     handle.set_ime_cursor_area(position, size);
+                 }
+                 RenderRootSignal::ClipboardStore(text) => {
+-                    self.clipboard_cx.set_contents(text).unwrap();
++                    if let Err(error) = self.clipboard_cx.set_contents(text) {
++                        tracing::warn!(?error, "Unable to write clipboard contents");
++                    }
+                 }
+                 RenderRootSignal::RequestRedraw => {
+                     need_redraw.insert(*handle_id);

@@ -1,0 +1,173 @@
+// Copyright 2026 the Xilem Authors
+// SPDX-License-Identifier: Apache-2.0
+
+use masonry::app::RenderRoot;
+use masonry::core::{
+    ErasedAction, Handled, NewWidget, PropertySet, StyleProperty, Widget, WidgetId, WidgetTag,
+};
+use masonry::kurbo::{Affine, Vec2};
+use masonry::layout::AsUnit;
+use masonry::peniko::Color;
+use masonry::properties::types::CrossAxisAlignment;
+use masonry::properties::{Background, Padding};
+use masonry::widgets::{Button, ButtonPress, Flex, Label, SizedBox};
+
+use crate::demo::{CONTENT_GAP, DemoPage, SIDEBAR_GAP, ShellTags, wrap_in_shell};
+
+pub(crate) struct TransformsDemo {
+    shell: ShellTags,
+    state_label: WidgetTag<Label>,
+    target: WidgetTag<SizedBox>,
+    btn_rotate_left: WidgetTag<Button>,
+    btn_rotate_right: WidgetTag<Button>,
+    btn_scale_down: WidgetTag<Button>,
+    btn_scale_up: WidgetTag<Button>,
+    btn_reset: WidgetTag<Button>,
+    angle_rad: f64,
+    scale: f64,
+}
+
+impl TransformsDemo {
+    pub(crate) fn new(shell: ShellTags) -> Self {
+        Self {
+            shell,
+            state_label: WidgetTag::unique(),
+            target: WidgetTag::unique(),
+            btn_rotate_left: WidgetTag::unique(),
+            btn_rotate_right: WidgetTag::unique(),
+            btn_scale_down: WidgetTag::unique(),
+            btn_scale_up: WidgetTag::unique(),
+            btn_reset: WidgetTag::unique(),
+            angle_rad: 0.0,
+            scale: 1.0,
+        }
+    }
+
+    fn apply(&self, render_root: &mut RenderRoot) {
+        let pivot = Vec2::new(80.0, 80.0);
+        let transform = Affine::translate(pivot)
+            .then_rotate(self.angle_rad)
+            .then_scale(self.scale)
+            .then_translate(-pivot);
+
+        render_root.edit_widget_with_tag(self.target, |mut target| {
+            target.set_transform(transform);
+        });
+        render_root.edit_widget_with_tag(self.state_label, |mut label| {
+            Label::set_text(
+                &mut label,
+                format!(
+                    "angle: {:.0}°   scale: {:.2}",
+                    self.angle_rad.to_degrees(),
+                    self.scale
+                ),
+            );
+        });
+    }
+
+    fn matches_button(
+        &self,
+        render_root: &mut RenderRoot,
+        tag: WidgetTag<Button>,
+        widget_id: WidgetId,
+    ) -> bool {
+        render_root.get_widget_with_tag(tag).unwrap().id() == widget_id
+    }
+}
+
+impl DemoPage for TransformsDemo {
+    fn name(&self) -> &'static str {
+        "Transforms"
+    }
+
+    fn shell_tags(&self) -> ShellTags {
+        self.shell
+    }
+
+    fn build(&self) -> NewWidget<dyn Widget> {
+        let state = NewWidget::new(
+            Label::new("angle: 0°   scale: 1.00").with_style(StyleProperty::FontSize(13.0)),
+        )
+        .with_tag(self.state_label);
+
+        let controls = Flex::row()
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_fixed(NewWidget::new(Button::with_text("⟲")).with_tag(self.btn_rotate_left))
+            .with_fixed_spacer(SIDEBAR_GAP)
+            .with_fixed(NewWidget::new(Button::with_text("⟳")).with_tag(self.btn_rotate_right))
+            .with_fixed_spacer(SIDEBAR_GAP)
+            .with_fixed(NewWidget::new(Button::with_text("−")).with_tag(self.btn_scale_down))
+            .with_fixed_spacer(SIDEBAR_GAP)
+            .with_fixed(NewWidget::new(Button::with_text("+")).with_tag(self.btn_scale_up))
+            .with_fixed_spacer(SIDEBAR_GAP)
+            .with_fixed(NewWidget::new(Button::with_text("Reset")).with_tag(self.btn_reset));
+
+        let target = NewWidget::new(
+            SizedBox::new(
+                Label::new("Transform me\nand\nsee what happens")
+                    .with_style(StyleProperty::FontSize(14.0))
+                    .prepare(),
+            )
+            .size(160.px(), 160.px()),
+        )
+        .with_tag(self.target)
+        .with_props(
+            PropertySet::new()
+                .with(Background::Color(Color::from_rgb8(0x35, 0x35, 0x35)))
+                .with(Padding::all(12.px())),
+        );
+
+        let body = Flex::column()
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .with_fixed(state)
+            .with_fixed_spacer(CONTENT_GAP)
+            .with_fixed(controls.prepare())
+            .with_fixed_spacer(CONTENT_GAP)
+            .with_fixed(target);
+
+        wrap_in_shell(self.shell, NewWidget::new(body).erased())
+    }
+
+    fn on_selected(&mut self, render_root: &mut RenderRoot) {
+        self.apply(render_root);
+    }
+
+    fn on_action(
+        &mut self,
+        render_root: &mut RenderRoot,
+        action: &ErasedAction,
+        widget_id: WidgetId,
+    ) -> Handled {
+        if !action.is::<ButtonPress>() {
+            return Handled::No;
+        }
+
+        if self.matches_button(render_root, self.btn_rotate_left, widget_id) {
+            self.angle_rad -= 15_f64.to_radians();
+            self.apply(render_root);
+            return Handled::Yes;
+        }
+        if self.matches_button(render_root, self.btn_rotate_right, widget_id) {
+            self.angle_rad += 15_f64.to_radians();
+            self.apply(render_root);
+            return Handled::Yes;
+        }
+        if self.matches_button(render_root, self.btn_scale_down, widget_id) {
+            self.scale = (self.scale / 1.1).clamp(0.3, 3.0);
+            self.apply(render_root);
+            return Handled::Yes;
+        }
+        if self.matches_button(render_root, self.btn_scale_up, widget_id) {
+            self.scale = (self.scale * 1.1).clamp(0.3, 3.0);
+            self.apply(render_root);
+            return Handled::Yes;
+        }
+        if self.matches_button(render_root, self.btn_reset, widget_id) {
+            self.angle_rad = 0.0;
+            self.scale = 1.0;
+            self.apply(render_root);
+            return Handled::Yes;
+        }
+        Handled::No
+    }
+}

@@ -1,0 +1,39 @@
+[package]
+name = "copypasta"
+version = "0.10.2"
+authors = ["Christian Duerr <contact@christianduerr.com>"]
+description = "copypasta is a cross-platform library for getting and setting the contents of the OS-level clipboard."
+repository = "https://github.com/alacritty/copypasta"
+documentation = "https://docs.rs/copypasta"
+readme = "README.md"
+license = "MIT / Apache-2.0"
+keywords = ["clipboard"]
+exclude = ["/.travis.yml"]
+edition = "2021"
+rust-version = "1.71.0"
+
+[features]
+default = ["x11", "wayland", "wayland-dlopen"]
+x11 = ["x11-clipboard"]
+wayland = ["smithay-clipboard"]
+wayland-dlopen = ["smithay-clipboard/dlopen"]
+
+[target.'cfg(windows)'.dependencies]
+clipboard-win = { version = "5.4.0", features = ["std"]}
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5.1"
+objc2-foundation = { version = "0.2.0", default-features = false, features = [
+    "std",
+    "NSArray",
+    "NSString",
+    "NSURL",
+] }
+objc2-app-kit = { version = "0.2.0", default-features = false, features = [
+    "std",
+    "NSPasteboard",
+] }
+
+[target.'cfg(all(unix, not(any(target_os="macos", target_os="android", target_os="ios", target_os="emscripten"))))'.dependencies]
+x11-clipboard = { version = "0.9.1", optional = true }
+smithay-clipboard = { version = "0.7.0", default-features = false, optional = true }

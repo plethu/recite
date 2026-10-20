@@ -1,0 +1,138 @@
+[workspace]
+resolver = "2"
+members = ["masonry", "masonry_winit"]
+
+[workspace.package]
+# Xilem version, also used by other packages which want to mimic Xilem's version.
+# Right now those packages include: xilem_core, xilem_masonry, xilem_web, masonry, masonry_core, masonry_imaging, masonry_testing, masonry_winit.
+#
+# NOTE: When bumping this, remember to also bump the aforementioned other packages'
+#       version in the dependencies section of this file.
+version = "0.4.0"
+
+edition = "2024"
+# Keep in sync with RUST_MIN_VER in .github/workflows/ci.yml, with the relevant README.md files.
+rust-version = "1.96"
+license = "Apache-2.0"
+repository = "https://github.com/linebender/xilem"
+
+[workspace.dependencies]
+
+masonry = { version = "0.4.0", path = "masonry", default-features = false }
+masonry_core = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", default-features = false }
+masonry_imaging = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", default-features = false }
+masonry_testing = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", default-features = false }
+masonry_winit = { version = "0.4.0", path = "masonry_winit", default-features = false }
+xilem_core = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88" }
+xilem_masonry = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88" }
+xilem = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", default-features = false }
+tree_arena = { version = "0.2.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88" }
+include_doc_path = { version = "0.1.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", package = "linebender_include_doc_path" }
+
+anymore = "1.0.0"
+imaging = "0.0.1"
+imaging_wgpu = { version = "0.0.1", features = ["wgpu-28"] }
+imaging_skia = { version = "0.0.1", features = ["gpu"] }
+imaging_vello = "0.0.1"
+imaging_vello_hybrid = "0.0.1"
+imaging_vello_cpu = "0.0.1"
+vello = { version = "0.8.0", default-features = false, features = ["wgpu"] }
+wgpu = "28.0.0"
+kurbo = "0.13.1"
+parley = { version = "0.8.0", features = ["accesskit"] }
+# TODO: Use no_std correctly in Xilem Web.
+peniko = "0.6.1"
+winit = "0.30.13"
+tracing = { version = "0.1.44", default-features = false }
+tracing-wasm = "0.2.1"
+console_error_panic_hook = "0.1.7"
+# Remove "std" when that's fixed upstream
+ui-events = { version = "0.3.0", default-features = false, features = ["kurbo"] }
+ui-events-winit = { version = "0.3.0", default-features = false }
+smallvec = "1.15.1"
+hashbrown = { version = "0.17.0", default-features = false, features = ["default-hasher"] }
+dpi = "0.1.2"
+image = { version = "0.25.10", default-features = false }
+resvg = "0.47.0"
+usvg = "0.47.0"
+web-time = "1.1.0"
+bitflags = "2.11.0"
+accesskit = "0.24.0"
+accesskit_winit = { version = "0.32.2", default-features = false, features = [
+    "accesskit_unix",
+    "tokio",
+    "rwh_06",
+] }
+accesskit_consumer = "0.35.0"
+time = "0.3.47"
+reqwest = { version = "0.12.28", default-features = false, features = [
+    # We use rustls as Android doesn't ship with openssl
+    # and this is likely to be easiest to get working.
+    "rustls-tls",
+] }
+divan = "0.1.21"
+
+[workspace.lints]
+# unsafe code is not allowed in Xilem or Masonry
+# We would like to set this to `forbid`, but we have to use `deny` because `android_activity`
+# requires us to use the `#[unsafe(no_mangle)]` attribute
+# (And cargo doesn't let us have platform specific lints here)
+rust.unsafe_code = "deny"
+
+rust.unexpected_cfgs = { level = "warn", check-cfg = ['cfg(compile_stress_test)'] }
+
+# LINEBENDER LINT SET - Cargo.toml - v8
+# See https://linebender.org/wiki/canonical-lints/
+rust.keyword_idents_2024 = "forbid"
+rust.non_ascii_idents = "forbid"
+rust.non_local_definitions = "forbid"
+rust.unsafe_op_in_unsafe_fn = "forbid"
+
+rust.elided_lifetimes_in_paths = "warn"
+rust.missing_debug_implementations = "warn"
+rust.missing_docs = "warn"
+rust.trivial_numeric_casts = "warn"
+rust.unnameable_types = "warn"
+rust.unreachable_pub = "warn"
+rust.unused_import_braces = "warn"
+rust.unused_lifetimes = "warn"
+rust.unused_macro_rules = "warn"
+rust.unused_qualifications = "warn"
+
+clippy.too_many_arguments = "allow"
+
+clippy.allow_attributes_without_reason = "warn"
+clippy.cast_possible_truncation = "warn"
+clippy.cast_possible_wrap = "warn"
+clippy.collection_is_never_read = "warn"
+clippy.default_trait_access = "warn"
+clippy.dbg_macro = "warn"
+clippy.debug_assert_with_mut_call = "warn"
+clippy.doc_markdown = "warn"
+clippy.fn_to_numeric_cast_any = "warn"
+clippy.infinite_loop = "warn"
+clippy.large_stack_arrays = "warn"
+clippy.mismatching_type_param_order = "warn"
+clippy.missing_assert_message = "warn"
+clippy.missing_fields_in_debug = "warn"
+clippy.same_functions_in_if_condition = "warn"
+clippy.semicolon_if_nothing_returned = "warn"
+clippy.should_panic_without_expect = "warn"
+clippy.todo = "warn"
+clippy.unseparated_literal_suffix = "warn"
+clippy.use_self = "warn"
+
+clippy.cargo_common_metadata = "warn"
+clippy.negative_feature_names = "warn"
+clippy.redundant_feature_names = "warn"
+clippy.wildcard_dependencies = "warn"
+# END LINEBENDER LINT SET
+
+[profile.build-perf]
+inherits = "dev"
+
+[profile.ci]
+inherits = "dev"
+debug = 0 # Don't compile debug info to reduce compilation artifact size for cache benefits.
+[profile.ci.package."*"]
+debug-assertions = true # Keep always on for dependencies for cache reuse.

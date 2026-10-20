@@ -1,0 +1,73 @@
+// Copyright 2026 The AccessKit Authors. All rights reserved.
+// Licensed under the Apache License, Version 2.0 (found in
+// the LICENSE-APACHE file) or the MIT license (found in
+// the LICENSE-MIT file), at your option.
+
+use accesskit::{Node, NodeId, Role, Tree as TreeData, TreeId, TreeUpdate};
+use alloc::vec;
+use alloc::vec::Vec;
+
+use crate::{Tree, common_filter};
+
+#[test]
+fn filtered_siblings_skip_pruned_subtrees_after_empty_transparent_containers() {
+    let root = NodeId(0);
+    let first = NodeId(1);
+    let empty = NodeId(2);
+    let hidden = NodeId(3);
+    let child = NodeId(4);
+    let last = NodeId(5);
+    for children in [[first, empty, hidden, last], [first, hidden, empty, last]] {
+        let mut parent = Node::new(Role::Window);
+        parent.set_children(children.to_vec());
+        let mut hidden_node = Node::new(Role::Group);
+        hidden_node.set_hidden();
+        hidden_node.set_children(vec![child]);
+        let tree = Tree::new(
+            TreeUpdate {
+                nodes: vec![
+                    (root, parent),
+                    (first, Node::new(Role::TextInput)),
+                    (empty, Node::new(Role::GenericContainer)),
+                    (hidden, hidden_node),
+                    (child, Node::new(Role::Button)),
+                    (last, Node::new(Role::ScrollBar)),
+                ],
+                tree: Some(TreeData::new(root)),
+                tree_id: TreeId::ROOT,
+                focus: root,
+            },
+            false,
+        );
+        let parent = tree.state().root();
+        let ids: Vec<_> = parent
+            .filtered_children(&common_filter)
+            .map(|node| node.id().to_components().0)
+            .collect();
+        assert_eq!(ids, [first, last]);
+        let reverse: Vec<_> = parent
+            .filtered_children(&common_filter)
+            .rev()
+            .map(|node| node.id().to_components().0)
+            .collect();
+        assert_eq!(reverse, [last, first]);
+        for back_first in [false, true] {
+            let mut mixed = parent.filtered_children(&common_filter);
+            let (a, b) = if back_first {
+                (mixed.next_back(), mixed.next())
+            } else {
+                (mixed.next(), mixed.next_back())
+            };
+            assert_eq!(
+                a.unwrap().id().to_components().0,
+                if back_first { last } else { first }
+            );
+            assert_eq!(
+                b.unwrap().id().to_components().0,
+                if back_first { first } else { last }
+            );
+            assert!(mixed.next().is_none());
+            assert!(mixed.next_back().is_none());
+        }
+    }
+}
