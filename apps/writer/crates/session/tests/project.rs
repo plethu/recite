@@ -117,7 +117,7 @@ fn failed_open_and_excluded_retained_file_leave_drafts_and_active_ownership_inta
     let mut project = ProjectSession::open(directory.path(), None).unwrap();
     let first = project.current().path().to_owned();
     let second = directory.path().join("second.recite");
-    let other = ProjectSession::open(directory.path(), Some(Path::new("second.recite"))).unwrap();
+    let other = recite_writer_session::recovery::RecoveryStore::open(&second).unwrap();
     edit(&mut project, "Keep this draft.", false).unwrap();
     assert!(matches!(
         project.switch(&second),
@@ -169,4 +169,34 @@ fn save_all_stops_on_conflict_without_overwriting_disk_or_losing_inactive_draft(
     );
     assert!(project.reload_current().unwrap().unwrap().exists());
     assert!(!project.dirty());
+}
+
+#[test]
+fn requested_document_does_not_acquire_an_unrelated_first_document_lease() {
+    let directory = fixture().unwrap();
+    let first = directory.path().join("first.recite");
+    let lease = recite_writer_session::recovery::RecoveryStore::open(&first).unwrap();
+    let mut project =
+        ProjectSession::open(directory.path(), Some(Path::new("second.recite"))).unwrap();
+    edit(&mut project, "Keep requested document.", false).unwrap();
+    project.checkpoint().unwrap();
+    let sidecar = directory
+        .path()
+        .join("second.recite.recite-editor-recovery.json");
+    let recovery = fs::read(&sidecar).unwrap();
+    assert!(matches!(
+        ProjectSession::open(directory.path(), Some(Path::new("second.recite"))),
+        Err(FileError::RecoveryInUse)
+    ));
+    assert_eq!(fs::read(&sidecar).unwrap(), recovery);
+    assert_eq!(
+        project.current().model().draft(),
+        "Keep requested document."
+    );
+    assert!(matches!(
+        project.switch(&first),
+        Err(FileError::RecoveryInUse)
+    ));
+    drop(lease);
+    project.switch(&first).unwrap();
 }

@@ -1,15 +1,6 @@
 //! Bounded preparation and durability work; accepted writes are never cancelled.
-use crate::{
-    declarations::{DeclarationSave, recovery::DraftSnapshot},
-    project::{
-        FileError,
-        manifest::{ManifestOutcome, ManifestSave},
-        save::ordered::Write,
-    },
-    recovery::{Recovery, worker::Durability},
-};
-
 use crate::localisation::catalogue::{CatalogueDurability, CatalogueSave, CatalogueSaved};
+use crate::project::FileError;
 use recite_writer_model::{EditRequest, PreparedEdit, ReplyRules, ReplyRulesRequest};
 pub(crate) enum Work {
     RetirePresentation(Box<crate::presentation::RetiredPresentation>),
@@ -21,13 +12,7 @@ pub(crate) enum Work {
     Catalogue(Box<CatalogueSave>),
     CatalogueRecovery(CatalogueDurability),
     RetireCatalogue(Box<CatalogueSave>),
-    Write(Write),
-    RetireWrite(Write),
-    Recovery(Durability<Recovery>),
-    Manifest(ManifestSave),
-    DeclarationSource(Box<DeclarationSave>),
-    DeclarationRecovery(Durability<DraftSnapshot>),
-    PublishDeclarations(Box<DeclarationSave>),
+    Save(recite_writer_session::project::save::sequence::Work),
 }
 pub(crate) enum Output {
     Navigation(crate::navigation::worker::Output),
@@ -35,11 +20,8 @@ pub(crate) enum Output {
     Rules(ReplyRulesRequest, Result<Box<ReplyRules>, String>),
     Catalogue(Box<CatalogueSave>, Result<CatalogueSaved, String>),
     Retired,
-    Written(Write, Result<(), FileError>),
     Recovered(Result<(), FileError>),
-    Manifest(ManifestOutcome),
-    DeclarationSource(Box<DeclarationSave>, Result<(), FileError>),
-    GeneratedDeclarations(Box<DeclarationSave>, Result<(), FileError>),
+    Save(recite_writer_session::project::save::sequence::Receipt),
 }
 pub(crate) struct Worker {
     requests: async_channel::Sender<Work>,
@@ -86,25 +68,7 @@ impl Worker {
                             drop(value);
                             Output::Retired
                         }
-                        Work::Write(mut write) => {
-                            let result = write.execute();
-                            Output::Written(write, result)
-                        }
-                        Work::RetireWrite(write) => {
-                            drop(write);
-                            Output::Retired
-                        }
-                        Work::Recovery(ticket) => Output::Recovered(ticket.wait()),
-                        Work::Manifest(request) => Output::Manifest(request.execute()),
-                        Work::DeclarationSource(request) => {
-                            let result = request.write_source();
-                            Output::DeclarationSource(request, result)
-                        }
-                        Work::DeclarationRecovery(ticket) => Output::Recovered(ticket.wait()),
-                        Work::PublishDeclarations(request) => {
-                            let result = request.write_output();
-                            Output::GeneratedDeclarations(request, result)
-                        }
+                        Work::Save(work) => Output::Save(work.execute()),
                     };
                     if output.send_blocking(result).is_err() {
                         break;

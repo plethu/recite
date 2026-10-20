@@ -66,7 +66,7 @@ fn failed_scene_save_cleanup_blocks_leaving_until_retry() -> Result<(), Box<dyn 
     std::fs::create_dir(&recovery)?;
     assert!(matches!(
         files.save_document(&mut current, &other),
-        Err(FileError::BackgroundRecovery(_))
+        Err(FileError::Saving {path, error}) if path == other && matches!(*error, FileError::BackgroundRecovery(_))
     ));
     assert_eq!(std::fs::read_to_string(&other)?, changed);
     assert!(files.retained_dirty());
@@ -131,7 +131,7 @@ fn failed_save_all_projects_applied_but_unsaved_retained_edits()
     std::fs::write(&later, ":: external\n-> END\n")?;
     assert!(matches!(
         files.save_all(&mut current),
-        Err(FileError::Conflict)
+        Err(FileError::Saving {path, error}) if path == later && matches!(*error, FileError::Conflict)
     ));
     assert_eq!(files.current, original);
     assert_eq!(
@@ -162,7 +162,7 @@ fn inactive_save_conflict_preserves_active_draft_and_both_sessions()
     std::fs::write(&other, ":: external\n-> END\n")?;
     assert!(matches!(
         files.save_document(&mut current, &other),
-        Err(FileError::Conflict)
+        Err(FileError::Saving {path, error}) if path == other && matches!(*error, FileError::Conflict)
     ));
     assert_eq!(files.current, original);
     assert_eq!(current.draft(), "active unfinished draft");

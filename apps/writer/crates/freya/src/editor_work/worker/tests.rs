@@ -1,6 +1,7 @@
 use super::*;
 use crate::project::{ProjectFiles, save::ordered::Step};
 use recite_writer_model::View;
+use recite_writer_session::project::save::sequence::{Receipt, Work as SaveWork};
 use std::sync::Arc;
 
 #[test]
@@ -37,15 +38,18 @@ fn saved_search_owners_retire_on_worker_before_recovery_even_on_failure()
         }
         let worker = Worker::new()?;
         futures_lite::future::block_on(async {
-            let Output::Written(mut write, result) = worker.execute(Work::Write(write)).await?
+            let Output::Save(Receipt::Written(mut write, result)) =
+                worker.execute(Work::Save(SaveWork::Write(write))).await?
             else {
                 return Err("unexpected write receipt".into());
             };
             if case == "disk_conflict" {
                 assert!(result.is_err());
                 assert!(matches!(
-                    worker.execute(Work::RetireWrite(write)).await?,
-                    Output::Retired
+                    worker
+                        .execute(Work::Save(SaveWork::RetireWrite(write)))
+                        .await?,
+                    Output::Save(Receipt::Retired)
                 ));
                 assert_eq!(old.strong_count(), 1);
                 assert_eq!(
@@ -63,11 +67,16 @@ fn saved_search_owners_retire_on_worker_before_recovery_even_on_failure()
                 1
             );
             assert!(matches!(
-                worker.execute(Work::RetireWrite(write)).await?,
-                Output::Retired
+                worker
+                    .execute(Work::Save(SaveWork::RetireWrite(write)))
+                    .await?,
+                Output::Save(Receipt::Retired)
             ));
             assert!(old.upgrade().is_none());
-            let Output::Recovered(result) = worker.execute(Work::Recovery(ticket)).await? else {
+            let Output::Save(Receipt::Recovered(result)) = worker
+                .execute(Work::Save(SaveWork::Recovery(ticket)))
+                .await?
+            else {
                 return Err("unexpected recovery receipt".into());
             };
             assert_eq!(result.is_err(), case == "recovery_failed");

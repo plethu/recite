@@ -27,6 +27,14 @@ pub(super) struct ManifestDraft {
     state: PersistenceState,
 }
 
+impl Drop for ManifestDraft {
+    fn drop(&mut self) {
+        // A concurrent process spawn can briefly inherit the descriptor before exec.
+        // Ownership ends here even while that duplicate descriptor is still alive.
+        let _ = self._lease.unlock();
+    }
+}
+
 #[derive(PartialEq, Eq)]
 enum PersistenceState {
     Editable,
@@ -195,12 +203,5 @@ impl ManifestSave {
             Ok(())
         })();
         ManifestOutcome { replaced, result }
-    }
-}
-
-impl ManifestDraft {
-    pub fn save(&mut self) -> Result<(), FileError> {
-        let outcome = self.save_request().execute();
-        self.accept_save(outcome)
     }
 }

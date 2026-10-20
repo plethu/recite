@@ -55,7 +55,7 @@ fn save_conflict_stays_open_and_reload_preserves_the_local_work() {
     assert_eq!(writer.project.current().model().view(), &View::Source);
     assert!(writer.status.contains("previous work preserved"));
     writer.reload();
-    assert_eq!(writer.status, "Reloaded from disk");
+    assert!(writer.status.contains("previous work preserved"));
     fs::remove_file(directory.path().join("recite.project.toml")).unwrap();
     writer.reload();
     assert_ne!(writer.status, "Reloaded from disk");

@@ -25,35 +25,23 @@ impl ProjectFiles {
         current: &mut recite_writer_model::Workbench,
         scope: super::ordered::Scope,
     ) -> Result<(), FileError> {
-        let steps = self.save_plan(current, scope)?;
-        let result = (|| {
-            for step in steps {
-                match step {
-                    super::ordered::Step::Manifest => {
-                        if self.manifest.dirty() {
-                            self.manifest.save()?;
-                        }
-                    }
-                    super::ordered::Step::Declarations { force } => {
-                        if let Some(session) =
-                            self.declarations.as_mut().filter(|s| force || s.dirty())
-                        {
-                            session.save_and_generate()?;
-                            self.refresh(current)?;
-                        }
-                    }
-                    step => {
-                        let mut write = self.prepare_write(step)?;
-                        write.execute()?;
-                        let path = write.path.clone();
-                        let result = self.publish_write(current, &mut write)?.wait();
-                        let park = self.finish_saved_tab(&path);
-                        result.and(park)?;
-                    }
-                }
+        self.require_idle_save()?;
+        if scope.applies_current(&self.current) {
+            let applied = current.apply().map_err(FileError::from);
+            if let Err(error) = applied {
+                let _ = self.queue_checkpoint(current);
+                return self.finish_save(current, Err(error));
             }
-            Ok(())
-        })();
-        self.finish_save(current, result)
+        }
+        let mut sequence = super::sequence::SaveSequence::accepted(self, current, scope);
+        loop {
+            match sequence.poll(self, current) {
+                super::sequence::Progress::Work(work) => {
+                    sequence.accept(self, current, work.execute());
+                }
+                super::sequence::Progress::Finished(result) => return result,
+                super::sequence::Progress::Waiting => sequence.failed(FileError::SavePending),
+            }
+        }
     }
 }

@@ -6,7 +6,6 @@ use recite_writer_session::declarations::producer;
 mod producer_controls;
 use entries::entries;
 pub(crate) use producer_controls::ProducerPoll;
-pub(crate) use recite_writer_session::declarations::recovery;
 use recite_writer_session::declarations::session;
 mod source;
 mod source_link;
@@ -16,7 +15,7 @@ use crate::{
     messages::{MsgId, text},
 };
 use freya::prelude::*;
-pub(crate) use session::{DeclarationSave, Session};
+pub(crate) use session::Session;
 
 pub(crate) fn open(mut writer: Writer) {
     if let Err(error) = try_open(writer) {

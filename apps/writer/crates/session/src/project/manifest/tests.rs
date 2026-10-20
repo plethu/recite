@@ -89,12 +89,33 @@ fn recovery_cleanup_does_not_discard_a_draft_when_disk_changed_again()
     Ok(())
 }
 
+#[test]
+fn manifest_owner_releases_lease_even_with_a_duplicate_descriptor() {
+    let (root, draft) = draft().unwrap();
+    let duplicate = draft._lease.try_clone().unwrap();
+    assert!(matches!(
+        ManifestDraft::open(root.path()),
+        Err(FileError::RecoveryInUse)
+    ));
+    drop(draft);
+    let reopened = ManifestDraft::open(root.path()).unwrap();
+    assert!(reopened.dirty());
+    drop(duplicate);
+}
+
 impl ManifestDraft {
     fn save_with_cleanup_sync(
         &mut self,
         sync: impl FnOnce(&std::path::Path) -> io::Result<()>,
     ) -> Result<(), FileError> {
         let outcome = self.save_request().execute_with_sync(sync);
+        self.accept_save(outcome)
+    }
+}
+
+impl ManifestDraft {
+    pub(crate) fn save(&mut self) -> Result<(), FileError> {
+        let outcome = self.save_request().execute();
         self.accept_save(outcome)
     }
 }

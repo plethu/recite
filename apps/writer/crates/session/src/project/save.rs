@@ -4,6 +4,7 @@ use recite_writer_model::Workbench;
 use std::path::Path;
 mod blocking;
 pub mod ordered;
+pub mod sequence;
 
 impl ProjectFiles {
     fn refresh_after_save(

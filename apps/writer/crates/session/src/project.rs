@@ -5,10 +5,12 @@ mod recovery;
 mod rename;
 pub mod save;
 mod search;
+mod session;
 mod sessions;
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
 use recite_writer_model::{Document, ProjectContext, Workbench};
+pub use session::{DocumentSession, DocumentSessionMut, ProjectDocument, ProjectSession};
 pub use sessions::checkpoint::{Checkpoint, ReadyCheckpoint};
 pub use sessions::preparing::{PreparedSwitch, SwitchRequest};
 
@@ -53,6 +55,14 @@ impl ProjectFiles {
         &self.root
     }
     pub fn open_with_control(path: &Path, control: &dyn WorkControl) -> Result<Self, FileError> {
+        Self::open_requested_with_control(path, None, control)
+    }
+
+    pub fn open_requested_with_control(
+        path: &Path,
+        requested: Option<&Path>,
+        control: &dyn WorkControl,
+    ) -> Result<Self, FileError> {
         control.checkpoint()?;
         let report = recite_config::discover_project(path)?;
         control.checkpoint()?;
@@ -64,11 +74,20 @@ impl ProjectFiles {
             .iter()
             .map(|d| d.path().to_owned())
             .collect();
-        let current = paths.first().ok_or(FileError::Empty)?.clone();
+        let requested = requested.map(|path| report.manifest().project_root().join(path));
+        let current = match requested {
+            Some(path) if paths.contains(&path) => path,
+            Some(_) => return Err(FileError::Selection),
+            None => paths.first().ok_or(FileError::Empty)?.clone(),
+        };
         let saved: std::sync::Arc<str> = read_regular(&current)?.into();
         let recovery = RecoveryStore::open(&current)?;
         let mut context = crate::load_context(&report)?;
-        if let Some(document) = report.documents().first() {
+        if let Some(document) = report
+            .documents()
+            .iter()
+            .find(|document| document.path() == current)
+        {
             crate::share_saved_source(&mut context, document.key(), &saved);
         }
         control.checkpoint()?;
@@ -160,6 +179,15 @@ impl ProjectFiles {
         if !report.is_complete() {
             return Err(FileError::Incomplete);
         }
+        for path in self.session_paths() {
+            if !report
+                .documents()
+                .iter()
+                .any(|document| document.path() == path)
+            {
+                return Err(FileError::SessionExcluded(path.clone()));
+            }
+        }
         let context = crate::load_context(&report)?;
         let disk = read_regular(&self.current)?;
         let key = recite_core::DocumentKey::new(self.document_name()?)
@@ -168,12 +196,35 @@ impl ProjectFiles {
         let document =
             Document::in_project(key, disk.clone(), self.retained_context(context.clone()))
                 .map_err(recite_writer_model::WorkbenchError::from)?;
-        let next = Workbench::from_document(document, None)?;
+        let mut next = Workbench::from_document(document, None)?;
+        if let recite_writer_model::View::Passage(id) = workbench.view()
+            && next
+                .document()
+                .passage_snapshot()
+                .is_ok_and(|passages| passages.iter().any(|passage| &passage.id == id))
+        {
+            next.select(recite_writer_model::View::Passage(id.clone()))?;
+        }
         let path = self.export(workbench)?;
         self.recovery.persist(None)?;
         self.saved = disk.into();
         self.search = self.refreshed_search(&context.documents);
         self.context = context;
+        self.paths = report
+            .documents()
+            .iter()
+            .map(|document| document.path().to_owned())
+            .collect();
+        self.names = report
+            .documents()
+            .iter()
+            .map(|document| {
+                (
+                    document.path().to_owned(),
+                    document.key().as_str().to_owned(),
+                )
+            })
+            .collect();
         Ok((path, next))
     }
 
