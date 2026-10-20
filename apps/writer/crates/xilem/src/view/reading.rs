@@ -12,11 +12,7 @@ pub(super) fn inspection(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
         .or(state.reading.error.as_deref())
         .map(str::to_owned);
     if let Some(error) = error {
-        let repair = if state.editor.is_some() {
-            "Choose Open in editor to repair the source, then Reload (keep recovery copy). Your source bytes are preserved."
-        } else {
-            "Open this file in your preferred editor, then choose Reload (keep recovery copy). Your source bytes are preserved."
-        };
+        let repair = "Choose Open in editor to repair the source, then Reload (keep recovery copy). Your source bytes are preserved.";
         Either::A(
             flex_col((
                 label(scale, "Source editing in your editor"),

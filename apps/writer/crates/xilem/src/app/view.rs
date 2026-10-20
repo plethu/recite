@@ -1,5 +1,5 @@
 use super::*;
-use crate::presentation::{label, prose, radio_button, text_button};
+use crate::presentation::{label, paragraph, prose, radio_button, text_button};
 use xilem::{
     WidgetView,
     masonry::layout::AsUnit,
@@ -61,8 +61,7 @@ fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
                 }),
             ))
             .gap(12.px()),
-            (!app.status.is_empty())
-                .then(|| sized_box(prose(scale, app.status.clone())).width(800.px())),
+            (!app.status.is_empty()).then(|| paragraph(scale, app.status.clone(), 800.)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(8.px()),

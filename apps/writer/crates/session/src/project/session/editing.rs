@@ -18,16 +18,10 @@ impl DocumentSessionMut<'_> {
         self.files.save_current(self.model)
     }
     pub fn prepare_external_edit(&mut self) -> Result<(), FileError> {
-        self.files.require_idle_save()?;
-        self.files.checkpoint(self.model)?;
-        let mut write = self
-            .files
-            .prepare_write(super::super::save::ordered::Step::Current(
-                self.model.document().source_snapshot(),
-            ))?;
-        write.execute()?;
-        let result = self.files.publish_write(self.model, &mut write)?.wait();
-        self.files.finish_save(self.model, result)
+        self.files.save_synchronously(
+            self.model,
+            super::super::save::ordered::Scope::AcceptedCurrent,
+        )
     }
     /// Trial state is transient and never queues document recovery writes.
     pub fn accept_preview(

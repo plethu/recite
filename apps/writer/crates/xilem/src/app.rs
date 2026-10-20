@@ -92,6 +92,7 @@ impl App {
             inbox: None,
         }
     }
+    #[cfg(test)]
     pub fn with_writer(writer: Writer) -> Self {
         Self {
             window: writer.window,

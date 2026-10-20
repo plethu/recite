@@ -1,5 +1,5 @@
 use super::{Phase, Writer, keyed::keyed};
-use crate::presentation::{label, prose, text_button};
+use crate::presentation::{label, paragraph, prose, text_button};
 use recite_writer_model::{View, Workbench};
 use xilem::core::one_of::Either;
 use xilem::masonry::layout::AsUnit;
@@ -21,8 +21,26 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
             sized_box(
                 flex_col((
                     header(state),
-                    sized_box(prose(scale, state.status.clone()))
-                        .width((state.script_width() + state.navigation_width() + 20.).px()),
+                    paragraph(
+                        scale,
+                        state.status.clone(),
+                        state.script_width() + state.navigation_width() + 20.,
+                    ),
+                    state.external.path().map(|path| {
+                        let path = state
+                            .session
+                            .project()
+                            .and_then(|project| path.strip_prefix(project.root()).ok())
+                            .unwrap_or(path);
+                        paragraph(
+                            scale,
+                            format!(
+                                "Editor request active for {}. You can keep writing.",
+                                path.display()
+                            ),
+                            state.script_width() + state.navigation_width() + 20.,
+                        )
+                    }),
                     recovery_copy(state),
                     close_prompt(state),
                     flex_row((
@@ -54,7 +72,11 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
             .background_color(state.palette.canvas),
         )
         .constrain_horizontal(true),
-        (crate::trial::worker(), crate::editor_work::worker()),
+        (
+            crate::trial::worker(),
+            crate::editor_work::worker(),
+            crate::external_editor::worker(),
+        ),
     )
 }
 
@@ -96,8 +118,19 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
             }),
             state.session.project().is_some().then(|| {
                 text_button(scale, "Open in editor", Writer::open_editor)
-                    .disabled(closing || state.work.busy() || state.editor.is_none())
+                    .disabled(closing || state.work.busy() || state.external.busy())
             }),
+            (state.session.project().is_some() && state.editor.is_some()).then(|| {
+                text_button(scale, "Use system default", Writer::open_system_editor)
+                    .disabled(closing || state.work.busy() || state.external.busy())
+            }),
+        ))
+        .gap(8.px()),
+        flex_row((
+            state
+                .work
+                .preparing_editor()
+                .then(|| text_button(scale, "Cancel editor launch", Writer::cancel_editor_launch)),
             state.session.project().is_some().then(|| {
                 text_button(scale, "Reload (keep recovery copy)", Writer::reload)
                     .disabled(closing || state.work.busy())

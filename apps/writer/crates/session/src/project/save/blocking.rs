@@ -20,7 +20,7 @@ impl ProjectFiles {
     ) -> Result<(), FileError> {
         self.save_synchronously(current, super::ordered::Scope::Document(path.to_owned()))
     }
-    fn save_synchronously(
+    pub(in crate::project) fn save_synchronously(
         &mut self,
         current: &mut recite_writer_model::Workbench,
         scope: super::ordered::Scope,

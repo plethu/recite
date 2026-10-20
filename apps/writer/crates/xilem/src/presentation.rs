@@ -2,7 +2,7 @@
 mod controls;
 mod radio;
 mod theme;
-pub(super) use controls::{label, prose, text_button};
+pub(super) use controls::{label, paragraph, prose, text_button};
 pub(super) use radio::radio_button;
 use recite_config::{WriterConfig, WriterPresentationField, WriterTheme};
 use recite_writer_session::palette::{Palette, Rgba};

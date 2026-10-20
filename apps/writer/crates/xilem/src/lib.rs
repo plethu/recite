@@ -1,27 +1,26 @@
 mod app;
 mod editor_work;
+mod external_editor;
 mod feedback;
 mod keyed;
 mod navigation;
 mod presentation;
 mod reading;
 mod session;
-mod startup;
 #[cfg(test)]
 mod tests;
 mod trial;
 mod view;
-pub use startup::{HELP, LaunchOptions, Startup};
+pub use recite_writer_session::startup::{HELP, LaunchOptions};
 
 use recite_writer_model::Workbench;
 use recite_writer_session::{FileError, ProjectSession};
-use std::ffi::OsString;
 use xilem::{AppState, WindowId};
 
-pub struct Writer {
+struct Writer {
     session: session::Session,
-    editor: Option<OsString>,
-    editor_args: Vec<OsString>,
+    editor: Option<recite_writer_session::startup::EditorCommand>,
+    external: external_editor::ExternalEditor,
     window: WindowId,
     phase: Phase,
     status: String,
@@ -53,19 +52,6 @@ impl AppState for Writer {
 }
 
 impl Writer {
-    pub fn open(startup: Startup) -> Result<Self, FileError> {
-        let project = ProjectSession::open(&startup.project, startup.document.as_deref())?;
-        let editor = startup
-            .editor
-            .map(|program| recite_writer_session::startup::EditorCommand {
-                program,
-                args: startup.editor_args,
-            });
-        Ok(Self::from_session(
-            session::Session::Project(Box::new(project)),
-            editor,
-        ))
-    }
     fn from_session(
         session: session::Session,
         editor: Option<recite_writer_session::startup::EditorCommand>,
@@ -84,8 +70,8 @@ impl Writer {
         .into();
         Self {
             session,
-            editor: editor.as_ref().map(|command| command.program.clone()),
-            editor_args: editor.map_or_else(Vec::new, |command| command.args),
+            editor,
+            external: external_editor::ExternalEditor::new(),
             window: WindowId::next(),
             phase: Phase::Writing,
             status,
@@ -167,37 +153,6 @@ impl Writer {
         };
         self.reading.prepare(self.session.model());
     }
-    fn open_editor(&mut self) {
-        if self.work.busy() {
-            self.status = "Wait for the current save before opening your editor.".into();
-            return;
-        }
-        let Some(editor) = self.editor.clone() else {
-            return;
-        };
-        let Some(project) = self.session.project_mut() else {
-            self.status = FileError::ProjectRequired.to_string();
-            return;
-        };
-        if let Err(error) = project.current_mut().prepare_external_edit() {
-            self.status = feedback::file(&error);
-            return;
-        }
-        self.status = match std::process::Command::new(editor)
-            .args(&self.editor_args)
-            .arg(project.current().path())
-            .spawn()
-        {
-            Ok(mut child) => {
-                // Reap the independently owned editor without blocking Writer's event loop.
-                std::thread::spawn(move || {
-                    let _ = child.wait();
-                });
-                "Opened accepted source in your editor; Writer drafts remain recoverable. Reload when you return.".into()
-            }
-            Err(error) => format!("Could not open the editor: {error}"),
-        };
-    }
     fn request_close(&mut self) {
         if self.work.busy() {
             self.status = "Saving is still finishing. Your work remains open.".into();
@@ -230,9 +185,6 @@ impl Writer {
     }
 }
 
-pub fn run(writer: Writer) -> Result<(), xilem::winit::error::EventLoopError> {
-    app::application(app::App::with_writer(writer)).run_in(xilem::EventLoop::with_user_event())
-}
 pub fn run_launch(options: LaunchOptions) -> Result<(), String> {
     let Some(app) = app::App::new(options)? else {
         return Ok(());

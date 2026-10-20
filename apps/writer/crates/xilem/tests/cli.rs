@@ -15,6 +15,7 @@ fn help_and_startup_errors_run_without_a_display_or_touching_a_project() {
         );
     }
     let directory = tempfile::tempdir().unwrap();
+    let environment = tempfile::tempdir().unwrap();
     for arguments in [
         vec![],
         vec!["--unknown", "value"],
@@ -30,6 +31,13 @@ fn help_and_startup_errors_run_without_a_display_or_touching_a_project() {
     ] {
         let output = Command::new(env!("CARGO_BIN_EXE_recite-writer-xilem"))
             .args(arguments)
+            .env_remove("DISPLAY")
+            .env_remove("WAYLAND_DISPLAY")
+            .env_remove("WINIT_UNIX_BACKEND")
+            .env_remove("DBUS_SESSION_BUS_ADDRESS")
+            .env_remove("RECITE_CONFIG")
+            .env("XDG_RUNTIME_DIR", environment.path())
+            .env("XDG_CONFIG_HOME", environment.path().join("config"))
             .output()
             .unwrap();
         assert_eq!(output.status.code(), Some(2));

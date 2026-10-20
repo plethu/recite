@@ -18,12 +18,12 @@ pub(crate) fn project(source: &str) -> Result<tempfile::TempDir, Box<dyn std::er
 }
 
 pub(crate) fn open(directory: &tempfile::TempDir) -> Result<Writer, Box<dyn std::error::Error>> {
-    Ok(Writer::open(Startup {
-        project: directory.path().to_owned(),
-        document: Some("scene.recite".into()),
-        editor: None,
-        editor_args: vec![],
-    })?)
+    let session =
+        ProjectSession::open(directory.path(), Some(std::path::Path::new("scene.recite")))?;
+    Ok(Writer::from_session(
+        crate::session::Session::Project(Box::new(session)),
+        None,
+    ))
 }
 
 #[derive(Debug)]

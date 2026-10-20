@@ -91,6 +91,11 @@ temporary examples and project creation use shared launch/session owners. Its pe
 apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
 validation. Ordinary exit confirmation never weakens the unsaved-work guard.
 
+The Xilem editor handoff saves accepted source and recovery in the background without accepting the
+active field draft. It uses the OS preferred application or literal configured arguments. Cancelling
+the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's
+lifetime stays independent of the Writer window, and completion names its source document.
+
 Its source-language runtime preview prepares immutable accepted inputs off-thread and publishes only
 into the still-current document and requested destination. Cancelling or hiding preparation
 invalidates publication immediately; an active compiler phase may finish before another starts.

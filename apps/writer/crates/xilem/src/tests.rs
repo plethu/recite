@@ -99,45 +99,6 @@ fn save_conflict_stays_open_and_reload_preserves_the_local_work() {
 }
 
 #[test]
-fn startup_rejects_missing_repeated_and_unpaired_options() {
-    for arguments in [
-        vec![],
-        vec!["--project"],
-        vec!["--project", "a", "--project", "b"],
-        vec!["--wat", "a"],
-        vec!["--project", "a", "--editor-arg", "x"],
-    ] {
-        assert!(Startup::parse(arguments.into_iter().map(OsString::from)).is_err());
-    }
-    let selected = project(recite_writer_model::FIXTURE).unwrap();
-    let expected = selected.path().to_owned();
-    let args = vec![
-        OsString::from("--project"),
-        expected.as_os_str().to_owned(),
-        OsString::from("--document"),
-        OsString::from("scene.recite"),
-        OsString::from("--editor"),
-        OsString::from("editor"),
-        OsString::from("--editor-arg"),
-        OsString::from("--wait"),
-    ];
-    let startup = Startup::parse(args).unwrap();
-    assert_eq!(startup.project, expected);
-    assert_eq!(startup.document, Some("scene.recite".into()));
-    assert_eq!(startup.editor_args, [OsString::from("--wait")]);
-    let directory = project(recite_writer_model::FIXTURE).unwrap();
-    assert!(
-        Writer::open(Startup {
-            document: Some("missing.recite".into()),
-            project: directory.path().to_owned(),
-            editor: None,
-            editor_args: vec![]
-        })
-        .is_err()
-    );
-}
-
-#[test]
 fn manuscript_and_close_decisions_have_native_accessible_names() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
@@ -203,24 +164,6 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
             .unwrap()
             .contains("Accepted.")
     );
-}
-
-#[test]
-fn editor_launch_errors_are_visible_and_preserve_the_draft() {
-    let directory = project(recite_writer_model::FIXTURE).unwrap();
-    let mut writer = open(&directory).unwrap();
-    writer.open_editor();
-    assert_eq!(writer.status, "Ready");
-    writer.editor = Some(directory.path().join("missing-editor").into_os_string());
-    writer.change(|model| {
-        model.set_draft("Still here.".into());
-        Ok(())
-    });
-    click(&mut writer, &["Open in editor"]).unwrap();
-    assert!(writer.status.starts_with("Could not open the editor:"));
-    assert_eq!(writer.session.model().draft(), "Still here.");
-    click(&mut writer, &["Close", "Close and keep recovery"]).unwrap();
-    assert!(!writer.keep_running());
 }
 
 #[test]

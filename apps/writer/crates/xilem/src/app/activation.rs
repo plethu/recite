@@ -25,8 +25,7 @@ impl App {
                     writer.follow_location(&route.parse().map_err(str::to_owned)?)?;
                 }
                 if let Some(editor) = request.editor {
-                    writer.editor = Some(editor.program);
-                    writer.editor_args = editor.args;
+                    writer.editor = Some(editor);
                 }
                 self.show_welcome = false;
                 self.settings_open = false;

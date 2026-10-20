@@ -49,9 +49,11 @@ reaches Keep editing in three presses and verifies that cancelling close retains
 Automatic focus return and the remaining keyboard workflow need acceptance before the default
 switches.
 
-Xilem saves and cold project loads use workers and retain newer typing; save-and-close timing is
-recorded by the native probe. Remaining synchronous navigation, reload and external-editor work
-still needs completion before default cutover.
+Xilem saves, cold project loads and editor handoff use workers and retain newer typing;
+save-and-close timing is recorded by the native probe. Preferred-application lookup, an
+independently open editor, checked-save conflict refusal and missing-executable retry also pass the
+owned native editor drill. Remaining synchronous navigation and reload still need completion before
+default cutover.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

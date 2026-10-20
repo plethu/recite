@@ -18,37 +18,53 @@ enum Operation {
     RetiringApply(Scope, Result<(), FileError>),
     Saving(Box<SaveSequence>),
 }
+#[derive(Default)]
+enum AfterSave {
+    #[default]
+    Stay,
+    Close,
+    OpenEditor(std::sync::Arc<crate::external_editor::Request>),
+}
 pub(super) struct EditorWork {
     pub(super) sender: Option<UnboundedSender<Work>>,
     operation: Option<Operation>,
-    close_after: bool,
+    after: AfterSave,
 }
 impl EditorWork {
     pub fn new() -> Self {
         Self {
             sender: None,
             operation: None,
-            close_after: false,
+            after: AfterSave::Stay,
         }
     }
     pub fn busy(&self) -> bool {
         self.operation.is_some()
     }
     pub fn keep_editing(&mut self) {
-        self.close_after = false;
+        self.after = AfterSave::Stay;
+    }
+    pub fn preparing_editor(&self) -> bool {
+        matches!(self.after, AfterSave::OpenEditor(_))
     }
 }
 impl Writer {
     pub(super) fn save(&mut self) {
-        self.start_save(Scope::Current, false);
+        self.start_save(Scope::Current, AfterSave::Stay);
     }
     pub(super) fn save_all(&mut self) {
-        self.start_save(Scope::All, false);
+        self.start_save(Scope::All, AfterSave::Stay);
     }
     pub(super) fn save_and_close(&mut self) {
-        self.start_save(Scope::All, true);
+        self.start_save(Scope::All, AfterSave::Close);
     }
-    fn start_save(&mut self, scope: Scope, close_after: bool) {
+    pub(super) fn save_for_editor(
+        &mut self,
+        request: std::sync::Arc<crate::external_editor::Request>,
+    ) {
+        self.start_save(Scope::AcceptedCurrent, AfterSave::OpenEditor(request));
+    }
+    fn start_save(&mut self, scope: Scope, after: AfterSave) {
         if self.work.busy() {
             return;
         }
@@ -79,12 +95,12 @@ impl Writer {
         })();
         match prepared {
             Ok(Some(request)) => {
-                self.work.close_after = close_after;
+                self.work.after = after;
                 self.work.operation = Some(Operation::Applying(scope));
                 self.submit_save_work(Work::Edit(request));
             }
             Ok(None) => {
-                self.work.close_after = close_after;
+                self.work.after = after;
                 self.begin_save_sequence(scope);
             }
             Err(error) => self.finish_save_work(Err(error)),
@@ -128,11 +144,13 @@ impl Writer {
             Ok(()) => "Saved".into(),
             Err(error) => feedback::file(error),
         };
-        let close_after = std::mem::take(&mut self.work.close_after);
-        if close_after && result.is_ok() && !self.session.dirty() {
-            self.close_with_recovery();
-        } else if close_after {
-            self.phase = Phase::ConfirmClose;
+        match std::mem::take(&mut self.work.after) {
+            AfterSave::Close if result.is_ok() && !self.session.dirty() => {
+                self.close_with_recovery()
+            }
+            AfterSave::Close => self.phase = Phase::ConfirmClose,
+            AfterSave::OpenEditor(request) if result.is_ok() => self.launch_editor(request),
+            AfterSave::Stay | AfterSave::OpenEditor(_) => {}
         }
     }
 }

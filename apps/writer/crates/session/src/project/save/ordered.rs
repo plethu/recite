@@ -6,6 +6,8 @@ use std::{path::PathBuf, sync::Arc};
 
 pub enum Scope {
     Current,
+    /// Persist accepted source while retaining the active field draft.
+    AcceptedCurrent,
     Document(PathBuf),
     All,
     Declarations,
@@ -15,7 +17,7 @@ impl Scope {
         match self {
             Self::Current | Self::All => true,
             Self::Document(path) => path == current,
-            Self::Declarations => false,
+            Self::AcceptedCurrent | Self::Declarations => false,
         }
     }
 }
@@ -61,7 +63,7 @@ impl ProjectFiles {
         }
         let path = match &scope {
             Scope::Document(path) => path.clone(),
-            Scope::Current | Scope::All => self.current.clone(),
+            Scope::Current | Scope::AcceptedCurrent | Scope::All => self.current.clone(),
             Scope::Declarations => unreachable!(),
         };
         let source = current.document().source_snapshot();

@@ -12,9 +12,9 @@ xilem *args:
     cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-xilem -- "$@"
 
 # Probe Xilem on owned Linux hosts; needs Cage, wtype, grim, wl-clipboard, python3-gi and D-Bus.
-probe-xilem output="target/writer-native/result.json":
+probe-xilem output="target/writer-native/result.json" scenario="all":
     cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-xilem
-    /usr/bin/python3 tests/writer-native/check.py apps/writer/target/debug/recite-writer-xilem "{{ output }}"
+    /usr/bin/python3 tests/writer-native/check.py apps/writer/target/debug/recite-writer-xilem "{{ output }}" --scenario "{{ scenario }}"
 
 # Verify the maintained writer and its source-editing model.
 check:
