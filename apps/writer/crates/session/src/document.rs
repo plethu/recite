@@ -2,7 +2,10 @@
 use crate::recovery::{Recovery, RecoveryStore};
 use crate::{FileError, export_recovery, read_regular, replace_checked};
 use recite_core::DocumentKey;
-use recite_writer_model::{Document, ProjectContext, View, Workbench, WorkbenchError};
+use recite_writer_model::{
+    ConditionValue, Document, EffectAck, PreparedPreview, Preview, ProjectContext, View, Workbench,
+    WorkbenchError,
+};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -78,6 +81,26 @@ impl DocumentSession {
     }
     pub fn model(&self) -> &Workbench {
         &self.model
+    }
+
+    /// Trial state is transient; playback never queues a document recovery write.
+    pub fn accept_preview(
+        &mut self,
+        preview: Box<PreparedPreview>,
+    ) -> Result<Option<Preview>, Box<PreparedPreview>> {
+        self.model.accept_preview(preview)
+    }
+
+    pub fn advance_preview(&mut self, choice: Option<usize>) -> Result<(), WorkbenchError> {
+        self.model.advance_preview(choice)
+    }
+
+    pub fn answer_preview(&mut self, value: ConditionValue) -> Result<(), WorkbenchError> {
+        self.model.answer_preview(value)
+    }
+
+    pub fn acknowledge_preview(&mut self, ack: EffectAck) -> Result<(), WorkbenchError> {
+        self.model.acknowledge_preview(ack)
     }
     pub fn dirty(&self) -> bool {
         self.model.has_draft() || self.model.document().source() != self.baseline.as_ref()

@@ -2,6 +2,7 @@ mod keyed;
 mod startup;
 #[cfg(test)]
 mod tests;
+mod trial;
 mod view;
 pub use startup::{HELP, Startup};
 
@@ -19,6 +20,7 @@ pub struct Writer {
     status: String,
     page: usize,
     file_page: usize,
+    trial: trial::Trial,
 }
 
 #[derive(PartialEq)]
@@ -39,6 +41,8 @@ impl Writer {
         let project = ProjectSession::open(&startup.project, startup.document.as_deref())?;
         let status = if project.dirty() {
             "Recovered unsaved work; review it before saving."
+        } else if project.current().model().view() == &View::Source {
+            "Source needs attention. Open it in your editor, then reload."
         } else {
             "Ready"
         }
@@ -52,6 +56,7 @@ impl Writer {
             status,
             page: 0,
             file_page: 0,
+            trial: trial::Trial::new(),
         })
     }
 
@@ -89,6 +94,7 @@ impl Writer {
         }
     }
     fn switch(&mut self, path: &std::path::Path) {
+        self.trial.cancel();
         self.status = match self.project.switch(path) {
             Ok(()) => {
                 self.page = 0;
@@ -103,6 +109,7 @@ impl Writer {
         };
     }
     fn reload(&mut self) {
+        self.trial.cancel();
         let result = self.project.reload_current();
         self.status = match result {
             Ok(Some(path)) => format!("Reloaded; previous work preserved at {}", path.display()),

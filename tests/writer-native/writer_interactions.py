@@ -232,6 +232,11 @@ def run(api, bus, registry, binary, output):
                 results["malformed_source_preserved_for_external_repair"] = True
                 window.act("Close")
                 assert process.wait(timeout=5) == 0
+                from preview_interactions import exercise as preview_exercise
+
+                preview_exercise(
+                    api, bus, registry, arguments, log, source, output, results, launch, capture
+                )
     except Exception as error:
         results["error"] = repr(error)
         if process is not None and process.poll() is None:

@@ -11,34 +11,43 @@ use xilem::view::{
 use xilem::{InsertNewline, WidgetView};
 
 mod navigation;
+mod trial;
 use navigation::navigation;
 
 pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Sized> + use<> {
-    portal(
-        sized_box(
-            flex_col((
-                header(state),
-                close_prompt(state),
-                flex_row((navigation(state), manuscript(state))).gap(20.px()),
-                diagnostics(state),
-                sized_box(prose(state.status.clone())).width(830.px()),
-                state
-                    .project
-                    .sessions()
-                    .find_map(|session| session.recovery_error())
-                    .map(|error| {
-                        label(format!(
-                            "Recovery failed: {error}. Save or keep the window open."
-                        ))
-                    }),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(16.px()),
+    xilem::core::fork(
+        portal(
+            sized_box(
+                flex_col((
+                    header(state),
+                    close_prompt(state),
+                    flex_row((
+                        navigation(state),
+                        flex_col((manuscript(state), trial::panel(state)))
+                            .cross_axis_alignment(CrossAxisAlignment::Start)
+                            .gap(20.px()),
+                    ))
+                    .gap(20.px()),
+                    sized_box(prose(state.status.clone())).width(830.px()),
+                    state
+                        .project
+                        .sessions()
+                        .find_map(|session| session.recovery_error())
+                        .map(|error| {
+                            label(format!(
+                                "Recovery failed: {error}. Save or keep the window open."
+                            ))
+                        }),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(16.px()),
+            )
+            .padding(24.px())
+            .background_color(Color::from_rgb8(27, 24, 30)),
         )
-        .padding(24.px())
-        .background_color(Color::from_rgb8(27, 24, 30)),
+        .constrain_horizontal(true),
+        crate::trial::worker(),
     )
-    .constrain_horizontal(true)
 }
 
 fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -98,7 +107,11 @@ fn manuscript(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript")),
             ))
             .width(560.px())
-            .height(260.px()),
+            .height(if state.trial.visible {
+                120.px()
+            } else {
+                260.px()
+            }),
         )
     };
     let selection = if source_required {
@@ -109,6 +122,7 @@ fn manuscript(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         label(selection),
         editor,
+        diagnostics(state),
         flex_row((
             text_button("Apply draft", |state: &mut Writer| {
                 state.change(Workbench::apply)
@@ -148,11 +162,11 @@ fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .filter_map(|index| diagnostics.get(index))
             .map(|diagnostic| {
                 sized_box(prose(format!(
-                    "Line {} · {}",
+                    "Source diagnostics · line {} · {}",
                     diagnostic.span.start.line(),
                     diagnostic.message
                 )))
-                .width(830.px())
+                .width(560.px())
             })
             .collect::<Vec<_>>(),
     )

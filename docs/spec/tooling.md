@@ -84,6 +84,14 @@ accepted edit history and recovery leases; closing and Save all consider inactiv
 uses an external editor for source repair rather than embedding a second source editor. This does
 not establish parity for the remaining workspaces or remove the existing Freya Source workflow.
 
+Its source-language runtime preview prepares immutable accepted inputs off-thread and publishes only
+into the still-current document and requested destination. Cancelling or hiding preparation
+invalidates publication immediately; an active compiler phase may finish before another starts.
+Playback uses the shared runtime for choices, condition inputs and explicit blocking-effect
+acknowledgements. It never executes game effects, persists trial state, applies field drafts or
+silently replaces a running snapshot after edits. Restart is explicit, and failed preparation
+retains the previous run. Accepted sibling source participates; unapplied sibling fields do not.
+
 Linux, Windows and macOS remain first-class desktop targets, not implied platform acceptance. Claims
 require native evidence for authoring, assistive technology, physical input, startup, memory and
 installed packages on each declared platform. Renderer reach or visual polish is insufficient.

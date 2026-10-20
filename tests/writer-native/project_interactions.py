@@ -20,10 +20,28 @@ def manuscript(window):
 
 
 def switch(window, name, text):
-    window.act(name)
-    node = manuscript(window)
-    window.wait(lambda: window.text(node) == text, "retained document draft")
-    return node
+    before = manuscript(window)
+    assert window.act(name), "document switch action was rejected"
+    current = "Current · " + name.removesuffix(" · Unsaved")
+    # Action delivery and AccessKit tree replacement are asynchronous. Resolve the
+    # field on each poll instead of holding a node retired by the document switch.
+    return window.wait(
+        lambda: (
+            (window.find(current) or window.find(current + " · Unsaved"))
+            and next(
+                (
+                    node
+                    for node, label in window.nodes()
+                    if label == "Manuscript"
+                    and tuple(node) != tuple(before)
+                    and window.call(node, "Accessible", "GetRole")[0] == 79
+                    and window.text(node) == text
+                ),
+                None,
+            )
+        ),
+        "retained document draft",
+    )
 
 
 def exercise(window, primary, results):

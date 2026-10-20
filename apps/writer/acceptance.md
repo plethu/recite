@@ -31,14 +31,16 @@ screen-reader usability.
 The opt-in Xilem migration frontend has passed native Wayland checks in a private Cage compositor
 for typing undo/redo, clipboard exchange with Unicode, checked saves, literal IDE arguments,
 explicit reload with an independent recovery copy, document switching with retained drafts, native
-undo isolation between equal-text fields, and multi-document close/reopen recovery. Its accessible
-manuscript name and final layout are checked separately. This does not establish workspace parity:
-Map, localisation, schema, runtime preview, preferences and desktop activation remain on Freya.
-Physical IME, screen-reader announcements, hardware rendering and Windows/macOS acceptance remain
-unverified for Xilem. The portal scrollbar precedes close choices in the Tab cycle; the current
-native drill reaches Keep editing in three presses and verifies that cancelling close retains text
-undo/redo. Automatic focus return and the remaining keyboard workflow need acceptance before the
-default switches.
+undo isolation between equal-text fields, and multi-document close/reopen recovery. Source-language
+preview also covers choices, typed condition answers, blocking-effect acknowledgement, stale-input
+notices, restart refusal with an unapplied draft, and native typing history after hiding playback.
+Its accessible manuscript name and final layout are checked separately. This does not establish
+workspace parity: Map, localisation and configured preview inputs, schema, preferences and desktop
+activation remain on Freya. Physical IME, screen-reader announcements, hardware rendering and
+Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes close choices in
+the Tab cycle; the current native drill reaches Keep editing in three presses and verifies that
+cancelling close retains text undo/redo. Automatic focus return and the remaining keyboard workflow
+need acceptance before the default switches.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

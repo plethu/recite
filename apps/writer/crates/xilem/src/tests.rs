@@ -3,7 +3,7 @@ use super::*;
 mod keyed;
 #[path = "tests/navigation/tests.rs"]
 mod navigation;
-mod support;
+pub(crate) mod support;
 use std::{fs, path::PathBuf};
 use support::{click, labels, open, project};
 

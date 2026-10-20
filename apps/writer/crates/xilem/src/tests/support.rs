@@ -7,7 +7,7 @@ use xilem::core::{
     DynMessage, MessageCtx, ProxyError, RawProxy, SendMessage, View as _, ViewId, ViewPathTracker,
 };
 
-pub(super) fn project(source: &str) -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
+pub(crate) fn project(source: &str) -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
     fs::write(
         directory.path().join("recite.project.toml"),
@@ -17,7 +17,7 @@ pub(super) fn project(source: &str) -> Result<tempfile::TempDir, Box<dyn std::er
     Ok(directory)
 }
 
-pub(super) fn open(directory: &tempfile::TempDir) -> Result<Writer, Box<dyn std::error::Error>> {
+pub(crate) fn open(directory: &tempfile::TempDir) -> Result<Writer, Box<dyn std::error::Error>> {
     Ok(Writer::open(Startup {
         project: directory.path().to_owned(),
         document: Some("scene.recite".into()),
@@ -27,7 +27,7 @@ pub(super) fn open(directory: &tempfile::TempDir) -> Result<Writer, Box<dyn std:
 }
 
 #[derive(Debug)]
-pub(super) struct NoProxy;
+pub(crate) struct NoProxy;
 impl RawProxy for NoProxy {
     fn send_message(&self, _path: Arc<[ViewId]>, message: SendMessage) -> Result<(), ProxyError> {
         Err(ProxyError::DriverFinished(message))
@@ -37,7 +37,7 @@ impl RawProxy for NoProxy {
     }
 }
 
-pub(super) fn labels(writer: &mut Writer) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub(crate) fn labels(writer: &mut Writer) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let runtime = Arc::new(tokio::runtime::Runtime::new()?);
     let mut context = ViewCtx::new(Arc::new(NoProxy), runtime);
     let view = view::writer(writer);
@@ -58,7 +58,7 @@ pub(super) fn labels(writer: &mut Writer) -> Result<Vec<String>, Box<dyn std::er
 }
 
 // Drive actual view callbacks through the same message path as Xilem's window driver.
-pub(super) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     let mut context = ViewCtx::new(Arc::new(NoProxy), Arc::new(tokio::runtime::Runtime::new()?));
     let mut view = view::writer(writer);
     let (pod, mut state) = view.build(&mut context, writer);

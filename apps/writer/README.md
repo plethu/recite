@@ -43,9 +43,17 @@ undo/redo, applying changes, checked saves, diagnostics, crash recovery and guar
 retained documents. Switching files preserves field drafts, accepted undo history and recovery
 ownership. Save all and Save and close cover every open file. Open in editor saves accepted source
 while retaining an unapplied manuscript draft. Reload keeps local work in an independent recovery
-copy before accepting disk bytes. Map, localisation, schema tooling, runtime preview, preferences
-and desktop activation remain to be ported. The default launcher still uses Freya. See
-[acceptance](acceptance.md) for evidence limits.
+copy before accepting disk bytes.
+
+Start / restart preview prepares source-language playback off the UI thread, starting at the
+selected beat. Continue, choose replies, answer condition requests, and acknowledge simulated
+effects; Writer never executes game effects. The compiled run remains fixed and shows a stale notice
+after edits. Apply or discard a manuscript draft before restarting. Cancel invalidates publication
+while the active compiler phase finishes. Hiding playback retains manuscript typing history.
+Catalogue/interpolation preview inputs remain part of the localisation port.
+
+Map, localisation, schema tooling, preferences and desktop activation remain to be ported. The
+default launcher still uses Freya. See [acceptance](acceptance.md) for evidence limits.
 
 ## Build requirements
 

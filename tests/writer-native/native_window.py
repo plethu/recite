@@ -23,6 +23,16 @@ class NativeWindow:
     def wait(self, operation, label):
         return self.api.wait_for(operation, label, self.process, timeout=10)
 
+    def find_text(self, value, prefix=False):
+        for node, name in self.nodes():
+            if name.startswith(value) if prefix else name == value:
+                return node
+            if "org.a11y.atspi.Text" in self.call(node, "Accessible", "GetInterfaces")[0]:
+                text = self.text(node)
+                if text.startswith(value) if prefix else text == value:
+                    return node
+        return None
+
     def act(self, label):
         node = self.find(label)
         if node is None:
