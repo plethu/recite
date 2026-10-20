@@ -33,12 +33,12 @@ impl Session {
     }
     pub fn accept_saved_output(&mut self, request: &mut DeclarationSave) -> Result<(), FileError> {
         if !Arc::ptr_eq(&self.schema_output, &request.expected_output) {
-            return Err(FileError::DeclarationSourceChanged);
+            return Err(FileError::DeclarationChanged);
         }
         let output = request
             .prepared_output
             .take()
-            .ok_or(FileError::DeclarationSourceChanged)?;
+            .ok_or(FileError::DeclarationChanged)?;
         request.retired_output = Some(std::mem::replace(&mut self.schema_output, output));
         Ok(())
     }
@@ -92,7 +92,7 @@ impl DeclarationSave {
         let output = self
             .prepared_output
             .as_ref()
-            .ok_or(FileError::DeclarationSourceChanged)?;
+            .ok_or(FileError::DeclarationChanged)?;
         replace_checked(
             &self.output,
             self.expected_output.baseline(),

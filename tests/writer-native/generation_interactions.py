@@ -80,7 +80,52 @@ def run(api, bus, registry, binary, output):
                 )
                 assert "Updated Mara" in (project / "schema.json").read_text()
                 results["cancel_retirement_retains_published_output"] = True
+                registration = project / "recite.producer.toml"
+                original = registration.read_text()
+                registration.write_text("invalid producer registration [")
+                window.act("Reload producer registration")
+                window.wait(
+                    lambda: window.find_text("Producer registration is invalid:", contains=True),
+                    "invalid registration replaces reviewed command",
+                )
+                assert not window.enabled("Regenerate schema")
+                capture(output, "-registration-error")
+                registration.write_text(original.replace("producer.sh", "producer-reloaded.sh"))
+                window.act("Reload producer registration")
+                window.wait(
+                    lambda: window.find_text("producer-reloaded.sh", contains=True),
+                    "reloaded literal producer command",
+                )
+                window.wait(
+                    lambda: window.enabled("Regenerate schema"), "reviewed registration restored"
+                )
+                results["registration_reload_replaces_command_or_error_without_execution"] = True
+                schema["speakers"]["mara"]["display_name"] = "Reloaded from disk"
+                (project / "schema.json").write_text(json.dumps(schema))
+                window.act("Reload generated schema")
+                window.wait(
+                    lambda: window.find_text("Schema reloaded; project analysis refreshed."),
+                    "strict output reload and analysis adoption",
+                )
+                capture(output, "-output-reloaded")
+                (project / "schema.json").write_text("unfinished JSON {")
+                window.act("Reload generated schema")
+                window.wait(
+                    lambda: window.find_text("Project validation failed:", contains=True),
+                    "damaged output rejected",
+                )
+                assert (project / "schema.json").read_text() == "unfinished JSON {"
+                (project / "schema.json").write_text(json.dumps(schema))
+                window.act("Reload generated schema")
+                window.wait(
+                    lambda: window.find_text("Schema reloaded; project analysis refreshed."),
+                    "valid output reload retry",
+                )
+                results["strict_output_reload_rejects_damage_and_accepts_retry"] = True
                 window.act("Return to writing")
+                window.wait(lambda: focused(window, node), "retained writing after metadata reload")
+                assert manuscript(window) == node
+                assert window.text(node) == "The last tram waits.x"
                 window.act("Close")
                 window.wait(
                     lambda: window.find("Close and keep recovery"), "close after cancellation"

@@ -3,7 +3,7 @@ use super::*;
 mod actions;
 mod preview;
 mod repair;
-use recite_writer_session::declarations::{SourceAction, SourceStatus};
+use recite_writer_session::declarations::{DeclarationAction, SourceStatus};
 use std::path::{Path, PathBuf};
 #[derive(Default)]
 enum Validation {
@@ -26,6 +26,11 @@ pub(in crate::workspaces) struct Panel {
     preview_open: bool,
 }
 impl Panel {
+    pub fn invalidate_output(&mut self) {
+        if matches!(self.validation, Validation::Valid(_)) {
+            self.validation = Validation::Unchecked;
+        }
+    }
     pub fn status_message(&self) -> &'static str {
         if matches!(self.validation, Validation::Invalid(_)) && self.artifact.is_some() {
             "Recovered draft exported. Open it in your editor, then import the repaired TOML."
@@ -79,7 +84,9 @@ impl Panel {
 impl Validation {
     fn message(&self) -> &'static str {
         match self {
-            Self::Unchecked => "Source validation has not run.",
+            Self::Unchecked => {
+                "Generated schema changed. Validate this draft to check whether it needs generation."
+            }
             Self::Valid(SourceStatus::Current) => {
                 "Source validation passed; generated schema is current."
             }

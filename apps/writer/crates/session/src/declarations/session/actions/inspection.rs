@@ -7,19 +7,30 @@ pub enum SourceStatus {
     NeedsGeneration,
     DamagedOutput,
 }
-impl SourceReceipt {
+impl DeclarationReceipt {
     /// Worker-side validation also describes recovered drafts that cannot yet be saved.
     pub fn inspect_source(&self) -> Result<SourceStatus, FileError> {
         let draft = self.draft().ok_or(FileError::SchemaOwnership)?;
         let path = match self.result.as_ref().and_then(|result| result.as_ref().ok()) {
-            Some(PreparedSource::Bound(source)) => &source.path,
-            _ => &self.source.as_ref().ok_or(FileError::SchemaOwnership)?.path,
+            Some(PreparedDeclaration::Bound(source)) => &source.path,
+            _ => &self.inputs.source().ok_or(FileError::SchemaOwnership)?.path,
         };
         inspect_source(
             self.output().ok_or(FileError::SchemaOwnership)?,
             path,
             draft,
         )
+    }
+    pub fn inspects_source(&self) -> bool {
+        matches!(&self.inputs, Inputs::Source(_))
+    }
+    pub fn registration(
+        &self,
+    ) -> Option<&Result<Option<recite_config::ProducerRegistration>, String>> {
+        match self.result.as_ref()?.as_ref().ok()? {
+            PreparedDeclaration::Registration(registration) => Some(registration),
+            _ => None,
+        }
     }
     pub fn archive(&self) -> Option<&Path> {
         match &self.artifact {
@@ -35,9 +46,12 @@ impl SourceReceipt {
     }
     pub fn draft(&self) -> Option<&str> {
         match self.result.as_ref()?.as_ref().ok()? {
-            PreparedSource::Bound(source) => Some(&source.draft),
-            PreparedSource::Replaced(state) => Some(&state.draft),
-            PreparedSource::Unchanged => self.source.as_ref().map(|source| source.draft.as_str()),
+            PreparedDeclaration::Bound(source) => Some(&source.draft),
+            PreparedDeclaration::Replaced(state) => Some(&state.draft),
+            PreparedDeclaration::Output(_) | PreparedDeclaration::Registration(_) => None,
+            PreparedDeclaration::Unchanged => {
+                self.inputs.source().map(|source| source.draft.as_str())
+            }
         }
     }
     pub fn last_valid_schema(&self) -> Option<&ProjectSchema> {
@@ -46,21 +60,25 @@ impl SourceReceipt {
     }
     fn output(&self) -> Option<&SchemaOutput> {
         match self.result.as_ref()?.as_ref().ok()? {
-            PreparedSource::Replaced(state) => state
+            PreparedDeclaration::Replaced(state) => state
                 .output
                 .as_ref()
                 .map(Arc::as_ref)
                 .or(Some(self.schema_output.as_ref())),
+            PreparedDeclaration::Output(output) => Some(output),
             _ => Some(self.schema_output.as_ref()),
         }
     }
     pub fn reloads_output(&self) -> bool {
-        matches!(&self.result, Some(Ok(PreparedSource::Replaced(state))) if state.output.is_some())
+        matches!(&self.result, Some(Ok(PreparedDeclaration::Output(_))))
+            || matches!(&self.result, Some(Ok(PreparedDeclaration::Replaced(state))) if state.output.is_some())
     }
     pub fn replaces_source(&self) -> bool {
         matches!(
             &self.result,
-            Some(Ok(PreparedSource::Bound(_) | PreparedSource::Replaced(_)))
+            Some(Ok(
+                PreparedDeclaration::Bound(_) | PreparedDeclaration::Replaced(_)
+            ))
         )
     }
 }

@@ -94,6 +94,11 @@ typing and history remain independent. Malformed generated JSON is an explicit d
 inspectors identify the last validated declarations as such, retain the observed bytes for conflict
 checks, and allow the standalone source to regenerate the output.
 
+Output and producer-registration reloads share that checked action owner, preserving newer TOML
+typing. An invalid registration replaces the reviewed command with its error. Output changes retire
+cached source-currentness claims; explicit draft validation compares the current buffer with the
+loaded output, independently of project-analysis refresh and Save's own validation.
+
 Native Map geometry, synopsis, spatial selection and personal-placement format have shared owners.
 Its accepted projection is prepared on workers and checked against source identity before adoption;
 placement writes reconcile even when presentation is cancelled. Camera and local layout never add a

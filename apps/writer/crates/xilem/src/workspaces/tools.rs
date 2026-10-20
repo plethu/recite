@@ -1,12 +1,13 @@
 //! One project-tool operation owns its terminal receipt across screen changes.
 mod accepting;
+mod declaration;
 mod job;
-mod source;
 mod worker;
 use super::{Phase, Writer, declarations::Row};
 use recite_writer_session::{
     declarations::{
-        Session, SourceAction, SourceReceipt, SourceRecovered, SourceRecovery, SourceWork, entries,
+        DeclarationAction, DeclarationFinish, DeclarationFinished, DeclarationReceipt,
+        DeclarationWork, Session, entries,
         session::{GenerationReceipt, GenerationStart, GenerationStarted, GenerationWork},
     },
     project::{PreparedRefresh, RefreshRequest},
@@ -37,7 +38,7 @@ pub(super) enum Work {
     Start(Box<GenerationStart>),
     Publish(Box<GenerationWork>),
     Refresh(Box<RefreshRequest>),
-    Source(Box<SourceWork>),
+    Declaration(Box<DeclarationWork>),
 }
 enum Value {
     Started(GenerationStarted),
@@ -46,8 +47,11 @@ enum Value {
         rows: Vec<Row>,
     },
     Refreshed(Box<PreparedRefresh>),
-    Source(Box<source::Prepared>),
-    SourceRecovered(SourceRecovered),
+    Declaration(Box<declaration::Prepared>),
+    DeclarationFinished {
+        receipt: DeclarationFinished,
+        completion: declaration::Completion,
+    },
 }
 struct Completed {
     request: Arc<Request>,
@@ -55,7 +59,11 @@ struct Completed {
 }
 enum Retirement {
     Drop(Option<Value>),
-    Recover(Box<SourceRecovery>, Option<Value>),
+    Finish {
+        work: Box<DeclarationFinish>,
+        completion: declaration::Completion,
+        retired: Option<Value>,
+    },
 }
 impl Retirement {
     fn finish(self, request: Arc<Request>) -> Option<Completed> {
@@ -64,11 +72,18 @@ impl Retirement {
                 drop(value);
                 None
             }
-            Self::Recover(work, value) => {
-                drop(value);
+            Self::Finish {
+                work,
+                completion,
+                retired,
+            } => {
+                drop(retired);
                 Some(Completed {
                     request,
-                    result: Ok(Value::SourceRecovered(work.execute())),
+                    result: Ok(Value::DeclarationFinished {
+                        receipt: work.execute(),
+                        completion,
+                    }),
                 })
             }
         }
@@ -180,7 +195,7 @@ impl Writer {
             Work::Start(_) => "Checking the reviewed producer command…",
             Work::Publish(_) => "Publishing generated schema… You can keep writing.",
             Work::Refresh(_) => "Refreshing schema analysis… You can keep writing.",
-            Work::Source(_) => "Preparing declaration source… Your current draft stays open.",
+            Work::Declaration(_) => "Preparing declaration source… Your current draft stays open.",
         }
         .into();
         let job = Job { request, work };

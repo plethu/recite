@@ -4,6 +4,7 @@ pub mod producer;
 pub mod recovery;
 pub mod session;
 pub use session::{
-    DeclarationRevision, DeclarationSave, DeclarationSaveRequest, SchemaOutputStatus, Session,
-    SourceAction, SourceReceipt, SourceRecovered, SourceRecovery, SourceStatus, SourceWork,
+    DeclarationAction, DeclarationFinish, DeclarationFinished, DeclarationReceipt,
+    DeclarationRevision, DeclarationSave, DeclarationSaveRequest, DeclarationWork,
+    SchemaOutputStatus, Session, SourceStatus,
 };

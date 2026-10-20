@@ -55,9 +55,9 @@ pub enum FileError {
     )]
     SchemaSessionActive,
     #[error(
-        "The declaration source changed while this action was preparing. Your newer draft remains open."
+        "Declarations changed while this action was preparing. Your current work remains open."
     )]
-    DeclarationSourceChanged,
+    DeclarationChanged,
     #[error("Declaration action cancelled. Your current source remains open.")]
     DeclarationActionCancelled,
     #[error("Save this document before closing it. Your draft remains open.")]

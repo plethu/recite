@@ -15,6 +15,9 @@ impl Writer {
                 }
             }
             Some(Operation::Saving(mut sequence)) => {
+                if matches!(&receipt, Receipt::DeclarationOutput(_, Ok(()))) {
+                    self.invalidate_declaration_output();
+                }
                 let Some((files, model)) = self.session.parts_mut() else {
                     self.status = FileError::ProjectRequired.to_string();
                     return;

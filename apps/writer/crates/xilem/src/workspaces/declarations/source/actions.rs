@@ -8,9 +8,21 @@ pub(super) fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         Validation::Invalid(_)
     );
     flex_col((
+        matches!(
+            writer.workspaces.declarations.source.validation,
+            Validation::Unchecked
+        )
+        .then(|| {
+            text_button(
+                scale,
+                "Validate declaration draft",
+                |writer: &mut Writer| writer.declaration_action(DeclarationAction::InspectSource),
+            )
+            .disabled(blocked)
+        }),
         (invalid && writer.workspaces.declarations.source.artifact.is_none()).then(|| {
             text_button(scale, "Export declaration draft", |writer: &mut Writer| {
-                writer.source_action(SourceAction::ExportDraft)
+                writer.declaration_action(DeclarationAction::ExportDraft)
             })
             .disabled(blocked)
         }),
@@ -34,7 +46,7 @@ pub(super) fn primary(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             text_button(
                 scale,
                 "Reload declaration source (keep recovery copy)",
-                |writer: &mut Writer| writer.source_action(SourceAction::Reload),
+                |writer: &mut Writer| writer.declaration_action(DeclarationAction::ReloadSource),
             )
             .disabled(blocked)
         }),
@@ -71,13 +83,13 @@ pub(super) fn recovery(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             text_button(
                 scale,
                 "Reload declaration source (keep recovery copy)",
-                |writer: &mut Writer| writer.source_action(SourceAction::Reload),
+                |writer: &mut Writer| writer.declaration_action(DeclarationAction::ReloadSource),
             )
             .disabled(blocked)
         }),
         dirty.then(|| {
             text_button(scale, "Discard declaration draft", |writer: &mut Writer| {
-                writer.source_action(SourceAction::Discard)
+                writer.declaration_action(DeclarationAction::Discard)
             })
             .disabled(blocked)
         }),

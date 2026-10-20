@@ -270,6 +270,15 @@ project context** rereads project sources and schema while retaining the current
 draft, and undo history. It marks an existing preview stale. A failed refresh retains the last
 accepted context and reports the error.
 
+In Xilem, **Declarations → Declaration source** binds standalone TOML. Open the saved source in your
+editor, explicitly **Reload declaration source**, then **Save and generate declarations**. Reload
+preserves the previous draft in a separate TOML recovery copy. An invalid recovered draft offers
+**Export declaration draft**; repair that separate file in your editor, then **Import repaired
+declaration draft**. Import stages validated TOML; Save and generate writes the source and output.
+The read-only preview is optional. **Producer** reloads the registration for review or reloads valid
+generated JSON from disk. After output changes, **Validate declaration draft** checks whether the
+current TOML matches it; project-analysis refresh does not establish that fact.
+
 Preview compiles that same set of effective sources and schema. Script starts at the selected line's
 beat; Source starts at the compiled default block. Cross-file links use the normal Recite reference
 rules. Existing previews keep their compiled input until explicitly restarted. Effect requests are

@@ -15,6 +15,7 @@ enum Stage {
     Unbound,
     Saved,
     Recovered,
+    OutputChanged,
 }
 impl Stage {
     fn name(self) -> &'static str {
@@ -22,6 +23,7 @@ impl Stage {
             Self::Unbound => "unbound",
             Self::Saved => "saved",
             Self::Recovered => "recovered",
+            Self::OutputChanged => "output-changed",
         }
     }
 }
@@ -40,7 +42,12 @@ fn reveal<W: Widget>(harness: &mut TestHarness<W>, label: &str) {
 #[test]
 fn declaration_source_binding_recovery_and_preview_render_at_personal_scales() {
     for scale in [100, 200] {
-        for stage in [Stage::Unbound, Stage::Saved, Stage::Recovered] {
+        for stage in [
+            Stage::Unbound,
+            Stage::Saved,
+            Stage::Recovered,
+            Stage::OutputChanged,
+        ] {
             let (directory, mut writer, mut jobs) = fixture();
             writer.config.writer.presentation = writer
                 .config
@@ -56,7 +63,7 @@ fn declaration_source_binding_recovery_and_preview_render_at_personal_scales() {
                     format!("{source}\n# {}\n", "author notes 演劇 ".repeat(2000)),
                 )
                 .unwrap();
-                writer.source_action(SourceAction::Bind(path));
+                writer.declaration_action(DeclarationAction::Bind(path));
                 finish(&mut writer, &mut jobs);
             }
             if matches!(stage, Stage::Recovered) {
@@ -68,10 +75,14 @@ fn declaration_source_binding_recovery_and_preview_render_at_personal_scales() {
                     .unwrap()
                     .set_draft("# Recovered draft\nunfinished TOML [".into())
                     .unwrap();
-                writer.source_action(SourceAction::ExportDraft);
+                writer.declaration_action(DeclarationAction::ExportDraft);
                 finish(&mut writer, &mut jobs);
             }
             writer.show_declaration_source();
+            if matches!(stage, Stage::OutputChanged) {
+                writer.declaration_action(DeclarationAction::ReloadGenerated);
+                finish(&mut writer, &mut jobs);
+            }
             writer.workspaces.declarations.source.toggle_preview();
             let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
             let mut context = ViewCtx::new(Arc::new(support::NoProxy), runtime);

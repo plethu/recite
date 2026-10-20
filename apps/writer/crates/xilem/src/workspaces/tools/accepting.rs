@@ -1,3 +1,4 @@
+use super::super::SchemaUpdate;
 use super::*;
 impl Writer {
     pub(super) fn accept_tool(&mut self, mut completed: Completed) -> Retirement {
@@ -31,7 +32,8 @@ impl Writer {
                 .and_then(|session| session.accept_generation(receipt))
                 .map(|()| {
                     self.workspaces.declarations.replace(std::mem::take(rows));
-                    self.workspaces.schema_refresh = Some(super::super::SchemaUpdate::Published);
+                    self.workspaces.declarations.source.invalidate_output();
+                    self.workspaces.schema_refresh = Some(SchemaUpdate::Published);
                     self.refresh_schema_context();
                 }),
             Ok(Value::Refreshed(prepared)) => self
@@ -44,7 +46,7 @@ impl Writer {
                         .map_err(|error| error.to_string())
                 })
                 .map(|()| {
-                    let update = self.workspaces.schema_refresh.take().map(super::super::SchemaUpdate::message).unwrap_or("Schema updated");
+                    let update = self.workspaces.schema_refresh.take().map(SchemaUpdate::message).unwrap_or("Schema updated");
                     self.reading.prepare(self.session.model());
                     let stale_rule_draft = self.session.model().has_draft() && self.rules.as_ref().is_some_and(|reply| !reply.projection().belongs_to(self.session.model().document()));
                     if stale_rule_draft { self.retire_rules(); }
@@ -55,18 +57,17 @@ impl Writer {
                         format!("{update}; project analysis refreshed. The staged reply draft is retained for external repair.")
                     } else { format!("{update}; project analysis refreshed.") };
                 }),
-            Ok(Value::Source(prepared)) => {
-                let result = self.accept_source_tool(prepared);
-                match result {
+            Ok(Value::Declaration(prepared)) => {
+                let completion = prepared.completion();
+                match self.accept_declaration_tool(prepared) {
                     Ok(work) => {
-                        self.workspaces.tools.pending = Some(completed.request.clone());
-                        let value = completed.result.ok();
-                        return Retirement::Recover(Box::new(work), value);
-                    },
+                        self.workspaces.tools.pending = Some(completed.request);
+                        return Retirement::Finish { work: Box::new(work), completion, retired: completed.result.ok() };
+                    }
                     Err(error) => Err(error),
                 }
             }
-            Ok(Value::SourceRecovered(receipt)) => self.finish_source_tool(receipt),
+            Ok(Value::DeclarationFinished { receipt, completion }) => self.finish_declaration_tool(receipt, *completion),
             Err(error) => Err(error.clone()),
         };
         if let Err(error) = result {

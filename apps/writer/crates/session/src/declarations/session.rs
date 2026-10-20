@@ -9,11 +9,12 @@ mod generation;
 mod output;
 use output::SchemaOutput;
 pub use output::SchemaOutputStatus;
+mod actions;
 mod saving;
-mod source_work;
 mod starting;
-pub use source_work::{
-    SourceAction, SourceReceipt, SourceRecovered, SourceRecovery, SourceStatus, SourceWork,
+pub use actions::{
+    DeclarationAction, DeclarationFinish, DeclarationFinished, DeclarationReceipt, DeclarationWork,
+    SourceStatus,
 };
 mod activity;
 use activity::Activity;
@@ -141,29 +142,6 @@ impl Session {
         }
         Ok(())
     }
-    pub fn reload_generated(&mut self) -> Result<(), FileError> {
-        self.require_idle_save()?;
-        if self.busy() {
-            return Err(FileError::UnsavedDocument);
-        }
-        let text = read_regular(&self.output)?;
-        let loaded =
-            recite_core::schema::load_schema_manifest_str(self.output.to_string_lossy(), &text);
-        let schema = loaded
-            .schema
-            .ok_or(FileError::Validation(loaded.diagnostics))?;
-        self.check_owner(&schema)?;
-        self.schema_output = Arc::new(SchemaOutput::Ready(super::producer::Generated {
-            schema: schema.into(),
-            text,
-        }));
-        Ok(())
-    }
-    pub fn reload_registration(&mut self) {
-        if !self.busy() {
-            self.registration = Self::registration(&self.root, self.last_valid_schema());
-        }
-    }
     pub fn cancel(&self) {
         self.activity.cancel();
     }
@@ -174,9 +152,6 @@ impl Session {
         self.source
             .as_ref()
             .is_some_and(|s| s.draft != s.baseline || s.recovery.pending())
-    }
-    fn check_owner(&self, candidate: &ProjectSchema) -> Result<(), FileError> {
-        check_owner(self.last_valid_schema(), candidate)
     }
     /// Last validated declarations; consult `output_status` before presenting them as current.
     pub fn last_valid_schema(&self) -> &ProjectSchema {
@@ -190,7 +165,7 @@ impl Session {
     }
     pub fn current(&self) -> bool {
         self.source.as_ref().is_some_and(|source| {
-            source_work::inspect_source(&self.schema_output, &source.path, &source.draft)
+            actions::inspect_source(&self.schema_output, &source.path, &source.draft)
                 .is_ok_and(|status| status == SourceStatus::Current)
         })
     }

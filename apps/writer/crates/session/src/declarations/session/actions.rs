@@ -1,8 +1,12 @@
-//! Source preparation keeps the live recovery lease and all newer typing in the Session.
+//! Checked declaration actions retain the live recovery lease and newer source typing.
 mod accepting;
 mod inspection;
 pub use inspection::SourceStatus;
 pub(super) use inspection::inspect_source;
+mod finishing;
+mod metadata;
+use finishing::FinishPayload;
+pub use finishing::{DeclarationFinish, DeclarationFinished};
 mod preparing;
 use super::{
     DeclarationRevision, FileError, ProjectSchema, SchemaOutput, SchemaOutputStatus, Session,
@@ -15,13 +19,15 @@ use std::{
     sync::Arc,
 };
 
-pub enum SourceAction {
-    Inspect,
+pub enum DeclarationAction {
+    InspectSource,
     Bind(PathBuf),
-    Reload,
+    ReloadSource,
     Discard,
     ExportDraft,
     ImportDraft(PathBuf),
+    ReloadGenerated,
+    ReloadRegistration,
 }
 enum SourceArtifact {
     Archived(PathBuf),
@@ -33,41 +39,51 @@ struct SourceStamp {
     baseline: String,
     draft: String,
 }
-pub struct SourceWork {
+enum Inputs {
+    Source(Option<SourceStamp>),
+    Output,
+}
+impl Inputs {
+    fn source(&self) -> Option<&SourceStamp> {
+        match self {
+            Self::Source(source) => source.as_ref(),
+            Self::Output => None,
+        }
+    }
+    fn matches(&self, source: Option<&Source>) -> bool {
+        match (self, source) {
+            (Self::Output, _) | (Self::Source(None), None) => true,
+            (Self::Source(Some(stamp)), Some(source)) => stamp.matches(source),
+            _ => false,
+        }
+    }
+}
+pub struct DeclarationWork {
     token: ActivityToken,
-    action: SourceAction,
+    action: DeclarationAction,
     root: PathBuf,
     output: PathBuf,
     schema_output: Arc<SchemaOutput>,
-    source: Option<SourceStamp>,
+    inputs: Inputs,
 }
 struct Replacement {
     baseline: String,
     draft: String,
     output: Option<Arc<SchemaOutput>>,
 }
-enum PreparedSource {
+enum PreparedDeclaration {
     Bound(Box<Source>),
     Replaced(Replacement),
     Unchanged,
+    Output(Arc<SchemaOutput>),
+    Registration(Result<Option<recite_config::ProducerRegistration>, String>),
 }
-pub struct SourceReceipt {
+pub struct DeclarationReceipt {
     token: ActivityToken,
     schema_output: Arc<SchemaOutput>,
-    source: Option<SourceStamp>,
+    inputs: Inputs,
     artifact: Option<SourceArtifact>,
-    result: Option<Result<PreparedSource, FileError>>,
-}
-/// Adoption has queued recovery; the activity stays busy until its fixed fence is harvested.
-pub struct SourceRecovery {
-    token: ActivityToken,
-    ticket: Option<Durability<DraftSnapshot>>,
-    retired_source: Option<Source>,
-    retired_state: Option<Replacement>,
-}
-pub struct SourceRecovered {
-    token: ActivityToken,
-    result: Option<Result<(), FileError>>,
+    result: Option<Result<PreparedDeclaration, FileError>>,
 }
 impl SourceStamp {
     fn capture(source: &Source) -> Self {
@@ -86,49 +102,64 @@ impl SourceStamp {
     }
 }
 impl Session {
-    pub fn prepare_source(&mut self, action: SourceAction) -> Result<SourceWork, FileError> {
+    pub fn prepare_declaration(
+        &mut self,
+        action: DeclarationAction,
+    ) -> Result<DeclarationWork, FileError> {
         self.require_idle_save()?;
-        if self.busy() || (matches!(&action, SourceAction::Bind(_)) && self.dirty()) {
+        if self.busy() || (matches!(&action, DeclarationAction::Bind(_)) && self.dirty()) {
             return Err(FileError::UnsavedDocument);
         }
         if matches!(
             &action,
-            SourceAction::Reload | SourceAction::ExportDraft | SourceAction::ImportDraft(_)
+            DeclarationAction::ReloadSource
+                | DeclarationAction::ExportDraft
+                | DeclarationAction::ImportDraft(_)
         ) && self.source.is_none()
         {
             return Err(FileError::SchemaOwnership);
         }
         let token = ActivityToken::new();
-        self.activity = Activity::ChangingSource(token.clone());
-        Ok(SourceWork {
+        self.activity = Activity::PreparingDeclaration(token.clone());
+        let inputs = match &action {
+            DeclarationAction::ReloadGenerated | DeclarationAction::ReloadRegistration => {
+                Inputs::Output
+            }
+            _ => Inputs::Source(self.source.as_ref().map(SourceStamp::capture)),
+        };
+        Ok(DeclarationWork {
             token,
             action,
             root: self.root.clone(),
             output: self.output.clone(),
             schema_output: self.schema_output.clone(),
-            source: self.source.as_ref().map(SourceStamp::capture),
+            inputs,
         })
     }
-    fn source_blocking(&mut self, action: SourceAction) -> Result<Option<PathBuf>, FileError> {
-        let mut receipt = self.prepare_source(action)?.execute();
-        let work = self.accept_source(&mut receipt)?;
-        self.accept_source_recovery(&mut work.execute())?;
+    fn declaration_blocking(
+        &mut self,
+        action: DeclarationAction,
+    ) -> Result<Option<PathBuf>, FileError> {
+        let mut receipt = self.prepare_declaration(action)?.execute();
+        let work = self.accept_declaration(&mut receipt)?;
+        self.accept_declaration_finish(&mut work.execute())?;
         Ok(receipt.artifact.and_then(|artifact| match artifact {
             SourceArtifact::Archived(path) => Some(path),
             SourceArtifact::Editable(_) => None,
         }))
     }
     pub fn bind(&mut self, path: &Path) -> Result<(), FileError> {
-        self.source_blocking(SourceAction::Bind(path.to_owned()))
+        self.declaration_blocking(DeclarationAction::Bind(path.to_owned()))
             .map(drop)
     }
     /// The captured draft is archived before preparing an explicit disk rebase.
     pub fn reload_source(&mut self) -> Result<PathBuf, FileError> {
-        self.source_blocking(SourceAction::Reload)?
+        self.declaration_blocking(DeclarationAction::ReloadSource)?
             .ok_or(FileError::SchemaOwnership)
     }
     pub fn discard(&mut self) -> Result<(), FileError> {
-        self.source_blocking(SourceAction::Discard).map(drop)
+        self.declaration_blocking(DeclarationAction::Discard)
+            .map(drop)
     }
     pub fn generation_active(&self) -> bool {
         matches!(
@@ -139,8 +170,8 @@ impl Session {
         )
     }
 }
-impl SourceWork {
-    pub fn execute(self) -> SourceReceipt {
+impl DeclarationWork {
+    pub fn execute(self) -> DeclarationReceipt {
         let mut artifact = None;
         let result =
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.prepare(&mut artifact)))
@@ -150,38 +181,21 @@ impl SourceWork {
                     )
                     .into())
                 });
-        SourceReceipt {
+        DeclarationReceipt {
             token: self.token,
             schema_output: self.schema_output,
-            source: self.source,
+            inputs: self.inputs,
             artifact,
             result: Some(result),
         }
     }
-    pub fn not_started(self, error: String) -> SourceReceipt {
-        SourceReceipt {
+    pub fn not_started(self, error: String) -> DeclarationReceipt {
+        DeclarationReceipt {
             token: self.token,
             schema_output: self.schema_output,
-            source: self.source,
+            inputs: self.inputs,
             artifact: None,
             result: Some(Err(std::io::Error::other(error).into())),
-        }
-    }
-}
-impl SourceRecovery {
-    pub fn execute(self) -> SourceRecovered {
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let result = self.ticket.map_or(Ok(()), Durability::wait);
-            drop(self.retired_source);
-            drop(self.retired_state);
-            result
-        }))
-        .unwrap_or_else(|_| {
-            Err(std::io::Error::other("Declaration source recovery stopped unexpectedly.").into())
-        });
-        SourceRecovered {
-            token: self.token,
-            result: Some(result),
         }
     }
 }

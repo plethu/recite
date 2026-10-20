@@ -1,5 +1,6 @@
 use super::*;
 use recite_config::ProducerRegistration;
+use recite_writer_session::declarations::DeclarationAction;
 use std::fmt::Write;
 #[derive(Default)]
 pub(super) struct Panel {
@@ -37,6 +38,20 @@ pub(super) fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.declarations.producer;
     flex_col((
         label(scale, "Schema producer").text_size(18. * scale),
+        flex_row((
+            text_button(
+                scale,
+                "Reload producer registration",
+                |writer: &mut Writer| {
+                    writer.declaration_action(DeclarationAction::ReloadRegistration)
+                },
+            )
+            .disabled(writer.declaration_action_blocked()),
+            text_button(scale, "Reload generated schema", |writer: &mut Writer| {
+                writer.declaration_action(DeclarationAction::ReloadGenerated)
+            })
+            .disabled(writer.declaration_action_blocked()),
+        )),
         label(
             scale,
             format!(

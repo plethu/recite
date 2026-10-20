@@ -45,6 +45,9 @@ pub(crate) struct Workspaces {
     schema_feedback_page: usize,
 }
 impl Writer {
+    pub(crate) fn invalidate_declaration_output(&mut self) {
+        self.workspaces.declarations.source.invalidate_output();
+    }
     pub(crate) fn project_jobs_busy(&self) -> bool {
         self.workspaces.tools.busy()
             || self.session.project().is_some_and(|project| {

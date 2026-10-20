@@ -80,7 +80,13 @@ retirement. Shared/native regressions also cover foreign and repeated receipts, 
 publication conflicts, cancellation before/after writing, and refresh failure followed by retry. A
 staged Rules draft survives a schema change with its validation policy and external-repair route
 retained. Producer ready/busy states have 100/200% render review; command details and reports are
-paged. Declaration source binding/editing and producer registration/output reload remain unfinished.
+paged. Source binding, invalid TOML recovery, export to a separate IDE artifact, explicit import and
+standalone generation pass a separate owned Wayland drill while retaining manuscript typing and
+undo. Source/recovery states have independent 100/200% render review. Producer-registration reload
+replaces the reviewed command or its error without execution; generated-output reload rejects
+malformed JSON and supports a valid retry. Shared/native regressions preserve newer TOML typing
+through these metadata reloads. Output changes clear cached source-currentness until explicit draft
+validation.
 
 A queued accessibility action may outlive its native widget. Recite checks the live owned base layer
 before dispatch; the stale-click regression also requires replacement focus/click actions to work

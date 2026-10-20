@@ -4,19 +4,21 @@ use crate::declarations::{producer::Generated, recovery::Store};
 use crate::project::read_regular;
 use std::io::Write;
 
-impl SourceWork {
+impl DeclarationWork {
     pub(super) fn prepare(
         &self,
         artifact: &mut Option<SourceArtifact>,
-    ) -> Result<PreparedSource, FileError> {
+    ) -> Result<PreparedDeclaration, FileError> {
         if self.token.cancelled() {
             return Err(FileError::DeclarationActionCancelled);
         }
         match &self.action {
-            SourceAction::Inspect => Ok(PreparedSource::Unchanged),
-            SourceAction::Bind(path) => self.bind(path),
-            SourceAction::Reload => {
-                let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
+            DeclarationAction::ReloadGenerated => self.reload_generated(),
+            DeclarationAction::ReloadRegistration => Ok(self.reload_registration()),
+            DeclarationAction::InspectSource => Ok(PreparedDeclaration::Unchanged),
+            DeclarationAction::Bind(path) => self.bind(path),
+            DeclarationAction::ReloadSource => {
+                let source = self.inputs.source().ok_or(FileError::SchemaOwnership)?;
                 let baseline = read_regular(&source.path)?;
                 let output = read_regular(&self.output)?;
                 let loaded = recite_core::schema::load_schema_manifest_str(
@@ -30,7 +32,7 @@ impl SourceWork {
                     return Err(FileError::DeclarationActionCancelled);
                 }
                 self.export_draft(source, artifact)?;
-                Ok(PreparedSource::Replaced(Replacement {
+                Ok(PreparedDeclaration::Replaced(Replacement {
                     draft: baseline.clone(),
                     baseline,
                     output: Some(Arc::new(match loaded.schema {
@@ -45,30 +47,30 @@ impl SourceWork {
                     })),
                 }))
             }
-            SourceAction::ExportDraft => {
-                let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
+            DeclarationAction::ExportDraft => {
+                let source = self.inputs.source().ok_or(FileError::SchemaOwnership)?;
                 self.export_draft(source, artifact)?;
-                Ok(PreparedSource::Unchanged)
+                Ok(PreparedDeclaration::Unchanged)
             }
-            SourceAction::ImportDraft(path) => {
-                let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
+            DeclarationAction::ImportDraft(path) => {
+                let source = self.inputs.source().ok_or(FileError::SchemaOwnership)?;
                 let draft = read_regular(&self.root.join(path))?;
                 check_owner(
                     self.schema_output.last_valid_schema(),
                     parse(path, &draft)?.schema(),
                 )?;
-                Ok(PreparedSource::Replaced(Replacement {
+                Ok(PreparedDeclaration::Replaced(Replacement {
                     baseline: source.baseline.clone(),
                     draft,
                     output: None,
                 }))
             }
-            SourceAction::Discard => {
+            DeclarationAction::Discard => {
                 Ok(self
-                    .source
-                    .as_ref()
-                    .map_or(PreparedSource::Unchanged, |source| {
-                        PreparedSource::Replaced(Replacement {
+                    .inputs
+                    .source()
+                    .map_or(PreparedDeclaration::Unchanged, |source| {
+                        PreparedDeclaration::Replaced(Replacement {
                             baseline: source.baseline.clone(),
                             draft: source.baseline.clone(),
                             output: None,
@@ -82,7 +84,7 @@ impl SourceWork {
         source: &SourceStamp,
         artifact: &mut Option<SourceArtifact>,
     ) -> Result<(), FileError> {
-        let editable = matches!(&self.action, SourceAction::ExportDraft);
+        let editable = matches!(&self.action, DeclarationAction::ExportDraft);
         let parent = source.path.parent().ok_or(FileError::Selection)?;
         let mut copy = tempfile::Builder::new()
             .prefix(if editable {
@@ -102,17 +104,17 @@ impl SourceWork {
         });
         crate::sync_directory(parent).map_err(FileError::from)
     }
-    fn bind(&self, path: &Path) -> Result<PreparedSource, FileError> {
+    fn bind(&self, path: &Path) -> Result<PreparedDeclaration, FileError> {
         let path = self.root.join(path).canonicalize()?;
         if path == self.output.canonicalize()? {
             return Err(FileError::SchemaOwnership);
         }
         if self
-            .source
-            .as_ref()
+            .inputs
+            .source()
             .is_some_and(|source| source.path.canonicalize().is_ok_and(|old| old == path))
         {
-            return Ok(PreparedSource::Unchanged);
+            return Ok(PreparedDeclaration::Unchanged);
         }
         let baseline = read_regular(&path)?;
         check_owner(
@@ -128,7 +130,7 @@ impl SourceWork {
             self.schema_output.last_valid_schema(),
             parse(&path, &baseline)?.schema(),
         )?;
-        Ok(PreparedSource::Bound(Box::new(Source {
+        Ok(PreparedDeclaration::Bound(Box::new(Source {
             path,
             baseline,
             draft,

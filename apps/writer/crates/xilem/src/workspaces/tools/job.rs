@@ -8,9 +8,9 @@ impl Job {
                 rows: vec![],
             }),
             Work::Refresh(_) => Err(error),
-            Work::Source(work) => Ok(Value::Source(Box::new(source::Prepared::new(
-                work.not_started(error),
-            )))),
+            Work::Declaration(work) => Ok(Value::Declaration(Box::new(
+                declaration::Prepared::new(work.not_started(error)),
+            ))),
         };
         Completed {
             request: self.request,
@@ -28,9 +28,9 @@ impl Job {
                     .unwrap_or_default();
                 Ok(Value::Published { receipt, rows })
             }
-            Work::Source(work) => Ok(Value::Source(Box::new(source::Prepared::new(
-                work.execute(),
-            )))),
+            Work::Declaration(work) => Ok(Value::Declaration(Box::new(
+                declaration::Prepared::new(work.execute()),
+            ))),
             Work::Refresh(work) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 work.prepare(&recite_compiler::authoring::CancellationToken::new())
                     .map(|prepared| Value::Refreshed(Box::new(prepared)))

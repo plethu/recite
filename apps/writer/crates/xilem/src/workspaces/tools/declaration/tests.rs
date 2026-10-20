@@ -3,6 +3,8 @@ use super::*;
 use crate::{tests::support, workspaces::Screen};
 use std::fs;
 use tokio::sync::mpsc;
+#[path = "metadata/tests.rs"]
+mod metadata;
 #[path = "visual/tests.rs"]
 mod visual;
 
@@ -14,7 +16,9 @@ fn source_binding_keeps_close_guarded_until_the_same_worker_finishes_retirement(
         Ok(())
     });
     writer.show_declaration_source();
-    writer.source_action(SourceAction::Bind(directory.path().join("schema.toml")));
+    writer.declaration_action(DeclarationAction::Bind(
+        directory.path().join("schema.toml"),
+    ));
     let completed = jobs.try_recv().unwrap().execute();
     let request = completed.request.clone();
     let retirement = writer.accept_tool(completed);
@@ -45,7 +49,9 @@ fn source_binding_keeps_close_guarded_until_the_same_worker_finishes_retirement(
 #[test]
 fn checked_artifact_import_and_declaration_save_preserve_the_unapplied_manuscript() {
     let (directory, mut writer, mut jobs) = fixture();
-    writer.source_action(SourceAction::Bind(directory.path().join("schema.toml")));
+    writer.declaration_action(DeclarationAction::Bind(
+        directory.path().join("schema.toml"),
+    ));
     finish(&mut writer, &mut jobs);
     writer.show_declaration_source();
     writer.change(|model| {
@@ -60,7 +66,7 @@ fn checked_artifact_import_and_declaration_save_preserve_the_unapplied_manuscrip
         .unwrap()
         .set_draft("Recovered unfinished [".into())
         .unwrap();
-    writer.source_action(SourceAction::ExportDraft);
+    writer.declaration_action(DeclarationAction::ExportDraft);
     finish(&mut writer, &mut jobs);
     let artifact = writer
         .workspaces
@@ -75,7 +81,7 @@ fn checked_artifact_import_and_declaration_save_preserve_the_unapplied_manuscrip
     );
     let original = fs::read_to_string(directory.path().join("schema.toml")).unwrap();
     fs::write(&artifact, original.replace("Mara", "Repaired")).unwrap();
-    writer.source_action(SourceAction::ImportDraft(artifact.clone()));
+    writer.declaration_action(DeclarationAction::ImportDraft(artifact.clone()));
     finish(&mut writer, &mut jobs);
     assert_eq!(writer.session.model().draft(), "Unapplied manuscript.");
     assert_eq!(
@@ -118,7 +124,9 @@ fn checked_artifact_import_and_declaration_save_preserve_the_unapplied_manuscrip
 fn source_dispatch_failure_releases_both_domain_and_transport_activity() {
     let (directory, mut writer, _jobs) = fixture();
     writer.workspaces.tools.sender = None;
-    writer.source_action(SourceAction::Bind(directory.path().join("schema.toml")));
+    writer.declaration_action(DeclarationAction::Bind(
+        directory.path().join("schema.toml"),
+    ));
     assert!(!writer.project_jobs_busy());
     assert!(!writer.declaration_session().unwrap().busy());
     assert!(writer.declaration_session().unwrap().source.is_none());

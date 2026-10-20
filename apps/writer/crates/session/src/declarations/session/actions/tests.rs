@@ -9,16 +9,16 @@ fn rebinding_the_same_source_reuses_its_live_lease_and_stays_busy_until_retireme
     let (directory, mut session) = session().unwrap();
     let path = directory.path().join("schema.toml");
     let work = session
-        .prepare_source(SourceAction::Bind(path.clone()))
+        .prepare_declaration(DeclarationAction::Bind(path.clone()))
         .unwrap();
     assert!(session.busy());
     assert!(Store::open(&path).is_err());
     let mut receipt = work.execute();
-    let retirement = session.accept_source(&mut receipt).unwrap();
+    let retirement = session.accept_declaration(&mut receipt).unwrap();
     assert!(session.busy());
     assert!(Store::open(&path).is_err());
     session
-        .accept_source_recovery(&mut retirement.execute())
+        .accept_declaration_finish(&mut retirement.execute())
         .unwrap();
     assert!(!session.busy());
     assert!(Store::open(&path).is_err());
@@ -29,7 +29,9 @@ fn archived_reload_rejects_newer_typing_or_cancellation_without_losing_the_archi
     for cancel in [false, true] {
         let (directory, mut session) = session().unwrap();
         session.source.as_mut().unwrap().draft = "Captured unfinished TOML [".into();
-        let work = session.prepare_source(SourceAction::Reload).unwrap();
+        let work = session
+            .prepare_declaration(DeclarationAction::ReloadSource)
+            .unwrap();
         fs::write(
             directory.path().join("schema.toml"),
             SOURCE.replace("Mara", "External"),
@@ -41,7 +43,7 @@ fn archived_reload_rejects_newer_typing_or_cancellation_without_losing_the_archi
         if cancel {
             session.cancel();
         }
-        assert!(session.accept_source(&mut receipt).is_err());
+        assert!(session.accept_declaration(&mut receipt).is_err());
         assert!(!session.busy());
         assert_eq!(
             session.source.as_ref().unwrap().draft,
@@ -65,11 +67,11 @@ fn source_recovery_fence_is_single_owner_and_preserves_typing_after_adoption() {
     )
     .unwrap();
     let mut receipt = session
-        .prepare_source(SourceAction::Reload)
+        .prepare_declaration(DeclarationAction::ReloadSource)
         .unwrap()
         .execute();
-    assert!(other.accept_source(&mut receipt).is_err());
-    let retirement = session.accept_source(&mut receipt).unwrap();
+    assert!(other.accept_declaration(&mut receipt).is_err());
+    let retirement = session.accept_declaration(&mut receipt).unwrap();
     assert!(session.busy());
     assert!(session.source.as_ref().unwrap().draft.contains("External"));
     session
@@ -80,10 +82,10 @@ fn source_recovery_fence_is_single_owner_and_preserves_typing_after_adoption() {
         .unwrap();
     let mut durable = retirement.execute();
     assert!(session.busy());
-    assert!(other.accept_source_recovery(&mut durable).is_err());
-    session.accept_source_recovery(&mut durable).unwrap();
+    assert!(other.accept_declaration_finish(&mut durable).is_err());
+    session.accept_declaration_finish(&mut durable).unwrap();
     assert!(!session.busy());
-    assert!(session.accept_source_recovery(&mut durable).is_err());
+    assert!(session.accept_declaration_finish(&mut durable).is_err());
     assert!(session.dirty());
     session.source.as_mut().unwrap().flush_recovery().unwrap();
     session.source.take();
@@ -97,7 +99,9 @@ fn source_recovery_fence_is_single_owner_and_preserves_typing_after_adoption() {
 #[test]
 fn dispatch_failure_releases_activity_and_source_work_blocks_schema_replacement() {
     let (_directory, mut session) = session().unwrap();
-    let work = session.prepare_source(SourceAction::Discard).unwrap();
+    let work = session
+        .prepare_declaration(DeclarationAction::Discard)
+        .unwrap();
     assert!(matches!(
         session.check_project_settings("format_version=1\n[project]\nschema='other.json'\n"),
         Err(FileError::SchemaSessionActive)
@@ -105,7 +109,7 @@ fn dispatch_failure_releases_activity_and_source_work_blocks_schema_replacement(
     assert!(session.prepare_save().is_err());
     assert!(session.start_generation().is_err());
     let mut receipt = work.not_started("Source worker unavailable".into());
-    assert!(session.accept_source(&mut receipt).is_err());
+    assert!(session.accept_declaration(&mut receipt).is_err());
     assert!(!session.busy());
     assert_eq!(session.source.as_ref().unwrap().draft, SOURCE);
 }
@@ -124,7 +128,7 @@ fn recovery_failure_keeps_the_adopted_source_dirty_and_the_archive_discoverable(
     )
     .unwrap();
     let mut receipt = session
-        .prepare_source(SourceAction::Reload)
+        .prepare_declaration(DeclarationAction::ReloadSource)
         .unwrap()
         .execute();
     let archive = receipt.archive().unwrap().to_owned();
@@ -133,10 +137,10 @@ fn recovery_failure_keeps_the_adopted_source_dirty_and_the_archive_discoverable(
         .join("schema.toml.recite-editor-recovery.json");
     fs::remove_file(&sidecar).unwrap();
     fs::create_dir(&sidecar).unwrap();
-    let recovery = session.accept_source(&mut receipt).unwrap();
+    let recovery = session.accept_declaration(&mut receipt).unwrap();
     assert!(session.busy());
     let mut terminal = recovery.execute();
-    assert!(session.accept_source_recovery(&mut terminal).is_err());
+    assert!(session.accept_declaration_finish(&mut terminal).is_err());
     assert!(!session.busy());
     assert!(session.dirty());
     let source = session.source.as_ref().unwrap();
@@ -178,32 +182,34 @@ fn editable_artifact_round_trip_preserves_invalid_drafts_and_rejects_foreign_pro
         .unwrap()
         .set_draft("Unfinished TOML [".into())
         .unwrap();
-    let work = session.prepare_source(SourceAction::ExportDraft).unwrap();
+    let work = session
+        .prepare_declaration(DeclarationAction::ExportDraft)
+        .unwrap();
     assert!(Arc::ptr_eq(&work.schema_output, &session.schema_output));
     let mut receipt = work.execute();
     let artifact = receipt.editable_draft().unwrap().to_owned();
-    let recovery = session.accept_source(&mut receipt).unwrap();
+    let recovery = session.accept_declaration(&mut receipt).unwrap();
     session
-        .accept_source_recovery(&mut recovery.execute())
+        .accept_declaration_finish(&mut recovery.execute())
         .unwrap();
     assert_eq!(fs::read_to_string(&artifact).unwrap(), "Unfinished TOML [");
     assert_eq!(session.source.as_ref().unwrap().draft, "Unfinished TOML [");
     fs::write(&artifact, SOURCE.replace("dialogue", "foreign")).unwrap();
     let mut receipt = session
-        .prepare_source(SourceAction::ImportDraft(artifact.clone()))
+        .prepare_declaration(DeclarationAction::ImportDraft(artifact.clone()))
         .unwrap()
         .execute();
-    assert!(session.accept_source(&mut receipt).is_err());
+    assert!(session.accept_declaration(&mut receipt).is_err());
     assert!(!session.busy());
     assert_eq!(session.source.as_ref().unwrap().draft, "Unfinished TOML [");
     fs::write(&artifact, SOURCE.replace("Mara", "Repaired")).unwrap();
     let mut receipt = session
-        .prepare_source(SourceAction::ImportDraft(artifact.clone()))
+        .prepare_declaration(DeclarationAction::ImportDraft(artifact.clone()))
         .unwrap()
         .execute();
-    let recovery = session.accept_source(&mut receipt).unwrap();
+    let recovery = session.accept_declaration(&mut receipt).unwrap();
     session
-        .accept_source_recovery(&mut recovery.execute())
+        .accept_declaration_finish(&mut recovery.execute())
         .unwrap();
     assert!(session.source.as_ref().unwrap().draft.contains("Repaired"));
     assert_eq!(session.source.as_ref().unwrap().baseline, SOURCE);
@@ -233,16 +239,16 @@ fn damaged_output_reload_keeps_last_valid_declarations_and_can_regenerate() {
     assert_eq!(session.schema_output.baseline(), "unfinished JSON {");
     assert!(!session.current());
     let mut inspected = session
-        .prepare_source(SourceAction::Inspect)
+        .prepare_declaration(DeclarationAction::InspectSource)
         .unwrap()
         .execute();
     assert_eq!(
         inspected.inspect_source().unwrap(),
         SourceStatus::DamagedOutput
     );
-    let recovery = session.accept_source(&mut inspected).unwrap();
+    let recovery = session.accept_declaration(&mut inspected).unwrap();
     session
-        .accept_source_recovery(&mut recovery.execute())
+        .accept_declaration_finish(&mut recovery.execute())
         .unwrap();
     session.save_and_generate().unwrap();
     assert_eq!(session.output_status(), SchemaOutputStatus::Ready);
@@ -257,7 +263,7 @@ fn damaged_output_reload_keeps_last_valid_declarations_and_can_regenerate() {
 fn source_receipt_rejects_a_changed_output_baseline_even_with_the_same_schema() {
     let (_directory, mut session) = session().unwrap();
     let mut receipt = session
-        .prepare_source(SourceAction::Discard)
+        .prepare_declaration(DeclarationAction::Discard)
         .unwrap()
         .execute();
     let unchanged_schema = session.last_valid_schema_snapshot();
@@ -270,8 +276,8 @@ fn source_receipt_rejects_a_changed_output_baseline_even_with_the_same_schema() 
         receipt.schema_output.last_valid_schema()
     ));
     assert!(matches!(
-        session.accept_source(&mut receipt),
-        Err(FileError::DeclarationSourceChanged)
+        session.accept_declaration(&mut receipt),
+        Err(FileError::DeclarationChanged)
     ));
     assert!(!session.busy());
 }

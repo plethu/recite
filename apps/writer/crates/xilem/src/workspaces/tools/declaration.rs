@@ -1,29 +1,53 @@
 //! Checked source adoption and its recovery fence share one worker continuation.
-use super::super::SchemaUpdate;
+use super::super::{SchemaUpdate, declarations::producer_description, text};
 use super::*;
 use crate::external_editor::Request as EditorRequest;
 use recite_writer_session::declarations::SourceStatus;
 pub(super) struct Prepared {
-    receipt: SourceReceipt,
-    preview: Vec<String>,
+    receipt: DeclarationReceipt,
     rows: Option<Vec<Row>>,
-    validation: Result<SourceStatus, String>,
+    presentation: Presentation,
+}
+enum Presentation {
+    Source {
+        preview: Vec<String>,
+        validation: Result<SourceStatus, String>,
+    },
+    Registration(Vec<String>),
+    Output,
+}
+#[derive(Clone, Copy)]
+pub(super) enum Completion {
+    Source,
+    Registration,
+    Output,
 }
 impl Prepared {
-    pub(super) fn new(receipt: SourceReceipt) -> Self {
-        let preview = receipt
-            .draft()
-            .map(super::super::text::pages)
-            .unwrap_or_default();
+    pub(super) fn new(receipt: DeclarationReceipt) -> Self {
+        let presentation = if let Some(registration) = receipt.registration() {
+            Presentation::Registration(producer_description(registration))
+        } else if receipt.inspects_source() {
+            Presentation::Source {
+                preview: receipt.draft().map(text::pages).unwrap_or_default(),
+                validation: receipt.inspect_source().map_err(|error| error.to_string()),
+            }
+        } else {
+            Presentation::Output
+        };
         let rows = receipt
             .last_valid_schema()
             .map(|schema| entries::entries(schema).into_iter().map(Row::new).collect());
-        let validation = receipt.inspect_source().map_err(|error| error.to_string());
         Self {
             receipt,
-            preview,
             rows,
-            validation,
+            presentation,
+        }
+    }
+    pub(super) fn completion(&self) -> Completion {
+        match self.presentation {
+            Presentation::Source { .. } => Completion::Source,
+            Presentation::Registration(_) => Completion::Registration,
+            Presentation::Output => Completion::Output,
         }
     }
 }
@@ -61,35 +85,38 @@ impl Writer {
             EditorRequest::declaration_draft(project, path.to_owned(), self.editor.clone());
         self.launch_editor(Arc::new(request));
     }
-    pub(crate) fn source_action(&mut self, action: SourceAction) {
+    pub(crate) fn declaration_action(&mut self, action: DeclarationAction) {
         if self.declaration_action_blocked() {
             return;
         }
         self.workspaces.schema_feedback.clear();
         self.workspaces.schema_feedback_page = 0;
+        if matches!(&action, DeclarationAction::ReloadGenerated) {
+            self.workspaces.declarations.source.invalidate_output();
+        }
         let result = self
             .declaration_session_mut()
             .ok_or("Open declarations first.".to_owned())
             .and_then(|session| {
                 session
-                    .prepare_source(action)
+                    .prepare_declaration(action)
                     .map_err(|error| error.to_string())
             });
         match result {
-            Ok(work) => self.submit_tool(Work::Source(Box::new(work))),
+            Ok(work) => self.submit_tool(Work::Declaration(Box::new(work))),
             Err(error) => self.schema_feedback(error),
         }
     }
     pub(crate) fn bind_declaration_source(&mut self) {
         let path = self.workspaces.declarations.source.binding_path().trim();
         if !path.is_empty() {
-            self.source_action(SourceAction::Bind(path.into()));
+            self.declaration_action(DeclarationAction::Bind(path.into()));
         }
     }
     pub(crate) fn import_declaration_draft(&mut self) {
         let path = self.workspaces.declarations.source.import_path().trim();
         if !path.is_empty() {
-            self.source_action(SourceAction::ImportDraft(path.into()));
+            self.declaration_action(DeclarationAction::ImportDraft(path.into()));
         }
     }
     pub(crate) fn cancel_declaration_action(&mut self) {
@@ -99,17 +126,16 @@ impl Writer {
         }
     }
     pub(crate) fn refresh_declaration_rows(&mut self) {
-        self.source_action(SourceAction::Inspect);
+        self.declaration_action(DeclarationAction::InspectSource);
     }
-    pub(super) fn accept_source_tool(
+    pub(super) fn accept_declaration_tool(
         &mut self,
         prepared: &mut Prepared,
-    ) -> Result<SourceRecovery, String> {
+    ) -> Result<DeclarationFinish, String> {
         let Prepared {
             receipt,
-            preview,
             rows,
-            validation,
+            presentation,
         } = prepared;
         let archive = receipt.archive().map(PathBuf::from);
         let editable = receipt.editable_draft().map(PathBuf::from);
@@ -128,39 +154,71 @@ impl Writer {
         let recovery = self
             .declaration_session_mut()
             .ok_or("Declarations were closed.".to_owned())?
-            .accept_source(receipt)
+            .accept_declaration(receipt)
             .map_err(|error| error.to_string())?;
         if replaced {
             self.workspaces.declarations.source.retire_export();
         }
-        self.workspaces
-            .declarations
-            .source
-            .replace_preview(std::mem::take(preview), validation);
-        if let Err(error) = validation {
-            self.schema_feedback(format!("Declaration source needs repair:\n{error}"));
+        match presentation {
+            Presentation::Source {
+                preview,
+                validation,
+            } => {
+                self.workspaces
+                    .declarations
+                    .source
+                    .replace_preview(std::mem::take(preview), validation);
+                if let Err(error) = validation {
+                    self.schema_feedback(format!("Declaration source needs repair:\n{error}"));
+                }
+            }
+            Presentation::Registration(pages) => self
+                .workspaces
+                .declarations
+                .describe_producer(std::mem::take(pages)),
+            Presentation::Output => (),
         }
         if let Some(rows) = rows.take() {
             self.workspaces.declarations.replace(rows);
         }
         if reloaded {
             self.workspaces.schema_refresh = Some(SchemaUpdate::Reloaded);
+            if !receipt.inspects_source() {
+                self.workspaces.declarations.source.invalidate_output();
+            }
         }
-        self.status = "Declaration source adopted; finishing recovery…".into();
+        self.status = "Declaration action adopted; finishing recovery and cleanup…".into();
         Ok(recovery)
     }
-    pub(super) fn finish_source_tool(
+    pub(super) fn finish_declaration_tool(
         &mut self,
-        receipt: &mut SourceRecovered,
+        receipt: &mut DeclarationFinished,
+        completion: Completion,
     ) -> Result<(), String> {
         self.declaration_session_mut()
             .ok_or("Declarations were closed.".to_owned())?
-            .accept_source_recovery(receipt)
+            .accept_declaration_finish(receipt)
             .map_err(|error| format!("Source buffer retained; recovery failed: {error}"))?;
         if self.workspaces.schema_refresh.is_some() {
             self.refresh_schema_context();
         } else {
-            self.status = self.workspaces.declarations.source.status_message().into();
+            match completion {
+                Completion::Source => {
+                    self.status = self.workspaces.declarations.source.status_message().into()
+                }
+                Completion::Registration => match self
+                    .declaration_session()
+                    .map(|session| &session.registration)
+                {
+                    Some(Err(error)) => {
+                        self.schema_feedback(format!("Producer registration is invalid:\n{error}"))
+                    }
+                    _ => self.status =
+                        "Producer registration reloaded. Review the command before regenerating."
+                            .into(),
+                },
+                Completion::Output => self.status = "Generated schema reloaded.".into(),
+            }
         }
         Ok(())
     }

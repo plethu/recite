@@ -9,7 +9,7 @@ pub(super) fn panel(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
     Some(xilem::view::sized_box(flex_col((
         label(scale, "Declaration draft repair").text_size(18. * scale),
         paragraph(scale, "Export a separate TOML file for your editor, then import the repaired draft. The saved source stays unchanged until Save and generate.", 640.),
-        text_button(scale, "Export declaration draft", |writer: &mut Writer| writer.source_action(SourceAction::ExportDraft)).disabled(blocked),
+        text_button(scale, "Export declaration draft", |writer: &mut Writer| writer.declaration_action(DeclarationAction::ExportDraft)).disabled(blocked),
         panel.artifact.as_ref().map(|path| paragraph(scale, format!("Editable draft: {}", path.display()), 640.)),
         panel.artifact.as_ref().filter(|_| !matches!(panel.validation, Validation::Invalid(_))).map(|_| text_button(scale, "Open exported declaration draft in editor", Writer::open_declaration_draft).disabled(blocked || writer.external.busy())),
         label(scale, "Repaired declaration draft path"),

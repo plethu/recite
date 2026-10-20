@@ -10,8 +10,8 @@ pub(super) enum Activity {
     StartingGeneration(ActivityToken),
     Generating(Job),
     PublishingGeneration(ActivityToken),
-    ChangingSource(ActivityToken),
-    RecoveringSource(ActivityToken),
+    PreparingDeclaration(ActivityToken),
+    FinishingDeclaration(ActivityToken),
 }
 impl Activity {
     pub fn cancel(&self) {
@@ -20,8 +20,8 @@ impl Activity {
             Self::Generating(job) => job.cancel(),
             Self::StartingGeneration(publication)
             | Self::PublishingGeneration(publication)
-            | Self::ChangingSource(publication)
-            | Self::RecoveringSource(publication) => publication.cancel(),
+            | Self::PreparingDeclaration(publication)
+            | Self::FinishingDeclaration(publication) => publication.cancel(),
         }
     }
 }
