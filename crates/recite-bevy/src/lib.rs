@@ -17,7 +17,7 @@ pub use asset::{
     ReciteDialogueLoadError, ReciteDialogueLoader, ReciteRevision,
 };
 pub use context::{ReciteCatalog, ReciteConditions, ReciteInterpolation};
-pub use output::{ReciteOutput, ReciteOutputValue};
+pub use output::{OutputSequence, ReciteOutput, ReciteOutputValue};
 pub use plugin::{RecitePlugin, ReciteSet};
 pub use schema::{
     ConditionBuilder, EffectBuilder, ReciteEnum, ReciteSchema, ReciteType, SchemaRegistrationError,

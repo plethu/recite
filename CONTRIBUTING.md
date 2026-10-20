@@ -152,6 +152,15 @@ gate rejects multiple `Option<bool>` state fields in one control under `src/desi
 configuration overrides remain outside that rule. Complexity and nesting limits alone do not check
 the relationships between those fields.
 
+Owned Rust coordination uses distinct value types for numeric identities and freshness markers. The
+same ast-grep gate checks production source across the root, Writer and editor/tool workspaces. It
+rejects primitive fields, parameters and aliases named for IDs, revisions, generations, sequences,
+epochs, tokens, tickets or serials, including optional, atomic and homogeneous collection storage.
+Reuse an existing domain type or introduce a newtype; a type alias does not distinguish identities.
+Keep numeric wire encodings at serialization boundaries. Counts, indexes and format-version numbers
+stay numeric. The rule relies on semantic naming; it cannot infer identities hidden behind arbitrary
+names or the role of each value in mixed containers.
+
 The [site](docs-site/README.md) uses Eleventy with mise-managed Bun for builds and checks. Its
 output is static HTML, CSS and browser modules; hosting needs no Node server or UI framework
 runtime. Python wheels used to distribute formatters are tools, not new application modules.

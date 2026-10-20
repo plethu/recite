@@ -1,4 +1,4 @@
-use super::Epochs;
+use super::{Epochs, ScopeEpoch, TopologyEpoch};
 use proptest::prelude::*;
 
 const PARTITIONS: [&str; 3] = ["left", "right", "third"];
@@ -40,22 +40,24 @@ proptest! {
 #[test]
 fn generation_exhaustion_fails_without_wrapping() {
     let mut global = Epochs {
-        revision: u64::MAX,
+        revision: ScopeEpoch(u64::MAX),
         ..Epochs::default()
     };
     assert_eq!(global.advance(Some("left")), None);
-    assert_eq!(global.revision, u64::MAX);
+    assert_eq!(global.revision, ScopeEpoch(u64::MAX));
     assert!(global.partitions.is_empty());
 
     let mut topology = Epochs {
-        topology: u64::MAX,
+        topology: TopologyEpoch(u64::MAX),
         ..Epochs::default()
     };
     assert_eq!(topology.advance(None), None);
-    assert_eq!(topology.topology, u64::MAX);
+    assert_eq!(topology.topology, TopologyEpoch(u64::MAX));
 
     let mut partition = Epochs::default();
-    partition.partitions.insert("left".into(), u64::MAX);
+    partition
+        .partitions
+        .insert("left".into(), ScopeEpoch(u64::MAX));
     assert_eq!(partition.advance(Some("left")), None);
-    assert_eq!(partition.partitions["left"], u64::MAX);
+    assert_eq!(partition.partitions["left"], ScopeEpoch(u64::MAX));
 }

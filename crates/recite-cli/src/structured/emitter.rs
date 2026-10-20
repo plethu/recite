@@ -1,3 +1,4 @@
+use crate::structured::sequence::RecordSequence;
 use std::io::Write;
 
 use crate::args::StructuredInvocation;
@@ -12,14 +13,14 @@ use super::PROTOCOL_VERSION;
 
 pub(super) struct ProtocolWriter<'a> {
     output: &'a mut dyn Write,
-    sequence: u64,
+    sequence: RecordSequence,
 }
 
 impl<'a> ProtocolWriter<'a> {
     pub(super) fn new(output: &'a mut dyn Write) -> Self {
         Self {
             output,
-            sequence: 0,
+            sequence: RecordSequence::default(),
         }
     }
 
@@ -73,7 +74,7 @@ impl<'a> ProtocolWriter<'a> {
         serde_json::to_writer(&mut *self.output, record).map_err(CliError::TraceJson)?;
         self.output.write_all(b"\n")?;
         self.output.flush()?;
-        self.sequence += 1;
+        self.sequence.advance();
         Ok(())
     }
 }

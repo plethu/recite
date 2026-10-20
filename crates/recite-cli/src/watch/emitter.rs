@@ -1,3 +1,4 @@
+use crate::structured::sequence::RecordSequence;
 use std::io::Write;
 
 use serde::Serialize;
@@ -12,7 +13,7 @@ use super::wire_types::{BuildCompletedData, BuildStartedData, CancellationDto};
 pub(super) struct WatchProtocol<'a> {
     output: &'a mut dyn Write,
     invocation_id: Option<String>,
-    sequence: u64,
+    sequence: RecordSequence,
 }
 
 impl<'a> WatchProtocol<'a> {
@@ -20,7 +21,7 @@ impl<'a> WatchProtocol<'a> {
         Self {
             output,
             invocation_id,
-            sequence: 0,
+            sequence: RecordSequence::default(),
         }
     }
 
@@ -96,7 +97,7 @@ impl<'a> WatchProtocol<'a> {
         .map_err(CliError::TraceJson)?;
         self.output.write_all(b"\n")?;
         self.output.flush()?;
-        self.sequence += 1;
+        self.sequence.advance();
         Ok(())
     }
 }
@@ -104,7 +105,7 @@ impl<'a> WatchProtocol<'a> {
 #[derive(Serialize)]
 struct WatchRecord<T> {
     version: u16,
-    sequence: u64,
+    sequence: RecordSequence,
     event: &'static str,
     command: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]

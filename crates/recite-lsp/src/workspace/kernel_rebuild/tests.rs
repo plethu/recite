@@ -55,7 +55,7 @@ fn exhausted_workspace_generation_retains_committed_documents_and_snapshot() {
 #[test]
 fn exhausted_partition_generation_retains_committed_documents_and_snapshot() {
     let (directory, mut workspace) = workspace_with_saved_document();
-    workspace.next_partition_build_id = u64::MAX;
+    workspace.next_partition_build_id = crate::workspace::PartitionBuildId::for_test(u64::MAX);
     let previous = workspace.clone();
     let uri = file_path_to_uri(&directory.path().join("draft.recite")).unwrap();
 
@@ -96,7 +96,7 @@ fn failure_after_first_partition_candidate_retains_entire_committed_workspace() 
             format!(":: replacement{index}\n"),
         );
     }
-    workspace.next_partition_build_id = u64::MAX - 1;
+    workspace.next_partition_build_id = crate::workspace::PartitionBuildId::for_test(u64::MAX - 1);
     let previous = workspace.clone();
 
     let result = workspace.rebuild_for_documents_with_schemas(

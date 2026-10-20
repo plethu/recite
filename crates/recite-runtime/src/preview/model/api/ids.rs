@@ -1,5 +1,18 @@
 /// Stable identity for one condition request in a preview session.
-#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd, Hash)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+)]
+#[serde(transparent)]
 pub struct PreviewConditionRequestId(u64);
 
 impl PreviewConditionRequestId {

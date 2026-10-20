@@ -14,10 +14,22 @@ use crate::documents::{OpenDocument, OpenDocumentStore};
 #[cfg(test)]
 mod tests;
 
+/// Identity of a partition rebuild, independent of authoring snapshot generations.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct PartitionBuildId(u64);
+impl PartitionBuildId {
+    pub(super) fn checked_next(self) -> Option<Self> {
+        self.0.checked_add(1).map(Self)
+    }
+    pub(super) const fn as_u64(self) -> u64 {
+        self.0
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct KernelPartition {
     pub(super) kernel: std::sync::Arc<AuthoringKernel>,
-    pub(super) build_id: u64,
+    pub(super) build_id: PartitionBuildId,
     pub(super) schema: SchemaIndex,
     pub(super) open_owners: BTreeMap<DocumentKey, lsp_types::Uri>,
     pub(super) retired_schema_uris: BTreeSet<String>,

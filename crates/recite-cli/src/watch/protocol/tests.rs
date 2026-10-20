@@ -28,7 +28,8 @@ fn cancellation_acknowledgement_precedes_cancelled_build_completion() {
         .expect("cancel record");
     protocol
         .build_completed(
-            BuildCompletedData::from_diagnostics(0, &[], &[]).expect("completion record"),
+            BuildCompletedData::from_diagnostics(BuildGeneration::initial(), &[], &[])
+                .expect("completion record"),
         )
         .expect("completion record");
 

@@ -1,5 +1,5 @@
 use recite_benchmarks::report::{
-    BenchGroup, BenchReportOptions, BenchTarget, TimingSummary, build_bench_report,
+    BenchGroup, BenchReportOptions, BenchTarget, BuildMetadata, TimingSummary, build_bench_report,
 };
 use recite_benchmarks::{BenchmarkFixture, BenchmarkScale};
 
@@ -207,4 +207,23 @@ fn timing_summary_sorts_samples_for_stable_summary() {
     assert_eq!(summary.median_ns, 20);
     assert_eq!(summary.mean_ns, 20);
     assert_eq!(summary.max_ns, 30);
+}
+
+#[test]
+fn numeric_measurement_revision_preserves_existing_report_metadata() {
+    let wire = serde_json::json!({
+        "profile": "release",
+        "features": { "id_storage": "compact_str" },
+        "measurement_revision": 1,
+    });
+    let metadata: BuildMetadata = serde_json::from_value(wire.clone()).expect("existing metadata");
+    assert_eq!(metadata.measurement_revision.get(), 1);
+    assert_eq!(serde_json::to_value(metadata).expect("metadata JSON"), wire);
+    let mut missing_revision = wire;
+    missing_revision
+        .as_object_mut()
+        .expect("metadata object")
+        .remove("measurement_revision");
+    let legacy: BuildMetadata = serde_json::from_value(missing_revision).expect("legacy metadata");
+    assert_eq!(legacy.measurement_revision.get(), 0);
 }

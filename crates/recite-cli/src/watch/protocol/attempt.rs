@@ -49,7 +49,7 @@ where
         &BuildControl,
     ) -> Result<super::super::build::BuildStatus, CliError>,
 {
-    let generation = state.next_build_generation_number();
+    let generation = state.upcoming_build_generation();
     protocol.build_started(BuildStartedData {
         generation,
         trigger,

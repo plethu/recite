@@ -36,7 +36,7 @@ impl Server {
             .ok_or(ServerError::SequenceExhausted)?;
         self.revision = self
             .revision
-            .checked_add(1)
+            .checked_next()
             .ok_or(ServerError::SequenceExhausted)?;
         self.invalidate();
         if let Some(uri) = update.changed_uri() {

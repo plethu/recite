@@ -138,9 +138,12 @@ fn failure_mapping_is_typed_without_host_prose() {
 
 #[test]
 fn preparation_diagnostics_do_not_claim_a_build_publication_attempt() {
-    let value =
-        super::BuildCompletedData::from_diagnostics(0, &["recite.project.toml".into()], &[])
-            .expect("diagnostic completion");
+    let value = super::BuildCompletedData::from_diagnostics(
+        BuildGeneration::initial(),
+        &["recite.project.toml".into()],
+        &[],
+    )
+    .expect("diagnostic completion");
     let value: Value = serde_json::to_value(value).expect("completion JSON");
     assert_eq!(value["outcome"]["type"], "diagnostics");
     assert_eq!(
@@ -160,7 +163,7 @@ fn preparation_inputs_are_sorted_and_deduplicated() {
         details: None,
     };
     let value = super::BuildCompletedData::from_error(
-        0,
+        BuildGeneration::initial(),
         &["z-input".into(), "a-input".into(), "z-input".into()],
         error,
     );

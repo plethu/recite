@@ -1,16 +1,31 @@
 use std::collections::BTreeMap;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct TopologyEpoch(u64);
+impl TopologyEpoch {
+    fn checked_next(self) -> Option<Self> {
+        self.0.checked_add(1).map(Self)
+    }
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct ScopeEpoch(u64);
+impl ScopeEpoch {
+    fn checked_next(self) -> Option<Self> {
+        self.0.checked_add(1).map(Self)
+    }
+}
+
 #[derive(Clone, Default)]
 pub(super) struct Epochs {
-    topology: u64,
-    revision: u64,
-    partitions: BTreeMap<String, u64>,
+    topology: TopologyEpoch,
+    revision: ScopeEpoch,
+    partitions: BTreeMap<String, ScopeEpoch>,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct Fence {
-    topology: u64,
+    topology: TopologyEpoch,
     partition: Option<String>,
-    epoch: u64,
+    epoch: ScopeEpoch,
 }
 impl Epochs {
     pub(super) fn fence(&self, partition: Option<&str>) -> Fence {
@@ -18,7 +33,7 @@ impl Epochs {
             topology: self.topology,
             partition: partition.map(str::to_owned),
             epoch: partition.map_or(self.revision, |p| {
-                self.partitions.get(p).copied().unwrap_or(0)
+                self.partitions.get(p).copied().unwrap_or_default()
             }),
         }
     }
@@ -30,12 +45,13 @@ impl Epochs {
         self.fence(fence.partition.as_deref()) == *fence
     }
     pub(super) fn advance(&mut self, partition: Option<&str>) -> Option<()> {
-        self.revision = self.revision.checked_add(1)?;
-        let epoch = match partition {
-            Some(p) => self.partitions.entry(p.to_owned()).or_default(),
-            None => &mut self.topology,
-        };
-        *epoch = epoch.checked_add(1)?;
+        self.revision = self.revision.checked_next()?;
+        if let Some(partition) = partition {
+            let epoch = self.partitions.entry(partition.to_owned()).or_default();
+            *epoch = epoch.checked_next()?;
+        } else {
+            self.topology = self.topology.checked_next()?;
+        }
         Some(())
     }
 }

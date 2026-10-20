@@ -50,7 +50,7 @@ pub struct ReciteOwner {
     driver: SessionDriver,
     variant: Option<String>,
     active_revision: Option<ReciteRevision>,
-    next_sequence: u64,
+    next_sequence: crate::OutputSequence,
 }
 
 impl ReciteOwner {
@@ -88,7 +88,7 @@ pub(crate) fn process_requests(world: &mut World) {
                 Err(error) => ReciteOutputValue::Error { error, handle_id },
             };
             let sequence = owner.next_sequence;
-            owner.next_sequence = owner.next_sequence.wrapping_add(1);
+            owner.next_sequence.advance();
             world.write_message(ReciteOutput { sequence, value });
         }
     });

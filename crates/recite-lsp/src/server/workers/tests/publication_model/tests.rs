@@ -146,7 +146,7 @@ fn empty_workspace(catalog: Arc<UiCatalog>) -> Arc<LspWorkspace> {
 
 fn analysis_job(updates: Vec<Arc<Update>>) -> AnalysisJob {
     AnalysisJob {
-        through: 1,
+        through: crate::server::UpdateRevision::for_test(1),
         epochs: Epochs::default(),
         updates,
         refresh_uris: Vec::new(),

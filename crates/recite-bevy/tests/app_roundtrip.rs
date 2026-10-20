@@ -284,7 +284,7 @@ fn app_delivers_ordered_dialogue_and_stable_choice() -> Result<(), Box<dyn std::
     );
     let first = outputs(&app, &mut cursor);
     assert_eq!(first.len(), 1);
-    assert_eq!(first[0].sequence, 0);
+    assert_eq!(first[0].sequence.get(), 0);
     let ReciteOutputValue::Dialogue(events) = &first[0].value else {
         panic!("start should emit dialogue");
     };
@@ -298,7 +298,7 @@ fn app_delivers_ordered_dialogue_and_stable_choice() -> Result<(), Box<dyn std::
         ReciteRequest::SelectChoice(ChoiceId::new("rthh7ab").expect("choice ID")),
     );
     let selected = outputs(&app, &mut cursor);
-    assert_eq!(selected[0].sequence, 1);
+    assert_eq!(selected[0].sequence.get(), 1);
     assert!(
         matches!(&selected[0].value, ReciteOutputValue::Dialogue(events) if events.iter().any(|event| matches!(event, DialogueEvent::End { .. })))
     );

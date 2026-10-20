@@ -150,10 +150,10 @@ impl LspWorkspace {
             let build_id = if reusable {
                 old.map_or(next_partition_build_id, |old| old.build_id)
             } else {
-                let build_id = next_partition_build_id.checked_add(1).ok_or(
+                let build_id = next_partition_build_id.checked_next().ok_or(
                     AuthoringError::GenerationExhausted {
                         current: recite_compiler::authoring::SnapshotGeneration::new(
-                            next_partition_build_id,
+                            next_partition_build_id.as_u64(),
                         ),
                     },
                 )?;

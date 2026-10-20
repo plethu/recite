@@ -252,9 +252,7 @@ pub(super) const fn host_policy_required() -> RestartGuidanceDto {
 pub(super) fn cancellation(value: BuildCancellation) -> CancellationDto {
     match value {
         BuildCancellation::User => CancellationDto::User,
-        BuildCancellation::Superseded { by } => CancellationDto::Superseded {
-            by_generation: by.as_u64(),
-        },
+        BuildCancellation::Superseded { by } => CancellationDto::Superseded { by_generation: by },
         _ => CancellationDto::Unknown,
     }
 }
