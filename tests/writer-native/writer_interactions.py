@@ -3,6 +3,7 @@
 import json
 import subprocess
 import tempfile
+import traceback
 from collections import Counter
 from pathlib import Path
 
@@ -180,12 +181,24 @@ def run(api, bus, registry, binary, output):
                 key("End", control=True)
                 type_text("x")
                 window.wait(lambda: window.text(node) == incoming + "x", "closing draft")
+                save_control = window.find("Save file")
+                assert window.enabled("Save file")
+                saved_before_close = source.read_text()
                 window.act("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "close guard")
+                assert window.find("Save file") == save_control
+                assert not window.enabled("Save file")
+                window.act("Save file")
                 results["close_choice_tab_steps"] = focus_close_choice(window)
+                assert source.read_text() == saved_before_close
+                assert window.text(node) == incoming + "x"
+                results["disabled_native_save_rejects_activation"] = True
                 results["close_choice_keyboard_focus"] = True
                 key("Return")
                 window.wait(lambda: not window.find("Keep editing"), "cancel closing")
+                window.wait(lambda: window.enabled("Save file"), "save enabled after cancel")
+                assert window.find("Save file") == save_control
+                results["native_enabled_sensitive_transition_keeps_control_identity"] = True
                 window.focus(node)
                 key("z", control=True)
                 window.wait(
@@ -212,8 +225,7 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-recovered")
                 window.act("Close")
                 window.wait(lambda: window.find("Save and close"), "save-close guard")
-                window.act("Save and close")
-                assert process.wait(timeout=5) == 0
+                window.save_and_close(results, "recovered_save_close")
                 assert incoming + "x" in source.read_text()
                 assert not source.with_name("scene.recite.recite-editor-recovery.json").exists()
                 assert "An unapplied Writer draft.x" in other.read_text()
@@ -228,6 +240,8 @@ def run(api, bus, registry, binary, output):
                     for address, _ in window.nodes()
                 )
                 assert source.read_text() == malformed
+                assert not window.enabled("Add beat")
+                assert not window.enabled("Start / restart preview")
                 capture(output, "-source")
                 results["malformed_source_preserved_for_external_repair"] = True
                 window.act("Close")
@@ -237,8 +251,14 @@ def run(api, bus, registry, binary, output):
                 preview_exercise(
                     api, bus, registry, arguments, log, source, output, results, launch, capture
                 )
+                from structure_interactions import exercise as structure_exercise
+
+                structure_exercise(
+                    api, bus, registry, arguments, log, source, output, results, launch, capture
+                )
     except Exception as error:
         results["error"] = repr(error)
+        results["error_traceback"] = traceback.format_exc()
         if process is not None and process.poll() is None:
             waits = Counter()
             for task in Path(f"/proc/{process.pid}/task").iterdir():

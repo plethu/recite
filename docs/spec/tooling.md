@@ -53,8 +53,9 @@ workflows, comments, unknown metadata and stable IDs; edits are explicit and und
 an equivalent accessible list/outline. Automatic layout is the default; local viewport or stable-ID
 sidecar layout never becomes dialogue semantics. The beat outline uses accepted compiler summaries,
 including recognized headers in incomplete source; selecting an entry still uses the normal Script
-validation. Its default and END badges describe authored syntax, not reachability. Unapplied Source
-drafts do not change this accepted outline.
+validation and requires one unambiguous local declaration. Recovery and history may still restore an
+incomplete selection without authorizing a structural edit. Its default and END badges describe
+authored syntax, not reachability. Unapplied Source drafts do not change this accepted outline.
 
 The workbench supports project opening, editing, diagnostics, completion, search/navigation,
 recovery, conflict-aware saving, schema inspection and producer actions, lossless gettext PO
@@ -78,11 +79,12 @@ and file replacement, conflict protection and recovery belong to `recite-writer-
 configuration, compiler and runtime ownership remains outside both frontends. Exercise regression
 checks before upgrading the pinned toolkit.
 
-The opt-in Xilem frontend covers retained project documents, manuscript editing, diagnostics,
-checked save, recovery and explicit IDE handoff/reload. File switching preserves drafts, selection,
-accepted edit history and recovery leases; closing and Save all consider inactive documents too. It
-uses an external editor for source repair rather than embedding a second source editor. This does
-not establish parity for the remaining workspaces or remove the existing Freya Source workflow.
+The opt-in Xilem frontend covers retained project documents, beat/line/reply creation, paged Script
+reading, manuscript editing, diagnostics, checked save, recovery and explicit IDE handoff/reload.
+File switching preserves drafts, selection, accepted edit history and recovery leases; closing and
+Save all consider inactive documents too. It uses an external editor for source repair rather than
+embedding a second source editor. This does not establish parity for the remaining workspaces or
+remove the existing Freya Source workflow.
 
 Its source-language runtime preview prepares immutable accepted inputs off-thread and publishes only
 into the still-current document and requested destination. Cancelling or hiding preparation

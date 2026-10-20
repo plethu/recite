@@ -1,6 +1,9 @@
 """Keyboard and accessibility operations scoped to an owned native Writer window."""
 
 import subprocess
+import time
+from collections import Counter
+from pathlib import Path
 
 
 class NativeWindow:
@@ -20,8 +23,26 @@ class NativeWindow:
             None,
         )
 
-    def wait(self, operation, label):
-        return self.api.wait_for(operation, label, self.process, timeout=10)
+    def wait(self, operation, label, timeout=10):
+        return self.api.wait_for(operation, label, self.process, timeout=timeout)
+
+    def save_and_close(self, results, label):
+        started = time.monotonic()
+        assert self.act("Save and close")
+        try:
+            code = self.process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            tasks = Path(f"/proc/{self.process.pid}/task")
+            waits = Counter()
+            for task in tasks.iterdir():
+                try:
+                    waits[task.joinpath("wchan").read_text().strip()] += 1
+                except OSError:
+                    pass  # A thread may exit while collecting this optional timing diagnostic.
+            results[label + "_waits_at_five_seconds"] = dict(waits)
+            code = self.process.wait(timeout=25)
+        results[label + "_seconds"] = time.monotonic() - started
+        assert code == 0
 
     def find_text(self, value, prefix=False):
         for node, name in self.nodes():
@@ -38,6 +59,16 @@ class NativeWindow:
         if node is None:
             raise RuntimeError("Missing probe action: " + label)
         return self.call(node, "Action", "DoAction", self.api.GLib.Variant("(i)", (0,)))[0]
+
+    def enabled(self, label):
+        node = self.find(label)
+        if node is None:
+            raise RuntimeError("Missing probe control: " + label)
+        state = self.call(node, "Accessible", "GetState")[0][0]
+        enabled = bool(state & (1 << int(self.api.Atspi.StateType.ENABLED)))
+        sensitive = bool(state & (1 << int(self.api.Atspi.StateType.SENSITIVE)))
+        assert enabled == sensitive, (label, enabled, sensitive)
+        return enabled
 
     def text(self, node):
         return self.call(node, "Text", "GetText", self.api.GLib.Variant("(ii)", (0, -1)))[0]

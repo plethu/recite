@@ -141,6 +141,7 @@ impl Document {
     pub fn add_choice(&mut self, expected: i64, section: &str) -> Result<String, EditError> {
         self.check_revision(expected)?;
         self.passage_snapshot()?;
+        let index = self.unique_block_index(section)?;
         let blocks = self
             .kernel()
             .snapshot()
@@ -148,10 +149,6 @@ impl Document {
             .ok_or(EditError::Position)?
             .summary()
             .blocks();
-        let index = blocks
-            .iter()
-            .position(|block| block.id().as_str() == section)
-            .ok_or(EditError::Destination)?;
         let mut insertion = if let Some(next) = blocks.get(index + 1) {
             offset(self.source(), next.span().start)?
         } else {

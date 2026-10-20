@@ -38,6 +38,12 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
             .disabled(closing)
         })
         .collect::<Vec<_>>();
+    let height = match files.len() {
+        0 => 0.,
+        1 => 64.,
+        2 => 100.,
+        _ => 140.,
+    };
     sized_box(
         flex_col((
             label("Project files"),
@@ -50,17 +56,19 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
                 .constrain_horizontal(true),
             )
             .width(250.px())
-            .height(140.px()),
-            flex_row((
-                text_button("Previous files", |state: &mut Writer| {
-                    state.file_page = state.file_page.saturating_sub(1)
-                })
-                .disabled(closing || state.file_page == 0),
-                text_button("Next files", |state: &mut Writer| state.file_page += 1)
-                    .disabled(closing || state.file_page + 1 >= pages),
-            ))
-            .gap(8.px()),
-            label(format!("Files · page {} of {pages}", state.file_page + 1)),
+            .height(height.px()),
+            (pages > 1).then(|| {
+                flex_row((
+                    text_button("Previous files", |state: &mut Writer| {
+                        state.file_page = state.file_page.saturating_sub(1)
+                    })
+                    .disabled(closing || state.file_page == 0),
+                    text_button("Next files", |state: &mut Writer| state.file_page += 1)
+                        .disabled(closing || state.file_page + 1 >= pages),
+                ))
+                .gap(8.px())
+            }),
+            (pages > 1).then(|| label(format!("Files · page {} of {pages}", state.file_page + 1))),
             outline(state),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -70,45 +78,71 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
 }
 
 fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase == Phase::ConfirmClose;
-    let model = state.project.current().model();
-    let passages = model.document().passage_snapshot().unwrap_or_default();
-    let pages = passages.len().div_ceil(PAGE).max(1);
-    state.page = state.page.min(pages - 1);
-    let entries = passages
+    let closing = state.phase != Phase::Writing;
+    let blocks = state.project.current().model().document().block_summaries();
+    let pages = blocks.len().div_ceil(PAGE).max(1);
+    state.beat_page = state.beat_page.min(pages - 1);
+    let entries = blocks
         .iter()
-        .skip(state.page * PAGE)
+        .skip(state.beat_page * PAGE)
         .take(PAGE)
-        .map(|passage| {
-            let id = passage.id.clone();
-            let current = model.view() == &View::Passage(id.clone());
-            let excerpt: String = passage.text.chars().take(12).collect();
-            text_button(
-                format!("{}{}…", if current { "Current · " } else { "" }, excerpt),
-                move |state: &mut Writer| state.select(id.clone()),
+        .map(|block| {
+            let id = block.id().to_string();
+            let current = state.reading.selected.as_deref() == Some(&id);
+            button(
+                label(format!(
+                    "{} · {}{}{}",
+                    if current { "Current beat" } else { "Beat" },
+                    id,
+                    if block.is_default() {
+                        " · Default"
+                    } else {
+                        ""
+                    },
+                    if block.has_end_destination() {
+                        " · END"
+                    } else {
+                        ""
+                    }
+                ))
+                .prop(LineBreaking::WordWrap),
+                move |state: &mut Writer| state.inspect(id.clone()),
             )
             .disabled(closing)
         })
         .collect::<Vec<_>>();
-    sized_box(
-        flex_col((
-            label("Passages"),
-            flex_col(entries)
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(8.px()),
+    let height = match entries.len() {
+        0 => 0.,
+        1 => 64.,
+        2 => 120.,
+        3 => 180.,
+        _ => 220.,
+    };
+    flex_col((
+        label("Beats"),
+        sized_box(
+            portal(
+                flex_col(entries)
+                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                    .gap(8.px()),
+            )
+            .constrain_horizontal(true),
+        )
+        .width(250.px())
+        .height(height.px()),
+        (pages > 1).then(|| {
             flex_row((
-                text_button("Previous", |state: &mut Writer| {
-                    state.page = state.page.saturating_sub(1)
+                text_button("Previous beats", |state: &mut Writer| {
+                    state.beat_page = state.beat_page.saturating_sub(1)
                 })
-                .disabled(closing || state.page == 0),
-                text_button("Next", |state: &mut Writer| state.page += 1)
-                    .disabled(closing || state.page + 1 >= pages),
+                .disabled(closing || state.beat_page == 0),
+                text_button("Next beats", |state: &mut Writer| state.beat_page += 1)
+                    .disabled(closing || state.beat_page + 1 >= pages),
             ))
-            .gap(8.px()),
-            label(format!("Page {} of {pages}", state.page + 1)),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px()),
-    )
-    .width(250.px())
+            .gap(8.px())
+        }),
+        (pages > 1).then(|| label(format!("Beats · page {} of {pages}", state.beat_page + 1))),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(12.px())
 }

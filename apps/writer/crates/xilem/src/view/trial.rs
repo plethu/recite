@@ -11,7 +11,12 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         label("Conversation preview").text_size(22.),
         flex_row((
-            text_button("Start / restart preview", Writer::start_trial).disabled(closing || busy),
+            text_button("Start / restart preview", Writer::start_trial).disabled(
+                closing
+                    || busy
+                    || state.reading.script().is_err()
+                    || state.reading.script().is_ok_and(<[_]>::is_empty),
+            ),
             text_button("Cancel preparation", |state: &mut Writer| {
                 state.trial.cancel()
             })
@@ -23,7 +28,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .disabled(closing || !state.trial.visible),
         ))
         .gap(8.px()),
-        (model.view() == &View::Source && !state.trial.visible).then(|| {
+        (state.reading.script().is_err() && !state.trial.visible).then(|| {
             sized_box(prose(
                 "Repair this source in your editor before starting a preview.",
             ))

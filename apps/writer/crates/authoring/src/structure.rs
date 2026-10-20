@@ -11,16 +11,13 @@ impl Document {
     ) -> Result<(), EditError> {
         self.check_revision(expected)?;
         self.script_snapshot()?;
+        let index = self.unique_block_index(block)?;
         let snapshot = self.kernel().snapshot();
         let blocks = snapshot
             .document(self.key())
             .ok_or(EditError::Position)?
             .summary()
             .blocks();
-        let index = blocks
-            .iter()
-            .position(|b| b.id().as_str() == block)
-            .ok_or(EditError::Destination)?;
         let start = blocks[index].span().start.line();
         let end = blocks
             .get(index + 1)
@@ -47,14 +44,14 @@ impl Document {
 
     pub fn rename_beat(&mut self, expected: i64, block: &str, name: &str) -> Result<(), EditError> {
         self.check_revision(expected)?;
+        let index = self.unique_block_index(block)?;
         let snapshot = self.kernel().snapshot();
         let declaration = snapshot
             .document(self.key())
             .ok_or(EditError::Position)?
             .summary()
             .blocks()
-            .iter()
-            .find(|b| b.id().as_str() == block)
+            .get(index)
             .ok_or(EditError::Destination)?;
         let position = SourcePosition::new(declaration.span().start.line(), 4)?;
         let plan = snapshot.plan_rename_block(self.key(), position, name)?;
@@ -93,11 +90,13 @@ impl Document {
         } else {
             "\n"
         };
-        let entry = if snapshot
-            .documents()
-            .iter()
-            .all(|document| document.summary().blocks().is_empty())
-        {
+        let entry = if snapshot.documents().iter().all(|document| {
+            document
+                .summary()
+                .blocks()
+                .iter()
+                .all(|block| !block.is_default())
+        }) {
             " default"
         } else {
             ""
@@ -117,16 +116,13 @@ impl Document {
     pub fn add_line(&mut self, expected: i64, section: &str) -> Result<String, EditError> {
         self.check_revision(expected)?;
         self.passage_snapshot()?;
+        let index = self.unique_block_index(section)?;
         let snapshot = self.kernel().snapshot();
         let blocks = snapshot
             .document(self.key())
             .ok_or(EditError::Position)?
             .summary()
             .blocks();
-        let index = blocks
-            .iter()
-            .position(|b| b.id().as_str() == section)
-            .ok_or(EditError::Destination)?;
         let start = offset(self.source(), blocks[index].span().start)?;
         let end = blocks
             .get(index + 1)

@@ -12,6 +12,7 @@ impl Workbench {
     pub fn rename_beat(&mut self, name: &str) -> Result<(), WorkbenchError> {
         self.require_applied()?;
         let block = self.selected_block()?.ok_or(EditError::Destination)?;
+        self.document.validate_script_block(&block)?;
         self.document
             .rename_beat(self.document.revision(), &block, name)?;
         self.inspect_block(name)

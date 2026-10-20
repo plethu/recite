@@ -1,4 +1,6 @@
+mod feedback;
 mod keyed;
+mod reading;
 mod startup;
 #[cfg(test)]
 mod tests;
@@ -18,9 +20,10 @@ pub struct Writer {
     window: WindowId,
     phase: Phase,
     status: String,
-    page: usize,
+    beat_page: usize,
     file_page: usize,
     trial: trial::Trial,
+    reading: reading::Reading,
 }
 
 #[derive(PartialEq)]
@@ -39,9 +42,11 @@ impl AppState for Writer {
 impl Writer {
     pub fn open(startup: Startup) -> Result<Self, FileError> {
         let project = ProjectSession::open(&startup.project, startup.document.as_deref())?;
+        let mut reading = reading::Reading::new();
+        reading.prepare(project.current().model());
         let status = if project.dirty() {
             "Recovered unsaved work; review it before saving."
-        } else if project.current().model().view() == &View::Source {
+        } else if reading.script().is_err() || reading.error.is_some() {
             "Source needs attention. Open it in your editor, then reload."
         } else {
             "Ready"
@@ -54,9 +59,10 @@ impl Writer {
             window: WindowId::next(),
             phase: Phase::Writing,
             status,
-            page: 0,
+            beat_page: 0,
             file_page: 0,
             trial: trial::Trial::new(),
+            reading,
         })
     }
 
@@ -66,29 +72,34 @@ impl Writer {
     ) {
         self.status = match self.project.current_mut().edit(action) {
             Ok(()) => "Draft updated".into(),
-            Err(error) => error.to_string(),
+            Err(error) => feedback::file(&error),
         };
+        self.reading.prepare(self.project.current().model());
     }
     fn save(&mut self) -> bool {
-        match self.project.current_mut().save() {
+        let result = self.project.current_mut().save();
+        self.reading.prepare(self.project.current().model());
+        match result {
             Ok(()) => {
                 self.status = "Saved".into();
                 true
             }
             Err(error) => {
-                self.status = error.to_string();
+                self.status = feedback::file(&error);
                 false
             }
         }
     }
     fn save_all(&mut self) -> bool {
-        match self.project.save_all() {
+        let result = self.project.save_all();
+        self.reading.prepare(self.project.current().model());
+        match result {
             Ok(()) => {
                 self.status = "All open files saved".into();
                 true
             }
             Err(error) => {
-                self.status = error.to_string();
+                self.status = feedback::file(&error);
                 false
             }
         }
@@ -97,7 +108,7 @@ impl Writer {
         self.trial.cancel();
         self.status = match self.project.switch(path) {
             Ok(()) => {
-                self.page = 0;
+                self.beat_page = 0;
                 if self.project.current().dirty() {
                     "Unsaved work restored"
                 } else {
@@ -105,8 +116,9 @@ impl Writer {
                 }
                 .into()
             }
-            Err(error) => error.to_string(),
+            Err(error) => feedback::file(&error),
         };
+        self.reading.prepare(self.project.current().model());
     }
     fn reload(&mut self) {
         self.trial.cancel();
@@ -114,15 +126,16 @@ impl Writer {
         self.status = match result {
             Ok(Some(path)) => format!("Reloaded; previous work preserved at {}", path.display()),
             Ok(None) => "Reloaded from disk".into(),
-            Err(error) => error.to_string(),
+            Err(error) => feedback::file(&error),
         };
+        self.reading.prepare(self.project.current().model());
     }
     fn open_editor(&mut self) {
         let Some(editor) = self.editor.clone() else {
             return;
         };
         if let Err(error) = self.project.current_mut().prepare_external_edit() {
-            self.status = error.to_string();
+            self.status = feedback::file(&error);
             return;
         }
         self.status = match std::process::Command::new(editor)
@@ -151,13 +164,23 @@ impl Writer {
         match self.project.checkpoint() {
             Ok(()) => self.phase = Phase::Closed,
             Err(error) => {
-                self.status = error.to_string();
+                self.status = feedback::file(&error);
                 self.phase = Phase::ConfirmClose;
             }
         }
     }
     fn select(&mut self, id: String) {
         self.change(|model| model.select(View::Passage(id)));
+    }
+    fn inspect(&mut self, id: String) {
+        self.change(|model| model.inspect_block(&id));
+    }
+    fn read_current(&mut self) {
+        match self.project.current().model().selected_block() {
+            Ok(Some(id)) => self.inspect(id),
+            Ok(None) => self.status = "Choose a beat in the outline.".into(),
+            Err(error) => self.status = feedback::workbench(&error),
+        }
     }
 }
 

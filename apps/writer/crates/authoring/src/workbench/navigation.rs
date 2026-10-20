@@ -14,7 +14,7 @@ impl Workbench {
         // The old draft was already committed; history may have removed its target.
         self.load(String::new().into());
         match block {
-            Some(block) => self.inspect_block(&block),
+            Some(block) => self.select(View::Block(block)),
             None => self.select(View::Source),
         }
     }
@@ -57,6 +57,8 @@ impl Workbench {
     }
     /// Enter a beat without executing any dialogue or effects.
     pub fn inspect_block(&mut self, block: &str) -> Result<(), WorkbenchError> {
+        self.require_applied()?;
+        self.document.validate_script_block(block)?;
         self.select(View::Block(block.into()))
     }
 
@@ -68,7 +70,7 @@ impl Workbench {
             .filter(|block| self.document.sections().contains(block))
             .cloned()
         {
-            return self.select(View::Block(block));
+            return self.inspect_block(&block);
         }
         let block = self
             .document
@@ -77,7 +79,7 @@ impl Workbench {
             .ok_or(EditError::MissingPassage)?
             .id
             .clone();
-        self.select(View::Block(block))
+        self.inspect_block(&block)
     }
     pub fn selected_block(&self) -> Result<Option<String>, WorkbenchError> {
         match &self.view {

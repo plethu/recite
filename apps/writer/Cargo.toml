@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-exclude = ["vendor/xilem/*", "vendor/copypasta"]
+exclude = ["vendor/xilem/*", "vendor/copypasta", "vendor/accesskit-atspi-common"]
 members = ["crates/authoring", "crates/freya", "crates/grammar", "crates/session", "crates/xilem"]
 
 [workspace.package]
@@ -35,6 +35,7 @@ debug = "line-tables-only"
 debug = 0
 
 [patch.crates-io]
+accesskit_atspi_common = { path = "vendor/accesskit-atspi-common" }
 copypasta = { path = "vendor/copypasta" }
 freya-code-editor = { path = "vendor/freya-code-editor" }
 freya-core = { path = "vendor/freya-core" }

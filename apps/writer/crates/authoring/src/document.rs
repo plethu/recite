@@ -16,6 +16,7 @@ mod completion;
 pub use completion::CompletionSnapshot;
 mod diagnostics;
 pub use diagnostics::DiagnosticSnapshot;
+mod blocks;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {

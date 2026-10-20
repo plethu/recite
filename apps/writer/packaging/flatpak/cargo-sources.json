@@ -47,19 +47,6 @@
   {
     "type": "archive",
     "archive-type": "tar-gzip",
-    "url": "https://static.crates.io/crates/accesskit_atspi_common/accesskit_atspi_common-0.18.1.crate",
-    "sha256": "1e8c61bee90b42a772d39d06a740207dc71a4e780004ace1db8d99fb1baaa954",
-    "dest": "cargo/vendor/accesskit_atspi_common-0.18.1"
-  },
-  {
-    "type": "inline",
-    "contents": "{\"package\": \"1e8c61bee90b42a772d39d06a740207dc71a4e780004ace1db8d99fb1baaa954\", \"files\": {}}",
-    "dest": "cargo/vendor/accesskit_atspi_common-0.18.1",
-    "dest-filename": ".cargo-checksum.json"
-  },
-  {
-    "type": "archive",
-    "archive-type": "tar-gzip",
     "url": "https://static.crates.io/crates/accesskit_atspi_common/accesskit_atspi_common-0.19.1.crate",
     "sha256": "023da0e5097f46df7092d5280b02efb9bbf8d93298daeced42652463e357d636",
     "dest": "cargo/vendor/accesskit_atspi_common-0.19.1"

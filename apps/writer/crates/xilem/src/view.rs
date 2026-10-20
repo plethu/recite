@@ -10,7 +10,10 @@ use xilem::view::{
 };
 use xilem::{InsertNewline, WidgetView};
 
+mod manuscript;
 mod navigation;
+mod reading;
+use manuscript::manuscript;
 mod trial;
 use navigation::navigation;
 
@@ -76,73 +79,6 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .disabled(closing || state.editor.is_none()),
             text_button("Reload (keep recovery copy)", Writer::reload).disabled(closing),
             text_button("Close", Writer::request_close).disabled(closing),
-        ))
-        .gap(8.px()),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
-}
-
-fn manuscript(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase == Phase::ConfirmClose;
-    let model = state.project.current().model();
-    let source_required = !matches!(model.view(), View::Passage(_));
-    let editor = if source_required {
-        Either::A(sized_box(prose("Edit this source in your editor. Its bytes are preserved. Open it externally, then reload from disk.")).width(560.px()))
-    } else {
-        Either::B(
-            sized_box(keyed(
-                (model.document().key().clone(), model.view().clone()),
-                text_input(model.draft().to_owned(), |state: &mut Writer, text| {
-                    state.change(|model| {
-                        model.set_draft(text);
-                        Ok(())
-                    });
-                })
-                .insert_newline(InsertNewline::OnEnter)
-                .font("Literata")
-                .text_size(20.)
-                .placeholder("Manuscript")
-                .disabled(closing)
-                .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript")),
-            ))
-            .width(560.px())
-            .height(if state.trial.visible {
-                120.px()
-            } else {
-                260.px()
-            }),
-        )
-    };
-    let selection = if source_required {
-        "Source editing in your editor"
-    } else {
-        "Manuscript"
-    };
-    flex_col((
-        label(selection),
-        editor,
-        diagnostics(state),
-        flex_row((
-            text_button("Apply draft", |state: &mut Writer| {
-                state.change(Workbench::apply)
-            })
-            .disabled(closing || source_required),
-            text_button("Discard draft", |state: &mut Writer| {
-                state.change(|model| {
-                    model.discard();
-                    Ok(())
-                })
-            })
-            .disabled(closing),
-            text_button("Undo applied", |state: &mut Writer| {
-                state.change(Workbench::undo)
-            })
-            .disabled(closing),
-            text_button("Redo applied", |state: &mut Writer| {
-                state.change(Workbench::redo)
-            })
-            .disabled(closing),
         ))
         .gap(8.px()),
     ))

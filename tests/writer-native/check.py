@@ -34,7 +34,7 @@ def atspi_binary(name):
     raise RuntimeError(f"Install at-spi2-core: could not find {name}")
 
 
-def run_probe(binary, output):
+def run_probe(binary, output, scenario):
     session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     status = ("org.a11y.Bus", "/org/a11y/bus")
     call(
@@ -80,7 +80,10 @@ def run_probe(binary, output):
             "private registry",
             registry_process,
         )
-        from writer_interactions import run
+        if scenario == "structure":
+            from structure_interactions import run
+        else:
+            from writer_interactions import run
 
         return run(writer_probe, bus, registry, binary, output)
 
@@ -90,6 +93,7 @@ def main():
     parser.add_argument("binary", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--child", action="store_true")
+    parser.add_argument("--scenario", choices=("all", "structure"), default="all")
     args = parser.parse_args()
     binary = args.binary.resolve(strict=True)
     output = args.output.resolve()
@@ -115,7 +119,7 @@ def main():
                 "owned accessibility bus launcher",
                 launcher,
             )
-            passed = run_probe(binary, output)
+            passed = run_probe(binary, output, args.scenario)
         if not passed:
             sys.exit(2)
         return
@@ -161,12 +165,14 @@ def main():
                 str(binary),
                 str(output),
                 "--child",
+                "--scenario",
+                args.scenario,
             ],
             env=environment,
             start_new_session=True,
         )
         try:
-            code = process.wait(timeout=60)
+            code = process.wait(timeout=120 if args.scenario == "all" else 60)
             if code:
                 sys.exit(code)
         finally:

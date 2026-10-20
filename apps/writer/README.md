@@ -38,12 +38,19 @@ Use your editor's own arguments; `--editor-arg` repeats and the source path is a
 shell. Omit it if the editor needs no arguments. Without `--editor`, external opening is disabled.
 For a graphical editor that supports it, pass `--editor-arg --wait` to request a waiting window.
 
-This frontend supports project file and passage navigation, manuscript editing, native text
-undo/redo, applying changes, checked saves, diagnostics, crash recovery and guarded closing across
-retained documents. Switching files preserves field drafts, accepted undo history and recovery
-ownership. Save all and Save and close cover every open file. Open in editor saves accepted source
-while retaining an unapplied manuscript draft. Reload keeps local work in an independent recovery
-copy before accepting disk bytes.
+This frontend supports project file and beat navigation, manuscript editing, native text undo/redo,
+applying changes, checked saves, diagnostics, crash recovery and guarded closing across retained
+documents. Switching files preserves field drafts, accepted undo history and recovery ownership.
+Save all and Save and close cover every open file. Open in editor saves accepted source while
+retaining an unapplied manuscript draft. Reload keeps local work in an independent recovery copy
+before accepting disk bytes.
+
+The beat outline uses accepted source, including recognizable headers in incomplete documents. Read
+beat shows dialogue, replies, conditions, effects and continuations without running them; edit a
+passage from that reading list. Add beat, Add line and Add reply use the shared stable-ID editing
+operations. Empty documents and empty beats offer creation controls. Apply or discard a field draft
+before changing its structure or selection. Duplicate beat names and unprojectable syntax require
+external repair; their source is preserved. Long reading lists mount sixteen entries per page.
 
 Start / restart preview prepares source-language playback off the UI thread, starting at the
 selected beat. Continue, choose replies, answer condition requests, and acknowledge simulated
