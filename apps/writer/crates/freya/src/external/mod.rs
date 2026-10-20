@@ -1,13 +1,13 @@
 mod handoff;
-mod watch;
+
 use crate::{
     design::{Button, ComparisonRow, ComparisonView, SubmitAction, tokens as t},
     editing::{Pane, Writer},
     messages::{MsgId, text},
 };
 use freya::prelude::*;
-pub(crate) use handoff::Handoff;
-pub(crate) use watch::Watch;
+pub(crate) use recite_writer_session::external::Handoff;
+pub(crate) use recite_writer_session::external::Watch;
 pub(crate) fn open(mut writer: Writer) {
     if let Err(error) = try_open(writer) {
         writer.message.error(error);

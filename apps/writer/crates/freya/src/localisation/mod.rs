@@ -1,26 +1,25 @@
 //! A bilingual manuscript over the same beat selection and ordinary PO files.
 pub(crate) mod watching;
 use messages::{MsgId, text as wording};
-pub(crate) mod catalogue;
+pub(crate) use recite_writer_session::localisation::catalogue;
 mod close_drafts;
 mod comparison;
 pub(crate) use close_drafts::CloseDrafts;
 mod context;
 mod manuscript;
 pub(super) use manuscript::{columns, source_passage};
-mod create;
+pub(crate) use recite_writer_session::localisation::create;
 mod entry;
 mod extraction;
 mod field;
 mod language_picker;
-pub(crate) mod messages;
+pub(crate) use recite_writer_session::localisation::messages;
 mod navigation;
 mod panel;
 mod queue;
 pub(crate) mod refresh;
 mod setup;
 pub(crate) use language_picker::LanguagePicker;
-mod target;
 
 use crate::{
     design::{Button, tokens as t},
@@ -293,9 +292,9 @@ pub(super) fn translation(writer: Writer, passage: recite_writer_model::Passage)
     field::TranslationField { writer, passage }.into_element()
 }
 
-mod status;
+pub(crate) use recite_writer_session::localisation::status;
 
-mod context_data;
+pub(crate) use recite_writer_session::localisation::context_data;
 mod entry_context;
 
 pub(crate) fn close_drafts_message() -> String {

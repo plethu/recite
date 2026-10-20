@@ -3,14 +3,7 @@ use super::{Button, keyboard, tokens as t};
 use freya::prelude::*;
 use std::sync::Arc;
 
-#[derive(Clone, PartialEq)]
-pub(crate) struct PickerOption {
-    pub value: String,
-    pub title: String,
-    pub detail: String,
-    /// Human-facing tag or context, independent of the opaque selection value.
-    pub annotation: String,
-}
+pub(crate) use recite_writer_session::choices::PickerOption;
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct SearchPicker {

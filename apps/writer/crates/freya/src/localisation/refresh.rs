@@ -6,8 +6,8 @@ use super::{
 use crate::{editing::Writer, project::ProjectFiles};
 use freya::prelude::State;
 use recite_core::po::{PoDocument, PoDocumentFingerprint};
+use recite_writer_session::localisation::refresh::changes;
 use std::path::PathBuf;
-mod changes;
 mod detail;
 
 pub(super) mod screen;

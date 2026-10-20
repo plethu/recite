@@ -78,7 +78,7 @@ impl Component for EntryContext {
                                 writer.pane.set(Pane::Preview);
                             });
                             if let Some(destination) = &destination {
-                                destination.open(writer, completed);
+                                super::navigation::open(destination, writer, completed);
                             } else {
                                 completed.call(Ok(()));
                             }

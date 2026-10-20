@@ -1,11 +1,11 @@
 //! Watch the containing directory so atomic PO replacement stays observable.
-mod worker;
 use crate::{
     editing::Writer,
     external::Watch,
     messages::{MsgId, text},
 };
 use freya::prelude::*;
+use recite_writer_session::localisation::watching::worker;
 #[derive(Clone, Copy)]
 pub(crate) struct CatalogueWatch {
     pub writer: Writer,

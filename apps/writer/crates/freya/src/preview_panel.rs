@@ -2,7 +2,7 @@
 mod controls;
 mod prepare;
 mod request;
-mod snapshot;
+
 mod task;
 mod trace;
 mod worker;
@@ -14,7 +14,7 @@ use crate::{
 };
 use freya::prelude::*;
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
-pub(crate) use snapshot::Snapshot;
+pub(crate) use recite_writer_session::preview::Snapshot;
 pub(crate) use task::{start, use_preview_work};
 
 #[derive(Clone)]

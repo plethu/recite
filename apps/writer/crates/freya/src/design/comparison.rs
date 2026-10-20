@@ -1,16 +1,9 @@
 //! Shared version presentation. Callers own identity, freshness and resolution.
 mod diff;
-mod source;
 use super::{Button, tokens as t};
 use crate::messages::{MsgId, text};
 use freya::prelude::*;
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ComparisonRow {
-    pub caption: String,
-    pub before: Option<String>,
-    pub after: Option<String>,
-}
+pub(crate) use recite_writer_session::comparison::ComparisonRow;
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct ComparisonView {

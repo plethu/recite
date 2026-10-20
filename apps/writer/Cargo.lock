@@ -4929,18 +4929,27 @@ dependencies = [
 name = "recite-writer-session"
 version = "0.0.0"
 dependencies = [
+ "async-channel",
  "atomic-write-file",
  "criterion",
+ "isolang",
+ "language-tags",
+ "notify",
+ "recite-build",
  "recite-compiler",
  "recite-config",
  "recite-core",
+ "recite-ui",
  "recite-writer-model",
  "ropey",
  "serde",
  "serde_json",
+ "similar",
  "tempfile",
  "thiserror 2.0.20",
+ "unic-langid",
  "url",
+ "wait-timeout",
 ]
 
 [[package]]

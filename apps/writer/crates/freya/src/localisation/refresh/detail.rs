@@ -55,7 +55,8 @@ pub(super) fn render(change: &Change, mut writer: Writer) -> Element {
             Button::new()
                 .flat()
                 .on_press(move |_| {
-                    destination.open(
+                    super::super::navigation::open(
+                        &destination,
                         writer,
                         EventHandler::new(move |result: Result<(), String>| {
                             if let Err(error) = result {

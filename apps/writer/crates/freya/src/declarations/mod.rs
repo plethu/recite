@@ -1,13 +1,13 @@
 //! Project declarations keep generated output and source ownership separate.
 mod buffer;
 pub(crate) use buffer::{SourceBuffer, harvest};
-mod entries;
-mod producer;
+use recite_writer_session::declarations::entries;
+use recite_writer_session::declarations::producer;
 mod producer_controls;
-pub(crate) use producer_controls::ProducerPoll;
-pub(crate) mod recovery;
-mod session;
 use entries::entries;
+pub(crate) use producer_controls::ProducerPoll;
+pub(crate) use recite_writer_session::declarations::recovery;
+use recite_writer_session::declarations::session;
 mod source;
 mod source_link;
 use crate::{

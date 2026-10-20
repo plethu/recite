@@ -223,21 +223,7 @@ pub fn accent(dark: bool) -> Color {
     Palette::with_mode(dark, monochrome()).accent
 }
 
-pub fn display_name(identifier: &str) -> String {
-    let name = identifier
-        .strip_suffix(".recite")
-        .unwrap_or(identifier)
-        .replace('_', " ");
-    name.split(' ')
-        .map(|word| {
-            let mut chars = word.chars();
-            chars.next().map_or_else(String::new, |first| {
-                first.to_uppercase().collect::<String>() + chars.as_str()
-            })
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
+pub use recite_writer_session::choices::display_name;
 
 #[cfg(test)]
 mod tests;

@@ -1,5 +1,4 @@
 //! A bounded queue; opening an entry retains the full beat manuscript.
-pub(super) mod filter;
 use super::messages::{MsgId, text as wording};
 use super::navigation::Destination;
 use crate::{
@@ -8,6 +7,7 @@ use crate::{
     palette,
 };
 use freya::prelude::*;
+pub(super) use recite_writer_session::localisation::queue::filter;
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 #[derive(Clone)]
 struct IndexSnapshot(Rc<RefCell<filter::QueueIndex>>);

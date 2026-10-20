@@ -1,28 +1,11 @@
 //! Manifest-selected builds run independently of screen navigation.
-mod job;
 use crate::{
     design::{Button, SubmitAction, tokens as t},
     editing::{Pane, Writer},
     messages::{MsgId, text},
 };
 use freya::prelude::*;
-#[derive(Default)]
-pub(crate) struct Builds {
-    targets: Vec<(String, Vec<String>)>,
-    selected: Option<String>,
-    job: Option<job::Job>,
-    result: Option<job::Outcome>,
-}
-impl Builds {
-    pub(crate) fn cancel(&self) {
-        if let Some(job) = &self.job {
-            job.control.cancel();
-        }
-    }
-    pub fn busy(&self) -> bool {
-        self.job.is_some()
-    }
-}
+use recite_writer_session::builds::job;
 pub(crate) fn open(mut writer: Writer) {
     if let Err(error) = try_open(writer) {
         writer.message.error(error);
@@ -315,44 +298,5 @@ impl Component for BuildPoll {
             }
         }
         rect()
-    }
-}
-
-impl job::Outcome {
-    fn is_success(&self) -> bool {
-        matches!(self, Self::Completed { result, .. } if matches!(
-            result.status(),
-            recite_compiler::authoring::BuildTerminalStatus::Succeeded | recite_compiler::authoring::BuildTerminalStatus::Cancelled
-        ))
-    }
-
-    fn message(&self) -> String {
-        use recite_compiler::authoring::BuildTerminalStatus;
-        match self {
-            Self::Completed { result, recovery, assets, inputs_changed } => match result.status() {
-                BuildTerminalStatus::Succeeded if *inputs_changed => "Build finished, but project inputs changed during the build. Build again to include them.".into(),
-                BuildTerminalStatus::Succeeded => format!("Built {}", assets.join(", ")),
-                BuildTerminalStatus::Cancelled => "Build cancelled. Previous outputs remain available.".into(),
-                _ => format!(
-                    "Build did not complete.\n{}\n{}\n{}",
-                    crate::project_context::diagnostic_messages(result.diagnostics()),
-                    result.failure().map(ToString::to_string).unwrap_or_default(),
-                    recovery.iter().map(|entry| format!("Recovery record: {}", entry.marker().display())).collect::<Vec<_>>().join("\n")
-                ),
-            },
-            Self::Failed(failure) => match failure {
-                job::Failure::Preparation(error) => error.to_string(),
-                job::Failure::Diagnostics(diagnostics) => crate::project_context::diagnostic_messages(diagnostics),
-                job::Failure::AssetRetired => "The selected output is no longer declared by the manifest. Reopen Build scenes.".into(),
-                job::Failure::NoTargets => "Declare a scene and output in recite.project.toml before building.".into(),
-                job::Failure::Publisher(error) => error.to_string(),
-                job::Failure::Coordinator { error, recovery } => format!(
-                    "{}\n{}",
-                    error,
-                    recovery.iter().map(|entry| format!("Recovery record: {}", entry.marker().display())).collect::<Vec<_>>().join("\n")
-                ),
-                job::Failure::WorkerStopped => "Build worker stopped unexpectedly.".into(),
-            },
-        }
     }
 }

@@ -11,7 +11,7 @@ use crate::{
 use freya::prelude::*;
 use std::path::PathBuf;
 
-pub(crate) mod languages;
+pub(crate) use recite_writer_session::localisation::setup::languages;
 mod request;
 use request::{Pending, begin};
 
