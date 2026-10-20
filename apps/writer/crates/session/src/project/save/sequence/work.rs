@@ -3,7 +3,7 @@ use super::super::ordered::Write;
 use crate::{
     declarations::{DeclarationSave, recovery::DraftSnapshot},
     project::{
-        FileError,
+        FileError, PreparedRefresh, RefreshRequest,
         manifest::{ManifestOutcome, ManifestSave},
     },
     recovery::{Recovery, worker::Durability},
@@ -21,6 +21,8 @@ pub enum Work {
     DeclarationRecovery(Box<DeclarationSave>, Durability<DraftSnapshot>),
     DeclarationOutput(Box<DeclarationSave>),
     RetireDeclaration(Box<DeclarationSave>),
+    Refresh(Box<RefreshRequest>),
+    RetireRefresh(Box<PreparedRefresh>),
 }
 pub enum Receipt {
     Edit(Result<Box<PreparedEdit>, WorkbenchError>),
@@ -30,6 +32,7 @@ pub enum Receipt {
     DeclarationSource(Box<DeclarationSave>, Result<(), FileError>),
     DeclarationRecovered(Box<DeclarationSave>, Result<(), FileError>),
     DeclarationOutput(Box<DeclarationSave>, Result<(), FileError>),
+    Refreshed(Result<Box<PreparedRefresh>, FileError>),
     Retired,
 }
 impl Work {
@@ -66,6 +69,15 @@ impl Work {
                 Receipt::DeclarationOutput(request, result)
             }
             Self::RetireDeclaration(owner) => {
+                drop(owner);
+                Receipt::Retired
+            }
+            Self::Refresh(request) => Receipt::Refreshed(
+                request
+                    .prepare(&recite_compiler::authoring::CancellationToken::new())
+                    .map(Box::new),
+            ),
+            Self::RetireRefresh(owner) => {
                 drop(owner);
                 Receipt::Retired
             }

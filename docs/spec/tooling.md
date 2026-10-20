@@ -125,6 +125,15 @@ all and build completes the shared ordered save sequence first. Build jobs and t
 outlive the selected screen. Cancellation keeps close and project replacement guarded until the
 terminal result is collected.
 
+Registered schema generation retains one shared activity owner through command validation, process
+execution and checked output publication. Native publication receipts are reconciled even after
+leaving Declarations or requesting cancellation; cancellation after a successful write cannot undo
+its new schema baseline. Project discovery and analysis refresh run separately on a worker. Refresh
+adopts analysis without replacing live field drafts, selection, preview or undo history. A failed or
+stale refresh keeps the published schema and offers a retry. Stale reply controls retire while their
+staged source draft and validation policy remain available for external repair. Command details and
+terminal reports are paged, including individual long lines.
+
 Queued accessibility actions are checked against current native widget identity before dispatch;
 retired controls cannot crash the host or act on a replacement widget. The current host bridge owns
 one native window and its base layer.

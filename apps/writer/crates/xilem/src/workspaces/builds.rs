@@ -46,6 +46,7 @@ impl Writer {
         }
     }
     pub(crate) fn poll_project_jobs(&mut self) {
+        self.poll_schema_generation();
         let Some(project) = self.session.project_mut() else {
             return;
         };

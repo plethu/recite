@@ -2,7 +2,9 @@
 mod external;
 pub mod manifest;
 mod recovery;
+mod refresh;
 mod reload;
+pub use refresh::{PreparedRefresh, RefreshRequest};
 pub use reload::{PreparedReload, ReloadRequest};
 mod source_repair;
 pub use source_repair::{SourceRepairArtifact, SourceRepairExport};
@@ -174,58 +176,6 @@ impl ProjectFiles {
     }
     pub fn queue_checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
         self.recovery.queue(self.recovery_value(workbench))
-    }
-
-    pub fn refresh(&mut self, workbench: &mut Workbench) -> Result<(), FileError> {
-        self.require_idle_save()?;
-        let report = recite_config::discover_project(&self.root)?;
-        if !report.is_complete() {
-            return Err(FileError::Incomplete);
-        }
-        for path in self.session_paths() {
-            if !report.documents().iter().any(|d| d.path() == path) {
-                return Err(FileError::SessionExcluded(path.clone()));
-            }
-        }
-        let schema_changed = self.declarations.as_ref().is_some_and(|session| {
-            !session.matches_schema(
-                report
-                    .manifest()
-                    .source()
-                    .manifest()
-                    .project
-                    .schema
-                    .as_deref(),
-            )
-        });
-        if schema_changed
-            && self
-                .declarations
-                .as_ref()
-                .is_some_and(|session| session.dirty() || session.busy())
-        {
-            return Err(FileError::SchemaSessionActive);
-        }
-        let context = crate::load_context(&report)?;
-        self.manifest
-            .refresh(report.manifest().source().source_text());
-        workbench.refresh_project(self.retained_context(context.clone()))?;
-        if schema_changed {
-            self.declarations = None;
-        }
-        self.paths = report
-            .documents()
-            .iter()
-            .map(|d| d.path().to_owned())
-            .collect();
-        self.names = report
-            .documents()
-            .iter()
-            .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
-            .collect();
-        self.search = self.refreshed_search(&context.documents);
-        self.context = context.into();
-        Ok(())
     }
 
     pub fn export(&self, workbench: &Workbench) -> Result<PathBuf, FileError> {

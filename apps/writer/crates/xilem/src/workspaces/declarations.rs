@@ -1,15 +1,27 @@
 //! Bounded declaration inspection; the shared Session remains the canonical schema/source owner.
 use super::*;
+mod producer;
 use crate::attention::{Pane, Region};
-use crate::presentation::{label, paragraph, text_button};
+use crate::presentation::{label, paragraph, radio_button, text_button};
 use xilem::{
     WidgetView,
     masonry::layout::AsUnit,
     masonry::properties::TextAreaLabel,
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, text_input},
+    view::{CrossAxisAlignment, flex_col, flex_row, radio_group, text_input},
 };
 const PAGE: usize = 5;
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    #[default]
+    Inspect,
+    Producer,
+}
+impl Writer {
+    pub(crate) fn show_declaration_producer(&mut self) {
+        self.workspaces.declarations.mode = Mode::Producer;
+    }
+}
 pub(crate) struct Row {
     name: String,
     kind: String,
@@ -29,6 +41,8 @@ impl Row {
 }
 #[derive(Default)]
 pub(super) struct Panel {
+    mode: Mode,
+    producer: producer::Panel,
     rows: Vec<Row>,
     query: String,
     matches: Vec<usize>,
@@ -37,6 +51,9 @@ pub(super) struct Panel {
     detail_page: usize,
 }
 impl Panel {
+    pub fn describe_producer(&mut self, pages: Vec<String>) {
+        self.producer = producer::Panel { pages, page: 0 };
+    }
     pub fn replace(&mut self, rows: Vec<Row>) {
         self.rows = rows;
         self.filter(self.query.clone());
@@ -62,11 +79,37 @@ impl Panel {
         self.detail_page = 0;
     }
 }
+pub(super) use producer::description as producer_description;
 pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = writer.ui_scale();
+    flex_col((
+        label(scale, "Declarations").text_size(28. * scale),
+        radio_group(flex_row((
+            radio_button(
+                scale,
+                "Inspect declarations",
+                writer.workspaces.declarations.mode == Mode::Inspect,
+                |writer: &mut Writer| writer.workspaces.declarations.mode = Mode::Inspect,
+            ),
+            radio_button(
+                scale,
+                "Producer",
+                writer.workspaces.declarations.mode == Mode::Producer,
+                Writer::show_declaration_producer,
+            ),
+        ))),
+        xilem::view::indexed_stack((inspection(writer), producer::controls(writer))).active(
+            usize::from(writer.workspaces.declarations.mode == Mode::Producer),
+        ),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(12.px())
+    .prop(Region(Some(Pane::Declarations)))
+}
+fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let panel = &writer.workspaces.declarations;
     flex_col((
-        label(scale, "Declarations").text_size(28. * scale),
         label(scale, "Search declarations"),
         text_input(panel.query.clone(), |writer: &mut Writer, query| {
             writer.workspaces.declarations.filter(query)
@@ -103,7 +146,6 @@ pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
-    .prop(Region(Some(Pane::Declarations)))
 }
 fn declaration_rows(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let panel = &writer.workspaces.declarations;

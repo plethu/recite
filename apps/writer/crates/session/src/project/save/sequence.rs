@@ -15,6 +15,7 @@ enum Pending {
     DeclarationSource,
     DeclarationRecovery,
     DeclarationOutput,
+    Refresh,
     Retire,
 }
 pub enum Progress {

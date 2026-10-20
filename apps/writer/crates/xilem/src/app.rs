@@ -114,6 +114,7 @@ impl App {
         self.writer.as_ref().is_none_or(|writer| {
             !writer.work.busy()
                 && !writer.navigation.busy()
+                && !writer.project_jobs_busy()
                 && match &writer.session {
                     Session::Project(project) => project.files().can_leave(writer.session.model()),
                     Session::Examples { .. } => !writer.session.dirty(),

@@ -123,6 +123,14 @@ impl ProjectSession {
         prepared.exchange(&mut self.model, &mut self.documents);
         Ok(())
     }
+    pub fn accept_refresh(
+        &mut self,
+        prepared: &mut super::PreparedRefresh,
+    ) -> Result<(), FileError> {
+        self.files.accept_refresh(&mut self.model, prepared)?;
+        prepared.exchange_documents(&mut self.documents);
+        Ok(())
+    }
     pub fn reload_current(&mut self) -> Result<Option<PathBuf>, FileError> {
         let mut prepared = self
             .files

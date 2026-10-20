@@ -3,8 +3,10 @@ mod builds;
 mod declarations;
 mod opening;
 mod text;
+mod tools;
 use crate::{Phase, Writer};
 pub(crate) use opening::{Open, Prepared, Work};
+pub(crate) use tools::worker;
 use xilem::{
     ViewCtx,
     core::{NoElement, ViewSequence},
@@ -24,17 +26,22 @@ pub(crate) struct Workspaces {
     build_page: usize,
     build_feedback: Vec<String>,
     feedback_page: usize,
+    tools: tools::Tools,
+    schema_needs_refresh: bool,
+    schema_feedback: Vec<String>,
+    schema_feedback_page: usize,
 }
 impl Writer {
     pub(crate) fn project_jobs_busy(&self) -> bool {
-        self.session.project().is_some_and(|project| {
-            project.files().builds.busy()
-                || project
-                    .files()
-                    .declarations
-                    .as_ref()
-                    .is_some_and(|session| session.busy())
-        })
+        self.workspaces.tools.busy()
+            || self.session.project().is_some_and(|project| {
+                project.files().builds.busy()
+                    || project
+                        .files()
+                        .declarations
+                        .as_ref()
+                        .is_some_and(|session| session.busy())
+            })
     }
     pub(crate) fn return_to_writing(&mut self) {
         if self.phase != Phase::Writing {

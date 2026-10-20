@@ -73,14 +73,13 @@ impl Component for ProducerActions {
                 .child(
                     Button::new()
                         .on_press(move |_| {
-                            if let Some(job) = writer
+                            if let Some(session) = writer
                                 .files
                                 .peek()
                                 .as_ref()
                                 .and_then(|f| f.declarations.as_ref())
-                                .and_then(|s| s.job.as_ref())
                             {
-                                job.cancel();
+                                session.cancel();
                             }
                         })
                         .child(text(MsgId::WriterCancel)),
@@ -179,31 +178,23 @@ fn poll_generation(mut writer: Writer) {
     if writer.files.peek().as_ref().is_some_and(|p| p.saving) {
         return;
     }
-    let result = writer
-        .files
-        .peek()
-        .as_ref()
-        .and_then(|project| project.declarations.as_ref())
-        .and_then(|session| session.job.as_ref())
-        .and_then(|job| job.poll());
-    let Some(result) = result else {
-        return;
-    };
     let mut files = writer.files.write();
     let Some(project) = files.as_mut() else {
         return;
     };
-    let result = project
+    let Some(result) = project
         .declarations
         .as_mut()
-        .ok_or("Declarations were closed.".to_owned())
-        .and_then(|session| session.finish_generation(result))
-        .and_then(|()| {
-            if let Ok(model) = writer.buffers.model.write().as_mut() {
-                project.refresh(model).map_err(|error| error.to_string())?;
-            }
-            Ok(())
-        });
+        .and_then(|session| session.poll_generation_blocking())
+    else {
+        return;
+    };
+    let result = result.and_then(|()| {
+        if let Ok(model) = writer.buffers.model.write().as_mut() {
+            project.refresh(model).map_err(|error| error.to_string())?;
+        }
+        Ok(())
+    });
     writer
         .message
         .report(result, text(MsgId::WriterProducerFinished));

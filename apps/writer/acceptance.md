@@ -73,7 +73,14 @@ accessibility nodes at 100/200%; details and build reports also bound a single l
 The owned Wayland drill covers declaration query focus, selected detail, returning with native text
 undo, disk-only builds, ordered save-all/build, and cancellation retirement before closing. These
 inspection/build states have separate render review, including scrolled 200% declaration detail.
-Declaration source binding/editing and registered producer actions remain unfinished.
+Registered producer startup, checked output publication and project-analysis refresh run on workers.
+The owned Wayland producer drill covers completion after returning to writing, retained native
+typing and undo, cancellation retaining published output, and recovery close after terminal
+retirement. Shared/native regressions also cover foreign and repeated receipts, failed dispatch,
+publication conflicts, cancellation before/after writing, and refresh failure followed by retry. A
+staged Rules draft survives a schema change with its validation policy and external-repair route
+retained. Producer ready/busy states have 100/200% render review; command details and reports are
+paged. Declaration source binding/editing and producer registration/output reload remain unfinished.
 
 A queued accessibility action may outlive its native widget. Recite checks the live owned base layer
 before dispatch; the stale-click regression also requires replacement focus/click actions to work

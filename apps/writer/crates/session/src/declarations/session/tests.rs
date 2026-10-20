@@ -1,7 +1,7 @@
 use super::*;
-const SOURCE: &str =
+pub(super) const SOURCE: &str =
     "schema_version = 1\n[producer]\nid = \"dialogue\"\n[speakers.mara]\ndisplay_name = \"Mara\"\n";
-fn session() -> Result<(tempfile::TempDir, Session), Box<dyn std::error::Error>> {
+pub(super) fn session() -> Result<(tempfile::TempDir, Session), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let parsed = parse(Path::new("schema.toml"), SOURCE)?;
     let output = dir.path().join("schema.json");
@@ -11,7 +11,7 @@ fn session() -> Result<(tempfile::TempDir, Session), Box<dyn std::error::Error>>
     let mut session = Session {
         saving: false,
         registration: Ok(None),
-        job: None,
+        generation: Generation::Idle,
         root: dir.path().to_owned(),
         output,
         output_baseline,
@@ -135,8 +135,7 @@ args=["-c", "cp fixture.json \"$1\"", "producer", "{output}"]
 }
 
 fn poll_generation(session: &mut Session) -> Option<Result<(), String>> {
-    let result = session.job.as_ref()?.poll()?;
-    Some(session.finish_generation(result))
+    session.poll_generation_blocking()
 }
 
 #[test]

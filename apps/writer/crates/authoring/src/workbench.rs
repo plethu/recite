@@ -6,6 +6,8 @@ mod identity;
 pub use identity::NavigationStamp;
 mod preparing;
 pub use preparing::{NavigationRequest, PreparedNavigation};
+mod context_refresh;
+pub use context_refresh::{ContextRefreshRequest, PreparedContextRefresh};
 mod navigation;
 mod opening;
 mod preview;

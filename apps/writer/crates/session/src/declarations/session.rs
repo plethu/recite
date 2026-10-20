@@ -2,8 +2,13 @@
 use crate::project::{FileError, read_regular, save::replace_checked};
 use recite_core::schema::{ProjectSchema, SchemaSource};
 use std::path::{Path, PathBuf};
+mod generation;
 mod saving;
+mod starting;
+use generation::Generation;
+pub use generation::{GenerationReceipt, GenerationWork};
 pub use saving::DeclarationSave;
+pub use starting::{GenerationStart, GenerationStarted};
 
 /// Freshness of the mounted declaration source buffer, separate from recovery ordering.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -21,7 +26,7 @@ pub struct Session {
     output_baseline: String,
     pub source: Option<Source>,
     pub registration: Result<Option<recite_config::ProducerRegistration>, String>,
-    pub job: Option<super::producer::Job>,
+    generation: Generation,
     root: PathBuf,
 }
 pub struct Source {
@@ -69,7 +74,7 @@ impl Session {
         Ok(Self {
             saving: false,
             registration,
-            job: None,
+            generation: Generation::Idle,
             root: root.to_owned(),
             output,
             schema,
@@ -81,6 +86,18 @@ impl Session {
         root: &Path,
         schema: &ProjectSchema,
     ) -> Result<Option<recite_config::ProducerRegistration>, String> {
+        Self::read_registration(
+            root,
+            schema
+                .producer_metadata
+                .as_ref()
+                .and_then(|m| m.producer.as_ref()),
+        )
+    }
+    fn read_registration(
+        root: &Path,
+        producer: Option<&recite_core::schema::ProducerIdentity>,
+    ) -> Result<Option<recite_config::ProducerRegistration>, String> {
         let path = root.join(recite_config::PRODUCER_REGISTRATION_FILE);
         let text = match std::fs::read_to_string(path) {
             Ok(text) => text,
@@ -89,12 +106,7 @@ impl Session {
         };
         let registration =
             recite_config::ProducerRegistration::parse(&text).map_err(|e| e.to_string())?;
-        if schema
-            .producer_metadata
-            .as_ref()
-            .and_then(|m| m.producer.as_ref())
-            != Some(registration.producer())
-        {
+        if producer != Some(registration.producer()) {
             return Err("Registration belongs to a different schema producer.".into());
         }
         Ok(Some(registration))
@@ -134,58 +146,15 @@ impl Session {
         Ok(())
     }
     pub fn reload_registration(&mut self) {
-        if self.job.is_none() {
+        if !self.busy() {
             self.registration = Self::registration(&self.root, &self.schema);
         }
     }
-    pub fn start_generation(&mut self) -> Result<(), String> {
-        self.require_idle_save().map_err(|e| e.to_string())?;
-        if self.job.is_some() {
-            return Err("Generation is already running.".into());
-        }
-        if self.dirty() {
-            return Err("Save or discard the standalone source draft first.".into());
-        }
-        let registration = self
-            .registration
-            .as_ref()
-            .map_err(Clone::clone)?
-            .as_ref()
-            .ok_or("No producer registered.")?;
-        // Run only the configuration displayed on this screen.
-        let current = Self::registration(&self.root, &self.schema)?;
-        if current.as_ref() != Some(registration) {
-            return Err(
-                "Producer registration changed. Reload it and review the command before retrying."
-                    .into(),
-            );
-        }
-        self.job = Some(super::producer::Job::start(
-            self.root.clone(),
-            registration.clone(),
-        )?);
-        Ok(())
-    }
-    pub fn finish_generation(
-        &mut self,
-        result: Result<super::producer::Generated, String>,
-    ) -> Result<(), String> {
-        self.job = None;
-        result.and_then(|generated| {
-            replace_checked(&self.output, &self.output_baseline, &generated.text)
-                .map_err(|e| e.to_string())?;
-            self.output_baseline = generated.text;
-            self.schema = generated.schema;
-            Ok(())
-        })
-    }
     pub fn cancel(&self) {
-        if let Some(job) = &self.job {
-            job.cancel();
-        }
+        self.generation.cancel();
     }
     pub fn busy(&self) -> bool {
-        self.job.is_some()
+        !matches!(self.generation, Generation::Idle)
     }
     pub fn dirty(&self) -> bool {
         self.source.as_ref().is_some_and(|s| s.draft != s.baseline)
@@ -234,6 +203,9 @@ impl Session {
     /// Explicit reload keeps the previous draft as a source file before rebasing.
     pub fn reload_source(&mut self) -> Result<PathBuf, FileError> {
         self.require_idle_save()?;
+        if self.busy() {
+            return Err(FileError::UnsavedDocument);
+        }
         use std::io::Write;
         let source = self.source.as_ref().ok_or(FileError::SchemaOwnership)?;
         let disk = read_regular(&source.path)?;
@@ -264,6 +236,9 @@ impl Session {
     }
     pub fn discard(&mut self) -> Result<(), FileError> {
         self.require_idle_save()?;
+        if self.busy() {
+            return Err(FileError::UnsavedDocument);
+        }
         if let Some(source) = &mut self.source {
             source.draft = source.baseline.clone();
             source.revision.advance();

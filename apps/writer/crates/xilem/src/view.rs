@@ -73,6 +73,16 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             .project()
             .is_some_and(|project| project.files().builds.busy())
             .then(|| text_button(state.ui_scale(), "Cancel build", Writer::cancel_build)),
+        state
+            .declaration_session()
+            .is_some_and(|session| session.busy())
+            .then(|| {
+                text_button(
+                    state.ui_scale(),
+                    "Cancel schema generation",
+                    Writer::cancel_schema_generation,
+                )
+            }),
         (state.workspaces.screen == crate::workspaces::Screen::Write
             && state.visible_workspace() != crate::map::Workspace::Map
             && matches!(surface, surface::Surface::SourceRepair { import: true, .. }))
@@ -101,6 +111,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             crate::editor_work::worker(),
             crate::external_editor::worker(),
             crate::navigation::worker(),
+            crate::workspaces::worker(),
             crate::workspaces::jobs(state),
         ),
     )

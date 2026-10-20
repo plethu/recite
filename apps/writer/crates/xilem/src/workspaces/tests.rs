@@ -16,7 +16,7 @@ fn finish_build(writer: &mut Writer) {
     panic!("Build did not retire");
 }
 
-fn fixture() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
+pub(super) fn fixture() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     let directory =
         support::project(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n")?;
     fs::write(

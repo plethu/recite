@@ -46,6 +46,20 @@ impl SaveSequence {
             (Some(Pending::DeclarationOutput), Receipt::DeclarationOutput(request, result)) => {
                 self.accept_output(files, current, request, result)
             }
+            (Some(Pending::Refresh), Receipt::Refreshed(result)) => {
+                let mut prepared = match result {
+                    Ok(prepared) => prepared,
+                    Err(error) => {
+                        self.record(error);
+                        return;
+                    }
+                };
+                files.set_saving(false);
+                let result = files.accept_refresh(current, &mut prepared);
+                files.set_saving(true);
+                self.retire(Work::RetireRefresh(prepared), None);
+                result
+            }
             (Some(Pending::Retire), Receipt::Retired) => {
                 self.queued = self.after_retire.take();
                 Ok(())
@@ -121,8 +135,9 @@ impl SaveSequence {
             .accept_saved_output(*request);
         // Refresh validates the published schema while preserving newer source drafts.
         files.set_saving(false);
-        let result = files.refresh(current);
+        let result = files.refresh_request(current);
         files.set_saving(true);
-        result
+        self.queued = Some((Work::Refresh(Box::new(result?)), Pending::Refresh));
+        Ok(())
     }
 }

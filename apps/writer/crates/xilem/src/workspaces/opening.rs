@@ -19,6 +19,7 @@ pub(crate) enum Prepared {
         root: PathBuf,
         session: Option<Box<Session>>,
         rows: Vec<declarations::Row>,
+        producer: Vec<String>,
     },
     Build {
         root: PathBuf,
@@ -51,6 +52,7 @@ impl Work {
                     .map(declarations::Row::new)
                     .collect();
                 Ok(Prepared::Declarations {
+                    producer: declarations::producer_description(&session.registration),
                     root: self.root,
                     session: Some(Box::new(session)),
                     rows,
@@ -78,10 +80,18 @@ impl Writer {
             .ok_or("The project changed while its workspace was opening.")?;
         let (files, _) = project.parts_mut();
         let screen = match prepared {
-            Prepared::Declarations { session, rows, .. } => {
+            Prepared::Declarations {
+                session,
+                rows,
+                producer,
+                ..
+            } => {
                 if files.declarations.is_none() {
                     files.declarations = session.take().map(|session| *session);
                     self.workspaces.declarations.replace(std::mem::take(rows));
+                    self.workspaces
+                        .declarations
+                        .describe_producer(std::mem::take(producer));
                 }
                 Screen::Declarations
             }
