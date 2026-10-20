@@ -60,26 +60,14 @@ fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             .disabled(closing)
         })
         .collect::<Vec<_>>();
-    let height = match files.len() {
-        0 => 0.,
-        1 => 64.,
-        2 => 100.,
-        _ => 140.,
-    };
     sized_box(
         flex_col((
             label(scale, "Project files"),
-            sized_box(
-                portal(
-                    flex_col(files)
-                        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                        .gap(8.px()),
-                )
-                .constrain_horizontal(true),
-            )
-            .dims((state.navigation_width().px(), height.px())),
+            flex_col(files)
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(8.px()),
             (pages > 1).then(|| {
-                flex_row((
+                flex_col((
                     text_button(scale, "Previous files", |state: &mut Writer| {
                         state.file_page = state.file_page.saturating_sub(1)
                     })
@@ -142,26 +130,13 @@ fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             .disabled(closing)
         })
         .collect::<Vec<_>>();
-    let height = match entries.len() {
-        0 => 0.,
-        1 => 64.,
-        2 => 120.,
-        3 => 180.,
-        _ => 220.,
-    };
     flex_col((
         label(scale, "Beats"),
-        sized_box(
-            portal(
-                flex_col(entries)
-                    .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                    .gap(8.px()),
-            )
-            .constrain_horizontal(true),
-        )
-        .dims((state.navigation_width().px(), height.px())),
+        flex_col(entries)
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(8.px()),
         (pages > 1).then(|| {
-            flex_row((
+            flex_col((
                 text_button(scale, "Previous beats", |state: &mut Writer| {
                     state.beat_page = state.beat_page.saturating_sub(1)
                 })

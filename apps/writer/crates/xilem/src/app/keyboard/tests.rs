@@ -4,9 +4,12 @@ use xilem::{core::DynMessage, masonry::testing::TestHarness};
 
 #[test]
 fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_after_rebuild() {
-    for change in 0..5 {
+    for change in 0..6 {
         let writer = Writer::from_session(Session::examples().unwrap(), None);
         let mut app = App::with_writer(writer);
+        if change == 5 {
+            app.open_picker(picker::Mode::Commands);
+        }
         let mut ctx = ViewCtx::new(
             Arc::new(NoProxy),
             Arc::new(tokio::runtime::Runtime::new().unwrap()),
@@ -29,7 +32,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                 .session
                 .edit(|model| model.refresh_project(Default::default()))
                 .unwrap(),
-            _ => app
+            4 => app
                 .preferences
                 .config
                 .writer
@@ -39,6 +42,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                     "Primary+Alt+S".to_owned().try_into().unwrap(),
                 )
                 .unwrap(),
+            _ => app.open_picker(picker::Mode::Commands),
         }
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),
@@ -75,7 +79,11 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             std::mem::take(ctx.environment()),
             Vec::new(),
             DynMessage::new(Invocation {
-                command: WriterCommand::Settings,
+                command: if change == 5 {
+                    WriterCommand::Close
+                } else {
+                    WriterCommand::Settings
+                },
                 generation: state.generation,
             }),
         );
@@ -83,6 +91,10 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             harness.edit_root_widget(|root| next.message(&mut state, &mut message, root, &mut app)),
             MessageResult::Action(())
         ));
-        assert!(app.settings_open);
+        if change == 5 {
+            assert!(app.picker.is_none());
+        } else {
+            assert!(app.settings_open);
+        }
     }
 }

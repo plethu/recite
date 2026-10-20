@@ -106,6 +106,7 @@ impl Writer {
     }
     pub(super) fn select(&mut self, id: String) {
         self.navigate(Target::Selection(Location {
+            screen: recite_writer_session::location::Screen::Write,
             passage: Some(id),
             source: false,
             view: Some(recite_config::WriterView::Script),
@@ -114,6 +115,7 @@ impl Writer {
     }
     pub(super) fn inspect(&mut self, id: String) {
         self.navigate(Target::Selection(Location {
+            screen: recite_writer_session::location::Screen::Write,
             beat: Some(id),
             passage: None,
             source: false,
@@ -132,10 +134,11 @@ impl Writer {
         let model = self.session.model();
         Location {
             document: model.document().key().to_string(),
+            source: model.view() == &View::Source && self.rules.is_none(),
             beat: model.selected_block().ok().flatten(),
             passage: match model.view() {
                 View::Passage(id) => Some(id.clone()),
-                _ => None,
+                _ => self.rules.as_ref().map(|rules| rules.passage.clone()),
             },
             ..self.location.clone()
         }
@@ -170,7 +173,7 @@ impl Writer {
             let _ = incoming.reply.send(result);
         }
     }
-    fn begin_navigation(&mut self, target: Target) -> Result<(), String> {
+    pub(super) fn begin_navigation(&mut self, target: Target) -> Result<(), String> {
         if self.work.busy() || self.navigation.busy() || self.phase != super::Phase::Writing {
             return Err("Finish the current editor action before navigating.".into());
         }
@@ -245,6 +248,9 @@ impl Writer {
             }
             Target::Repair(repair::Action::Choose) => {
                 "Choose the source file repaired in your editor."
+            }
+            Target::Edit(EditOperation::Apply) if self.rules.is_some() => {
+                "Applying reply draft… Controls will reopen when it finishes."
             }
             Target::Edit(EditOperation::Apply) => "Applying draft… You can keep editing.",
             Target::Edit(EditOperation::Undo) => "Undoing applied edit… You can keep editing.",

@@ -1,5 +1,4 @@
 use super::argument::ArgumentField;
-use super::tree::{at, remove};
 use crate::design::Options;
 use crate::messages::{MsgId, text};
 use crate::{
@@ -105,7 +104,7 @@ impl Component for ConditionControl {
                                         rules.condition = rules
                                             .condition
                                             .take()
-                                            .and_then(|node| remove(node, &remove_path));
+                                            .and_then(|node| node.remove_at(&remove_path));
                                     });
                                 })
                                 .child(text(MsgId::WriterRulesRemove)),
@@ -236,7 +235,7 @@ impl Component for MatchMode {
 fn change_node(writer: Writer, path: &[usize], edit: impl FnOnce(&mut RuleExpression)) {
     super::change(writer, |rules| {
         if let Some(root) = &mut rules.condition
-            && let Some(node) = at(root, path)
+            && let Some(node) = root.at_mut(path)
         {
             edit(node);
         }

@@ -115,6 +115,12 @@ fn result(
             .writer
             .as_ref()
             .is_some_and(|writer| !writer.navigation.busy() && !writer.work.busy()),
+        Item::Rule(_) => app
+            .picker
+            .as_ref()
+            .and_then(|picker| picker.rule_choice.as_ref())
+            .zip(app.writer.as_ref())
+            .is_some_and(|(request, writer)| request.is_current(writer)),
     };
     let title = format!(
         "{}{}",
@@ -190,6 +196,9 @@ fn guidance(mode: Mode) -> &'static str {
         }
         Mode::ProjectText => {
             "Search saved project text. Accepted edits appear here after saving; field drafts are excluded."
+        }
+        Mode::RulesChoices => {
+            "Search declared values. Enter stages your choice; Apply or Save commits the reply draft. Escape returns to the field."
         }
     }
 }

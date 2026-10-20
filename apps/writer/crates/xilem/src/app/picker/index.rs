@@ -48,7 +48,7 @@ pub(super) fn entries(app: &App, mode: Mode) -> Result<Vec<Entry>, String> {
                 })
                 .collect())
         }
-        Mode::ProjectText => Ok(Vec::new()),
+        Mode::ProjectText | Mode::RulesChoices => Ok(Vec::new()),
     }
 }
 impl Picker {

@@ -93,13 +93,20 @@ impl Writer {
                 )
                 .into());
             }
+            let rules = self.rules.clone();
             let (files, model) = self.session.parts_mut().ok_or(FileError::ProjectRequired)?;
             let request = if scope.applies_current(&files.current) {
                 let request = model.edit_request(EditOperation::Apply)?;
                 if request.is_none() {
                     model.apply()?;
                 }
-                request
+                request.map(|request| {
+                    if let Some(rules) = rules {
+                        request.with_rules(rules)
+                    } else {
+                        request
+                    }
+                })
             } else {
                 None
             };
@@ -134,7 +141,12 @@ impl Writer {
             .as_ref()
             .is_some_and(|sender| sender.send(work).is_ok());
         if sent {
-            self.status = "Saving… You can keep editing.".into();
+            self.status = if self.rules.is_some() {
+                "Saving… Reply controls will reopen when it finishes."
+            } else {
+                "Saving… You can keep editing."
+            }
+            .into();
         } else {
             self.work.operation = None;
             self.finish_save_work(Err(std::io::Error::other(
@@ -164,6 +176,9 @@ impl Writer {
             AfterSave::Close => self.phase = Phase::ConfirmClose,
             AfterSave::OpenEditor(request) if result.is_ok() => self.launch_editor(request),
             AfterSave::Stay | AfterSave::OpenEditor(_) => {}
+        }
+        if self.phase == Phase::Writing {
+            self.refresh_rules();
         }
     }
 }

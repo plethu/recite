@@ -95,7 +95,9 @@ fn role(widget: WidgetRef<'_, dyn Widget>) -> Kind {
     };
     if input.get_prop::<crate::app::picker::QueryField>().0 {
         Kind::Query
-    } else if input.get_prop::<crate::view::Manuscript>().0 {
+    } else if input.get_prop::<crate::view::Manuscript>().0
+        || input.get_prop::<crate::rules::view::ArgumentField>().0
+    {
         Kind::Manuscript
     } else {
         Kind::Other

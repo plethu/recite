@@ -116,7 +116,9 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
             return MessageResult::Stale;
         }
         let mut pod = Passthrough::child_mut(&mut element);
-        child.message(child_state, message, pod.downcast(), writer)
+        let result = child.message(child_state, message, pod.downcast(), writer);
+        app.open_rule_choices();
+        result
     }
 }
 

@@ -68,6 +68,7 @@ fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             let content = match &row.content {
                 Content::Passage(passage) => {
                     let id = passage.id.clone();
+                    let rule_id = id.clone();
                     let caption = match &passage.kind {
                         PassageKind::Dialogue { speaker } => {
                             speaker.clone().unwrap_or_else(|| "Narration".into())
@@ -91,6 +92,17 @@ fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
                                 move |state: &mut Writer| state.select(id.clone()),
                             )
                             .disabled(closing),
+                            matches!(passage.kind, PassageKind::Choice { .. }).then(|| {
+                                text_button(scale, "Reply rules…", move |state: &mut Writer| {
+                                    let mut location = state.current_location();
+                                    location.screen =
+                                        recite_writer_session::location::Screen::Rules;
+                                    location.passage = Some(rule_id.clone());
+                                    location.source = false;
+                                    state.navigate(crate::navigation::Target::Location(location));
+                                })
+                                .disabled(closing || state.navigation.busy() || state.work.busy())
+                            }),
                         ))
                         .cross_axis_alignment(CrossAxisAlignment::Start)
                         .gap(8.px()),

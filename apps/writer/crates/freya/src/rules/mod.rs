@@ -5,7 +5,6 @@ mod add;
 mod argument;
 mod condition;
 mod effect;
-mod tree;
 use crate::{
     design::{Button, SubmitAction, tokens as t},
     editing::{Pane, Writer, editor_data},
@@ -38,23 +37,19 @@ fn change(mut writer: Writer, edit: impl FnOnce(&mut ReplyRules)) {
     if writer.work.busy() {
         return;
     }
+    writer.buffers.harvest();
     let result = (|| {
+        let mut model = writer.buffers.model.write();
+        let model = model.as_mut().map_err(|error| error.to_string())?;
         let mut state = writer.buffers.rules.write();
         let rules = state.as_mut().ok_or("Open a reply first.")?;
-        if rules.source().map_err(|e| e.to_string())? != writer.buffers.editor.peek().rope {
-            return Err(
-                "The source draft changed. Reopen reply rules after applying or discarding it."
-                    .to_owned(),
-            );
-        }
-        let mut next = rules.clone();
-        edit(&mut next);
-        let source = next.source().map_err(|e| e.to_string())?;
+        model
+            .stage_reply_rules(rules, edit)
+            .map_err(|error| error.to_string())?;
         writer
             .buffers
             .editor
-            .set(editor_data(&source, true, writer.dark));
-        *rules = next;
+            .set(editor_data(model.draft(), true, writer.dark));
         Ok(())
     })();
     writer.buffers.harvest();

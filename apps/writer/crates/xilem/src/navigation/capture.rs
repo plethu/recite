@@ -16,6 +16,13 @@ impl Writer {
             self.status = "No applied change for this command.".into();
             return Ok(());
         };
+        let edit = if operation == EditOperation::Apply
+            && let Some(rules) = &self.rules
+        {
+            edit.with_rules(rules.clone())
+        } else {
+            edit
+        };
         let request = Arc::new(Request {
             target,
             origin: Origin::capture(self),

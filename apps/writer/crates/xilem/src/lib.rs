@@ -7,6 +7,7 @@ mod native_host;
 mod navigation;
 mod presentation;
 mod reading;
+mod rules;
 mod session;
 #[cfg(test)]
 mod tests;
@@ -36,6 +37,7 @@ struct Writer {
     recovery_details: bool,
     location: recite_writer_session::location::Location,
     rules: Option<recite_writer_model::ReplyRules>,
+    rule_controls: rules::Controls,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
 }
@@ -93,6 +95,7 @@ impl Writer {
             recovery_details: false,
             location: Default::default(),
             rules: None,
+            rule_controls: Default::default(),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),
         }
@@ -134,7 +137,17 @@ impl Writer {
         &mut self,
         action: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
     ) {
-        self.status = match self.session.edit(action) {
+        let result = self.session.edit(action);
+        if result.is_ok()
+            && self.rules.as_ref().is_some_and(|rules| {
+                self.session.model().view() != &recite_writer_model::View::Source
+                    || !rules.belongs_to(self.session.model().document())
+            })
+        {
+            self.rules = None;
+            self.location.screen = recite_writer_session::location::Screen::Write;
+        }
+        self.status = match result {
             Ok(()) if self.source_repair_pending() => {
                 "Recovered source draft awaiting repair and import.".into()
             }
@@ -154,6 +167,10 @@ impl Writer {
             .project_mut()
             .ok_or(FileError::ProjectRequired)
             .and_then(ProjectSession::reload_current);
+        if result.is_ok() {
+            self.rules = None;
+            self.location.screen = recite_writer_session::location::Screen::Write;
+        }
         self.status = match result {
             Ok(Some(path)) => {
                 self.recovery_copy = Some(path);

@@ -73,6 +73,12 @@ impl Writer {
         match &request.target {
             Target::Edit(target) if *target == operation => {
                 self.status = "Applied edit updated.".into();
+                if operation != EditOperation::Apply {
+                    self.reset_rule_structure();
+                }
+                if self.navigation.deferred_save.is_none() {
+                    self.refresh_rules();
+                }
                 Ok(())
             }
             Target::Edit(target) => self.submit_edit(request.target.clone(), *target),
@@ -113,27 +119,38 @@ impl Writer {
             self.location = location.clone();
             self.trial.visible =
                 location.screen == recite_writer_session::location::Screen::Preview;
-            std::mem::swap(&mut self.rules, &mut prepared.rules);
+            self.install_rules(&mut prepared.rules);
         } else if let Target::Selection(location) = &request.target {
+            self.rules = None;
+            self.location.screen = recite_writer_session::location::Screen::Write;
             self.location.document = location.document.clone();
             self.location.beat = location.beat.clone();
             self.location.passage = location.passage.clone();
             self.location.source = location.source;
             self.location.view = location.view;
+        } else {
+            self.rules = None;
+            self.location.screen = recite_writer_session::location::Screen::Write;
         }
         self.beat_page = 0;
         self.remember_location();
         self.reading.prepare(self.session.model());
-        self.status = if self.session.dirty() {
-            "Unsaved work restored"
+        self.status = if let Some(status) = self.rule_controls.refresh_status.take() {
+            status
+        } else if self.session.dirty() {
+            "Unsaved work restored".into()
         } else {
-            "Ready"
-        }
-        .into();
+            "Ready".into()
+        };
         Ok(())
     }
-    pub(super) fn navigation_failed(&mut self, error: String) {
+    pub(crate) fn navigation_failed(&mut self, error: String) {
         self.navigation.visit = None;
+        if self.rule_controls.refresh_status.take().is_some() {
+            self.rules = None;
+            self.location.screen = recite_writer_session::location::Screen::Write;
+            self.location.passage = None;
+        }
         // Parking may have completed before cancellation or failed destination validation.
         if let Some((files, model)) = self.session.parts_mut() {
             let _ = files.queue_checkpoint(model);

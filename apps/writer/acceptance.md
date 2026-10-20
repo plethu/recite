@@ -70,8 +70,17 @@ editor and imports through checked authoring preparation. The owned Wayland dril
 import refusal, close/restart recovery, literal editor paths and explicit Save after valid import.
 Cancellation and newer-typing regressions preserve the current draft; unrepaired retained drafts
 also block Save All and implicit Apply through links. The 100/200% recovery states have separate
-visual review. This enables recovery without an embedded source editor; native reply-rule controls
-remain in progress.
+visual review. This enables recovery without an embedded source editor.
+
+Native reply-rule controls now use the shared source-preserving staging owner. Their owned Wayland
+drill covers picker cancellation with native undo, Apply without replacing the argument widget or
+writing to disk, invalid Save refusal, declared registry selection, checked Save with comments and
+IDs preserved, and return to reply text. Focused regressions cover stale choices after effect
+removal, repeated Apply followed by applied undo, and deferred Save through a disk conflict. A
+1,026-effect workload mounts four argument fields and stays within 128 accessible nodes per page.
+Rule fields are paged: native text undo survives continuously mounted fields; leaving a field page
+ends its local text history. Applied undo remains available for accepted edits. Run this drill with
+`mise exec -- just writer probe-xilem target/writer-native/rules.json rules`.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

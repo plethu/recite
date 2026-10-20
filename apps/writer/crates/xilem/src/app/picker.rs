@@ -8,6 +8,14 @@ use recite_config::WriterCommand;
 use recite_writer_session::location::Location;
 pub(crate) use view::{ActiveResult, QueryField};
 const PAGE: usize = 5;
+/// One opening has a distinct authority even when its mode and query are identical.
+#[derive(Clone)]
+pub(super) struct PickerInstance(Arc<()>);
+impl PartialEq for PickerInstance {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
 /// A change to the query, result set or active result; independent of command freshness.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) struct PickerRevision(u64);
@@ -22,11 +30,13 @@ pub(crate) enum Mode {
     Commands,
     GoTo,
     ProjectText,
+    RulesChoices,
 }
 #[derive(Clone)]
 enum Item {
     Command(WriterCommand),
     Location(Location),
+    Rule(crate::rules::selection::Choice),
 }
 struct Entry {
     item: Item,
@@ -36,6 +46,8 @@ struct Entry {
 pub(super) struct Picker {
     pub(super) mode: Mode,
     pub(super) revision: PickerRevision,
+    pub(super) instance: PickerInstance,
+    rule_choice: Option<crate::rules::selection::Request>,
     query: String,
     entries: Vec<Entry>,
     matches: Vec<usize>,
@@ -49,6 +61,7 @@ impl Mode {
             Self::Commands => "Commands",
             Self::GoTo => "Go to scene or beat",
             Self::ProjectText => "Find saved project text",
+            Self::RulesChoices => "Choose reply rule value",
         }
     }
 }
@@ -57,6 +70,8 @@ impl Picker {
         let matches = (0..entries.len()).collect();
         Self {
             mode,
+            instance: PickerInstance(Arc::new(())),
+            rule_choice: None,
             revision: PickerRevision::default(),
             query: String::new(),
             total: entries.len(),
@@ -75,6 +90,36 @@ impl Picker {
     }
 }
 impl App {
+    pub(super) fn open_rule_choices(&mut self) {
+        let Some(request) = self
+            .writer
+            .as_mut()
+            .and_then(|writer| writer.rule_controls.pending_choice.take())
+        else {
+            return;
+        };
+        if self.settings_open
+            || self.show_welcome
+            || !self
+                .writer
+                .as_ref()
+                .is_some_and(|writer| request.is_current(writer))
+        {
+            return;
+        }
+        let entries = request
+            .choices
+            .iter()
+            .map(|(title, detail, choice)| Entry {
+                title: title.clone(),
+                detail: detail.clone(),
+                item: Item::Rule(choice.clone()),
+            })
+            .collect();
+        let mut picker = Picker::new(Mode::RulesChoices, entries);
+        picker.rule_choice = Some(request);
+        self.picker = Some(picker);
+    }
     pub(super) fn open_picker(&mut self, mode: Mode) {
         if self.settings_open
             || self.show_welcome
@@ -162,6 +207,16 @@ impl App {
                         self.dismiss_picker();
                     }
                 }
+            }
+            Some(Item::Rule(choice)) => {
+                let request = self
+                    .picker
+                    .as_mut()
+                    .and_then(|picker| picker.rule_choice.take());
+                if let (Some(request), Some(writer)) = (request, &mut self.writer) {
+                    request.apply(writer, choice);
+                }
+                self.dismiss_picker();
             }
             _ => {}
         }

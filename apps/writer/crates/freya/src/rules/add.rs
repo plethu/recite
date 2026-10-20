@@ -1,7 +1,7 @@
 use crate::editing::Writer;
 use crate::messages::{MsgId, text};
 use freya::prelude::*;
-use recite_writer_model::{ReplyRules, RuleExpression};
+use recite_writer_model::RuleExpression;
 #[derive(Clone)]
 pub(super) struct AddRule {
     pub writer: Writer,
@@ -83,7 +83,11 @@ impl Component for AddRule {
                     return;
                 };
                 super::change(writer, |rules| {
-                    add_available_rule(rules, is_effect, path.as_deref(), index)
+                    if is_effect {
+                        rules.add_effect(index);
+                    } else {
+                        rules.add_condition(index, path.as_deref());
+                    }
                 });
             }),
             vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
@@ -91,35 +95,3 @@ impl Component for AddRule {
         }
     }
 }
-
-fn add_available_rule(rules: &mut ReplyRules, effect: bool, path: Option<&[usize]>, index: usize) {
-    if effect {
-        if let Some(effect) = rules.available_effects.get(index) {
-            rules.effects.push(effect.clone());
-        }
-        return;
-    }
-    let Some(condition) = rules.available_conditions.get(index).cloned() else {
-        return;
-    };
-    if let Some(path) = path {
-        if let Some(root) = &mut rules.condition
-            && let Some(RuleExpression::All(items) | RuleExpression::Any(items)) =
-                super::tree::at(root, path)
-        {
-            items.push(condition);
-        }
-        return;
-    }
-    rules.condition = Some(match rules.condition.take() {
-        None => condition,
-        Some(RuleExpression::All(mut items)) => {
-            items.push(condition);
-            RuleExpression::All(items)
-        }
-        Some(existing) => RuleExpression::All(vec![existing, condition]),
-    });
-}
-
-#[cfg(test)]
-mod tests;

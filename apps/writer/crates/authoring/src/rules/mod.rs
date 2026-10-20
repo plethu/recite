@@ -2,6 +2,7 @@
 use crate::DocumentVersion;
 mod effect;
 mod expression;
+mod tree;
 pub use effect::RuleEffect;
 pub use expression::RuleExpression;
 mod projection;

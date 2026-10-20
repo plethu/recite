@@ -11,6 +11,16 @@ opens or creates projects and offers temporary examples. **Settings** changes pe
 text sizes, scale and shortcut bindings through the same configuration as Freya. See the
 [acceptance limits](acceptance.md#known-limits) for the remaining migration workspaces and commands.
 
+In Xilem beat reading, **Reply rules…** opens typed conditions and the destination's direct effects.
+**Show actions** reveals grouping, negation, effect ordering and delivery controls; **Choose
+value…** searches declared registry or enum values. Changes stay in a recoverable draft until
+**Apply reply** or **Save file**. Apply updates the working document; Save also writes it to disk.
+Effects belong to the destination and can also run when another reply reaches it. **Edit reply
+text** applies valid rule changes before returning to the manuscript. Invalid arguments remain
+available to correct. Text undo remains available while a field is open, including across the choice
+picker and Apply. Changing rule-field pages ends that page's field undo history; applied edits use
+document undo.
+
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:
 

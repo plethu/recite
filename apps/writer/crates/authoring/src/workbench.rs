@@ -5,6 +5,7 @@ pub use preparing::{NavigationRequest, PreparedNavigation};
 mod navigation;
 mod opening;
 mod preview;
+mod rules;
 pub use edit::{EditRequest, PreparedEdit};
 mod source_repair;
 mod source_validation;

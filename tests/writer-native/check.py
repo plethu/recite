@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "repair":
+        if scenario == "rules":
+            from rules_interactions import run
+        elif scenario == "repair":
             from repair_interactions import run
         elif scenario == "picker":
             from picker_interactions import run
@@ -119,6 +121,7 @@ def main():
             "preview",
             "picker",
             "repair",
+            "rules",
         ),
         default="all",
     )

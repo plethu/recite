@@ -7,7 +7,11 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
     let editing = matches!(model.view(), View::Passage(_));
     let has_draft = model.has_draft();
     let editor = if !editing {
-        Either::A(super::reading::inspection(state))
+        Either::A(if state.rules.is_some() {
+            Either::A(crate::rules::view::panel(state))
+        } else {
+            Either::B(super::reading::inspection(state))
+        })
     } else {
         Either::B(
             sized_box(keyed(
@@ -39,7 +43,9 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
             )),
         )
     };
-    let selection = if editing {
+    let selection = if state.rules.is_some() {
+        "Reply"
+    } else if editing {
         "Manuscript"
     } else {
         "Beat reading"
@@ -49,34 +55,36 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
         actions(state),
         editor,
         diagnostics(state),
-        flex_row((
-            text_button(scale, "Apply draft", |state: &mut Writer| {
-                state.navigate(crate::navigation::Target::Edit(
-                    recite_writer_model::EditOperation::Apply,
-                ))
-            })
-            .disabled(closing || state.navigation.busy() || !editing || !has_draft),
-            text_button(scale, "Discard draft", |state: &mut Writer| {
-                state.change(|model| {
-                    model.discard();
-                    Ok(())
+        state.rules.is_none().then(|| {
+            flex_row((
+                text_button(scale, "Apply draft", |state: &mut Writer| {
+                    state.navigate(crate::navigation::Target::Edit(
+                        recite_writer_model::EditOperation::Apply,
+                    ))
                 })
-            })
-            .disabled(closing || !has_draft),
-            text_button(scale, "Undo applied", |state: &mut Writer| {
-                state.navigate(crate::navigation::Target::Edit(
-                    recite_writer_model::EditOperation::Undo,
-                ))
-            })
-            .disabled(closing),
-            text_button(scale, "Redo applied", |state: &mut Writer| {
-                state.navigate(crate::navigation::Target::Edit(
-                    recite_writer_model::EditOperation::Redo,
-                ))
-            })
-            .disabled(closing),
-        ))
-        .gap(8.px()),
+                .disabled(closing || state.navigation.busy() || !editing || !has_draft),
+                text_button(scale, "Discard draft", |state: &mut Writer| {
+                    state.change(|model| {
+                        model.discard();
+                        Ok(())
+                    })
+                })
+                .disabled(closing || !has_draft),
+                text_button(scale, "Undo applied", |state: &mut Writer| {
+                    state.navigate(crate::navigation::Target::Edit(
+                        recite_writer_model::EditOperation::Undo,
+                    ))
+                })
+                .disabled(closing),
+                text_button(scale, "Redo applied", |state: &mut Writer| {
+                    state.navigate(crate::navigation::Target::Edit(
+                        recite_writer_model::EditOperation::Redo,
+                    ))
+                })
+                .disabled(closing),
+            ))
+            .gap(8.px())
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
