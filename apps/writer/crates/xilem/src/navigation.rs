@@ -3,6 +3,7 @@ mod capture;
 mod history;
 mod opening;
 mod publication;
+pub(super) mod repair;
 mod saving;
 pub(super) mod worker;
 use super::{Writer, feedback, session::Session};
@@ -20,6 +21,7 @@ pub(super) enum Target {
     Location(Location),
     Selection(Location),
     Edit(EditOperation),
+    Repair(repair::Action),
 }
 
 #[cfg(test)]
@@ -187,6 +189,9 @@ impl Writer {
             return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
         }
         self.trial.cancel();
+        if self.source_repair_pending() && matches!(target, Target::Location(_) | Target::Edit(_)) {
+            return Err("Repair and import the recovered source draft before applying it or following a link. You can switch documents to keep this draft for later.".into());
+        }
         if self.navigation.visit.is_none() {
             self.navigation.history.record(self.current_location());
         }
@@ -234,6 +239,13 @@ impl Writer {
             return Err(self.status.clone());
         }
         self.status = match &request.target {
+            Target::Repair(repair::Action::Export) => "Exporting the captured source draft…",
+            Target::Repair(repair::Action::Import(_)) => {
+                "Checking repaired source… Your current draft stays open."
+            }
+            Target::Repair(repair::Action::Choose) => {
+                "Choose the source file repaired in your editor."
+            }
             Target::Edit(EditOperation::Apply) => "Applying draft… You can keep editing.",
             Target::Edit(EditOperation::Undo) => "Undoing applied edit… You can keep editing.",
             Target::Edit(EditOperation::Redo) => "Redoing applied edit… You can keep editing.",

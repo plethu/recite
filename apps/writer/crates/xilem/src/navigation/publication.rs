@@ -21,19 +21,19 @@ impl Writer {
                 return None;
             }
         };
-        let result = if request.checkpoint().is_err() {
-            Err("Navigation cancelled; your current work stays open.".into())
-        } else {
-            match &mut value {
-                ResultValue::Edit {
-                    prepared,
-                    operation,
-                } => self.publish_navigation_edit(&request, prepared, *operation),
-                ResultValue::Navigation {
-                    prepared,
-                    checkpoint,
-                } => self.publish_navigation(&request, prepared, checkpoint.as_ref()),
+        let result = match &mut value {
+            ResultValue::Repair(repaired) => self.publish_source_repair(&request, repaired),
+            _ if request.checkpoint().is_err() => {
+                Err("Navigation cancelled; your current work stays open.".into())
             }
+            ResultValue::Edit {
+                prepared,
+                operation,
+            } => self.publish_navigation_edit(&request, prepared, *operation),
+            ResultValue::Navigation {
+                prepared,
+                checkpoint,
+            } => self.publish_navigation(&request, prepared, checkpoint.as_ref()),
         };
         if let Err(error) = result {
             self.navigation_failed(error);
@@ -118,6 +118,8 @@ impl Writer {
             self.location.document = location.document.clone();
             self.location.beat = location.beat.clone();
             self.location.passage = location.passage.clone();
+            self.location.source = location.source;
+            self.location.view = location.view;
         }
         self.beat_page = 0;
         self.remember_location();

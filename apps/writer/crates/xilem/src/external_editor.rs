@@ -1,40 +1,65 @@
 //! An independently reaped editor opens only after accepted source and recovery are durable.
+mod request;
 #[cfg(test)]
 mod tests;
 mod worker;
 use super::{Phase, Writer};
 use recite_writer_session::startup::EditorCommand;
-use std::{path::PathBuf, sync::Arc};
+pub(super) use request::Request;
+use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 pub(super) use worker::worker;
 
-pub(super) struct Request {
-    path: PathBuf,
-    editor: Option<EditorCommand>,
-}
 pub(super) struct ExternalEditor {
     pub sender: Option<UnboundedSender<Arc<Request>>>,
     pending: Option<Arc<Request>>,
+    failed: Option<Arc<Request>>,
 }
 impl ExternalEditor {
     pub fn new() -> Self {
         Self {
             sender: None,
             pending: None,
+            failed: None,
         }
     }
     pub fn busy(&self) -> bool {
         self.pending.is_some()
     }
     pub fn path(&self) -> Option<&std::path::Path> {
-        self.pending.as_ref().map(|request| request.path.as_path())
+        self.pending.as_ref().map(|request| request.path())
     }
 }
 impl Writer {
+    pub(super) fn open_exported_source(&mut self) {
+        let Some(artifact) = &self.repair.artifact else {
+            return;
+        };
+        if self.external.busy() {
+            self.status = "An editor launch is already in progress.".into();
+            return;
+        }
+        self.launch_editor(Arc::new(Request::repair(artifact, self.editor.clone())));
+    }
     pub(super) fn open_editor(&mut self) {
         self.prepare_editor(self.editor.clone());
     }
     pub(super) fn open_system_editor(&mut self) {
+        if self.work.busy() || self.navigation.busy() || self.external.busy() {
+            self.status = "Finish the current editor action before retrying the launcher.".into();
+            return;
+        }
+        if let Some(failed) = &self.external.failed
+            && failed.is_repair()
+            && self
+                .session
+                .project()
+                .is_some_and(|project| project.current().path() == failed.document())
+        {
+            let request = Arc::new(failed.with_system_editor());
+            self.launch_editor(request);
+            return;
+        }
         self.prepare_editor(None);
     }
     fn prepare_editor(&mut self, editor: Option<EditorCommand>) {
@@ -51,10 +76,10 @@ impl Writer {
             self.status = "The editor launcher is unavailable. Reopen Writer to retry.".into();
             return;
         }
-        self.save_for_editor(Arc::new(Request {
-            path: project.current().path().to_owned(),
+        self.save_for_editor(Arc::new(Request::source(
+            project.current().path().to_owned(),
             editor,
-        }));
+        )));
     }
     pub(super) fn cancel_editor_launch(&mut self) {
         if self.work.preparing_editor() {
@@ -67,7 +92,7 @@ impl Writer {
             || self
                 .session
                 .project()
-                .is_none_or(|project| project.current().path() != request.path)
+                .is_none_or(|project| project.current().path() != request.document())
         {
             self.status =
                 "Saved accepted source; editor launch cancelled because the document changed."
@@ -80,6 +105,7 @@ impl Writer {
             .as_ref()
             .is_some_and(|sender| sender.send(Arc::clone(&request)).is_ok());
         if sent {
+            self.external.failed = None;
             self.external.pending = Some(request);
             self.status =
                 "Opening source in your editor… Writer drafts remain open and recoverable.".into();
@@ -98,20 +124,24 @@ impl Writer {
             return;
         }
         let finished = result.is_some();
+        let failed = result.as_ref().is_some_and(Result::is_err);
         let current = self
             .session
             .project()
-            .is_some_and(|project| project.current().path() == request.path);
+            .is_some_and(|project| project.current().path() == request.document());
         let document = self
             .session
             .project()
-            .and_then(|project| request.path.strip_prefix(project.root()).ok())
-            .unwrap_or(&request.path)
+            .and_then(|project| request.path().strip_prefix(project.root()).ok())
+            .unwrap_or(request.path())
             .display();
         self.status = match result {
             None => {
                 format!("Editor launch requested for {document}; Writer drafts remain recoverable.")
             }
+            Some(Ok(())) if current && request.is_repair() => format!(
+                "Editor launcher finished for {document}. Choose Import repaired source to validate its changes; your original draft remains recoverable."
+            ),
             Some(Ok(())) if current => format!(
                 "Editor launcher finished for {document}. Reload to inspect external changes; Writer drafts remain recoverable."
             ),
@@ -129,6 +159,9 @@ impl Writer {
             },
         };
         if finished {
+            if failed {
+                self.external.failed = Some(request);
+            }
             self.external.pending = None;
         }
     }

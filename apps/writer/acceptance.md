@@ -65,6 +65,14 @@ workers, with regression checks for cancellation, newer typing, outgoing recover
 Dynamic preview resizing has a Portal scrollbar regression and a native scrolling drill. Synchronous
 reload and structural creation still need completion before default cutover.
 
+Source-draft repair now exports captured text plus a complete recovery backup, opens the preferred
+editor and imports through checked authoring preparation. The owned Wayland drill verifies invalid
+import refusal, close/restart recovery, literal editor paths and explicit Save after valid import.
+Cancellation and newer-typing regressions preserve the current draft; unrepaired retained drafts
+also block Save All and implicit Apply through links. The 100/200% recovery states have separate
+visual review. This enables recovery without an embedded source editor; native reply-rule controls
+remain in progress.
+
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.
 The Xilem addition introduces `rustybuzz` through `usvg`; the other reported package versions were

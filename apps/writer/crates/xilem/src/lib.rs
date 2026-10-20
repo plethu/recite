@@ -31,6 +31,7 @@ struct Writer {
     reading: reading::Reading,
     work: editor_work::EditorWork,
     navigation: navigation::Navigation,
+    repair: navigation::repair::Repair,
     recovery_copy: Option<std::path::PathBuf>,
     recovery_details: bool,
     location: recite_writer_session::location::Location,
@@ -60,7 +61,11 @@ impl Writer {
     ) -> Self {
         let mut reading = reading::Reading::new();
         reading.prepare(session.model());
-        let status = if session.dirty() {
+        let status = if session.model().view() == &recite_writer_model::View::Source
+            && session.model().has_draft()
+        {
+            "Recovered source draft awaiting repair and import."
+        } else if session.dirty() {
             "Recovered unsaved work; review it before saving."
         } else if session.project().is_none() {
             "Temporary examples. Edits stay in this window and are discarded when it closes."
@@ -83,6 +88,7 @@ impl Writer {
             reading,
             work: editor_work::EditorWork::new(),
             navigation: navigation::Navigation::new(),
+            repair: navigation::repair::Repair::default(),
             recovery_copy: None,
             recovery_details: false,
             location: Default::default(),
@@ -129,6 +135,9 @@ impl Writer {
         action: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
     ) {
         self.status = match self.session.edit(action) {
+            Ok(()) if self.source_repair_pending() => {
+                "Recovered source draft awaiting repair and import.".into()
+            }
             Ok(()) => "Draft updated".into(),
             Err(error) => feedback::file(&error),
         };

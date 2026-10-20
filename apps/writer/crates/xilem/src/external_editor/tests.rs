@@ -3,6 +3,69 @@ use crate::tests::support::{finish_work, open, project};
 use recite_writer_session::project::save::sequence::Work;
 
 #[test]
+fn default_editor_retry_keeps_the_repair_artifact_target_and_import_guidance() {
+    let directory = project(recite_writer_model::FIXTURE).unwrap();
+    let mut writer = open(&directory).unwrap();
+    let document = writer
+        .session
+        .project()
+        .unwrap()
+        .current()
+        .path()
+        .to_owned();
+    let source = directory.path().join("recite-source-repair-example.txt");
+    std::fs::write(&source, "Recovered draft").unwrap();
+    writer.repair.artifact = Some(recite_writer_session::project::SourceRepairArtifact {
+        document: document.clone(),
+        source: source.clone(),
+        recovery: directory.path().join("backup.json"),
+    });
+    let (sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    writer.external.sender = Some(sender);
+    writer.open_exported_source();
+    let request = launches.try_recv().unwrap();
+    writer.accept_editor(request, Some(Err("missing editor".into())));
+    writer.open_system_editor();
+    let request = launches.try_recv().unwrap();
+    assert_eq!(request.path(), source);
+    assert_eq!(request.document(), document);
+    assert!(request.editor.is_none());
+    writer.accept_editor(request, Some(Ok(())));
+    assert!(writer.status.contains("Import repaired source"));
+    assert!(!writer.status.contains("Reload to inspect"));
+}
+
+#[test]
+fn ordinary_default_editor_retry_still_runs_the_checked_source_save() {
+    let directory = project(recite_writer_model::FIXTURE).unwrap();
+    let mut writer = open(&directory).unwrap();
+    let (sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
+    writer.work.sender = Some(sender);
+    let (sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    writer.external.sender = Some(sender);
+    writer.open_editor();
+    finish_work(&mut writer, &mut saves).unwrap();
+    let request = launches.try_recv().unwrap();
+    writer.accept_editor(request, Some(Err("missing editor".into())));
+    let source = writer
+        .session
+        .project()
+        .unwrap()
+        .current()
+        .path()
+        .to_owned();
+    std::fs::write(&source, "external source change").unwrap();
+    writer.open_system_editor();
+    finish_work(&mut writer, &mut saves).unwrap();
+    assert!(launches.try_recv().is_err());
+    assert_eq!(
+        std::fs::read_to_string(source).unwrap(),
+        "external source change"
+    );
+    assert!(writer.status.contains("changed on disk"));
+}
+
+#[test]
 fn accepted_source_is_saved_and_newer_field_typing_stays_open_before_launch() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
@@ -46,7 +109,7 @@ fn accepted_source_is_saved_and_newer_field_typing_stays_open_before_launch() {
     writer.accept_save_work(receipt);
     finish_work(&mut writer, &mut saves).unwrap();
     let request = launches.try_recv().unwrap();
-    assert_eq!(request.path, path);
+    assert_eq!(request.path(), path);
     assert_eq!(
         request.editor.as_ref().unwrap().args,
         ["--wait", "$(not-a-shell)"].map(std::ffi::OsString::from)

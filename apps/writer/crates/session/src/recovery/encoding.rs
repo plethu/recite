@@ -43,6 +43,8 @@ struct DraftWire<'a> {
     source: &'a RawValue,
     view: &'a View,
     draft: &'a DraftSnapshot,
+    #[serde(skip_serializing_if = "recite_writer_model::SourceValidation::is_freeform")]
+    source_validation: recite_writer_model::SourceValidation,
 }
 #[derive(Serialize)]
 struct RecoveryWire<'a> {
@@ -80,6 +82,7 @@ impl Encoding {
                     source: &sources.applied.json,
                     view: snapshot.draft.view(),
                     draft: snapshot.draft.draft_snapshot(),
+                    source_validation: snapshot.draft.source_validation(),
                 },
             },
         )

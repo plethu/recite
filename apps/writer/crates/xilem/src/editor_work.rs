@@ -65,6 +65,13 @@ impl Writer {
         self.start_save(Scope::AcceptedCurrent, AfterSave::OpenEditor(request));
     }
     fn start_save(&mut self, scope: Scope, after: AfterSave) {
+        if let Some(document) = self.source_repair_requirement(&scope) {
+            self.status = format!(
+                "Repair and import the source draft in {} before saving it. No project files changed.",
+                document.display()
+            );
+            return;
+        }
         if self.navigation.busy() {
             if !matches!(&after, AfterSave::Stay) || !self.defer_save_until_apply(&scope) {
                 self.status = "Finish the current editor action before saving.".into();

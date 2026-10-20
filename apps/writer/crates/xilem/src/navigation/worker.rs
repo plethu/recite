@@ -16,6 +16,7 @@ pub(crate) struct Job {
     pub work: Work,
 }
 pub(crate) enum Work {
+    Repair(Box<repair::Work>),
     Edit {
         edit: Box<EditRequest>,
         operation: EditOperation,
@@ -26,6 +27,7 @@ pub(crate) enum Work {
     },
 }
 pub(crate) enum ResultValue {
+    Repair(Box<repair::ResultValue>),
     Edit {
         prepared: Box<PreparedEdit>,
         operation: EditOperation,
@@ -74,6 +76,7 @@ impl Job {
 impl Work {
     fn execute(self, control: &dyn WorkControl) -> Result<ResultValue, String> {
         match self {
+            Self::Repair(work) => work.execute(control).map(ResultValue::Repair),
             Self::Edit { edit, operation } => edit
                 .prepare(control)
                 .map(|prepared| ResultValue::Edit {

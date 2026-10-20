@@ -177,7 +177,9 @@ impl App {
         let idle = !writer.work.busy() && !writer.navigation.busy();
         match command {
             C::Commands | C::GoTo | C::Find | C::OpenProject | C::Settings | C::Close => true,
-            C::Save | C::SaveAll => idle && writer.session.project().is_some(),
+            C::Save | C::SaveAll => {
+                idle && !writer.source_repair_pending() && writer.session.project().is_some()
+            }
             C::Source => idle && !writer.external.busy() && writer.session.project().is_some(),
             C::Apply => idle && writer.session.model().has_draft(),
             C::Undo => {

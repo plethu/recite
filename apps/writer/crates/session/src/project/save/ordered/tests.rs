@@ -3,6 +3,44 @@ use crate::project::tests::project;
 use recite_writer_model::View;
 
 #[test]
+fn retained_checked_source_cannot_bypass_validation_in_save_all()
+-> Result<(), Box<dyn std::error::Error>> {
+    let (dir, mut files) = project()?;
+    let active = files.current.clone();
+    let retained = dir.path().join("other.recite");
+    let source = ":: other default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+    std::fs::write(&retained, source)?;
+    let mut model = files.workbench()?;
+    files.refresh(&mut model)?;
+    files.switch(&mut model, &retained, None, |_| Ok(()))?;
+    model.open_reply_rules("22222222222222222222")?;
+    model.set_draft(":: other default\n? invalid".into());
+    files.switch(&mut model, &active, None, |_| Ok(()))?;
+
+    // The asynchronous path sees only the retained model, with no mounted controls.
+    let steps = files.save_plan(&mut model, Scope::All)?;
+    let step = steps.iter().find(|step| matches!(step, Step::Retained { path, drafts: Drafts::Apply } if path == &retained))
+        .ok_or("retained draft step")?;
+    let (_, request) = files.retained_edit(step)?.ok_or("retained edit")?;
+    assert!(
+        request
+            .prepare(&recite_compiler::authoring::CancellationToken::new())
+            .is_err()
+    );
+
+    // The synchronous save owner must enforce the same model contract.
+    assert!(files.save_all(&mut model).is_err());
+    assert_eq!(std::fs::read_to_string(&retained)?, source);
+    files.switch(&mut model, &retained, None, |_| Ok(()))?;
+    assert_eq!(model.draft(), ":: other default\n? invalid");
+    assert_eq!(
+        model.source_validation(),
+        recite_writer_model::SourceValidation::NoNewErrors
+    );
+    Ok(())
+}
+
+#[test]
 fn disk_receipt_preserves_newer_accepted_edits_and_field_drafts()
 -> Result<(), Box<dyn std::error::Error>> {
     let (dir, mut files) = project()?;

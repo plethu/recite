@@ -71,7 +71,7 @@ impl Writer {
             Target::Location(location) | Target::Selection(location) => {
                 self.location_destination(location)?
             }
-            Target::Edit(_) => return Err("Invalid navigation target.".into()),
+            Target::Edit(_) | Target::Repair(_) => return Err("Invalid navigation target.".into()),
         };
         let request = Arc::new(Request {
             target,

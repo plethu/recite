@@ -27,6 +27,26 @@ impl Workbench {
     }
     pub fn select(&mut self, view: View) -> Result<(), WorkbenchError> {
         self.require_applied()?;
+        self.install_view(view, super::SourceValidation::Freeform)
+    }
+
+    pub(crate) fn restore_draft(
+        &mut self,
+        view: View,
+        draft: crate::DraftSnapshot,
+        validation: super::SourceValidation,
+    ) -> Result<(), WorkbenchError> {
+        // Selection validation finishes before displacing any current field state.
+        self.install_view(view, validation)?;
+        self.set_draft_snapshot(draft);
+        Ok(())
+    }
+
+    fn install_view(
+        &mut self,
+        view: View,
+        validation: super::SourceValidation,
+    ) -> Result<(), WorkbenchError> {
         let text = match &view {
             View::Source => self.document.source_snapshot().into(),
             View::Block(block) => {
@@ -52,6 +72,7 @@ impl Workbench {
             self.script_selection = Some(block);
         }
         self.view = view;
+        self.source_validation = validation;
         self.load(text);
         Ok(())
     }

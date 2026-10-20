@@ -10,11 +10,13 @@ pub struct EditRequest {
     source: SourceEditRequest,
     selection: Option<Selection>,
     operation: EditOperation,
+    validation: super::SourceValidation,
 }
 pub struct PreparedEdit {
     source: PreparedSourceEdit,
     selection: Option<PreparedSelection>,
     applying: bool,
+    validation: super::SourceValidation,
 }
 struct Selection {
     view: View,
@@ -44,7 +46,8 @@ impl Workbench {
             (EditOperation::Apply, View::Block(_)) => None,
             _ => self
                 .document
-                .source_edit_request(self.draft.clone(), operation),
+                .source_edit_request(self.draft.clone(), operation)
+                .map(|request| request.requiring_validation(self.source_validation)),
         };
         Ok(source.map(|source| EditRequest {
             source,
@@ -53,11 +56,15 @@ impl Workbench {
                 script: self.script_selection.clone(),
             }),
             operation,
+            validation: self.source_validation,
         }))
     }
 
     /// Keep the receipt until its displaced source, projections and history can retire off UI.
     pub fn accept_edit(&mut self, prepared: &mut PreparedEdit) -> Result<(), WorkbenchError> {
+        if self.source_validation != prepared.validation {
+            return Err(EditError::Stale.into());
+        }
         let submitted_is_current = self.draft == prepared.source.request.draft;
         if let Some(selection) = &prepared.selection {
             if self.view != selection.origin.view
@@ -125,6 +132,7 @@ impl EditRequest {
                     preview: None,
                     page: None,
                     script_selection: origin.script.clone(),
+                    source_validation: super::SourceValidation::default(),
                 };
                 // History may restore malformed source. Preserve the existing fallback policy.
                 model.refresh()?;
@@ -146,6 +154,7 @@ impl EditRequest {
             source,
             selection,
             applying,
+            validation: self.validation,
         })
     }
 }

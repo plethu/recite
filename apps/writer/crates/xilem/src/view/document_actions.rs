@@ -33,13 +33,23 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 text_button(scale, "Save file", |state: &mut Writer| {
                     state.save();
                 })
-                .disabled(closing || state.work.busy() || state.navigation.busy())
+                .disabled(
+                    closing
+                        || state.work.busy()
+                        || state.navigation.busy()
+                        || state.source_repair_pending(),
+                )
             }),
             state.session.project().is_some().then(|| {
                 text_button(scale, "Save all", |state: &mut Writer| {
                     state.save_all();
                 })
-                .disabled(closing || state.work.busy() || state.navigation.busy())
+                .disabled(
+                    closing
+                        || state.work.busy()
+                        || state.navigation.busy()
+                        || state.source_repair_pending(),
+                )
             }),
             state.session.project().is_some().then(|| {
                 text_button(scale, "Open in editor", Writer::open_editor).disabled(
@@ -152,7 +162,7 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
                     }),
                     (state.session.project().is_some() && !ordinary_exit).then(|| {
                         text_button(scale, "Save all and close", Writer::save_and_close)
-                            .disabled(state.work.busy())
+                            .disabled(state.work.busy() || state.source_repair_pending())
                     }),
                     text_button(
                         scale,

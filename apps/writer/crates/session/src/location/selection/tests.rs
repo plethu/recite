@@ -54,3 +54,33 @@ fn linked_catalogue_must_stay_inside_its_project() -> Result<(), Box<dyn std::er
     }
     Ok(())
 }
+#[test]
+fn rules_reuse_preserves_validation_but_explicit_clean_source_links_are_freeform() {
+    let source = ":: start default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+    let mut model = recite_writer_model::Workbench::new(source).unwrap();
+    let rules = super::Location {
+        screen: super::Screen::Rules,
+        passage: Some("22222222222222222222".into()),
+        ..super::Location::default()
+    };
+    super::select(&mut model, &rules).unwrap();
+    super::select_reusing_rules(&mut model, &rules).unwrap();
+    assert_eq!(
+        model.source_validation(),
+        recite_writer_model::SourceValidation::NoNewErrors
+    );
+    super::select(
+        &mut model,
+        &super::Location {
+            source: true,
+            ..super::Location::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        model.source_validation(),
+        recite_writer_model::SourceValidation::Freeform
+    );
+    model.set_draft(":: start default\n? invalid".into());
+    model.apply().unwrap();
+}

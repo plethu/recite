@@ -198,6 +198,17 @@ again restores the session. Source files are changed only by Save. A process cra
 recovery lock; another writer cannot own the same file's recovery snapshot at the same time. The
 empty `.recite-editor-recovery.lock` file may remain and need not be removed.
 
+Structured reply drafts keep their validation rules through document switching and recovery. Apply
+and Save refuse malformed syntax or additional project diagnostics, retaining the draft for repair.
+A rejected recovery selection also leaves the current field intact.
+
+In the Xilem frontend, recovered source drafts use **Export draft and open editor**. This creates a
+unique `recite-source-repair-*.txt` beside the document and a complete JSON recovery backup. Repair
+that text in your preferred editor, then choose **Import repaired source**. After restarting Writer,
+choose that same text file with **Choose file…**. Import validates and accepts the repaired text;
+**Save file** then writes it to the project. The exported text and backup remain available. Save
+controls stay disabled while the source draft awaits repair and import.
+
 PO translation drafts also have a locked recovery snapshot beside their catalogue. Reopen that same
 catalogue to restore unsaved translations. Standalone declaration TOML drafts recover when you bind
 the same source again; the source association itself is not persisted. Incomplete TOML is retained.

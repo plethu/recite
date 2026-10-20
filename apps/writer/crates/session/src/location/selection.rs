@@ -2,9 +2,22 @@
 use super::{Location, Screen};
 use recite_writer_model::{View, Workbench, WorkbenchError};
 
+enum SourceEntry {
+    Freeform,
+    PreserveRules,
+}
+
 pub fn select(
     model: &mut Workbench,
     location: &Location,
+) -> Result<Option<recite_writer_model::ReplyRules>, WorkbenchError> {
+    select_with_source_entry(model, location, SourceEntry::Freeform)
+}
+
+fn select_with_source_entry(
+    model: &mut Workbench,
+    location: &Location,
+    source: SourceEntry,
 ) -> Result<Option<recite_writer_model::ReplyRules>, WorkbenchError> {
     if let (Some(passage), Some(beat)) = (&location.passage, &location.beat)
         && model
@@ -22,7 +35,7 @@ pub fn select(
             .passage
             .as_deref()
             .ok_or(recite_writer_model::EditError::Destination)?;
-        Some(model.document().reply_rules(passage)?)
+        Some(model.open_reply_rules(passage)?)
     } else {
         None
     };
@@ -36,7 +49,11 @@ pub fn select(
     if let Some(view) = view {
         if let View::Block(beat) = &view {
             model.inspect_block(beat)?;
-        } else if model.view() != &view {
+        } else if model.view() != &view
+            || (view == View::Source
+                && location.screen != Screen::Rules
+                && matches!(source, SourceEntry::Freeform))
+        {
             model.select(view)?;
         }
     } else if model.view() == &View::Source {
@@ -62,7 +79,7 @@ pub fn select_reusing_rules(
     {
         return Err(recite_writer_model::EditError::Destination.into());
     }
-    select(model, &selection).map(|_| ())
+    select_with_source_entry(model, &selection, SourceEntry::PreserveRules).map(|_| ())
 }
 
 pub fn catalogue_path(

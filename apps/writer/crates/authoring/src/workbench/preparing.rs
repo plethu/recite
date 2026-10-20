@@ -15,6 +15,7 @@ pub struct NavigationRequest {
     draft: DraftSnapshot,
     loaded: DraftSnapshot,
     dirty: bool,
+    source_validation: super::SourceValidation,
 }
 pub struct PreparedNavigation {
     request: NavigationRequest,
@@ -33,6 +34,7 @@ impl Workbench {
             draft: self.draft.clone(),
             loaded: self.loaded.clone(),
             dirty: self.dirty,
+            source_validation: self.source_validation,
         }
     }
     /// Publish prepared context/selection once; keep the receipt for worker retirement.
@@ -53,6 +55,7 @@ impl Workbench {
         std::mem::swap(&mut self.draft, &mut prepared.model.draft);
         std::mem::swap(&mut self.loaded, &mut prepared.model.loaded);
         self.dirty = prepared.model.dirty;
+        self.source_validation = prepared.model.source_validation;
         self.draft_revision = self.document.revision();
         prepared.accepted = true;
         Ok(())
@@ -66,6 +69,7 @@ impl NavigationRequest {
             && self.draft == model.draft
             && self.loaded == model.loaded
             && self.dirty == model.dirty
+            && self.source_validation == model.source_validation
     }
     pub fn prepare(
         self,
@@ -92,6 +96,7 @@ impl NavigationRequest {
             dirty: self.dirty,
             preview: None,
             page: None,
+            source_validation: self.source_validation,
         };
         Ok(PreparedNavigation {
             request: self,

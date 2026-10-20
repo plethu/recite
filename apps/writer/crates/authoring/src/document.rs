@@ -19,6 +19,7 @@ pub use identity::AnalysisStamp;
 mod diagnostics;
 pub use diagnostics::DiagnosticSnapshot;
 mod blocks;
+mod validation;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {
@@ -36,8 +37,8 @@ pub enum EditError {
     Stale,
     #[error("{argument} needs a valid {expected} value.")]
     InvalidRuleValue { argument: String, expected: String },
-    #[error("Cannot apply rules: {0}")]
-    InvalidRules(String),
+    #[error("Cannot apply this source change: {0}")]
+    InvalidSourceChange(String),
     #[error("This content needs Source view: {0}")]
     SourceRequired(&'static str),
     #[error("The selected line no longer exists or has no unique frozen ID.")]

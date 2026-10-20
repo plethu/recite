@@ -24,6 +24,7 @@ pub(crate) struct SourceEditRequest {
     pub(crate) draft: DraftSnapshot,
     operation: Operation,
     rules: Option<Box<crate::ReplyRules>>,
+    validation: crate::SourceValidation,
 }
 enum Operation {
     Apply,
@@ -69,6 +70,7 @@ impl Document {
             draft,
             operation,
             rules: None,
+            validation: crate::SourceValidation::default(),
         })
     }
 
@@ -78,6 +80,7 @@ impl Document {
             draft,
             operation: Operation::Prose(id, self.projections.capture_local()),
             rules: None,
+            validation: crate::SourceValidation::default(),
         }
     }
 
@@ -111,6 +114,10 @@ impl Document {
 }
 
 impl SourceEditRequest {
+    pub(crate) fn requiring_validation(mut self, validation: crate::SourceValidation) -> Self {
+        self.validation = validation;
+        self
+    }
     /// Preserve Rules validation when its controls still describe this exact draft.
     pub(crate) fn with_rules(mut self, rules: crate::ReplyRules) -> Self {
         self.rules = Some(Box::new(rules));
@@ -135,15 +142,18 @@ impl SourceEditRequest {
             Operation::Undo(change) => change.apply(&self.base.source, true).into(),
             Operation::Redo(change) => change.apply(&self.base.source, false).into(),
         };
-        if let Some(rules) = &self.rules
-            && rules.belongs_to(&self.base.projection_document())
-            && rules.changed()
-            && rules
-                .source()
-                .is_ok_and(|rules_source| rules_source.as_str() == source.as_ref())
-        {
-            rules.validate(&self.base.projection_document())?;
+        let rules = self.rules.as_ref().filter(|rules| {
+            rules.belongs_to(&self.base.projection_document())
+                && rules.changed()
+                && rules
+                    .source()
+                    .is_ok_and(|text| text.as_str() == source.as_ref())
+        });
+        if let Some(rules) = rules {
+            rules.validate_draft(&self.base.projection_document())?;
         }
+        let validate = matches!(self.operation, Operation::Apply)
+            && (rules.is_some() || self.validation == crate::SourceValidation::NoNewErrors);
         let (kernel, history, version) = if source == self.base.source {
             // A pristine Rope may have flattened into a second whole-file string.
             source = self.base.source.clone();
@@ -178,7 +188,7 @@ impl SourceEditRequest {
             (Some(Arc::new(kernel)), history, version)
         };
         control.checkpoint().map_err(AuthoringError::from)?;
-        Ok(PreparedSourceEdit {
+        let prepared = PreparedSourceEdit {
             request: self,
             source,
             kernel,
@@ -188,7 +198,15 @@ impl SourceEditRequest {
             retired_history: Vec::new(),
             accepted: false,
             version,
-        })
+        };
+        if validate {
+            prepared
+                .request
+                .base
+                .projection_document()
+                .validate_source_candidate(&prepared.projection_document())?;
+        }
+        Ok(prepared)
     }
 }
 

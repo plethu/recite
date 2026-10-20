@@ -78,6 +78,27 @@ fn rope_backed_draft_streams_through_the_durable_codec() {
 }
 
 #[test]
+fn checked_source_policy_survives_the_cached_recovery_encoder() {
+    let source = ":: start default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+    let mut model = recite_writer_model::Workbench::new(source).unwrap();
+    model.open_reply_rules("22222222222222222222").unwrap();
+    model.set_draft(":: start default\n? invalid".into());
+    let recovery = Recovery::new(source.into(), model.recovery());
+    let mut encoding = Encoding::default();
+    let output = check(&mut encoding, &recovery);
+    let decoded: Recovery = serde_json::from_slice(&output.bytes).unwrap();
+    let mut reopened = recite_writer_model::Workbench::new(source).unwrap();
+    decoded.draft.restore(&mut reopened).unwrap();
+    assert_eq!(
+        reopened.source_validation(),
+        recite_writer_model::SourceValidation::NoNewErrors
+    );
+    assert!(reopened.apply().is_err());
+    assert_eq!(reopened.document().source(), source);
+    assert_eq!(reopened.draft(), ":: start default\n? invalid");
+}
+
+#[test]
 fn immutable_sources_share_encoding_and_warm_writes_are_bounded() {
     let source = "escaped \"é💬\\\n".repeat(100_000);
     let mut encoding = Encoding::default();

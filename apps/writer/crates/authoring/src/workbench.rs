@@ -6,9 +6,13 @@ mod navigation;
 mod opening;
 mod preview;
 pub use edit::{EditRequest, PreparedEdit};
+mod source_repair;
+mod source_validation;
+pub use source_repair::{PreparedSourceRepair, SourceRepairRequest};
 mod structure;
 use crate::{Document, DraftSnapshot, EditError, PassageKind, Preview, PreviewError, PreviewPage};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
+pub use source_validation::SourceValidation;
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum View {
@@ -48,6 +52,7 @@ pub struct Workbench {
     preview: Option<Preview>,
     page: Option<PreviewPage>,
     script_selection: Option<String>,
+    source_validation: SourceValidation,
 }
 
 impl Workbench {
@@ -101,9 +106,13 @@ impl Workbench {
         }
         match &self.view {
             View::Block(_) => {}
-            View::Source => self
-                .document
-                .replace_source(self.draft_revision, self.draft.text_snapshot())?,
+            View::Source => {
+                if self.source_validation == SourceValidation::NoNewErrors {
+                    self.document.validate_source_change(self.draft.as_str())?;
+                }
+                self.document
+                    .replace_source(self.draft_revision, self.draft.text_snapshot())?;
+            }
             View::Passage(id) => {
                 self.document
                     .replace_text(self.draft_revision, id, self.draft.as_str())?

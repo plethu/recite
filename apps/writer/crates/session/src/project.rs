@@ -2,6 +2,8 @@
 mod external;
 pub mod manifest;
 mod recovery;
+mod source_repair;
+pub use source_repair::{SourceRepairArtifact, SourceRepairExport};
 mod rename;
 pub mod save;
 mod search;

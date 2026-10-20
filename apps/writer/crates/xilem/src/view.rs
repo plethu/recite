@@ -23,6 +23,7 @@ use manuscript::manuscript;
 mod trial;
 use navigation::navigation;
 mod document_actions;
+mod source_repair;
 use document_actions::{close_prompt, header, recovery_copy};
 
 pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Sized> + use<> {
@@ -57,6 +58,7 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
                     }),
                     recovery_copy(state),
                     close_prompt(state),
+                    source_repair::panel(state),
                     flex_row((
                         navigation(state),
                         flex_col((manuscript(state), trial::panel(state)))
