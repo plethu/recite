@@ -11,6 +11,7 @@ pub struct CatalogueSave {
     baseline: PoDocumentFingerprint,
     drafts: BTreeMap<PoEntryId, Arc<Draft>>,
     retired_forms: Vec<(PoEntryId, Vec<String>)>,
+    retired_queue: Option<queue::QueueCache>,
 }
 pub struct CatalogueSaved {
     forms: Vec<(PoEntryId, Vec<String>)>,
@@ -87,6 +88,7 @@ impl Catalogue {
             baseline: self.baseline.clone(),
             drafts,
             retired_forms: Vec::new(),
+            retired_queue: None,
         })
     }
     pub fn accept_save(
@@ -114,8 +116,13 @@ impl Catalogue {
                 (id, draft)
             })
             .collect();
-        if let Some(cache) = self.queue_cache.get_mut().as_mut() {
-            cache.index.borrow_mut().replace_forms(&mut saved.forms);
+        let cache = self.queue_cache.get_mut();
+        if cache
+            .as_ref()
+            .is_some_and(|cache| cache.index.replace_forms(&mut saved.forms).is_err())
+        {
+            // A panic may have partially patched the derived index. Rebuild from the new document.
+            request.retired_queue = cache.take();
         }
         // Queue may never have been opened. Its unused normalized forms still
         // belong to the worker receipt, just like displaced cached forms.

@@ -1,6 +1,6 @@
 //! Bound mounted text even when an upstream description or build report has one enormous line.
 use recite_writer_session::comparison::ComparisonRow;
-pub(super) fn change_pages(row: ComparisonRow) -> Vec<ComparisonRow> {
+pub(crate) fn change_pages(row: ComparisonRow) -> Vec<ComparisonRow> {
     let before = row.before.as_deref().map(pages).unwrap_or_default();
     let after = row.after.as_deref().map(pages).unwrap_or_default();
     let count = before.len().max(after.len());
@@ -16,7 +16,7 @@ pub(super) fn change_pages(row: ComparisonRow) -> Vec<ComparisonRow> {
         })
         .collect()
 }
-pub(super) fn pages(text: &str) -> Vec<String> {
+pub(crate) fn pages(text: &str) -> Vec<String> {
     let mut pages = Vec::new();
     let mut page = String::new();
     let mut count = 0;

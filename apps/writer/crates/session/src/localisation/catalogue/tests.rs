@@ -103,7 +103,7 @@ fn comparison_is_bound_to_the_seen_external_version() -> Result<(), String> {
     std::fs::write(&path, SOURCE.replace("Bonjour", "External")).map_err(|e| e.to_string())?;
     assert!(
         catalogue
-            .accept_external(true, &comparison.fingerprint)
+            .accept_external(ExternalDecision::KeepDrafts, &comparison.inspection)
             .is_err()
     );
     assert!(catalogue.dirty());
@@ -114,7 +114,7 @@ fn comparison_is_bound_to_the_seen_external_version() -> Result<(), String> {
             .iter()
             .any(|row| row.after.as_deref() == Some("External {name}"))
     );
-    catalogue.accept_external(true, &comparison.fingerprint)?;
+    catalogue.accept_external(ExternalDecision::KeepDrafts, &comparison.inspection)?;
     assert_eq!(
         catalogue.draft(id).map(|d| d.forms.join("")),
         Some("Local {name}".into())
@@ -237,7 +237,7 @@ fn choosing_the_disk_catalogue_discards_plural_drafts() -> Result<(), String> {
     std::fs::write(&path, source.replace("billet", "titre")).map_err(|e| e.to_string())?;
     let comparison = catalogue.compare()?;
     assert_eq!(comparison.rows.len(), 2);
-    catalogue.accept_external(false, &comparison.fingerprint)?;
+    catalogue.accept_external(ExternalDecision::UseDisk, &comparison.inspection)?;
     let draft = catalogue.draft(id).ok_or("draft")?;
     assert_eq!(draft.forms, ["titre", "titres"]);
     assert!(draft.reviewed);
@@ -267,7 +267,7 @@ fn changed_plural_semantics_cannot_silently_rebase_a_draft() -> Result<(), Strin
         let comparison = catalogue.compare()?;
         assert!(
             catalogue
-                .accept_external(true, &comparison.fingerprint)
+                .accept_external(ExternalDecision::KeepDrafts, &comparison.inspection)
                 .is_err()
         );
         assert_eq!(catalogue.draft(id), Some(draft.clone()));
@@ -472,12 +472,12 @@ fn discarding_external_conflicts_accepts_removed_entries_and_clears_recovery()
         std::fs::write(&path, format!("# newer\n{changed}"))?;
         assert!(
             catalogue
-                .accept_external(false, &comparison.fingerprint)
+                .accept_external(ExternalDecision::UseDisk, &comparison.inspection)
                 .is_err()
         );
         assert!(catalogue.dirty());
         let comparison = catalogue.compare()?;
-        catalogue.accept_external(false, &comparison.fingerprint)?;
+        catalogue.accept_external(ExternalDecision::UseDisk, &comparison.inspection)?;
         assert!(!catalogue.dirty());
         assert_eq!(catalogue.document.source(), format!("# newer\n{changed}"));
         drop(catalogue);

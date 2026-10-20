@@ -5,6 +5,7 @@ mod editor_work;
 mod external_editor;
 mod feedback;
 mod keyed;
+mod localisation;
 mod lookup;
 mod map;
 mod native_host;
@@ -49,6 +50,7 @@ struct Writer {
     pending_search: Option<app::picker::Search>,
     lookup: Option<lookup::Search>,
     workspaces: workspaces::Workspaces,
+    localisation: localisation::Localisation,
     viewport: kurbo::Size,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
@@ -59,6 +61,7 @@ enum Phase {
     Writing,
     ConfirmClose,
     ConfirmExit,
+    Closing,
     Closed,
 }
 
@@ -113,6 +116,7 @@ impl Writer {
             pending_search: None,
             lookup: None,
             workspaces: Default::default(),
+            localisation: Default::default(),
             viewport: kurbo::Size::new(1280., 800.),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),
@@ -180,7 +184,7 @@ impl Writer {
             self.status = "An editor action is still finishing. Your work remains open.".into();
             return;
         }
-        if self.session.dirty() {
+        if self.session.dirty() || self.localisation.dirty() {
             self.phase = Phase::ConfirmClose;
         } else if self.config.writer.confirm_exit {
             self.phase = Phase::ConfirmExit;
@@ -193,6 +197,14 @@ impl Writer {
             self.status = "Wait for the current editor action before closing.".into();
             return;
         }
+        if self.localisation.has_catalogue() {
+            self.phase = Phase::Closing;
+            self.flush_catalogue_before_close();
+            return;
+        }
+        self.close_sources_with_recovery();
+    }
+    pub(crate) fn close_sources_with_recovery(&mut self) {
         let Some(project) = self.session.project_mut() else {
             self.phase = Phase::Closed;
             return;

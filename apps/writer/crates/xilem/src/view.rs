@@ -68,6 +68,13 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
                 Writer::cancel_project_action,
             )
         }),
+        state.localisation.working().then(|| {
+            text_button(
+                state.ui_scale(),
+                "Cancel catalogue action",
+                Writer::cancel_catalogue_action,
+            )
+        }),
         editor_status(state),
         state.navigation.busy().then(|| {
             text_button(

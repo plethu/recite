@@ -70,7 +70,7 @@ fn vim_alias_runs_the_shared_save_path_and_unavailable_commands_leave_search_ope
         Ok(())
     });
     app.open_picker(Search::Commands);
-    app.filter_picker("Localise".into());
+    app.filter_picker("Forward".into());
     app.activate_picker(0);
     assert!(app.picker.is_some());
     app.filter_picker(":w".into());
@@ -85,6 +85,30 @@ fn vim_alias_runs_the_shared_save_path_and_unavailable_commands_leave_search_ope
             .unwrap()
             .contains("Save from command search.")
     );
+}
+
+#[test]
+fn localisation_command_opens_the_native_workspace_without_applying_manuscript_typing() {
+    let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+    let mut app = App::with_writer(support::open(&directory).unwrap());
+    app.writer.as_mut().unwrap().change(|model| {
+        model.set_draft("Keep this pending manuscript.".into());
+        Ok(())
+    });
+    app.open_picker(Search::Commands);
+    app.filter_picker("Localise".into());
+    app.activate_picker(0);
+    assert!(app.picker.is_none());
+    let writer = app.writer.as_ref().unwrap();
+    assert!(matches!(
+        writer.workspaces.screen,
+        crate::workspaces::Screen::Localisation
+    ));
+    assert_eq!(
+        writer.session.model().draft(),
+        "Keep this pending manuscript."
+    );
+    assert!(writer.session.model().has_draft());
 }
 
 #[test]

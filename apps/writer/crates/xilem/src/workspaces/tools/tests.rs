@@ -6,6 +6,34 @@ use crate::{
 use recite_core::schema::SchemaSource;
 use std::{fs, path::Path};
 use tokio::sync::mpsc;
+pub(crate) struct Driver {
+    jobs: mpsc::UnboundedReceiver<Job>,
+}
+impl Driver {
+    pub(crate) fn new(writer: &mut Writer) -> Self {
+        let (sender, jobs) = mpsc::unbounded_channel();
+        writer.workspaces.tools.sender = Some(sender);
+        Self { jobs }
+    }
+    pub(crate) fn finish(&mut self, writer: &mut Writer) {
+        finish(writer, &mut self.jobs);
+    }
+    pub(crate) fn complete_after(
+        &mut self,
+        writer: &mut Writer,
+        before_accept: impl FnOnce(&mut Writer),
+    ) {
+        let mut completed = self.jobs.try_recv().unwrap().execute();
+        before_accept(writer);
+        loop {
+            let request = completed.request.clone();
+            match writer.accept_tool(completed).finish(request) {
+                Some(next) => completed = next,
+                None => break,
+            }
+        }
+    }
+}
 #[path = "visual/tests.rs"]
 mod visual;
 

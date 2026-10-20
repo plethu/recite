@@ -9,6 +9,7 @@ use crate::{
     editing::Writer,
 };
 use freya::prelude::*;
+use recite_writer_session::localisation::catalogue::ExternalDecision;
 
 #[derive(Clone)]
 pub(super) struct ExternalComparison {
@@ -25,7 +26,7 @@ impl Component for ExternalComparison {
         let mut state = writer.localisation;
         let mut message = writer.message;
         let action_id = use_a11y();
-        let mut choice = use_state(|| None::<bool>);
+        let mut choice = use_state(|| None::<ExternalDecision>);
         let current = state.read();
         let mut body = rect()
             .width(Size::fill())
@@ -46,7 +47,7 @@ impl Component for ExternalComparison {
                     .child(text(MsgId::WriterReadPassage)),
             );
         if let Some(comparison) = &current.comparison {
-            let expected = comparison.fingerprint.clone();
+            let expected = comparison.inspection.clone();
             body = body.child(ComparisonView {
                 code: false,
                 before: text(MsgId::WriterDraftVersion),
@@ -54,14 +55,14 @@ impl Component for ExternalComparison {
                 rows: comparison.rows.clone(),
             });
             let mut choices = crate::design::actions();
-            for (keep, caption) in [
-                (true, MsgId::WriterKeepDrafts),
-                (false, MsgId::WriterUseFile),
+            for (decision, caption) in [
+                (ExternalDecision::KeepDrafts, MsgId::WriterKeepDrafts),
+                (ExternalDecision::UseDisk, MsgId::WriterUseFile),
             ] {
                 choices = choices.child(
                     Button::new()
-                        .radio(*choice.read() == Some(keep))
-                        .on_press(move |_| choice.set(Some(keep)))
+                        .radio(*choice.read() == Some(decision))
+                        .on_press(move |_| choice.set(Some(decision)))
                         .child(text(caption)),
                 );
             }
@@ -70,14 +71,14 @@ impl Component for ExternalComparison {
                 caption: text(MsgId::WriterCompareReturn),
                 enabled: choice.read().is_some(),
                 action: EventHandler::new(move |()| {
-                    let Some(keep) = *choice.peek() else {
+                    let Some(decision) = *choice.peek() else {
                         return;
                     };
                     let result = state
                         .write()
                         .catalogue
                         .as_mut()
-                        .map(|catalogue| catalogue.accept_external(keep, &expected));
+                        .map(|catalogue| catalogue.accept_external(decision, &expected));
                     if let Some(result) = result {
                         if result.is_ok() {
                             let mut value = state.write();

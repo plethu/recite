@@ -7,15 +7,7 @@ use crate::{
     palette,
 };
 use freya::prelude::*;
-pub(super) use recite_writer_session::localisation::queue::filter;
-use std::{cell::RefCell, rc::Rc, sync::Arc};
-#[derive(Clone)]
-struct IndexSnapshot(Rc<RefCell<filter::QueueIndex>>);
-impl PartialEq for IndexSnapshot {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
-    }
-}
+use std::sync::Arc;
 use t::ProseTypography;
 
 #[derive(Clone)]
@@ -77,14 +69,12 @@ fn render(writer: Writer) -> Element {
     let index = use_memo(move || {
         let _saved_source = saved_source.read();
         let passages = passage_snapshot.read();
-        IndexSnapshot(
-            state
-                .peek()
-                .catalogue
-                .as_ref()
-                .map(|catalogue| catalogue.queue_index(passages.as_ref().map(|p| p.0.clone())))
-                .unwrap_or_else(|| Rc::new(RefCell::new(filter::QueueIndex::default()))),
-        )
+        state
+            .peek()
+            .catalogue
+            .as_ref()
+            .map(|catalogue| catalogue.queue_index(passages.as_ref().map(|p| p.0.clone())))
+            .unwrap_or_default()
     });
     let matches = use_memo(move || {
         let _revision = revision.read();
@@ -95,13 +85,8 @@ fn render(writer: Writer) -> Element {
             .peek()
             .catalogue
             .as_ref()
-            .map(|catalogue| {
-                index
-                    .0
-                    .borrow()
-                    .matching_entries(catalogue, &query, only_attention)
-            })
-            .unwrap_or_default()
+            .map(|catalogue| index.matching_entries(catalogue, &query, only_attention))
+            .unwrap_or_else(|| Ok(Vec::new()))
     });
     let only_attention = *attention.read();
     let current = state.read();
@@ -119,6 +104,10 @@ fn render(writer: Writer) -> Element {
         let passages = passage_snapshot.read();
         let passages = passages.as_ref().map(|p| p.0.as_ref()).unwrap_or_default();
         let matches = matches.read();
+        let matches = match matches.as_ref() {
+            Ok(matches) => matches,
+            Err(error) => return content.child(label().text(error.clone())).into_element(),
+        };
         let count = matches.len();
         let current_page = (*page.read()).min(count.saturating_sub(1) / 32);
         let destinations: Vec<_> = matches

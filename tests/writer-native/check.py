@@ -80,7 +80,11 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "external":
+        if scenario == "localisation-scale":
+            from localisation_scale import run
+        elif scenario == "localisation":
+            from localisation_interactions import run
+        elif scenario == "external":
             from external_interactions import run
         elif scenario == "rename":
             from rename_interactions import run
@@ -152,6 +156,8 @@ def main():
             "project-settings",
             "rename",
             "external",
+            "localisation",
+            "localisation-scale",
         ),
         default="all",
     )

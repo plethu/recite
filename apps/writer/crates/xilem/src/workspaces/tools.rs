@@ -37,6 +37,7 @@ enum ToolKind {
     Refresh,
     Settings,
     Other,
+    Catalogue,
 }
 pub(super) struct Job {
     request: Arc<Request>,
@@ -50,6 +51,7 @@ pub(super) enum Work {
     Settings(Box<SettingsWork>),
     SettingsPublish(Box<SettingsPublication>),
     Project(Box<project::Work>),
+    Catalogue(Box<crate::localisation::Work>),
 }
 enum Value {
     Started(GenerationStarted),
@@ -66,12 +68,18 @@ enum Value {
     Settings(Box<settings::Prepared>),
     SettingsWritten(Box<SettingsWritten>),
     Project(Box<project::Completed>),
+    Catalogue(Box<crate::localisation::Completed>),
+    CatalogueFinished(Box<crate::localisation::Finished>),
 }
 struct Completed {
     request: Arc<Request>,
     result: Result<Value, String>,
 }
 enum Retirement {
+    FinishCatalogue {
+        work: Box<crate::localisation::Finish>,
+        retired: Option<Value>,
+    },
     Drop(Option<Value>),
     Finish {
         work: Box<DeclarationFinish>,
@@ -82,6 +90,13 @@ enum Retirement {
 impl Retirement {
     fn finish(self, request: Arc<Request>) -> Option<Completed> {
         match self {
+            Self::FinishCatalogue { work, retired } => {
+                drop(retired);
+                Some(Completed {
+                    request,
+                    result: Ok(Value::CatalogueFinished(Box::new(work.execute()))),
+                })
+            }
             Self::Drop(value) => {
                 drop(value);
                 None
@@ -109,6 +124,9 @@ impl Tools {
     }
 }
 impl Writer {
+    pub(crate) fn submit_catalogue_tool(&mut self, work: crate::localisation::Work) {
+        self.submit_tool(Work::Catalogue(Box::new(work)));
+    }
     pub(crate) fn declaration_session(&self) -> Option<&Session> {
         self.session.project()?.files().declarations.as_ref()
     }
@@ -215,6 +233,7 @@ impl Writer {
             kind: match &work {
                 Work::Refresh(_) => ToolKind::Refresh,
                 Work::Settings(_) | Work::SettingsPublish(_) => ToolKind::Settings,
+                Work::Catalogue(_) => ToolKind::Catalogue,
                 _ => ToolKind::Other,
             },
         });
@@ -231,6 +250,7 @@ impl Writer {
             Work::Project(_) => {
                 "Preparing the project operation… Editing is paused until its result returns."
             }
+            Work::Catalogue(_) => "Preparing the catalogue… Your source manuscript remains open.",
         }
         .into();
         let job = Job { request, work };

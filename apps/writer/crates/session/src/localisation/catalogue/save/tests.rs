@@ -1,3 +1,4 @@
+use super::super::ExternalDecision;
 use super::*;
 impl Catalogue {
     pub fn save(&mut self, id: PoEntryId) -> Result<(), String> {
@@ -37,14 +38,11 @@ fn queue_cache_does_not_retain_an_obsolete_passage_snapshot()
     };
     let old = Arc::downgrade(&passages);
     let first = catalogue.queue_index(Some(passages.clone()));
-    assert!(std::rc::Rc::ptr_eq(
-        &first,
-        &catalogue.queue_index(Some(passages.clone()))
-    ));
+    assert!(first == catalogue.queue_index(Some(passages.clone())));
     drop(passages);
     assert!(old.upgrade().is_none());
     let replacement = catalogue.queue_index(None);
-    assert!(!std::rc::Rc::ptr_eq(&first, &replacement));
+    assert!(first != replacement);
     Ok(())
 }
 
@@ -68,8 +66,8 @@ fn local_save_patches_shared_queue_forms_without_rebuilding_structural_rows()
     let index = catalogue.queue_index(None);
     assert_eq!(
         index
-            .borrow()
-            .matching_entries(&catalogue, "bonjour", false),
+            .matching_entries(&catalogue, "bonjour", false)
+            .unwrap(),
         [id]
     );
     catalogue.update(
@@ -84,22 +82,22 @@ fn local_save_patches_shared_queue_forms_without_rebuilding_structural_rows()
     let forms = saved.forms.as_ptr();
     catalogue.accept_save(&mut request, saved)?;
     catalogue.finish_save();
-    assert!(std::rc::Rc::ptr_eq(&index, &catalogue.queue_index(None)));
+    assert!(index == catalogue.queue_index(None));
     assert_eq!(
-        index.borrow().matching_entries(&catalogue, "salut", false),
+        index.matching_entries(&catalogue, "salut", false).unwrap(),
         [id]
     );
     assert!(
         index
-            .borrow()
             .matching_entries(&catalogue, "bonjour", false)
+            .unwrap()
             .is_empty()
     );
     assert!(!request.retired_forms.is_empty());
     assert_eq!(request.retired_forms.as_ptr(), forms);
     assert_eq!(request.retired_forms[0].1, ["bonjour {name}"]);
     catalogue.reload()?;
-    assert!(!std::rc::Rc::ptr_eq(&index, &catalogue.queue_index(None)));
+    assert!(index != catalogue.queue_index(None));
     Ok(())
 }
 
@@ -143,12 +141,17 @@ fn receipts_preserve_newer_drafts_and_reversions_and_block_replacement()
             reviewed: false,
         };
         catalogue.update(id, submitted.clone());
+        let inspection = catalogue.compare()?.inspection;
         let mut request = catalogue.begin_save(Some(&[id]))?;
         assert!(Arc::ptr_eq(&request.document, &catalogue.document));
         assert!(Arc::ptr_eq(&request.drafts[&id], &catalogue.drafts[&id]));
         assert!(catalogue.begin_save(None).is_err());
         assert!(catalogue.reload().is_err());
-        assert!(catalogue.accept_external(false, &request.baseline).is_err());
+        assert!(
+            catalogue
+                .accept_external(ExternalDecision::UseDisk, &inspection)
+                .is_err()
+        );
         catalogue.discard(id);
         assert!(catalogue.changed(id));
         let saved = std::thread::scope(|scope| scope.spawn(|| request.execute()).join().unwrap())?;

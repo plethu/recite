@@ -118,7 +118,7 @@ pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> 
     )
 }
 fn tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    xilem::view::radio_group(
+    let modes = xilem::view::radio_group(
         flex_row(
             [
                 ("Script", Workspace::Script),
@@ -140,5 +140,13 @@ fn tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
             }),
         )
         .gap(12.px()),
-    )
+    );
+    flex_row((
+        modes,
+        state.session.project().map(|_| {
+            text_button(state.ui_scale(), "Translations", Writer::open_localisation)
+                .disabled(state.project_action_blocked())
+        }),
+    ))
+    .gap(12.px())
 }

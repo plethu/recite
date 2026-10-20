@@ -1,3 +1,4 @@
+pub(crate) use super::tools::tests::Driver as ToolDriver;
 use super::*;
 use crate::tests::support;
 use std::fs;

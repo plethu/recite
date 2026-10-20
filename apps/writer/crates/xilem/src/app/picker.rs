@@ -240,7 +240,10 @@ impl App {
         match command {
             C::Commands | C::GoTo | C::Find | C::OpenProject | C::Settings | C::Close => true,
             C::Save | C::SaveAll => {
-                idle && !writer.source_repair_pending() && writer.session.project().is_some()
+                idle && !writer.localisation.saving()
+                    && (command != C::SaveAll || !writer.localisation.working())
+                    && !writer.source_repair_pending()
+                    && writer.session.project().is_some()
             }
             C::Source => idle && !writer.external.busy() && writer.session.project().is_some(),
             C::Apply => idle && writer.session.model().has_draft(),
@@ -267,6 +270,7 @@ impl App {
             }
             C::Preview => idle,
             C::Declarations | C::Build | C::Rename => idle && writer.session.project().is_some(),
+            C::Localise => !writer.project_action_blocked() && writer.session.project().is_some(),
             C::Back | C::Forward => {
                 idle && writer
                     .navigation
@@ -274,7 +278,6 @@ impl App {
                     .step(command == C::Forward)
                     .is_some()
             }
-            _ => false,
         }
     }
 }

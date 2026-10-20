@@ -29,6 +29,15 @@ worker owns the project, retaining the mounted manuscript field. If recovery fai
 editing stays paused until **Retry project edit recovery** succeeds, or you close keeping recovery
 and reopen. An unexpected worker failure requires reopening.
 
+In Xilem, **Translations** or **Localise** in Commands opens a PO catalogue workspace. Enter its
+path, choose **Open catalogue**, then search or filter the queue and open an entry. **Save
+translation** publishes that entry; **Save all** includes translation drafts and source edits.
+Returning to writing preserves the mounted manuscript and its text undo history. If another tool
+changes the PO file, **Compare catalogue disk changes** offers explicit draft/disk decisions against
+the inspected versions. Closing with recovery retains translation drafts; reopen the same project
+and catalogue to restore them. Catalogue creation, source refresh and localised preview are still
+being migrated.
+
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:
 

@@ -66,6 +66,16 @@ impl Catalogue {
         self.recovery_failure = None;
         Ok(())
     }
+    /// Flush the last admitted snapshot without reading possibly quarantined catalogue state.
+    pub fn flush_admitted_recovery(&mut self) -> Result<(), String> {
+        self.require_idle_save()?;
+        if let Some(store) = &mut self.recovery {
+            let snapshot = store.snapshot().cloned();
+            store.persist(snapshot).map_err(|error| error.to_string())?;
+        }
+        self.recovery_failure = None;
+        Ok(())
+    }
     pub fn recovery_error(&self) -> Option<String> {
         self.recovery_failure
             .clone()

@@ -71,6 +71,15 @@ impl Writer {
             Ok(Value::Settings(prepared)) => self.accept_settings_tool(prepared),
             Ok(Value::SettingsWritten(receipt)) => self.accept_settings_written(receipt),
             Ok(Value::Project(prepared)) => self.accept_project_tool(prepared),
+            Ok(Value::Catalogue(prepared)) => match self.accept_catalogue_tool(prepared) {
+                Ok(Some(work)) => {
+                    self.workspaces.tools.pending = Some(completed.request);
+                    return Retirement::FinishCatalogue { work: Box::new(work), retired: completed.result.ok() };
+                }
+                Ok(None) => Ok(()),
+                Err(error) => Err(error),
+            },
+            Ok(Value::CatalogueFinished(finished)) => self.finish_catalogue_tool(finished),
             Err(error) => Err(error.clone()),
         };
         if let Err(error) = result {
@@ -81,7 +90,9 @@ impl Writer {
             } else {
                 error
             };
-            if completed.request.kind == ToolKind::Settings
+            if completed.request.kind == ToolKind::Catalogue {
+                self.catalogue_feedback(message);
+            } else if completed.request.kind == ToolKind::Settings
                 || self
                     .session
                     .project()

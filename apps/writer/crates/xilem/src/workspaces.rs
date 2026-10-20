@@ -6,7 +6,7 @@ mod opening;
 mod rename;
 pub(crate) use rename::recovery;
 mod settings;
-mod text;
+pub(crate) mod text;
 mod tools;
 use crate::{Phase, Writer};
 pub(crate) use opening::{Open, Prepared, Work};
@@ -25,6 +25,7 @@ pub(crate) enum Screen {
     Settings,
     Rename,
     External,
+    Localisation,
 }
 #[derive(Clone, Copy)]
 enum ContextUpdate {
@@ -66,6 +67,7 @@ impl Writer {
     }
     pub(crate) fn project_jobs_busy(&self) -> bool {
         self.session.checked_out()
+            || self.localisation.working()
             || self.workspaces.tools.busy()
             || self.session.project().is_some_and(|project| {
                 project.files().builds.busy()
@@ -124,12 +126,14 @@ pub(crate) fn panel(writer: &Writer) -> impl xilem::WidgetView<Writer> + use<> {
         settings::panel(writer),
         rename::panel(writer),
         external::panel(writer),
+        crate::localisation::panel(writer),
     ))
     .active(match writer.workspaces.screen {
         Screen::Build => 1,
         Screen::Settings => 2,
         Screen::Rename => 3,
         Screen::External => 4,
+        Screen::Localisation => 5,
         Screen::Write | Screen::Declarations => 0,
     })
 }
@@ -152,4 +156,4 @@ pub(crate) fn jobs(writer: &Writer) -> impl ViewSequence<Writer, (), ViewCtx, No
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

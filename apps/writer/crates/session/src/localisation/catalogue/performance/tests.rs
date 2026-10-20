@@ -55,7 +55,7 @@ fn catalogue_scale_timing() -> Result<(), Box<dyn std::error::Error>> {
         let mut count = 0;
         for _ in 0..5 {
             let started = WallTime.start();
-            let matches = index.borrow().matching_entries(&catalogue, query, false);
+            let matches = index.matching_entries(&catalogue, query, false)?;
             times.push(WallTime.end(started).as_secs_f64() * 1000.);
             count = matches.len();
             std::hint::black_box(&matches);

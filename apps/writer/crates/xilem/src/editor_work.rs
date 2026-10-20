@@ -19,13 +19,18 @@ enum Operation {
     Saving(Box<SaveSequence>),
 }
 #[derive(Default)]
-enum AfterSave {
+pub(crate) enum AfterSave {
     #[default]
     Stay,
     Close,
     Build(Option<String>),
     Declarations,
     OpenEditor(std::sync::Arc<crate::external_editor::Request>),
+}
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Layers {
+    Sources,
+    SourcesAndCatalogue,
 }
 pub(super) struct EditorWork {
     pub(super) sender: Option<UnboundedSender<Work>>,
@@ -80,6 +85,21 @@ impl Writer {
         self.start_save(Scope::AcceptedCurrent, AfterSave::OpenEditor(request));
     }
     fn start_save(&mut self, scope: Scope, after: AfterSave) {
+        self.start_save_layers(scope, after, Layers::SourcesAndCatalogue);
+    }
+    pub(crate) fn resume_source_save(&mut self, scope: Scope, after: AfterSave) {
+        self.start_save_layers(scope, after, Layers::Sources);
+    }
+    fn start_save_layers(&mut self, scope: Scope, after: AfterSave, layers: Layers) {
+        if matches!(scope, Scope::All) && self.localisation.working() {
+            self.status = "Wait for the catalogue action to finish before saving all files.".into();
+            return;
+        }
+        if self.localisation.saving() {
+            self.status =
+                "Wait for the catalogue save to finish before saving source files.".into();
+            return;
+        }
         if self.session.read_only() {
             self.status = FileError::ProjectActionPending.to_string();
             return;
@@ -98,6 +118,13 @@ impl Writer {
             return;
         }
         if self.work.busy() {
+            return;
+        }
+        if layers == Layers::SourcesAndCatalogue
+            && matches!(scope, Scope::All)
+            && self.localisation.needs_save()
+        {
+            self.save_catalogue_then_sources(scope, after);
             return;
         }
         let prepared = (|| {
@@ -184,12 +211,16 @@ impl Writer {
         let result = files.finish_save(model, result);
         self.reading.prepare(self.session.model());
         self.status = match &result {
-            Ok(()) if self.session.dirty() => "Saved; newer edits remain open.".into(),
+            Ok(()) if self.session.dirty() || self.localisation.dirty() => {
+                "Saved; newer edits remain open.".into()
+            }
             Ok(()) => "Saved".into(),
             Err(error) => feedback::file(error),
         };
         match std::mem::take(&mut self.work.after) {
-            AfterSave::Close if result.is_ok() && !self.session.dirty() => {
+            AfterSave::Close
+                if result.is_ok() && !self.session.dirty() && !self.localisation.dirty() =>
+            {
                 self.close_with_recovery()
             }
             AfterSave::Close => self.phase = Phase::ConfirmClose,

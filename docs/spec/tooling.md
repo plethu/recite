@@ -157,6 +157,17 @@ all and build completes the shared ordered save sequence first. Build jobs and t
 outlive the selected screen. Cancellation keeps close and project replacement guarded until the
 terminal result is collected.
 
+Xilem opens ordinary PO catalogues through the shared localisation owner. Exclusive catalogue
+inspection returns that owner on failure or cancellation; queue and entry presentation are bounded
+independently of catalogue size. Translation typing remains editable during a captured save, and
+newer drafts survive its receipt. Save all publishes catalogue drafts before the normal source save
+sequence. Close waits for both layers and their recovery; cancelling close preserves dispatched
+writes. Unexpected catalogue failures quarantine editing and close using only admitted recovery.
+Disk decisions require the exact inspected local catalogue and external fingerprint. Keeping drafts
+preserves compatible translations for review against the adopted PO metadata; using disk explicitly
+discards those drafts. Catalogue creation, source refresh and localised preview remain migration
+work.
+
 Registered schema generation retains one shared activity owner through command validation, process
 execution and checked output publication. Native publication receipts are reconciled even after
 leaving Declarations or requesting cancellation; cancellation after a successful write cannot undo

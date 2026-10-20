@@ -19,7 +19,8 @@ pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> 
                 blocked
                     || state.session.read_only()
                     || state.source_repair_pending()
-                    || state.external_resolution_pending(),
+                    || state.external_resolution_pending()
+                    || state.project_jobs_busy(),
             ),
             text_button(state.ui_scale(), "Close", Writer::request_close)
                 .disabled(blocked || state.project_jobs_busy()),
@@ -43,6 +44,7 @@ pub(super) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     state.phase != Phase::Writing
                         || state.navigation.busy()
                         || state.work.busy()
+                        || state.localisation.saving()
                         || state.source_repair_pending(),
                 )
             }),
@@ -74,6 +76,7 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .disabled(
                     closing
                         || state.work.busy()
+                        || state.localisation.saving()
                         || state.navigation.busy()
                         || state.source_repair_pending(),
                 )
@@ -85,6 +88,8 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .disabled(
                     closing
                         || state.work.busy()
+                        || state.localisation.saving()
+                        || state.localisation.working()
                         || state.navigation.busy()
                         || state.source_repair_pending(),
                 )
@@ -205,12 +210,18 @@ pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + 
 pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = state.ui_scale();
     let ordinary_exit = state.phase == Phase::ConfirmExit;
-    matches!(state.phase, Phase::ConfirmClose | Phase::ConfirmExit).then(|| {
+    matches!(
+        state.phase,
+        Phase::ConfirmClose | Phase::ConfirmExit | Phase::Closing
+    )
+    .then(|| {
         sized_box(
             flex_col((
                 label(
                     scale,
-                    if ordinary_exit {
+                    if state.phase == Phase::Closing {
+                        "Finishing recovery before closing"
+                    } else if ordinary_exit {
                         "Close Recite Writer?"
                     } else if state.session.project().is_some() {
                         "Keep your unsaved work before closing"
@@ -218,15 +229,24 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
                         "Example edits are temporary and will be discarded"
                     },
                 ),
+                crate::localisation::close_details(state),
                 flex_row((
                     text_button(scale, "Keep editing", |state: &mut Writer| {
                         state.phase = Phase::Writing;
                         state.work.keep_editing();
+                        state.localisation.keep_editing();
                     }),
-                    (state.session.project().is_some() && !ordinary_exit).then(|| {
-                        text_button(scale, "Save all and close", Writer::save_and_close)
-                            .disabled(state.work.busy() || state.source_repair_pending())
-                    }),
+                    (state.session.project().is_some()
+                        && !ordinary_exit
+                        && state.phase != Phase::Closing)
+                        .then(|| {
+                            text_button(scale, "Save all and close", Writer::save_and_close)
+                                .disabled(
+                                    state.work.busy()
+                                        || state.project_jobs_busy()
+                                        || state.source_repair_pending(),
+                                )
+                        }),
                     text_button(
                         scale,
                         if ordinary_exit {
@@ -238,7 +258,7 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
                         },
                         Writer::close_with_recovery,
                     )
-                    .disabled(state.work.busy()),
+                    .disabled(state.work.busy() || state.project_jobs_busy()),
                 ))
                 .gap(8.px()),
             ))

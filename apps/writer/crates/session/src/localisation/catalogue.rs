@@ -2,6 +2,7 @@
 mod preview;
 mod queue;
 pub use preview::PreviewInput;
+pub use queue::CatalogueQueue;
 mod recovery;
 mod save;
 use super::messages::{MsgId, text as wording};
@@ -19,10 +20,8 @@ pub struct Draft {
     pub reviewed: bool,
 }
 
-pub struct Comparison {
-    pub rows: Vec<crate::comparison::ComparisonRow>,
-    pub fingerprint: PoDocumentFingerprint,
-}
+mod external;
+pub use external::{Comparison, ExternalDecision, Inspection};
 
 pub struct Catalogue {
     pub path: PathBuf,
@@ -74,6 +73,9 @@ impl Catalogue {
     }
     pub fn dirty(&self) -> bool {
         !self.drafts.is_empty()
+    }
+    pub fn changed_entries(&self) -> impl ExactSizeIterator<Item = PoEntryId> + '_ {
+        self.drafts.keys().copied()
     }
     pub fn entry_for(&self, anchor: &str, source: &str) -> Option<PoEntryId> {
         let mut matches = self
@@ -161,67 +163,6 @@ impl Catalogue {
             return Err(wording(MsgId::WriterReloadDrafts));
         }
         self.adopt(Self::open(&self.path)?)
-    }
-    pub fn compare(&self) -> Result<Comparison, String> {
-        let disk = Self::open(&self.path)?;
-        let mut rows = Vec::new();
-        for (id, draft) in self.drafts.iter() {
-            let Some(entry) = self.document.entry(*id) else {
-                continue;
-            };
-            let target = entry
-                .context()
-                .and_then(|c| disk.entry_for(c, entry.source_text()))
-                .and_then(|id| disk.draft(id));
-            for (index, text) in draft.forms.iter().enumerate() {
-                rows.push(crate::comparison::ComparisonRow {
-                    caption: format!("{} · {}", entry.source_text(), index + 1),
-                    before: Some(text.clone()),
-                    after: target.as_ref().and_then(|d| d.forms.get(index)).cloned(),
-                });
-            }
-        }
-        Ok(Comparison {
-            rows,
-            fingerprint: disk.baseline,
-        })
-    }
-    pub fn accept_external(
-        &mut self,
-        keep_drafts: bool,
-        expected: &PoDocumentFingerprint,
-    ) -> Result<(), String> {
-        self.require_idle_save()?;
-        let mut next = Self::open(&self.path)?;
-        if &next.baseline != expected {
-            return Err(wording(MsgId::WriterCompare));
-        }
-        if !keep_drafts {
-            return self.adopt(next);
-        }
-        for (id, draft) in &self.drafts {
-            let entry = self
-                .document
-                .entry(*id)
-                .ok_or_else(|| wording(MsgId::WriterNoEntry))?;
-            let target = entry
-                .context()
-                .and_then(|c| next.entry_for(c, entry.source_text()))
-                .ok_or_else(|| wording(MsgId::WriterNoEntry))?;
-            let target_entry = next
-                .document
-                .entry(target)
-                .ok_or_else(|| wording(MsgId::WriterNoEntry))?;
-            if target_entry.plural_source_text() != entry.plural_source_text()
-                || self.plural_rule() != next.plural_rule()
-            {
-                return Err(wording(MsgId::WriterExternalStructureChanged));
-            }
-            let mut chosen = draft.as_ref().clone();
-            chosen.reviewed = false;
-            next.drafts.insert(target, Arc::new(chosen));
-        }
-        self.adopt(next)
     }
     pub fn replace_refreshed(
         &mut self,

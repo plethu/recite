@@ -45,6 +45,7 @@ impl App {
                     WriterCommand::Map => writer.show_workspace(crate::map::Workspace::Map),
                     WriterCommand::Split => writer.show_workspace(crate::map::Workspace::Split),
                     WriterCommand::Focus => writer.toggle_focus(),
+                    WriterCommand::Localise => writer.open_localisation(),
                     WriterCommand::Declarations => {
                         writer.open_project_workspace(crate::workspaces::Open::Declarations)
                     }

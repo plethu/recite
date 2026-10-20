@@ -42,8 +42,11 @@ cover live light/dark/monochrome colours, 100–200% scale, retained manuscript 
 shortcut edits, persisted configuration and ordinary exit confirmation. Native keyboard checks cover
 focused Apply, immediate Save, live rebinding and retained text undo/redo. The native settings drill
 traverses and activates controls after scrolling; adapter regressions cover clipping and
-registration ordering. This does not establish workspace parity: localisation and configured preview
-inputs, schema and workspace command dispatch remain in progress. Physical IME, screen-reader
+registration ordering. Catalogue editing now covers native review/save, retained manuscript undo,
+inspected PO conflict decisions, source-plus-catalogue Save All and close/reopen recovery. Separate
+native checks exercise command search and catalogue editing at 200% UI scale with 32px reading text.
+This does not establish workspace parity: catalogue creation, source refresh, configured preview
+inputs and remaining workspace commands are still being migrated. Physical IME, screen-reader
 announcements, hardware rendering and Windows/macOS acceptance remain unverified for Xilem. The
 portal scrollbar precedes close choices in the Tab cycle; the current native drill reaches Keep
 editing in three presses and verifies that cancelling close retains text undo/redo. Automatic focus
