@@ -236,7 +236,7 @@ impl App {
         if writer.phase != Phase::Writing {
             return false;
         }
-        let idle = !writer.work.busy() && !writer.navigation.busy();
+        let idle = !writer.work.busy() && !writer.navigation.busy() && !writer.session.read_only();
         match command {
             C::Commands | C::GoTo | C::Find | C::OpenProject | C::Settings | C::Close => true,
             C::Save | C::SaveAll => {
@@ -246,9 +246,13 @@ impl App {
             C::Apply => idle && writer.session.model().has_draft(),
             C::Undo => {
                 idle && (writer.session.model().has_draft()
-                    || writer.session.model().document().can_undo())
+                    || writer.session.model().document().can_undo()
+                    || writer.has_project_history(false))
             }
-            C::Redo => idle && writer.session.model().document().can_redo(),
+            C::Redo => {
+                idle && (writer.session.model().document().can_redo()
+                    || writer.has_project_history(true))
+            }
             C::Script | C::Map | C::Split | C::AddBeat | C::Focus => idle,
             C::PaneLeft | C::PaneRight | C::PaneUp | C::PaneDown => true,
             C::NextMatch | C::PreviousMatch => idle,
@@ -262,7 +266,7 @@ impl App {
                     .is_some()
             }
             C::Preview => idle,
-            C::Declarations | C::Build => idle && writer.session.project().is_some(),
+            C::Declarations | C::Build | C::Rename => idle && writer.session.project().is_some(),
             C::Back | C::Forward => {
                 idle && writer
                     .navigation

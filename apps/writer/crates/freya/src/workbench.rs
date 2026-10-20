@@ -76,10 +76,12 @@ pub(crate) fn render(mode: AppMode) -> Element {
             .map_or("", buffers::prose_draft)
             .to_owned()
     });
-    buffers::observe_draft(model, editor, prose);
+    let files = use_state(|| None);
+    buffers::observe_draft(model, editor, prose, files);
     let editor_id = use_a11y();
     let rules = use_state(|| None);
     let buffers = buffers::Buffers {
+        files,
         bookmarks: buffers::Bookmarks::new(),
         rules,
         model,
@@ -120,7 +122,6 @@ pub(crate) fn render(mode: AppMode) -> Element {
         }
     });
     let expanded = use_state(std::collections::BTreeSet::new);
-    let files = use_state(|| None);
     let examples = use_state(recite_writer_session::examples::ExampleSessions::default);
     let queue = navigation::Queue {
         search: use_state(String::new),

@@ -11,12 +11,16 @@ pub(crate) enum Open {
     Declarations,
     Build,
     Settings,
+    Rename,
 }
 pub(crate) struct Work {
     root: PathBuf,
     action: Open,
 }
 pub(crate) enum Prepared {
+    Rename {
+        root: PathBuf,
+    },
     Declarations {
         root: PathBuf,
         session: Option<Box<Session>>,
@@ -57,6 +61,7 @@ impl Work {
     }
     pub fn execute(self) -> Result<Prepared, String> {
         match self.action {
+            Open::Rename => Ok(Prepared::Rename { root: self.root }),
             Open::Declarations => {
                 let session = Session::open(&self.root).map_err(|error| error.to_string())?;
                 let rows = entries::entries(session.last_valid_schema())
@@ -96,6 +101,7 @@ impl Writer {
             Prepared::Declarations { root, .. }
             | Prepared::Build { root, .. }
             | Prepared::Settings { root, .. } => root,
+            Prepared::Rename { root } => root,
         };
         let project = self
             .session
@@ -104,6 +110,12 @@ impl Writer {
             .ok_or("The project changed while its workspace was opening.")?;
         let (files, _) = project.parts_mut();
         let screen = match prepared {
+            Prepared::Rename { .. } => {
+                self.workspaces
+                    .rename
+                    .choose_block(project.current().model().selected_block().ok().flatten());
+                Screen::Rename
+            }
             Prepared::Declarations {
                 session,
                 rows,

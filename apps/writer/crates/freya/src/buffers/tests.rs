@@ -7,6 +7,7 @@ fn same_source_navigation_keeps_rope_and_caret_but_scene_changes_reset_them() {
     fn app() -> impl IntoElement {
         let source = ":: start default\n-> END\n";
         let mut buffers = Buffers {
+            files: use_state(|| None),
             bookmarks: Bookmarks::new(),
             rules: use_state(|| None),
             model: use_state(move || {

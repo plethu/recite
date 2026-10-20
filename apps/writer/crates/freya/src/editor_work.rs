@@ -105,6 +105,7 @@ fn enqueue(
     completed: EventHandler<Result<(), String>>,
 ) -> Result<(), String> {
     writer.work.require_idle()?;
+    writer.require_project_edit_ready()?;
     let worker = Worker::new().map_err(|e| e.to_string())?;
     let kind = match &intent {
         Intent::Save { .. } if *writer.pane.peek() == crate::editing::Pane::Rules => {
@@ -156,6 +157,7 @@ fn enqueue(
 pub(crate) fn start(mut writer: Writer, scope: Scope, completed: EventHandler<Result<(), String>>) {
     let result = (|| {
         writer.work.require_idle()?;
+        writer.require_project_edit_ready()?;
         let applies = {
             let files = writer.files.peek();
             let project = files.as_ref().ok_or("Open a project before saving.")?;
@@ -196,6 +198,7 @@ pub(crate) fn edit_then(
     completed: EventHandler<Result<(), String>>,
 ) -> Result<(), String> {
     writer.work.require_idle()?;
+    writer.require_project_edit_ready()?;
     writer.buffers.harvest();
     if let Some(request) = document::capture(writer, operation)? {
         enqueue(
@@ -218,6 +221,7 @@ pub(crate) fn edit_then(
 }
 pub(crate) fn rules(mut writer: Writer, passage: &str) -> Result<(), String> {
     writer.work.require_idle()?;
+    writer.require_project_edit_ready()?;
     let request = writer
         .buffers
         .model
@@ -338,6 +342,7 @@ pub(crate) fn navigate(
     completed: EventHandler<Result<(), String>>,
 ) -> Result<(), String> {
     writer.work.require_idle()?;
+    writer.require_project_edit_ready()?;
     enqueue(
         writer,
         Intent::Navigation(Box::new(request.begin(writer)?)),

@@ -53,11 +53,21 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
                 usize::from(state.attention.is_focused())
             },
         ),
-        paragraph(
-            state.ui_scale(),
-            state.status.clone(),
-            state.script_width() + state.navigation_width() + 20.,
-        ),
+        state.session.recovery_reason().is_none().then(|| {
+            paragraph(
+                state.ui_scale(),
+                state.status.clone(),
+                state.script_width() + state.navigation_width() + 20.,
+            )
+        }),
+        crate::workspaces::recovery(state),
+        state.session.checked_out().then(|| {
+            text_button(
+                state.ui_scale(),
+                "Cancel project action",
+                Writer::cancel_project_action,
+            )
+        }),
         editor_status(state),
         state.navigation.busy().then(|| {
             text_button(
@@ -134,6 +144,9 @@ fn editor_status(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     })
 }
 fn recovery_failure(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    if state.session.recovery_reason().is_some() {
+        return None;
+    }
     state
         .session
         .project()

@@ -21,6 +21,14 @@ available to correct. Text undo remains available while a field is open, includi
 picker and Apply. Changing rule-field pages ends that page's field undo history; applied edits use
 document undo.
 
+In Xilem, **Rename beat** in Commands opens the project rename workspace. Enter the current and new
+beat names, choose **Review project rename**, and inspect the paged source and manifest changes.
+**Apply project rename** stages one grouped Undo/Redo step; **Save all** writes the affected files.
+Changing either name discards the old review. Review and Apply briefly pause editing while their
+worker owns the project, retaining the mounted manuscript field. If recovery fails after staging,
+editing stays paused until **Retry project edit recovery** succeeds, or you close keeping recovery
+and reopen. An unexpected worker failure requires reopening.
+
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:
 

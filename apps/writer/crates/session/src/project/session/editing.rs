@@ -10,6 +10,7 @@ impl DocumentSessionMut<'_> {
         &mut self,
         action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
     ) -> Result<(), FileError> {
+        self.files.require_project_edit_ready()?;
         let result = action(self.model).map_err(FileError::from);
         let recovery = self.files.queue_checkpoint(self.model);
         result.and(recovery)

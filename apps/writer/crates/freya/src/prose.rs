@@ -6,6 +6,8 @@ use freya::{animation::use_animation, prelude::*};
 use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, PassageKind, View};
 pub(crate) mod focus;
+mod validation;
+pub(crate) use validation::validate;
 
 #[derive(Clone)]
 pub(super) struct ProseField {
@@ -111,7 +113,6 @@ impl Component for ProseField {
         let wide = *width.read() >= 560. * t::ui_scale();
         let actions = crate::passage_menu::render(writer, details, &passage);
         let colors = t::colors();
-        let mut buffers = writer.buffers;
         // Facts about the line, in mono, overlaid in the gap below it so hover never moves text.
         let meta = (*hovered.read() || selected).then(|| {
             rect()
@@ -134,7 +135,7 @@ impl Component for ProseField {
         });
         let field = t::prose().child(
             Input::new(text)
-                .enabled(!writer.work.busy() || selected)
+                .enabled(!writer.project_edit_blocked() && (!writer.work.busy() || selected))
                 .a11y_id(id)
                 .multiline(true)
                 .width(Size::fill())
@@ -148,25 +149,7 @@ impl Component for ProseField {
                         crate::closing::text_input_key(event)
                     }
                 })
-                .on_validate(move |value: InputValidator| {
-                    let selected = buffers
-                        .model
-                        .peek()
-                        .as_ref()
-                        .is_ok_and(|m| m.view() == &target);
-                    if !selected && let View::Passage(passage) = &target {
-                        focus::select(writer, passage.clone(), id);
-                    }
-                    if let Ok(session) = buffers.model.write().as_mut() {
-                        if session.view() == &target {
-                            let draft = value.text().clone();
-                            session.set_draft(draft.clone());
-                            buffers.prose.set_if_modified(draft);
-                        } else {
-                            value.set_valid(false);
-                        }
-                    }
-                })
+                .on_validate(move |value: InputValidator| validate(writer, &target, id, value))
                 // Lines are flat at rest; only keyboard or pointer focus draws the outline.
                 .theme_colors(InputColorsThemePartial {
                     background: Some(Preference::Specific(Color::TRANSPARENT)),

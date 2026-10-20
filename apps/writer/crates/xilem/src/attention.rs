@@ -21,6 +21,7 @@ pub(crate) enum Pane {
     Declarations,
     Build,
     Settings,
+    Rename,
 }
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct Region(pub Option<Pane>);

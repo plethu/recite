@@ -1,5 +1,5 @@
 //! Mirror text changes without recapturing Source for cursor or syntax updates.
-use super::Session;
+use super::{ProjectFiles, Session};
 use freya::{
     code_editor::{CodeEditorData, Rope},
     prelude::*,
@@ -42,9 +42,17 @@ pub(crate) fn observe_draft(
     mut model: Session,
     editor: State<CodeEditorData>,
     prose: State<String>,
+    files: State<Option<ProjectFiles>>,
 ) {
     let mut source = use_state(SourceDraft::default);
     use_side_effect(move || {
+        if files
+            .read()
+            .as_ref()
+            .is_some_and(ProjectFiles::project_edit_recovery_pending)
+        {
+            return;
+        }
         let draft = {
             let state = model.read();
             let Ok(session) = state.as_ref() else {

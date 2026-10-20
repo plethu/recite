@@ -3,9 +3,11 @@ use super::{
     FileError, read_regular,
     save::{replace_checked, sync_directory},
 };
+mod checkpoint;
+pub(super) use checkpoint::Checkpoint;
 use std::{
     fs::{File, OpenOptions},
-    io::{self, Write},
+    io,
     path::{Path, PathBuf},
 };
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -38,7 +40,8 @@ impl Drop for ManifestDraft {
 #[derive(PartialEq, Eq)]
 enum PersistenceState {
     Editable,
-    RecoveryCleanupPending,
+    CheckpointCleanupPending,
+    SaveCleanupPending,
 }
 impl ManifestDraft {
     pub fn open(root: &Path) -> Result<Self, FileError> {
@@ -73,7 +76,7 @@ impl ManifestDraft {
             _lease: lease,
             draft,
             state: if recovered {
-                PersistenceState::RecoveryCleanupPending
+                PersistenceState::CheckpointCleanupPending
             } else {
                 PersistenceState::Editable
             },
@@ -85,7 +88,7 @@ impl ManifestDraft {
     pub fn dirty(&self) -> bool {
         self.draft.text != self.draft.baseline
             || !self.draft.affected.is_empty()
-            || self.state == PersistenceState::RecoveryCleanupPending
+            || self.state != PersistenceState::Editable
     }
     pub fn affected(&self) -> &[String] {
         &self.draft.affected
@@ -93,40 +96,23 @@ impl ManifestDraft {
     pub fn pending(&self) -> &std::collections::BTreeMap<String, crate::recovery::Recovery> {
         &self.draft.documents
     }
+    pub fn recovery_pending(&self) -> bool {
+        !self.draft.documents.is_empty() || self.state == PersistenceState::CheckpointCleanupPending
+    }
     pub fn checkpointed(&mut self) -> Result<(), FileError> {
-        self.set(
+        self.checkpointed_with_sync(sync_directory)
+    }
+    pub(super) fn checkpointed_with_sync(
+        &mut self,
+        sync: impl FnOnce(&Path) -> io::Result<()>,
+    ) -> Result<(), FileError> {
+        self.checkpoint_with_sync(
             self.draft.text.clone(),
             Default::default(),
             self.draft.affected.clone(),
-        )
-    }
-    pub fn set(
-        &mut self,
-        text: String,
-        documents: std::collections::BTreeMap<String, crate::recovery::Recovery>,
-        affected: Vec<String>,
-    ) -> Result<(), FileError> {
-        let draft = Draft {
-            version: 1,
-            documents,
-            affected,
-            baseline: self.draft.baseline.clone(),
-            text,
-        };
-        if draft.text == draft.baseline && draft.affected.is_empty() {
-            self.remove_recovery(sync_directory)?;
-            self.draft = draft;
-            self.state = PersistenceState::Editable;
-            return Ok(());
-        }
-        let mut file = atomic_write_file::AtomicWriteFile::open(&self.recovery)?;
-        file.write_all(&serde_json::to_vec(&draft)?)?;
-        file.commit().map_err(FileError::Commit)?;
-        #[cfg(unix)]
-        File::open(self.path.parent().ok_or(FileError::Selection)?)?.sync_all()?;
-        self.draft = draft;
-        self.state = PersistenceState::Editable;
-        Ok(())
+            sync,
+        )?
+        .result()
     }
     pub fn refresh(&mut self, text: String) {
         if !self.dirty() {
@@ -153,22 +139,12 @@ impl ManifestDraft {
             self.draft.baseline = self.draft.text.clone();
             self.draft.affected.clear();
             self.draft.documents.clear();
-            self.state = PersistenceState::RecoveryCleanupPending;
+            self.state = PersistenceState::SaveCleanupPending;
             if outcome.result.is_ok() {
                 self.state = PersistenceState::Editable;
             }
         }
         outcome.result
-    }
-
-    fn remove_recovery(&self, sync: impl FnOnce(&Path) -> io::Result<()>) -> Result<(), FileError> {
-        match std::fs::remove_file(&self.recovery) {
-            Ok(()) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(error) => return Err(error.into()),
-        }
-        sync(self.path.parent().ok_or(FileError::Selection)?)?;
-        Ok(())
     }
 }
 

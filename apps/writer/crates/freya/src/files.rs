@@ -123,7 +123,10 @@ pub(crate) fn controls(
         .child(crate::external::WatchPoll { writer })
         .child(crate::builds::BuildPoll { writer })
         .child(crate::declarations::ProducerPoll { writer })
-        .child(status::RecoveryStatus { files })
+        .child(status::RecoveryStatus {
+            files,
+            retry: EventHandler::new(move |()| crate::recovery::retry_project_edit(writer)),
+        })
         .child(crate::project_loading::Loading {
             writer,
             files,

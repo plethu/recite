@@ -17,6 +17,7 @@ impl Job {
             Work::SettingsPublish(work) => {
                 Ok(Value::SettingsWritten(Box::new(work.not_started(error))))
             }
+            Work::Project(work) => Ok(Value::Project(Box::new(work.not_started(error)))),
         };
         Completed {
             request: self.request,
@@ -41,6 +42,7 @@ impl Job {
                 work.execute(),
             )))),
             Work::SettingsPublish(work) => Ok(Value::SettingsWritten(Box::new(work.execute()))),
+            Work::Project(work) => Ok(Value::Project(Box::new(work.execute()))),
             Work::Refresh(work) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 work.prepare(&recite_compiler::authoring::CancellationToken::new())
                     .map(|prepared| Value::Refreshed(Box::new(prepared)))

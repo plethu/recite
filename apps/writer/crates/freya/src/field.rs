@@ -50,6 +50,7 @@ impl Component for SourceField {
                             .height(Size::fill())
                             .child(
                                 CodeEditor::new(writer.buffers.editor, editor_id)
+                                    .read_only(writer.project_edit_blocked())
                                     .scroll_controller(writer.source_viewport.scroll)
                                     .font_family("monospace")
                                     .font_size(t::code_size())

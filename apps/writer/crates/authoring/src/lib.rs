@@ -27,10 +27,10 @@ pub use projection::{Passage, PassageContent, PassageKind};
 pub use recovery::RecoveredDraft;
 pub use script::{ScriptBlock, ScriptEntry};
 pub use workbench::{
-    ContextRefreshRequest, EditRequest, NavigationRequest, NavigationStamp, PreparedContextRefresh,
-    PreparedEdit, PreparedNavigation, PreparedSourceRepair, PreparedStructuralEdit, RouteOwner,
-    SourceRepairRequest, SourceValidation, StructuralCommand, StructuralRequest, View, Workbench,
-    WorkbenchError,
+    ContextRefreshRequest, EditRequest, FrozenWorkbench, NavigationRequest, NavigationStamp,
+    PreparedContextRefresh, PreparedEdit, PreparedNavigation, PreparedSourceRepair,
+    PreparedStructuralEdit, RouteOwner, SourceRepairRequest, SourceValidation, StructuralCommand,
+    StructuralRequest, View, Workbench, WorkbenchError,
 };
 
 pub const FIXTURE: &str =

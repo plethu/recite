@@ -21,6 +21,7 @@ pub(crate) fn prose_draft(model: &Workbench) -> &str {
 }
 #[derive(Clone, Copy)]
 pub(crate) struct Buffers {
+    pub files: State<Option<ProjectFiles>>,
     pub bookmarks: Bookmarks,
     pub rules: State<Option<recite_writer_model::ReplyRules>>,
     pub model: Session,
@@ -87,6 +88,14 @@ impl Buffers {
         }
     }
     pub(super) fn harvest(mut self) {
+        if self
+            .files
+            .peek()
+            .as_ref()
+            .is_some_and(ProjectFiles::project_edit_recovery_pending)
+        {
+            return;
+        }
         self.remember();
         if let Ok(model) = self.model.write().as_mut() {
             harvest_draft(model, &self.editor.peek().rope, &self.prose.peek());

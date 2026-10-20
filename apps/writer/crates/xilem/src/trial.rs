@@ -73,6 +73,10 @@ impl Trial {
 
 impl Writer {
     pub(super) fn start_trial(&mut self) {
+        if self.session.read_only() {
+            self.trial.status = "Finish the project action before starting a preview.".into();
+            return;
+        }
         self.workspaces.screen = crate::workspaces::Screen::Write;
         self.attention.leave_focus();
         self.trial.visible = true;

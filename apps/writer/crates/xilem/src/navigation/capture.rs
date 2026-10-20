@@ -196,6 +196,9 @@ impl Writer {
                     .request(model, &location.document)
                     .map_err(|error| error.to_string())?,
             ))),
+            Session::Working { .. } | Session::Recovering { .. } => {
+                Err(FileError::ProjectActionPending.to_string())
+            }
         }
     }
 }

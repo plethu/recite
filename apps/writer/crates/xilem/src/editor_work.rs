@@ -80,6 +80,10 @@ impl Writer {
         self.start_save(Scope::AcceptedCurrent, AfterSave::OpenEditor(request));
     }
     fn start_save(&mut self, scope: Scope, after: AfterSave) {
+        if self.session.read_only() {
+            self.status = FileError::ProjectActionPending.to_string();
+            return;
+        }
         if let Some(document) = self.source_repair_requirement(&scope) {
             self.status = format!(
                 "Repair and import the source draft in {} before saving it. No project files changed.",

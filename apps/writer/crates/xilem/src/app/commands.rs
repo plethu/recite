@@ -51,6 +51,9 @@ impl App {
                     WriterCommand::Build => {
                         writer.open_project_workspace(crate::workspaces::Open::Build)
                     }
+                    WriterCommand::Rename => {
+                        writer.open_project_workspace(crate::workspaces::Open::Rename)
+                    }
                     WriterCommand::NextMatch | WriterCommand::PreviousMatch => {
                         writer.repeat_lookup(command == WriterCommand::NextMatch)
                     }
@@ -64,13 +67,9 @@ impl App {
                     WriterCommand::Apply => writer.navigate(crate::navigation::Target::Edit(
                         recite_writer_model::EditOperation::Apply,
                     )),
-                    WriterCommand::Undo | WriterCommand::Redo => writer.navigate(
-                        crate::navigation::Target::Edit(if command == WriterCommand::Undo {
-                            recite_writer_model::EditOperation::Undo
-                        } else {
-                            recite_writer_model::EditOperation::Redo
-                        }),
-                    ),
+                    WriterCommand::Undo | WriterCommand::Redo => {
+                        writer.undo_redo(command == WriterCommand::Redo)
+                    }
                     WriterCommand::AddBeat | WriterCommand::AddLine | WriterCommand::AddReply => {
                         writer.navigate(crate::navigation::Target::Structure(match command {
                             WriterCommand::AddBeat => StructuralCommand::AddBeat,

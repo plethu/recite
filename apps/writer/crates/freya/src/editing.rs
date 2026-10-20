@@ -330,7 +330,21 @@ impl Writer {
         action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
     ) -> Result<(), String> {
         self.work.require_idle()?;
+        self.require_project_edit_ready()?;
         perform(self.buffers, self.message, self.dark, action)
+    }
+    pub(crate) fn require_project_edit_ready(self) -> Result<(), String> {
+        self.files.peek().as_ref().map_or(Ok(()), |files| {
+            files
+                .require_project_edit_ready()
+                .map_err(|error| error.to_string())
+        })
+    }
+    pub(crate) fn project_edit_blocked(self) -> bool {
+        self.files
+            .read()
+            .as_ref()
+            .is_some_and(crate::project::ProjectFiles::project_edit_recovery_pending)
     }
 }
 

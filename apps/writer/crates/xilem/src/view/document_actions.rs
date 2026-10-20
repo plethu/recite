@@ -16,7 +16,7 @@ pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> 
             )
             .disabled(state.phase != Phase::Writing),
             text_button(state.ui_scale(), "Save all", Writer::save_all)
-                .disabled(blocked || state.source_repair_pending()),
+                .disabled(blocked || state.session.read_only() || state.source_repair_pending()),
             text_button(state.ui_scale(), "Close", Writer::request_close)
                 .disabled(blocked || state.project_jobs_busy()),
         ))

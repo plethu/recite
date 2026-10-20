@@ -8,6 +8,7 @@ use recite_writer_model::{Document, Workbench};
 fn history_publication_updates_both_widgets_and_source_language_even_when_text_matches() {
     fn app() -> impl IntoElement {
         let buffers = Buffers {
+            files: use_state(|| None),
             bookmarks: Bookmarks::new(),
             rules: use_state(|| None),
             model: use_state(|| Workbench::new("")),

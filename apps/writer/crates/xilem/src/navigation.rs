@@ -12,6 +12,7 @@ use super::{Writer, feedback, session::Session};
 use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
 use recite_writer_model::StructuralCommand;
 use recite_writer_model::{AnalysisStamp, EditOperation, RecoveredDraft, View};
+use recite_writer_session::FileError;
 use recite_writer_session::location::Location;
 use std::sync::atomic;
 use std::{path::PathBuf, sync::Arc};
@@ -201,6 +202,9 @@ impl Writer {
         }
     }
     pub(super) fn begin_navigation(&mut self, target: Target) -> Result<(), String> {
+        if self.session.read_only() {
+            return Err(FileError::ProjectActionPending.to_string());
+        }
         if self.work.busy() || self.navigation.busy() || self.phase != super::Phase::Writing {
             return Err("Finish the current editor action before navigating.".into());
         }

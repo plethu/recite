@@ -2,9 +2,11 @@
 mod accepting;
 mod declaration;
 mod job;
+mod project;
 mod settings;
 mod worker;
 use super::{Phase, Writer, declarations::Row};
+pub(super) use project::Action as ProjectAction;
 use recite_writer_session::{
     declarations::{
         DeclarationAction, DeclarationFinish, DeclarationFinished, DeclarationReceipt,
@@ -46,6 +48,7 @@ pub(super) enum Work {
     Declaration(Box<DeclarationWork>),
     Settings(Box<SettingsWork>),
     SettingsPublish(Box<SettingsPublication>),
+    Project(Box<project::Work>),
 }
 enum Value {
     Started(GenerationStarted),
@@ -61,6 +64,7 @@ enum Value {
     },
     Settings(Box<settings::Prepared>),
     SettingsWritten(Box<SettingsWritten>),
+    Project(Box<project::Completed>),
 }
 struct Completed {
     request: Arc<Request>,
@@ -123,7 +127,8 @@ impl Writer {
                 .is_some_and(|project| project.files().require_navigation_ready().is_err())
     }
     pub(super) fn project_action_blocked(&self) -> bool {
-        self.phase != Phase::Writing
+        self.session.read_only()
+            || self.phase != Phase::Writing
             || self.work.busy()
             || self.navigation.busy()
             || self.project_jobs_busy()
@@ -201,11 +206,11 @@ impl Writer {
         }
     }
     fn submit_tool(&mut self, work: Work) {
-        let Some(project) = self.session.project() else {
+        let Some(root) = self.session.project_root() else {
             return;
         };
         let request = Arc::new(Request {
-            root: project.root().to_owned(),
+            root: root.to_owned(),
             kind: match &work {
                 Work::Refresh(_) => ToolKind::Refresh,
                 Work::Settings(_) | Work::SettingsPublish(_) => ToolKind::Settings,
@@ -221,6 +226,9 @@ impl Writer {
             Work::Settings(_) => "Preparing project settings… Your manuscript stays open.",
             Work::SettingsPublish(_) => {
                 "Publishing reviewed project settings… You can keep writing."
+            }
+            Work::Project(_) => {
+                "Preparing the project operation… Editing is paused until its result returns."
             }
         }
         .into();

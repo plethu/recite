@@ -286,6 +286,7 @@ pub(super) fn route(
     completed: EventHandler<Result<(), String>>,
 ) -> Result<(), String> {
     writer.work.require_idle()?;
+    writer.require_project_edit_ready()?;
     crate::projections::cancel_view(writer);
     writer.remember_scene();
     writer.buffers.harvest();

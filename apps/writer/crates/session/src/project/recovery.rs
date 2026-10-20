@@ -22,6 +22,9 @@ impl ProjectFiles {
                 RecoveryStore::open(&path)?.persist(Some(recovery))?;
             }
         }
+        if self.manifest.recovery_pending() {
+            self.manifest.checkpointed()?;
+        }
         let recovered = self.recovery.snapshot();
         let source = recovered.map_or(self.saved.as_ref(), |r| r.draft.source());
         let key = recite_core::DocumentKey::new(self.document_name()?)
@@ -49,9 +52,6 @@ impl ProjectFiles {
             self.switch_with_control(&mut workbench, &path, None, |_| Ok(()), control)?;
         }
         self.switch_with_control(&mut workbench, &original, None, |_| Ok(()), control)?;
-        if !self.manifest.pending().is_empty() {
-            self.manifest.checkpointed()?;
-        }
         control.checkpoint()?;
         Ok(workbench)
     }

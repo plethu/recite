@@ -124,6 +124,7 @@ impl Writer {
     }
     pub(crate) fn rules_editable(&self) -> bool {
         self.phase == Phase::Writing
+            && !self.session.read_only()
             && !self.work.busy()
             && !self.navigation.busy()
             && self.rules.as_ref().is_some_and(|reply| {

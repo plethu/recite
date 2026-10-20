@@ -86,6 +86,15 @@ Save all consider inactive documents too. It uses an external editor for source 
 embedding a second source editor. This does not establish parity for the remaining workspaces or
 remove the existing Freya Source workflow.
 
+Project-wide beat rename uses the shared reviewed plan and grouped history. Xilem moves the sole
+project owner to a worker separately for Review and Apply, retaining a read-only writing projection
+and mounted native fields. The durable grouped journal commits before the model swap; cancellation
+after that point cannot discard the returned owner. Both frontends exclude newer edits, navigation
+and Save until document recovery and the journal's final directory sync complete. Known checkpoint
+failures offer Retry; an unexpected worker panic requires closing with recovery and reopening.
+Global Undo/Redo reaches grouped history after local document edits. Save all includes the staged
+source, references and manifest in the shared save sequence.
+
 Standalone declaration TOML uses the same external-editor boundary in Xilem. A bound source can
 restore an invalid recovered draft; export preserves it in a separate editable TOML file, and
 explicit import validates its producer before staging it. The original source changes only on Save

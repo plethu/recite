@@ -54,7 +54,7 @@ fn prose_editor(state: &Writer, passage: &str) -> impl WidgetView<Writer> + use<
         .font("Literata")
         .text_size(state.reading_size())
         .placeholder("Manuscript")
-        .disabled(state.phase != Phase::Writing)
+        .disabled(state.phase != Phase::Writing || state.session.read_only())
         .prop(properties::TextAreaLabel::new("Manuscript"))
         .prop(properties::PlaceholderTextSize {
             size: state.reading_size(),
@@ -84,12 +84,17 @@ fn destination(state: &Writer, surface: &Surface<'_>) -> Option<impl WidgetView<
             "Change reply destination…",
             move |state: &mut Writer| state.choose_destination(owner.clone()),
         )
-        .disabled(state.phase != Phase::Writing || state.navigation.busy() || state.work.busy()),
+        .disabled(
+            state.phase != Phase::Writing
+                || state.session.read_only()
+                || state.navigation.busy()
+                || state.work.busy(),
+        ),
     )
 }
 fn draft_actions(state: &Writer, editing: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing;
+    let closing = state.phase != Phase::Writing || state.session.read_only();
     let has_draft = state.session.model().has_draft();
     flex_row((
         edit_button(
@@ -118,13 +123,22 @@ fn edit_button(
     operation: EditOperation,
     enabled: bool,
 ) -> impl WidgetView<Writer> + use<> {
-    text_button(state.ui_scale(), title, move |state: &mut Writer| {
-        state.navigate(crate::navigation::Target::Edit(operation))
-    })
+    text_button(
+        state.ui_scale(),
+        title,
+        move |state: &mut Writer| match operation {
+            EditOperation::Undo => state.undo_redo(false),
+            EditOperation::Redo => state.undo_redo(true),
+            _ => state.navigate(crate::navigation::Target::Edit(operation)),
+        },
+    )
     .disabled(!enabled)
 }
 fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
+    let closing = state.phase != Phase::Writing
+        || state.session.read_only()
+        || state.navigation.busy()
+        || state.work.busy();
     let repair = state.reading.script().is_err();
     let selected = state.reading.selected.is_some() && state.reading.error.is_none() && !repair;
     flex_row((

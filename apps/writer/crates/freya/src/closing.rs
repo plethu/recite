@@ -356,6 +356,14 @@ fn flush_recovery(
         source.flush_recovery().map_err(|e| e.to_string())?;
     }
     buffers.harvest();
+    if files
+        .peek()
+        .as_ref()
+        .is_some_and(ProjectFiles::project_edit_recovery_pending)
+    {
+        // The grouped checkpoint already owns these exact staged documents. Keep it for replay.
+        return Ok(());
+    }
     let model = buffers.model.peek();
     if let (Ok(workbench), Some(project)) = (model.as_ref(), files.write().as_mut()) {
         project

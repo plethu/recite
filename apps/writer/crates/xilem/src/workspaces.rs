@@ -2,6 +2,8 @@
 mod builds;
 mod declarations;
 mod opening;
+mod rename;
+pub(crate) use rename::recovery;
 mod settings;
 mod text;
 mod tools;
@@ -20,6 +22,7 @@ pub(crate) enum Screen {
     Declarations,
     Build,
     Settings,
+    Rename,
 }
 #[derive(Clone, Copy)]
 enum ContextUpdate {
@@ -45,6 +48,7 @@ pub(crate) struct Workspaces {
     pub screen: Screen,
     declarations: declarations::Panel,
     settings: settings::Panel,
+    rename: rename::Panel,
     build_page: usize,
     build_feedback: Vec<String>,
     feedback_page: usize,
@@ -58,7 +62,8 @@ impl Writer {
         self.workspaces.declarations.source.invalidate_output();
     }
     pub(crate) fn project_jobs_busy(&self) -> bool {
-        self.workspaces.tools.busy()
+        self.session.checked_out()
+            || self.workspaces.tools.busy()
             || self.session.project().is_some_and(|project| {
                 project.files().builds.busy()
                     || project
@@ -82,10 +87,16 @@ impl Writer {
         self.refresh_map_if_needed();
     }
     pub(crate) fn open_project_workspace(&mut self, action: Open) {
+        if matches!(action, Open::Rename) {
+            self.workspaces
+                .rename
+                .choose_block(self.session.model().selected_block().ok().flatten());
+        }
         let retained = self.session.project().is_some_and(|project| match action {
             Open::Declarations => project.files().declarations.is_some(),
             Open::Build => project.files().builds.busy(),
             Open::Settings => project.files().settings.is_some(),
+            Open::Rename => true,
         });
         if retained && self.phase == Phase::Writing && !self.navigation.busy() && !self.work.busy()
         {
@@ -95,6 +106,7 @@ impl Writer {
                 Open::Declarations => Screen::Declarations,
                 Open::Build => Screen::Build,
                 Open::Settings => Screen::Settings,
+                Open::Rename => Screen::Rename,
             };
             return;
         }
@@ -107,10 +119,12 @@ pub(crate) fn panel(writer: &Writer) -> impl xilem::WidgetView<Writer> + use<> {
         declarations::panel(writer),
         builds::panel(writer),
         settings::panel(writer),
+        rename::panel(writer),
     ))
     .active(match writer.workspaces.screen {
         Screen::Build => 1,
         Screen::Settings => 2,
+        Screen::Rename => 3,
         Screen::Write | Screen::Declarations => 0,
     })
 }

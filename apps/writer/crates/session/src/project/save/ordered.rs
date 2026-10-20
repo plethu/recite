@@ -50,7 +50,7 @@ impl ProjectFiles {
         if self.saving {
             Err(FileError::SavePending)
         } else {
-            Ok(())
+            self.require_project_edit_ready()
         }
     }
     pub fn save_plan_accepted(
@@ -58,6 +58,7 @@ impl ProjectFiles {
         current: &Workbench,
         scope: Scope,
     ) -> Result<Vec<Step>, FileError> {
+        self.require_project_edit_ready()?;
         if matches!(scope, Scope::Declarations) {
             return Ok(vec![Step::Declarations { force: true }]);
         }

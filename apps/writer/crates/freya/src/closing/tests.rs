@@ -1,6 +1,8 @@
 use super::*;
 use freya_testing::prelude::*;
 use recite_writer_model::View;
+#[path = "tests/grouped_recovery.rs"]
+mod grouped_recovery;
 
 const SOURCE: &str = ":: start default\n> @ffee6p8\n  Saved prose.\n-> END\n";
 const DRAFT: &str = ":: start default\n> @ffee6p8\n  Unfinished prose.\n-> END\n";
@@ -21,6 +23,7 @@ fn durability() -> impl IntoElement {
         Ok(model)
     });
     let buffers = Buffers {
+        files,
         bookmarks: crate::buffers::Bookmarks::new(),
         rules: use_state(|| None),
         model,

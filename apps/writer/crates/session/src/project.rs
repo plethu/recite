@@ -164,6 +164,7 @@ impl ProjectFiles {
     }
 
     pub fn checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
+        self.require_project_edit_ready()?;
         self.recovery.persist(self.recovery_value(workbench))
     }
     fn recovery_value(&self, workbench: &Workbench) -> Option<Recovery> {
@@ -180,6 +181,7 @@ impl ProjectFiles {
         })
     }
     pub fn queue_checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
+        self.require_project_edit_ready()?;
         self.recovery.queue(self.recovery_value(workbench))
     }
 

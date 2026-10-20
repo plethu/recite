@@ -14,8 +14,8 @@ impl Writer {
         self.workspaces.tools.pending = None;
         let project_matches = self
             .session
-            .project()
-            .is_some_and(|project| project.root() == completed.request.root);
+            .project_root()
+            .is_some_and(|root| root == completed.request.root);
         if !project_matches {
             self.status = "The project changed while its tool was running.".into();
             return Retirement::Drop(completed.result.ok());
@@ -70,6 +70,7 @@ impl Writer {
             Ok(Value::DeclarationFinished { receipt, completion }) => self.finish_declaration_tool(receipt, *completion),
             Ok(Value::Settings(prepared)) => self.accept_settings_tool(prepared),
             Ok(Value::SettingsWritten(receipt)) => self.accept_settings_written(receipt),
+            Ok(Value::Project(prepared)) => self.accept_project_tool(prepared),
             Err(error) => Err(error.clone()),
         };
         if let Err(error) = result {

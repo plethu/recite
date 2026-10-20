@@ -219,6 +219,7 @@ impl ProjectFiles {
         self.configuration_change.is_some()
     }
     pub fn require_navigation_ready(&self) -> Result<(), FileError> {
+        self.require_project_edit_ready()?;
         // Freya's legacy editor worker also sets `saving` while executing navigation.
         // The settings publication token is the authority for this membership exclusion.
         if self.settings.as_ref().is_some_and(|session| {

@@ -118,6 +118,7 @@ impl App {
                 && match &writer.session {
                     Session::Project(project) => project.files().can_leave(writer.session.model()),
                     Session::Examples { .. } => !writer.session.dirty(),
+                    Session::Working { .. } | Session::Recovering { .. } => false,
                 }
         })
     }

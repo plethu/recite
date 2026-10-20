@@ -3,6 +3,10 @@ use std::io;
 pub enum FileError {
     #[error("Open a project to use this file action. Example changes are temporary.")]
     ProjectRequired,
+    #[error(
+        "A project action owns the editor. Wait for its result or finish its recovery before editing."
+    )]
+    ProjectActionPending,
     #[error("A save is still finishing. Keep editing, or wait for it before changing files.")]
     SavePending,
     #[error("Could not save {path}: {error}")]
@@ -42,6 +46,18 @@ pub enum FileError {
         "A document changed after rename review. Review the rename again, or undo subsequent edits first."
     )]
     StaleRename,
+    #[error(
+        "Recovered changes in {0} differ from the rename review. Inspect and resolve them before reviewing the rename again."
+    )]
+    RecoveredRenameInput(std::path::PathBuf),
+    #[error(
+        "The grouped project recovery checkpoint does not match the live documents. Close with recovery and reopen the project before editing further."
+    )]
+    ProjectEditRecoveryRestart,
+    #[error(
+        "Grouped project recovery is incomplete. Retry project edit recovery or close with recovery before editing, navigating or saving."
+    )]
+    ProjectEditRecoveryPending,
     #[error(
         "This project has no schema. Configure its generated schema in recite.project.toml first."
     )]

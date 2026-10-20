@@ -104,6 +104,15 @@ fn manifest_owner_releases_lease_even_with_a_duplicate_descriptor() {
 }
 
 impl ManifestDraft {
+    pub(in crate::project) fn set(
+        &mut self,
+        text: String,
+        documents: std::collections::BTreeMap<String, crate::recovery::Recovery>,
+        affected: Vec<String>,
+    ) -> Result<(), FileError> {
+        self.checkpoint(text, documents, affected)?.result()
+    }
+
     fn save_with_cleanup_sync(
         &mut self,
         sync: impl FnOnce(&std::path::Path) -> io::Result<()>,

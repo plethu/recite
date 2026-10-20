@@ -14,6 +14,7 @@ pub(crate) fn model() -> Workbench {
 }
 pub(crate) fn writer() -> Writer {
     let preferences = use_state(|| crate::preferences::Preferences::load(None));
+    let files = use_state(|| None);
     Writer {
         editor_command: use_state(|| None),
         vim: crate::commands::Navigation::new(),
@@ -25,7 +26,7 @@ pub(crate) fn writer() -> Writer {
         declaration_buffer: use_state(|| None),
         projections: use_state(|| None),
         localisation: use_state(crate::localisation::Localisation::default),
-        files: use_state(|| None),
+        files,
         examples: use_state(recite_writer_session::examples::ExampleSessions::default),
         queue: crate::navigation::Queue {
             search: use_state(String::new),
@@ -34,6 +35,7 @@ pub(crate) fn writer() -> Writer {
         },
         reference: use_state(|| None),
         buffers: crate::buffers::Buffers {
+            files,
             bookmarks: crate::buffers::Bookmarks::new(),
             rules: use_state(|| None),
             model: use_state(|| Ok(model())),

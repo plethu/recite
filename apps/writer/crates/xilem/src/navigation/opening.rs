@@ -29,6 +29,9 @@ impl Writer {
                         .select_example(index)
                         .map_err(|error| error.to_string())?;
                 }
+                Session::Working { .. } | Session::Recovering { .. } => {
+                    return Err(FileError::ProjectActionPending.to_string());
+                }
             }
         }
         let mut rules = None;
