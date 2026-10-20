@@ -20,7 +20,6 @@ pub use recite_writer_session::startup::{HELP, LaunchOptions};
 use xilem::masonry::kurbo;
 
 use recite_writer_model::Workbench;
-use recite_writer_session::{FileError, ProjectSession};
 use xilem::{AppState, WindowId};
 
 struct Writer {
@@ -165,33 +164,7 @@ impl Writer {
         self.reading.prepare(self.session.model());
     }
     fn reload(&mut self) {
-        if self.work.busy() || self.navigation.busy() {
-            self.status = "Wait for the current editor action before reloading.".into();
-            return;
-        }
-        self.trial.cancel();
-        self.cancel_map_gesture();
-        let result = self
-            .session
-            .project_mut()
-            .ok_or(FileError::ProjectRequired)
-            .and_then(ProjectSession::reload_current);
-        if result.is_ok() {
-            self.retire_rules();
-            self.invalidate_map();
-        }
-        self.status = match result {
-            Ok(Some(path)) => {
-                self.recovery_copy = Some(path);
-                self.recovery_details = false;
-                "Reloaded; previous work preserved in a recovery copy.".into()
-            }
-            Ok(None) => "Reloaded from disk".into(),
-            Err(error) => feedback::file(&error),
-        };
-        self.reading.prepare(self.session.model());
-        self.sync_map_selection();
-        self.refresh_map_if_needed();
+        self.navigate(navigation::Target::Reload);
     }
     fn request_close(&mut self) {
         if self.work.busy() || self.navigation.busy() {

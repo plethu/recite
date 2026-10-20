@@ -113,6 +113,13 @@ during explicit Apply waits for successful publication and retirement, then uses
 save path; cancellation or failure clears that request. Save All takes precedence over repeated
 Save.
 
+Xilem prepares explicit disk reload on a worker, including discovery, accepted projections, saved
+search inputs and a complete independent recovery archive. Adoption requires the same project root,
+current selection/draft, baseline and retained session inputs. Completed archives remain available
+even when cancellation or newer typing prevents adoption. Recovery cleanup is queued before an
+infallible owner swap and joined off-thread; a later cleanup failure reports an accepted reload with
+failed cleanup, without rolling back adopted content. Subsequent typing retains its own recovery.
+
 The Xilem editor handoff saves accepted source and recovery in the background without accepting the
 active field draft. It uses the OS preferred application or literal configured arguments. Cancelling
 the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's

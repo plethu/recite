@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "map":
+        if scenario == "reload":
+            from reload_interactions import run
+        elif scenario == "map":
             from map_interactions import run
         elif scenario == "routes":
             from routes_interactions import run
@@ -128,6 +130,7 @@ def main():
             "rules",
             "routes",
             "map",
+            "reload",
         ),
         default="all",
     )

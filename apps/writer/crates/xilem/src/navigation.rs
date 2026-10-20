@@ -4,6 +4,7 @@ mod capture;
 mod history;
 mod opening;
 mod publication;
+mod reload;
 pub(super) mod repair;
 mod saving;
 pub(super) mod worker;
@@ -27,6 +28,7 @@ pub(super) enum Target {
     Structure(StructuralCommand),
     Workspace(crate::map::Workspace),
     MapRefresh,
+    Reload,
     Repair(repair::Action),
 }
 
@@ -297,6 +299,7 @@ impl Writer {
             Target::Structure(_) => "Preparing structural edit… Your current work stays open.",
             Target::Workspace(_) => "Preparing scene map… Your current work stays open.",
             Target::MapRefresh => "Updating scene map… You can keep editing.",
+            Target::Reload => "Preparing disk reload… Your current work stays open.",
             _ => "Preparing navigation… You can keep editing.",
         }
         .into();

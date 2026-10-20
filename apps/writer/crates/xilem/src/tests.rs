@@ -1,5 +1,6 @@
 use super::*;
 use recite_writer_model::View;
+use recite_writer_session::{FileError, ProjectSession};
 #[path = "tests/keyed/tests.rs"]
 mod keyed;
 #[path = "tests/navigation/tests.rs"]
@@ -88,13 +89,13 @@ fn save_conflict_stays_open_and_reload_preserves_the_local_work() {
     support::save(&mut writer).unwrap();
     assert!(writer.status.contains("changed on disk"));
     assert!(writer.keep_running());
-    writer.reload();
+    click(&mut writer, &["Reload (keep recovery copy)"]).unwrap();
     assert_eq!(writer.session.model().view(), &View::Source);
     assert!(writer.status.contains("previous work preserved"));
-    writer.reload();
+    click(&mut writer, &["Reload (keep recovery copy)"]).unwrap();
     assert!(writer.status.contains("previous work preserved"));
     fs::remove_file(directory.path().join("recite.project.toml")).unwrap();
-    writer.reload();
+    click(&mut writer, &["Reload (keep recovery copy)"]).unwrap();
     assert_ne!(writer.status, "Reloaded from disk");
 }
 

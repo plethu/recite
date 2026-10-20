@@ -64,8 +64,13 @@ workers, with regression checks for cancellation, newer typing, outgoing recover
 Structural creation and destination changes also prepare on workers, preserving history and
 rejecting stale or cancelled publication. The owned native drills cover prose Apply before creation,
 reply and continuation routes, separate applied undo/redo, stable IDs and explicit disk Save.
-Dynamic preview resizing has a Portal scrollbar regression and a native scrolling drill. Synchronous
-reload still needs completion before default cutover.
+Dynamic preview resizing has a Portal scrollbar regression and a native scrolling drill. Reload now
+prepares discovery, disk content and an independent recovery archive on a worker, with checked
+adoption and separate recovery-cleanup failure reporting. Shared and native regressions cover newer
+typing, cancellation, retained drafts/history, changed project roots and cleanup retry. Its fixed
+10,000-passage workload shares source/context allocations during capture. The owned Wayland Reload
+drill verifies complete recovery export, fresh native field history and post-reload typing across
+restart; pending states have separate 100/200% render checks.
 
 Source-draft repair now exports captured text plus a complete recovery backup, opens the preferred
 editor and imports through checked authoring preparation. The owned Wayland drill verifies invalid

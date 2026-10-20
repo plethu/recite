@@ -8,7 +8,14 @@ use xilem::{
 };
 
 #[test]
-fn pending_navigation_keeps_manuscript_editable_and_exposes_cancel_while_save_is_disabled() {
+fn pending_navigation_and_reload_keep_manuscript_editable_and_expose_cancel_while_save_is_disabled()
+{
+    for reload in [false, true] {
+        check_pending_navigation(reload);
+    }
+}
+
+fn check_pending_navigation(reload: bool) {
     for scale in [100, 200] {
         let mut fixture = fixture().unwrap();
         let writer = &mut fixture.writer;
@@ -19,7 +26,11 @@ fn pending_navigation_keeps_manuscript_editable_and_exposes_cancel_while_save_is
             .with_value(recite_config::WriterPresentationField::UiScale, scale)
             .unwrap();
         writer.configure(config);
-        writer.switch(&fixture.other);
+        if reload {
+            writer.reload();
+        } else {
+            writer.switch(&fixture.other);
+        }
         let mut ctx = ViewCtx::new(
             Arc::new(NoProxy),
             Arc::new(tokio::runtime::Runtime::new().unwrap()),
@@ -48,7 +59,11 @@ fn pending_navigation_keeps_manuscript_editable_and_exposes_cancel_while_save_is
         if let Ok(prefix) = std::env::var("RECITE_CAPTURE_NAVIGATION_WAIT") {
             harness
                 .render()
-                .save(format!("{prefix}-{scale}.png"))
+                .save(if reload {
+                    format!("{prefix}-reload-{scale}.png")
+                } else {
+                    format!("{prefix}-{scale}.png")
+                })
                 .unwrap();
         }
         writer.cancel_navigation();

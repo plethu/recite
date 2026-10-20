@@ -118,11 +118,20 @@ impl ProjectSession {
         self.files.save_all(&mut self.model)?;
         self.checkpoint()
     }
+    pub fn accept_reload(&mut self, prepared: &mut super::PreparedReload) -> Result<(), FileError> {
+        self.files.publish_reload(&self.model, prepared)?;
+        prepared.exchange(&mut self.model, &mut self.documents);
+        Ok(())
+    }
     pub fn reload_current(&mut self) -> Result<Option<PathBuf>, FileError> {
-        let (copy, next) = self.files.reload(&self.model)?;
-        self.model = next;
-        self.documents = documents(&self.files)?;
-        Ok(Some(copy))
+        let mut prepared = self
+            .files
+            .reload_request(&self.model)?
+            .prepare(&CancellationToken::new())?;
+        self.files.recovery.persist(None)?;
+        self.accept_reload(&mut prepared)?;
+        prepared.finish_cleanup()?;
+        Ok(Some(prepared.archive().to_owned()))
     }
 }
 

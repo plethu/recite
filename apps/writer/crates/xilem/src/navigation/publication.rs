@@ -8,6 +8,9 @@ impl Writer {
             request,
             mut result,
         } = completed;
+        if let Ok(ResultValue::Reload(prepared)) = &result {
+            self.record_reload_archive(prepared);
+        }
         if !self
             .navigation
             .pending
@@ -52,6 +55,7 @@ impl Writer {
                 operation,
             } => self.publish_navigation_edit(&request, prepared, *operation),
             ResultValue::Structure(prepared) => self.publish_structural_edit(&request, prepared),
+            ResultValue::Reload(prepared) => self.publish_reload(&request, prepared),
             ResultValue::Navigation {
                 prepared,
                 checkpoint,

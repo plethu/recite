@@ -2,6 +2,8 @@
 mod external;
 pub mod manifest;
 mod recovery;
+mod reload;
+pub use reload::{PreparedReload, ReloadRequest};
 mod source_repair;
 pub use source_repair::{SourceRepairArtifact, SourceRepairExport};
 mod rename;
@@ -11,7 +13,7 @@ mod session;
 mod sessions;
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
-use recite_writer_model::{Document, ProjectContext, Workbench};
+use recite_writer_model::{ProjectContext, Workbench};
 pub use session::{DocumentSession, DocumentSessionMut, ProjectDocument, ProjectSession};
 pub use sessions::checkpoint::{Checkpoint, ReadyCheckpoint};
 pub use sessions::preparing::{PreparedSwitch, SwitchRequest};
@@ -172,62 +174,6 @@ impl ProjectFiles {
     }
     pub fn queue_checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
         self.recovery.queue(self.recovery_value(workbench))
-    }
-
-    /// Preserve the complete local session before accepting the disk version.
-    pub fn reload(&mut self, workbench: &Workbench) -> Result<(PathBuf, Workbench), FileError> {
-        self.require_idle_save()?;
-        let report = recite_config::discover_project(&self.root)?;
-        if !report.is_complete() {
-            return Err(FileError::Incomplete);
-        }
-        for path in self.session_paths() {
-            if !report
-                .documents()
-                .iter()
-                .any(|document| document.path() == path)
-            {
-                return Err(FileError::SessionExcluded(path.clone()));
-            }
-        }
-        let context = crate::load_context(&report)?;
-        let disk = read_regular(&self.current)?;
-        let key = recite_core::DocumentKey::new(self.document_name()?)
-            .map_err(recite_writer_model::EditError::from)
-            .map_err(recite_writer_model::WorkbenchError::from)?;
-        let document =
-            Document::in_project(key, disk.clone(), self.retained_context(context.clone()))
-                .map_err(recite_writer_model::WorkbenchError::from)?;
-        let mut next = Workbench::from_document(document, None)?;
-        if let recite_writer_model::View::Passage(id) = workbench.view()
-            && next
-                .document()
-                .passage_snapshot()
-                .is_ok_and(|passages| passages.iter().any(|passage| &passage.id == id))
-        {
-            next.select(recite_writer_model::View::Passage(id.clone()))?;
-        }
-        let path = self.export(workbench)?;
-        self.recovery.persist(None)?;
-        self.saved = disk.into();
-        self.search = self.refreshed_search(&context.documents);
-        self.context = context.into();
-        self.paths = report
-            .documents()
-            .iter()
-            .map(|document| document.path().to_owned())
-            .collect();
-        self.names = report
-            .documents()
-            .iter()
-            .map(|document| {
-                (
-                    document.path().to_owned(),
-                    document.key().as_str().to_owned(),
-                )
-            })
-            .collect();
-        Ok((path, next))
     }
 
     pub fn refresh(&mut self, workbench: &mut Workbench) -> Result<(), FileError> {

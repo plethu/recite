@@ -1,6 +1,7 @@
 use super::*;
 use crate::navigation::worker;
 use masonry::testing::TestHarness;
+use recite_writer_session::ProjectSession;
 use recite_writer_session::project::save::sequence;
 use std::fs;
 use std::sync::Arc;
@@ -150,7 +151,9 @@ pub(crate) fn finish_navigation(
     while writer.navigation.busy() {
         let completed = requests.try_recv()?.execute();
         let request = completed.request.clone();
-        drop(writer.accept_navigation(completed));
+        if let Some(retired) = writer.accept_navigation(completed) {
+            retired.retire()?;
+        }
         writer.navigation_retired(&request);
     }
     Ok(())

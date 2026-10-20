@@ -20,6 +20,10 @@ pub enum FileError {
         "Project discovery is incomplete. Repair the project's discovery diagnostics before opening it here."
     )]
     Incomplete,
+    #[error(
+        "The project's root changed on disk. Restore its manifest or reopen the intended project; current edits remain open."
+    )]
+    ProjectRootChanged,
     #[error("Project validation failed: {}", crate::context::diagnostic_messages(.0))]
     Validation(Vec<recite_core::Diagnostic>),
     #[error(

@@ -45,9 +45,11 @@ Save all and Save and close cover every open file. Open in editor saves accepted
 retaining an unapplied manuscript draft. Reload keeps local work in an independent recovery copy
 before accepting disk bytes.
 
-File/selection navigation, Apply and applied history prepare in the background. A pending action can
-be cancelled while typing continues. Save pressed during explicit Apply waits for its result and
-retirement; a failed or cancelled Apply leaves the requested save unrun.
+File/selection navigation, disk reload, Apply and applied history prepare in the background. A
+pending action can be cancelled while typing continues. Reload checks the captured session before
+adoption; a completed recovery archive remains available when cancellation or newer typing prevents
+adoption. Save pressed during explicit Apply waits for its result and retirement; a failed or
+cancelled Apply leaves the requested save unrun.
 
 The beat outline uses accepted source, including recognizable headers in incomplete documents. Read
 beat shows dialogue, replies, conditions, effects and continuations without running them; edit a

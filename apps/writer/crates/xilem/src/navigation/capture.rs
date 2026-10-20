@@ -79,6 +79,9 @@ impl Writer {
             });
             return self.send_navigation(request, worker::Work::Map(Box::new(work)));
         }
+        if matches!(target, Target::Reload) {
+            return self.submit_reload();
+        }
         let model = self.session.model();
         let location = match &target {
             Target::Location(location) | Target::Selection(location) => Some(location.clone()),
@@ -110,6 +113,7 @@ impl Writer {
             | Target::Repair(_)
             | Target::Structure(_)
             | Target::Workspace(_)
+            | Target::Reload
             | Target::MapRefresh => {
                 return Err("Invalid navigation target.".into());
             }

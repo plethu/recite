@@ -9,6 +9,8 @@ use tokio::sync::mpsc::UnboundedReceiver;
 mod failure;
 #[path = "history/tests.rs"]
 mod history;
+#[path = "reload/tests.rs"]
+mod reload;
 #[path = "repair/tests.rs"]
 mod repair;
 #[path = "visual/tests.rs"]

@@ -86,6 +86,7 @@ fn structural_authoring_and_reload_retire_rule_presentation_and_its_picker_recei
         };
         if reload {
             writer.reload();
+            support::finish_navigation(writer, &mut fixture.jobs).unwrap();
         } else {
             writer.change(recite_writer_model::Workbench::add_beat);
         }

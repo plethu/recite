@@ -2,7 +2,7 @@ use super::*;
 use recite_writer_model::{EditRequest, PreparedEdit};
 use recite_writer_session::{
     navigation::{Prepare, Prepared},
-    project::{Checkpoint, ReadyCheckpoint},
+    project::{Checkpoint, PreparedReload, ReadyCheckpoint, ReloadRequest},
 };
 use std::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -16,6 +16,7 @@ pub(crate) struct Job {
     pub work: Work,
 }
 pub(crate) enum Work {
+    Reload(Box<ReloadRequest>),
     Map(Box<crate::map::Preparation>),
     Repair(Box<repair::Work>),
     Structure(Box<recite_writer_model::StructuralRequest>),
@@ -29,6 +30,7 @@ pub(crate) enum Work {
     },
 }
 pub(crate) enum ResultValue {
+    Reload(Box<PreparedReload>),
     Map(Box<crate::map::Prepared>),
     Repair(Box<repair::ResultValue>),
     Structure(Box<recite_writer_model::PreparedStructuralEdit>),
@@ -52,6 +54,7 @@ enum Output {
         retire: mpsc::SyncSender<Option<ResultValue>>,
     },
     Retired(Arc<Request>),
+    ReloadCleanupFailed(String),
 }
 impl std::fmt::Debug for Output {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -80,6 +83,10 @@ impl Job {
 impl Work {
     fn execute(self, control: &dyn WorkControl) -> Result<ResultValue, String> {
         match self {
+            Self::Reload(reload) => reload
+                .prepare(control)
+                .map(|prepared| ResultValue::Reload(Box::new(prepared)))
+                .map_err(|error| feedback::file(&error)),
             Self::Map(work) => work
                 .execute(control)
                 .map(|prepared| ResultValue::Map(Box::new(prepared))),
@@ -133,6 +140,21 @@ impl Work {
         }
     }
 }
+impl ResultValue {
+    /// Displaced models and recovery fences are retired by the preparation worker.
+    pub(crate) fn retire(mut self) -> Result<(), String> {
+        if let Self::Reload(prepared) = &mut self {
+            prepared.finish_cleanup().map_err(|error| {
+                format!(
+                    "Reload accepted for {}; recovery cleanup failed: {}. The recovery copy is preserved.",
+                    prepared.document().display(),
+                    feedback::file(&error)
+                )
+            })?;
+        }
+        Ok(())
+    }
+}
 pub(crate) fn worker() -> impl View<Writer, (), ViewCtx, Element = NoElement> {
     xilem::view::worker(
         serve,
@@ -144,6 +166,7 @@ pub(crate) fn worker() -> impl View<Writer, (), ViewCtx, Element = NoElement> {
                 let _ = retire.send(retired);
             }
             Output::Retired(request) => writer.navigation_retired(&request),
+            Output::ReloadCleanupFailed(message) => writer.status = message,
         },
     )
 }
@@ -164,7 +187,11 @@ async fn serve(proxy: MessageProxy<Output>, mut requests: UnboundedReceiver<Job>
                 .message(Output::Prepared { completed, retire })
                 .is_ok()
             {
-                drop(retired.recv());
+                if let Ok(Some(value)) = retired.recv()
+                    && let Err(message) = value.retire()
+                {
+                    let _ = proxy.message(Output::ReloadCleanupFailed(message));
+                }
                 let _ = proxy.message(Output::Retired(request));
             }
         })
