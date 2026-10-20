@@ -3,6 +3,11 @@ use std::io;
 pub enum FileError {
     #[error("A save is still finishing. Keep editing, or wait for it before changing files.")]
     SavePending,
+    #[error("Could not save {path}: {error}")]
+    Saving {
+        path: std::path::PathBuf,
+        error: Box<FileError>,
+    },
     #[error("Project opening was cancelled.")]
     Interrupted(#[from] recite_compiler::authoring::Interrupted),
     #[error(transparent)]

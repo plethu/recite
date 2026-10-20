@@ -21,11 +21,34 @@ impl DocumentSession {
         key: DocumentKey,
         context: ProjectContext,
     ) -> Result<Self, FileError> {
+        Self::open_using(path, |source| Document::in_project(key, source, context))
+    }
+
+    pub(crate) fn open_sibling(
+        path: PathBuf,
+        key: DocumentKey,
+        context: ProjectContext,
+        sibling: &Document,
+    ) -> Result<Self, FileError> {
+        Self::open_using(path, |source| {
+            sibling.open_sibling_with_control(
+                key,
+                source,
+                context,
+                &recite_compiler::authoring::CancellationToken::new(),
+            )
+        })
+    }
+
+    fn open_using(
+        path: PathBuf,
+        document: impl FnOnce(&str) -> Result<Document, recite_writer_model::EditError>,
+    ) -> Result<Self, FileError> {
         let saved: Arc<str> = read_regular(&path)?.into();
         let recovery = RecoveryStore::open(&path)?;
         let recovered = recovery.snapshot();
         let source = recovered.map_or(saved.as_ref(), |value| value.draft.source());
-        let document = Document::in_project(key, source, context).map_err(WorkbenchError::from)?;
+        let document = document(source).map_err(WorkbenchError::from)?;
         let initial = recovered.map(|value| value.draft.view().clone());
         let mut model = Workbench::from_document(document, initial)?;
         if let Some(value) = recovered {
@@ -38,6 +61,16 @@ impl DocumentSession {
             model,
             recovery,
         })
+    }
+
+    pub(crate) fn refresh(&mut self, context: ProjectContext) -> Result<(), FileError> {
+        self.model.refresh_project(context)?;
+        Ok(())
+    }
+
+    pub(crate) fn park(&mut self) -> Result<(), FileError> {
+        self.checkpoint()?;
+        self.recovery.park()
     }
 
     pub fn path(&self) -> &Path {

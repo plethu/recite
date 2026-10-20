@@ -4949,7 +4949,6 @@ name = "recite-writer-xilem"
 version = "0.0.0"
 dependencies = [
  "masonry",
- "recite-config",
  "recite-writer-model",
  "recite-writer-session",
  "tempfile",

@@ -26,6 +26,14 @@ GLib = writer_probe.GLib
 Gio = writer_probe.Gio
 
 
+def atspi_binary(name):
+    for directory in ("/usr/lib", "/usr/libexec"):
+        path = Path(directory) / name
+        if path.is_file():
+            return str(path)
+    raise RuntimeError(f"Install at-spi2-core: could not find {name}")
+
+
 def run_probe(binary, output):
     session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     status = ("org.a11y.Bus", "/org/a11y/bus")
@@ -52,11 +60,7 @@ def run_probe(binary, output):
         None,
     )
     registry = ("org.a11y.atspi.Registry", writer_probe.ROOT)
-    registry_binary = next(
-        path
-        for path in ("/usr/lib/at-spi2-registryd", "/usr/libexec/at-spi2-registryd")
-        if Path(path).is_file()
-    )
+    registry_binary = atspi_binary("at-spi2-registryd")
     with (
         child_process(
             [registry_binary],
@@ -96,7 +100,9 @@ def main():
         os.environ.pop("DISPLAY", None)
         if os.environ.get("RECITE_PRIVATE_PROBE") != "1":
             parser.error("Child mode requires the owned compositor and bus")
-        with child_process(["/usr/lib/at-spi-bus-launcher", "--launch-immediately"]) as launcher:
+        with child_process(
+            [atspi_binary("at-spi-bus-launcher"), "--launch-immediately"]
+        ) as launcher:
             session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
             wait_for(
                 lambda: call(

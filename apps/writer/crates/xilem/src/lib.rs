@@ -1,3 +1,4 @@
+mod keyed;
 mod startup;
 #[cfg(test)]
 mod tests;
@@ -5,19 +6,19 @@ mod view;
 pub use startup::{HELP, Startup};
 
 use recite_writer_model::{View, Workbench};
-use recite_writer_session::{DocumentSession, FileError, load_context};
-use std::{ffi::OsString, path::PathBuf};
+use recite_writer_session::{FileError, ProjectSession};
+use std::ffi::OsString;
 use xilem::{AppState, WindowId, WindowOptions, Xilem};
 
 pub struct Writer {
-    session: DocumentSession,
-    project: PathBuf,
+    project: ProjectSession,
     editor: Option<OsString>,
     editor_args: Vec<OsString>,
     window: WindowId,
     phase: Phase,
     status: String,
     page: usize,
+    file_page: usize,
 }
 
 #[derive(PartialEq)]
@@ -35,41 +36,22 @@ impl AppState for Writer {
 
 impl Writer {
     pub fn open(startup: Startup) -> Result<Self, FileError> {
-        let report = recite_config::discover_project(&startup.project)?;
-        if !report.is_complete() {
-            return Err(FileError::Incomplete);
-        }
-        let root = report.manifest().project_root().to_owned();
-        let requested = startup.document.map(|path| root.join(path));
-        let document = report
-            .documents()
-            .iter()
-            .find(|document| {
-                requested
-                    .as_ref()
-                    .is_none_or(|path| document.path() == path)
-            })
-            .ok_or(FileError::Selection)?;
-        let session = DocumentSession::open(
-            document.path().to_owned(),
-            document.key().clone(),
-            load_context(&report)?,
-        )?;
-        let status = if session.dirty() {
+        let project = ProjectSession::open(&startup.project, startup.document.as_deref())?;
+        let status = if project.dirty() {
             "Recovered unsaved work; review it before saving."
         } else {
             "Ready"
         }
         .into();
         Ok(Self {
-            session,
-            project: root,
+            project,
             editor: startup.editor,
             editor_args: startup.editor_args,
             window: WindowId::next(),
             phase: Phase::Writing,
             status,
             page: 0,
+            file_page: 0,
         })
     }
 
@@ -77,13 +59,13 @@ impl Writer {
         &mut self,
         action: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
     ) {
-        self.status = match self.session.edit(action) {
+        self.status = match self.project.current_mut().edit(action) {
             Ok(()) => "Draft updated".into(),
             Err(error) => error.to_string(),
         };
     }
     fn save(&mut self) -> bool {
-        match self.session.save() {
+        match self.project.current_mut().save() {
             Ok(()) => {
                 self.status = "Saved".into();
                 true
@@ -94,15 +76,34 @@ impl Writer {
             }
         }
     }
-    fn reload(&mut self) {
-        let result = recite_config::discover_project(&self.project)
-            .map_err(FileError::from)
-            .and_then(|report| {
-                if !report.is_complete() {
-                    return Err(FileError::Incomplete);
+    fn save_all(&mut self) -> bool {
+        match self.project.save_all() {
+            Ok(()) => {
+                self.status = "All open files saved".into();
+                true
+            }
+            Err(error) => {
+                self.status = error.to_string();
+                false
+            }
+        }
+    }
+    fn switch(&mut self, path: &std::path::Path) {
+        self.status = match self.project.switch(path) {
+            Ok(()) => {
+                self.page = 0;
+                if self.project.current().dirty() {
+                    "Unsaved work restored"
+                } else {
+                    "Ready"
                 }
-                self.session.reload(load_context(&report)?)
-            });
+                .into()
+            }
+            Err(error) => error.to_string(),
+        };
+    }
+    fn reload(&mut self) {
+        let result = self.project.reload_current();
         self.status = match result {
             Ok(Some(path)) => format!("Reloaded; previous work preserved at {}", path.display()),
             Ok(None) => "Reloaded from disk".into(),
@@ -113,13 +114,13 @@ impl Writer {
         let Some(editor) = self.editor.clone() else {
             return;
         };
-        if let Err(error) = self.session.prepare_external_edit() {
+        if let Err(error) = self.project.current_mut().prepare_external_edit() {
             self.status = error.to_string();
             return;
         }
         self.status = match std::process::Command::new(editor)
             .args(&self.editor_args)
-            .arg(self.session.path())
+            .arg(self.project.current().path())
             .spawn()
         {
             Ok(mut child) => {
@@ -133,14 +134,14 @@ impl Writer {
         };
     }
     fn request_close(&mut self) {
-        if self.session.dirty() {
+        if self.project.dirty() {
             self.phase = Phase::ConfirmClose;
         } else {
             self.close_with_recovery();
         }
     }
     fn close_with_recovery(&mut self) {
-        match self.session.checkpoint() {
+        match self.project.checkpoint() {
             Ok(()) => self.phase = Phase::Closed,
             Err(error) => {
                 self.status = error.to_string();
@@ -153,7 +154,9 @@ impl Writer {
     }
 }
 
-pub fn run(writer: Writer) -> Result<(), xilem::winit::error::EventLoopError> {
+fn application(
+    writer: Writer,
+) -> Xilem<Writer, impl FnMut(&mut Writer) -> std::iter::Once<xilem::WindowView<Writer>>> {
     Xilem::new(writer, |state: &mut Writer| {
         std::iter::once(
             xilem::window(state.window, "Recite Writer", view::writer(state)).with_options(|_| {
@@ -165,5 +168,8 @@ pub fn run(writer: Writer) -> Result<(), xilem::winit::error::EventLoopError> {
         )
     })
     .with_font(include_bytes!("../../freya/fonts/literata/Literata-Variable.ttf").to_vec())
-    .run_in(xilem::EventLoop::with_user_event())
+}
+
+pub fn run(writer: Writer) -> Result<(), xilem::winit::error::EventLoopError> {
+    application(writer).run_in(xilem::EventLoop::with_user_event())
 }

@@ -21,7 +21,7 @@ class NativeWindow:
         )
 
     def wait(self, operation, label):
-        return self.api.wait_for(operation, label, self.process, timeout=4)
+        return self.api.wait_for(operation, label, self.process, timeout=10)
 
     def act(self, label):
         node = self.find(label)

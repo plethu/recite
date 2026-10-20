@@ -1,6 +1,11 @@
 fn main() {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
+    // Options consume one value; help must not intercept literal editor arguments.
+    if args
+        .iter()
+        .step_by(2)
+        .any(|arg| arg == "--help" || arg == "-h")
+    {
         println!("{}", recite_writer_xilem::HELP);
         return;
     }

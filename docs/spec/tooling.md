@@ -78,10 +78,11 @@ and file replacement, conflict protection and recovery belong to `recite-writer-
 configuration, compiler and runtime ownership remains outside both frontends. Exercise regression
 checks before upgrading the pinned toolkit.
 
-The opt-in Xilem frontend currently covers one project document's manuscript, diagnostics, checked
-save, recovery and explicit IDE handoff/reload. It uses an external editor for source repair rather
-than embedding a second source editor. This does not establish parity for the remaining workspaces
-or remove the existing Freya Source workflow.
+The opt-in Xilem frontend covers retained project documents, manuscript editing, diagnostics,
+checked save, recovery and explicit IDE handoff/reload. File switching preserves drafts, selection,
+accepted edit history and recovery leases; closing and Save all consider inactive documents too. It
+uses an external editor for source repair rather than embedding a second source editor. This does
+not establish parity for the remaining workspaces or remove the existing Freya Source workflow.
 
 Linux, Windows and macOS remain first-class desktop targets, not implied platform acceptance. Claims
 require native evidence for authoring, assistive technology, physical input, startup, memory and

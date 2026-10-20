@@ -7,6 +7,8 @@ from collections import Counter
 from pathlib import Path
 
 from native_window import NativeWindow, key, type_text
+from project_interactions import exercise as project_exercise
+from project_interactions import switch
 
 SOURCE = """:: opening default
 > first@11111111111111111111
@@ -88,6 +90,13 @@ def run(api, bus, registry, binary, output):
             project.mkdir()
             source = project / "scene.recite"
             source.write_text(SOURCE)
+            other = project / "zz-other.recite"
+            other.write_text(
+                SOURCE.replace(":: opening default", ":: other")
+                .replace("11111111111111111111", "33333333333333333333")
+                .replace("22222222222222222222", "44444444444444444444")
+                .replace("The last tram waits.", "An unapplied Writer draft.")
+            )
             (project / "recite.project.toml").write_text(
                 'format_version = 1\n[project]\ncontent_set = "trial"\nversion = "1"\n'
             )
@@ -148,6 +157,8 @@ def run(api, bus, registry, binary, output):
                 window.wait(
                     lambda: window.text(node) == "An unapplied Writer draft.", "unapplied draft"
                 )
+                node = project_exercise(window, "An unapplied Writer draft.", results)
+                capture(output, "-documents")
                 window.act("Open in editor")
                 window.wait(
                     lambda: "# Owned external edit" in source.read_text(), "owned editor completion"
@@ -194,6 +205,9 @@ def run(api, bus, registry, binary, output):
                 assert process.wait(timeout=5) == 0
                 process, window, node = launch(api, bus, registry, arguments, log)
                 window.wait(lambda: window.text(node) == incoming + "x", "restored draft")
+                node = switch(window, "zz-other.recite", "An unapplied Writer draft.x")
+                node = switch(window, "scene.recite · Unsaved", incoming + "x")
+                results["inactive_document_recovery_survives_restart"] = True
                 results["close_guard_and_reopen_recovery"] = True
                 capture(output, "-recovered")
                 window.act("Close")
@@ -202,7 +216,10 @@ def run(api, bus, registry, binary, output):
                 assert process.wait(timeout=5) == 0
                 assert incoming + "x" in source.read_text()
                 assert not source.with_name("scene.recite.recite-editor-recovery.json").exists()
+                assert "An unapplied Writer draft.x" in other.read_text()
+                assert not other.with_name("zz-other.recite.recite-editor-recovery.json").exists()
                 results["save_and_close_clears_recovery"] = True
+                results["save_and_close_covers_inactive_files"] = True
                 malformed = ":: scene default\n->\n"
                 source.write_text(malformed)
                 process, window, _ = launch(api, bus, registry, arguments, log, manuscript=False)

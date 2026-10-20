@@ -1,4 +1,4 @@
-use super::{Phase, Writer};
+use super::{Phase, Writer, keyed::keyed};
 use recite_writer_model::{View, Workbench};
 use xilem::core::one_of::Either;
 use xilem::masonry::layout::AsUnit;
@@ -10,7 +10,8 @@ use xilem::view::{
 };
 use xilem::{InsertNewline, WidgetView};
 
-const PAGE: usize = 8;
+mod navigation;
+use navigation::navigation;
 
 pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Sized> + use<> {
     portal(
@@ -18,15 +19,20 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
             flex_col((
                 header(state),
                 close_prompt(state),
-                flex_row((outline(state), manuscript(state))).gap(20.px()),
+                flex_row((navigation(state), manuscript(state))).gap(20.px()),
                 diagnostics(state),
                 sized_box(prose(state.status.clone())).width(830.px()),
-                state.session.recovery_error().map(|error| {
-                    label(format!(
-                        "Recovery failed: {error}. Save or keep the window open."
-                    ))
-                }),
+                state
+                    .project
+                    .sessions()
+                    .find_map(|session| session.recovery_error())
+                    .map(|error| {
+                        label(format!(
+                            "Recovery failed: {error}. Save or keep the window open."
+                        ))
+                    }),
             ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(16.px()),
         )
         .padding(24.px())
@@ -41,8 +47,8 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
         label("Recite Writer").text_size(28.),
         label(format!(
             "{}{}",
-            state.session.model().document().key().as_str(),
-            if state.session.dirty() {
+            state.project.current().model().document().key().as_str(),
+            if state.project.current().dirty() {
                 " · Unsaved"
             } else {
                 ""
@@ -53,6 +59,10 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 state.save();
             })
             .disabled(closing),
+            text_button("Save all", |state: &mut Writer| {
+                state.save_all();
+            })
+            .disabled(closing),
             text_button("Open in editor", Writer::open_editor)
                 .disabled(closing || state.editor.is_none()),
             text_button("Reload (keep recovery copy)", Writer::reload).disabled(closing),
@@ -60,59 +70,20 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ))
         .gap(8.px()),
     ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
-}
-
-fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase == Phase::ConfirmClose;
-    let model = state.session.model();
-    let passages = model.document().passage_snapshot().unwrap_or_default();
-    let pages = passages.len().div_ceil(PAGE).max(1);
-    state.page = state.page.min(pages - 1);
-    let entries = passages
-        .iter()
-        .skip(state.page * PAGE)
-        .take(PAGE)
-        .map(|passage| {
-            let id = passage.id.clone();
-            let current = model.view() == &View::Passage(id.clone());
-            let excerpt: String = passage.text.chars().take(12).collect();
-            text_button(
-                format!("{}{}…", if current { "Current · " } else { "" }, excerpt),
-                move |state: &mut Writer| state.select(id.clone()),
-            )
-            .disabled(closing)
-        })
-        .collect::<Vec<_>>();
-    sized_box(
-        flex_col((
-            label("Passages"),
-            flex_col(entries).gap(8.px()),
-            flex_row((
-                text_button("Previous", |state: &mut Writer| {
-                    state.page = state.page.saturating_sub(1)
-                })
-                .disabled(closing || state.page == 0),
-                text_button("Next", |state: &mut Writer| state.page += 1)
-                    .disabled(closing || state.page + 1 >= pages),
-            ))
-            .gap(8.px()),
-            label(format!("Page {} of {pages}", state.page + 1)),
-        ))
-        .gap(12.px()),
-    )
-    .width(250.px())
 }
 
 fn manuscript(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase == Phase::ConfirmClose;
-    let model = state.session.model();
+    let model = state.project.current().model();
     let source_required = !matches!(model.view(), View::Passage(_));
     let editor = if source_required {
         Either::A(sized_box(prose("Edit this source in your editor. Its bytes are preserved. Open it externally, then reload from disk.")).width(560.px()))
     } else {
         Either::B(
-            sized_box(
+            sized_box(keyed(
+                (model.document().key().clone(), model.view().clone()),
                 text_input(model.draft().to_owned(), |state: &mut Writer, text| {
                     state.change(|model| {
                         model.set_draft(text);
@@ -125,7 +96,7 @@ fn manuscript(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .placeholder("Manuscript")
                 .disabled(closing)
                 .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript")),
-            )
+            ))
             .width(560.px())
             .height(260.px()),
         )
@@ -161,11 +132,17 @@ fn manuscript(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ))
         .gap(8.px()),
     ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
 }
 
 fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let diagnostics = state.session.model().document().diagnostic_snapshot();
+    let diagnostics = state
+        .project
+        .current()
+        .model()
+        .document()
+        .diagnostic_snapshot();
     flex_col(
         (0..diagnostics.len().min(3))
             .filter_map(|index| diagnostics.get(index))
@@ -192,7 +169,7 @@ fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                         state.phase = Phase::Writing
                     }),
                     text_button("Save and close", |state: &mut Writer| {
-                        if state.save() {
+                        if state.save_all() {
                             state.phase = Phase::Closed;
                         }
                     }),
