@@ -120,9 +120,19 @@ fn source_apply_and_save_phases() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 impl ProjectFiles {
+    pub(in crate::project) fn record_saved(
+        &mut self,
+        path: &Path,
+        source: &std::sync::Arc<str>,
+    ) -> Result<(), FileError> {
+        if let Some(document) = self.record_saved_document(path, source)? {
+            std::sync::Arc::make_mut(&mut self.search).replace_document(document);
+        }
+        Ok(())
+    }
     fn save_shared(&mut self, source: std::sync::Arc<str>) -> Result<(), FileError> {
         replace_checked(&self.current, &self.saved, &source)?;
         self.saved = source;
-        self.update_saved_context()
+        self.record_saved(&self.current.clone(), &self.saved.clone())
     }
 }

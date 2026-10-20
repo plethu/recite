@@ -184,6 +184,16 @@ even when cancellation or newer typing prevents adoption. Recovery cleanup is qu
 infallible owner swap and joined off-thread; a later cleanup failure reports an accepted reload with
 failed cleanup, without rolling back adopted content. Subsequent typing retains its own recovery.
 
+Disk comparison observes the accepted source and unapplied field separately, preserving selection
+and history. Keep Writer retains the exact model and rebases its saved inputs to the inspected disk;
+Use Disk adopts that source as one history step. Both archive the full prior recovery and recheck
+the exact local session and disk before admission. Once recovery submission succeeds, publication
+completes despite cancellation; a late durability failure reports adoption with incomplete recovery.
+Xilem composes this workflow through the existing exclusive project worker. Its comparison mounts
+one bounded changed passage at a time. A separate IDE merge draft materializes pending prose without
+applying it to the live document; Import validates against the captured context and inspected disk,
+then adopts one undoable source replacement. Only explicit Save writes the source file.
+
 The Xilem editor handoff saves accepted source and recovery in the background without accepting the
 active field draft. It uses the OS preferred application or literal configured arguments. Cancelling
 the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's

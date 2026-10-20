@@ -1,12 +1,13 @@
 //! Export the staged Source field as text, with its complete recovery backup.
 use super::{FileError, ProjectFiles};
 use crate::{files::sync_directory, recovery::Recovery};
-use recite_writer_model::{View, Workbench};
+use recite_writer_model::{DraftSnapshot, View, Workbench};
 use std::{io::Write, path::PathBuf};
 
 pub struct SourceRepairExport {
     path: PathBuf,
     recovery: Recovery,
+    source: DraftSnapshot,
 }
 #[derive(Clone, Debug)]
 pub struct SourceRepairArtifact {
@@ -20,13 +21,21 @@ impl ProjectFiles {
         if model.view() != &View::Source {
             return Err(FileError::Selection);
         }
-        Ok(SourceRepairExport {
-            path: self.current.clone(),
-            recovery: Recovery::new(self.saved.clone(), model.recovery()),
-        })
+        Ok(SourceRepairExport::captured(
+            self.current.clone(),
+            Recovery::new(self.saved.clone(), model.recovery()),
+            model.draft_snapshot().clone(),
+        ))
     }
 }
 impl SourceRepairExport {
+    pub(super) fn captured(path: PathBuf, recovery: Recovery, source: DraftSnapshot) -> Self {
+        Self {
+            path,
+            recovery,
+            source,
+        }
+    }
     /// Run on a worker. Kept files are user recovery artifacts, never app scratch.
     pub fn write(self) -> Result<SourceRepairArtifact, FileError> {
         let parent = self.path.parent().ok_or(FileError::Selection)?;
@@ -36,7 +45,7 @@ impl SourceRepairExport {
             .prefix("recite-source-repair-")
             .suffix(".txt")
             .tempfile_in(parent)?;
-        write!(source, "{}", self.recovery.draft.draft_snapshot().as_str())?;
+        write!(source, "{}", self.source.as_str())?;
         source.as_file().sync_all()?;
         let (_, source) = source.keep().map_err(|error| error.error)?;
         sync_directory(parent)?;

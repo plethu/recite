@@ -84,7 +84,7 @@ fn schema_refresh_retires_stale_rule_controls_and_preserves_the_repairable_draft
     assert!(writer.source_repair_pending());
     assert!(writer.status.contains("staged reply draft"));
 }
-pub(super) fn finish(writer: &mut Writer, jobs: &mut mpsc::UnboundedReceiver<Job>) {
+pub(in crate::workspaces) fn finish(writer: &mut Writer, jobs: &mut mpsc::UnboundedReceiver<Job>) {
     for _ in 0..200 {
         if let Ok(job) = jobs.try_recv() {
             let mut completed = job.execute();

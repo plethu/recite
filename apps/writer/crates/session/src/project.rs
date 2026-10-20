@@ -1,5 +1,6 @@
 //! File ownership for the retained editor.
 mod external;
+pub use external::{ExternalComparison, ExternalDecision, ExternalResolution};
 pub mod manifest;
 mod recovery;
 mod refresh;

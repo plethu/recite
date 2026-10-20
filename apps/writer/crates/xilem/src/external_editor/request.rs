@@ -7,6 +7,7 @@ enum ProjectNext {
     ImportDeclarations,
     ImportSettings,
     ReloadSettings,
+    ImportMerge,
 }
 
 #[derive(Clone)]
@@ -27,6 +28,20 @@ pub(crate) struct Request {
     pub(super) editor: Option<EditorCommand>,
 }
 impl Request {
+    pub(crate) fn merge_draft(
+        project: &ProjectSession,
+        path: PathBuf,
+        editor: Option<EditorCommand>,
+    ) -> Self {
+        Self {
+            target: Target::ProjectFile {
+                root: project.root().to_owned(),
+                path,
+                next: ProjectNext::ImportMerge,
+            },
+            editor,
+        }
+    }
     pub(crate) fn declaration_source(
         project: &ProjectSession,
         path: PathBuf,
@@ -142,6 +157,10 @@ impl Request {
                 next: ProjectNext::ReloadSettings,
                 ..
             } => "Choose Reload saved settings to inspect its changes",
+            Target::ProjectFile {
+                next: ProjectNext::ImportMerge,
+                ..
+            } => "Choose Import reviewed merge to validate its changes",
         }
     }
 }

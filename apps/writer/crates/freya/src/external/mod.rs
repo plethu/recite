@@ -1,4 +1,9 @@
 mod handoff;
+mod resolution;
+mod watching;
+pub(crate) use watching::WatchPoll;
+#[cfg(test)]
+mod tests;
 
 use crate::design::keyboard;
 use crate::{
@@ -9,12 +14,15 @@ use crate::{
 use freya::prelude::*;
 pub(crate) use recite_writer_session::external::Handoff;
 pub(crate) use recite_writer_session::external::Watch;
+use recite_writer_session::project::ExternalDecision;
 pub(crate) fn open(mut writer: Writer) {
     if let Err(error) = try_open(writer) {
         writer.message.error(error);
     }
 }
 pub(crate) fn try_open(mut writer: Writer) -> Result<(), String> {
+    writer.work.require_idle()?;
+    writer.require_project_edit_ready()?;
     writer.buffers.harvest();
     let result = {
         let mut model = writer.buffers.model.write();
@@ -41,8 +49,8 @@ impl PartialEq for ExternalScreen {
 }
 impl Component for ExternalScreen {
     fn render(&self) -> impl IntoElement {
-        let mut writer = self.writer;
-        let mut choice = use_state(|| None::<bool>);
+        let writer = self.writer;
+        let choice = use_state(|| None::<ExternalDecision>);
         let id = use_a11y();
         let files = writer.files.read();
         let Some(comparison) = files.as_ref().and_then(|p| p.external.as_ref()) else {
@@ -50,34 +58,13 @@ impl Component for ExternalScreen {
         };
         let submit = SubmitAction {
             id,
-            caption: text(MsgId::WriterUseEditableDraft),
+            caption: "Confirm inspected version".into(),
             enabled: choice.read().is_some(),
             action: EventHandler::new(move |()| {
-                let Some(keep) = *choice.peek() else {
+                let Some(decision) = *choice.peek() else {
                     return;
                 };
-                writer.buffers.harvest();
-                let result = {
-                    let mut model = writer.buffers.model.write();
-                    let mut files = writer.files.write();
-                    match (model.as_mut(), files.as_mut()) {
-                        (Ok(model), Some(files)) => files
-                            .resolve_external(model, keep)
-                            .map_err(|e| e.to_string()),
-                        _ => Err("Open a project first.".into()),
-                    }
-                };
-                match result {
-                    Ok(copy) => {
-                        writer.buffers.sync(writer.dark);
-                        writer.pane.set(Pane::Map);
-                        writer.message.info(format!(
-                            "Editable draft restored. Previous session retained at {}",
-                            copy.display()
-                        ));
-                    }
-                    Err(e) => writer.message.error(e),
-                }
+                resolution::resolve(writer, decision);
             }),
         };
         let keyboard = submit.clone();
@@ -92,50 +79,21 @@ impl Component for ExternalScreen {
                     keyboard.run();
                 }
             })
-            .child(
-                rect()
-                    .horizontal()
-                    .spacing(t::SPACE_LG)
-                    .child(
-                        label()
-                            .text(text(MsgId::WriterCompare))
-                            .font_size(t::title()),
-                    )
-                    .child(
-                        Button::new()
-                            .flat()
-                            .on_press(move |_| writer.pane.set(Pane::Map))
-                            .child(text(MsgId::WriterReturnWriting)),
-                    ),
-            )
-            .child(label().text(comparison.path.display().to_string()))
+            .child(header(writer))
+            .child(label().text(comparison.path().display().to_string()))
+            .maybe_child(comparison.archive().map(|path| paragraph().width(Size::fill()).span(Span::new(format!("Complete recovery copy: {}", path.display())))))
+            .maybe_child(comparison.pending_draft().map(|_| paragraph().width(Size::fill()).span(Span::new("An unapplied field draft is retained. Keep Writer version preserves it; Use inspected disk version archives it before replacing the document."))))
             .child(ComparisonView {
                 code: true,
-                before: text(MsgId::WriterDraftVersion),
+                before: "Accepted Writer source".into(),
                 after: text(MsgId::WriterDiskVersion),
-                rows: ComparisonRow::source("", &comparison.draft, &comparison.disk),
+                rows: ComparisonRow::source("", comparison.writer_source(), comparison.disk_source()),
             })
-            .child(
-                rect()
-                    .horizontal()
-                    .spacing(t::SPACE_MD)
-                    .child(
-                        Button::new()
-                            .radio(*choice.read() == Some(true))
-                            .on_press(move |_| choice.set(Some(true)))
-                            .child(text(MsgId::WriterDraftVersion)),
-                    )
-                    .child(
-                        Button::new()
-                            .radio(*choice.read() == Some(false))
-                            .on_press(move |_| choice.set(Some(false)))
-                            .child(text(MsgId::WriterDiskVersion)),
-                    ),
-            )
+            .child(decisions(choice))
             .child(
                 paragraph()
                     .width(Size::fill())
-                    .span(Span::new(text(MsgId::WriterDiskDraftHint))),
+                    .span(Span::new("This decision does not write the source file. Keep Writer version allows the next Save to replace the inspected disk version. A complete recovery copy is retained before either decision.")),
             )
             .child(submit.button());
         rect().width(Size::fill()).height(Size::fill()).child(
@@ -146,84 +104,41 @@ impl Component for ExternalScreen {
         )
     }
 }
-#[derive(Clone, Copy)]
-pub(crate) struct WatchPoll {
-    pub writer: Writer,
-}
-impl PartialEq for WatchPoll {
-    fn eq(&self, _: &Self) -> bool {
-        false
-    }
-}
-impl Component for WatchPoll {
-    fn render(&self) -> impl IntoElement {
-        let mut tick = freya::sdk::use_timeout(|| std::time::Duration::from_millis(500));
-        if tick.elapsed() {
-            tick.reset();
-            poll_external_changes(self.writer);
-        }
-        rect()
-    }
-}
-
-fn poll_external_changes(mut writer: Writer) {
-    if writer.files.peek().as_ref().is_some_and(|p| p.saving) {
-        return;
-    }
-    let result = writer
-        .files
-        .peek()
-        .as_ref()
-        .and_then(|project| project.handoff.as_ref())
-        .and_then(Handoff::poll);
-    if let Some(result) = result {
-        writer
-            .message
-            .report(result, text(MsgId::WriterExternalOpened));
-        if let Some(project) = writer.files.write().as_mut() {
-            project.handoff = None;
-        }
-    }
-    let files = writer.files.peek();
-    let Some(project) = files.as_ref() else {
-        return;
-    };
-    let Ok(watch) = &project.watch else {
-        return;
-    };
-    let paths = match watch.changed() {
-        Ok(paths) => paths,
-        Err(error) => {
-            writer.message.error(format!(
-                "File watching stopped: {error}. Save still checks for external changes."
-            ));
-            return;
-        }
-    };
-    let Some(target) = paths.iter().find(|path| project.externally_changed(path)) else {
-        return;
-    };
-    if writer.message.is_error() {
-        return;
-    }
-    let target = target.clone();
-    writer.message.error_with_action(
-        text(MsgId::WriterDiskChanged),
-        text(MsgId::WriterCompare),
-        EventHandler::new(move |()| compare_changed_document(writer, &target)),
-    );
-}
-
-fn compare_changed_document(mut writer: Writer, target: &std::path::Path) {
-    if let Err(error) = writer.open_document_then(
-        target,
-        EventHandler::new(move |result: Result<(), String>| match result {
-            Ok(()) => open(writer),
-            Err(error) => writer.message.error(error),
-        }),
-    ) {
-        writer.message.error(error);
-    }
-}
-
 pub(crate) use handoff::open_editor;
+
+fn header(mut writer: Writer) -> impl IntoElement {
+    rect()
+        .horizontal()
+        .spacing(t::SPACE_LG)
+        .child(
+            label()
+                .text(text(MsgId::WriterCompare))
+                .font_size(t::title()),
+        )
+        .child(
+            Button::new()
+                .flat()
+                .on_press(move |_| writer.pane.set(Pane::Map))
+                .child(text(MsgId::WriterReturnWriting)),
+        )
+}
+
+fn decisions(mut choice: State<Option<ExternalDecision>>) -> impl IntoElement {
+    rect()
+        .horizontal()
+        .spacing(t::SPACE_MD)
+        .child(
+            Button::new()
+                .named("Keep Writer version")
+                .radio(*choice.read() == Some(ExternalDecision::KeepWriter))
+                .on_press(move |_| choice.set(Some(ExternalDecision::KeepWriter)))
+                .child("Keep Writer version"),
+        )
+        .child(
+            Button::new()
+                .named("Use inspected disk version")
+                .radio(*choice.read() == Some(ExternalDecision::UseInspectedDisk))
+                .on_press(move |_| choice.set(Some(ExternalDecision::UseInspectedDisk)))
+                .child("Use inspected disk version"),
+        )
+}

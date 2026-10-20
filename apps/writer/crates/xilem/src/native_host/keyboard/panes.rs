@@ -53,6 +53,7 @@ impl Attention {
                     Screen::Build => Pane::Build,
                     Screen::Settings => Pane::Settings,
                     Screen::Rename => Pane::Rename,
+                    Screen::External => Pane::External,
                     Screen::Write => Pane::Script,
                 };
                 if let Some(target) = targets(root).iter().find(|target| target.pane == pane) {

@@ -1,7 +1,7 @@
 //! Personal presentation is a cached projection of the shared authored palette.
 mod controls;
-mod manuscript;
-pub(crate) use manuscript::manuscript_text;
+mod styled_text;
+pub(crate) use styled_text::{manuscript_text, source_text};
 mod radio;
 mod theme;
 pub(super) use controls::{label, paragraph, prose, text_button};

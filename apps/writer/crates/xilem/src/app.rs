@@ -254,6 +254,7 @@ pub(super) fn application(
     })
     .with_default_properties(defaults)
     .with_font(include_bytes!("../../freya/fonts/literata/Literata-Variable.ttf").to_vec())
+    .with_font(include_bytes!("../../freya/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf").to_vec())
 }
 
 #[cfg(test)]

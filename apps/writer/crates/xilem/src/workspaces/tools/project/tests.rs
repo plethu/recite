@@ -5,6 +5,8 @@ use crate::{
 };
 use std::fs;
 use tokio::sync::mpsc;
+#[path = "external/tests.rs"]
+mod external;
 #[path = "visual/tests.rs"]
 mod visual;
 const SOURCE: &str =

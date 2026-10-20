@@ -1,4 +1,4 @@
-//! Authored prose uses a stable native text widget with the Writer's reading typeface.
+//! Read-only authored text uses stable native widgets with explicit manuscript or source typography.
 use xilem::{
     Pod, ViewCtx,
     core::{MessageCtx, MessageResult, Mut, View, ViewMarker},
@@ -8,25 +8,47 @@ use xilem::{
     },
 };
 
-pub(crate) struct ManuscriptText {
+pub(crate) struct StyledText {
     text: ArcStr,
     size: f32,
+    family: Family,
 }
-pub(crate) fn manuscript_text(size: f32, text: impl Into<ArcStr>) -> ManuscriptText {
-    ManuscriptText {
+pub(crate) fn manuscript_text(size: f32, text: impl Into<ArcStr>) -> StyledText {
+    StyledText {
         text: text.into(),
         size,
+        family: Family::Manuscript,
     }
 }
-impl ViewMarker for ManuscriptText {}
-impl<State: 'static> View<State, (), ViewCtx> for ManuscriptText {
+#[derive(Clone, Copy, PartialEq)]
+enum Family {
+    Manuscript,
+    Source,
+}
+impl Family {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Manuscript => "Literata",
+            Self::Source => "IBM Plex Mono",
+        }
+    }
+}
+pub(crate) fn source_text(size: f32, text: impl Into<ArcStr>) -> StyledText {
+    StyledText {
+        text: text.into(),
+        size,
+        family: Family::Source,
+    }
+}
+impl ViewMarker for StyledText {}
+impl<State: 'static> View<State, (), ViewCtx> for StyledText {
     type Element = Pod<Prose>;
     type ViewState = ();
     fn build(&self, ctx: &mut ViewCtx, _: &mut State) -> (Self::Element, ()) {
         let area = TextArea::new_immutable(&self.text)
             .with_word_wrap(true)
             .with_style(StyleProperty::FontSize(self.size))
-            .with_style(StyleProperty::FontFamily("Literata".into()));
+            .with_style(StyleProperty::FontFamily(self.family.name().into()));
         (
             ctx.create_pod(Prose::from_text_area(NewWidget::new(area)).with_clip(true)),
             (),
@@ -43,6 +65,12 @@ impl<State: 'static> View<State, (), ViewCtx> for ManuscriptText {
         let mut area = Prose::text_mut(&mut element);
         if self.text != previous.text {
             TextArea::reset_text(&mut area, &self.text);
+        }
+        if self.family != previous.family {
+            TextArea::insert_style(
+                &mut area,
+                StyleProperty::FontFamily(self.family.name().into()),
+            );
         }
         if self.size != previous.size {
             TextArea::insert_style(&mut area, StyleProperty::FontSize(self.size));

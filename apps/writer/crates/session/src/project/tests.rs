@@ -335,15 +335,17 @@ fn external_comparison_returns_a_draft_and_rechecks_the_inspected_version()
     model.set_draft(format!("{}\n# my draft\n", model.document().source()));
     let draft = model.draft().to_owned();
     fs::write(&files.current, "# another writer\n")?;
-    files.compare_external(&mut model)?;
+    files.compare_external(&model)?;
     fs::write(&files.current, "# changed again\n")?;
     assert!(matches!(
-        files.resolve_external(&mut model, true),
+        files.resolve_external(&mut model, super::ExternalDecision::KeepWriter),
         Err(super::FileError::Conflict)
     ));
     assert_eq!(model.draft(), draft);
-    files.compare_external(&mut model)?;
-    let copy = files.resolve_external(&mut model, true)?;
+    files.compare_external(&model)?;
+    let copy = files
+        .resolve_external(&mut model, super::ExternalDecision::KeepWriter)?
+        .archive;
     assert!(copy.exists());
     assert_eq!(model.draft(), draft);
     assert_eq!(fs::read_to_string(&files.current)?, "# changed again\n");

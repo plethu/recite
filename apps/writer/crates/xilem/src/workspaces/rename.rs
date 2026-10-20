@@ -1,13 +1,9 @@
 //! Rename composes an explicit proposal, bounded review and exclusive project actions.
 mod view;
 use super::{Writer, text, tools::ProjectAction};
+pub(super) use recite_writer_session::comparison::ComparisonRow as Change;
 pub(super) use view::panel;
 pub(crate) use view::recovery;
-pub(super) struct Change {
-    pub caption: String,
-    pub before: Option<String>,
-    pub after: Option<String>,
-}
 #[derive(Default)]
 pub(super) struct Panel {
     block: String,

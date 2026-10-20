@@ -1,7 +1,7 @@
 //! Structural commands prepare against an applied snapshot and publish one live history step.
-use super::{NavigationRequest, SourceValidation, View, Workbench, WorkbenchError};
+use super::{FieldState, NavigationRequest, View, Workbench, WorkbenchError};
 use crate::{
-    DraftSnapshot, EditError, EditOperation,
+    EditError, EditOperation,
     document::{PreparedSourceEdit, SourceEditRequest},
 };
 use recite_compiler::authoring::{AuthoringError, WorkControl};
@@ -32,16 +32,8 @@ pub struct StructuralRequest {
 pub struct PreparedStructuralEdit {
     origin: NavigationRequest,
     source: PreparedSourceEdit,
-    selection: Selection,
+    selection: FieldState,
     accepted: bool,
-}
-struct Selection {
-    view: View,
-    script: Option<String>,
-    draft: DraftSnapshot,
-    loaded: DraftSnapshot,
-    dirty: bool,
-    validation: SourceValidation,
 }
 impl Workbench {
     pub fn structural_request(
@@ -69,14 +61,7 @@ impl Workbench {
             return Err(EditError::Stale.into());
         }
         self.document.accept_source_edit(&mut prepared.source)?;
-        let selection = &mut prepared.selection;
-        std::mem::swap(&mut self.view, &mut selection.view);
-        std::mem::swap(&mut self.script_selection, &mut selection.script);
-        std::mem::swap(&mut self.draft, &mut selection.draft);
-        std::mem::swap(&mut self.loaded, &mut selection.loaded);
-        self.dirty = selection.dirty;
-        self.source_validation = selection.validation;
-        self.draft_revision = self.document.revision();
+        prepared.selection.publish(self);
         prepared.accepted = true;
         Ok(())
     }
@@ -95,28 +80,12 @@ impl StructuralRequest {
             .checkpoint()
             .map_err(AuthoringError::from)
             .map_err(EditError::from)?;
-        let Workbench {
-            document,
-            view,
-            script_selection,
-            draft,
-            loaded,
-            dirty,
-            source_validation,
-            ..
-        } = model;
+        let (document, selection) = FieldState::take(model);
         let source = self.source.prepare_candidate(document)?;
         Ok(PreparedStructuralEdit {
             origin,
             source,
-            selection: Selection {
-                view,
-                script: script_selection,
-                draft,
-                loaded,
-                dirty,
-                validation: source_validation,
-            },
+            selection,
             accepted: false,
         })
     }

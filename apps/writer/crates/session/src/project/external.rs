@@ -1,60 +1,85 @@
-//! An external comparison is bound to one file and one inspected disk version.
+//! Comparisons observe one exact local session and disk version without changing selection.
+mod merging;
+mod resolving;
 use super::{FileError, ProjectFiles, read_regular};
-use recite_writer_model::{View, Workbench};
-use std::path::PathBuf;
-#[derive(Clone)]
+use crate::recovery::Recovery;
+use recite_writer_model::{NavigationStamp, ProjectContext, RecoveredDraft, Workbench};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExternalDecision {
+    KeepWriter,
+    UseInspectedDisk,
+}
+#[must_use = "Adoption can complete with incomplete recovery; inspect the receipt."]
+pub struct ExternalResolution {
+    pub archive: PathBuf,
+    pub recovery_error: Option<FileError>,
+}
 pub struct ExternalComparison {
-    pub path: PathBuf,
-    pub draft: String,
-    pub disk: String,
+    path: PathBuf,
+    recovery: Recovery,
+    pending: bool,
+    disk: Arc<str>,
+    origin: NavigationStamp,
+    context: Arc<ProjectContext>,
+    archive: Option<PathBuf>,
+    artifact: Option<super::SourceRepairArtifact>,
+}
+impl ExternalComparison {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+    pub fn writer_source(&self) -> &str {
+        self.recovery.draft.source()
+    }
+    pub fn disk_source(&self) -> &str {
+        &self.disk
+    }
+    pub fn pending_draft(&self) -> Option<&RecoveredDraft> {
+        self.pending.then_some(&self.recovery.draft)
+    }
+    pub fn archive(&self) -> Option<&Path> {
+        self.archive.as_deref()
+    }
+    pub fn artifact(&self) -> Option<&super::SourceRepairArtifact> {
+        self.artifact.as_ref()
+    }
+    /// Cheap local freshness check for presentation; adoption also rechecks the disk contents.
+    pub fn is_current(&self, files: &ProjectFiles, model: &Workbench) -> bool {
+        self.path == files.current
+            && self.origin.is_current(model)
+            && Arc::ptr_eq(&self.recovery.baseline, &files.saved)
+            && Arc::ptr_eq(&self.context, &files.context)
+    }
 }
 impl ProjectFiles {
-    pub fn compare_external(&mut self, model: &mut Workbench) -> Result<(), FileError> {
-        if model.view() != &View::Source {
-            model.select(View::Source)?;
-        }
+    pub fn compare_external(&mut self, model: &Workbench) -> Result<(), FileError> {
+        self.require_idle_save()?;
+        self.require_navigation_ready()?;
+        let disk = read_regular(&self.current)?.into();
         self.external = Some(ExternalComparison {
             path: self.current.clone(),
-            draft: model.draft().into(),
-            disk: read_regular(&self.current)?,
+            recovery: Recovery::new(self.saved.clone(), model.recovery()),
+            pending: model.has_draft(),
+            disk,
+            origin: model.navigation_stamp(),
+            context: self.context.clone(),
+            archive: None,
+            artifact: None,
         });
         Ok(())
     }
-    pub fn resolve_external(
-        &mut self,
-        model: &mut Workbench,
-        keep: bool,
-    ) -> Result<PathBuf, FileError> {
-        self.require_idle_save()?;
-        let comparison = self.external.as_ref().ok_or(FileError::Selection)?;
-        if comparison.path != self.current
-            || model.view() != &View::Source
-            || model.draft() != comparison.draft
-            || read_regular(&comparison.path)? != comparison.disk
-        {
-            return Err(FileError::Conflict);
-        }
-        let next = if keep {
-            comparison.draft.clone()
-        } else {
-            comparison.disk.clone()
-        };
-        let disk = comparison.disk.clone();
-        let copy = self.export(model)?;
-        model.set_draft(next);
-        if !keep {
-            model.apply()?;
-        }
-        self.saved = disk.into();
-        self.update_saved_context()?;
-        self.checkpoint(model)?;
-        Ok(copy)
-    }
-    pub fn externally_changed(&self, path: &std::path::Path) -> bool {
+    pub fn externally_changed(&self, path: &Path) -> bool {
         let baseline = if path == self.current {
             Some(self.saved.as_ref())
         } else {
-            self.retained.get(path).map(|s| s.baseline.as_ref())
+            self.retained
+                .get(path)
+                .map(|session| session.baseline.as_ref())
         };
         baseline.is_some_and(|baseline| read_regular(path).map_or(true, |disk| disk != baseline))
     }

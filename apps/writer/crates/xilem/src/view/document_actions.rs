@@ -15,8 +15,12 @@ pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> 
                 Writer::return_to_writing,
             )
             .disabled(state.phase != Phase::Writing),
-            text_button(state.ui_scale(), "Save all", Writer::save_all)
-                .disabled(blocked || state.session.read_only() || state.source_repair_pending()),
+            text_button(state.ui_scale(), "Save all", Writer::save_all).disabled(
+                blocked
+                    || state.session.read_only()
+                    || state.source_repair_pending()
+                    || state.external_resolution_pending(),
+            ),
             text_button(state.ui_scale(), "Close", Writer::request_close)
                 .disabled(blocked || state.project_jobs_busy()),
         ))
@@ -111,6 +115,10 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
             state.session.project().is_some().then(|| {
                 text_button(scale, "Reload (keep recovery copy)", Writer::reload)
                     .disabled(closing || state.work.busy() || state.navigation.busy())
+            }),
+            state.session.project().is_some().then(|| {
+                text_button(scale, "Compare disk changes", Writer::compare_disk_changes)
+                    .disabled(state.project_action_blocked())
             }),
             text_button(scale, "Focus writing", Writer::toggle_focus)
                 .disabled(closing || state.work.busy() || state.navigation.busy()),

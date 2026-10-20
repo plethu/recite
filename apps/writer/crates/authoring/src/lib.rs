@@ -29,8 +29,9 @@ pub use script::{ScriptBlock, ScriptEntry};
 pub use workbench::{
     ContextRefreshRequest, EditRequest, FrozenWorkbench, NavigationRequest, NavigationStamp,
     PreparedContextRefresh, PreparedEdit, PreparedNavigation, PreparedSourceRepair,
-    PreparedStructuralEdit, RouteOwner, SourceRepairRequest, SourceValidation, StructuralCommand,
-    StructuralRequest, View, Workbench, WorkbenchError,
+    PreparedSourceReplacement, PreparedStructuralEdit, RouteOwner, SourceRepairRequest,
+    SourceReplacementRequest, SourceValidation, StructuralCommand, StructuralRequest, View,
+    Workbench, WorkbenchError,
 };
 
 pub const FIXTURE: &str =

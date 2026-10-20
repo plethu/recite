@@ -22,20 +22,6 @@ impl ProjectFiles {
 }
 
 impl ProjectFiles {
-    pub(super) fn update_saved_context(&mut self) -> Result<(), FileError> {
-        self.record_saved(&self.current.clone(), &self.saved.clone())
-    }
-
-    pub(super) fn record_saved(
-        &mut self,
-        path: &Path,
-        source: &std::sync::Arc<str>,
-    ) -> Result<(), FileError> {
-        if let Some(document) = self.record_saved_document(path, source)? {
-            std::sync::Arc::make_mut(&mut self.search).replace_document(document);
-        }
-        Ok(())
-    }
     pub(super) fn record_saved_document(
         &mut self,
         path: &Path,

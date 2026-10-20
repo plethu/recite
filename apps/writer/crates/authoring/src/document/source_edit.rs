@@ -89,7 +89,7 @@ impl Document {
         &mut self,
         prepared: &mut PreparedSourceEdit,
     ) -> Result<(), EditError> {
-        if prepared.accepted || !prepared.request.base.is_current(self) {
+        if !prepared.is_current(self) {
             return Err(EditError::Stale);
         }
         if let Some(kernel) = prepared.kernel.take() {
@@ -212,6 +212,9 @@ impl SourceEditRequest {
 }
 
 impl PreparedSourceEdit {
+    pub(crate) fn is_current(&self, document: &Document) -> bool {
+        !self.accepted && self.request.base.is_current(document)
+    }
     pub(crate) fn projection_document(&self) -> Document {
         let mut document = self.request.base.projection_document();
         if let Some(kernel) = &self.kernel {

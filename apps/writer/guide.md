@@ -271,6 +271,15 @@ retained copy, close the writer, preserve any existing `<source>.recite-editor-r
 copy the retained JSON to that path before reopening the source. The original baseline still
 protects external edits.
 
+In Xilem, **Compare disk changes** shows changed passages and any unapplied field draft separately.
+**Keep Writer version** preserves your exact document, field draft and Undo history; the next Save
+replaces the inspected disk version. **Use inspected disk version** archives that session and adopts
+the disk source as one Undo step. Both retain a complete recovery copy, whose path is available
+under **Show recovery copy location**. A changed local field or newer disk version requires a fresh
+review. For a manual merge, choose **Export merge draft**, open the separate text file in your IDE,
+then **Import reviewed merge**. Export includes pending prose without applying it in Writer. Import
+checks the edited source and retains your selected field when valid; Save publishes it explicitly.
+
 Recovery is written after buffer updates, so an abrupt crash can lose changes that have not reached
 that update. A corrupt or unsupported snapshot is left untouched and reported; move it aside for
 inspection before retrying. Recovery writes can fail on read-only directories or a full disk. Keep

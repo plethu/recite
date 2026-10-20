@@ -7,6 +7,7 @@ mod settings;
 mod worker;
 use super::{Phase, Writer, declarations::Row};
 pub(super) use project::Action as ProjectAction;
+pub(super) use project::ExternalAction;
 use recite_writer_session::{
     declarations::{
         DeclarationAction, DeclarationFinish, DeclarationFinished, DeclarationReceipt,
@@ -126,7 +127,7 @@ impl Writer {
                 .project()
                 .is_some_and(|project| project.files().require_navigation_ready().is_err())
     }
-    pub(super) fn project_action_blocked(&self) -> bool {
+    pub(crate) fn project_action_blocked(&self) -> bool {
         self.session.read_only()
             || self.phase != Phase::Writing
             || self.work.busy()
@@ -248,4 +249,4 @@ impl Writer {
     }
 }
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

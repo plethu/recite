@@ -1,6 +1,7 @@
 //! Project screens retain writing widgets; durable state remains in the shared project owner.
 mod builds;
 mod declarations;
+mod external;
 mod opening;
 mod rename;
 pub(crate) use rename::recovery;
@@ -23,6 +24,7 @@ pub(crate) enum Screen {
     Build,
     Settings,
     Rename,
+    External,
 }
 #[derive(Clone, Copy)]
 enum ContextUpdate {
@@ -49,6 +51,7 @@ pub(crate) struct Workspaces {
     declarations: declarations::Panel,
     settings: settings::Panel,
     rename: rename::Panel,
+    external: external::Panel,
     build_page: usize,
     build_feedback: Vec<String>,
     feedback_page: usize,
@@ -120,11 +123,13 @@ pub(crate) fn panel(writer: &Writer) -> impl xilem::WidgetView<Writer> + use<> {
         builds::panel(writer),
         settings::panel(writer),
         rename::panel(writer),
+        external::panel(writer),
     ))
     .active(match writer.workspaces.screen {
         Screen::Build => 1,
         Screen::Settings => 2,
         Screen::Rename => 3,
+        Screen::External => 4,
         Screen::Write | Screen::Declarations => 0,
     })
 }
