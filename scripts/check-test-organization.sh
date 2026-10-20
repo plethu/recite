@@ -7,7 +7,8 @@ Usage:
   check-test-organization.sh [repo-root]
 
 Checks Recite Rust test layout conventions:
-  - production source may declare `#[cfg(test)] mod tests;` only;
+  - production source may conditionally declare only external `mod tests;`
+    sidecars, optionally with `pub(super)` or `pub(crate)` visibility;
   - private source-side tests must live in module-local `tests.rs` sidecars;
   - Zed extension source follows the same sidecar rule under `editors/zed/src/`;
   - source-side `*_test.rs` and `*_tests.rs` files are not allowed;
@@ -54,12 +55,12 @@ while IFS= read -r file; do
   if [[ "$basename" != "tests.rs" ]]; then
     while IFS= read -r match; do
       fail "${match}: #[test] belongs in tests.rs or crates/<crate>/tests/"
-    done < <(grep -n '#\[test\]' "$repo_root/$file" || true)
+    done < <(grep -Hn '#\[test\]' "$repo_root/$file" || true)
   fi
 
   while IFS= read -r match; do
     fail "${match}: inline mod tests blocks are not allowed; use #[cfg(test)] mod tests;"
-  done < <(grep -n '^[[:space:]]*mod tests[[:space:]]*{' "$repo_root/$file" || true)
+  done < <(grep -HnE '^[[:space:]]*(pub(\([^)]*\))?[[:space:]]+)?mod tests[[:space:]]*\{' "$repo_root/$file" || true)
 
   while IFS= read -r match; do
     fail "$match"
@@ -67,8 +68,8 @@ while IFS= read -r file; do
     awk '
       /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/ {
         line = NR
-        if ((getline next_line) <= 0 || next_line !~ /^[[:space:]]*mod tests;[[:space:]]*$/) {
-          printf "%s:%d: #[cfg(test)] is only allowed before `mod tests;`\n", FILENAME, line
+        if ((getline next_line) <= 0 || next_line !~ /^[[:space:]]*(pub\((crate|super)\)[[:space:]]+)?mod tests;[[:space:]]*$/) {
+          printf "%s:%d: #[cfg(test)] is only allowed before an external tests sidecar declaration\n", FILENAME, line
         }
       }
     ' "$repo_root/$file"

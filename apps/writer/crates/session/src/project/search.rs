@@ -4,19 +4,6 @@ use recite_compiler::authoring::{SavedDocument, WorkControl};
 use recite_writer_model::SearchIndex;
 use std::sync::Arc;
 
-#[cfg(test)]
-impl super::ProjectFiles {
-    pub(super) fn refreshed_search(&self, documents: &[SavedDocument]) -> Arc<SearchIndex> {
-        use recite_compiler::authoring::CancellationToken;
-        refresh_search(
-            &self.context.documents,
-            &self.search,
-            documents,
-            &CancellationToken::new(),
-        )
-        .unwrap()
-    }
-}
 pub(super) fn refresh_search(
     previous: &[SavedDocument],
     search: &Arc<SearchIndex>,

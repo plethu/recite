@@ -1,7 +1,7 @@
 use super::*;
 use freya_testing::prelude::*;
 use recite_writer_model::View;
-#[path = "tests/grouped_recovery.rs"]
+#[path = "grouped_recovery/tests.rs"]
 mod grouped_recovery;
 
 const SOURCE: &str = ":: start default\n> @ffee6p8\n  Saved prose.\n-> END\n";

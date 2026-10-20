@@ -16,11 +16,17 @@ ignores:
   - "**/src/tests/**"
 message: Private tests must live in a module-local tests.rs sidecar.
 note: |
-  Keep #[cfg(test)] declarations as `mod tests;` in production modules. This
+  Keep #[cfg(test)] declarations as external `mod tests;` sidecars in production
+  modules; restricted pub(super) or pub(crate) visibility may share private test
+  support without exposing production internals. This
   keeps private test ownership visible and lets the test-organization gate
   apply the same rule without scanning test bodies as production code.
 rule:
-  pattern: |
-    mod tests {
-      $$$BODY
-    }
+  all:
+    - kind: mod_item
+    - has:
+        field: name
+        regex: ^tests$
+    - has:
+        field: body
+        kind: declaration_list

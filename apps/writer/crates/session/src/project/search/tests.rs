@@ -1,3 +1,6 @@
+use super::refresh_search;
+use recite_compiler::authoring::{CancellationToken, SavedDocument};
+use recite_writer_model::SearchIndex;
 use std::{fs, sync::Arc};
 
 #[test]
@@ -109,4 +112,16 @@ fn sparse_refresh_retains_unchanged_shards_and_saved_result_snapshots()
         }
     }
     Ok(())
+}
+
+impl super::super::ProjectFiles {
+    fn refreshed_search(&self, documents: &[SavedDocument]) -> Arc<SearchIndex> {
+        refresh_search(
+            &self.context.documents,
+            &self.search,
+            documents,
+            &CancellationToken::new(),
+        )
+        .unwrap()
+    }
 }
