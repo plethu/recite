@@ -139,7 +139,7 @@ impl ProjectFiles {
             }
         }
         self.switch(current, &original, None, |_| Ok(()))?;
-        let mut context = self.retained_context(self.context.clone());
+        let mut context = self.retained_context(self.context.as_ref().clone());
         for change in &latest.changes {
             if let Some(source) = context
                 .documents

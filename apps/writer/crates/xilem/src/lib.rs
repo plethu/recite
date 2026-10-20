@@ -30,6 +30,7 @@ struct Writer {
     trial: trial::Trial,
     reading: reading::Reading,
     work: editor_work::EditorWork,
+    navigation: navigation::Navigation,
     recovery_copy: Option<std::path::PathBuf>,
     recovery_details: bool,
     location: recite_writer_session::location::Location,
@@ -81,6 +82,7 @@ impl Writer {
             trial: trial::Trial::new(),
             reading,
             work: editor_work::EditorWork::new(),
+            navigation: navigation::Navigation::new(),
             recovery_copy: None,
             recovery_details: false,
             location: Default::default(),
@@ -133,8 +135,8 @@ impl Writer {
         self.reading.prepare(self.session.model());
     }
     fn reload(&mut self) {
-        if self.work.busy() {
-            self.status = "Wait for the current save before reloading.".into();
+        if self.work.busy() || self.navigation.busy() {
+            self.status = "Wait for the current editor action before reloading.".into();
             return;
         }
         self.trial.cancel();
@@ -155,8 +157,8 @@ impl Writer {
         self.reading.prepare(self.session.model());
     }
     fn request_close(&mut self) {
-        if self.work.busy() {
-            self.status = "Saving is still finishing. Your work remains open.".into();
+        if self.work.busy() || self.navigation.busy() {
+            self.status = "An editor action is still finishing. Your work remains open.".into();
             return;
         }
         if self.session.dirty() {
@@ -168,8 +170,8 @@ impl Writer {
         }
     }
     fn close_with_recovery(&mut self) {
-        if self.work.busy() {
-            self.status = "Wait for the current save before closing.".into();
+        if self.work.busy() || self.navigation.busy() {
+            self.status = "Wait for the current editor action before closing.".into();
             return;
         }
         let Some(project) = self.session.project_mut() else {

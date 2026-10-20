@@ -145,7 +145,12 @@ fn editor_completion_is_attributed_to_its_document_after_navigation() {
     writer.open_editor();
     finish_work(&mut writer, &mut saves).unwrap();
     let request = launches.try_recv().unwrap();
+    let (sender, mut navigation) = tokio::sync::mpsc::unbounded_channel();
+    writer.navigation.sender = Some(sender);
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    writer.navigation.runtime = Some(runtime.handle().clone());
     writer.switch(&other);
+    crate::tests::support::finish_navigation(&mut writer, &mut navigation).unwrap();
     writer.accept_editor(request, Some(Ok(())));
     assert!(!writer.external.busy());
     assert_eq!(

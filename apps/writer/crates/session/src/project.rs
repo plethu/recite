@@ -34,7 +34,7 @@ pub struct ProjectFiles {
     pub current: PathBuf,
     saved: std::sync::Arc<str>,
     root: PathBuf,
-    context: ProjectContext,
+    context: std::sync::Arc<ProjectContext>,
     search: std::sync::Arc<recite_writer_model::SearchIndex>,
     recovery: RecoveryStore,
     names: std::collections::BTreeMap<PathBuf, String>,
@@ -121,7 +121,7 @@ impl ProjectFiles {
             saved,
             names,
             recovery,
-            context,
+            context: context.into(),
             search,
             root,
         })
@@ -209,7 +209,7 @@ impl ProjectFiles {
         self.recovery.persist(None)?;
         self.saved = disk.into();
         self.search = self.refreshed_search(&context.documents);
-        self.context = context;
+        self.context = context.into();
         self.paths = report
             .documents()
             .iter()
@@ -276,7 +276,7 @@ impl ProjectFiles {
             .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
             .collect();
         self.search = self.refreshed_search(&context.documents);
-        self.context = context;
+        self.context = context.into();
         Ok(())
     }
 

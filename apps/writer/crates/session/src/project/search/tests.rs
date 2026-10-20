@@ -75,7 +75,7 @@ fn sparse_refresh_retains_unchanged_shards_and_saved_result_snapshots()
 -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files) = super::super::tests::project()?;
     let documents = recite_writer_model::workload::project(10_000, 500)?;
-    files.context.documents = documents.clone();
+    std::sync::Arc::make_mut(&mut files.context).documents = documents.clone();
     files.search = Arc::new(recite_writer_model::SearchIndex::build(&documents));
     let before = files.search.search_results("courier", 10_000);
     let mut changed = documents.clone();

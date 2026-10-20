@@ -74,7 +74,9 @@ class NativeWindow:
 
     def find_text(self, value, prefix=False, contains=False):
         def matches(text):
-            return value in text if contains else (text.startswith(value) if prefix else text == value)
+            return (
+                value in text if contains else (text.startswith(value) if prefix else text == value)
+            )
 
         for node, name in self.nodes():
             if matches(name):
@@ -88,6 +90,30 @@ class NativeWindow:
     def act(self, label):
         node = self.wait(lambda: self.find(label), "available action: " + label)
         return self.call(node, "Action", "DoAction", self.api.GLib.Variant("(i)", (0,)))[0]
+
+    def reveal_end(self, label):
+        """Explicitly reach a below-viewport action through the native outer scrollbar."""
+        if self.find(label):
+            return
+        vertical = 1 << int(self.api.Atspi.StateType.VERTICAL)
+        scrollbars = [
+            node
+            for node, _ in self.nodes()
+            if self.call(node, "Accessible", "GetRole")[0] == 48
+            and self.call(node, "Accessible", "GetState")[0][0] & vertical
+        ]
+        coordinates = self.api.GLib.Variant("(u)", (int(self.api.Atspi.CoordType.WINDOW),))
+        # Writer also has small scrollable file/beat lists; use the window-height portal.
+        scrollbar = max(
+            scrollbars,
+            key=lambda node: self.call(node, "Component", "GetExtents", coordinates)[0][3],
+            default=None,
+        )
+        if scrollbar is None:
+            raise RuntimeError("No native vertical scrollbar to reveal " + label)
+        self.focus(scrollbar)
+        key("End")
+        self.wait(lambda: self.find(label), "scrolled action: " + label)
 
     def enabled(self, label):
         node = self.find(label)
@@ -110,7 +136,9 @@ class NativeWindow:
 
 def key(name, control=False, shift=False, alt=False):
     arguments = ["wtype"]
-    modifiers = [name for name, active in [("ctrl", control), ("shift", shift), ("alt", alt)] if active]
+    modifiers = [
+        name for name, active in [("ctrl", control), ("shift", shift), ("alt", alt)] if active
+    ]
     for modifier in modifiers:
         arguments += ["-M", modifier]
     arguments += ["-k", name]
@@ -125,12 +153,14 @@ def type_text(text):
 
 def attach(api, bus, registry, process):
     """Find only the accessibility application owned by the supplied process."""
+
     def application():
         for child in api.call(bus, registry, api.ACCESSIBLE, "GetChildren")[0]:
             pid = api.call(
                 bus,
                 ("org.freedesktop.DBus", "/org/freedesktop/DBus"),
-                "org.freedesktop.DBus", "GetConnectionUnixProcessID",
+                "org.freedesktop.DBus",
+                "GetConnectionUnixProcessID",
                 api.GLib.Variant("(s)", (child[0],)),
             )[0]
             if pid == process.pid:

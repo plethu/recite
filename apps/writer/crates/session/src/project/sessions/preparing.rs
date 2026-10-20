@@ -1,8 +1,8 @@
 //! Destination analysis is prepared without moving the active or retained session owners.
 use super::super::{FileError, ProjectFiles, ReadyCheckpoint, read_regular};
-use super::{Retained, overlay};
+use super::Retained;
 use crate::recovery::RecoveryStore;
-use recite_compiler::authoring::WorkControl;
+use recite_compiler::authoring::{SavedDocument, WorkControl};
 use recite_writer_model::{
     CompletionSnapshot, NavigationRequest, PreparedNavigation, ProjectContext, View, Workbench,
     WorkbenchError,
@@ -24,7 +24,8 @@ pub struct SwitchRequest {
     from: PathBuf,
     origin: CompletionSnapshot,
     path: PathBuf,
-    context: ProjectContext,
+    context: Arc<ProjectContext>,
+    overlays: Vec<SavedDocument>,
     opening: Opening,
 }
 enum Destination {
@@ -44,11 +45,22 @@ impl ProjectFiles {
         path: &Path,
         initial: Option<View>,
     ) -> Result<SwitchRequest, FileError> {
-        if path == self.current || !self.paths.iter().any(|candidate| candidate == path) {
+        if path == self.current || !self.names.contains_key(path) {
             return Err(FileError::Selection);
         }
-        let mut context = self.retained_context(self.context.clone());
-        overlay(&mut context, current);
+        // Capture only open sources. Materialize the project-sized saved context on the worker.
+        let overlays = self
+            .retained
+            .values()
+            .map(|session| &session.model)
+            .chain(std::iter::once(current))
+            .map(|model| {
+                SavedDocument::from_shared(
+                    model.document().key().clone(),
+                    model.document().source_snapshot(),
+                )
+            })
+            .collect();
         let opening = match self.retained.get(path) {
             Some(session) => Opening::Retained(session.model.navigation_request()),
             None => Opening::Cold {
@@ -65,7 +77,8 @@ impl ProjectFiles {
             from: self.current.clone(),
             origin: current.document().completion_snapshot(),
             path: path.to_owned(),
-            context,
+            context: self.context.clone(),
+            overlays,
             opening,
         })
     }
@@ -106,9 +119,21 @@ impl SwitchRequest {
         select: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
     ) -> Result<PreparedSwitch, FileError> {
         control.checkpoint()?;
+        let mut context = self.context.as_ref().clone();
+        let overlays: std::collections::BTreeMap<_, _> = self
+            .overlays
+            .into_iter()
+            .map(|saved| (saved.key().clone(), saved))
+            .collect();
+        for saved in &mut context.documents {
+            if let Some(overlay) = overlays.get(saved.key()) {
+                *saved = overlay.clone();
+            }
+        }
+        control.checkpoint()?;
         let destination = match self.opening {
             Opening::Retained(request) => {
-                let mut prepared = request.prepare(Some(self.context), control)?;
+                let mut prepared = request.prepare(Some(context), control)?;
                 select(prepared.model_mut())?;
                 Destination::Retained(prepared)
             }
@@ -123,7 +148,7 @@ impl SwitchRequest {
                     .snapshot()
                     .map_or(baseline.as_ref(), |r| r.draft.source());
                 let document = sibling
-                    .open_sibling_with_control(key, source, self.context, control)
+                    .open_sibling_with_control(key, source, context, control)
                     .map_err(WorkbenchError::from)?;
                 let view = recovery
                     .snapshot()
@@ -172,7 +197,7 @@ impl PreparedSwitch {
         checkpoint.is_current(files, current)
             && self.from == files.current
             && self.origin.is_current(current.document())
-            && files.paths.contains(&self.path)
+            && files.names.contains_key(&self.path)
             && match &self.destination {
                 Destination::Retained(prepared) => files
                     .retained
@@ -184,3 +209,6 @@ impl PreparedSwitch {
             }
     }
 }
+
+#[cfg(test)]
+mod tests;

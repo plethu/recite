@@ -39,7 +39,8 @@ conditional groups and effects, and editing previously empty beats through nativ
 accessible manuscript name and final layout are checked separately. Welcome/project creation,
 retained temporary examples and native second-launch document selection also pass. Personal settings
 cover live light/dark/monochrome colours, 100–200% scale, retained manuscript undo, validated
-shortcut edits, persisted configuration and ordinary exit confirmation. The native settings drill
+shortcut edits, persisted configuration and ordinary exit confirmation. Native keyboard checks cover
+focused Apply, immediate Save, live rebinding and retained text undo/redo. The native settings drill
 traverses and activates controls after scrolling; adapter regressions cover clipping and
 registration ordering. This does not establish workspace parity: Map, localisation and configured
 preview inputs, schema and workspace command dispatch remain in progress. Physical IME,
@@ -52,8 +53,10 @@ switches.
 Xilem saves, cold project loads and editor handoff use workers and retain newer typing;
 save-and-close timing is recorded by the native probe. Preferred-application lookup, an
 independently open editor, checked-save conflict refusal and missing-executable retry also pass the
-owned native editor drill. Remaining synchronous navigation and reload still need completion before
-default cutover.
+owned native editor drill. File and selection navigation, Apply and applied history now prepare on
+workers, with regression checks for cancellation, newer typing, outgoing recovery and deferred Save.
+Dynamic preview resizing has a Portal scrollbar regression and a native scrolling drill. Synchronous
+reload and structural creation still need completion before default cutover.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

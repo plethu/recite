@@ -1,5 +1,10 @@
 """Source-language runtime playback through an owned Writer window."""
 
+import json
+import tempfile
+import traceback
+from pathlib import Path
+
 from native_window import key, type_text
 
 SOURCE = """:: start default
@@ -20,10 +25,39 @@ SOURCE = """:: start default
 """
 
 
+def run(api, bus, registry, binary, output):
+    from writer_interactions import capture, launch
+
+    results = {"backend": "owned Wayland", "scenario": "preview"}
+    try:
+        with tempfile.TemporaryDirectory(prefix="recite-preview-") as temporary:
+            project = Path(temporary)
+            (project / "recite.project.toml").write_text("format_version = 1\n")
+            with output.with_suffix(".writer.log").open("w") as log:
+                exercise(
+                    api,
+                    bus,
+                    registry,
+                    [str(binary), "--project", str(project)],
+                    log,
+                    project / "scene.recite",
+                    output,
+                    results,
+                    launch,
+                    capture,
+                )
+    except Exception as error:
+        results["error"], results["error_traceback"] = repr(error), traceback.format_exc()
+    output.write_text(json.dumps(results, indent=2) + "\n")
+    print(json.dumps(results))
+    return "error" not in results
+
+
 def exercise(api, bus, registry, arguments, log, source, output, results, launch, capture):
     source.write_text(SOURCE)
     process, window, node = launch(api, bus, registry, arguments, log)
     try:
+        window.reveal_end("Start / restart preview")
         window.act("Start / restart preview")
         window.wait(lambda: window.find("Continue preview"), "prepared runtime line")
         window.act("Continue preview")
@@ -34,7 +68,8 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.act("Answer true")
         window.wait(lambda: window.find_text("Yes."), "condition result")
         window.act("Continue preview")
-        window.wait(lambda: window.find("Acknowledge effect"), "blocking effect request")
+        window.wait(lambda: window.find_text("Effect requested"), "blocking effect request")
+        window.reveal_end("Acknowledge effect")
         capture(output, "-effect")
         window.act("Acknowledge effect")
         window.wait(lambda: window.find("Continue preview"), "acknowledged effect")
@@ -69,6 +104,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         assert process.wait(timeout=5) == 0
     except Exception:
         if process.poll() is None:
+            results["preview_visible_names_at_failure"] = [name for _, name in window.nodes()]
             capture(output, "-preview-error")
         raise
     finally:

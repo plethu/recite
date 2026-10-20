@@ -18,7 +18,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use super::Activation;
+use super::{Activation, IncomingRoute};
 use crate::startup::{EditorCommand, LaunchOptions, Startup};
 
 const QUEUE_SIZE: usize = 16;
@@ -46,15 +46,6 @@ enum Receipt {
     Queued,
     Applied,
     Refused(String),
-}
-
-pub struct IncomingRoute {
-    pub project: Option<PathBuf>,
-    pub route: Option<String>,
-    pub document: Option<PathBuf>,
-    pub editor: Option<EditorCommand>,
-    pub cancelled: Arc<AtomicBool>,
-    pub reply: mpsc::Sender<Result<(), String>>,
 }
 
 #[derive(Clone)]

@@ -65,6 +65,12 @@ impl Writer {
         self.start_save(Scope::AcceptedCurrent, AfterSave::OpenEditor(request));
     }
     fn start_save(&mut self, scope: Scope, after: AfterSave) {
+        if self.navigation.busy() {
+            if !matches!(&after, AfterSave::Stay) || !self.defer_save_until_apply(&scope) {
+                self.status = "Finish the current editor action before saving.".into();
+            }
+            return;
+        }
         if self.work.busy() {
             return;
         }

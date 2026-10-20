@@ -3,8 +3,6 @@ use super::location::{Location, Screen};
 use crate::editing::{Pane, Writer};
 use freya::prelude::*;
 
-pub(super) use recite_writer_session::location::{catalogue_path, select, select_reusing_rules};
-
 pub(super) fn present(mut writer: Writer, location: &Location) -> Result<(), String> {
     {
         let mut state = writer.localisation.write();

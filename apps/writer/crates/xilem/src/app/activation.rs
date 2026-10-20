@@ -18,18 +18,21 @@ impl App {
                         .is_some_and(|project| project.root() == path)
                 })
             {
-                if writer.phase != Phase::Writing || writer.work.busy() {
+                if writer.phase != Phase::Writing || writer.work.busy() || writer.navigation.busy()
+                {
                     return Err("Finish the current editor action before opening a link.".into());
                 }
                 if let Some(route) = &request.route {
-                    writer.follow_location(&route.parse().map_err(str::to_owned)?)?;
-                }
-                if let Some(editor) = request.editor {
-                    writer.editor = Some(editor);
+                    let location = route.parse().map_err(str::to_owned)?;
+                    writer.navigate_activation(location, request)?;
+                } else {
+                    if let Some(editor) = request.editor {
+                        writer.editor = Some(editor);
+                    }
+                    let _ = request.reply.send(Ok(()));
                 }
                 self.show_welcome = false;
                 self.settings_open = false;
-                let _ = request.reply.send(Ok(()));
                 return Ok(());
             }
             let options = LaunchOptions {

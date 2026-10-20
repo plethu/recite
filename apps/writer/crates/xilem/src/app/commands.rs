@@ -30,7 +30,9 @@ impl App {
                     WriterCommand::Save => writer.save(),
                     WriterCommand::SaveAll => writer.save_all(),
                     WriterCommand::Source => writer.open_editor(),
-                    WriterCommand::Apply => writer.change(Workbench::apply),
+                    WriterCommand::Apply => writer.navigate(crate::navigation::Target::Edit(
+                        recite_writer_model::EditOperation::Apply,
+                    )),
                     WriterCommand::AddBeat => writer.change(Workbench::add_beat),
                     WriterCommand::AddLine => writer.change(Workbench::add_line),
                     WriterCommand::AddReply => writer.change(Workbench::add_choice),

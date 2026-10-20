@@ -48,9 +48,11 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
         diagnostics(state),
         flex_row((
             text_button(scale, "Apply draft", |state: &mut Writer| {
-                state.change(Workbench::apply)
+                state.navigate(crate::navigation::Target::Edit(
+                    recite_writer_model::EditOperation::Apply,
+                ))
             })
-            .disabled(closing || !editing || !has_draft),
+            .disabled(closing || state.navigation.busy() || !editing || !has_draft),
             text_button(scale, "Discard draft", |state: &mut Writer| {
                 state.change(|model| {
                     model.discard();
@@ -59,11 +61,15 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
             })
             .disabled(closing || !has_draft),
             text_button(scale, "Undo applied", |state: &mut Writer| {
-                state.change(Workbench::undo)
+                state.navigate(crate::navigation::Target::Edit(
+                    recite_writer_model::EditOperation::Undo,
+                ))
             })
             .disabled(closing),
             text_button(scale, "Redo applied", |state: &mut Writer| {
-                state.change(Workbench::redo)
+                state.navigate(crate::navigation::Target::Edit(
+                    recite_writer_model::EditOperation::Redo,
+                ))
             })
             .disabled(closing),
         ))
@@ -94,4 +100,26 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
         text_button(scale, "Read beat", Writer::read_current).disabled(closing || !selected),
     ))
     .gap(8.px())
+}
+
+fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let diagnostics = state.session.model().document().diagnostic_snapshot();
+    flex_col(
+        (0..diagnostics.len().min(3))
+            .filter_map(|index| diagnostics.get(index))
+            .map(|diagnostic| {
+                sized_box(prose(
+                    scale,
+                    format!(
+                        "Source diagnostics · line {} · {}",
+                        diagnostic.span.start.line(),
+                        diagnostic.message
+                    ),
+                ))
+                .width(state.script_width().px())
+            })
+            .collect::<Vec<_>>(),
+    )
+    .gap(6.px())
 }

@@ -105,6 +105,7 @@ impl App {
     fn can_replace(&self) -> bool {
         self.writer.as_ref().is_none_or(|writer| {
             !writer.work.busy()
+                && !writer.navigation.busy()
                 && match &writer.session {
                     Session::Project(project) => project.files().can_leave(writer.session.model()),
                     Session::Examples { .. } => !writer.session.dirty(),

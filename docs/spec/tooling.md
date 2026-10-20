@@ -97,6 +97,13 @@ manuscript. Composition bypasses application shortcuts; document, screen and bin
 invalidate queued commands. Unbound Control/Meta chords cannot become literal text. This does not
 establish physical IME or keyboard-layout acceptance on every platform.
 
+Xilem prepares file/selection navigation and applied edit history on workers. File switches retain
+field drafts; linked navigation applies captured prose first and stops if newer typing remains.
+Publication requires the same document and exact outgoing recovery checkpoint. A Save requested
+during explicit Apply waits for successful publication and retirement, then uses the normal checked
+save path; cancellation or failure clears that request. Save All takes precedence over repeated
+Save.
+
 The Xilem editor handoff saves accepted source and recovery in the background without accepting the
 active field draft. It uses the OS preferred application or literal configured arguments. Cancelling
 the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's

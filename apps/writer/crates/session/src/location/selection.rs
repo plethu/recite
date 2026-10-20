@@ -34,7 +34,9 @@ pub fn select(
         location.beat.as_ref().map(|beat| View::Block(beat.clone()))
     };
     if let Some(view) = view {
-        if model.view() != &view {
+        if let View::Block(beat) = &view {
+            model.inspect_block(beat)?;
+        } else if model.view() != &view {
             model.select(view)?;
         }
     } else if model.view() == &View::Source {

@@ -38,7 +38,7 @@ impl Writer {
         self.prepare_editor(None);
     }
     fn prepare_editor(&mut self, editor: Option<EditorCommand>) {
-        if self.work.busy() || self.external.busy() {
+        if self.work.busy() || self.navigation.busy() || self.external.busy() {
             self.status =
                 "An editor or save request is already in progress. You can keep editing.".into();
             return;

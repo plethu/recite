@@ -28,7 +28,7 @@ impl ProjectFiles {
             .map_err(recite_writer_model::EditError::from)
             .map_err(recite_writer_model::WorkbenchError::from)?;
         let document =
-            Document::in_project_with_control(key, source, self.context.clone(), control)
+            Document::in_project_with_control(key, source, self.context.as_ref().clone(), control)
                 .map_err(recite_writer_model::WorkbenchError::from)?;
         control.checkpoint()?;
         let view = recovered

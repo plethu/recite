@@ -1,6 +1,25 @@
 use super::*;
 
 #[test]
+fn incomplete_or_ambiguous_beats_cannot_be_selected_through_a_link() -> Result<(), WorkbenchError> {
+    for source in [
+        ":: start default\n->\n",
+        ":: start default\n-> END\n:: start\n-> END\n",
+    ] {
+        let mut model = Workbench::new(source)?;
+        let before = model.view().clone();
+        let location = Location {
+            beat: Some("start".into()),
+            ..Location::default()
+        };
+        assert!(select(&mut model, &location).is_err());
+        assert_eq!(model.view(), &before);
+        assert_eq!(model.document().source(), source);
+    }
+    Ok(())
+}
+
+#[test]
 fn inconsistent_beat_and_passage_link_does_not_change_selection() -> Result<(), WorkbenchError> {
     let mut model = recite_writer_model::WRITER_EXAMPLES[0].open()?;
     let before = model.view().clone();

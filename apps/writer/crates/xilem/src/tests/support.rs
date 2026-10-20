@@ -64,6 +64,9 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
     let (pod, mut state) = view.build(&mut context, writer);
     let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
+    let (navigation_sender, mut navigation_requests) = tokio::sync::mpsc::unbounded_channel();
+    writer.navigation.sender = Some(navigation_sender);
+    writer.navigation.runtime = Some(context.runtime().handle().clone());
     let mut harness = TestHarness::create_with_size(
         masonry::theme::default_property_set(),
         pod.new_widget,
@@ -127,6 +130,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
         });
         *context.environment() = message.finish().0;
         finish_work(writer, &mut requests)?;
+        finish_navigation(writer, &mut navigation_requests)?;
         let next = view::writer(writer);
         harness
             .edit_root_widget(|root| next.rebuild(&view, &mut state, &mut context, root, writer));
@@ -146,6 +150,19 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
             }
             assert_eq!(focused.as_deref(), Some("Keep editing"));
         }
+    }
+    Ok(())
+}
+
+pub(crate) fn finish_navigation(
+    writer: &mut Writer,
+    requests: &mut tokio::sync::mpsc::UnboundedReceiver<crate::navigation::worker::Job>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    while writer.navigation.busy() {
+        let completed = requests.try_recv()?.execute();
+        let request = completed.request.clone();
+        drop(writer.accept_navigation(completed));
+        writer.navigation_retired(&request);
     }
     Ok(())
 }

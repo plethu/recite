@@ -3,7 +3,9 @@ use recite_writer_session::{FileError, ProjectSession};
 use std::{fs, path::PathBuf};
 
 fn open(path: PathBuf) -> Result<ProjectSession, Box<dyn std::error::Error>> {
-    let root = path.parent().ok_or("fixture path needs a parent directory")?;
+    let root = path
+        .parent()
+        .ok_or("fixture path needs a parent directory")?;
     let manifest = root.join("recite.project.toml");
     if !manifest.exists() {
         fs::write(manifest, "format_version = 1\n")?;
