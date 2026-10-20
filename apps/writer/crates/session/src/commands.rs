@@ -1,5 +1,6 @@
 //! Shared command wording for menus, search and personal shortcuts.
 pub mod keybindings;
+pub mod search;
 pub mod targets;
 pub mod vim;
 use crate::messages::{MsgId, text};

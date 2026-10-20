@@ -77,3 +77,16 @@ pub fn rank(label: &str, query: &str) -> Option<u8> {
         None
     }
 }
+
+/// Stable ranking for an explicit lookup; retained cursors resolve again against current targets.
+pub fn matching(targets: impl IntoIterator<Item = Target>, query: &str) -> Vec<Target> {
+    let mut matches = targets
+        .into_iter()
+        .filter_map(|target| rank(&target.label(), query).map(|rank| (rank, target)))
+        .collect::<Vec<_>>();
+    matches.sort_by_key(|(rank, _)| *rank);
+    matches.into_iter().map(|(_, target)| target).collect()
+}
+
+#[cfg(test)]
+mod tests;

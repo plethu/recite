@@ -114,6 +114,11 @@ loss and context changes cancel it, and consumed terminal releases cannot activa
 controls. Pane focus, redraw and accessibility updates must publish without requiring another input
 event.
 
+Scene/beat search repeats resolve current accepted navigation facts in discovery/rank order. Native
+lookup retains only its accepted query and semantic scene/beat target; each invocation captures a
+fresh location and advances the cursor only after checked navigation succeeds. Cancelling another
+lookup leaves that accepted search intact. Saved-project-text lookup does not replace it.
+
 Xilem prepares file/selection navigation and applied edit history on workers. File switches retain
 field drafts; linked navigation applies captured prose first and stops if newer typing remains.
 Publication requires the same document and exact outgoing recovery checkpoint. A Save requested

@@ -5,6 +5,7 @@ mod editor_work;
 mod external_editor;
 mod feedback;
 mod keyed;
+mod lookup;
 mod map;
 mod native_host;
 mod navigation;
@@ -45,6 +46,7 @@ struct Writer {
     rules: Option<rules::ReplySession>,
     pending_choice: Option<choices::Request>,
     pending_search: Option<app::picker::Search>,
+    lookup: Option<lookup::Search>,
     viewport: kurbo::Size,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
@@ -107,6 +109,7 @@ impl Writer {
             rules: None,
             pending_choice: None,
             pending_search: None,
+            lookup: None,
             viewport: kurbo::Size::new(1280., 800.),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),

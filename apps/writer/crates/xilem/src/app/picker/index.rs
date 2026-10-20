@@ -33,7 +33,6 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
             } else {
                 targets::examples(model).map_err(|error| error.to_string())?
             };
-            let origin = writer.current_location();
             Ok(targets
                 .into_iter()
                 .map(|target| Entry {
@@ -44,7 +43,7 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
                         "Scene"
                     }
                     .into(),
-                    item: Item::Location(target.location(origin.clone())),
+                    item: Item::Lookup(target),
                 })
                 .collect())
         }

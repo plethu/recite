@@ -23,6 +23,10 @@ pub(super) enum Target {
     Document(PathBuf),
     Example(String),
     Location(Location),
+    Lookup {
+        location: Location,
+        search: crate::lookup::Search,
+    },
     Selection(Location),
     Edit(EditOperation),
     Structure(StructuralCommand),
@@ -218,7 +222,11 @@ impl Writer {
         if self.source_repair_pending()
             && matches!(
                 target,
-                Target::Location(_) | Target::Edit(_) | Target::Structure(_) | Target::Workspace(_)
+                Target::Location(_)
+                    | Target::Lookup { .. }
+                    | Target::Edit(_)
+                    | Target::Structure(_)
+                    | Target::Workspace(_)
             )
         {
             return Err("Repair and import the recovered source draft before applying it or following a link. You can switch documents to keep this draft for later.".into());
@@ -228,7 +236,11 @@ impl Writer {
         }
         let applies = (matches!(
             target,
-            Target::Location(_) | Target::Edit(_) | Target::Structure(_) | Target::Workspace(_)
+            Target::Location(_)
+                | Target::Lookup { .. }
+                | Target::Edit(_)
+                | Target::Structure(_)
+                | Target::Workspace(_)
         ) || (matches!(target, Target::Selection(_))
             && matches!(self.session.model().view(), View::Passage(_))))
             && self.session.model().has_draft();

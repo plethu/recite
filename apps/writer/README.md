@@ -80,7 +80,10 @@ Focus writing hides surrounding panes while preserving the mounted manuscript an
 history. Exit focus restores the workspace and reveals the previous native focus target. F6 and
 Shift+F6 cycle visible panes; in Vim mode, Ctrl+W then h/j/k/l moves by direction and Escape
 cancels. Text fields retain ordinary character input. The pane hint and focus changes publish
-without waiting for another input event.
+without waiting for another input event. After accepting a scene/beat lookup, next/previous match
+commands (n/N in Vim navigation) repeat that query against current accepted targets. Cancelling a
+new lookup preserves the previous search; a failed navigation does not advance it. Saved project
+text lookup remains a separate search.
 
 Personal settings and desktop activation also use the shared owners. Localisation, configured
 preview inputs, schema tooling and remaining workspace commands are still in progress. The default

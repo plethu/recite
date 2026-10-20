@@ -45,6 +45,9 @@ impl App {
                     WriterCommand::Map => writer.show_workspace(crate::map::Workspace::Map),
                     WriterCommand::Split => writer.show_workspace(crate::map::Workspace::Split),
                     WriterCommand::Focus => writer.toggle_focus(),
+                    WriterCommand::NextMatch | WriterCommand::PreviousMatch => {
+                        writer.repeat_lookup(command == WriterCommand::NextMatch)
+                    }
                     WriterCommand::PaneLeft => writer.focus_pane(PaneMotion::Left),
                     WriterCommand::PaneRight => writer.focus_pane(PaneMotion::Right),
                     WriterCommand::PaneUp => writer.focus_pane(PaneMotion::Up),

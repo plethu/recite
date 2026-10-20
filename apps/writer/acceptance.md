@@ -61,8 +61,11 @@ and Split lifetime regression preserves native undo at 100/200%. The owned Wayla
 covers undo/redo, nested lookup restoration, directional Vim panes, prefix cancellation, standard F6
 cycling, window blur and revealing the previous focus target after outer scrolling. A host signal
 delivery regression requires F6's visible and AT-SPI focus to update without additional input. These
-Focus and prefix states have separate render review. Repeat-search commands remain part of the
-unfinished command port.
+Focus and prefix states have separate render review. Native n/N repeats accepted scene/beat lookup,
+including project-wide targets; Freya retains its filtered scene-navigation surface. Both share
+ordered wrapping/fallback selection. Native checked publication preserves the cursor after
+cancellation, failed Apply or newer typing, and cancelling another picker preserves the query.
+Saved-text results do not replace this cursor because individual text hits have no stable identity.
 
 Xilem saves, cold project loads and editor handoff use workers and retain newer typing;
 save-and-close timing is recorded by the native probe. Preferred-application lookup, an

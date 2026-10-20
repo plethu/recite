@@ -112,7 +112,7 @@ fn result(
     let selected = position == active;
     let enabled = match entry.item {
         Item::Command(command) => app.command_enabled(command),
-        Item::Location(_) => app
+        Item::Location(_) | Item::Lookup(_) => app
             .writer
             .as_ref()
             .is_some_and(|writer| !writer.navigation.busy() && !writer.work.busy()),

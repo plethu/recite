@@ -5,6 +5,7 @@ use crate::{design::tokens as t, editing::Writer};
 use freya::prelude::*;
 pub(super) use keyboard::{alias, modifier_keyboard};
 pub(crate) use keyboard::{keyboard, modifier_key};
+use recite_writer_session::commands::search::repeat_target;
 
 #[derive(Clone, Copy)]
 pub(crate) struct Navigation {
@@ -93,18 +94,11 @@ impl Navigation {
     }
     pub fn step(mut self, writer: Writer, forward: bool) {
         let matches = self.matches.peek();
-        if matches.is_empty() {
+        let Some(id) =
+            repeat_target(matches.iter(), self.selected.peek().as_ref(), forward).cloned()
+        else {
             return;
-        }
-        let current = self
-            .selected
-            .peek()
-            .as_ref()
-            .and_then(|id| matches.iter().position(|candidate| candidate == id));
-        let next = current.map_or(if forward { 0 } else { matches.len() - 1 }, |i| {
-            (i + if forward { 1 } else { matches.len() - 1 }) % matches.len()
-        });
-        let id = matches[next].clone();
+        };
         drop(matches);
         writer.inspect(&id);
         if writer.selection.peek().as_deref() == Some(&id) {

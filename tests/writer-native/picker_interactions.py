@@ -1,6 +1,7 @@
 """Native command search, focus restoration, saved-text lookup and checked history."""
 
 import json
+import os
 import tempfile
 import traceback
 from pathlib import Path
@@ -25,6 +26,9 @@ def run(api, bus, registry, binary, output):
             (project / "recite.project.toml").write_text("format_version = 1\n")
             source = project / "scene.recite"
             source.write_text(SOURCE)
+            config = Path(os.environ["XDG_CONFIG_HOME"]) / "recite/config.toml"
+            config.parent.mkdir(parents=True, exist_ok=True)
+            config.write_text('config_version = 1\n[ui]\nkeymap = "vim"\n')
             (project / "zz-other.recite").write_text(
                 ":: other\n> third@33333333333333333333\n  Another scene waits.\n-> END\n"
             )
@@ -98,6 +102,37 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.find("Current · scene.recite"), "saved text destination")
                 results["saved_project_text_opens_source_beat"] = True
                 capture(output, "-writer")
+                key("p", control=True)
+                query = field(window, "Search query")
+                window.wait(lambda: focused(window, query), "repeat-search query focus")
+                type_text("recite")
+                key("Down")
+                window.wait(
+                    lambda: window.find_text("Selected · scene.recite · Opening"),
+                    "accepted repeated scene target",
+                )
+                key("Return")
+                window.wait(lambda: not window.find("Search query"), "lookup accepted")
+                window.focus(window.find("Go to"))
+                type_text("n")
+                window.wait(lambda: window.find("Current · zz-other.recite"), "next lookup match")
+                window.focus(window.find("Go to"))
+                type_text("N")
+                window.wait(lambda: window.find("Current · scene.recite"), "previous lookup match")
+                key("p", control=True)
+                query = field(window, "Search query")
+                window.wait(lambda: focused(window, query), "cancelled lookup query focus")
+                type_text("other")
+                key("Escape")
+                window.wait(lambda: not window.find("Search query"), "cancelled search")
+                window.focus(window.find("Go to"))
+                type_text("n")
+                window.wait(
+                    lambda: window.find("Current · zz-other.recite"),
+                    "cancelled search preserves accepted repeat query",
+                )
+                results["vim_repeat_uses_accepted_lookup_and_escape_preserves_it"] = True
+                capture(output, "-repeated")
                 window.close_clean()
                 assert process.wait(timeout=5) == 0
     except Exception as error:

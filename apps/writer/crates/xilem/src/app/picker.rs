@@ -7,6 +7,7 @@ pub(super) mod view;
 use super::*;
 use crate::rules::selection;
 use recite_config::WriterCommand;
+use recite_writer_session::commands::targets;
 use recite_writer_session::location::Location;
 pub(crate) use view::{ActiveResult, QueryField};
 const PAGE: usize = 5;
@@ -62,6 +63,7 @@ impl Purpose {
 enum Item {
     Command(WriterCommand),
     Location(Location),
+    Lookup(targets::Target),
     Rule(selection::Choice),
     Destination(String),
 }
@@ -199,6 +201,19 @@ impl App {
                 self.dismiss_picker();
                 self.run_command(command);
             }
+            Some(Item::Lookup(target)) => {
+                let query = self
+                    .picker
+                    .as_ref()
+                    .map(|picker| picker.query.clone())
+                    .unwrap_or_default();
+                if let Some(writer) = &mut self.writer {
+                    writer.lookup(query, target);
+                    if writer.navigation.busy() {
+                        self.dismiss_picker();
+                    }
+                }
+            }
             Some(Item::Location(location)) => {
                 if let Some(writer) = &mut self.writer {
                     writer.navigate(crate::navigation::Target::Location(location));
@@ -236,6 +251,7 @@ impl App {
             C::Redo => idle && writer.session.model().document().can_redo(),
             C::Script | C::Map | C::Split | C::AddBeat | C::Focus => idle,
             C::PaneLeft | C::PaneRight | C::PaneUp | C::PaneDown => true,
+            C::NextMatch | C::PreviousMatch => idle,
             C::AddLine | C::AddReply => {
                 idle && writer
                     .session

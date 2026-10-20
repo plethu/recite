@@ -84,7 +84,9 @@ impl Writer {
         }
         let model = self.session.model();
         let location = match &target {
-            Target::Location(location) | Target::Selection(location) => Some(location.clone()),
+            Target::Location(location)
+            | Target::Lookup { location, .. }
+            | Target::Selection(location) => Some(location.clone()),
             _ => None,
         };
         let destination = match &target {
@@ -106,9 +108,9 @@ impl Writer {
                         .map_err(|error| error.to_string())?,
                 ))
             }
-            Target::Location(location) | Target::Selection(location) => {
-                self.location_destination(location)?
-            }
+            Target::Location(location)
+            | Target::Lookup { location, .. }
+            | Target::Selection(location) => self.location_destination(location)?,
             Target::Edit(_)
             | Target::Repair(_)
             | Target::Structure(_)

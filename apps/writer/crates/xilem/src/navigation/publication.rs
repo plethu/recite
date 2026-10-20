@@ -165,7 +165,7 @@ impl Writer {
             }
             _ => return Err("The navigation destination is no longer available.".into()),
         }
-        if let Target::Location(location) = &request.target {
+        if let Target::Location(location) | Target::Lookup { location, .. } = &request.target {
             self.location = location.clone();
             self.trial.visible =
                 location.screen == recite_writer_session::location::Screen::Preview;
@@ -196,6 +196,9 @@ impl Writer {
         self.reading.prepare(self.session.model());
         self.sync_map_selection();
         self.invalidate_map();
+        if let Target::Lookup { search, .. } = &request.target {
+            self.accept_lookup(search);
+        }
         self.status = if let Some(status) = self
             .rules
             .as_mut()

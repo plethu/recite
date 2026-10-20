@@ -117,6 +117,47 @@ fn saved_text_search_excludes_field_drafts_and_empty_search_has_no_results() {
 }
 
 #[test]
+fn cancelled_lookup_preserves_the_accepted_query_and_new_writer_has_no_repeat_cursor() {
+    let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+    std::fs::write(
+        directory.path().join("other.recite"),
+        ":: other default\n-> END\n",
+    )
+    .unwrap();
+    let mut app = App::with_writer(support::open(&directory).unwrap());
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let (sender, mut jobs) = async_mpsc::unbounded_channel();
+    let writer = app.writer.as_mut().unwrap();
+    writer.navigation.sender = Some(sender);
+    writer.navigation.runtime = Some(runtime.handle().clone());
+    app.open_picker(Search::GoTo);
+    app.filter_picker("other".into());
+    app.activate_picker(1);
+    support::finish_navigation(app.writer.as_mut().unwrap(), &mut jobs).unwrap();
+    app.open_picker(Search::GoTo);
+    app.filter_picker("missing".into());
+    app.dismiss_picker();
+    app.run_command(WriterCommand::NextMatch);
+    support::finish_navigation(app.writer.as_mut().unwrap(), &mut jobs).unwrap();
+    assert_eq!(
+        app.writer
+            .as_ref()
+            .unwrap()
+            .session
+            .model()
+            .document()
+            .key()
+            .as_str(),
+        "other.recite"
+    );
+    app.writer = Some(Writer::from_session(Session::examples().unwrap(), None));
+    app.run_command(WriterCommand::NextMatch);
+    let writer = app.writer.as_ref().unwrap();
+    assert!(!writer.navigation.busy());
+    assert!(writer.status.contains("before repeating"));
+}
+
+#[test]
 fn native_picker_renders_bounded_results_at_personal_scales() {
     for scale in [100, 200] {
         let writer = Writer::from_session(Session::examples().unwrap(), None);
