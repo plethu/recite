@@ -1,7 +1,7 @@
 //! Parking transfers the durability fence and thread join without releasing the disk lease.
 use super::{Durability, Phase, SnapshotStore, fail};
 use crate::{
-    project::FileError,
+    FileError,
     recovery::{RecoveryDisk, Snapshot},
 };
 use std::{
@@ -9,13 +9,13 @@ use std::{
     thread::JoinHandle,
 };
 
-pub(crate) struct Parking<T: Snapshot> {
+pub struct Parking<T: Snapshot> {
     durability: Durability<T>,
     worker: Option<JoinHandle<()>>,
     _disk: Arc<Mutex<RecoveryDisk<T>>>,
 }
 impl<T: Snapshot> SnapshotStore<T> {
-    pub(crate) fn begin_park(&mut self) -> Parking<T> {
+    pub fn begin_park(&mut self) -> Parking<T> {
         let mut state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
         if self.worker.is_some() && state.phase == Phase::Running {
             state.phase = Phase::Parking;
@@ -29,7 +29,7 @@ impl<T: Snapshot> SnapshotStore<T> {
     }
 }
 impl<T: Snapshot> Parking<T> {
-    pub(crate) fn wait(self) -> Result<(), FileError> {
+    pub fn wait(self) -> Result<(), FileError> {
         let pending = self.durability.pending.clone();
         let result = self.durability.wait();
         if let Some(worker) = self.worker

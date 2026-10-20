@@ -25,6 +25,26 @@ recurring conversation hub, a branching and reconverging evacuation, and a three
 Example edits live only for the window's lifetime. Project mode provides explicit save, crash
 recovery, and external-edit conflict protection. See the [writer guide](guide.md).
 
+## Xilem migration
+
+Xilem is the selected replacement frontend. Its first file-backed slice is available separately:
+
+```sh
+mise exec -- just writer xilem --project /path/to/project --document dialogue/scene.recite \
+    --editor nvim
+```
+
+Use your editor's own arguments; `--editor-arg` repeats and the source path is appended without a
+shell. Omit it if the editor needs no arguments. Without `--editor`, external opening is disabled.
+For a graphical editor that supports it, pass `--editor-arg --wait` to request a waiting window.
+
+This slice supports passage navigation, manuscript editing, native text undo/redo, applying changes,
+checked saves, diagnostics, crash recovery and guarded closing. Open in editor saves accepted source
+while retaining an unapplied manuscript draft. Reload keeps local work in an independent recovery
+copy before accepting disk bytes. Full project navigation, Map, localisation, schema tooling,
+runtime preview, preferences and desktop activation remain to be ported. The default launcher still
+uses Freya. See [acceptance](acceptance.md) for evidence limits.
+
 ## Build requirements
 
 This workspace has its own lockfile to contain the pinned Freya native graphics stack. It is

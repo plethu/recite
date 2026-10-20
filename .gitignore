@@ -73,3 +73,12 @@ Packages/com.recite.dialogue/Tests~/Headless/obj/
 # Reusable task results; execution state is never source.
 /.turbo/
 /.jj/
+
+!apps/writer/vendor/xilem/
+!apps/writer/vendor/xilem/**
+/apps/writer/vendor/xilem/target/
+!apps/writer/vendor/copypasta/
+!apps/writer/vendor/copypasta/**
+/apps/writer/vendor/copypasta/target/
+!apps/writer/vendor/patches/
+!apps/writer/vendor/patches/**

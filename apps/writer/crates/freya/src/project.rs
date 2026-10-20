@@ -12,13 +12,9 @@ use recite_writer_model::{Document, ProjectContext, Workbench};
 pub(crate) use sessions::checkpoint::{Checkpoint, ReadyCheckpoint};
 pub(crate) use sessions::preparing::{PreparedSwitch, SwitchRequest};
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
-mod error;
-pub use error::FileError;
+pub use recite_writer_session::{FileError, read_regular};
 
 pub struct ProjectFiles {
     pub(crate) saving: bool,
@@ -227,29 +223,11 @@ impl ProjectFiles {
     }
 
     pub fn export(&self, workbench: &Workbench) -> Result<PathBuf, FileError> {
-        let parent = self.current.parent().ok_or(FileError::Selection)?;
-        let mut copy = tempfile::Builder::new()
-            .prefix(".recite-recovered-")
-            .suffix(".json")
-            .tempfile_in(parent)?;
-        serde_json::to_writer_pretty(
-            &mut copy,
+        recite_writer_session::export_recovery(
+            &self.current,
             &Recovery::new(self.saved.clone(), workbench.recovery()),
-        )?;
-        copy.as_file().sync_all()?;
-        let (_, path) = copy.keep().map_err(|error| error.error)?;
-        #[cfg(unix)]
-        fs::File::open(parent)?.sync_all()?;
-        Ok(path)
+        )
     }
-}
-
-pub(super) fn read_regular(path: &Path) -> Result<String, FileError> {
-    let metadata = fs::symlink_metadata(path)?;
-    if !metadata.file_type().is_file() {
-        return Err(FileError::FileKind);
-    }
-    Ok(fs::read_to_string(path)?)
 }
 
 #[cfg(test)]

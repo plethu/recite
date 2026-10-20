@@ -76,11 +76,11 @@ adapter must exercise its applicable cases through the real host surface.
 
 `just coverage` uses the pinned cargo-llvm-cov and Rust LLVM tools to measure all-feature workspace
 tests. Production line coverage must reach 90% separately in core, compiler, runtime and LSP, 95% in
-the parser and 80% in the CLI. `just writer coverage` requires 90% separately in the Writer model
-and headless UI. The required Rust and Writer CI lanes enforce these floors and retain JSON
-evidence. Tests, examples and benchmark harnesses are excluded from the production denominator;
-production error paths and platform boundaries remain included. Line coverage does not establish
-branch coverage, assertion strength or native accessibility acceptance.
+the parser and 80% in the CLI. `just writer coverage` requires 90% separately in the Writer model,
+shared file/recovery session and Freya headless UI. The required Rust and Writer CI lanes enforce
+these floors and retain JSON evidence. Tests, examples and benchmark harnesses are excluded from the
+production denominator; production error paths and platform boundaries remain included. Line
+coverage does not establish branch coverage, assertion strength or native accessibility acceptance.
 
 Generated tests use Proptest with shrinking and standard failure persistence. CI runs 256 cases per
 property. State and format properties must compare independent expected values or action models;

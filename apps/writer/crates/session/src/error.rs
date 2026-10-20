@@ -13,7 +13,7 @@ pub enum FileError {
         "Project discovery is incomplete. Repair the project's discovery diagnostics before opening it here."
     )]
     Incomplete,
-    #[error("Project validation failed: {}", crate::project_context::diagnostic_messages(.0))]
+    #[error("Project validation failed: {}", crate::context::diagnostic_messages(.0))]
     Validation(Vec<recite_core::Diagnostic>),
     #[error(
         "This document is already open in another writer. Close it there before opening it here."

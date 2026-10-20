@@ -1,11 +1,7 @@
-use super::{FileError, ProjectFiles, read_regular};
-use atomic_write_file::AtomicWriteFile;
+use super::{FileError, ProjectFiles};
 use recite_writer_model::Workbench;
-use std::{
-    fs::{self, OpenOptions},
-    io::{self, Write},
-    path::{Path, PathBuf},
-};
+pub(crate) use recite_writer_session::{replace_checked, sync_directory};
+use std::path::Path;
 pub(crate) mod ordered;
 
 impl ProjectFiles {
@@ -61,74 +57,6 @@ impl ProjectFiles {
         let document = recite_compiler::authoring::SavedDocument::from_shared(key, source.clone());
         Ok(Some(document))
     }
-}
-
-/// Checked replacement shared by manuscript and standalone declaration sources.
-pub(crate) fn replace_checked(path: &Path, baseline: &str, source: &str) -> Result<(), FileError> {
-    replace_checked_with_sync(path, baseline, source, sync_directory)
-}
-
-fn replace_checked_with_sync(
-    path: &Path,
-    baseline: &str,
-    source: &str,
-    sync: impl FnOnce(&Path) -> io::Result<()>,
-) -> Result<(), FileError> {
-    let parent = path.parent().ok_or(FileError::Selection)?;
-    let mut lock_name = path.as_os_str().to_owned();
-    lock_name.push(".recite-editor.lock");
-    let lock_path = PathBuf::from(lock_name);
-    let lock_file = OpenOptions::new()
-        .write(true)
-        .read(true)
-        .create(true)
-        .truncate(false)
-        .open(&lock_path)
-        .map_err(FileError::Locked)?;
-    lock_file
-        .try_lock()
-        .map_err(|error| FileError::Locked(io::Error::other(error)))?;
-    let old = read_regular(path)?;
-    // A prior replacement may be visible even though its directory sync failed.
-    // Converge under the same lock without rewriting or creating another backup.
-    if old == source {
-        sync(parent)?;
-        return Ok(());
-    }
-    if old != baseline {
-        return Err(FileError::Conflict);
-    }
-    let permissions = fs::metadata(path)?.permissions();
-    if permissions.readonly() {
-        return Err(
-            io::Error::new(io::ErrorKind::PermissionDenied, "Source file is read-only").into(),
-        );
-    }
-    let mut replacement = AtomicWriteFile::open(path)?;
-    replacement.as_file().set_permissions(permissions.clone())?;
-    replacement.write_all(source.as_bytes())?;
-    // Keep the last observed source even after successful replacement.
-    let mut backup = tempfile::Builder::new()
-        .prefix(".recite-editor-backup-")
-        .tempfile_in(parent)?;
-    backup.as_file().set_permissions(permissions)?;
-    backup.write_all(old.as_bytes())?;
-    backup.as_file().sync_all()?;
-    if read_regular(path)? != baseline {
-        return Err(FileError::Conflict);
-    }
-    backup.keep().map_err(|error| error.error)?;
-    replacement.commit().map_err(FileError::Commit)?;
-    sync(parent)?;
-    Ok(())
-}
-
-pub(super) fn sync_directory(parent: &Path) -> io::Result<()> {
-    #[cfg(unix)]
-    fs::File::open(parent)?.sync_all()?;
-    #[cfg(not(unix))]
-    let _ = parent;
-    Ok(())
 }
 
 #[cfg(test)]

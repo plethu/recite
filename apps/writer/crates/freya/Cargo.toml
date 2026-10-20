@@ -17,6 +17,7 @@ recite-build = { path = "../../../../crates/recite-build", version = "0.1.0" }
 recite-runtime.workspace = true
 recite-writer-grammar = { path = "../grammar", version = "0.0.0" }
 recite-writer-model.workspace = true
+recite-writer-session.workspace = true
 rfd = "=0.17.2"
 similar = "=2.7.0"
 # The same Skia package used by Freya; draw graph paths without raster SVG assets.

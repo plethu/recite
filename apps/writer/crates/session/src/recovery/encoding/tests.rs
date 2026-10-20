@@ -47,7 +47,7 @@ fn rope_backed_draft_streams_through_the_durable_codec() {
     let mut model = recite_writer_model::Workbench::new(recite_writer_model::FIXTURE).unwrap();
     model.select(View::Source).unwrap();
     let original = format!("{}# \"é💬\"\\\r\n", recite_writer_model::FIXTURE);
-    let mut rope = freya::code_editor::Rope::from_str(&original);
+    let mut rope = ropey::Rope::from_str(&original);
     model.set_draft_snapshot(DraftSnapshot::from_rope(rope.clone()));
     let recovery = Recovery {
         version: 1,
@@ -63,7 +63,7 @@ fn rope_backed_draft_streams_through_the_durable_codec() {
         recovery
             .draft
             .draft_snapshot()
-            .matches_rope(&freya::code_editor::Rope::from_str(&original))
+            .matches_rope(&ropey::Rope::from_str(&original))
     );
 
     let directory = tempfile::tempdir().unwrap();

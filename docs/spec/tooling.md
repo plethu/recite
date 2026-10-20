@@ -71,10 +71,17 @@ its [guide](../../apps/writer/guide.md) owns current workflows.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Freya owns presentation, focus, interaction and file-session orchestration. Language, configuration,
-compiler and runtime ownership remains outside the frontend. Reconsider the framework for a concrete
-accessibility, input, distribution or maintenance blocker, and exercise regression checks before
-upgrading the pinned version.
+Xilem is the selected migration target following bounded native input, accessibility and maintenance
+experiments. The existing Freya application remains the default until workspace parity is verified.
+Presentation and focus belong to the frontend; source editing belongs to the shared authoring model,
+and file replacement, conflict protection and recovery belong to `recite-writer-session`. Language,
+configuration, compiler and runtime ownership remains outside both frontends. Exercise regression
+checks before upgrading the pinned toolkit.
+
+The opt-in Xilem frontend currently covers one project document's manuscript, diagnostics, checked
+save, recovery and explicit IDE handoff/reload. It uses an external editor for source repair rather
+than embedding a second source editor. This does not establish parity for the remaining workspaces
+or remove the existing Freya Source workflow.
 
 Linux, Windows and macOS remain first-class desktop targets, not implied platform acceptance. Claims
 require native evidence for authoring, assistive technology, physical input, startup, memory and

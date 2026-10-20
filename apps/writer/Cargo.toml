@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["crates/authoring", "crates/freya", "crates/grammar"]
+exclude = ["vendor/xilem/*", "vendor/copypasta"]
+members = ["crates/authoring", "crates/freya", "crates/grammar", "crates/session", "crates/xilem"]
 
 [workspace.package]
 version = "0.0.0"
@@ -15,6 +16,7 @@ recite-core = { path = "../../crates/recite-core", version = "0.1.0" }
 recite-parser = { path = "../../crates/recite-parser", version = "0.1.0" }
 recite-runtime = { path = "../../crates/recite-runtime", version = "0.1.0" }
 recite-writer-model = { path = "crates/authoring", version = "0.0.0" }
+recite-writer-session = { path = "crates/session", version = "0.0.0" }
 thiserror = "2"
 
 [workspace.lints.clippy]
@@ -33,5 +35,10 @@ debug = "line-tables-only"
 debug = 0
 
 [patch.crates-io]
+copypasta = { path = "vendor/copypasta" }
 freya-code-editor = { path = "vendor/freya-code-editor" }
 freya-core = { path = "vendor/freya-core" }
+
+[patch."https://github.com/linebender/xilem"]
+masonry = { path = "vendor/xilem/masonry" }
+masonry_winit = { path = "vendor/xilem/masonry_winit" }

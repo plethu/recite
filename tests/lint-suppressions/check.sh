@@ -10,6 +10,7 @@ cp "$repo_root/scripts/check-lint-suppressions.sh" \
   "$repo_root/scripts/check-lint-suppressions.py" \
   "$repo_root/scripts/lint_suppression_ast.py" \
   "$repo_root/scripts/lint_suppression_scan.py" \
+  "$repo_root/scripts/lint_suppression_upstream.py" \
   "$repo_root/scripts/lint_suppression_meta.py" "$test_root/repo/scripts/"
 chmod +x "$test_root/repo/scripts/check-lint-suppressions.sh"
 git -C "$test_root/repo" init -q -b main
@@ -18,7 +19,10 @@ git -C "$test_root/repo" config user.email fixture@example.invalid
 git -C "$test_root/repo" config commit.gpgsign false
 check_passes() {
   local base="$1" head="$2" output
-  output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$base" "$head" 2>&1)"
+  if ! output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$base" "$head" 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
   [[ "$output" == *"lint suppression policy passed"* ]] || {
     echo "lint suppression fixture unexpectedly failed" >&2
     printf '%s\n' "$output" >&2
@@ -413,3 +417,54 @@ git -C "$test_root/repo" checkout "$base_tip" -- crates/demo/src/independent.rs
 git -C "$test_root/repo" commit -qm head-addition
 check_fails "$base_tip" HEAD "lint suppression policy violation"
 echo 'merge-base suppression comparison passed'
+# Sourced by check.sh with an owned Git fixture and its assertion helpers.
+upstream_base="$(git -C "$test_root/repo" rev-parse HEAD)"
+upstream_path=apps/writer/vendor/xilem/masonry/src/lib.rs
+mkdir -p "$test_root/repo/$(dirname "$upstream_path")"
+printf '%s\n' '#![allow(dead_code)]' 'fn upstream() {}' >"$test_root/repo/$upstream_path"
+python3 - "$test_root/repo" "$upstream_path" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+root, source = Path(sys.argv[1]), sys.argv[2]
+entry = {
+    "path": source,
+    "upstream_path": source.removeprefix("apps/writer/vendor/xilem/"),
+    "sha256": hashlib.sha256((root / source).read_bytes()).hexdigest(),
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88",
+}
+(root / "scripts/lint-suppressions-upstream.json").write_text(json.dumps([entry]))
+PY
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" add -f "$upstream_path"
+git -C "$test_root/repo" commit -qm frozen-upstream
+frozen_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_passes "$upstream_base" "$frozen_sha"
+# Even an unrelated whitespace change invalidates approval of the whole file.
+printf '\n' >>"$test_root/repo/$upstream_path"
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -qm changed-frozen-source
+check_fails "$frozen_sha" HEAD "frozen upstream lint baseline changed"
+git -C "$test_root/repo" checkout "$frozen_sha" -- "$upstream_path"
+printf '%s\n' '#![allow(dead_code)]' 'fn new_vendor_file() {}' > \
+  "$test_root/repo/$(dirname "$upstream_path")/new.rs"
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" add -f "$(dirname "$upstream_path")/new.rs"
+git -C "$test_root/repo" commit -qm unapproved-vendor-source
+check_fails "$frozen_sha" HEAD "crate/module-wide suppressions are not permitted"
+git -C "$test_root/repo" rm -q "$(dirname "$upstream_path")/new.rs"
+git -C "$test_root/repo" commit -qm remove-unapproved
+for invalid in path sha256 revision; do
+  python3 - "$test_root/repo" "$frozen_sha" "$invalid" <<'PY'
+import json, subprocess, sys
+from pathlib import Path
+root, revision, field = sys.argv[1:]
+manifest = "scripts/lint-suppressions-upstream.json"
+entries = json.loads(subprocess.check_output(["git", "-C", root, "show", revision + ":" + manifest]))
+entries[0][field] = "crates/demo/src/lib.rs" if field == "path" else "not-a-digest"
+(Path(root) / manifest).write_text(json.dumps(entries))
+PY
+  git -C "$test_root/repo" add .
+  git -C "$test_root/repo" commit -qm invalid-upstream-manifest
+  check_fails "$frozen_sha" HEAD "invalid upstream lint baseline path or digest"
+done
+echo 'frozen upstream suppression fixtures passed'

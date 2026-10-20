@@ -1,0 +1,56 @@
+[
+  {
+    "path": "apps/writer/vendor/xilem/masonry/examples/calc_masonry.rs",
+    "sha256": "10e7ee76f3297e86848afee1e8cdd5e4de836f367b64ff2bbea9df4db873a2e4",
+    "upstream_path": "masonry/examples/calc_masonry.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/examples/custom_widget.rs",
+    "sha256": "bfdb2a697f24a53aa9af921bbb305364f51acdd896d011c68408df3212d46c05",
+    "upstream_path": "masonry/examples/custom_widget.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/src/doc/color_rectangle.rs",
+    "sha256": "ee44dab0c092ebceb16d3b8f7b0740119c19d894d9501cff31f2428018a8dce3",
+    "upstream_path": "masonry/src/doc/color_rectangle.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/src/doc/vertical_stack.rs",
+    "sha256": "779031263ad462a54d528ef8ba239e3a792aa29961644c23dc39edf98d6c167d",
+    "upstream_path": "masonry/src/doc/vertical_stack.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/src/layers/mod.rs",
+    "sha256": "2384699508f05af5f752e5bd560004d6d321db4d7e063d71ea99d0d3898d64a5",
+    "upstream_path": "masonry/src/layers/mod.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/src/lib.rs",
+    "sha256": "4daac07daa498a0b2926260512367d1183fb735e2745d44b71ea8746aa70e8fb",
+    "upstream_path": "masonry/src/lib.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/src/theme.rs",
+    "sha256": "ae7a6ff28761f7c604e4182849c10d264d02782eff80b2d06d02c9ec18de4bab",
+    "upstream_path": "masonry/src/theme.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/src/widgets/mod.rs",
+    "sha256": "79054dad761e314cdd04c853d928eba4cac39fad4055da0e5d7d424f9ff37a8a",
+    "upstream_path": "masonry/src/widgets/mod.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry/src/widgets/step_input.rs",
+    "sha256": "6d776f36c3676f37b918f6fd300b4c61f3979937e1ba7757bcfed72bec31c74d",
+    "upstream_path": "masonry/src/widgets/step_input.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  }
+]

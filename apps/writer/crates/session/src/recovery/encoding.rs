@@ -34,7 +34,7 @@ struct Sources {
 }
 
 #[derive(Default)]
-pub(crate) struct Encoding {
+pub struct Encoding {
     sources: Option<Sources>,
 }
 

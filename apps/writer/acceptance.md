@@ -27,6 +27,23 @@ screen-reader usability.
 
 ## Known limits
 
+The opt-in Xilem migration frontend has passed native Wayland checks in a private Cage compositor
+for typing undo/redo, clipboard exchange with Unicode, checked saves, literal IDE arguments,
+explicit reload with an independent recovery copy, and close/reopen recovery. Its accessible
+manuscript name and final layout are checked separately. This is the first file-backed slice, not
+workspace parity: Map, localisation, schema, runtime preview, preferences and desktop activation
+remain on Freya. Physical IME, screen-reader announcements, hardware rendering and Windows/macOS
+acceptance remain unverified for Xilem. The portal scrollbar precedes close choices in the Tab
+cycle; the current native drill reaches Keep editing in two presses and verifies that cancelling
+close retains text undo/redo. Automatic focus return and the remaining keyboard workflow need
+acceptance before the default switches.
+
+The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
+D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.
+The Xilem addition introduces `rustybuzz` through `usvg`; the other reported package versions were
+already in the Freya lockfile. No dependency-policy exceptions were added. The limits below describe
+the default Freya application.
+
 - The pinned CodeEditor exposes an unnamed inner TextInput and does not display IME preedit.
   `probe_records_missing_code_editor_preedit_presentation` records the gap; a passing test does not
   mean IME support passes. After upgrading Freya, replace it with a positive assertion once fixed.

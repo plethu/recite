@@ -1,0 +1,23 @@
+[package]
+name = "recite-writer-xilem"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }
+recite-writer-model.workspace = true
+recite-writer-session.workspace = true
+xilem = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88" }
+
+[dev-dependencies]
+tempfile = "3"
+masonry = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", features = [
+    "testing"
+] }
+tokio = { version = "1", features = ["rt"] }
+
+[lints]
+workspace = true

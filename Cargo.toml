@@ -41,6 +41,10 @@ critical_mutation_files = [
     "crates/recite-runtime/src/session_serialization/pending_position.rs",
 ]
 
+[workspace.metadata.typos.files]
+# Preserve upstream dependency prose (CONTRIBUTING.md).
+extend-exclude = ["apps/writer/vendor/xilem", "apps/writer/vendor/copypasta"]
+
 [workspace.metadata.typos.default]
 # Generated stable dialogue IDs are random base32 data: as `@id` header fields
 # and as bare IDs in import mappings. Content fingerprints are hexadecimal.

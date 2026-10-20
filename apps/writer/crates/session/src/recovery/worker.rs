@@ -1,8 +1,8 @@
 //! One disk owner, one pending snapshot. Explicit persistence waits for durability.
 mod parking;
 use super::{RecoveryDisk, Snapshot};
-use crate::project::FileError;
-pub(crate) use parking::Parking;
+use crate::FileError;
+pub use parking::Parking;
 use std::{
     path::Path,
     sync::{Arc, Condvar, Mutex},
@@ -23,7 +23,7 @@ struct Pending<T: Snapshot> {
     error: Option<String>,
     phase: Phase,
 }
-pub(crate) struct SnapshotStore<T: Snapshot> {
+pub struct SnapshotStore<T: Snapshot> {
     snapshot: Option<T>,
     sequence: u64,
     pending: Arc<(Mutex<Pending<T>>, Condvar)>,
@@ -31,12 +31,12 @@ pub(crate) struct SnapshotStore<T: Snapshot> {
     worker: Option<JoinHandle<()>>,
 }
 /// A fixed durability fence. Later coalesced snapshots also satisfy this sequence.
-pub(crate) struct Durability<T: Snapshot> {
+pub struct Durability<T: Snapshot> {
     pending: Arc<(Mutex<Pending<T>>, Condvar)>,
     sequence: u64,
 }
 impl<T: Snapshot> Durability<T> {
-    pub(crate) fn wait(self) -> Result<(), FileError> {
+    pub fn wait(self) -> Result<(), FileError> {
         let mut state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
         while state.completed < self.sequence && state.phase != Phase::Failed {
             state = self
@@ -52,7 +52,7 @@ impl<T: Snapshot> Durability<T> {
     }
 }
 impl<T: Snapshot> SnapshotStore<T> {
-    pub(crate) fn parked_at(&self, sequence: u64) -> bool {
+    pub fn parked_at(&self, sequence: u64) -> bool {
         let state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
         self.sequence == sequence
             && self.worker.is_none()
@@ -61,19 +61,16 @@ impl<T: Snapshot> SnapshotStore<T> {
             && state.completed >= sequence
             && state.error.is_none()
     }
-    pub(crate) fn sequence(&self) -> u64 {
+    pub fn sequence(&self) -> u64 {
         self.sequence
     }
-    pub(crate) fn durability(&self) -> Durability<T> {
+    pub fn durability(&self) -> Durability<T> {
         Durability {
             pending: self.pending.clone(),
             sequence: self.sequence,
         }
     }
-    pub(crate) fn begin_persist(
-        &mut self,
-        snapshot: Option<T>,
-    ) -> Result<Durability<T>, FileError> {
+    pub fn begin_persist(&mut self, snapshot: Option<T>) -> Result<Durability<T>, FileError> {
         self.submit(snapshot)?;
         Ok(self.durability())
     }

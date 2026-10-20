@@ -17,8 +17,9 @@ lint_checker="$repo_root/scripts/check-lint-suppressions.py"
 lint_ast="$repo_root/scripts/lint_suppression_ast.py"
 lint_scan="$repo_root/scripts/lint_suppression_scan.py"
 lint_meta="$repo_root/scripts/lint_suppression_meta.py"
+lint_upstream="$repo_root/scripts/lint_suppression_upstream.py"
 lint_allowlist="$repo_root/scripts/generated-rust-allowlist.txt"
-for required_file in "$workflow" "$wrapper" "$fixture" "$metadata" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_scan" "$lint_meta" "$lint_allowlist"; do
+for required_file in "$workflow" "$wrapper" "$fixture" "$metadata" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_scan" "$lint_meta" "$lint_upstream" "$lint_allowlist"; do
   [[ -f "$required_file" ]] || {
     echo "missing trusted-policy fixture file: $required_file" >&2
     exit 1
@@ -101,6 +102,7 @@ cp -- "$lint_checker" "$repo/scripts/check-lint-suppressions.py"
 cp -- "$lint_ast" "$repo/scripts/lint_suppression_ast.py"
 cp -- "$lint_scan" "$repo/scripts/lint_suppression_scan.py"
 cp -- "$lint_meta" "$repo/scripts/lint_suppression_meta.py"
+cp -- "$lint_upstream" "$repo/scripts/lint_suppression_upstream.py"
 cp -- "$lint_allowlist" "$repo/scripts/generated-rust-allowlist.txt"
 cp -- "$wrapper" "$repo/scripts/check-trusted-pr-policy.sh"
 chmod +x "$repo/scripts/check-git-policy.sh"
@@ -114,6 +116,7 @@ git -C "$repo" add scripts/check-git-policy.sh scripts/check-lint-suppressions.s
   scripts/git-policy/metadata.sh \
   scripts/check-lint-suppressions.py scripts/lint_suppression_ast.py \
   scripts/lint_suppression_meta.py scripts/lint_suppression_scan.py \
+  scripts/lint_suppression_upstream.py \
   scripts/generated-rust-allowlist.txt \
   scripts/check-trusted-pr-policy.sh
 git -C "$repo" commit --quiet -m '[REC-164] ci: fixture base policy'

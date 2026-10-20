@@ -13,10 +13,11 @@ import json
 import os
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from lint_suppression_ast import ParseError, scan_sources
+from lint_suppression_upstream import frozen_upstream
 
 ALLOWLIST_PATH = "scripts/generated-rust-allowlist.txt"
 
@@ -192,7 +193,7 @@ def reason_ok(item: Suppression, prefix: str | None = None) -> bool:
 
 def violation(item: Suppression) -> str | None:
     if (
-        item.category == "generated"
+        item.category in {"generated", "upstream"}
         or item.status == "baseline"
         or item.category in {"tests", "fixtures", "benchmarks"}
     ):
@@ -279,6 +280,7 @@ def main() -> int:
             if path.endswith(".rs")
         ]
         generated = generated_allowlist(repo, policy)
+        frozen = frozen_upstream(file_at, repo, policy, head)
     except (OSError, RuntimeError, ParseError, subprocess.CalledProcessError) as error:
         print(f"lint suppression policy setup failed: {error}", file=sys.stderr)
         return 2
@@ -293,6 +295,9 @@ def main() -> int:
                 generated,
             )
         )
+        current = [
+            replace(item, category="upstream") if item.path in frozen else item for item in current
+        ]
         baseline_sources: list[tuple[str, str]] = []
         if base is not None and not is_zero_sha(base):
             for path in sorted(set(paths)):
