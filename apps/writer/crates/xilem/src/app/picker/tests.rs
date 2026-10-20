@@ -1,5 +1,7 @@
 use super::*;
 use crate::tests::support::{self, NoProxy};
+use tokio::sync::mpsc as async_mpsc;
+use xilem::masonry::accesskit;
 use xilem::{
     ViewCtx,
     core::View as _,
@@ -16,7 +18,7 @@ fn go_to_applies_draft_uses_the_worker_and_preserves_cross_document_selection() 
     .unwrap();
     let mut app = App::with_writer(support::open(&directory).unwrap());
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let (sender, mut jobs) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut jobs) = async_mpsc::unbounded_channel();
     let writer = app.writer.as_mut().unwrap();
     writer.navigation.sender = Some(sender);
     writer.navigation.runtime = Some(runtime.handle().clone());
@@ -60,7 +62,7 @@ fn vim_alias_runs_the_shared_save_path_and_unavailable_commands_leave_search_ope
     let directory = support::project(recite_writer_model::FIXTURE).unwrap();
     let mut app = App::with_writer(support::open(&directory).unwrap());
     app.preferences.config.ui.keymap = recite_config::Keymap::Vim;
-    let (sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut saves) = async_mpsc::unbounded_channel();
     let writer = app.writer.as_mut().unwrap();
     writer.work.sender = Some(sender);
     writer.change(|model| {
@@ -68,7 +70,7 @@ fn vim_alias_runs_the_shared_save_path_and_unavailable_commands_leave_search_ope
         Ok(())
     });
     app.open_picker(Search::Commands);
-    app.filter_picker("Map".into());
+    app.filter_picker("Focus".into());
     app.activate_picker(0);
     assert!(app.picker.is_some());
     app.filter_picker(":w".into());
@@ -156,9 +158,8 @@ fn native_picker_renders_bounded_results_at_personal_scales() {
             let mut buttons = 0;
             let mut query = false;
             while let Some(node) = pending.pop() {
-                buttons += usize::from(
-                    node.role() == xilem::masonry::accesskit::Role::Button && !node.is_disabled(),
-                );
+                buttons +=
+                    usize::from(node.role() == accesskit::Role::Button && !node.is_disabled());
                 query |= node.label().as_deref() == Some("Search query");
                 pending.extend(node.children());
             }

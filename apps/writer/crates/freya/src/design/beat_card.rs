@@ -3,7 +3,7 @@ use super::tokens as t;
 use freya::prelude::*;
 
 // Below this scale, the map becomes a structural overview instead of tiny prose.
-pub(crate) const DIALOGUE_ZOOM: f32 = 0.6;
+pub(crate) use recite_writer_session::map::DIALOGUE_ZOOM;
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct BeatCard {

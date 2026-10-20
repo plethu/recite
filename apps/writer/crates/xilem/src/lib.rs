@@ -4,6 +4,7 @@ mod editor_work;
 mod external_editor;
 mod feedback;
 mod keyed;
+mod map;
 mod native_host;
 mod navigation;
 mod presentation;
@@ -16,6 +17,7 @@ mod tests;
 mod trial;
 mod view;
 pub use recite_writer_session::startup::{HELP, LaunchOptions};
+use xilem::masonry::kurbo;
 
 use recite_writer_model::Workbench;
 use recite_writer_session::{FileError, ProjectSession};
@@ -32,6 +34,7 @@ struct Writer {
     file_page: usize,
     trial: trial::Trial,
     reading: reading::Reading,
+    map: map::MapSession,
     work: editor_work::EditorWork,
     navigation: navigation::Navigation,
     repair: navigation::repair::Repair,
@@ -40,6 +43,8 @@ struct Writer {
     location: recite_writer_session::location::Location,
     rules: Option<rules::ReplySession>,
     pending_choice: Option<choices::Request>,
+    pending_search: Option<app::picker::Search>,
+    viewport: kurbo::Size,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
 }
@@ -90,6 +95,7 @@ impl Writer {
             file_page: 0,
             trial: trial::Trial::new(),
             reading,
+            map: map::MapSession::new(),
             work: editor_work::EditorWork::new(),
             navigation: navigation::Navigation::new(),
             repair: navigation::repair::Repair::default(),
@@ -98,12 +104,16 @@ impl Writer {
             location: Default::default(),
             rules: None,
             pending_choice: None,
+            pending_search: None,
+            viewport: kurbo::Size::new(1280., 800.),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),
         }
     }
 
     fn configure(&mut self, config: recite_config::UserConfig) {
+        self.map
+            .rescale(self.ui_scale(), presentation::scale(&config.writer));
         self.palette = presentation::palette(&config.writer);
         self.config = config;
     }
@@ -119,12 +129,7 @@ impl Writer {
         )
     }
     fn script_width(&self) -> f64 {
-        f64::from(
-            self.config
-                .writer
-                .presentation
-                .value(recite_config::WriterPresentationField::ScriptWidth),
-        )
+        view::workspace::Layout::resolve(self).script
     }
     fn navigation_width(&self) -> f64 {
         f64::from(
@@ -165,6 +170,7 @@ impl Writer {
             return;
         }
         self.trial.cancel();
+        self.cancel_map_gesture();
         let result = self
             .session
             .project_mut()
@@ -172,6 +178,7 @@ impl Writer {
             .and_then(ProjectSession::reload_current);
         if result.is_ok() {
             self.retire_rules();
+            self.invalidate_map();
         }
         self.status = match result {
             Ok(Some(path)) => {
@@ -183,6 +190,8 @@ impl Writer {
             Err(error) => feedback::file(&error),
         };
         self.reading.prepare(self.session.model());
+        self.sync_map_selection();
+        self.refresh_map_if_needed();
     }
     fn request_close(&mut self) {
         if self.work.busy() || self.navigation.busy() {

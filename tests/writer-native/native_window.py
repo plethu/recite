@@ -93,8 +93,29 @@ class NativeWindow:
 
     def reveal_end(self, label):
         """Explicitly reach a below-viewport action through the native outer scrollbar."""
-        if self.find(label):
-            return
+        self._reveal(label, "End")
+
+    def reveal_start(self, label):
+        """Reach an above-viewport action through the native outer scrollbar."""
+        self._reveal(label, "Home")
+
+    def _reveal(self, label, direction):
+        def scroll():
+            if self.find(label):
+                return True
+            scrollbar = self._outer_scrollbar()
+            if scrollbar is None:
+                return False
+            self.focus(scrollbar)
+            key(direction)
+            return True
+
+        # A pane transition can remove AT-SPI nodes during traversal. Retry the
+        # complete live lookup, as act()/field lookup already do.
+        self.wait(scroll, "native scroll toward: " + label)
+        self.wait(lambda: self.find(label), "scrolled action: " + label)
+
+    def _outer_scrollbar(self):
         vertical = 1 << int(self.api.Atspi.StateType.VERTICAL)
         scrollbars = [
             node
@@ -104,16 +125,11 @@ class NativeWindow:
         ]
         coordinates = self.api.GLib.Variant("(u)", (int(self.api.Atspi.CoordType.WINDOW),))
         # Writer also has small scrollable file/beat lists; use the window-height portal.
-        scrollbar = max(
+        return max(
             scrollbars,
             key=lambda node: self.call(node, "Component", "GetExtents", coordinates)[0][3],
             default=None,
         )
-        if scrollbar is None:
-            raise RuntimeError("No native vertical scrollbar to reveal " + label)
-        self.focus(scrollbar)
-        key("End")
-        self.wait(lambda: self.find(label), "scrolled action: " + label)
 
     def enabled(self, label):
         node = self.find(label)

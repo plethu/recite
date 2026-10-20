@@ -1,7 +1,10 @@
 use super::surface::Surface;
 use super::*;
+use crate::rules;
 use recite_writer_model::{EditOperation, StructuralCommand};
 use xilem::AnyWidgetView;
+use xilem::masonry::kurbo;
+use xilem::masonry::properties;
 
 pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetView<Writer> + use<> {
     flex_col((
@@ -19,7 +22,7 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
 fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> {
     match surface {
         Surface::Manuscript { passage, .. } => prose_editor(state, passage).boxed(),
-        Surface::Reply(reply) => crate::rules::view::panel(state, reply).boxed(),
+        Surface::Reply(reply) => rules::view::panel(state, reply).boxed(),
         Surface::Beat { id, rows } => super::reading::block(state, id, rows).boxed(),
         Surface::Empty => super::reading::empty(state).boxed(),
         Surface::SourceRepair { error: Some(error), .. } => super::reading::repair(state, error).boxed(),
@@ -47,8 +50,8 @@ fn prose_editor(state: &Writer, passage: &str) -> impl WidgetView<Writer> + use<
         .text_size(state.reading_size())
         .placeholder("Manuscript")
         .disabled(state.phase != Phase::Writing)
-        .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript"))
-        .prop(xilem::masonry::properties::PlaceholderTextSize {
+        .prop(properties::TextAreaLabel::new("Manuscript"))
+        .prop(properties::PlaceholderTextSize {
             size: state.reading_size(),
         })
         .prop(Manuscript(true)),
@@ -100,6 +103,8 @@ fn draft_actions(state: &Writer, editing: bool) -> impl WidgetView<Writer> + use
         edit_button(state, "Undo applied", EditOperation::Undo, !closing),
         edit_button(state, "Redo applied", EditOperation::Redo, !closing),
     ))
+    .direction(action_axis(state))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
 }
 fn edit_button(
@@ -139,7 +144,16 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
         text_button(state.ui_scale(), "Read beat", Writer::read_current)
             .disabled(closing || !selected),
     ))
+    .direction(action_axis(state))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
+}
+fn action_axis(state: &Writer) -> kurbo::Axis {
+    if state.script_width() < 560. * f64::from(state.ui_scale()) {
+        kurbo::Axis::Vertical
+    } else {
+        kurbo::Axis::Horizontal
+    }
 }
 fn add_button(
     state: &Writer,

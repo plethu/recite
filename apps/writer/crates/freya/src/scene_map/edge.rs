@@ -1,5 +1,7 @@
 //! Retarget colour fades from the current frame, even during rapid pointer movement.
 mod path;
+use crate::design::palette;
+use crate::design::tokens;
 use freya::{
     animation::{OnChange, use_animation_with_dependencies},
     prelude::*,
@@ -29,18 +31,14 @@ impl Component for Edge {
         let animation =
             use_animation_with_dependencies(&self.highlighted, move |config, active| {
                 config.on_change(OnChange::Rerun);
-                crate::design::tokens::transition(
-                    previous.get(),
-                    if *active { 1. } else { 0. },
-                    reduced,
-                )
+                tokens::transition(previous.get(), if *active { 1. } else { 0. }, reduced)
             });
         let initial_opacity = if self.dimmed { 0.25 } else { 1. };
         let current_opacity = use_hook(|| Rc::new(Cell::new(initial_opacity)));
         let previous_opacity = current_opacity.clone();
         let opacity = use_animation_with_dependencies(&self.dimmed, move |config, dimmed| {
             config.on_change(OnChange::Rerun);
-            crate::design::tokens::transition(
+            tokens::transition(
                 previous_opacity.get(),
                 if *dimmed { 0.25 } else { 1. },
                 reduced,
@@ -63,10 +61,10 @@ impl Component for Edge {
             (EdgePath::parse(&route.path), Path::from_svg(&route.arrow))
         });
         let (curve, arrow) = paths.read().clone();
-        let p = crate::design::palette::current();
+        let p = palette::current();
         // Forward flow is the plum ink; returns are the second ink, so the two read apart.
         let ink = if self.returning { p.teal } else { p.accent };
-        let base = crate::design::palette::skia_opaque(ink);
+        let base = palette::skia_opaque(ink);
         let accent = base;
         let layer = |color: Color, thickness: f32| {
             let curve = curve.clone();

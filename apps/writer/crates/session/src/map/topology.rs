@@ -111,11 +111,17 @@ impl Geometry {
         let mut adjacency = vec![Vec::new(); blocks.len()];
         let mut incident = vec![Vec::new(); blocks.len()];
         for (index, link) in links.iter().enumerate() {
+            if let Some(&from) = ids.get(&link.origin) {
+                incident[from].push(index);
+            }
+            if let Some(&to) = ids.get(&link.destination)
+                && link.origin != link.destination
+            {
+                incident[to].push(index);
+            }
             if let (Some(&from), Some(&to)) = (ids.get(&link.origin), ids.get(&link.destination)) {
                 adjacency[from].push(to);
                 adjacency[to].push(from);
-                incident[from].push(index);
-                incident[to].push(index);
             }
         }
         let mut nodes = layout::layout(blocks, links, WIDTH);

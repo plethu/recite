@@ -1,4 +1,6 @@
 use super::*;
+use crate::map::camera;
+use crate::map::topology;
 
 #[test]
 fn large_neighbourhood_keeps_selection_and_counts_hidden_beats()
@@ -37,13 +39,13 @@ fn large_neighbourhood_keeps_selection_and_counts_hidden_beats()
 
 #[test]
 fn culling_keeps_a_route_crossing_the_viewport() {
-    let camera = crate::map::camera::Camera::default();
-    assert!(crate::map::topology::visible(
+    let camera = camera::Camera::default();
+    assert!(topology::visible(
         (-1000., 100., 3000., 20.),
         camera,
         (1000., 800.)
     ));
-    assert!(!crate::map::topology::visible(
+    assert!(!topology::visible(
         (-1000., -1000., 20., 20.),
         camera,
         (1000., 800.)

@@ -58,11 +58,15 @@ struct Scope {
 struct DocumentScope {
     window: WindowId,
     view: recite_writer_model::View,
+    workspace: crate::map::Workspace,
     stamp: recite_writer_model::AnalysisStamp,
 }
 impl PartialEq for DocumentScope {
     fn eq(&self, other: &Self) -> bool {
-        self.window == other.window && self.view == other.view && self.stamp == other.stamp
+        self.window == other.window
+            && self.view == other.view
+            && self.workspace == other.workspace
+            && self.stamp == other.stamp
     }
 }
 impl Scope {
@@ -73,6 +77,7 @@ impl Scope {
                 DocumentScope {
                     window: writer.window,
                     view: model.view().clone(),
+                    workspace: writer.map.workspace,
                     stamp: model.document().analysis_stamp(),
                 }
             }),

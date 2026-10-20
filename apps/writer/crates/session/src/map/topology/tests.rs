@@ -8,6 +8,18 @@ fn blocks() -> Result<Arc<[ScriptBlock]>, Box<dyn std::error::Error>> {
     .script_snapshot()?)
 }
 
+#[test]
+fn incident_lists_include_end_and_missing_targets_and_do_not_duplicate_self_links() {
+    let document = Document::new(":: start default\n? one@11111111111111111111\n  Finish.\n  -> END\n? two@22222222222222222222\n  Again.\n  -> start\n? three@33333333333333333333\n  Missing.\n  -> absent\n").unwrap();
+    let graph = Topology::new(
+        document.script_snapshot().unwrap(),
+        &placement::Positions::new(),
+    );
+    assert_eq!(graph.incident[0], vec![0, 1, 2]);
+    assert_eq!(graph.links[0].destination, "END");
+    assert_eq!(graph.links[2].destination, "absent");
+}
+
 fn compare_fresh(
     previous: &Topology,
     blocks: Vec<ScriptBlock>,

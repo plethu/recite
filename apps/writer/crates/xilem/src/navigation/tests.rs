@@ -1,5 +1,8 @@
 use super::*;
 use crate::tests::support::{finish_navigation, finish_work, open, project};
+use std::sync::atomic;
+use std::sync::mpsc;
+use tokio::sync::mpsc as async_mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
 
 #[path = "failure/tests.rs"]
@@ -27,7 +30,7 @@ fn fixture() -> Result<Fixture, Box<dyn std::error::Error>> {
         ":: other\n> third@aaaaaaaaaaaaaaaaaaaa\n  Other.\n-> END\n",
     )?;
     let mut writer = open(&directory)?;
-    let (sender, jobs) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, jobs) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(sender);
     let runtime = tokio::runtime::Runtime::new()?;
     writer.navigation.runtime = Some(runtime.handle().clone());
@@ -180,8 +183,8 @@ fn failed_destination_harvests_parking_and_apply_and_history_use_checked_worker_
 fn forwarded_routes_reply_after_publication_and_honor_the_forwarders_cancellation() {
     for cancel in [false, true] {
         let mut fixture = fixture().unwrap();
-        let (reply, replied) = std::sync::mpsc::channel();
-        let cancelled = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (reply, replied) = mpsc::channel();
+        let cancelled = Arc::new(atomic::AtomicBool::new(false));
         let incoming = recite_writer_session::activation::IncomingRoute {
             project: None,
             route: None,
@@ -203,7 +206,7 @@ fn forwarded_routes_reply_after_publication_and_honor_the_forwarders_cancellatio
             .unwrap();
         assert!(replied.try_recv().is_err());
         if cancel {
-            cancelled.store(true, std::sync::atomic::Ordering::Release);
+            cancelled.store(true, atomic::Ordering::Release);
         }
         finish_navigation(&mut fixture.writer, &mut fixture.jobs).unwrap();
         assert_eq!(replied.try_recv().unwrap().is_ok(), !cancel);
@@ -224,7 +227,7 @@ fn save_after_apply_waits_for_retirement_keeps_newer_typing_and_never_runs_after
     for outcome in ["accepted", "newer", "failed", "cancelled"] {
         let mut fixture = fixture().unwrap();
         let writer = &mut fixture.writer;
-        let (sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
+        let (sender, mut saves) = async_mpsc::unbounded_channel();
         writer.work.sender = Some(sender);
         writer.change(|model| {
             model.set_draft(
@@ -298,7 +301,7 @@ fn deferred_save_all_is_not_downgraded_by_a_later_current_file_save() {
         })
         .unwrap();
     project.switch(&scene).unwrap();
-    let (sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut saves) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
     writer.change(|model| {
         model.set_draft("Active draft.".into());

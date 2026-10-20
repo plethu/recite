@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::NoProxy;
+use xilem::masonry::accesskit;
 use xilem::{
     ViewCtx,
     core::View,
@@ -39,8 +40,7 @@ fn pending_navigation_keeps_manuscript_editable_and_exposes_cancel_while_save_is
         while let Some(node) = pending.pop() {
             cancel |=
                 node.label().as_deref() == Some("Cancel pending action") && !node.is_disabled();
-            editable |= node.role() == xilem::masonry::accesskit::Role::MultilineTextInput
-                && !node.is_disabled();
+            editable |= node.role() == accesskit::Role::MultilineTextInput && !node.is_disabled();
             save_disabled |= node.label().as_deref() == Some("Save file") && node.is_disabled();
             pending.extend(node.children());
         }

@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::NoProxy;
+use tokio::sync::mpsc as async_mpsc;
 use xilem::{
     ViewCtx,
     core::View as _,
@@ -10,7 +11,7 @@ use xilem::{
 fn source_repair_export_preserves_draft_and_disk_then_imports_checked_text() {
     let mut fixture = fixture().unwrap();
     let writer = &mut fixture.writer;
-    let (sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut launches) = async_mpsc::unbounded_channel();
     writer.external.sender = Some(sender);
     writer.change(|model| {
         model.select(View::Source)?;
@@ -54,7 +55,7 @@ fn source_repair_export_preserves_draft_and_disk_then_imports_checked_text() {
 fn cancellation_reconciles_export_but_never_launches_or_publishes_an_import() {
     let mut fixture = fixture().unwrap();
     let writer = &mut fixture.writer;
-    let (sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut launches) = async_mpsc::unbounded_channel();
     writer.external.sender = Some(sender);
     writer.change(|model| {
         model.select(View::Source)?;

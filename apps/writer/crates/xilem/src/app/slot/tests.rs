@@ -1,5 +1,7 @@
 use super::*;
-use crate::tests::support::{NoProxy, open, project};
+use crate::tests::support::{self, NoProxy, open, project};
+use xilem::masonry::accesskit;
+use xilem::masonry::theme;
 use xilem::{
     core::{DynMessage, MessageResult},
     masonry::testing::TestHarness,
@@ -16,11 +18,8 @@ fn absent_present_replaced_and_removed_children_reject_retired_actions() {
     let mut app = App::empty();
     let mut view = writer_slot(&mut app);
     let (pod, mut state) = view.build(&mut ctx, &mut app);
-    let mut harness = TestHarness::create_with_size(
-        xilem::masonry::theme::default_property_set(),
-        pod.new_widget,
-        (900, 650),
-    );
+    let mut harness =
+        TestHarness::create_with_size(theme::default_property_set(), pod.new_widget, (900, 650));
     assert!(state.child.is_none());
     app.writer = Some(open(&first).unwrap());
     let next = writer_slot(&mut app);
@@ -32,19 +31,15 @@ fn absent_present_replaced_and_removed_children_reject_retired_actions() {
     let add = loop {
         let widget = pending.pop().expect("Add line action");
         if ctx.get_id_path(widget.id()).is_some()
-            && harness
-                .access_node(widget.id())
-                .and_then(|node| node.label())
-                .as_deref()
-                == Some("Add line")
+            && support::native_label(&harness, widget.id()).as_deref() == Some("Add line")
         {
             break widget.id();
         }
         pending.extend(widget.children());
     };
-    harness.process_access_event(xilem::masonry::accesskit::ActionRequest {
-        action: xilem::masonry::accesskit::Action::Click,
-        target_tree: xilem::masonry::accesskit::TreeId::ROOT,
+    harness.process_access_event(accesskit::ActionRequest {
+        action: accesskit::Action::Click,
+        target_tree: accesskit::TreeId::ROOT,
         target_node: add.to_raw().into(),
         data: None,
     });

@@ -65,6 +65,20 @@ impl Writer {
         {
             return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
         }
+        if matches!(target, Target::Workspace(_) | Target::MapRefresh) {
+            let work = self.prepare_map(if matches!(target, Target::Workspace(_)) {
+                crate::map::Purpose::Workspace
+            } else {
+                crate::map::Purpose::Placement
+            });
+            let request = Arc::new(Request {
+                target,
+                origin: Origin::capture(self),
+                cancel: CancellationToken::new(),
+                forwarded: None,
+            });
+            return self.send_navigation(request, worker::Work::Map(Box::new(work)));
+        }
         let model = self.session.model();
         let location = match &target {
             Target::Location(location) | Target::Selection(location) => Some(location.clone()),
@@ -92,7 +106,11 @@ impl Writer {
             Target::Location(location) | Target::Selection(location) => {
                 self.location_destination(location)?
             }
-            Target::Edit(_) | Target::Repair(_) | Target::Structure(_) => {
+            Target::Edit(_)
+            | Target::Repair(_)
+            | Target::Structure(_)
+            | Target::Workspace(_)
+            | Target::MapRefresh => {
                 return Err("Invalid navigation target.".into());
             }
         };

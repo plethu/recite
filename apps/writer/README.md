@@ -66,8 +66,17 @@ after edits. Apply or discard a manuscript draft before restarting. Cancel inval
 while the active compiler phase finishes. Hiding playback retains manuscript typing history.
 Catalogue/interpolation preview inputs remain part of the localisation port.
 
-Map, localisation, schema tooling, preferences and desktop activation remain to be ported. The
-default launcher still uses Freya. See [acceptance](acceptance.md) for evidence limits.
+Map and Split share accepted topology, synopsis, personal placement and spatial navigation with
+Freya. Camera changes leave source untouched; placement saves beside personal configuration. Native
+cards, keyboard selection, move handles, paged Connections and Go to provide equivalent routes
+through the scene. Large scenes start with nearby beats; whole-scene Fit uses a structural overview,
+and selecting a beat restores a readable native card. Script stays mounted across workspace changes
+so its native typing history survives. Geometry and personal placement I/O run on workers; checked
+receipts preserve newer typing and reconcile completed writes after cancellation.
+
+Personal settings and desktop activation also use the shared owners. Localisation, configured
+preview inputs, schema tooling and remaining workspace commands are still in progress. The default
+launcher continues to use Freya. See [acceptance](acceptance.md) for evidence limits.
 
 ## Build requirements
 

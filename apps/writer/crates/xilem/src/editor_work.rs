@@ -179,6 +179,8 @@ impl Writer {
         }
         if self.phase == Phase::Writing {
             self.refresh_rules();
+            self.invalidate_map();
+            self.refresh_map_if_needed();
         }
     }
 }

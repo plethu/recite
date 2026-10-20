@@ -3,6 +3,7 @@ use super::{
     camera::{Camera, Framing},
     placement::Arrangement,
 };
+use crate::design::palette as design_palette;
 use crate::{
     design::{Button, tokens as t},
     editing::Writer,
@@ -142,7 +143,7 @@ impl Toolbar {
                         crate::closing::text_input_key(event)
                     }),
             );
-        let colors = crate::design::palette::current();
+        let colors = design_palette::current();
         let zoom_controls = rect()
             .horizontal()
             .cross_align(Alignment::Center)

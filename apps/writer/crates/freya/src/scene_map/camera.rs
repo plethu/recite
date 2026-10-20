@@ -1,4 +1,6 @@
 //! One world-to-viewport transform, shared by rendering and drag coordinates.
+use crate::design::material;
+use crate::design::palette;
 use freya::prelude::*;
 
 pub(crate) use recite_writer_session::map::camera::{Camera, Framing};
@@ -84,9 +86,9 @@ pub(super) fn viewport(
             }
             e.stop_propagation();
         })
-        .child(crate::design::material::dot_grid(
+        .child(material::dot_grid(
             {
-                let p = crate::design::palette::current();
+                let p = palette::current();
                 Color::lerp(p.canvas, p.ink, 0.16)
             },
             24. * view.zoom,

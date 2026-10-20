@@ -7,7 +7,8 @@ use super::{
 };
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
-use recite_writer_model::{PassageKind, ScriptBlock, ScriptEntry};
+use recite_writer_model::ScriptBlock;
+use recite_writer_session::map::synopsis::synopsis;
 
 pub(super) use crate::design::DIALOGUE_ZOOM;
 
@@ -41,7 +42,6 @@ impl PartialEq for Card {
 impl Component for Card {
     fn render(&self) -> impl IntoElement {
         let mut writer = self.writer;
-        let mut presses = use_state(|| (0_u64, false));
         let zoom = self.zoom;
         let mut hovered = self.hovered;
         let pan = self.pan;
@@ -114,19 +114,9 @@ impl Component for Card {
                     .on_press(move |event: Event<PressEventData>| {
                         event.stop_propagation();
                         writer.map_focus.request_focus();
-                        let (generation, double) = *presses.peek();
-                        let generation = generation.wrapping_add(1);
-                        presses.set((generation, !double));
-                        if !double {
-                            spawn(async move {
-                                timer(std::time::Duration::from_millis(400)).await;
-                                if presses.peek().0 == generation {
-                                    presses.set((generation, false));
-                                }
-                            });
-                        }
+                        let open = opens_script(event.data());
                         writer.selection.set(Some(id.clone()));
-                        if double {
+                        if open {
                             writer.inspect(&id);
                         }
                     })
@@ -153,55 +143,14 @@ impl Component for Card {
         DiffKey::from(&(self.scene.clone(), self.block.id.clone()))
     }
 }
-struct Synopsis {
-    speaker: String,
-    prose: String,
-    annotations: Vec<String>,
-}
-fn synopsis(entries: &[ScriptEntry]) -> Synopsis {
-    fn scan(
-        entries: &[ScriptEntry],
-        effects: &mut usize,
-        conditions: &mut usize,
-        prose: &mut Option<(String, String)>,
-    ) {
-        for entry in entries {
-            match entry {
-                ScriptEntry::Passage(p) if prose.is_none() => {
-                    let speaker = match &p.kind {
-                        PassageKind::Dialogue { speaker } => speaker
-                            .as_deref()
-                            .map(palette::display_name)
-                            .unwrap_or_else(|| "Dialogue".into()),
-                        PassageKind::Choice { .. } => "Reply".into(),
-                    };
-                    *prose = Some((speaker, p.text.clone()));
-                }
-                ScriptEntry::Effect(_) => *effects += 1,
-                ScriptEntry::Group { entries, .. } => {
-                    *conditions += 1;
-                    scan(entries, effects, conditions, prose);
-                }
-                _ => {}
-            }
+fn opens_script(press: &PressEventData) -> bool {
+    match press {
+        PressEventData::Mouse(mouse) => {
+            EventsCombos::<Card>::pressed(mouse.global_location).is_double()
         }
-    }
-    let (mut effects, mut conditions, mut first) = (0, 0, None);
-    scan(entries, &mut effects, &mut conditions, &mut first);
-    let (speaker, prose) = first.unwrap_or_else(|| ("".into(), "Continue".into()));
-    let mut annotations = Vec::new();
-    if conditions > 0 {
-        annotations.push("◇ Conditional".into());
-    }
-    if effects > 0 {
-        annotations.push(format!(
-            "↗ {effects} effect{}",
-            if effects == 1 { "" } else { "s" }
-        ));
-    }
-    Synopsis {
-        speaker,
-        prose,
-        annotations,
+        PressEventData::Touch(touch) => {
+            EventsCombos::<Card>::pressed(touch.global_location).is_double()
+        }
+        PressEventData::Keyboard(_) | PressEventData::Accessibility(_) => true,
     }
 }

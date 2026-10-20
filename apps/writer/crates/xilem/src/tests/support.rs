@@ -1,11 +1,14 @@
 use super::*;
+use crate::navigation::worker;
 use masonry::testing::TestHarness;
+use recite_writer_session::project::save::sequence;
 use std::fs;
 use std::sync::Arc;
-use xilem::ViewCtx;
+use tokio::sync::mpsc as async_mpsc;
 use xilem::core::{
     DynMessage, MessageCtx, ProxyError, RawProxy, SendMessage, View as _, ViewId, ViewPathTracker,
 };
+use xilem::{ViewCtx, WidgetView};
 
 pub(crate) fn project(source: &str) -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
@@ -62,9 +65,9 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
     let mut context = ViewCtx::new(Arc::new(NoProxy), Arc::new(tokio::runtime::Runtime::new()?));
     let mut view = view::writer(writer);
     let (pod, mut state) = view.build(&mut context, writer);
-    let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut requests) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
-    let (navigation_sender, mut navigation_requests) = tokio::sync::mpsc::unbounded_channel();
+    let (navigation_sender, mut navigation_requests) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(navigation_sender);
     writer.navigation.runtime = Some(context.runtime().handle().clone());
     let mut harness = TestHarness::create_with_size(
@@ -72,15 +75,20 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
         pod.new_widget,
         (900, 650),
     );
+    flush_native(
+        writer,
+        &mut harness,
+        &mut context,
+        &mut view,
+        &mut state,
+        (&mut requests, &mut navigation_requests),
+        view::writer,
+    )?;
     let mut pending = vec![harness.root_widget().as_dyn()];
     let mut field = None;
     while let Some(widget) = pending.pop() {
         if context.get_id_path(widget.id()).is_some()
-            && harness
-                .access_node(widget.id())
-                .and_then(|node| node.label())
-                .as_deref()
-                == Some("Manuscript")
+            && native_label(&harness, widget.id()).as_deref() == Some("Manuscript")
         {
             field = Some(widget.id());
             break;
@@ -97,11 +105,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
                 .pop()
                 .ok_or_else(|| format!("missing action {name}"))?;
             if context.get_id_path(widget.id()).is_some()
-                && harness
-                    .access_node(widget.id())
-                    .and_then(|node| node.label())
-                    .as_deref()
-                    == Some(name)
+                && native_label(&harness, widget.id()).as_deref() == Some(name)
             {
                 break widget.id();
             }
@@ -113,37 +117,22 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
             target_node: id.to_raw().into(),
             data: None,
         });
-        let (action, source) = harness
-            .pop_action_erased()
-            .ok_or_else(|| format!("no action from {name}"))?;
-        let path = context
-            .get_id_path(source)
-            .ok_or("missing view path")?
-            .clone();
-        let mut message = MessageCtx::new(
-            std::mem::take(context.environment()),
-            path,
-            DynMessage(action),
-        );
-        harness.edit_root_widget(|root| {
-            view.message(&mut state, &mut message, root, writer);
-        });
-        *context.environment() = message.finish().0;
-        finish_work(writer, &mut requests)?;
-        finish_navigation(writer, &mut navigation_requests)?;
-        let next = view::writer(writer);
-        harness
-            .edit_root_widget(|root| next.rebuild(&view, &mut state, &mut context, root, writer));
-        view = next;
-        harness.redraw();
+        flush_native(
+            writer,
+            &mut harness,
+            &mut context,
+            &mut view,
+            &mut state,
+            (&mut requests, &mut navigation_requests),
+            view::writer,
+        )?;
         if *name == "Close" && matches!(writer.phase, Phase::ConfirmClose | Phase::ConfirmExit) {
             let mut focused = None;
             for _ in 0..3 {
                 harness.press_tab_key(false);
                 focused = harness
                     .focused_widget_id()
-                    .and_then(|id| harness.access_node(id))
-                    .and_then(|node| node.label());
+                    .and_then(|id| native_label(&harness, id));
                 if focused.as_deref() == Some("Keep editing") {
                     break;
                 }
@@ -156,7 +145,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
 
 pub(crate) fn finish_navigation(
     writer: &mut Writer,
-    requests: &mut tokio::sync::mpsc::UnboundedReceiver<crate::navigation::worker::Job>,
+    requests: &mut async_mpsc::UnboundedReceiver<worker::Job>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     while writer.navigation.busy() {
         let completed = requests.try_recv()?.execute();
@@ -170,9 +159,7 @@ pub(crate) fn finish_navigation(
 // Native callbacks schedule owned work; this harness executes it deterministically.
 pub(crate) fn finish_work(
     writer: &mut Writer,
-    requests: &mut tokio::sync::mpsc::UnboundedReceiver<
-        recite_writer_session::project::save::sequence::Work,
-    >,
+    requests: &mut async_mpsc::UnboundedReceiver<sequence::Work>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     while writer.work.busy() {
         let work = requests.try_recv()?;
@@ -181,8 +168,66 @@ pub(crate) fn finish_work(
     Ok(())
 }
 pub(crate) fn save(writer: &mut Writer) -> Result<(), Box<dyn std::error::Error>> {
-    let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut requests) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
     writer.save();
     finish_work(writer, &mut requests)
+}
+
+// Read stable public node locations rather than the upstream harness's raw-memory ID adapter.
+pub(crate) fn native_label<W: masonry::core::Widget>(
+    harness: &TestHarness<W>,
+    id: masonry::core::WidgetId,
+) -> Option<String> {
+    let tree = harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    while let Some(node) = pending.pop() {
+        if node.locate().0.0 == id.to_raw() {
+            return node.label();
+        }
+        pending.extend(node.children());
+    }
+    None
+}
+fn flush_native<V: WidgetView<Writer, Widget: Sized>>(
+    writer: &mut Writer,
+    harness: &mut TestHarness<V::Widget>,
+    context: &mut ViewCtx,
+    view: &mut V,
+    state: &mut V::ViewState,
+    jobs: (
+        &mut async_mpsc::UnboundedReceiver<sequence::Work>,
+        &mut async_mpsc::UnboundedReceiver<worker::Job>,
+    ),
+    make: fn(&Writer) -> V,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for _ in 0..20 {
+        let mut changed = false;
+        while let Some((action, source)) = harness.pop_action_erased() {
+            let path = context
+                .get_id_path(source)
+                .ok_or("missing view path")?
+                .clone();
+            let mut message = MessageCtx::new(
+                std::mem::take(context.environment()),
+                path,
+                DynMessage(action),
+            );
+            harness.edit_root_widget(|root| {
+                view.message(state, &mut message, root, writer);
+            });
+            *context.environment() = message.finish().0;
+            changed = true;
+        }
+        finish_work(writer, jobs.0)?;
+        finish_navigation(writer, jobs.1)?;
+        let next = make(writer);
+        harness.edit_root_widget(|root| next.rebuild(view, state, context, root, writer));
+        *view = next;
+        harness.redraw();
+        if !changed {
+            return Ok(());
+        }
+    }
+    Err("native actions did not settle".into())
 }

@@ -40,6 +40,9 @@ impl App {
                     return;
                 };
                 match command {
+                    WriterCommand::Script => writer.show_workspace(crate::map::Workspace::Script),
+                    WriterCommand::Map => writer.show_workspace(crate::map::Workspace::Map),
+                    WriterCommand::Split => writer.show_workspace(crate::map::Workspace::Split),
                     WriterCommand::Save => writer.save(),
                     WriterCommand::SaveAll => writer.save_all(),
                     WriterCommand::Source => writer.open_editor(),

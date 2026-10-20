@@ -1,6 +1,7 @@
 //! One owned cold-load request; rejected and replaced sessions retire on its worker.
 use super::*;
 use recite_compiler::authoring::{Interrupted, WorkControl};
+use std::sync::atomic;
 use tokio::sync::mpsc::UnboundedReceiver;
 use xilem::{
     ViewCtx,
@@ -20,7 +21,7 @@ pub(super) enum Job {
 pub(super) struct Request {
     pub options: LaunchOptions,
     pub cancel: CancellationToken,
-    pub forwarded: Option<Arc<std::sync::atomic::AtomicBool>>,
+    pub forwarded: Option<Arc<atomic::AtomicBool>>,
 }
 pub(super) struct Opening {
     pub request: Arc<Request>,
@@ -33,7 +34,7 @@ impl WorkControl for Request {
         if self
             .forwarded
             .as_ref()
-            .is_some_and(|cancelled| cancelled.load(std::sync::atomic::Ordering::Acquire))
+            .is_some_and(|cancelled| cancelled.load(atomic::Ordering::Acquire))
         {
             return Err(Interrupted);
         }
@@ -172,6 +173,9 @@ fn load(request: &Request) -> Result<Box<Writer>, String> {
         _ => return Err("Choose a project or a temporary example.".into()),
     };
     let mut writer = Writer::from_session(session, request.options.editor.clone());
+    if writer.session.project().is_some() {
+        writer.map.personal_storage();
+    }
     if let Some(location) = location
         && let Err(error) = writer.follow_location(&location)
     {
@@ -209,6 +213,13 @@ impl App {
         let (retired, result) = match output.result {
             Ok(mut writer) if valid => {
                 writer.configure(self.preferences.config.clone());
+                let view = writer.location.view.unwrap_or(self.preferences.config.writer.view);
+                if view == recite_config::WriterView::Map {
+                    writer.map.workspace = if self.preferences.config.writer.presentation.split() {
+                        crate::map::Workspace::Split
+                    } else { crate::map::Workspace::Map };
+                    writer.invalidate_map();
+                }
                 let previous = self.writer.replace(*writer).map(Box::new);
                 self.show_welcome = false;
                 self.settings_open = false;

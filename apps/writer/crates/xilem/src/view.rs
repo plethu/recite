@@ -2,17 +2,21 @@ use super::{Phase, Writer, keyed::keyed};
 use crate::presentation::{label, paragraph, prose, text_button};
 use recite_writer_model::View;
 use xilem::core::one_of::Either;
+use xilem::masonry::core;
 use xilem::masonry::layout::AsUnit;
+use xilem::masonry::widgets;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, portal, sized_box, text_input};
 use xilem::{InsertNewline, WidgetView};
 
 mod manuscript;
 mod surface;
+pub(super) mod workspace;
+use workspace::workspace;
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(super) struct Manuscript(pub bool);
-impl xilem::masonry::core::UsesProperty<Manuscript> for xilem::masonry::widgets::TextInput {}
-impl xilem::masonry::core::Property for Manuscript {
+impl core::UsesProperty<Manuscript> for widgets::TextInput {}
+impl core::Property for Manuscript {
     fn static_default() -> &'static Self {
         static OTHER: Manuscript = Manuscript(false);
         &OTHER
@@ -46,20 +50,24 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
         }),
         recovery_copy(state),
         close_prompt(state),
-        matches!(surface, surface::Surface::SourceRepair { import: true, .. })
-            .then(|| source_repair::panel(state)),
+        (state.map.workspace != crate::map::Workspace::Map
+            && matches!(surface, surface::Surface::SourceRepair { import: true, .. }))
+        .then(|| source_repair::panel(state)),
         workspace(state, &surface),
         recovery_failure(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(16.px());
     xilem::core::fork(
-        portal(
-            sized_box(content)
-                .padding(24.px())
-                .background_color(state.palette.canvas),
-        )
-        .constrain_horizontal(true),
+        xilem::view::resize_observer(
+            |state: &mut Writer, size| state.viewport = size,
+            portal(
+                sized_box(content)
+                    .padding(24.px())
+                    .background_color(state.palette.canvas),
+            )
+            .constrain_horizontal(true),
+        ),
         (
             crate::trial::worker(),
             crate::editor_work::worker(),
@@ -67,15 +75,6 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             crate::navigation::worker(),
         ),
     )
-}
-fn workspace(state: &Writer, surface: &surface::Surface<'_>) -> impl WidgetView<Writer> + use<> {
-    flex_row((
-        navigation(state),
-        flex_col((manuscript(state, surface), trial::panel(state)))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(20.px()),
-    ))
-    .gap(20.px())
 }
 fn editor_status(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     state.external.path().map(|path| {

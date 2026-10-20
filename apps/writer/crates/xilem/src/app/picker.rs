@@ -5,6 +5,7 @@ mod index;
 mod tests;
 pub(super) mod view;
 use super::*;
+use crate::rules::selection;
 use recite_config::WriterCommand;
 use recite_writer_session::location::Location;
 pub(crate) use view::{ActiveResult, QueryField};
@@ -61,7 +62,7 @@ impl Purpose {
 enum Item {
     Command(WriterCommand),
     Location(Location),
-    Rule(crate::rules::selection::Choice),
+    Rule(selection::Choice),
     Destination(String),
 }
 struct Entry {
@@ -233,7 +234,7 @@ impl App {
                     || writer.session.model().document().can_undo())
             }
             C::Redo => idle && writer.session.model().document().can_redo(),
-            C::AddBeat => idle,
+            C::Script | C::Map | C::Split | C::AddBeat => idle,
             C::AddLine | C::AddReply => {
                 idle && writer
                     .session

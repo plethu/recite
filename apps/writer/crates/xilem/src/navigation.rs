@@ -1,4 +1,5 @@
 //! Authoring selection and document navigation use the shared product locations.
+use recite_writer_session::location::history as location_history;
 mod capture;
 mod history;
 mod opening;
@@ -11,6 +12,7 @@ use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
 use recite_writer_model::StructuralCommand;
 use recite_writer_model::{AnalysisStamp, EditOperation, RecoveredDraft, View};
 use recite_writer_session::location::Location;
+use std::sync::atomic;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 pub(super) use worker::worker;
@@ -23,6 +25,8 @@ pub(super) enum Target {
     Selection(Location),
     Edit(EditOperation),
     Structure(StructuralCommand),
+    Workspace(crate::map::Workspace),
+    MapRefresh,
     Repair(repair::Action),
 }
 
@@ -34,14 +38,14 @@ pub(super) struct Navigation {
     pending: Option<Arc<Request>>,
     incoming: Option<recite_writer_session::activation::IncomingRoute>,
     deferred_save: Option<saving::DeferredSave>,
-    pub(super) history: recite_writer_session::location::history::History,
-    visit: Option<recite_writer_session::location::history::Step>,
+    pub(super) history: location_history::History,
+    visit: Option<location_history::Step>,
 }
 pub(super) struct Request {
     target: Target,
     origin: Origin,
     cancel: CancellationToken,
-    forwarded: Option<Arc<std::sync::atomic::AtomicBool>>,
+    forwarded: Option<Arc<atomic::AtomicBool>>,
 }
 struct Origin {
     window: xilem::WindowId,
@@ -70,7 +74,7 @@ impl WorkControl for Request {
         if self
             .forwarded
             .as_ref()
-            .is_some_and(|cancelled| cancelled.load(std::sync::atomic::Ordering::Acquire))
+            .is_some_and(|cancelled| cancelled.load(atomic::Ordering::Acquire))
         {
             return Err(Interrupted);
         }
@@ -134,7 +138,7 @@ impl Writer {
     }
     pub(super) fn current_location(&self) -> Location {
         let model = self.session.model();
-        Location {
+        let mut location = Location {
             document: model.document().key().to_string(),
             source: model.view() == &View::Source && self.rules.is_none(),
             beat: model.selected_block().ok().flatten(),
@@ -146,7 +150,18 @@ impl Writer {
                     .map(|rules| rules.projection().passage.clone()),
             },
             ..self.location.clone()
+        };
+        if self.map.workspace.has_map() {
+            location.view = Some(recite_config::WriterView::Map);
+            if self.map.workspace == crate::map::Workspace::Map {
+                location.beat = self.map_selected().map(str::to_owned);
+                location.passage = None;
+                location.source = false;
+            }
+        } else {
+            location.view = Some(recite_config::WriterView::Script);
         }
+        location
     }
     pub(super) fn navigate(&mut self, target: Target) {
         if let Err(error) = self.begin_navigation(target) {
@@ -196,11 +211,12 @@ impl Writer {
         {
             return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
         }
+        self.cancel_map_gesture();
         self.trial.cancel();
         if self.source_repair_pending()
             && matches!(
                 target,
-                Target::Location(_) | Target::Edit(_) | Target::Structure(_)
+                Target::Location(_) | Target::Edit(_) | Target::Structure(_) | Target::Workspace(_)
             )
         {
             return Err("Repair and import the recovered source draft before applying it or following a link. You can switch documents to keep this draft for later.".into());
@@ -210,7 +226,7 @@ impl Writer {
         }
         let applies = (matches!(
             target,
-            Target::Location(_) | Target::Edit(_) | Target::Structure(_)
+            Target::Location(_) | Target::Edit(_) | Target::Structure(_) | Target::Workspace(_)
         ) || (matches!(target, Target::Selection(_))
             && matches!(self.session.model().view(), View::Passage(_))))
             && self.session.model().has_draft();
@@ -232,6 +248,13 @@ impl Writer {
         }
         if queued_save {
             self.status = "Requested save cancelled; your work stays open.".into();
+        }
+    }
+    pub(crate) fn cancel_map_preparation(&mut self) {
+        if let Some(request) = &self.navigation.pending
+            && matches!(request.target, Target::Workspace(_) | Target::MapRefresh)
+        {
+            request.cancel.interrupt();
         }
     }
     fn send_navigation(&mut self, request: Arc<Request>, work: worker::Work) -> Result<(), String> {
@@ -272,6 +295,8 @@ impl Writer {
             Target::Edit(EditOperation::Undo) => "Undoing applied edit… You can keep editing.",
             Target::Edit(EditOperation::Redo) => "Redoing applied edit… You can keep editing.",
             Target::Structure(_) => "Preparing structural edit… Your current work stays open.",
+            Target::Workspace(_) => "Preparing scene map… Your current work stays open.",
+            Target::MapRefresh => "Updating scene map… You can keep editing.",
             _ => "Preparing navigation… You can keep editing.",
         }
         .into();

@@ -86,6 +86,15 @@ Save all consider inactive documents too. It uses an external editor for source 
 embedding a second source editor. This does not establish parity for the remaining workspaces or
 remove the existing Freya Source workflow.
 
+Native Map geometry, synopsis, spatial selection and personal-placement format have shared owners.
+Its accepted projection is prepared on workers and checked against source identity before adoption;
+placement writes reconcile even when presentation is cancelled. Camera and local layout never add a
+source undo step. Stable pane slots retain Script's mounted text history. Visible detail cards stay
+native controls; low-zoom overview paints geometry, retains complete outline/Go to/Connections
+paths, and restores a readable focused card on selection. Focus requests reveal the whole card
+through the outer scroll container. Collapsing focused cards transfers focus to the persistent map
+viewport.
+
 Both frontends use the same personal configuration, palette and command wording. Xilem's welcome,
 temporary examples and project creation use shared launch/session owners. Its personal settings
 apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict

@@ -1,6 +1,7 @@
 //! External source repair shares navigation's cancellation, origin checks and worker retirement.
 use super::*;
 use recite_writer_model::{PreparedSourceRepair, SourceRepairRequest};
+use recite_writer_session::project::save::ordered;
 use recite_writer_session::project::{SourceRepairArtifact, SourceRepairExport};
 
 #[derive(Default)]
@@ -56,10 +57,7 @@ impl Work {
     }
 }
 impl Writer {
-    pub(crate) fn source_repair_requirement(
-        &self,
-        scope: &recite_writer_session::project::save::ordered::Scope,
-    ) -> Option<PathBuf> {
+    pub(crate) fn source_repair_requirement(&self, scope: &ordered::Scope) -> Option<PathBuf> {
         use recite_writer_session::project::save::ordered::Scope;
         let project = self.session.project()?;
         match scope {
@@ -212,6 +210,7 @@ impl Writer {
                 self.location.passage = None;
                 self.location.beat = None;
                 self.reading.prepare(self.session.model());
+                self.invalidate_map();
                 self.status = "Repaired source accepted. Save file to write it to disk.".into();
             }
             ResultValue::Chosen(path) => {

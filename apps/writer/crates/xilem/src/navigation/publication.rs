@@ -4,13 +4,19 @@ use worker::{Completed, ResultValue};
 
 impl Writer {
     pub(crate) fn accept_navigation(&mut self, completed: Completed) -> Option<ResultValue> {
-        let Completed { request, result } = completed;
+        let Completed {
+            request,
+            mut result,
+        } = completed;
         if !self
             .navigation
             .pending
             .as_ref()
             .is_some_and(|pending| Arc::ptr_eq(pending, &request))
         {
+            if let Ok(ResultValue::Map(prepared)) = &mut result {
+                self.reconcile_map_placement(prepared);
+            }
             return result.ok();
         }
         self.navigation.pending = None;
@@ -26,6 +32,21 @@ impl Writer {
             _ if request.checkpoint().is_err() => {
                 Err("Navigation cancelled; your current work stays open.".into())
             }
+            ResultValue::Map(prepared) => {
+                let current = match request.target {
+                    Target::MapRefresh => request.origin.presentation_is_current(self),
+                    _ => request.origin.is_current(self),
+                };
+                if !current {
+                    Err("The scene changed while its map was preparing.".into())
+                } else {
+                    match request.target {
+                        Target::Workspace(workspace) => self.accept_map(prepared, workspace),
+                        Target::MapRefresh => self.accept_map(prepared, self.map.workspace),
+                        _ => Err("Invalid map request.".into()),
+                    }
+                }
+            }
             ResultValue::Edit {
                 prepared,
                 operation,
@@ -37,6 +58,9 @@ impl Writer {
             } => self.publish_navigation(&request, prepared, checkpoint.as_ref()),
         };
         if let Err(error) = result {
+            if let ResultValue::Map(prepared) = &mut value {
+                self.reconcile_map_placement(prepared);
+            }
             self.navigation_failed(error);
         } else {
             self.mark_deferred_save_applied(&request);
@@ -62,6 +86,7 @@ impl Writer {
             .edit(|model| model.accept_edit(prepared))
             .map_err(|error| error.to_string())?;
         self.reading.prepare(self.session.model());
+        self.invalidate_map();
         if self.session.model().has_draft() {
             let message =
                 "Applied captured text; newer typing remains open. Retry navigation when ready.";
@@ -100,6 +125,8 @@ impl Writer {
             .map_err(|error| error.to_string())?;
         self.retire_rules();
         self.reading.prepare(self.session.model());
+        self.sync_map_selection();
+        self.invalidate_map();
         self.remember_location();
         self.status = "Structural edit updated. Save when ready.".into();
         Ok(())
@@ -139,6 +166,17 @@ impl Writer {
             self.trial.visible =
                 location.screen == recite_writer_session::location::Screen::Preview;
             self.install_rules(&mut prepared.rules);
+            if let Some(view) = location.view {
+                self.map.workspace = if view == recite_config::WriterView::Map {
+                    if self.config.writer.presentation.split() {
+                        crate::map::Workspace::Split
+                    } else {
+                        crate::map::Workspace::Map
+                    }
+                } else {
+                    crate::map::Workspace::Script
+                };
+            }
         } else if let Target::Selection(location) = &request.target {
             self.retire_rules();
             self.location.document = location.document.clone();
@@ -152,6 +190,8 @@ impl Writer {
         self.beat_page = 0;
         self.remember_location();
         self.reading.prepare(self.session.model());
+        self.sync_map_selection();
+        self.invalidate_map();
         self.status = if let Some(status) = self
             .rules
             .as_mut()
