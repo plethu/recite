@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     sync::{Arc, Mutex},
 };
 
@@ -11,12 +11,15 @@ use xilem::masonry::accesskit::{
     ActionHandler, ActionRequest, Affine, Node, NodeId as LocalId, Rect, Role, Tree, TreeId,
     TreeUpdate,
 };
+#[path = "atspi_exposure/pruned.rs"]
+mod pruned;
 
 #[derive(Default)]
 struct Observations {
-    registered: BTreeSet<NodeId>,
+    interfaces: BTreeMap<NodeId, InterfaceSet>,
     edges: BTreeSet<(NodeId, NodeId, bool)>,
     selections: usize,
+    failures: Vec<String>,
 }
 #[derive(Clone, Default)]
 struct Registration(Arc<Mutex<Observations>>);
@@ -30,19 +33,33 @@ impl Registration {
 }
 impl AdapterCallback for Registration {
     fn register_interfaces(&self, _: &Adapter, id: NodeId, interfaces: InterfaceSet) {
-        if interfaces.contains(atspi_common::Interface::Accessible) {
-            assert!(
-                self.observations().registered.insert(id),
-                "duplicate registration: {id:?}"
-            );
+        if interfaces == InterfaceSet::empty() {
+            return;
         }
+        let mut ledger = self.observations();
+        let current = ledger.interfaces.get(&id).copied().unwrap_or_default();
+        if current & interfaces != InterfaceSet::empty() {
+            ledger.failures.push(format!(
+                "duplicate registration: {id:?}, current {current:?}, added {interfaces:?}"
+            ));
+        }
+        ledger.interfaces.insert(id, current | interfaces);
     }
     fn unregister_interfaces(&self, _: &Adapter, id: NodeId, interfaces: InterfaceSet) {
-        if interfaces.contains(atspi_common::Interface::Accessible) {
-            assert!(
-                self.observations().registered.remove(&id),
-                "duplicate removal: {id:?}"
-            );
+        if interfaces == InterfaceSet::empty() {
+            return;
+        }
+        let mut ledger = self.observations();
+        let current = ledger.interfaces.get(&id).copied().unwrap_or_default();
+        let removed = current & interfaces;
+        if removed != interfaces {
+            ledger.failures.push(format!("unregistered interface removal: {id:?}, current {current:?}, removed {interfaces:?}"));
+        }
+        let next = current ^ removed;
+        if next == InterfaceSet::empty() {
+            ledger.interfaces.remove(&id);
+        } else {
+            ledger.interfaces.insert(id, next);
         }
     }
     fn emit_event(&self, _: &Adapter, event: Event) {
@@ -54,10 +71,13 @@ impl AdapterCallback for Registration {
             let mut ledger = self.observations();
             let edge = match event {
                 ObjectEvent::ChildAdded(_, child) => {
-                    assert!(
-                        ledger.registered.contains(&child),
-                        "child announced before registration"
-                    );
+                    if !ledger.interfaces.get(&child).is_some_and(|interfaces| {
+                        interfaces.contains(atspi_common::Interface::Accessible)
+                    }) {
+                        ledger
+                            .failures
+                            .push("child announced before registration".into());
+                    }
                     Some((parent, child, true))
                 }
                 ObjectEvent::ChildRemoved(child) => Some((parent, child, false)),
@@ -67,8 +87,10 @@ impl AdapterCallback for Registration {
                 }
                 _ => None,
             };
-            if let Some(edge) = edge {
-                assert!(ledger.edges.insert(edge), "duplicate child event");
+            if let Some(edge) = edge
+                && !ledger.edges.insert(edge)
+            {
+                ledger.failures.push("duplicate child event".into());
             }
         }
     }
@@ -152,11 +174,31 @@ impl ScrollFixture {
         Ok(exposed)
     }
     fn assert_registered(&self) -> Result<(), Box<dyn std::error::Error>> {
+        {
+            let ledger = self.registration.observations();
+            assert!(
+                ledger.failures.is_empty(),
+                "interface protocol violations: {:?}",
+                ledger.failures
+            );
+        }
         assert_eq!(
             self.exposed()?,
-            self.registration.observations().registered,
+            self.registration
+                .observations()
+                .interfaces
+                .keys()
+                .copied()
+                .collect(),
             "exposed and registered objects must agree"
         );
+        for (id, interfaces) in &self.registration.observations().interfaces {
+            assert_eq!(
+                *interfaces,
+                self.adapter.platform_node(*id).interfaces()?,
+                "registered interface mask disagrees with exposed node {id:?}"
+            );
+        }
         Ok(())
     }
 }
