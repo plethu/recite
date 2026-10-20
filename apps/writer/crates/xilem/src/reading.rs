@@ -7,6 +7,7 @@ pub(super) enum Content {
     Passage(Passage),
     Heading(String),
     Note(String),
+    Continuation(String),
 }
 
 pub(super) struct Row {
@@ -116,7 +117,7 @@ fn flatten(entries: &[ScriptEntry]) -> Arc<[Row]> {
                 pending.push((entries.iter(), nested.into()));
                 Content::Heading(heading.clone())
             }
-            ScriptEntry::Jump(target) => Content::Note(format!("Continue → {target}")),
+            ScriptEntry::Jump(target) => Content::Continuation(target.clone()),
             ScriptEntry::Effect(text) => Content::Note(format!("Effect · {text}")),
             ScriptEntry::Source(text) => {
                 Content::Note(format!("Source fragment (read only) · {text}"))

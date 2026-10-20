@@ -23,3 +23,23 @@ fn stamp_tracks_analysis_replacement_without_retaining_project_payloads() -> Res
     assert!(stamp.source.upgrade().is_none());
     Ok(())
 }
+
+#[test]
+fn navigation_stamp_does_not_keep_compiler_or_context_payloads_alive()
+-> Result<(), crate::WorkbenchError> {
+    let document = Document::new(":: start default\n-> END\n")?;
+    let kernel = Arc::downgrade(&document.kernel);
+    let context = Arc::downgrade(&document.context);
+    let model = crate::Workbench::from_document(document, Some(crate::View::Source))?;
+    let kernel_owners = kernel.strong_count();
+    let context_owners = context.strong_count();
+    let stamp = model.navigation_stamp();
+    assert!(stamp.is_current(&model));
+    assert_eq!(kernel.strong_count(), kernel_owners);
+    assert_eq!(context.strong_count(), context_owners);
+    drop(model);
+    assert!(kernel.upgrade().is_none());
+    assert!(context.upgrade().is_none());
+    drop(stamp);
+    Ok(())
+}

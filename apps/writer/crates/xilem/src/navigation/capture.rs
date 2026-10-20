@@ -2,6 +2,20 @@ use super::*;
 use recite_writer_session::navigation::{Destination, Prepare};
 
 impl Writer {
+    pub(super) fn submit_structural(&mut self, command: StructuralCommand) -> Result<(), String> {
+        let edit = self
+            .session
+            .model()
+            .structural_request(command.clone())
+            .map_err(|error| error.to_string())?;
+        let request = Arc::new(Request {
+            target: Target::Structure(command),
+            origin: Origin::capture(self),
+            cancel: CancellationToken::new(),
+            forwarded: None,
+        });
+        self.send_navigation(request, worker::Work::Structure(Box::new(edit)))
+    }
     pub(super) fn submit_edit(
         &mut self,
         target: Target,
@@ -19,7 +33,7 @@ impl Writer {
         let edit = if operation == EditOperation::Apply
             && let Some(rules) = &self.rules
         {
-            edit.with_rules(rules.clone())
+            edit.with_rules(rules.projection().clone())
         } else {
             edit
         };
@@ -78,7 +92,9 @@ impl Writer {
             Target::Location(location) | Target::Selection(location) => {
                 self.location_destination(location)?
             }
-            Target::Edit(_) | Target::Repair(_) => return Err("Invalid navigation target.".into()),
+            Target::Edit(_) | Target::Repair(_) | Target::Structure(_) => {
+                return Err("Invalid navigation target.".into());
+            }
         };
         let request = Arc::new(Request {
             target,

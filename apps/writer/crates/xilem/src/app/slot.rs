@@ -21,7 +21,7 @@ pub(super) struct SlotState<T> {
 pub(super) fn writer_slot(app: &mut App) -> WriterSlot<impl WidgetView<Writer> + use<>> {
     WriterSlot {
         key: app.writer.as_ref().map(|writer| writer.window),
-        child: app.writer.as_mut().map(crate::view::writer),
+        child: app.writer.as_ref().map(crate::view::writer),
     }
 }
 impl<V> ViewMarker for WriterSlot<V> {}
@@ -117,7 +117,7 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
         }
         let mut pod = Passthrough::child_mut(&mut element);
         let result = child.message(child_state, message, pod.downcast(), writer);
-        app.open_rule_choices();
+        app.open_editor_choices();
         result
     }
 }

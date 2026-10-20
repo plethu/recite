@@ -94,11 +94,11 @@ fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
             .is_none_or(|writer| writer.phase != Phase::Writing);
     flex_row((
         text_button(scale, "Commands", |app: &mut App| {
-            app.open_picker(picker::Mode::Commands)
+            app.open_picker(picker::Search::Commands)
         })
         .disabled(disabled),
         text_button(scale, "Go to", |app: &mut App| {
-            app.open_picker(picker::Mode::GoTo)
+            app.open_picker(picker::Search::GoTo)
         })
         .disabled(disabled),
         app.writer
@@ -106,7 +106,7 @@ fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
             .and_then(|writer| writer.session.project())
             .map(|_| {
                 text_button(scale, "Find project text", |app: &mut App| {
-                    app.open_picker(picker::Mode::ProjectText)
+                    app.open_picker(picker::Search::ProjectText)
                 })
                 .disabled(disabled)
             }),

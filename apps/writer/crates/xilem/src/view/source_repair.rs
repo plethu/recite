@@ -2,18 +2,14 @@
 use super::*;
 use xilem::masonry::properties::TextAreaLabel;
 
-pub(super) fn panel(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    if state.session.model().view() != &View::Source || state.rules.is_some() {
-        return None;
-    }
+pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let busy = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
     let project = state.session.project();
     let exported = state.repair.artifact.as_ref().is_some_and(|artifact| {
         project.is_some_and(|project| project.current().path() == artifact.document)
     });
-    Some(
-        flex_col((
+    flex_col((
             label(scale, "Repair source draft").text_size(22. * scale),
             label(scale, if state.source_repair_pending() {
                 "Import is required before Save"
@@ -38,6 +34,5 @@ pub(super) fn panel(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                 text_button(scale, "Import repaired source", Writer::import_source_repair)
                     .disabled(busy || state.repair_path().trim().is_empty()),
             )).gap(8.px()),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px()),
-    )
+        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
 }

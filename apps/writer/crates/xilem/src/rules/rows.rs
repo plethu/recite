@@ -59,6 +59,51 @@ fn arguments(call: CallTarget, count: usize, rows: &mut Vec<Row>) {
         })
     }));
 }
-pub(super) fn same_structure(old: &ReplyRules, next: &ReplyRules) -> bool {
-    project(old) == project(next)
+
+/// Resolve cached addresses once at the list boundary. Components receive the
+/// concrete node or argument they render, never an optional second lookup.
+pub(super) enum Resolved<'a> {
+    Condition {
+        path: &'a [usize],
+        title: &'a str,
+        node: &'a RuleExpression,
+    },
+    Effect {
+        index: usize,
+        effect: &'a recite_writer_model::RuleEffect,
+    },
+    Argument {
+        target: &'a ArgumentTarget,
+        owner: &'a str,
+        argument: &'a RuleArgument,
+    },
+}
+impl Row {
+    pub fn resolve<'a>(&'a self, rules: &'a ReplyRules) -> Option<Resolved<'a>> {
+        match self {
+            Self::Condition(path, title) => Some(Resolved::Condition {
+                path,
+                title,
+                node: rules.condition.as_ref()?.at(path)?,
+            }),
+            Self::Effect(index, _) => Some(Resolved::Effect {
+                index: *index,
+                effect: rules.effects.get(*index)?,
+            }),
+            Self::Argument(target) => {
+                let owner = match &target.call {
+                    CallTarget::Condition(path) => match rules.condition.as_ref()?.at(path)? {
+                        RuleExpression::Call { function, .. } => function,
+                        _ => return None,
+                    },
+                    CallTarget::Effect(index) => &rules.effects.get(*index)?.function,
+                };
+                Some(Resolved::Argument {
+                    target,
+                    owner,
+                    argument: target.get(rules)?,
+                })
+            }
+        }
+    }
 }

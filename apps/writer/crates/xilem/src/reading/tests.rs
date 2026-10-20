@@ -8,6 +8,12 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
     let mut writer = open(&directory).unwrap();
     assert_eq!(writer.status, "Ready");
     assert!(
+        !labels(&mut writer)
+            .unwrap()
+            .iter()
+            .any(|label| label == "Repair source draft")
+    );
+    assert!(
         labels(&mut writer)
             .unwrap()
             .iter()
@@ -75,13 +81,13 @@ fn empty_and_effect_only_beats_have_distinct_reading_states() {
 }
 
 #[test]
-fn structural_actions_guard_unapplied_text_and_offer_external_repair_for_syntax() {
+fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_syntax() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
     let source = writer.session.model().document().source_snapshot();
     let selection = writer.session.model().view().clone();
     writer.change(|model| {
-        model.set_draft("Keep this draft.".into());
+        model.set_draft("-> syntax".into());
         Ok(())
     });
     click(
@@ -90,7 +96,7 @@ fn structural_actions_guard_unapplied_text_and_offer_external_repair_for_syntax(
     )
     .unwrap();
     assert_eq!(writer.session.model().view(), &selection);
-    assert_eq!(writer.session.model().draft(), "Keep this draft.");
+    assert_eq!(writer.session.model().draft(), "-> syntax");
     assert!(Arc::ptr_eq(
         &source,
         &writer.session.model().document().source_snapshot()

@@ -62,8 +62,11 @@ save-and-close timing is recorded by the native probe. Preferred-application loo
 independently open editor, checked-save conflict refusal and missing-executable retry also pass the
 owned native editor drill. File and selection navigation, Apply and applied history now prepare on
 workers, with regression checks for cancellation, newer typing, outgoing recovery and deferred Save.
+Structural creation and destination changes also prepare on workers, preserving history and
+rejecting stale or cancelled publication. The owned native drills cover prose Apply before creation,
+reply and continuation routes, separate applied undo/redo, stable IDs and explicit disk Save.
 Dynamic preview resizing has a Portal scrollbar regression and a native scrolling drill. Synchronous
-reload and structural creation still need completion before default cutover.
+reload still needs completion before default cutover.
 
 Source-draft repair now exports captured text plus a complete recovery backup, opens the preferred
 editor and imports through checked authoring preparation. The owned Wayland drill verifies invalid
@@ -79,8 +82,11 @@ IDs preserved, and return to reply text. Focused regressions cover stale choices
 removal, repeated Apply followed by applied undo, and deferred Save through a disk conflict. A
 1,026-effect workload mounts four argument fields and stays within 128 accessible nodes per page.
 Rule fields are paged: native text undo survives continuously mounted fields; leaving a field page
-ends its local text history. Applied undo remains available for accepted edits. Run this drill with
-`mise exec -- just writer probe-xilem target/writer-native/rules.json rules`.
+ends its local text history. Applied undo remains available for accepted edits. Projection and
+controls share one reply-session lifetime; reopening rejects old choice receipts. Renderers derive
+the authoring surface from Workbench selection and compose resolved controls without changing page
+state. Picker freshness stamps retain no compiler or project graph. Run this drill with `mise
+exec -- just writer probe-xilem target/writer-native/rules.json rules`.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

@@ -8,6 +8,7 @@ mod saving;
 pub(super) mod worker;
 use super::{Writer, feedback, session::Session};
 use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
+use recite_writer_model::StructuralCommand;
 use recite_writer_model::{AnalysisStamp, EditOperation, RecoveredDraft, View};
 use recite_writer_session::location::Location;
 use std::{path::PathBuf, sync::Arc};
@@ -21,6 +22,7 @@ pub(super) enum Target {
     Location(Location),
     Selection(Location),
     Edit(EditOperation),
+    Structure(StructuralCommand),
     Repair(repair::Action),
 }
 
@@ -138,7 +140,10 @@ impl Writer {
             beat: model.selected_block().ok().flatten(),
             passage: match model.view() {
                 View::Passage(id) => Some(id.clone()),
-                _ => self.rules.as_ref().map(|rules| rules.passage.clone()),
+                _ => self
+                    .rules
+                    .as_ref()
+                    .map(|rules| rules.projection().passage.clone()),
             },
             ..self.location.clone()
         }
@@ -192,18 +197,29 @@ impl Writer {
             return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
         }
         self.trial.cancel();
-        if self.source_repair_pending() && matches!(target, Target::Location(_) | Target::Edit(_)) {
+        if self.source_repair_pending()
+            && matches!(
+                target,
+                Target::Location(_) | Target::Edit(_) | Target::Structure(_)
+            )
+        {
             return Err("Repair and import the recovered source draft before applying it or following a link. You can switch documents to keep this draft for later.".into());
         }
         if self.navigation.visit.is_none() {
             self.navigation.history.record(self.current_location());
         }
-        let applies = matches!(target, Target::Location(_) | Target::Edit(_))
+        let applies = (matches!(
+            target,
+            Target::Location(_) | Target::Edit(_) | Target::Structure(_)
+        ) || (matches!(target, Target::Selection(_))
+            && matches!(self.session.model().view(), View::Passage(_))))
             && self.session.model().has_draft();
         if applies {
             self.submit_edit(target, EditOperation::Apply)
         } else if let Target::Edit(operation) = target {
             self.submit_edit(Target::Edit(operation), operation)
+        } else if let Target::Structure(command) = target {
+            self.submit_structural(command)
         } else {
             self.submit_navigation(target)
         }
@@ -255,6 +271,7 @@ impl Writer {
             Target::Edit(EditOperation::Apply) => "Applying draft… You can keep editing.",
             Target::Edit(EditOperation::Undo) => "Undoing applied edit… You can keep editing.",
             Target::Edit(EditOperation::Redo) => "Redoing applied edit… You can keep editing.",
+            Target::Structure(_) => "Preparing structural edit… Your current work stays open.",
             _ => "Preparing navigation… You can keep editing.",
         }
         .into();

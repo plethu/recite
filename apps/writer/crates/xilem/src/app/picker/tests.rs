@@ -24,7 +24,7 @@ fn go_to_applies_draft_uses_the_worker_and_preserves_cross_document_selection() 
         model.set_draft("Text before lookup.".into());
         Ok(())
     });
-    app.open_picker(Mode::GoTo);
+    app.open_picker(Search::GoTo);
     app.filter_picker("other".into());
     assert_eq!(app.picker.as_ref().unwrap().matches.len(), 2);
     app.step_picker(true);
@@ -67,7 +67,7 @@ fn vim_alias_runs_the_shared_save_path_and_unavailable_commands_leave_search_ope
         model.set_draft("Save from command search.".into());
         Ok(())
     });
-    app.open_picker(Mode::Commands);
+    app.open_picker(Search::Commands);
     app.filter_picker("Map".into());
     app.activate_picker(0);
     assert!(app.picker.is_some());
@@ -101,7 +101,7 @@ fn saved_text_search_excludes_field_drafts_and_empty_search_has_no_results() {
         model.set_draft("Unsearchable field draft.".into());
         Ok(())
     });
-    app.open_picker(Mode::ProjectText);
+    app.open_picker(Search::ProjectText);
     assert_eq!(app.picker.as_ref().unwrap().total, 0);
     app.filter_picker("Unsearchable".into());
     assert_eq!(app.picker.as_ref().unwrap().total, 0);
@@ -127,8 +127,19 @@ fn native_picker_renders_bounded_results_at_personal_scales() {
             .with_value(recite_config::WriterPresentationField::UiScale, scale)
             .unwrap();
         app.theme.refresh(&app.preferences.config.writer);
-        for mode in [Mode::Commands, Mode::GoTo] {
-            app.open_picker(mode);
+        for mode in [Mode::Commands, Mode::GoTo, Mode::Destinations] {
+            if mode == Mode::Destinations {
+                let writer = app.writer.as_mut().unwrap();
+                let beat = writer.session.model().selected_block().unwrap().unwrap();
+                writer.choose_destination(recite_writer_model::RouteOwner::Beat(beat));
+                app.open_editor_choices();
+            } else {
+                app.open_picker(if mode == Mode::Commands {
+                    Search::Commands
+                } else {
+                    Search::GoTo
+                });
+            }
             let mut ctx = ViewCtx::new(
                 Arc::new(NoProxy),
                 Arc::new(tokio::runtime::Runtime::new().unwrap()),

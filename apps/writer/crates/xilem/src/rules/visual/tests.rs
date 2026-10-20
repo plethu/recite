@@ -39,8 +39,12 @@ fn rule_fields_and_expanded_actions_render_at_personal_scales() {
             writer.configure(config);
             let target = first_argument(writer).unwrap();
             match stage {
-                "condition-actions" => writer.rule_controls.expanded = Some(target.call.clone()),
-                "effect-actions" => writer.rule_controls.expanded = Some(CallTarget::Effect(0)),
+                "condition-actions" => {
+                    writer.rules.as_mut().unwrap().controls.expanded = Some(target.call.clone())
+                }
+                "effect-actions" => {
+                    writer.rules.as_mut().unwrap().controls.expanded = Some(CallTarget::Effect(0))
+                }
                 "invalid" => writer.edit_rule_argument(target, "-".into()),
                 _ => {}
             }

@@ -153,3 +153,23 @@ fn sibling_edits_rebind_staged_rules_but_schema_changes_leave_them_explicitly_st
     }
     Ok(())
 }
+
+#[test]
+fn navigation_stamp_checks_selection_draft_source_and_project_context() -> Result {
+    for change in ["draft", "view", "context", "source"] {
+        let mut model = model()?;
+        let stamp = model.navigation_stamp();
+        assert!(stamp.is_current(&model));
+        match change {
+            "draft" => model.set_draft("Newer draft".into()),
+            "view" => model.inspect_block("later")?,
+            "context" => model.refresh_project(Default::default())?,
+            _ => {
+                model.set_draft(format!("{SOURCE}\n# accepted\n"));
+                model.apply()?;
+            }
+        }
+        assert!(!stamp.is_current(&model), "{change}");
+    }
+    Ok(())
+}

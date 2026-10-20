@@ -1,6 +1,6 @@
 //! Picker receipts name a concrete field and reject changes to its source or structure.
 use super::*;
-use recite_writer_model::{AnalysisStamp, RecoveredDraft, RuleEffect};
+use recite_writer_model::{NavigationStamp, RuleEffect};
 
 #[derive(Clone)]
 pub(crate) enum Choice {
@@ -17,9 +17,8 @@ pub(crate) enum Target {
 pub(crate) struct Request {
     target: Target,
     window: xilem::WindowId,
-    stamp: AnalysisStamp,
-    draft: RecoveredDraft,
-    passage: String,
+    origin: NavigationStamp,
+    session: SessionIdentity,
     structure: StructureRevision,
     pub choices: Vec<(String, String, Choice)>,
 }
@@ -27,13 +26,10 @@ impl Request {
     pub fn is_current(&self, writer: &Writer) -> bool {
         writer.rules_editable()
             && self.window == writer.window
-            && self.stamp.is_current(writer.session.model().document())
-            && self.draft == writer.session.model().recovery()
-            && writer
-                .rules
-                .as_ref()
-                .is_some_and(|rules| rules.passage == self.passage)
-            && self.structure == writer.rule_controls.revision
+            && self.origin.is_current(writer.session.model())
+            && writer.rules.as_ref().is_some_and(|reply| {
+                reply.identity == self.session && reply.controls.revision == self.structure
+            })
     }
     pub fn apply(&self, writer: &mut Writer, choice: Choice) -> bool {
         if !self.is_current(writer) {
@@ -45,7 +41,7 @@ impl Request {
                 if !writer
                     .rules
                     .as_ref()
-                    .and_then(|rules| target.get(rules))
+                    .and_then(|reply| target.get(&reply.projection))
                     .is_some_and(|argument| argument.choices.contains(&value))
                 {
                     return false;
@@ -84,7 +80,8 @@ impl Writer {
         if !self.rules_editable() {
             return;
         }
-        let Some(rules) = &self.rules else { return };
+        let Some(reply) = &self.rules else { return };
+        let rules = &reply.projection;
         let choices = match &target {
             Target::AddCondition(_) => rules
                 .available_conditions
@@ -129,15 +126,14 @@ impl Writer {
                 })
                 .collect(),
         };
-        self.rule_controls.pending_choice = Some(Request {
+        self.pending_choice = Some(crate::choices::Request::Rules(Request {
             target,
             choices,
             window: self.window,
-            stamp: self.session.model().document().analysis_stamp(),
-            draft: self.session.model().recovery(),
-            passage: rules.passage.clone(),
-            structure: self.rule_controls.revision,
-        });
+            origin: self.session.model().navigation_stamp(),
+            session: reply.identity.clone(),
+            structure: reply.controls.revision,
+        }));
     }
 }
 fn signature(arguments: &[RuleArgument]) -> String {

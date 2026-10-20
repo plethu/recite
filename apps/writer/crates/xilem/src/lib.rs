@@ -1,4 +1,5 @@
 mod app;
+mod choices;
 mod editor_work;
 mod external_editor;
 mod feedback;
@@ -7,6 +8,7 @@ mod native_host;
 mod navigation;
 mod presentation;
 mod reading;
+mod routes;
 mod rules;
 mod session;
 #[cfg(test)]
@@ -36,8 +38,8 @@ struct Writer {
     recovery_copy: Option<std::path::PathBuf>,
     recovery_details: bool,
     location: recite_writer_session::location::Location,
-    rules: Option<recite_writer_model::ReplyRules>,
-    rule_controls: rules::Controls,
+    rules: Option<rules::ReplySession>,
+    pending_choice: Option<choices::Request>,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
 }
@@ -95,7 +97,7 @@ impl Writer {
             recovery_details: false,
             location: Default::default(),
             rules: None,
-            rule_controls: Default::default(),
+            pending_choice: None,
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),
         }
@@ -141,11 +143,12 @@ impl Writer {
         if result.is_ok()
             && self.rules.as_ref().is_some_and(|rules| {
                 self.session.model().view() != &recite_writer_model::View::Source
-                    || !rules.belongs_to(self.session.model().document())
+                    || !rules
+                        .projection()
+                        .belongs_to(self.session.model().document())
             })
         {
-            self.rules = None;
-            self.location.screen = recite_writer_session::location::Screen::Write;
+            self.retire_rules();
         }
         self.status = match result {
             Ok(()) if self.source_repair_pending() => {
@@ -168,8 +171,7 @@ impl Writer {
             .ok_or(FileError::ProjectRequired)
             .and_then(ProjectSession::reload_current);
         if result.is_ok() {
-            self.rules = None;
-            self.location.screen = recite_writer_session::location::Screen::Write;
+            self.retire_rules();
         }
         self.status = match result {
             Ok(Some(path)) => {

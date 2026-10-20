@@ -3,7 +3,7 @@ use xilem::masonry::properties::LineBreaking;
 use xilem::view::button;
 const PAGE: usize = 8;
 
-pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let documents = if state.session.project().is_some() {
         Either::A(project_files(state))
     } else {
@@ -16,7 +16,7 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
     )
     .width(state.navigation_width().px())
 }
-fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing;
     const FILE_PAGE: usize = 4;
@@ -27,13 +27,13 @@ fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
         .len()
         .div_ceil(FILE_PAGE)
         .max(1);
-    state.file_page = state.file_page.min(pages - 1);
+    let page = state.file_page.min(pages - 1);
     let files = state
         .session
         .project()
         .map_or(&[][..], |project| project.documents())
         .iter()
-        .skip(state.file_page * FILE_PAGE)
+        .skip(page * FILE_PAGE)
         .take(FILE_PAGE)
         .map(|document| {
             let path = document.path.clone();
@@ -68,23 +68,18 @@ fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
                 .gap(8.px()),
             (pages > 1).then(|| {
                 flex_col((
-                    text_button(scale, "Previous files", |state: &mut Writer| {
-                        state.file_page = state.file_page.saturating_sub(1)
+                    text_button(scale, "Previous files", move |state: &mut Writer| {
+                        state.file_page = page.saturating_sub(1)
                     })
-                    .disabled(closing || state.file_page == 0),
-                    text_button(scale, "Next files", |state: &mut Writer| {
-                        state.file_page += 1
+                    .disabled(closing || page == 0),
+                    text_button(scale, "Next files", move |state: &mut Writer| {
+                        state.file_page = (page + 1).min(pages - 1)
                     })
-                    .disabled(closing || state.file_page + 1 >= pages),
+                    .disabled(closing || page + 1 >= pages),
                 ))
                 .gap(8.px())
             }),
-            (pages > 1).then(|| {
-                label(
-                    scale,
-                    format!("Files · page {} of {pages}", state.file_page + 1),
-                )
-            }),
+            (pages > 1).then(|| label(scale, format!("Files · page {} of {pages}", page + 1))),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(12.px()),
@@ -92,15 +87,15 @@ fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
     .width(state.navigation_width().px())
 }
 
-fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing;
     let blocks = state.session.model().document().block_summaries();
     let pages = blocks.len().div_ceil(PAGE).max(1);
-    state.beat_page = state.beat_page.min(pages - 1);
+    let page = state.beat_page.min(pages - 1);
     let entries = blocks
         .iter()
-        .skip(state.beat_page * PAGE)
+        .skip(page * PAGE)
         .take(PAGE)
         .map(|block| {
             let id = block.id().to_string();
@@ -137,23 +132,18 @@ fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             .gap(8.px()),
         (pages > 1).then(|| {
             flex_col((
-                text_button(scale, "Previous beats", |state: &mut Writer| {
-                    state.beat_page = state.beat_page.saturating_sub(1)
+                text_button(scale, "Previous beats", move |state: &mut Writer| {
+                    state.beat_page = page.saturating_sub(1)
                 })
-                .disabled(closing || state.beat_page == 0),
-                text_button(scale, "Next beats", |state: &mut Writer| {
-                    state.beat_page += 1
+                .disabled(closing || page == 0),
+                text_button(scale, "Next beats", move |state: &mut Writer| {
+                    state.beat_page = (page + 1).min(pages - 1)
                 })
-                .disabled(closing || state.beat_page + 1 >= pages),
+                .disabled(closing || page + 1 >= pages),
             ))
             .gap(8.px())
         }),
-        (pages > 1).then(|| {
-            label(
-                scale,
-                format!("Beats · page {} of {pages}", state.beat_page + 1),
-            )
-        }),
+        (pages > 1).then(|| label(scale, format!("Beats · page {} of {pages}", page + 1))),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())

@@ -1,137 +1,192 @@
+//! Reply components consume one resolved editing session.
 use super::*;
-use crate::{
-    keyed::keyed,
-    presentation::{label, paragraph, text_button},
-};
+use crate::presentation::{label, paragraph, text_button};
 use xilem::{
-    InsertNewline, WidgetView,
-    masonry::{layout::AsUnit, properties::TextAreaLabel},
+    AnyWidgetView, WidgetView,
+    masonry::layout::AsUnit,
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, sized_box, text_input},
+    view::{CrossAxisAlignment, flex_col, flex_row, sized_box},
 };
+mod argument;
 mod structure;
+pub(crate) use argument::ArgumentField;
 const PAGE: usize = 8;
 
-#[derive(Clone, Copy, Default, PartialEq)]
-pub(crate) struct ArgumentField(pub bool);
-impl xilem::masonry::core::UsesProperty<ArgumentField> for xilem::masonry::widgets::TextInput {}
-impl xilem::masonry::core::Property for ArgumentField {
-    fn static_default() -> &'static Self {
-        static OTHER: ArgumentField = ArgumentField(false);
-        &OTHER
-    }
+pub(crate) fn panel(state: &Writer, reply: &ReplySession) -> impl WidgetView<Writer> + use<> {
+    sized_box(
+        flex_col((
+            heading(state, &reply.projection),
+            additions(state, &reply.projection),
+            draft_actions(state),
+            reply_actions(state, &reply.projection),
+            fields(state, reply),
+            pagination(state, reply),
+            (!state.work.busy()
+                && !state.navigation.busy()
+                && !reply
+                    .projection
+                    .belongs_to(state.session.model().document()))
+            .then(|| {
+                text_button(
+                    state.ui_scale(),
+                    "Refresh reply controls",
+                    Writer::refresh_rules,
+                )
+            }),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(12.px()),
+    )
+    .width(state.script_width().px())
 }
-pub(crate) fn panel(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+fn heading(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let width = state.script_width();
+    flex_col((
+        label(scale, "Reply rules").text_size(22. * scale),
+        paragraph(scale, format!("{} · Destination: {}", rules.text,
+            rules.destination.as_deref().unwrap_or("No destination")), width),
+        paragraph(scale, "Conditions control when this reply is available. Effects belong to its destination and can also run when another reply reaches that beat.", width),
+        rules.has_other_statements.then(|| paragraph(scale,
+            "Other statements are preserved. Effect order can change only when the destination contains direct effects alone.", width)),
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px())
+}
+fn additions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let disabled = !state.rules_editable();
-    let rules = state.rules.as_ref();
-    let pages = state.rule_controls.rows.len().div_ceil(PAGE).max(1);
-    state.rule_controls.page = state.rule_controls.page.min(pages - 1);
-    let page = state.rule_controls.page;
-    let rows = state
-        .rule_controls
+    flex_col((
+        flex_row((
+            text_button(scale, "Add condition…", |state: &mut Writer| {
+                state.pick_rule_choice(selection::Target::AddCondition(None))
+            })
+            .disabled(disabled || rules.available_conditions.is_empty()),
+            text_button(scale, "Add effect…", |state: &mut Writer| {
+                state.pick_rule_choice(selection::Target::AddEffect)
+            })
+            .disabled(
+                disabled || !rules.effect_order_editable || rules.available_effects.is_empty(),
+            ),
+        ))
+        .gap(8.px()),
+        rules
+            .condition
+            .is_none()
+            .then(|| label(scale, "Available without a condition")),
+        rules
+            .effects
+            .is_empty()
+            .then(|| label(scale, "No direct effects at this destination")),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(12.px())
+}
+fn draft_actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let disabled = !state.rules_editable() || !state.session.model().has_draft();
+    flex_row((
+        text_button(state.ui_scale(), "Apply reply", |state: &mut Writer| {
+            state.navigate(crate::navigation::Target::Edit(
+                recite_writer_model::EditOperation::Apply,
+            ))
+        })
+        .disabled(disabled),
+        text_button(state.ui_scale(), "Discard reply", Writer::discard_rules).disabled(disabled),
+    ))
+    .gap(8.px())
+}
+fn reply_actions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> + use<> {
+    let passage = rules.passage.clone();
+    flex_col((
+        text_button(state.ui_scale(), "Edit reply text", Writer::edit_reply_text)
+            .disabled(!state.rules_editable()),
+        text_button(
+            state.ui_scale(),
+            "Change reply destination…",
+            move |state: &mut Writer| {
+                state.choose_destination(recite_writer_model::RouteOwner::Reply(passage.clone()))
+            },
+        )
+        .disabled(!state.rules_editable()),
+    ))
+    .direction(
+        if state.script_width() >= 350. * f64::from(state.ui_scale()) {
+            xilem::masonry::kurbo::Axis::Horizontal
+        } else {
+            xilem::masonry::kurbo::Axis::Vertical
+        },
+    )
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(8.px())
+}
+fn fields(state: &Writer, reply: &ReplySession) -> impl WidgetView<Writer> + use<> {
+    let pages = reply.controls.rows.len().div_ceil(PAGE).max(1);
+    let page = reply.controls.page.min(pages - 1);
+    let rows = reply
+        .controls
         .rows
         .iter()
         .skip(page * PAGE)
         .take(PAGE)
-        .map(|row| match row {
-            Row::Condition(path, title) => {
-                xilem::core::one_of::Either::A(structure::condition(state, path, title))
-            }
-            Row::Effect(index, title) => xilem::core::one_of::Either::B(
-                xilem::core::one_of::Either::A(structure::effect(state, *index, title)),
-            ),
-            Row::Argument(target) => xilem::core::one_of::Either::B(
-                xilem::core::one_of::Either::B(argument(state, target)),
-            ),
-        })
+        .map(|row| row_view(state, reply, row))
         .collect::<Vec<_>>();
-    sized_box(flex_col((
-        label(scale, "Reply rules").text_size(22. * scale),
-        paragraph(scale, rules.map_or_else(String::new, |rules| format!("{} · Destination: {}", rules.text, rules.destination.as_deref().unwrap_or("No destination"))), state.script_width()),
-        paragraph(scale, "Conditions control when this reply is available. Effects belong to its destination and can also run when another reply reaches that beat.", state.script_width()),
-        rules.filter(|rules| rules.has_other_statements).map(|_| paragraph(scale, "Other statements are preserved. Effect order can change only when the destination contains direct effects alone.", state.script_width())),
-        flex_row((
-            text_button(scale, "Add condition…", |state: &mut Writer| state.pick_rule_choice(selection::Target::AddCondition(None)))
-                .disabled(disabled || rules.is_none_or(|rules| rules.available_conditions.is_empty())),
-            text_button(scale, "Add effect…", |state: &mut Writer| state.pick_rule_choice(selection::Target::AddEffect))
-                .disabled(disabled || rules.is_none_or(|rules| !rules.effect_order_editable || rules.available_effects.is_empty())),
-        )).gap(8.px()),
-        rules.filter(|rules| rules.condition.is_none()).map(|_| label(scale, "Available without a condition")),
-        rules.filter(|rules| rules.effects.is_empty()).map(|_| label(scale, "No direct effects at this destination")),
-        flex_row((
-            text_button(scale, "Apply reply", |state: &mut Writer| state.navigate(crate::navigation::Target::Edit(recite_writer_model::EditOperation::Apply)))
-                .disabled(disabled || !state.session.model().has_draft()),
-            text_button(scale, "Discard reply", Writer::discard_rules).disabled(disabled || !state.session.model().has_draft()),
-        )).gap(8.px()),
-        text_button(scale, "Edit reply text", Writer::edit_reply_text).disabled(disabled),
-        flex_col(rows).cross_axis_alignment(CrossAxisAlignment::Start).gap(16.px()),
-        (pages > 1).then(|| flex_col((
-            label(scale, format!("Rule fields · {} of {pages}", page + 1)),
-            flex_row((text_button(scale, "Previous fields", |state: &mut Writer| state.rule_controls.page = state.rule_controls.page.saturating_sub(1)).disabled(page == 0),
-            text_button(scale, "Next fields", |state: &mut Writer| state.rule_controls.page += 1).disabled(page + 1 >= pages),
-            )).gap(8.px()),
-        )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())),
-        (!state.work.busy() && !state.navigation.busy() && rules.is_some_and(|rules| !rules.belongs_to(state.session.model().document()))).then(|| text_button(scale, "Refresh reply controls", |state: &mut Writer| { state.refresh_rules(); })),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px())).width(state.script_width().px())
+    flex_col(rows)
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(16.px())
 }
-fn argument(state: &Writer, target: &ArgumentTarget) -> impl WidgetView<Writer> + use<> {
-    let argument = state.rules.as_ref().and_then(|rules| target.get(rules));
-    let scale = state.ui_scale();
-    let caption = argument.map_or_else(String::new, |arg| {
-        let owner = match &target.call {
-            CallTarget::Condition(path) => state
-                .rules
-                .as_ref()
-                .and_then(|rules| rules.condition.as_ref())
-                .and_then(|root| root.at(path))
-                .and_then(|node| match node {
-                    RuleExpression::Call { function, .. } => Some(function.as_str()),
-                    _ => None,
-                })
-                .unwrap_or("Condition"),
-            CallTarget::Effect(index) => state
-                .rules
-                .as_ref()
-                .and_then(|rules| rules.effects.get(*index))
-                .map_or("Effect", |effect| effect.function.as_str()),
-        };
-        format!("{owner} · {} · {}", arg.label, arg.type_name)
-    });
-    let target = target.clone();
-    let change = target.clone();
-    let choose = target.clone();
-    let choices = argument.is_some_and(|argument| !argument.choices.is_empty());
-    flex_col((
-        paragraph(scale, caption.clone(), state.script_width()),
-        sized_box(keyed(
-            (
-                state.session.model().document().key().clone(),
-                state.rules.as_ref().map(|rules| rules.passage.clone()),
-                state.rule_controls.revision,
-                target,
+fn row_view(state: &Writer, reply: &ReplySession, row: &Row) -> Box<AnyWidgetView<Writer>> {
+    match row.resolve(&reply.projection) {
+        Some(rows::Resolved::Condition { path, title, node }) => {
+            structure::condition(state, reply, path, title, node).boxed()
+        }
+        Some(rows::Resolved::Effect { index, effect }) => {
+            structure::effect(state, reply, index, effect).boxed()
+        }
+        Some(rows::Resolved::Argument {
+            target,
+            owner,
+            argument,
+        }) => argument::field(state, reply, target, owner, argument).boxed(),
+        None => paragraph(
+            state.ui_scale(),
+            "Reply controls changed. Refresh them to continue.",
+            state.script_width(),
+        )
+        .boxed(),
+    }
+}
+fn pagination(state: &Writer, reply: &ReplySession) -> Option<impl WidgetView<Writer> + use<>> {
+    let pages = reply.controls.rows.len().div_ceil(PAGE).max(1);
+    let page = reply.controls.page.min(pages - 1);
+    (pages > 1).then(|| {
+        flex_col((
+            label(
+                state.ui_scale(),
+                format!("Rule fields · {} of {pages}", page + 1),
             ),
-            text_input(
-                argument.map_or_else(String::new, |arg| arg.value.clone()),
-                move |state: &mut Writer, value| state.edit_rule_argument(change.clone(), value),
-            )
-            .text_size(16. * scale)
-            .insert_newline(InsertNewline::OnShiftEnter)
-            .disabled(!state.rules_editable())
-            .prop(TextAreaLabel::new(caption))
-            .prop(ArgumentField(true)),
+            flex_row((
+                text_button(
+                    state.ui_scale(),
+                    "Previous fields",
+                    move |state: &mut Writer| {
+                        if let Some(reply) = &mut state.rules {
+                            reply.controls.page = page.saturating_sub(1);
+                        }
+                    },
+                )
+                .disabled(page == 0),
+                text_button(
+                    state.ui_scale(),
+                    "Next fields",
+                    move |state: &mut Writer| {
+                        if let Some(reply) = &mut state.rules {
+                            reply.controls.page = (page + 1).min(pages - 1);
+                        }
+                    },
+                )
+                .disabled(page + 1 >= pages),
+            ))
+            .gap(8.px()),
         ))
-        .width(state.script_width().px()),
-        choices.then(|| {
-            text_button(scale, "Choose value…", move |state: &mut Writer| {
-                state.pick_rule_choice(selection::Target::Argument(choose.clone()))
-            })
-            .disabled(!state.rules_editable())
-        }),
-        argument
-            .and_then(|argument| argument.validate().err())
-            .map(|error| paragraph(scale, error.to_string(), state.script_width())),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(6.px())
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(8.px())
+    })
 }

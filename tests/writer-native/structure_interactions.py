@@ -61,12 +61,6 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         type_text("The new scene begins.")
         window.wait(lambda: window.text(node) == "The new scene begins.", "new line draft")
         window.act("Add reply")
-        window.wait(
-            lambda: window.find_text("Apply or discard", prefix=True), "creation draft guard"
-        )
-        assert window.text(node) == "The new scene begins."
-        window.act("Apply draft")
-        window.act("Add reply")
         node = window.wait(lambda: manuscript(window), "new reply editor")
         window.wait(lambda: window.text(node) != "The new scene begins.", "new reply selection")
         window.focus(node)
@@ -85,7 +79,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         results["structured_save_seconds"] = time.monotonic() - started
         window.wait(lambda: window.find_text("Saved"), "save completion", timeout=30)
         assert source.read_text().startswith("# A new scene.")
-        results["structured_creation_draft_guard_and_reading"] = True
+        results["structured_creation_applies_prose_before_leaving_and_preserves_unsaved_boundary"] = True
         window.close_clean()
         assert process.wait(timeout=5) == 0
     except Exception:

@@ -243,7 +243,7 @@ fn pending_editor_save_keeps_manuscript_enabled_and_exposes_cancellation() {
         Arc::new(NoProxy),
         Arc::new(tokio::runtime::Runtime::new().unwrap()),
     );
-    let view = crate::view::writer(&mut writer);
+    let view = crate::view::writer(&writer);
     let save_sender = writer.work.sender.clone();
     let editor_sender = writer.external.sender.clone();
     let (pod, _) = view.build(&mut ctx, &mut writer);

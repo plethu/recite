@@ -1,155 +1,171 @@
 use super::*;
+use recite_writer_model::RuleEffect;
 
 pub(super) fn condition(
     state: &Writer,
+    reply: &ReplySession,
     path: &[usize],
     title: &str,
+    node: &RuleExpression,
 ) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    let disabled = !state.rules_editable();
-    let node = state
-        .rules
-        .as_ref()
-        .and_then(|rules| rules.condition.as_ref())
-        .and_then(|root| root.at(path));
-    let group = matches!(node, Some(RuleExpression::All(_) | RuleExpression::Any(_)));
-    let path = path.to_vec();
-    let all = path.clone();
-    let any = path.clone();
-    let not = path.clone();
-    let remove = path.clone();
-    let target = CallTarget::Condition(path.clone());
-    let expanded = state.rule_controls.expanded.as_ref() == Some(&target);
+    let target = CallTarget::Condition(path.to_vec());
+    let expanded = reply.controls.expanded.as_ref() == Some(&target);
     flex_col((
-        actions(
-            state,
-            format!("Condition: {title}"),
-            CallTarget::Condition(path.clone()),
-            expanded,
-        ),
-        expanded.then(|| {
-            flex_row((
-                text_button(
-                    scale,
-                    if group { "Match all" } else { "Group: all" },
-                    move |state: &mut Writer| state.group_condition(all.clone(), Grouping::All),
-                )
-                .disabled(disabled || matches!(node, Some(RuleExpression::All(_)))),
-                text_button(
-                    scale,
-                    if group { "Match any" } else { "Group: any" },
-                    move |state: &mut Writer| state.group_condition(any.clone(), Grouping::Any),
-                )
-                .disabled(disabled || matches!(node, Some(RuleExpression::Any(_)))),
-                text_button(
-                    scale,
-                    if matches!(node, Some(RuleExpression::Not(_))) {
-                        "Remove negation"
-                    } else {
-                        "Negate"
-                    },
-                    move |state: &mut Writer| state.group_condition(not.clone(), Grouping::Not),
-                )
-                .disabled(disabled),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
-        }),
-        expanded.then(|| {
-            flex_col((
-                group.then(|| {
-                    text_button(scale, "Add within group…", move |state: &mut Writer| {
-                        state.pick_rule_choice(selection::Target::AddCondition(Some(path.clone())))
-                    })
-                    .disabled(disabled)
-                }),
-                text_button(
-                    scale,
-                    format!("Remove condition {title}"),
-                    move |state: &mut Writer| state.remove_condition(remove.clone()),
-                )
-                .disabled(disabled),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
-        }),
+        actions(state, format!("Condition: {title}"), target, expanded),
+        expanded.then(|| grouping(state, path, node)),
+        expanded.then(|| condition_actions(state, path, title, node)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())
 }
-pub(super) fn effect(state: &Writer, index: usize, title: &str) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    let effect = state
-        .rules
-        .as_ref()
-        .and_then(|rules| rules.effects.get(index));
+fn grouping(
+    state: &Writer,
+    path: &[usize],
+    node: &RuleExpression,
+) -> impl WidgetView<Writer> + use<> {
     let disabled = !state.rules_editable();
-    let reorder = !disabled
-        && state
-            .rules
-            .as_ref()
-            .is_some_and(|rules| rules.effect_order_editable);
-    let count = state.rules.as_ref().map_or(0, |rules| rules.effects.len());
-    let expanded = state.rule_controls.expanded.as_ref() == Some(&CallTarget::Effect(index));
-    let mode = effect.map_or("", |effect| mode_name(effect.mode));
+    let group = matches!(node, RuleExpression::All(_) | RuleExpression::Any(_));
+    let all = path.to_vec();
+    let any = path.to_vec();
+    let not = path.to_vec();
+    flex_row((
+        text_button(
+            state.ui_scale(),
+            if group { "Match all" } else { "Group: all" },
+            move |state: &mut Writer| state.group_condition(all.clone(), Grouping::All),
+        )
+        .disabled(disabled || matches!(node, RuleExpression::All(_))),
+        text_button(
+            state.ui_scale(),
+            if group { "Match any" } else { "Group: any" },
+            move |state: &mut Writer| state.group_condition(any.clone(), Grouping::Any),
+        )
+        .disabled(disabled || matches!(node, RuleExpression::Any(_))),
+        text_button(
+            state.ui_scale(),
+            if matches!(node, RuleExpression::Not(_)) {
+                "Remove negation"
+            } else {
+                "Negate"
+            },
+            move |state: &mut Writer| state.group_condition(not.clone(), Grouping::Not),
+        )
+        .disabled(disabled),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(6.px())
+}
+fn condition_actions(
+    state: &Writer,
+    path: &[usize],
+    title: &str,
+    node: &RuleExpression,
+) -> impl WidgetView<Writer> + use<> {
+    let add = path.to_vec();
+    let remove = path.to_vec();
     flex_col((
-        actions(
-            state,
-            format!("Effect {}: {title} · {mode}", index + 1),
-            CallTarget::Effect(index),
-            expanded,
-        ),
-        expanded.then(|| {
-            flex_col((
-                text_button(scale, "Move effect up", move |state: &mut Writer| {
-                    state.move_effect(index, false)
-                })
-                .disabled(!reorder || index == 0),
-                text_button(scale, "Move effect down", move |state: &mut Writer| {
-                    state.move_effect(index, true)
-                })
-                .disabled(!reorder || index + 1 >= count),
-                text_button(scale, "Remove effect", move |state: &mut Writer| {
-                    state.remove_effect(index)
-                })
-                .disabled(!reorder),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(6.px())
-        }),
-        expanded.then(|| {
-            flex_col(
-                effect
-                    .into_iter()
-                    .flat_map(|effect| {
-                        effect.allowed_modes.iter().map(move |mode| {
-                            let mode = *mode;
-                            let caption = mode_name(mode);
-                            text_button(
-                                scale,
-                                format!(
-                                    "{}Delivery: {caption}",
-                                    if mode == effect.mode {
-                                        "Selected · "
-                                    } else {
-                                        ""
-                                    }
-                                ),
-                                move |state: &mut Writer| state.effect_mode(index, mode),
-                            )
-                            .disabled(disabled || mode == effect.mode)
-                        })
-                    })
-                    .collect::<Vec<_>>(),
+        matches!(node, RuleExpression::All(_) | RuleExpression::Any(_)).then(|| {
+            text_button(
+                state.ui_scale(),
+                "Add within group…",
+                move |state: &mut Writer| {
+                    state.pick_rule_choice(selection::Target::AddCondition(Some(add.clone())))
+                },
             )
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(4.px())
+            .disabled(!state.rules_editable())
         }),
+        text_button(
+            state.ui_scale(),
+            format!("Remove condition {title}"),
+            move |state: &mut Writer| state.remove_condition(remove.clone()),
+        )
+        .disabled(!state.rules_editable()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())
 }
-
+pub(super) fn effect(
+    state: &Writer,
+    reply: &ReplySession,
+    index: usize,
+    effect: &RuleEffect,
+) -> impl WidgetView<Writer> + use<> {
+    let target = CallTarget::Effect(index);
+    let expanded = reply.controls.expanded.as_ref() == Some(&target);
+    flex_col((
+        actions(
+            state,
+            format!(
+                "Effect {}: {} · {}",
+                index + 1,
+                effect.function,
+                mode_name(effect.mode)
+            ),
+            target,
+            expanded,
+        ),
+        expanded.then(|| effect_order(state, &reply.projection, index)),
+        expanded.then(|| delivery_modes(state, index, effect)),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(6.px())
+}
+fn effect_order(
+    state: &Writer,
+    rules: &ReplyRules,
+    index: usize,
+) -> impl WidgetView<Writer> + use<> {
+    let disabled = !state.rules_editable() || !rules.effect_order_editable;
+    flex_col((
+        text_button(
+            state.ui_scale(),
+            "Move effect up",
+            move |state: &mut Writer| state.move_effect(index, false),
+        )
+        .disabled(disabled || index == 0),
+        text_button(
+            state.ui_scale(),
+            "Move effect down",
+            move |state: &mut Writer| state.move_effect(index, true),
+        )
+        .disabled(disabled || index + 1 >= rules.effects.len()),
+        text_button(
+            state.ui_scale(),
+            "Remove effect",
+            move |state: &mut Writer| state.remove_effect(index),
+        )
+        .disabled(disabled),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(6.px())
+}
+fn delivery_modes(
+    state: &Writer,
+    index: usize,
+    effect: &RuleEffect,
+) -> impl WidgetView<Writer> + use<> {
+    let modes = effect
+        .allowed_modes
+        .iter()
+        .map(|mode| {
+            let mode = *mode;
+            let selected = mode == effect.mode;
+            text_button(
+                state.ui_scale(),
+                format!(
+                    "{}Delivery: {}",
+                    if selected { "Selected · " } else { "" },
+                    mode_name(mode)
+                ),
+                move |state: &mut Writer| state.effect_mode(index, mode),
+            )
+            .disabled(!state.rules_editable() || selected)
+        })
+        .collect::<Vec<_>>();
+    flex_col(modes)
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(4.px())
+}
 fn mode_name(mode: EffectMode) -> &'static str {
     match mode {
         EffectMode::Deferred => "Deferred",
@@ -157,7 +173,6 @@ fn mode_name(mode: EffectMode) -> &'static str {
         EffectMode::Blocking => "Blocking",
     }
 }
-
 fn actions(
     state: &Writer,
     title: String,

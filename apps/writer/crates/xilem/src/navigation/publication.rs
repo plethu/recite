@@ -30,6 +30,7 @@ impl Writer {
                 prepared,
                 operation,
             } => self.publish_navigation_edit(&request, prepared, *operation),
+            ResultValue::Structure(prepared) => self.publish_structural_edit(&request, prepared),
             ResultValue::Navigation {
                 prepared,
                 checkpoint,
@@ -82,8 +83,26 @@ impl Writer {
                 Ok(())
             }
             Target::Edit(target) => self.submit_edit(request.target.clone(), *target),
+            Target::Structure(command) => self.submit_structural(command.clone()),
             target => self.submit_navigation(target.clone()),
         }
+    }
+    fn publish_structural_edit(
+        &mut self,
+        request: &Request,
+        prepared: &mut recite_writer_model::PreparedStructuralEdit,
+    ) -> Result<(), String> {
+        if !request.origin.is_current(self) {
+            return Err("The draft changed while the structural edit was preparing. Your current work stays open.".into());
+        }
+        self.session
+            .edit(|model| model.accept_structural_edit(prepared))
+            .map_err(|error| error.to_string())?;
+        self.retire_rules();
+        self.reading.prepare(self.session.model());
+        self.remember_location();
+        self.status = "Structural edit updated. Save when ready.".into();
+        Ok(())
     }
     fn publish_navigation(
         &mut self,
@@ -121,21 +140,23 @@ impl Writer {
                 location.screen == recite_writer_session::location::Screen::Preview;
             self.install_rules(&mut prepared.rules);
         } else if let Target::Selection(location) = &request.target {
-            self.rules = None;
-            self.location.screen = recite_writer_session::location::Screen::Write;
+            self.retire_rules();
             self.location.document = location.document.clone();
             self.location.beat = location.beat.clone();
             self.location.passage = location.passage.clone();
             self.location.source = location.source;
             self.location.view = location.view;
         } else {
-            self.rules = None;
-            self.location.screen = recite_writer_session::location::Screen::Write;
+            self.retire_rules();
         }
         self.beat_page = 0;
         self.remember_location();
         self.reading.prepare(self.session.model());
-        self.status = if let Some(status) = self.rule_controls.refresh_status.take() {
+        self.status = if let Some(status) = self
+            .rules
+            .as_mut()
+            .and_then(crate::rules::ReplySession::take_refresh_status)
+        {
             status
         } else if self.session.dirty() {
             "Unsaved work restored".into()
@@ -146,9 +167,13 @@ impl Writer {
     }
     pub(crate) fn navigation_failed(&mut self, error: String) {
         self.navigation.visit = None;
-        if self.rule_controls.refresh_status.take().is_some() {
-            self.rules = None;
-            self.location.screen = recite_writer_session::location::Screen::Write;
+        if self
+            .rules
+            .as_mut()
+            .and_then(crate::rules::ReplySession::take_refresh_status)
+            .is_some()
+        {
+            self.retire_rules();
             self.location.passage = None;
         }
         // Parking may have completed before cancellation or failed destination validation.

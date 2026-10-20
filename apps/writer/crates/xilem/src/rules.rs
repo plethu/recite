@@ -1,4 +1,5 @@
 //! Native rule controls stage edits through the shared authoring owner.
+mod editing;
 mod rows;
 pub(crate) mod selection;
 pub(super) mod view;
@@ -6,6 +7,7 @@ use crate::{Phase, Writer};
 use recite_core::ast::EffectMode;
 use recite_writer_model::{ReplyRules, RuleArgument, RuleExpression};
 use rows::Row;
+use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct StructureRevision(u64);
@@ -47,13 +49,61 @@ impl ArgumentTarget {
     }
 }
 #[derive(Default)]
-pub(super) struct Controls {
+struct Controls {
     revision: StructureRevision,
     rows: Vec<Row>,
     page: usize,
     expanded: Option<CallTarget>,
-    pub pending_choice: Option<selection::Request>,
-    pub refresh_status: Option<String>,
+    refresh_status: Option<String>,
+}
+/// A projection and all presentation state share one lifetime. The Workbench owns
+/// source, draft and history; this session owns only mounted reply controls.
+pub(super) struct ReplySession {
+    projection: ReplyRules,
+    document: recite_core::DocumentKey,
+    identity: SessionIdentity,
+    controls: Controls,
+}
+#[derive(Clone, Debug)]
+struct SessionIdentity(Arc<()>);
+impl PartialEq for SessionIdentity {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+impl ReplySession {
+    fn new(projection: ReplyRules, document: recite_core::DocumentKey) -> Self {
+        let rows = rows::project(&projection);
+        Self {
+            projection,
+            document,
+            identity: SessionIdentity(Arc::new(())),
+            controls: Controls {
+                rows,
+                ..Controls::default()
+            },
+        }
+    }
+    pub fn is_open_for(&self, model: &recite_writer_model::Workbench) -> bool {
+        model.view() == &recite_writer_model::View::Source
+            && self.document == *model.document().key()
+    }
+    pub fn projection(&self) -> &ReplyRules {
+        &self.projection
+    }
+    pub fn take_refresh_status(&mut self) -> Option<String> {
+        self.controls.refresh_status.take()
+    }
+    fn replace(&mut self, projection: ReplyRules) -> ReplyRules {
+        let rows = rows::project(&projection);
+        if self.controls.rows != rows {
+            self.controls.revision.advance();
+            self.controls.page = 0;
+            self.controls.expanded = None;
+        }
+        self.controls.rows = rows;
+        std::mem::replace(&mut self.projection, projection)
+    }
 }
 #[derive(Clone, Copy)]
 enum Grouping {
@@ -62,128 +112,46 @@ enum Grouping {
     Not,
 }
 impl Writer {
+    pub(super) fn retire_rules(&mut self) {
+        self.rules = None;
+        self.pending_choice = None;
+        self.location.screen = recite_writer_session::location::Screen::Write;
+    }
     pub(super) fn reset_rule_structure(&mut self) {
-        self.rule_controls.revision.advance();
+        if let Some(reply) = &mut self.rules {
+            reply.controls.revision.advance();
+        }
     }
     pub(crate) fn rules_editable(&self) -> bool {
         self.phase == Phase::Writing
             && !self.work.busy()
             && !self.navigation.busy()
-            && self.rules.as_ref().is_some_and(|rules| {
+            && self.rules.as_ref().is_some_and(|reply| {
                 self.session.model().view() == &recite_writer_model::View::Source
-                    && rules.belongs_to(self.session.model().document())
+                    && reply.projection.belongs_to(self.session.model().document())
             })
     }
     pub(super) fn install_rules(&mut self, rules: &mut Option<ReplyRules>) {
-        if !self
-            .rules
-            .as_ref()
-            .zip(rules.as_ref())
-            .is_some_and(|(old, next)| {
-                old.passage == next.passage && rows::same_structure(old, next)
-            })
-        {
-            self.rule_controls.revision.advance();
-            self.rule_controls.page = 0;
-        }
-        std::mem::swap(&mut self.rules, rules);
-        self.rule_controls.rows = self.rules.as_ref().map(rows::project).unwrap_or_default();
-    }
-    fn stage_rules(&mut self, structural: bool, edit: impl FnOnce(&mut ReplyRules)) {
-        if !self.rules_editable() {
-            self.status =
-                "Finish the current action, then refresh reply controls if needed.".into();
-            return;
-        }
-        let Some(rules) = &mut self.rules else { return };
-        self.status = match self
-            .session
-            .edit(|model| model.stage_reply_rules(rules, edit))
-        {
-            Ok(()) => {
-                if structural {
-                    self.rule_controls.revision.advance();
-                    self.rule_controls.rows = rows::project(rules);
-                    self.rule_controls.expanded = None;
-                }
-                match rules.validate_draft(self.session.model().document()) {
-                    Ok(_) => "Reply draft updated. Apply or Save when ready.".into(),
-                    Err(error) => format!("Reply draft kept · {error}"),
-                }
+        let document = self.session.model().document().key();
+        let old = self.rules.take();
+        self.rules = match (old, rules.take()) {
+            (Some(mut reply), Some(next))
+                if reply.document == *document && reply.projection.passage == next.passage =>
+            {
+                *rules = Some(reply.replace(next));
+                Some(reply)
             }
-            Err(error) => error.to_string(),
+            (old, next) => {
+                *rules = old.map(|reply| reply.projection);
+                next.map(|rules| ReplySession::new(rules, document.clone()))
+            }
         };
     }
-    fn edit_rule_argument(&mut self, target: ArgumentTarget, value: String) {
-        self.stage_rules(false, move |rules| {
-            if let Some(argument) = target.get_mut(rules) {
-                argument.value = value;
-            }
-        });
-    }
-    fn remove_condition(&mut self, path: Vec<usize>) {
-        self.stage_rules(true, |rules| {
-            rules.condition = rules
-                .condition
-                .take()
-                .and_then(|root| root.remove_at(&path));
-        });
-    }
-    fn group_condition(&mut self, path: Vec<usize>, grouping: Grouping) {
-        self.stage_rules(true, |rules| {
-            if let Some(node) = rules.condition.as_mut().and_then(|root| root.at_mut(&path)) {
-                let old = node.clone();
-                *node = match grouping {
-                    Grouping::All => match old {
-                        RuleExpression::Any(items) => RuleExpression::All(items),
-                        old => RuleExpression::All(vec![old]),
-                    },
-                    Grouping::Any => match old {
-                        RuleExpression::All(items) => RuleExpression::Any(items),
-                        old => RuleExpression::Any(vec![old]),
-                    },
-                    Grouping::Not => match old {
-                        RuleExpression::Not(inner) => *inner,
-                        old => RuleExpression::Not(Box::new(old)),
-                    },
-                };
-            }
-        });
-    }
-    fn remove_effect(&mut self, index: usize) {
-        self.stage_rules(true, |rules| {
-            if rules.effect_order_editable && index < rules.effects.len() {
-                rules.effects.remove(index);
-            }
-        });
-    }
-    fn move_effect(&mut self, index: usize, forward: bool) {
-        self.stage_rules(true, |rules| {
-            let next = if forward {
-                index.checked_add(1)
-            } else {
-                index.checked_sub(1)
-            };
-            if rules.effect_order_editable
-                && index < rules.effects.len()
-                && let Some(next) = next.filter(|next| *next < rules.effects.len())
-            {
-                rules.effects.swap(index, next);
-            }
-        });
-    }
-    fn effect_mode(&mut self, index: usize, mode: EffectMode) {
-        self.stage_rules(false, |rules| {
-            if let Some(effect) = rules.effects.get_mut(index)
-                && effect.allowed_modes.contains(&mode)
-            {
-                effect.mode = mode;
-            }
-        });
-    }
     pub(super) fn refresh_rules(&mut self) {
-        if self.rules.is_some() && !self.session.model().has_draft() {
-            self.rule_controls.refresh_status = Some(self.status.clone());
+        if !self.session.model().has_draft()
+            && let Some(reply) = &mut self.rules
+        {
+            reply.controls.refresh_status = Some(self.status.clone());
             if let Err(error) =
                 self.begin_navigation(crate::navigation::Target::Location(self.current_location()))
             {
@@ -192,7 +160,8 @@ impl Writer {
         }
     }
     fn toggle_rule_actions(&mut self, target: CallTarget) {
-        self.rule_controls.expanded = if self.rule_controls.expanded.as_ref() == Some(&target) {
+        let Some(reply) = &mut self.rules else { return };
+        reply.controls.expanded = if reply.controls.expanded.as_ref() == Some(&target) {
             None
         } else {
             Some(target)
@@ -204,7 +173,7 @@ impl Writer {
                 model.discard();
                 Ok(())
             });
-            self.rule_controls.revision.advance();
+            self.reset_rule_structure();
             self.refresh_rules();
         }
     }
@@ -214,7 +183,7 @@ impl Writer {
                 recite_writer_session::location::Location {
                     screen: recite_writer_session::location::Screen::Write,
                     source: false,
-                    passage: Some(rules.passage.clone()),
+                    passage: Some(rules.projection.passage.clone()),
                     view: Some(recite_config::WriterView::Script),
                     ..self.current_location()
                 },

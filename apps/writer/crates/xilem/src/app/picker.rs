@@ -1,4 +1,5 @@
 //! Transient native lookup keeps the mounted manuscript and its input history intact.
+mod choices;
 mod index;
 #[cfg(test)]
 mod tests;
@@ -31,12 +32,37 @@ pub(crate) enum Mode {
     GoTo,
     ProjectText,
     RulesChoices,
+    Destinations,
+}
+#[derive(Clone, Copy)]
+pub(crate) enum Search {
+    Commands,
+    GoTo,
+    ProjectText,
+}
+enum Purpose {
+    Search(Search),
+    Editor(Box<crate::choices::Request>),
+}
+impl Purpose {
+    fn mode(&self) -> Mode {
+        match self {
+            Self::Search(Search::Commands) => Mode::Commands,
+            Self::Search(Search::GoTo) => Mode::GoTo,
+            Self::Search(Search::ProjectText) => Mode::ProjectText,
+            Self::Editor(request) => match request.as_ref() {
+                crate::choices::Request::Rules(_) => Mode::RulesChoices,
+                crate::choices::Request::Destination(_) => Mode::Destinations,
+            },
+        }
+    }
 }
 #[derive(Clone)]
 enum Item {
     Command(WriterCommand),
     Location(Location),
     Rule(crate::rules::selection::Choice),
+    Destination(String),
 }
 struct Entry {
     item: Item,
@@ -44,10 +70,9 @@ struct Entry {
     detail: String,
 }
 pub(super) struct Picker {
-    pub(super) mode: Mode,
+    purpose: Purpose,
     pub(super) revision: PickerRevision,
     pub(super) instance: PickerInstance,
-    rule_choice: Option<crate::rules::selection::Request>,
     query: String,
     entries: Vec<Entry>,
     matches: Vec<usize>,
@@ -62,16 +87,16 @@ impl Mode {
             Self::GoTo => "Go to scene or beat",
             Self::ProjectText => "Find saved project text",
             Self::RulesChoices => "Choose reply rule value",
+            Self::Destinations => "Change destination",
         }
     }
 }
 impl Picker {
-    fn new(mode: Mode, entries: Vec<Entry>) -> Self {
+    fn new(purpose: Purpose, entries: Vec<Entry>) -> Self {
         let matches = (0..entries.len()).collect();
         Self {
-            mode,
+            purpose,
             instance: PickerInstance(Arc::new(())),
-            rule_choice: None,
             revision: PickerRevision::default(),
             query: String::new(),
             total: entries.len(),
@@ -80,6 +105,9 @@ impl Picker {
             active: 0,
             limit: 100,
         }
+    }
+    pub(super) fn mode(&self) -> Mode {
+        self.purpose.mode()
     }
     fn step(&mut self, forward: bool) {
         let count = self.matches.len();
@@ -90,37 +118,7 @@ impl Picker {
     }
 }
 impl App {
-    pub(super) fn open_rule_choices(&mut self) {
-        let Some(request) = self
-            .writer
-            .as_mut()
-            .and_then(|writer| writer.rule_controls.pending_choice.take())
-        else {
-            return;
-        };
-        if self.settings_open
-            || self.show_welcome
-            || !self
-                .writer
-                .as_ref()
-                .is_some_and(|writer| request.is_current(writer))
-        {
-            return;
-        }
-        let entries = request
-            .choices
-            .iter()
-            .map(|(title, detail, choice)| Entry {
-                title: title.clone(),
-                detail: detail.clone(),
-                item: Item::Rule(choice.clone()),
-            })
-            .collect();
-        let mut picker = Picker::new(Mode::RulesChoices, entries);
-        picker.rule_choice = Some(request);
-        self.picker = Some(picker);
-    }
-    pub(super) fn open_picker(&mut self, mode: Mode) {
+    pub(super) fn open_picker(&mut self, search: Search) {
         if self.settings_open
             || self.show_welcome
             || self
@@ -130,8 +128,8 @@ impl App {
         {
             return;
         }
-        match index::entries(self, mode) {
-            Ok(entries) => self.picker = Some(Picker::new(mode, entries)),
+        match index::entries(self, search) {
+            Ok(entries) => self.picker = Some(Picker::new(Purpose::Search(search), entries)),
             Err(error) => self.status = error,
         }
     }
@@ -208,15 +206,8 @@ impl App {
                     }
                 }
             }
-            Some(Item::Rule(choice)) => {
-                let request = self
-                    .picker
-                    .as_mut()
-                    .and_then(|picker| picker.rule_choice.take());
-                if let (Some(request), Some(writer)) = (request, &mut self.writer) {
-                    request.apply(writer, choice);
-                }
-                self.dismiss_picker();
+            Some(item @ (Item::Rule(_) | Item::Destination(_))) => {
+                self.activate_editor_choice(item)
             }
             _ => {}
         }

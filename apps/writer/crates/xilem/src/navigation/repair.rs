@@ -206,7 +206,7 @@ impl Writer {
                 self.session
                     .edit(|model| model.accept_source_repair(prepared))
                     .map_err(|error| error.to_string())?;
-                self.rules = None;
+                self.retire_rules();
                 self.location.screen = recite_writer_session::location::Screen::Write;
                 self.location.source = true;
                 self.location.passage = None;

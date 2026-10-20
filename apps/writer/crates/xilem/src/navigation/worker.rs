@@ -17,6 +17,7 @@ pub(crate) struct Job {
 }
 pub(crate) enum Work {
     Repair(Box<repair::Work>),
+    Structure(Box<recite_writer_model::StructuralRequest>),
     Edit {
         edit: Box<EditRequest>,
         operation: EditOperation,
@@ -28,6 +29,7 @@ pub(crate) enum Work {
 }
 pub(crate) enum ResultValue {
     Repair(Box<repair::ResultValue>),
+    Structure(Box<recite_writer_model::PreparedStructuralEdit>),
     Edit {
         prepared: Box<PreparedEdit>,
         operation: EditOperation,
@@ -77,6 +79,10 @@ impl Work {
     fn execute(self, control: &dyn WorkControl) -> Result<ResultValue, String> {
         match self {
             Self::Repair(work) => work.execute(control).map(ResultValue::Repair),
+            Self::Structure(edit) => edit
+                .prepare(control)
+                .map(|prepared| ResultValue::Structure(Box::new(prepared)))
+                .map_err(|error| feedback::workbench(&error)),
             Self::Edit { edit, operation } => edit
                 .prepare(control)
                 .map(|prepared| ResultValue::Edit {

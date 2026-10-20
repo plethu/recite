@@ -8,6 +8,24 @@ pub struct PickerOption {
     pub annotation: String,
 }
 
+pub fn destinations(beats: Vec<String>) -> Vec<PickerOption> {
+    beats
+        .into_iter()
+        .map(|value| PickerOption {
+            title: display_name(&value),
+            value,
+            detail: "Beat in this scene".into(),
+            annotation: String::new(),
+        })
+        .chain(std::iter::once(PickerOption {
+            value: "END".into(),
+            title: "End conversation".into(),
+            detail: "Finish this conversation".into(),
+            annotation: String::new(),
+        }))
+        .collect()
+}
+
 pub fn display_name(identifier: &str) -> String {
     let name = identifier
         .strip_suffix(".recite")

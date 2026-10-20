@@ -2,12 +2,12 @@
 use super::*;
 use recite_writer_session::commands::{self, targets};
 
-pub(super) fn entries(app: &App, mode: Mode) -> Result<Vec<Entry>, String> {
+pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
     let Some(writer) = &app.writer else {
         return Ok(Vec::new());
     };
-    match mode {
-        Mode::Commands => Ok(WriterCommand::ALL
+    match search {
+        Search::Commands => Ok(WriterCommand::ALL
             .iter()
             .map(|command| Entry {
                 item: Item::Command(*command),
@@ -26,7 +26,7 @@ pub(super) fn entries(app: &App, mode: Mode) -> Result<Vec<Entry>, String> {
                 },
             })
             .collect()),
-        Mode::GoTo => {
+        Search::GoTo => {
             let model = writer.session.model();
             let targets = if writer.session.project().is_some() {
                 targets::project(model)
@@ -48,7 +48,7 @@ pub(super) fn entries(app: &App, mode: Mode) -> Result<Vec<Entry>, String> {
                 })
                 .collect())
         }
-        Mode::ProjectText | Mode::RulesChoices => Ok(Vec::new()),
+        Search::ProjectText => Ok(Vec::new()),
     }
 }
 impl Picker {
@@ -58,7 +58,7 @@ impl Picker {
         search: Option<&recite_writer_model::SearchIndex>,
     ) {
         self.revision.advance();
-        if self.mode == Mode::ProjectText {
+        if self.mode() == Mode::ProjectText {
             let results = search
                 .map(|index| index.search_results(&self.query, self.limit))
                 .unwrap_or_default();
@@ -82,7 +82,7 @@ impl Picker {
                 .collect();
             self.matches = (0..self.entries.len()).collect();
         } else {
-            let alias = (self.mode == Mode::Commands && keymap == recite_config::Keymap::Vim)
+            let alias = (self.mode() == Mode::Commands && keymap == recite_config::Keymap::Vim)
                 .then(|| commands::vim_alias(&self.query))
                 .flatten();
             let mut ranked = self
@@ -95,7 +95,12 @@ impl Picker {
                             matches!(entry.item, Item::Command(candidate) if candidate == command)
                                 .then_some(0)
                         }
-                        None => targets::rank(&entry.title, &self.query),
+                        None => {
+                            targets::rank(&entry.title, &self.query).or_else(|| match &entry.item {
+                                Item::Destination(value) => targets::rank(value, &self.query),
+                                _ => None,
+                            })
+                        }
                     };
                     rank.map(|rank| (rank, index))
                 })

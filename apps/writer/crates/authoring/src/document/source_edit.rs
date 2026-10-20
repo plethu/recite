@@ -9,6 +9,7 @@ use recite_compiler::authoring::{
     AuthoringError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument, WorkControl,
 };
 use std::sync::Arc;
+mod candidate;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]

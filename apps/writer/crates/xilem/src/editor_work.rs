@@ -93,7 +93,7 @@ impl Writer {
                 )
                 .into());
             }
-            let rules = self.rules.clone();
+            let rules = self.rules.as_ref().map(|reply| reply.projection().clone());
             let (files, model) = self.session.parts_mut().ok_or(FileError::ProjectRequired)?;
             let request = if scope.applies_current(&files.current) {
                 let request = model.edit_request(EditOperation::Apply)?;

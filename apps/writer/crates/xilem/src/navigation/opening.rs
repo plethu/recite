@@ -41,7 +41,7 @@ impl Writer {
                 Ok(())
             })
             .map_err(|error| error.to_string())?;
-        self.rules = rules;
+        self.install_rules(&mut rules);
         self.location = location.clone();
         self.trial.visible = location.screen == recite_writer_session::location::Screen::Preview;
         self.reading.prepare(self.session.model());

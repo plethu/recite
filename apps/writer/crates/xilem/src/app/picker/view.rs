@@ -36,7 +36,7 @@ impl UsesProperty<ActiveResult> for xilem::masonry::widgets::Button {}
 pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     let picker = app.picker.as_ref();
-    let mode = picker.map_or(Mode::Commands, |picker| picker.mode);
+    let mode = picker.map_or(Mode::Commands, Picker::mode);
     let page = picker.map_or(0, |picker| picker.active / PAGE);
     let count = picker.map_or(0, |picker| picker.matches.len());
     let rows = picker
@@ -115,12 +115,14 @@ fn result(
             .writer
             .as_ref()
             .is_some_and(|writer| !writer.navigation.busy() && !writer.work.busy()),
-        Item::Rule(_) => app
+        Item::Rule(_) | Item::Destination(_) => app
             .picker
             .as_ref()
-            .and_then(|picker| picker.rule_choice.as_ref())
             .zip(app.writer.as_ref())
-            .is_some_and(|(request, writer)| request.is_current(writer)),
+            .is_some_and(|(picker, writer)| match &picker.purpose {
+                super::Purpose::Editor(request) => request.is_current(writer),
+                super::Purpose::Search(_) => false,
+            }),
     };
     let title = format!(
         "{}{}",
@@ -199,6 +201,9 @@ fn guidance(mode: Mode) -> &'static str {
         }
         Mode::RulesChoices => {
             "Search declared values. Enter stages your choice; Apply or Save commits the reply draft. Escape returns to the field."
+        }
+        Mode::Destinations => {
+            "Choose a beat in this scene, or end the conversation. This applies the current draft and changes its route; Save writes the document to disk."
         }
     }
 }

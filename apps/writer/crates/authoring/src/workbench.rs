@@ -1,5 +1,9 @@
 use crate::DocumentVersion;
+mod commands;
 mod edit;
+pub use commands::{PreparedStructuralEdit, RouteOwner, StructuralCommand, StructuralRequest};
+mod identity;
+pub use identity::NavigationStamp;
 mod preparing;
 pub use preparing::{NavigationRequest, PreparedNavigation};
 mod navigation;

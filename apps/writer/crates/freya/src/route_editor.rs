@@ -1,14 +1,10 @@
 //! Destination editing beside the reply or continuation it changes.
 use crate::design::tokens as t;
-use crate::{editing::Writer, palette};
+use crate::editing::Writer;
 use freya::prelude::*;
 use recite_writer_model::View;
 
-#[derive(Clone, PartialEq)]
-pub(super) enum RouteOwner {
-    Reply(String),
-    Beat(String),
-}
+pub(super) use recite_writer_model::RouteOwner;
 
 #[derive(Clone)]
 pub(super) struct RouteEditor {
@@ -41,27 +37,11 @@ impl Component for RouteEditor {
                 .map(|model| model.document().sections())
                 .unwrap_or_default();
             std::sync::Arc::new(
-                sections
+                recite_writer_session::choices::destinations(sections)
                     .into_iter()
-                    .chain(std::iter::once("END".into()))
-                    .filter_map(|value| {
-                        let title = if value == "END" {
-                            "End conversation".into()
-                        } else {
-                            palette::display_name(&value)
-                        };
-                        (title.to_lowercase().contains(&needle)
-                            || value.to_lowercase().contains(&needle))
-                        .then(|| crate::design::PickerOption {
-                            annotation: String::new(),
-                            detail: if value == "END" {
-                                "Finish this conversation".into()
-                            } else {
-                                String::new()
-                            },
-                            title,
-                            value,
-                        })
+                    .filter(|choice| {
+                        choice.title.to_lowercase().contains(&needle)
+                            || choice.value.to_lowercase().contains(&needle)
                     })
                     .collect::<Vec<_>>(),
             )
@@ -141,6 +121,10 @@ impl Component for RouteEditor {
                                     model.select(View::Block(block.clone()))?;
                                     model.set_continuation(&option.value)
                                 }
+                                _ => Err(recite_writer_model::EditError::SourceRequired(
+                                    "this route owner is not supported",
+                                )
+                                .into()),
                             });
                         }),
                     })

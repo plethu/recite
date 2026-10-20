@@ -52,9 +52,12 @@ retirement; a failed or cancelled Apply leaves the requested save unrun.
 The beat outline uses accepted source, including recognizable headers in incomplete documents. Read
 beat shows dialogue, replies, conditions, effects and continuations without running them; edit a
 passage from that reading list. Add beat, Add line and Add reply use the shared stable-ID editing
-operations. Empty documents and empty beats offer creation controls. Apply or discard a field draft
-before changing its structure or selection. Duplicate beat names and unprojectable syntax require
-external repair; their source is preserved. Long reading lists mount sixteen entries per page.
+operations on workers. Empty documents and empty beats offer creation controls. Leaving a prose
+field applies its valid draft before a structural edit or selection change; rejected prose stays
+open. Reply and unconditional continuation destinations use the searchable beat picker. Each
+structural edit has a separate applied undo step, and Save remains explicit. Duplicate beat names
+and unprojectable syntax require external repair; their source is preserved. Long reading lists
+mount sixteen entries per page.
 
 Start / restart preview prepares source-language playback off the UI thread, starting at the
 selected beat. Continue, choose replies, answer condition requests, and acknowledge simulated

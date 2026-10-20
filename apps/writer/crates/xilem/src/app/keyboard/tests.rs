@@ -8,7 +8,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         let writer = Writer::from_session(Session::examples().unwrap(), None);
         let mut app = App::with_writer(writer);
         if change == 5 {
-            app.open_picker(picker::Mode::Commands);
+            app.open_picker(picker::Search::Commands);
         }
         let mut ctx = ViewCtx::new(
             Arc::new(NoProxy),
@@ -42,7 +42,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
                     "Primary+Alt+S".to_owned().try_into().unwrap(),
                 )
                 .unwrap(),
-            _ => app.open_picker(picker::Mode::Commands),
+            _ => app.open_picker(picker::Search::Commands),
         }
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),

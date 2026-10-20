@@ -81,7 +81,7 @@ impl Scope {
             picker: app
                 .picker
                 .as_ref()
-                .map(|picker| (picker.instance.clone(), picker.mode, picker.revision)),
+                .map(|picker| (picker.instance.clone(), picker.mode(), picker.revision)),
         }
     }
 }
