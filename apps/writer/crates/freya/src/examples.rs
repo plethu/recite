@@ -37,38 +37,29 @@ pub(super) fn select_at(
         &mut recite_writer_model::Workbench,
     ) -> Result<(), recite_writer_model::WorkbenchError>,
 ) -> Result<(), String> {
-    let example = &WRITER_EXAMPLES[index];
-    let current = writer
+    let example = WRITER_EXAMPLES
+        .get(index)
+        .ok_or("The selected example is unavailable.")?;
+    if writer
         .buffers
         .model
         .peek()
         .as_ref()
-        .map_err(|e| e.to_string())?
-        .document()
-        .key()
-        .to_string();
-    if current == example.name {
+        .is_ok_and(|model| model.document().key().as_str() == example.name)
+    {
         return Ok(());
     }
     let previous_scene = writer.scene_key();
     writer.remember_scene();
     writer.buffers.harvest();
-    let next = {
-        let mut parked = writer.examples.write();
-        if let Some(next) = parked.get_mut(example.name) {
-            select(next).map_err(|e| e.to_string())?;
-            parked
-                .remove(example.name)
-                .ok_or("Example session disappeared.")?
-        } else {
-            let mut next = example.open().map_err(|e| e.to_string())?;
-            select(&mut next).map_err(|e| e.to_string())?;
-            next
-        }
-    };
-    let previous = std::mem::replace(&mut *writer.buffers.model.write(), Ok(next));
-    if let Ok(previous) = previous {
-        writer.examples.write().insert(current, previous);
+    {
+        let mut model = writer.buffers.model.write();
+        let model = model.as_mut().map_err(|e| e.to_string())?;
+        writer
+            .examples
+            .write()
+            .switch(model, index, select)
+            .map_err(|e| e.to_string())?;
     }
     let state = writer.buffers.model.peek();
     if let Ok(session) = state.as_ref() {

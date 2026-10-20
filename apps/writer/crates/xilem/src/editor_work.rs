@@ -53,14 +53,18 @@ impl Writer {
             return;
         }
         let prepared = (|| {
-            self.project.files().require_idle_save()?;
+            self.session
+                .project()
+                .ok_or(FileError::ProjectRequired)?
+                .files()
+                .require_idle_save()?;
             if self.work.sender.is_none() {
                 return Err(std::io::Error::other(
                     "The editor worker is unavailable. Reopen Writer to retry.",
                 )
                 .into());
             }
-            let (files, model) = self.project.parts_mut();
+            let (files, model) = self.session.parts_mut().ok_or(FileError::ProjectRequired)?;
             let request = if scope.applies_current(&files.current) {
                 let request = model.edit_request(EditOperation::Apply)?;
                 if request.is_none() {
@@ -87,7 +91,10 @@ impl Writer {
         }
     }
     fn begin_save_sequence(&mut self, scope: Scope) {
-        let (files, model) = self.project.parts_mut();
+        let Some((files, model)) = self.session.parts_mut() else {
+            self.status = FileError::ProjectRequired.to_string();
+            return;
+        };
         let sequence = SaveSequence::accepted(files, model, scope);
         self.drive_save(Box::new(sequence));
     }
@@ -108,18 +115,21 @@ impl Writer {
         }
     }
     fn finish_save_work(&mut self, result: Result<(), FileError>) {
-        let (files, model) = self.project.parts_mut();
+        let Some((files, model)) = self.session.parts_mut() else {
+            self.status = FileError::ProjectRequired.to_string();
+            return;
+        };
         files.set_saving(false);
         let _ = files.queue_checkpoint(model);
         let result = files.finish_save(model, result);
-        self.reading.prepare(self.project.current().model());
+        self.reading.prepare(self.session.model());
         self.status = match &result {
-            Ok(()) if self.project.dirty() => "Saved; newer edits remain open.".into(),
+            Ok(()) if self.session.dirty() => "Saved; newer edits remain open.".into(),
             Ok(()) => "Saved".into(),
             Err(error) => feedback::file(error),
         };
         let close_after = std::mem::take(&mut self.work.close_after);
-        if close_after && result.is_ok() && !self.project.dirty() {
+        if close_after && result.is_ok() && !self.session.dirty() {
             self.close_with_recovery();
         } else if close_after {
             self.phase = Phase::ConfirmClose;

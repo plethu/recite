@@ -4,11 +4,16 @@ use freya::prelude::WritableUtils;
 
 pub(super) fn poll(loading: &Loading) {
     let loaded = loading.job.peek().as_ref().and_then(|job| {
-        job.load
-            .try_result()
-            .map(|result| (job.load.cancelled(), job.source.clone(), result))
+        job.load.try_result().map(|result| {
+            (
+                job.load.cancelled(),
+                job.source.clone(),
+                job.path.clone(),
+                result,
+            )
+        })
     });
-    let Some((cancelled, source, loaded)) = loaded else {
+    let Some((cancelled, source, requested_path, loaded)) = loaded else {
         return;
     };
     let current = loading
@@ -59,9 +64,13 @@ pub(super) fn poll(loading: &Loading) {
         Ok(loaded) => loaded,
         Err(error) => {
             panel.set(true);
-            message.error(error.to_string());
+            let error = format!(
+                "Project {} could not open: {error}",
+                requested_path.display()
+            );
+            message.error(error.clone());
             #[cfg(target_os = "linux")]
-            reply_error(activation, error.to_string());
+            reply_error(activation, error);
             return;
         }
     };

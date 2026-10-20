@@ -91,3 +91,21 @@ def key(name, control=False):
 
 def type_text(text):
     subprocess.run(["wtype", "--", text], check=True, timeout=10, capture_output=True)
+
+
+def attach(api, bus, registry, process):
+    """Find only the accessibility application owned by the supplied process."""
+    def application():
+        for child in api.call(bus, registry, api.ACCESSIBLE, "GetChildren")[0]:
+            pid = api.call(
+                bus,
+                ("org.freedesktop.DBus", "/org/freedesktop/DBus"),
+                "org.freedesktop.DBus", "GetConnectionUnixProcessID",
+                api.GLib.Variant("(s)", (child[0],)),
+            )[0]
+            if pid == process.pid:
+                return child
+        return None
+
+    app = api.wait_for(application, "owned Writer registration", process)
+    return NativeWindow(api, bus, process, lambda: list(api.descendants(bus, app)))

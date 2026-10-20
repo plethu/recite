@@ -8,6 +8,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use super::IO_TIMEOUT;
+pub(super) mod native;
 
 pub(super) const MAX_FRAME: usize = 64 * 1024;
 

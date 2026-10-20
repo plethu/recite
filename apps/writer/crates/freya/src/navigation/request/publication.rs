@@ -1,6 +1,6 @@
 //! Publish only after destination and outgoing recovery proofs remain current.
 use super::{Origin, Request, Target};
-use crate::navigation::worker::{self, Example, PreparedDestination};
+use crate::navigation::worker::{self, PreparedDestination};
 use crate::{
     editing::Writer,
     editor_work::worker::{Output, Work, Worker},
@@ -52,18 +52,9 @@ pub(super) async fn publish(
                 .as_ref()
                 .zip(checkpoint.as_ref())
                 .is_some_and(|(files, checkpoint)| prepared.is_current(files, model, checkpoint)),
-            PreparedDestination::Example {
-                name,
-                prepared: Example::Retained(prepared),
-            } => writer
-                .examples
-                .peek()
-                .get(name)
-                .is_some_and(|model| prepared.is_current(model)),
-            PreparedDestination::Example {
-                name,
-                prepared: Example::Cold(next),
-            } => next.is_some() && !writer.examples.peek().contains_key(name),
+            PreparedDestination::Example(prepared) => {
+                prepared.is_current(&writer.examples.peek(), model)
+            }
         };
         if !current {
             return Err(
@@ -119,26 +110,11 @@ pub(super) async fn publish(
                     checkpoint.as_ref().ok_or("Missing outgoing checkpoint.")?,
                 )
                 .map_err(|e| e.to_string())?,
-            PreparedDestination::Example { name, prepared } => {
-                let mut examples = writer.examples.write();
-                let next = match prepared {
-                    Example::Retained(selection) => {
-                        examples
-                            .get_mut(name)
-                            .ok_or("Example session disappeared.")?
-                            .accept_navigation(selection)
-                            .map_err(|e| e.to_string())?;
-                        examples
-                            .remove(name)
-                            .ok_or("Example session disappeared.")?
-                    }
-                    Example::Cold(next) => {
-                        *next.take().ok_or("Example session already accepted.")?
-                    }
-                };
-                let old = std::mem::replace(model, next);
-                examples.insert(old.document().key().to_string(), old);
-            }
+            PreparedDestination::Example(prepared) => writer
+                .examples
+                .write()
+                .accept(model, prepared)
+                .map_err(|e| e.to_string())?,
         }
     }
     let changed_scene = previous_scene != writer.scene_key();
@@ -158,13 +134,9 @@ pub(super) async fn publish(
             PreparedDestination::Switch(prepared) => {
                 prepared.refresh_rules(rules, model);
             }
-            PreparedDestination::Example {
-                prepared: Example::Retained(prepared),
-                ..
-            } => {
-                prepared.refresh_rules(rules, model.document());
+            PreparedDestination::Example(prepared) => {
+                prepared.refresh_rules(rules, model);
             }
-            PreparedDestination::Example { .. } => {}
         }
     }
     writer

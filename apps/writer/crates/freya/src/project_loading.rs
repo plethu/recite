@@ -69,6 +69,7 @@ fn receive_activation(
 }
 
 pub(crate) struct LoadJob {
+    path: PathBuf,
     load: worker::Load,
     source: Option<std::sync::Arc<str>>,
     #[cfg(target_os = "linux")]
@@ -120,9 +121,11 @@ fn start_inner(
     let forwarded = activation.as_ref().map(|request| request.cancelled.clone());
     #[cfg(not(target_os = "linux"))]
     let forwarded = None;
+    let path = request.path.clone();
     match worker::Load::open(request, forwarded) {
         Ok(load) => {
             job.set(Some(LoadJob {
+                path,
                 load,
                 source: buffers
                     .model

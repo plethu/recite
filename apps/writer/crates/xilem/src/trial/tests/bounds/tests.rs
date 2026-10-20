@@ -15,16 +15,9 @@ fn five_hundred_twelve_choices_mount_sixteen_controls_and_keep_runtime_indices()
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
     install(&mut writer).unwrap();
-    writer.project.current_mut().advance_preview(None).unwrap();
+    writer.session.advance_preview(None).unwrap();
     assert_eq!(
-        writer
-            .project
-            .current()
-            .model()
-            .preview_page()
-            .unwrap()
-            .choices
-            .len(),
+        writer.session.model().preview_page().unwrap().choices.len(),
         512
     );
     let mounted = labels(&mut writer).unwrap();
@@ -54,15 +47,7 @@ fn five_hundred_twelve_choices_mount_sixteen_controls_and_keep_runtime_indices()
         ],
     )
     .unwrap();
-    assert!(
-        writer
-            .project
-            .current()
-            .model()
-            .preview_page()
-            .unwrap()
-            .ended
-    );
+    assert!(writer.session.model().preview_page().unwrap().ended);
     assert_eq!(writer.trial.choice_page, 0);
 }
 
@@ -82,27 +67,13 @@ fn deferred_effect_pages_keep_every_request_available_without_mounting_the_whole
     let mut writer = open(&directory).unwrap();
     install(&mut writer).unwrap();
     for _ in 0..34 {
-        writer.project.current_mut().advance_preview(None).unwrap();
-        if writer
-            .project
-            .current()
-            .model()
-            .preview_page()
-            .unwrap()
-            .ended
-        {
+        writer.session.advance_preview(None).unwrap();
+        if writer.session.model().preview_page().unwrap().ended {
             break;
         }
     }
     assert_eq!(
-        writer
-            .project
-            .current()
-            .model()
-            .preview_page()
-            .unwrap()
-            .effects
-            .len(),
+        writer.session.model().preview_page().unwrap().effects.len(),
         33
     );
     let mounted = labels(&mut writer).unwrap();

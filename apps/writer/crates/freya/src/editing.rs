@@ -92,6 +92,7 @@ pub(crate) enum Pane {
 
 #[derive(Clone, Copy)]
 pub(crate) struct Writer {
+    pub editor_command: State<Option<recite_writer_session::startup::EditorCommand>>,
     pub vim: crate::commands::Navigation,
     pub command_search: crate::commands::Search,
     pub source_viewport: crate::source_editor::EditorViewport,
@@ -102,7 +103,7 @@ pub(crate) struct Writer {
     pub projections: State<Option<crate::projections::Work>>,
     pub localisation: State<crate::localisation::Localisation>,
     pub files: State<Option<crate::project::ProjectFiles>>,
-    pub examples: State<std::collections::BTreeMap<String, Workbench>>,
+    pub examples: State<recite_writer_session::examples::ExampleSessions>,
     pub queue: crate::navigation::Queue,
     pub reference: State<Option<crate::reading_context::Reference>>,
     pub buffers: crate::buffers::Buffers,

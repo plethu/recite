@@ -4958,10 +4958,13 @@ version = "0.0.0"
 dependencies = [
  "accesskit_atspi_common 0.18.1",
  "masonry",
+ "recite-compiler",
+ "recite-config",
  "recite-core",
  "recite-runtime",
  "recite-writer-model",
  "recite-writer-session",
+ "rfd",
  "tempfile",
  "tokio",
  "xilem",

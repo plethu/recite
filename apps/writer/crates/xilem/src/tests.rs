@@ -1,11 +1,44 @@
 use super::*;
+use recite_writer_model::View;
 #[path = "tests/keyed/tests.rs"]
 mod keyed;
 #[path = "tests/navigation/tests.rs"]
 mod navigation;
 pub(crate) mod support;
-use std::{fs, path::PathBuf};
+use std::fs;
 use support::{click, labels, open, project};
+
+#[test]
+fn examples_preserve_drafts_and_offer_explicit_temporary_close_without_file_actions() {
+    let mut writer = Writer::from_session(session::Session::examples().unwrap(), None);
+    click(&mut writer, &["last_tram_linear.recite"]).unwrap();
+    writer.change(|model| {
+        model.set_draft("Temporary draft.".into());
+        Ok(())
+    });
+    click(
+        &mut writer,
+        &["relay_hub.recite", "last_tram_linear.recite"],
+    )
+    .unwrap();
+    assert_eq!(writer.session.model().draft(), "Temporary draft.");
+    let names = labels(&mut writer).unwrap();
+    assert!(
+        !names
+            .iter()
+            .any(|name| matches!(name.as_str(), "Save file" | "Save all" | "Open in editor"))
+    );
+    writer.request_close();
+    let names = labels(&mut writer).unwrap();
+    assert!(
+        names
+            .iter()
+            .any(|name| name == "Close and discard example changes")
+    );
+    assert!(!names.iter().any(|name| name == "Close and keep recovery"));
+    click(&mut writer, &["Keep editing"]).unwrap();
+    assert_eq!(writer.session.model().draft(), "Temporary draft.");
+}
 
 #[test]
 fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
@@ -15,9 +48,9 @@ fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
         model.set_draft("Keep this draft.".into());
         Ok(())
     });
-    let selected = writer.project.current().model().view().clone();
+    let selected = writer.session.model().view().clone();
     writer.select("missing".into());
-    assert_eq!(writer.project.current().model().view(), &selected);
+    assert_eq!(writer.session.model().view(), &selected);
     writer.request_close();
     assert!(writer.phase == Phase::ConfirmClose);
     assert!(writer.keep_running());
@@ -25,9 +58,9 @@ fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
     assert!(!writer.keep_running());
     drop(writer);
     let mut writer = open(&directory).unwrap();
-    assert_eq!(writer.project.current().model().draft(), "Keep this draft.");
+    assert_eq!(writer.session.model().draft(), "Keep this draft.");
     support::save(&mut writer).unwrap();
-    assert!(!writer.project.dirty());
+    assert!(!writer.session.dirty());
     writer.request_close();
     assert!(!writer.keep_running());
     assert!(
@@ -54,7 +87,7 @@ fn save_conflict_stays_open_and_reload_preserves_the_local_work() {
     assert!(writer.status.contains("changed on disk"));
     assert!(writer.keep_running());
     writer.reload();
-    assert_eq!(writer.project.current().model().view(), &View::Source);
+    assert_eq!(writer.session.model().view(), &View::Source);
     assert!(writer.status.contains("previous work preserved"));
     writer.reload();
     assert!(writer.status.contains("previous work preserved"));
@@ -74,18 +107,20 @@ fn startup_rejects_missing_repeated_and_unpaired_options() {
     ] {
         assert!(Startup::parse(arguments.into_iter().map(OsString::from)).is_err());
     }
-    let args = [
-        "--project",
-        "a space [x] $test",
-        "--document",
-        "scene.recite",
-        "--editor",
-        "editor",
-        "--editor-arg",
-        "--wait",
+    let selected = project(recite_writer_model::FIXTURE).unwrap();
+    let expected = selected.path().to_owned();
+    let args = vec![
+        OsString::from("--project"),
+        expected.as_os_str().to_owned(),
+        OsString::from("--document"),
+        OsString::from("scene.recite"),
+        OsString::from("--editor"),
+        OsString::from("editor"),
+        OsString::from("--editor-arg"),
+        OsString::from("--wait"),
     ];
-    let startup = Startup::parse(args.into_iter().map(OsString::from)).unwrap();
-    assert_eq!(startup.project, PathBuf::from("a space [x] $test"));
+    let startup = Startup::parse(args).unwrap();
+    assert_eq!(startup.project, expected);
     assert_eq!(startup.document, Some("scene.recite".into()));
     assert_eq!(startup.editor_args, [OsString::from("--wait")]);
     let directory = project(recite_writer_model::FIXTURE).unwrap();
@@ -143,22 +178,22 @@ fn malformed_source_offers_external_repair_without_an_editable_manuscript() {
 fn native_view_actions_apply_discard_undo_and_guard_save() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
-    let original = writer.project.current().model().draft().to_owned();
+    let original = writer.session.model().draft().to_owned();
     writer.change(|model| {
         model.set_draft("Accepted.".into());
         Ok(())
     });
     click(&mut writer, &["Apply draft", "Undo applied"]).unwrap();
-    assert_eq!(writer.project.current().model().draft(), original);
+    assert_eq!(writer.session.model().draft(), original);
     click(&mut writer, &["Redo applied"]).unwrap();
-    assert_eq!(writer.project.current().model().draft(), "Accepted.");
+    assert_eq!(writer.session.model().draft(), "Accepted.");
     writer.change(|model| {
         model.set_draft("Discard this.".into());
         Ok(())
     });
     click(&mut writer, &["Discard draft", "Close", "Keep editing"]).unwrap();
     assert!(writer.phase == Phase::Writing);
-    assert_eq!(writer.project.current().model().draft(), "Accepted.");
+    assert_eq!(writer.session.model().draft(), "Accepted.");
     click(&mut writer, &["Close", "Save all and close"]).unwrap();
     assert!(!writer.keep_running());
     assert!(
@@ -181,7 +216,7 @@ fn editor_launch_errors_are_visible_and_preserve_the_draft() {
     });
     click(&mut writer, &["Open in editor"]).unwrap();
     assert!(writer.status.starts_with("Could not open the editor:"));
-    assert_eq!(writer.project.current().model().draft(), "Still here.");
+    assert_eq!(writer.session.model().draft(), "Still here.");
     click(&mut writer, &["Close", "Close and keep recovery"]).unwrap();
     assert!(!writer.keep_running());
 }
@@ -191,7 +226,8 @@ fn native_driver_keeps_the_document_lease_and_uses_the_selected_window_identity(
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let writer = open(&directory).unwrap();
     let window_id = writer.window;
-    let (driver, mut windows) = application(writer).into_driver_and_windows(Err);
+    let (driver, mut windows) =
+        app::application(app::App::with_writer(writer)).into_driver_and_windows(Err);
     assert_eq!(windows.len(), 1);
     let window = windows.pop().unwrap();
     assert_eq!(window.id, window_id);

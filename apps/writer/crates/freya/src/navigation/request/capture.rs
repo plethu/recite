@@ -102,23 +102,16 @@ impl Request {
                             .map_err(|e| e.to_string())?,
                     ))
                 } else {
-                    if !recite_writer_model::WRITER_EXAMPLES
-                        .iter()
-                        .any(|e| e.name == l.document)
-                    {
-                        return Err("The linked scene is not open.".into());
-                    }
-                    Destination::Example {
-                        name: l.document.clone(),
-                        retained: writer
+                    Destination::Example(Box::new(
+                        writer
                             .examples
                             .peek()
-                            .get(&l.document)
-                            .map(|m| m.navigation_request()),
-                    }
+                            .request(model, &l.document)
+                            .map_err(|e| e.to_string())?,
+                    ))
                 }
             }
-            _ => Destination::Current(model.navigation_request()),
+            _ => Destination::Current(Box::new(model.navigation_request())),
         };
         let catalogue = writer
             .localisation

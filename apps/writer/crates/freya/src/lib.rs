@@ -10,7 +10,7 @@ mod rules;
 mod source_editor;
 mod startup;
 pub use activation::{Activation, ActivationHost, ActivationInbox};
-pub use startup::{InitialProject, Startup};
+pub use startup::{InitialEditor, InitialProject, LaunchOptions, Startup};
 pub fn startup_help() -> &'static str {
     startup::HELP
 }

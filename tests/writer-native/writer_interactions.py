@@ -7,7 +7,7 @@ import traceback
 from collections import Counter
 from pathlib import Path
 
-from native_window import NativeWindow, key, type_text
+from native_window import attach, key, type_text
 from project_interactions import exercise as project_exercise
 from project_interactions import switch
 
@@ -23,21 +23,7 @@ SOURCE = """:: opening default
 def launch(api, bus, registry, arguments, log, manuscript=True):
     process = subprocess.Popen(arguments, stdout=log, stderr=subprocess.STDOUT)
 
-    def application():
-        for child in api.call(bus, registry, api.ACCESSIBLE, "GetChildren")[0]:
-            pid = api.call(
-                bus,
-                ("org.freedesktop.DBus", "/org/freedesktop/DBus"),
-                "org.freedesktop.DBus",
-                "GetConnectionUnixProcessID",
-                api.GLib.Variant("(s)", (child[0],)),
-            )[0]
-            if pid == process.pid:
-                return child
-        return None
-
-    app = api.wait_for(application, "file-backed Writer registration", process)
-    window = NativeWindow(api, bus, process, lambda: list(api.descendants(bus, app)))
+    window = attach(api, bus, registry, process)
     if not manuscript:
         window.wait(lambda: window.find("Open in editor"), "source repair controls")
         return process, window, None
@@ -45,8 +31,9 @@ def launch(api, bus, registry, arguments, log, manuscript=True):
         lambda: next(
             (
                 address
-                for address, _ in window.nodes()
-                if window.call(address, "Accessible", "GetRole")[0] == 79
+                for address, name in window.nodes()
+                if name == "Manuscript"
+                and window.call(address, "Accessible", "GetRole")[0] == 79
             ),
             None,
         ),

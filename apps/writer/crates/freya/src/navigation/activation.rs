@@ -2,7 +2,7 @@
 use super::*;
 
 pub(crate) fn receive(
-    writer: Writer,
+    mut writer: Writer,
     request: crate::activation::IncomingRoute,
     ready: bool,
 ) -> Result<(), String> {
@@ -42,6 +42,7 @@ pub(crate) fn receive(
             .map(|f| f.root().display().to_string())
             .unwrap_or_default();
         let mut message = writer.message;
+        let editor = request.editor.clone();
         super::route(
             writer,
             location,
@@ -52,6 +53,9 @@ pub(crate) fn receive(
                     message.error(error.clone());
                 }
                 if result.is_ok() {
+                    if let Some(editor) = editor.clone() {
+                        writer.editor_command.set(Some(editor));
+                    }
                     let router = RouterContext::get();
                     let next = snapshot(writer);
                     let current = router.current::<location::Route>().0;
@@ -68,6 +72,9 @@ pub(crate) fn receive(
             }),
         )?;
     } else {
+        if let Some(editor) = request.editor {
+            writer.editor_command.set(Some(editor));
+        }
         focus();
         let _ = request.reply.send(Ok(()));
     }

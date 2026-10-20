@@ -14,23 +14,22 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
             .any(|label| label == "No beats yet")
     );
     click(&mut writer, &["Add beat", "Edit passage 1"]).unwrap();
-    let first = writer.project.current().model().view().clone();
+    let first = writer.session.model().view().clone();
     assert!(matches!(first, View::Passage(_)));
     writer.change(|model| {
         model.set_draft("An opening line.".into());
         Ok(())
     });
     click(&mut writer, &["Apply draft", "Add reply"]).unwrap();
-    let reply = writer.project.current().model().view().clone();
+    let reply = writer.session.model().view().clone();
     assert_ne!(first, reply);
-    let source = writer.project.current().model().document().source();
+    let source = writer.session.model().document().source();
     assert!(source.starts_with("# Keep this comment."));
     assert!(source.contains("An opening line."));
     click(&mut writer, &["Undo applied"]).unwrap();
     assert_eq!(
         writer
-            .project
-            .current()
+            .session
             .model()
             .document()
             .passage_snapshot()
@@ -39,8 +38,8 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
         1
     );
     click(&mut writer, &["Edit passage 1"]).unwrap();
-    assert_eq!(writer.project.current().model().view(), &first);
-    assert_eq!(writer.project.current().model().draft(), "An opening line.");
+    assert_eq!(writer.session.model().view(), &first);
+    assert_eq!(writer.session.model().draft(), "An opening line.");
 }
 
 #[test]
@@ -79,13 +78,8 @@ fn empty_and_effect_only_beats_have_distinct_reading_states() {
 fn structural_actions_guard_unapplied_text_and_offer_external_repair_for_syntax() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
-    let source = writer
-        .project
-        .current()
-        .model()
-        .document()
-        .source_snapshot();
-    let selection = writer.project.current().model().view().clone();
+    let source = writer.session.model().document().source_snapshot();
+    let selection = writer.session.model().view().clone();
     writer.change(|model| {
         model.set_draft("Keep this draft.".into());
         Ok(())
@@ -95,16 +89,11 @@ fn structural_actions_guard_unapplied_text_and_offer_external_repair_for_syntax(
         &["Add line", "Add reply", "Read beat", "Add beat"],
     )
     .unwrap();
-    assert_eq!(writer.project.current().model().view(), &selection);
-    assert_eq!(writer.project.current().model().draft(), "Keep this draft.");
+    assert_eq!(writer.session.model().view(), &selection);
+    assert_eq!(writer.session.model().draft(), "Keep this draft.");
     assert!(Arc::ptr_eq(
         &source,
-        &writer
-            .project
-            .current()
-            .model()
-            .document()
-            .source_snapshot()
+        &writer.session.model().document().source_snapshot()
     ));
     writer.change(|model| {
         model.set_draft("-> syntax".into());
@@ -112,7 +101,7 @@ fn structural_actions_guard_unapplied_text_and_offer_external_repair_for_syntax(
     });
     click(&mut writer, &["Apply draft"]).unwrap();
     assert!(writer.status.contains("your editor"));
-    assert_eq!(writer.project.current().model().draft(), "-> syntax");
+    assert_eq!(writer.session.model().draft(), "-> syntax");
 }
 
 #[test]
@@ -123,15 +112,15 @@ fn incomplete_and_ambiguous_headers_remain_visible_without_authorizing_edits() {
     ] {
         let directory = project(source).unwrap();
         let mut writer = open(&directory).unwrap();
-        let selection = writer.project.current().model().view().clone();
+        let selection = writer.session.model().view().clone();
         let names = labels(&mut writer).unwrap();
         let header = names
             .iter()
             .find(|name| name.to_lowercase().contains("beat · start · default"))
             .unwrap();
         click(&mut writer, &[header]).unwrap();
-        assert_eq!(writer.project.current().model().view(), &selection);
-        assert_eq!(writer.project.current().model().document().source(), source);
+        assert_eq!(writer.session.model().view(), &selection);
+        assert_eq!(writer.session.model().document().source(), source);
         assert!(writer.status.contains("your editor"));
     }
 }
@@ -212,7 +201,7 @@ fn paged_conditional_entries_keep_their_context_and_plural_fragments_stay_read_o
             .any(|name| name.contains("Source fragment (read only) · Many letters."))
     );
     assert!(!names.iter().any(|name| name == "Manuscript"));
-    assert_eq!(writer.project.current().model().document().source(), source);
+    assert_eq!(writer.session.model().document().source(), source);
     click(&mut writer, &["Previous beat entries"]).unwrap();
     assert_eq!(writer.reading.page, 0);
 }

@@ -1,6 +1,7 @@
 use super::*;
 use recite_writer_model::FIXTURE;
 use std::fs;
+#[path = "tests/declarations/tests.rs"]
 mod declarations;
 
 fn project() -> (tempfile::TempDir, ProjectFiles, Workbench) {

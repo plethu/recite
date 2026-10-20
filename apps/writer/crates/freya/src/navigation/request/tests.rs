@@ -1,5 +1,5 @@
 use super::*;
-use crate::navigation::worker::{Destination, Example, Prepare, PreparedDestination};
+use crate::navigation::worker::{Destination, Prepare, PreparedDestination};
 use freya::prelude::*;
 use freya_testing::prelude::*;
 
@@ -16,13 +16,10 @@ fn rejected_navigation_retires_a_completed_destination_with_its_origins() {
             .unwrap();
             let worker = Worker::for_test();
             let prepared = prepare_example(&worker);
-            let PreparedDestination::Example {
-                prepared: Example::Cold(Some(model)),
-                ..
-            } = &prepared.destination
-            else {
-                panic!("cold destination")
+            let PreparedDestination::Example(example) = &prepared.destination else {
+                panic!("example destination")
             };
+            let model = example.model().expect("unaccepted model");
             let source = std::sync::Arc::downgrade(&model.document().source_snapshot());
             navigation.prepared = Some(prepared);
             assert!(source.upgrade().is_some());
@@ -42,10 +39,11 @@ fn rejected_navigation_retires_a_completed_destination_with_its_origins() {
 
 fn prepare_example(worker: &Worker) -> Box<worker::Prepared> {
     let preparation = Prepare {
-        destination: Destination::Example {
-            name: "last_tram_linear.recite".into(),
-            retained: None,
-        },
+        destination: Destination::Example(Box::new(
+            recite_writer_session::examples::ExampleSessions::default()
+                .request(&crate::tests::support::model(), "last_tram_linear.recite")
+                .unwrap(),
+        )),
         location: None,
         project: None,
         catalogue: None,

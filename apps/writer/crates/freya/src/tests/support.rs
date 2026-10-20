@@ -15,6 +15,7 @@ pub(crate) fn model() -> Workbench {
 pub(crate) fn writer() -> Writer {
     let preferences = use_state(|| crate::preferences::Preferences::load(None));
     Writer {
+        editor_command: use_state(|| None),
         vim: crate::commands::Navigation::new(),
         command_search: crate::commands::Search::new(),
         source_viewport: crate::source_editor::EditorViewport::new(),
@@ -25,7 +26,7 @@ pub(crate) fn writer() -> Writer {
         projections: use_state(|| None),
         localisation: use_state(crate::localisation::Localisation::default),
         files: use_state(|| None),
-        examples: use_state(std::collections::BTreeMap::new),
+        examples: use_state(recite_writer_session::examples::ExampleSessions::default),
         queue: crate::navigation::Queue {
             search: use_state(String::new),
             attention: use_state(|| false),

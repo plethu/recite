@@ -26,6 +26,8 @@ fn submitted_route(
     sender.try_send(crate::activation::IncomingRoute {
         project: project_from_route(&route)?,
         route: Some(route),
+        document: None,
+        editor: None,
         cancelled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         reply,
     })?;
@@ -68,6 +70,8 @@ fn welcome_owner_opens_forwarded_projects_and_switches_cleanly()
     sender.try_send(crate::activation::IncomingRoute {
         project: Some(first.path().to_path_buf()),
         route: Some(route(first.path())),
+        document: None,
+        editor: None,
         cancelled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
         reply: cancel_reply,
     })?;
@@ -314,6 +318,8 @@ fn route_less_project_switch_clears_clean_catalogue() -> Result<(), Box<dyn std:
     sender.try_send(crate::activation::IncomingRoute {
         project: Some(second.path().to_path_buf()),
         route: None,
+        document: None,
+        editor: None,
         cancelled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         reply,
     })?;

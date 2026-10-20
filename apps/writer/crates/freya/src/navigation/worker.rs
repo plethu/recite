@@ -5,21 +5,14 @@ use recite_writer_model::{NavigationRequest, PreparedNavigation, ReplyRules, Wor
 use std::path::PathBuf;
 
 pub(crate) enum Destination {
-    Current(NavigationRequest),
+    Current(Box<NavigationRequest>),
     Switch(Box<SwitchRequest>),
-    Example {
-        name: String,
-        retained: Option<NavigationRequest>,
-    },
+    Example(Box<recite_writer_session::examples::SwitchRequest>),
 }
 pub(crate) enum PreparedDestination {
     Current(PreparedNavigation),
     Switch(PreparedSwitch),
-    Example { name: String, prepared: Example },
-}
-pub(crate) enum Example {
-    Retained(Box<PreparedNavigation>),
-    Cold(Option<Box<Workbench>>),
+    Example(Box<recite_writer_session::examples::PreparedSwitch>),
 }
 pub(crate) struct Prepare {
     pub destination: Destination,
@@ -118,23 +111,11 @@ impl Prepare {
                     .prepare(&control, select)
                     .map_err(|e| e.to_string())?,
             ),
-            Destination::Example { name, retained } => {
-                let prepared = if let Some(request) = retained {
-                    let mut prepared =
-                        request.prepare(None, &control).map_err(|e| e.to_string())?;
-                    select(prepared.model_mut()).map_err(|e| e.to_string())?;
-                    Example::Retained(Box::new(prepared))
-                } else {
-                    let example = recite_writer_model::WRITER_EXAMPLES
-                        .iter()
-                        .find(|e| e.name == name)
-                        .ok_or("The linked scene is not open.")?;
-                    let mut model = example.open().map_err(|e| e.to_string())?;
-                    select(&mut model).map_err(|e| e.to_string())?;
-                    Example::Cold(Some(Box::new(model)))
-                };
-                PreparedDestination::Example { name, prepared }
-            }
+            Destination::Example(request) => PreparedDestination::Example(Box::new(
+                request
+                    .prepare(&control, select)
+                    .map_err(|e| e.to_string())?,
+            )),
         };
         Ok(Prepared {
             destination,

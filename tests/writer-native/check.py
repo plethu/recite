@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "structure":
+        if scenario == "startup":
+            from startup_interactions import run
+        elif scenario == "structure":
             from structure_interactions import run
         else:
             from writer_interactions import run
@@ -93,7 +95,7 @@ def main():
     parser.add_argument("binary", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--child", action="store_true")
-    parser.add_argument("--scenario", choices=("all", "structure"), default="all")
+    parser.add_argument("--scenario", choices=("all", "structure", "startup"), default="all")
     args = parser.parse_args()
     binary = args.binary.resolve(strict=True)
     output = args.output.resolve()

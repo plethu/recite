@@ -65,24 +65,38 @@ impl Load {
         let worker = std::thread::Builder::new()
             .name("recite-project-open".into())
             .spawn(move || {
-                let loaded = ProjectFiles::open_with_control(&request.path, &work).and_then(
-                    |mut project| {
-                        let view = crate::navigation::initial_view(
-                            request.route.as_deref(),
-                            project.document_name()?,
-                        );
-                        let initial = (view.unwrap_or(request.view)
-                            == recite_config::WriterView::Source)
-                            .then_some(recite_writer_model::View::Source);
-                        let workbench = project.workbench_with_control(initial, &work)?;
-                        work.checkpoint()?;
-                        Ok(LoadedProject {
-                            files: project,
-                            workbench,
-                            view,
-                        })
-                    },
-                );
+                let requested = request
+                    .route
+                    .as_deref()
+                    .and_then(|route| {
+                        route
+                            .parse::<recite_writer_session::location::Location>()
+                            .ok()
+                    })
+                    .map(|location| location.document)
+                    .filter(|document| !document.is_empty())
+                    .map(PathBuf::from);
+                let loaded = ProjectFiles::open_requested_with_control(
+                    &request.path,
+                    requested.as_deref(),
+                    &work,
+                )
+                .and_then(|mut project| {
+                    let view = crate::navigation::initial_view(
+                        request.route.as_deref(),
+                        project.document_name()?,
+                    );
+                    let initial = (view.unwrap_or(request.view)
+                        == recite_config::WriterView::Source)
+                        .then_some(recite_writer_model::View::Source);
+                    let workbench = project.workbench_with_control(initial, &work)?;
+                    work.checkpoint()?;
+                    Ok(LoadedProject {
+                        files: project,
+                        workbench,
+                        view,
+                    })
+                });
                 let _ = sender.send(loaded);
             })?;
         Ok(Self {

@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase == Phase::ConfirmClose;
-    let model = state.project.current().model();
+    let model = state.session.model();
     let editing = matches!(model.view(), View::Passage(_));
     let editor = if !editing {
         Either::A(super::reading::inspection(state))
@@ -23,12 +23,14 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
                 .disabled(closing)
                 .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript")),
             ))
-            .width(560.px())
-            .height(if state.trial.visible {
-                100.px()
-            } else {
-                260.px()
-            }),
+            .dims((
+                560.px(),
+                if state.trial.visible {
+                    100.px()
+                } else {
+                    260.px()
+                },
+            )),
         )
     };
     let selection = if editing {

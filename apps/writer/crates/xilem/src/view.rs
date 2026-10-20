@@ -34,9 +34,13 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
                     ))
                     .gap(20.px()),
                     state
-                        .project
-                        .sessions()
-                        .find_map(|session| session.recovery_error())
+                        .session
+                        .project()
+                        .and_then(|project| {
+                            project
+                                .sessions()
+                                .find_map(|session| session.recovery_error())
+                        })
                         .map(|error| {
                             label(format!(
                                 "Recovery failed: {error}. Save or keep the window open."
@@ -60,26 +64,39 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
         label("Recite Writer").text_size(28.),
         label(format!(
             "{}{}",
-            state.project.current().model().document().key().as_str(),
-            if state.project.current().dirty() {
+            state.session.model().document().key().as_str(),
+            if state.session.current_dirty() {
                 " · Unsaved"
             } else {
                 ""
             }
         )),
+        state
+            .session
+            .project()
+            .is_none()
+            .then(|| label("Temporary example · changes are discarded when this window closes")),
         flex_row((
-            text_button("Save file", |state: &mut Writer| {
-                state.save();
-            })
-            .disabled(closing || state.work.busy()),
-            text_button("Save all", |state: &mut Writer| {
-                state.save_all();
-            })
-            .disabled(closing || state.work.busy()),
-            text_button("Open in editor", Writer::open_editor)
-                .disabled(closing || state.work.busy() || state.editor.is_none()),
-            text_button("Reload (keep recovery copy)", Writer::reload)
-                .disabled(closing || state.work.busy()),
+            state.session.project().is_some().then(|| {
+                text_button("Save file", |state: &mut Writer| {
+                    state.save();
+                })
+                .disabled(closing || state.work.busy())
+            }),
+            state.session.project().is_some().then(|| {
+                text_button("Save all", |state: &mut Writer| {
+                    state.save_all();
+                })
+                .disabled(closing || state.work.busy())
+            }),
+            state.session.project().is_some().then(|| {
+                text_button("Open in editor", Writer::open_editor)
+                    .disabled(closing || state.work.busy() || state.editor.is_none())
+            }),
+            state.session.project().is_some().then(|| {
+                text_button("Reload (keep recovery copy)", Writer::reload)
+                    .disabled(closing || state.work.busy())
+            }),
             text_button("Close", Writer::request_close).disabled(closing),
         ))
         .gap(8.px()),
@@ -113,12 +130,7 @@ fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
 }
 
 fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let diagnostics = state
-        .project
-        .current()
-        .model()
-        .document()
-        .diagnostic_snapshot();
+    let diagnostics = state.session.model().document().diagnostic_snapshot();
     flex_col(
         (0..diagnostics.len().min(3))
             .filter_map(|index| diagnostics.get(index))
@@ -139,16 +151,29 @@ fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     (state.phase == Phase::ConfirmClose).then(|| {
         sized_box(
             flex_col((
-                label("Keep your unsaved work before closing"),
+                label(if state.session.project().is_some() {
+                    "Keep your unsaved work before closing"
+                } else {
+                    "Example edits are temporary and will be discarded"
+                }),
                 flex_row((
                     text_button("Keep editing", |state: &mut Writer| {
                         state.phase = Phase::Writing;
                         state.work.keep_editing();
                     }),
-                    text_button("Save all and close", Writer::save_and_close)
-                        .disabled(state.work.busy()),
-                    text_button("Close and keep recovery", Writer::close_with_recovery)
-                        .disabled(state.work.busy()),
+                    state.session.project().is_some().then(|| {
+                        text_button("Save all and close", Writer::save_and_close)
+                            .disabled(state.work.busy())
+                    }),
+                    text_button(
+                        if state.session.project().is_some() {
+                            "Close and keep recovery"
+                        } else {
+                            "Close and discard example changes"
+                        },
+                        Writer::close_with_recovery,
+                    )
+                    .disabled(state.work.busy()),
                 ))
                 .gap(8.px()),
             ))

@@ -1,5 +1,7 @@
 use super::*;
 use std::io::Write;
+#[path = "tests/options/tests.rs"]
+mod options;
 
 fn owner(activation: Activation) -> ActivationHost {
     match activation {
@@ -81,6 +83,8 @@ fn invalid_and_oversized_frames_are_refused() -> Result<(), Box<dyn std::error::
         &Request {
             project: Some(PathBuf::from("relative")),
             route: None,
+            document: None,
+            editor: None,
         },
     )?;
     assert!(matches!(
@@ -157,6 +161,8 @@ fn project_intent_must_match_the_project_encoded_in_the_route()
     let mut request = Request {
         project: Some(first.join("recite.project.toml")),
         route: Some(route),
+        document: None,
+        editor: None,
     };
     assert_eq!(canonical_intent(&request)?, Some(first.clone()));
     request.project = Some(second);
@@ -198,6 +204,8 @@ fn activation_refuses_invalid_intent_and_never_queues_it() -> Result<(), Box<dyn
             &Request {
                 project: None,
                 route: Some(route.into()),
+                document: None,
+                editor: None,
             },
         )?;
         assert!(matches!(
@@ -266,7 +274,9 @@ fn forwarding_requires_a_queued_receipt_followed_by_an_applied_outcome()
                 &socket,
                 &Request {
                     project: None,
-                    route: Some("recite://writer/write".into())
+                    route: Some("recite://writer/write".into()),
+                    document: None,
+                    editor: None,
                 }
             ),
             Err(expected.into())
@@ -291,6 +301,8 @@ fn disconnected_activation_consumers_refuse_or_cancel_the_unapplied_request()
                 &Request {
                     project: None,
                     route: None,
+                    document: None,
+                    editor: None,
                 },
             )?;
             assert!(matches!(
@@ -303,6 +315,8 @@ fn disconnected_activation_consumers_refuse_or_cancel_the_unapplied_request()
                 &Request {
                     project: None,
                     route: None,
+                    document: None,
+                    editor: None,
                 },
             )?;
             assert!(matches!(
@@ -321,4 +335,20 @@ fn disconnected_activation_consumers_refuse_or_cancel_the_unapplied_request()
         worker.join().map_err(|_| "activation worker panicked")??;
     }
     Ok(())
+}
+
+fn claim_at(
+    directory: &Path,
+    project: Option<&Path>,
+    route: Option<&str>,
+) -> Result<Activation, String> {
+    super::claim_at(
+        directory,
+        &Request {
+            project: project.map(Path::to_path_buf),
+            route: route.map(str::to_owned),
+            document: None,
+            editor: None,
+        },
+    )
 }

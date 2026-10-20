@@ -30,7 +30,10 @@ fn launch(mut writer: Writer) {
     let Some(project) = files.as_mut() else {
         return;
     };
-    match Handoff::start(project.current.clone()) {
+    match Handoff::configured(
+        project.current.clone(),
+        writer.editor_command.peek().as_ref(),
+    ) {
         Ok(job) => {
             project.handoff = Some(job);
             writer.message.info(text(MsgId::WriterExternalOpening));

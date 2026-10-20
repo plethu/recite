@@ -6,7 +6,7 @@ mod captions;
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase != Phase::Writing;
     let busy = state.trial.busy();
-    let model = state.project.current().model();
+    let model = state.session.model();
     let page = model.preview_page().filter(|_| state.trial.visible);
     flex_col((
         label("Conversation preview").text_size(22.),
@@ -67,7 +67,7 @@ fn playback(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetVi
         .take(PAGE)
         .map(|(index, choice)| {
             text_button(choice.text.clone(), move |state: &mut Writer| {
-                let result = state.project.current_mut().advance_preview(Some(index));
+                let result = state.session.advance_preview(Some(index));
                 report(state, result);
             })
             .disabled(disabled)
@@ -112,21 +112,14 @@ fn playback(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetVi
         page.waiting_effect.as_ref().map(|_| {
             flex_row((
                 text_button("Acknowledge effect", |state: &mut Writer| {
-                    let result = state
-                        .project
-                        .current_mut()
-                        .acknowledge_preview(EffectAck::Completed);
+                    let result = state.session.acknowledge_preview(EffectAck::Completed);
                     report(state, result);
                 })
                 .disabled(disabled),
                 text_button("Report effect failure", |state: &mut Writer| {
-                    let result =
-                        state
-                            .project
-                            .current_mut()
-                            .acknowledge_preview(EffectAck::Failed {
-                                reason: "Simulated preview failure".into(),
-                            });
+                    let result = state.session.acknowledge_preview(EffectAck::Failed {
+                        reason: "Simulated preview failure".into(),
+                    });
                     report(state, result);
                 })
                 .disabled(disabled),
@@ -152,7 +145,7 @@ fn playback(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetVi
         }),
         can_continue.then(|| {
             text_button("Continue preview", |state: &mut Writer| {
-                let result = state.project.current_mut().advance_preview(None);
+                let result = state.session.advance_preview(None);
                 report(state, result);
             })
             .disabled(disabled)
@@ -174,10 +167,7 @@ fn condition(
                 text_button(
                     if value { "Answer true" } else { "Answer false" },
                     move |state: &mut Writer| {
-                        let result = state
-                            .project
-                            .current_mut()
-                            .answer_preview(ConditionValue::Bool(value));
+                        let result = state.session.answer_preview(ConditionValue::Bool(value));
                         report(state, result);
                     },
                 )
@@ -199,7 +189,7 @@ fn condition(
                 .width(240.px()),
                 text_button("Answer condition", |state: &mut Writer| {
                     let value = ConditionValue::EnumVariant(state.trial.answer.trim().to_owned());
-                    let result = state.project.current_mut().answer_preview(value);
+                    let result = state.session.answer_preview(value);
                     report(state, result);
                 })
                 .disabled(disabled || state.trial.answer.trim().is_empty()),

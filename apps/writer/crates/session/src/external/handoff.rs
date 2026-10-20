@@ -4,6 +4,19 @@ pub struct Handoff {
     result: mpsc::Receiver<Result<(), String>>,
 }
 impl Handoff {
+    pub fn configured(
+        path: PathBuf,
+        editor: Option<&crate::startup::EditorCommand>,
+    ) -> Result<Self, String> {
+        match editor {
+            Some(editor) => {
+                let mut command = std::process::Command::new(&editor.program);
+                command.args(&editor.args).arg(path);
+                Self::command(command)
+            }
+            None => Self::start(path),
+        }
+    }
     pub fn start(path: PathBuf) -> Result<Self, String> {
         let program = if cfg!(target_os = "macos") {
             "open"

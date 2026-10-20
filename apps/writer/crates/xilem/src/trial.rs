@@ -78,8 +78,7 @@ impl Writer {
             return;
         }
         let result = self
-            .project
-            .current()
+            .session
             .model()
             .preview_request()
             .map_err(|error| error.to_string())
@@ -105,9 +104,9 @@ impl Writer {
         let current = matches!(preparation, Preparation::Running(ref request) if Arc::ptr_eq(request, &output.request))
             && self.phase == Phase::Writing
             && self.trial.visible
-            && output.request.is_current(self.project.current().model());
+            && output.request.is_current(self.session.model());
         let retired = match output.result {
-            Ok(prepared) if current => match self.project.current_mut().accept_preview(prepared) {
+            Ok(prepared) if current => match self.session.accept_preview(prepared) {
                 Ok(previous) => {
                     self.trial.answer.clear();
                     self.trial.choice_page = 0;

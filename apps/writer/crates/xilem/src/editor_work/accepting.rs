@@ -15,7 +15,10 @@ impl Writer {
                 }
             }
             Some(Operation::Saving(mut sequence)) => {
-                let (files, model) = self.project.parts_mut();
+                let Some((files, model)) = self.session.parts_mut() else {
+                    self.status = FileError::ProjectRequired.to_string();
+                    return;
+                };
                 sequence.accept(files, model, receipt);
                 self.drive_save(sequence);
             }
@@ -29,7 +32,10 @@ impl Writer {
         };
         match result {
             Ok(mut prepared) => {
-                let (files, model) = self.project.parts_mut();
+                let Some((files, model)) = self.session.parts_mut() else {
+                    self.status = FileError::ProjectRequired.to_string();
+                    return;
+                };
                 let accepted = model.accept_edit(&mut prepared).map_err(FileError::from);
                 // The explicit save retries recovery; an older asynchronous failure
                 // must not veto this rescue of the newly accepted source.
@@ -41,7 +47,10 @@ impl Writer {
         }
     }
     pub(super) fn drive_save(&mut self, mut sequence: Box<SaveSequence>) {
-        let (files, model) = self.project.parts_mut();
+        let Some((files, model)) = self.session.parts_mut() else {
+            self.status = FileError::ProjectRequired.to_string();
+            return;
+        };
         match sequence.poll(files, model) {
             Progress::Work(work) => {
                 self.work.operation = Some(Operation::Saving(sequence));

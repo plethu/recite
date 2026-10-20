@@ -40,7 +40,7 @@ pub(super) fn inspection(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
         ))
     } else {
         Either::B(Either::B(
-            if matches!(state.project.current().model().view(), View::Block(_)) {
+            if matches!(state.session.model().view(), View::Block(_)) {
                 Either::A(block(state))
             } else {
                 Either::B(sized_box(prose("Choose a beat in the outline to read or write it. Use your editor for source editing; source drafts remain recoverable.")).width(560.px()))

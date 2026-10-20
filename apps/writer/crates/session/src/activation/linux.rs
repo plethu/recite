@@ -19,18 +19,26 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use super::Activation;
+use crate::startup::{EditorCommand, LaunchOptions, Startup};
 
 const QUEUE_SIZE: usize = 16;
 const IO_TIMEOUT: Duration = Duration::from_secs(5);
 const ACCEPT_PAUSE: Duration = Duration::from_millis(25);
 
+mod validation;
 mod wire;
+use validation::{canonical_intent, validate_options};
 use wire::{monotonic_now, read_frame, write_frame};
 
 #[derive(Serialize, Deserialize)]
 struct Request {
+    #[serde(with = "wire::native::optional_path")]
     project: Option<PathBuf>,
     route: Option<String>,
+    #[serde(with = "wire::native::optional_path")]
+    document: Option<PathBuf>,
+    #[serde(with = "wire::native::optional_editor")]
+    editor: Option<EditorCommand>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -43,6 +51,8 @@ enum Receipt {
 pub struct IncomingRoute {
     pub project: Option<PathBuf>,
     pub route: Option<String>,
+    pub document: Option<PathBuf>,
+    pub editor: Option<EditorCommand>,
     pub cancelled: Arc<AtomicBool>,
     pub reply: mpsc::Sender<Result<(), String>>,
 }
@@ -93,10 +103,11 @@ impl Drop for ActivationHost {
         if fs::symlink_metadata(&self.socket).is_ok_and(|meta| meta.file_type().is_socket()) {
             let _ = fs::remove_file(&self.socket);
         }
+        let _ = self._lock.unlock();
     }
 }
 
-pub(super) fn claim(project: Option<&Path>, route: Option<&str>) -> Result<Activation, String> {
+pub(super) fn claim(options: &LaunchOptions) -> Result<Activation, String> {
     let store = recite_config::UserConfigStore::discover().map_err(|e| e.to_string())?;
     // This is the parent used by UserConfigStore::state_file.
     store
@@ -115,14 +126,21 @@ pub(super) fn claim(project: Option<&Path>, route: Option<&str>) -> Result<Activ
         return Err("Unsafe user configuration directory".into());
     }
     let directory = config_parent.join("writer-activation");
-    claim_at(&directory, project, route)
+    let Startup::Writer { project, route } = &options.intent else {
+        return Err("Invalid writer launch mode".into());
+    };
+    claim_at(
+        &directory,
+        &Request {
+            project: project.clone(),
+            route: route.clone(),
+            document: options.document.clone(),
+            editor: options.editor.clone(),
+        },
+    )
 }
 
-fn claim_at(
-    directory: &Path,
-    project: Option<&Path>,
-    route: Option<&str>,
-) -> Result<Activation, String> {
+fn claim_at(directory: &Path, request: &Request) -> Result<Activation, String> {
     private_directory(directory)?;
     let key = "writer";
     let lock_path = directory.join(format!("{key}.lock"));
@@ -131,13 +149,7 @@ fn claim_at(
     match lock.try_lock() {
         Ok(()) => owner(lock, socket),
         Err(fs::TryLockError::WouldBlock) => {
-            forward(
-                &socket,
-                &Request {
-                    project: project.map(Path::to_path_buf),
-                    route: route.map(str::to_owned),
-                },
-            )?;
+            forward(&socket, request)?;
             Ok(Activation::Forwarded)
         }
         Err(fs::TryLockError::Error(error)) => {
@@ -226,6 +238,10 @@ fn handle(
             return Ok(());
         }
     };
+    if let Err(error) = validate_options(&request, project.as_deref()) {
+        write_frame(stream, &Receipt::Refused(error))?;
+        return Ok(());
+    }
     if !polling.load(Ordering::Acquire) {
         write_frame(
             stream,
@@ -235,10 +251,21 @@ fn handle(
     }
     let (reply, result) = mpsc::channel();
     let cancelled = Arc::new(AtomicBool::new(false));
+    let route = LaunchOptions {
+        intent: Startup::Writer {
+            project: project.clone(),
+            route: request.route,
+        },
+        document: request.document.clone(),
+        editor: request.editor.clone(),
+    }
+    .route()?;
     if sender
         .try_send(IncomingRoute {
             project,
-            route: request.route,
+            route,
+            document: request.document,
+            editor: request.editor,
             cancelled: cancelled.clone(),
             reply,
         })
@@ -265,32 +292,6 @@ fn handle(
         }
     };
     write_frame(stream, &receipt)
-}
-
-fn canonical_intent(request: &Request) -> Result<Option<PathBuf>, String> {
-    let linked = request
-        .route
-        .as_deref()
-        .map(crate::location::project_from_route)
-        .transpose()?
-        .flatten();
-    let canonical = |path: &Path| {
-        recite_config::discover_project(path)
-            .map(|report| report.manifest().project_root().to_owned())
-            .map_err(|error| format!("Could not open linked project {}: {error}", path.display()))
-    };
-    match (request.project.as_deref(), linked.as_deref()) {
-        (Some(project), Some(linked)) => {
-            let project = canonical(project)?;
-            if project != canonical(linked)? {
-                return Err("The link identifies another project".into());
-            }
-            Ok(Some(project))
-        }
-        (Some(project), None) => canonical(project).map(Some),
-        (None, Some(_)) => Err("A project link needs a project intent".into()),
-        (None, None) => Ok(None),
-    }
 }
 
 fn forward(socket: &Path, request: &Request) -> Result<(), String> {

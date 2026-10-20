@@ -4,33 +4,51 @@ use xilem::view::button;
 const PAGE: usize = 8;
 
 pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+    let documents = if state.session.project().is_some() {
+        Either::A(project_files(state))
+    } else {
+        Either::B(examples(state))
+    };
+    sized_box(
+        flex_col((documents, outline(state)))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(12.px()),
+    )
+    .width(250.px())
+}
+fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase == Phase::ConfirmClose;
     const FILE_PAGE: usize = 4;
-    let pages = state.project.documents().len().div_ceil(FILE_PAGE).max(1);
+    let pages = state
+        .session
+        .project()
+        .map_or(&[][..], |project| project.documents())
+        .len()
+        .div_ceil(FILE_PAGE)
+        .max(1);
     state.file_page = state.file_page.min(pages - 1);
     let files = state
-        .project
-        .documents()
+        .session
+        .project()
+        .map_or(&[][..], |project| project.documents())
         .iter()
         .skip(state.file_page * FILE_PAGE)
         .take(FILE_PAGE)
         .map(|document| {
             let path = document.path.clone();
-            let open = state
-                .project
-                .sessions()
-                .find(|session| session.path() == path);
-            let current = state.project.current().path() == path;
+            let project = state.session.project();
+            let dirty = project.is_some_and(|project| {
+                project
+                    .sessions()
+                    .any(|session| session.path() == path && session.dirty())
+            });
+            let current = project.is_some_and(|project| project.current().path() == path);
             button(
                 label(format!(
                     "{}{}{}",
                     if current { "Current · " } else { "" },
                     document.key.as_str(),
-                    if open.is_some_and(|session| session.dirty()) {
-                        " · Unsaved"
-                    } else {
-                        ""
-                    }
+                    if dirty { " · Unsaved" } else { "" }
                 ))
                 .prop(LineBreaking::WordWrap),
                 move |state: &mut Writer| state.switch(&path),
@@ -55,8 +73,7 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
                 )
                 .constrain_horizontal(true),
             )
-            .width(250.px())
-            .height(height.px()),
+            .dims((250.px(), height.px())),
             (pages > 1).then(|| {
                 flex_row((
                     text_button("Previous files", |state: &mut Writer| {
@@ -69,7 +86,6 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
                 .gap(8.px())
             }),
             (pages > 1).then(|| label(format!("Files · page {} of {pages}", state.file_page + 1))),
-            outline(state),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(12.px()),
@@ -79,7 +95,7 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
 
 fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase != Phase::Writing;
-    let blocks = state.project.current().model().document().block_summaries();
+    let blocks = state.session.model().document().block_summaries();
     let pages = blocks.len().div_ceil(PAGE).max(1);
     state.beat_page = state.beat_page.min(pages - 1);
     let entries = blocks
@@ -128,8 +144,7 @@ fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             )
             .constrain_horizontal(true),
         )
-        .width(250.px())
-        .height(height.px()),
+        .dims((250.px(), height.px())),
         (pages > 1).then(|| {
             flex_row((
                 text_button("Previous beats", |state: &mut Writer| {
@@ -142,6 +157,37 @@ fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             .gap(8.px())
         }),
         (pages > 1).then(|| label(format!("Beats · page {} of {pages}", state.beat_page + 1))),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(12.px())
+}
+
+fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    flex_col((
+        label("Temporary examples"),
+        flex_col(
+            recite_writer_model::WRITER_EXAMPLES
+                .iter()
+                .enumerate()
+                .map(|(index, example)| {
+                    button(
+                        label(format!(
+                            "{}{}",
+                            if example.name == state.session.model().document().key().as_str() {
+                                "Current · "
+                            } else {
+                                ""
+                            },
+                            example.name
+                        ))
+                        .prop(LineBreaking::WordWrap),
+                        move |state: &mut Writer| state.select_example(index),
+                    )
+                    .disabled(state.phase != Phase::Writing)
+                })
+                .collect::<Vec<_>>(),
+        )
+        .gap(8.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())

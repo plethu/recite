@@ -59,13 +59,7 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
         ));
         if invalidate != 4 {
             assert_eq!(
-                writer
-                    .project
-                    .current()
-                    .model()
-                    .preview_page()
-                    .unwrap()
-                    .text,
+                writer.session.model().preview_page().unwrap().text,
                 "Hello."
             );
         }
@@ -97,13 +91,7 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
     assert!(returned.recv().unwrap().is_none());
     assert_eq!(writer.trial.status, "Could not prepare");
     assert_eq!(
-        writer
-            .project
-            .current()
-            .model()
-            .preview_page()
-            .unwrap()
-            .text,
+        writer.session.model().preview_page().unwrap().text,
         "Hello."
     );
     writer.trial.sender = None;
@@ -134,36 +122,19 @@ fn native_preview_actions_play_choices_conditions_effects_and_keep_authoring_und
         &["Continue preview", "Choose the branch", "Answer true"],
     )
     .unwrap();
-    assert_eq!(
-        writer
-            .project
-            .current()
-            .model()
-            .preview_page()
-            .unwrap()
-            .text,
-        "Yes."
-    );
+    assert_eq!(writer.session.model().preview_page().unwrap().text, "Yes.");
     click(
         &mut writer,
         &["Continue preview", "Acknowledge effect", "Continue preview"],
     )
     .unwrap();
-    assert!(
-        writer
-            .project
-            .current()
-            .model()
-            .preview_page()
-            .unwrap()
-            .ended
-    );
-    assert!(!writer.project.dirty(), "playback is transient");
+    assert!(writer.session.model().preview_page().unwrap().ended);
+    assert!(!writer.session.dirty(), "playback is transient");
     writer.change(|model| {
         model.set_draft("Accepted.".into());
         model.apply()
     });
-    assert!(writer.project.current().model().preview_stale());
+    assert!(writer.session.model().preview_stale());
     assert!(
         labels(&mut writer)
             .unwrap()
@@ -172,7 +143,7 @@ fn native_preview_actions_play_choices_conditions_effects_and_keep_authoring_und
     );
     click(&mut writer, &["Hide preview", "Undo applied"]).unwrap();
     assert!(!writer.trial.visible);
-    assert_eq!(writer.project.current().model().draft(), "Hello.");
+    assert_eq!(writer.session.model().draft(), "Hello.");
 }
 
 #[test]
@@ -192,7 +163,7 @@ fn enum_condition_and_effect_failure_use_the_existing_runtime_contract() {
     )
     .unwrap();
     assert!(!writer.trial.status.is_empty());
-    assert!(!writer.project.dirty());
+    assert!(!writer.session.dirty());
 }
 
 #[derive(Debug)]
@@ -238,13 +209,7 @@ fn native_worker_waits_for_disposal_receipts_and_exits_when_its_owner_disconnect
         );
         writer.accept_trial(*output);
         assert_eq!(
-            writer
-                .project
-                .current()
-                .model()
-                .preview_page()
-                .unwrap()
-                .text,
+            writer.session.model().preview_page().unwrap().text,
             "Hello."
         );
     }
@@ -253,9 +218,7 @@ fn native_worker_waits_for_disposal_receipts_and_exits_when_its_owner_disconnect
     let proxy = MessageProxy::new(Arc::new(crate::tests::support::NoProxy), Arc::from([]));
     let (sender, requests) = tokio::sync::mpsc::unbounded_channel();
     sender
-        .send(Arc::new(
-            writer.project.current().model().preview_request().unwrap(),
-        ))
+        .send(Arc::new(writer.session.model().preview_request().unwrap()))
         .unwrap();
     drop(sender);
     runtime.block_on(serve(proxy, requests));

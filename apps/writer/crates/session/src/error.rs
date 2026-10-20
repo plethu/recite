@@ -1,6 +1,8 @@
 use std::io;
 #[derive(Debug, thiserror::Error)]
 pub enum FileError {
+    #[error("Open a project to use this file action. Example changes are temporary.")]
+    ProjectRequired,
     #[error("A save is still finishing. Keep editing, or wait for it before changing files.")]
     SavePending,
     #[error("Could not save {path}: {error}")]

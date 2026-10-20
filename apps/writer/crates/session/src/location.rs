@@ -1,5 +1,7 @@
 //! Linkable workspace locations; no edits or manuscript content in URLs.
 use std::{fmt, str::FromStr};
+mod selection;
+pub use selection::{catalogue_path, select, select_reusing_rules};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Screen {

@@ -15,15 +15,15 @@ fn inactive_draft_guards_window_closing_and_save_close_covers_every_open_file() 
         Ok(())
     });
     click(&mut writer, &["other.recite"]).unwrap();
-    assert_eq!(writer.project.current().path(), other);
-    assert!(!writer.project.current().dirty());
+    assert_eq!(writer.session.project().unwrap().current().path(), other);
+    assert!(!writer.session.project().unwrap().current().dirty());
     click(&mut writer, &["Close"]).unwrap();
     assert!(writer.phase == Phase::ConfirmClose);
     click(&mut writer, &["Keep editing"]).unwrap();
     assert!(writer.phase == Phase::Writing);
     click(&mut writer, &["Close", "Save all and close"]).unwrap();
     assert!(!writer.keep_running());
-    assert!(!writer.project.dirty());
+    assert!(!writer.session.dirty());
     assert!(
         fs::read_to_string(directory.path().join("scene.recite"))
             .unwrap()
@@ -54,7 +54,7 @@ fn failed_inactive_save_keeps_the_window_open_and_displays_the_conflicting_file(
     assert!(writer.status.contains("changed on disk"));
     click(&mut writer, &["Keep editing"]).unwrap();
     writer.switch(&directory.path().join("missing.recite"));
-    assert_eq!(writer.project.current().path(), other);
+    assert_eq!(writer.session.project().unwrap().current().path(), other);
 }
 
 #[test]
@@ -77,5 +77,5 @@ fn file_pages_bound_native_controls_without_opening_unvisited_documents() {
     assert!(!after.iter().any(|label| label == "file_00.recite"));
     click(&mut writer, &["Previous files"]).unwrap();
     assert_eq!(writer.file_page, 0);
-    assert_eq!(writer.project.sessions().count(), 1);
+    assert_eq!(writer.session.project().unwrap().sessions().count(), 1);
 }

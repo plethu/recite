@@ -32,12 +32,15 @@ pub struct DocumentSessionMut<'a> {
 
 impl ProjectSession {
     pub fn open(project: &Path, requested: Option<&Path>) -> Result<Self, FileError> {
-        let mut files = ProjectFiles::open_requested_with_control(
-            project,
-            requested,
-            &CancellationToken::new(),
-        )?;
-        let model = files.workbench()?;
+        Self::open_with_control(project, requested, &CancellationToken::new())
+    }
+    pub fn open_with_control(
+        project: &Path,
+        requested: Option<&Path>,
+        control: &dyn recite_compiler::authoring::WorkControl,
+    ) -> Result<Self, FileError> {
+        let mut files = ProjectFiles::open_requested_with_control(project, requested, control)?;
+        let model = files.workbench_with_control(None, control)?;
         let documents = documents(&files)?;
         Ok(Self {
             files,

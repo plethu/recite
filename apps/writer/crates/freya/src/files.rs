@@ -21,10 +21,10 @@ pub(crate) fn controls(
     let buffers = writer.buffers;
     let initial = use_try_consume::<crate::InitialProject>();
     let initial_route = use_try_consume::<crate::InitialRoute>();
+    let initial_path = initial.and_then(|value| value.0);
+    let displayed_path = initial_path.clone();
     let path = use_state(move || {
-        initial
-            .and_then(|value| value.0)
-            .map_or_else(String::new, |path| path.to_string_lossy().into_owned())
+        displayed_path.map_or_else(String::new, |path| path.to_string_lossy().into_owned())
     });
     let path_id = use_a11y();
     let browse_id = use_a11y();
@@ -48,10 +48,10 @@ pub(crate) fn controls(
         }
     });
     use_hook(move || {
-        if !path.peek().is_empty() {
+        if let Some(initial_path) = initial_path {
             crate::project_loading::start(
                 job,
-                path.peek().as_str().into(),
+                initial_path,
                 writer,
                 initial_route.map(|route| route.0),
             );

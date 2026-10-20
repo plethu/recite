@@ -1,13 +1,14 @@
 use freya::prelude::*;
 
 fn main() {
-    let startup = match recite_writer::Startup::parse(std::env::args().skip(1)) {
+    let options = match recite_writer::LaunchOptions::parse(std::env::args_os().skip(1)) {
         Ok(startup) => startup,
         Err(error) => {
             eprintln!("{error}\n{}", recite_writer::startup_help());
             std::process::exit(2);
         }
     };
+    let startup = options.intent.clone();
     if startup == recite_writer::Startup::Help {
         println!("{}", recite_writer::startup_help());
         return;
@@ -16,10 +17,17 @@ fn main() {
         println!("recite-writer {}", env!("CARGO_PKG_VERSION"));
         return;
     }
+    let initial_route = match options.route() {
+        Ok(route) => route,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(2);
+        }
+    };
     let specimen = startup == recite_writer::Startup::DesignSystem;
     let owner = match &startup {
-        recite_writer::Startup::Writer { project, route } => {
-            match recite_writer::Activation::claim(project.as_deref(), route.as_deref()) {
+        recite_writer::Startup::Writer { .. } => {
+            match recite_writer::Activation::claim_launch(&options) {
                 Ok(recite_writer::Activation::Owner(owner)) => Some(owner),
                 Ok(recite_writer::Activation::Forwarded) => return,
                 Err(error) => {
@@ -44,20 +52,19 @@ fn main() {
                     return recite_writer::design_app();
                 }
                 // Startup intent is fixed for this window's lifetime.
-                let (file_backed, project, initial_route) = match &startup {
-                    recite_writer::Startup::Writer { project, route } => {
-                        (true, project.clone(), route.clone())
-                    }
-                    recite_writer::Startup::Examples { route } => (false, None, route.clone()),
-                    _ => (false, None, None),
+                let (file_backed, project) = match &startup {
+                    recite_writer::Startup::Writer { project, .. } => (true, project.clone()),
+                    _ => (false, None),
                 };
-                if let Some(route) = initial_route {
+                if let Some(route) = initial_route.clone() {
                     use_provide_context(move || recite_writer::InitialRoute(route));
                 }
                 if let Some(inbox) = inbox.clone() {
                     use_provide_context(move || inbox);
                 }
                 use_provide_context(move || recite_writer::InitialProject(project));
+                let editor = options.editor.clone();
+                use_provide_context(move || recite_writer::InitialEditor(editor));
                 let _preferences = use_provide_context(|| {
                     recite_config::UserConfigStore::discover().map_err(|e| e.to_string())
                 });

@@ -33,13 +33,11 @@ fn save_stays_responsive_and_retains_typing_that_arrived_after_disk_dispatch() {
     writer.accept_save_work(receipt);
     finish_work(&mut writer, &mut requests).unwrap();
     assert!(!writer.work.busy());
-    assert_eq!(
-        writer.project.current().model().draft(),
-        "Newer typing during save."
-    );
-    assert!(writer.project.dirty());
+    assert_eq!(writer.session.model().draft(), "Newer typing during save.");
+    assert!(writer.session.dirty());
     assert!(writer.status.contains("newer edits remain"));
-    let source = std::fs::read_to_string(writer.project.current().path()).unwrap();
+    let source =
+        std::fs::read_to_string(writer.session.project().unwrap().current().path()).unwrap();
     assert!(source.contains("Accepted before saving."));
     assert!(!source.contains("Newer typing during save."));
 }
@@ -68,10 +66,11 @@ fn typing_during_apply_saves_captured_source_and_preserves_the_live_draft() {
     assert!(writer.phase == Phase::ConfirmClose);
     assert!(!writer.work.busy());
     assert_eq!(
-        writer.project.current().model().draft(),
+        writer.session.model().draft(),
         "Typed before Apply returned."
     );
-    let saved = std::fs::read_to_string(writer.project.current().path()).unwrap();
+    let saved =
+        std::fs::read_to_string(writer.session.project().unwrap().current().path()).unwrap();
     assert!(saved.contains("Captured field draft."));
     assert!(!saved.contains("Typed before Apply returned."));
     assert!(writer.status.contains("newer edits remain"));
@@ -87,7 +86,7 @@ fn unavailable_worker_keeps_unsaved_work_and_releases_busy_guard() {
     });
     writer.save();
     assert!(!writer.work.busy());
-    assert!(!writer.project.files().saving);
+    assert!(!writer.session.project().unwrap().files().saving);
     assert!(writer.status.contains("worker is unavailable"));
-    assert_eq!(writer.project.current().model().draft(), "Keep me.");
+    assert_eq!(writer.session.model().draft(), "Keep me.");
 }

@@ -27,3 +27,7 @@ pub mod choices;
 pub mod localisation;
 
 pub mod preview;
+
+pub mod startup;
+
+pub mod examples;

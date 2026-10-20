@@ -121,7 +121,7 @@ pub(crate) fn render(mode: AppMode) -> Element {
     });
     let expanded = use_state(std::collections::BTreeSet::new);
     let files = use_state(|| None);
-    let examples = use_state(std::collections::BTreeMap::new);
+    let examples = use_state(recite_writer_session::examples::ExampleSessions::default);
     let queue = navigation::Queue {
         search: use_state(String::new),
         attention: use_state(|| false),
@@ -130,7 +130,9 @@ pub(crate) fn render(mode: AppMode) -> Element {
     let reference = use_state(|| None::<reading_context::Reference>);
     let localisation = use_state(localisation::Localisation::default);
     let status_a11y = use_a11y();
+    let initial_editor = use_try_consume::<crate::InitialEditor>().and_then(|editor| editor.0);
     let writer = editing::Writer {
+        editor_command: use_state(move || initial_editor),
         vim: commands::Navigation::new(),
         command_search: commands::Search::new(),
         source_viewport: source_editor::EditorViewport::new(),
