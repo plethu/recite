@@ -54,12 +54,12 @@ pub(crate) fn receive(
                 if result.is_ok() {
                     let router = RouterContext::get();
                     let next = snapshot(writer);
-                    let current = router.current::<Location>();
+                    let current = router.current::<location::Route>().0;
                     if next != current {
                         if next.same_place(&current) {
-                            let _ = router.replace(next);
+                            let _ = router.replace(location::Route(next));
                         } else {
-                            let _ = router.push(next);
+                            let _ = router.push(location::Route(next));
                         }
                     }
                     focus();

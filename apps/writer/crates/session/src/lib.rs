@@ -13,3 +13,8 @@ pub use document::DocumentSession;
 pub use error::FileError;
 pub use files::{export_recovery, read_regular, replace_checked, sync_directory};
 pub use project::{ProjectDocument, ProjectSession};
+
+pub mod activation;
+pub mod location;
+pub mod map;
+pub mod preferences;

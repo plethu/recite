@@ -22,10 +22,7 @@ pub struct InitialRoute(pub String);
 #[derive(Clone, Copy)]
 pub(crate) struct NavigationReady(pub(crate) State<bool>);
 
-pub(crate) fn project_from_route(route: &str) -> Result<Option<std::path::PathBuf>, String> {
-    let location = route.parse::<Location>().map_err(str::to_owned)?;
-    Ok(location.project.map(std::path::PathBuf::from))
-}
+pub(crate) use recite_writer_session::location::project_from_route;
 
 /// A matching initial route can avoid constructing a view that will never be shown.
 /// Route application still owns validation, navigation and draft protection.
@@ -56,7 +53,7 @@ pub(crate) struct Queue {
 pub(super) fn app(mode: AppMode) -> Element {
     let mode = use_state(move || mode);
     use_provide_context(move || ModeSwitch(mode));
-    Router::<Location>::new(RouterConfig::default).into_element()
+    Router::<location::Route>::new(RouterConfig::default).into_element()
 }
 
 /// The window's mode can change at runtime: the welcome screen opens the bundled examples.
@@ -201,7 +198,7 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
                     }
                     starting.set(false);
                     started.set(true);
-                    let _ = RouterContext::get().replace(snapshot(writer));
+                    let _ = RouterContext::get().replace(location::Route(snapshot(writer)));
                 });
                 let result = link
                     .parse::<Location>()
@@ -212,18 +209,18 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
                 }
             } else {
                 started.set(true);
-                let _ = router.replace(snapshot(writer));
+                let _ = router.replace(location::Route(snapshot(writer)));
             }
         } else {
             let Some(next) = settled_snapshot(writer) else {
                 return;
             };
-            let current = router.current::<Location>();
+            let current = router.current::<location::Route>().0;
             if next != current {
                 if next.same_place(&current) {
-                    let _ = router.replace(next);
+                    let _ = router.replace(location::Route(next));
                 } else {
-                    let _ = router.push(next);
+                    let _ = router.push(location::Route(next));
                 }
             }
         }
@@ -244,7 +241,7 @@ pub(super) fn step(writer: Writer, forward: bool) {
     } else {
         router.go_back();
     }
-    let target = router.current::<Location>();
+    let target = router.current::<location::Route>().0;
     let completed = EventHandler::new(move |result: Result<(), String>| {
         if let Err(error) = result {
             let router = RouterContext::get();

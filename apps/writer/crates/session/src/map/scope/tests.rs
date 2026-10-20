@@ -37,13 +37,13 @@ fn large_neighbourhood_keeps_selection_and_counts_hidden_beats()
 
 #[test]
 fn culling_keeps_a_route_crossing_the_viewport() {
-    let camera = crate::scene_map::camera::Camera::default();
-    assert!(crate::scene_map::topology::visible(
+    let camera = crate::map::camera::Camera::default();
+    assert!(crate::map::topology::visible(
         (-1000., 100., 3000., 20.),
         camera,
         (1000., 800.)
     ));
-    assert!(!crate::scene_map::topology::visible(
+    assert!(!crate::map::topology::visible(
         (-1000., -1000., 20., 20.),
         camera,
         (1000., 800.)

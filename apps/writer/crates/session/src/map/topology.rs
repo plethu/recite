@@ -12,14 +12,14 @@ use std::{
 };
 
 #[derive(Clone, PartialEq)]
-pub(super) struct Topology {
+pub struct Topology {
     pub blocks: Arc<[ScriptBlock]>,
     pub links: Vec<SceneLink>,
     geometry: Arc<Geometry>,
 }
 
 #[derive(PartialEq)]
-pub(super) struct Geometry {
+pub struct Geometry {
     positions: placement::Positions,
     pub ids: BTreeMap<String, usize>,
     pub adjacency: Vec<Vec<usize>>,
@@ -168,7 +168,7 @@ impl Geometry {
     }
 }
 
-pub(super) fn visible(
+pub fn visible(
     bounds: (f32, f32, f32, f32),
     camera: super::camera::Camera,
     size: (f32, f32),

@@ -41,10 +41,10 @@ enum Receipt {
 }
 
 pub struct IncomingRoute {
-    pub(crate) project: Option<PathBuf>,
-    pub(crate) route: Option<String>,
-    pub(crate) cancelled: Arc<AtomicBool>,
-    pub(crate) reply: mpsc::Sender<Result<(), String>>,
+    pub project: Option<PathBuf>,
+    pub route: Option<String>,
+    pub cancelled: Arc<AtomicBool>,
+    pub reply: mpsc::Sender<Result<(), String>>,
 }
 
 #[derive(Clone)]
@@ -54,14 +54,14 @@ pub struct ActivationInbox {
 }
 
 impl ActivationInbox {
-    pub(crate) fn new(receiver: Receiver<IncomingRoute>) -> Self {
+    pub fn new(receiver: Receiver<IncomingRoute>) -> Self {
         Self {
             receiver: Arc::new(Mutex::new(receiver)),
             polling: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    pub(crate) fn try_next(&self) -> Option<IncomingRoute> {
+    pub fn try_next(&self) -> Option<IncomingRoute> {
         // Socket ownership precedes window creation. Do not queue requests
         // until the UI has started consuming them.
         self.polling.store(true, Ordering::Release);
@@ -271,7 +271,7 @@ fn canonical_intent(request: &Request) -> Result<Option<PathBuf>, String> {
     let linked = request
         .route
         .as_deref()
-        .map(crate::navigation::project_from_route)
+        .map(crate::location::project_from_route)
         .transpose()?
         .flatten();
     let canonical = |path: &Path| {

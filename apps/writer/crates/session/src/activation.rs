@@ -3,7 +3,7 @@
 mod linux;
 
 #[cfg(target_os = "linux")]
-pub(crate) use linux::IncomingRoute;
+pub use linux::IncomingRoute;
 #[cfg(target_os = "linux")]
 pub use linux::{ActivationHost, ActivationInbox};
 

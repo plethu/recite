@@ -28,7 +28,7 @@ pub fn prose_size() -> f32 {
 pub const TEXT_EXCERPT: f32 = 15.;
 pub const EXCERPT_LINE_HEIGHT: f32 = 1.35;
 /// A map card fits a title, speaker and three excerpt lines at `EXCERPT_LINE_HEIGHT`.
-pub const CARD_HEIGHT: f32 = 160.;
+pub const CARD_HEIGHT: f32 = recite_writer_session::map::layout::HEIGHT;
 pub fn code_size() -> f32 {
     f32::from(
         crate::presentation::typography().value(recite_config::WriterPresentationField::SourceSize),

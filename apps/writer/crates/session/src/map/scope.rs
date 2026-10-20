@@ -3,13 +3,13 @@ use super::{layout::HEIGHT, topology::Topology};
 use std::collections::{BTreeSet, VecDeque};
 
 #[derive(Clone, PartialEq)]
-pub(super) struct Scope {
+pub struct Scope {
     pub members: BTreeSet<String>,
     pub node_indices: Vec<usize>,
     pub edge_indices: Vec<usize>,
     pub bounds: (f32, f32, f32, f32),
 }
-pub(super) fn nearby(graph: &Topology, selected: Option<&str>) -> Option<Scope> {
+pub fn nearby(graph: &Topology, selected: Option<&str>) -> Option<Scope> {
     let blocks = &graph.blocks;
     if blocks.len() <= 200 {
         return None;

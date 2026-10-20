@@ -6,16 +6,16 @@ pub(crate) mod camera;
 mod card;
 mod connections;
 mod edge;
-mod layout;
+use recite_writer_session::map::layout;
 mod navigation;
-mod placement;
-mod routing;
-mod scope;
+use recite_writer_session::map::placement;
+use recite_writer_session::map::routing;
+use recite_writer_session::map::scope;
 mod toolbar;
-mod topology;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
 use layout::HEIGHT;
+use recite_writer_session::map::topology;
 use std::sync::Arc;
 
 // Scope indices and source blocks resolve against the same captured topology.

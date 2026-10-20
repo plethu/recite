@@ -1,7 +1,7 @@
 //! One live user preference session shared by settings, navigation and closing.
 use recite_config::{UserConfig, UserConfigEdit, UserConfigStore};
 
-pub(crate) struct Preferences {
+pub struct Preferences {
     pub config: UserConfig,
     pub error: Option<String>,
     store: Option<Result<UserConfigStore, String>>,

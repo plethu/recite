@@ -3,7 +3,7 @@ use recite_config::UserStateFile;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub(super) type Positions = BTreeMap<String, (f32, f32)>;
+pub type Positions = BTreeMap<String, (f32, f32)>;
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -12,7 +12,7 @@ struct Layouts {
     scenes: BTreeMap<String, Positions>,
 }
 #[derive(Debug, thiserror::Error)]
-pub(super) enum LayoutError {
+pub enum LayoutError {
     #[error(transparent)]
     Json(#[from] serde_json::Error),
     #[error(
@@ -48,7 +48,7 @@ impl Layouts {
         Ok(value)
     }
 }
-pub(super) fn load(file: &UserStateFile, scene: &str) -> Result<Positions, String> {
+pub fn load(file: &UserStateFile, scene: &str) -> Result<Positions, String> {
     let source = file.load().map_err(|e| e.to_string())?;
     Ok(Layouts::parse(source.as_deref())
         .map_err(|e| e.to_string())?
@@ -56,7 +56,7 @@ pub(super) fn load(file: &UserStateFile, scene: &str) -> Result<Positions, Strin
         .remove(scene)
         .unwrap_or_default())
 }
-pub(super) fn save(file: &UserStateFile, scene: &str, positions: &Positions) -> Result<(), String> {
+pub fn save(file: &UserStateFile, scene: &str, positions: &Positions) -> Result<(), String> {
     file.update(|source| {
         let mut layouts = Layouts::parse(source)?;
         if positions.is_empty() {
@@ -75,7 +75,7 @@ pub(super) fn save(file: &UserStateFile, scene: &str, positions: &Positions) -> 
 mod tests;
 
 /// In-memory placement is retained even if persistence fails; the error stays visible.
-pub(super) struct Arrangement {
+pub struct Arrangement {
     scenes: BTreeMap<String, Positions>,
     store: Option<Result<UserStateFile, String>>,
     pub error: Option<String>,
@@ -124,7 +124,7 @@ impl Arrangement {
 }
 
 /// Passage IDs survive beat renaming; effects-only beats fall back to the block ID.
-pub(super) fn card_key(block: &recite_writer_model::ScriptBlock) -> String {
+pub fn card_key(block: &recite_writer_model::ScriptBlock) -> String {
     fn first(entries: &[recite_writer_model::ScriptEntry]) -> Option<String> {
         entries.iter().find_map(|entry| match entry {
             recite_writer_model::ScriptEntry::Passage(p) => Some(format!("passage:{}", p.id)),

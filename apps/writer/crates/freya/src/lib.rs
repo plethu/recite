@@ -1,4 +1,4 @@
-mod activation;
+use recite_writer_session::activation;
 mod builds;
 mod commands;
 mod declarations;
@@ -42,7 +42,7 @@ mod localisation;
 mod messages;
 mod navigation;
 pub use navigation::InitialRoute;
-mod preferences;
+use recite_writer_session::preferences;
 mod preview_panel;
 mod prose;
 mod scene;

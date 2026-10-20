@@ -3,18 +3,14 @@ use super::layout::{HEIGHT, Node};
 use recite_writer_model::{SceneLink, ScriptBlock};
 
 #[derive(Clone, PartialEq)]
-pub(super) struct Route {
+pub struct Route {
     pub path: String,
     pub arrow: String,
     pub bounds: (f32, f32, f32, f32),
     /// Anchor on the connection, in world coordinates.
     pub label: (f32, f32),
 }
-pub(super) fn routes(
-    blocks: &[ScriptBlock],
-    nodes: &[Node],
-    links: &[SceneLink],
-) -> Vec<Option<Route>> {
+pub fn routes(blocks: &[ScriptBlock], nodes: &[Node], links: &[SceneLink]) -> Vec<Option<Route>> {
     let right = nodes.iter().map(|n| n.x + n.width).fold(0., f32::max) + 24.;
     let ids: std::collections::BTreeMap<_, _> = blocks
         .iter()

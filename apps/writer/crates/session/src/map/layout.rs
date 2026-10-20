@@ -2,16 +2,16 @@
 use recite_writer_model::{SceneLink, ScriptBlock};
 use std::collections::VecDeque;
 
-pub(super) const WIDTH: f32 = 1200.;
-pub(super) const HEIGHT: f32 = crate::design::tokens::CARD_HEIGHT;
+pub const WIDTH: f32 = 1200.;
+pub const HEIGHT: f32 = 160.;
 #[derive(Clone, Debug, PartialEq)]
-pub(super) struct Node {
+pub struct Node {
     pub x: f32,
     pub y: f32,
     pub width: f32,
 }
 
-pub(super) fn layout(blocks: &[ScriptBlock], links: &[SceneLink], width: f32) -> Vec<Node> {
+pub fn layout(blocks: &[ScriptBlock], links: &[SceneLink], width: f32) -> Vec<Node> {
     let columns = ((width - 32.) / 240.).floor().clamp(2., 4.) as usize;
     let ids: std::collections::BTreeMap<_, _> = blocks
         .iter()
