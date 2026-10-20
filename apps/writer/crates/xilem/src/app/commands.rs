@@ -4,6 +4,17 @@ use recite_writer_model::Workbench;
 
 impl App {
     pub(super) fn run_command(&mut self, command: WriterCommand) {
+        if self.picker.is_some() {
+            match command {
+                WriterCommand::Commands => self.open_picker(picker::Mode::Commands),
+                WriterCommand::GoTo | WriterCommand::Find => self.open_picker(picker::Mode::GoTo),
+                WriterCommand::NextMatch => self.step_picker(true),
+                WriterCommand::PreviousMatch => self.step_picker(false),
+                WriterCommand::Close => self.dismiss_picker(),
+                _ => {}
+            }
+            return;
+        }
         if self
             .writer
             .as_ref()
@@ -13,6 +24,8 @@ impl App {
             return;
         }
         match command {
+            WriterCommand::Commands => self.open_picker(picker::Mode::Commands),
+            WriterCommand::GoTo | WriterCommand::Find => self.open_picker(picker::Mode::GoTo),
             WriterCommand::Settings => self.show_settings(),
             WriterCommand::OpenProject => {
                 self.show_welcome = true;
@@ -33,10 +46,20 @@ impl App {
                     WriterCommand::Apply => writer.navigate(crate::navigation::Target::Edit(
                         recite_writer_model::EditOperation::Apply,
                     )),
+                    WriterCommand::Undo | WriterCommand::Redo => writer.navigate(
+                        crate::navigation::Target::Edit(if command == WriterCommand::Undo {
+                            recite_writer_model::EditOperation::Undo
+                        } else {
+                            recite_writer_model::EditOperation::Redo
+                        }),
+                    ),
                     WriterCommand::AddBeat => writer.change(Workbench::add_beat),
                     WriterCommand::AddLine => writer.change(Workbench::add_line),
                     WriterCommand::AddReply => writer.change(Workbench::add_choice),
                     WriterCommand::Preview => writer.start_trial(),
+                    WriterCommand::Back | WriterCommand::Forward => {
+                        writer.history_step(command == WriterCommand::Forward)
+                    }
                     _ => {
                         writer.status = format!(
                             "{} is not available in this frontend yet.",

@@ -1,3 +1,4 @@
+mod focus;
 use crate::app::keyboard::{Context, Invocation, KeyboardContext, TAG};
 use recite_config::WriterCommand;
 use recite_writer_session::commands::keybindings::{self, Input, Key, Modifiers, PhysicalKey};
@@ -19,7 +20,7 @@ enum Composition {
 pub(super) struct Keyboard {
     modifiers: ModifiersState,
     composition: Composition,
-    field: Option<(WidgetId, bool)>,
+    focus: focus::Focus,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
@@ -52,7 +53,29 @@ impl Keyboard {
                 };
                 let enter =
                     event.logical_key == xilem::winit::keyboard::Key::Named(NamedKey::Enter);
-                let manuscript = enter && self.manuscript_focused(root);
+                let kind = self.focus.kind(root);
+                let picker =
+                    if context.picker_open && self.normalized_modifiers() == Modifiers::default() {
+                        match event.logical_key {
+                            xilem::winit::keyboard::Key::Named(NamedKey::Escape) => {
+                                Some(WriterCommand::Close)
+                            }
+                            xilem::winit::keyboard::Key::Named(NamedKey::ArrowDown)
+                                if kind == focus::Kind::Query =>
+                            {
+                                Some(WriterCommand::NextMatch)
+                            }
+                            xilem::winit::keyboard::Key::Named(NamedKey::ArrowUp)
+                                if kind == focus::Kind::Query =>
+                            {
+                                Some(WriterCommand::PreviousMatch)
+                            }
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    };
+                let manuscript = enter && kind == focus::Kind::Manuscript;
                 return self.dispatch(
                     &context,
                     root.focused_widget(),
@@ -64,6 +87,7 @@ impl Keyboard {
                             modifiers: self.normalized_modifiers(),
                         },
                         enter,
+                        picker,
                         first_press: event.state == ElementState::Pressed && !event.repeat,
                     },
                 );
@@ -93,7 +117,9 @@ impl Keyboard {
                     primary: true,
                     ..Modifiers::default()
                 };
-        let command = if apply {
+        let command = if stroke.picker.is_some() {
+            stroke.picker
+        } else if apply {
             Some(WriterCommand::Apply)
         } else {
             keybindings::command(&context.shortcuts, stroke.input)
@@ -109,20 +135,14 @@ impl Keyboard {
         }
         true
     }
-    fn manuscript_focused(&mut self, root: &RenderRoot) -> bool {
-        let Some(focused) = root.focused_widget() else {
-            self.field = None;
-            return false;
-        };
-        if let Some((cached, manuscript)) = self.field
-            && cached == focused
-        {
-            return manuscript;
+    pub fn synchronize(&mut self, root: &mut RenderRoot) {
+        let context = root
+            .get_widget_with_tag(TAG)
+            .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone());
+        if let Some(context) = context {
+            self.focus
+                .synchronize(root, context.picker_open, context.generation);
         }
-        // This property is immutable for the native input's lifetime; widget IDs are unique.
-        let manuscript = manuscript_in_path(root.get_layer_root(0), focused);
-        self.field = Some((focused, manuscript));
-        manuscript
     }
     fn normalized_modifiers(&self) -> Modifiers {
         Modifiers {
@@ -139,25 +159,6 @@ impl Keyboard {
                 self.modifiers.super_key()
             },
         }
-    }
-}
-fn manuscript_in_path(
-    mut widget: xilem::masonry::core::WidgetRef<'_, dyn xilem::masonry::core::Widget>,
-    focused: WidgetId,
-) -> bool {
-    loop {
-        if let Some(input) = widget.downcast::<TextInput>() {
-            return input.get_prop::<crate::view::Manuscript>().0
-                && input.area_pod().id() == focused;
-        }
-        let Some(child) = widget
-            .children()
-            .into_iter()
-            .find(|child| child.ctx().has_focus_target())
-        else {
-            return false;
-        };
-        widget = child;
     }
 }
 
@@ -203,6 +204,7 @@ fn physical(key: xilem::winit::keyboard::PhysicalKey) -> PhysicalKey {
 struct Stroke<'a> {
     input: Input<'a>,
     enter: bool,
+    picker: Option<WriterCommand>,
     first_press: bool,
 }
 

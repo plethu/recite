@@ -4,6 +4,7 @@ mod activation;
 mod commands;
 pub(super) mod keyboard;
 mod opening;
+pub(super) mod picker;
 mod settings;
 mod slot;
 mod view;
@@ -27,6 +28,7 @@ pub(super) struct App {
     theme: crate::presentation::Theme,
     settings_open: bool,
     settings: settings::Settings,
+    picker: Option<picker::Picker>,
     window: WindowId,
     show_welcome: bool,
     closed: bool,
@@ -86,6 +88,7 @@ impl App {
             theme: crate::presentation::Theme::new(&recite_config::WriterConfig::default()),
             settings_open: false,
             settings: Default::default(),
+            picker: None,
             window: WindowId::next(),
             show_welcome: true,
             closed: false,

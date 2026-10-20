@@ -16,7 +16,7 @@ pub(super) struct WriterSlot<V> {
 }
 pub(super) struct SlotState<T> {
     child: Option<T>,
-    generation: u64,
+    child_id: ViewId,
 }
 pub(super) fn writer_slot(app: &mut App) -> WriterSlot<impl WidgetView<Writer> + use<>> {
     WriterSlot {
@@ -35,7 +35,7 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
                 Pod::new_with_props(Passthrough::new(child.new_widget), Dimensions::MAX),
                 SlotState {
                     child: Some(state),
-                    generation: 0,
+                    child_id: ViewId::new(0),
                 },
             )
         } else {
@@ -46,7 +46,7 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
                 ),
                 SlotState {
                     child: None,
-                    generation: 0,
+                    child_id: ViewId::new(0),
                 },
             )
         }
@@ -63,7 +63,7 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
             && let (Some(child), Some(previous), Some(child_state), Some(writer)) =
                 (&self.child, &prev.child, &mut state.child, &mut app.writer)
         {
-            ctx.with_id(ViewId::new(state.generation), |ctx| {
+            ctx.with_id(state.child_id, |ctx| {
                 let mut pod = Passthrough::child_mut(&mut element);
                 child.rebuild(previous, child_state, ctx, pod.downcast(), writer);
             });
@@ -73,11 +73,9 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
             return;
         }
         prev.teardown(state, ctx, element.reborrow_mut());
-        state.generation = state.generation.wrapping_add(1);
+        state.child_id = ViewId::new(state.child_id.routing_id().wrapping_add(1));
         if let (Some(child), Some(writer)) = (&self.child, &mut app.writer) {
-            let (child, next) = ctx.with_id(ViewId::new(state.generation), |ctx| {
-                child.build(ctx, writer)
-            });
+            let (child, next) = ctx.with_id(state.child_id, |ctx| child.build(ctx, writer));
             Passthrough::set_child(&mut element, child.new_widget);
             state.child = Some(next);
         } else {
@@ -92,7 +90,7 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
         mut element: Mut<'_, Self::Element>,
     ) {
         if let (Some(child), Some(child_state)) = (&self.child, &mut state.child) {
-            ctx.with_id(ViewId::new(state.generation), |ctx| {
+            ctx.with_id(state.child_id, |ctx| {
                 let mut pod = Passthrough::child_mut(&mut element);
                 child.teardown(child_state, ctx, pod.downcast());
             });
@@ -106,10 +104,7 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
         mut element: Mut<'_, Self::Element>,
         app: &mut App,
     ) -> MessageResult<()> {
-        if message
-            .take_first()
-            .is_none_or(|id| id.routing_id() != state.generation)
-        {
+        if message.take_first().is_none_or(|id| id != state.child_id) {
             return MessageResult::Stale;
         }
         let (Some(child), Some(child_state), Some(writer)) =

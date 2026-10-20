@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub struct CompletionSnapshot {
     pub(super) source: Arc<str>,
     pub(super) key: DocumentKey,
-    pub(super) version: i64,
+    pub(super) version: DocumentVersion,
     pub(super) kernel: Arc<AuthoringKernel>,
     pub(super) context: Arc<ProjectContext>,
 }
@@ -37,7 +37,12 @@ impl Document {
             && self.key == candidate.key
             && Arc::ptr_eq(&self.source, &candidate.source)
             && (candidate.version == self.version
-                || Some(candidate.version) == self.version.checked_add(1))
+                || Some(candidate.version)
+                    == self
+                        .version
+                        .as_i64()
+                        .checked_add(1)
+                        .map(DocumentVersion::new))
     }
     pub(crate) fn accept_navigation_analysis(
         &mut self,
@@ -55,7 +60,7 @@ impl Document {
     }
 }
 impl CompletionSnapshot {
-    pub(crate) fn rules_revision(&self, candidate: &Document) -> Option<i64> {
+    pub(crate) fn rules_revision(&self, candidate: &Document) -> Option<DocumentVersion> {
         (self.key == candidate.key
             && Arc::ptr_eq(&self.source, &candidate.source)
             && self.context.schema == candidate.context.schema)
@@ -119,16 +124,17 @@ impl CompletionSnapshot {
         let fallback;
         let snapshot = if accepted {
             self.kernel.snapshot()
-        } else if let Some(version) = self.version.checked_add(1) {
+        } else if let Some(version) = self
+            .version
+            .as_i64()
+            .checked_add(1)
+            .map(DocumentVersion::new)
+        {
             updated = self.kernel.updated(
                 AuthoringRequest::new(
                     self.kernel.snapshot().generation(),
                     self.context.documents.clone(),
-                    [OpenDocument::from_shared(
-                        self.key.clone(),
-                        DocumentVersion::new(version),
-                        source,
-                    )],
+                    [OpenDocument::from_shared(self.key.clone(), version, source)],
                 ),
                 control,
             )?;

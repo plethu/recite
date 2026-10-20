@@ -5,6 +5,15 @@ use std::path::{Path, PathBuf};
 mod saving;
 pub use saving::DeclarationSave;
 
+/// Freshness of the mounted declaration source buffer, separate from recovery ordering.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DeclarationRevision(u64);
+impl DeclarationRevision {
+    fn advance(&mut self) {
+        self.0 = self.0.wrapping_add(1);
+    }
+}
+
 pub struct Session {
     saving: bool,
     pub output: PathBuf,
@@ -20,7 +29,7 @@ pub struct Source {
     pub baseline: String,
     pub recovery: super::recovery::Store,
     pub draft: String,
-    pub revision: u64,
+    pub revision: DeclarationRevision,
 }
 impl Session {
     pub fn set_saving(&mut self, saving: bool) {
@@ -202,7 +211,7 @@ impl Session {
             baseline,
             draft,
             recovery,
-            revision: 0,
+            revision: DeclarationRevision::default(),
         });
         Ok(())
     }
@@ -240,7 +249,7 @@ impl Session {
         if let Some(source) = &mut self.source {
             source.baseline = disk.clone();
             source.draft = disk;
-            source.revision = source.revision.wrapping_add(1);
+            source.revision.advance();
             source.flush_recovery()?;
         }
         self.output_baseline = output;
@@ -253,7 +262,7 @@ impl Session {
         self.require_idle_save()?;
         if let Some(source) = &mut self.source {
             source.draft = source.baseline.clone();
-            source.revision = source.revision.wrapping_add(1);
+            source.revision.advance();
             source.flush_recovery()?;
         }
         Ok(())

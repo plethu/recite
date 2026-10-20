@@ -1,5 +1,5 @@
 use super::*;
-use recite_writer_model::Document;
+use recite_writer_model::{Document, DocumentVersion};
 
 #[test]
 fn prose_and_labels_reuse_captions_while_names_badges_and_order_invalidate()
@@ -176,7 +176,7 @@ fn draft_notifications_keep_summary_identity_but_acceptance_and_replacement_refr
         "First"
     );
     let replacement = Document::new(source)?;
-    assert_eq!(replacement.revision(), 1);
+    assert_eq!(replacement.revision(), DocumentVersion::new(1));
     let replaced = SummarySnapshot(replacement.summary_snapshot());
     assert_eq!(
         initial.0, replaced.0,

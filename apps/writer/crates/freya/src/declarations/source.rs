@@ -110,7 +110,8 @@ impl Component for SourceEditor {
                 .map_or("", |s| s.draft.as_str());
             data(draft, writer.dark)
         });
-        let mut revision = use_state(|| 0);
+        let mut revision =
+            use_state(recite_writer_session::declarations::DeclarationRevision::default);
         if let Some(source) = writer
             .files
             .read()

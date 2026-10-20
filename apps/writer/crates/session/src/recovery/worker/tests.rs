@@ -257,7 +257,7 @@ fn dropping_parking_receipt_does_not_discard_a_queued_recovery()
     let pending = store.pending.clone();
     drop(store);
     let mut state = pending.0.lock().unwrap();
-    while state.completed < 2 && state.phase != Phase::Failed {
+    while state.completed < RecoverySequence(2) && state.phase != Phase::Failed {
         let (next, timeout) = pending
             .1
             .wait_timeout(state, std::time::Duration::from_secs(5))

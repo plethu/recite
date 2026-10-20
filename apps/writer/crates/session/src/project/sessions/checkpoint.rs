@@ -1,6 +1,9 @@
 //! Only a completed, exact outgoing checkpoint authorizes a prepared scene switch.
 use super::super::{FileError, ProjectFiles};
-use crate::recovery::{Recovery, worker::Parking};
+use crate::recovery::{
+    Recovery,
+    worker::{Parking, RecoverySequence},
+};
 use recite_writer_model::{CompletionSnapshot, Workbench};
 use std::path::PathBuf;
 
@@ -8,7 +11,7 @@ struct Capture {
     path: PathBuf,
     source: CompletionSnapshot,
     recovery: Option<Recovery>,
-    sequence: u64,
+    sequence: RecoverySequence,
 }
 pub struct Checkpoint {
     captured: Capture,

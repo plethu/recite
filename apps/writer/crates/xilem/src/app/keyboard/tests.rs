@@ -45,7 +45,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             Vec::new(),
             DynMessage::new(Invocation {
                 command: WriterCommand::Close,
-                generation: 0,
+                generation: CommandGeneration::default(),
             }),
         );
         let result =
@@ -57,13 +57,13 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         *ctx.environment() = message.finish().0;
         let next = host(&app, xilem::view::label("Keyboard host"));
         harness.edit_root_widget(|root| next.rebuild(&view, &mut state, &mut ctx, root, &mut app));
-        assert_eq!(state.generation, 1);
+        assert_ne!(state.generation, CommandGeneration::default());
         let mut message = MessageCtx::new(
             std::mem::take(ctx.environment()),
             Vec::new(),
             DynMessage::new(Invocation {
                 command: WriterCommand::Close,
-                generation: 0,
+                generation: CommandGeneration::default(),
             }),
         );
         assert!(matches!(
@@ -76,7 +76,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
             Vec::new(),
             DynMessage::new(Invocation {
                 command: WriterCommand::Settings,
-                generation: 1,
+                generation: state.generation,
             }),
         );
         assert!(matches!(

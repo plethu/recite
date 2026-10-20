@@ -1,5 +1,6 @@
 //! Search is a transient dialog; cancelling returns to its invoker.
 mod handoff;
+use super::targets::TargetExt as _;
 use super::{Command, SearchMode, targets};
 use crate::commands::CommandExt;
 use crate::{

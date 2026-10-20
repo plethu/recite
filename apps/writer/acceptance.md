@@ -50,6 +50,13 @@ reaches Keep editing in three presses and verifies that cancelling close retains
 Automatic focus return and the remaining keyboard workflow need acceptance before the default
 switches.
 
+Shared scene/beat lookup, command ranking and Vim save/close aliases now drive both frontends. The
+native lookup drill covers query autofocus, Escape focus return, retained manuscript undo/redo,
+checked Save from command search, keyboard scene selection, Back/Forward and saved-project text
+search. Result controls are paged and scroll independently from the query and pagination controls.
+Placeholder scaling and serif reading typography have separate 100/200% render checks; those
+captures do not establish assistive-technology usability.
+
 Xilem saves, cold project loads and editor handoff use workers and retain newer typing;
 save-and-close timing is recorded by the native probe. Preferred-application lookup, an
 independently open editor, checked-save conflict refusal and missing-executable retry also pass the

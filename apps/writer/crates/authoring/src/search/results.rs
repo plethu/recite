@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 pub(super) struct SearchMatch {
     pub document: Arc<RegionIndex>,
-    pub id: usize,
+    pub index: usize,
 }
 
 /// Saved search results share prose and keep their originating shards alive.
@@ -41,6 +41,8 @@ impl SearchResults {
     }
 
     pub fn get(&self, index: usize) -> Option<&SearchHit> {
-        self.hits.get(index).map(|hit| &hit.document.hits[hit.id])
+        self.hits
+            .get(index)
+            .map(|hit| &hit.document.hits[hit.index])
     }
 }

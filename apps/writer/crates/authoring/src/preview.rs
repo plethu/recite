@@ -1,3 +1,4 @@
+use crate::DocumentVersion;
 mod catalogue;
 mod setup;
 pub use setup::PreviewSetup;
@@ -54,7 +55,7 @@ pub struct PreviewPage {
 /// The compiled asset remains fixed until an explicit new preview is started.
 pub struct Preview {
     session: OwnedPreview,
-    revision: i64,
+    revision: DocumentVersion,
     catalogues: catalogue::TrialCatalogues,
     values: recite_runtime::localisation::InterpolationValues,
 }
@@ -87,7 +88,7 @@ impl Preview {
     pub(crate) fn from_request(
         request: &crate::PreviewRequest,
         block: Option<&str>,
-        revision: i64,
+        revision: DocumentVersion,
         setup: PreviewSetup,
     ) -> Result<Self, PreviewError> {
         let trial_options = setup.options();
@@ -131,7 +132,7 @@ impl Preview {
         self.session.borrow_dependent().trace().events()
     }
 
-    pub const fn revision(&self) -> i64 {
+    pub const fn revision(&self) -> DocumentVersion {
         self.revision
     }
 

@@ -9,6 +9,18 @@ use std::{
     thread::JoinHandle,
 };
 
+/// Process-local durability ordering; unrelated to document or declaration revisions.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RecoverySequence(u64);
+impl RecoverySequence {
+    fn checked_next(self) -> Result<Self, FileError> {
+        self.0
+            .checked_add(1)
+            .map(Self)
+            .ok_or_else(|| FileError::BackgroundRecovery("Recovery sequence exhausted".into()))
+    }
+}
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum Phase {
     Running,
@@ -18,14 +30,14 @@ enum Phase {
     Closed,
 }
 struct Pending<T: Snapshot> {
-    next: Option<(u64, Option<T>)>,
-    completed: u64,
+    next: Option<(RecoverySequence, Option<T>)>,
+    completed: RecoverySequence,
     error: Option<String>,
     phase: Phase,
 }
 pub struct SnapshotStore<T: Snapshot> {
     snapshot: Option<T>,
-    sequence: u64,
+    sequence: RecoverySequence,
     pending: Arc<(Mutex<Pending<T>>, Condvar)>,
     disk: Arc<Mutex<RecoveryDisk<T>>>,
     worker: Option<JoinHandle<()>>,
@@ -33,7 +45,7 @@ pub struct SnapshotStore<T: Snapshot> {
 /// A fixed durability fence. Later coalesced snapshots also satisfy this sequence.
 pub struct Durability<T: Snapshot> {
     pending: Arc<(Mutex<Pending<T>>, Condvar)>,
-    sequence: u64,
+    sequence: RecoverySequence,
 }
 impl<T: Snapshot> Durability<T> {
     pub fn wait(self) -> Result<(), FileError> {
@@ -52,7 +64,7 @@ impl<T: Snapshot> Durability<T> {
     }
 }
 impl<T: Snapshot> SnapshotStore<T> {
-    pub fn parked_at(&self, sequence: u64) -> bool {
+    pub fn parked_at(&self, sequence: RecoverySequence) -> bool {
         let state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
         self.sequence == sequence
             && self.worker.is_none()
@@ -61,7 +73,7 @@ impl<T: Snapshot> SnapshotStore<T> {
             && state.completed >= sequence
             && state.error.is_none()
     }
-    pub fn sequence(&self) -> u64 {
+    pub fn sequence(&self) -> RecoverySequence {
         self.sequence
     }
     pub fn durability(&self) -> Durability<T> {
@@ -79,11 +91,11 @@ impl<T: Snapshot> SnapshotStore<T> {
         let snapshot = disk.snapshot().cloned();
         Ok(Self {
             snapshot,
-            sequence: 0,
+            sequence: RecoverySequence::default(),
             pending: Arc::new((
                 Mutex::new(Pending {
                     next: None,
-                    completed: 0,
+                    completed: RecoverySequence::default(),
                     error: None,
                     phase: Phase::Parked,
                 }),
@@ -168,9 +180,7 @@ impl<T: Snapshot> SnapshotStore<T> {
             ));
         }
         if snapshot != self.snapshot || state.error.is_some() {
-            let sequence = self.sequence.checked_add(1).ok_or_else(|| {
-                FileError::BackgroundRecovery("Recovery sequence exhausted".into())
-            })?;
+            let sequence = self.sequence.checked_next()?;
             if state.phase != Phase::Parking {
                 self.start(&mut state)?;
             }

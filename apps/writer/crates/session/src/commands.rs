@@ -1,7 +1,17 @@
 //! Shared command wording for menus, search and personal shortcuts.
 pub mod keybindings;
+pub mod targets;
 use crate::messages::{MsgId, text};
 use recite_config::WriterCommand;
+
+pub fn vim_alias(query: &str) -> Option<WriterCommand> {
+    match query.trim().trim_start_matches(':') {
+        "w" => Some(WriterCommand::Save),
+        "wa" => Some(WriterCommand::SaveAll),
+        "q" => Some(WriterCommand::Close),
+        _ => None,
+    }
+}
 
 pub fn label(command: WriterCommand, focused: bool) -> String {
     match command {

@@ -24,6 +24,9 @@ pub(super) fn manuscript(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
                 .placeholder("Manuscript")
                 .disabled(closing)
                 .prop(xilem::masonry::properties::TextAreaLabel::new("Manuscript"))
+                .prop(xilem::masonry::properties::PlaceholderTextSize {
+                    size: state.reading_size(),
+                })
                 .prop(Manuscript(true)),
             ))
             .dims((

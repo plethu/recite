@@ -174,7 +174,7 @@ fn sibling_interruption_never_changes_the_original() -> Result<(), EditError> {
         ));
         assert_eq!(original.kernel.snapshot(), &accepted);
         assert_eq!(original.source(), ":: start default\n-> END\n");
-        assert_eq!(original.revision(), 1);
+        assert_eq!(original.revision(), DocumentVersion::new(1));
     }
     Ok(())
 }
@@ -184,9 +184,13 @@ fn refused_analysis_does_not_publish_prepared_prose_projections() -> Result<(), 
     let mut document = Document::new(crate::FIXTURE)?;
     let script = document.script_snapshot()?;
     let passages = document.passage_snapshot()?;
-    document.version = i64::MAX;
+    document.version = DocumentVersion::new(i64::MAX);
     assert!(matches!(
-        document.replace_text(i64::MAX, &passages[0].id, "A proposed café edit."),
+        document.replace_text(
+            DocumentVersion::new(i64::MAX),
+            &passages[0].id,
+            "A proposed café edit."
+        ),
         Err(EditError::RevisionExhausted)
     ));
     assert_eq!(document.source(), crate::FIXTURE);
@@ -206,7 +210,7 @@ fn refused_analysis_does_not_publish_prepared_prose_projections() -> Result<(), 
 fn exhausted_revision_does_not_disable_read_only_draft_completion()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut document = super::Document::new(":: start default\n-> END\n")?;
-    document.version = i64::MAX;
+    document.version = DocumentVersion::new(i64::MAX);
     let draft = ":: start default\n-> dest\n:: destination\n-> END\n";
     let result = document.complete_draft(draft, recite_core::SourcePosition::new(2, 8)?)?;
     assert!(
@@ -223,7 +227,7 @@ fn exhausted_revision_does_not_disable_read_only_draft_completion()
     let (range, replacement) = result.replacement(draft, index)?;
     assert_eq!(&draft[range], "dest");
     assert_eq!(replacement, "destination");
-    assert_eq!(document.version, i64::MAX);
+    assert_eq!(document.version, DocumentVersion::new(i64::MAX));
     assert_eq!(document.source(), ":: start default\n-> END\n");
     Ok(())
 }
@@ -246,7 +250,7 @@ fn retained_analysis_does_not_publish_an_interrupted_acceptance() -> Result<(), 
         ));
         assert!(retained.is_current(&document));
         assert_eq!(document.source(), crate::FIXTURE);
-        assert_eq!(document.revision(), 1);
+        assert_eq!(document.revision(), DocumentVersion::new(1));
         assert!(!document.can_undo());
         assert!(std::sync::Arc::ptr_eq(
             &script,

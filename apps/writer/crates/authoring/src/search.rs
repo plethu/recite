@@ -91,7 +91,7 @@ impl SearchIndex {
     pub fn search_results(&self, query: &str, limit: usize) -> SearchResults {
         let (total, hits) = self.search_with(query, limit, |document, id| results::SearchMatch {
             document: document.clone(),
-            id,
+            index: id,
         });
         SearchResults::new(total, hits)
     }

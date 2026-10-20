@@ -1,5 +1,6 @@
 //! Authoring selection and document navigation use the shared product locations.
 mod capture;
+mod history;
 mod opening;
 mod publication;
 mod saving;
@@ -29,6 +30,8 @@ pub(super) struct Navigation {
     pending: Option<Arc<Request>>,
     incoming: Option<recite_writer_session::activation::IncomingRoute>,
     deferred_save: Option<saving::DeferredSave>,
+    pub(super) history: recite_writer_session::location::history::History,
+    visit: Option<recite_writer_session::location::history::Step>,
 }
 pub(super) struct Request {
     target: Target,
@@ -49,6 +52,8 @@ impl Navigation {
             pending: None,
             incoming: None,
             deferred_save: None,
+            history: Default::default(),
+            visit: None,
         }
     }
     pub fn busy(&self) -> bool {
@@ -182,6 +187,9 @@ impl Writer {
             return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
         }
         self.trial.cancel();
+        if self.navigation.visit.is_none() {
+            self.navigation.history.record(self.current_location());
+        }
         let applies = matches!(target, Target::Location(_) | Target::Edit(_))
             && self.session.model().has_draft();
         if applies {

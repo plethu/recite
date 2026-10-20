@@ -14,6 +14,14 @@ use xilem::{
 };
 
 pub(crate) const TAG: WidgetTag<Passthrough> = WidgetTag::named("recite-commands");
+/// Freshness of commands captured from one mounted keyboard context.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct CommandGeneration(u64);
+impl CommandGeneration {
+    fn advance(&mut self) {
+        self.0 = self.0.wrapping_add(1);
+    }
+}
 #[derive(Clone, Default)]
 pub(crate) struct KeyboardContext(pub Option<Arc<Context>>);
 impl Property for KeyboardContext {
@@ -24,13 +32,14 @@ impl Property for KeyboardContext {
 }
 pub(crate) struct Context {
     pub shortcuts: WriterShortcuts,
-    pub generation: u64,
+    pub generation: CommandGeneration,
     pub writer_active: bool,
+    pub picker_open: bool,
     pub proxy: MessageProxy<Invocation>,
 }
 pub(crate) struct Invocation {
     pub command: WriterCommand,
-    pub generation: u64,
+    pub generation: CommandGeneration,
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -44,6 +53,7 @@ struct Scope {
     writer: Option<DocumentScope>,
     welcome: bool,
     settings: bool,
+    picker: Option<(picker::Mode, picker::PickerRevision)>,
 }
 struct DocumentScope {
     window: WindowId,
@@ -68,6 +78,10 @@ impl Scope {
             }),
             welcome: app.show_welcome,
             settings: app.settings_open,
+            picker: app
+                .picker
+                .as_ref()
+                .map(|picker| (picker.mode, picker.revision)),
         }
     }
 }
@@ -78,7 +92,7 @@ pub(super) struct Host<V> {
 }
 pub(super) struct Hosted<T> {
     child: T,
-    generation: u64,
+    generation: CommandGeneration,
     proxy: MessageProxy<Invocation>,
 }
 pub(super) fn host<V: WidgetView<App>>(app: &App, child: V) -> Host<V> {
@@ -96,6 +110,7 @@ impl<V> Host<V> {
             writer_active: self.scope.writer.is_some()
                 && !self.scope.welcome
                 && !self.scope.settings,
+            picker_open: self.scope.picker.is_some(),
             proxy: state.proxy.clone(),
         })))
     }
@@ -109,7 +124,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         let (child, child_state) = ctx.with_id(ViewId::new(0), |ctx| self.child.build(ctx, app));
         let state = Hosted {
             child: child_state,
-            generation: 0,
+            generation: CommandGeneration::default(),
             proxy,
         };
         let mut pod = Pod::new_with_props(Passthrough::new(child.new_widget), Dimensions::MAX);
@@ -128,7 +143,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         app: &mut App,
     ) {
         if self.scope != prev.scope || self.shortcuts != prev.shortcuts {
-            state.generation = state.generation.wrapping_add(1);
+            state.generation.advance();
         }
         if self.scope != prev.scope || self.shortcuts != prev.shortcuts {
             element.insert_prop(self.context(state));

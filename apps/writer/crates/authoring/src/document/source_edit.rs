@@ -49,6 +49,7 @@ pub(crate) struct PreparedSourceEdit {
     projections: Option<ProjectionCache>,
     retired_history: Vec<Arc<Change>>,
     accepted: bool,
+    version: DocumentVersion,
 }
 
 impl Document {
@@ -94,7 +95,7 @@ impl Document {
                 self.projections = projections;
             }
             self.source = prepared.source.clone();
-            self.version += 1; // Preparation checked overflow against this exact revision.
+            self.version = prepared.version;
         }
         match std::mem::replace(&mut prepared.history, HistoryEdit::None) {
             HistoryEdit::None => {}
@@ -143,15 +144,17 @@ impl SourceEditRequest {
         {
             rules.validate(&self.base.projection_document())?;
         }
-        let (kernel, history) = if source == self.base.source {
+        let (kernel, history, version) = if source == self.base.source {
             // A pristine Rope may have flattened into a second whole-file string.
             source = self.base.source.clone();
-            (None, HistoryEdit::None)
+            (None, HistoryEdit::None, self.base.version)
         } else {
             let version = self
                 .base
                 .version
+                .as_i64()
                 .checked_add(1)
+                .map(DocumentVersion::new)
                 .ok_or(EditError::RevisionExhausted)?;
             let history = match &self.operation {
                 Operation::Apply | Operation::Prose(..) => {
@@ -166,13 +169,13 @@ impl SourceEditRequest {
                     self.base.context.documents.clone(),
                     [OpenDocument::from_shared(
                         self.base.key.clone(),
-                        DocumentVersion::new(version),
+                        version,
                         source.clone(),
                     )],
                 ),
                 control,
             )?;
-            (Some(Arc::new(kernel)), history)
+            (Some(Arc::new(kernel)), history, version)
         };
         control.checkpoint().map_err(AuthoringError::from)?;
         Ok(PreparedSourceEdit {
@@ -184,6 +187,7 @@ impl SourceEditRequest {
             projections,
             retired_history: Vec::new(),
             accepted: false,
+            version,
         })
     }
 }
@@ -194,7 +198,7 @@ impl PreparedSourceEdit {
         if let Some(kernel) = &self.kernel {
             document.source = self.source.clone();
             document.kernel = kernel.clone();
-            document.version += 1; // Preparation checked this exact revision.
+            document.version = self.version;
             if let Some(projections) = &self.projections {
                 document.projections = projections.capture_local().restore();
             }

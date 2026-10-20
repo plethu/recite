@@ -3,4 +3,4 @@ pub mod entries;
 pub mod producer;
 pub mod recovery;
 pub mod session;
-pub use session::{DeclarationSave, Session};
+pub use session::{DeclarationRevision, DeclarationSave, Session};

@@ -5,7 +5,11 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing;
     flex_col((
-        label(scale, "Recite Writer").text_size(28. * scale),
+        flex_row((
+            label(scale, "Recite Writer").text_size(28. * scale),
+            history_buttons(state),
+        ))
+        .gap(24.px()),
         label(
             scale,
             format!(
@@ -70,6 +74,32 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+}
+
+fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let closing = state.phase != Phase::Writing;
+    flex_row((
+        text_button(scale, "Back", |state: &mut Writer| {
+            state.history_step(false)
+        })
+        .disabled(
+            closing
+                || state.work.busy()
+                || state.navigation.busy()
+                || state.navigation.history.step(false).is_none(),
+        ),
+        text_button(scale, "Forward", |state: &mut Writer| {
+            state.history_step(true)
+        })
+        .disabled(
+            closing
+                || state.work.busy()
+                || state.navigation.busy()
+                || state.navigation.history.step(true).is_none(),
+        ),
+    ))
+    .gap(8.px())
 }
 
 pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {

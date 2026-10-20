@@ -80,10 +80,11 @@ fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
                     Either::A(
                         flex_col((
                             label(scale, caption),
-                            sized_box(
-                                prose(scale, passage.text.clone()).text_size(state.reading_size()),
-                            )
-                            .width(width),
+                            flex_row((sized_box(crate::presentation::manuscript_text(
+                                state.reading_size(),
+                                passage.text.clone(),
+                            ))
+                            .width(width),)),
                             text_button(
                                 scale,
                                 format!("Edit passage {}", index + 1),

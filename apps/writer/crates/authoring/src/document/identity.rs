@@ -1,6 +1,6 @@
 //! Analysis identity without retaining a project graph for a queued UI action.
 use super::{Document, ProjectContext};
-use recite_compiler::authoring::AuthoringKernel;
+use recite_compiler::authoring::{AuthoringKernel, DocumentVersion};
 use recite_core::DocumentKey;
 use std::sync::{Arc, Weak};
 
@@ -11,7 +11,7 @@ use std::sync::{Arc, Weak};
 #[derive(Clone)]
 pub struct AnalysisStamp {
     key: DocumentKey,
-    version: i64,
+    version: DocumentVersion,
     source: Weak<str>,
     kernel: Weak<AuthoringKernel>,
     context: Weak<ProjectContext>,

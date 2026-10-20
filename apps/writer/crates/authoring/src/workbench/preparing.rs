@@ -1,5 +1,6 @@
 //! Prepare destination selection against immutable analysis; retain live history and preview.
 use super::{View, Workbench, WorkbenchError};
+use crate::DocumentVersion;
 use crate::{
     CompletionSnapshot, DraftSnapshot, EditError, ProjectContext,
     projection_cache::CachedProjections,
@@ -19,7 +20,7 @@ pub struct PreparedNavigation {
     request: NavigationRequest,
     model: Workbench,
     accepted: bool,
-    rules_revision: Option<i64>,
+    rules_revision: Option<DocumentVersion>,
 }
 impl Workbench {
     /// Capture a destination without copying its history, preview or projection arrays.

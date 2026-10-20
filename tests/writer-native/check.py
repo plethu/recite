@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "preview":
+        if scenario == "picker":
+            from picker_interactions import run
+        elif scenario == "preview":
             from preview_interactions import run
         elif scenario == "keyboard":
             from keyboard_interactions import run
@@ -105,7 +107,16 @@ def main():
     parser.add_argument("--child", action="store_true")
     parser.add_argument(
         "--scenario",
-        choices=("all", "structure", "startup", "preferences", "editor", "keyboard", "preview"),
+        choices=(
+            "all",
+            "structure",
+            "startup",
+            "preferences",
+            "editor",
+            "keyboard",
+            "preview",
+            "picker",
+        ),
         default="all",
     )
     args = parser.parse_args()

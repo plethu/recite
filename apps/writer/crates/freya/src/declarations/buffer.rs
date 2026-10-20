@@ -1,13 +1,14 @@
 //! Actions harvest the mounted widget explicitly; observers may still be queued.
 use crate::editing::Writer;
 use freya::{code_editor::CodeEditorData, prelude::*};
+use recite_writer_session::declarations::DeclarationRevision;
 use std::path::PathBuf;
 
 #[derive(Clone)]
 pub(crate) struct SourceBuffer {
     pub(super) path: PathBuf,
     pub(super) editor: State<CodeEditorData>,
-    pub(super) revision: State<u64>,
+    pub(super) revision: State<DeclarationRevision>,
 }
 
 pub(crate) fn harvest(mut writer: Writer) {

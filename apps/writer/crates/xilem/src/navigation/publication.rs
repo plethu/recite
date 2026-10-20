@@ -120,6 +120,7 @@ impl Writer {
             self.location.passage = location.passage.clone();
         }
         self.beat_page = 0;
+        self.remember_location();
         self.reading.prepare(self.session.model());
         self.status = if self.session.dirty() {
             "Unsaved work restored"
@@ -130,6 +131,7 @@ impl Writer {
         Ok(())
     }
     pub(super) fn navigation_failed(&mut self, error: String) {
+        self.navigation.visit = None;
         // Parking may have completed before cancellation or failed destination validation.
         if let Some((files, model)) = self.session.parts_mut() {
             let _ = files.queue_checkpoint(model);

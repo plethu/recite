@@ -1,5 +1,6 @@
 //! Immutable accepted inputs for background trial preparation.
 use super::{Document, ProjectContext};
+use crate::DocumentVersion;
 use crate::{Preview, PreviewError, PreviewPage, PreviewSetup, Workbench};
 use recite_compiler::authoring::AuthoringKernel;
 use recite_core::DocumentKey;
@@ -9,7 +10,7 @@ use std::sync::Arc;
 pub struct PreviewRequest {
     source: Arc<str>,
     key: DocumentKey,
-    revision: i64,
+    revision: DocumentVersion,
     pub(crate) kernel: Arc<AuthoringKernel>,
     pub(crate) context: Arc<ProjectContext>,
     block: Option<String>,

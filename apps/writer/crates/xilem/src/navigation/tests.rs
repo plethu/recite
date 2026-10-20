@@ -4,6 +4,8 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 #[path = "failure/tests.rs"]
 mod failure;
+#[path = "history/tests.rs"]
+mod history;
 #[path = "visual/tests.rs"]
 mod visual;
 

@@ -105,11 +105,4 @@ fn dispatch(mut writer: Writer, event: &Event<KeyboardEventData>) {
 }
 
 /// Exact aliases reuse command validation and persistence; this is not an Ex parser.
-pub(in crate::commands) fn alias(query: &str) -> Option<Command> {
-    match query.trim().trim_start_matches(':') {
-        "w" => Some(Command::Save),
-        "wa" => Some(Command::SaveAll),
-        "q" => Some(Command::Close),
-        _ => None,
-    }
-}
+pub(in crate::commands) use recite_writer_session::commands::vim_alias as alias;

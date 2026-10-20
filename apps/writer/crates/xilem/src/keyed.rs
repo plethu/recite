@@ -9,7 +9,7 @@ pub(super) struct Keyed<K, V> {
     inner: V,
 }
 pub(super) struct KeyedState<T> {
-    generation: u64,
+    child_id: ViewId,
     inner: T,
 }
 pub(super) fn keyed<K, V>(key: K, inner: V) -> Keyed<K, V> {
@@ -27,7 +27,7 @@ impl<State: 'static, K: PartialEq + Send + Sync + 'static, V: WidgetView<State>>
         (
             Pod::new_with_props(Passthrough::new(child.new_widget), Dimensions::MAX),
             KeyedState {
-                generation: 0,
+                child_id: ViewId::new(0),
                 inner,
             },
         )
@@ -42,17 +42,15 @@ impl<State: 'static, K: PartialEq + Send + Sync + 'static, V: WidgetView<State>>
         state: &mut State,
     ) {
         if self.key == prev.key {
-            ctx.with_id(ViewId::new(local.generation), |ctx| {
+            ctx.with_id(local.child_id, |ctx| {
                 let mut child = Passthrough::child_mut(&mut element);
                 self.inner
                     .rebuild(&prev.inner, &mut local.inner, ctx, child.downcast(), state);
             });
         } else {
             prev.teardown(local, ctx, element.reborrow_mut());
-            local.generation = local.generation.wrapping_add(1);
-            let (child, inner) = ctx.with_id(ViewId::new(local.generation), |ctx| {
-                self.inner.build(ctx, state)
-            });
+            local.child_id = ViewId::new(local.child_id.routing_id().wrapping_add(1));
+            let (child, inner) = ctx.with_id(local.child_id, |ctx| self.inner.build(ctx, state));
             Passthrough::set_child(&mut element, child.new_widget);
             local.inner = inner;
         }
@@ -64,7 +62,7 @@ impl<State: 'static, K: PartialEq + Send + Sync + 'static, V: WidgetView<State>>
         ctx: &mut ViewCtx,
         mut element: Mut<'_, Self::Element>,
     ) {
-        ctx.with_id(ViewId::new(local.generation), |ctx| {
+        ctx.with_id(local.child_id, |ctx| {
             let mut child = Passthrough::child_mut(&mut element);
             self.inner.teardown(&mut local.inner, ctx, child.downcast());
         });
@@ -77,10 +75,7 @@ impl<State: 'static, K: PartialEq + Send + Sync + 'static, V: WidgetView<State>>
         mut element: Mut<'_, Self::Element>,
         state: &mut State,
     ) -> MessageResult<()> {
-        if message
-            .take_first()
-            .is_none_or(|id| id.routing_id() != local.generation)
-        {
+        if message.take_first().is_none_or(|id| id != local.child_id) {
             return MessageResult::Stale;
         }
         let mut child = Passthrough::child_mut(&mut element);

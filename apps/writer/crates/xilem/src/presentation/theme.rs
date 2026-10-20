@@ -5,7 +5,7 @@ use xilem::masonry::{
     layout::AsUnit,
     properties::{
         Background, BorderColor, BorderWidth, CaretColor, CheckmarkColor, ContentColor,
-        CornerRadius, Padding, PlaceholderColor, SelectionColor,
+        CornerRadius, Padding, PlaceholderColor, PlaceholderTextSize, SelectionColor,
     },
     widgets::{Button, Checkbox, Label, RadioButton, TextArea, TextInput},
 };
@@ -23,6 +23,7 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     properties.insert::<RadioButton, _>(CheckmarkColor { color: p.accent });
     properties.insert::<TextInput, _>(Background::Color(p.surface));
     properties.insert::<TextInput, _>(PlaceholderColor::new(p.placeholder));
+    properties.insert::<TextInput, _>(PlaceholderTextSize { size: 14. * scale });
     properties.insert::<TextInput, _>(CaretColor { color: p.ink });
     properties.insert::<TextInput, _>(SelectionColor { color: p.selection });
     properties.insert::<TextArea<true>, _>(CaretColor { color: p.ink });

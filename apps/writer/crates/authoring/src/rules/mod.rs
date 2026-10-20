@@ -1,4 +1,5 @@
 //! Reply rule edits preserve source outside the edited expressions and effect slots.
+use crate::DocumentVersion;
 mod effect;
 mod expression;
 pub use effect::RuleEffect;
@@ -26,7 +27,7 @@ pub struct ReplyRules {
     pub available_conditions: Vec<RuleExpression>,
     pub available_effects: Vec<RuleEffect>,
     key: DocumentKey,
-    revision: i64,
+    revision: DocumentVersion,
     source: std::sync::Arc<str>,
     original_condition: Option<RuleExpression>,
     condition_range: Option<Range<usize>>,

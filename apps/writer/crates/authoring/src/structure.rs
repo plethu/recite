@@ -1,11 +1,12 @@
 //! Structured insertions share the compiler's stable-ID planner and one undo boundary.
+use crate::DocumentVersion;
 use crate::{Document, EditError, projection::offset};
 use recite_core::{SourcePosition, StableIdGenerator, StatementHeader};
 
 impl Document {
     pub fn set_continuation(
         &mut self,
-        expected: i64,
+        expected: DocumentVersion,
         block: &str,
         destination: &str,
     ) -> Result<(), EditError> {
@@ -42,7 +43,12 @@ impl Document {
         self.replace_target(expected, line, destination)
     }
 
-    pub fn rename_beat(&mut self, expected: i64, block: &str, name: &str) -> Result<(), EditError> {
+    pub fn rename_beat(
+        &mut self,
+        expected: DocumentVersion,
+        block: &str,
+        name: &str,
+    ) -> Result<(), EditError> {
         self.check_revision(expected)?;
         let index = self.unique_block_index(block)?;
         let snapshot = self.kernel().snapshot();
@@ -67,7 +73,7 @@ impl Document {
         self.replace_source(expected, next)
     }
 
-    pub fn add_beat(&mut self, expected: i64) -> Result<String, EditError> {
+    pub fn add_beat(&mut self, expected: DocumentVersion) -> Result<String, EditError> {
         self.check_revision(expected)?;
         self.script_snapshot()?;
         let snapshot = self.kernel().snapshot();
@@ -113,7 +119,11 @@ impl Document {
     }
 
     /// Inserts before the beat's first top-level choice or divert, or at its end.
-    pub fn add_line(&mut self, expected: i64, section: &str) -> Result<String, EditError> {
+    pub fn add_line(
+        &mut self,
+        expected: DocumentVersion,
+        section: &str,
+    ) -> Result<String, EditError> {
         self.check_revision(expected)?;
         self.passage_snapshot()?;
         let index = self.unique_block_index(section)?;

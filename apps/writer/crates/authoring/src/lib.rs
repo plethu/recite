@@ -1,6 +1,8 @@
 //! Source-preserving authoring sessions for the native Recite writer.
 //! Parsing, validation, IDs, compilation, and preview use the real Recite crates.
 
+pub use recite_compiler::authoring::DocumentVersion;
+
 mod document;
 mod draft_snapshot;
 mod edits;

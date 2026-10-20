@@ -19,8 +19,9 @@ fn context() -> (Context, mpsc::Receiver<SendMessage>) {
     (
         Context {
             shortcuts: Default::default(),
-            generation: 9,
+            generation: Default::default(),
             writer_active: true,
+            picker_open: false,
             proxy: MessageProxy::new(Arc::new(Recorder(sender)), Arc::from([])),
         },
         receiver,
@@ -37,6 +38,7 @@ fn stroke(key: Key<'_>) -> Stroke<'_> {
             },
         },
         enter: false,
+        picker: None,
         first_press: true,
     }
 }
@@ -52,7 +54,7 @@ fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_act
         .downcast::<Invocation>()
         .unwrap();
     assert_eq!(action.command, WriterCommand::Save);
-    assert_eq!(action.generation, 9);
+    assert_eq!(action.generation, context.generation);
     let mut repeat = stroke(Key::Character("s"));
     repeat.first_press = false;
     assert!(keyboard.dispatch(&context, None, false, repeat));

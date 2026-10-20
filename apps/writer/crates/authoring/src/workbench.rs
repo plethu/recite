@@ -1,3 +1,4 @@
+use crate::DocumentVersion;
 mod edit;
 mod preparing;
 pub use preparing::{NavigationRequest, PreparedNavigation};
@@ -43,7 +44,7 @@ pub struct Workbench {
     draft: DraftSnapshot,
     loaded: DraftSnapshot,
     dirty: bool,
-    draft_revision: i64,
+    draft_revision: DocumentVersion,
     preview: Option<Preview>,
     page: Option<PreviewPage>,
     script_selection: Option<String>,
