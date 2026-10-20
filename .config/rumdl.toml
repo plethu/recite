@@ -3,6 +3,8 @@ line-length = 100
 exclude = [
     "apps/writer/vendor/xilem/**",
     "apps/writer/vendor/copypasta/**",
+    "apps/writer/vendor/accesskit-atspi-common/README.md",
+    "apps/writer/vendor/accesskit-atspi-common/CHANGELOG.md",
     "**/node_modules/**",
     "**/target/**",
     "docs-site/dist/**",
