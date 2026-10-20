@@ -113,6 +113,16 @@ temporary examples and project creation use shared launch/session owners. Its pe
 apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
 validation. Ordinary exit confirmation never weakens the unsaved-work guard.
 
+Xilem's project settings workspace retains a conflict-checked opening baseline. Export creates a
+separate TOML draft for the external editor; explicit Import validates the prospective project and
+preserves every open document. Apply writes the exact review, revalidating under the manifest lock.
+Publication and saved-baseline reload briefly exclude document membership and declaration changes;
+manuscript typing remains independent. Successful writes reconcile before asynchronous analysis
+refresh. Uncertain storage outcomes retain the last-known baseline for inspection, retire obsolete
+producer authority, and require explicit baseline reload before another Apply. Failed refresh keeps
+navigation guarded until a checked retry restores project context. Unstarted reloads preserve prior
+authority; failed observations quarantine it, and cancellation cannot erase observed saved changes.
+
 Configured native shortcuts use the same validated chord matcher in both frontends. Xilem routes
 commands before text input, retains native text undo/redo, and scopes Apply to the focused
 manuscript. Composition bypasses application shortcuts; document, screen and binding changes

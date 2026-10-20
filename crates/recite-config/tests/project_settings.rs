@@ -61,6 +61,10 @@ fn manifest_edits_preserve_open_documents_before_writing() -> Result<(), Box<dyn
     for (name, removed) in [("active.recite", active), ("retained.recite", retained)] {
         let replacement = format!("{original}\n[discovery]\nexcludes = ['{name}']\n");
         assert!(matches!(
+            settings.validate_preserving_documents(&replacement, &documents),
+            Err(recite_config::ProjectSettingsError::OpenDocument(path)) if path == removed
+        ));
+        assert!(matches!(
             settings.save_preserving_documents(&replacement, &documents),
             Err(recite_config::ProjectSettingsError::OpenDocument(path)) if path == removed
         ));
@@ -68,9 +72,17 @@ fn manifest_edits_preserve_open_documents_before_writing() -> Result<(), Box<dyn
         assert_eq!(settings.source(), original);
     }
     let valid = original.replace("trial", "revised");
+    let reviewed = settings.validate_preserving_documents(&valid, &documents)?;
+    assert_eq!(reviewed.documents().len(), 2);
+    assert_eq!(std::fs::read_to_string(&path)?, original);
+    let mut earlier_edit = settings.clone();
     settings.save_preserving_documents(&valid, &documents)?;
     assert_eq!(std::fs::read_to_string(&path)?, valid);
     assert_eq!(settings.source(), valid);
+    assert!(matches!(
+        earlier_edit.save(original),
+        Err(recite_config::ProjectSettingsError::Conflict)
+    ));
     Ok(())
 }
 

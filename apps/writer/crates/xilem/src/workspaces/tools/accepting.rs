@@ -1,4 +1,4 @@
-use super::super::SchemaUpdate;
+use super::super::ContextUpdate;
 use super::*;
 impl Writer {
     pub(super) fn accept_tool(&mut self, mut completed: Completed) -> Retirement {
@@ -33,8 +33,8 @@ impl Writer {
                 .map(|()| {
                     self.workspaces.declarations.replace(std::mem::take(rows));
                     self.workspaces.declarations.source.invalidate_output();
-                    self.workspaces.schema_refresh = Some(SchemaUpdate::Published);
-                    self.refresh_schema_context();
+                    self.workspaces.context_refresh = Some(ContextUpdate::Published);
+                    self.refresh_project_context();
                 }),
             Ok(Value::Refreshed(prepared)) => self
                 .session
@@ -46,7 +46,7 @@ impl Writer {
                         .map_err(|error| error.to_string())
                 })
                 .map(|()| {
-                    let update = self.workspaces.schema_refresh.take().map(SchemaUpdate::message).unwrap_or("Schema updated");
+                    let update = self.workspaces.context_refresh.take().map(ContextUpdate::message).unwrap_or("Schema updated");
                     self.reading.prepare(self.session.model());
                     let stale_rule_draft = self.session.model().has_draft() && self.rules.as_ref().is_some_and(|reply| !reply.projection().belongs_to(self.session.model().document()));
                     if stale_rule_draft { self.retire_rules(); }
@@ -68,17 +68,28 @@ impl Writer {
                 }
             }
             Ok(Value::DeclarationFinished { receipt, completion }) => self.finish_declaration_tool(receipt, *completion),
+            Ok(Value::Settings(prepared)) => self.accept_settings_tool(prepared),
+            Ok(Value::SettingsWritten(receipt)) => self.accept_settings_written(receipt),
             Err(error) => Err(error.clone()),
         };
         if let Err(error) = result {
             let message = if completed.request.kind == ToolKind::Refresh
-                && let Some(update) = self.workspaces.schema_refresh
+                && let Some(update) = self.workspaces.context_refresh
             {
                 format!("{}; context refresh failed: {error}", update.message())
             } else {
                 error
             };
-            self.schema_feedback(message);
+            if completed.request.kind == ToolKind::Settings
+                || self
+                    .session
+                    .project()
+                    .is_some_and(|project| project.files().configuration_refresh_required())
+            {
+                self.settings_feedback(message);
+            } else {
+                self.schema_feedback(message);
+            }
         }
         Retirement::Drop(completed.result.ok())
     }

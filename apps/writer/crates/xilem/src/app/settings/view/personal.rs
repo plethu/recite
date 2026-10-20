@@ -82,6 +82,13 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
     })
     .collect::<Vec<_>>();
     flex_col((
+        text_button(scale, "Project settings…", App::open_project_settings).disabled(
+            app.writer.as_ref().is_none_or(|writer| {
+                writer.session.project().is_none()
+                    || writer.project_jobs_busy()
+                    || writer.phase != crate::Phase::Writing
+            }),
+        ),
         label(scale, "Appearance").text_size(18. * scale),
         radio_group(
             flex_row((

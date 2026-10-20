@@ -40,6 +40,13 @@ fn command_label(command: WriterCommand) -> String {
     }
 }
 impl App {
+    fn open_project_settings(&mut self) {
+        if let Some(writer) = &mut self.writer {
+            writer.open_project_workspace(crate::workspaces::Open::Settings);
+            self.settings_open = false;
+            self.show_welcome = false;
+        }
+    }
     pub(super) fn show_settings(&mut self) {
         self.settings_open = true;
         self.settings.page = commands()

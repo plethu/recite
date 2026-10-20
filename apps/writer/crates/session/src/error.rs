@@ -51,7 +51,7 @@ pub enum FileError {
     )]
     SchemaOwnership,
     #[error(
-        "Save or discard declaration changes and wait for active declaration work before changing the project schema."
+        "Save or discard declaration changes and wait for active declaration work before changing project settings or schema."
     )]
     SchemaSessionActive,
     #[error(
@@ -60,6 +60,28 @@ pub enum FileError {
     DeclarationChanged,
     #[error("Declaration action cancelled. Your current source remains open.")]
     DeclarationActionCancelled,
+    #[error(transparent)]
+    ProjectSettings(#[from] recite_config::ProjectSettingsError),
+    #[error(
+        "Project settings changed on disk. Your reviewed draft was not applied. Inspect the saved manifest and choose Reload saved settings before another Apply."
+    )]
+    SettingsConflict,
+    #[error("Project settings changed during this action. Current work remains open.")]
+    SettingsChanged,
+    #[error("Project settings action cancelled. Current project settings remain unchanged.")]
+    SettingsCancelled,
+    #[error(
+        "Project settings changed. Refresh project context before navigating between documents."
+    )]
+    SettingsRefreshRequired,
+    #[error(
+        "The saved project settings are unconfirmed. Reload saved settings before another Apply."
+    )]
+    SettingsReloadRequired,
+    #[error("Import a separate project settings draft before applying it.")]
+    SettingsSource,
+    #[error("Save or undo the pending project rename before applying project settings.")]
+    ProjectEditPending,
     #[error("Save this document before closing it. Your draft remains open.")]
     UnsavedDocument,
     #[error(

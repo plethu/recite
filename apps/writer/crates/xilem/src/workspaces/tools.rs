@@ -2,6 +2,7 @@
 mod accepting;
 mod declaration;
 mod job;
+mod settings;
 mod worker;
 use super::{Phase, Writer, declarations::Row};
 use recite_writer_session::{
@@ -10,7 +11,10 @@ use recite_writer_session::{
         DeclarationWork, Session, entries,
         session::{GenerationReceipt, GenerationStart, GenerationStarted, GenerationWork},
     },
-    project::{PreparedRefresh, RefreshRequest},
+    project::{
+        PreparedRefresh, RefreshRequest,
+        settings::{SettingsPublication, SettingsWork, SettingsWritten},
+    },
 };
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
@@ -28,6 +32,7 @@ struct Request {
 #[derive(PartialEq, Eq)]
 enum ToolKind {
     Refresh,
+    Settings,
     Other,
 }
 pub(super) struct Job {
@@ -39,6 +44,8 @@ pub(super) enum Work {
     Publish(Box<GenerationWork>),
     Refresh(Box<RefreshRequest>),
     Declaration(Box<DeclarationWork>),
+    Settings(Box<SettingsWork>),
+    SettingsPublish(Box<SettingsPublication>),
 }
 enum Value {
     Started(GenerationStarted),
@@ -52,6 +59,8 @@ enum Value {
         receipt: DeclarationFinished,
         completion: declaration::Completion,
     },
+    Settings(Box<settings::Prepared>),
+    SettingsWritten(Box<SettingsWritten>),
 }
 struct Completed {
     request: Arc<Request>,
@@ -107,6 +116,13 @@ impl Writer {
             .as_mut()
     }
     pub(super) fn declaration_action_blocked(&self) -> bool {
+        self.project_action_blocked()
+            || self
+                .session
+                .project()
+                .is_some_and(|project| project.files().require_navigation_ready().is_err())
+    }
+    pub(super) fn project_action_blocked(&self) -> bool {
         self.phase != Phase::Writing
             || self.work.busy()
             || self.navigation.busy()
@@ -157,7 +173,7 @@ impl Writer {
         self.workspaces.schema_feedback = super::text::pages(&message);
         self.workspaces.schema_feedback_page = 0;
     }
-    pub(crate) fn refresh_schema_context(&mut self) {
+    pub(crate) fn refresh_project_context(&mut self) {
         if self.phase != Phase::Writing || self.workspaces.tools.busy() || self.work.busy() {
             return;
         }
@@ -174,7 +190,13 @@ impl Writer {
         match result {
             Ok(work) => self.submit_tool(Work::Refresh(Box::new(work))),
             Err(error) => {
-                self.status = format!("Schema published; context refresh failed: {error}")
+                self.status = format!(
+                    "{}; context refresh failed: {error}",
+                    self.workspaces
+                        .context_refresh
+                        .map(super::ContextUpdate::message)
+                        .unwrap_or("Project settings changed")
+                )
             }
         }
     }
@@ -184,18 +206,22 @@ impl Writer {
         };
         let request = Arc::new(Request {
             root: project.root().to_owned(),
-            kind: if matches!(&work, Work::Refresh(_)) {
-                ToolKind::Refresh
-            } else {
-                ToolKind::Other
+            kind: match &work {
+                Work::Refresh(_) => ToolKind::Refresh,
+                Work::Settings(_) | Work::SettingsPublish(_) => ToolKind::Settings,
+                _ => ToolKind::Other,
             },
         });
         self.workspaces.tools.pending = Some(request.clone());
         self.status = match &work {
             Work::Start(_) => "Checking the reviewed producer command…",
             Work::Publish(_) => "Publishing generated schema… You can keep writing.",
-            Work::Refresh(_) => "Refreshing schema analysis… You can keep writing.",
+            Work::Refresh(_) => "Refreshing project analysis… You can keep writing.",
             Work::Declaration(_) => "Preparing declaration source… Your current draft stays open.",
+            Work::Settings(_) => "Preparing project settings… Your manuscript stays open.",
+            Work::SettingsPublish(_) => {
+                "Publishing reviewed project settings… You can keep writing."
+            }
         }
         .into();
         let job = Job { request, work };

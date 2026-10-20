@@ -156,6 +156,7 @@ impl ProjectFiles {
         control: &dyn WorkControl,
     ) -> Result<(), FileError> {
         self.require_idle_save()?;
+        self.require_navigation_ready()?;
         control.checkpoint()?;
         if path == self.current {
             select(current)?;

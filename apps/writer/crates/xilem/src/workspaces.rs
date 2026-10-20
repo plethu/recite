@@ -2,6 +2,7 @@
 mod builds;
 mod declarations;
 mod opening;
+mod settings;
 mod text;
 mod tools;
 use crate::{Phase, Writer};
@@ -18,17 +19,24 @@ pub(crate) enum Screen {
     Write,
     Declarations,
     Build,
+    Settings,
 }
 #[derive(Clone, Copy)]
-enum SchemaUpdate {
+enum ContextUpdate {
     Published,
     Reloaded,
+    SettingsSaved,
+    SettingsReloaded,
+    SettingsUnconfirmed,
 }
-impl SchemaUpdate {
+impl ContextUpdate {
     fn message(self) -> &'static str {
         match self {
             Self::Published => "Schema published",
             Self::Reloaded => "Schema reloaded",
+            Self::SettingsSaved => "Project settings saved",
+            Self::SettingsReloaded => "Project settings reloaded",
+            Self::SettingsUnconfirmed => "Saved project settings need confirmation",
         }
     }
 }
@@ -36,11 +44,12 @@ impl SchemaUpdate {
 pub(crate) struct Workspaces {
     pub screen: Screen,
     declarations: declarations::Panel,
+    settings: settings::Panel,
     build_page: usize,
     build_feedback: Vec<String>,
     feedback_page: usize,
     tools: tools::Tools,
-    schema_refresh: Option<SchemaUpdate>,
+    context_refresh: Option<ContextUpdate>,
     schema_feedback: Vec<String>,
     schema_feedback_page: usize,
 }
@@ -52,6 +61,11 @@ impl Writer {
         self.workspaces.tools.busy()
             || self.session.project().is_some_and(|project| {
                 project.files().builds.busy()
+                    || project
+                        .files()
+                        .settings
+                        .as_ref()
+                        .is_some_and(|session| session.busy())
                     || project
                         .files()
                         .declarations
@@ -71,6 +85,7 @@ impl Writer {
         let retained = self.session.project().is_some_and(|project| match action {
             Open::Declarations => project.files().declarations.is_some(),
             Open::Build => project.files().builds.busy(),
+            Open::Settings => project.files().settings.is_some(),
         });
         if retained && self.phase == Phase::Writing && !self.navigation.busy() && !self.work.busy()
         {
@@ -79,6 +94,7 @@ impl Writer {
             self.workspaces.screen = match action {
                 Open::Declarations => Screen::Declarations,
                 Open::Build => Screen::Build,
+                Open::Settings => Screen::Settings,
             };
             return;
         }
@@ -87,8 +103,16 @@ impl Writer {
 }
 
 pub(crate) fn panel(writer: &Writer) -> impl xilem::WidgetView<Writer> + use<> {
-    xilem::view::indexed_stack((declarations::panel(writer), builds::panel(writer)))
-        .active(usize::from(writer.workspaces.screen == Screen::Build))
+    xilem::view::indexed_stack((
+        declarations::panel(writer),
+        builds::panel(writer),
+        settings::panel(writer),
+    ))
+    .active(match writer.workspaces.screen {
+        Screen::Build => 1,
+        Screen::Settings => 2,
+        Screen::Write | Screen::Declarations => 0,
+    })
 }
 
 // Conditional task lifetime follows active jobs, independently of the selected screen.

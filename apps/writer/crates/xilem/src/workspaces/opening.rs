@@ -2,6 +2,7 @@ use super::*;
 use recite_writer_session::{
     builds,
     declarations::{entries, session::Session},
+    project::settings as settings_session,
 };
 use std::path::PathBuf;
 
@@ -9,6 +10,7 @@ use std::path::PathBuf;
 pub(crate) enum Open {
     Declarations,
     Build,
+    Settings,
 }
 pub(crate) struct Work {
     root: PathBuf,
@@ -25,11 +27,21 @@ pub(crate) enum Prepared {
         root: PathBuf,
         targets: Vec<(String, Vec<String>)>,
     },
+    Settings {
+        root: PathBuf,
+        session: Option<settings_session::Session>,
+        preview: Vec<String>,
+    },
 }
 impl Work {
     pub fn capture(writer: &Writer, action: Open) -> Result<Self, String> {
         let project = writer.session.project().ok_or("Open a project first.")?;
         if project.files().builds.busy()
+            || project
+                .files()
+                .settings
+                .as_ref()
+                .is_some_and(|session| session.busy())
             || project
                 .files()
                 .declarations
@@ -62,6 +74,16 @@ impl Work {
                 targets: builds::targets(&self.root)?,
                 root: self.root,
             }),
+            Open::Settings => {
+                let session = settings_session::Session::open(&self.root)
+                    .map_err(|error| error.to_string())?;
+                let preview = text::pages(session.baseline());
+                Ok(Prepared::Settings {
+                    root: self.root,
+                    session: Some(session),
+                    preview,
+                })
+            }
         }
     }
 }
@@ -71,7 +93,9 @@ impl Writer {
         prepared: &mut Prepared,
     ) -> Result<(), String> {
         let root = match prepared {
-            Prepared::Declarations { root, .. } | Prepared::Build { root, .. } => root,
+            Prepared::Declarations { root, .. }
+            | Prepared::Build { root, .. }
+            | Prepared::Settings { root, .. } => root,
         };
         let project = self
             .session
@@ -107,6 +131,17 @@ impl Writer {
                     files.builds.selected = None;
                 }
                 Screen::Build
+            }
+            Prepared::Settings {
+                session, preview, ..
+            } => {
+                if files.settings.is_none() {
+                    files.settings = session.take();
+                    self.workspaces
+                        .settings
+                        .replace_preview(std::mem::take(preview));
+                }
+                Screen::Settings
             }
         };
         self.cancel_map_gesture();

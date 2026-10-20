@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "declaration-source":
+        if scenario == "project-settings":
+            from project_settings_interactions import run
+        elif scenario == "declaration-source":
             from declaration_source_interactions import run
         elif scenario == "generation":
             from generation_interactions import run
@@ -143,6 +145,7 @@ def main():
             "project-tools",
             "generation",
             "declaration-source",
+            "project-settings",
         ),
         default="all",
     )

@@ -45,6 +45,7 @@ impl ProjectFiles {
         path: &Path,
         initial: Option<View>,
     ) -> Result<SwitchRequest, FileError> {
+        self.require_navigation_ready()?;
         if path == self.current || !self.names.contains_key(path) {
             return Err(FileError::Selection);
         }
@@ -88,6 +89,7 @@ impl ProjectFiles {
         prepared: &mut PreparedSwitch,
         checkpoint: &ReadyCheckpoint,
     ) -> Result<(), FileError> {
+        self.require_navigation_ready()?;
         if !prepared.is_current(self, current, checkpoint) {
             return Err(WorkbenchError::from(recite_writer_model::EditError::Stale).into());
         }

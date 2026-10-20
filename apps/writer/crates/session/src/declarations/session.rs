@@ -135,9 +135,10 @@ impl Session {
         let source = loaded
             .source
             .ok_or(FileError::Validation(loaded.diagnostics))?;
-        if !self.matches_schema(source.manifest().project.schema.as_deref())
-            && (self.dirty() || self.busy())
-        {
+        self.check_schema_association(source.manifest().project.schema.as_deref())
+    }
+    pub fn check_schema_association(&self, relative: Option<&str>) -> Result<(), FileError> {
+        if !self.matches_schema(relative) && (self.dirty() || self.busy()) {
             return Err(FileError::SchemaSessionActive);
         }
         Ok(())

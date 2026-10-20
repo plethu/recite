@@ -4,6 +4,7 @@ pub mod manifest;
 mod recovery;
 mod refresh;
 mod reload;
+pub mod settings;
 pub use refresh::{PreparedRefresh, RefreshRequest};
 pub use reload::{PreparedReload, ReloadRequest};
 mod source_repair;
@@ -35,6 +36,8 @@ pub struct ProjectFiles {
     rename_redo: Vec<rename::RenameUndo>,
     pub builds: crate::builds::Builds,
     pub declarations: Option<crate::declarations::Session>,
+    pub settings: Option<settings::Session>,
+    configuration_change: Option<settings::ConfigurationChange>,
     retained: std::collections::BTreeMap<PathBuf, sessions::Retained>,
     pub paths: Vec<PathBuf>,
     pub current: PathBuf,
@@ -121,6 +124,8 @@ impl ProjectFiles {
             rename_undo: Vec::new(),
             rename_redo: Vec::new(),
             declarations: None,
+            settings: None,
+            configuration_change: None,
             retained: Default::default(),
             paths,
             current,

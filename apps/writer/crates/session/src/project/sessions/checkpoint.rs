@@ -23,6 +23,7 @@ impl ProjectFiles {
         &mut self,
         model: &Workbench,
     ) -> Result<Checkpoint, FileError> {
+        self.require_navigation_ready()?;
         let recovery = self.recovery_value(model);
         self.recovery.begin_persist(recovery.clone())?;
         let captured = Capture {

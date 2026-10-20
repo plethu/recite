@@ -18,7 +18,7 @@ impl Writer {
         self.build_selected(selected);
     }
     pub(crate) fn build_selected(&mut self, asset: Option<String>) {
-        if self.phase != Phase::Writing || self.navigation.busy() || self.work.busy() {
+        if self.declaration_action_blocked() {
             return;
         }
         let Some(project) = self.session.project_mut() else {
@@ -88,7 +88,8 @@ pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .prop(Region(Some(Pane::Build)))
 }
 fn build_actions(writer: &Writer, busy: bool, empty: bool) -> impl WidgetView<Writer> + use<> {
-    let blocked = busy
+    let blocked = writer.declaration_action_blocked()
+        || busy
         || empty
         || writer.phase != Phase::Writing
         || writer.navigation.busy()

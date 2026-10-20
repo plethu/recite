@@ -12,6 +12,7 @@ struct Origin {
     current: PathBuf,
     context: Arc<ProjectContext>,
     retained: Vec<(PathBuf, CompletionSnapshot)>,
+    configuration_change: Option<super::settings::ConfigurationChange>,
 }
 pub struct RefreshRequest {
     origin: Origin,
@@ -39,6 +40,7 @@ impl ProjectFiles {
                 root: self.root.clone(),
                 current: self.current.clone(),
                 context: self.context.clone(),
+                configuration_change: self.configuration_change.clone(),
                 retained: self
                     .retained
                     .iter()
@@ -92,6 +94,7 @@ impl ProjectFiles {
         std::mem::swap(&mut self.search, &mut prepared.search);
         std::mem::swap(&mut self.paths, &mut prepared.paths);
         std::mem::swap(&mut self.names, &mut prepared.names);
+        self.configuration_change = None;
         Ok(())
     }
     pub fn refresh(&mut self, model: &mut Workbench) -> Result<(), FileError> {
@@ -104,6 +107,11 @@ impl ProjectFiles {
 impl Origin {
     fn is_current(&self, files: &ProjectFiles) -> bool {
         self.root == files.root
+            && match (&self.configuration_change, &files.configuration_change) {
+                (None, None) => true,
+                (Some(before), Some(current)) => before.matches(current),
+                _ => false,
+            }
             && self.current == files.current
             && Arc::ptr_eq(&self.context, &files.context)
             && self.retained.len() == files.retained.len()

@@ -86,11 +86,11 @@ pub(super) fn controls(writer: &Writer) -> impl WidgetView<Writer> + use<> {
                     || registration.is_none()
                     || session.is_some_and(|session| session.dirty()),
             ),
-            writer.workspaces.schema_refresh.is_some().then(|| {
+            writer.workspaces.context_refresh.is_some().then(|| {
                 text_button(
                     scale,
                     "Retry schema analysis",
-                    Writer::refresh_schema_context,
+                    Writer::refresh_project_context,
                 )
                 .disabled(writer.workspaces.tools.busy() || writer.work.busy())
             }),

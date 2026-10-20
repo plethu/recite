@@ -1,5 +1,5 @@
 //! Checked source adoption and its recovery fence share one worker continuation.
-use super::super::{SchemaUpdate, declarations::producer_description, text};
+use super::super::{ContextUpdate, declarations::producer_description, text};
 use super::*;
 use crate::external_editor::Request as EditorRequest;
 use recite_writer_session::declarations::SourceStatus;
@@ -182,7 +182,7 @@ impl Writer {
             self.workspaces.declarations.replace(rows);
         }
         if reloaded {
-            self.workspaces.schema_refresh = Some(SchemaUpdate::Reloaded);
+            self.workspaces.context_refresh = Some(ContextUpdate::Reloaded);
             if !receipt.inspects_source() {
                 self.workspaces.declarations.source.invalidate_output();
             }
@@ -199,8 +199,8 @@ impl Writer {
             .ok_or("Declarations were closed.".to_owned())?
             .accept_declaration_finish(receipt)
             .map_err(|error| format!("Source buffer retained; recovery failed: {error}"))?;
-        if self.workspaces.schema_refresh.is_some() {
-            self.refresh_schema_context();
+        if self.workspaces.context_refresh.is_some() {
+            self.refresh_project_context();
         } else {
             match completion {
                 Completion::Source => {

@@ -177,6 +177,13 @@ settings are a separate tab with a manifest editor and an explicit Apply action.
 parser, discovery rules, schema validation and atomic replacement primitives as other clients. A
 changed file on disk is never overwritten by a stale Settings draft.
 
+In the opt-in Xilem frontend, **Settings → Project settings…** opens a retained workspace. **Export
+settings draft** creates a separate TOML file; open it in your IDE, then **Import settings draft**
+to validate and review it. **Apply reviewed settings** publishes those exact contents and refreshes
+project analysis without applying or saving manuscript edits. **Reload saved settings** explicitly
+replaces the captured baseline after external edits. A failed analysis refresh offers a retry; an
+unconfirmed baseline must be reloaded before another Apply.
+
 Native trackpad pinch remains unsupported by this pinned backend: Freya does not forward pinch
 events, and its winit version does not emit them on Linux. Ctrl+scroll is available, but is not a
 substitute for native gesture support. Keyboard component tests do not establish screen-reader or

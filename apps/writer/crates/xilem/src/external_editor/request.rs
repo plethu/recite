@@ -2,9 +2,11 @@ use recite_writer_session::ProjectSession;
 use recite_writer_session::{project::SourceRepairArtifact, startup::EditorCommand};
 use std::path::{Path, PathBuf};
 #[derive(Clone)]
-enum DeclarationNext {
-    Reload,
-    Import,
+enum ProjectNext {
+    ReloadDeclarations,
+    ImportDeclarations,
+    ImportSettings,
+    ReloadSettings,
 }
 
 #[derive(Clone)]
@@ -14,10 +16,10 @@ enum Target {
         document: PathBuf,
         path: PathBuf,
     },
-    Declaration {
+    ProjectFile {
         root: PathBuf,
         path: PathBuf,
-        next: DeclarationNext,
+        next: ProjectNext,
     },
 }
 pub(crate) struct Request {
@@ -31,10 +33,10 @@ impl Request {
         editor: Option<EditorCommand>,
     ) -> Self {
         Self {
-            target: Target::Declaration {
+            target: Target::ProjectFile {
                 root: project.root().to_owned(),
                 path,
-                next: DeclarationNext::Reload,
+                next: ProjectNext::ReloadDeclarations,
             },
             editor,
         }
@@ -45,15 +47,43 @@ impl Request {
         editor: Option<EditorCommand>,
     ) -> Self {
         Self {
-            target: Target::Declaration {
+            target: Target::ProjectFile {
                 root: project.root().to_owned(),
                 path,
-                next: DeclarationNext::Import,
+                next: ProjectNext::ImportDeclarations,
             },
             editor,
         }
     }
 
+    pub(crate) fn settings_draft(
+        project: &ProjectSession,
+        path: PathBuf,
+        editor: Option<EditorCommand>,
+    ) -> Self {
+        Self {
+            target: Target::ProjectFile {
+                root: project.root().to_owned(),
+                path,
+                next: ProjectNext::ImportSettings,
+            },
+            editor,
+        }
+    }
+    pub(crate) fn project_manifest(
+        project: &ProjectSession,
+        path: PathBuf,
+        editor: Option<EditorCommand>,
+    ) -> Self {
+        Self {
+            target: Target::ProjectFile {
+                root: project.root().to_owned(),
+                path,
+                next: ProjectNext::ReloadSettings,
+            },
+            editor,
+        }
+    }
     pub(super) fn source(path: PathBuf, editor: Option<EditorCommand>) -> Self {
         Self {
             target: Target::Source(path),
@@ -79,14 +109,14 @@ impl Request {
         match &self.target {
             Target::Source(path)
             | Target::Repair { path, .. }
-            | Target::Declaration { path, .. } => path,
+            | Target::ProjectFile { path, .. } => path,
         }
     }
     pub(super) fn is_current(&self, project: &ProjectSession) -> bool {
         match &self.target {
             Target::Source(path) => project.current().path() == path,
             Target::Repair { document, .. } => project.current().path() == document,
-            Target::Declaration { root, .. } => project.root() == root,
+            Target::ProjectFile { root, .. } => project.root() == root,
         }
     }
     pub(super) fn is_separate_file(&self) -> bool {
@@ -96,14 +126,22 @@ impl Request {
         match &self.target {
             Target::Source(_) => "Reload to inspect external changes",
             Target::Repair { .. } => "Choose Import repaired source to validate its changes",
-            Target::Declaration {
-                next: DeclarationNext::Reload,
+            Target::ProjectFile {
+                next: ProjectNext::ReloadDeclarations,
                 ..
             } => "Reload declaration source to inspect its changes",
-            Target::Declaration {
-                next: DeclarationNext::Import,
+            Target::ProjectFile {
+                next: ProjectNext::ImportDeclarations,
                 ..
             } => "Choose Import repaired declaration draft to validate its changes",
+            Target::ProjectFile {
+                next: ProjectNext::ImportSettings,
+                ..
+            } => "Choose Import settings draft to validate its changes",
+            Target::ProjectFile {
+                next: ProjectNext::ReloadSettings,
+                ..
+            } => "Choose Reload saved settings to inspect its changes",
         }
     }
 }

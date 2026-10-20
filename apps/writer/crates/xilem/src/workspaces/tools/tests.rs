@@ -139,7 +139,7 @@ fn hidden_generation_retains_newer_typing_undo_and_close_guard_until_analysis_is
             .contains("Updated")
     );
     assert!(
-        writer.workspaces.schema_refresh.is_none(),
+        writer.workspaces.context_refresh.is_none(),
         "{}",
         writer.status
     );
@@ -168,7 +168,7 @@ fn published_schema_survives_failed_context_refresh_and_can_be_retried() {
         "{}",
         writer.status
     );
-    assert!(writer.workspaces.schema_refresh.is_some());
+    assert!(writer.workspaces.context_refresh.is_some());
     assert!(
         fs::read_to_string(directory.path().join("schema.json"))
             .unwrap()
@@ -189,10 +189,10 @@ fn published_schema_survives_failed_context_refresh_and_can_be_retried() {
         "format_version=1\n[project]\nschema='schema.json'\n",
     )
     .unwrap();
-    writer.refresh_schema_context();
+    writer.refresh_project_context();
     finish(&mut writer, &mut jobs);
     assert!(
-        writer.workspaces.schema_refresh.is_none(),
+        writer.workspaces.context_refresh.is_none(),
         "{}",
         writer.status
     );

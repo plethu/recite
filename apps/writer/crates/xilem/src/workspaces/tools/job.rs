@@ -11,6 +11,12 @@ impl Job {
             Work::Declaration(work) => Ok(Value::Declaration(Box::new(
                 declaration::Prepared::new(work.not_started(error)),
             ))),
+            Work::Settings(work) => Ok(Value::Settings(Box::new(settings::Prepared::new(
+                work.not_started(error),
+            )))),
+            Work::SettingsPublish(work) => {
+                Ok(Value::SettingsWritten(Box::new(work.not_started(error))))
+            }
         };
         Completed {
             request: self.request,
@@ -31,6 +37,10 @@ impl Job {
             Work::Declaration(work) => Ok(Value::Declaration(Box::new(
                 declaration::Prepared::new(work.execute()),
             ))),
+            Work::Settings(work) => Ok(Value::Settings(Box::new(settings::Prepared::new(
+                work.execute(),
+            )))),
+            Work::SettingsPublish(work) => Ok(Value::SettingsWritten(Box::new(work.execute()))),
             Work::Refresh(work) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 work.prepare(&recite_compiler::authoring::CancellationToken::new())
                     .map(|prepared| Value::Refreshed(Box::new(prepared)))
