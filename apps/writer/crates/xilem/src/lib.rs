@@ -1,3 +1,4 @@
+mod editor_work;
 mod feedback;
 mod keyed;
 mod reading;
@@ -24,6 +25,9 @@ pub struct Writer {
     file_page: usize,
     trial: trial::Trial,
     reading: reading::Reading,
+    work: editor_work::EditorWork,
+    recovery_copy: Option<std::path::PathBuf>,
+    recovery_details: bool,
 }
 
 #[derive(PartialEq)]
@@ -63,6 +67,9 @@ impl Writer {
             file_page: 0,
             trial: trial::Trial::new(),
             reading,
+            work: editor_work::EditorWork::new(),
+            recovery_copy: None,
+            recovery_details: false,
         })
     }
 
@@ -75,34 +82,6 @@ impl Writer {
             Err(error) => feedback::file(&error),
         };
         self.reading.prepare(self.project.current().model());
-    }
-    fn save(&mut self) -> bool {
-        let result = self.project.current_mut().save();
-        self.reading.prepare(self.project.current().model());
-        match result {
-            Ok(()) => {
-                self.status = "Saved".into();
-                true
-            }
-            Err(error) => {
-                self.status = feedback::file(&error);
-                false
-            }
-        }
-    }
-    fn save_all(&mut self) -> bool {
-        let result = self.project.save_all();
-        self.reading.prepare(self.project.current().model());
-        match result {
-            Ok(()) => {
-                self.status = "All open files saved".into();
-                true
-            }
-            Err(error) => {
-                self.status = feedback::file(&error);
-                false
-            }
-        }
     }
     fn switch(&mut self, path: &std::path::Path) {
         self.trial.cancel();
@@ -121,16 +100,28 @@ impl Writer {
         self.reading.prepare(self.project.current().model());
     }
     fn reload(&mut self) {
+        if self.work.busy() {
+            self.status = "Wait for the current save before reloading.".into();
+            return;
+        }
         self.trial.cancel();
         let result = self.project.reload_current();
         self.status = match result {
-            Ok(Some(path)) => format!("Reloaded; previous work preserved at {}", path.display()),
+            Ok(Some(path)) => {
+                self.recovery_copy = Some(path);
+                self.recovery_details = false;
+                "Reloaded; previous work preserved in a recovery copy.".into()
+            }
             Ok(None) => "Reloaded from disk".into(),
             Err(error) => feedback::file(&error),
         };
         self.reading.prepare(self.project.current().model());
     }
     fn open_editor(&mut self) {
+        if self.work.busy() {
+            self.status = "Wait for the current save before opening your editor.".into();
+            return;
+        }
         let Some(editor) = self.editor.clone() else {
             return;
         };
@@ -154,6 +145,10 @@ impl Writer {
         };
     }
     fn request_close(&mut self) {
+        if self.work.busy() {
+            self.status = "Saving is still finishing. Your work remains open.".into();
+            return;
+        }
         if self.project.dirty() {
             self.phase = Phase::ConfirmClose;
         } else {
@@ -161,6 +156,10 @@ impl Writer {
         }
     }
     fn close_with_recovery(&mut self) {
+        if self.work.busy() {
+            self.status = "Wait for the current save before closing.".into();
+            return;
+        }
         match self.project.checkpoint() {
             Ok(()) => self.phase = Phase::Closed,
             Err(error) => {

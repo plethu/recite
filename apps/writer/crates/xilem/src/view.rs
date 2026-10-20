@@ -23,6 +23,8 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
             sized_box(
                 flex_col((
                     header(state),
+                    sized_box(prose(state.status.clone())).width(830.px()),
+                    recovery_copy(state),
                     close_prompt(state),
                     flex_row((
                         navigation(state),
@@ -31,7 +33,6 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
                             .gap(20.px()),
                     ))
                     .gap(20.px()),
-                    sized_box(prose(state.status.clone())).width(830.px()),
                     state
                         .project
                         .sessions()
@@ -49,7 +50,7 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
             .background_color(Color::from_rgb8(27, 24, 30)),
         )
         .constrain_horizontal(true),
-        crate::trial::worker(),
+        (crate::trial::worker(), crate::editor_work::worker()),
     )
 }
 
@@ -70,20 +71,45 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
             text_button("Save file", |state: &mut Writer| {
                 state.save();
             })
-            .disabled(closing),
+            .disabled(closing || state.work.busy()),
             text_button("Save all", |state: &mut Writer| {
                 state.save_all();
             })
-            .disabled(closing),
+            .disabled(closing || state.work.busy()),
             text_button("Open in editor", Writer::open_editor)
-                .disabled(closing || state.editor.is_none()),
-            text_button("Reload (keep recovery copy)", Writer::reload).disabled(closing),
+                .disabled(closing || state.work.busy() || state.editor.is_none()),
+            text_button("Reload (keep recovery copy)", Writer::reload)
+                .disabled(closing || state.work.busy()),
             text_button("Close", Writer::request_close).disabled(closing),
         ))
         .gap(8.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+}
+
+fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    state
+        .recovery_copy
+        .as_ref()
+        .filter(|_| state.phase == Phase::Writing)
+        .map(|path| {
+            flex_col((
+                text_button(
+                    if state.recovery_details {
+                        "Hide recovery copy location"
+                    } else {
+                        "Show recovery copy location"
+                    },
+                    |state: &mut Writer| state.recovery_details = !state.recovery_details,
+                ),
+                state
+                    .recovery_details
+                    .then(|| sized_box(prose(path.display().to_string())).width(830.px())),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(8.px())
+        })
 }
 
 fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -116,14 +142,13 @@ fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                 label("Keep your unsaved work before closing"),
                 flex_row((
                     text_button("Keep editing", |state: &mut Writer| {
-                        state.phase = Phase::Writing
+                        state.phase = Phase::Writing;
+                        state.work.keep_editing();
                     }),
-                    text_button("Save and close", |state: &mut Writer| {
-                        if state.save_all() {
-                            state.phase = Phase::Closed;
-                        }
-                    }),
-                    text_button("Close and keep recovery", Writer::close_with_recovery),
+                    text_button("Save all and close", Writer::save_and_close)
+                        .disabled(state.work.busy()),
+                    text_button("Close and keep recovery", Writer::close_with_recovery)
+                        .disabled(state.work.busy()),
                 ))
                 .gap(8.px()),
             ))

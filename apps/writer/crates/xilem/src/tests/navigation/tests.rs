@@ -21,7 +21,7 @@ fn inactive_draft_guards_window_closing_and_save_close_covers_every_open_file() 
     assert!(writer.phase == Phase::ConfirmClose);
     click(&mut writer, &["Keep editing"]).unwrap();
     assert!(writer.phase == Phase::Writing);
-    click(&mut writer, &["Close", "Save and close"]).unwrap();
+    click(&mut writer, &["Close", "Save all and close"]).unwrap();
     assert!(!writer.keep_running());
     assert!(!writer.project.dirty());
     assert!(
@@ -47,7 +47,7 @@ fn failed_inactive_save_keeps_the_window_open_and_displays_the_conflicting_file(
         ":: external\n-> END\n",
     )
     .unwrap();
-    click(&mut writer, &["Close", "Save and close"]).unwrap();
+    click(&mut writer, &["Close", "Save all and close"]).unwrap();
     assert!(writer.keep_running());
     assert!(writer.phase == Phase::ConfirmClose);
     assert!(writer.status.contains("scene.recite"));

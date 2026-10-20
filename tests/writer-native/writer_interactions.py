@@ -224,7 +224,7 @@ def run(api, bus, registry, binary, output):
                 results["close_guard_and_reopen_recovery"] = True
                 capture(output, "-recovered")
                 window.act("Close")
-                window.wait(lambda: window.find("Save and close"), "save-close guard")
+                window.wait(lambda: window.find("Save all and close"), "save-close guard")
                 window.save_and_close(results, "recovered_save_close")
                 assert incoming + "x" in source.read_text()
                 assert not source.with_name("scene.recite.recite-editor-recovery.json").exists()

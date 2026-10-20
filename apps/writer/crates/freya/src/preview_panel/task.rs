@@ -1,7 +1,6 @@
 //! Widget capture and model publication are the only UI work in trial startup.
 use super::{
     Snapshot,
-    prepare::Inputs,
     request::Request,
     worker::{Output, Retired, Worker},
 };
@@ -62,7 +61,7 @@ pub(crate) fn start(writer: Writer, configured: bool) -> Result<(), String> {
 }
 fn start_applied(mut writer: Writer, configured: bool) -> Result<(), String> {
     writer.try_navigate(|_| Ok(()))?;
-    let inputs = Inputs::capture(writer, configured);
+    let inputs = super::prepare::capture(writer, configured);
     let model = writer.buffers.model.peek();
     let model = model.as_ref().map_err(|e| e.to_string())?;
     let snapshot = Snapshot::capture(

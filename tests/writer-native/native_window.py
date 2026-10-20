@@ -28,7 +28,7 @@ class NativeWindow:
 
     def save_and_close(self, results, label):
         started = time.monotonic()
-        assert self.act("Save and close")
+        assert self.act("Save all and close")
         try:
             code = self.process.wait(timeout=5)
         except subprocess.TimeoutExpired:

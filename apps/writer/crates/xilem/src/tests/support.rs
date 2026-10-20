@@ -62,6 +62,8 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
     let mut context = ViewCtx::new(Arc::new(NoProxy), Arc::new(tokio::runtime::Runtime::new()?));
     let mut view = view::writer(writer);
     let (pod, mut state) = view.build(&mut context, writer);
+    let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+    writer.work.sender = Some(sender);
     let mut harness = TestHarness::create_with_size(
         masonry::theme::default_property_set(),
         pod.new_widget,
@@ -124,6 +126,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
             view.message(&mut state, &mut message, root, writer);
         });
         *context.environment() = message.finish().0;
+        finish_work(writer, &mut requests)?;
         let next = view::writer(writer);
         harness
             .edit_root_widget(|root| next.rebuild(&view, &mut state, &mut context, root, writer));
@@ -145,4 +148,24 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
         }
     }
     Ok(())
+}
+
+// Native callbacks schedule owned work; this harness executes it deterministically.
+pub(crate) fn finish_work(
+    writer: &mut Writer,
+    requests: &mut tokio::sync::mpsc::UnboundedReceiver<
+        recite_writer_session::project::save::sequence::Work,
+    >,
+) -> Result<(), Box<dyn std::error::Error>> {
+    while writer.work.busy() {
+        let work = requests.try_recv()?;
+        writer.accept_save_work(work.execute());
+    }
+    Ok(())
+}
+pub(crate) fn save(writer: &mut Writer) -> Result<(), Box<dyn std::error::Error>> {
+    let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+    writer.work.sender = Some(sender);
+    writer.save();
+    finish_work(writer, &mut requests)
 }

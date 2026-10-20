@@ -26,7 +26,8 @@ fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
     drop(writer);
     let mut writer = open(&directory).unwrap();
     assert_eq!(writer.project.current().model().draft(), "Keep this draft.");
-    assert!(writer.save());
+    support::save(&mut writer).unwrap();
+    assert!(!writer.project.dirty());
     writer.request_close();
     assert!(!writer.keep_running());
     assert!(
@@ -49,7 +50,8 @@ fn save_conflict_stays_open_and_reload_preserves_the_local_work() {
         ":: scene default\n->\n",
     )
     .unwrap();
-    assert!(!writer.save());
+    support::save(&mut writer).unwrap();
+    assert!(writer.status.contains("changed on disk"));
     assert!(writer.keep_running());
     writer.reload();
     assert_eq!(writer.project.current().model().view(), &View::Source);
@@ -114,7 +116,11 @@ fn manuscript_and_close_decisions_have_native_accessible_names() {
     });
     writer.request_close();
     let labels = labels(&mut writer).unwrap();
-    for name in ["Keep editing", "Save and close", "Close and keep recovery"] {
+    for name in [
+        "Keep editing",
+        "Save all and close",
+        "Close and keep recovery",
+    ] {
         assert!(labels.iter().any(|label| label == name), "missing {name}");
     }
 }
@@ -153,7 +159,7 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
     click(&mut writer, &["Discard draft", "Close", "Keep editing"]).unwrap();
     assert!(writer.phase == Phase::Writing);
     assert_eq!(writer.project.current().model().draft(), "Accepted.");
-    click(&mut writer, &["Close", "Save and close"]).unwrap();
+    click(&mut writer, &["Close", "Save all and close"]).unwrap();
     assert!(!writer.keep_running());
     assert!(
         fs::read_to_string(directory.path().join("scene.recite"))

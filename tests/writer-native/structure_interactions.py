@@ -120,7 +120,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.wait(lambda: window.find("Edit passage 1"), "new line reading")
         results["script_groups_effects_and_empty_beat_inspection"] = True
         window.act("Close")
-        window.wait(lambda: window.find("Save and close"), "structural close guard")
+        window.wait(lambda: window.find("Save all and close"), "structural close guard")
         window.save_and_close(results, "structured_save_close")
     except Exception:
         if process.poll() is None:
