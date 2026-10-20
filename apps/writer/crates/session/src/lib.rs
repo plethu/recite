@@ -31,3 +31,7 @@ pub mod preview;
 pub mod startup;
 
 pub mod examples;
+
+pub mod palette;
+
+pub mod commands;

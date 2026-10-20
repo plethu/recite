@@ -86,6 +86,11 @@ Save all consider inactive documents too. It uses an external editor for source 
 embedding a second source editor. This does not establish parity for the remaining workspaces or
 remove the existing Freya Source workflow.
 
+Both frontends use the same personal configuration, palette and command wording. Xilem's welcome,
+temporary examples and project creation use shared launch/session owners. Its personal settings
+apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
+validation. Ordinary exit confirmation never weakens the unsaved-work guard.
+
 Its source-language runtime preview prepares immutable accepted inputs off-thread and publishes only
 into the still-current document and requested destination. Cancelling or hiding preparation
 invalidates publication immediately; an active compiler phase may finish before another starts.

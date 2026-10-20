@@ -2,6 +2,7 @@
 #[cfg(target_os = "linux")]
 mod activation;
 mod opening;
+mod settings;
 mod slot;
 mod view;
 use super::{Phase, Writer, session::Session};
@@ -20,6 +21,10 @@ use xilem::{AppState, WindowId};
 
 pub(super) struct App {
     writer: Option<Writer>,
+    preferences: recite_writer_session::preferences::Preferences,
+    theme: crate::presentation::Theme,
+    settings_open: bool,
+    settings: settings::Settings,
     window: WindowId,
     show_welcome: bool,
     closed: bool,
@@ -52,16 +57,25 @@ impl App {
         };
         let welcome = matches!(options.intent, Startup::Writer { project: None, .. });
         let inbox = host.as_ref().map(ActivationHost::inbox);
-        Ok(Some(Self {
+        let mut app = Self {
             initial: (!welcome).then_some(options),
             _host: host,
             inbox,
             ..Self::empty()
-        }))
+        };
+        app.preferences = recite_writer_session::preferences::Preferences::load(Some(
+            recite_config::UserConfigStore::discover().map_err(|error| error.to_string()),
+        ));
+        app.theme.refresh(&app.preferences.config.writer);
+        Ok(Some(app))
     }
     fn empty() -> Self {
         Self {
             writer: None,
+            preferences: recite_writer_session::preferences::Preferences::load(None),
+            theme: crate::presentation::Theme::new(&recite_config::WriterConfig::default()),
+            settings_open: false,
+            settings: Default::default(),
             window: WindowId::next(),
             show_welcome: true,
             closed: false,
@@ -99,6 +113,7 @@ impl App {
     fn request_close(&mut self) {
         if let Some(writer) = self.writer.as_mut() {
             self.show_welcome = false;
+            self.settings_open = false;
             writer.request_close();
         } else {
             if let Some(opening) = &self.opening {
@@ -211,15 +226,20 @@ impl App {
 pub(super) fn application(
     app: App,
 ) -> xilem::Xilem<App, impl FnMut(&mut App) -> std::iter::Once<xilem::WindowView<App>>> {
+    let defaults = app.theme.initial_properties();
     xilem::Xilem::new(app, |app: &mut App| {
         std::iter::once(
-            xilem::window(app.window, "Recite Writer", view::app(app)).with_options(|_| {
-                xilem::WindowOptions::new("Recite Writer")
-                    .with_initial_inner_size(xilem::winit::dpi::LogicalSize::new(1200., 800.))
-                    .with_min_inner_size(xilem::winit::dpi::LogicalSize::new(900., 650.))
-                    .on_close(App::request_close)
-            }),
+            xilem::window(app.window, "Recite Writer", view::app(app))
+                .with_default_properties(app.theme.properties.clone())
+                .with_base_color(app.theme.palette.canvas)
+                .with_options(|_| {
+                    xilem::WindowOptions::new("Recite Writer")
+                        .with_initial_inner_size(xilem::winit::dpi::LogicalSize::new(1200., 800.))
+                        .with_min_inner_size(xilem::winit::dpi::LogicalSize::new(900., 650.))
+                        .on_close(App::request_close)
+                }),
         )
     })
+    .with_default_properties(defaults)
     .with_font(include_bytes!("../../freya/fonts/literata/Literata-Variable.ttf").to_vec())
 }

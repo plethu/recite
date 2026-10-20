@@ -231,7 +231,7 @@ def run(api, bus, registry, binary, output):
                 assert not window.enabled("Start / restart preview")
                 capture(output, "-source")
                 results["malformed_source_preserved_for_external_repair"] = True
-                window.act("Close")
+                window.close_clean()
                 assert process.wait(timeout=5) == 0
                 from preview_interactions import exercise as preview_exercise
 

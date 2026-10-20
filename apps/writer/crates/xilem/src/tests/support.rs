@@ -132,7 +132,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
             .edit_root_widget(|root| next.rebuild(&view, &mut state, &mut context, root, writer));
         view = next;
         harness.redraw();
-        if *name == "Close" && writer.phase == Phase::ConfirmClose {
+        if *name == "Close" && matches!(writer.phase, Phase::ConfirmClose | Phase::ConfirmExit) {
             let mut focused = None;
             for _ in 0..3 {
                 harness.press_tab_key(false);

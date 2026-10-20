@@ -9,10 +9,7 @@ pub(crate) use keyboard::keyboard;
 pub(crate) use vim::keyboard as vim_keyboard;
 mod execute;
 mod targets;
-use crate::{
-    editing::Writer,
-    messages::{MsgId, text},
-};
+use crate::editing::Writer;
 use freya::prelude::*;
 pub(crate) use palette::Palette;
 
@@ -65,43 +62,9 @@ impl CommandExt for Command {
         execute::run(self, writer);
     }
     fn label(self, writer: Writer) -> String {
-        match self {
-            Self::Script => text(MsgId::WriterWorkspaceScriptView),
-            Self::Map => text(MsgId::WriterWorkspaceMapView),
-            Self::Source => text(MsgId::WriterWorkspaceSourceView),
-            Self::Split => text(MsgId::WriterWorkspaceSplitView),
-            Self::Focus if *writer.layout.focus.read() => text(MsgId::WriterWorkspaceExitFocus),
-            Self::Focus => text(MsgId::WriterWorkspaceFocusWriting),
-            Self::Commands => text(MsgId::WriterWorkspaceCommands),
-            Self::GoTo => text(MsgId::WriterWorkspaceGoTo),
-            Self::OpenProject => text(MsgId::WriterGuiOpenProject),
-            Self::Save => text(MsgId::WriterWorkspaceSave),
-            Self::SaveAll => text(MsgId::WriterWorkspaceSaveAll),
-            Self::Apply => text(MsgId::WriterApplyDraft),
-            Self::Undo => text(MsgId::WriterWorkspaceUndo),
-            Self::Redo => text(MsgId::WriterWorkspaceRedo),
-            Self::AddBeat => text(MsgId::WriterGuiAddBeat),
-            Self::AddLine => text(MsgId::WriterGuiAddLine),
-            Self::AddReply => text(MsgId::WriterGuiAddReply),
-            Self::Preview => text(MsgId::WriterGuiTryScene),
-            Self::Localise => text(MsgId::WriterLocalise),
-            Self::Declarations => text(MsgId::WriterDeclarations),
-            Self::Build => text(MsgId::WriterBuildScenes),
-            Self::Rename => text(MsgId::WriterRenameProject),
-            Self::Settings => text(MsgId::WriterGuiUserPreferences),
-
-            Self::Back => "Back".into(),
-            Self::Forward => "Forward".into(),
-            Self::Find => "Find scene or beat".into(),
-            Self::NextMatch => "Next search match".into(),
-            Self::PreviousMatch => "Previous search match".into(),
-            Self::PaneLeft => "Focus pane left".into(),
-            Self::PaneRight => "Focus pane right".into(),
-            Self::PaneUp => "Focus pane above".into(),
-            Self::PaneDown => "Focus pane below".into(),
-            Self::Close => "Close application".into(),
-        }
+        recite_writer_session::commands::label(self, *writer.layout.focus.read())
     }
+
     fn shortcut(self, writer: Writer) -> String {
         if self == Self::Apply {
             return crate::design::keyboard::submit_hint().into();

@@ -62,6 +62,8 @@ fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
     support::save(&mut writer).unwrap();
     assert!(!writer.session.dirty());
     writer.request_close();
+    assert!(writer.phase == Phase::ConfirmExit);
+    click(&mut writer, &["Close Writer"]).unwrap();
     assert!(!writer.keep_running());
     assert!(
         fs::read_to_string(directory.path().join("scene.recite"))
@@ -237,4 +239,35 @@ fn native_driver_keeps_the_document_lease_and_uses_the_selected_window_identity(
     ));
     drop(driver);
     assert!(open(&directory).is_ok());
+}
+
+#[test]
+fn ordinary_exit_preference_does_not_weaken_unsaved_work_protection() {
+    let directory = project(recite_writer_model::FIXTURE).unwrap();
+    let mut writer = open(&directory).unwrap();
+    writer.request_close();
+    assert!(writer.phase == Phase::ConfirmExit);
+    assert!(
+        labels(&mut writer)
+            .unwrap()
+            .iter()
+            .any(|label| label == "Close Writer")
+    );
+    click(&mut writer, &["Keep editing"]).unwrap();
+    writer.config.writer.confirm_exit = false;
+    writer.change(|model| {
+        model.set_draft("Still protected.".into());
+        Ok(())
+    });
+    writer.request_close();
+    assert!(writer.phase == Phase::ConfirmClose);
+    click(&mut writer, &["Keep editing", "Discard draft"]).unwrap();
+    writer.session.project_mut().unwrap().checkpoint().unwrap();
+    writer.request_close();
+    assert!(!writer.keep_running());
+    assert!(
+        !fs::read_to_string(directory.path().join("scene.recite"))
+            .unwrap()
+            .contains("Still protected.")
+    );
 }

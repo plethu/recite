@@ -1,13 +1,10 @@
 use super::{Phase, Writer, keyed::keyed};
+use crate::presentation::{label, prose, text_button};
 use recite_writer_model::{View, Workbench};
 use xilem::core::one_of::Either;
 use xilem::masonry::layout::AsUnit;
-use xilem::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{
-    CrossAxisAlignment, flex_col, flex_row, label, portal, prose, sized_box, text_button,
-    text_input,
-};
+use xilem::view::{CrossAxisAlignment, flex_col, flex_row, portal, sized_box, text_input};
 use xilem::{InsertNewline, WidgetView};
 
 mod manuscript;
@@ -18,12 +15,14 @@ mod trial;
 use navigation::navigation;
 
 pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Sized> + use<> {
+    let scale = state.ui_scale();
     xilem::core::fork(
         portal(
             sized_box(
                 flex_col((
                     header(state),
-                    sized_box(prose(state.status.clone())).width(830.px()),
+                    sized_box(prose(scale, state.status.clone()))
+                        .width((state.script_width() + state.navigation_width() + 20.).px()),
                     recovery_copy(state),
                     close_prompt(state),
                     flex_row((
@@ -42,16 +41,17 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
                                 .find_map(|session| session.recovery_error())
                         })
                         .map(|error| {
-                            label(format!(
-                                "Recovery failed: {error}. Save or keep the window open."
-                            ))
+                            label(
+                                scale,
+                                format!("Recovery failed: {error}. Save or keep the window open."),
+                            )
                         }),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(16.px()),
             )
             .padding(24.px())
-            .background_color(Color::from_rgb8(27, 24, 30)),
+            .background_color(state.palette.canvas),
         )
         .constrain_horizontal(true),
         (crate::trial::worker(), crate::editor_work::worker()),
@@ -59,45 +59,50 @@ pub(super) fn writer(state: &mut Writer) -> impl WidgetView<Writer, Widget: Size
 }
 
 fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase == Phase::ConfirmClose;
+    let scale = state.ui_scale();
+    let closing = state.phase != Phase::Writing;
     flex_col((
-        label("Recite Writer").text_size(28.),
-        label(format!(
-            "{}{}",
-            state.session.model().document().key().as_str(),
-            if state.session.current_dirty() {
-                " · Unsaved"
-            } else {
-                ""
-            }
-        )),
-        state
-            .session
-            .project()
-            .is_none()
-            .then(|| label("Temporary example · changes are discarded when this window closes")),
+        label(scale, "Recite Writer").text_size(28. * scale),
+        label(
+            scale,
+            format!(
+                "{}{}",
+                state.session.model().document().key().as_str(),
+                if state.session.current_dirty() {
+                    " · Unsaved"
+                } else {
+                    ""
+                }
+            ),
+        ),
+        state.session.project().is_none().then(|| {
+            label(
+                scale,
+                "Temporary example · changes are discarded when this window closes",
+            )
+        }),
         flex_row((
             state.session.project().is_some().then(|| {
-                text_button("Save file", |state: &mut Writer| {
+                text_button(scale, "Save file", |state: &mut Writer| {
                     state.save();
                 })
                 .disabled(closing || state.work.busy())
             }),
             state.session.project().is_some().then(|| {
-                text_button("Save all", |state: &mut Writer| {
+                text_button(scale, "Save all", |state: &mut Writer| {
                     state.save_all();
                 })
                 .disabled(closing || state.work.busy())
             }),
             state.session.project().is_some().then(|| {
-                text_button("Open in editor", Writer::open_editor)
+                text_button(scale, "Open in editor", Writer::open_editor)
                     .disabled(closing || state.work.busy() || state.editor.is_none())
             }),
             state.session.project().is_some().then(|| {
-                text_button("Reload (keep recovery copy)", Writer::reload)
+                text_button(scale, "Reload (keep recovery copy)", Writer::reload)
                     .disabled(closing || state.work.busy())
             }),
-            text_button("Close", Writer::request_close).disabled(closing),
+            text_button(scale, "Close", Writer::request_close).disabled(closing),
         ))
         .gap(8.px()),
     ))
@@ -106,6 +111,7 @@ fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 
 fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    let scale = state.ui_scale();
     state
         .recovery_copy
         .as_ref()
@@ -113,6 +119,7 @@ fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
         .map(|path| {
             flex_col((
                 text_button(
+                    scale,
                     if state.recovery_details {
                         "Hide recovery copy location"
                     } else {
@@ -120,9 +127,10 @@ fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                     },
                     |state: &mut Writer| state.recovery_details = !state.recovery_details,
                 ),
-                state
-                    .recovery_details
-                    .then(|| sized_box(prose(path.display().to_string())).width(830.px())),
+                state.recovery_details.then(|| {
+                    sized_box(prose(scale, path.display().to_string()))
+                        .width((state.script_width() + state.navigation_width() + 20.).px())
+                }),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(8.px())
@@ -130,17 +138,21 @@ fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
 }
 
 fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
     let diagnostics = state.session.model().document().diagnostic_snapshot();
     flex_col(
         (0..diagnostics.len().min(3))
             .filter_map(|index| diagnostics.get(index))
             .map(|diagnostic| {
-                sized_box(prose(format!(
-                    "Source diagnostics · line {} · {}",
-                    diagnostic.span.start.line(),
-                    diagnostic.message
-                )))
-                .width(560.px())
+                sized_box(prose(
+                    scale,
+                    format!(
+                        "Source diagnostics · line {} · {}",
+                        diagnostic.span.start.line(),
+                        diagnostic.message
+                    ),
+                ))
+                .width(state.script_width().px())
             })
             .collect::<Vec<_>>(),
     )
@@ -148,25 +160,35 @@ fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 
 fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    (state.phase == Phase::ConfirmClose).then(|| {
+    let scale = state.ui_scale();
+    let ordinary_exit = state.phase == Phase::ConfirmExit;
+    matches!(state.phase, Phase::ConfirmClose | Phase::ConfirmExit).then(|| {
         sized_box(
             flex_col((
-                label(if state.session.project().is_some() {
-                    "Keep your unsaved work before closing"
-                } else {
-                    "Example edits are temporary and will be discarded"
-                }),
+                label(
+                    scale,
+                    if ordinary_exit {
+                        "Close Recite Writer?"
+                    } else if state.session.project().is_some() {
+                        "Keep your unsaved work before closing"
+                    } else {
+                        "Example edits are temporary and will be discarded"
+                    },
+                ),
                 flex_row((
-                    text_button("Keep editing", |state: &mut Writer| {
+                    text_button(scale, "Keep editing", |state: &mut Writer| {
                         state.phase = Phase::Writing;
                         state.work.keep_editing();
                     }),
-                    state.session.project().is_some().then(|| {
-                        text_button("Save all and close", Writer::save_and_close)
+                    (state.session.project().is_some() && !ordinary_exit).then(|| {
+                        text_button(scale, "Save all and close", Writer::save_and_close)
                             .disabled(state.work.busy())
                     }),
                     text_button(
-                        if state.session.project().is_some() {
+                        scale,
+                        if ordinary_exit {
+                            "Close Writer"
+                        } else if state.session.project().is_some() {
                             "Close and keep recovery"
                         } else {
                             "Close and discard example changes"
@@ -181,6 +203,6 @@ fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
             .gap(8.px()),
         )
         .padding(12.px())
-        .background_color(Color::from_rgb8(45, 39, 49))
+        .background_color(state.palette.surface)
     })
 }

@@ -207,9 +207,11 @@ impl App {
                 _ => false,
             };
         let (retired, result) = match output.result {
-            Ok(writer) if valid => {
+            Ok(mut writer) if valid => {
+                writer.configure(self.preferences.config.clone());
                 let previous = self.writer.replace(*writer).map(Box::new);
                 self.show_welcome = false;
+                self.settings_open = false;
                 self.status.clear();
                 (previous, Ok(()))
             }

@@ -4,6 +4,7 @@ use recite_writer_model::PassageKind;
 use xilem::style::Padding;
 
 pub(super) fn inspection(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
     let error = state
         .reading
         .script()
@@ -18,9 +19,9 @@ pub(super) fn inspection(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
         };
         Either::A(
             flex_col((
-                label("Source editing in your editor"),
-                sized_box(prose(repair)).width(560.px()),
-                sized_box(prose(error)).width(560.px()),
+                label(scale, "Source editing in your editor"),
+                sized_box(prose(scale, repair)).width(state.script_width().px()),
+                sized_box(prose(scale, error)).width(state.script_width().px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(8.px()),
@@ -32,8 +33,11 @@ pub(super) fn inspection(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
     {
         Either::B(Either::A(
             flex_col((
-                label("No beats yet").text_size(22.),
-                prose("Add a beat to start writing. Comments and existing source are preserved."),
+                label(scale, "No beats yet").text_size(22. * scale),
+                prose(
+                    scale,
+                    "Add a beat to start writing. Comments and existing source are preserved.",
+                ),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(8.px()),
@@ -43,13 +47,14 @@ pub(super) fn inspection(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
             if matches!(state.session.model().view(), View::Block(_)) {
                 Either::A(block(state))
             } else {
-                Either::B(sized_box(prose("Choose a beat in the outline to read or write it. Use your editor for source editing; source drafts remain recoverable.")).width(560.px()))
+                Either::B(sized_box(prose(scale, "Choose a beat in the outline to read or write it. Use your editor for source editing; source drafts remain recoverable.")).width(state.script_width().px()))
             },
         ))
     }
 }
 
 fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
     const PAGE: usize = 16;
     let pages = state.reading.rows.len().div_ceil(PAGE).max(1);
     state.reading.page = state.reading.page.min(pages - 1);
@@ -63,7 +68,7 @@ fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
         .take(PAGE)
         .map(|(index, row)| {
             let inset = row.groups.len().min(3) as f64 * 24.;
-            let width = (560. - inset).px();
+            let width = (state.script_width() - inset).px();
             let content = match &row.content {
                 Content::Passage(passage) => {
                     let id = passage.id.clone();
@@ -78,9 +83,13 @@ fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
                     };
                     Either::A(
                         flex_col((
-                            label(caption),
-                            sized_box(prose(passage.text.clone()).text_size(20.)).width(width),
+                            label(scale, caption),
+                            sized_box(
+                                prose(scale, passage.text.clone()).text_size(state.reading_size()),
+                            )
+                            .width(width),
                             text_button(
+                                scale,
                                 format!("Edit passage {}", index + 1),
                                 move |state: &mut Writer| state.select(id.clone()),
                             )
@@ -91,16 +100,19 @@ fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
                     )
                 }
                 Content::Heading(text) => Either::B(Either::A(
-                    sized_box(prose(text.clone()).text_size(20.)).width(width),
+                    sized_box(prose(scale, text.clone()).text_size(state.reading_size()))
+                        .width(width),
                 )),
-                Content::Note(text) => {
-                    Either::B(Either::B(sized_box(prose(text.clone())).width(width)))
-                }
+                Content::Note(text) => Either::B(Either::B(
+                    sized_box(prose(scale, text.clone())).width(width),
+                )),
             };
             flex_col((
                 (!row.groups.is_empty()).then(|| {
-                    sized_box(prose(format!("Within {}", row.groups.join(" → "))).text_size(14.))
-                        .width(width)
+                    sized_box(
+                        prose(scale, format!("Within {}", row.groups.join(" → "))).text_size(14.),
+                    )
+                    .width(width)
                 }),
                 content,
             ))
@@ -110,25 +122,28 @@ fn block(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
         })
         .collect::<Vec<_>>();
     flex_col((
-        label(format!(
-            "Beat · {}",
-            state.reading.selected.as_deref().unwrap_or("")
-        ))
-        .text_size(22.),
+        label(
+            scale,
+            format!("Beat · {}", state.reading.selected.as_deref().unwrap_or("")),
+        )
+        .text_size(22. * scale),
         flex_col(rows)
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(20.px()),
         state.reading.rows.is_empty().then(|| {
-            prose("No dialogue yet. Add a line or reply, or edit the source in your editor.")
+            prose(
+                scale,
+                "No dialogue yet. Add a line or reply, or edit the source in your editor.",
+            )
         }),
         (pages > 1).then(|| {
             flex_row((
-                text_button("Previous beat entries", |state: &mut Writer| {
+                text_button(scale, "Previous beat entries", |state: &mut Writer| {
                     state.reading.page = state.reading.page.saturating_sub(1)
                 })
                 .disabled(closing || state.reading.page == 0),
-                label(format!("{} of {pages}", state.reading.page + 1)),
-                text_button("Next beat entries", |state: &mut Writer| {
+                label(scale, format!("{} of {pages}", state.reading.page + 1)),
+                text_button(scale, "Next beat entries", |state: &mut Writer| {
                     state.reading.page += 1
                 })
                 .disabled(closing || state.reading.page + 1 >= pages),

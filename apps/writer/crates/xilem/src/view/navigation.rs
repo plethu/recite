@@ -14,10 +14,11 @@ pub(super) fn navigation(state: &mut Writer) -> impl WidgetView<Writer> + use<> 
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(12.px()),
     )
-    .width(250.px())
+    .width(state.navigation_width().px())
 }
 fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
-    let closing = state.phase == Phase::ConfirmClose;
+    let scale = state.ui_scale();
+    let closing = state.phase != Phase::Writing;
     const FILE_PAGE: usize = 4;
     let pages = state
         .session
@@ -44,12 +45,15 @@ fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             });
             let current = project.is_some_and(|project| project.current().path() == path);
             button(
-                label(format!(
-                    "{}{}{}",
-                    if current { "Current · " } else { "" },
-                    document.key.as_str(),
-                    if dirty { " · Unsaved" } else { "" }
-                ))
+                label(
+                    scale,
+                    format!(
+                        "{}{}{}",
+                        if current { "Current · " } else { "" },
+                        document.key.as_str(),
+                        if dirty { " · Unsaved" } else { "" }
+                    ),
+                )
                 .prop(LineBreaking::WordWrap),
                 move |state: &mut Writer| state.switch(&path),
             )
@@ -64,7 +68,7 @@ fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
     };
     sized_box(
         flex_col((
-            label("Project files"),
+            label(scale, "Project files"),
             sized_box(
                 portal(
                     flex_col(files)
@@ -73,27 +77,35 @@ fn project_files(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
                 )
                 .constrain_horizontal(true),
             )
-            .dims((250.px(), height.px())),
+            .dims((state.navigation_width().px(), height.px())),
             (pages > 1).then(|| {
                 flex_row((
-                    text_button("Previous files", |state: &mut Writer| {
+                    text_button(scale, "Previous files", |state: &mut Writer| {
                         state.file_page = state.file_page.saturating_sub(1)
                     })
                     .disabled(closing || state.file_page == 0),
-                    text_button("Next files", |state: &mut Writer| state.file_page += 1)
-                        .disabled(closing || state.file_page + 1 >= pages),
+                    text_button(scale, "Next files", |state: &mut Writer| {
+                        state.file_page += 1
+                    })
+                    .disabled(closing || state.file_page + 1 >= pages),
                 ))
                 .gap(8.px())
             }),
-            (pages > 1).then(|| label(format!("Files · page {} of {pages}", state.file_page + 1))),
+            (pages > 1).then(|| {
+                label(
+                    scale,
+                    format!("Files · page {} of {pages}", state.file_page + 1),
+                )
+            }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(12.px()),
     )
-    .width(250.px())
+    .width(state.navigation_width().px())
 }
 
 fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing;
     let blocks = state.session.model().document().block_summaries();
     let pages = blocks.len().div_ceil(PAGE).max(1);
@@ -106,21 +118,24 @@ fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             let id = block.id().to_string();
             let current = state.reading.selected.as_deref() == Some(&id);
             button(
-                label(format!(
-                    "{} · {}{}{}",
-                    if current { "Current beat" } else { "Beat" },
-                    id,
-                    if block.is_default() {
-                        " · Default"
-                    } else {
-                        ""
-                    },
-                    if block.has_end_destination() {
-                        " · END"
-                    } else {
-                        ""
-                    }
-                ))
+                label(
+                    scale,
+                    format!(
+                        "{} · {}{}{}",
+                        if current { "Current beat" } else { "Beat" },
+                        id,
+                        if block.is_default() {
+                            " · Default"
+                        } else {
+                            ""
+                        },
+                        if block.has_end_destination() {
+                            " · END"
+                        } else {
+                            ""
+                        }
+                    ),
+                )
                 .prop(LineBreaking::WordWrap),
                 move |state: &mut Writer| state.inspect(id.clone()),
             )
@@ -135,7 +150,7 @@ fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
         _ => 220.,
     };
     flex_col((
-        label("Beats"),
+        label(scale, "Beats"),
         sized_box(
             portal(
                 flex_col(entries)
@@ -144,42 +159,53 @@ fn outline(state: &mut Writer) -> impl WidgetView<Writer> + use<> {
             )
             .constrain_horizontal(true),
         )
-        .dims((250.px(), height.px())),
+        .dims((state.navigation_width().px(), height.px())),
         (pages > 1).then(|| {
             flex_row((
-                text_button("Previous beats", |state: &mut Writer| {
+                text_button(scale, "Previous beats", |state: &mut Writer| {
                     state.beat_page = state.beat_page.saturating_sub(1)
                 })
                 .disabled(closing || state.beat_page == 0),
-                text_button("Next beats", |state: &mut Writer| state.beat_page += 1)
-                    .disabled(closing || state.beat_page + 1 >= pages),
+                text_button(scale, "Next beats", |state: &mut Writer| {
+                    state.beat_page += 1
+                })
+                .disabled(closing || state.beat_page + 1 >= pages),
             ))
             .gap(8.px())
         }),
-        (pages > 1).then(|| label(format!("Beats · page {} of {pages}", state.beat_page + 1))),
+        (pages > 1).then(|| {
+            label(
+                scale,
+                format!("Beats · page {} of {pages}", state.beat_page + 1),
+            )
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
 }
 
 fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
     flex_col((
-        label("Temporary examples"),
+        label(scale, "Temporary examples"),
         flex_col(
             recite_writer_model::WRITER_EXAMPLES
                 .iter()
                 .enumerate()
                 .map(|(index, example)| {
                     button(
-                        label(format!(
-                            "{}{}",
-                            if example.name == state.session.model().document().key().as_str() {
-                                "Current · "
-                            } else {
-                                ""
-                            },
-                            example.name
-                        ))
+                        label(
+                            scale,
+                            format!(
+                                "{}{}",
+                                if example.name == state.session.model().document().key().as_str() {
+                                    "Current · "
+                                } else {
+                                    ""
+                                },
+                                example.name
+                            ),
+                        )
                         .prop(LineBreaking::WordWrap),
                         move |state: &mut Writer| state.select_example(index),
                     )

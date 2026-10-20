@@ -86,7 +86,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.wait(lambda: window.find_text("Saved"), "save completion", timeout=30)
         assert source.read_text().startswith("# A new scene.")
         results["structured_creation_draft_guard_and_reading"] = True
-        window.act("Close")
+        window.close_clean()
         assert process.wait(timeout=5) == 0
     except Exception:
         if process.poll() is None:

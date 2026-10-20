@@ -26,6 +26,34 @@ class NativeWindow:
     def wait(self, operation, label, timeout=10):
         return self.api.wait_for(operation, label, self.process, timeout=timeout)
 
+    def exposure_diagnostic(self):
+        """Report broken advertised edges; this never substitutes for a passing traversal."""
+        pending = [(None, self.application)]
+        seen, failures = set(), []
+        while pending and len(seen) < 5000:
+            parent, node = pending.pop()
+            identity = tuple(node)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            try:
+                children = self.call(node, "Accessible", "GetChildren")[0]
+            except self.api.GLib.Error as error:
+                failures.append({"parent": parent, "advertised_child": node, "error": str(error)})
+                continue
+            pending.extend((node, child) for child in children)
+        return {"visited": len(seen), "broken_edges": failures}
+
+    def close_clean(self):
+        self.act("Close")
+        try:
+            self.wait(lambda: self.find("Close Writer"), "ordinary exit preference")
+        except RuntimeError:
+            if self.process.poll() != 0:
+                raise
+        if self.process.poll() is None:
+            self.act("Close Writer")
+
     def save_and_close(self, results, label):
         started = time.monotonic()
         assert self.act("Save all and close")
@@ -44,20 +72,21 @@ class NativeWindow:
         results[label + "_seconds"] = time.monotonic() - started
         assert code == 0
 
-    def find_text(self, value, prefix=False):
+    def find_text(self, value, prefix=False, contains=False):
+        def matches(text):
+            return value in text if contains else (text.startswith(value) if prefix else text == value)
+
         for node, name in self.nodes():
-            if name.startswith(value) if prefix else name == value:
+            if matches(name):
                 return node
             if "org.a11y.atspi.Text" in self.call(node, "Accessible", "GetInterfaces")[0]:
                 text = self.text(node)
-                if text.startswith(value) if prefix else text == value:
+                if matches(text):
                     return node
         return None
 
     def act(self, label):
-        node = self.find(label)
-        if node is None:
-            raise RuntimeError("Missing probe action: " + label)
+        node = self.wait(lambda: self.find(label), "available action: " + label)
         return self.call(node, "Action", "DoAction", self.api.GLib.Variant("(i)", (0,)))[0]
 
     def enabled(self, label):
@@ -108,4 +137,6 @@ def attach(api, bus, registry, process):
         return None
 
     app = api.wait_for(application, "owned Writer registration", process)
-    return NativeWindow(api, bus, process, lambda: list(api.descendants(bus, app)))
+    window = NativeWindow(api, bus, process, lambda: list(api.descendants(bus, app)))
+    window.application = app
+    return window

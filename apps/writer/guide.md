@@ -6,6 +6,11 @@ The native writer uses Freya and the shared Recite authoring kernel. Run from th
 mise exec -- just writer run
 ```
 
+The opt-in Xilem migration frontend runs with `mise exec -- just writer xilem`. Its welcome screen
+opens or creates projects and offers temporary examples. **Settings** changes personal appearance,
+text sizes, scale and shortcut bindings through the same configuration as Freya. See the
+[acceptance limits](acceptance.md#known-limits) for the remaining migration workspaces and commands.
+
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:
 

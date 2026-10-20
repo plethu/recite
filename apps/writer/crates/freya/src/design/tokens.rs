@@ -61,8 +61,7 @@ pub const RADIUS: f32 = 3.;
 pub const DIALOG_RADIUS: f32 = 4.;
 /// Stamp controls: an ink stroke, and how far hover and press lift a filled stamp.
 pub const STROKE_WIDTH: f32 = 1.5;
-pub const STAMP_HOVER: f32 = 0.12;
-pub const STAMP_PRESSED: f32 = 0.22;
+pub use recite_writer_session::palette::{STAMP_HOVER, STAMP_PRESSED};
 /// The sidebar's horizontal padding; selected rows' plates bleed across it.
 pub const RAIL_PADDING: f32 = 12.;
 /// A list row's reserved marker gutter, beyond its usual padding.

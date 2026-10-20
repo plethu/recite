@@ -65,7 +65,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         key("z", control=True)
         window.wait(lambda: window.text(node) == original, "restored manuscript")
         results["preview_preserves_native_typing_history"] = True
-        window.act("Close")
+        window.close_clean()
         assert process.wait(timeout=5) == 0
     except Exception:
         if process.poll() is None:

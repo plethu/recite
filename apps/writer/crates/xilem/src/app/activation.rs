@@ -29,6 +29,7 @@ impl App {
                     writer.editor_args = editor.args;
                 }
                 self.show_welcome = false;
+                self.settings_open = false;
                 let _ = request.reply.send(Ok(()));
                 return Ok(());
             }

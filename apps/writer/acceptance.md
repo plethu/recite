@@ -36,17 +36,22 @@ preview also covers choices, typed condition answers, blocking-effect acknowledg
 notices, restart refusal with an unapplied draft, and native typing history after hiding playback.
 Structured authoring covers creating beats, lines and replies, guarding unapplied drafts, reading
 conditional groups and effects, and editing previously empty beats through native controls. Its
-accessible manuscript name and final layout are checked separately. This does not establish
-workspace parity: Map, localisation and configured preview inputs, schema, preferences and desktop
-activation remain on Freya. Physical IME, screen-reader announcements, hardware rendering and
-Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes close choices in
-the Tab cycle; the current native drill reaches Keep editing in three presses and verifies that
-cancelling close retains text undo/redo. Automatic focus return and the remaining keyboard workflow
-need acceptance before the default switches.
+accessible manuscript name and final layout are checked separately. Welcome/project creation,
+retained temporary examples and native second-launch document selection also pass. Personal settings
+cover live light/dark/monochrome colours, 100–200% scale, retained manuscript undo, validated
+shortcut edits, persisted configuration and ordinary exit confirmation. The native settings drill
+traverses and activates controls after scrolling; adapter regressions cover clipping and
+registration ordering. This does not establish workspace parity: Map, localisation and configured
+preview inputs, schema and workspace command dispatch remain in progress. Physical IME,
+screen-reader announcements, hardware rendering and Windows/macOS acceptance remain unverified for
+Xilem. The portal scrollbar precedes close choices in the Tab cycle; the current native drill
+reaches Keep editing in three presses and verifies that cancelling close retains text undo/redo.
+Automatic focus return and the remaining keyboard workflow need acceptance before the default
+switches.
 
-The Xilem file actions still wait synchronously for durable storage. Save and close timing is
-recorded by the native probe; slow storage can stall the window. Those waits need a worker boundary
-before default cutover.
+Xilem saves and cold project loads use workers and retain newer typing; save-and-close timing is
+recorded by the native probe. Remaining synchronous navigation, reload and external-editor work
+still needs completion before default cutover.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

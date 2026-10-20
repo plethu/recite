@@ -3,6 +3,7 @@ mod editor_work;
 mod feedback;
 mod keyed;
 mod navigation;
+mod presentation;
 mod reading;
 mod session;
 mod startup;
@@ -33,12 +34,15 @@ pub struct Writer {
     recovery_details: bool,
     location: recite_writer_session::location::Location,
     rules: Option<recite_writer_model::ReplyRules>,
+    config: recite_config::UserConfig,
+    palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
 }
 
 #[derive(PartialEq)]
 enum Phase {
     Writing,
     ConfirmClose,
+    ConfirmExit,
     Closed,
 }
 
@@ -94,7 +98,41 @@ impl Writer {
             recovery_details: false,
             location: Default::default(),
             rules: None,
+            palette: presentation::palette(&recite_config::WriterConfig::default()),
+            config: Default::default(),
         }
+    }
+
+    fn configure(&mut self, config: recite_config::UserConfig) {
+        self.palette = presentation::palette(&config.writer);
+        self.config = config;
+    }
+    fn ui_scale(&self) -> f32 {
+        presentation::scale(&self.config.writer)
+    }
+    fn reading_size(&self) -> f32 {
+        f32::from(
+            self.config
+                .writer
+                .presentation
+                .value(recite_config::WriterPresentationField::ReadingSize),
+        )
+    }
+    fn script_width(&self) -> f64 {
+        f64::from(
+            self.config
+                .writer
+                .presentation
+                .value(recite_config::WriterPresentationField::ScriptWidth),
+        )
+    }
+    fn navigation_width(&self) -> f64 {
+        f64::from(
+            self.config
+                .writer
+                .presentation
+                .value(recite_config::WriterPresentationField::DrawerWidth),
+        )
     }
 
     fn change(
@@ -167,6 +205,8 @@ impl Writer {
         }
         if self.session.dirty() {
             self.phase = Phase::ConfirmClose;
+        } else if self.config.writer.confirm_exit {
+            self.phase = Phase::ConfirmExit;
         } else {
             self.close_with_recovery();
         }
