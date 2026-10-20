@@ -1,4 +1,5 @@
 use super::*;
+use crate::design::material;
 
 fn luminance(color: Color) -> f64 {
     let linear = |channel: u8| {
@@ -35,7 +36,7 @@ fn body_and_supporting_text_remain_readable_across_surfaces_and_interactions() {
                     contrast(text, background) >= 4.5,
                     "dark={dark}, text={text:?}, background={background:?}"
                 );
-                for edge in crate::design::material::face_edges(background, 0.) {
+                for edge in material::face_edges(background, 0.) {
                     assert!(
                         contrast(text, edge) >= 4.5,
                         "gradient text contrast: dark={dark}"
@@ -45,9 +46,7 @@ fn body_and_supporting_text_remain_readable_across_surfaces_and_interactions() {
         }
         for amount in [0., 0.08, 0.16] {
             assert!(contrast(p.on_accent, Color::lerp(p.accent, p.on_accent, amount)) >= 4.5);
-            for edge in
-                crate::design::material::face_edges(Color::lerp(p.accent, p.on_accent, amount), 0.)
-            {
+            for edge in material::face_edges(Color::lerp(p.accent, p.on_accent, amount), 0.) {
                 assert!(
                     contrast(p.on_accent, edge) >= 4.5,
                     "primary gradient contrast: dark={dark}"

@@ -2,6 +2,7 @@ use super::*;
 use freya::code_editor::Rope;
 use recite_core::SourcePosition;
 use recite_writer_model::Document;
+use std::sync::mpsc;
 use std::{sync::Barrier, time::Duration};
 
 fn request(suffix: usize) -> Arc<Request> {
@@ -115,7 +116,7 @@ fn failure_wakes_the_retained_receiver_and_allows_immediate_retry() {
     let receiver = worker.results();
     let barrier = Arc::new(Barrier::new(2));
     let held = Arc::clone(&barrier);
-    let (exited, old_exit) = std::sync::mpsc::channel();
+    let (exited, old_exit) = mpsc::channel();
     worker.worker = Some(thread::spawn(move || {
         held.wait();
         exited.send(()).unwrap();

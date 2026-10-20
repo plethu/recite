@@ -2,6 +2,7 @@ use super::*;
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::Document;
 use serde_json::{Value, json};
+use std::env::consts;
 #[path = "opening/tests.rs"]
 mod opening;
 #[path = "parking/tests.rs"]
@@ -485,7 +486,7 @@ fn retained_project_sessions_preserve_edits_and_release_closed_owners()
         json!({"passages":passages,"per_document":per_document,"documents":inputs.len(),"visits":visits,
         "source_bytes":inputs.iter().map(|d| d.text().len()).sum::<usize>(),
         "resources":{"initial":initial,"opened":opened,"cycles":checkpoints},
-        "samples":samples,"host":std::env::consts::OS,"profile":if cfg!(debug_assertions) { "test" } else { "release" },"native_frame_pacing":false})
+        "samples":samples,"host":consts::OS,"profile":if cfg!(debug_assertions) { "test" } else { "release" },"native_frame_pacing":false})
     );
     Ok(())
 }

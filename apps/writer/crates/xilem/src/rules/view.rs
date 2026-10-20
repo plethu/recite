@@ -1,6 +1,7 @@
 //! Reply components consume one resolved editing session.
 use super::*;
 use crate::presentation::{label, paragraph, text_button};
+use xilem::masonry::kurbo;
 use xilem::{
     AnyWidgetView, WidgetView,
     masonry::layout::AsUnit,
@@ -109,9 +110,9 @@ fn reply_actions(state: &Writer, rules: &ReplyRules) -> impl WidgetView<Writer> 
     ))
     .direction(
         if state.script_width() >= 350. * f64::from(state.ui_scale()) {
-            xilem::masonry::kurbo::Axis::Horizontal
+            kurbo::Axis::Horizontal
         } else {
-            xilem::masonry::kurbo::Axis::Vertical
+            kurbo::Axis::Vertical
         },
     )
     .cross_axis_alignment(CrossAxisAlignment::Start)

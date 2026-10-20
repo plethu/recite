@@ -1,4 +1,6 @@
 use serde_json::json;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use tempfile::TempDir;
 
 #[cfg(windows)]
@@ -38,7 +40,7 @@ pub(crate) fn manifestless_watcher_keeps_builtin_exclusions() {
     workspace.refresh_watched_uri(&file_uri(&temp.path().join(".hidden/new.recite")));
     #[cfg(unix)]
     {
-        use std::os::unix::fs::symlink;
+        use unix_fs::symlink;
 
         write_file(temp.path(), "generated/linked.recite", ":: linked\n");
         symlink(

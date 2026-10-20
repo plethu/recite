@@ -1,5 +1,6 @@
 use super::*;
 use crate::design::SubmitAction;
+use crate::design::keyboard;
 #[derive(Clone, Copy)]
 pub(super) struct ProducerActions {
     pub writer: Writer,
@@ -115,7 +116,7 @@ impl Component for ProducerActions {
         };
         let keyboard = submit.clone();
         body.on_key_down(move |e: Event<KeyboardEventData>| {
-            if crate::design::keyboard::submit_key(&e) {
+            if keyboard::submit_key(&e) {
                 e.prevent_default();
                 e.stop_propagation();
                 keyboard.run();

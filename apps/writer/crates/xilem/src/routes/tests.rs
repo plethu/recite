@@ -2,18 +2,19 @@ use super::*;
 use crate::navigation::{self, Target};
 use crate::tests::support;
 use recite_writer_model::{EditOperation, View};
+use tokio::sync::mpsc as async_mpsc;
 const SOURCE: &str = "# Keep comments.\n:: start default\n? reply@22222222222222222222\n  Let me through.\n  -> accepted\n:: accepted\n-> END\n:: alternative\n-> END\n";
 struct Fixture {
     directory: tempfile::TempDir,
     writer: Writer,
-    jobs: tokio::sync::mpsc::UnboundedReceiver<navigation::worker::Job>,
+    jobs: async_mpsc::UnboundedReceiver<navigation::worker::Job>,
     _runtime: tokio::runtime::Runtime,
 }
 fn fixture() -> Result<Fixture, Box<dyn std::error::Error>> {
     let directory = support::project(SOURCE)?;
     let mut writer = support::open(&directory)?;
     let runtime = tokio::runtime::Runtime::new()?;
-    let (sender, jobs) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, jobs) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(sender);
     writer.navigation.runtime = Some(runtime.handle().clone());
     Ok(Fixture {

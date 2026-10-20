@@ -10,15 +10,17 @@ use masonry_winit::{
         window::WindowId,
     },
 };
+use xilem::masonry::app;
 use xilem::masonry::core::DefaultProperties;
+use xilem::winit::error;
 
 pub(super) fn run(
     event_loop: EventLoop,
     windows: Vec<NewWindow>,
     driver: impl AppDriver + 'static,
     defaults: DefaultProperties,
-) -> Result<(), xilem::winit::error::EventLoopError> {
-    let _ = xilem::masonry::app::try_init_tracing();
+) -> Result<(), error::EventLoopError> {
+    let _ = app::try_init_tracing();
     let mut host = Host {
         masonry: MasonryState::new(event_loop.create_proxy(), windows, defaults),
         driver,

@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 #[test]
 fn incomplete_or_ambiguous_beats_cannot_be_selected_through_a_link() -> Result<(), WorkbenchError> {
@@ -46,7 +48,7 @@ fn linked_catalogue_must_stay_inside_its_project() -> Result<(), Box<dyn std::er
     assert!(catalogue_path(root.path(), outside.path().to_str().ok_or("path")?).is_err());
     #[cfg(unix)]
     {
-        std::os::unix::fs::symlink(
+        unix_fs::symlink(
             outside.path().join("outside.po"),
             root.path().join("locale/link.po"),
         )?;

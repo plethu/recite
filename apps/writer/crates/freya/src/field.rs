@@ -1,4 +1,5 @@
 //! Explicit source editing; prose fields manage their own focus and edit sessions.
+use crate::design::keyboard;
 use crate::design::tokens as t;
 use crate::editing::Writer;
 use freya::{code_editor::*, prelude::*};
@@ -70,7 +71,7 @@ impl Component for SourceField {
                                         if crate::field_completion::keyboard(writer, &event) {
                                             return false;
                                         }
-                                        if crate::design::keyboard::submit_key(&event) {
+                                        if keyboard::submit_key(&event) {
                                             return false;
                                         }
                                         if event.code == Code::Space

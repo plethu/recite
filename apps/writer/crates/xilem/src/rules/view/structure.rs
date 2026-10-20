@@ -1,5 +1,6 @@
 use super::*;
 use recite_writer_model::RuleEffect;
+use xilem::masonry::properties;
 
 pub(super) fn condition(
     state: &Writer,
@@ -187,7 +188,7 @@ fn actions(
                 if expanded { "Hide" } else { "Show" }
             ),
         )
-        .prop(xilem::masonry::properties::LineBreaking::WordWrap),
+        .prop(properties::LineBreaking::WordWrap),
         move |state: &mut Writer| state.toggle_rule_actions(target.clone()),
     ))
     .width(state.script_width().px())

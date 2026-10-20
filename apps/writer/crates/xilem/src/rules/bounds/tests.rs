@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::NoProxy;
+use xilem::masonry::accesskit;
 use xilem::{
     ViewCtx,
     core::View,
@@ -35,7 +36,7 @@ fn a_thousand_effects_keep_only_one_page_of_native_controls_mounted() {
     let (mut fields, mut nodes) = (0, 0);
     while let Some(node) = pending.pop() {
         nodes += 1;
-        fields += usize::from(node.role() == xilem::masonry::accesskit::Role::MultilineTextInput);
+        fields += usize::from(node.role() == accesskit::Role::MultilineTextInput);
         pending.extend(node.children());
     }
     assert_eq!(fields, 4);

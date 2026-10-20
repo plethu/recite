@@ -1,6 +1,8 @@
 use super::*;
-use crate::tests::support::{finish_work, open, project};
+use crate::tests::support::{self, finish_work, open, project};
 use recite_writer_session::project::save::sequence::Work;
+use tokio::sync::mpsc as async_mpsc;
+use xilem::masonry::accesskit;
 
 #[test]
 fn default_editor_retry_keeps_the_repair_artifact_target_and_import_guidance() {
@@ -20,7 +22,7 @@ fn default_editor_retry_keeps_the_repair_artifact_target_and_import_guidance() {
         source: source.clone(),
         recovery: directory.path().join("backup.json"),
     });
-    let (sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut launches) = async_mpsc::unbounded_channel();
     writer.external.sender = Some(sender);
     writer.open_exported_source();
     let request = launches.try_recv().unwrap();
@@ -39,9 +41,9 @@ fn default_editor_retry_keeps_the_repair_artifact_target_and_import_guidance() {
 fn ordinary_default_editor_retry_still_runs_the_checked_source_save() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
-    let (sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut saves) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
-    let (sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut launches) = async_mpsc::unbounded_channel();
     writer.external.sender = Some(sender);
     writer.open_editor();
     finish_work(&mut writer, &mut saves).unwrap();
@@ -85,8 +87,8 @@ fn accepted_source_is_saved_and_newer_field_typing_stays_open_before_launch() {
         model.set_draft("Unfinished field.".into());
         Ok(())
     });
-    let (save_sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
-    let (editor_sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (save_sender, mut saves) = async_mpsc::unbounded_channel();
+    let (editor_sender, mut launches) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(save_sender);
     writer.external.sender = Some(editor_sender);
     writer.editor = Some(EditorCommand {
@@ -145,8 +147,8 @@ fn accepted_source_is_saved_and_newer_field_typing_stays_open_before_launch() {
 fn disk_conflict_prevents_launch_and_preserves_the_unapplied_draft() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
-    let (save_sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
-    let (editor_sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (save_sender, mut saves) = async_mpsc::unbounded_channel();
+    let (editor_sender, mut launches) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(save_sender);
     writer.external.sender = Some(editor_sender);
     writer.change(|model| {
@@ -178,8 +180,8 @@ fn cancelled_launch_still_reconciles_the_dispatched_save() {
         model.apply()
     });
     let accepted = writer.session.model().document().source().to_owned();
-    let (save_sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
-    let (editor_sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (save_sender, mut saves) = async_mpsc::unbounded_channel();
+    let (editor_sender, mut launches) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(save_sender);
     writer.external.sender = Some(editor_sender);
     writer.open_editor();
@@ -201,19 +203,19 @@ fn editor_completion_is_attributed_to_its_document_after_navigation() {
     let other = directory.path().join("other.recite");
     std::fs::write(&other, ":: other default\n-> END\n").unwrap();
     let mut writer = open(&directory).unwrap();
-    let (save_sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
-    let (editor_sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (save_sender, mut saves) = async_mpsc::unbounded_channel();
+    let (editor_sender, mut launches) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(save_sender);
     writer.external.sender = Some(editor_sender);
     writer.open_editor();
     finish_work(&mut writer, &mut saves).unwrap();
     let request = launches.try_recv().unwrap();
-    let (sender, mut navigation) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut navigation) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(sender);
     let runtime = tokio::runtime::Runtime::new().unwrap();
     writer.navigation.runtime = Some(runtime.handle().clone());
     writer.switch(&other);
-    crate::tests::support::finish_navigation(&mut writer, &mut navigation).unwrap();
+    support::finish_navigation(&mut writer, &mut navigation).unwrap();
     writer.accept_editor(request, Some(Ok(())));
     assert!(!writer.external.busy());
     assert_eq!(
@@ -234,8 +236,8 @@ fn pending_editor_save_keeps_manuscript_enabled_and_exposes_cancellation() {
     };
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
-    let (save_sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
-    let (editor_sender, mut launches) = tokio::sync::mpsc::unbounded_channel();
+    let (save_sender, mut saves) = async_mpsc::unbounded_channel();
+    let (editor_sender, mut launches) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(save_sender);
     writer.external.sender = Some(editor_sender);
     writer.open_editor();
@@ -261,8 +263,7 @@ fn pending_editor_save_keeps_manuscript_enabled_and_exposes_cancellation() {
     let mut editable = false;
     while let Some(node) = pending.pop() {
         cancel |= node.label().as_deref() == Some("Cancel editor launch");
-        editable |= node.role() == xilem::masonry::accesskit::Role::MultilineTextInput
-            && !node.is_disabled();
+        editable |= node.role() == accesskit::Role::MultilineTextInput && !node.is_disabled();
         pending.extend(node.children());
     }
     assert!(cancel && editable);

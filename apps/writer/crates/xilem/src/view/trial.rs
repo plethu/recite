@@ -1,6 +1,7 @@
 //! Source-language runtime controls; all traversal stays in the shared model.
 use super::*;
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck, PreviewPage};
+use xilem::masonry::properties;
 mod captions;
 
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -194,9 +195,7 @@ fn condition(
                         state.trial.answer = answer
                     })
                     .disabled(disabled)
-                    .prop(xilem::masonry::properties::TextAreaLabel::new(
-                        "Condition enum value",
-                    )),
+                    .prop(properties::TextAreaLabel::new("Condition enum value")),
                 )
                 .width(240.px()),
                 text_button(scale, "Answer condition", |state: &mut Writer| {

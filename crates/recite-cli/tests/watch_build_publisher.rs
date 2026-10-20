@@ -1,5 +1,7 @@
 use std::fmt::Display;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use std::path::Path;
 
 use recite_cli::watch::{
@@ -262,7 +264,7 @@ fn unsafe_target_forms_and_source_alias_are_rejected() {
 #[cfg(unix)]
 #[test]
 fn outside_output_symlink_is_rejected_before_staging() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = require(TempDir::new(), "tempdir");
     let outside = require(TempDir::new(), "outside");
@@ -285,7 +287,7 @@ fn outside_output_symlink_is_rejected_before_staging() {
 #[cfg(unix)]
 #[test]
 fn any_output_symlink_component_is_rejected_before_staging() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = require(TempDir::new(), "tempdir");
     let request = request(

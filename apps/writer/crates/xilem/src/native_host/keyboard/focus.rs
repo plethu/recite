@@ -1,7 +1,11 @@
 //! Native focus moves through RenderRoot's safe API; mounted fields retain their identities.
 use super::*;
 use crate::app::keyboard::CommandGeneration;
+use crate::app::picker;
+use crate::rules::view;
+use xilem::masonry::accesskit;
 use xilem::masonry::core::{Widget, WidgetRef};
+use xilem::masonry::widgets;
 
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(super) enum Kind {
@@ -40,9 +44,9 @@ impl Focus {
             self.revealed = None;
         } else if self.revealed != Some(generation) {
             if let Some(id) = find(root, Kind::ActiveResult) {
-                root.handle_access_event(xilem::masonry::accesskit::ActionRequest {
-                    action: xilem::masonry::accesskit::Action::ScrollIntoView,
-                    target_tree: xilem::masonry::accesskit::TreeId::ROOT,
+                root.handle_access_event(accesskit::ActionRequest {
+                    action: accesskit::Action::ScrollIntoView,
+                    target_tree: accesskit::TreeId::ROOT,
                     target_node: id.to_raw().into(),
                     data: None,
                 });
@@ -85,18 +89,18 @@ impl Focus {
 }
 fn role(widget: WidgetRef<'_, dyn Widget>) -> Kind {
     if widget
-        .downcast::<xilem::masonry::widgets::Button>()
-        .is_some_and(|button| button.get_prop::<crate::app::picker::ActiveResult>().0)
+        .downcast::<widgets::Button>()
+        .is_some_and(|button| button.get_prop::<picker::ActiveResult>().0)
     {
         return Kind::ActiveResult;
     }
     let Some(input) = widget.downcast::<TextInput>() else {
         return Kind::Other;
     };
-    if input.get_prop::<crate::app::picker::QueryField>().0 {
+    if input.get_prop::<picker::QueryField>().0 {
         Kind::Query
     } else if input.get_prop::<crate::view::Manuscript>().0
-        || input.get_prop::<crate::rules::view::ArgumentField>().0
+        || input.get_prop::<view::ArgumentField>().0
     {
         Kind::Manuscript
     } else {

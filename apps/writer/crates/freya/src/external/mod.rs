@@ -1,5 +1,6 @@
 mod handoff;
 
+use crate::design::keyboard;
 use crate::{
     design::{Button, ComparisonRow, ComparisonView, SubmitAction, tokens as t},
     editing::{Pane, Writer},
@@ -85,7 +86,7 @@ impl Component for ExternalScreen {
             .padding(t::SPACE_XL)
             .spacing(t::SPACE_LG)
             .on_key_down(move |e: Event<KeyboardEventData>| {
-                if crate::design::keyboard::submit_key(&e) {
+                if keyboard::submit_key(&e) {
                     e.prevent_default();
                     e.stop_propagation();
                     keyboard.run();

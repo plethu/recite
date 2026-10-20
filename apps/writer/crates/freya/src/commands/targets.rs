@@ -1,5 +1,6 @@
 //! Native routing adapts shared scene and beat lookup targets.
 use crate::editing::Writer;
+use recite_writer_session::commands::targets;
 pub(super) use recite_writer_session::commands::targets::{Target, rank};
 pub(super) trait TargetExt {
     fn open(&self, writer: Writer) -> Result<(), String>;
@@ -35,9 +36,9 @@ pub(super) fn all(mut writer: Writer) -> Vec<Target> {
         return Vec::new();
     };
     if writer.files.read().is_some() {
-        recite_writer_session::commands::targets::project(model)
+        targets::project(model)
     } else {
-        match recite_writer_session::commands::targets::examples(model) {
+        match targets::examples(model) {
             Ok(targets) => targets,
             Err(error) => {
                 writer.message.error(error.to_string());

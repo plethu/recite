@@ -1,4 +1,5 @@
 use super::*;
+use crate::editor_work::worker;
 use recite_writer_model::Document;
 use std::sync::Arc;
 
@@ -17,7 +18,7 @@ fn closed_scene_rules_retire_even_when_the_worker_receipt_is_closed()
         positions: BTreeMap::new(),
         rules: Some(rules),
     };
-    crate::editor_work::worker::Worker::retire_presentation(retired)?;
+    worker::Worker::retire_presentation(retired)?;
     for _ in 0..5_000 {
         if weak.strong_count() == 0 {
             break;

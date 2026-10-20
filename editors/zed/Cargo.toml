@@ -20,6 +20,7 @@ unsafe_code = "forbid"
 unreachable_pub = "warn"
 
 [lints.clippy]
+absolute_paths = "warn"
 unwrap_used = "warn"
 expect_used = "warn"
 todo = "warn"

@@ -1,4 +1,5 @@
 use super::*;
+use crate::project::save;
 
 impl ProjectFiles {
     pub fn save_retained(&mut self) -> Result<(), FileError> {
@@ -24,11 +25,7 @@ impl Retained {
         self.save_applied(path)
     }
     pub(super) fn save_applied(&mut self, path: &Path) -> Result<(), FileError> {
-        crate::project::save::replace_checked(
-            path,
-            &self.baseline,
-            self.model.document().source(),
-        )?;
+        save::replace_checked(path, &self.baseline, self.model.document().source())?;
         self.baseline = self.model.document().source_snapshot();
         let recovery = self
             .model

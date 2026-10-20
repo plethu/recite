@@ -1,5 +1,6 @@
 //! Mount only visible diagnostic buttons; accepted reports stay immutable and shared.
 use super::{open, row};
+use crate::design::palette;
 use crate::{
     editing::Writer,
     messages::{MsgId, text},
@@ -62,12 +63,8 @@ impl Component for Panel {
             .a11y_focusable(true)
             .width(Size::fill())
             .height(Size::px(count.min(3) as f32 * ROW_HEIGHT))
-            .background(crate::design::palette::current().inset)
-            .border(
-                Border::new()
-                    .width(1.)
-                    .fill(crate::design::palette::current().rule),
-            )
+            .background(palette::current().inset)
+            .border(Border::new().width(1.).fill(palette::current().rule))
             .on_key_down(move |event: Event<KeyboardEventData>| {
                 navigate(writer, editor_id, &keyboard, active, pending, event);
             })

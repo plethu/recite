@@ -1,4 +1,7 @@
 //! Anchored secondary line actions, with owned keyboard focus and dismissal.
+use crate::design::keyboard;
+use crate::design::material;
+use crate::design::tokens;
 use crate::{design::Button, editing::Writer};
 use freya::prelude::*;
 use recite_writer_model::{Passage, PassageKind, Workbench};
@@ -28,10 +31,10 @@ pub(super) fn render(writer: Writer, mut details: State<bool>, passage: &Passage
                 .position(Position::new_absolute().top(30.).right(0.))
                 .width(Size::px(232.))
                 .layer(Layer::Overlay)
-                .corner_radius(crate::design::tokens::DIALOG_RADIUS)
-                .shadow(crate::design::material::offset(
-                    crate::design::tokens::colors().teal,
-                    crate::design::tokens::SHADOW_OFFSET,
+                .corner_radius(tokens::DIALOG_RADIUS)
+                .shadow(material::offset(
+                    tokens::colors().teal,
+                    tokens::SHADOW_OFFSET,
                 ))
                 .on_key_down(move |event: Event<KeyboardEventData>| {
                     let focus = *Platform::get()
@@ -41,7 +44,7 @@ pub(super) fn render(writer: Writer, mut details: State<bool>, passage: &Passage
                     let current = items.iter().position(|id| *id == focus).unwrap_or(0);
                     let vim =
                         writer.preferences.peek().config.ui.keymap == recite_config::Keymap::Vim;
-                    let next = if let Some(step) = crate::design::keyboard::list_step(&event, vim) {
+                    let next = if let Some(step) = keyboard::list_step(&event, vim) {
                         Some((current as isize + step).rem_euclid(count as isize) as usize)
                     } else {
                         match event.key {

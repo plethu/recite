@@ -1,13 +1,14 @@
 use super::*;
 use crate::tests::support::{finish_work, open, project};
 use recite_writer_session::project::save::sequence::Work;
+use tokio::sync::mpsc as async_mpsc;
 use xilem::AppState;
 
 #[test]
 fn save_stays_responsive_and_retains_typing_that_arrived_after_disk_dispatch() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
-    let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut requests) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
     writer.change(|model| {
         model.set_draft("Accepted before saving.".into());
@@ -46,7 +47,7 @@ fn save_stays_responsive_and_retains_typing_that_arrived_after_disk_dispatch() {
 fn typing_during_apply_saves_captured_source_and_preserves_the_live_draft() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let mut writer = open(&directory).unwrap();
-    let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut requests) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
     writer.change(|model| {
         model.set_draft("Captured field draft.".into());

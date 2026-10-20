@@ -1,5 +1,7 @@
 //! Per-document presentation is transient; authored drafts belong to the buffers.
 use crate::editing::{Pane, Writer};
+use crate::editor_work::worker;
+use crate::navigation::request;
 use freya::prelude::*;
 use recite_config::WriterView;
 use std::collections::BTreeMap;
@@ -158,7 +160,7 @@ impl Writer {
     }
     fn retire_presentation(mut self, retired: RetiredPresentation) {
         if !retired.is_empty()
-            && let Err(error) = crate::editor_work::worker::Worker::retire_presentation(retired)
+            && let Err(error) = worker::Worker::retire_presentation(retired)
         {
             self.message.error(error.to_string());
         }
@@ -239,8 +241,8 @@ impl Writer {
             .view_for_file(path, self.preferences.peek().config.writer.view);
         crate::editor_work::navigate(
             self,
-            crate::navigation::request::Request {
-                target: crate::navigation::request::Target::Document {
+            request::Request {
+                target: request::Target::Document {
                     path: path.to_owned(),
                     view,
                     initial: !self.layout.sessions.has_file(path),

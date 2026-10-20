@@ -1,3 +1,4 @@
+use crate::features::schema_hover;
 pub(super) fn assert_absent_content_fingerprint(catalog: &recite_ui::UiCatalog) {
     let producer = recite_core::schema::ProducerIdentity::new("adapter", "generated")
         .expect("producer identity");
@@ -16,8 +17,7 @@ pub(super) fn assert_absent_content_fingerprint(catalog: &recite_ui::UiCatalog) 
         producer_fingerprints: vec![fingerprint.clone()],
     });
     let summary = recite_compiler::authoring::SchemaSummary::from_schema(&schema);
-    let detail =
-        crate::features::schema_hover::hover_detail(None, &summary, &[fingerprint], catalog);
+    let detail = schema_hover::hover_detail(None, &summary, &[fingerprint], catalog);
 
     assert!(detail.contains("ABSENT-CONTENT"));
     assert!(detail.contains("items-v1"));

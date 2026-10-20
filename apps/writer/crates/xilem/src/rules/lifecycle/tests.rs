@@ -1,4 +1,5 @@
 use super::*;
+use tokio::sync::mpsc as async_mpsc;
 
 #[test]
 fn retired_and_reopened_reply_rejects_a_receipt_even_at_the_same_source_and_structure() {
@@ -101,7 +102,7 @@ fn undo_removing_the_open_reply_retires_controls_and_preserves_redo() {
             .unwrap();
     let mut writer = support::open(&directory).unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let (sender, mut jobs) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut jobs) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(sender);
     writer.navigation.runtime = Some(runtime.handle().clone());
     writer.change(recite_writer_model::Workbench::add_choice);

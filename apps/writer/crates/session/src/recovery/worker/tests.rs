@@ -1,5 +1,6 @@
 use super::*;
 use serde::{Deserialize, Serialize};
+use std::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Draft(usize);
@@ -176,12 +177,9 @@ fn detached_durability_fence_waits_without_borrowing_the_live_store()
     let disk = store.disk.clone();
     let guard = disk.lock().unwrap();
     let ticket = store.begin_persist(Some(Draft(1)))?;
-    let (done, result) = std::sync::mpsc::sync_channel(1);
+    let (done, result) = mpsc::sync_channel(1);
     let waiter = std::thread::spawn(move || done.send(ticket.wait()).unwrap());
-    assert!(matches!(
-        result.try_recv(),
-        Err(std::sync::mpsc::TryRecvError::Empty)
-    ));
+    assert!(matches!(result.try_recv(), Err(mpsc::TryRecvError::Empty)));
     // The UI owner remains free to queue newer content while durability waits.
     store.queue(Some(Draft(2)))?;
     drop(guard);

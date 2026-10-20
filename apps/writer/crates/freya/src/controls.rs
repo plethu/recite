@@ -1,4 +1,5 @@
 //! Compact, named controls shared by the writer's contextual toolbars.
+use crate::design::tokens;
 use freya::prelude::*;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -44,8 +45,8 @@ impl Icon {
             "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'>{shape}</svg>"
         );
         SvgViewer::new(Bytes::from(svg.into_bytes()))
-            .width(Size::px(crate::design::tokens::ICON_SIZE))
-            .height(Size::px(crate::design::tokens::ICON_SIZE))
+            .width(Size::px(tokens::ICON_SIZE))
+            .height(Size::px(tokens::ICON_SIZE))
             .stroke(color)
             .into_element()
     }
@@ -83,12 +84,12 @@ impl Component for IconButton {
                 .flat()
                 .enabled(self.enabled)
                 .named(self.name.clone())
-                .width(Size::px(crate::design::tokens::control_height()))
+                .width(Size::px(tokens::control_height()))
                 .on_press(move |_| action.call(()))
                 .child(self.icon.colored(if self.enabled {
-                    crate::design::tokens::colors().ink
+                    tokens::colors().ink
                 } else {
-                    crate::design::tokens::colors().muted
+                    tokens::colors().muted
                 })),
         )
     }
@@ -123,7 +124,7 @@ impl Component for NavigationRow {
             .named(self.text.clone())
             .toggle(self.selected)
             // Beat rows sit inside the rail padding and their own outline indent.
-            .plate_bleed(crate::design::tokens::RAIL_PADDING + crate::design::tokens::SPACE_XL)
+            .plate_bleed(tokens::RAIL_PADDING + tokens::SPACE_XL)
             .width(Size::fill())
             .on_press(self.action.clone())
             .child(
@@ -138,6 +139,6 @@ impl Component for NavigationRow {
 
 impl Component for Icon {
     fn render(&self) -> impl IntoElement {
-        self.colored(crate::design::tokens::colors().ink)
+        self.colored(tokens::colors().ink)
     }
 }

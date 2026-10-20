@@ -1,5 +1,6 @@
 //! Toolkit property defaults retain authored colours through native control states.
 use super::*;
+use xilem::masonry::theme;
 use xilem::masonry::{
     core::{DefaultProperties, PropertySet, PropertyStack, Selector, Widget},
     layout::AsUnit,
@@ -11,7 +12,7 @@ use xilem::masonry::{
 };
 
 pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
-    let mut properties = xilem::masonry::theme::default_property_set();
+    let mut properties = theme::default_property_set();
     text::<Label>(&mut properties, p);
     text::<TextArea<true>>(&mut properties, p);
     text::<TextArea<false>>(&mut properties, p);

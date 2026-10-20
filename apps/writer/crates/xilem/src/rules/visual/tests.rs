@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::NoProxy;
+use xilem::masonry::accesskit;
 use xilem::{
     ViewCtx,
     core::View,
@@ -63,8 +64,7 @@ fn rule_fields_and_expanded_actions_render_at_personal_scales() {
             let mut pending = vec![tree.state().root()];
             let mut fields = 0;
             while let Some(node) = pending.pop() {
-                fields +=
-                    usize::from(node.role() == xilem::masonry::accesskit::Role::MultilineTextInput);
+                fields += usize::from(node.role() == accesskit::Role::MultilineTextInput);
                 pending.extend(node.children());
             }
             assert!(fields > 0 && fields <= 8);

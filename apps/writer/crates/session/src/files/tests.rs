@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 #[test]
 fn retry_after_visible_replacement_confirms_sync_without_another_backup()
@@ -30,7 +32,7 @@ fn desired_content_does_not_bypass_symlink_rejection() -> Result<(), Box<dyn std
     let target = root.path().join("target.recite");
     let link = root.path().join("link.recite");
     fs::write(&target, "after")?;
-    std::os::unix::fs::symlink(&target, &link)?;
+    unix_fs::symlink(&target, &link)?;
     assert!(matches!(
         replace_checked(&link, "before", "after"),
         Err(FileError::FileKind)

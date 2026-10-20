@@ -1,4 +1,5 @@
 //! One command vocabulary for visible actions, search and workspace shortcuts.
+use crate::design::keyboard as design_keyboard;
 mod keyboard;
 mod vim;
 pub(crate) use vim::{Navigation, modifier_key as vim_modifier_key};
@@ -67,7 +68,7 @@ impl CommandExt for Command {
 
     fn shortcut(self, writer: Writer) -> String {
         if self == Self::Apply {
-            return crate::design::keyboard::submit_hint().into();
+            return design_keyboard::submit_hint().into();
         }
         writer
             .preferences

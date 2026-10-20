@@ -1,4 +1,5 @@
 //! Bounded project search results retain document and beat context.
+use crate::navigation::location;
 use crate::{
     design::{Button, tokens as t},
     editing::Writer,
@@ -183,8 +184,8 @@ fn open_result(
         return;
     };
     let _ = path;
-    let location = crate::navigation::location::Location {
-        screen: crate::navigation::location::Screen::Write,
+    let location = location::Location {
+        screen: location::Screen::Write,
         document: hit.document.to_string(),
         beat: Some(hit.beat.to_string()),
         passage: None,

@@ -1,6 +1,8 @@
 //! Reply rules edit the recoverable source draft and apply through the authoring model.
+use crate::design::keyboard;
 use crate::design::tokens::ProseTypography;
 use crate::messages::{MsgId, text};
+use crate::navigation::location;
 mod add;
 mod argument;
 mod condition;
@@ -13,8 +15,8 @@ use freya::prelude::*;
 use recite_writer_model::{ReplyRules, View};
 
 pub(super) fn open(writer: Writer, passage: &str) -> Result<(), String> {
-    let location = crate::navigation::location::Location {
-        screen: crate::navigation::location::Screen::Rules,
+    let location = location::Location {
+        screen: location::Screen::Rules,
         passage: Some(passage.to_owned()),
         source: false,
         beat: None,
@@ -297,7 +299,7 @@ impl Component for RulesScreen {
             .on_global_key_down(move |event: Event<KeyboardEventData>| {
                 if !*writer.settings_open.peek()
                     && !writer.localisation.peek().modal_open()
-                    && crate::design::keyboard::submit_key(&event)
+                    && keyboard::submit_key(&event)
                 {
                     event.prevent_default();
                     event.stop_propagation();

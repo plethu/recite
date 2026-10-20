@@ -1,5 +1,6 @@
 //! Forwarded native launches publish only into an available, matching session.
 use super::*;
+use std::sync::atomic;
 impl App {
     pub(super) fn accept_activation(
         &mut self,
@@ -7,7 +8,7 @@ impl App {
     ) {
         let reply = request.reply.clone();
         let result = (|| {
-            if request.cancelled.load(std::sync::atomic::Ordering::Acquire) {
+            if request.cancelled.load(atomic::Ordering::Acquire) {
                 return Err("Writer activation was cancelled".into());
             }
             if let Some(writer) = self.writer.as_mut()

@@ -1,4 +1,6 @@
 use lsp_types::{GotoDefinitionResponse, Location, Position, Uri};
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use tempfile::TempDir;
 
 use crate::workspace::WorkspaceConfig;
@@ -13,7 +15,7 @@ pub(crate) fn all() {
 fn valid_manifest_open_identity_survives_creation_and_alias_owner_switch() {
     #[cfg(unix)]
     {
-        use std::os::unix::fs::symlink;
+        use unix_fs::symlink;
 
         let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
         let source_root = temp.path().join("src");

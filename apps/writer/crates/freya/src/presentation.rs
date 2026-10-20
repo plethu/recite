@@ -1,5 +1,7 @@
 //! Live workspace presentation; durable preferences remain in recite-config.
 mod sessions;
+use crate::design::tokens;
+use crate::scene_map::camera;
 use crate::{editing::Writer, preferences::Preferences};
 use freya::prelude::*;
 use recite_config::{UserConfigEdit, WriterPresentation, WriterPresentationField, WriterView};
@@ -18,7 +20,7 @@ pub(crate) fn typography() -> WriterPresentation {
 pub(crate) struct Layout {
     sessions: sessions::Sessions,
     pub project_controls: State<Option<EventHandler<()>>>,
-    pub cameras: State<std::collections::BTreeMap<String, crate::scene_map::camera::Camera>>,
+    pub cameras: State<std::collections::BTreeMap<String, camera::Camera>>,
     pub view: State<WriterView>,
     pub focus: State<bool>,
     pub before_focus: State<Option<(crate::editing::Pane, WriterView, AccessibilityId)>>,
@@ -64,13 +66,12 @@ impl Layout {
     pub fn navigation_expanded(self) -> bool {
         *self.navigation.read()
             && !*self.focus.read()
-            && *self.available.read() >= 900. * crate::design::tokens::ui_scale()
+            && *self.available.read() >= 900. * tokens::ui_scale()
     }
     pub fn show_split(self, writer: Writer) -> bool {
-        let scale = crate::design::tokens::ui_scale();
-        let minimum = 640.
-            + if self.navigation_expanded() { 180. } else { 0. }
-            + 2. * crate::design::tokens::SPLITTER_WIDTH;
+        let scale = tokens::ui_scale();
+        let minimum =
+            640. + if self.navigation_expanded() { 180. } else { 0. } + 2. * tokens::SPLITTER_WIDTH;
         !*self.focus.read()
             && (writer.preferences.read().config.writer.presentation.split()
                 || (!self.standalone() && *writer.pane.read() == crate::editing::Pane::Script))

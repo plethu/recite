@@ -1,5 +1,7 @@
 //! Source and generated output publish in order, retaining successful prefixes.
 use super::{FileError, PathBuf, ProjectSchema, Session, parse, read_regular, replace_checked};
+use crate::declarations::recovery;
+use crate::recovery::worker;
 impl Session {
     pub fn prepare_save(&self) -> Result<DeclarationSave, FileError> {
         if self.busy() {
@@ -21,10 +23,7 @@ impl Session {
     pub fn accept_saved_source(
         &mut self,
         request: &DeclarationSave,
-    ) -> Result<
-        crate::recovery::worker::Durability<crate::declarations::recovery::DraftSnapshot>,
-        FileError,
-    > {
+    ) -> Result<worker::Durability<recovery::DraftSnapshot>, FileError> {
         let source = self.source.as_mut().ok_or(FileError::SchemaOwnership)?;
         source.baseline = request.source.clone();
         source.begin_saved_recovery()

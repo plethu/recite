@@ -1,4 +1,5 @@
 //! Settings visibly separate personal presentation from project-owned content.
+use crate::design::keyboard;
 use crate::design::tokens as t;
 use crate::{
     editing::{Writer, editor_data},
@@ -201,7 +202,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                                 .font_size(t::body())
                                 .gutter(false)
                                 .on_pre_key_down(|e: Event<KeyboardEventData>| {
-                                    if crate::design::keyboard::submit_key(&e)
+                                    if keyboard::submit_key(&e)
                                         || matches!(
                                             e.key,
                                             Key::Named(NamedKey::Tab | NamedKey::Escape)

@@ -1,11 +1,13 @@
 use super::*;
 use crate::keyed::keyed;
+use xilem::masonry::core;
+use xilem::masonry::widgets;
 use xilem::{InsertNewline, masonry::properties::TextAreaLabel, view::text_input};
 
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct ArgumentField(pub bool);
-impl xilem::masonry::core::UsesProperty<ArgumentField> for xilem::masonry::widgets::TextInput {}
-impl xilem::masonry::core::Property for ArgumentField {
+impl core::UsesProperty<ArgumentField> for widgets::TextInput {}
+impl core::Property for ArgumentField {
     fn static_default() -> &'static Self {
         static OTHER: ArgumentField = ArgumentField(false);
         &OTHER

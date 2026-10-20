@@ -1,5 +1,6 @@
 use super::*;
 use crate::presentation::{label, paragraph, prose, radio_button, text_button};
+use xilem::masonry::properties;
 use xilem::{
     WidgetView,
     masonry::layout::AsUnit,
@@ -129,12 +130,12 @@ fn welcome(app: &App) -> impl WidgetView<App> + use<> {
         )).gap(8.px()),
         label(scale, if app.creating { "New project folder" } else { "Project folder" }),
         flex_row((
-            sized_box(text_input(app.path.clone(), |app: &mut App, text| { app.path = text; app.native_path = None; }).placeholder("Project folder").text_size(14. * scale).disabled(busy).prop(xilem::masonry::properties::TextAreaLabel::new("Project folder"))).width(600.px()),
+            sized_box(text_input(app.path.clone(), |app: &mut App, text| { app.path = text; app.native_path = None; }).placeholder("Project folder").text_size(14. * scale).disabled(busy).prop(properties::TextAreaLabel::new("Project folder"))).width(600.px()),
             text_button(scale, "Browse folders", App::browse).disabled(busy),
         )).gap(8.px()),
         app.creating.then(|| flex_col((
             label(scale, "Project name"),
-            sized_box(text_input(app.name.clone(), |app: &mut App, text| app.name = text).placeholder("Project name").text_size(14. * scale).disabled(busy).prop(xilem::masonry::properties::TextAreaLabel::new("Project name"))).width(600.px()),
+            sized_box(text_input(app.name.clone(), |app: &mut App, text| app.name = text).placeholder("Project name").text_size(14. * scale).disabled(busy).prop(properties::TextAreaLabel::new("Project name"))).width(600.px()),
             prose(scale, "Creates recite.project.toml and a first scene with a default beat. Existing project files are preserved."),
         )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())),
         flex_row((

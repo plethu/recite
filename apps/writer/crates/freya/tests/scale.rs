@@ -2,6 +2,7 @@ mod support;
 use criterion::measurement::{Measurement, WallTime};
 use freya::prelude::*;
 use freya_testing::prelude::*;
+use std::env::consts;
 use std::time::Duration;
 
 #[test]
@@ -74,7 +75,7 @@ fn large_scene_keeps_mounted_nodes_bounded() -> Result<(), Box<dyn std::error::E
     println!(
         "{}",
         serde_json::json!({"beats": beats, "first_usable_ms":first_ms,
-        "mounted_cards":mounted, "navigation_ms":frames, "host":std::env::consts::OS,
+        "mounted_cards":mounted, "navigation_ms":frames, "host":consts::OS,
         "profile":"test", "native_frame_pacing":false})
     );
     Ok(())

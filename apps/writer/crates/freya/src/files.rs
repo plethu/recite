@@ -1,7 +1,9 @@
 use crate::commands::CommandExt;
 use crate::design::Button;
 use crate::design::tokens as t;
+use crate::localisation::watching;
 use crate::project::ProjectFiles;
+use crate::recovery::status;
 use freya::prelude::*;
 
 pub(crate) struct FileChrome {
@@ -117,11 +119,11 @@ pub(crate) fn controls(
         })
         .into_element();
     let services = rect()
-        .child(crate::localisation::watching::CatalogueWatch { writer })
+        .child(watching::CatalogueWatch { writer })
         .child(crate::external::WatchPoll { writer })
         .child(crate::builds::BuildPoll { writer })
         .child(crate::declarations::ProducerPoll { writer })
-        .child(crate::recovery::status::RecoveryStatus { files })
+        .child(status::RecoveryStatus { files })
         .child(crate::project_loading::Loading {
             writer,
             files,

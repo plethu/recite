@@ -1,6 +1,8 @@
 use super::*;
 #[cfg(target_os = "linux")]
 use freya_testing::prelude::*;
+use std::sync::atomic;
+use std::sync::mpsc;
 
 #[cfg(target_os = "linux")]
 fn linked_project() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
@@ -19,16 +21,16 @@ fn linked_project() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
 
 #[cfg(target_os = "linux")]
 fn submitted_route(
-    sender: &std::sync::mpsc::SyncSender<crate::activation::IncomingRoute>,
+    sender: &mpsc::SyncSender<crate::activation::IncomingRoute>,
     route: String,
-) -> Result<std::sync::mpsc::Receiver<Result<(), String>>, Box<dyn std::error::Error>> {
-    let (reply, result) = std::sync::mpsc::channel();
+) -> Result<mpsc::Receiver<Result<(), String>>, Box<dyn std::error::Error>> {
+    let (reply, result) = mpsc::channel();
     sender.try_send(crate::activation::IncomingRoute {
         project: project_from_route(&route)?,
         route: Some(route),
         document: None,
         editor: None,
-        cancelled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        cancelled: std::sync::Arc::new(atomic::AtomicBool::new(false)),
         reply,
     })?;
     Ok(result)
@@ -44,7 +46,7 @@ fn welcome_owner_opens_forwarded_projects_and_switches_cleanly()
         second.path().join("b.recite"),
         ":: other default\n> @bqyvpqq\n  Second project scene.\n-> END\n",
     )?;
-    let (sender, receiver) = std::sync::mpsc::sync_channel(16);
+    let (sender, receiver) = mpsc::sync_channel(16);
     let inbox = crate::ActivationInbox::new(receiver);
     let (mut test, _) = TestingRunner::new(
         crate::editor_app,
@@ -66,13 +68,13 @@ fn welcome_owner_opens_forwarded_projects_and_switches_cleanly()
                 .finish()
         )
     };
-    let (cancel_reply, cancel_result) = std::sync::mpsc::channel();
+    let (cancel_reply, cancel_result) = mpsc::channel();
     sender.try_send(crate::activation::IncomingRoute {
         project: Some(first.path().to_path_buf()),
         route: Some(route(first.path())),
         document: None,
         editor: None,
-        cancelled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
+        cancelled: std::sync::Arc::new(atomic::AtomicBool::new(true)),
         reply: cancel_reply,
     })?;
     test.poll_n(std::time::Duration::from_millis(16), 10);
@@ -118,7 +120,7 @@ fn received_route_updates_history_and_refuses_a_source_draft()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = linked_project()?;
     let root = dir.path().to_path_buf();
-    let (sender, receiver) = std::sync::mpsc::sync_channel(16);
+    let (sender, receiver) = mpsc::sync_channel(16);
     let inbox = crate::ActivationInbox::new(receiver);
     let initial = format!(
         "recite://writer/write?{}",
@@ -217,7 +219,7 @@ fn received_route_refuses_translation_drafts() -> Result<(), Box<dyn std::error:
     let catalogue = root.join("locale/fr.po");
     let saved = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"alice_way_001\"\nmsgid \"Would you tell me, please, which way I ought to go from here?\"\nmsgstr \"Bonjour\"\n";
     std::fs::write(&catalogue, saved)?;
-    let (sender, receiver) = std::sync::mpsc::sync_channel(16);
+    let (sender, receiver) = mpsc::sync_channel(16);
     let inbox = crate::ActivationInbox::new(receiver);
     let initial = format!(
         "recite://writer/translation?{}",
@@ -299,7 +301,7 @@ fn route_less_project_switch_clears_clean_catalogue() -> Result<(), Box<dyn std:
             .append_pair("entry", "alice_way_001")
             .finish()
     );
-    let (sender, receiver) = std::sync::mpsc::sync_channel(16);
+    let (sender, receiver) = mpsc::sync_channel(16);
     let inbox = crate::ActivationInbox::new(receiver);
     let root = first.path().to_path_buf();
     let (mut test, _) = TestingRunner::new(
@@ -314,13 +316,13 @@ fn route_less_project_switch_clears_clean_catalogue() -> Result<(), Box<dyn std:
     );
     test.poll_n(std::time::Duration::from_millis(16), 40);
     assert!(contains_paragraph(&test, "Bonjour"));
-    let (reply, result) = std::sync::mpsc::channel();
+    let (reply, result) = mpsc::channel();
     sender.try_send(crate::activation::IncomingRoute {
         project: Some(second.path().to_path_buf()),
         route: None,
         document: None,
         editor: None,
-        cancelled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        cancelled: std::sync::Arc::new(atomic::AtomicBool::new(false)),
         reply,
     })?;
     test.poll_n(std::time::Duration::from_millis(16), 40);
@@ -342,7 +344,7 @@ fn a_source_route_cannot_replace_recovered_invalid_prose() -> Result<(), Box<dyn
     assert!(model.apply().is_err());
     files.checkpoint(&model)?;
     drop(files);
-    let (sender, receiver) = std::sync::mpsc::sync_channel(16);
+    let (sender, receiver) = mpsc::sync_channel(16);
     let inbox = crate::ActivationInbox::new(receiver);
     let route = "recite://writer/write?scene=a.recite&view=source".to_string();
     let initial = route.clone();

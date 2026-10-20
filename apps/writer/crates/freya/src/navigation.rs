@@ -10,6 +10,7 @@ use crate::{
     editing::{Pane, Writer},
     localisation::CatalogueView,
 };
+use std::sync::atomic;
 
 use freya::{prelude::*, router::*};
 use location::{Location, Screen};
@@ -281,7 +282,7 @@ pub(super) fn open_passage(
 pub(super) fn route(
     writer: Writer,
     location: Location,
-    cancelled: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    cancelled: Option<std::sync::Arc<atomic::AtomicBool>>,
     completed: EventHandler<Result<(), String>>,
 ) -> Result<(), String> {
     writer.work.require_idle()?;

@@ -1,4 +1,6 @@
 use recite_config::UserStateFile;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 #[test]
 fn state_updates_reload_before_merging_and_reject_invalid_changes()
@@ -27,7 +29,7 @@ fn application_state_does_not_follow_a_symlink() -> Result<(), Box<dyn std::erro
     let target = dir.path().join("target");
     let path = dir.path().join("state");
     std::fs::write(&target, "untouched")?;
-    std::os::unix::fs::symlink(&target, &path)?;
+    unix_fs::symlink(&target, &path)?;
     let state = UserStateFile::new(path);
     assert!(state.load().is_err());
     assert!(

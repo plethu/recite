@@ -1,6 +1,8 @@
 #![cfg(test)]
 
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 use tempfile::TempDir;
 
@@ -258,7 +260,7 @@ fn output_symlink_is_rejected_without_touching_its_target() {
     let temp = TempDir::new().expect("tempdir");
     let input = fixture(temp.path(), ":: Start\nHello.\n");
     let destination = temp.path().join("output");
-    std::os::unix::fs::symlink(temp.path(), &destination).expect("symlink");
+    unix_fs::symlink(temp.path(), &destination).expect("symlink");
     run(recite()
         .arg("import")
         .arg(&input)

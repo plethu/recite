@@ -1,9 +1,12 @@
 //! One root coordinator owns accepted editor work and ordered durability.
+use crate::localisation::catalogue as localisation_catalogue;
 mod catalogue;
 pub(crate) mod document;
 mod manuscript;
 pub(crate) mod worker;
+use crate::navigation::request;
 pub(crate) use crate::project::save::ordered::Scope as SaveScope;
+use crate::prose::focus;
 use crate::{editing::Writer, project::save::ordered::Scope};
 use freya::prelude::*;
 use recite_writer_model::{EditOperation, EditRequest, ReplyRulesRequest};
@@ -19,8 +22,8 @@ enum Intent {
         applying: bool,
     },
     Rules(ReplyRulesRequest),
-    Catalogue(Box<crate::localisation::catalogue::CatalogueSave>),
-    Navigation(Box<crate::navigation::request::Navigation>),
+    Catalogue(Box<localisation_catalogue::CatalogueSave>),
+    Navigation(Box<request::Navigation>),
 }
 struct Pending {
     intent: Intent,
@@ -31,7 +34,7 @@ struct Pending {
 pub(crate) struct EditorWork {
     requests: State<Option<async_channel::Sender<Pending>>>,
     active: State<Option<Kind>>,
-    pub(crate) focus: State<Option<crate::prose::focus::Request>>,
+    pub(crate) focus: State<Option<focus::Request>>,
 }
 #[derive(Clone, Copy)]
 enum Kind {
@@ -277,9 +280,7 @@ async fn finish(mut writer: Writer, pending: Pending) {
             .map_err(|e| e.to_string()),
         Intent::Rules(request) => document::rules(writer, request, &worker).await,
         Intent::Catalogue(request) => catalogue::save(writer, request, &worker).await,
-        Intent::Navigation(request) => {
-            crate::navigation::request::execute(writer, request, &worker).await
-        }
+        Intent::Navigation(request) => request::execute(writer, request, &worker).await,
         Intent::Save {
             scope,
             source: request,
@@ -296,7 +297,7 @@ async fn finish(mut writer: Writer, pending: Pending) {
     }
     let successful = result.is_ok();
     completed.call(result);
-    crate::prose::focus::complete(writer, successful);
+    focus::complete(writer, successful);
 }
 
 pub(crate) fn save(writer: Writer, all: bool) {
@@ -333,7 +334,7 @@ pub(crate) fn save(writer: Writer, all: bool) {
 
 pub(crate) fn navigate(
     writer: Writer,
-    request: crate::navigation::request::Request,
+    request: request::Request,
     completed: EventHandler<Result<(), String>>,
 ) -> Result<(), String> {
     writer.work.require_idle()?;

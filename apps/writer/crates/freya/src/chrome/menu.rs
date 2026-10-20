@@ -1,5 +1,6 @@
 //! Less frequent workspace actions remain reachable at every text size.
 use crate::commands::CommandExt;
+use crate::design::material;
 use crate::{
     commands::Command,
     design::{Button, tokens as t},
@@ -89,10 +90,7 @@ pub(super) fn render(writer: Writer, writing: bool) -> Element {
                 .layer(Layer::Overlay)
                 .width(Size::px(280. * t::ui_scale()))
                 .corner_radius(t::DIALOG_RADIUS)
-                .shadow(crate::design::material::offset(
-                    t::colors().teal,
-                    t::SHADOW_OFFSET,
-                ))
+                .shadow(material::offset(t::colors().teal, t::SHADOW_OFFSET))
                 .on_key_down(move |event: Event<KeyboardEventData>| {
                     let focused = *Platform::get()
                         .current_window()

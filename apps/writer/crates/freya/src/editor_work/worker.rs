@@ -1,10 +1,12 @@
 //! Bounded preparation and durability work; accepted writes are never cancelled.
 use crate::localisation::catalogue::{CatalogueDurability, CatalogueSave, CatalogueSaved};
+use crate::navigation::worker;
 use crate::project::FileError;
 use recite_writer_model::{EditRequest, PreparedEdit, ReplyRules, ReplyRulesRequest};
+use recite_writer_session::project::save::sequence;
 pub(crate) enum Work {
     RetirePresentation(Box<crate::presentation::RetiredPresentation>),
-    Navigation(Box<crate::navigation::worker::Work>),
+    Navigation(Box<worker::Work>),
     Edit(EditRequest),
     RetireEdit(Box<PreparedEdit>),
     Rules(ReplyRulesRequest),
@@ -12,16 +14,16 @@ pub(crate) enum Work {
     Catalogue(Box<CatalogueSave>),
     CatalogueRecovery(CatalogueDurability),
     RetireCatalogue(Box<CatalogueSave>),
-    Save(recite_writer_session::project::save::sequence::Work),
+    Save(sequence::Work),
 }
 pub(crate) enum Output {
-    Navigation(crate::navigation::worker::Output),
+    Navigation(worker::Output),
     Edit(Result<Box<PreparedEdit>, recite_writer_model::WorkbenchError>),
     Rules(ReplyRulesRequest, Result<Box<ReplyRules>, String>),
     Catalogue(Box<CatalogueSave>, Result<CatalogueSaved, String>),
     Retired,
     Recovered(Result<(), FileError>),
-    Save(recite_writer_session::project::save::sequence::Receipt),
+    Save(sequence::Receipt),
 }
 pub(crate) struct Worker {
     requests: async_channel::Sender<Work>,

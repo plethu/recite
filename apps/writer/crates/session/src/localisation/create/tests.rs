@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 #[test]
 fn new_catalogues_have_target_plural_arms_and_no_translations() -> Result<(), String> {
@@ -56,7 +58,7 @@ fn creation_never_overwrites_existing_files_or_symlinks() -> Result<(), String> 
     #[cfg(unix)]
     {
         let link = dir.path().join("link.po");
-        std::os::unix::fs::symlink(&path, &link).map_err(|e| e.to_string())?;
+        unix_fs::symlink(&path, &link).map_err(|e| e.to_string())?;
         assert!(persist(&document, &link).is_err());
         assert!(
             fs::symlink_metadata(link)

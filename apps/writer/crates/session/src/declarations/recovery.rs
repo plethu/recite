@@ -1,4 +1,5 @@
 //! Standalone declaration drafts use the shared background recovery store.
+use crate::recovery::worker;
 use crate::{
     project::FileError,
     recovery::{Snapshot, SnapshotStore},
@@ -25,9 +26,7 @@ impl super::session::Source {
             draft: self.draft.clone(),
         })
     }
-    pub fn begin_saved_recovery(
-        &mut self,
-    ) -> Result<crate::recovery::worker::Durability<DraftSnapshot>, FileError> {
+    pub fn begin_saved_recovery(&mut self) -> Result<worker::Durability<DraftSnapshot>, FileError> {
         self.recovery.begin_persist(self.snapshot())
     }
     pub fn queue_recovery(&mut self) -> Result<(), FileError> {

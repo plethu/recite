@@ -2,6 +2,7 @@
 mod capture;
 mod publication;
 use super::{location::Location, worker};
+use crate::editor_work::document;
 use crate::{
     editing::Writer,
     editor_work::worker::{Output, Work, Worker},
@@ -117,12 +118,12 @@ async fn execute_prepared(
             .as_ref()
             .is_ok_and(|m| matches!(m.view(), View::Passage(_)) && m.has_draft())
     {
-        if let Some(edit) = crate::editor_work::document::capture(writer, EditOperation::Apply)? {
-            let mut prepared = crate::editor_work::document::prepare(edit, worker)
+        if let Some(edit) = document::capture(writer, EditOperation::Apply)? {
+            let mut prepared = document::prepare(edit, worker)
                 .await
                 .map_err(|e| e.to_string())?;
             let result = request.require_presentation(intent, writer).and_then(|()| {
-                crate::editor_work::document::publish(writer.buffers, writer.dark, &mut prepared)
+                document::publish(writer.buffers, writer.dark, &mut prepared)
                     .map_err(|e| e.to_string())
             });
             worker

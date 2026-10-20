@@ -1,4 +1,5 @@
 use super::*;
+use crate::tests::support;
 use crate::{
     commands::{Command, SearchMode},
     design::{ModalState, SubmitAction},
@@ -26,7 +27,7 @@ struct Controls {
     modal: State<usize>,
 }
 fn app() -> impl IntoElement {
-    let mut writer = crate::tests::support::writer();
+    let mut writer = support::writer();
     let mut modal = use_state(|| 0usize);
     use_provide_context(move || ModalState(modal));
     let handoff = use_handoff(writer);

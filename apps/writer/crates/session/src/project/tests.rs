@@ -1,5 +1,7 @@
 use super::ProjectFiles;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 pub(super) fn project() -> Result<(tempfile::TempDir, ProjectFiles), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
@@ -84,7 +86,7 @@ fn substituted_symlink_is_not_followed() -> Result<(), Box<dyn std::error::Error
     let outside = dir.path().join("unrelated");
     fs::write(&outside, "untouched")?;
     fs::remove_file(&files.current)?;
-    std::os::unix::fs::symlink(&outside, &files.current)?;
+    unix_fs::symlink(&outside, &files.current)?;
     assert!(matches!(
         files.save("changed"),
         Err(super::FileError::FileKind)

@@ -1,10 +1,11 @@
 use super::*;
-use crate::tests::support::{click, labels, open, project};
+use crate::tests::support::{self, click, labels, open, project};
+use tokio::sync::mpsc as async_mpsc;
 
 const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
 
 fn begin(writer: &mut Writer) -> Result<Arc<PreviewRequest>, Box<dyn std::error::Error>> {
-    let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut requests) = async_mpsc::unbounded_channel();
     writer.trial.sender = Some(sender);
     writer.start_trial();
     let request = requests.try_recv()?;
@@ -97,7 +98,7 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
     writer.trial.sender = None;
     writer.start_trial();
     assert!(writer.trial.status.contains("unavailable"));
-    let (sender, requests) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, requests) = async_mpsc::unbounded_channel();
     drop(requests);
     writer.trial.sender = Some(sender);
     writer.start_trial();
@@ -191,7 +192,7 @@ fn native_worker_waits_for_disposal_receipts_and_exits_when_its_owner_disconnect
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let (results, waiting) = mpsc::sync_channel(1);
     let proxy = MessageProxy::new(Arc::new(Results(results)), Arc::from([]));
-    let (sender, requests) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, requests) = async_mpsc::unbounded_channel();
     writer.trial.sender = Some(sender);
     let worker = runtime.spawn(serve(proxy, requests));
     for _ in 0..20 {
@@ -215,8 +216,8 @@ fn native_worker_waits_for_disposal_receipts_and_exits_when_its_owner_disconnect
     }
     writer.trial.sender = None;
     runtime.block_on(worker).unwrap();
-    let proxy = MessageProxy::new(Arc::new(crate::tests::support::NoProxy), Arc::from([]));
-    let (sender, requests) = tokio::sync::mpsc::unbounded_channel();
+    let proxy = MessageProxy::new(Arc::new(support::NoProxy), Arc::from([]));
+    let (sender, requests) = async_mpsc::unbounded_channel();
     sender
         .send(Arc::new(writer.session.model().preview_request().unwrap()))
         .unwrap();

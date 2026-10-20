@@ -3,6 +3,7 @@ use super::{
     CatalogueView,
     messages::{MsgId, text},
 };
+use crate::design::keyboard;
 use crate::design::tokens::ProseTypography;
 use crate::{
     design::{Button, tokens as t},
@@ -80,7 +81,7 @@ impl Component for EntryEditor {
         };
         let shortcut = primary.clone();
         body = body.on_global_key_down(move |event: Event<KeyboardEventData>| {
-            if !state.peek().modal_open() && crate::design::keyboard::submit_key(&event) {
+            if !state.peek().modal_open() && keyboard::submit_key(&event) {
                 event.prevent_default();
                 event.stop_propagation();
                 shortcut.run();

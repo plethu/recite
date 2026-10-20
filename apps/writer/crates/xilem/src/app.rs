@@ -15,11 +15,14 @@ use recite_writer_session::{
     activation::{Activation, ActivationHost, ActivationInbox},
     startup::{LaunchOptions, Startup},
 };
+use std::sync::atomic;
 use std::{
     path::PathBuf,
     sync::{Arc, mpsc},
 };
 use tokio::sync::mpsc::UnboundedSender;
+use xilem::winit::dpi;
+use xilem::winit::error;
 use xilem::{AppState, WindowId};
 
 pub(super) struct App {
@@ -44,7 +47,7 @@ pub(super) struct App {
     _host: Option<ActivationHost>,
     inbox: Option<ActivationInbox>,
 }
-pub(super) fn run(app: App) -> Result<(), xilem::winit::error::EventLoopError> {
+pub(super) fn run(app: App) -> Result<(), error::EventLoopError> {
     let defaults = app.theme.initial_properties();
     let event_loop = xilem::EventLoop::with_user_event().build()?;
     let proxy = event_loop.create_proxy();
@@ -188,7 +191,7 @@ impl App {
         &mut self,
         options: LaunchOptions,
         reply: Option<mpsc::Sender<Result<(), String>>>,
-        cancelled: Option<Arc<std::sync::atomic::AtomicBool>>,
+        cancelled: Option<Arc<atomic::AtomicBool>>,
     ) -> Result<(), String> {
         if self.opening.is_some() || self.auxiliary {
             return Err("Finish the current project action before opening another project.".into());
@@ -239,8 +242,8 @@ pub(super) fn application(
                 .with_base_color(app.theme.palette.canvas)
                 .with_options(|_| {
                     xilem::WindowOptions::new("Recite Writer")
-                        .with_initial_inner_size(xilem::winit::dpi::LogicalSize::new(1200., 800.))
-                        .with_min_inner_size(xilem::winit::dpi::LogicalSize::new(900., 650.))
+                        .with_initial_inner_size(dpi::LogicalSize::new(1200., 800.))
+                        .with_min_inner_size(dpi::LogicalSize::new(900., 650.))
                         .on_close(App::request_close)
                 }),
         )

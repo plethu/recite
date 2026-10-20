@@ -1,4 +1,5 @@
 use super::*;
+use crate::design::keyboard;
 use crate::design::{PathField, PathKind, SubmitAction};
 use freya::code_editor::*;
 
@@ -189,7 +190,7 @@ impl Component for SourceEditor {
             .content(Content::Flex)
             .spacing(t::SPACE_MD)
             .on_key_down(move |e: Event<KeyboardEventData>| {
-                if crate::design::keyboard::submit_key(&e) || crate::editing::is_save_key(&e) {
+                if keyboard::submit_key(&e) || crate::editing::is_save_key(&e) {
                     e.prevent_default();
                     e.stop_propagation();
                     keyboard.run();
@@ -208,9 +209,7 @@ impl Component for SourceEditor {
                             .font_size(t::code_size())
                             .gutter(false)
                             .on_pre_key_down(move |e: Event<KeyboardEventData>| {
-                                if crate::design::keyboard::submit_key(&e)
-                                    || crate::editing::is_save_key(&e)
-                                {
+                                if keyboard::submit_key(&e) || crate::editing::is_save_key(&e) {
                                     return false;
                                 }
                                 if crate::closing::is_quit_key(&e) {

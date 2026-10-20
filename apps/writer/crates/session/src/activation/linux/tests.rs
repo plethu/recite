@@ -1,5 +1,7 @@
 use super::*;
 use std::io::Write;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 #[path = "tests/options/tests.rs"]
 mod options;
 
@@ -101,7 +103,7 @@ fn unsafe_state_entries_are_rejected() -> Result<(), Box<dyn std::error::Error>>
     assert!(claim_at(dir.path(), None, None).is_err());
     fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700))?;
     let lock = dir.path().join("writer.lock");
-    std::os::unix::fs::symlink("/dev/null", &lock)?;
+    unix_fs::symlink("/dev/null", &lock)?;
     assert!(claim_at(dir.path(), None, None).is_err());
     Ok(())
 }

@@ -2,8 +2,10 @@
 #[cfg(target_os = "linux")]
 mod linux;
 
-#[cfg(target_os = "linux")]
 pub use linux::{ActivationHost, ActivationInbox};
+#[cfg(target_os = "linux")]
+use std::sync::atomic;
+use std::sync::mpsc;
 
 #[cfg(not(target_os = "linux"))]
 #[derive(Clone)]
@@ -24,8 +26,8 @@ pub struct IncomingRoute {
     pub route: Option<String>,
     pub document: Option<std::path::PathBuf>,
     pub editor: Option<crate::startup::EditorCommand>,
-    pub cancelled: std::sync::Arc<std::sync::atomic::AtomicBool>,
-    pub reply: std::sync::mpsc::Sender<Result<(), String>>,
+    pub cancelled: std::sync::Arc<atomic::AtomicBool>,
+    pub reply: mpsc::Sender<Result<(), String>>,
 }
 
 /// Claim the writer window, or deliver this invocation to its owner.

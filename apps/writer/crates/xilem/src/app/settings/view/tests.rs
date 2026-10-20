@@ -1,6 +1,8 @@
 use super::*;
 use crate::tests::support::NoProxy;
 use std::sync::Arc;
+use xilem::masonry::core;
+use xilem::masonry::widgets;
 use xilem::{ViewCtx, core::View, masonry::testing::TestHarness};
 
 #[test]
@@ -14,9 +16,7 @@ fn personal_controls_expose_their_native_checkbox_names() {
     let (pod, _) = view.build(&mut ctx, &mut app);
     let harness = TestHarness::create_with_size(
         app.theme.initial_properties(),
-        xilem::masonry::core::NewWidget::new(xilem::masonry::widgets::SizedBox::new(
-            pod.new_widget,
-        )),
+        core::NewWidget::new(widgets::SizedBox::new(pod.new_widget)),
         (1200, 650),
     );
     let tree = harness.access_tree();

@@ -1,5 +1,6 @@
 use crate::dialogue_locale::DialogueCatalogMalformedReason;
 use crate::fs::display_path;
+use crate::schema_inspection::error;
 use recite_core::compiled::CompiledAssetDecodeError;
 use std::io;
 use std::path::PathBuf;
@@ -126,7 +127,7 @@ pub(crate) enum CliError {
     Benchmark(recite_benchmarks::BenchmarkError),
     BenchJson(serde_json::Error),
     TraceJson(serde_json::Error),
-    SchemaInspection(crate::schema_inspection::error::SchemaInspectionError),
+    SchemaInspection(error::SchemaInspectionError),
     UserConfig {
         source: recite_config::ConfigError,
     },

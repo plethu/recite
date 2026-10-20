@@ -1,5 +1,7 @@
 use std::fmt::Display;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use std::path::Path;
 
 use recite_cli::watch::{
@@ -203,7 +205,7 @@ fn target_path_failures_keep_their_exact_typed_category() {
 #[cfg(unix)]
 #[test]
 fn symlink_alias_destinations_are_rejected_before_staging() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = require(TempDir::new(), "tempdir");
     let request = request(
@@ -228,7 +230,7 @@ fn symlink_alias_destinations_are_rejected_before_staging() {
 #[cfg(unix)]
 #[test]
 fn output_parent_symlink_swap_is_refused_at_commit() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = require(TempDir::new(), "tempdir");
     let outside = require(TempDir::new(), "outside");

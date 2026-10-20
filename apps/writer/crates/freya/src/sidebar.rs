@@ -1,5 +1,6 @@
 //! A stable navigation rail with an animated scene outline and fixed settings footer.
 use crate::commands::CommandExt;
+use crate::design::material;
 use crate::design::tokens as t;
 use crate::{controls, editing::Writer};
 use freya::prelude::*;
@@ -85,7 +86,7 @@ fn render(
         .content(Content::Flex)
         .overflow(Overflow::Clip)
         .background(t::colors().canvas)
-        .child(crate::design::material::grain(t::colors().ink))
+        .child(material::grain(t::colors().ink))
         .child(
             rect()
                 .height(Size::px(t::control_height() + 16.))

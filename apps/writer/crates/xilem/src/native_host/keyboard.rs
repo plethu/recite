@@ -2,6 +2,7 @@ mod focus;
 use crate::app::keyboard::{Context, Invocation, KeyboardContext, TAG};
 use recite_config::WriterCommand;
 use recite_writer_session::commands::keybindings::{self, Input, Key, Modifiers, PhysicalKey};
+use xilem::winit::keyboard;
 use xilem::{
     masonry::{app::RenderRoot, core::WidgetId, widgets::TextInput},
     winit::{
@@ -51,30 +52,24 @@ impl Keyboard {
                 else {
                     return false;
                 };
-                let enter =
-                    event.logical_key == xilem::winit::keyboard::Key::Named(NamedKey::Enter);
+                let enter = event.logical_key == keyboard::Key::Named(NamedKey::Enter);
                 let kind = self.focus.kind(root);
-                let picker =
-                    if context.picker_open && self.normalized_modifiers() == Modifiers::default() {
-                        match event.logical_key {
-                            xilem::winit::keyboard::Key::Named(NamedKey::Escape) => {
-                                Some(WriterCommand::Close)
-                            }
-                            xilem::winit::keyboard::Key::Named(NamedKey::ArrowDown)
-                                if kind == focus::Kind::Query =>
-                            {
-                                Some(WriterCommand::NextMatch)
-                            }
-                            xilem::winit::keyboard::Key::Named(NamedKey::ArrowUp)
-                                if kind == focus::Kind::Query =>
-                            {
-                                Some(WriterCommand::PreviousMatch)
-                            }
-                            _ => None,
+                let picker = if context.picker_open
+                    && self.normalized_modifiers() == Modifiers::default()
+                {
+                    match event.logical_key {
+                        keyboard::Key::Named(NamedKey::Escape) => Some(WriterCommand::Close),
+                        keyboard::Key::Named(NamedKey::ArrowDown) if kind == focus::Kind::Query => {
+                            Some(WriterCommand::NextMatch)
                         }
-                    } else {
-                        None
-                    };
+                        keyboard::Key::Named(NamedKey::ArrowUp) if kind == focus::Kind::Query => {
+                            Some(WriterCommand::PreviousMatch)
+                        }
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
                 let manuscript = enter && kind == focus::Kind::Manuscript;
                 return self.dispatch(
                     &context,
@@ -162,10 +157,10 @@ impl Keyboard {
     }
 }
 
-fn key(key: &xilem::winit::keyboard::Key) -> Key<'_> {
+fn key(key: &keyboard::Key) -> Key<'_> {
     match key {
-        xilem::winit::keyboard::Key::Character(value) => Key::Character(value),
-        xilem::winit::keyboard::Key::Named(named) => match named {
+        keyboard::Key::Character(value) => Key::Character(value),
+        keyboard::Key::Named(named) => match named {
             NamedKey::F1 => Key::Function(1),
             NamedKey::F2 => Key::Function(2),
             NamedKey::F3 => Key::Function(3),
@@ -183,7 +178,7 @@ fn key(key: &xilem::winit::keyboard::Key) -> Key<'_> {
         _ => Key::Other,
     }
 }
-fn physical(key: xilem::winit::keyboard::PhysicalKey) -> PhysicalKey {
+fn physical(key: keyboard::PhysicalKey) -> PhysicalKey {
     use xilem::winit::keyboard::{KeyCode, PhysicalKey as NativePhysical};
     match key {
         NativePhysical::Code(KeyCode::Digit0) => PhysicalKey::Digit(0),

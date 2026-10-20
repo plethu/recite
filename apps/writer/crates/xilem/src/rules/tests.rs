@@ -4,6 +4,7 @@ use crate::tests::support;
 use recite_writer_model::EditOperation;
 use recite_writer_session::location::{Location, Screen};
 use std::sync::Arc;
+use tokio::sync::mpsc as async_mpsc;
 #[path = "bounds/tests.rs"]
 mod bounds;
 #[path = "lifecycle/tests.rs"]
@@ -14,7 +15,7 @@ const SOURCE: &str = "# Keep this comment.\n:: start default\n? reply@2222222222
 struct Fixture {
     directory: tempfile::TempDir,
     writer: Writer,
-    jobs: tokio::sync::mpsc::UnboundedReceiver<navigation::worker::Job>,
+    jobs: async_mpsc::UnboundedReceiver<navigation::worker::Job>,
     _runtime: tokio::runtime::Runtime,
 }
 fn fixture() -> Result<Fixture, Box<dyn std::error::Error>> {
@@ -24,7 +25,7 @@ fn open_fixture(source: &str) -> Result<Fixture, Box<dyn std::error::Error>> {
     let directory = support::project(source)?;
     let mut writer = support::open(&directory)?;
     let runtime = tokio::runtime::Runtime::new()?;
-    let (sender, mut jobs) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut jobs) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(sender);
     writer.navigation.runtime = Some(runtime.handle().clone());
     writer.navigate(Target::Location(Location {
@@ -119,7 +120,7 @@ fn invalid_rule_save_keeps_recovery_then_corrected_save_refreshes_controls() {
     let mut fixture = fixture().unwrap();
     let writer = &mut fixture.writer;
     let target = first_argument(writer).unwrap();
-    let (sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
+    let (sender, mut saves) = async_mpsc::unbounded_channel();
     writer.work.sender = Some(sender);
     writer.edit_rule_argument(target.clone(), "-".into());
     writer.save();
@@ -177,7 +178,7 @@ fn deferred_save_waits_for_apply_retirement_and_refreshes_even_after_a_disk_conf
     for conflict in [false, true] {
         let mut fixture = fixture().unwrap();
         let writer = &mut fixture.writer;
-        let (sender, mut saves) = tokio::sync::mpsc::unbounded_channel();
+        let (sender, mut saves) = async_mpsc::unbounded_channel();
         writer.work.sender = Some(sender);
         let target = first_argument(writer).unwrap();
         writer.edit_rule_argument(target.clone(), "5".into());

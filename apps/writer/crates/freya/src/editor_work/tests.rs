@@ -1,5 +1,8 @@
 use super::*;
 use crate::editing::{Pane, Writer};
+use crate::navigation::location;
+use crate::navigation::request;
+use crate::prose::focus;
 use crate::tests::support;
 use freya_testing::prelude::*;
 use recite_writer_model::View;
@@ -23,10 +26,8 @@ fn rejected_navigation_retires_its_last_captured_document_owner() {
             writer.work.requests.set(Some(requests));
             navigate(
                 writer,
-                crate::navigation::request::Request {
-                    target: crate::navigation::request::Target::Location(
-                        crate::navigation::snapshot(writer),
-                    ),
+                request::Request {
+                    target: request::Target::Location(crate::navigation::snapshot(writer)),
                     cancelled: None,
                 },
                 EventHandler::new(|result: Result<(), String>| assert!(result.is_err())),
@@ -67,15 +68,13 @@ fn a_newer_dialog_or_typing_before_navigation_starts_cannot_apply_the_old_draft(
                 let completed = outcome.clone();
                 navigate(
                     writer,
-                    crate::navigation::request::Request {
-                        target: crate::navigation::request::Target::Location(
-                            crate::navigation::location::Location {
-                                source: true,
-                                passage: None,
-                                beat: None,
-                                ..crate::navigation::snapshot(writer)
-                            },
-                        ),
+                    request::Request {
+                        target: request::Target::Location(location::Location {
+                            source: true,
+                            passage: None,
+                            beat: None,
+                            ..crate::navigation::snapshot(writer)
+                        }),
                         cancelled: None,
                     },
                     EventHandler::new(move |result| {
@@ -194,14 +193,14 @@ fn latest_focused_field_wins_and_returning_to_current_field_keeps_newer_typing()
                 writer.work.requests.set(Some(requests));
                 let mut platform = Platform::get().current_window();
                 platform.focused_accessibility_id.set(b);
-                crate::prose::focus::select(writer, support::B.into(), b);
+                focus::select(writer, support::B.into(), b);
                 assert!(writer.work.busy());
                 platform.focused_accessibility_id.set(c);
-                crate::prose::focus::select(writer, support::C.into(), c);
+                focus::select(writer, support::C.into(), c);
                 assert_eq!(waiting.len(), 1);
                 if return_to_current {
                     platform.focused_accessibility_id.set(a);
-                    crate::prose::focus::select(writer, support::A.into(), a);
+                    focus::select(writer, support::A.into(), a);
                     writer.buffers.prose.set("Newer typing.".into());
                 }
                 let pending = waiting.try_recv().unwrap();

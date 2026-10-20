@@ -1,5 +1,7 @@
 //! Publish only after destination and outgoing recovery proofs remain current.
 use super::{Origin, Request, Target};
+use crate::localisation::catalogue;
+use crate::navigation::apply;
 use crate::navigation::worker::{self, PreparedDestination};
 use crate::{
     editing::Writer,
@@ -70,7 +72,7 @@ pub(super) async fn publish(
         let catalogue = prepared
             .catalogue
             .take()
-            .map(|path| crate::localisation::catalogue::Catalogue::open_recoverable(&path))
+            .map(|path| catalogue::Catalogue::open_recoverable(&path))
             .transpose()?;
         let mut localisation = writer.localisation.write();
         localisation.prepare_install()?;
@@ -146,7 +148,7 @@ pub(super) async fn publish(
         project.set_saving(false);
     }
     let result = match &request.target {
-        Target::Location(location) => crate::navigation::apply::present(writer, location),
+        Target::Location(location) => apply::present(writer, location),
         Target::Document { view, .. } => {
             writer.resume_prepared_scene(*view);
             Ok(())

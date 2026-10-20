@@ -1,5 +1,7 @@
 //! Source submission shares the dialog and routed-editor shortcut policy.
 use crate::commands::CommandExt;
+use crate::design::keyboard;
+use crate::design::tokens;
 use crate::{
     design::{Button, SubmitAction},
     editing::Writer,
@@ -20,7 +22,7 @@ impl PartialEq for SourceActions {
 impl Component for SourceActions {
     fn render(&self) -> impl IntoElement {
         let writer = self.writer;
-        let compact = *writer.layout.available.read() < 1100. * crate::design::tokens::ui_scale();
+        let compact = *writer.layout.available.read() < 1100. * tokens::ui_scale();
         let changed = writer
             .buffers
             .model
@@ -43,13 +45,13 @@ impl Component for SourceActions {
         let shortcut = primary.clone();
         crate::design::actions()
             .main_align(Alignment::Start)
-            .padding(crate::design::tokens::SPACE_SM)
-            .background(crate::design::tokens::colors().inset)
+            .padding(tokens::SPACE_SM)
+            .background(tokens::colors().inset)
             .on_global_key_down(move |event: Event<KeyboardEventData>| {
                 if !writer.localisation.peek().modal_open()
                     && !*writer.settings_open.peek()
                     && writer.command_search.mode.peek().is_none()
-                    && crate::design::keyboard::submit_key(&event)
+                    && keyboard::submit_key(&event)
                 {
                     event.prevent_default();
                     event.stop_propagation();

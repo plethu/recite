@@ -1,6 +1,8 @@
 //! Install a finished load only while its captured source and intent remain current.
 use super::{Loading, can_switch_project};
+use crate::navigation::activation;
 use freya::prelude::WritableUtils;
+use std::sync::atomic;
 
 pub(super) fn poll(loading: &Loading) {
     let loaded = loading.job.peek().as_ref().and_then(|job| {
@@ -35,7 +37,7 @@ pub(super) fn poll(loading: &Loading) {
     #[cfg(target_os = "linux")]
     let activation_cancelled = activation
         .as_ref()
-        .is_some_and(|request| request.cancelled.load(std::sync::atomic::Ordering::Acquire));
+        .is_some_and(|request| request.cancelled.load(atomic::Ordering::Acquire));
     #[cfg(not(target_os = "linux"))]
     let activation_cancelled = false;
     if cancelled || activation_cancelled {
@@ -117,7 +119,7 @@ pub(super) fn poll(loading: &Loading) {
     #[cfg(target_os = "linux")]
     if let Some(request) = activation {
         let reply = request.reply.clone();
-        if let Err(error) = crate::navigation::activation::receive(loading.writer, request, true) {
+        if let Err(error) = activation::receive(loading.writer, request, true) {
             let error = format!(
                 "Project {opened_root} opened, but the target location could not open: {error}"
             );

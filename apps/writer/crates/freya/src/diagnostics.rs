@@ -1,5 +1,6 @@
 //! Diagnostics keep their source coordinates and navigate through the draft guard.
 mod panel;
+use crate::navigation::location;
 pub(crate) use panel::Panel;
 
 use crate::{
@@ -70,8 +71,8 @@ fn row(
 
 fn open(writer: Writer, editor_id: AccessibilityId, span: &recite_core::SourceSpan) {
     let position = span.start;
-    let location = crate::navigation::location::Location {
-        screen: crate::navigation::location::Screen::Write,
+    let location = location::Location {
+        screen: location::Screen::Write,
         beat: None,
         passage: None,
         document: span.file.clone(),

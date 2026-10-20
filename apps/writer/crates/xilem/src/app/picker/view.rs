@@ -1,5 +1,6 @@
 use super::{App, Entry, Item, Mode, PAGE, Picker};
 use crate::presentation::{label, paragraph, text_button};
+use xilem::masonry::widgets;
 use xilem::{
     WidgetView,
     masonry::{
@@ -31,7 +32,7 @@ impl Property for ActiveResult {
         &OTHER
     }
 }
-impl UsesProperty<ActiveResult> for xilem::masonry::widgets::Button {}
+impl UsesProperty<ActiveResult> for widgets::Button {}
 
 pub(in crate::app) fn picker(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);

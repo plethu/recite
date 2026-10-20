@@ -1,5 +1,6 @@
 //! Shared dispatch and discovery read the same persisted bindings.
 use super::Command;
+use crate::design::tokens;
 use crate::presentation::Typography;
 use freya::prelude::*;
 
@@ -94,8 +95,8 @@ pub(crate) fn hint(binding: &str, area: Option<Area>) -> Option<Element> {
     if !preferences.config.writer.shortcut_hints && !relevant {
         return None;
     }
-    let p = crate::design::tokens::colors();
-    let size = crate::design::tokens::small();
+    let p = tokens::colors();
+    let size = tokens::small();
     let width = binding.len() as f32 * size * 0.65 + 10.;
     let window = *Platform::get().current_window().root_size.read();
     let left = area.min_x().min((window.width - width - 4.).max(0.));
@@ -119,7 +120,7 @@ pub(crate) fn hint(binding: &str, area: Option<Area>) -> Option<Element> {
                     .text(binding.to_owned())
                     .font_family("monospace")
                     .max_lines(1)
-                    .font_size(crate::design::tokens::small()),
+                    .font_size(tokens::small()),
             )
             .into_element(),
     )

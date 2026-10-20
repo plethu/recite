@@ -1,6 +1,7 @@
 //! Regressions for the retained Masonry text-history patch.
 use masonry::core::keyboard::{Code, Key, KeyState};
 use masonry::core::{Ime, KeyboardEvent, Modifiers, TextEvent};
+use masonry::parley::fontique;
 use masonry::testing::TestHarness;
 use masonry::widgets::TextArea;
 
@@ -19,13 +20,10 @@ fn area(text: &str) -> TestHarness<TextArea<true>> {
             None,
         );
         fonts.collection.set_generic_families(
-            masonry::parley::fontique::GenericFamily::SansSerif,
+            fontique::GenericFamily::SansSerif,
             registered.into_iter().map(|(id, _)| id).take(1),
         );
-        TextArea::insert_style(
-            &mut widget,
-            masonry::parley::fontique::GenericFamily::SansSerif,
-        );
+        TextArea::insert_style(&mut widget, fontique::GenericFamily::SansSerif);
     });
     harness.focus_on(Some(harness.root_id()));
     harness.edit_root_widget(|mut widget| {

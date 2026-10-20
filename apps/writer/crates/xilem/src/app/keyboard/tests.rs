@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::NoProxy;
+use xilem::masonry::theme;
 use xilem::{core::DynMessage, masonry::testing::TestHarness};
 
 #[test]
@@ -17,7 +18,7 @@ fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_af
         let view = host(&app, xilem::view::label("Keyboard host"));
         let (pod, mut state) = view.build(&mut ctx, &mut app);
         let mut harness = TestHarness::create_with_size(
-            xilem::masonry::theme::default_property_set(),
+            theme::default_property_set(),
             pod.new_widget,
             (300, 100),
         );

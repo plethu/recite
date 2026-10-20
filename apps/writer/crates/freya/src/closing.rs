@@ -1,5 +1,6 @@
 //! One close policy for native window requests and application keyboard shortcuts.
 mod blockers;
+use crate::design::keyboard;
 use crate::design::tokens as t;
 use crate::{buffers::Buffers, project::ProjectFiles};
 use freya::prelude::*;
@@ -56,7 +57,7 @@ pub(super) fn text_input_key(event: Event<KeyboardEventData>) -> bool {
     ) {
         return false;
     }
-    if crate::design::keyboard::submit_key(&event)
+    if keyboard::submit_key(&event)
         || crate::editing::is_workspace_key(&event)
         || (event.modifiers == Modifiers::ALT
             && matches!(event.code, Code::ArrowLeft | Code::ArrowRight))

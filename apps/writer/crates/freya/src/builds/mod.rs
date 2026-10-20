@@ -1,4 +1,5 @@
 //! Manifest-selected builds run independently of screen navigation.
+use crate::design::keyboard;
 use crate::{
     design::{Button, SubmitAction, tokens as t},
     editing::{Pane, Writer},
@@ -116,7 +117,7 @@ impl Component for BuildScreen {
             .spacing(t::SPACE_LG)
             .padding(t::SPACE_XL)
             .on_key_down(move |e: Event<KeyboardEventData>| {
-                if crate::design::keyboard::submit_key(&e) {
+                if keyboard::submit_key(&e) {
                     e.prevent_default();
                     e.stop_propagation();
                     keyboard.run();

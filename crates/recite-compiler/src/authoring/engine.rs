@@ -1,3 +1,4 @@
+use crate::validation::incremental;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
@@ -103,7 +104,7 @@ fn completeness(is_complete: bool) -> crate::validation::ValidationCompleteness 
 pub(super) fn build_documents(
     effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
     analyses: &BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
-    semantic: &crate::validation::incremental::ProjectDiagnostics,
+    semantic: &incremental::ProjectDiagnostics,
     old_snapshot: &AuthoringSnapshot,
     project_changed: &BTreeSet<recite_core::DocumentKey>,
     control: &dyn WorkControl,

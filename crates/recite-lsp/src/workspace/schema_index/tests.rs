@@ -1,4 +1,6 @@
 use super::SchemaIndex;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use std::{fs, sync::Arc};
 
 const VALID: &str = r#"{"schema_version":1,"speakers":{"narrator":{"display_name":"Narrator"}}}"#;
@@ -48,7 +50,7 @@ fn closing_overlay_restores_fresh_disk_state_and_configured_uri() {
 #[cfg(unix)]
 #[test]
 fn identical_invalid_bytes_at_retargeted_alias_use_new_diagnostic_path() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
     let dir = tempfile::tempdir().unwrap();
     let first = dir.path().join("first.json");
     let second = dir.path().join("second.json");

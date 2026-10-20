@@ -1,4 +1,5 @@
 //! One project load at a time; cancelled or superseded work never replaces edits.
+use crate::navigation::activation;
 use crate::{
     design::{Button, tokens as t},
     editing::Writer,
@@ -6,6 +7,7 @@ use crate::{
 };
 use freya::prelude::*;
 use std::path::PathBuf;
+use std::sync::atomic;
 mod completion;
 mod worker;
 
@@ -29,7 +31,7 @@ fn receive_activation(
 ) {
     let reply = request.reply.clone();
     let result = (|| {
-        if request.cancelled.load(std::sync::atomic::Ordering::Acquire) {
+        if request.cancelled.load(atomic::Ordering::Acquire) {
             return Err("Writer activation was cancelled".to_string());
         }
         request
@@ -56,7 +58,7 @@ fn receive_activation(
             }
             return start_forwarded(job, target.clone(), writer, request);
         }
-        crate::navigation::activation::receive(writer, request, ready)
+        activation::receive(writer, request, ready)
     })();
     match result {
         Ok(()) => {}

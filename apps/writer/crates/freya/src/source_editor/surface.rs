@@ -1,5 +1,6 @@
 //! Independent line-number gutter avoids rc.7's shared horizontal scroll bounds.
 use super::EditorViewport;
+use crate::design::tokens;
 use crate::design::tokens::PrintTypography;
 use freya::{
     code_editor::{CodeEditorData, EditorSyntaxTheme},
@@ -74,10 +75,10 @@ struct Gutter {
 }
 impl Component for Gutter {
     fn render(&self) -> impl IntoElement {
-        let colors = crate::design::tokens::colors();
+        let colors = tokens::colors();
         let mut height = use_state(|| 0.);
         let (_, y): (i32, i32) = self.scroll.into();
-        let line = (self.size * crate::design::tokens::CODE_LINE_HEIGHT).floor();
+        let line = (self.size * tokens::CODE_LINE_HEIGHT).floor();
         let count = self.editor.read().rope.len_lines();
         let first = (-(y as f32) / line).floor().max(0.) as usize;
         let last = (first + (*height.read() / line).ceil() as usize + 1).min(count);

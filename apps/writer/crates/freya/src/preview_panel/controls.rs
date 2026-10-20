@@ -1,4 +1,5 @@
 //! Inputs are staged locally; Restart captures them together with catalogue bytes.
+use crate::design::keyboard;
 use crate::{
     design::{Button, SubmitAction, tokens as t},
     editing::Writer,
@@ -44,7 +45,7 @@ impl Component for Controls {
             .on_global_key_down(move |event: Event<KeyboardEventData>| {
                 if !writer.localisation.peek().modal_open()
                     && !*writer.settings_open.peek()
-                    && crate::design::keyboard::submit_key(&event)
+                    && keyboard::submit_key(&event)
                 {
                     event.prevent_default();
                     event.stop_propagation();

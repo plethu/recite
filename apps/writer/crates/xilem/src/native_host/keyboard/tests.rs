@@ -1,6 +1,10 @@
 use super::*;
 use std::sync::{Arc, mpsc};
 use xilem::core::{MessageProxy, ProxyError, RawProxy, SendMessage, ViewId};
+use xilem::masonry::core;
+use xilem::masonry::testing;
+use xilem::masonry::theme;
+use xilem::masonry::widgets;
 
 #[derive(Debug)]
 struct Recorder(mpsc::Sender<SendMessage>);
@@ -89,11 +93,9 @@ fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_act
 fn apply_belongs_to_the_active_manuscript_and_composition_bypasses_commands() {
     let (mut context, receiver) = context();
     let mut keyboard = Keyboard::default();
-    let harness = xilem::masonry::testing::TestHarness::create(
-        xilem::masonry::theme::default_property_set(),
-        xilem::masonry::core::NewWidget::new(xilem::masonry::widgets::Label::new(
-            "Composition owner",
-        )),
+    let harness = testing::TestHarness::create(
+        theme::default_property_set(),
+        core::NewWidget::new(widgets::Label::new("Composition owner")),
     );
     let focus = Some(harness.root_id());
     keyboard.composition = Composition::Preedit(focus);

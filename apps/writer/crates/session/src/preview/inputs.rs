@@ -1,4 +1,5 @@
 //! Typed interpolation values and captured catalogue policy for a runtime trial.
+use crate::localisation::catalogue;
 use crate::messages::{MsgId, text};
 use recite_compiler::authoring::{CatalogInput, CatalogResolutionPolicy};
 use recite_core::{LocaleId, ScalarValue, ast::InterpolationType};
@@ -10,7 +11,7 @@ pub struct Inputs {
     pub variant: String,
     pub include_drafts: bool,
     pub values: Option<BTreeMap<String, String>>,
-    pub catalogue: Option<crate::localisation::catalogue::PreviewInput>,
+    pub catalogue: Option<catalogue::PreviewInput>,
 }
 impl Inputs {
     pub fn prepare(

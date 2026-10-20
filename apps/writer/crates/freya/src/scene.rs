@@ -1,6 +1,7 @@
 //! A beat's script and explicit links to its neighbouring beats.
 mod slug;
 use crate::design::Button;
+use crate::design::material;
 use crate::design::tokens as t;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
@@ -188,9 +189,9 @@ fn end_mark(block: &recite_writer_model::ScriptBlock) -> Element {
         .cross_align(Alignment::Center)
         .spacing(t::SPACE_MD)
         .padding((t::SPACE_LG, 0.))
-        .child(crate::design::material::dotted_rule(p.rule, "before"))
+        .child(material::dotted_rule(p.rule, "before"))
         .child(t::meta(text).font_size(11. * t::ui_scale()))
-        .child(crate::design::material::dotted_rule(p.rule, "after"))
+        .child(material::dotted_rule(p.rule, "after"))
         .into_element()
 }
 

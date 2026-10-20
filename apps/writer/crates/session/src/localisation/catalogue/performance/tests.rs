@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::localisation::queue::filter;
 use criterion::measurement::{Measurement, WallTime};
 
 #[test]
@@ -44,7 +45,7 @@ fn catalogue_scale_timing() -> Result<(), Box<dyn std::error::Error>> {
     let index = catalogue.queue_index(None);
     let index_ms = WallTime.end(index_started).as_secs_f64() * 1000.;
     let rebuild_started = WallTime.start();
-    let replacement = crate::localisation::queue::filter::QueueIndex::new(&catalogue, &[]);
+    let replacement = filter::QueueIndex::new(&catalogue, &[]);
     let index_rebuild_ms = WallTime.end(rebuild_started).as_secs_f64() * 1000.;
     std::hint::black_box(&replacement);
     drop(replacement);
@@ -108,7 +109,7 @@ fn catalogue_authored_workflow_timing() -> Result<(), Box<dyn std::error::Error>
     let mut catalogue = Catalogue::open_recoverable(&path)?;
     let open_ms = WallTime.end(start).as_secs_f64() * 1000.;
     let start = WallTime.start();
-    let index = crate::localisation::queue::filter::QueueIndex::new(&catalogue, &passages);
+    let index = filter::QueueIndex::new(&catalogue, &passages);
     let index_ms = WallTime.end(start).as_secs_f64() * 1000.;
     let drafts = catalogue
         .document

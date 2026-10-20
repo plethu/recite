@@ -3,6 +3,8 @@ use recite_core::schema::{
     MetadataDomainDefinition, MissingMetadataContextPolicy, ProducerOrigin, ProjectSchema,
     RegistryDefinition,
 };
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use tempfile::TempDir;
 
 use recite_compiler::authoring::SchemaSummary;
@@ -123,7 +125,7 @@ pub(super) fn schema_summary_preserves_source_ownership_and_generated_read_only_
 
 #[cfg(unix)]
 pub(super) fn schema_kind_survives_symlink_reload() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let target = temp.path().join("schema.data");

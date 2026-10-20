@@ -68,6 +68,12 @@ Recite's own source remains MIT OR Apache-2.0. Distributions must retain depende
 MPL source availability obligations described in the
 [Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 
+Owned Rust workspaces enable Clippy's `absolute_paths` lint. Import a useful owner instead of
+repeating long crate paths in signatures and expressions; keep names such as `navigation::Target`
+and `Target::Workspace` qualified. `clippy.toml` permits short paths up to three segments. Rustfmt
+orders imports; Clippy checks their use. Macro and attribute paths follow Clippy's upstream
+coverage.
+
 The complete check needs network access for dependency installation and the advisory database. Its
 isolated fixture builds also need temporary disk space. If `/tmp` is a small RAM-backed filesystem,
 use `TMPDIR=/var/tmp just check`; the temporary directory must be outside the checkout so isolation

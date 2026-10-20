@@ -1,12 +1,13 @@
 use super::*;
 use crate::navigation::worker::{Destination, Prepare, PreparedDestination};
+use crate::tests::support;
 use freya::prelude::*;
 use freya_testing::prelude::*;
 
 #[test]
 fn rejected_navigation_retires_a_completed_destination_with_its_origins() {
     fn app() -> impl IntoElement {
-        let mut writer = crate::tests::support::writer();
+        let mut writer = support::writer();
         use_hook(move || {
             let mut navigation = Request {
                 target: Target::Location(crate::navigation::snapshot(writer)),
@@ -41,7 +42,7 @@ fn prepare_example(worker: &Worker) -> Box<worker::Prepared> {
     let preparation = Prepare {
         destination: Destination::Example(Box::new(
             recite_writer_session::examples::ExampleSessions::default()
-                .request(&crate::tests::support::model(), "last_tram_linear.recite")
+                .request(&support::model(), "last_tram_linear.recite")
                 .unwrap(),
         )),
         location: None,

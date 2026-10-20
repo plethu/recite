@@ -1,5 +1,7 @@
 use super::*;
 use crate::tests::support::{open, project};
+use std::sync::atomic;
+use tokio::sync::mpsc as async_mpsc;
 
 #[test]
 fn changed_or_cancelled_cold_load_preserves_the_live_writer_and_retires_the_unused_owner() {
@@ -7,7 +9,7 @@ fn changed_or_cancelled_cold_load_preserves_the_live_writer_and_retires_the_unus
         let first = project(recite_writer_model::FIXTURE).unwrap();
         let second = project(recite_writer_model::FIXTURE).unwrap();
         let mut app = App::with_writer(open(&first).unwrap());
-        let (sender, mut jobs) = tokio::sync::mpsc::unbounded_channel();
+        let (sender, mut jobs) = async_mpsc::unbounded_channel();
         app.sender = Some(sender);
         app.start_open(
             LaunchOptions {
@@ -77,7 +79,7 @@ fn idle_activation_polling_posts_no_ui_work_but_delivers_actual_launches() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let (results, waiting) = mpsc::sync_channel(1);
     let proxy = MessageProxy::new(Arc::new(Results(results)), Arc::from([]));
-    let (jobs, requests) = tokio::sync::mpsc::unbounded_channel();
+    let (jobs, requests) = async_mpsc::unbounded_channel();
     let (routes, incoming) = mpsc::channel();
     jobs.send(Job::Listen(ActivationInbox::new(incoming)))
         .unwrap();
@@ -96,7 +98,7 @@ fn idle_activation_polling_posts_no_ui_work_but_delivers_actual_launches() {
             route: Some("recite://writer/write?scene=owned.recite".into()),
             document: Some("owned.recite".into()),
             editor: None,
-            cancelled: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            cancelled: Arc::new(atomic::AtomicBool::new(false)),
             reply,
         })
         .unwrap();

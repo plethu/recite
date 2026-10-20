@@ -1,3 +1,4 @@
+use crate::features::schema_hover;
 #[test]
 fn initialize_advertises_completion_and_hover() {
     super::availability::initialize_advertises_completion_and_hover();
@@ -125,7 +126,7 @@ fn schema_hover_preserves_freshness_without_producer_identity() {
     let catalog =
         recite_ui::UiCatalog::load(&recite_ui::UiLocale::default()).expect("default UI catalog");
     let summary = recite_compiler::authoring::SchemaSummary::from_schema(&schema);
-    let detail = crate::features::schema_hover::hover_detail(None, &summary, &scoped, &catalog);
+    let detail = schema_hover::hover_detail(None, &summary, &scoped, &catalog);
     assert!(detail.contains("Content fingerprint blake3:"));
     assert!(detail.contains("items-v1"));
     assert!(!detail.contains("Schema producer"));
@@ -156,7 +157,7 @@ fn schema_hover_uses_choice_selector_site_with_injected_catalog() {
         value: "items-v1".to_owned(),
     }];
     let summary = recite_compiler::authoring::SchemaSummary::from_schema(&schema);
-    let detail = crate::features::schema_hover::hover_detail(None, &summary, &scoped, &catalog);
+    let detail = schema_hover::hover_detail(None, &summary, &scoped, &catalog);
     assert!(detail.contains("scope localisé:"));
     assert!(!detail.contains("(scoped:"));
 }

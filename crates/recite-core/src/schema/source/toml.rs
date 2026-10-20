@@ -8,6 +8,7 @@ use super::{
     spans,
 };
 use crate::DiagnosticArgumentValue;
+use crate::schema::manifest;
 use crate::schema::schema_diagnostic;
 
 /// Load the standalone producer's versioned TOML source.
@@ -33,7 +34,7 @@ pub fn load_schema_source_str(file: impl Into<String>, source: &str) -> SchemaSo
         }
     };
 
-    let toml_spans = crate::schema::manifest::TomlSpanIndex::from_document(&parsed);
+    let toml_spans = manifest::TomlSpanIndex::from_document(&parsed);
     let document = parsed.into_mut();
     let (schema, diagnostics) = lower_source(&file, source, &document, &toml_spans);
     let Some(schema) = schema else {

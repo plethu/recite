@@ -20,6 +20,7 @@ recite-writer-session = { path = "crates/session", version = "0.0.0" }
 thiserror = "2"
 
 [workspace.lints.clippy]
+absolute_paths = "warn"
 expect_used = "deny"
 todo = "deny"
 unimplemented = "deny"

@@ -1,3 +1,5 @@
+# Keep call sites readable while retaining short module-qualified names.
+absolute-paths-max-segments = 3
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 # Backstops for control flow. Function length remains an audit signal:

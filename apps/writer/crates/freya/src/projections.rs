@@ -1,5 +1,6 @@
 //! Demand local reading projections without parsing accepted source on the UI.
 mod worker;
+use crate::design::tokens;
 use crate::editing::{Pane, Writer};
 use freya::prelude::*;
 use recite_writer_model::{ProjectionRequest, View};
@@ -121,7 +122,7 @@ pub(crate) fn placeholder(writer: Writer) -> Element {
     );
     rect()
         .width(Size::fill())
-        .padding(crate::design::tokens::SPACE_MD)
+        .padding(tokens::SPACE_MD)
         .a11y_role(AccessibilityRole::Status)
         .a11y_alt(caption.clone())
         .child(label().text(caption))

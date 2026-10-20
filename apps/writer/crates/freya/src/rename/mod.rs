@@ -1,3 +1,4 @@
+use crate::design::keyboard;
 use crate::{
     design::{
         Button, ComparisonRow, ComparisonView, PickerOption, SearchPicker, SubmitAction,
@@ -215,7 +216,7 @@ impl Component for RenameScreen {
         body = body
             .child(primary.button())
             .on_key_down(move |e: Event<KeyboardEventData>| {
-                if crate::design::keyboard::submit_key(&e) {
+                if keyboard::submit_key(&e) {
                     e.prevent_default();
                     e.stop_propagation();
                     shortcut.run();

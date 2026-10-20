@@ -1,4 +1,6 @@
-use std::os::unix::fs::symlink;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
+use unix_fs::symlink;
 
 use lsp_types::{DocumentChanges, Position, Uri};
 use recite_compiler::authoring::CancellationToken;
