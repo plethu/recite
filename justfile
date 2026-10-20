@@ -157,6 +157,7 @@ _check-quality:
     just quality setup
     mise -E quality exec -- python scripts/run-checks.py quality
     python3 tests/maintainability/config-discovery.py
+    python3 tests/maintainability/tooling-checks.py
     tests/maintainability/check.sh
     tests/maintainability/format-replay.sh
     tests/ast-grep/check.sh

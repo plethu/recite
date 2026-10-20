@@ -1,9 +1,5 @@
 import { EventEmitter } from "node:events";
 
-export function uri(value) {
-  return { toString: () => `file:///${value}` };
-}
-
 export function action(document, title) {
   return {
     title,
@@ -225,13 +221,5 @@ export function hostApi({ isTrusted, onDidGrantWorkspaceTrust }) {
       registeredProviders.push({ name, selector, provider, triggerCharacters });
       return { dispose() {} };
     };
-  }
-}
-
-export async function waitFor(predicate, timeoutMs = 5_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (!predicate()) {
-    if (Date.now() >= deadline) throw new Error("timed out waiting for controller evidence");
-    await new Promise((resolve) => setTimeout(resolve, 10));
   }
 }

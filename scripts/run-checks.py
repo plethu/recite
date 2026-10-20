@@ -28,7 +28,7 @@ TOOLS = {
     "rust": {"rust", "just"},
     "quality": {"rust", "node", "bun", "dotnet", "python", "just", "aqua:BurntSushi/ripgrep"},
     "spelling": {"typos"},
-    "workflows": {"aqua:rhysd/actionlint"},
+    "workflows": {"aqua:rhysd/actionlint", "aqua:zizmorcore/zizmor"},
     "contracts": {"python", "uv", "just", "typos", "aqua:rhysd/actionlint", "aqua:jqlang/jq"},
 }
 

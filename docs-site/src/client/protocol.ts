@@ -4,7 +4,7 @@ export interface Line {
   text: string;
   speaker: string | null;
 }
-export interface Choice {
+interface Choice {
   id: string;
   text: string;
   available: boolean;
@@ -16,7 +16,7 @@ export interface Effect {
   mode: "immediate" | "blocking" | "deferred";
   args: { type: string; value: string | number | boolean }[];
 }
-export interface Diagnostic {
+interface Diagnostic {
   code: string;
   compatibility_message: string | null;
   span: { start: { line: number; column: number } };

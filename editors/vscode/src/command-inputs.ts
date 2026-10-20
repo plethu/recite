@@ -2,10 +2,6 @@ import { is, commandPathSchema } from "./schemas/index.js";
 import type { UserInterface, SourceSnapshot } from "./types.ts";
 import * as path from "node:path";
 
-export function currentSavedSource(userInterface: UserInterface) {
-  return savedSourceSnapshot(userInterface).path;
-}
-
 export function savedSourceSnapshot(userInterface: UserInterface) {
   const document = userInterface.activeDocument();
   if (!document || document.languageId !== "recite") {
@@ -81,7 +77,7 @@ export async function requiredFixturePath(provided: unknown, userInterface: User
   return selected?.[0] ? commandPath(selected[0], userInterface) : undefined;
 }
 
-export function commandPath(value: unknown, userInterface: UserInterface) {
+function commandPath(value: unknown, userInterface: UserInterface) {
   const candidate =
     typeof value === "string" ? value : is(commandPathSchema, value) ? value.fsPath : undefined;
   if (typeof candidate !== "string" || candidate.trim() === "" || !path.isAbsolute(candidate)) {

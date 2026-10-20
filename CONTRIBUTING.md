@@ -29,7 +29,7 @@ one area's commands. Each module is also callable from its own directory without
 example `cd apps/writer && just run --project /path/to/project`.
 
 Bun installs the frozen JavaScript workspace and runs its scripts. `bun run js:fmt`, `bun run
-js:check` and `bun run js:test` run standalone Oxfmt, Oxlint/TypeScript and Bun’s native test
+js:check` and `bun run js:test` run standalone Oxfmt, Oxlint/TypeScript/Knip and Bun’s native test
 runner. Root `oxfmt.config.mts` and `oxlint.config.mts` own the shared defaults; package
 configurations import those defaults and own their environments and generated-file exclusions. Run
 the commands without `--config` so both tools discover the nearest derived configuration. Select
@@ -112,6 +112,17 @@ untracked source, repository configuration, resolved tool versions and the suppo
 environment. The runner shares disposable results between linked Git worktrees. `turbo.json` owns
 cache policy; `package.json` scripts and the referenced Just recipes own commands. Mise provisions
 tools. Successful tasks remain reusable when a later task fails.
+
+`bun run js:unused` runs Knip with native configuration in `package.json`. Entry patterns name
+external hosts and build entrypoints; other source files remain reachable through imports. The VS
+Code host provides `vscode` at runtime and its matrix runner loads `@vscode/test-electron` from the
+extension workspace. Eleventy is invoked by its direct CLI path. These uses are declared explicitly
+because they are outside Knip's ordinary import graph. Mise owns the non-JavaScript check binaries.
+
+The workflow check runs actionlint and pinned zizmor offline, blocking medium/high security findings
+with ordinary failure exit codes. Two narrowly annotated `pull_request_target` triggers run only
+base-owned policy/cache retirement. Low/informational advice remains available through `zizmor
+--offline .github`; network-dependent advisory scans are fresh work, not cached evidence.
 
 Mise prefers upstream prebuilt Cargo tools and falls back to source builds when no compatible binary
 is available. CI installs only each lane's declared tools; nested setup commands must also name
@@ -263,6 +274,20 @@ matrices run on scheduled, manual and release verification. Config moves compare
 both paths; spelling metadata and formatter changes do not select runtime tests. Dependency checks
 have their own lane, and source formatting/linting does not build the site's WASM bridge.
 
+### Automated tool updates
+
+`.github/renovate.json` configures the hosted Renovate GitHub App for tool/runtime and pinned action
+updates. One grouped batch may be open at a time, with a Monday maintenance window, seven-day
+release age, explicit approval for major updates and no automerge. Normal rebasing keeps strict
+branch protection intact. GitHub App commits must be signed and carry the maintenance issue prefix
+and PR reference. Rust toolchain bumps remain manual because the trusted policy also pins its parser
+toolchain. Keep activation pending until a real generated PR satisfies these rules.
+
+Application dependency updates and lockfile maintenance remain outside this initial rollout; #246
+owns the outstanding dependency remediation. Renovate's native Cargo/Bun/npm managers are available
+when that policy is settled. The repository configuration is portable to the open-source CLI if the
+hosted service becomes unsuitable; no private task runner or hosted build cache is required.
+
 ## Preparing and publishing releases
 
 Use [SemVer 2.0](https://semver.org/). Before 1.0, bump the minor version for incompatible public
@@ -296,11 +321,19 @@ evidence; green CI alone does not establish readiness.
    protected PR workflow with `Refs #N`, keeping the release issue open until publication succeeds.
    Neither helper commits, tags, pushes nor publishes.
 2. After the approved merge, resolve the complete commit ID. Dispatch **Release candidate** from
-   `main`, supplying that exact `commit` and prepared `version`. It runs complete correctness,
-   performance/session and distribution verification, exercises archived CLI/LSP binaries, and
-   collects Writer installers. Wait for success and inspect its receipt and artifacts. Branch
-   rehearsals are supported but cannot be published. Candidates expire after 30 days; rerun expired
-   candidates rather than rebuilding inside publication.
+   `main`, supplying that exact `commit`, prepared `version` and `api_baseline`: a prior accepted
+   revision recorded in the release issue. `just release api-check BASELINE` also runs locally. It
+   resolves the baseline to a full SHA and checks default-feature core/parser/compiler/runtime,
+   build/config/import/adapter/UI APIs with an explicit additive-only budget. This avoids permissive
+   version inference across beta/RC numbers. Engine adapters, FFI/ABI, persisted formats and feature
+   combinations still require their own consumer evidence. Before the first product release only,
+   use `initial` to record that no published baseline exists; this is not a compatibility pass.
+   Intentional breaking changes require an accepted new baseline and migration notes in the release
+   issue. Candidate artifacts retain this API report and bind it into the receipt. It runs complete
+   correctness, performance/session and distribution verification, exercises archived CLI/LSP
+   binaries, and collects Writer installers. Wait for success and inspect its receipt and artifacts.
+   Branch rehearsals are supported but cannot be published. Candidates expire after 30 days; rerun
+   expired candidates rather than rebuilding inside publication.
 3. Once release publication is authorized, create and verify one annotated signed product tag: `git
    tag -s vVERSION COMMIT -m 'Recite VERSION'`, `git verify-tag vVERSION`, then `git push origin
    refs/tags/vVERSION`. The signing key must be registered with GitHub so its tag API reports a

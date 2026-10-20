@@ -91,7 +91,7 @@ export function initializeParams(api: HostApi, root: string | undefined, overrid
   };
 }
 
-export function projectRootPath(api: HostApi, configured: string, userInterface: UserInterface) {
+function projectRootPath(api: HostApi, configured: string, userInterface: UserInterface) {
   const workspace = api.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!configured.trim()) return workspace;
   if (path.isAbsolute(configured)) return path.normalize(configured);
@@ -101,7 +101,7 @@ export function projectRootPath(api: HostApi, configured: string, userInterface:
   return path.resolve(workspace, configured);
 }
 
-export function resolveCommand(command: string, root: string | undefined) {
+function resolveCommand(command: string, root: string | undefined) {
   if (!root || (!path.isAbsolute(command) && !command.includes("/") && !command.includes("\\"))) {
     return command;
   }

@@ -6,7 +6,7 @@
     "editors/vscode"
   ],
   "scripts": {
-    "js:check": "bun run --bun oxlint --deny-warnings && tsc --noEmit -p tsconfig.tools.json && bun run --filter recite-vscode typecheck",
+    "js:check": "bun run --bun oxlint --deny-warnings && tsc --noEmit -p tsconfig.tools.json && bun run --filter recite-vscode typecheck && bun run js:unused",
     "js:fmt": "bun run --bun oxfmt \"**/*.{js,mjs,cjs,ts,mts,cts,tsx}\"",
     "js:fmt-check": "bun run --bun oxfmt --check \"**/*.{js,mjs,cjs,ts,mts,cts,tsx}\"",
     "js:test": "bun test --timeout 30000",
@@ -17,8 +17,9 @@
     "check:fmt-other": "just quality _fmt-check",
     "check:lint-other": "just quality _lint",
     "check:spelling": "typos",
-    "check:workflows": "actionlint -shellcheck= -pyflakes=",
-    "check:ci-contracts": "uv run --locked --no-python-downloads python -m unittest discover -s tests/ci -p 'test_*.py'"
+    "check:workflows": "actionlint -shellcheck= -pyflakes= && zizmor --offline --min-severity medium --no-progress --strict-collection .github",
+    "check:ci-contracts": "uv run --locked --no-python-downloads python -m unittest discover -s tests/ci -p 'test_*.py'",
+    "js:unused": "bun run --bun knip --no-progress"
   },
   "devDependencies": {
     "@fluent/syntax": "0.19.0",
@@ -26,10 +27,56 @@
     "@types/node": "24.19.1",
     "@typescript/native": "npm:typescript@7.0.2",
     "ajv": "8.20.0",
+    "knip": "6.42.0",
     "oxfmt": "0.72.0",
     "oxlint": "1.87.0"
   },
   "packageManager": "bun@1.4.3",
+  "knip": {
+    "workspaces": {
+      ".": {
+        "entry": [
+          "scripts/check-schema-manifest.mjs",
+          "editors/recite-neovim/scripts/*.mjs",
+          "editors/recite-neovim/test/*.test.mjs",
+          "editors/recite-tree-sitter/grammar.js",
+          "editors/recite-tree-sitter/{oxfmt,oxlint}.config.mts",
+          "tests/editor-hosts/vscode/*.{mjs,cjs}"
+        ],
+        "ignoreBinaries": [
+          "just",
+          "typos",
+          "actionlint",
+          "uv",
+          "zizmor"
+        ],
+        "ignoreDependencies": [
+          "vscode",
+          "@vscode/test-electron"
+        ]
+      },
+      "docs-site": {
+        "entry": [
+          "src/pages/*.11ty.tsx",
+          "src/client/{site,controller,worker}.ts",
+          "tests/**/*.{test,spec}.{mjs,ts}"
+        ],
+        "ignoreDependencies": [
+          "@11ty/eleventy"
+        ]
+      },
+      "editors/vscode": {
+        "entry": [
+          "src/extension.{cts,ts}",
+          "scripts/*.mjs",
+          "test/*.test.mjs"
+        ],
+        "ignoreDependencies": [
+          "@vscode/test-electron"
+        ]
+      }
+    }
+  },
   "trustedDependencies": [
     "esbuild"
   ]

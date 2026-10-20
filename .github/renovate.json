@@ -1,0 +1,69 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabledManagers": [
+    "mise",
+    "github-actions",
+    "bun"
+  ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/target/**",
+    "**/vendor/**"
+  ],
+  "dependencyDashboard": true,
+  "prConcurrentLimit": 1,
+  "branchConcurrentLimit": 1,
+  "prHourlyLimit": 1,
+  "timezone": "Europe/London",
+  "schedule": [
+    "* 0-5 * * 1"
+  ],
+  "minimumReleaseAge": "7 days",
+  "automerge": false,
+  "platformCommit": "enabled",
+  "branchPrefix": "chore/",
+  "branchNameStrict": true,
+  "packageRules": [
+    {
+      "matchManagers": [
+        "mise",
+        "github-actions",
+        "bun"
+      ],
+      "groupName": "development tools",
+      "pinDigests": true
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchManagers": [
+        "mise"
+      ],
+      "matchDepNames": [
+        "rust"
+      ],
+      "enabled": false,
+      "description": "Rust updates also change the base-owned trusted-policy toolchain assertion."
+    },
+    {
+      "matchManagers": [
+        "bun"
+      ],
+      "matchDepTypes": [
+        "!packageManager"
+      ],
+      "enabled": false,
+      "description": "Only the Bun runtime pin is in scope; application dependencies remain manual."
+    }
+  ],
+  "semanticCommits": "disabled",
+  "commitMessagePrefix": "[REC-269] chore(deps):",
+  "commitMessageLowerCase": "never",
+  "prBodyNotes": [
+    "Refs #269"
+  ]
+}

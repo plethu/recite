@@ -100,6 +100,7 @@
     "TMPDIR",
     "RUSTUP_HOME",
     "CARGO_HOME",
-    "DOTNET_ROOT"
+    "DOTNET_ROOT",
+    "RUSTUP_TOOLCHAIN"
   ]
 }

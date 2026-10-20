@@ -30,6 +30,7 @@ def lanes_for_path(path, *, base=None, head=None):
     """Keep narrow, known surfaces explicit; new build inputs fail toward more CI."""
     name = Path(path).name
     if path in {
+        ".github/renovate.json",
         "turbo.json",
         "scripts/run-checks.py",
         ".github/workflows/cache-cleanup.yml",
