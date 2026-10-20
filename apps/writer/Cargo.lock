@@ -4957,6 +4957,7 @@ name = "recite-writer-xilem"
 version = "0.0.0"
 dependencies = [
  "accesskit_atspi_common 0.18.1",
+ "atspi-common",
  "masonry",
  "recite-compiler",
  "recite-config",
