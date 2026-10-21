@@ -1,4 +1,6 @@
 use super::*;
+#[path = "geometry/tests.rs"]
+mod geometry;
 #[path = "workflow/tests.rs"]
 mod workflow;
 

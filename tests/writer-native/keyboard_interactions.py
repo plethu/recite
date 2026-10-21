@@ -91,7 +91,7 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-writer")
                 config = Path(os.environ["XDG_CONFIG_HOME"]) / "recite/config.toml"
                 assert 'save = "Primary+Alt+S"' in config.read_text()
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "guarded close")
                 window.act("Close and keep recovery")
                 assert process.wait(timeout=5) == 0

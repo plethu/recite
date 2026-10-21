@@ -32,7 +32,7 @@ def run(api, bus, registry, binary, output):
                 disk = SOURCE.replace("The last tram waits.", "The tram has left.")
                 source.write_text(disk)
                 started = time.monotonic()
-                assert window.act("Reload (keep recovery copy)")
+                assert window.document_action("Reload (keep recovery copy)")
                 window.wait(
                     lambda: window.text(manuscript(window)) == "The tram has left.", "disk adoption"
                 )
@@ -58,7 +58,7 @@ def run(api, bus, registry, binary, output):
                     lambda: window.text(node) == "The tram has left. New typing.",
                     "post-reload draft",
                 )
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "recovery close")
                 window.act("Close and keep recovery")
                 assert process.wait(timeout=5) == 0
@@ -68,7 +68,7 @@ def run(api, bus, registry, binary, output):
                 )
                 results["post_reload_typing_survives_restart"] = True
                 capture(output, "-recovered")
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Save all and close"), "final close")
                 window.save_and_close(results, "post_reload_save_close")
                 assert "The tram has left. New typing." in source.read_text()

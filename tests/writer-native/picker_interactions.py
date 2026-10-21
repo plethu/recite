@@ -7,7 +7,7 @@ import traceback
 from pathlib import Path
 
 from native_window import key, type_text
-from project_interactions import manuscript
+from project_interactions import document_caption, manuscript
 from startup_interactions import field, fill
 from writer_interactions import SOURCE, capture, launch
 
@@ -80,15 +80,20 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-go-to")
                 key("Return")
                 window.wait(
-                    lambda: window.find("Current · zz-other.recite"), "accepted go-to document"
+                    lambda: document_caption(window, "zz-other.recite", selected=True),
+                    "accepted go-to document",
                 )
                 window.act("Back")
-                window.wait(lambda: window.find("Current · scene.recite"), "history back document")
+                window.wait(
+                    lambda: document_caption(window, "scene.recite", selected=True),
+                    "history back document",
+                )
                 node = manuscript(window)
                 assert window.text(node) == "The last tram waits.x"
                 window.act("Forward")
                 window.wait(
-                    lambda: window.find("Current · zz-other.recite"), "history forward document"
+                    lambda: document_caption(window, "zz-other.recite", selected=True),
+                    "history forward document",
                 )
                 results["go_to_keyboard_selection_and_back_forward"] = True
                 window.act("Find project text")
@@ -99,7 +104,10 @@ def run(api, bus, registry, binary, output):
                 )
                 capture(output, "-project-text")
                 key("Return")
-                window.wait(lambda: window.find("Current · scene.recite"), "saved text destination")
+                window.wait(
+                    lambda: document_caption(window, "scene.recite", selected=True),
+                    "saved text destination",
+                )
                 results["saved_project_text_opens_source_beat"] = True
                 capture(output, "-writer")
                 key("p", control=True)
@@ -115,10 +123,16 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: not window.find("Search query"), "lookup accepted")
                 window.focus(window.find("Go to"))
                 type_text("n")
-                window.wait(lambda: window.find("Current · zz-other.recite"), "next lookup match")
+                window.wait(
+                    lambda: document_caption(window, "zz-other.recite", selected=True),
+                    "next lookup match",
+                )
                 window.focus(window.find("Go to"))
                 type_text("N")
-                window.wait(lambda: window.find("Current · scene.recite"), "previous lookup match")
+                window.wait(
+                    lambda: document_caption(window, "scene.recite", selected=True),
+                    "previous lookup match",
+                )
                 key("p", control=True)
                 query = field(window, "Search query")
                 window.wait(lambda: focused(window, query), "cancelled lookup query focus")
@@ -128,7 +142,7 @@ def run(api, bus, registry, binary, output):
                 window.focus(window.find("Go to"))
                 type_text("n")
                 window.wait(
-                    lambda: window.find("Current · zz-other.recite"),
+                    lambda: document_caption(window, "zz-other.recite", selected=True),
                     "cancelled search preserves accepted repeat query",
                 )
                 results["vim_repeat_uses_accepted_lookup_and_escape_preserves_it"] = True

@@ -40,6 +40,8 @@ impl Writer {
         self.cancel_project_workspace_open();
         self.workspaces.screen = crate::workspaces::Screen::Write;
         self.attention.leave_focus();
+        self.trial.visible = false;
+        self.trial.settings.open = false;
         if workspace.has_map()
             && workspace == self.map.workspace
             && self

@@ -1,14 +1,32 @@
 use super::*;
+use crate::keyed::column;
+use crate::presentation::print;
 use crate::reading::{Content, Row};
-use recite_writer_model::{Passage, PassageKind, RouteOwner};
-use xilem::{AnyWidgetView, style::Padding};
-const PAGE: usize = 16;
+use recite_core::DocumentKey;
+use recite_writer_model::{AnalysisStamp, RouteOwner};
+use recite_writer_session::choices::display_name;
+mod header;
+mod passage;
+use crate::reading::PAGE;
+use xilem::{
+    AnyWidgetView,
+    masonry::{kurbo::Axis, properties::ContentColor},
+    style::Padding,
+    view::divider,
+};
+
+#[derive(Clone, PartialEq)]
+enum RowIdentity {
+    Passage(DocumentKey, String),
+    Structural(AnalysisStamp, usize),
+}
 
 pub(super) fn repair(state: &Writer, error: &str) -> impl WidgetView<Writer> + use<> {
     flex_col((
         label(state.ui_scale(), "Source editing in your editor"),
         paragraph(state.ui_scale(), "Choose Open in editor to repair the source, then Reload (keep recovery copy). Your source bytes are preserved.", state.script_width()),
         paragraph(state.ui_scale(), error.to_owned(), state.script_width()),
+        state.session.project().map(|_| print::action(state.ui_scale(), "Open in editor", state.phase != Phase::Writing || state.external.busy(), Writer::open_editor)),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
 }
 pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -26,18 +44,26 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
     let scale = state.ui_scale();
     let pages = rows.len().div_ceil(PAGE).max(1);
     let page = state.reading.page.min(pages - 1);
-    let entries = rows
-        .iter()
-        .enumerate()
-        .skip(page * PAGE)
-        .take(PAGE)
-        .map(|(index, entry)| row(state, id, index, entry))
-        .collect::<Vec<_>>();
+    let start = page * PAGE;
+    let end = (start + PAGE).min(rows.len());
+    let entries = (start..end)
+        .map(|index| {
+            let key = match &rows[index].content {
+                Content::Passage { passage, .. } => RowIdentity::Passage(
+                    state.session.model().document().key().clone(),
+                    passage.id.clone(),
+                ),
+                _ => RowIdentity::Structural(
+                    state.session.model().document().analysis_stamp(),
+                    index,
+                ),
+            };
+            (key, row(state, id, &rows[index]))
+        })
+        .collect();
     flex_col((
-        label(scale, format!("Beat · {id}")).text_size(22. * scale),
-        flex_col(entries)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(20.px()),
+        header::heading(state, id),
+        column(entries).gap(12.px()),
         rows.is_empty().then(|| {
             prose(
                 scale,
@@ -45,11 +71,25 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
             )
         }),
         pagination(state, page, pages),
+        (page + 1 == pages
+            && !matches!(
+                rows.last().map(|row| &row.content),
+                Some(Content::Continuation(_))
+            ))
+        .then(|| {
+            divider(
+                Axis::Horizontal,
+                print::meta(scale, "◆ END ◆").color(state.palette.muted),
+            )
+            .dash_pattern(&[1.px(), 3.px()])
+            .prop(ContentColor::new(state.palette.rule))
+            .width(state.script_width().px())
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(16.px())
 }
-fn row(state: &Writer, beat: &str, index: usize, row: &Row) -> impl WidgetView<Writer> + use<> {
+fn row(state: &Writer, beat: &str, row: &Row) -> impl WidgetView<Writer> + use<> {
     let inset = row.groups.len().min(3) as f64 * 24.;
     let width = state.script_width() - inset;
     flex_col((
@@ -63,21 +103,17 @@ fn row(state: &Writer, beat: &str, index: usize, row: &Row) -> impl WidgetView<W
             )
             .width(width.px())
         }),
-        content(state, beat, index, row, width),
+        content(state, beat, row, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())
     .padding(Padding::left(inset.px()))
 }
-fn content(
-    state: &Writer,
-    beat: &str,
-    index: usize,
-    row: &Row,
-    width: f64,
-) -> Box<AnyWidgetView<Writer>> {
+fn content(state: &Writer, beat: &str, row: &Row, width: f64) -> Box<AnyWidgetView<Writer>> {
     match &row.content {
-        Content::Passage(item) => passage(state, index, item, width).boxed(),
+        Content::Passage { passage, number } => {
+            passage::row(state, *number, passage, row.reply, width).boxed()
+        }
         Content::Heading(text) => {
             sized_box(prose(state.ui_scale(), text.clone()).text_size(state.reading_size()))
                 .width(width.px())
@@ -89,40 +125,7 @@ fn content(
         }
     }
 }
-fn passage(
-    state: &Writer,
-    index: usize,
-    passage: &Passage,
-    width: f64,
-) -> impl WidgetView<Writer> + use<> {
-    let id = passage.id.clone();
-    let caption = match &passage.kind {
-        PassageKind::Dialogue { speaker } => speaker.clone().unwrap_or_else(|| "Narration".into()),
-        PassageKind::Choice { destination } => format!(
-            "Reply → {}",
-            destination.as_deref().unwrap_or("Choose a destination")
-        ),
-    };
-    flex_col((
-        label(state.ui_scale(), caption),
-        flex_row((sized_box(crate::presentation::manuscript_text(
-            state.reading_size(),
-            passage.text.clone(),
-        ))
-        .width(width.px()),)),
-        text_button(
-            state.ui_scale(),
-            format!("Edit passage {}", index + 1),
-            move |state: &mut Writer| state.select(id.clone()),
-        )
-        .disabled(state.phase != Phase::Writing),
-        matches!(passage.kind, PassageKind::Choice { .. })
-            .then(|| reply_actions(state, &passage.id)),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
-}
-fn reply_actions(state: &Writer, id: &str) -> impl WidgetView<Writer> + use<> {
+pub(super) fn reply_actions(state: &Writer, id: &str) -> impl WidgetView<Writer> + use<> {
     let rule_id = id.to_owned();
     let route_id = id.to_owned();
     let disabled = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
@@ -155,16 +158,38 @@ fn continuation(
     beat: Option<&str>,
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
+    let end = target == "END";
+    let target = target.to_owned();
+    let toggle = target.clone();
     flex_col((
-        paragraph(state.ui_scale(), format!("Continue → {target}"), width),
+        end.then(|| print::meta(state.ui_scale(), "◆ END ◆").color(state.palette.muted)),
+        (!end).then(|| {
+            print::action(
+                state.ui_scale(),
+                format!(
+                    "{} {}",
+                    if state.destination_expanded(&target) {
+                        "▾"
+                    } else {
+                        "→"
+                    },
+                    display_name(&target)
+                ),
+                state.phase != Phase::Writing,
+                move |state: &mut Writer| state.toggle_destination_preview(toggle.clone()),
+            )
+        }),
+        (!end)
+            .then(|| super::reference::destination(state, &target, width))
+            .flatten(),
         beat.map(|id| {
             let owner = RouteOwner::Beat(id.to_owned());
-            text_button(
+            print::action(
                 state.ui_scale(),
                 "Change continuation…",
+                state.phase != Phase::Writing || state.navigation.busy() || state.work.busy(),
                 move |state: &mut Writer| state.choose_destination(owner.clone()),
             )
-            .disabled(state.phase != Phase::Writing || state.navigation.busy() || state.work.busy())
         }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)

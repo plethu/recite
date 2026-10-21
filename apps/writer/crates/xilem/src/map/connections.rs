@@ -26,6 +26,7 @@ pub(super) struct List {
 }
 #[derive(Default)]
 pub(super) struct Connections {
+    pub expanded: bool,
     outgoing: List,
     incoming: List,
 }

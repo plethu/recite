@@ -1,23 +1,12 @@
 use super::*;
 use crate::tests::support::NoProxy;
-use xilem::masonry::kurbo;
+use xilem::masonry::{core::WindowEvent, kurbo};
 use xilem::{ViewCtx, core::View, masonry::testing::TestHarness};
 
 #[test]
 fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_graph() {
     for count in [512, 2048] {
-        let mut source = String::new();
-        for index in 0..count {
-            source.push_str(&format!(
-                ":: beat_{index}{}\n> line@{index:020}\n  Dialogue for beat {index}.\n-> {}\n",
-                if index == 0 { " default" } else { "" },
-                if index + 1 == count {
-                    "END".into()
-                } else {
-                    format!("beat_{}", index + 1)
-                }
-            ));
-        }
+        let source = linear_scene(count);
         let mut fixture = fixture_source(&source).unwrap();
         let writer = &mut fixture.writer;
         let graph = writer.map.scene(writer).unwrap().projection.graph.clone();
@@ -30,7 +19,7 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         let mut harness = TestHarness::create_with_size(
             crate::presentation::Theme::new(&writer.config.writer).initial_properties(),
             pod.new_widget,
-            (1280, 1000),
+            (1280, 750),
         );
         native::settle(
             writer,
@@ -43,17 +32,30 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         let tree = harness.access_tree();
         let mut pending = vec![tree.state().root()];
         let mut nodes = 0;
+        let mut roles = std::collections::BTreeMap::new();
+        let mut names = Vec::new();
         while let Some(node) = pending.pop() {
             nodes += 1;
+            *roles.entry(format!("{:?}", node.role())).or_insert(0) += 1;
+            if let Some(label) = node.label() {
+                names.push(label);
+            }
             pending.extend(node.children());
         }
         let scene = writer.map.scene(writer).unwrap();
+        // This cost case retains its approximately 500px canvas workload.
+        // Larger windows expose more cards and are exercised separately below.
+        assert!(
+            (490. ..=500.).contains(&scene.viewport.1),
+            "{:?}",
+            scene.viewport
+        );
         assert_eq!(scene.scope.as_ref().unwrap().node_indices.len(), 80);
         assert_eq!(scene.projection.graph.blocks.len(), count);
         // Bound the visible neighbourhood together with its native navigation controls.
         assert!(
             nodes <= 240,
-            "bounded Map mounted {nodes} accessibility nodes"
+            "bounded Map mounted {nodes} accessibility nodes: {roles:?}; {names:?}"
         );
         assert!(scene.mounted_indices().count() <= 4);
         println!(
@@ -125,4 +127,75 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         ));
         assert!(fixture.jobs.try_recv().is_err());
     }
+}
+
+#[test]
+fn allocated_map_canvas_grows_with_the_window_and_exposes_more_of_the_scene() {
+    let mut fixture = fixture_source(&linear_scene(20)).unwrap();
+    let writer = &mut fixture.writer;
+    let mut ctx = ViewCtx::new(
+        Arc::new(NoProxy),
+        Arc::new(tokio::runtime::Runtime::new().unwrap()),
+    );
+    let mut view = native::surface(writer);
+    let (pod, mut local) = view.build(&mut ctx, writer);
+    let mut harness = TestHarness::create_with_size(
+        crate::presentation::Theme::new(&writer.config.writer).initial_properties(),
+        pod.new_widget,
+        (1280, 750),
+    );
+    native::settle(
+        writer,
+        &mut harness,
+        &mut ctx,
+        &mut view,
+        &mut local,
+        native::surface,
+    );
+    let initial = writer.map.scene(writer).unwrap().viewport;
+    let initial_cards = writer.map.scene(writer).unwrap().mounted_indices().count();
+    harness.process_window_event(WindowEvent::Resize((1280, 1100).into()));
+    native::settle(
+        writer,
+        &mut harness,
+        &mut ctx,
+        &mut view,
+        &mut local,
+        native::surface,
+    );
+    let expanded = writer.map.scene(writer).unwrap().viewport;
+    assert_eq!(expanded.0, initial.0);
+    assert!(
+        (expanded.1 - initial.1 - 350.).abs() < 1.,
+        "{initial:?} -> {expanded:?}"
+    );
+    assert_eq!(
+        writer
+            .map
+            .scene(writer)
+            .unwrap()
+            .projection
+            .graph
+            .blocks
+            .len(),
+        20
+    );
+    assert!(writer.map.scene(writer).unwrap().mounted_indices().count() > initial_cards);
+    assert!(fixture.jobs.try_recv().is_err());
+}
+
+fn linear_scene(count: usize) -> String {
+    let mut source = String::new();
+    for index in 0..count {
+        source.push_str(&format!(
+            ":: beat_{index}{}\n> line@{index:020}\n  Dialogue for beat {index}.\n-> {}\n",
+            if index == 0 { " default" } else { "" },
+            if index + 1 == count {
+                "END".into()
+            } else {
+                format!("beat_{}", index + 1)
+            }
+        ));
+    }
+    source
 }

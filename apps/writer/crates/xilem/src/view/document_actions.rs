@@ -1,6 +1,8 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
-use xilem::masonry::kurbo::Axis;
+use xilem::{masonry::properties::LineBreaking, view::portal};
+mod menu;
+pub(super) use menu::panel;
 
 pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
@@ -60,89 +62,6 @@ pub(super) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .gap(8.px())
 }
 
-pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing;
-    flex_col((
-        flex_row((
-            label(scale, "Recite Writer").text_size(28. * scale),
-            history_buttons(state),
-        ))
-        .direction(if state.viewport.width < 900. * f64::from(scale) {
-            Axis::Vertical
-        } else {
-            Axis::Horizontal
-        })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(24.px()),
-        label(scale, document_caption(state)),
-        temporary_notice(state),
-        flex_row((
-            state.session.project().is_some().then(|| {
-                text_button(scale, "Save file", |state: &mut Writer| {
-                    state.save();
-                })
-                .disabled(
-                    closing
-                        || state.work.busy()
-                        || state.localisation.saving()
-                        || state.navigation.busy()
-                        || state.source_repair_pending(),
-                )
-            }),
-            state.session.project().is_some().then(|| {
-                text_button(scale, "Save all", |state: &mut Writer| {
-                    state.save_all();
-                })
-                .disabled(
-                    closing
-                        || state.work.busy()
-                        || state.localisation.saving()
-                        || state.localisation.working()
-                        || state.navigation.busy()
-                        || state.source_repair_pending(),
-                )
-            }),
-            state.session.project().is_some().then(|| {
-                text_button(scale, "Open in editor", Writer::open_editor).disabled(
-                    closing
-                        || state.work.busy()
-                        || state.navigation.busy()
-                        || state.external.busy(),
-                )
-            }),
-            (state.session.project().is_some() && state.editor.is_some()).then(|| {
-                text_button(scale, "Use system default", Writer::open_system_editor).disabled(
-                    closing
-                        || state.work.busy()
-                        || state.navigation.busy()
-                        || state.external.busy(),
-                )
-            }),
-        ))
-        .gap(8.px()),
-        flex_row((
-            state
-                .work
-                .preparing_editor()
-                .then(|| text_button(scale, "Cancel editor launch", Writer::cancel_editor_launch)),
-            state.session.project().is_some().then(|| {
-                text_button(scale, "Reload (keep recovery copy)", Writer::reload)
-                    .disabled(closing || state.work.busy() || state.navigation.busy())
-            }),
-            state.session.project().is_some().then(|| {
-                text_button(scale, "Compare disk changes", Writer::compare_disk_changes)
-                    .disabled(state.project_action_blocked())
-            }),
-            text_button(scale, "Focus writing", Writer::toggle_focus)
-                .disabled(closing || state.work.busy() || state.navigation.busy()),
-            text_button(scale, "Close", Writer::request_close).disabled(closing),
-        ))
-        .gap(8.px()),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
-}
 fn document_caption(state: &Writer) -> String {
     format!(
         "{}{}",
@@ -189,13 +108,9 @@ fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .gap(8.px())
 }
-fn copy_link(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    text_button(
-        state.ui_scale(),
-        "Copy link to this view",
-        Writer::copy_link,
-    )
-    .disabled(state.phase != Phase::Writing || state.project_action_blocked())
+pub(super) fn copy_link(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    text_button(state.ui_scale(), "Copy link", Writer::copy_link)
+        .disabled(state.phase != Phase::Writing || state.project_action_blocked())
 }
 
 pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
@@ -247,6 +162,11 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
                         "Example edits are temporary and will be discarded"
                     },
                 ),
+                label(scale, document_caption(state))
+                    .prop(LineBreaking::WordWrap),
+                (state.session.project().is_some() && !ordinary_exit).then(|| {
+                    paragraph(scale, "Save all and close checks and saves pending prose and project drafts. Close and keep recovery keeps pending edits recoverable without saving them to the source files.", (state.viewport.width - 80.).min(760.))
+                }),
                 crate::localisation::close_details(state),
                 flex_row((
                     text_button(scale, "Keep editing", |state: &mut Writer| {
@@ -286,4 +206,22 @@ pub(super) fn close_prompt(state: &Writer) -> Option<impl WidgetView<Writer> + u
         .padding(12.px())
         .background_color(state.palette.surface)
     })
+}
+
+pub(super) fn close_view(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    portal(
+        flex_col((
+            xilem::view::FlexSpacer::Fixed(48.px()),
+            flex_row((sized_box(flex_col((close_prompt(state),))).width(
+                (state.viewport.width - 48.)
+                    .min(720. * f64::from(state.ui_scale()))
+                    .px(),
+            ),))
+            .main_axis_alignment(xilem::view::MainAxisAlignment::Center),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .padding(24.px()),
+    )
+    .constrain_horizontal(true)
+    .background_color(state.palette.inset)
 }

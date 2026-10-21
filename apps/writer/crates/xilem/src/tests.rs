@@ -50,7 +50,10 @@ fn unsaved_close_requires_a_decision_and_keeps_a_reopenable_draft() {
         Ok(())
     });
     let selected = writer.session.model().view().clone();
-    writer.select("missing".into());
+    writer.native_field_focus(Some(crate::attention::EditingTarget::passage(
+        &writer,
+        "missing".into(),
+    )));
     assert_eq!(writer.session.model().view(), &selected);
     writer.request_close();
     assert!(writer.phase == Phase::ConfirmClose);
@@ -89,13 +92,25 @@ fn save_conflict_stays_open_and_reload_preserves_the_local_work() {
     support::save(&mut writer).unwrap();
     assert!(writer.status.contains("changed on disk"));
     assert!(writer.keep_running());
-    click(&mut writer, &["Reload (keep recovery copy)"]).unwrap();
+    click(
+        &mut writer,
+        &["Document actions ⋯", "Reload (keep recovery copy)"],
+    )
+    .unwrap();
     assert_eq!(writer.session.model().view(), &View::Source);
     assert!(writer.status.contains("previous work preserved"));
-    click(&mut writer, &["Reload (keep recovery copy)"]).unwrap();
+    click(
+        &mut writer,
+        &["Document actions ⋯", "Reload (keep recovery copy)"],
+    )
+    .unwrap();
     assert!(writer.status.contains("previous work preserved"));
     fs::remove_file(directory.path().join("recite.project.toml")).unwrap();
-    click(&mut writer, &["Reload (keep recovery copy)"]).unwrap();
+    click(
+        &mut writer,
+        &["Document actions ⋯", "Reload (keep recovery copy)"],
+    )
+    .unwrap();
     assert_ne!(writer.status, "Reloaded from disk");
 }
 
@@ -149,16 +164,30 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
     });
     click(&mut writer, &["Apply draft", "Undo applied"]).unwrap();
     assert_eq!(writer.session.model().draft(), original);
-    click(&mut writer, &["Redo applied"]).unwrap();
+    click(&mut writer, &["Document actions ⋯", "Redo applied"]).unwrap();
     assert_eq!(writer.session.model().draft(), "Accepted.");
     writer.change(|model| {
         model.set_draft("Discard this.".into());
         Ok(())
     });
-    click(&mut writer, &["Discard draft", "Close", "Keep editing"]).unwrap();
+    click(
+        &mut writer,
+        &[
+            "Document actions ⋯",
+            "Discard draft",
+            "Document actions ⋯",
+            "Close",
+            "Keep editing",
+        ],
+    )
+    .unwrap();
     assert!(writer.phase == Phase::Writing);
     assert_eq!(writer.session.model().draft(), "Accepted.");
-    click(&mut writer, &["Close", "Save all and close"]).unwrap();
+    click(
+        &mut writer,
+        &["Document actions ⋯", "Close", "Save all and close"],
+    )
+    .unwrap();
     assert!(!writer.keep_running());
     assert!(
         fs::read_to_string(directory.path().join("scene.recite"))
@@ -205,7 +234,11 @@ fn ordinary_exit_preference_does_not_weaken_unsaved_work_protection() {
     });
     writer.request_close();
     assert!(writer.phase == Phase::ConfirmClose);
-    click(&mut writer, &["Keep editing", "Discard draft"]).unwrap();
+    click(
+        &mut writer,
+        &["Keep editing", "Document actions ⋯", "Discard draft"],
+    )
+    .unwrap();
     writer.session.project_mut().unwrap().checkpoint().unwrap();
     writer.request_close();
     assert!(!writer.keep_running());

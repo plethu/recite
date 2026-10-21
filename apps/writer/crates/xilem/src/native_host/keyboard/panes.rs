@@ -1,6 +1,6 @@
 //! Native pane geometry and focus history stay outside product commands.
 use super::*;
-use crate::attention::{Pane, PaneMotion, PaneRequest, Region};
+use crate::attention::{Pane, PaneEntry, PaneMotion, PaneRequest, Region};
 use crate::workspaces::Screen;
 use xilem::masonry::{
     accesskit,
@@ -93,14 +93,26 @@ impl Attention {
         self.writing_target = root.focused_widget().or(self.writing_target);
     }
 }
-fn focus_script(root: &mut RenderRoot) {
+pub(super) fn focus_script(root: &mut RenderRoot) {
     let panes = targets(root);
     if let Some(target) = panes.iter().find(|target| target.pane == Pane::Script) {
         reveal(root, target.widget);
     }
 }
+pub(super) fn focus_pane(root: &mut RenderRoot, pane: Pane) -> bool {
+    targets(root)
+        .iter()
+        .find(|target| target.pane == pane)
+        .is_some_and(|target| reveal(root, target.widget))
+}
 fn move_focus(root: &mut RenderRoot, direction: PaneMotion) {
     let panes = targets(root);
+    if let PaneMotion::To(pane) = direction {
+        if let Some(target) = panes.iter().find(|target| target.pane == pane) {
+            reveal(root, target.widget);
+        }
+        return;
+    }
     let Some(origin) = panes
         .iter()
         .find(|target| target.focused)
@@ -109,6 +121,7 @@ fn move_focus(root: &mut RenderRoot, direction: PaneMotion) {
         return;
     };
     let (dx, dy) = match direction {
+        PaneMotion::To(_) => return,
         PaneMotion::Left => (-1., 0.),
         PaneMotion::Right => (1., 0.),
         PaneMotion::Up => (0., -1.),
@@ -141,17 +154,43 @@ fn move_focus(root: &mut RenderRoot, direction: PaneMotion) {
         reveal(root, id);
     }
 }
-fn reveal(root: &mut RenderRoot, id: WidgetId) -> bool {
+pub(super) fn reveal(root: &mut RenderRoot, id: WidgetId) -> bool {
     if root.focus_on(Some(id)) {
-        root.handle_access_event(accesskit::ActionRequest {
-            action: accesskit::Action::ScrollIntoView,
-            target_tree: accesskit::TreeId::ROOT,
-            target_node: id.to_raw().into(),
-            data: None,
-        });
+        reveal_focused(root);
         return true;
     }
     false
+}
+pub(super) fn reveal_focused(root: &mut RenderRoot) {
+    if let Some(id) = root.focused_widget() {
+        let control = focused_control(root, id);
+        root.handle_access_event(accesskit::ActionRequest {
+            action: accesskit::Action::ScrollIntoView,
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: control.to_raw().into(),
+            data: None,
+        });
+    }
+}
+fn focused_control(root: &RenderRoot, focused: WidgetId) -> WidgetId {
+    let mut widget = root.get_layer_root(0);
+    loop {
+        if let Some(input) = widget.downcast::<TextInput>() {
+            return if input.area_pod().id() == focused {
+                input.id()
+            } else {
+                focused
+            };
+        }
+        let Some(child) = widget
+            .children()
+            .into_iter()
+            .find(|child| child.ctx().has_focus_target())
+        else {
+            return focused;
+        };
+        widget = child;
+    }
 }
 fn targets(root: &RenderRoot) -> Vec<Target> {
     let mut targets = Vec::new();
@@ -161,7 +200,7 @@ fn targets(root: &RenderRoot) -> Vec<Target> {
             continue;
         }
         if let Some(pane) = region(widget) {
-            if let Some(target) = first_focusable(widget) {
+            if let Some(target) = pane_entry(widget, pane) {
                 targets.push(Target {
                     pane,
                     center: widget.ctx().window_transform() * widget.ctx().border_box().center(),
@@ -185,7 +224,25 @@ fn region(widget: WidgetRef<'_, dyn Widget>) -> Option<Pane> {
             .and_then(|widget| widget.get_prop::<Region>().0)
     }
 }
-fn first_focusable(widget: WidgetRef<'_, dyn Widget>) -> Option<WidgetId> {
+fn pane_entry(widget: WidgetRef<'_, dyn Widget>, pane: Pane) -> Option<WidgetId> {
+    if pane == Pane::Preview {
+        let mut pending = vec![widget];
+        while let Some(child) = pending.pop() {
+            if child.ctx().is_stashed() || child.ctx().is_disabled() {
+                continue;
+            }
+            if child
+                .downcast::<Flex>()
+                .is_some_and(|flex| flex.get_prop::<PaneEntry>().0)
+            {
+                return first_focusable(child, false);
+            }
+            pending.extend(child.children());
+        }
+    }
+    first_focusable(widget, pane != Pane::Preview)
+}
+fn first_focusable(widget: WidgetRef<'_, dyn Widget>, prefer_text: bool) -> Option<WidgetId> {
     let mut pending = vec![widget];
     let mut fallback = None;
     while let Some(widget) = pending.pop() {
@@ -194,7 +251,7 @@ fn first_focusable(widget: WidgetRef<'_, dyn Widget>) -> Option<WidgetId> {
         }
         if widget.ctx().accepts_focus() {
             // Prefer a writing field over the pane's surrounding action buttons.
-            if widget.downcast::<TextArea<true>>().is_some() {
+            if prefer_text && widget.downcast::<TextArea<true>>().is_some() {
                 return Some(widget.id());
             }
             fallback.get_or_insert(widget.id());

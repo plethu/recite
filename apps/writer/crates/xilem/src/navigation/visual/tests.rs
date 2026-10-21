@@ -52,7 +52,8 @@ fn check_pending_navigation(reload: bool) {
             cancel |=
                 node.label().as_deref() == Some("Cancel pending action") && !node.is_disabled();
             editable |= node.role() == accesskit::Role::MultilineTextInput && !node.is_disabled();
-            save_disabled |= node.label().as_deref() == Some("Save file") && node.is_disabled();
+            save_disabled |=
+                matches!(node.label().as_deref(), Some("Save file" | "Save")) && node.is_disabled();
             pending.extend(node.children());
         }
         assert!(cancel && editable && save_disabled);

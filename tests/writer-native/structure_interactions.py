@@ -7,6 +7,7 @@ import traceback
 from pathlib import Path
 
 from native_window import key, type_text
+from project_interactions import manuscript
 
 
 def run(api, bus, registry, binary, output):
@@ -33,38 +34,33 @@ def run(api, bus, registry, binary, output):
     return "error" not in results
 
 
-def manuscript(window):
-    return next(
-        (
-            address
-            for address, _ in window.nodes()
-            if window.call(address, "Accessible", "GetRole")[0] == 79
-        ),
-        None,
-    )
-
-
 def exercise(api, bus, registry, arguments, log, source, output, results, launch, capture):
     source.write_text("# A new scene.\n")
     process, window, _ = launch(api, bus, registry, arguments, log, manuscript=False)
     try:
         window.wait(lambda: window.find("No beats yet"), "valid empty document")
+        window.document_action("Configure preview")
         window.reveal_end("Start / restart preview")
         assert not window.enabled("Start / restart preview")
         capture(output, "-empty")
+        window.act("Return to writing")
         window.reveal_start("Add beat")
         window.act("Add beat")
         window.reveal_end("Edit passage 1")
         capture(output, "-new-beat")
-        window.act("Edit passage 1")
+        window.edit_passage(1)
         node = window.wait(lambda: manuscript(window), "created line editor")
         window.focus(node)
         key("a", control=True)
         type_text("The new scene begins.")
         window.wait(lambda: window.text(node) == "The new scene begins.", "new line draft")
         window.act("Add reply")
-        node = window.wait(lambda: manuscript(window), "new reply editor")
-        window.wait(lambda: window.text(node) != "The new scene begins.", "new reply selection")
+
+        def selected_reply():
+            current = manuscript(window)
+            return current if window.text(current) != "The new scene begins." else None
+
+        node = window.wait(selected_reply, "new reply selection")
         window.focus(node)
         key("a", control=True)
         type_text("Stay for a moment.")
@@ -107,7 +103,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.wait(lambda: window.find_text(":if trusts(player)"), "conditional Script heading")
         window.wait(lambda: window.find_text("Effect ·", prefix=True), "read-only effect")
         capture(output, "-script")
-        window.act("Beat · empty")
+        window.act("Empty")
         window.wait(
             lambda: window.find_text("No dialogue yet.", prefix=True), "empty beat inspection"
         )
@@ -118,8 +114,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.act("Read beat")
         window.wait(lambda: window.find("Edit passage 1"), "new line reading")
         results["script_groups_effects_and_empty_beat_inspection"] = True
-        window.reveal_start("Close")
-        window.act("Close")
+        window.document_action("Close")
         window.wait(lambda: window.find("Save all and close"), "structural close guard")
         window.save_and_close(results, "structured_save_close")
     except Exception:

@@ -2,6 +2,7 @@
 #[cfg(test)]
 mod tests;
 
+use super::control_style::ControlStyle;
 use super::*;
 use xilem::masonry::theme;
 use xilem::masonry::{
@@ -82,5 +83,47 @@ fn control<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, sc
             .with(Background::Color(p.inset))
             .with(BorderColor { color: p.rule }),
     );
+    quiet_controls(&mut stack, p);
     properties.insert_stack::<W>(stack);
+}
+
+fn quiet_controls(stack: &mut PropertyStack, p: &Palette<Color>) {
+    for style in [
+        ControlStyle::Action,
+        ControlStyle::Navigation,
+        ControlStyle::Segment,
+        ControlStyle::Manuscript,
+    ] {
+        let classes = [style.class()];
+        stack.push_layer(
+            Selector::classes(&classes),
+            PropertySet::new()
+                .with(Background::Color(Color::TRANSPARENT))
+                .with(BorderColor {
+                    color: Color::TRANSPARENT,
+                }),
+        );
+        stack.push_layer(
+            Selector::classes(&classes).with_hovered(true),
+            PropertySet::new()
+                .with(Background::Color(p.hover))
+                .with(BorderColor { color: p.boundary }),
+        );
+        stack.push_layer(
+            Selector::classes(&classes).with_active(true),
+            Background::Color(p.pressed),
+        );
+        stack.push_layer(
+            Selector::classes(&classes).with_focused(true),
+            BorderColor { color: p.accent },
+        );
+        stack.push_layer(
+            Selector::classes(&classes).with_disabled(true),
+            PropertySet::new()
+                .with(Background::Color(Color::TRANSPARENT))
+                .with(BorderColor {
+                    color: Color::TRANSPARENT,
+                }),
+        );
+    }
 }

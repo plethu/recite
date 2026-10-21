@@ -35,6 +35,15 @@ pub(super) enum Workspace {
     Split,
 }
 impl Workspace {
+    pub fn configured(view: recite_config::WriterView, split: bool) -> Self {
+        if split {
+            Self::Split
+        } else if view == recite_config::WriterView::Map {
+            Self::Map
+        } else {
+            Self::Script
+        }
+    }
     pub fn has_map(self) -> bool {
         self != Self::Script
     }
@@ -73,6 +82,7 @@ struct Scene {
     scope: Option<scope::Scope>,
     whole: bool,
     connections: connections::Connections,
+    controls: bool,
     gesture: Gesture,
     placement: Option<placement::Change>,
     focus: Option<FocusIntent>,
@@ -179,6 +189,7 @@ impl MapSession {
                     scope: None,
                     whole: false,
                     connections: Default::default(),
+                    controls: false,
                     gesture: Gesture::Idle,
                     placement: None,
                     focus: None,

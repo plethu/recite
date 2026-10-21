@@ -70,7 +70,7 @@ def focus_close_choice(window):
 
 def run(api, bus, registry, binary, output):
     results = {"host": "owned Cage, D-Bus, project and editor", "physical_ime": False}
-    process = None
+    process, source = None, None
     try:
         with tempfile.TemporaryDirectory(prefix="recite-file-writer-") as temporary:
             project = Path(temporary) / "Project [owned] $test"
@@ -121,16 +121,31 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == original + "x", "native redo")
                 results["typing_undo_redo"] = True
                 key("a", control=True)
+                results["copy_source_before"] = source.read_text()
+
+                def selected():
+                    selection = window.call(
+                        node, "Text", "GetSelection", api.GLib.Variant("(i)", (0,))
+                    )
+                    results["copy_native_selection"] = selection
+                    return tuple(selection) == (0, len(original + "x"))
+
+                window.wait(selected, "native select-all before copying")
                 key("c", control=True)
-                window.wait(
-                    lambda: (
-                        subprocess.run(
-                            ["wl-paste", "--no-newline"], capture_output=True, text=True
-                        ).stdout
-                        == original + "x"
-                    ),
-                    "copy out",
-                )
+
+                def copied():
+                    sample = subprocess.run(
+                        ["wl-paste", "--no-newline"], capture_output=True, text=True, timeout=2
+                    )
+                    results["copy_transport"] = {
+                        "returncode": sample.returncode,
+                        "stdout": sample.stdout,
+                        "stderr": sample.stderr,
+                    }
+                    results["copy_source_after"] = source.read_text()
+                    return sample.returncode == 0 and sample.stdout == original + "x"
+
+                window.wait(copied, "copy out")
                 results["copy_out"] = True
                 incoming = "Saved Café 日本語 مرحبا"
                 subprocess.run(["wl-copy", "--", incoming], check=True, timeout=3)
@@ -154,7 +169,7 @@ def run(api, bus, registry, binary, output):
                 assert json.loads(receipt.read_text()) == [str(source)]
                 assert "An unapplied Writer draft." not in source.read_text()
                 results["editor_argv_and_unapplied_draft_preserved"] = True
-                window.act("Reload (keep recovery copy)")
+                window.document_action("Reload (keep recovery copy)")
                 window.wait(lambda: window.text(node) == incoming, "explicit reload")
                 copies = list(project.glob(".recite-recovered-*.json"))
                 assert len(copies) == 1
@@ -168,24 +183,28 @@ def run(api, bus, registry, binary, output):
                 key("End", control=True)
                 type_text("x")
                 window.wait(lambda: window.text(node) == incoming + "x", "closing draft")
-                save_control = window.find("Save file")
+                save_control = window.find_action("Save file")
                 assert window.enabled("Save file")
                 saved_before_close = source.read_text()
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "close guard")
-                assert window.find("Save file") == save_control
-                assert not window.enabled("Save file")
-                window.act("Save file")
+                assert window.find("Save file") is None
+                try:
+                    window.call(save_control, "Action", "DoAction", api.GLib.Variant("(i)", (0,)))
+                except api.GLib.Error:
+                    pass  # A stashed control is retired from the native accessibility tree.
                 results["close_choice_tab_steps"] = focus_close_choice(window)
                 assert source.read_text() == saved_before_close
-                assert window.text(node) == incoming + "x"
                 results["disabled_native_save_rejects_activation"] = True
                 results["close_choice_keyboard_focus"] = True
                 key("Return")
                 window.wait(lambda: not window.find("Keep editing"), "cancel closing")
                 window.wait(lambda: window.enabled("Save file"), "save enabled after cancel")
-                assert window.find("Save file") == save_control
-                results["native_enabled_sensitive_transition_keeps_control_identity"] = True
+                node = window.wait(
+                    lambda: window.find("Manuscript"), "restored manuscript exposure"
+                )
+                assert window.text(node) == incoming + "x"
+                results["close_stashes_authoring_controls_and_restores_the_draft"] = True
                 window.focus(node)
                 key("z", control=True)
                 window.wait(
@@ -197,7 +216,7 @@ def run(api, bus, registry, binary, output):
                     "redo retained after cancelling close",
                 )
                 results["cancel_close_retains_text_history"] = True
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Keep editing"), "close again")
                 focus_close_choice(window)
                 capture(output, "-close")
@@ -210,7 +229,7 @@ def run(api, bus, registry, binary, output):
                 results["inactive_document_recovery_survives_restart"] = True
                 results["close_guard_and_reopen_recovery"] = True
                 capture(output, "-recovered")
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Save all and close"), "save-close guard")
                 window.save_and_close(results, "recovered_save_close")
                 assert incoming + "x" in source.read_text()
@@ -227,7 +246,8 @@ def run(api, bus, registry, binary, output):
                 assert window.enabled("Export draft and open editor")
                 assert source.read_text() == malformed
                 assert not window.enabled("Add beat")
-                window.reveal_end("Start / restart preview")
+                window.document_action("Configure preview")
+                window.reveal_start("Start / restart preview")
                 assert not window.enabled("Start / restart preview")
                 capture(output, "-source")
                 results["malformed_source_preserved_for_external_repair"] = True
@@ -246,6 +266,8 @@ def run(api, bus, registry, binary, output):
     except Exception as error:
         results["error"] = repr(error)
         results["error_traceback"] = traceback.format_exc()
+        if source is not None and source.exists():
+            results["source_at_failure"] = source.read_text()
         if process is not None and process.poll() is None:
             waits = Counter()
             for task in Path(f"/proc/{process.pid}/task").iterdir():

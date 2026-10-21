@@ -153,8 +153,7 @@ def run(api, bus, registry, binary, output, scale=100):
                 assert window.text(current) == "The last tram crosses the harbour."
                 results["both_checkouts_preserve_the_mounted_manuscript"] = True
                 command(window, "Localise")
-                window.reveal_start("Close")
-                window.act("Close")
+                window.document_action("Close")
                 reveal(window, "Close and keep recovery")
                 window.act("Close and keep recovery")
                 assert process.wait(timeout=10) == 0

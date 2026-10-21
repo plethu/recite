@@ -61,7 +61,7 @@ def exercise(window, project, output, results):
     assert window.text(field(window, "Translation form 1")) == "Un brouillon distant."
     action(window, "Preview this passage")
     reveal(window, "Start / restart preview")
-    action(window, "Preview inputs")
+    action(window, "Configure preview")
     reveal_field(window, "Preview wording")
     assert window.text(field(window, "Preview wording")) == "formal"
     capture(output, "-inputs")
@@ -72,7 +72,7 @@ def exercise(window, project, output, results):
     capture_end(window, output, "-draft-preview")
     assert po.read_text() == PO
     results["preview_can_capture_draft_without_publishing_po"] = True
-    action(window, "Hide preview")
+    action(window, "Return to writing")
     reveal(window, "scene.recite · Unsaved")
     action(window, "scene.recite · Unsaved")
     reveal_field(window, "Manuscript")

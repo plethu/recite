@@ -49,6 +49,7 @@ impl Writer {
         }
     }
     pub(crate) fn navigation_retired(&mut self, request: &Arc<Request>) {
+        self.field_apply_retired(request);
         self.refresh_map_if_needed();
         if self
             .navigation

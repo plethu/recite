@@ -59,7 +59,8 @@ def run(api, bus, registry, binary, output):
                     api, bus, registry, [str(binary), "--project", str(project)], log
                 )
                 window.act("Read beat")
-                window.act("Reply rules…")
+                window.edit_passage(2)
+                window.document_action("Reply rules…")
                 minimum = "standing · minimum · Whole number"
                 node = field(window, minimum)
                 capture(output, "-controls")

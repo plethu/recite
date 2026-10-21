@@ -1,5 +1,7 @@
 //! A normal card button and its explicit move handle compose independent inputs.
 use super::*;
+use crate::presentation::{manuscript_text, print};
+use recite_writer_session::typography::FONT_DISPLAY;
 use xilem::masonry::properties;
 pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetView<Writer> + use<> {
     let block = &scene.projection.graph.blocks[index];
@@ -21,13 +23,11 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             1.,
             format!("{}{title}", if selected { "Selected · " } else { "" }),
         )
+        .font(print::font(FONT_DISPLAY))
         .text_size(18.),
         label(1., synopsis.speaker.clone()),
-        paragraph(
-            1.,
-            synopsis.prose.chars().take(64).collect::<String>(),
-            scene.node(index).width as f64 - 32.,
-        ),
+        flex_row((manuscript_text(16., excerpt(&synopsis.prose))
+            .width((f64::from(scene.node(index).width) - 32.).px()),)),
         (!synopsis.annotations.is_empty()).then(|| label(1., synopsis.annotations.join(" · "))),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -86,4 +86,15 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(4.px())
         .dims((scene.node(index).width.px(), HEIGHT.px()))
+}
+fn excerpt(text: &str) -> String {
+    let mut chars = text.chars();
+    let mut preview = chars.by_ref().take(96).collect::<String>();
+    if chars.next().is_some() {
+        if let Some(end) = preview.rfind(char::is_whitespace) {
+            preview.truncate(end);
+        }
+        preview.push('…');
+    }
+    preview
 }

@@ -62,6 +62,7 @@ impl<D: AppDriver> ApplicationHandler<MasonryUserEvent> for Host<D> {
         } else {
             self.keyboard.reset();
         }
+        self.masonry.flush_signals(event_loop, &mut self.driver);
         self.masonry.handle_suspended(event_loop);
     }
     fn window_event(&mut self, event_loop: &ActiveEventLoop, id: WindowId, event: WindowEvent) {

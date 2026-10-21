@@ -1,6 +1,6 @@
 //! A tagged immutable keyboard context routes native host messages through Xilem.
 use super::*;
-use crate::attention::PaneMotion;
+use crate::attention::{DocumentMenu, EditingTarget, PaneMotion};
 use crate::localisation::TranslationTarget;
 use recite_config::{WriterCommand, WriterShortcuts};
 use xilem::{
@@ -38,7 +38,10 @@ pub(crate) struct Context {
     pub writer_active: bool,
     pub screen: Option<crate::workspaces::Screen>,
     pub picker_open: bool,
+    pub document_menu: DocumentMenu,
     pub attention: crate::attention::Attention,
+    pub editing: Option<EditingTarget>,
+    pub field_restoration: Option<EditingTarget>,
     pub keymap: recite_config::Keymap,
     pub proxy: MessageProxy<Invocation>,
 }
@@ -53,6 +56,8 @@ pub(crate) enum Action {
     SubmitPicker,
     PaneHint(bool),
     CyclePane { forward: bool },
+    FieldFocus(Option<EditingTarget>),
+    DismissDocumentMenu,
 }
 impl std::fmt::Debug for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -75,8 +80,11 @@ struct DocumentScope {
     workspace: crate::map::Workspace,
     stamp: recite_writer_model::AnalysisStamp,
     attention: crate::attention::Attention,
+    editing: Option<EditingTarget>,
+    field_restoration: Option<EditingTarget>,
     writing: bool,
     screen: crate::workspaces::Screen,
+    document_menu: DocumentMenu,
 }
 impl PartialEq for DocumentScope {
     fn eq(&self, other: &Self) -> bool {
@@ -85,8 +93,11 @@ impl PartialEq for DocumentScope {
             && self.workspace == other.workspace
             && self.stamp == other.stamp
             && self.attention == other.attention
+            && self.editing == other.editing
+            && self.field_restoration == other.field_restoration
             && self.writing == other.writing
             && self.screen == other.screen
+            && self.document_menu == other.document_menu
     }
 }
 impl Scope {
@@ -100,8 +111,11 @@ impl Scope {
                     workspace: writer.map.workspace,
                     stamp: model.document().analysis_stamp(),
                     attention: writer.attention.clone(),
+                    editing: EditingTarget::capture(writer),
+                    field_restoration: writer.field_restoration(),
                     writing: writer.phase == Phase::Writing,
                     screen: writer.workspaces.screen,
+                    document_menu: writer.document_menu,
                 }
             }),
             welcome: app.show_welcome,
@@ -141,6 +155,11 @@ impl<V> Host<V> {
             }) && !self.scope.welcome
                 && !self.scope.settings,
             picker_open: self.scope.picker.is_some(),
+            document_menu: self
+                .scope
+                .writer
+                .as_ref()
+                .map_or(DocumentMenu::Closed, |writer| writer.document_menu),
             screen: self
                 .scope
                 .writer
@@ -153,7 +172,24 @@ impl<V> Host<V> {
                 .as_ref()
                 .map(|writer| writer.attention.clone())
                 .unwrap_or_default(),
+            editing: self
+                .scope
+                .writer
+                .as_ref()
+                .filter(|writer| {
+                    writer.writing
+                        && writer.screen == crate::workspaces::Screen::Write
+                        && !self.scope.welcome
+                        && !self.scope.settings
+                        && self.scope.picker.is_none()
+                })
+                .and_then(|writer| writer.editing.clone()),
             keymap: self.scope.keymap,
+            field_restoration: self
+                .scope
+                .writer
+                .as_ref()
+                .and_then(|writer| writer.field_restoration.clone()),
             proxy: state.proxy.clone(),
         })))
     }
@@ -171,6 +207,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
             proxy,
         };
         let mut pod = Pod::new_with_props(Passthrough::new(child.new_widget), Dimensions::MAX);
+        ctx.record_action_source(pod.new_widget.id());
         pod.new_widget = pod
             .new_widget
             .with_tag(TAG)
@@ -207,6 +244,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
             let mut child = Passthrough::child_mut(&mut element);
             self.child.teardown(&mut state.child, ctx, child.downcast());
         });
+        ctx.teardown_action_source(element);
     }
     fn message(
         &self,
@@ -234,6 +272,11 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
             return MessageResult::Stale;
         }
         match invocation.action {
+            Action::FieldFocus(target) => {
+                if let Some(writer) = &mut app.writer {
+                    writer.native_field_focus(target);
+                }
+            }
             Action::Command(command) => app.run_command(command),
             Action::SaveTranslation(target) => {
                 if let Some(writer) = &mut app.writer {
@@ -241,6 +284,11 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
                 }
             }
             Action::SubmitPicker => app.submit_picker(),
+            Action::DismissDocumentMenu => {
+                if let Some(writer) = &mut app.writer {
+                    writer.document_menu = DocumentMenu::Dismissed;
+                }
+            }
             Action::PaneHint(pending) => app.pane_hint = pending,
             Action::CyclePane { forward } => {
                 if let Some(writer) = &mut app.writer {

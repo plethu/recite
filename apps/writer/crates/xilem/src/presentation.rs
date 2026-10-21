@@ -2,6 +2,10 @@
 mod controls;
 mod styled_text;
 pub(crate) use styled_text::{manuscript_text, source_text};
+pub(crate) mod control_style;
+pub(crate) mod group;
+pub(crate) mod identity;
+pub(crate) mod print;
 mod radio;
 mod theme;
 pub(super) use controls::{label, paragraph, prose, text_button};
@@ -15,6 +19,7 @@ pub(super) struct Theme {
     key: (WriterTheme, bool, u16),
     pub palette: Palette<Color>,
     pub properties: Arc<DefaultProperties>,
+    wordmark: Result<Arc<usvg::Tree>, String>,
 }
 impl Theme {
     pub fn initial_properties(&self) -> DefaultProperties {
@@ -29,6 +34,7 @@ impl Theme {
                 config.presentation.value(WriterPresentationField::UiScale),
             ),
             properties: Arc::new(theme::properties(&palette, scale(config))),
+            wordmark: identity::load(config),
             palette,
         }
     }

@@ -117,7 +117,7 @@ def run(api, bus, registry, binary, output):
                 results["mounted_manuscript_history_survives_preference_changes"] = True
                 assert config.read_text().startswith("# Preserve this personal comment.")
                 results["shared_config_owner_preserves_user_comments"] = True
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "close guard")
                 window.act("Close and keep recovery")
                 assert process.wait(timeout=5) == 0
@@ -132,11 +132,11 @@ def run(api, bus, registry, binary, output):
                 results["personal_preferences_and_recovery_survive_restart"] = True
                 window.act("Done with settings")
                 manuscript(window)
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Save all and close"), "save close choice")
                 window.save_and_close(results, "preference_save_close")
                 process, window, node = launch(api, bus, registry, arguments, log)
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Close Writer"), "ordinary close confirmation")
                 capture(output, "-ordinary-close")
                 window.act("Keep editing")

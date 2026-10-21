@@ -15,7 +15,7 @@ fn area(text: &str) -> TestHarness<TextArea<true>> {
         let (fonts, _) = widget.ctx.text_contexts();
         let registered = fonts.collection.register_fonts(
             masonry::peniko::Blob::new(std::sync::Arc::new(
-                include_bytes!("../../freya/fonts/literata/Literata-Variable.ttf").to_vec(),
+                include_bytes!("../../../assets/fonts/literata/Literata-Variable.ttf").to_vec(),
             )),
             None,
         );

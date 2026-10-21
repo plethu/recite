@@ -92,6 +92,7 @@ impl Writer {
         self.cancel_history_navigation();
         self.remember_location();
         self.workspaces.screen = Screen::Write;
+        self.return_from_trial();
         self.refresh_map_if_needed();
         self.remember_location();
     }

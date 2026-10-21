@@ -5,6 +5,7 @@ import tempfile
 import traceback
 from pathlib import Path
 
+from localisation_interactions import reveal_text
 from native_window import key, type_text
 
 SOURCE = """:: start default
@@ -57,6 +58,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
     source.write_text(SOURCE)
     process, window, node = launch(api, bus, registry, arguments, log)
     try:
+        window.document_action("Configure preview")
         window.reveal_end("Start / restart preview")
         window.act("Start / restart preview")
         window.reveal_end("Continue preview")
@@ -77,28 +79,32 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.act("Continue preview")
         window.wait(lambda: window.find("Conversation ended"), "conversation ending")
         results["preview_choices_conditions_and_effect_ack"] = True
+        window.act("Return to writing")
         window.reveal_start("Manuscript")
+        node = window.wait(lambda: window.find("Manuscript"), "returned manuscript")
         window.focus(node)
         original = window.text(node)
         key("End", control=True)
         type_text("x")
+        window.document_action("Configure preview")
         window.reveal_end("Start / restart preview")
+        window.reveal_down("This preview uses older inputs. Restart to use your accepted edits.")
         window.wait(
             lambda: window.find_text("This preview uses older inputs.", prefix=True),
             "stale preview",
         )
         capture(output, "-stale")
+        window.reveal_start("Start / restart preview")
         window.act("Start / restart preview")
-        window.wait(
-            lambda: window.find_text("Apply or discard", prefix=True), "unapplied preview guard"
-        )
+        reveal_text(window, "Apply or discard", prefix=True)
         results["preview_restart_preserves_unapplied_draft_and_previous_run"] = True
+        window.act("Return to writing")
         window.reveal_start("Manuscript")
         window.focus(node)
         key("z", control=True)
         window.wait(lambda: window.text(node) == original, "typing undo through preview")
-        window.reveal_end("Hide preview")
-        window.act("Hide preview")
+        window.document_action("Configure preview")
+        window.act("Return to writing")
         window.reveal_start("Manuscript")
         window.focus(node)
         key("y", control=True)

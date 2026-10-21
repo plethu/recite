@@ -19,15 +19,32 @@ def manuscript(window):
     )
 
 
+def document_caption(window, name, selected=None):
+    key = name.removesuffix(" · Unsaved")
+    for node, caption in window.nodes():
+        clean = caption.removesuffix(" · Unsaved")
+        current = clean.startswith("▾ ") or clean == "Current · " + key
+        matches = clean in (key, "Current · " + key) or (
+            clean.startswith(("▾ ", "▸ ")) and clean.endswith(" · " + key)
+        )
+        if (
+            matches
+            and (selected is None or current == selected)
+            and "org.a11y.atspi.Action" in window.call(node, "Accessible", "GetInterfaces")[0]
+        ):
+            return caption
+    return None
+
+
 def switch(window, name, text):
     before = manuscript(window)
-    assert window.act(name), "document switch action was rejected"
-    current = "Current · " + name.removesuffix(" · Unsaved")
+    caption = window.wait(lambda: document_caption(window, name), "document selector: " + name)
+    assert window.act(caption), "document switch action was rejected"
     # Action delivery and AccessKit tree replacement are asynchronous. Resolve the
-    # field on each poll instead of holding a node retired by the document switch.
+    # live field after switching instead of reusing the retired document's node.
     return window.wait(
         lambda: (
-            (window.find(current) or window.find(current + " · Unsaved"))
+            document_caption(window, name, selected=True)
             and next(
                 (
                     node

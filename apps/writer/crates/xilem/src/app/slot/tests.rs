@@ -110,8 +110,7 @@ fn copy_link_dispatches_the_exact_escaped_location_through_the_native_clipboard_
     let copy = loop {
         let widget = pending.pop().expect("Copy link action");
         if ctx.get_id_path(widget.id()).is_some()
-            && support::native_label(&harness, widget.id()).as_deref()
-                == Some("Copy link to this view")
+            && support::native_label(&harness, widget.id()).as_deref() == Some("Copy link")
         {
             break widget.id();
         }

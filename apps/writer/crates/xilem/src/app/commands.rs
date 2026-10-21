@@ -1,5 +1,10 @@
 use super::*;
-use crate::{attention::PaneMotion, map::Workspace, navigation::Target, workspaces::Open};
+use crate::{
+    attention::{DocumentMenu, PaneMotion},
+    map::Workspace,
+    navigation::Target,
+    workspaces::Open,
+};
 use recite_config::WriterCommand;
 use recite_writer_model::{EditOperation, StructuralCommand};
 
@@ -23,6 +28,9 @@ impl App {
         {
             self.status = "Choose how to close Writer before running another command.".into();
             return;
+        }
+        if let Some(writer) = &mut self.writer {
+            writer.document_menu = DocumentMenu::Closed;
         }
         match (&mut self.writer, command) {
             (_, WriterCommand::Commands) => self.open_picker(picker::Search::Commands),

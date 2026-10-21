@@ -126,7 +126,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: focused(window, node), "retained writing after metadata reload")
                 assert manuscript(window) == node
                 assert window.text(node) == "The last tram waits.x"
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(
                     lambda: window.find("Close and keep recovery"), "close after cancellation"
                 )

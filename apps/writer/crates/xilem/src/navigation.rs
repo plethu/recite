@@ -2,6 +2,7 @@
 use recite_writer_session::location::history as location_history;
 mod capture;
 mod destination;
+mod focus;
 mod history;
 mod location;
 mod opening;
@@ -34,6 +35,7 @@ pub(super) enum Target {
         search: crate::lookup::Search,
     },
     Selection(Location),
+    PinReference,
     Edit(EditOperation),
     Structure(StructuralCommand),
     Workspace(crate::map::Workspace),
@@ -71,6 +73,7 @@ pub(super) struct Navigation {
     deferred_save: Option<saving::DeferredSave>,
     pub(super) history: location_history::History,
     visit: Option<location_history::Step>,
+    field: focus::Admission,
 }
 pub(super) struct Request {
     target: Target,
@@ -107,10 +110,11 @@ impl Navigation {
             deferred_save: None,
             history: Default::default(),
             visit: None,
+            field: Default::default(),
         }
     }
     pub fn busy(&self) -> bool {
-        self.pending.is_some() || self.deferred_save.is_some()
+        self.pending.is_some() || self.deferred_save.is_some() || self.field.busy()
     }
 }
 impl WorkControl for Request {
@@ -154,15 +158,6 @@ impl Writer {
         if let Some(example) = recite_writer_model::WRITER_EXAMPLES.get(index) {
             self.navigate(Target::Example(example.name.into()));
         }
-    }
-    pub(super) fn select(&mut self, id: String) {
-        self.navigate(Target::Selection(Location {
-            screen: recite_writer_session::location::Screen::Write,
-            passage: Some(id),
-            source: false,
-            view: Some(recite_config::WriterView::Script),
-            ..self.current_location()
-        }));
     }
     pub(super) fn inspect(&mut self, id: String) {
         self.navigate(Target::Selection(Location {
@@ -236,6 +231,7 @@ impl Writer {
                     | Target::Edit(_)
                     | Target::Structure(_)
                     | Target::Workspace(_)
+                    | Target::PinReference
             )
         {
             return Err("Repair and import the recovered source draft before applying it or following a link. You can switch documents to keep this draft for later.".into());
@@ -251,6 +247,7 @@ impl Writer {
                 | Target::Edit(_)
                 | Target::Structure(_)
                 | Target::Workspace(_)
+                | Target::PinReference
         ) || (matches!(target, Target::Selection(_))
             && matches!(self.session.model().view(), View::Passage(_))))
             && self.session.model().has_draft();

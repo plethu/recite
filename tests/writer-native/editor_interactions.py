@@ -99,7 +99,7 @@ def run(api, bus, registry, binary, output):
                 assert window.text(node).endswith(" unfinished")
                 capture(output, "-conflict")
                 results["disk_conflict_prevents_launch_and_retains_native_draft"] = True
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(
                     lambda: window.find("Close and keep recovery"),
                     "close with retained field draft",
@@ -158,7 +158,7 @@ def run(api, bus, registry, binary, output):
                     lambda: window.enabled("Use system default"), "available fallback after scaling"
                 )
                 before = receipt.stat().st_mtime_ns
-                window.act("Use system default")
+                window.document_action("Use system default")
                 window.wait(
                     lambda: receipt.stat().st_mtime_ns != before,
                     "fallback from failed explicit editor",
@@ -173,7 +173,7 @@ def run(api, bus, registry, binary, output):
                 results[
                     "failed_explicit_editor_restores_controls_and_preserves_recovered_draft"
                 ] = True
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "last recovery close")
                 window.act("Close and keep recovery")
                 assert process.wait(timeout=5) == 0

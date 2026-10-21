@@ -23,6 +23,8 @@ fn creating_and_opening_a_project_use_terminal_worker_receipts_and_preserve_exis
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("Created project");
     let mut app = App::empty();
+    app.preferences.config.writer.presentation =
+        app.preferences.config.writer.presentation.with_split(true);
     let (sent, outputs) = mpsc::sync_channel(4);
     let mut context = ViewCtx::new(
         Arc::new(Results(sent)),
@@ -62,6 +64,7 @@ fn creating_and_opening_a_project_use_terminal_worker_receipts_and_preserve_exis
     assert!(!app.show_welcome);
     assert!(app.opening.is_none());
     let writer = app.writer.as_ref().unwrap();
+    assert_eq!(writer.map.workspace, crate::map::Workspace::Split);
     assert_eq!(writer.session.project().unwrap().root(), path);
     assert!(
         writer

@@ -55,8 +55,11 @@ pub(crate) fn labels(writer: &mut Writer) -> Result<Vec<String>, Box<dyn std::er
     let mut pending = vec![tree.state().root()];
     let mut labels = vec![];
     while let Some(node) = pending.pop() {
-        if let Some(label) = node.label().or_else(|| node.value()) {
+        if let Some(label) = node.label() {
             labels.push(label);
+        }
+        if let Some(value) = node.value() {
+            labels.push(value);
         }
         pending.extend(node.children());
     }
@@ -114,12 +117,26 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
             }
             pending.extend(widget.children());
         };
+        let field = harness
+            .get_widget_with_id(id)
+            .downcast::<masonry::widgets::TextArea<true>>()
+            .is_some();
         harness.process_access_event(masonry::accesskit::ActionRequest {
-            action: masonry::accesskit::Action::Click,
+            action: if field {
+                masonry::accesskit::Action::Focus
+            } else {
+                masonry::accesskit::Action::Click
+            },
             target_tree: masonry::accesskit::TreeId::ROOT,
             target_node: id.to_raw().into(),
             data: None,
         });
+        if field {
+            let target = harness.focused_widget_id().and_then(|id| {
+                crate::attention::PassageField::focused(harness.root_widget().as_dyn(), id)
+            });
+            writer.native_field_focus(target);
+        }
         flush_native(
             writer,
             &mut harness,

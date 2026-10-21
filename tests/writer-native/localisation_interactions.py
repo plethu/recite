@@ -51,7 +51,7 @@ def _reveal(window, find, label):
     def locate():
         if find():
             return True, None
-        scrollbar = window._outer_scrollbar()
+        scrollbar = window.content_scrollbar(label)
         return (False, scrollbar) if scrollbar else None
 
     visible, scrollbar = window.wait(locate, "control or outer scrollbar: " + label)
@@ -63,8 +63,11 @@ def _reveal(window, find, label):
     def page():
         if find():
             return True
+        scrollbar = window.content_scrollbar(label)
+        if scrollbar is None:
+            return False
+        window.focus(scrollbar)
         key("Page_Down")
-        key("Up")
         return bool(find())
 
     window.wait(page, "scrolled control: " + label)
@@ -212,8 +215,7 @@ def run(api, bus, registry, binary, output):
                 results[
                     "disk_conflict_requires_inspection_and_keeps_the_chosen_draft_without_writing_po"
                 ] = True
-                window.reveal_start("Save all")
-                window.act("Save all")
+                window.document_action("Save all")
                 window.wait(
                     lambda: (
                         "Un brouillon conservé." in po.read_text()
@@ -224,8 +226,7 @@ def run(api, bus, registry, binary, output):
                 assert "# external translator note" in po.read_text()
                 results["save_all_publishes_both_layers_and_preserves_external_po_metadata"] = True
                 edit(window, "À retrouver après réouverture.")
-                window.reveal_start("Close")
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(
                     lambda: window.find("Close and keep recovery"), "translation close guard"
                 )
@@ -245,8 +246,7 @@ def run(api, bus, registry, binary, output):
                 )
                 assert "Un brouillon conservé." in po.read_text()
                 results["close_recovery_restores_translation_drafts_without_publishing_them"] = True
-                window.reveal_start("Close")
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Save all and close"), "saved close continuation")
                 window.act("Save all and close")
                 assert process.wait(timeout=10) == 0

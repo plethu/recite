@@ -105,7 +105,6 @@ def run(api, bus, registry, binary, output):
                     assert source.read_text() == SOURCE
                     results[f"forwarded_source_link_completes_at_process_start_{scale}"] = True
                     release.touch()
-                    window.reveal_start("Close")
                     window.close_clean()
                     assert process.wait(timeout=5) == 0
                     long_source = "À la gare, le dernier tram attend. " * 64
@@ -140,7 +139,6 @@ def run(api, bus, registry, binary, output):
                         "next source reading part",
                     )
                     results[f"bounded_long_source_reading_and_next_part_{scale}"] = True
-                    window.reveal_start("Close")
                     window.close_clean()
                     assert process.wait(timeout=5) == 0
                     receipt.unlink()
@@ -161,7 +159,6 @@ def run(api, bus, registry, binary, output):
                     capture(output, f"-source-{scale}")
                     results[f"cold_source_link_resumes_on_worker_readiness_{scale}"] = True
                     release.touch()
-                    window.reveal_start("Close")
                     window.close_clean()
                     assert process.wait(timeout=5) == 0
     except Exception as error:

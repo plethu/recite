@@ -45,8 +45,7 @@ class NativeWindow:
         return {"visited": len(seen), "broken_edges": failures}
 
     def close_clean(self):
-        self.reveal_start("Close")
-        self.act("Close")
+        self.document_action("Close")
         try:
             self.wait(lambda: self.find("Close Writer"), "ordinary exit preference")
         except RuntimeError:
@@ -89,34 +88,130 @@ class NativeWindow:
         return None
 
     def act(self, label):
-        node = self.wait(lambda: self.find(label), "available action: " + label)
+        node = self.wait(lambda: self.find_action(label), "available action: " + label)
         return self.call(node, "Action", "DoAction", self.api.GLib.Variant("(i)", (0,)))[0]
 
-    def reveal_end(self, label):
-        """Explicitly reach a below-viewport action through the native outer scrollbar."""
-        self._reveal(label, "End")
+    def find_action(self, label):
+        return next(
+            (
+                node
+                for node, name in self.nodes()
+                if name == label
+                and "org.a11y.atspi.Action" in self.call(node, "Accessible", "GetInterfaces")[0]
+            ),
+            None,
+        )
 
-    def reveal_start(self, label):
-        """Reach an above-viewport action through the native outer scrollbar."""
-        self._reveal(label, "Home")
+    def document_action(self, label):
+        """Follow the document menu's named native group and its own viewport."""
 
-    def _reveal(self, label, direction):
-        def scroll():
-            if self.find(label):
+        def open_menu():
+            if self.find_action(label) is None and self.find("Document actions menu") is None:
+                self.act("Document actions ⋯")
+            return True
+
+        self.wait(open_menu, "document action or open menu: " + label)
+
+        def page():
+            if self.find_action(label) is not None:
                 return True
-            scrollbar = self._outer_scrollbar()
+            scrollbar = self.section_scrollbar("Document actions menu")
+            if scrollbar is not None:
+                self.focus(scrollbar)
+                key("Page_Down")
+            return False
+
+        self.wait(page, "document menu action: " + label)
+        return self.act(label)
+
+    def section_scrollbar(self, label):
+        """Resolve a named pane's own ScrollView through standard AT-SPI children."""
+        for anchor, name in self.nodes():
+            if name != label:
+                continue
+            pending, seen = [anchor], set()
+            while pending:
+                node = pending.pop()
+                if tuple(node) in seen:
+                    continue
+                seen.add(tuple(node))
+                children = self.call(node, "Accessible", "GetChildren")[0]
+                vertical = 1 << int(self.api.Atspi.StateType.VERTICAL)
+                scrollbar = next(
+                    (
+                        child
+                        for child in children
+                        if self.call(child, "Accessible", "GetRole")[0]
+                        == int(self.api.Atspi.Role.SCROLL_BAR)
+                        and self.call(child, "Accessible", "GetState")[0][0] & vertical
+                    ),
+                    None,
+                )
+                if scrollbar is not None:
+                    return scrollbar
+                pending.extend(children)
+        return None
+
+    def content_scrollbar(self, label):
+        if (
+            label == "Manuscript"
+            or label.startswith("Edit passage ")
+            or label in ("Pin reference", "Read beat")
+        ):
+            return self.section_scrollbar("Script pane") or self._outer_scrollbar()
+        return self._outer_scrollbar()
+
+    def edit_passage(self, ordinal):
+        node = self.wait(lambda: self.find(f"Edit passage {ordinal}"), "inline manuscript field")
+        self.focus(node)
+        self.wait(lambda: self.find("Manuscript") == node, "admitted inline manuscript")
+
+    def reveal_down(self, label):
+        """Reach a content action by paging its owned native document viewport."""
+
+        def page():
+            if self.find(label) or self.find_text(label):
+                return True
+            scrollbar = self.content_scrollbar(label)
             if scrollbar is None:
                 return False
             self.focus(scrollbar)
-            key(direction)
+            key("Page_Down")
+            return False
+
+        self.wait(page, "paged content action: " + label)
+
+    def reveal_end(self, label):
+        """Reach a content action through its named native viewport."""
+        self._reveal(label)
+
+    def reveal_start(self, label):
+        """Reach a content action through its named native viewport."""
+        self._reveal(label)
+
+    def _reveal(self, label):
+        def scroll():
+            if self.find(label) or self.find_text(label):
+                return True
+            scrollbar = self.content_scrollbar(label)
+            if scrollbar is None:
+                return False
+            self.focus(scrollbar)
+            key("Home")
             return True
 
         # A pane transition can remove AT-SPI nodes during traversal. Retry the
         # complete live lookup, as act()/field lookup already do.
         self.wait(scroll, "native scroll toward: " + label)
-        self.wait(lambda: self.find(label), "scrolled action: " + label)
+        self.reveal_down(label)
 
     def _outer_scrollbar(self):
+        # Named panes remain exposed while their content scrolls. Prefer the
+        # active preview for content probes; manuscript requests select Script.
+        for label in ("Conversation preview", "Script pane"):
+            scrollbar = self.section_scrollbar(label)
+            if scrollbar is not None:
+                return scrollbar
         vertical = 1 << int(self.api.Atspi.StateType.VERTICAL)
         scrollbars = [
             node
@@ -125,10 +220,14 @@ class NativeWindow:
             and self.call(node, "Accessible", "GetState")[0][0] & vertical
         ]
         coordinates = self.api.GLib.Variant("(u)", (int(self.api.Atspi.CoordType.WINDOW),))
-        # Writer also has small scrollable file/beat lists; use the window-height portal.
+        # The writing rail scrolls independently. The content portal reaches the
+        # right window edge; height alone would select the rail or a pinned preview.
         return max(
             scrollbars,
-            key=lambda node: self.call(node, "Component", "GetExtents", coordinates)[0][3],
+            key=lambda node: (
+                self.call(node, "Component", "GetExtents", coordinates)[0][0],
+                self.call(node, "Component", "GetExtents", coordinates)[0][3],
+            ),
             default=None,
         )
 

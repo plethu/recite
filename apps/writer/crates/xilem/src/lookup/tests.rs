@@ -76,11 +76,12 @@ fn rejected_and_cancelled_search_navigation_preserve_the_last_accepted_search()
         let writer = &mut fixture.writer;
         begin(writer, "part_a");
         support::finish_navigation(writer, &mut fixture.jobs)?;
-        writer.select(
+        writer.native_field_focus(Some(crate::attention::EditingTarget::passage(
+            writer,
             writer.session.model().document().passage_snapshot()?[0]
                 .id
                 .clone(),
-        );
+        )));
         support::finish_navigation(writer, &mut fixture.jobs)?;
         writer.repeat_lookup(true);
         let completed = fixture.jobs.try_recv()?.execute();
@@ -110,11 +111,12 @@ fn newer_typing_after_implicit_apply_prevents_cursor_publication()
     let writer = &mut fixture.writer;
     begin(writer, "part_a");
     support::finish_navigation(writer, &mut fixture.jobs)?;
-    writer.select(
+    writer.native_field_focus(Some(crate::attention::EditingTarget::passage(
+        writer,
         writer.session.model().document().passage_snapshot()?[0]
             .id
             .clone(),
-    );
+    )));
     support::finish_navigation(writer, &mut fixture.jobs)?;
     writer.change(|model| {
         model.set_draft("Captured text.".into());

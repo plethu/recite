@@ -1,8 +1,11 @@
+mod document_menu;
 mod focus;
 mod held;
 mod history;
+mod manuscript;
 mod panes;
 mod picker;
+mod tab;
 mod vim;
 use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
 use recite_config::WriterCommand;
@@ -30,6 +33,9 @@ pub(super) struct Keyboard {
     attention: panes::Attention,
     vim: vim::Vim,
     held: held::HeldKeys,
+    manuscript: manuscript::Fields,
+    document_menu: document_menu::Focus,
+    tab: tab::Reveal,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
@@ -37,17 +43,22 @@ impl Keyboard {
         self.composition = Composition::Idle;
         self.vim = vim::Vim::default();
         self.held = held::HeldKeys::default();
+        self.tab = tab::Reveal::default();
     }
-    pub fn blur(&mut self, root: &RenderRoot) {
+    pub fn blur(&mut self, root: &mut RenderRoot) {
         if let Some(context) = root
             .get_widget_with_tag(TAG)
             .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone())
         {
             self.vim.cancel(&context);
+            self.manuscript.clear(root, &context);
         }
         self.reset();
     }
-    pub fn event(&mut self, root: &RenderRoot, event: &WindowEvent) -> bool {
+    pub fn event(&mut self, root: &mut RenderRoot, event: &WindowEvent) -> bool {
+        if manuscript::blocks_input(root, event) {
+            return true;
+        }
         match event {
             WindowEvent::ModifiersChanged(modifiers) => self.modifiers = modifiers.state(),
             WindowEvent::Ime(Ime::Preedit(text, _)) => {
@@ -79,6 +90,16 @@ impl Keyboard {
         {
             return true;
         }
+        if manuscript::unadmitted(root)
+            && event.state == ElementState::Pressed
+            && !matches!(
+                event.logical_key,
+                keyboard::Key::Named(NamedKey::Tab | NamedKey::Escape)
+            )
+        {
+            self.held.press(event.physical_key);
+            return true;
+        }
         if is_synthetic {
             return false;
         }
@@ -96,6 +117,7 @@ impl Keyboard {
             event.logical_key,
             self.normalized_modifiers(),
         )
+        .or_else(|| document_menu::escape(&context, event.logical_key, self.normalized_modifiers()))
         .or_else(|| history::key(&context, event.logical_key, self.normalized_modifiers()));
         let consumed = self.dispatch(
             &context,
@@ -119,8 +141,19 @@ impl Keyboard {
             self.vim.cancel(&context);
             return consumed;
         }
-        self.vim
-            .event(&context, root.focused_widget(), kind, event, self.modifiers)
+        let consumed = self
+            .vim
+            .event(&context, root.focused_widget(), kind, event, self.modifiers);
+        if !consumed
+            && event.state == ElementState::Pressed
+            && *event.logical_key == keyboard::Key::Named(NamedKey::Tab)
+            && !self
+                .modifiers
+                .intersects(ModifiersState::CONTROL | ModifiersState::ALT | ModifiersState::SUPER)
+        {
+            self.tab.request(root.focused_widget());
+        }
+        consumed
     }
     fn dispatch(
         &mut self,
@@ -181,6 +214,7 @@ impl Keyboard {
         true
     }
     pub fn synchronize(&mut self, root: &mut RenderRoot) {
+        self.tab.synchronize(root);
         let context = root
             .get_widget_with_tag(TAG)
             .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone());
@@ -193,6 +227,15 @@ impl Keyboard {
             self.focus
                 .synchronize(root, context.picker_open, context.generation);
             self.attention.synchronize(root, &context);
+            if !context.picker_open {
+                self.focus.synchronize_manuscript(
+                    root,
+                    context.editing.as_ref().filter(|_| context.writer_active),
+                );
+            }
+            self.manuscript
+                .synchronize(root, &context, &self.composition);
+            self.document_menu.synchronize(root, &context);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {

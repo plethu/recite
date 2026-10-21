@@ -47,7 +47,6 @@ def run(api, bus, registry, binary, output):
                     "large-reading translation saved",
                 )
                 results["command_search_catalogue_edit_and_save_at_200_ui_and_32_reading"] = True
-                window.reveal_start("Close")
                 window.close_clean()
                 assert process.wait(timeout=10) == 0
     except Exception as error:

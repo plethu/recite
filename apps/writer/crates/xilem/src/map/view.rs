@@ -3,14 +3,15 @@ use super::interaction::Source;
 use super::*;
 use crate::attention::{Pane, Region};
 use crate::view::workspace;
-use xilem::masonry::kurbo;
 use xilem::masonry::properties;
 mod canvas;
 mod card;
 mod connections;
 mod overview;
+mod toolbar;
 use crate::presentation::{label, paragraph, text_button};
 use recite_writer_session::map::{layout::HEIGHT, topology};
+use toolbar::toolbar;
 use xilem::{
     AnyWidgetView, WidgetView,
     masonry::{
@@ -20,8 +21,8 @@ use xilem::{
     },
     style::Style,
     view::{
-        CrossAxisAlignment, button_any_pointer, canvas, flex_col, flex_row, resize_observer,
-        sized_box, zstack,
+        CrossAxisAlignment, FlexExt, button_any_pointer, canvas, flex_col, flex_row,
+        resize_observer, sized_box, zstack,
     },
 };
 
@@ -38,12 +39,7 @@ pub(crate) fn panel(state: &Writer) -> Box<AnyWidgetView<Writer>> {
         .projection
         .is_current(state.session.model().document());
     flex_col((
-        toolbar(state),
-        paragraph(
-            state.ui_scale(),
-            "Drag empty space to pan; Ctrl+scroll zooms. Arrows select a beat; Enter opens Script.",
-            workspace::Layout::resolve(state).map,
-        ),
+        toolbar(state, scene),
         (scene.detail() == Detail::Overview).then(|| {
             label(
                 state.ui_scale(),
@@ -81,7 +77,7 @@ pub(crate) fn panel(state: &Writer) -> Box<AnyWidgetView<Writer>> {
                 700.,
             )
         }),
-        canvas::viewport(state, scene),
+        canvas::viewport(state, scene).flex(1.),
         connections::panel(state, scene),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -120,47 +116,6 @@ fn scope_control(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use
                 }
             },
         ),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(8.px())
-}
-fn toolbar(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    flex_col((
-        flex_row((
-            text_button(state.ui_scale(), "Open script", Writer::open_map_beat),
-            text_button(
-                state.ui_scale(),
-                "Arrange automatically",
-                Writer::arrange_map,
-            )
-            .disabled(state.navigation.busy() || state.work.busy()),
-            text_button(state.ui_scale(), "Add beat", |state: &mut Writer| {
-                state.navigate(Target::Structure(
-                    recite_writer_model::StructuralCommand::AddBeat,
-                ))
-            })
-            .disabled(state.navigation.busy() || state.work.busy()),
-        ))
-        .direction(
-            if workspace::Layout::resolve(state).map < 430. * f64::from(state.ui_scale()) {
-                kurbo::Axis::Vertical
-            } else {
-                kurbo::Axis::Horizontal
-            },
-        )
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
-        flex_row((
-            text_button(state.ui_scale(), "Zoom out", |state: &mut Writer| {
-                state.zoom_map(1. / 1.2)
-            }),
-            text_button(state.ui_scale(), "100%", Writer::reset_map_zoom),
-            text_button(state.ui_scale(), "Zoom in", |state: &mut Writer| {
-                state.zoom_map(1.2)
-            }),
-            text_button(state.ui_scale(), "Fit", Writer::fit_map),
-        ))
-        .gap(8.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())

@@ -50,9 +50,9 @@ def run(api, bus, registry, binary, output):
                     api, bus, registry, [str(binary), "--project", str(project)], log
                 )
                 window.act("Read beat")
-                window.act("Edit passage 2")
+                window.edit_passage(2)
                 fill(window, "Manuscript", "A revised reply.")
-                window.act("Change reply destination…")
+                window.document_action("Change reply destination…")
                 query = field(window, "Search query")
                 window.wait(lambda: focused(window, query), "destination picker rendered")
                 capture(output, "-picker")
@@ -66,14 +66,13 @@ def run(api, bus, registry, binary, output):
                 window.act("Undo applied")
                 window.wait(lambda: window.find_text("Applied edit updated."), "route undo")
                 window.act("Read beat")
-                window.wait(lambda: window.find_text("Reply → accepted"), "original route restored")
+                window.wait(lambda: window.find_action("→ Accepted"), "original route restored")
                 window.wait(
                     lambda: window.find_text("A revised reply."), "preceding prose still accepted"
                 )
                 results["reply_route_undo_preserves_preceding_prose_step"] = True
-                window.reveal_end("Redo applied")
-                window.act("Redo applied")
-                window.wait(lambda: window.find_text("Reply → alternative"), "route redo")
+                window.document_action("Redo applied")
+                window.wait(lambda: window.find_action("→ Alternative"), "route redo")
                 capture(output, "-reply")
                 key("s", control=True)
                 window.wait(
@@ -85,10 +84,11 @@ def run(api, bus, registry, binary, output):
                 )
                 assert "reply@22222222222222222222" in source.read_text()
                 results["route_requires_explicit_save_and_preserves_ids"] = True
-                window.act("Beat · alternative · END")
+                window.act("Alternative · end")
+                window.reveal_end("Change continuation…")
                 window.act("Change continuation…")
                 choose(window, "Accepted")
-                window.wait(lambda: window.find_text("Continue → accepted"), "changed continuation")
+                window.wait(lambda: window.find_action("→ Accepted"), "changed continuation")
                 capture(output, "-continuation")
                 key("s", control=True)
                 window.wait(

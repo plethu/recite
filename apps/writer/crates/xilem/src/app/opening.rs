@@ -1,6 +1,7 @@
 //! One owned cold-load request; rejected and replaced sessions retire on its worker.
 mod loading;
 use super::*;
+use crate::map::Workspace;
 use loading::{Loaded, load};
 use recite_compiler::authoring::{Interrupted, WorkControl};
 use std::sync::atomic;
@@ -179,10 +180,8 @@ impl App {
             Ok(Loaded { mut writer, location }) if valid => {
                 writer.configure(self.preferences.config.clone());
                 let view = writer.location.view.unwrap_or(self.preferences.config.writer.view);
-                if view == recite_config::WriterView::Map {
-                    writer.map.workspace = if self.preferences.config.writer.presentation.split() {
-                        crate::map::Workspace::Split
-                    } else { crate::map::Workspace::Map };
+                writer.map.workspace = Workspace::configured(view, self.preferences.config.writer.presentation.split());
+                if writer.map.workspace.has_map() {
                     writer.invalidate_map();
                 }
                 let previous = self.writer.replace(*writer).map(Box::new);

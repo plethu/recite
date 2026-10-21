@@ -1,4 +1,5 @@
 use super::*;
+use crate::map::Workspace;
 use recite_writer_session::navigation::PreparedDestination;
 use worker::{Completed, ResultValue};
 
@@ -31,6 +32,7 @@ impl Writer {
             Ok(value) => value,
             Err(error) => {
                 self.navigation_failed(error);
+                self.field_apply_completed(&request, false);
                 return None;
             }
         };
@@ -77,6 +79,7 @@ impl Writer {
                 checkpoint,
             } => self.publish_navigation(&request, prepared, checkpoint.as_ref()),
         });
+        let accepted = result.is_ok();
         if let Err(error) = result {
             if let ResultValue::Map(prepared) = &mut value {
                 self.reconcile_map_placement(prepared);
@@ -91,6 +94,7 @@ impl Writer {
                 self.finish_navigation_reply(Ok(()));
             }
         }
+        self.field_apply_completed(&request, accepted);
         Some(value)
     }
     fn publish_navigation_edit(
@@ -197,6 +201,9 @@ impl Writer {
             _ => return Err("The navigation destination is no longer available.".into()),
         }
         if let Target::Selection(location) = &request.target {
+            self.trial.visible =
+                location.screen == recite_writer_session::location::Screen::Preview;
+            self.trial.settings.open = false;
             self.retire_rules();
             self.location.document = location.document.clone();
             self.location.beat = location.beat.clone();
@@ -209,17 +216,14 @@ impl Writer {
                 location.screen == recite_writer_session::location::Screen::Preview;
             self.install_rules(&mut prepared.rules);
             if let Some(view) = location.view {
-                self.map.workspace = if view == recite_config::WriterView::Map {
-                    if self.config.writer.presentation.split() {
-                        crate::map::Workspace::Split
-                    } else {
-                        crate::map::Workspace::Map
-                    }
-                } else {
-                    crate::map::Workspace::Script
-                };
+                self.map.workspace =
+                    Workspace::configured(view, self.config.writer.presentation.split());
             }
         } else {
+            if !matches!(request.target, Target::PinReference) {
+                self.trial.visible = false;
+                self.trial.settings.open = false;
+            }
             self.retire_rules();
         }
         if let Target::CatalogueSource(intent) = &request.target {
@@ -249,6 +253,10 @@ impl Writer {
         };
         if matches!(request.target, Target::CompareFile(_)) {
             self.compare_disk_changes();
+        }
+        if matches!(request.target, Target::PinReference) {
+            self.publish_reference()?;
+            self.status = "Reference snapshot pinned.".into();
         }
         if let Some(destination) = destination {
             self.start_location_destination(destination, request.cancel.clone())?;

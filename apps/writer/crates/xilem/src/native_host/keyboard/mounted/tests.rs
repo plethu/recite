@@ -21,6 +21,10 @@ const MAP: WidgetTag<Button> = WidgetTag::named("mounted-map");
 const RESULT: WidgetTag<Button> = WidgetTag::named("mounted-result");
 #[path = "input/tests.rs"]
 mod input;
+#[path = "manuscript/tests.rs"]
+mod manuscript;
+#[path = "tab/tests.rs"]
+mod tab;
 
 fn mounted() -> (RenderRoot, mpsc::Receiver<RenderRootSignal>) {
     let (context, _) = context();
@@ -73,8 +77,10 @@ fn mounted() -> (RenderRoot, mpsc::Receiver<RenderRootSignal>) {
             size: (900, 500).into(),
             scale_factor: 1.,
             test_font: Some(Blob::new(Arc::new(
-                include_bytes!("../../../../../freya/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf")
-                    .to_vec(),
+                include_bytes!(
+                    "../../../../../../assets/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf"
+                )
+                .to_vec(),
             ))),
         },
     );
@@ -84,6 +90,35 @@ fn mounted() -> (RenderRoot, mpsc::Receiver<RenderRootSignal>) {
 }
 fn field(root: &RenderRoot, tag: WidgetTag<TextInput>) -> WidgetId {
     root.get_widget_with_tag(tag).unwrap().area_pod().id()
+}
+
+#[test]
+fn document_menu_dismissal_returns_to_its_origin_and_an_action_keeps_destination_focus() {
+    use crate::attention::DocumentMenu;
+    let (mut root, _signals) = mounted();
+    let panel = root.get_layer_root(0).children()[0].children()[0].children()[1].id();
+    root.edit_widget(panel, |mut widget| {
+        widget.insert_prop(Region(Some(Pane::DocumentActions)));
+    });
+    let (mut context, _) = context();
+    let script = field(&root, SCRIPT);
+    let destination = field(&root, QUERY);
+    let action = root.get_widget_with_tag(MAP).unwrap().id();
+    let mut menu = document_menu::Focus::default();
+    root.focus_on(Some(script));
+    menu.synchronize(&mut root, &context);
+    context.document_menu = DocumentMenu::Open;
+    menu.synchronize(&mut root, &context);
+    assert_eq!(root.focused_widget(), Some(action));
+    context.document_menu = DocumentMenu::Dismissed;
+    menu.synchronize(&mut root, &context);
+    assert_eq!(root.focused_widget(), Some(script));
+    context.document_menu = DocumentMenu::Open;
+    menu.synchronize(&mut root, &context);
+    root.focus_on(Some(destination));
+    context.document_menu = DocumentMenu::Closed;
+    menu.synchronize(&mut root, &context);
+    assert_eq!(root.focused_widget(), Some(destination));
 }
 
 #[test]
@@ -179,7 +214,7 @@ fn composition_and_window_blur_guard_native_commands_and_preserve_the_text_field
     let mut keyboard = Keyboard::default();
     keyboard.synchronize(&mut root);
     keyboard.event(
-        &root,
+        &mut root,
         &WindowEvent::Ime(Ime::Preedit("pré".into(), Some((0, 3)))),
     );
     assert!(!keyboard.dispatch(
@@ -205,14 +240,14 @@ fn composition_and_window_blur_guard_native_commands_and_preserve_the_text_field
             .action,
         Action::Command(WriterCommand::Save)
     );
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Preedit("".into(), None)));
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Commit("pré".into())));
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Disabled));
+    keyboard.event(&mut root, &WindowEvent::Ime(Ime::Preedit("".into(), None)));
+    keyboard.event(&mut root, &WindowEvent::Ime(Ime::Commit("pré".into())));
+    keyboard.event(&mut root, &WindowEvent::Ime(Ime::Disabled));
     keyboard.event(
-        &root,
+        &mut root,
         &WindowEvent::ModifiersChanged(ModifiersState::CONTROL.into()),
     );
-    keyboard.event(&root, &WindowEvent::Focused(false));
+    keyboard.event(&mut root, &WindowEvent::Focused(false));
     assert_eq!(keyboard.modifiers, ModifiersState::default());
     assert!(matches!(keyboard.composition, Composition::Idle));
     assert_eq!(root.focused_widget(), Some(query));

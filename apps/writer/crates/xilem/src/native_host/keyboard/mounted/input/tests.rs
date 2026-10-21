@@ -2,7 +2,7 @@ use super::*;
 use recite_config::Keymap;
 use xilem::winit::keyboard::{Key as NativeKey, KeyCode, PhysicalKey as NativePhysical};
 
-fn scope(root: &mut RenderRoot, context: Context) {
+pub(super) fn scope(root: &mut RenderRoot, context: Context) {
     let id = root.get_widget_with_tag(TAG).unwrap().id();
     root.edit_widget(id, |mut widget| {
         widget.insert_prop(KeyboardContext(Some(Arc::new(context))));
@@ -30,6 +30,34 @@ fn primary() -> ModifiersState {
     } else {
         ModifiersState::CONTROL
     }
+}
+
+#[test]
+fn document_menu_escape_owns_its_release_and_yields_to_an_open_picker() {
+    let (mut root, _signals) = mounted();
+    let (mut context, messages) = context();
+    context.document_menu = crate::attention::DocumentMenu::Open;
+    scope(&mut root, context);
+    let mut keyboard = Keyboard::default();
+    let escape = NativeKey::Named(NamedKey::Escape);
+    let key = press(&escape, KeyCode::Escape);
+    assert!(keyboard.key_event(&root, key, false));
+    assert_eq!(action(&messages), Action::DismissDocumentMenu);
+    let (context, _) = super::context();
+    scope(&mut root, context);
+    assert!(keyboard.key_event(
+        &root,
+        Keystroke {
+            state: ElementState::Released,
+            ..key
+        },
+        false
+    ));
+    assert!(messages.try_recv().is_err());
+    let (mut context, _) = super::context();
+    context.document_menu = crate::attention::DocumentMenu::Open;
+    context.picker_open = true;
+    assert!(document_menu::escape(&context, &escape, Modifiers::default()).is_none());
 }
 
 #[test]
@@ -102,10 +130,10 @@ fn picker_enter_never_leaks_a_release_and_composition_stays_with_its_field() {
     let script = field(&root, SCRIPT);
     root.focus_on(Some(script));
     keyboard.modifiers = primary();
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Preedit("é".into(), None)));
+    keyboard.event(&mut root, &WindowEvent::Ime(Ime::Preedit("é".into(), None)));
     assert!(!keyboard.key_event(&root, key, false));
     assert!(messages.try_recv().is_err());
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Commit("é".into())));
+    keyboard.event(&mut root, &WindowEvent::Ime(Ime::Commit("é".into())));
     assert!(keyboard.key_event(&root, key, false));
     assert_eq!(action(&messages), Action::Command(WriterCommand::Apply));
     assert!(keyboard.key_event(
@@ -181,12 +209,15 @@ fn vim_prefix_is_bound_to_focus_and_ime_while_native_text_and_repeat_keep_their_
     ));
     assert!(keyboard.key_event(&root, prefix, false));
     assert_eq!(action(&messages), Action::PaneHint(true));
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Preedit("pré".into(), None)));
+    keyboard.event(
+        &mut root,
+        &WindowEvent::Ime(Ime::Preedit("pré".into(), None)),
+    );
     keyboard.synchronize(&mut root);
     assert_eq!(action(&messages), Action::PaneHint(false));
     assert!(!keyboard.key_event(&root, direction, false));
     assert!(messages.try_recv().is_err());
-    keyboard.event(&root, &WindowEvent::Focused(false));
+    keyboard.event(&mut root, &WindowEvent::Focused(false));
     assert_eq!(keyboard.modifiers, ModifiersState::default());
 }
 
@@ -208,9 +239,9 @@ fn mouse_history_posts_once_and_does_not_interrupt_composition_or_a_picker() {
         assert!(messages.try_recv().is_err());
     }
     assert!(!keyboard.history_mouse(&root, MouseButton::Left, ElementState::Pressed));
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Preedit("é".into(), None)));
+    keyboard.event(&mut root, &WindowEvent::Ime(Ime::Preedit("é".into(), None)));
     assert!(!keyboard.history_mouse(&root, MouseButton::Back, ElementState::Pressed));
-    keyboard.event(&root, &WindowEvent::Ime(Ime::Disabled));
+    keyboard.event(&mut root, &WindowEvent::Ime(Ime::Disabled));
     let (mut context, _) = super::context();
     context.picker_open = true;
     scope(&mut root, context);

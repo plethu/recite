@@ -1,5 +1,7 @@
+mod chrome;
 use super::*;
-use crate::presentation::{label, paragraph, prose, radio_button, text_button};
+use crate::presentation::{label, prose, radio_button, text_button};
+use chrome::app_bar;
 use xilem::masonry::properties;
 use xilem::{
     WidgetView,
@@ -11,117 +13,40 @@ use xilem::{
     },
 };
 pub(super) fn app(app: &mut App) -> impl WidgetView<App> + use<> {
+    if let Some(writer) = &mut app.writer {
+        writer.viewport.width = app.viewport.width;
+    }
     let slot = slot::writer_slot(app);
     keyboard::host(
         app,
         xilem::core::fork(
-            flex_col((
-                app_bar(app),
-                indexed_stack((
-                    welcome(app),
-                    slot,
-                    settings::settings(app),
-                    picker::view::picker(app),
+            xilem::view::resize_observer(
+                |app: &mut App, size| app.viewport = size,
+                flex_col((
+                    app_bar(app),
+                    indexed_stack((
+                        welcome(app),
+                        slot,
+                        settings::settings(app),
+                        picker::view::picker(app),
+                    ))
+                    .active(if app.picker.is_some() {
+                        3
+                    } else if app.settings_open {
+                        2
+                    } else {
+                        usize::from(!app.show_welcome)
+                    })
+                    .flex(1.),
                 ))
-                .active(if app.picker.is_some() {
-                    3
-                } else if app.settings_open {
-                    2
-                } else {
-                    usize::from(!app.show_welcome)
-                })
-                .flex(1.),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .background_color(app.theme.palette.canvas),
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(0.px())
+                .background_color(app.theme.palette.canvas),
+            ),
             opening::worker(),
         ),
     )
 }
-fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
-    let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let searching = app.picker.is_some();
-    sized_box(
-        flex_col((
-            flex_row((
-                app.writer.as_ref().map(|writer| {
-                    text_button(scale, "Projects", |app: &mut App| {
-                        app.show_welcome = !app.show_welcome;
-                        app.settings_open = false;
-                    })
-                    .disabled(searching || writer.phase != Phase::Writing)
-                }),
-                app.writer
-                    .as_ref()
-                    .filter(|_| app.show_welcome && !app.settings_open)
-                    .map(|_| {
-                        text_button(scale, "Return to Writer", |app: &mut App| {
-                            app.show_welcome = false
-                        })
-                    }),
-                text_button(scale, "Settings", App::show_settings).disabled(
-                    searching
-                        || app.settings_open
-                        || app
-                            .writer
-                            .as_ref()
-                            .is_some_and(|writer| writer.phase != Phase::Writing),
-                ),
-                app.writer
-                    .as_ref()
-                    .filter(|_| !app.show_welcome && !app.settings_open)
-                    .map(|_| search_buttons(app)),
-                app.settings_open.then(|| {
-                    text_button(scale, "Done with settings", |app: &mut App| {
-                        app.settings_open = false
-                    })
-                }),
-            ))
-            .gap(12.px()),
-            (!app.status.is_empty()).then(|| paragraph(scale, app.status.clone(), 800.)),
-            app.pane_hint.then(|| {
-                paragraph(
-                    scale,
-                    "Pane navigation · h left · j down · k up · l right · Esc cancel",
-                    900.,
-                )
-            }),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
-    )
-    .padding(12.px())
-}
-
-fn search_buttons(app: &App) -> impl WidgetView<App> + use<> {
-    let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let disabled = app.picker.is_some()
-        || app
-            .writer
-            .as_ref()
-            .is_none_or(|writer| writer.phase != Phase::Writing);
-    flex_row((
-        text_button(scale, "Commands", |app: &mut App| {
-            app.open_picker(picker::Search::Commands)
-        })
-        .disabled(disabled),
-        text_button(scale, "Go to", |app: &mut App| {
-            app.open_picker(picker::Search::GoTo)
-        })
-        .disabled(disabled),
-        app.writer
-            .as_ref()
-            .and_then(|writer| writer.session.project())
-            .map(|_| {
-                text_button(scale, "Find project text", |app: &mut App| {
-                    app.open_picker(picker::Search::ProjectText)
-                })
-                .disabled(disabled)
-            }),
-    ))
-    .gap(8.px())
-}
-
 fn welcome(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
     let busy = app.opening.is_some() || app.auxiliary;

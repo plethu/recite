@@ -17,9 +17,9 @@ from localisation_interactions import (
     search_entries,
 )
 from localisation_sources import action
-from native_window import attach, key
+from native_window import attach, key, type_text
 from project_interactions import manuscript
-from startup_interactions import fill
+from startup_interactions import field, fill
 from writer_interactions import capture
 
 SOURCE = """:: start default
@@ -66,15 +66,45 @@ def capture_end(window, output, suffix):
     capture(output, suffix)
 
 
+def tab_to_language(window):
+    """Observe a real Tab move and its viewport bounds without probe scrolling."""
+    key("Tab")
+    focused = 1 << int(window.api.Atspi.StateType.FOCUSED)
+    coordinates = window.api.GLib.Variant("(u)", (int(window.api.Atspi.CoordType.WINDOW),))
+
+    def visible():
+        node = field(window, "Find preview language")
+        if not window.call(node, "Accessible", "GetState")[0][0] & focused:
+            return False
+        viewport = window.section_scrollbar("Conversation preview")
+        if viewport is None:
+            return False
+        bounds = window.call(node, "Component", "GetExtents", coordinates)[0]
+        clip = window.call(viewport, "Component", "GetExtents", coordinates)[0]
+        return bounds[1] >= clip[1] and bounds[1] + bounds[3] <= clip[1] + clip[3]
+
+    window.wait(visible, "Tab reveals the preview language input within its viewport")
+
+
 def exercise(window, po, output, results):
     original = manuscript(window)
+    original_text = window.text(original)
+    window.focus(original)
+    key("End", control=True)
+    type_text("x")
+    window.wait(lambda: window.text(original) == original_text + "x", "retained history seed")
+    key("z", control=True)
+    window.wait(lambda: window.text(original) == original_text, "clean source before preview")
     open_catalogue(window, po)
     search_entries(window, "Hello")
     reveal_text(window, "1 matching entries", prefix=True)
     open_entry(window)
     edit(window, "Salut {name}.")
     action(window, "Return to writing")
-    action(window, "Preview inputs")
+    window.document_action("Configure preview")
+    tab_to_language(window)
+    capture(output, "-language-tab")
+    results["native_tab_reveals_preview_input"] = True
     reveal_field(window, "Find preview language")
     fill(window, "Find preview language", "fr-CA")
     action(window, "Search preview languages")
@@ -110,9 +140,24 @@ def exercise(window, po, output, results):
     value(window, "tickets", "2")
     action(window, "Use source language only")
     restart(window, "Hello Ada.")
-    action(window, "Hide preview inputs")
-    reveal_field(window, "Manuscript")
-    assert manuscript(window) == original
+    window.act("Return to writing")
+
+    def returned():
+        current = window.find("Manuscript")
+        if current and window.text(current) == original_text:
+            focused = 1 << int(window.api.Atspi.StateType.FOCUSED)
+            return (
+                current if window.call(current, "Accessible", "GetState")[0][0] & focused else None
+            )
+        return None
+
+    current = window.wait(returned, "automatically restored writing focus")
+    key("y", control=True)
+    window.wait(
+        lambda: window.text(current) == original_text + "x", "redo after preview configuration"
+    )
+    key("z", control=True)
+    window.wait(lambda: window.text(current) == original_text, "undo after preview configuration")
     results["source_only_restart_and_manuscript_identity"] = True
 
 

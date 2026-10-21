@@ -52,7 +52,7 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
 fn empty_and_effect_only_beats_have_distinct_reading_states() {
     let directory = project(":: start default\n").unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["Current beat · start · Default"]).unwrap();
+    click(&mut writer, &["◆ Start · Start"]).unwrap();
     assert!(
         labels(&mut writer)
             .unwrap()
@@ -69,10 +69,10 @@ fn empty_and_effect_only_beats_have_distinct_reading_states() {
     drop(writer);
     let directory = project(":: start default\n!blocking overlay(work)\n-> END\n").unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["Current beat · start · Default · END"]).unwrap();
+    click(&mut writer, &["◆ Start · Start · end"]).unwrap();
     let labels = labels(&mut writer).unwrap();
     assert!(labels.iter().any(|label| label.starts_with("Effect ·")));
-    assert!(labels.iter().any(|label| label == "Continue → END"));
+    assert!(labels.iter().any(|label| label == "◆ END ◆"));
     assert!(
         !labels
             .iter()
@@ -122,7 +122,7 @@ fn incomplete_and_ambiguous_headers_remain_visible_without_authorizing_edits() {
         let names = labels(&mut writer).unwrap();
         let header = names
             .iter()
-            .find(|name| name.to_lowercase().contains("beat · start · default"))
+            .find(|name| name.to_lowercase().contains("start · start"))
             .unwrap();
         click(&mut writer, &[header]).unwrap();
         assert_eq!(writer.session.model().view(), &selection);
@@ -167,7 +167,13 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     }
     click(
         &mut writer,
-        &["Discard draft", "Read beat", "Next beat entries"],
+        &[
+            "Document actions ⋯",
+            "Discard draft",
+            "Document actions ⋯",
+            "Read beat",
+            "Next beat entries",
+        ],
     )
     .unwrap();
     assert!(Arc::ptr_eq(&rows, &writer.reading.rows));
@@ -240,3 +246,6 @@ fn preserved_source_selection_distinguishes_readable_script_and_repair() {
             .any(|name| name == "Source editing in your editor")
     );
 }
+
+#[path = "inline/tests.rs"]
+mod inline;

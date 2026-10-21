@@ -28,7 +28,8 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.settle();
     let (sender, mut requests) = async_mpsc::unbounded_channel();
     mounted.state.trial.sender = Some(sender);
-    mounted.activate("Preview inputs");
+    mounted.activate("Document actions ⋯");
+    mounted.activate("Configure preview");
     mounted.type_text("Find preview language", "fr-CA");
     mounted.activate("Search preview languages");
     mounted.activate("Preview in French (Canada) · fr-CA");
@@ -40,7 +41,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.activate("More preview values");
     mounted.type_text("Preview value: e_tail", "Retained across pages");
     mounted.activate("Previous preview values");
-    mounted.activate("Start / restart preview");
+    mounted.activate("Try scene");
     finish(&mut mounted.state, requests.try_recv().unwrap()).unwrap();
     mounted.settle();
     mounted.activate("Answer true");
@@ -87,7 +88,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     mounted.activate("Previous trace value part");
     assert_eq!(cursor(mounted.state.trial.trace.place), original_cursor);
     mounted.replace_text("Preview value: a_count", "not a count");
-    mounted.activate("Start / restart preview");
+    mounted.activate("Try scene");
     assert!(
         finish(&mut mounted.state, requests.try_recv().unwrap())
             .unwrap()
@@ -105,7 +106,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
         Ok(())
     });
     mounted.settle();
-    mounted.activate("Start / restart preview");
+    mounted.activate("Try scene");
     assert!(requests.try_recv().is_err());
     assert_eq!(cursor(mounted.state.trial.trace.place), original_cursor);
     mounted.state.change(|model| {
@@ -123,7 +124,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
         Section::Plurals
     ));
     mounted.activate("Trace: Translation lookups");
-    mounted.activate("Start / restart preview");
+    mounted.activate("Try scene");
     assert!(matches!(
         finish(&mut mounted.state, requests.try_recv().unwrap()).unwrap(),
         Some(Retired::Preview(_))

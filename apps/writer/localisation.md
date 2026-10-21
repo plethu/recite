@@ -111,6 +111,6 @@ keyboard, IME and screen-reader checks belong to [acceptance](acceptance.md).
 
 Writer bundles Latin, Cyrillic and Greek faces. Chinese, Japanese, Korean, Arabic, Hebrew,
 Devanagari and Thai text uses system fonts; on Linux, install the Noto families named in
-[`assets/fonts/FONTS.md`](assets/fonts/FONTS.md). Right-to-left text is shaped and
-ordered within a line, but paragraphs are laid out left to right: lines start at the left edge and
-trailing punctuation sits on the right.
+[`assets/fonts/FONTS.md`](assets/fonts/FONTS.md). Right-to-left text is shaped and ordered within a
+line, but paragraphs are laid out left to right: lines start at the left edge and trailing
+punctuation sits on the right.

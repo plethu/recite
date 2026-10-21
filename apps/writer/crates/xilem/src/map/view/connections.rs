@@ -2,14 +2,19 @@
 use super::*;
 use crate::map::connections::Direction;
 
-pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use<> {
-    flex_col((
-        label(state.ui_scale(), "Connections"),
-        connection_list(state, scene, Direction::Outgoing),
-        connection_list(state, scene, Direction::Incoming),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+pub(super) fn panel(state: &Writer, scene: &Scene) -> Option<impl WidgetView<Writer> + use<>> {
+    scene.connections.expanded.then(|| {
+        xilem::view::portal(
+            flex_col((
+                connection_list(state, scene, Direction::Outgoing),
+                connection_list(state, scene, Direction::Incoming),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(12.px()),
+        )
+        .constrain_horizontal(true)
+        .height((120. * f64::from(state.ui_scale())).px())
+    })
 }
 fn connection_list(
     state: &Writer,

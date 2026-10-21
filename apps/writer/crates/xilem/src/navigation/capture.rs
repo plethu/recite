@@ -112,6 +112,7 @@ impl Writer {
             | Target::Lookup { location, .. }
             | Target::Selection(location) => self.location_destination(location)?,
             Target::CatalogueSource(intent) => self.location_destination(intent.location())?,
+            Target::PinReference => Destination::Current(Box::new(model.navigation_request())),
             Target::Edit(_)
             | Target::Present(_)
             | Target::Repair(_)

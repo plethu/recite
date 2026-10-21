@@ -47,13 +47,12 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
     let (sender, mut navigation) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(sender);
     writer.navigation.runtime = Some(runtime.handle().clone());
-    for invalidate in 0..5 {
+    for invalidate in 0..4 {
         let request = begin(&mut writer).unwrap();
         match invalidate {
             0 => writer.trial.cancel(),
-            1 => writer.trial.visible = false,
-            2 => writer.phase = Phase::ConfirmClose,
-            3 => writer.change(|model| {
+            1 => writer.phase = Phase::ConfirmClose,
+            2 => writer.change(|model| {
                 model.set_draft("Draft".into());
                 Ok(())
             }),
@@ -66,7 +65,7 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
             finish(&mut writer, request).unwrap(),
             Some(Retired::Prepared(_))
         ));
-        if invalidate != 4 {
+        if invalidate != 3 {
             assert_eq!(
                 writer.session.model().preview_page().unwrap().text,
                 "Hello."
@@ -168,7 +167,7 @@ fn native_preview_actions_play_choices_conditions_effects_and_keep_authoring_und
             .iter()
             .any(|label| label.contains("older inputs"))
     );
-    click(&mut writer, &["Hide preview", "Undo applied"]).unwrap();
+    click(&mut writer, &["Return to writing", "Undo applied"]).unwrap();
     assert!(!writer.trial.visible);
     assert_eq!(writer.session.model().draft(), "Hello.");
 }
@@ -266,3 +265,6 @@ mod inputs;
 
 #[path = "tests/workflow/tests.rs"]
 mod workflow;
+
+#[path = "tests/presentation/tests.rs"]
+mod presentation;

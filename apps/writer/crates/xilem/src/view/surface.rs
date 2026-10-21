@@ -1,12 +1,10 @@
 //! Borrowed presentation derived once; Workbench remains the selection authority.
 use super::*;
 use crate::{reading::Row, rules::ReplySession};
-use recite_writer_model::{PassageKind, RouteOwner};
 
 pub(super) enum Surface<'a> {
     Manuscript {
         passage: &'a str,
-        route: Option<RouteOwner>,
     },
     Reply(&'a ReplySession),
     Beat {
@@ -28,13 +26,7 @@ impl<'a> Surface<'a> {
             .err()
             .or(state.reading.error.as_deref());
         match model.view() {
-            View::Passage(id) => {
-                let route = model.selected().ok().flatten().and_then(|passage| {
-                    matches!(passage.kind, PassageKind::Choice { .. })
-                        .then(|| RouteOwner::Reply(id.clone()))
-                });
-                Self::Manuscript { passage: id, route }
-            }
+            View::Passage(id) => Self::Manuscript { passage: id },
             View::Block(id) => match error {
                 Some(error) => Self::SourceRepair {
                     error: Some(error),
@@ -65,15 +57,6 @@ impl<'a> Surface<'a> {
                     }
                 }
             }
-        }
-    }
-
-    pub fn title(&self) -> &'static str {
-        match self {
-            Self::Manuscript { .. } => "Manuscript",
-            Self::Reply(_) => "Reply",
-            Self::SourceRepair { .. } => "Source attention",
-            Self::Beat { .. } | Self::Empty => "Beat reading",
         }
     }
 }

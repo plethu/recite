@@ -2,6 +2,7 @@
 use super::*;
 use crate::app::keyboard::CommandGeneration;
 use crate::app::picker;
+use crate::attention::EditingTarget;
 use crate::localisation::{TranslationField, TranslationTarget};
 use crate::rules::view;
 use xilem::masonry::accesskit;
@@ -25,8 +26,32 @@ pub(super) struct Focus {
     last: Option<WidgetId>,
     field: Option<(WidgetId, CommandGeneration, Kind)>,
     revealed: Option<CommandGeneration>,
+    editing: Option<EditingTarget>,
 }
 impl Focus {
+    pub fn synchronize_manuscript(
+        &mut self,
+        root: &mut RenderRoot,
+        editing: Option<&EditingTarget>,
+    ) {
+        if self.editing.as_ref() != editing {
+            if editing.is_some() {
+                if let Some(field) = editing
+                    .and_then(|target| super::manuscript::find(root.get_layer_root(0), target))
+                {
+                    if root.focused_widget() != Some(field) {
+                        super::panes::reveal(root, field);
+                    }
+                    self.editing = editing.cloned();
+                }
+            } else {
+                if super::manuscript::focused(root).is_some() {
+                    root.focus_on(None);
+                }
+                self.editing = None;
+            }
+        }
+    }
     pub fn synchronize(
         &mut self,
         root: &mut RenderRoot,

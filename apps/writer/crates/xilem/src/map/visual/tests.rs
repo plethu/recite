@@ -57,13 +57,22 @@ fn scene_map_renders_at_personal_scales_and_split_workspace() {
                 }
                 pending.extend(node.children());
             }
-            assert!(labels.iter().any(|label| label == "Scene map"));
-            assert!(
-                labels
-                    .iter()
-                    .any(|label| label.contains("Selected · Start")),
-                "{labels:?}"
-            );
+            let compact = workspace == Workspace::Split && scale == 200;
+            assert_eq!(labels.iter().any(|label| label == "Scene map"), !compact);
+            if compact {
+                assert!(
+                    manuscript(&harness).is_some(),
+                    "compact Split prioritises writing"
+                );
+                assert_eq!(writer.map.workspace, Workspace::Split);
+            } else {
+                assert!(
+                    labels
+                        .iter()
+                        .any(|label| label.contains("Selected · Start")),
+                    "{labels:?}"
+                );
+            }
             if let Ok(prefix) = std::env::var("RECITE_CAPTURE_MAP") {
                 harness
                     .render()

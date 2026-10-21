@@ -58,10 +58,8 @@ impl<S: 'static, V: WidgetView<S, Widget = Passthrough>> Mounted<S, V> {
         let tree = self.harness.access_tree();
         let mut pending = vec![tree.state().root()];
         while let Some(node) = pending.pop() {
-            if node
-                .label()
-                .or_else(|| node.value())
-                .is_some_and(|caption| caption.contains(text))
+            if node.label().is_some_and(|caption| caption.contains(text))
+                || node.value().is_some_and(|caption| caption.contains(text))
             {
                 return true;
             }

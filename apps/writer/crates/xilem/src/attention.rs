@@ -1,10 +1,73 @@
 //! Focus overlays the selected workspace; native pane requests carry their own identity.
 use crate::{Phase, Writer, map::Workspace};
+use recite_core::DocumentKey;
+use recite_writer_model::View;
 use std::sync::Arc;
+use xilem::WindowId;
+use xilem::masonry::core::{Widget, WidgetId, WidgetRef};
 use xilem::masonry::{core, widgets};
+
+/// The accepted passage whose inline field should receive native focus.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct EditingTarget {
+    window: WindowId,
+    document: DocumentKey,
+    passage: String,
+}
+
+#[derive(Clone, Default, PartialEq)]
+pub(crate) struct PassageField(pub Option<EditingTarget>);
+impl PassageField {
+    pub fn focused(
+        mut root: WidgetRef<'_, dyn Widget>,
+        focused: WidgetId,
+    ) -> Option<EditingTarget> {
+        loop {
+            if let Some(input) = root.downcast::<widgets::TextInput>() {
+                return (input.area_pod().id() == focused)
+                    .then(|| input.get_prop::<Self>().0.clone())
+                    .flatten();
+            }
+            root = root
+                .children()
+                .into_iter()
+                .find(|child| child.ctx().has_focus_target())?;
+        }
+    }
+}
+impl core::UsesProperty<PassageField> for widgets::TextInput {}
+impl core::Property for PassageField {
+    fn static_default() -> &'static Self {
+        static OTHER: PassageField = PassageField(None);
+        &OTHER
+    }
+}
+impl EditingTarget {
+    pub fn passage(writer: &Writer, passage: String) -> Self {
+        Self {
+            window: writer.window,
+            document: writer.session.model().document().key().clone(),
+            passage,
+        }
+    }
+    pub fn belongs_to(&self, writer: &Writer) -> bool {
+        self.window == writer.window && &self.document == writer.session.model().document().key()
+    }
+    pub fn view(&self) -> View {
+        View::Passage(self.passage.clone())
+    }
+    pub fn capture(writer: &Writer) -> Option<Self> {
+        let model = writer.session.model();
+        let View::Passage(passage) = model.view() else {
+            return None;
+        };
+        Some(Self::passage(writer, passage.clone()))
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum PaneMotion {
+    To(Pane),
     Left,
     Right,
     Up,
@@ -24,9 +87,39 @@ pub(crate) enum Pane {
     Rename,
     External,
     Localisation,
+    DocumentActions,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum DocumentMenu {
+    #[default]
+    Closed,
+    Open,
+    Dismissed,
+}
+impl DocumentMenu {
+    pub fn is_open(self) -> bool {
+        self == Self::Open
+    }
+    pub fn toggle(&mut self) {
+        *self = if self.is_open() {
+            Self::Dismissed
+        } else {
+            Self::Open
+        };
+    }
 }
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct Region(pub Option<Pane>);
+/// A contextual pane's preferred entry, without changing its geometry or Tab order.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct PaneEntry(pub bool);
+impl core::UsesProperty<PaneEntry> for widgets::Flex {}
+impl core::Property for PaneEntry {
+    fn static_default() -> &'static Self {
+        static NONE: PaneEntry = PaneEntry(false);
+        &NONE
+    }
+}
 impl core::UsesProperty<Region> for widgets::SizedBox {}
 impl core::UsesProperty<Region> for widgets::Flex {}
 impl core::Property for Region {

@@ -75,7 +75,7 @@ def run(api, bus, registry, binary, output):
                 assert source.read_text() == SOURCE
                 assert not window.enabled("Save file")
                 capture(output, "-invalid")
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "close recovered draft")
                 window.act("Close and keep recovery")
                 assert process.wait(timeout=5) == 0

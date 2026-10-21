@@ -7,7 +7,7 @@ import traceback
 from pathlib import Path
 
 from native_window import attach, key, type_text
-from project_interactions import manuscript
+from project_interactions import document_caption, manuscript
 from writer_interactions import SOURCE, capture
 
 
@@ -85,7 +85,8 @@ def run(api, bus, registry, binary, output):
                 )
                 assert forwarded.returncode == 0
                 window.wait(
-                    lambda: window.find("Current · zz-other.recite"), "forwarded document selector"
+                    lambda: document_caption(window, "zz-other.recite", selected=True),
+                    "forwarded document selector",
                 )
                 results["second_launch_selects_requested_document"] = True
                 capture(output, "-opened")
@@ -124,7 +125,7 @@ def run(api, bus, registry, binary, output):
                 type_text("x")
                 window.wait(lambda: window.text(node) == before + "x", "temporary example draft")
                 capture(output, "-examples")
-                window.act("Close")
+                window.document_action("Close")
                 window.wait(
                     lambda: window.find("Close and discard example changes"),
                     "temporary close choice",

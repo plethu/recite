@@ -4,6 +4,31 @@ Writer is a preview. Native authoring, accessibility, and installed-package acce
 host evidence. Automated tests and captured renders do not establish physical input, screen-reader
 usability, GPU performance, or cross-platform support.
 
+The paired human comparison on 2026-10-21 rejected Xilem's presentation readiness. The functional
+checks below did not establish interchangeability: Xilem still showed a form-like scaffold in place
+of Freya's fixed scene rail, compact toolbar and whole-beat manuscript with inline editing. The
+writing composition is being corrected against Freya's existing design. A retirement comparison
+needs equivalent rendered and interaction evidence for the same scene, selection, viewport and
+scale, including pending edits, focus mode, Map, Split and the remaining project screens. Narrow
+fixture or recovery render reviews do not satisfy that comparison. Keep both frontends available.
+
+The installed-package and broad native claims below describe signed baseline
+`9ce876da7f6b0945a2a662eba4951a14fd74bd02`. They have not all been repeated after the inline
+manuscript and shell correction. Treat current focused checks separately from that earlier full gate
+and package evidence.
+
+The writing correction now composes a fixed scene rail, compact toolbar and status bar, whole-beat
+inline manuscript fields, reply destinations, a retained reference dock and bounded document
+actions. Map and Split reuse the same retained writing fields. Preview occupies the editor
+workspace, with separate persistent actions to return to writing or close its input controls. Its
+run and staged inputs survive those transitions. An independent review of actual 1280×720 Wayland
+renders at 100/200% UI scale closed the reported writing, Map/Split, reference, menu and Preview
+composition findings. The final Preview follow-up inspected seven states at each scale, including
+real Tab entry to a fully visible language field. These findings cover the writing and Preview
+surfaces; they do not establish whole-product interchangeability, installed-package acceptance for
+this correction or physical keyboard/screen-reader usability. Remaining project screens still need
+equivalent paired acceptance before a Freya retirement decision.
+
 The local Xilem Linux release package passes payload, ABI and CLI inspection, native Wayland focus
 checks, and actual desktop-entry delivery on owned X11 and Wayland hosts. Cold and running-window
 links preserve fixture bytes; startup may return a retryable busy response until navigation is

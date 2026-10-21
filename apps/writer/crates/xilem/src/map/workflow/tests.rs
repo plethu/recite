@@ -57,6 +57,7 @@ fn mounted_map_controls_frame_the_scene_without_mutating_source_or_authoring_his
     let identity = mounted.state.prepare_map(Purpose::Placement).scene;
     assert!(!load(&file, &identity).unwrap().is_empty());
     mounted.settle();
+    mounted.activate("Map actions");
     mounted.activate("Arrange automatically");
     support::finish_navigation(&mut mounted.state, &mut jobs).unwrap();
     assert!(load(&file, &identity).unwrap().is_empty());

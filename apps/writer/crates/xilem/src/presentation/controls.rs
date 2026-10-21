@@ -8,7 +8,11 @@ use xilem::{
 use xilem::{masonry::layout::AsUnit, style::Style};
 
 pub(crate) fn label(scale: f32, text: impl Into<ArcStr>) -> Label {
-    view::label(text).text_size(14. * scale)
+    view::label(text)
+        .font(super::print::font(
+            recite_writer_session::typography::FONT_UI,
+        ))
+        .text_size(14. * scale)
 }
 pub(crate) fn prose<State, Action>(scale: f32, text: impl Into<ArcStr>) -> Prose<State, Action> {
     view::prose(text).text_size(14. * scale)

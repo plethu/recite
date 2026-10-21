@@ -22,6 +22,7 @@ use std::{
     sync::{Arc, mpsc},
 };
 use tokio::sync::mpsc::UnboundedSender;
+use xilem::masonry::kurbo::Size;
 use xilem::winit::dpi;
 use xilem::winit::error;
 use xilem::{AppState, WindowId};
@@ -43,6 +44,8 @@ pub(super) struct App {
     auxiliary: bool,
     status: String,
     pane_hint: bool,
+    workspace_menu: bool,
+    viewport: Size,
     initial: Option<LaunchOptions>,
     opening: Option<Opening>,
     sender: Option<UnboundedSender<Job>>,
@@ -104,6 +107,8 @@ impl App {
             auxiliary: false,
             status: "Open a project or create one to start writing.".into(),
             pane_hint: false,
+            workspace_menu: false,
+            viewport: Size::new(1280., 800.),
             initial: None,
             opening: None,
             sender: None,

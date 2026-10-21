@@ -1,24 +1,35 @@
 use super::surface::Surface;
 use super::*;
 use crate::attention::{Pane, Region};
+use crate::presentation::print;
 use crate::rules;
 use recite_writer_model::{EditOperation, StructuralCommand};
+mod field;
+mod folio;
+mod input;
+pub(super) use field::{passage_editor, prose_editor};
 use xilem::AnyWidgetView;
 use xilem::masonry::kurbo;
-use xilem::masonry::properties;
 
 pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        label(state.ui_scale(), surface.title()),
-        retained(actions(state), !state.attention.is_focused()),
-        retained(
-            flex_col((destination(state, surface),)),
-            !state.attention.is_focused(),
-        ),
+        matches!(surface, Surface::SourceRepair { import: true, .. })
+            .then(|| super::source_repair::panel(state)),
         content(state, surface),
+        retained(actions(state), !state.attention.is_focused()),
         diagnostics(state),
-        (!matches!(surface, Surface::Reply(_)))
-            .then(|| draft_actions(state, matches!(surface, Surface::Manuscript { .. }))),
+        (!matches!(
+            surface,
+            Surface::Reply(_) | Surface::Beat { .. } | Surface::Manuscript { .. }
+        ))
+        .then(|| {
+            draft_actions(
+                state,
+                matches!(surface, Surface::Manuscript { .. }),
+                action_axis(state),
+            )
+        }),
+        folio::footer(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
@@ -26,7 +37,16 @@ pub(super) fn manuscript(state: &Writer, surface: &Surface<'_>) -> impl WidgetVi
 }
 fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> {
     match surface {
-        Surface::Manuscript { passage, .. } => prose_editor(state, passage).boxed(),
+        Surface::Manuscript { passage, .. } => {
+            if let Some(id) = state.reading.selected.as_deref()
+                && state.reading.error.is_none()
+                && !state.reading.rows.is_empty()
+            {
+                super::reading::block(state, id, &state.reading.rows).boxed()
+            } else {
+                prose_editor(state, passage, state.script_width()).boxed()
+            }
+        },
         Surface::Reply(reply) => rules::view::panel(state, reply).boxed(),
         Surface::Beat { id, rows } => super::reading::block(state, id, rows).boxed(),
         Surface::Empty => super::reading::empty(state).boxed(),
@@ -35,64 +55,11 @@ fn content(state: &Writer, surface: &Surface<'_>) -> Box<AnyWidgetView<Writer>> 
             paragraph(state.ui_scale(), "Choose a beat in the outline to read or write it. Use your editor for source editing; source drafts remain recoverable.", state.script_width()).boxed(),
     }
 }
-fn prose_editor(state: &Writer, passage: &str) -> impl WidgetView<Writer> + use<> {
-    sized_box(keyed(
-        (
-            state.session.model().document().key().clone(),
-            passage.to_owned(),
-        ),
-        text_input(
-            state.session.model().draft().to_owned(),
-            |state: &mut Writer, text| {
-                state.change(|model| {
-                    model.set_draft(text);
-                    Ok(())
-                });
-            },
-        )
-        .insert_newline(InsertNewline::OnEnter)
-        .font("Literata")
-        .text_size(state.reading_size())
-        .placeholder("Manuscript")
-        .disabled(state.phase != Phase::Writing || state.session.read_only())
-        .prop(properties::TextAreaLabel::new("Manuscript"))
-        .prop(properties::PlaceholderTextSize {
-            size: state.reading_size(),
-        })
-        .prop(Manuscript(true)),
-    ))
-    .dims((
-        state.script_width().px(),
-        if state.trial.visible {
-            100.px()
-        } else {
-            260.px()
-        },
-    ))
-}
-fn destination(state: &Writer, surface: &Surface<'_>) -> Option<impl WidgetView<Writer> + use<>> {
-    let Surface::Manuscript {
-        route: Some(owner), ..
-    } = surface
-    else {
-        return None;
-    };
-    let owner = owner.clone();
-    Some(
-        text_button(
-            state.ui_scale(),
-            "Change reply destination…",
-            move |state: &mut Writer| state.choose_destination(owner.clone()),
-        )
-        .disabled(
-            state.phase != Phase::Writing
-                || state.session.read_only()
-                || state.navigation.busy()
-                || state.work.busy(),
-        ),
-    )
-}
-fn draft_actions(state: &Writer, editing: bool) -> impl WidgetView<Writer> + use<> {
+pub(super) fn draft_actions(
+    state: &Writer,
+    editing: bool,
+    axis: kurbo::Axis,
+) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing || state.session.read_only();
     let has_draft = state.session.model().has_draft();
@@ -110,10 +77,8 @@ fn draft_actions(state: &Writer, editing: bool) -> impl WidgetView<Writer> + use
             })
         })
         .disabled(closing || !has_draft),
-        edit_button(state, "Undo applied", EditOperation::Undo, !closing),
-        edit_button(state, "Redo applied", EditOperation::Redo, !closing),
     ))
-    .direction(action_axis(state))
+    .direction(axis)
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
 }
@@ -160,8 +125,6 @@ fn actions(state: &Writer) -> impl WidgetView<Writer> + use<> {
             StructuralCommand::AddReply,
             !closing && selected,
         ),
-        text_button(state.ui_scale(), "Read beat", Writer::read_current)
-            .disabled(closing || !selected),
     ))
     .direction(action_axis(state))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -180,10 +143,14 @@ fn add_button(
     command: StructuralCommand,
     enabled: bool,
 ) -> impl WidgetView<Writer> + use<> {
-    text_button(state.ui_scale(), title, move |state: &mut Writer| {
-        state.navigate(crate::navigation::Target::Structure(command.clone()))
-    })
-    .disabled(!enabled)
+    print::action(
+        state.ui_scale(),
+        title,
+        !enabled,
+        move |state: &mut Writer| {
+            state.navigate(crate::navigation::Target::Structure(command.clone()))
+        },
+    )
 }
 fn diagnostics(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let diagnostics = state.session.model().document().diagnostic_snapshot();

@@ -175,6 +175,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
         mounted.state.writer.as_mut().unwrap().return_to_writing();
         mounted.settle();
     }
+    mounted.activate("Workspace");
     mounted.activate("Projects");
     assert!(mounted.state.show_welcome);
     mounted.activate("Create a new project");
@@ -219,6 +220,7 @@ fn mounted_project_text_pages_load_all_matches_and_apply_the_field_only_on_navig
     writer.navigation.sender = Some(sender);
     writer.navigation.runtime = Some(runtime.handle().clone());
     mounted.replace_text("Manuscript", "Typing before lookup.");
+    mounted.activate("Workspace");
     mounted.activate("Find project text");
     mounted.type_text("Search query", "Shared");
     mounted.activate("Next results");

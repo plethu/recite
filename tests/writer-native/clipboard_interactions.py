@@ -43,8 +43,8 @@ def run(api, bus, registry, binary, output):
                     )
                     window = attach(api, bus, registry, process)
                     fill(window, "Manuscript", "Keep this private draft.")
-                    window.reveal_start("Copy link to this view")
-                    window.act("Copy link to this view")
+                    window.reveal_start("Copy link")
+                    window.act("Copy link")
                     link = window.wait(lambda: clipboard(), "native link clipboard")
                     query = parse_qs(urlsplit(link).query)
                     assert query["scene"] == [source.name]
@@ -66,8 +66,8 @@ def run(api, bus, registry, binary, output):
                         timeout=10,
                     )
                     assert forwarded.returncode == 0
-                    reveal(window, "Copy link to this view")
-                    window.act("Copy link to this view")
+                    reveal(window, "Copy link")
+                    window.act("Copy link")
                     copied = window.wait(lambda: clipboard(link), "catalogue location clipboard")
                     location = urlsplit(copied)
                     query = parse_qs(location.query)
@@ -76,8 +76,7 @@ def run(api, bus, registry, binary, output):
                     assert query["catalogue"] == ["fr.po"]
                     capture(output, f"-catalogue-{scale}")
                     results[f"catalogue_query_and_destination_roundtrip_{scale}"] = True
-                    window.reveal_start("Close")
-                    window.act("Close")
+                    window.document_action("Close")
                     window.wait(
                         lambda: window.find("Close and keep recovery"),
                         "keep accepted unsaved source",

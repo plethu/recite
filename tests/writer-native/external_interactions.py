@@ -45,7 +45,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == prose + "x", "pending prose")
                 disk = SOURCE.replace("The last tram waits.", "The external tram left.")
                 source.write_text(disk)
-                window.act("Compare disk changes")
+                window.document_action("Compare disk changes")
                 window.wait(
                     lambda: window.find_text("Disk comparison ready.", prefix=True),
                     "observational comparison",
@@ -74,7 +74,7 @@ def run(api, bus, registry, binary, output):
                 key("y", control=True)
                 window.wait(lambda: window.text(current) == prose + "x", "retained native redo")
                 results["keep_retains_native_field_undo_and_redo"] = True
-                window.act("Compare disk changes")
+                window.document_action("Compare disk changes")
                 window.wait(
                     lambda: window.find_text("Disk comparison ready.", prefix=True),
                     "fresh merge comparison",
@@ -131,8 +131,7 @@ def run(api, bus, registry, binary, output):
                 window = attach(api, bus, registry, process)
                 manuscript(window)
                 source.write_text(merged.replace("Reviewed merged tram.", "A newer external tram."))
-                window.reveal_start("Compare disk changes")
-                window.act("Compare disk changes")
+                window.document_action("Compare disk changes")
                 window.wait(
                     lambda: window.find_text("Disk comparison ready.", prefix=True),
                     "large-scale comparison",
@@ -149,7 +148,6 @@ def run(api, bus, registry, binary, output):
                     "large source comparison",
                 )
                 capture(output, "-comparison200-sources")
-                window.reveal_start("Close")
                 window.close_clean()
                 assert process.wait(timeout=5) == 0
     except Exception as error:

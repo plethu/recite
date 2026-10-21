@@ -7,7 +7,7 @@ use xilem::masonry::layout::AsUnit;
 use xilem::masonry::widgets;
 use xilem::style::Style;
 use xilem::view::{
-    CrossAxisAlignment, flex_col, flex_row, indexed_stack, portal, sized_box, text_input,
+    CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, sized_box, text_input,
 };
 use xilem::{InsertNewline, WidgetView};
 
@@ -31,35 +31,18 @@ mod trial;
 use navigation::navigation;
 mod document_actions;
 mod source_repair;
-use document_actions::{close_prompt, header, recovery_copy};
+use document_actions::recovery_copy;
+mod frame;
+mod reference;
+mod toolbar;
 
 fn retained<V: WidgetView<Writer>>(child: V, visible: bool) -> impl WidgetView<Writer> {
-    indexed_stack((child, sized_box(label(1., "")).dims((0.px(), 0.px()))))
-        .active(usize::from(!visible))
+    indexed_stack((child, flex_col(()).dims((0.px(), 0.px())))).active(usize::from(!visible))
 }
 
 pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> + use<> {
     let surface = surface::Surface::resolve(state);
     let content = flex_col((
-        indexed_stack((
-            header(state),
-            document_actions::focus_header(state),
-            document_actions::project_header(state),
-        ))
-        .active(
-            if state.workspaces.screen != crate::workspaces::Screen::Write {
-                2
-            } else {
-                usize::from(state.attention.is_focused())
-            },
-        ),
-        state.session.recovery_reason().is_none().then(|| {
-            paragraph(
-                state.ui_scale(),
-                state.status.clone(),
-                state.script_width() + state.navigation_width() + 20.,
-            )
-        }),
         crate::workspaces::recovery(state),
         crate::notices::panel(state),
         (state.session.checked_out() && !state.localisation.working()).then(|| {
@@ -85,7 +68,6 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             )
         }),
         recovery_copy(state),
-        close_prompt(state),
         state
             .session
             .project()
@@ -101,28 +83,22 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
                     Writer::cancel_schema_generation,
                 )
             }),
-        (state.workspaces.screen == crate::workspaces::Screen::Write
-            && state.visible_workspace() != crate::map::Workspace::Map
-            && matches!(surface, surface::Surface::SourceRepair { import: true, .. }))
-        .then(|| source_repair::panel(state)),
-        workspace::workspace_tabs(state),
-        xilem::view::indexed_stack((workspace(state, &surface), crate::workspaces::panel(state)))
-            .active(usize::from(
-                state.workspaces.screen != crate::workspaces::Screen::Write,
-            )),
+        xilem::view::indexed_stack((
+            workspace(state, &surface).boxed(),
+            crate::workspaces::panel(state).boxed(),
+        ))
+        .active(usize::from(
+            state.workspaces.screen != crate::workspaces::Screen::Write,
+        ))
+        .flex(1.),
         recovery_failure(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(16.px());
     xilem::core::fork(
         xilem::view::resize_observer(
-            |state: &mut Writer, size| state.viewport = size,
-            portal(
-                sized_box(content)
-                    .padding(24.px())
-                    .background_color(state.palette.canvas),
-            )
-            .constrain_horizontal(true),
+            |state: &mut Writer, size| state.viewport.height = size.height,
+            frame::frame(state, content.padding(16.px())),
         ),
         (
             crate::trial::worker(),
@@ -136,20 +112,38 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
     )
 }
 fn editor_status(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    state.external.path().map(|path| {
-        let path = state
-            .session
-            .project()
-            .and_then(|project| path.strip_prefix(project.root()).ok())
-            .unwrap_or(path);
-        paragraph(
-            state.ui_scale(),
-            format!(
-                "Editor request active for {}. You can keep writing.",
-                path.display()
+    (state.external.busy() || state.work.preparing_editor()).then(|| {
+        let message = state
+            .external
+            .path()
+            .map(|path| {
+                let path = state
+                    .session
+                    .project()
+                    .and_then(|project| path.strip_prefix(project.root()).ok())
+                    .unwrap_or(path);
+                format!(
+                    "Editor request active for {}. You can keep writing.",
+                    path.display()
+                )
+            })
+            .unwrap_or_else(|| {
+                "Preparing accepted source for your editor. You can keep writing.".into()
+            });
+        flex_col((
+            paragraph(
+                state.ui_scale(),
+                message,
+                state.script_width() + state.navigation_width() + 20.,
             ),
-            state.script_width() + state.navigation_width() + 20.,
-        )
+            text_button(
+                state.ui_scale(),
+                "Cancel editor launch",
+                Writer::cancel_editor_launch,
+            ),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(8.px())
     })
 }
 fn recovery_failure(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {

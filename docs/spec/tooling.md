@@ -254,15 +254,19 @@ the launch still reconciles dispatched writes; conflicts prevent launch. An exte
 lifetime stays independent of the Writer window, and completion names its source document.
 
 Its runtime preview prepares immutable accepted inputs off-thread and publishes only into the
-still-current document and requested destination. Cancelling or hiding preparation invalidates
-publication immediately; an active compiler phase may finish before another starts. Playback uses
-the shared runtime for choices, condition inputs and explicit blocking-effect acknowledgements. It
-never executes game effects, persists trial state, applies field drafts or silently replaces a
-running snapshot after edits. Restart is explicit, and failed preparation retains the previous run.
-Accepted sibling source participates; unapplied sibling fields do not. Captured requests and
-rejected or replaced runtimes return to the worker for destruction. The runtime owns its caption and
-catalogue provenance, so retained document trials recover their own metadata when switching files. A
-failed restart preserves that provenance with the prior run.
+still-current document and requested destination. Explicit cancellation invalidates publication
+immediately; an active compiler phase may finish before another starts. Preview occupies the editor
+workspace while retaining the writing panes and reference snapshot. Return to writing preserves
+staged inputs and the running conversation, and lets unchanged preparation finish in the background
+without reopening Preview or moving focus. Intervening document edits still reject that result.
+Closing the input controls stays in Preview. Playback uses the shared runtime for choices, condition
+inputs and explicit blocking-effect acknowledgements. It never executes game effects, persists trial
+state, applies field drafts or silently replaces a running snapshot after edits. Restart is
+explicit, and failed preparation retains the previous run. Accepted sibling source participates;
+unapplied sibling fields do not. Captured requests and rejected or replaced runtimes return to the
+worker for destruction. The runtime owns its caption and catalogue provenance, so retained document
+trials recover their own metadata when switching files. A failed restart preserves that provenance
+with the prior run.
 
 Both frontends inspect that run through the shared trace projection. Events, translation lookups and
 plural lookups retain their own capture order. Presentation mounts eight summaries or six record

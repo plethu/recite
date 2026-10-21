@@ -8,22 +8,9 @@ mod values;
 
 pub(super) fn controls(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let settings = &state.trial.settings;
-    let scale = state.ui_scale();
-    flex_col((
-        text_button(
-            scale,
-            if settings.open {
-                "Hide preview inputs"
-            } else {
-                "Preview inputs"
-            },
-            |state: &mut Writer| state.trial.settings.open = !state.trial.settings.open,
-        )
-        .disabled(disabled),
-        settings.open.then(|| editor(state, disabled)),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(10.px())
+    flex_col((settings.open.then(|| editor(state, disabled)),))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(10.px())
 }
 
 fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {

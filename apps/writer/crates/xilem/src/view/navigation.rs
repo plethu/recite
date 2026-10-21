@@ -1,8 +1,13 @@
 use super::*;
 use crate::attention::{Pane, Region};
+use crate::presentation::control_style::{ControlStyle, styled};
+use crate::presentation::{group::named, print};
+use crate::{app::picker::Search, map::Workspace};
+use recite_writer_session::choices::display_name;
 use xilem::masonry::properties::LineBreaking;
-use xilem::view::button;
+use xilem::view::{button, portal};
 const PAGE: usize = 8;
+const UNPAGED: usize = 12;
 
 pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let documents = if state.session.project().is_some() {
@@ -10,13 +15,44 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     } else {
         Either::B(examples(state))
     };
-    sized_box(
-        flex_col((documents, outline(state)))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(12.px()),
-    )
-    .width(state.navigation_width().px())
+    sized_box(named(
+        "Scene navigation",
+        portal(
+            flex_col((
+                (state.visible_workspace() != Workspace::Map).then(|| search_controls(state)),
+                documents,
+                outline(state),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(8.px())
+            .padding(12.px()),
+        )
+        .constrain_horizontal(true),
+    ))
+    .width(state.drawer_width().px())
+    .background_color(state.palette.canvas)
     .prop(Region(Some(Pane::Navigation)))
+}
+fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let blocked = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
+    flex_col((
+        button(
+            label(state.ui_scale(), "Search project words…")
+                .prop(LineBreaking::WordWrap)
+                .width((state.drawer_width() - 48.).px()),
+            |state: &mut Writer| state.pending_search = Some(Search::ProjectText),
+        )
+        .disabled(blocked || state.session.project().is_none()),
+        button(
+            label(state.ui_scale(), "Find scene or beat…")
+                .prop(LineBreaking::WordWrap)
+                .width((state.drawer_width() - 48.).px()),
+            |state: &mut Writer| state.pending_search = Some(Search::GoTo),
+        )
+        .disabled(blocked),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Stretch)
+    .gap(4.px())
 }
 fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -46,92 +82,118 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .any(|session| session.path() == path && session.dirty())
             });
             let current = project.is_some_and(|project| project.current().path() == path);
-            button(
-                label(
-                    scale,
-                    format!(
-                        "{}{}{}",
-                        if current { "Current · " } else { "" },
-                        document.key.as_str(),
-                        if dirty { " · Unsaved" } else { "" }
-                    ),
+            styled(
+                ControlStyle::Navigation,
+                button(
+                    label(
+                        scale,
+                        format!(
+                            "{}{} · {}{}",
+                            if current { "▾ " } else { "▸ " },
+                            display_name(
+                                document
+                                    .key
+                                    .as_str()
+                                    .rsplit('/')
+                                    .next()
+                                    .unwrap_or(document.key.as_str())
+                            ),
+                            document.key,
+                            if dirty { " · Unsaved" } else { "" }
+                        ),
+                    )
+                    .color(if current {
+                        state.palette.accent
+                    } else {
+                        state.palette.ink
+                    })
+                    .prop(LineBreaking::WordWrap)
+                    .width((state.drawer_width() - 48.).px()),
+                    move |state: &mut Writer| state.switch(&path),
                 )
-                .prop(LineBreaking::WordWrap),
-                move |state: &mut Writer| state.switch(&path),
+                .disabled(closing)
+                .background_color(state.palette.canvas),
             )
-            .disabled(closing)
         })
         .collect::<Vec<_>>();
-    sized_box(
-        flex_col((
-            label(scale, "Project files"),
-            flex_col(files)
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(8.px()),
-            (pages > 1).then(|| {
-                flex_col((
-                    text_button(scale, "Previous files", move |state: &mut Writer| {
-                        state.file_page = page.saturating_sub(1)
-                    })
-                    .disabled(closing || page == 0),
-                    text_button(scale, "Next files", move |state: &mut Writer| {
-                        state.file_page = (page + 1).min(pages - 1)
-                    })
-                    .disabled(closing || page + 1 >= pages),
-                ))
-                .gap(8.px())
-            }),
-            (pages > 1).then(|| label(scale, format!("Files · page {} of {pages}", page + 1))),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(12.px()),
-    )
-    .width(state.navigation_width().px())
+    flex_col((
+        print::caps(scale, "SCENES").color(state.palette.muted),
+        flex_col(files)
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .gap(8.px()),
+        (pages > 1).then(|| {
+            flex_col((
+                text_button(scale, "Previous files", move |state: &mut Writer| {
+                    state.file_page = page.saturating_sub(1)
+                })
+                .disabled(closing || page == 0),
+                text_button(scale, "Next files", move |state: &mut Writer| {
+                    state.file_page = (page + 1).min(pages - 1)
+                })
+                .disabled(closing || page + 1 >= pages),
+            ))
+            .gap(8.px())
+        }),
+        (pages > 1).then(|| label(scale, format!("Files · page {} of {pages}", page + 1))),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(12.px())
+    .width((state.drawer_width() - 24.).px())
 }
 
 fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing;
     let blocks = state.session.model().document().block_summaries();
-    let pages = blocks.len().div_ceil(PAGE).max(1);
+    // Short scenes use the slots otherwise occupied by pagination controls.
+    let page_size = if blocks.len() <= UNPAGED {
+        UNPAGED
+    } else {
+        PAGE
+    };
+    let pages = blocks.len().div_ceil(page_size).max(1);
     let page = state.beat_page.min(pages - 1);
     let entries = blocks
         .iter()
-        .skip(page * PAGE)
-        .take(PAGE)
+        .skip(page * page_size)
+        .take(page_size)
         .map(|block| {
             let id = block.id().to_string();
             let current = state.reading.selected.as_deref() == Some(&id);
-            button(
-                label(
-                    scale,
-                    format!(
-                        "{} · {}{}{}",
-                        if current { "Current beat" } else { "Beat" },
-                        id,
-                        if block.is_default() {
-                            " · Default"
-                        } else {
-                            ""
-                        },
-                        if block.has_end_destination() {
-                            " · END"
-                        } else {
-                            ""
-                        }
-                    ),
+            styled(
+                ControlStyle::Navigation,
+                button(
+                    label(
+                        scale,
+                        format!(
+                            "{}{}{}{}",
+                            if current { "◆ " } else { "" },
+                            if block.is_default() { "Start · " } else { "" },
+                            display_name(&id),
+                            if block.has_end_destination() {
+                                " · end"
+                            } else {
+                                ""
+                            }
+                        ),
+                    )
+                    .prop(LineBreaking::WordWrap)
+                    .width((state.drawer_width() - 48.).px()),
+                    move |state: &mut Writer| state.inspect(id.clone()),
                 )
-                .prop(LineBreaking::WordWrap),
-                move |state: &mut Writer| state.inspect(id.clone()),
+                .disabled(closing)
+                .background_color(if current {
+                    state.palette.plate
+                } else {
+                    state.palette.canvas
+                }),
             )
-            .disabled(closing)
         })
         .collect::<Vec<_>>();
     flex_col((
-        label(scale, "Beats"),
         flex_col(entries)
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .gap(8.px()),
+            .gap(2.px()),
         (pages > 1).then(|| {
             flex_col((
                 text_button(scale, "Previous beats", move |state: &mut Writer| {
@@ -160,23 +222,28 @@ fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 .iter()
                 .enumerate()
                 .map(|(index, example)| {
-                    button(
-                        label(
-                            scale,
-                            format!(
-                                "{}{}",
-                                if example.name == state.session.model().document().key().as_str() {
-                                    "Current · "
-                                } else {
-                                    ""
-                                },
-                                example.name
-                            ),
+                    styled(
+                        ControlStyle::Navigation,
+                        button(
+                            label(
+                                scale,
+                                format!(
+                                    "{}{}",
+                                    if example.name
+                                        == state.session.model().document().key().as_str()
+                                    {
+                                        "Current · "
+                                    } else {
+                                        ""
+                                    },
+                                    example.name
+                                ),
+                            )
+                            .prop(LineBreaking::WordWrap),
+                            move |state: &mut Writer| state.select_example(index),
                         )
-                        .prop(LineBreaking::WordWrap),
-                        move |state: &mut Writer| state.select_example(index),
+                        .disabled(state.phase != Phase::Writing),
                     )
-                    .disabled(state.phase != Phase::Writing)
                 })
                 .collect::<Vec<_>>(),
         )

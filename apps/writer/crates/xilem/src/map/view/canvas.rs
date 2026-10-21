@@ -43,11 +43,14 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         })
         .alt_text("Dialogue routes; use Connections below for their accessible list."),
     )
-    .dims((width.px(), 500.px()));
+    .width(width.px());
     let host = input::input(
         input::Kind::Viewport(scene.detail()),
         state.config.ui.keymap == recite_config::Keymap::Vim,
-        zstack((drawing, cards, route_labels(state, scene))).alignment(UnitPoint::TOP_LEFT),
+        // Cards own the final layer; variable children only append at its end.
+        // Full reply captions remain in the explicit Connections list.
+        zstack((drawing, zstack(cards).alignment(UnitPoint::TOP_LEFT)))
+            .alignment(UnitPoint::TOP_LEFT),
         |state: &mut Writer, action| state.map_input(Source::Viewport, action),
     );
     let host = host
@@ -62,7 +65,7 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
             state.session.model().document().key().clone(),
             host,
         ))
-        .dims((width.px(), 500.px())),
+        .width(width.px()),
     )
 }
 pub(super) fn focus_request(state: &Writer, scene: &Scene) -> Option<input::FocusRequest> {
@@ -161,56 +164,6 @@ fn provisional_edge(scene: &Scene, index: usize) -> Option<CubicBez> {
         end - Vec2::new(0., 32.),
         end,
     ))
-}
-fn route_labels(state: &Writer, scene: &Scene) -> Vec<impl WidgetView<Writer> + use<>> {
-    let scale = f64::from(state.ui_scale());
-    scene
-        .edge_indices()
-        .filter(|index| {
-            let link = &scene.projection.graph.links[*index];
-            scene
-                .selected
-                .as_deref()
-                .is_some_and(|id| link.origin == id || link.destination == id)
-        })
-        .filter_map(|index| {
-            scene.projection.graph.routes[index]
-                .as_ref()
-                .map(|route| (index, route))
-        })
-        .filter(|(_, route)| topology::visible(route.bounds, scene.camera, scene.viewport))
-        .take(if scene.detail() == Detail::Overview {
-            0
-        } else {
-            8
-        })
-        .map(|(index, route)| {
-            let link = &scene.projection.graph.links[index];
-            let text = format!(
-                "{}{}{}",
-                link.label.chars().take(40).collect::<String>(),
-                if link.conditional {
-                    " · conditional"
-                } else {
-                    ""
-                },
-                if link.returning { " · return" } else { "" }
-            );
-            let affine = Affine::scale(scale * f64::from(scene.camera.zoom)).then_translate(
-                (
-                    scale * f64::from(route.label.0 * scene.camera.zoom + scene.camera.x + 8.),
-                    scale * f64::from(route.label.1 * scene.camera.zoom + scene.camera.y),
-                )
-                    .into(),
-            );
-            placed::placed(
-                affine,
-                label(1., text)
-                    .text_size(11.)
-                    .background_color(state.palette.canvas),
-            )
-        })
-        .collect::<Vec<_>>()
 }
 fn draw_grid(state: &Writer, scene: &Scene, painter: &mut Painter<'_, record::Scene>) {
     let scale = f64::from(state.ui_scale());

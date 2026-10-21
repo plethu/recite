@@ -128,7 +128,7 @@ def run(api, bus, registry, binary, output):
                     "grouped global redo",
                 )
                 results["global_undo_redo_restores_grouped_project_change"] = True
-                window.act("Save all")
+                window.document_action("Save all")
                 window.wait(
                     lambda: (
                         ":: new" in source.read_text()

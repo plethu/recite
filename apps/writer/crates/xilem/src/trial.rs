@@ -1,5 +1,10 @@
 //! One in-flight compilation; the worker also destroys rejected/replaced trials.
 use super::{Phase, Writer};
+use crate::{
+    attention::{Pane, PaneMotion},
+    map::Workspace,
+    workspaces::Screen,
+};
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{PreparedPreview, Preview};
 use recite_writer_session::preview::{Request, trace::Browser};
@@ -87,9 +92,10 @@ impl Writer {
             self.trial.status = "Finish the project action before starting a preview.".into();
             return;
         }
-        self.workspaces.screen = crate::workspaces::Screen::Write;
+        self.workspaces.screen = Screen::Write;
         self.attention.leave_focus();
         self.trial.visible = true;
+        self.focus_pane(PaneMotion::To(Pane::Preview));
         if self.trial.busy() {
             return;
         }
@@ -114,12 +120,36 @@ impl Writer {
             Err(error) => error,
         };
     }
+    pub(super) fn configure_trial(&mut self) {
+        self.attention.leave_focus();
+        self.workspaces.screen = Screen::Write;
+        self.trial.visible = true;
+        self.trial.settings.open = true;
+        self.document_menu = crate::attention::DocumentMenu::Closed;
+        self.focus_pane(PaneMotion::To(Pane::Preview));
+    }
+    pub(super) fn configuring_trial(&self) -> bool {
+        self.trial.visible && self.trial.settings.open && !self.attention.is_focused()
+    }
+    pub(super) fn close_trial_inputs(&mut self) {
+        self.trial.settings.open = false;
+        self.focus_pane(PaneMotion::To(Pane::Preview));
+    }
+    pub(super) fn return_from_trial(&mut self) {
+        self.trial.settings.open = false;
+        self.trial.visible = false;
+        let pane = if self.visible_workspace() == Workspace::Map {
+            Pane::Map
+        } else {
+            Pane::Script
+        };
+        self.focus_pane(PaneMotion::To(pane));
+    }
 
     fn accept_trial(&mut self, output: Output) {
         let preparation = std::mem::replace(&mut self.trial.preparation, Preparation::Idle);
         let current = matches!(preparation, Preparation::Running(ref request) if Arc::ptr_eq(request, &output.request))
             && self.phase == Phase::Writing
-            && self.trial.visible
             && output
                 .request
                 .is_current(self.session.model(), self.localisation.preview_catalogue());

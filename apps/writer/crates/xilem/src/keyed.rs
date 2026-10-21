@@ -3,6 +3,8 @@
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::{properties::Dimensions, widgets::Passthrough};
 use xilem::{Pod, ViewCtx, WidgetView};
+mod column;
+pub(super) use column::column;
 
 pub(super) struct Keyed<K, V> {
     key: K,

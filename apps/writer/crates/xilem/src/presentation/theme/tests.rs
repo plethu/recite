@@ -4,7 +4,7 @@ use xilem::masonry::{
     core::{NewWidget, WidgetId},
     kurbo::Point,
     testing::TestHarness,
-    widgets::{CheckboxToggled, Flex, RadioButtonSelected, RadioGroup},
+    widgets::{ButtonPress, CheckboxToggled, Flex, RadioButtonSelected, RadioGroup},
 };
 
 #[test]
@@ -64,4 +64,62 @@ fn click(harness: &mut TestHarness<Flex>, id: WidgetId) {
         target_node: id.to_raw().into(),
         data: None,
     });
+}
+
+#[test]
+fn quiet_controls_keep_native_geometry_focus_and_actions_in_every_state() {
+    let palette = palette(&WriterConfig::default());
+    let button = NewWidget::new(Button::new(NewWidget::new(Label::new("Apply draft"))))
+        .with_class(ControlStyle::Action.class());
+    let id = button.id();
+    let mut harness = TestHarness::create_with_size(
+        properties(&palette, 1.),
+        NewWidget::new(Flex::column().with_fixed(button)),
+        (500, 200),
+    );
+    let size = harness.get_widget_with_id(id).ctx().border_box().size();
+    assert_eq!(
+        harness
+            .get_widget_with_id(id)
+            .get_prop::<BorderColor>()
+            .color,
+        Color::TRANSPARENT
+    );
+    harness.mouse_move_to(id);
+    assert_eq!(
+        harness
+            .get_widget_with_id(id)
+            .get_prop::<BorderColor>()
+            .color,
+        palette.boundary
+    );
+    harness.focus_on(Some(id));
+    assert_eq!(
+        harness
+            .get_widget_with_id(id)
+            .get_prop::<BorderColor>()
+            .color,
+        palette.accent
+    );
+    assert_eq!(
+        harness.get_widget_with_id(id).ctx().border_box().size(),
+        size
+    );
+    click(&mut harness, id);
+    assert!(harness.pop_action::<ButtonPress>().is_some());
+    harness.edit_widget_with_id(id, |mut widget| widget.ctx.set_disabled(true));
+    harness.redraw();
+    assert_eq!(
+        harness
+            .get_widget_with_id(id)
+            .get_prop::<BorderColor>()
+            .color,
+        Color::TRANSPARENT
+    );
+    assert_eq!(
+        harness.get_widget_with_id(id).ctx().border_box().size(),
+        size
+    );
+    click(&mut harness, id);
+    assert!(harness.pop_action::<ButtonPress>().is_none());
 }

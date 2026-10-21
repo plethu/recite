@@ -13,6 +13,7 @@ mod navigation;
 mod notices;
 mod presentation;
 mod reading;
+mod reading_context;
 mod routes;
 mod rules;
 mod session;
@@ -57,6 +58,8 @@ struct Writer {
     localisation: localisation::Localisation,
     notices: notices::Notices,
     viewport: kurbo::Size,
+    document_menu: attention::DocumentMenu,
+    reading_context: reading_context::Context,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
 }
@@ -125,6 +128,8 @@ impl Writer {
             localisation: Default::default(),
             notices: Default::default(),
             viewport: kurbo::Size::new(1280., 800.),
+            document_menu: Default::default(),
+            reading_context: reading_context::Context::default(),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),
         }
@@ -151,6 +156,12 @@ impl Writer {
         view::workspace::Layout::resolve(self).script
     }
     fn navigation_width(&self) -> f64 {
+        if self.attention.is_focused() || self.viewport.width < 900. * f64::from(self.ui_scale()) {
+            return 0.;
+        }
+        self.drawer_width()
+    }
+    fn drawer_width(&self) -> f64 {
         f64::from(
             self.config
                 .writer

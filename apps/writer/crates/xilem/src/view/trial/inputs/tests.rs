@@ -17,6 +17,7 @@ fn binding_view(count: usize) -> (usize, Writer) {
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
     writer.trial.settings.open = true;
+    writer.trial.visible = true;
     writer.trial.settings.query = "fr".into();
     writer.search_preview_languages();
     let mut context = ViewCtx::new(

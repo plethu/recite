@@ -25,7 +25,7 @@ from writer_interactions import SOURCE, capture
 
 
 def queue_ready(window):
-    window.reveal_start("Copy link to this view")
+    window.reveal_start("Copy link")
     window.wait(lambda: window.find_text("Catalogue ready.", prefix=True), "queue publication")
 
 
@@ -65,7 +65,7 @@ def run(api, bus, registry, binary, output):
                         lambda: "Saved by the translation shortcut." in po.read_text(),
                         "translation PO write",
                     )
-                    window.reveal_start("Copy link to this view")
+                    window.reveal_start("Copy link")
                     window.wait(
                         lambda: window.find_text("Translations saved."),
                         "translation-local shortcut completion",
@@ -101,8 +101,7 @@ def run(api, bus, registry, binary, output):
                     search_entries(window, "second")
                     open_entry(window)
                     edit(window, "Discard second translation.")
-                    window.reveal_start("Close")
-                    window.act("Close")
+                    window.document_action("Close")
                     window.wait(
                         lambda: window.find("Discard translations and close"),
                         "explicit translation discard",
@@ -145,8 +144,7 @@ def run(api, bus, registry, binary, output):
                     results[
                         f"discard_all_translations_does_not_restore_po_drafts_or_write_source_{scale}"
                     ] = True
-                    window.reveal_start("Close")
-                    window.act("Close")
+                    window.document_action("Close")
                     window.wait(
                         lambda: window.find("Close and keep recovery"), "retained source recovery"
                     )
