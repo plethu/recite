@@ -234,8 +234,9 @@ fn pane_entry(widget: WidgetRef<'_, dyn Widget>, pane: Pane) -> Option<WidgetId>
             if child
                 .downcast::<Flex>()
                 .is_some_and(|flex| flex.get_prop::<PaneEntry>().0)
+                && let Some(target) = first_focusable(child, false)
             {
-                return first_focusable(child, false);
+                return Some(target);
             }
             pending.extend(child.children());
         }

@@ -23,6 +23,8 @@ const RESULT: WidgetTag<Button> = WidgetTag::named("mounted-result");
 mod input;
 #[path = "manuscript/tests.rs"]
 mod manuscript;
+#[path = "preview/tests.rs"]
+mod preview;
 #[path = "tab/tests.rs"]
 mod tab;
 
