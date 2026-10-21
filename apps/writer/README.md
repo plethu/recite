@@ -65,8 +65,10 @@ Start / restart preview prepares source-language playback off the UI thread, sta
 selected beat. Continue, choose replies, answer condition requests, and acknowledge simulated
 effects; Writer never executes game effects. The compiled run remains fixed and shows a stale notice
 after edits. Apply or discard a manuscript draft before restarting. Cancel invalidates publication
-while the active compiler phase finishes. Hiding playback retains manuscript typing history.
-Catalogue/interpolation preview inputs remain part of the localisation port.
+while the active compiler phase finishes. Hiding playback retains manuscript typing history. Preview
+inputs select language, wording, interpolation values and saved or draft catalogue policy for the
+next run. Preview trace inspects typed events and localisation decisions through bounded record and
+complete-value pages shared with Freya.
 
 Map and Split share accepted topology, synopsis, personal placement and spatial navigation with
 Freya. Camera changes leave source untouched; placement saves beside personal configuration. Native
@@ -91,9 +93,9 @@ the shared ordered save path first. Jobs continue after returning to writing; ca
 pending until the terminal result is collected. Declaration source and producer actions are still in
 progress.
 
-Personal settings and desktop activation also use the shared owners. Localisation, configured
-preview inputs and remaining workspace commands are still in progress. The default launcher
-continues to use Freya. See [acceptance](acceptance.md) for evidence limits.
+Personal settings and desktop activation also use the shared owners. Remaining workspace commands
+and final parity verification are still in progress. The default launcher continues to use Freya.
+See [acceptance](acceptance.md) for evidence limits.
 
 ## Build requirements
 

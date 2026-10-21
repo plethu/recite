@@ -80,7 +80,11 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "localisation-navigation-scale":
+        if scenario == "preview-trace-scale":
+            from preview_trace import run_scale as run
+        elif scenario == "preview-trace":
+            from preview_trace import run
+        elif scenario == "localisation-navigation-scale":
             from localisation_navigation import run_scale as run
         elif scenario == "localisation-navigation":
             from localisation_navigation import run
@@ -161,6 +165,8 @@ def main():
             "preview",
             "preview-inputs",
             "preview-inputs-scale",
+            "preview-trace",
+            "preview-trace-scale",
             "picker",
             "repair",
             "rules",
@@ -268,7 +274,12 @@ def main():
                 timeout=120
                 if args.scenario == "all"
                 or args.scenario.startswith(
-                    ("preview-inputs", "localisation-details", "localisation-navigation")
+                    (
+                        "preview-inputs",
+                        "preview-trace",
+                        "localisation-details",
+                        "localisation-navigation",
+                    )
                 )
                 else 60
             )

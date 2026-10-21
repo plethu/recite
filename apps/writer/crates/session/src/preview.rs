@@ -7,3 +7,5 @@ pub use inputs::{Inputs, parse_value};
 
 mod request;
 pub use request::Request;
+
+pub mod trace;

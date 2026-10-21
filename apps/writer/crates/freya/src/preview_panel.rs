@@ -13,7 +13,7 @@ use crate::{
 };
 use freya::prelude::*;
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
-use recite_writer_session::preview::catalogue_stale;
+use recite_writer_session::preview::{catalogue_stale, trace::Browser};
 pub(crate) use task::{start, use_preview_work};
 
 #[derive(Clone)]
@@ -29,7 +29,7 @@ impl Component for PreviewScreen {
     fn render(&self) -> impl IntoElement {
         let mut writer = self.writer;
         let mut pane = writer.pane;
-        let mut trace_open = use_state(|| false);
+        let mut trace_browser = writer.trial.trace;
         let answer = use_state(String::new);
         let state = writer.buffers.model.read();
         let session = state.as_ref().ok();
@@ -202,15 +202,15 @@ impl Component for PreviewScreen {
             Button::new()
                 .flat()
                 .on_press(move |_| {
-                    let next = !*trace_open.peek();
-                    trace_open.set(next);
+                    let next = !trace_browser.peek().open;
+                    trace_browser.write().open = next;
                 })
                 .child(text(MsgId::WriterPreviewTrace)),
         );
-        if *trace_open.read()
+        if trace_browser.read().open
             && let Some(trace) = session.and_then(|s| s.preview_trace())
         {
-            panel = panel.child(trace::render(trace));
+            panel = panel.child(trace::render(trace, trace_browser));
         }
         ScrollView::new()
             .width(Size::fill())
@@ -226,6 +226,7 @@ pub(crate) struct TrialInputs {
     pub locale: State<String>,
     pub variant: State<String>,
     pub include_drafts: State<bool>,
+    pub trace: State<Browser>,
     pub values: State<std::collections::BTreeMap<String, String>>,
     work: State<Option<task::Work>>,
     restart_focus: AccessibilityId,
@@ -238,6 +239,7 @@ impl TrialInputs {
             locale: use_state(String::new),
             variant: use_state(String::new),
             include_drafts: use_state(|| false),
+            trace: use_state(Browser::default),
             values: use_state(std::collections::BTreeMap::new),
         }
     }

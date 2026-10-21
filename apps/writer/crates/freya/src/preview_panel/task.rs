@@ -114,7 +114,10 @@ fn accept(mut writer: Writer, output: Output) {
     let retired = match result {
         Ok(prepared) if current => match model.as_mut() {
             Ok(model) => match model.accept_preview(prepared) {
-                Ok(previous) => previous.map(|preview| Retired::Preview(Box::new(preview))),
+                Ok(previous) => {
+                    writer.trial.trace.write().restart();
+                    previous.map(|preview| Retired::Preview(Box::new(preview)))
+                }
                 Err(stale) => Some(Retired::Prepared(stale)),
             },
             Err(_) => Some(Retired::Prepared(prepared)),

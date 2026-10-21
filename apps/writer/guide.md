@@ -40,8 +40,8 @@ and catalogue to restore them. **Add language** searches language names and tags
 manuscript field drafts first. **Review source updates** compares the PO with current project
 sources, including accepted unsaved edits. **Apply source updates to PO** rechecks those inputs and
 writes only the PO; source files still need their own Save. These operations retain the mounted
-manuscript while editing is temporarily paused. Configured localised preview is still being
-migrated.
+manuscript while editing is temporarily paused. **Preview this passage** navigates to the source and
+stages its catalogue language and wording after successful navigation. Restart remains explicit.
 
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:
@@ -346,6 +346,13 @@ Preview startup prepares catalogues and compiles on one background worker. Resta
 inputs; later control edits belong to the next run. The previous page stays visible while its
 controls pause. Cancel or leave the preview to reject the result. A changed scene or catalogue also
 rejects preparation; the compiler phase already in progress finishes on its worker.
+
+**Preview inputs** selects language, wording, interpolation values and whether to include catalogue
+drafts for the next run. **Preview trace** inspects the current run's Events, Translation lookups or
+Plural lookups. Open a record to read its typed fields and lookup attempts. Long records page their
+fields; **Read complete trace value** opens the full text or digest in bounded parts. Authoring
+edits and failed restart preserve the inspected record. Successful restart returns to the first
+record list page.
 
 Initial project open runs in the background. Cancellation reaches compiler and search checkpoints;
 an individual filesystem operation or parse finishes before its next checkpoint. Recovery writes are

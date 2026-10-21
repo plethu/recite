@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::{self, click, labels, open, project};
+use recite_writer_session::preview::trace::{Place, ValuePosition};
 use tokio::sync::mpsc as async_mpsc;
 
 const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
@@ -84,11 +85,22 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
     let directory = project(SOURCE).unwrap();
     let mut writer = open(&directory).unwrap();
     install(&mut writer).unwrap();
+    writer.trial.trace.place = Place::Value(ValuePosition {
+        record: 0,
+        field: 2,
+        part: 0,
+    });
     let request = begin(&mut writer).unwrap();
     assert!(matches!(
         finish(&mut writer, request).unwrap(),
         Some(Retired::Preview(_))
     ));
+    assert!(matches!(writer.trial.trace.place, Place::List { page: 0 }));
+    writer.trial.trace.place = Place::Value(ValuePosition {
+        record: 0,
+        field: 2,
+        part: 0,
+    });
     let request = begin(&mut writer).unwrap();
     let (receipt, returned) = mpsc::sync_channel(1);
     writer.accept_trial(Output {
@@ -97,6 +109,10 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
         receipt,
     });
     assert!(returned.recv().unwrap().1.is_none());
+    assert!(matches!(
+        writer.trial.trace.place,
+        Place::Value(ValuePosition { field: 2, .. })
+    ));
     assert_eq!(
         writer.trial.status,
         "Could not prepare\nThe running preview below is unchanged."

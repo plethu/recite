@@ -2,7 +2,7 @@
 use super::{Phase, Writer};
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{PreparedPreview, Preview};
-use recite_writer_session::preview::Request;
+use recite_writer_session::preview::{Request, trace::Browser};
 use std::{
     fmt,
     sync::{Arc, mpsc},
@@ -25,6 +25,7 @@ pub(super) struct Trial {
     pub status: String,
     pub choice_page: usize,
     pub effect_page: usize,
+    pub trace: Browser,
 }
 
 enum Preparation {
@@ -64,6 +65,7 @@ impl Trial {
                 .into(),
             choice_page: 0,
             effect_page: 0,
+            trace: Default::default(),
         }
     }
 
@@ -132,6 +134,7 @@ impl Writer {
                     self.trial.answer.clear();
                     self.trial.choice_page = 0;
                     self.trial.effect_page = 0;
+                    self.trial.trace.restart();
                     self.trial.status = "Preview uses the accepted source snapshot.".into();
                     previous.map(|preview| Retired::Preview(Box::new(preview)))
                 }

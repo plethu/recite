@@ -9,6 +9,7 @@ use recite_writer_session::preview::catalogue_stale;
 mod captions;
 mod inputs;
 mod playback;
+mod trace;
 
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -49,6 +50,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
             flex_col((
                 paragraph(scale, state.trial.status.clone(), state.script_width()),
                 page.map(|page| running(state, page, closing || busy)),
+                trace::panel(state, closing),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(12.px())

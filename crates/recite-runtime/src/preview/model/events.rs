@@ -176,11 +176,17 @@ impl PreviewTrace {
             .map(|(_, trace)| trace)
     }
 
-    pub fn plural_lines(&self) -> impl Iterator<Item = &(String, PluralLineTrace)> {
+    /// Recorded plural deliveries in capture order, with constant-time length and indexing by skip.
+    pub fn plural_lines(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &(String, PluralLineTrace)> + DoubleEndedIterator {
         self.plural_lines.iter()
     }
 
-    pub fn localized_lookups(&self) -> impl Iterator<Item = &LocalizedLookupTrace> {
+    /// Recorded singular lookups in capture order, with constant-time length and indexing by skip.
+    pub fn localized_lookups(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &LocalizedLookupTrace> + DoubleEndedIterator {
         self.localized_lookups.iter()
     }
 

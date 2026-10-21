@@ -240,6 +240,12 @@ rejected or replaced runtimes return to the worker for destruction. The runtime 
 catalogue provenance, so retained document trials recover their own metadata when switching files. A
 failed restart preserves that provenance with the prior run.
 
+Both frontends inspect that run through the shared trace projection. Events, translation lookups and
+plural lookups retain their own capture order. Presentation mounts eight summaries or six record
+fields at a time; complete text and hexadecimal digest values use bounded pages. Typed arguments,
+pending versus committed choices and lookup attempts remain distinct. Typing and failed restart
+retain the inspected record; only successful restart resets its cursor.
+
 Linux, Windows and macOS remain first-class desktop targets, not implied platform acceptance. Claims
 require native evidence for authoring, assistive technology, physical input, startup, memory and
 installed packages on each declared platform. Renderer reach or visual polish is insufficient.
