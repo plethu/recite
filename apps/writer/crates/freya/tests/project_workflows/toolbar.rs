@@ -8,19 +8,19 @@ pub(super) fn set_fonts(test: &mut TestingRunner) {
     let fonts = std::collections::HashMap::from([
         (
             "Fraunces 72pt Soft",
-            &include_bytes!("../../fonts/fraunces/Fraunces72ptSoft-SemiBold.ttf")[..],
+            &include_bytes!("../../../../assets/fonts/fraunces/Fraunces72ptSoft-SemiBold.ttf")[..],
         ),
         (
             "IBM Plex Sans",
-            &include_bytes!("../../fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf")[..],
+            &include_bytes!("../../../../assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf")[..],
         ),
         (
             "IBM Plex Mono",
-            &include_bytes!("../../fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf")[..],
+            &include_bytes!("../../../../assets/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf")[..],
         ),
         (
             "Literata",
-            &include_bytes!("../../fonts/literata/Literata-Variable.ttf")[..],
+            &include_bytes!("../../../../assets/fonts/literata/Literata-Variable.ttf")[..],
         ),
     ]);
     test.set_fonts(fonts);

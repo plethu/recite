@@ -8,6 +8,7 @@ use freya::{
     prelude::*,
 };
 use recite_writer_model::{PassageKind, ScriptBlock, ScriptEntry};
+use recite_writer_session::reading::Excerpt;
 
 #[derive(Clone)]
 pub(super) struct BranchPreview {
@@ -70,28 +71,10 @@ impl Component for BranchPreview {
 }
 
 pub(super) fn entries(items: &[ScriptEntry], dark: bool) -> Element {
-    let mut budget = 32usize;
-    let content = limited_entries(items, dark, &mut budget);
-    rect()
-        .width(Size::fill())
-        .child(content)
-        .maybe_child((budget == 0).then(|| {
-            label()
-                .text(crate::messages::text(
-                    crate::messages::MsgId::WriterGuiPreviewLimit,
-                ))
-                .font_size(t::small())
-        }))
-        .into_element()
-}
-fn limited_entries(items: &[ScriptEntry], dark: bool, budget: &mut usize) -> Element {
+    let mut excerpt = Excerpt::new(items);
     let mut result = rect().width(Size::fill()).spacing(t::SPACE_SM);
-    for item in items {
-        if *budget == 0 {
-            break;
-        }
-        *budget -= 1;
-        result = result.child(match item {
+    for item in excerpt.by_ref() {
+        let row: Element = match item.entry {
             ScriptEntry::Passage(passage) => rect()
                 .width(Size::fill())
                 .spacing(t::SPACE_XS)
@@ -114,16 +97,12 @@ fn limited_entries(items: &[ScriptEntry], dark: bool, budget: &mut usize) -> Ele
                     label()
                         .text(passage.text.clone())
                         .prose_font()
-                        .font_size(t::TEXT_EXCERPT),
+                        .font_size(t::prose_size() * 0.75),
                 )
                 .into_element(),
-            ScriptEntry::Group {
-                heading,
-                entries: nested,
-            } => rect()
-                .width(Size::fill())
-                .child(label().text(heading.clone()).font_size(t::small()))
-                .child(limited_entries(nested, dark, budget))
+            ScriptEntry::Group { heading, .. } => label()
+                .text(heading.clone())
+                .font_size(t::small())
                 .into_element(),
             ScriptEntry::Jump(target) => label()
                 .text(format!("→ {}", palette::display_name(target)))
@@ -133,7 +112,21 @@ fn limited_entries(items: &[ScriptEntry], dark: bool, budget: &mut usize) -> Ele
                 .text(text.clone())
                 .font_size(t::small())
                 .into_element(),
-        });
+        };
+        result = result.child(
+            rect()
+                .width(Size::fill())
+                .padding((0., 0., 0., (item.depth.min(4) as f32) * t::SPACE_MD))
+                .child(row),
+        );
     }
-    result.into_element()
+    result
+        .maybe_child(excerpt.limited().then(|| {
+            label()
+                .text(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiPreviewLimit,
+                ))
+                .font_size(t::small())
+        }))
+        .into_element()
 }

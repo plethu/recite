@@ -14,6 +14,7 @@ use recite_compiler::authoring::CancellationToken;
 use recite_writer_session::{
     activation::{Activation, ActivationHost, ActivationInbox},
     startup::{LaunchOptions, Startup},
+    typography::BUNDLED_FONTS,
 };
 use std::sync::atomic;
 use std::{
@@ -241,7 +242,7 @@ pub(super) fn application(
     app: App,
 ) -> xilem::Xilem<App, impl FnMut(&mut App) -> std::iter::Once<xilem::WindowView<App>>> {
     let defaults = app.theme.initial_properties();
-    xilem::Xilem::new(app, |app: &mut App| {
+    let application = xilem::Xilem::new(app, |app: &mut App| {
         std::iter::once(
             xilem::window(app.window, "Recite Writer", view::app(app))
                 .with_default_properties(app.theme.properties.clone())
@@ -254,9 +255,10 @@ pub(super) fn application(
                 }),
         )
     })
-    .with_default_properties(defaults)
-    .with_font(include_bytes!("../../freya/fonts/literata/Literata-Variable.ttf").to_vec())
-    .with_font(include_bytes!("../../freya/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf").to_vec())
+    .with_default_properties(defaults);
+    BUNDLED_FONTS
+        .iter()
+        .fold(application, |app, (_, bytes)| app.with_font(bytes.to_vec()))
 }
 
 #[cfg(test)]

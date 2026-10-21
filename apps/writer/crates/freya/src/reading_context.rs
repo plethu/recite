@@ -5,11 +5,7 @@ use crate::{
     palette,
 };
 use freya::prelude::*;
-#[derive(Clone, PartialEq)]
-pub(crate) struct Reference {
-    pub document: String,
-    pub block: recite_writer_model::ScriptBlock,
-}
+pub(crate) use recite_writer_session::reading::ReferenceSnapshot;
 #[derive(Clone)]
 pub(crate) struct ReferencePanel {
     pub writer: Writer,
@@ -66,7 +62,7 @@ impl Component for ReferencePanel {
                                             .text(format!(
                                                 "{} Pinned snapshot · {}",
                                                 if *collapsed.read() { "▸" } else { "▾" },
-                                                palette::display_name(&reference.block.id)
+                                                palette::display_name(&reference.block().id)
                                             ))
                                             .font_size(t::small()),
                                     ),
@@ -83,7 +79,7 @@ impl Component for ReferencePanel {
                     )
                     .maybe_child((!*collapsed.read()).then(|| {
                         label()
-                            .text(format!("Read only · {}", reference.document))
+                            .text(format!("Read only · {}", reference.document()))
                             .font_size(t::small())
                             .color(colors.muted)
                     }))
@@ -93,7 +89,7 @@ impl Component for ReferencePanel {
                             .height(Size::px(180.))
                             .max_height(Size::window_percent(25.))
                             .child(crate::branch_preview::entries(
-                                &reference.block.entries,
+                                &reference.block().entries,
                                 self.writer.dark,
                             ))
                     }))

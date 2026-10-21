@@ -106,7 +106,7 @@ pub(crate) struct Writer {
     pub files: State<Option<crate::project::ProjectFiles>>,
     pub examples: State<recite_writer_session::examples::ExampleSessions>,
     pub queue: crate::navigation::Queue,
-    pub reference: State<Option<crate::reading_context::Reference>>,
+    pub reference: State<Option<crate::reading_context::ReferenceSnapshot>>,
     pub buffers: crate::buffers::Buffers,
     pub message: crate::feedback::Feedback,
     pub dark: bool,
@@ -184,17 +184,11 @@ impl Writer {
     pub fn pin(self) {
         self.after_prose(move |mut writer| {
             writer.try_navigate(|_| Ok(()))?;
-            if let Ok(session) = writer.buffers.model.peek().as_ref()
-                && let Ok(Some(id)) = session.selected_block()
-                && let Ok(blocks) = session.document().script_snapshot()
-                && let Some(block) = blocks.iter().find(|b| b.id == id)
-            {
-                writer
-                    .reference
-                    .set(Some(crate::reading_context::Reference {
-                        document: session.document().key().to_string(),
-                        block: block.clone(),
-                    }));
+            if let Ok(session) = writer.buffers.model.peek().as_ref() {
+                writer.reference.set(
+                    crate::reading_context::ReferenceSnapshot::capture(session)
+                        .map_err(|error| error.to_string())?,
+                );
             }
             Ok(())
         });

@@ -90,9 +90,10 @@ pub(super) fn run() -> Result<(), String> {
             }),
         )
     })
-    .with_default_properties(application_defaults)
-    .with_font(include_bytes!("../../freya/fonts/literata/Literata-Variable.ttf").to_vec())
-    .with_font(include_bytes!("../../freya/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf").to_vec());
+    .with_default_properties(application_defaults);
+    let application = recite_writer_session::typography::BUNDLED_FONTS
+        .iter()
+        .fold(application, |app, (_, bytes)| app.with_font(bytes.to_vec()));
     let event_loop = xilem::EventLoop::with_user_event()
         .build()
         .map_err(|error| error.to_string())?;

@@ -36,3 +36,6 @@ pub mod examples;
 pub mod palette;
 
 pub mod commands;
+
+pub mod reading;
+pub mod typography;

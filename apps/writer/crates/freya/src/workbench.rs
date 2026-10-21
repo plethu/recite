@@ -129,7 +129,7 @@ pub(crate) fn render(mode: AppMode) -> Element {
         attention: use_state(|| false),
         page: use_state(|| 0),
     };
-    let reference = use_state(|| None::<reading_context::Reference>);
+    let reference = use_state(|| None::<reading_context::ReferenceSnapshot>);
     let localisation = use_state(localisation::Localisation::default);
     let status_a11y = use_a11y();
     let initial_editor = use_try_consume::<crate::InitialEditor>().and_then(|editor| editor.0);

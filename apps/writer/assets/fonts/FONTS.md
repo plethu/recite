@@ -1,8 +1,9 @@
 # Writer fonts
 
 Writer embeds these OFL 1.1 families with `include_bytes!` and registers them at launch
-(`LaunchConfig::with_font` in `src/main.rs`), so the chains in `src/design/tokens.rs` resolve
-without system fonts. Each family's licence is `OFL.txt` in its folder; packages install them under
+from the shared inventory and fallback chains in `crates/session/src/typography.rs`. Both native
+adapters register that inventory, so these families resolve without system fonts. Each family's
+licence is `OFL.txt` in its folder; packages install them under
 `licenses/fonts/`.
 
 | file                                                                          | registered as      | version | source                                                         | axes                                  |
@@ -25,7 +26,7 @@ Fraunces italic is not shipped because no display text in Writer is italic.
 The bundled faces cover Latin. Literata and IBM Plex Sans also cover Cyrillic and Greek; IBM Plex
 Mono covers Cyrillic, and Greek in mono text falls back. Fraunces is Latin-only, so display titles
 in other scripts fall through to Literata. Chinese, Japanese, Korean, Arabic, Hebrew, Devanagari and
-Thai rely on system fonts, which are too large to bundle. The chains in `src/design/tokens.rs` name
+Thai rely on system fonts, which are too large to bundle. The shared fallback chains name
 them before the generic family:
 
 - macOS: PingFang SC, Hiragino Sans, Apple SD Gothic Neo, Geeza Pro, Kohinoor Devanagari, Thonburi;
