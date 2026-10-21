@@ -1,5 +1,6 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
+use xilem::masonry::kurbo::Axis;
 
 pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
@@ -24,6 +25,7 @@ pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> 
             ),
             text_button(state.ui_scale(), "Close", Writer::request_close)
                 .disabled(blocked || state.project_jobs_busy()),
+            copy_link(state),
         ))
         .gap(8.px()),
     ))
@@ -50,6 +52,7 @@ pub(super) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
             }),
             text_button(state.ui_scale(), "Close", Writer::request_close)
                 .disabled(state.phase != Phase::Writing),
+            copy_link(state),
         ))
         .gap(8.px()),
     ))
@@ -65,6 +68,12 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
             label(scale, "Recite Writer").text_size(28. * scale),
             history_buttons(state),
         ))
+        .direction(if state.viewport.width < 900. * f64::from(scale) {
+            Axis::Vertical
+        } else {
+            Axis::Horizontal
+        })
+        .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(24.px()),
         label(scale, document_caption(state)),
         temporary_notice(state),
@@ -176,8 +185,17 @@ fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 || state.navigation.busy()
                 || state.navigation.history.step(true).is_none(),
         ),
+        copy_link(state),
     ))
     .gap(8.px())
+}
+fn copy_link(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    text_button(
+        state.ui_scale(),
+        "Copy link to this view",
+        Writer::copy_link,
+    )
+    .disabled(state.phase != Phase::Writing || state.project_action_blocked())
 }
 
 pub(super) fn recovery_copy(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {

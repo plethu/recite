@@ -16,6 +16,13 @@ pub(super) fn selection_location(location: &Location) -> Location {
 }
 
 impl Writer {
+    pub(crate) fn copy_link(&mut self) {
+        if self.phase != crate::Phase::Writing || self.project_action_blocked() {
+            self.status = "Finish the current action before copying its location.".into();
+            return;
+        }
+        self.pending_clipboard = Some(format!("recite://writer{}", self.current_location()));
+    }
     pub(crate) fn current_location(&self) -> Location {
         let model = self.session.model();
         let mut location = Location {

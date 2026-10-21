@@ -115,8 +115,14 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
         if self.key != Some(writer.window) {
             return MessageResult::Stale;
         }
-        let mut pod = Passthrough::child_mut(&mut element);
-        let result = child.message(child_state, message, pod.downcast(), writer);
+        let result = {
+            let mut pod = Passthrough::child_mut(&mut element);
+            child.message(child_state, message, pod.downcast(), writer)
+        };
+        if let Some(text) = writer.pending_clipboard.take() {
+            element.ctx.set_clipboard(text);
+            writer.status = "Link sent to clipboard.".into();
+        }
         writer.refresh_map_if_needed();
         writer.resume_external_notices();
         writer.resume_linked_editor();

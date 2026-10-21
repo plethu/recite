@@ -16,11 +16,13 @@ mod reading;
 mod routes;
 mod rules;
 mod session;
+mod specimen;
 #[cfg(test)]
 mod tests;
 mod trial;
 mod view;
 mod workspaces;
+use recite_writer_session::startup::Startup;
 pub use recite_writer_session::startup::{HELP, LaunchOptions};
 use xilem::masonry::kurbo;
 
@@ -49,6 +51,7 @@ struct Writer {
     rules: Option<rules::ReplySession>,
     pending_choice: Option<choices::Request>,
     pending_search: Option<app::picker::Search>,
+    pending_clipboard: Option<String>,
     lookup: Option<lookup::Search>,
     workspaces: workspaces::Workspaces,
     localisation: localisation::Localisation,
@@ -116,6 +119,7 @@ impl Writer {
             rules: None,
             pending_choice: None,
             pending_search: None,
+            pending_clipboard: None,
             lookup: None,
             workspaces: Default::default(),
             localisation: Default::default(),
@@ -223,6 +227,9 @@ impl Writer {
 }
 
 pub fn run_launch(options: LaunchOptions) -> Result<(), String> {
+    if options.intent == Startup::DesignSystem {
+        return specimen::run();
+    }
     let Some(app) = app::App::new(options)? else {
         return Ok(());
     };

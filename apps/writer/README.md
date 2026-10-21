@@ -32,12 +32,16 @@ Xilem is the selected replacement frontend. Its file-backed frontend is availabl
 ```sh
 mise exec -- just writer xilem --project /path/to/project --document dialogue/scene.recite \
     --editor nvim
+mise exec -- just writer xilem --design-system
 ```
 
 Use your editor's own arguments; `--editor-arg` repeats and the source path is appended without a
 shell. Omit it if the editor needs no arguments. Without `--editor`, Writer uses the operating
 system's preferred application for the file. For a graphical editor that supports it, pass
 `--editor-arg --wait` to request a waiting window.
+
+The component specimen uses the production native controls, fonts and palette. Appearance and scale
+changes last only for that window; it opens no project and leaves personal preferences untouched.
 
 This frontend supports project file and beat navigation, manuscript editing, native text undo/redo,
 applying changes, checked saves, diagnostics, crash recovery and guarded closing across retained
@@ -94,10 +98,11 @@ the shared ordered save path first. Jobs continue after returning to writing; ca
 pending until the terminal result is collected. Standalone declaration sources support checked IDE
 export/import, save and generation; producer actions use the same shared project owner as Freya.
 
-Personal settings and desktop activation also use the shared owners. Linked destinations cover
-writing, preview, reply rules, project tools and catalogue workflows. Source links save accepted
-source and open the configured IDE; recovered source drafts retain their explicit repair workflow.
-Final parity verification is still in progress. The default launcher continues to use Freya. See
+Personal settings and desktop activation also use the shared owners. Copy link sends the current
+location through the toolkit's native clipboard. Linked destinations cover writing, preview, reply
+rules, project tools and catalogue workflows. Source links save accepted source and open the
+configured IDE; recovered source drafts retain their explicit repair workflow. Final parity
+verification is still in progress. The default launcher continues to use Freya. See
 [acceptance](acceptance.md) for evidence limits.
 
 ## Build requirements

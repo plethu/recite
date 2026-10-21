@@ -151,6 +151,10 @@ and `/translations`. Query parameters identify the project, scene, beat or stabl
 and queue search/filter/page. They contain locations, not document contents or translation drafts.
 Catalogue paths inside the current project are relative to its root.
 
+Xilem's **Copy link to this view** uses the same location format and leaves manuscript drafts
+unapplied. **Link sent to clipboard** reports delivery to the toolkit; the operating system does not
+provide a success receipt for that setter.
+
 Open a link on startup, with the corresponding project:
 
 ```sh

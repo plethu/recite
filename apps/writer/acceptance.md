@@ -153,8 +153,8 @@ without replacing newer text or opening a cancelled workspace. Script and Map sh
 slots. Independent 100/200% Map/Split render review covers controls, canvas guidance and manuscript
 alignment.
 
-The fixed 512/2,048-beat workloads each mount three detail cards and 239 accessibility nodes. Their
-whole-scene Fit mounts zero prose cards and 184 nodes, within the unchanged 240-node cap. Overview
+The fixed 512/2,048-beat workloads each mount three detail cards and 237 accessibility nodes. Their
+whole-scene Fit mounts zero prose cards and 185 nodes, within the unchanged 240-node cap. Overview
 clicks and spatial navigation restore a readable card; pan completion does not activate a beat.
 Removing focused cards transfers focus to the persistent viewport, while toolbar focus stays put.
 These bounded checks do not establish hardware rendering performance or physical trackpad
@@ -167,6 +167,13 @@ finish when the configured editor starts, while that editor remains open. Cold l
 when its workers become ready without additional user input. Private native tests also cover all
 twelve linked screens, catalogue replacement refusal, cancelled and failed owner returns, logical
 source-review pages, recovered Source repair, and source-handoff failure/teardown paths.
+
+The `clipboard` scenario checks Unicode project/scene paths and catalogue queries at 100/200% UI
+scale, preserving unapplied manuscript text. The independent `specimen` scenario checks production
+controls, search, native text undo, appearance and scale without reading or changing personal
+preferences. Checkbox/radio indicator geometry and strokes follow UI scale; a mounted-control
+regression checks reflow, focus retention and actions through 100→200→100%. Reading/source text
+sizes remain independent preferences. Actual native renders receive separate visual review.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

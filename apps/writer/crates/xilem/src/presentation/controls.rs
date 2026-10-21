@@ -20,7 +20,7 @@ pub(crate) fn paragraph<State: 'static, Action: 'static>(
 ) -> impl WidgetView<State, Action> {
     // A row resolves the reading width before measuring wrapped text height.
     // A column otherwise supplies its full width to the pinned Flex measurer.
-    view::flex_row((view::sized_box(prose(scale, text)).width(width.px()),))
+    view::flex_row((prose(scale, text).width(width.px()),))
 }
 pub(crate) fn text_button<State: 'static>(
     scale: f32,

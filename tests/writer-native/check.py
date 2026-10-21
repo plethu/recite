@@ -80,7 +80,11 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "linked-destinations":
+        if scenario == "specimen":
+            from specimen_interactions import run
+        elif scenario == "clipboard":
+            from clipboard_interactions import run
+        elif scenario == "linked-destinations":
             from linked_destinations import run
         elif scenario == "disk-notices":
             from disk_notices import run
@@ -163,6 +167,8 @@ def main():
         "--scenario",
         choices=(
             "all",
+            "specimen",
+            "clipboard",
             "linked-destinations",
             "disk-notices",
             "structure",

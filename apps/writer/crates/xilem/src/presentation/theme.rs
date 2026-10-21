@@ -1,12 +1,16 @@
 //! Toolkit property defaults retain authored colours through native control states.
+#[cfg(test)]
+mod tests;
+
 use super::*;
 use xilem::masonry::theme;
 use xilem::masonry::{
     core::{DefaultProperties, PropertySet, PropertyStack, Selector, Widget},
     layout::AsUnit,
     properties::{
-        Background, BorderColor, BorderWidth, CaretColor, CheckmarkColor, ContentColor,
-        CornerRadius, Padding, PlaceholderColor, PlaceholderTextSize, SelectionColor,
+        Background, BorderColor, BorderWidth, CaretColor, CheckmarkColor, CheckmarkSize,
+        CheckmarkStrokeWidth, ContentColor, CornerRadius, Padding, PlaceholderColor,
+        PlaceholderTextSize, SelectionColor,
     },
     widgets::{Button, Checkbox, Label, RadioButton, TextArea, TextInput},
 };
@@ -22,6 +26,8 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     control::<RadioButton>(&mut properties, p, scale);
     properties.insert::<Checkbox, _>(CheckmarkColor { color: p.accent });
     properties.insert::<RadioButton, _>(CheckmarkColor { color: p.accent });
+    indicators::<Checkbox>(&mut properties, scale);
+    indicators::<RadioButton>(&mut properties, scale);
     properties.insert::<TextInput, _>(Background::Color(p.surface));
     properties.insert::<TextInput, _>(PlaceholderColor::new(p.placeholder));
     properties.insert::<TextInput, _>(PlaceholderTextSize { size: 14. * scale });
@@ -31,6 +37,15 @@ pub(super) fn properties(p: &Palette<Color>, scale: f32) -> DefaultProperties {
     properties.insert::<TextArea<true>, _>(SelectionColor { color: p.selection });
     properties.insert::<TextArea<false>, _>(SelectionColor { color: p.selection });
     properties
+}
+fn indicators<W: Widget>(properties: &mut DefaultProperties, scale: f32) {
+    let scale = f64::from(scale);
+    properties.insert::<W, _>(CheckmarkSize {
+        side: (theme::BASIC_WIDGET_HEIGHT.get() * scale).px(),
+        gap: (theme::WIDGET_CONTROL_COMPONENT_PADDING.get() * scale).px(),
+    });
+    properties.insert::<W, _>(CheckmarkStrokeWidth { width: scale });
+    properties.insert::<W, _>(BorderWidth { width: scale.px() });
 }
 fn text<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>) {
     properties.insert::<W, _>(ContentColor::new(p.ink));
