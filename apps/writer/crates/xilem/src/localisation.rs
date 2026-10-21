@@ -3,6 +3,7 @@ mod creation;
 mod editing;
 mod refresh;
 mod slot;
+mod source_navigation;
 #[cfg(test)]
 mod tests;
 mod view;
@@ -19,6 +20,7 @@ use recite_writer_session::{
     localisation::catalogue::{Catalogue, EntryDetails, ExternalDecision, Inspection},
 };
 use slot::{Identity, Slot};
+pub(crate) use source_navigation::SourceIntent;
 use std::{path::PathBuf, sync::Arc};
 pub(crate) use view::{close_details, panel};
 pub(crate) use work::{Completed, Work};
@@ -64,6 +66,7 @@ struct Entry {
     details: Arc<EntryDetails>,
     wording_page: usize,
     rule: PluralRuleView,
+    source_location: Option<String>,
 }
 struct PluralRuleView {
     pages: Vec<String>,

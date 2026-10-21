@@ -24,6 +24,7 @@ pub(super) enum Target {
     Document(PathBuf),
     Example(String),
     Location(Location),
+    CatalogueSource(crate::localisation::SourceIntent),
     Lookup {
         location: Location,
         search: crate::lookup::Search,
@@ -36,6 +37,24 @@ pub(super) enum Target {
     Reload,
     ProjectWorkspace(crate::workspaces::Open),
     Repair(repair::Action),
+}
+
+impl Target {
+    fn location(&self) -> Option<&Location> {
+        match self {
+            Self::Location(location)
+            | Self::Lookup { location, .. }
+            | Self::Selection(location) => Some(location),
+            Self::CatalogueSource(intent) => Some(intent.location()),
+            _ => None,
+        }
+    }
+    fn check_scope(&self, writer: &Writer) -> Result<(), String> {
+        if let Self::CatalogueSource(intent) = self {
+            intent.check(writer)?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -228,6 +247,7 @@ impl Writer {
             && matches!(
                 target,
                 Target::Location(_)
+                    | Target::CatalogueSource(_)
                     | Target::Lookup { .. }
                     | Target::Edit(_)
                     | Target::Structure(_)
@@ -242,6 +262,7 @@ impl Writer {
         let applies = (matches!(
             target,
             Target::Location(_)
+                | Target::CatalogueSource(_)
                 | Target::Lookup { .. }
                 | Target::Edit(_)
                 | Target::Structure(_)

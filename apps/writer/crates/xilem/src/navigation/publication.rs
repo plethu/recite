@@ -87,6 +87,7 @@ impl Writer {
         prepared: &mut recite_writer_model::PreparedEdit,
         operation: EditOperation,
     ) -> Result<(), String> {
+        request.target.check_scope(self)?;
         if !request.origin.presentation_is_current(self) {
             return Err(
                 "The document changed while the command was preparing. Your work stays open."
@@ -149,6 +150,7 @@ impl Writer {
         prepared: &mut recite_writer_session::navigation::Prepared,
         checkpoint: Option<&recite_writer_session::project::ReadyCheckpoint>,
     ) -> Result<(), String> {
+        request.target.check_scope(self)?;
         if !request.origin.is_current(self) {
             return Err("The draft changed while navigation was preparing. Your edits remain open; retry navigation.".into());
         }
@@ -173,7 +175,14 @@ impl Writer {
             }
             _ => return Err("The navigation destination is no longer available.".into()),
         }
-        if let Target::Location(location) | Target::Lookup { location, .. } = &request.target {
+        if let Target::Selection(location) = &request.target {
+            self.retire_rules();
+            self.location.document = location.document.clone();
+            self.location.beat = location.beat.clone();
+            self.location.passage = location.passage.clone();
+            self.location.source = location.source;
+            self.location.view = location.view;
+        } else if let Some(location) = request.target.location() {
             self.location = location.clone();
             self.trial.visible =
                 location.screen == recite_writer_session::location::Screen::Preview;
@@ -189,15 +198,11 @@ impl Writer {
                     crate::map::Workspace::Script
                 };
             }
-        } else if let Target::Selection(location) = &request.target {
-            self.retire_rules();
-            self.location.document = location.document.clone();
-            self.location.beat = location.beat.clone();
-            self.location.passage = location.passage.clone();
-            self.location.source = location.source;
-            self.location.view = location.view;
         } else {
             self.retire_rules();
+        }
+        if let Target::CatalogueSource(intent) = &request.target {
+            intent.complete(self);
         }
         self.beat_page = 0;
         self.workspaces.screen = crate::workspaces::Screen::Write;

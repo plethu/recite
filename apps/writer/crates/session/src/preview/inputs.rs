@@ -1,5 +1,6 @@
 //! Typed interpolation values and captured catalogue policy for a runtime trial.
 use crate::localisation::catalogue::PreviewInput;
+use crate::localisation::target::document_language;
 use crate::messages::{MsgId, text};
 use recite_compiler::authoring::{CatalogInput, CatalogResolutionPolicy};
 use recite_core::{LocaleId, ScalarValue, ast::InterpolationType};
@@ -41,13 +42,8 @@ impl Inputs {
         };
         if let Some(catalogue) = catalogue {
             let document = catalogue.prepare()?;
-            let language = document
-                .headers()
-                .iter()
-                .find(|h| h.key().eq_ignore_ascii_case("Language"))
-                .ok_or_else(|| text(MsgId::WriterInvalidLanguage))?;
             let language =
-                LocaleId::new(language.value().replace('_', "-")).map_err(|e| e.to_string())?;
+                document_language(&document)?.ok_or_else(|| text(MsgId::WriterInvalidLanguage))?;
             setup
                 .catalogues
                 .push(CatalogInput::from_document(language, document).map_err(|e| e.to_string())?);

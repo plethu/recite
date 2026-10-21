@@ -1,6 +1,28 @@
 //! Catalogue identity and the language used to obtain gettext plural metadata.
 use super::messages::{MsgId, text as wording};
+use recite_core::{LocaleId, po::PoDocument};
 use unic_langid::LanguageIdentifier;
+
+/// Missing Language metadata means a source-only trial; malformed metadata is an error.
+pub fn document_language(document: &PoDocument) -> Result<Option<LocaleId>, String> {
+    document
+        .headers()
+        .iter()
+        .find(|header| header.key().eq_ignore_ascii_case("Language"))
+        .map(|header| {
+            let language: language_tags::LanguageTag = header
+                .value()
+                .trim()
+                .replace('_', "-")
+                .parse()
+                .map_err(|_| wording(MsgId::WriterInvalidLanguage))?;
+            language
+                .validate()
+                .map_err(|_| wording(MsgId::WriterInvalidLanguage))?;
+            LocaleId::new(language.to_string()).map_err(|error| error.to_string())
+        })
+        .transpose()
+}
 
 pub const COFI: &str = "cy-x-cofi";
 

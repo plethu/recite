@@ -10,6 +10,7 @@ use crate::{
 };
 use freya::prelude::*;
 use recite_core::po::{PoCommentKind, PoEntry};
+use recite_writer_session::localisation::target::document_language;
 #[derive(Clone)]
 pub(super) struct EntryContext {
     pub writer: Writer,
@@ -56,27 +57,20 @@ impl Component for EntryContext {
                                 .peek()
                                 .catalogue
                                 .as_ref()
-                                .and_then(|c| {
-                                    c.document
-                                        .headers()
-                                        .iter()
-                                        .find(|h| h.key().eq_ignore_ascii_case("Language"))
-                                        .map(|h| h.value().replace('_', "-"))
-                                })
-                                .unwrap_or_default();
-                            writer.trial.locale.set(locale);
-                            writer
-                                .trial
-                                .variant
-                                .set(entry.variant().unwrap_or_default().into());
-                            let completed = EventHandler::new(move |result: Result<(), String>| {
-                                if let Err(error) = result {
+                                .map(|catalogue| document_language(&catalogue.document))
+                                .transpose();
+                            let locale = match locale {
+                                Ok(locale) => locale
+                                    .flatten()
+                                    .map(|locale| locale.to_string())
+                                    .unwrap_or_default(),
+                                Err(error) => {
                                     writer.message.error(error);
                                     return;
                                 }
-                                writer.localisation.write().active = false;
-                                writer.pane.set(Pane::Preview);
-                            });
+                            };
+                            let variant = entry.variant().unwrap_or_default().to_owned();
+                            let completed = preview_completed(writer, locale, variant);
                             if let Some(destination) = &destination {
                                 super::navigation::open(destination, writer, completed);
                             } else {
@@ -129,3 +123,23 @@ impl Component for EntryContext {
         body
     }
 }
+
+fn preview_completed(
+    mut writer: Writer,
+    locale: String,
+    variant: String,
+) -> EventHandler<Result<(), String>> {
+    EventHandler::new(move |result: Result<(), String>| {
+        if let Err(error) = result {
+            writer.message.error(error);
+            return;
+        }
+        writer.trial.locale.set(locale.clone());
+        writer.trial.variant.set(variant.clone());
+        writer.localisation.write().active = false;
+        writer.pane.set(Pane::Preview);
+    })
+}
+
+#[cfg(test)]
+mod tests;

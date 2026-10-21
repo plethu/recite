@@ -38,7 +38,8 @@ pub(in crate::localisation::work) fn describe(
             })
         })
         .collect();
-    let entry = selected.and_then(|id| describe_entry(owner, id));
+    let entry =
+        selected.and_then(|id| describe_entry(owner, id, passages.as_deref().unwrap_or_default()));
     Ok(Presentation {
         queue: Queue {
             rows,
@@ -49,7 +50,7 @@ pub(in crate::localisation::work) fn describe(
         message: "Catalogue ready. Drafts stay in Writer until you Save.",
     })
 }
-fn describe_entry(owner: &Owner, id: PoEntryId) -> Option<Entry> {
+fn describe_entry(owner: &Owner, id: PoEntryId, passages: &[Passage]) -> Option<Entry> {
     let catalogue = &owner.catalogue;
     let entry = catalogue.document.entry(id)?;
     let details = catalogue.entry_details(id)?;
@@ -70,6 +71,8 @@ fn describe_entry(owner: &Owner, id: PoEntryId) -> Option<Entry> {
         form_page: 0,
         details,
         wording_page: 0,
+        source_location: SourceDestination::resolve(entry, passages)
+            .map(|destination| destination.caption().chars().take(160).collect()),
         rule: PluralRuleView {
             pages: rule,
             page: 0,
