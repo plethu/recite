@@ -157,8 +157,7 @@ pub(super) fn render(
                             .map(|c| (c.path.clone(), c.revision()));
                         let same_catalogue = match (&catalogue, &current) {
                             (Some((path, revision)), Some((current_path, current_revision))) => {
-                                path == current_path
-                                    && std::sync::Arc::ptr_eq(revision, current_revision)
+                                path == current_path && revision == current_revision
                             }
                             (None, None) => true,
                             _ => false,

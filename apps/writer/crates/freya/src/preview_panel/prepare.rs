@@ -9,16 +9,6 @@ pub(super) fn capture(writer: Writer, configured: bool) -> Inputs {
     };
     let include_drafts = configured && *writer.trial.include_drafts.peek();
     Inputs {
-        catalogue: (!locale.is_empty())
-            .then(|| {
-                writer
-                    .localisation
-                    .peek()
-                    .catalogue
-                    .as_ref()
-                    .map(|c| c.preview_input(include_drafts))
-            })
-            .flatten(),
         locale,
         variant: if configured {
             writer.trial.variant.peek().clone()

@@ -712,7 +712,7 @@ writer-source-only = Source text only
 
 writer-include-drafts = Include unsaved translations
 
-writer-trial-invalid-value = Enter a value matching the binding type.
+writer-trial-invalid-value = Enter a valid value of the indicated type.
 
 writer-lookup-matched = Translation found
 

@@ -7,14 +7,14 @@ use crate::{
         worker::{self, Destination},
     },
 };
-use recite_writer_model::{RecoveredDraft, View};
-use std::{path::PathBuf, sync::Arc};
+use recite_writer_model::{CatalogueRevision, CompletionSnapshot, RecoveredDraft, View};
+use std::path::PathBuf;
 pub(super) struct Origin {
-    source: recite_writer_model::CompletionSnapshot,
+    source: CompletionSnapshot,
     draft: RecoveredDraft,
     presentation: Presentation,
     project: Option<(PathBuf, PathBuf)>,
-    catalogue: Option<(PathBuf, Arc<()>)>,
+    catalogue: Option<(PathBuf, CatalogueRevision)>,
 }
 impl Origin {
     pub(super) fn capture(writer: Writer) -> Result<Self, String> {
@@ -57,9 +57,7 @@ impl Origin {
                 writer.localisation.peek().catalogue.as_ref(),
             ) {
                 (None, None) => true,
-                (Some((path, revision)), Some(c)) => {
-                    path == &c.path && Arc::ptr_eq(revision, &c.revision())
-                }
+                (Some((path, revision)), Some(c)) => path == &c.path && revision == &c.revision(),
                 _ => false,
             }
     }

@@ -2,6 +2,8 @@ use crate::DocumentVersion;
 mod catalogue;
 mod setup;
 pub use setup::PreviewSetup;
+mod provenance;
+pub use provenance::{CatalogueRevision, PreviewCatalogue, PreviewProvenance};
 
 use recite_compiler::compile::{
     CompileError, CompileInput, CompileOptions, compile_inputs_with_catalogue,
@@ -58,6 +60,7 @@ pub struct Preview {
     revision: DocumentVersion,
     catalogues: catalogue::TrialCatalogues,
     values: recite_runtime::localisation::InterpolationValues,
+    provenance: Option<PreviewProvenance>,
 }
 
 self_cell::self_cell! {
@@ -121,11 +124,16 @@ impl Preview {
             revision,
             catalogues,
             values: setup.values,
+            provenance: setup.provenance,
         })
     }
 
     pub fn trace(&self) -> &recite_runtime::preview::PreviewTrace {
         self.session.borrow_dependent().trace()
+    }
+
+    pub fn provenance(&self) -> Option<&PreviewProvenance> {
+        self.provenance.as_ref()
     }
 
     pub fn events(&self) -> &[PreviewEvent] {

@@ -1,10 +1,14 @@
-//! Source-language runtime controls; all traversal stays in the shared model.
+//! Runtime controls; capture policy and traversal stay in the shared owners.
 use super::*;
-use crate::attention::{Pane, Region};
-use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck, PreviewPage};
-use recite_writer_session::FileError;
-use xilem::masonry::properties;
+use crate::{
+    attention::{Pane, Region},
+    presentation::manuscript_text,
+};
+use recite_writer_model::PreviewPage;
+use recite_writer_session::preview::catalogue_stale;
 mod captions;
+mod inputs;
+mod playback;
 
 pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
@@ -18,6 +22,7 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
             text_button(scale, "Start / restart preview", Writer::start_trial).disabled(
                 closing
                     || busy
+                    || state.localisation.preview_blocked()
                     || state.reading.script().is_err()
                     || state.reading.script().is_ok_and(<[_]>::is_empty),
             ),
@@ -32,25 +37,18 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
             .disabled(closing || !state.trial.visible),
         ))
         .gap(8.px()),
+        inputs::controls(state, closing),
         (state.reading.script().is_err() && !state.trial.visible).then(|| {
-            sized_box(prose(
+            paragraph(
                 scale,
                 "Repair this source in your editor before starting a preview.",
-            ))
-            .width(state.script_width().px())
+                state.script_width(),
+            )
         }),
         state.trial.visible.then(|| {
             flex_col((
-                sized_box(prose(scale, state.trial.status.clone()))
-                    .width(state.script_width().px()),
-                (page.is_some() && model.preview_stale()).then(|| {
-                    sized_box(prose(
-                        scale,
-                        "This preview uses older inputs. Restart to use your accepted edits.",
-                    ))
-                    .width(state.script_width().px())
-                }),
-                page.map(|page| playback(state, page, closing || busy)),
+                paragraph(scale, state.trial.status.clone(), state.script_width()),
+                page.map(|page| running(state, page, closing || busy)),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(12.px())
@@ -61,163 +59,36 @@ pub(super) fn panel(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .prop(Region(Some(Pane::Preview)))
 }
 
-fn playback(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetView<Writer> + use<> {
+fn running(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    const PAGE: usize = 16;
-    let choice_pages = page.choices.len().div_ceil(PAGE).max(1);
-    let choice_page = state.trial.choice_page.min(choice_pages - 1);
-    let effect_pages = page.effects.len().div_ceil(PAGE).max(1);
-    let effect_page = state.trial.effect_page.min(effect_pages - 1);
-    let choices = page
-        .choices
-        .iter()
-        .enumerate()
-        .skip(choice_page * PAGE)
-        .take(PAGE)
-        .map(|(index, choice)| {
-            text_button(scale, choice.text.clone(), move |state: &mut Writer| {
-                let result = state.session.advance_preview(Some(index));
-                report(state, result);
-            })
-            .disabled(disabled)
-        })
-        .collect::<Vec<_>>();
-    let effects = page
-        .effects
-        .iter()
-        .skip(effect_page * PAGE)
-        .take(PAGE)
-        .map(|effect| {
-            sized_box(prose(scale, captions::effect(effect))).width(state.script_width().px())
-        })
-        .collect::<Vec<_>>();
-    let can_continue = page.choices.is_empty()
-        && !page.ended
-        && page.condition.is_none()
-        && page.waiting_effect.is_none();
-    flex_col((
-        (!page.ended && !page.text.is_empty()).then(|| {
-            sized_box(prose(scale, page.text.clone()).text_size(state.reading_size()))
-                .width(state.script_width().px())
-        }),
-        page.condition.as_ref().map(|request| {
-            flex_col((
-                sized_box(prose(scale, captions::condition(request.query())))
-                    .width(state.script_width().px()),
-                condition(state, request.query().expected_type(), disabled),
-            ))
-            .gap(8.px())
-        }),
-        flex_col(effects).gap(8.px()),
-        (effect_pages > 1).then(|| {
-            flex_row((
-                text_button(scale, "Previous effect requests", |state: &mut Writer| {
-                    state.trial.effect_page = state.trial.effect_page.saturating_sub(1)
-                })
-                .disabled(disabled || effect_page == 0),
-                label(scale, format!("{} of {effect_pages}", effect_page + 1)),
-                text_button(scale, "Next effect requests", |state: &mut Writer| {
-                    state.trial.effect_page += 1
-                })
-                .disabled(disabled || effect_page + 1 >= effect_pages),
-            ))
-            .gap(8.px())
-        }),
-        page.waiting_effect.as_ref().map(|_| {
-            flex_row((
-                text_button(scale, "Acknowledge effect", |state: &mut Writer| {
-                    let result = state.session.acknowledge_preview(EffectAck::Completed);
-                    report(state, result);
-                })
-                .disabled(disabled),
-                text_button(scale, "Report effect failure", |state: &mut Writer| {
-                    let result = state.session.acknowledge_preview(EffectAck::Failed {
-                        reason: "Simulated preview failure".into(),
-                    });
-                    report(state, result);
-                })
-                .disabled(disabled),
-            ))
-            .gap(8.px())
-        }),
-        flex_col(choices)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
-        (choice_pages > 1).then(|| {
-            flex_row((
-                text_button(scale, "Previous preview choices", |state: &mut Writer| {
-                    state.trial.choice_page = state.trial.choice_page.saturating_sub(1)
-                })
-                .disabled(disabled || choice_page == 0),
-                label(scale, format!("{} of {choice_pages}", choice_page + 1)),
-                text_button(scale, "Next preview choices", |state: &mut Writer| {
-                    state.trial.choice_page += 1
-                })
-                .disabled(disabled || choice_page + 1 >= choice_pages),
-            ))
-            .gap(8.px())
-        }),
-        can_continue.then(|| {
-            text_button(scale, "Continue preview", |state: &mut Writer| {
-                let result = state.session.advance_preview(None);
-                report(state, result);
-            })
-            .disabled(disabled)
-        }),
-        page.ended.then(|| label(scale, "Conversation ended")),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
-}
-
-fn condition(
-    state: &Writer,
-    expected: ConditionExpectedType,
-    disabled: bool,
-) -> impl WidgetView<Writer> + use<> {
-    let scale = state.ui_scale();
-    match expected {
-        ConditionExpectedType::Bool => Either::A(
-            flex_row([true, false].map(|value| {
-                text_button(
+    let stale = state.session.model().preview_stale()
+        || state
+            .session
+            .model()
+            .preview_provenance()
+            .is_some_and(|snapshot| {
+                catalogue_stale(snapshot, state.localisation.preview_catalogue())
+            });
+    sized_box(
+        flex_col((
+            label(scale, "Running preview").text_size(20. * scale),
+            state
+                .session
+                .model()
+                .preview_provenance()
+                .map(|snapshot| paragraph(scale, snapshot.caption.clone(), state.script_width())),
+            stale.then(|| {
+                paragraph(
                     scale,
-                    if value { "Answer true" } else { "Answer false" },
-                    move |state: &mut Writer| {
-                        let result = state.session.answer_preview(ConditionValue::Bool(value));
-                        report(state, result);
-                    },
+                    "This preview uses older inputs. Restart to use your accepted edits.",
+                    state.script_width(),
                 )
-                .disabled(disabled)
-            }))
-            .gap(8.px()),
-        ),
-        ConditionExpectedType::Enum => Either::B(
-            flex_row((
-                sized_box(
-                    text_input(state.trial.answer.clone(), |state: &mut Writer, answer| {
-                        state.trial.answer = answer
-                    })
-                    .disabled(disabled)
-                    .prop(properties::TextAreaLabel::new("Condition enum value")),
-                )
-                .width(240.px()),
-                text_button(scale, "Answer condition", |state: &mut Writer| {
-                    let value = ConditionValue::EnumVariant(state.trial.answer.trim().to_owned());
-                    let result = state.session.answer_preview(value);
-                    report(state, result);
-                })
-                .disabled(disabled || state.trial.answer.trim().is_empty()),
-            ))
-            .gap(8.px()),
-        ),
-    }
-}
-
-fn report(state: &mut Writer, result: Result<(), FileError>) {
-    state.trial.choice_page = 0;
-    state.trial.effect_page = 0;
-    state.trial.status = match result {
-        Ok(()) => "Preview uses the accepted source snapshot.".into(),
-        Err(error) => error.to_string(),
-    };
+            }),
+            playback::playback(state, page, disabled),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(12.px()),
+    )
+    .padding(12.px())
+    .background_color(state.palette.inset)
 }

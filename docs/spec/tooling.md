@@ -171,7 +171,12 @@ Freya. Both native owners are checked out for source operations and returned on 
 dispatch and unwind. Unresolved current or retained source fields refuse extraction. Refresh Apply
 re-extracts source and checks the exact reviewed catalogue before publication. A completed PO write
 remains an applied result even if recovery subsequently fails; both frontends surface that warning.
-Configured localised preview remains migration work.
+Configured preview captures the same locale, wording, typed values and saved-or-draft catalogue
+policy in both frontends. Native controls page interpolation inputs and language results; staged
+changes do not replace an active run. Saved catalogue bytes are read on the worker. Draft overlays
+require the captured disk baseline and never save or review the actual drafts. Catalogue changes
+invalidate localised trial requests and mark running localised snapshots stale; source-only trials
+ignore catalogue changes.
 
 Registered schema generation retains one shared activity owner through command validation, process
 execution and checked output publication. Native publication receipts are reconciled even after
@@ -215,13 +220,16 @@ active field draft. It uses the OS preferred application or literal configured a
 the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's
 lifetime stays independent of the Writer window, and completion names its source document.
 
-Its source-language runtime preview prepares immutable accepted inputs off-thread and publishes only
-into the still-current document and requested destination. Cancelling or hiding preparation
-invalidates publication immediately; an active compiler phase may finish before another starts.
-Playback uses the shared runtime for choices, condition inputs and explicit blocking-effect
-acknowledgements. It never executes game effects, persists trial state, applies field drafts or
-silently replaces a running snapshot after edits. Restart is explicit, and failed preparation
-retains the previous run. Accepted sibling source participates; unapplied sibling fields do not.
+Its runtime preview prepares immutable accepted inputs off-thread and publishes only into the
+still-current document and requested destination. Cancelling or hiding preparation invalidates
+publication immediately; an active compiler phase may finish before another starts. Playback uses
+the shared runtime for choices, condition inputs and explicit blocking-effect acknowledgements. It
+never executes game effects, persists trial state, applies field drafts or silently replaces a
+running snapshot after edits. Restart is explicit, and failed preparation retains the previous run.
+Accepted sibling source participates; unapplied sibling fields do not. Captured requests and
+rejected or replaced runtimes return to the worker for destruction. The runtime owns its caption and
+catalogue provenance, so retained document trials recover their own metadata when switching files. A
+failed restart preserves that provenance with the prior run.
 
 Linux, Windows and macOS remain first-class desktop targets, not implied platform acceptance. Claims
 require native evidence for authoring, assistive technology, physical input, startup, memory and

@@ -129,7 +129,7 @@ impl Catalogue {
         request.retired_forms = saved.forms;
         self.document = saved.document;
         self.baseline = saved.baseline;
-        self.revision = Arc::new(());
+        self.revision = CatalogueRevision::default();
         for (id, draft) in newer {
             self.drafts.remove(&id);
             if let Some(draft) = draft

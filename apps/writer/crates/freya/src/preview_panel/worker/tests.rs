@@ -1,26 +1,29 @@
-use super::super::{Snapshot, prepare::Inputs};
+use super::super::prepare::Inputs;
 use super::*;
 use recite_writer_model::Workbench;
 use std::{sync::Barrier, time::Duration};
 
 fn request(number: usize) -> Arc<Request> {
+    request_with_variant(number, "")
+}
+fn request_with_variant(number: usize, variant: &str) -> Arc<Request> {
     let model = Workbench::new(&format!(
         ":: start default\n> @w3xnt5r\n  Hello {number}.\n-> END\n"
     ))
     .unwrap();
-    Arc::new(Request {
-        source: model.preview_request().unwrap(),
-        view: model.view().clone(),
-        inputs: Inputs {
-            locale: String::new(),
-            variant: String::new(),
-            include_drafts: false,
-            values: Default::default(),
-            catalogue: None,
-        },
-        snapshot: Snapshot::capture(String::new(), false, None),
-    })
+    Arc::new(
+        Request::capture(
+            &model,
+            Inputs {
+                variant: variant.into(),
+                ..Inputs::default()
+            },
+            None,
+        )
+        .unwrap(),
+    )
 }
+
 fn receive(receiver: &async_channel::Receiver<Output>) -> Output {
     for _ in 0..5_000 {
         if let Ok(output) = receiver.try_recv() {
@@ -108,8 +111,7 @@ fn closing_with_an_unconsumed_output_releases_the_thread_and_large_result() {
 fn preparation_failure_returns_ownership_and_allows_a_clean_retry() {
     let mut worker = Worker::new();
     let receiver = worker.results();
-    let mut invalid = request(1);
-    Arc::get_mut(&mut invalid).unwrap().inputs.variant = "invalid&variant".into();
+    let invalid = request_with_variant(1, "invalid&variant");
     worker.submit(invalid).unwrap();
     let failed = receive(&receiver);
     assert!(failed.result.is_err());

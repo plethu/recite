@@ -5,7 +5,7 @@ use crate::localisation::refresh::changes;
 pub struct RefreshPreview {
     document: PoDocument,
     origin: Arc<PoDocument>,
-    revision: Arc<()>,
+    revision: CatalogueRevision,
     path: PathBuf,
     template: String,
     pub summary: String,
@@ -49,7 +49,7 @@ impl RefreshPreview {
     pub fn is_current(&self, catalogue: &Catalogue) -> bool {
         self.path == catalogue.path
             && Arc::ptr_eq(&self.origin, &catalogue.document)
-            && Arc::ptr_eq(&self.revision, &catalogue.revision)
+            && self.revision == catalogue.revision
             && !catalogue.dirty()
             && !catalogue.saving
     }

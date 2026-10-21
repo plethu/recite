@@ -47,7 +47,7 @@ fn render(writer: Writer) -> Element {
             .read()
             .catalogue
             .as_ref()
-            .map(|catalogue| SnapshotIdentity(catalogue.revision()))
+            .map(|catalogue| catalogue.revision())
     });
     let passage_snapshot = use_memo(move || {
         writer

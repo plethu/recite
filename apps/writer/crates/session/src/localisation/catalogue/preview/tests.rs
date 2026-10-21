@@ -1,6 +1,6 @@
 use super::*;
 const SOURCE: &str = "msgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n";
-use crate::preview::Snapshot;
+use crate::preview::{capture_provenance, catalogue_stale};
 
 #[test]
 fn catalogue_mutations_invalidate_localised_trials_only() -> Result<(), String> {
@@ -8,8 +8,8 @@ fn catalogue_mutations_invalidate_localised_trials_only() -> Result<(), String> 
     let path = dir.path().join("fr.po");
     std::fs::write(&path, SOURCE).map_err(|e| e.to_string())?;
     let mut catalogue = Catalogue::open(&path)?;
-    let capture = |catalogue: &Catalogue| Snapshot::capture(String::new(), true, Some(catalogue));
-    let source = Snapshot::capture(String::new(), false, Some(&catalogue));
+    let capture = |catalogue: &Catalogue| capture_provenance(String::new(), true, Some(catalogue));
+    let source = capture_provenance(String::new(), false, Some(&catalogue));
     let id = PoEntryId::new(0);
     let saved = capture(&catalogue);
     let running = catalogue.preview_input(true).prepare()?;
@@ -20,7 +20,7 @@ fn catalogue_mutations_invalidate_localised_trials_only() -> Result<(), String> 
             reviewed: true,
         },
     );
-    assert!(saved.stale(Some(&catalogue)));
+    assert!(catalogue_stale(&saved, Some(&catalogue)));
     assert!(running.source().contains("Bonjour {name}"));
     assert!(
         catalogue
@@ -30,12 +30,12 @@ fn catalogue_mutations_invalidate_localised_trials_only() -> Result<(), String> 
             .contains("Salut {name}")
     );
     let draft = capture(&catalogue);
-    assert!(!draft.stale(Some(&catalogue)));
+    assert!(!catalogue_stale(&draft, Some(&catalogue)));
     catalogue.save(id)?;
-    assert!(draft.stale(Some(&catalogue)));
+    assert!(catalogue_stale(&draft, Some(&catalogue)));
     let saved = capture(&catalogue);
     catalogue.reload()?;
-    assert!(saved.stale(Some(&catalogue)));
+    assert!(catalogue_stale(&saved, Some(&catalogue)));
     let reloaded = capture(&catalogue);
     catalogue.update(
         id,
@@ -46,11 +46,14 @@ fn catalogue_mutations_invalidate_localised_trials_only() -> Result<(), String> 
     );
     let edited = capture(&catalogue);
     catalogue.discard(id);
-    assert!(edited.stale(Some(&catalogue)));
-    assert!(reloaded.stale(Some(&catalogue)));
-    assert!(!source.stale(Some(&catalogue)));
-    assert!(capture(&catalogue).stale(None));
-    assert!(Snapshot::capture(String::new(), true, None).stale(Some(&catalogue)));
-    assert!(!source.stale(None));
+    assert!(catalogue_stale(&edited, Some(&catalogue)));
+    assert!(catalogue_stale(&reloaded, Some(&catalogue)));
+    assert!(!catalogue_stale(&source, Some(&catalogue)));
+    assert!(catalogue_stale(&capture(&catalogue), None));
+    assert!(catalogue_stale(
+        &capture_provenance(String::new(), true, None),
+        Some(&catalogue)
+    ));
+    assert!(!catalogue_stale(&source, None));
     Ok(())
 }

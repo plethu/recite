@@ -79,6 +79,27 @@ def open_catalogue(window, path):
     reveal(window, "Catalogue files")
 
 
+def search_entries(window, query):
+    reveal_field(window, "Search translations")
+    fill(window, "Search translations", query)
+
+    def search():
+        return next(
+            (
+                node
+                for node, name in window.nodes()
+                if name == "Search translations"
+                and window.call(node, "Accessible", "GetRole")[0]
+                == int(window.api.Atspi.Role.PUSH_BUTTON)
+            ),
+            None,
+        )
+
+    _reveal(window, search, "queue search action")
+    node = window.wait(search, "queue search action")
+    window.call(node, "Action", "DoAction", window.api.GLib.Variant("(i)", (0,)))
+
+
 def open_entry(window):
     reveal(window, "Open translation · ", prefix=True)
     window.wait(

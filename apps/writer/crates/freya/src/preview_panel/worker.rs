@@ -1,8 +1,8 @@
 //! One lazy worker. Capacity-one mailboxes coalesce queued trials; receipts return
 //! rejected/replaced sessions to the worker for destruction, never to the UI.
-use super::request::Request;
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{PreparedPreview, Preview};
+use recite_writer_session::preview::Request;
 use std::{
     io,
     sync::{Arc, Mutex},
@@ -101,11 +101,7 @@ fn run(
             continue;
         }
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let setup = job.request.inputs.prepare(&job.request.source)?;
-            if job.control.checkpoint().is_err() {
-                return Err(String::new());
-            }
-            job.request.source.prepare(setup).map_err(|e| e.to_string())
+            job.request.prepare(&job.control)
         }))
         .unwrap_or_else(|_| {
             Err("Preview preparation stopped unexpectedly. Restart to retry.".into())

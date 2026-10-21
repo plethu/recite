@@ -11,6 +11,7 @@ use crate::{
 };
 use freya::prelude::*;
 use recite_writer_model::{FIXTURE, View, WRITER_EXAMPLES, Workbench};
+use recite_writer_session::preview::catalogue_stale;
 
 pub(crate) fn render(mode: AppMode) -> Element {
     let initial = use_try_consume::<InitialSource>();
@@ -286,8 +287,10 @@ pub(crate) fn render(mode: AppMode) -> Element {
         count => format!("{count} problems"),
     };
     let preview_status = if session.preview_page().is_some()
-        && (session.preview_stale() || writer.trial.catalogue_stale(writer))
-    {
+        && (session.preview_stale()
+            || session.preview_provenance().is_some_and(|provenance| {
+                catalogue_stale(provenance, writer.localisation.read().catalogue.as_ref())
+            })) {
         "preview is out of date"
     } else {
         ""

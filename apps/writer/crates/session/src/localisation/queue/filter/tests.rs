@@ -95,7 +95,7 @@ fn filtering_preserves_counts_order_attention_and_current_scene_caption_preceden
     );
     let revision = catalogue.revision();
     catalogue.discard(first);
-    assert!(!std::sync::Arc::ptr_eq(&revision, &catalogue.revision()));
+    assert_ne!(revision, catalogue.revision());
     assert!(
         index
             .matching_entries(&catalogue, "nouveau", false)

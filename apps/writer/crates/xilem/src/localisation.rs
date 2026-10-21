@@ -16,7 +16,7 @@ use recite_core::po::PoEntryId;
 use recite_writer_session::localisation::status::TranslationStatus;
 use recite_writer_session::{
     comparison::ComparisonRow,
-    localisation::catalogue::{ExternalDecision, Inspection},
+    localisation::catalogue::{Catalogue, ExternalDecision, Inspection},
 };
 use slot::{Identity, Slot};
 use std::path::PathBuf;
@@ -93,6 +93,12 @@ pub(crate) struct Localisation {
     refresh: Option<refresh::Refresh>,
 }
 impl Localisation {
+    pub fn preview_catalogue(&self) -> Option<&Catalogue> {
+        self.slot.owner().map(|owner| &owner.catalogue)
+    }
+    pub fn preview_blocked(&self) -> bool {
+        self.slot.read_only()
+    }
     pub(crate) fn keep_editing(&mut self) {
         if let work::AfterSave::Sources { after, .. } = &mut self.after_save
             && matches!(after, SourceAfterSave::Close)

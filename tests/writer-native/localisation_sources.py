@@ -7,7 +7,14 @@ import tempfile
 import traceback
 from pathlib import Path
 
-from localisation_interactions import edit, open_entry, reveal, reveal_field, reveal_text
+from localisation_interactions import (
+    edit,
+    open_entry,
+    reveal,
+    reveal_field,
+    reveal_text,
+    search_entries,
+)
 from native_window import attach, key, type_text
 from project_interactions import manuscript
 from project_tools_interactions import command
@@ -88,24 +95,7 @@ def run(api, bus, registry, binary, output, scale=100):
                 assert 'msgstr ""' in po.read_text()
                 assert source.read_text() == SOURCE
                 results["language_search_creates_explicit_blank_catalogue"] = True
-                reveal(window, "Search translations")
-                fill(window, "Search translations", "The last tram waits.")
-                reveal(window, "Open translation · ", prefix=True)
-                search = window.wait(
-                    lambda: next(
-                        (
-                            node
-                            for node, name in window.nodes()
-                            if name == "Search translations"
-                            and window.call(node, "Accessible", "GetRole")[0]
-                            == int(api.Atspi.Role.PUSH_BUTTON)
-                        ),
-                        None,
-                    ),
-                    "queue search action",
-                )
-                window.call(search, "Action", "DoAction", api.GLib.Variant("(i)", (0,)))
-                reveal(window, "Open translation · ", prefix=True)
+                search_entries(window, "The last tram waits.")
                 window.wait(
                     lambda: window.find_text("1 matching entries", prefix=True),
                     "matching source entry",

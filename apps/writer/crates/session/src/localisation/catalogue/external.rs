@@ -12,7 +12,7 @@ pub struct Inspection {
     path: PathBuf,
     baseline: PoDocumentFingerprint,
     document: Arc<PoDocument>,
-    revision: Arc<()>,
+    revision: CatalogueRevision,
     fingerprint: PoDocumentFingerprint,
 }
 pub struct Comparison {
@@ -24,7 +24,7 @@ impl Catalogue {
         self.path == inspection.path
             && self.baseline == inspection.baseline
             && Arc::ptr_eq(&self.document, &inspection.document)
-            && Arc::ptr_eq(&self.revision, &inspection.revision)
+            && self.revision == inspection.revision
     }
     pub fn compare(&self) -> Result<Comparison, String> {
         let disk = Self::open(&self.path)?;

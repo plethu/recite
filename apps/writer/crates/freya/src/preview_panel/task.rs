@@ -1,14 +1,11 @@
 //! Widget capture and model publication are the only UI work in trial startup.
-use super::{
-    Snapshot,
-    request::Request,
-    worker::{Output, Retired, Worker},
-};
+use super::worker::{Output, Retired, Worker};
 use crate::{
     editing::{Pane, Writer},
     messages::{MsgId, text},
 };
 use freya::prelude::*;
+use recite_writer_session::preview::Request;
 use std::sync::Arc;
 
 pub(super) struct Work {
@@ -64,31 +61,11 @@ fn start_applied(mut writer: Writer, configured: bool) -> Result<(), String> {
     let inputs = super::prepare::capture(writer, configured);
     let model = writer.buffers.model.peek();
     let model = model.as_ref().map_err(|e| e.to_string())?;
-    let snapshot = Snapshot::capture(
-        format!(
-            "{} · {} · {} {}",
-            if inputs.locale.is_empty() {
-                text(MsgId::WriterSourceOnly)
-            } else {
-                inputs.locale.clone()
-            },
-            text(if inputs.include_drafts {
-                MsgId::WriterTrialDrafts
-            } else {
-                MsgId::WriterTrialSaved
-            }),
-            text(MsgId::WriterSourceRevision),
-            model.document().revision()
-        ),
-        !inputs.locale.is_empty(),
-        writer.localisation.peek().catalogue.as_ref(),
-    );
-    let request = Arc::new(Request {
-        source: model.preview_request().map_err(|e| e.to_string())?,
-        view: model.view().clone(),
+    let request = Arc::new(Request::capture(
+        model,
         inputs,
-        snapshot,
-    });
+        writer.localisation.peek().catalogue.as_ref(),
+    )?);
     let mut work = writer.trial.work.write();
     let work = work.as_mut().ok_or("Preview worker unavailable")?;
     work.worker
@@ -127,13 +104,9 @@ fn accept(mut writer: Writer, output: Output) {
     }
     writer.buffers.harvest();
     let mut model = writer.buffers.model.write();
-    let current_inputs = model.as_ref().is_ok_and(|m| {
-        request.is_current(
-            m,
-            *writer.pane.peek(),
-            writer.localisation.peek().catalogue.as_ref(),
-        )
-    });
+    let current_inputs = model
+        .as_ref()
+        .is_ok_and(|m| request.is_current(m, writer.localisation.peek().catalogue.as_ref()));
     if !current_inputs {
         writer.message.info(text(MsgId::WriterPreviewInputsChanged));
     }
@@ -141,10 +114,7 @@ fn accept(mut writer: Writer, output: Output) {
     let retired = match result {
         Ok(prepared) if current => match model.as_mut() {
             Ok(model) => match model.accept_preview(prepared) {
-                Ok(previous) => {
-                    writer.trial.snapshot.set(Some(request.snapshot.clone()));
-                    previous.map(|preview| Retired::Preview(Box::new(preview)))
-                }
+                Ok(previous) => previous.map(|preview| Retired::Preview(Box::new(preview))),
                 Err(stale) => Some(Retired::Prepared(stale)),
             },
             Err(_) => Some(Retired::Prepared(prepared)),

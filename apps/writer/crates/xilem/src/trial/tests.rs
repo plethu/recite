@@ -4,7 +4,7 @@ use tokio::sync::mpsc as async_mpsc;
 
 const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
 
-fn begin(writer: &mut Writer) -> Result<Arc<PreviewRequest>, Box<dyn std::error::Error>> {
+fn begin(writer: &mut Writer) -> Result<Arc<Request>, Box<dyn std::error::Error>> {
     let (sender, mut requests) = async_mpsc::unbounded_channel();
     writer.trial.sender = Some(sender);
     writer.start_trial();
@@ -16,10 +16,10 @@ fn begin(writer: &mut Writer) -> Result<Arc<PreviewRequest>, Box<dyn std::error:
 
 fn finish(
     writer: &mut Writer,
-    request: Arc<PreviewRequest>,
+    request: Arc<Request>,
 ) -> Result<Option<Retired>, Box<dyn std::error::Error>> {
     let result = request
-        .prepare(PreviewSetup::default())
+        .prepare(&CancellationToken::new())
         .map_err(|error| error.to_string());
     let (receipt, returned) = mpsc::sync_channel(1);
     writer.accept_trial(Output {
@@ -28,7 +28,7 @@ fn finish(
         receipt,
     });
     assert!(!writer.trial.busy());
-    Ok(returned.recv()?)
+    Ok(returned.recv()?.1)
 }
 
 fn install(writer: &mut Writer) -> Result<(), Box<dyn std::error::Error>> {
@@ -96,8 +96,11 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
         result: Err("Could not prepare".into()),
         receipt,
     });
-    assert!(returned.recv().unwrap().is_none());
-    assert_eq!(writer.trial.status, "Could not prepare");
+    assert!(returned.recv().unwrap().1.is_none());
+    assert_eq!(
+        writer.trial.status,
+        "Could not prepare\nThe running preview below is unchanged."
+    );
     assert_eq!(
         writer.session.model().preview_page().unwrap().text,
         "Hello."
@@ -226,7 +229,14 @@ fn native_worker_waits_for_disposal_receipts_and_exits_when_its_owner_disconnect
     let proxy = MessageProxy::new(Arc::new(support::NoProxy), Arc::from([]));
     let (sender, requests) = async_mpsc::unbounded_channel();
     sender
-        .send(Arc::new(writer.session.model().preview_request().unwrap()))
+        .send(Arc::new(
+            Request::capture(
+                writer.session.model(),
+                recite_writer_session::preview::Inputs::default(),
+                None,
+            )
+            .unwrap(),
+        ))
         .unwrap();
     drop(sender);
     runtime.block_on(serve(proxy, requests));
@@ -234,3 +244,6 @@ fn native_worker_waits_for_disposal_receipts_and_exits_when_its_owner_disconnect
 
 #[path = "tests/bounds/tests.rs"]
 mod bounds;
+
+#[path = "tests/inputs/tests.rs"]
+mod inputs;

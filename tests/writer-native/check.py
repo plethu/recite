@@ -80,7 +80,11 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "localisation-sources-scale":
+        if scenario == "preview-inputs-scale":
+            from preview_inputs import run_scale as run
+        elif scenario == "preview-inputs":
+            from preview_inputs import run
+        elif scenario == "localisation-sources-scale":
             from localisation_sources import run_scale as run
         elif scenario == "localisation-sources":
             from localisation_sources import run
@@ -147,6 +151,8 @@ def main():
             "editor",
             "keyboard",
             "preview",
+            "preview-inputs",
+            "preview-inputs-scale",
             "picker",
             "repair",
             "rules",
@@ -246,7 +252,11 @@ def main():
             start_new_session=True,
         )
         try:
-            code = process.wait(timeout=120 if args.scenario == "all" else 60)
+            code = process.wait(
+                timeout=120
+                if args.scenario in ("all", "preview-inputs", "preview-inputs-scale")
+                else 60
+            )
             if code:
                 sys.exit(code)
         finally:

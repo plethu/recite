@@ -1,4 +1,5 @@
 //! Explicit host inputs are consumed at restart and remain fixed for the trial.
+use super::PreviewProvenance;
 use recite_compiler::authoring::{CatalogInput, CatalogResolutionPolicy};
 use recite_runtime::{localisation::InterpolationValues, preview::PreviewOptions};
 
@@ -7,6 +8,7 @@ pub struct PreviewSetup {
     pub policy: CatalogResolutionPolicy,
     pub catalogues: Vec<CatalogInput>,
     pub values: InterpolationValues,
+    pub provenance: Option<PreviewProvenance>,
 }
 impl Default for PreviewSetup {
     fn default() -> Self {
@@ -14,6 +16,7 @@ impl Default for PreviewSetup {
             policy: CatalogResolutionPolicy::source_only(),
             catalogues: Vec::new(),
             values: InterpolationValues::new(),
+            provenance: None,
         }
     }
 }

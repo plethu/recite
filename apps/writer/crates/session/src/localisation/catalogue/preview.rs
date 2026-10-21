@@ -3,7 +3,7 @@ use super::*;
 use recite_core::po::{PoEdit, PoUpdate};
 
 impl Catalogue {
-    pub fn revision(&self) -> std::sync::Arc<()> {
+    pub fn revision(&self) -> CatalogueRevision {
         self.revision.clone()
     }
     pub fn preview_input(&self, include_drafts: bool) -> PreviewInput {

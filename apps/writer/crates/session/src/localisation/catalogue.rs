@@ -9,6 +9,7 @@ mod recovery;
 mod save;
 use super::messages::{MsgId, text as wording};
 use recite_core::po::{PoDocument, PoDocumentFingerprint, PoEntryId};
+use recite_writer_model::CatalogueRevision;
 pub use save::{CatalogueDurability, CatalogueSave, CatalogueSaved};
 use std::{
     collections::BTreeMap,
@@ -31,7 +32,7 @@ pub struct Catalogue {
     pub saving: bool,
     baseline: PoDocumentFingerprint,
     // Retained by trial runs; replacement also invalidates snapshots after reload.
-    revision: Arc<()>,
+    revision: CatalogueRevision,
     drafts: BTreeMap<PoEntryId, Arc<Draft>>,
     recovery: Option<crate::recovery::SnapshotStore<recovery::SnapshotData>>,
     recovery_failure: Option<String>,
@@ -55,7 +56,7 @@ impl Catalogue {
             }
         }
         Self {
-            revision: Arc::new(()),
+            revision: CatalogueRevision::default(),
             recovery: None,
             recovery_failure: None,
             anchors,
@@ -156,7 +157,7 @@ impl Catalogue {
         } else {
             self.drafts.insert(id, Arc::new(draft));
         }
-        self.revision = Arc::new(());
+        self.revision = CatalogueRevision::default();
         self.queue_recovery();
     }
     pub fn reload(&mut self) -> Result<(), String> {
@@ -196,7 +197,7 @@ impl Catalogue {
             return;
         }
         self.drafts.remove(&id);
-        self.revision = Arc::new(());
+        self.revision = CatalogueRevision::default();
         self.queue_recovery();
     }
 }

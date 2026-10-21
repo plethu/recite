@@ -1,8 +1,11 @@
 //! Trial publication stays with the revision-checked workbench.
 use super::{Workbench, WorkbenchError};
-use crate::{PreparedPreview, Preview, PreviewRequest, PreviewSetup};
+use crate::{PreparedPreview, Preview, PreviewProvenance, PreviewRequest, PreviewSetup};
 
 impl Workbench {
+    pub fn preview_provenance(&self) -> Option<&PreviewProvenance> {
+        self.preview.as_ref().and_then(Preview::provenance)
+    }
     pub fn preview_request(&self) -> Result<PreviewRequest, WorkbenchError> {
         self.require_applied()?;
         Ok(PreviewRequest::capture(
