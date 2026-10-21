@@ -1,4 +1,7 @@
 //! Translation edits use the shared file-backed catalogue, with one native presentation owner.
+mod creation;
+mod editing;
+mod refresh;
 mod slot;
 #[cfg(test)]
 mod tests;
@@ -65,6 +68,8 @@ enum Destination {
     Queue,
     Entry,
     Comparison,
+    Create,
+    Refresh,
 }
 struct Comparison {
     inspection: Inspection,
@@ -84,6 +89,8 @@ pub(crate) struct Localisation {
     report: Vec<String>,
     report_page: usize,
     after_save: work::AfterSave,
+    creation: creation::Creation,
+    refresh: Option<refresh::Refresh>,
 }
 impl Localisation {
     pub(crate) fn keep_editing(&mut self) {
@@ -142,7 +149,7 @@ impl Writer {
         let closing = matches!(action, work::Action::FlushForClose);
         if self.phase == Phase::Closed
             || (!closing && (self.phase != Phase::Writing || self.localisation.slot.read_only()))
-            || self.session.read_only()
+            || (self.session.read_only() && !closing)
             || self.navigation.busy()
             || self.work.busy()
             || self.project_jobs_busy()
@@ -178,59 +185,9 @@ impl Writer {
             self.catalogue_action(work::Action::Inspect(key.id));
         }
     }
-    fn update_translation(&mut self, key: &EntryKey, arm: usize, text: String) {
-        if self.phase != Phase::Writing {
-            return;
-        }
-        let Some(owner) = self
-            .localisation
-            .slot
-            .owner_mut()
-            .filter(|owner| owner.identity == key.catalogue)
-        else {
-            return;
-        };
-        let Some(mut draft) = owner.catalogue.draft(key.id) else {
-            return;
-        };
-        let Some(form) = draft.forms.get_mut(arm) else {
-            return;
-        };
-        *form = text;
-        draft.reviewed = false;
-        owner.catalogue.update(key.id, draft);
-        self.status = "Translation draft updated; Save publishes the PO file.".into();
-    }
-    fn review_translation(&mut self, key: &EntryKey, reviewed: bool) {
-        if self.phase != Phase::Writing {
-            return;
-        }
-        if let Some(owner) = self
-            .localisation
-            .slot
-            .owner_mut()
-            .filter(|owner| owner.identity == key.catalogue)
-            && let Some(mut draft) = owner.catalogue.draft(key.id)
-        {
-            draft.reviewed = reviewed;
-            owner.catalogue.update(key.id, draft);
-        }
-    }
-    fn discard_translation(&mut self, key: &EntryKey) {
-        if self.phase != Phase::Writing {
-            return;
-        }
-        if let Some(owner) = self
-            .localisation
-            .slot
-            .owner_mut()
-            .filter(|owner| owner.identity == key.catalogue)
-        {
-            owner.catalogue.discard(key.id);
-        }
-    }
     pub(crate) fn cancel_catalogue_action(&mut self) {
         self.localisation.slot.cancel();
+        self.session.cancel_exclusive();
         self.status = "Cancellation requested; waiting for the catalogue owner to return.".into();
     }
     fn compare_catalogue(&mut self) {

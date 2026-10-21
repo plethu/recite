@@ -1,6 +1,4 @@
 use super::*;
-use crate::presentation::manuscript_text;
-use xilem::core::one_of::Either;
 
 pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let state = &writer.localisation;
@@ -17,7 +15,7 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
         text_button(scale, "Return to translation queue", |writer: &mut Writer| writer.catalogue_action(work::Action::Query)).disabled(blocked),
         comparison.changes.get(comparison.page).map(|row| flex_col((
             paragraph(scale, format!("{} · part {} of {}", row.caption, comparison.page + 1, comparison.changes.len()), 640.),
-            versions(writer, row),
+            versions::versions(writer, row, "Writer translation draft", "Inspected PO translation"),
         )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())),
         comparison.changes.is_empty().then(|| paragraph(scale, "There are no translation drafts to compare with the inspected PO file.", 640.)),
         (comparison.changes.len() > 1).then(|| flex_col((
@@ -31,60 +29,4 @@ pub(super) fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + us
         text_button(scale, "Use inspected PO file", |writer: &mut Writer| writer.resolve_catalogue(ExternalDecision::UseDisk)).disabled(blocked || !current),
         paragraph(scale, "Discards current translation drafts and loads the inspected PO file.", 640.),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()))
-}
-fn versions(writer: &Writer, row: &ComparisonRow) -> impl WidgetView<Writer> + use<> {
-    let available = (writer.viewport.width - 72.).max(240.);
-    let wide = available >= 920. * f64::from(writer.ui_scale());
-    let width = if wide {
-        (available - 12.) / 2.
-    } else {
-        available
-    };
-    let before = version(
-        writer,
-        "Writer translation draft",
-        row.before.as_deref(),
-        width,
-    );
-    let after = version(
-        writer,
-        "Inspected PO translation",
-        row.after.as_deref(),
-        width,
-    );
-    if wide {
-        Either::A(
-            flex_row((before, after))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
-        )
-    } else {
-        Either::B(
-            flex_col((before, after))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(12.px()),
-        )
-    }
-}
-fn version(
-    writer: &Writer,
-    caption: &'static str,
-    value: Option<&str>,
-    width: f64,
-) -> impl WidgetView<Writer> + use<> {
-    sized_box(
-        flex_col((
-            label(writer.ui_scale(), caption),
-            flex_row((sized_box(manuscript_text(
-                writer.reading_size(),
-                value.unwrap_or("(No translation in this part)").to_owned(),
-            ))
-            .width((width - 24.).px()),)),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
-    )
-    .width(width.px())
-    .padding(12.px())
-    .background_color(writer.palette.inset)
 }

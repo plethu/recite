@@ -1,7 +1,7 @@
 //! Disk work owns the real catalogue and always returns it, including failure and cancellation.
 use super::*;
 use recite_compiler::authoring::WorkControl;
-mod describe;
+pub(super) mod describe;
 use describe::describe;
 use recite_writer_model::Passage;
 use recite_writer_session::localisation::{
@@ -36,6 +36,7 @@ pub(super) struct CheckedCompleted {
     previous: Option<Identity>,
     retired_entry: Option<Entry>,
     retired_comparison: Option<Comparison>,
+    retired_refresh: Option<refresh::Refresh>,
 }
 enum Completion {
     Show(Presentation),
@@ -43,8 +44,8 @@ enum Completion {
     CloseWindow,
     ClosedCatalogue,
 }
-struct Presentation {
-    queue: Queue,
+pub(super) struct Presentation {
+    pub(super) queue: Queue,
     entry: Option<Entry>,
     message: &'static str,
 }
@@ -68,6 +69,7 @@ impl Checked {
             previous: self.previous,
             retired_entry: None,
             retired_comparison: None,
+            retired_refresh: None,
             checkout: self.checkout,
             result: Err(error),
         }
@@ -141,6 +143,7 @@ impl Checked {
             previous,
             retired_entry: None,
             retired_comparison: None,
+            retired_refresh: None,
         }
     }
 }
@@ -212,6 +215,7 @@ impl Writer {
         if self.localisation.slot.identity() != completed.previous.as_ref() {
             completed.retired_entry = self.localisation.entry.take();
             completed.retired_comparison = self.localisation.comparison.take();
+            completed.retired_refresh = self.localisation.refresh.take();
             self.localisation.queue = Queue::default();
             self.localisation.destination = Destination::Queue;
             self.localisation.files_open = false;

@@ -2,6 +2,7 @@
 pub mod catalogue;
 pub mod context_data;
 pub mod create;
+pub mod extraction;
 pub mod messages;
 pub mod navigation;
 pub mod status;

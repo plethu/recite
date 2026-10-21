@@ -1,8 +1,11 @@
 //! Catalogue files, bounded queue rows and entry fields are independent native components.
 mod comparison;
+mod creation;
 mod entry;
 mod files;
 mod queue;
+mod refresh;
+mod versions;
 use super::*;
 use crate::{
     attention::{Pane, Region},
@@ -28,10 +31,10 @@ use xilem::{
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         label(writer.ui_scale(), "Translations").text_size(28. * writer.ui_scale()),
-        (!writer.localisation.has_catalogue()).then(|| paragraph(writer.ui_scale(), "Open a PO catalogue to translate this project. Drafts stay recoverable until you Save.", 640.)),
+        (!writer.localisation.has_catalogue()).then(|| paragraph(writer.ui_scale(), "Open a PO catalogue or add a language to translate this project. Drafts stay recoverable until you Save.", 640.)),
         files(writer),
         report(writer),
-        indexed_stack((queue(writer), flex_col((entry(writer),)), flex_col((comparison::comparison(writer),)))).active(match writer.localisation.destination { Destination::Queue => 0, Destination::Entry => 1, Destination::Comparison => 2 }),
+        indexed_stack((queue(writer), flex_col((entry(writer),)), flex_col((comparison::comparison(writer),)), flex_col((creation::creation(writer),)), flex_col((refresh::refresh(writer),)))).active(match writer.localisation.destination { Destination::Queue => 0, Destination::Entry => 1, Destination::Comparison => 2, Destination::Create => 3, Destination::Refresh => 4 }),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::Localisation)))
 }
 pub(crate) fn close_details(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {

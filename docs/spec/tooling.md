@@ -143,8 +143,9 @@ text history. Leaving Focus restores and reveals the previous valid native focus
 writing-pane fallback when that target has retired. F6/Shift+F6 cycle visible panes; Vim's
 directional pane prefix is scoped to its originating focus and keyboard context. Composition, focus
 loss and context changes cancel it, and consumed terminal releases cannot activate underlying
-controls. Pane focus, redraw and accessibility updates must publish without requiring another input
-event.
+controls. Host-owned command strokes retain their physical release after focus or command scope
+changes, including picker submission returning focus to an action button. Pane focus, redraw and
+accessibility updates must publish without requiring another input event.
 
 Scene/beat search repeats resolve current accepted navigation facts in discovery/rank order. Native
 lookup retains only its accepted query and semantic scene/beat target; each invocation captures a
@@ -165,8 +166,12 @@ sequence. Close waits for both layers and their recovery; cancelling close prese
 writes. Unexpected catalogue failures quarantine editing and close using only admitted recovery.
 Disk decisions require the exact inspected local catalogue and external fingerprint. Keeping drafts
 preserves compatible translations for review against the adopted PO metadata; using disk explicitly
-discards those drafts. Catalogue creation, source refresh and localised preview remain migration
-work.
+discards those drafts. Catalogue creation and source refresh share extraction and review policy with
+Freya. Both native owners are checked out for source operations and returned on cancellation, failed
+dispatch and unwind. Unresolved current or retained source fields refuse extraction. Refresh Apply
+re-extracts source and checks the exact reviewed catalogue before publication. A completed PO write
+remains an applied result even if recovery subsequently fails; both frontends surface that warning.
+Configured localised preview remains migration work.
 
 Registered schema generation retains one shared activity owner through command validation, process
 execution and checked output publication. Native publication receipts are reconciled even after

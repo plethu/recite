@@ -98,16 +98,23 @@ impl Component for RefreshScreen {
                 .child(wording(MsgId::WriterRefreshRecheck)),
         );
         if let Some(preview) = &current.refresh {
-            body = body.child(label().text(preview.summary.clone()));
+            body = body.child(label().text(preview.source.summary.clone()));
             if preview.applied {
                 body = body.child(label().text(wording(MsgId::WriterRefreshDone)));
             }
             let index = current
                 .update_index
-                .min(preview.changes.len().saturating_sub(1));
+                .min(preview.source.changes.len().saturating_sub(1));
             let page = index / 24;
             let mut list = rect().width(Size::px(230.)).spacing(t::SPACE_XS);
-            for (i, change) in preview.changes.iter().enumerate().skip(page * 24).take(24) {
+            for (i, change) in preview
+                .source
+                .changes
+                .iter()
+                .enumerate()
+                .skip(page * 24)
+                .take(24)
+            {
                 let excerpt = change
                     .new
                     .as_ref()
@@ -135,8 +142,8 @@ impl Component for RefreshScreen {
                         ),
                 );
             }
-            if preview.changes.len() > 24 {
-                let last = preview.changes.len() - 1;
+            if preview.source.changes.len() > 24 {
+                let last = preview.source.changes.len() - 1;
                 list = list.child(
                     rect()
                         .horizontal()
@@ -159,7 +166,7 @@ impl Component for RefreshScreen {
                         ),
                 );
             }
-            if let Some(change) = preview.changes.get(index) {
+            if let Some(change) = preview.source.changes.get(index) {
                 body = body.child(
                     rect()
                         .horizontal()
@@ -231,9 +238,16 @@ fn save(mut writer: Writer, files: State<Option<ProjectFiles>>) {
     };
     writer.message.clear();
     match preview.apply(writer, files) {
-        Ok(()) => {
+        Ok(receipt) => {
             preview.applied = true;
-            writer.message.info(wording(MsgId::WriterRefreshed));
+            if let Some(error) = receipt.recovery_error {
+                writer.message.error(format!(
+                    "{}\nRecovery is incomplete: {error}. Retry Save or keep this window open.",
+                    wording(MsgId::WriterRefreshed)
+                ));
+            } else {
+                writer.message.info(wording(MsgId::WriterRefreshed));
+            }
         }
         Err(error) => writer.message.error(error),
     }

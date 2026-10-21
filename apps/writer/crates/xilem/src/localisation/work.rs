@@ -1,12 +1,14 @@
 //! The existing project-tools worker carries catalogue owners and save receipts.
 mod checked;
 mod saving;
+mod source;
 use super::*;
 pub(super) use checked::Action;
 use recite_writer_model::Passage;
 pub(super) use saving::AfterSave;
 pub(crate) use saving::{Finish, Finished};
 use slot::Checkout;
+pub(super) use source::Action as SourceAction;
 use std::sync::Arc;
 
 pub(crate) struct Work {
@@ -15,6 +17,7 @@ pub(crate) struct Work {
 enum Kind {
     Checked(checked::Checked),
     Saving(saving::Save),
+    Source(source::Work),
 }
 pub(crate) struct Completed {
     kind: Completion,
@@ -22,6 +25,7 @@ pub(crate) struct Completed {
 enum Completion {
     Checked(Box<checked::CheckedCompleted>),
     Saving(saving::Saved),
+    Source(Box<source::Completed>),
 }
 impl Work {
     pub(super) fn checked(
@@ -38,6 +42,7 @@ impl Work {
         Completed {
             kind: match self.kind {
                 Kind::Checked(work) => Completion::Checked(Box::new(work.not_started(error))),
+                Kind::Source(work) => Completion::Source(Box::new(work.not_started(error))),
                 Kind::Saving(work) => Completion::Saving(work.not_started(error)),
             },
         }
@@ -46,6 +51,7 @@ impl Work {
         Completed {
             kind: match self.kind {
                 Kind::Checked(work) => Completion::Checked(Box::new(work.execute())),
+                Kind::Source(work) => Completion::Source(Box::new(work.execute())),
                 Kind::Saving(work) => Completion::Saving(work.execute()),
             },
         }
@@ -61,6 +67,7 @@ impl Writer {
                 self.accept_checked_catalogue(completed).map(|()| None)
             }
             Completion::Saving(completed) => self.accept_catalogue_save(completed),
+            Completion::Source(completed) => self.accept_catalogue_source(completed).map(|()| None),
         }
     }
 }

@@ -13,6 +13,8 @@ pub(super) fn files(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         (queue && (state.files_open || !state.has_catalogue())).then(|| controls(writer)),
         (queue && state.has_catalogue()).then(|| text_button(scale, "Save all translation drafts", Writer::save_translation_drafts).disabled(writer.project_action_blocked() || state.slot.read_only() || !state.needs_save())),
         (queue && state.has_catalogue()).then(|| text_button(scale, "Compare catalogue disk changes", Writer::compare_catalogue).disabled(writer.project_action_blocked() || state.slot.read_only())),
+        queue.then(|| text_button(scale, "Add language", Writer::new_catalogue).disabled(writer.project_action_blocked() || state.slot.read_only() || state.dirty())),
+        (queue && state.has_catalogue()).then(|| text_button(scale, "Review source updates", Writer::review_catalogue_sources).disabled(writer.project_action_blocked() || state.slot.read_only() || state.dirty())),
         state.slot.read_only().then(|| paragraph(scale, "The catalogue is read-only until its operation returns. After an unexpected stop, close with recovery and reopen before editing translations.", 640.)),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(8.px())
 }

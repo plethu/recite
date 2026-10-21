@@ -80,7 +80,11 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "localisation-scale":
+        if scenario == "localisation-sources-scale":
+            from localisation_sources import run_scale as run
+        elif scenario == "localisation-sources":
+            from localisation_sources import run
+        elif scenario == "localisation-scale":
             from localisation_scale import run
         elif scenario == "localisation":
             from localisation_interactions import run
@@ -158,6 +162,8 @@ def main():
             "external",
             "localisation",
             "localisation-scale",
+            "localisation-sources",
+            "localisation-sources-scale",
         ),
         default="all",
     )

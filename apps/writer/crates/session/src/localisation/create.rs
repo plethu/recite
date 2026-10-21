@@ -4,17 +4,14 @@ use super::{
     catalogue::Catalogue,
     messages::{MsgId, text as wording},
 };
+use recite_compiler::authoring::{CancellationToken, WorkControl};
 use recite_core::po::{PoDiagnosticKind, PoDocument, PoEdit};
 use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-        mpsc,
-    },
+    sync::mpsc,
     time::Duration,
 };
 use wait_timeout::ChildExt;
@@ -29,22 +26,22 @@ pub fn suggested_path(root: &Path, locale: &str) -> PathBuf {
 
 pub struct Preparation {
     result: mpsc::Receiver<Result<PoDocument, String>>,
-    cancelled: Arc<AtomicBool>,
+    cancelled: CancellationToken,
 }
 impl Drop for Preparation {
     fn drop(&mut self) {
-        self.cancelled.store(true, Ordering::Relaxed);
+        self.cancelled.interrupt();
     }
 }
 impl Preparation {
     pub fn start(template: String, locale: TargetLocale) -> Result<Self, String> {
         let (sender, result) = mpsc::sync_channel(1);
-        let cancelled = Arc::new(AtomicBool::new(false));
+        let cancelled = CancellationToken::new();
         let cancellation = cancelled.clone();
         std::thread::Builder::new()
             .name("recite-catalogue-create".into())
             .spawn(move || {
-                let _ = sender.send(initialise(&template, &locale, &cancellation));
+                let _ = sender.send(prepare(&template, &locale, &cancellation));
             })
             .map_err(|e| e.to_string())?;
         Ok(Self { result, cancelled })
@@ -60,14 +57,13 @@ impl Preparation {
     }
 }
 
-fn initialise(
+/// Run gettext on a worker owned by the caller. No file is published here.
+pub fn prepare(
     template: &str,
     locale: &TargetLocale,
-    cancelled: &AtomicBool,
+    control: &dyn WorkControl,
 ) -> Result<PoDocument, String> {
-    if cancelled.load(Ordering::Relaxed) {
-        return Err(wording(MsgId::WriterCreationFailed));
-    }
+    control.checkpoint().map_err(|e| e.to_string())?;
     let directory = tempfile::tempdir().map_err(|e| e.to_string())?;
     let input = directory.path().join("messages.pot");
     let output = directory.path().join("catalogue.po");
@@ -110,22 +106,8 @@ fn initialise(
                 e.to_string()
             }
         })?;
-    match child.wait_timeout(Duration::from_secs(15)) {
-        Ok(Some(status)) if status.success() && !cancelled.load(Ordering::Relaxed) => {}
-        result => {
-            // Cancellation discards the result; a hung initializer is killed and reaped.
-            let _ = child.kill();
-            let _ = child.wait();
-            let detail = result.err().map_or_else(
-                || fs::read_to_string(errors).unwrap_or_default(),
-                |e| e.to_string(),
-            );
-            return Err(format!(
-                "{}\n{detail}",
-                wording(MsgId::WriterCreationFailed)
-            ));
-        }
-    }
+    wait_for_initialiser(&mut child, &errors, control)?;
+    control.checkpoint().map_err(|e| e.to_string())?;
     let text = fs::read_to_string(output).map_err(|e| e.to_string())?;
     let document = PoDocument::parse(text).map_err(|error| match error.kind() {
         PoDiagnosticKind::InvalidHeader(_) | PoDiagnosticKind::InvalidPluralRule(_) => {
@@ -134,6 +116,33 @@ fn initialise(
         _ => error.to_string(),
     })?;
     normalise(document, locale)
+}
+
+fn wait_for_initialiser(
+    child: &mut std::process::Child,
+    errors: &Path,
+    control: &dyn WorkControl,
+) -> Result<(), String> {
+    let mut polls = 0;
+    let error = loop {
+        if let Err(error) = control.checkpoint() {
+            break error.to_string();
+        }
+        if polls == 300 {
+            break wording(MsgId::WriterCreationFailed);
+        }
+        // At most 300 bounded waits; cancellation is checked between each one.
+        polls += 1;
+        match child.wait_timeout(Duration::from_millis(50)) {
+            Ok(Some(status)) if status.success() => return Ok(()),
+            Ok(None) => continue,
+            Ok(Some(_)) => break fs::read_to_string(errors).unwrap_or_default(),
+            Err(error) => break error.to_string(),
+        }
+    };
+    let _ = child.kill();
+    let _ = child.wait();
+    Err(format!("{}\n{error}", wording(MsgId::WriterCreationFailed)))
 }
 
 fn normalise(mut document: PoDocument, locale: &TargetLocale) -> Result<PoDocument, String> {
@@ -193,7 +202,10 @@ pub fn persist(document: &PoDocument, path: &Path) -> Result<Catalogue, String> 
     if let Ok(directory) = fs::File::open(parent) {
         let _ = directory.sync_all();
     }
-    Catalogue::open_recoverable(path)
+    Catalogue::open_recoverable(path).map_err(|error| format!(
+        "Created {}. Opening its recovery state failed: {error}. Open that file after resolving recovery; creation will not overwrite it.",
+        path.display(),
+    ))
 }
 
 #[cfg(test)]

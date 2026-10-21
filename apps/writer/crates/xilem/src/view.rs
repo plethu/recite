@@ -61,7 +61,7 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
             )
         }),
         crate::workspaces::recovery(state),
-        state.session.checked_out().then(|| {
+        (state.session.checked_out() && !state.localisation.working()).then(|| {
             text_button(
                 state.ui_scale(),
                 "Cancel project action",

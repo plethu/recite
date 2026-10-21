@@ -35,8 +35,13 @@ translation** publishes that entry; **Save all** includes translation drafts and
 Returning to writing preserves the mounted manuscript and its text undo history. If another tool
 changes the PO file, **Compare catalogue disk changes** offers explicit draft/disk decisions against
 the inspected versions. Closing with recovery retains translation drafts; reopen the same project
-and catalogue to restore them. Catalogue creation, source refresh and localised preview are still
-being migrated.
+and catalogue to restore them. **Add language** searches language names and tags, shows the new
+`locale/<locale>.po` destination, and creates a blank catalogue using GNU gettext. Resolve
+manuscript field drafts first. **Review source updates** compares the PO with current project
+sources, including accepted unsaved edits. **Apply source updates to PO** rechecks those inputs and
+writes only the PO; source files still need their own Save. These operations retain the mounted
+manuscript while editing is temporarily paused. Configured localised preview is still being
+migrated.
 
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:

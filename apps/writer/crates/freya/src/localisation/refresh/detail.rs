@@ -1,4 +1,3 @@
-use super::changes::Change;
 use crate::design::tokens::ProseTypography;
 use crate::localisation::messages::{MsgId, text as wording};
 use crate::{
@@ -6,6 +5,7 @@ use crate::{
     editing::Writer,
 };
 use freya::prelude::*;
+use recite_writer_session::localisation::refresh::changes::Change;
 pub(super) fn render(change: &Change, mut writer: Writer) -> Element {
     let mut detail = rect()
         .width(Size::fill())

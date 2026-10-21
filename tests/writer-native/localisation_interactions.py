@@ -22,19 +22,50 @@ msgstr "Le dernier tram attend."
 
 
 def reveal(window, label, prefix=False):
-    """Page through the native scrollbar to expose controls between Home and End."""
-    if window.find(label, prefix=prefix):
+    """Expose a named control, independently of its visible field label."""
+    _reveal(window, lambda: window.find(label, prefix=prefix), label)
+
+
+def reveal_text(window, label, prefix=False):
+    """Expose a read-only Text value which has no accessible control name."""
+    _reveal(window, lambda: window.find_text(label, prefix=prefix), label)
+
+
+def reveal_field(window, label):
+    """Expose the editable field rather than a same-named heading."""
+
+    def find():
+        return next(
+            (
+                node
+                for node, name in window.nodes()
+                if name == label and window.call(node, "Accessible", "GetRole")[0] == 79
+            ),
+            None,
+        )
+
+    _reveal(window, find, label)
+
+
+def _reveal(window, find, label):
+    def locate():
+        if find():
+            return True, None
+        scrollbar = window._outer_scrollbar()
+        return (False, scrollbar) if scrollbar else None
+
+    visible, scrollbar = window.wait(locate, "control or outer scrollbar: " + label)
+    if visible:
         return
-    scrollbar = window.wait(window._outer_scrollbar, "outer scrollbar")
     window.focus(scrollbar)
     key("Home")
 
     def page():
-        if window.find(label, prefix=prefix):
+        if find():
             return True
         key("Page_Down")
         key("Up")
-        return bool(window.find(label, prefix=prefix))
+        return bool(find())
 
     window.wait(page, "scrolled control: " + label)
 

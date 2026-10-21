@@ -7,7 +7,7 @@ fn new_catalogues_have_target_plural_arms_and_no_translations() -> Result<(), St
     let template = "#. block: opening\n#. speaker: narrator\nmsgctxt \"ffee6p8\"\nmsgid \"One letter\"\nmsgid_plural \"{count} letters\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
     for (tag, arms) in [("ja", 1), ("fr-CA", 2), ("ru", 3), ("pl", 3), ("en", 2)] {
         let locale = language(tag)?;
-        let document = initialise(template, &locale, &AtomicBool::new(false))?;
+        let document = prepare(template, &locale, &CancellationToken::new())?;
         assert!(
             document
                 .headers()
@@ -71,6 +71,27 @@ fn creation_never_overwrites_existing_files_or_symlinks() -> Result<(), String> 
 }
 
 #[test]
+fn post_creation_recovery_failure_reports_the_created_file_and_preserves_it()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::recovery::RecoveryStore;
+    let directory = tempfile::tempdir()?;
+    let path = directory.path().join("fr.po");
+    let lock = RecoveryStore::open(&path)?;
+    let document =
+        PoDocument::parse("msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n")?;
+    let error = persist(&document, &path)
+        .err()
+        .ok_or("expected recovery lock failure")?;
+    assert!(error.starts_with("Created ") && error.contains(path.to_str().ok_or("path")?));
+    assert_eq!(fs::read_to_string(&path)?, document.source());
+    assert!(persist(&document, &path).is_err());
+    drop(lock);
+    let catalogue = Catalogue::open_recoverable(&path)?;
+    assert_eq!(catalogue.document.source(), document.source());
+    Ok(())
+}
+
+#[test]
 fn locale_is_explicit_and_cannot_escape_the_suggested_directory() {
     for invalid in [
         "",
@@ -97,10 +118,10 @@ fn locale_is_explicit_and_cannot_escape_the_suggested_directory() {
 
 #[test]
 fn singular_catalogues_do_not_require_a_plural_database() -> Result<(), String> {
-    let document = initialise(
+    let document = prepare(
         "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n",
         &language("ar")?,
-        &AtomicBool::new(false),
+        &CancellationToken::new(),
     )?;
     assert!(
         document
@@ -125,7 +146,9 @@ fn plural_metadata_is_required_and_cancelled_preparations_are_discarded() -> Res
         normalise(neutral, &language("fr")?).map(|_| ()),
         Err(wording(MsgId::WriterPluralUnknown))
     );
-    assert!(initialise(template, &language("fr")?, &AtomicBool::new(true)).is_err());
+    let cancelled = CancellationToken::new();
+    cancelled.interrupt();
+    assert!(prepare(template, &language("fr")?, &cancelled).is_err());
     Ok(())
 }
 
@@ -134,7 +157,7 @@ fn cofi_catalogue_keeps_its_identity_and_uses_welsh_as_its_base() -> Result<(), 
     let template = "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
     let target = language("CY-x-COFI")?;
     assert_eq!(target.base().to_string(), "cy");
-    let cofi = initialise(template, &target, &AtomicBool::new(false))?;
+    let cofi = prepare(template, &target, &CancellationToken::new())?;
     assert!(
         cofi.headers()
             .iter()

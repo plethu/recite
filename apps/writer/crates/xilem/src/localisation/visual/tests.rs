@@ -13,7 +13,7 @@ use xilem::{
     },
 };
 
-fn reveal<W: Widget>(harness: &mut TestHarness<W>, caption: &str) {
+pub(super) fn reveal<W: Widget>(harness: &mut TestHarness<W>, caption: &str) {
     let mut pending = vec![harness.root_widget().as_dyn()];
     while let Some(widget) = pending.pop() {
         let text = widget

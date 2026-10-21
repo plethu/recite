@@ -1,8 +1,10 @@
 //! File-backed PO editing. Drafts never become a parallel translation database.
 mod preview;
 mod queue;
+mod refresh;
 pub use preview::PreviewInput;
 pub use queue::CatalogueQueue;
+pub use refresh::{RefreshApplied, RefreshPreview};
 mod recovery;
 mod save;
 use super::messages::{MsgId, text as wording};

@@ -1,6 +1,6 @@
 //! Prepare bounded catalogue presentation on the worker.
 use super::*;
-pub(super) fn describe(
+pub(in crate::localisation::work) fn describe(
     owner: &Owner,
     query: &Query,
     selected: Option<PoEntryId>,
