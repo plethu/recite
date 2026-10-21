@@ -59,6 +59,7 @@ def check_builder_manifest(frontend=None) -> None:
             "--socket=fallback-x11",
             "--device=dri",
             "--filesystem=host",
+            "--talk-name=org.a11y.Bus",
             "--talk-name=org.freedesktop.Flatpak",
         }
         <= finish_args,
@@ -66,6 +67,22 @@ def check_builder_manifest(frontend=None) -> None:
     )
     writer = manifest["modules"][-1]
     require(writer["name"] == "recite-writer", "wrong writer module")
+    checkout = next(source for source in writer["sources"] if source.get("type") == "dir")
+    require(
+        {
+            ".git",
+            "target",
+            "apps/writer/target",
+            "apps/writer/vendor/freya-code-editor/target",
+            "editors/zed/target",
+            "node_modules",
+            "docs-site/node_modules",
+            ".venv",
+            ".turbo",
+        }
+        <= set(checkout["skip"]),
+        "source checkout must exclude build output and development caches",
+    )
     env = writer["build-options"]["env"]
     require(env["CARGO_NET_OFFLINE"] == "true", "Cargo must build offline")
     expected_frontend = "freya" if is_freya else "xilem"
@@ -176,6 +193,7 @@ def check_export(output: Path) -> None:
         require((files / relative).is_file(), f"missing {relative}")
     metadata = (build / "metadata").read_text()
     require("org.freedesktop.Flatpak" in metadata, "host spawn permission missing")
+    require("org.a11y.Bus=talk" in metadata, "screen-reader status permission missing")
     require(
         "x-scheme-handler/recite" in (files / f"share/applications/{APP_ID}.desktop").read_text(),
         "packaged desktop entry lost link registration",

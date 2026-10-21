@@ -21,7 +21,7 @@ fi
 output=${1:-"$default_output"}
 output=$(realpath -m "$output")
 
-# The manifest copies this checkout as a source. Only target/ is excluded.
+# The manifest copies this checkout; target/ is excluded from its source snapshot.
 if [[ "$output" == / || "$repo" == "$output" || "$repo" == "$output/"* ]] \
   || [[ "$output" == "$repo/"* && "$output" != "$repo/target" && "$output" != "$repo/target/"* ]]; then
   echo 'output must be under target/ or outside the checkout and its ancestors' >&2

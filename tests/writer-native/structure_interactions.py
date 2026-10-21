@@ -49,10 +49,12 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
     process, window, _ = launch(api, bus, registry, arguments, log, manuscript=False)
     try:
         window.wait(lambda: window.find("No beats yet"), "valid empty document")
+        window.reveal_end("Start / restart preview")
         assert not window.enabled("Start / restart preview")
         capture(output, "-empty")
+        window.reveal_start("Add beat")
         window.act("Add beat")
-        window.wait(lambda: window.find("Edit passage 1"), "created beat reading")
+        window.reveal_end("Edit passage 1")
         capture(output, "-new-beat")
         window.act("Edit passage 1")
         node = window.wait(lambda: manuscript(window), "created line editor")
@@ -72,6 +74,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.wait(lambda: window.find_text("Stay for a moment."), "accepted reply reading")
         capture(output, "-written-beat")
         started = time.monotonic()
+        window.reveal_start("Save file")
         window.act("Save file")
         window.wait(
             lambda: "Stay for a moment." in source.read_text(), "structured save", timeout=30
@@ -115,6 +118,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.act("Read beat")
         window.wait(lambda: window.find("Edit passage 1"), "new line reading")
         results["script_groups_effects_and_empty_beat_inspection"] = True
+        window.reveal_start("Close")
         window.act("Close")
         window.wait(lambda: window.find("Save all and close"), "structural close guard")
         window.save_and_close(results, "structured_save_close")

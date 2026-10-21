@@ -25,7 +25,7 @@ def launch(api, bus, registry, arguments, log, manuscript=True):
 
     window = attach(api, bus, registry, process)
     if not manuscript:
-        window.wait(lambda: window.find("Open in editor"), "source repair controls")
+        window.reveal_start("Open in editor")
         return process, window, None
     node = window.wait(
         lambda: next(
@@ -139,6 +139,7 @@ def run(api, bus, registry, binary, output):
                 window.act("Save file")
                 window.wait(lambda: incoming in source.read_text(), "checked native save")
                 results["unicode_paste_and_save"] = True
+                window.wait(lambda: window.enabled("Save file"), "durable save completion")
                 key("a", control=True)
                 type_text("An unapplied Writer draft.")
                 window.wait(
@@ -221,12 +222,12 @@ def run(api, bus, registry, binary, output):
                 malformed = ":: scene default\n->\n"
                 source.write_text(malformed)
                 process, window, _ = launch(api, bus, registry, arguments, log, manuscript=False)
-                assert not any(
-                    window.call(address, "Accessible", "GetRole")[0] == 79
-                    for address, _ in window.nodes()
-                )
+                assert window.find("Manuscript") is None
+                window.reveal_end("Export draft and open editor")
+                assert window.enabled("Export draft and open editor")
                 assert source.read_text() == malformed
                 assert not window.enabled("Add beat")
+                window.reveal_end("Start / restart preview")
                 assert not window.enabled("Start / restart preview")
                 capture(output, "-source")
                 results["malformed_source_preserved_for_external_repair"] = True

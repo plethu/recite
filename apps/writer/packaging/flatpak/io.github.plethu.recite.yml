@@ -12,6 +12,9 @@ finish-args:
   - --device=dri
   # A project can live anywhere the user has access, including mounted drives.
   - --filesystem=host
+  # AccessKit reads screen-reader status on the session bus before using the
+  # separately proxied accessibility bus.
+  - --talk-name=org.a11y.Bus
   # Explicit, project-configured producers and editors run on the host.
   - --talk-name=org.freedesktop.Flatpak
 modules:
@@ -32,6 +35,12 @@ modules:
           - target
           - .flatpak-builder
           - apps/writer/target
+          - apps/writer/vendor/freya-code-editor/target
+          - editors/zed/target
+          - node_modules
+          - docs-site/node_modules
+          - .venv
+          - .turbo
       - cargo-sources.json
     build-commands:
       - cargo --offline --frozen build --manifest-path apps/writer/Cargo.toml -p "$(python3 scripts/writer_frontend.py --frontend xilem)" --release -j 4

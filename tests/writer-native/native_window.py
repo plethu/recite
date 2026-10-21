@@ -45,6 +45,7 @@ class NativeWindow:
         return {"visited": len(seen), "broken_edges": failures}
 
     def close_clean(self):
+        self.reveal_start("Close")
         self.act("Close")
         try:
             self.wait(lambda: self.find("Close Writer"), "ordinary exit preference")

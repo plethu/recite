@@ -242,6 +242,7 @@ impl Component for ProseField {
                     .maybe_child(self.below.clone())
                     .maybe_child(pending_draft.then(|| {
                         rect()
+                            .padding((t::META_GAP * t::ui_scale(), 0., 0., 0.))
                             .spacing(t::SPACE_XS)
                             .maybe_child(
                                 writer.message.is_error().then(|| {

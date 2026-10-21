@@ -7,9 +7,14 @@ usability, GPU performance, or cross-platform support.
 The local Xilem Linux release package passes payload, ABI and CLI inspection, native Wayland focus
 checks, and actual desktop-entry delivery on owned X11 and Wayland hosts. Cold and running-window
 links preserve fixture bytes; startup may return a retryable busy response until navigation is
-ready. The native Nix package also builds and passes its headless CLI checks. Both Flatpak manifests
-parse, but the Xilem Flatpak source build, other native platforms and installed-host lifecycle
-acceptance remain unverified.
+ready. The native Nix package also builds and passes its headless CLI checks. Xilem's Flatpak builds
+from locked offline sources, exports, installs and upgrades in an isolated profile. Installed
+Wayland checks cover native text history, Unicode clipboard/save, file switching, recovery,
+configured IDE handoff, producer publication/cancellation, preview and structural authoring. Native
+links round-trip at 100/200% scale. Both manifests grant the specific screen-reader status service;
+the installed accessibility tree uses Flatpak's separate AT-SPI proxy. These checks use an owned
+compositor and private bus. Physical-host lifecycle acceptance and other native platforms remain
+unverified; Freya's full Flatpak source build has not been repeated.
 
 ## Repeatable checks
 
@@ -195,8 +200,20 @@ Back/Forward controls.
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.
 The Xilem addition introduces `rustybuzz` through `usvg`; the other reported package versions were
-already in the Freya lockfile. No dependency-policy exceptions were added. The limits below describe
-the Freya fallback.
+already in the Freya lockfile. No dependency-policy exceptions were added.
+
+Selected-package production/build graphs distinguish the retirement benefits from the shared work:
+Xilem avoids Skia and Freya's default image codecs, including AVIF. On Linux it also avoids `paste`;
+macOS retains `paste` through Metal. SVG/font maintenance findings remain on all three desktop
+targets, and Linux retains the D-Bus findings. The combined all-feature audit remains the enforced
+gate. The NCSA finding belongs to a conditional fuzzing dependency in the AVIF graph, not to a
+fuzzer shipped in the runtime.
+
+The bounded SVG update would require another vendored Xilem crate and changes beyond the approved
+upstream lint baseline. It was not adopted. A coordinated accessibility-stack update is still needed
+for the D-Bus findings; no compatibility fork or policy exception was added to clear them.
+
+The limits below describe the Freya fallback.
 
 - The pinned CodeEditor exposes an unnamed inner TextInput and does not display IME preedit.
   `probe_records_missing_code_editor_preedit_presentation` records the gap; a passing test does not
@@ -207,6 +224,11 @@ the Freya fallback.
 - Exact prose caret/selection restoration after Input remounts is deferred pending a supported
   upstream approach; see [Freya #2308](https://github.com/marc2332/freya/issues/2308). Draft
   retention and Source caret restoration remain required.
+- An owned Wayland recovery comparison observed advertised AT-SPI objects that returned
+  `UnknownObject` in Freya's full writing workspace. The native drill could not reach the restored
+  prose field reliably. Its snapshot was visibly restored, and focused regressions verify retained
+  prose and Source drafts across saved view preferences; this does not establish native
+  accessibility or a complete native cross-frontend recovery pass.
 - The backend does not forward native trackpad pinch. Ctrl+scroll zoom tests do not establish
   physical gesture support or smooth trackpad scrolling.
 - ARM Linux, native macOS/Windows, screen readers, physical IME/BiDi, display scaling and sustained
@@ -218,14 +240,18 @@ changes the user's desktop associations.
 
 ## Start here: a real writing session
 
-Use a copy of a real project. Launch from the repository with `mise exec -- just writer run`, then
-open that project.
+Use separate copies of a real project for the two frontends. Launch Xilem with `mise exec -- just
+writer xilem`, then repeat with `mise exec -- just writer freya`. Close the first before launching
+the second: they share single-instance routing, preferences and recovery. Use separate
+`RECITE_CONFIG` paths if you want to compare their settings independently.
 
 Spend 30–45 minutes doing ordinary work:
 
 1. Create a beat, write several lines and replies, change destinations and use previews. Navigate
    with the sidebar, graph and history.
-2. Undo and redo, switch Map/Source, edit source, apply it, save and reopen.
+2. Undo and redo, switch Script/Map/Split, save and reopen. In Xilem, use **Open in editor**, make a
+   source edit, then compare or reload it while retaining recovery. In Freya, also edit in Source
+   and apply it. Compare the effort of these two source workflows.
 3. Open a PO catalogue, translate several passages, mark one reviewed, use the queue, and leave
    drafts in more than one beat.
 4. Quit. The dialog should name those drafts and offer working navigation, save-all and discard-all
@@ -233,7 +259,10 @@ Spend 30–45 minutes doing ordinary work:
 5. Reopen and verify the saved text and destinations.
 
 Report anything that made you hunt for a control, lose your place, or wonder whether work was saved.
-Include the steps and the expected behavior.
+Include the steps and the expected behavior. After the separate runs, keep an unsaved recoverable
+draft in one frontend, close it, and reopen that same project in the other. Verify the draft and
+stable IDs, then repeat in the other direction. Keep both only for a named capability or usability
+gap; record what would close that gap before retiring the fallback.
 
 ## Recovery and conflict drill
 

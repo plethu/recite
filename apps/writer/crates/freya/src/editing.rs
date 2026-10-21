@@ -2,6 +2,7 @@ use freya::{code_editor::*, prelude::*};
 use recite_writer_model::{View, Workbench, WorkbenchError};
 
 mod continuation;
+mod scene;
 pub(crate) use continuation::Presentation;
 
 pub type Session = State<Result<Workbench, WorkbenchError>>;
@@ -138,46 +139,6 @@ impl Writer {
         });
     }
 
-    pub fn scene_opened(mut self, view: recite_config::WriterView) -> Result<(), String> {
-        let recovered_source = self
-            .buffers
-            .model
-            .peek()
-            .as_ref()
-            .is_ok_and(|m| m.view() == &View::Source && m.has_draft());
-        if recovered_source {
-            self.layout.view.set(recite_config::WriterView::Source);
-            self.pane.set(Pane::Map);
-            return Ok(());
-        }
-        if view == recite_config::WriterView::Source {
-            self.try_navigate(|m| m.select(View::Source))?;
-        } else {
-            if !self
-                .buffers
-                .model
-                .peek()
-                .as_ref()
-                .is_ok_and(crate::scene::has_no_beats)
-            {
-                self.try_navigate(Workbench::show_script)?;
-            }
-        }
-        self.selection.set(None);
-        self.layout.view.set(view);
-        if view != recite_config::WriterView::Source
-            && self.layout.standalone()
-            && !self
-                .buffers
-                .model
-                .peek()
-                .as_ref()
-                .is_ok_and(crate::scene::has_no_beats)
-        {
-            self.ensure_beat()?;
-        }
-        Ok(())
-    }
     pub fn ensure_beat(mut self) -> Result<(), String> {
         if self
             .buffers
