@@ -138,6 +138,8 @@ def run_probe(binary, output, scenario):
             from editor_interactions import run
         elif scenario == "preferences":
             from preferences_interactions import run
+        elif scenario == "project-replacement":
+            from project_replacement import run
         elif scenario == "startup":
             from startup_interactions import run
         elif scenario == "structure":
@@ -159,6 +161,7 @@ def main():
             "all",
             "structure",
             "startup",
+            "project-replacement",
             "preferences",
             "editor",
             "keyboard",

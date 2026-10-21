@@ -4,8 +4,8 @@ use std::sync::atomic;
 use tokio::sync::mpsc as async_mpsc;
 
 #[test]
-fn changed_or_cancelled_cold_load_preserves_the_live_writer_and_retires_the_unused_owner() {
-    for cancel in [false, true] {
+fn obsolete_cold_load_preserves_the_live_writer_and_retires_the_unused_owner() {
+    for action in ["edit", "cancel", "close"] {
         let first = project(recite_writer_model::FIXTURE).unwrap();
         let second = project(recite_writer_model::FIXTURE).unwrap();
         let mut app = App::with_writer(open(&first).unwrap());
@@ -29,13 +29,13 @@ fn changed_or_cancelled_cold_load_preserves_the_live_writer_and_retires_the_unus
         };
         let result = load(&request);
         assert!(result.is_ok());
-        if cancel {
-            app.cancel_open();
-        } else {
-            app.writer.as_mut().unwrap().change(|model| {
+        match action {
+            "cancel" => app.cancel_open(),
+            "close" => app.request_close(),
+            _ => app.writer.as_mut().unwrap().change(|model| {
                 model.set_draft("Keep this newer draft.".into());
                 Ok(())
-            });
+            }),
         }
         let (retire, retired) = mpsc::sync_channel(1);
         app.accept_open(Opened {
@@ -45,8 +45,11 @@ fn changed_or_cancelled_cold_load_preserves_the_live_writer_and_retires_the_unus
         });
         let writer = app.writer.as_ref().unwrap();
         assert_eq!(writer.session.project().unwrap().root(), first.path());
-        if !cancel {
+        if action == "edit" {
             assert_eq!(writer.session.model().draft(), "Keep this newer draft.");
+        }
+        if action == "close" {
+            assert!(writer.phase != Phase::Writing);
         }
         assert!(app.status.contains("current work remains open"));
         let unused = retired.try_recv().unwrap().unwrap();

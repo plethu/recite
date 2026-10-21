@@ -124,6 +124,9 @@ impl Localisation {
     pub fn working(&self) -> bool {
         self.slot.working()
     }
+    pub fn can_leave(&self) -> bool {
+        !self.slot.read_only() && !self.needs_save() && !self.saving()
+    }
     pub fn has_catalogue(&self) -> bool {
         self.slot.path().is_some()
     }

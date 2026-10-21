@@ -11,6 +11,9 @@ opens or creates projects and offers temporary examples. **Settings** changes pe
 text sizes, scale and shortcut bindings through the same configuration as Freya. See the
 [acceptance limits](acceptance.md#known-limits) for the remaining migration workspaces and commands.
 
+Save translation drafts before opening another project. A saved catalogue may remain open while you
+switch; no separate catalogue-close step is required.
+
 In Xilem beat reading, **Reply rules…** opens typed conditions and the destination's direct effects.
 **Show actions** reveals grouping, negation, effect ordering and delivery controls; **Choose
 value…** searches declared registry or enum values. Changes stay in a recoverable draft until

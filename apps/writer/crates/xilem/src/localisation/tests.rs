@@ -4,6 +4,8 @@ use recite_writer_model::View;
 use recite_writer_session::localisation::catalogue::Catalogue;
 use std::fs;
 use tokio::sync::mpsc;
+#[path = "replacement/tests.rs"]
+mod replacement;
 #[path = "source_views/tests.rs"]
 mod source_views;
 #[path = "visual/tests.rs"]

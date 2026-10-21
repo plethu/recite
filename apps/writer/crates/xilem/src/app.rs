@@ -112,8 +112,9 @@ impl App {
     }
     fn can_replace(&self) -> bool {
         self.writer.as_ref().is_none_or(|writer| {
-            !writer.work.busy()
-                && !writer.localisation.has_catalogue()
+            writer.phase == Phase::Writing
+                && !writer.work.busy()
+                && writer.localisation.can_leave()
                 && !writer.navigation.busy()
                 && !writer.project_jobs_busy()
                 && match &writer.session {
