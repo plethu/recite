@@ -65,13 +65,14 @@ impl Component for EntryEditor {
         let Some(draft) = catalogue.draft(id) else {
             return body.into_element();
         };
-        let plural = entry.is_plural();
-        let rule = catalogue.plural_rule().map(str::to_owned);
-        let valid = !plural
-            || rule
-                .as_deref()
-                .and_then(|rule| recite_core::po::validate_plural_rule(rule).ok())
-                == Some(draft.forms.len());
+        let Some(details) = catalogue.entry_details(id) else {
+            return body
+                .child(label().text(text(MsgId::WriterNoEntry)))
+                .into_element();
+        };
+        let plural = details.plural.is_plural();
+        let rule = details.plural.rule().map(str::to_owned);
+        let valid = details.plural.valid();
         let changed = catalogue.changed(id);
         let primary = crate::design::SubmitAction {
             id: save_id,
@@ -87,23 +88,15 @@ impl Component for EntryEditor {
                 shortcut.run();
             }
         });
-        let root = context.split('&').next().unwrap_or(context);
         let mut variants = crate::design::actions().main_align(Alignment::Start);
-        for variant in catalogue.document.entries().iter().filter(|e| {
-            !e.is_obsolete()
-                && e.context()
-                    .is_some_and(|c| c.split('&').next() == Some(root))
-        }) {
-            let next = variant.context().unwrap_or_default().to_owned();
-            let caption = variant
-                .variant()
-                .map_or_else(|| text(MsgId::WriterDefaultWording), str::to_owned);
+        for variant in &details.wordings {
+            let next = variant.context.clone();
             variants = variants.child(
                 Button::new()
                     .flat()
-                    .toggle(variant.id() == id)
+                    .toggle(variant.entry == id)
                     .on_press(move |_| state.write().entry_context = Some(next.clone()))
-                    .child(caption),
+                    .child(variant.caption.clone()),
             );
         }
         body = body.child(
@@ -126,28 +119,7 @@ impl Component for EntryEditor {
         });
         body = body.child(variants);
         for (index, value) in draft.forms.iter().enumerate() {
-            let examples: Vec<_> = rule
-                .as_deref()
-                .map(|rule| {
-                    (0..=200)
-                        .filter(|count| {
-                            recite_core::po::evaluate_plural_form(rule, *count).ok() == Some(index)
-                        })
-                        .take(5)
-                        .map(|count| count.to_string())
-                        .collect()
-                })
-                .unwrap_or_default();
-            let caption = if plural {
-                format!(
-                    "{} {} · {}",
-                    text(MsgId::WriterPluralForm),
-                    index + 1,
-                    examples.join(", ")
-                )
-            } else {
-                text(MsgId::WriterTranslation)
-            };
+            let caption = details.plural.form_caption(index);
             body = body.child(rect().key((id, index)).width(Size::fill()).child(Arm {
                 writer,
                 id,

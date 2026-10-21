@@ -16,10 +16,10 @@ use recite_core::po::PoEntryId;
 use recite_writer_session::localisation::status::TranslationStatus;
 use recite_writer_session::{
     comparison::ComparisonRow,
-    localisation::catalogue::{Catalogue, ExternalDecision, Inspection},
+    localisation::catalogue::{Catalogue, EntryDetails, ExternalDecision, Inspection},
 };
 use slot::{Identity, Slot};
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 pub(crate) use view::{close_details, panel};
 pub(crate) use work::{Completed, Work};
 pub(crate) use work::{Finish, Finished};
@@ -61,7 +61,16 @@ struct Entry {
     source_page: usize,
     context_page: usize,
     form_page: usize,
+    details: Arc<EntryDetails>,
+    wording_page: usize,
+    rule: PluralRuleView,
 }
+struct PluralRuleView {
+    pages: Vec<String>,
+    page: usize,
+    expanded: bool,
+}
+
 #[derive(Default)]
 enum Destination {
     #[default]

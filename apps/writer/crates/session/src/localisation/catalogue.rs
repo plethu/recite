@@ -1,5 +1,7 @@
 //! File-backed PO editing. Drafts never become a parallel translation database.
+mod entry_details;
 mod preview;
+pub use entry_details::{EntryDetails, PluralGuide, Wording};
 mod queue;
 mod refresh;
 pub use preview::PreviewInput;
@@ -38,6 +40,7 @@ pub struct Catalogue {
     recovery_failure: Option<String>,
     anchors: BTreeMap<String, Vec<PoEntryId>>,
     queue_cache: std::cell::RefCell<Option<queue::QueueCache>>,
+    entry_cache: std::cell::RefCell<Option<entry_details::Cache>>,
 }
 impl Catalogue {
     pub fn open(path: &Path) -> Result<Self, String> {
@@ -61,6 +64,7 @@ impl Catalogue {
             recovery_failure: None,
             anchors,
             queue_cache: Default::default(),
+            entry_cache: Default::default(),
             path: path.to_owned(),
             baseline: document.fingerprint(),
             document: Arc::new(document),

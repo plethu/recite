@@ -80,7 +80,11 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "preview-inputs-scale":
+        if scenario == "localisation-details-scale":
+            from localisation_details import run_scale as run
+        elif scenario == "localisation-details":
+            from localisation_details import run
+        elif scenario == "preview-inputs-scale":
             from preview_inputs import run_scale as run
         elif scenario == "preview-inputs":
             from preview_inputs import run
@@ -167,6 +171,8 @@ def main():
             "rename",
             "external",
             "localisation",
+            "localisation-details",
+            "localisation-details-scale",
             "localisation-scale",
             "localisation-sources",
             "localisation-sources-scale",
@@ -254,7 +260,8 @@ def main():
         try:
             code = process.wait(
                 timeout=120
-                if args.scenario in ("all", "preview-inputs", "preview-inputs-scale")
+                if args.scenario == "all"
+                or args.scenario.startswith(("preview-inputs", "localisation-details"))
                 else 60
             )
             if code:

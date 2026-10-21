@@ -164,19 +164,23 @@ independently of catalogue size. Translation typing remains editable during a ca
 newer drafts survive its receipt. Save all publishes catalogue drafts before the normal source save
 sequence. Close waits for both layers and their recovery; cancelling close preserves dispatched
 writes. Unexpected catalogue failures quarantine editing and close using only admitted recovery.
-Disk decisions require the exact inspected local catalogue and external fingerprint. Keeping drafts
-preserves compatible translations for review against the adopted PO metadata; using disk explicitly
-discards those drafts. Catalogue creation and source refresh share extraction and review policy with
-Freya. Both native owners are checked out for source operations and returned on cancellation, failed
-dispatch and unwind. Unresolved current or retained source fields refuse extraction. Refresh Apply
-re-extracts source and checks the exact reviewed catalogue before publication. A completed PO write
-remains an applied result even if recovery subsequently fails; both frontends surface that warning.
-Configured preview captures the same locale, wording, typed values and saved-or-draft catalogue
-policy in both frontends. Native controls page interpolation inputs and language results; staged
-changes do not replace an active run. Saved catalogue bytes are read on the worker. Draft overlays
-require the captured disk baseline and never save or review the actual drafts. Catalogue changes
-invalidate localised trial requests and mark running localised snapshots stale; source-only trials
-ignore catalogue changes.
+Wording choices and plural guidance share one catalogue projection across frontends. Translation
+typing reuses it; a new PO snapshot or changed form count invalidates it. Native entry components
+page wording choices, plural forms and long rule text independently. Invalid plural metadata
+disables the entry save while retaining drafts. Nearby source excludes wording variants of the
+current passage. Disk decisions require the exact inspected local catalogue and external
+fingerprint. Keeping drafts preserves compatible translations for review against the adopted PO
+metadata; using disk explicitly discards those drafts. Catalogue creation and source refresh share
+extraction and review policy with Freya. Both native owners are checked out for source operations
+and returned on cancellation, failed dispatch and unwind. Unresolved current or retained source
+fields refuse extraction. Refresh Apply re-extracts source and checks the exact reviewed catalogue
+before publication. A completed PO write remains an applied result even if recovery subsequently
+fails; both frontends surface that warning. Configured preview captures the same locale, wording,
+typed values and saved-or-draft catalogue policy in both frontends. Native controls page
+interpolation inputs and language results; staged changes do not replace an active run. Saved
+catalogue bytes are read on the worker. Draft overlays require the captured disk baseline and never
+save or review the actual drafts. Catalogue changes invalidate localised trial requests and mark
+running localised snapshots stale; source-only trials ignore catalogue changes.
 
 Registered schema generation retains one shared activity owner through command validation, process
 execution and checked output publication. Native publication receipts are reconciled even after

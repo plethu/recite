@@ -38,24 +38,7 @@ pub(in crate::localisation::work) fn describe(
             })
         })
         .collect();
-    let entry = selected.and_then(|id| {
-        let entry = catalogue.document.entry(id)?;
-        (!entry.is_header() && !entry.is_obsolete()).then(|| Entry {
-            key: EntryKey {
-                catalogue: owner.identity.clone(),
-                id,
-            },
-            source: text::pages(&context_data::source(entry)),
-            context: context_data::Nearby::new(&catalogue.document)
-                .for_entry(entry)
-                .iter()
-                .flat_map(|source| text::pages(source))
-                .collect(),
-            source_page: 0,
-            context_page: 0,
-            form_page: 0,
-        })
-    });
+    let entry = selected.and_then(|id| describe_entry(owner, id));
     Ok(Presentation {
         queue: Queue {
             rows,
@@ -64,5 +47,33 @@ pub(in crate::localisation::work) fn describe(
         },
         entry,
         message: "Catalogue ready. Drafts stay in Writer until you Save.",
+    })
+}
+fn describe_entry(owner: &Owner, id: PoEntryId) -> Option<Entry> {
+    let catalogue = &owner.catalogue;
+    let entry = catalogue.document.entry(id)?;
+    let details = catalogue.entry_details(id)?;
+    let rule = details.plural.rule().map(text::pages).unwrap_or_default();
+    Some(Entry {
+        key: EntryKey {
+            catalogue: owner.identity.clone(),
+            id,
+        },
+        source: text::pages(&context_data::source(entry)),
+        context: context_data::Nearby::new(&catalogue.document)
+            .for_entry(entry)
+            .iter()
+            .flat_map(|source| text::pages(source))
+            .collect(),
+        source_page: 0,
+        context_page: 0,
+        form_page: 0,
+        details,
+        wording_page: 0,
+        rule: PluralRuleView {
+            pages: rule,
+            page: 0,
+            expanded: false,
+        },
     })
 }

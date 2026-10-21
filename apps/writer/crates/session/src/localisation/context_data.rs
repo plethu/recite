@@ -23,7 +23,7 @@ impl<'a> Nearby<'a> {
         let entries: Vec<_> = document
             .entries()
             .iter()
-            .filter(|e| !e.is_header() && !e.is_obsolete())
+            .filter(|e| !e.is_header() && !e.is_obsolete() && e.variant().is_none())
             .collect();
         let positions = entries
             .iter()
@@ -58,3 +58,6 @@ impl<'a> Nearby<'a> {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests;
