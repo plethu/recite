@@ -3,6 +3,63 @@ type TestResult = Result<(), Box<dyn std::error::Error>>;
 const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n? requires=(standing(3) and (has_key(gate) or has_permit(courier))) @rthh7ab\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n# Keep this comment.\n! blocking mark_map(floodgate)\n-> END\n";
 
 #[test]
+fn requirement_envelopes_keep_negation_calls_and_adjacent_attributes_valid() -> TestResult {
+    for requirement in ["", " requires=(ready())"] {
+        let source = format!(
+            "# Keep authored spacing.\n:: start default\n? reply@22222222222222222222{requirement} reason=closed_gate\n  Continue.\n  -> END\n"
+        );
+        let mut model = Workbench::new(&source)?;
+        model.select(View::Source)?;
+        let call = RuleExpression::Call {
+            function: "ready".into(),
+            arguments: vec![],
+        };
+        for (condition, value) in [
+            (
+                RuleExpression::Not(Box::new(call.clone())),
+                "(not (ready()))",
+            ),
+            (call, "(ready())"),
+        ] {
+            let mut rules = model.document().reply_rules("22222222222222222222")?;
+            rules.condition = Some(condition);
+            let expected = rules.source()?;
+            let header = if requirement.is_empty() {
+                format!("? reply@22222222222222222222 reason=closed_gate requires={value}")
+            } else {
+                format!("? reply@22222222222222222222 requires={value} reason=closed_gate")
+            };
+            assert!(expected.lines().any(|line| line == header));
+            assert!(expected.starts_with("# Keep authored spacing.\n"));
+            model.set_draft(expected.clone());
+            model.apply_reply_rules(&rules)?;
+            assert_eq!(model.document().source(), expected);
+            let reprojected = model.document().reply_rules("22222222222222222222")?;
+            assert_eq!(
+                reprojected.source()?,
+                expected,
+                "reprojection must not add grouping"
+            );
+            assert!(matches!(
+                reprojected.condition,
+                Some(RuleExpression::Group(_))
+            ));
+        }
+        assert!(model.document().source().contains("requires=(ready())"));
+        model.undo()?;
+        assert!(
+            model
+                .document()
+                .source()
+                .contains("requires=(not (ready()))")
+        );
+        model.undo()?;
+        assert_eq!(model.document().source(), source);
+    }
+    Ok(())
+}
+
+#[test]
 fn unchanged_rules_are_byte_identical_and_edits_are_one_undo() -> TestResult {
     let mut model = Workbench::new(SOURCE)?;
     let mut rules = model.document().reply_rules("rthh7ab")?;

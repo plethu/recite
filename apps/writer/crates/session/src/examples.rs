@@ -43,10 +43,11 @@ impl ExampleSessions {
         current: &Workbench,
         name: &str,
     ) -> Result<SwitchRequest, WorkbenchError> {
-        if current.document().key().as_str() == name
-            || !WRITER_EXAMPLES.iter().any(|example| example.name == name)
-        {
+        if current.document().key().as_str() == name {
             return Err(EditError::Destination.into());
+        }
+        if !WRITER_EXAMPLES.iter().any(|example| example.name == name) {
+            return Err(WorkbenchError::ExampleUnavailable);
         }
         Ok(SwitchRequest {
             origin: current.navigation_request(),

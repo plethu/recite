@@ -7,6 +7,8 @@ use tokio::sync::mpsc;
 mod metadata;
 #[path = "visual/tests.rs"]
 mod visual;
+#[path = "workflow/tests.rs"]
+mod workflow;
 
 #[test]
 fn source_binding_keeps_close_guarded_until_the_same_worker_finishes_retirement() {

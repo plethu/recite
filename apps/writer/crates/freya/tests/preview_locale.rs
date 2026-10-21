@@ -54,10 +54,41 @@ fn trial_language_count_and_fallback_are_native_controls() -> Result<(), Box<dyn
     );
     support::click(&mut test, "Inputs for the next run")?;
     support::click(&mut test, "What happened in this run?")?;
+    support::click(&mut test, "Plural lookups")?;
+    support::click(
+        &mut test,
+        "Open trace record 1 · Plural lookup · {count} tickets",
+    )?;
     assert!(
-        test.find(|_, e| Label::try_downcast(e)
-            .filter(|l| l.text.contains("fr · Default wording · Translation found")))
+        test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "fr"))
             .is_some()
+    );
+    support::click(&mut test, "More record details")?;
+    assert!(
+        test.find(
+            |_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "12345678901234567890")
+        )
+        .is_some()
+    );
+    assert!(
+        test.find(
+            |_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "Matched plural form")
+        )
+        .is_some()
+    );
+    assert!(
+        test.find(|node, _| {
+            let values: Vec<_> = node
+                .children()
+                .into_iter()
+                .filter_map(|child| {
+                    Label::try_downcast(child.element().as_ref())
+                        .map(|label| label.text.to_string())
+                })
+                .collect();
+            (values == ["Matched plural form", "2"]).then_some(())
+        })
+        .is_some()
     );
     if let Ok(path) = std::env::var("RECITE_WRITER_TRIAL_SCREENSHOT") {
         test.render_to_file(path);

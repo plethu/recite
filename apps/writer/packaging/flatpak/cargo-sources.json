@@ -73,19 +73,6 @@
   {
     "type": "archive",
     "archive-type": "tar-gzip",
-    "url": "https://static.crates.io/crates/accesskit_consumer/accesskit_consumer-0.36.0.crate",
-    "sha256": "25e0d7e25d06f4dc21d1774d67146e9e80d6789216cbd4d1e88185b0095dba60",
-    "dest": "cargo/vendor/accesskit_consumer-0.36.0"
-  },
-  {
-    "type": "inline",
-    "contents": "{\"package\": \"25e0d7e25d06f4dc21d1774d67146e9e80d6789216cbd4d1e88185b0095dba60\", \"files\": {}}",
-    "dest": "cargo/vendor/accesskit_consumer-0.36.0",
-    "dest-filename": ".cargo-checksum.json"
-  },
-  {
-    "type": "archive",
-    "archive-type": "tar-gzip",
     "url": "https://static.crates.io/crates/accesskit_consumer/accesskit_consumer-0.38.0.crate",
     "sha256": "5d10a236f96f87d70732e44520046785431ef01d5bcd6b041317bfadd2f88245",
     "dest": "cargo/vendor/accesskit_consumer-0.38.0"

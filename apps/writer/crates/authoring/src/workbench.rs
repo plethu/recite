@@ -46,6 +46,8 @@ pub enum WorkbenchError {
     NoPreview,
     #[error("The bundled writer example schema is invalid.")]
     ExampleSchema,
+    #[error("The linked scene is not open. Choose an available bundled example.")]
+    ExampleUnavailable,
 }
 
 impl From<PreviewError> for WorkbenchError {

@@ -13,6 +13,8 @@ use xilem::{
 
 const SOURCE: &str =
     ":: start default\n> line@11111111111111111111\n  Original manuscript.\n-> END\n";
+#[path = "workflow/tests.rs"]
+mod workflow;
 
 fn reveal<W: Widget>(harness: &mut TestHarness<W>, caption: &str) {
     let mut pending = vec![harness.root_widget().as_dyn()];

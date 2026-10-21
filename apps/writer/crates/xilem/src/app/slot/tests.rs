@@ -6,6 +6,8 @@ use xilem::{
     core::{DynMessage, MessageResult},
     masonry::testing::TestHarness,
 };
+#[path = "rules/tests.rs"]
+mod rules;
 
 #[test]
 fn absent_present_replaced_and_removed_children_reject_retired_actions() {

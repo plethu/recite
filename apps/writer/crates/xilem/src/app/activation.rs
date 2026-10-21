@@ -1,6 +1,8 @@
 //! Forwarded native launches publish only into an available, matching session.
 use super::*;
 use std::sync::atomic;
+#[cfg(test)]
+mod tests;
 impl App {
     pub(super) fn accept_activation(
         &mut self,

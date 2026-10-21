@@ -108,11 +108,14 @@ pub fn wait_preview(test: &mut TestingRunner) -> Result<(), Box<dyn std::error::
 /// Editor completion follows worker receipts, not a number of simulated frames.
 pub fn wait_editor_work(test: &mut TestingRunner) -> Result<(), Box<dyn std::error::Error>> {
     for _ in 0..10_000 {
-        test.sync_and_update();
+        // Project and save receipt polling uses the runner's virtual clock.
+        test.poll_n(std::time::Duration::from_millis(16), 1);
         let pending = test
             .find(|_, e| {
                 Label::try_downcast(e).filter(|l| {
                     [
+                        "Opening project…",
+                        "Finishing cancelled load…",
                         "Saving… You can keep editing.",
                         "Saving translations… You can keep editing.",
                         "Preparing source edit… You can keep editing.",

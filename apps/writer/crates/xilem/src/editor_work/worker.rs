@@ -5,6 +5,8 @@ use xilem::{
     ViewCtx,
     core::{MessageProxy, NoElement, View},
 };
+#[cfg(test)]
+mod tests;
 
 struct Output(Result<Receipt, ()>);
 impl std::fmt::Debug for Output {

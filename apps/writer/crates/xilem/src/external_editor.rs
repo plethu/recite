@@ -2,7 +2,7 @@
 pub(crate) mod linked;
 mod request;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 mod worker;
 use super::{Phase, Writer};
 use recite_writer_session::startup::EditorCommand;

@@ -263,3 +263,6 @@ mod bounds;
 
 #[path = "tests/inputs/tests.rs"]
 mod inputs;
+
+#[path = "tests/workflow/tests.rs"]
+mod workflow;

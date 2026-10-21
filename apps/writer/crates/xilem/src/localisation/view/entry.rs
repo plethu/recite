@@ -2,6 +2,8 @@ use super::*;
 mod forms;
 mod plural;
 mod source;
+#[cfg(test)]
+mod tests;
 mod wordings;
 pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let state = &writer.localisation;

@@ -1,4 +1,6 @@
 //! A separate production-component specimen; no project, recovery or durable preference owner.
+#[cfg(test)]
+mod tests;
 mod view;
 use crate::{map::Workspace, presentation::Theme};
 use recite_config::{WriterConfig, WriterPresentationField, WriterTheme};

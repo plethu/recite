@@ -7,6 +7,8 @@ use std::fs;
 use tokio::sync::mpsc;
 #[path = "visual/tests.rs"]
 mod visual;
+#[path = "workflow/tests.rs"]
+mod workflow;
 
 fn fixture() -> (tempfile::TempDir, Writer, mpsc::UnboundedReceiver<Job>) {
     let directory = project_fixture().unwrap();

@@ -1,5 +1,20 @@
 use super::*;
 #[test]
+fn unavailable_example_reports_its_own_error_without_changing_the_current_editor() {
+    let sessions = ExampleSessions::default();
+    let mut model = WRITER_EXAMPLES[0].open().unwrap();
+    model.set_draft("Keep my pending prose.".into());
+    let document = model.document().completion_snapshot();
+    let view = model.view().clone();
+    assert!(matches!(
+        sessions.request(&model, "missing.recite"),
+        Err(WorkbenchError::ExampleUnavailable)
+    ));
+    assert!(document.is_current(model.document()));
+    assert_eq!(model.view(), &view);
+    assert_eq!(model.draft(), "Keep my pending prose.");
+}
+#[test]
 fn examples_keep_complete_history_and_drafts_without_files() {
     let mut sessions = ExampleSessions::default();
     let mut model = WRITER_EXAMPLES[2].open().unwrap();

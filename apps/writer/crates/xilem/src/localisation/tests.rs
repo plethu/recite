@@ -10,6 +10,8 @@ mod replacement;
 mod source_views;
 #[path = "visual/tests.rs"]
 mod visual;
+#[path = "workflow/tests.rs"]
+mod workflow;
 
 pub(super) const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
 const PO: &str = "#. file: scene.recite\n#. block: start\n# translator note\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";

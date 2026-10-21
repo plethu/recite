@@ -4,6 +4,25 @@ use recite_writer_session::project::save::sequence::Work;
 use tokio::sync::mpsc as async_mpsc;
 use xilem::masonry::accesskit;
 
+pub(crate) struct Driver(async_mpsc::UnboundedReceiver<Arc<Request>>);
+impl Driver {
+    pub(crate) fn new(writer: &mut Writer) -> Self {
+        let (sender, receiver) = async_mpsc::unbounded_channel();
+        writer.external.sender = Some(sender);
+        Self(receiver)
+    }
+    pub(crate) fn complete(
+        &mut self,
+        writer: &mut Writer,
+        path: &std::path::Path,
+        result: Result<(), String>,
+    ) {
+        let request = self.0.try_recv().unwrap();
+        assert_eq!(request.path(), path);
+        writer.accept_editor(request, Some(result));
+    }
+}
+
 #[test]
 fn default_editor_retry_keeps_the_repair_artifact_target_and_import_guidance() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();

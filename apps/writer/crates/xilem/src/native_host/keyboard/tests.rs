@@ -5,6 +5,8 @@ use xilem::masonry::core;
 use xilem::masonry::testing;
 use xilem::masonry::theme;
 use xilem::masonry::widgets;
+#[path = "mounted/tests.rs"]
+mod mounted;
 
 #[derive(Debug)]
 struct Recorder(mpsc::Sender<SendMessage>);

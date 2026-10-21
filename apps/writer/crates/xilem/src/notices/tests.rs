@@ -3,6 +3,8 @@ use crate::tests::support;
 use crate::workspaces::tests::ToolDriver;
 use recite_writer_model::View;
 use std::fs;
+#[path = "catalogue/tests.rs"]
+mod catalogue;
 #[path = "visual/tests.rs"]
 mod visual;
 
@@ -15,6 +17,7 @@ fn connect(writer: &mut Writer) -> mpsc::Receiver<Request> {
         requests: send,
         catalogue,
     });
+    writer.notices.flight = None;
     requests
 }
 fn changed(writer: &mut Writer, paths: impl IntoIterator<Item = PathBuf>) {

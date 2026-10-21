@@ -1,5 +1,5 @@
 //! Prepare destination selection against immutable analysis; retain live history and preview.
-use super::{NavigationStamp, Workbench, WorkbenchError};
+use super::{Workbench, WorkbenchError, identity::SelectionStamp};
 use crate::DocumentVersion;
 use crate::{CompletionSnapshot, EditError, ProjectContext, projection_cache::CachedProjections};
 use recite_compiler::authoring::{AuthoringError, WorkControl};
@@ -7,7 +7,7 @@ use recite_compiler::authoring::{AuthoringError, WorkControl};
 pub struct NavigationRequest {
     base: CompletionSnapshot,
     projections: CachedProjections,
-    selection: NavigationStamp,
+    selection: SelectionStamp,
 }
 pub struct PreparedNavigation {
     request: NavigationRequest,
@@ -21,7 +21,7 @@ impl Workbench {
         NavigationRequest {
             base: self.document.completion_snapshot(),
             projections: self.document.projections.capture_local(),
-            selection: self.navigation_stamp(),
+            selection: self.selection_stamp(),
         }
     }
     /// Publish prepared context/selection once; keep the receipt for worker retirement.
@@ -50,7 +50,7 @@ impl Workbench {
 }
 impl NavigationRequest {
     pub fn is_current(&self, model: &Workbench) -> bool {
-        self.selection.is_current(model)
+        self.base.is_current(model.document()) && self.selection.is_current(model)
     }
     pub fn prepare(
         self,

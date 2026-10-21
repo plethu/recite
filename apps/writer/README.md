@@ -101,9 +101,10 @@ export/import, save and generation; producer actions use the same shared project
 Personal settings and desktop activation also use the shared owners. Copy link sends the current
 location through the toolkit's native clipboard. Linked destinations cover writing, preview, reply
 rules, project tools and catalogue workflows. Source links save accepted source and open the
-configured IDE; recovered source drafts retain their explicit repair workflow. Final parity
-verification is still in progress. The default launcher continues to use Freya. See
-[acceptance](acceptance.md) for evidence limits.
+configured IDE; recovered source drafts retain their explicit repair workflow. Shared workflow
+parity is covered by headless tests and owned Wayland drills. The native dependency audit remains
+red, and the default launcher continues to use Freya. See [acceptance](acceptance.md) for evidence
+limits.
 
 ## Build requirements
 

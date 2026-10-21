@@ -59,11 +59,11 @@ across typing and failed restart. Successful restart resets the trace cursor. Sh
 regressions bound retained-history and large-value cost; separate visual review covers both
 frontends' record and value pages. A consumer iterator regression also covers reachable scrollbars
 following pruned siblings. Command dispatch is exhaustive, and linked destinations cover every
-shared screen. Final integration checks and dependency-policy resolution remain required. Physical
-IME, screen-reader announcements, hardware rendering and Windows/macOS acceptance remain unverified
-for Xilem. The portal scrollbar precedes close choices in the Tab cycle; the current native drill
-reaches Keep editing in three presses and verifies that cancelling close retains text undo/redo.
-Freya remains the default launcher.
+shared screen. Shared workflow checks and all four Writer production-line coverage floors pass.
+Dependency-policy resolution remains required. Physical IME, screen-reader announcements, hardware
+rendering and Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes
+close choices in the Tab cycle; the current native drill reaches Keep editing in three presses and
+verifies that cancelling close retains text undo/redo. Freya remains the default launcher.
 
 Shared scene/beat lookup, command ranking and Vim save/close aliases now drive both frontends. The
 native lookup drill covers query autofocus, Escape focus return, retained manuscript undo/redo,

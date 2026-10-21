@@ -68,12 +68,12 @@ impl Keyboard {
                 event,
                 is_synthetic,
                 ..
-            } => return self.key_event(root, event, *is_synthetic),
+            } => return self.key_event(root, Keystroke::from(event), *is_synthetic),
             _ => {}
         }
         false
     }
-    fn key_event(&mut self, root: &RenderRoot, event: &KeyEvent, is_synthetic: bool) -> bool {
+    fn key_event(&mut self, root: &RenderRoot, event: Keystroke<'_>, is_synthetic: bool) -> bool {
         if self.held.consume(event.physical_key, event.state)
             || self.vim.release(event.physical_key, event.state)
         {
@@ -88,22 +88,22 @@ impl Keyboard {
         else {
             return false;
         };
-        let enter = event.logical_key == keyboard::Key::Named(NamedKey::Enter);
+        let enter = *event.logical_key == keyboard::Key::Named(NamedKey::Enter);
         let kind = self.focus.kind(root, context.generation);
         let action = picker::action(
             &context,
             kind.clone(),
-            &event.logical_key,
+            event.logical_key,
             self.normalized_modifiers(),
         )
-        .or_else(|| history::key(&context, &event.logical_key, self.normalized_modifiers()));
+        .or_else(|| history::key(&context, event.logical_key, self.normalized_modifiers()));
         let consumed = self.dispatch(
             &context,
             root.focused_widget(),
             kind.clone(),
             Stroke {
                 input: Input {
-                    key: key(&event.logical_key),
+                    key: key(event.logical_key),
                     physical: physical(event.physical_key),
                     modifiers: self.normalized_modifiers(),
                 },
@@ -257,6 +257,25 @@ struct Stroke<'a> {
     enter: bool,
     action: Option<Action>,
     first_press: bool,
+}
+
+/// The window event keeps ownership of text and platform data while policy borrows its keys.
+#[derive(Clone, Copy)]
+struct Keystroke<'a> {
+    logical_key: &'a keyboard::Key,
+    physical_key: keyboard::PhysicalKey,
+    state: ElementState,
+    repeat: bool,
+}
+impl<'a> From<&'a KeyEvent> for Keystroke<'a> {
+    fn from(event: &'a KeyEvent) -> Self {
+        Self {
+            logical_key: &event.logical_key,
+            physical_key: event.physical_key,
+            state: event.state,
+            repeat: event.repeat,
+        }
+    }
 }
 
 #[cfg(test)]

@@ -5,6 +5,8 @@ use xilem::{
     ViewCtx,
     core::{MessageProxy, NoElement, View},
 };
+#[cfg(test)]
+mod tests;
 
 struct Output {
     completed: Completed,

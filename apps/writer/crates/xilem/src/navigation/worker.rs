@@ -10,6 +10,8 @@ use xilem::{
     ViewCtx,
     core::{MessageProxy, NoElement, View},
 };
+#[cfg(test)]
+mod tests;
 
 pub(crate) struct Job {
     pub request: Arc<Request>,

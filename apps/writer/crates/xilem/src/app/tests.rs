@@ -1,4 +1,6 @@
 use super::*;
+#[path = "workflow/tests.rs"]
+mod workflow;
 
 impl App {
     pub(crate) fn with_writer(writer: Writer) -> Self {

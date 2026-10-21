@@ -1,5 +1,5 @@
 use super::*;
-use crate::navigation::worker;
+use crate::navigation::worker::Job as NavigationJob;
 use masonry::testing::TestHarness;
 use recite_writer_session::ProjectSession;
 use recite_writer_session::project::save::sequence;
@@ -10,6 +10,8 @@ use xilem::core::{
     DynMessage, MessageCtx, ProxyError, RawProxy, SendMessage, View as _, ViewId, ViewPathTracker,
 };
 use xilem::{ViewCtx, WidgetView};
+pub(crate) mod mounted;
+pub(crate) mod worker;
 
 pub(crate) fn project(source: &str) -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
@@ -146,7 +148,7 @@ pub(crate) fn click(writer: &mut Writer, names: &[&str]) -> Result<(), Box<dyn s
 
 pub(crate) fn finish_navigation(
     writer: &mut Writer,
-    requests: &mut async_mpsc::UnboundedReceiver<worker::Job>,
+    requests: &mut async_mpsc::UnboundedReceiver<NavigationJob>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     while writer.navigation.busy() {
         let completed = requests.try_recv()?.execute();
@@ -200,7 +202,7 @@ pub(crate) fn flush_native<V: WidgetView<Writer, Widget: Sized>>(
     state: &mut V::ViewState,
     jobs: (
         &mut async_mpsc::UnboundedReceiver<sequence::Work>,
-        &mut async_mpsc::UnboundedReceiver<worker::Job>,
+        &mut async_mpsc::UnboundedReceiver<NavigationJob>,
     ),
     make: fn(&Writer) -> V,
 ) -> Result<(), Box<dyn std::error::Error>> {

@@ -315,13 +315,21 @@ fn watched_external_change_returns_an_unsaved_editable_draft()
     assert!(has(&test, "changed outside Recite"));
     support::click(&mut test, "Compare external changes")?;
     assert!(has(&test, "Changed externally."));
-    support::click(&mut test, "Your draft")?;
-    support::click(&mut test, "Use as editable draft")?;
+    support::click(&mut test, "Keep Writer version")?;
+    support::click(&mut test, "Confirm inspected version")?;
     assert_eq!(
         std::fs::read_to_string(dir.path().join("a.recite"))?,
         external
     );
+    assert!(has(&test, "Kept Writer's document and draft."));
+    assert!(has(&test, "Previous session retained at"));
+    support::click(&mut test, "Source")?;
     assert!(has(&test, "Hello."));
+    support::click(&mut test, "Save")?;
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("a.recite"))?,
+        original
+    );
     Ok(())
 }
 

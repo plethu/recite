@@ -3,6 +3,8 @@ use super::*;
 use crate::tests::support;
 use std::fs;
 use tokio::sync::mpsc;
+#[path = "builds/tests.rs"]
+mod builds;
 #[path = "visual/tests.rs"]
 mod visual;
 

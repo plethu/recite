@@ -122,9 +122,13 @@ fn forwarded_cancellation_also_discards_a_completed_load() -> Result<(), Box<dyn
 }
 
 #[test]
-fn source_route_hint_applies_only_to_its_document() -> Result<(), Box<dyn std::error::Error>> {
-    for (scene, expected) in [("scene.recite", true), ("other.recite", false)] {
+fn source_route_opens_its_requested_document() -> Result<(), Box<dyn std::error::Error>> {
+    for scene in ["scene.recite", "other.recite"] {
         let dir = project()?;
+        std::fs::write(
+            dir.path().join("other.recite"),
+            ":: other default\n-> END\n",
+        )?;
         let load = Load::open(
             OpenProject {
                 path: dir.path().to_owned(),
@@ -134,17 +138,50 @@ fn source_route_hint_applies_only_to_its_document() -> Result<(), Box<dyn std::e
             None,
         )?;
         let opened = result(&load)?;
+        assert_eq!(opened.files.document_name()?, scene);
         assert_eq!(
-            opened.workbench.view() == &recite_writer_model::View::Source,
-            expected
+            opened.workbench.document().source(),
+            std::fs::read_to_string(dir.path().join(scene))?
         );
-        assert_eq!(
-            opened.view == Some(recite_config::WriterView::Source),
-            expected
-        );
+        assert_eq!(opened.workbench.view(), &recite_writer_model::View::Source);
+        assert_eq!(opened.view, Some(recite_config::WriterView::Source));
         assert!(!opened.workbench.has_draft());
     }
     Ok(())
+}
+
+#[test]
+fn missing_source_route_rejects_without_opening_another_document()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = project()?;
+    let load = Load::open(
+        OpenProject {
+            path: dir.path().to_owned(),
+            view: recite_config::WriterView::Script,
+            route: Some("recite://writer/write?scene=missing.recite&view=source".into()),
+        },
+        None,
+    )?;
+    assert!(matches!(result(&load), Err(FileError::Selection)));
+    assert!(!dir.path().join(".recite-manifest-draft.lock").exists());
+    assert!(
+        !dir.path()
+            .join("scene.recite.recite-editor-recovery.lock")
+            .exists()
+    );
+    let mut reopened = ProjectFiles::open(dir.path())?;
+    reopened.workbench()?;
+    Ok(())
+}
+
+#[test]
+fn initial_source_hint_does_not_apply_to_another_document() {
+    let route = Some("recite://writer/write?scene=scene.recite&view=source");
+    assert_eq!(
+        crate::navigation::initial_view(route, "scene.recite"),
+        Some(recite_config::WriterView::Source)
+    );
+    assert_eq!(crate::navigation::initial_view(route, "other.recite"), None);
 }
 
 #[test]

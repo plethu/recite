@@ -66,7 +66,6 @@ impl Attention {
         if screen != Screen::Write {
             return;
         }
-        self.writing_target = root.focused_widget().or(self.writing_target);
         if matches!(self.writing, WritingFocus::Workspace) && !context.attention.is_focused() {
             self.last = root.focused_widget().or(self.last);
         }
@@ -91,6 +90,7 @@ impl Attention {
                 move_focus(root, request.motion());
             }
         }
+        self.writing_target = root.focused_widget().or(self.writing_target);
     }
 }
 fn focus_script(root: &mut RenderRoot) {

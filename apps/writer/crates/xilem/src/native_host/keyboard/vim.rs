@@ -2,7 +2,6 @@
 use super::*;
 use crate::app::keyboard::{Action, CommandGeneration};
 use recite_writer_session::commands::vim::{self, Chord};
-use xilem::winit::event::KeyEvent;
 
 struct Prefix {
     generation: CommandGeneration,
@@ -41,7 +40,7 @@ impl Vim {
         context: &Context,
         focus: Option<WidgetId>,
         kind: focus::Kind,
-        event: &KeyEvent,
+        event: Keystroke<'_>,
         modifiers: ModifiersState,
     ) -> bool {
         self.synchronize(context, focus);
@@ -65,7 +64,7 @@ impl Vim {
         ) {
             return false;
         }
-        let chord = match &event.logical_key {
+        let chord = match event.logical_key {
             keyboard::Key::Character(value) if modifiers == ModifiersState::CONTROL => {
                 Chord::Control(value)
             }

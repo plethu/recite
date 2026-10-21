@@ -29,7 +29,11 @@ impl Document {
 }
 impl AnalysisStamp {
     pub fn is_current(&self, document: &Document) -> bool {
-        self == &document.analysis_stamp()
+        self.key == document.key
+            && self.version == document.version
+            && Weak::ptr_eq(&self.source, &Arc::downgrade(&document.source))
+            && Weak::ptr_eq(&self.kernel, &Arc::downgrade(&document.kernel))
+            && Weak::ptr_eq(&self.context, &Arc::downgrade(&document.context))
     }
 }
 impl PartialEq for AnalysisStamp {

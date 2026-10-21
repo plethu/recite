@@ -1,9 +1,91 @@
 use super::*;
 use crate::tests::support::NoProxy;
+use crate::tests::support::mounted::Mounted;
+use recite_config::{Keymap, WriterPaneSide, WriterTheme};
 use std::sync::Arc;
 use xilem::masonry::core;
 use xilem::masonry::widgets;
 use xilem::{ViewCtx, core::View, masonry::testing::TestHarness};
+
+fn surface(app: &mut App) -> impl WidgetView<App, Widget = widgets::Passthrough> + use<> {
+    crate::keyed::keyed((), settings(app))
+}
+
+#[test]
+fn personal_preferences_apply_through_mounted_controls_and_retain_shortcut_drafts() {
+    let mut mounted = Mounted::new(App::empty(), surface);
+    for caption in [
+        "Dark theme",
+        "Monochrome colours",
+        "Reduce animation",
+        "Always show shortcut hints",
+        "Zoom around the pointer",
+        "Confirm before closing",
+        "Vim keymap",
+        "Script pane on the right",
+        "Increase Reading text size",
+        "Decrease Reading text size",
+        "Increase UI scale",
+        "Decrease UI scale",
+    ] {
+        mounted.activate(caption);
+        assert_eq!(mounted.state.status, "Preferences saved.", "{caption}");
+    }
+    assert_eq!(
+        mounted.state.preferences.config.writer.theme,
+        WriterTheme::Dark
+    );
+    assert_eq!(mounted.state.preferences.config.ui.keymap, Keymap::Vim);
+    assert_eq!(
+        mounted.state.preferences.config.writer.pane_side,
+        WriterPaneSide::Right
+    );
+    assert!(mounted.state.preferences.config.writer.monochrome);
+    assert!(mounted.state.preferences.config.writer.reduced_motion);
+    mounted.activate("Light theme");
+    mounted.activate("Standard keymap");
+    mounted.activate("Script pane on the left");
+    mounted.activate("Keyboard shortcuts");
+    mounted.replace_text("Shortcut binding", "Primary+Alt+S");
+    assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
+    mounted.activate("Next commands");
+    mounted.activate("Previous commands");
+    assert_eq!(mounted.state.shortcut_draft(), "Primary+Alt+S");
+    mounted.activate("Save shortcut");
+    assert_eq!(
+        mounted
+            .state
+            .preferences
+            .config
+            .writer
+            .shortcuts
+            .binding(WriterCommand::Save),
+        "Primary+Alt+S"
+    );
+    assert!(
+        mounted
+            .state
+            .settings
+            .feedback
+            .as_ref()
+            .unwrap()
+            .contains("Shortcut saved")
+    );
+    mounted.activate("Reset shortcuts");
+    assert_eq!(
+        mounted
+            .state
+            .preferences
+            .config
+            .writer
+            .shortcuts
+            .binding(WriterCommand::Save),
+        "Primary+S"
+    );
+    assert!(mounted.state.settings.drafts.is_empty());
+    mounted.activate("Personal preferences");
+    assert_eq!(mounted.state.preferences.config.ui.keymap, Keymap::Standard);
+}
 
 #[test]
 fn personal_controls_expose_their_native_checkbox_names() {

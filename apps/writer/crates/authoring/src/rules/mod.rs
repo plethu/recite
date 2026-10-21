@@ -88,11 +88,11 @@ impl ReplyRules {
         if self.condition != self.original_condition {
             match (&self.condition, &self.condition_range) {
                 (Some(condition), Some(range)) => {
-                    patches.push((range.clone(), condition.source()?))
+                    patches.push((range.clone(), condition.requirement_source()?))
                 }
                 (Some(condition), None) => patches.push((
                     self.header_fields_end..self.header_fields_end,
-                    format!(" requires=({})", condition.source()?),
+                    format!(" requires={}", condition.requirement_source()?),
                 )),
                 (None, Some(_)) => patches.push((
                     self.requirement_range.clone().ok_or(EditError::Position)?,

@@ -14,6 +14,8 @@ use xilem::{
     view::{CrossAxisAlignment, flex_col, flex_row, radio_group, text_input},
 };
 const PAGE: usize = 5;
+#[cfg(test)]
+mod tests;
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
 enum Mode {
     #[default]

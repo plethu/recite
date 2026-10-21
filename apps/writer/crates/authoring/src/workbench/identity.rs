@@ -6,6 +6,12 @@ use crate::{AnalysisStamp, DraftSnapshot};
 #[derive(Clone)]
 pub struct NavigationStamp {
     analysis: AnalysisStamp,
+    selection: SelectionStamp,
+}
+
+/// Selection authority composes with either a weak stamp or a prepared analysis snapshot.
+#[derive(Clone)]
+pub(super) struct SelectionStamp {
     pub(super) view: View,
     pub(super) script: Option<String>,
     pub(super) draft: DraftSnapshot,
@@ -17,6 +23,12 @@ impl Workbench {
     pub fn navigation_stamp(&self) -> NavigationStamp {
         NavigationStamp {
             analysis: self.document.analysis_stamp(),
+            selection: self.selection_stamp(),
+        }
+    }
+
+    pub(super) fn selection_stamp(&self) -> SelectionStamp {
+        SelectionStamp {
             view: self.view.clone(),
             script: self.script_selection.clone(),
             draft: self.draft.clone(),
@@ -28,8 +40,12 @@ impl Workbench {
 }
 impl NavigationStamp {
     pub fn is_current(&self, model: &Workbench) -> bool {
-        self.analysis.is_current(model.document())
-            && self.view == model.view
+        self.analysis.is_current(model.document()) && self.selection.is_current(model)
+    }
+}
+impl SelectionStamp {
+    pub(super) fn is_current(&self, model: &Workbench) -> bool {
+        self.view == model.view
             && self.script == model.script_selection
             && self.draft == model.draft
             && self.loaded == model.loaded
