@@ -50,7 +50,7 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
         let scene = writer.map.scene(writer).unwrap();
         assert_eq!(scene.scope.as_ref().unwrap().node_indices.len(), 80);
         assert_eq!(scene.projection.graph.blocks.len(), count);
-        // Both fixed inputs measured 239 nodes and three visible cards, including current chrome.
+        // Bound the visible neighbourhood together with its native navigation controls.
         assert!(
             nodes <= 240,
             "bounded Map mounted {nodes} accessibility nodes"

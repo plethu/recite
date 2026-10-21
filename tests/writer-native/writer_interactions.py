@@ -32,8 +32,7 @@ def launch(api, bus, registry, arguments, log, manuscript=True):
             (
                 address
                 for address, name in window.nodes()
-                if name == "Manuscript"
-                and window.call(address, "Accessible", "GetRole")[0] == 79
+                if name == "Manuscript" and window.call(address, "Accessible", "GetRole")[0] == 79
             ),
             None,
         ),

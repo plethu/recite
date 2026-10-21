@@ -34,17 +34,24 @@ def run(api, bus, registry, binary, output):
                 'format_version = 1\n[project]\ncontent_set = "rules"\n'
                 'version = "1"\nschema = "schema.json"\n'
             )
-            (project / "schema.json").write_text(json.dumps({
-                "schema_version": 1,
-                "registries": {"sounds": {"values": ["bell", "gate_latch"]}},
-                "conditions": {
-                    "standing": {"params": [{"name": "minimum", "type": "int"}]},
-                    "ready": {"params": []},
-                },
-                "effects": {"play_sfx": {"modes": ["immediate"], "params": [
-                    {"name": "sound", "type": "registry:sounds"}
-                ]}},
-            }))
+            (project / "schema.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "registries": {"sounds": {"values": ["bell", "gate_latch"]}},
+                        "conditions": {
+                            "standing": {"params": [{"name": "minimum", "type": "int"}]},
+                            "ready": {"params": []},
+                        },
+                        "effects": {
+                            "play_sfx": {
+                                "modes": ["immediate"],
+                                "params": [{"name": "sound", "type": "registry:sounds"}],
+                            }
+                        },
+                    }
+                )
+            )
             source = project / "scene.recite"
             source.write_text(SOURCE)
             with output.with_suffix(".writer.log").open("w") as log:
@@ -82,7 +89,10 @@ def run(api, bus, registry, binary, output):
                 results["apply_reprojects_without_replacing_argument_field_or_saving"] = True
                 fill(window, minimum, "-")
                 key("s", control=True)
-                window.wait(lambda: window.find_text("needs a valid whole number value.", contains=True), "invalid argument feedback")
+                window.wait(
+                    lambda: window.find_text("needs a valid whole number value.", contains=True),
+                    "invalid argument feedback",
+                )
                 capture(output, "-invalid")
                 assert source.read_text() == SOURCE
                 fill(window, minimum, "9")
@@ -97,10 +107,18 @@ def run(api, bus, registry, binary, output):
                 sound = field(window, "play_sfx · sound · sounds")
                 window.wait(lambda: window.text(sound) == "bell", "staged registry selection")
                 key("s", control=True)
-                window.wait(lambda: "standing(9)" in source.read_text() and "play_sfx(bell)" in source.read_text(), "checked reply save")
+                window.wait(
+                    lambda: (
+                        "standing(9)" in source.read_text()
+                        and "play_sfx(bell)" in source.read_text()
+                    ),
+                    "checked reply save",
+                )
                 assert "# Keep this effect comment." in source.read_text()
                 assert "reply@22222222222222222222" in source.read_text()
-                results["invalid_save_preserves_source_then_declared_choice_saves_with_comments_and_ids"] = True
+                results[
+                    "invalid_save_preserves_source_then_declared_choice_saves_with_comments_and_ids"
+                ] = True
                 window.act("Edit reply text")
                 window.wait(lambda: window.find("Manuscript"), "reply text editor")
                 results["rules_returns_to_editable_reply_text"] = True

@@ -1,6 +1,11 @@
 [workspace]
 resolver = "3"
-exclude = ["vendor/xilem/*", "vendor/copypasta", "vendor/accesskit-atspi-common", "vendor/accesskit-consumer"]
+exclude = [
+    "vendor/xilem/*",
+    "vendor/copypasta",
+    "vendor/accesskit-atspi-common",
+    "vendor/accesskit-consumer"
+]
 members = ["crates/authoring", "crates/freya", "crates/grammar", "crates/session", "crates/xilem"]
 
 [workspace.package]

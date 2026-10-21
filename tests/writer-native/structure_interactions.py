@@ -79,7 +79,9 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         results["structured_save_seconds"] = time.monotonic() - started
         window.wait(lambda: window.find_text("Saved"), "save completion", timeout=30)
         assert source.read_text().startswith("# A new scene.")
-        results["structured_creation_applies_prose_before_leaving_and_preserves_unsaved_boundary"] = True
+        results[
+            "structured_creation_applies_prose_before_leaving_and_preserves_unsaved_boundary"
+        ] = True
         window.close_clean()
         assert process.wait(timeout=5) == 0
     except Exception:

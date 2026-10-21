@@ -41,13 +41,18 @@ def run(api, bus, registry, binary, output):
                 source = project / "scene.recite"
                 source.write_text(SOURCE)
                 po = project / "fr.po"
-                po.write_text(PO + '\n#. file: scene.recite\n#. block: opening\nmsgctxt "22222222222222222222"\nmsgid "A second paragraph."\nmsgstr "Un second paragraphe."\n')
+                po.write_text(
+                    PO
+                    + '\n#. file: scene.recite\n#. block: opening\nmsgctxt "22222222222222222222"\nmsgid "A second paragraph."\nmsgstr "Un second paragraphe."\n'
+                )
                 config = project / "config.toml"
                 config.write_text(f"config_version=1\n[writer.presentation]\nui_scale={scale}\n")
                 environment = dict(os.environ, RECITE_CONFIG=str(config))
                 arguments = [str(binary), "--project", str(project)]
                 with output.with_suffix(f".{scale}.writer.log").open("w") as log:
-                    process = subprocess.Popen(arguments, env=environment, stdout=log, stderr=subprocess.STDOUT)
+                    process = subprocess.Popen(
+                        arguments, env=environment, stdout=log, stderr=subprocess.STDOUT
+                    )
                     window = attach(api, bus, registry, process)
                     fill(window, "Manuscript", "Unapplied source stays private.")
                     open_catalogue(window, po)
@@ -56,9 +61,15 @@ def run(api, bus, registry, binary, output):
                     edit(window, "Saved by the translation shortcut.")
                     window.focus(field(window, "Translation form 1"))
                     key("s", control=True)
-                    window.wait(lambda: "Saved by the translation shortcut." in po.read_text(), "translation PO write")
+                    window.wait(
+                        lambda: "Saved by the translation shortcut." in po.read_text(),
+                        "translation PO write",
+                    )
                     window.reveal_start("Copy link to this view")
-                    window.wait(lambda: window.find_text("Translations saved."), "translation-local shortcut completion")
+                    window.wait(
+                        lambda: window.find_text("Translations saved."),
+                        "translation-local shortcut completion",
+                    )
                     assert "Saved by the translation shortcut." in po.read_text()
                     assert source.read_text() == SOURCE
                     window.reveal_start("Return to writing")
@@ -75,9 +86,14 @@ def run(api, bus, registry, binary, output):
                     assert window.text(field(window, "Search translations")) == "tram"
                     key("Right", alt=True)
                     reveal_field(window, "Translation form 1")
-                    assert window.text(field(window, "Translation form 1")) == "Saved by the translation shortcut."
+                    assert (
+                        window.text(field(window, "Translation form 1"))
+                        == "Saved by the translation shortcut."
+                    )
                     capture(output, f"-history-{scale}")
-                    results[f"ordinary_history_and_alt_arrows_restore_catalogue_query_{scale}"] = True
+                    results[f"ordinary_history_and_alt_arrows_restore_catalogue_query_{scale}"] = (
+                        True
+                    )
                     edit(window, "Discard first translation.")
                     window.reveal_start("Return to translation queue")
                     window.act("Return to translation queue")
@@ -87,7 +103,10 @@ def run(api, bus, registry, binary, output):
                     edit(window, "Discard second translation.")
                     window.reveal_start("Close")
                     window.act("Close")
-                    window.wait(lambda: window.find("Discard translations and close"), "explicit translation discard")
+                    window.wait(
+                        lambda: window.find("Discard translations and close"),
+                        "explicit translation discard",
+                    )
                     window.focus(window._outer_scrollbar())
                     key("Home")
                     time.sleep(0.15)
@@ -103,23 +122,34 @@ def run(api, bus, registry, binary, output):
                     assert source.read_text() == SOURCE
                     assert "Discard" not in po.read_text()
                     assert "Saved by the translation shortcut." in po.read_text()
-                    process = subprocess.Popen(arguments, env=environment, stdout=log, stderr=subprocess.STDOUT)
+                    process = subprocess.Popen(
+                        arguments, env=environment, stdout=log, stderr=subprocess.STDOUT
+                    )
                     window = attach(api, bus, registry, process)
                     manuscript(window)
                     open_catalogue(window, po)
                     search_entries(window, "tram")
                     open_entry(window)
-                    assert window.text(field(window, "Translation form 1")) == "Saved by the translation shortcut."
+                    assert (
+                        window.text(field(window, "Translation form 1"))
+                        == "Saved by the translation shortcut."
+                    )
                     window.reveal_start("Return to translation queue")
                     window.act("Return to translation queue")
                     queue_ready(window)
                     search_entries(window, "second")
                     open_entry(window)
-                    assert window.text(field(window, "Translation form 1")) == "Un second paragraphe."
-                    results[f"discard_all_translations_does_not_restore_po_drafts_or_write_source_{scale}"] = True
+                    assert (
+                        window.text(field(window, "Translation form 1")) == "Un second paragraphe."
+                    )
+                    results[
+                        f"discard_all_translations_does_not_restore_po_drafts_or_write_source_{scale}"
+                    ] = True
                     window.reveal_start("Close")
                     window.act("Close")
-                    window.wait(lambda: window.find("Close and keep recovery"), "retained source recovery")
+                    window.wait(
+                        lambda: window.find("Close and keep recovery"), "retained source recovery"
+                    )
                     window.act("Close and keep recovery")
                     assert process.wait(timeout=10) == 0
     except Exception as error:

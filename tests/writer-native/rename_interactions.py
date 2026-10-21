@@ -36,9 +36,15 @@ def run(api, bus, registry, binary, output):
             manifest.write_text(original)
             with output.with_suffix(".writer.log").open("w") as log:
                 process = subprocess.Popen(
-                    [str(binary), "--project", str(root), "--route",
-                     "recite://writer/write?scene=scene.recite&passage=11111111111111111111"],
-                    stdout=log, stderr=subprocess.STDOUT,
+                    [
+                        str(binary),
+                        "--project",
+                        str(root),
+                        "--route",
+                        "recite://writer/write?scene=scene.recite&passage=11111111111111111111",
+                    ],
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
                 )
                 window = attach(api, bus, registry, process)
                 try:
@@ -58,19 +64,27 @@ def run(api, bus, registry, binary, output):
                 fill(window, "Current beat name", "old")
                 fill(window, "New beat name", "new")
                 window.act("Review project rename")
-                window.wait(lambda: window.find_text("Rename reviewed.", prefix=True), "reviewed rename")
+                window.wait(
+                    lambda: window.find_text("Rename reviewed.", prefix=True), "reviewed rename"
+                )
                 capture(output, "-review")
                 visited = set()
                 for _ in range(30):
-                    caption = window.wait(lambda: window.find_text("Review ·", prefix=True), "review caption")
+                    caption = window.wait(
+                        lambda: window.find_text("Review ·", prefix=True), "review caption"
+                    )
                     visited.add(window.text(caption))
                     if not window.enabled("More rename changes"):
                         break
                     previous = window.text(caption)
                     window.act("More rename changes")
-                    window.wait(lambda: window.find_text("Review ·", prefix=True)
-                                and window.text(window.find_text("Review ·", prefix=True)) != previous,
-                                "next rename change")
+                    window.wait(
+                        lambda: (
+                            window.find_text("Review ·", prefix=True)
+                            and window.text(window.find_text("Review ·", prefix=True)) != previous
+                        ),
+                        "next rename change",
+                    )
                 else:
                     raise AssertionError("rename review did not finish")
                 assert any("zz-other.recite" in caption for caption in visited)
@@ -80,7 +94,10 @@ def run(api, bus, registry, binary, output):
                 results["review_covers_references_and_manifest_without_writing_sources"] = True
                 window.reveal_start("Apply project rename")
                 window.act("Apply project rename")
-                window.wait(lambda: window.find_text("Project rename staged.", prefix=True), "grouped rename")
+                window.wait(
+                    lambda: window.find_text("Project rename staged.", prefix=True),
+                    "grouped rename",
+                )
                 capture(output, "-staged")
                 assert source.read_text() == before and other.read_text() == reference
                 assert manifest.read_text() == original
@@ -95,14 +112,31 @@ def run(api, bus, registry, binary, output):
                 results["exclusive_worker_preserves_mounted_field_and_native_history"] = True
                 journal = root / ".recite-manifest-draft.json"
                 command(window, "Undo")
-                window.wait(lambda: tomllib.loads(json.loads(journal.read_text())["text"])["scenes"][0]["block"] == "old", "grouped global undo")
+                window.wait(
+                    lambda: (
+                        tomllib.loads(json.loads(journal.read_text())["text"])["scenes"][0]["block"]
+                        == "old"
+                    ),
+                    "grouped global undo",
+                )
                 command(window, "Redo")
-                window.wait(lambda: tomllib.loads(json.loads(journal.read_text())["text"])["scenes"][0]["block"] == "new", "grouped global redo")
+                window.wait(
+                    lambda: (
+                        tomllib.loads(json.loads(journal.read_text())["text"])["scenes"][0]["block"]
+                        == "new"
+                    ),
+                    "grouped global redo",
+                )
                 results["global_undo_redo_restores_grouped_project_change"] = True
                 window.act("Save all")
-                window.wait(lambda: ":: new" in source.read_text()
-                            and "scene.recite::new" in other.read_text()
-                            and tomllib.loads(manifest.read_text())["scenes"][0]["block"] == "new", "all renamed files saved")
+                window.wait(
+                    lambda: (
+                        ":: new" in source.read_text()
+                        and "scene.recite::new" in other.read_text()
+                        and tomllib.loads(manifest.read_text())["scenes"][0]["block"] == "new"
+                    ),
+                    "all renamed files saved",
+                )
                 results["save_all_publishes_manuscript_references_and_manifest"] = True
                 window.close_clean()
                 assert process.wait(timeout=5) == 0

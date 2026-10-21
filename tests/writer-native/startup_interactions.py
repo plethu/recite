@@ -13,8 +13,14 @@ from writer_interactions import SOURCE, capture
 
 def field(window, name):
     return window.wait(
-        lambda: next((node for node, label in window.nodes()
-                     if label == name and window.call(node, "Accessible", "GetRole")[0] == 79), None),
+        lambda: next(
+            (
+                node
+                for node, label in window.nodes()
+                if label == name and window.call(node, "Accessible", "GetRole")[0] == 79
+            ),
+            None,
+        ),
         name + " editable field",
     )
 
@@ -35,9 +41,16 @@ def run(api, bus, registry, binary, output):
             root = Path(temporary)
             project = root / "project"
             project.mkdir()
-            (project / "recite.project.toml").write_text('format_version = 1\n[project]\ncontent_set = "startup"\nversion = "1"\n')
+            (project / "recite.project.toml").write_text(
+                'format_version = 1\n[project]\ncontent_set = "startup"\nversion = "1"\n'
+            )
             (project / "scene.recite").write_text(SOURCE)
-            (project / "zz-other.recite").write_text(SOURCE.replace("The last tram waits.", "Another document.").replace("opening", "other").replace("11111111111111111111", "33333333333333333333").replace("22222222222222222222", "44444444444444444444"))
+            (project / "zz-other.recite").write_text(
+                SOURCE.replace("The last tram waits.", "Another document.")
+                .replace("opening", "other")
+                .replace("11111111111111111111", "33333333333333333333")
+                .replace("22222222222222222222", "44444444444444444444")
+            )
             with output.with_suffix(".writer.log").open("w") as log:
                 process = subprocess.Popen([str(binary)], stdout=log, stderr=subprocess.STDOUT)
                 window = attach(api, bus, registry, process)
@@ -60,11 +73,20 @@ def run(api, bus, registry, binary, output):
                 node = manuscript(window)
                 window.focus(node)
                 key("z", control=True)
-                window.wait(lambda: window.text(node) == "The last tram waits.", "retained native undo")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.", "retained native undo"
+                )
                 results["project_form_preserves_native_history"] = True
-                forwarded = subprocess.run([str(binary), "--project", str(project), "--document", "zz-other.recite"], stdout=log, stderr=subprocess.STDOUT, timeout=10)
+                forwarded = subprocess.run(
+                    [str(binary), "--project", str(project), "--document", "zz-other.recite"],
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    timeout=10,
+                )
                 assert forwarded.returncode == 0
-                window.wait(lambda: window.find("Current · zz-other.recite"), "forwarded document selector")
+                window.wait(
+                    lambda: window.find("Current · zz-other.recite"), "forwarded document selector"
+                )
                 results["second_launch_selects_requested_document"] = True
                 capture(output, "-opened")
                 window.act("Projects")
@@ -76,16 +98,24 @@ def run(api, bus, registry, binary, output):
                 fill(window, "Project folder", str(created))
                 fill(window, "Project name", "A native beginning")
                 window.act("Create project")
-                window.wait(lambda: created.joinpath("recite.project.toml").is_file(), "starter project files")
+                window.wait(
+                    lambda: created.joinpath("recite.project.toml").is_file(),
+                    "starter project files",
+                )
                 window.wait(lambda: not window.find("Create project"), "created project opened")
                 manuscript(window)
-                assert 'content_set = "a_native_beginning"' in created.joinpath("recite.project.toml").read_text()
+                assert (
+                    'content_set = "a_native_beginning"'
+                    in created.joinpath("recite.project.toml").read_text()
+                )
                 results["created_project_uses_shared_starter"] = True
                 capture(output, "-created")
                 window.act("Projects")
                 field(window, "Project folder")
                 window.act("Try temporary examples")
-                window.wait(lambda: window.find("Temporary examples"), "temporary example navigation")
+                window.wait(
+                    lambda: window.find("Temporary examples"), "temporary example navigation"
+                )
                 assert not window.find("Save file")
                 node = manuscript(window)
                 before = window.text(node)
@@ -95,7 +125,10 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == before + "x", "temporary example draft")
                 capture(output, "-examples")
                 window.act("Close")
-                window.wait(lambda: window.find("Close and discard example changes"), "temporary close choice")
+                window.wait(
+                    lambda: window.find("Close and discard example changes"),
+                    "temporary close choice",
+                )
                 assert not window.find("Save all and close")
                 assert not window.find("Close and keep recovery")
                 capture(output, "-example-close")

@@ -127,7 +127,9 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.find("Search query"), "Vim normal search")
                 key("Escape")
                 window.wait(lambda: not window.find("Search query"), "normal lookup closed")
-                window.wait(lambda: focused(window, previous), "normal lookup returns to navigation")
+                window.wait(
+                    lambda: focused(window, previous), "normal lookup returns to navigation"
+                )
                 results["cancelled_prefix_and_normal_text_keep_distinct_ownership"] = True
                 key("F6")
                 window.wait(lambda: focused(window, node), "standard next pane to manuscript")

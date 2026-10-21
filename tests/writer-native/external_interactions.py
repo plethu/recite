@@ -33,7 +33,8 @@ def run(api, bus, registry, binary, output):
             with output.with_suffix(".writer.log").open("w") as log:
                 process = subprocess.Popen(
                     [str(binary), "--project", str(project), "--editor", str(editor)],
-                    stdout=log, stderr=subprocess.STDOUT,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
                 )
                 window = attach(api, bus, registry, process)
                 node = manuscript(window)
@@ -45,20 +46,28 @@ def run(api, bus, registry, binary, output):
                 disk = SOURCE.replace("The last tram waits.", "The external tram left.")
                 source.write_text(disk)
                 window.act("Compare disk changes")
-                window.wait(lambda: window.find_text("Disk comparison ready.", prefix=True), "observational comparison")
+                window.wait(
+                    lambda: window.find_text("Disk comparison ready.", prefix=True),
+                    "observational comparison",
+                )
                 assert source.read_text() == disk
                 window.reveal_start("Return to writing")
                 capture(output, "-comparison")
                 window.reveal_start("Keep Writer version")
                 window.act("Keep Writer version")
-                window.wait(lambda: window.find_text("Kept Writer's document", prefix=True), "keep Writer adoption")
+                window.wait(
+                    lambda: window.find_text("Kept Writer's document", prefix=True),
+                    "keep Writer adoption",
+                )
                 window.reveal_start("Return to writing")
                 window.act("Return to writing")
                 current = manuscript(window)
                 assert tuple(current) == tuple(node)
                 assert window.text(current) == prose + "x"
                 assert source.read_text() == disk
-                results["comparison_and_keep_preserve_mounted_pending_field_without_source_write"] = True
+                results[
+                    "comparison_and_keep_preserve_mounted_pending_field_without_source_write"
+                ] = True
                 window.focus(current)
                 key("z", control=True)
                 window.wait(lambda: window.text(current) == prose, "retained native undo")
@@ -66,10 +75,16 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(current) == prose + "x", "retained native redo")
                 results["keep_retains_native_field_undo_and_redo"] = True
                 window.act("Compare disk changes")
-                window.wait(lambda: window.find_text("Disk comparison ready.", prefix=True), "fresh merge comparison")
+                window.wait(
+                    lambda: window.find_text("Disk comparison ready.", prefix=True),
+                    "fresh merge comparison",
+                )
                 window.reveal_end("Export merge draft")
                 window.act("Export merge draft")
-                window.wait(lambda: window.find_text("Merge draft exported.", prefix=True), "detached merge draft")
+                window.wait(
+                    lambda: window.find_text("Merge draft exported.", prefix=True),
+                    "detached merge draft",
+                )
                 window.reveal_end("Open merge draft in editor")
                 window.act("Open merge draft in editor")
                 window.wait(receipt.exists, "literal IDE argument")
@@ -80,15 +95,23 @@ def run(api, bus, registry, binary, output):
                 assert prose + "x" in draft.read_text()
                 merged = SOURCE.replace("The last tram waits.", "Reviewed merged tram.")
                 draft.write_text(merged)
-                window.wait(lambda: window.enabled("Open merge draft in editor"), "launcher completion")
+                window.wait(
+                    lambda: window.enabled("Open merge draft in editor"), "launcher completion"
+                )
                 window.reveal_end("Import reviewed merge")
                 window.act("Import reviewed merge")
-                window.wait(lambda: window.find_text("Reviewed merge adopted", prefix=True), "checked merge adoption")
+                window.wait(
+                    lambda: window.find_text("Reviewed merge adopted", prefix=True),
+                    "checked merge adoption",
+                )
                 assert source.read_text() == disk
                 assert list(project.glob(".recite-recovered-*.json"))
                 window.reveal_start("Return to writing")
                 window.act("Return to writing")
-                window.wait(lambda: window.text(manuscript(window)) == "Reviewed merged tram.", "selected merged prose")
+                window.wait(
+                    lambda: window.text(manuscript(window)) == "Reviewed merged tram.",
+                    "selected merged prose",
+                )
                 results["ide_merge_import_validates_and_adopts_without_writing_source"] = True
                 capture(output, "-adopted")
                 window.reveal_start("Save file")
@@ -102,14 +125,18 @@ def run(api, bus, registry, binary, output):
                 process = subprocess.Popen(
                     [str(binary), "--project", str(project)],
                     env=dict(os.environ, RECITE_CONFIG=str(config)),
-                    stdout=log, stderr=subprocess.STDOUT,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
                 )
                 window = attach(api, bus, registry, process)
                 manuscript(window)
                 source.write_text(merged.replace("Reviewed merged tram.", "A newer external tram."))
                 window.reveal_start("Compare disk changes")
                 window.act("Compare disk changes")
-                window.wait(lambda: window.find_text("Disk comparison ready.", prefix=True), "large-scale comparison")
+                window.wait(
+                    lambda: window.find_text("Disk comparison ready.", prefix=True),
+                    "large-scale comparison",
+                )
                 capture(output, "-comparison200")
                 window.reveal_start("Return to writing")
                 capture(output, "-comparison200-top")
@@ -117,7 +144,10 @@ def run(api, bus, registry, binary, output):
                 window.focus(scrollbar)
                 for _ in range(3):
                     key("Down")
-                window.wait(lambda: window.find_text("A newer external tram.", contains=True), "large source comparison")
+                window.wait(
+                    lambda: window.find_text("A newer external tram.", contains=True),
+                    "large source comparison",
+                )
                 capture(output, "-comparison200-sources")
                 window.reveal_start("Close")
                 window.close_clean()

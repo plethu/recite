@@ -5,6 +5,8 @@ exclude = [
     "apps/writer/vendor/copypasta/**",
     "apps/writer/vendor/accesskit-atspi-common/README.md",
     "apps/writer/vendor/accesskit-atspi-common/CHANGELOG.md",
+    "apps/writer/vendor/accesskit-consumer/README.md",
+    "apps/writer/vendor/accesskit-consumer/CHANGELOG.md",
     "**/node_modules/**",
     "**/target/**",
     "docs-site/dist/**",

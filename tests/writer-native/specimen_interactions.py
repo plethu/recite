@@ -29,25 +29,39 @@ def run(api, bus, registry, binary, output):
             original = 'config_version=1\n[writer]\ntheme="dark"\nmonochrome=true\n'
             config.write_text(original)
             with output.with_suffix(".writer.log").open("w") as log:
-                process = subprocess.Popen([str(binary), "--design-system"], env=dict(os.environ, RECITE_CONFIG=str(config)), stdout=log, stderr=subprocess.STDOUT)
+                process = subprocess.Popen(
+                    [str(binary), "--design-system"],
+                    env=dict(os.environ, RECITE_CONFIG=str(config)),
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                )
                 window = attach(api, bus, registry, process)
-                window.wait(lambda: window.find("Dark appearance"), "session-only default appearance")
+                window.wait(
+                    lambda: window.find("Dark appearance"), "session-only default appearance"
+                )
                 window.act("Try scene")
-                window.wait(lambda: window.find_text("Primary action activated."), "production button callback")
+                window.wait(
+                    lambda: window.find_text("Primary action activated."),
+                    "production button callback",
+                )
                 assert not window.enabled("Save changes")
                 capture(output, "-light100")
                 reveal_field(window, "Find a destination")
                 fill(window, "Find a destination", "Station")
                 window.wait(lambda: window.find("Station History"), "filtered destination")
                 window.act("Station History")
-                window.wait(lambda: window.find_text("Destination: Station History"), "selected destination")
+                window.wait(
+                    lambda: window.find_text("Destination: Station History"), "selected destination"
+                )
                 reveal_field(window, "Specimen manuscript")
                 manuscript = field(window, "Specimen manuscript")
                 before = window.text(manuscript)
                 window.focus(manuscript)
                 key("End", control=True)
                 type_text("x")
-                window.wait(lambda: window.text(manuscript) == before + "x", "native specimen typing")
+                window.wait(
+                    lambda: window.text(manuscript) == before + "x", "native specimen typing"
+                )
                 key("z", control=True)
                 window.wait(lambda: window.text(manuscript) == before, "native specimen undo")
                 capture(output, "-fields100")
@@ -74,7 +88,9 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-fields200")
                 results["scaled_native_checkbox_and_radio_actions"] = True
                 scroll(window, "End")
-                window.wait(lambda: window.find_text("Selected passage"), "production palette samples")
+                window.wait(
+                    lambda: window.find_text("Selected passage"), "production palette samples"
+                )
                 capture(output, "-samples200")
                 results["appearance_monochrome_and_scale_are_session_only"] = True
                 assert config.read_text() == original

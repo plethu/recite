@@ -8,7 +8,7 @@
   "NoColor": false,
   "Exclude": [
     "^apps/writer/vendor/(xilem|copypasta)/",
-    "^apps/writer/vendor/accesskit-atspi-common/\\.cargo_vcs_info\\.json$",
+    "^apps/writer/vendor/(accesskit-atspi-common|accesskit-consumer)/\\.cargo_vcs_info\\.json$",
     "^docs-site/src/client/generated/",
     "^fixtures/",
     "^include/recite\\.h$",

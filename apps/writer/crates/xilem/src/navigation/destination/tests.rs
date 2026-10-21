@@ -136,6 +136,24 @@ fn every_linked_screen_has_the_same_destination_on_cold_and_existing_window_navi
             let actual = writer.current_location();
             assert_eq!(actual.screen, screen, "cold={cold}: {}", writer.status);
             assert_eq!(actual.catalogue.as_deref(), Some("fr.po"));
+            if !cold
+                && matches!(
+                    screen,
+                    Screen::Declarations | Screen::Build | Screen::Rename
+                )
+            {
+                assert_eq!(
+                    writer
+                        .navigation
+                        .history
+                        .step(false)
+                        .unwrap()
+                        .location()
+                        .screen,
+                    Screen::Write,
+                    "a composed destination must record after its catalogue is installed"
+                );
+            }
             if screen == Screen::Entry {
                 assert_eq!(actual.entry, location.entry);
             }

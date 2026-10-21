@@ -43,7 +43,9 @@ impl Writer {
                 if request.origin.window != self.window || self.phase != crate::Phase::Writing {
                     Err("The project window changed while its workspace was opening.".into())
                 } else {
-                    self.accept_project_workspace(prepared)
+                    self.accept_project_workspace(prepared)?;
+                    self.remember_location();
+                    Ok(())
                 }
             }
             ResultValue::Presented(prepared) => {

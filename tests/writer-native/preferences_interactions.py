@@ -1,4 +1,5 @@
 """Live preferences preserve mounted fields and persist through the shared user store."""
+
 import json
 import os
 import tempfile
@@ -18,11 +19,11 @@ def run(api, bus, registry, binary, output):
     try:
         with tempfile.TemporaryDirectory(prefix="recite-preferences-") as temporary:
             project = Path(temporary)
-            (project / "recite.project.toml").write_text('format_version = 1\n')
+            (project / "recite.project.toml").write_text("format_version = 1\n")
             (project / "scene.recite").write_text(SOURCE)
             config = Path(os.environ["XDG_CONFIG_HOME"]) / "recite/config.toml"
             config.parent.mkdir(parents=True, exist_ok=True)
-            config.write_text('# Preserve this personal comment.\nconfig_version = 1\n')
+            config.write_text("# Preserve this personal comment.\nconfig_version = 1\n")
             arguments = [str(binary), "--project", str(project)]
             with output.with_suffix(".writer.log").open("w") as log:
                 process, window, node = launch(api, bus, registry, arguments, log)
@@ -34,7 +35,12 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.find("Dark theme"), "personal preferences")
                 capture(output, "-light")
                 window.act("Dark theme")
-                window.wait(lambda: tomllib.loads(config.read_text()).get("writer", {}).get("theme") == "dark", "durable dark theme")
+                window.wait(
+                    lambda: (
+                        tomllib.loads(config.read_text()).get("writer", {}).get("theme") == "dark"
+                    ),
+                    "durable dark theme",
+                )
                 dark = window.find("Dark theme")
                 window.focus(dark)
                 window.act("Increase UI scale")
@@ -56,30 +62,57 @@ def run(api, bus, registry, binary, output):
                 window.act("Keyboard shortcuts")
                 fill(window, "Shortcut binding", "Primary+Shift+S")
                 window.act("Save shortcut")
-                window.wait(lambda: window.find_text("is assigned to both", contains=True), "shortcut conflict feedback")
+                window.wait(
+                    lambda: window.find_text("is assigned to both", contains=True),
+                    "shortcut conflict feedback",
+                )
                 assert not tomllib.loads(config.read_text())["writer"].get("shortcuts", {})
                 results["conflicting_shortcuts_leave_durable_preferences_unchanged"] = True
                 fill(window, "Shortcut binding", "Primary+Alt+S")
                 window.act("Save shortcut")
-                window.wait(lambda: tomllib.loads(config.read_text()).get("writer", {}).get("shortcuts", {}).get("save") == "Primary+Alt+S", "saved shortcut")
-                window.wait(lambda: window.find_text("Shortcut saved for Save.", contains=True), "command-specific saved feedback")
+                window.wait(
+                    lambda: (
+                        tomllib.loads(config.read_text())
+                        .get("writer", {})
+                        .get("shortcuts", {})
+                        .get("save")
+                        == "Primary+Alt+S"
+                    ),
+                    "saved shortcut",
+                )
+                window.wait(
+                    lambda: window.find_text("Shortcut saved for Save.", contains=True),
+                    "command-specific saved feedback",
+                )
                 assert not window.enabled("Save shortcut")
                 capture(output, "-keyboard")
                 fill(window, "Shortcut binding", "Primary+Alt+D")
                 window.act("Save project · Primary+Shift+S")
                 window.act("Save · Primary+Alt+S")
-                window.wait(lambda: window.text(field(window, "Shortcut binding")) == "Primary+Alt+D", "retained shortcut draft")
+                window.wait(
+                    lambda: window.text(field(window, "Shortcut binding")) == "Primary+Alt+D",
+                    "retained shortcut draft",
+                )
                 window.act("Done with settings")
                 window.act("Settings")
-                window.wait(lambda: window.text(field(window, "Shortcut binding")) == "Primary+Alt+D", "shortcut draft after reopening settings")
+                window.wait(
+                    lambda: window.text(field(window, "Shortcut binding")) == "Primary+Alt+D",
+                    "shortcut draft after reopening settings",
+                )
                 results["shortcut_drafts_survive_command_changes_and_settings_reopening"] = True
                 window.act("Done with settings")
                 node = manuscript(window)
                 window.focus(node)
                 key("z", control=True)
-                window.wait(lambda: window.text(node) == "The last tram waits.", "undo after live preferences")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.",
+                    "undo after live preferences",
+                )
                 key("y", control=True)
-                window.wait(lambda: window.text(node) == "The last tram waits.x", "redo after live preferences")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.x",
+                    "redo after live preferences",
+                )
                 capture(output, "-writer")
                 results["mounted_manuscript_history_survives_preference_changes"] = True
                 assert config.read_text().startswith("# Preserve this personal comment.")
@@ -89,7 +122,10 @@ def run(api, bus, registry, binary, output):
                 window.act("Close and keep recovery")
                 assert process.wait(timeout=5) == 0
                 process, window, node = launch(api, bus, registry, arguments, log)
-                window.wait(lambda: window.text(node) == "The last tram waits.x", "recovered draft with persisted preferences")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.x",
+                    "recovered draft with persisted preferences",
+                )
                 window.act("Settings")
                 window.wait(lambda: window.find("Reading text size: 21"), "reloaded preferences")
                 assert tomllib.loads(config.read_text()).get("writer", {}).get("theme") == "dark"
@@ -105,20 +141,36 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-ordinary-close")
                 window.act("Keep editing")
                 window.wait(lambda: not window.find("Close Writer"), "cancel ordinary close")
-                window.wait(lambda: window.enabled("Settings"), "settings enabled after cancelling close")
+                window.wait(
+                    lambda: window.enabled("Settings"), "settings enabled after cancelling close"
+                )
                 window.act("Settings")
-                window.wait(lambda: window.find("Dark theme"), "personal preferences after cancelling close")
-                scrollbar = next(address for address, _ in window.nodes() if window.call(address, "Accessible", "GetRole")[0] == 48)
+                window.wait(
+                    lambda: window.find("Dark theme"), "personal preferences after cancelling close"
+                )
+                scrollbar = next(
+                    address
+                    for address, _ in window.nodes()
+                    if window.call(address, "Accessible", "GetRole")[0] == 48
+                )
                 window.focus(scrollbar)
                 key("End")
                 window.wait(lambda: window.find("Confirm before closing"), "close preference")
                 capture(output, "-behaviour")
                 window.act("Monochrome colours")
-                window.wait(lambda: tomllib.loads(config.read_text())["writer"].get("monochrome") is True, "durable monochrome preference")
+                window.wait(
+                    lambda: tomllib.loads(config.read_text())["writer"].get("monochrome") is True,
+                    "durable monochrome preference",
+                )
                 capture(output, "-monochrome")
                 results["scrolling_exposes_registered_and_actionable_preferences"] = True
                 window.act("Confirm before closing")
-                window.wait(lambda: tomllib.loads(config.read_text())["writer"].get("confirm_exit") is False, "disabled ordinary confirmation")
+                window.wait(
+                    lambda: (
+                        tomllib.loads(config.read_text())["writer"].get("confirm_exit") is False
+                    ),
+                    "disabled ordinary confirmation",
+                )
                 window.act("Done with settings")
                 manuscript(window)
                 window.close_clean()

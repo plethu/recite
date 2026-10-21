@@ -1,4 +1,5 @@
 """Real native command chords coexist with field history and saved personal bindings."""
+
 import json
 import os
 import tempfile
@@ -22,15 +23,21 @@ def run(api, bus, registry, binary, output):
             source = project / "scene.recite"
             source.write_text(SOURCE)
             with output.with_suffix(".writer.log").open("w") as log:
-                process, window, node = launch(api, bus, registry, [str(binary), "--project", str(project)], log)
+                process, window, node = launch(
+                    api, bus, registry, [str(binary), "--project", str(project)], log
+                )
                 window.focus(node)
                 key("End", control=True)
                 type_text("x")
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "typed field")
                 key("Return", control=True)
-                window.wait(lambda: not window.enabled("Apply draft"), "focused manuscript Apply chord")
+                window.wait(
+                    lambda: not window.enabled("Apply draft"), "focused manuscript Apply chord"
+                )
                 key("s", control=True)
-                window.wait(lambda: "The last tram waits.x" in source.read_text(), "native Save command")
+                window.wait(
+                    lambda: "The last tram waits.x" in source.read_text(), "native Save command"
+                )
                 capture(output, "-applied")
                 results["default_save_and_focused_apply_dispatch_without_another_event"] = True
                 key("comma", control=True)
@@ -42,13 +49,18 @@ def run(api, bus, registry, binary, output):
                 assert "The last tram waits.x" in source.read_text()
                 assert window.text(field(window, "Shortcut binding")) == "Primary+Alt+S"
                 window.act("Save shortcut")
-                window.wait(lambda: window.find_text("Shortcut saved for Save.", contains=True), "saved binding")
+                window.wait(
+                    lambda: window.find_text("Shortcut saved for Save.", contains=True),
+                    "saved binding",
+                )
                 window.act("Done with settings")
                 node = manuscript(window)
                 window.focus(node)
                 key("End", control=True)
                 type_text("y")
-                window.wait(lambda: window.text(node) == "The last tram waits.xy", "draft after settings")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.xy", "draft after settings"
+                )
                 key("s", control=True)
                 time.sleep(0.1)
                 assert window.text(node) == "The last tram waits.xy"
@@ -56,14 +68,25 @@ def run(api, bus, registry, binary, output):
                 key("Return", control=True)
                 window.wait(lambda: not window.enabled("Apply draft"), "second Apply command")
                 key("s", control=True, alt=True)
-                window.wait(lambda: "The last tram waits.xy" in source.read_text(), "live rebound Save command")
+                window.wait(
+                    lambda: "The last tram waits.xy" in source.read_text(),
+                    "live rebound Save command",
+                )
                 results["live_rebinding_removes_old_chord_without_inserting_its_character"] = True
                 type_text("z")
-                window.wait(lambda: window.text(node) == "The last tram waits.xyz", "native history input")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.xyz", "native history input"
+                )
                 key("z", control=True)
-                window.wait(lambda: window.text(node) == "The last tram waits.xy", "native undo after commands")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.xy",
+                    "native undo after commands",
+                )
                 key("y", control=True)
-                window.wait(lambda: window.text(node) == "The last tram waits.xyz", "native redo after commands")
+                window.wait(
+                    lambda: window.text(node) == "The last tram waits.xyz",
+                    "native redo after commands",
+                )
                 results["application_commands_preserve_native_undo_and_redo"] = True
                 capture(output, "-writer")
                 config = Path(os.environ["XDG_CONFIG_HOME"]) / "recite/config.toml"

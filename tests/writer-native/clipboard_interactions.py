@@ -30,13 +30,17 @@ def run(api, bus, registry, binary, output):
                 (project / "recite.project.toml").write_text("format_version=1\n")
                 source = project / "scène & notes.recite"
                 source.write_text(SOURCE)
-                (project / "fr.po").write_text('msgctxt "11111111111111111111"\nmsgid "The last tram waits."\nmsgstr "Le dernier tram attend."\n')
+                (project / "fr.po").write_text(
+                    'msgctxt "11111111111111111111"\nmsgid "The last tram waits."\nmsgstr "Le dernier tram attend."\n'
+                )
                 config = project / "config.toml"
                 config.write_text(f"config_version=1\n[writer.presentation]\nui_scale={scale}\n")
                 environment = dict(os.environ, RECITE_CONFIG=str(config))
                 arguments = [str(binary), "--project", str(project), "--document", source.name]
                 with output.with_suffix(f".{scale}.writer.log").open("w") as log:
-                    process = subprocess.Popen(arguments, env=environment, stdout=log, stderr=subprocess.STDOUT)
+                    process = subprocess.Popen(
+                        arguments, env=environment, stdout=log, stderr=subprocess.STDOUT
+                    )
                     window = attach(api, bus, registry, process)
                     fill(window, "Manuscript", "Keep this private draft.")
                     window.reveal_start("Copy link to this view")
@@ -51,8 +55,16 @@ def run(api, bus, registry, binary, output):
                     reveal_field(window, "Manuscript")
                     assert window.text(field(window, "Manuscript")) == "Keep this private draft."
                     results[f"escaped_native_link_preserves_unapplied_prose_{scale}"] = True
-                    route = "recite://writer/translations?" + urlencode({"scene": source.name, "catalogue": "fr.po", "q": "clé & café?"})
-                    forwarded = subprocess.run([str(binary), "--project", str(project), "--route", route], env=environment, stdout=log, stderr=subprocess.STDOUT, timeout=10)
+                    route = "recite://writer/translations?" + urlencode(
+                        {"scene": source.name, "catalogue": "fr.po", "q": "clé & café?"}
+                    )
+                    forwarded = subprocess.run(
+                        [str(binary), "--project", str(project), "--route", route],
+                        env=environment,
+                        stdout=log,
+                        stderr=subprocess.STDOUT,
+                        timeout=10,
+                    )
                     assert forwarded.returncode == 0
                     reveal(window, "Copy link to this view")
                     window.act("Copy link to this view")
@@ -66,7 +78,10 @@ def run(api, bus, registry, binary, output):
                     results[f"catalogue_query_and_destination_roundtrip_{scale}"] = True
                     window.reveal_start("Close")
                     window.act("Close")
-                    window.wait(lambda: window.find("Close and keep recovery"), "keep accepted unsaved source")
+                    window.wait(
+                        lambda: window.find("Close and keep recovery"),
+                        "keep accepted unsaved source",
+                    )
                     window.act("Close and keep recovery")
                     assert process.wait(timeout=5) == 0
     except Exception as error:

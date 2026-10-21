@@ -49,30 +49,54 @@ def run(api, bus, registry, binary, output):
                 launcher = ["--editor", "/usr/bin/python3", "--editor-arg", str(editor)]
                 with output.with_suffix(f".{scale}.writer.log").open("w") as log:
                     process = subprocess.Popen(
-                        base + ["--route", route("localise", catalogue="fr.po", passage="11111111111111111111")],
-                        env=environment, stdout=log, stderr=subprocess.STDOUT,
+                        base
+                        + [
+                            "--route",
+                            route("localise", catalogue="fr.po", passage="11111111111111111111"),
+                        ],
+                        env=environment,
+                        stdout=log,
+                        stderr=subprocess.STDOUT,
                     )
                     window = attach(api, bus, registry, process)
                     reveal_text(window, "Selected source passage")
-                    window.wait(lambda: window.find_text("The last tram waits."), "linked source context")
+                    window.wait(
+                        lambda: window.find_text("The last tram waits."), "linked source context"
+                    )
                     reveal(window, "Translate this passage")
                     capture(output, f"-passage-{scale}")
                     window.act("Translate this passage")
                     reveal_field(window, "Translation form 1")
-                    assert window.text(field(window, "Translation form 1")) == "Le dernier tram attend."
+                    assert (
+                        window.text(field(window, "Translation form 1"))
+                        == "Le dernier tram attend."
+                    )
                     results[f"cold_passage_context_and_matching_entry_{scale}"] = True
                     forwarded = subprocess.run(
-                        base + ["--route", route("translation", catalogue="fr.po", entry="11111111111111111111")],
-                        env=environment, stdout=log, stderr=subprocess.STDOUT, timeout=10,
+                        base
+                        + [
+                            "--route",
+                            route("translation", catalogue="fr.po", entry="11111111111111111111"),
+                        ],
+                        env=environment,
+                        stdout=log,
+                        stderr=subprocess.STDOUT,
+                        timeout=10,
                     )
                     assert forwarded.returncode == 0
                     reveal_field(window, "Translation form 1")
-                    assert window.text(field(window, "Translation form 1")) == "Le dernier tram attend."
+                    assert (
+                        window.text(field(window, "Translation form 1"))
+                        == "Le dernier tram attend."
+                    )
                     capture(output, f"-entry-{scale}")
                     results[f"forwarded_stable_entry_context_{scale}"] = True
                     forwarded = subprocess.run(
                         base + launcher + ["--route", route("write", view="source")],
-                        env=environment, stdout=log, stderr=subprocess.STDOUT, timeout=10,
+                        env=environment,
+                        stdout=log,
+                        stderr=subprocess.STDOUT,
+                        timeout=10,
                     )
                     assert forwarded.returncode == 0
                     window.wait(receipt.exists, "source link starts configured editor")
@@ -87,14 +111,23 @@ def run(api, bus, registry, binary, output):
                     long_source = "À la gare, le dernier tram attend. " * 64
                     source.write_text(SOURCE.replace("The last tram waits.", long_source))
                     process = subprocess.Popen(
-                        base + ["--route", route("localise", catalogue="fr.po", passage="11111111111111111111")],
-                        env=environment, stdout=log, stderr=subprocess.STDOUT,
+                        base
+                        + [
+                            "--route",
+                            route("localise", catalogue="fr.po", passage="11111111111111111111"),
+                        ],
+                        env=environment,
+                        stdout=log,
+                        stderr=subprocess.STDOUT,
                     )
                     window = attach(api, bus, registry, process)
                     window.reveal_start("Selected source passage")
                     capture(output, f"-long-source-{scale}")
                     reveal(window, "More source passage")
-                    window.wait(lambda: window.find_text("Source part 1 of", prefix=True), "bounded reading part")
+                    window.wait(
+                        lambda: window.find_text("Source part 1 of", prefix=True),
+                        "bounded reading part",
+                    )
                     window.reveal_end("Open translation queue")
                     window.focus(window._outer_scrollbar())
                     key("End")
@@ -102,7 +135,10 @@ def run(api, bus, registry, binary, output):
                     capture(output, f"-long-source-actions-{scale}")
                     reveal(window, "More source passage")
                     window.act("More source passage")
-                    window.wait(lambda: window.find_text("Source part 2 of", prefix=True), "next source reading part")
+                    window.wait(
+                        lambda: window.find_text("Source part 2 of", prefix=True),
+                        "next source reading part",
+                    )
                     results[f"bounded_long_source_reading_and_next_part_{scale}"] = True
                     window.reveal_start("Close")
                     window.close_clean()
@@ -111,12 +147,17 @@ def run(api, bus, registry, binary, output):
                     release.unlink()
                     process = subprocess.Popen(
                         base + launcher + ["--route", route("write", view="source")],
-                        env=environment, stdout=log, stderr=subprocess.STDOUT,
+                        env=environment,
+                        stdout=log,
+                        stderr=subprocess.STDOUT,
                     )
                     window = attach(api, bus, registry, process)
                     window.wait(receipt.exists, "cold source link launches without another input")
                     assert json.loads(receipt.read_text()) == [str(source)]
-                    window.wait(lambda: window.find_text("Editor launch requested", contains=True), "cold editor launch receipt")
+                    window.wait(
+                        lambda: window.find_text("Editor launch requested", contains=True),
+                        "cold editor launch receipt",
+                    )
                     capture(output, f"-source-{scale}")
                     results[f"cold_source_link_resumes_on_worker_readiness_{scale}"] = True
                     release.touch()
