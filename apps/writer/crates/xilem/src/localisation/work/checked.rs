@@ -14,6 +14,7 @@ pub(in crate::localisation) enum Action {
     Reload,
     Close,
     FlushForClose,
+    DiscardForClose,
     Compare,
     Resolve {
         decision: ExternalDecision,
@@ -92,7 +93,7 @@ impl Checked {
                 owner.flush_recovery()?;
             }
             perform(&mut checkout, &action)?;
-            if matches!(action, Action::FlushForClose) {
+            if matches!(action, Action::FlushForClose | Action::DiscardForClose) {
                 return Ok(Completion::CloseWindow);
             }
             if matches!(action, Action::Close) {
@@ -174,6 +175,14 @@ fn perform(checkout: &mut Checkout, action: &Action) -> Result<(), String> {
             if matches!(action, Action::Close) {
                 checkout.owner = None;
             }
+        }
+        Action::DiscardForClose => {
+            let owner = checkout.owner.as_mut().ok_or("Open a catalogue first.")?;
+            let changed = owner.catalogue.changed_entries().collect::<Vec<_>>();
+            for id in changed {
+                owner.catalogue.discard(id);
+            }
+            owner.flush_recovery()?;
         }
         Action::Resolve {
             decision,
@@ -257,6 +266,9 @@ impl Writer {
                 self.localisation.destination = Destination::Queue;
                 self.catalogue_feedback("Catalogue closed after recovery became durable.".into());
             }
+        }
+        if completed.result.is_ok() {
+            self.remember_catalogue_location();
         }
         Ok(())
     }

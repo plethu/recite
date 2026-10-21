@@ -263,6 +263,7 @@ impl Writer {
         }
     }
     pub(super) fn cancel_navigation(&mut self) {
+        self.navigation.visit = None;
         let queued_save = self.navigation.deferred_save.take().is_some();
         if let Some(request) = &self.navigation.pending {
             request.cancel.interrupt();
@@ -286,6 +287,11 @@ impl Writer {
             .as_ref()
             .is_some_and(|request| matches!(request.target, Target::ProjectWorkspace(_)))
         {
+            self.cancel_navigation();
+        }
+    }
+    pub(crate) fn cancel_history_navigation(&mut self) {
+        if self.navigation.visit.is_some() {
             self.cancel_navigation();
         }
     }

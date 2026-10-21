@@ -28,7 +28,7 @@ pub(super) fn creation(writer: &Writer) -> Option<impl WidgetView<Writer> + use<
             paragraph(scale, format!("New catalogue: {}", display.display()), 640.)
         }),
         text_button(scale, "Create catalogue", Writer::create_catalogue).disabled(blocked || path.is_none()),
-        text_button(scale, "Return to translation queue", |writer: &mut Writer| writer.localisation.destination = Destination::Queue).disabled(blocked),
+        text_button(scale, "Return to translation queue", Writer::return_to_translation_queue).disabled(blocked),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(10.px()))
 }
 fn choices(writer: &Writer) -> impl WidgetView<Writer> + use<> {

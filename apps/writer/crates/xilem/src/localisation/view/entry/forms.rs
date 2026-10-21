@@ -74,6 +74,7 @@ fn form(
     .font("Literata")
     .text_size(writer.reading_size())
     .disabled(blocked)
+    .prop(TranslationField::new(entry.key.clone()))
     .prop(TextAreaLabel::new(format!(
         "Translation form {}",
         index + 1

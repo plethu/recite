@@ -14,6 +14,7 @@ impl PartialEq for Identity {
         Arc::ptr_eq(&self.0, &other.0)
     }
 }
+impl Eq for Identity {}
 pub(super) struct Owner {
     pub identity: Identity,
     pub catalogue: Catalogue,

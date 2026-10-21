@@ -1,5 +1,6 @@
 mod focus;
 mod held;
+mod history;
 mod panes;
 mod picker;
 mod vim;
@@ -60,6 +61,9 @@ impl Keyboard {
                 self.composition = Composition::Idle
             }
             WindowEvent::Focused(false) => self.blur(root),
+            WindowEvent::MouseInput { button, state, .. } => {
+                return self.history_mouse(root, *button, *state);
+            }
             WindowEvent::KeyboardInput {
                 event,
                 is_synthetic,
@@ -86,17 +90,17 @@ impl Keyboard {
         };
         let enter = event.logical_key == keyboard::Key::Named(NamedKey::Enter);
         let kind = self.focus.kind(root, context.generation);
-        let picker = picker::action(
+        let action = picker::action(
             &context,
-            kind,
+            kind.clone(),
             &event.logical_key,
             self.normalized_modifiers(),
-        );
-        let manuscript = enter && kind == focus::Kind::Manuscript;
+        )
+        .or_else(|| history::key(&context, &event.logical_key, self.normalized_modifiers()));
         let consumed = self.dispatch(
             &context,
             root.focused_widget(),
-            manuscript,
+            kind.clone(),
             Stroke {
                 input: Input {
                     key: key(&event.logical_key),
@@ -104,7 +108,7 @@ impl Keyboard {
                     modifiers: self.normalized_modifiers(),
                 },
                 enter,
-                picker,
+                action,
                 first_press: event.state == ElementState::Pressed && !event.repeat,
             },
         );
@@ -122,7 +126,7 @@ impl Keyboard {
         &mut self,
         context: &Context,
         focused: Option<WidgetId>,
-        manuscript: bool,
+        kind: focus::Kind,
         stroke: Stroke<'_>,
     ) -> bool {
         if matches!(self.composition, Composition::Preedit(focus) if focus != focused) {
@@ -132,14 +136,14 @@ impl Keyboard {
             return false;
         }
         let apply = context.writer_active
-            && manuscript
+            && kind == focus::Kind::Manuscript
             && stroke.enter
             && stroke.input.modifiers
                 == Modifiers {
                     primary: true,
                     ..Modifiers::default()
                 };
-        let action = if let Some(action) = stroke.picker {
+        let action = if let Some(action) = stroke.action {
             Some(action)
         } else if apply {
             Some(Action::Command(WriterCommand::Apply))
@@ -154,7 +158,14 @@ impl Keyboard {
                 forward: !stroke.input.modifiers.shift,
             })
         } else {
-            keybindings::command(&context.shortcuts, stroke.input).map(Action::Command)
+            keybindings::command(&context.shortcuts, stroke.input).map(|command| {
+                match (&kind, command) {
+                    (focus::Kind::Translation(target), WriterCommand::Save) => {
+                        Action::SaveTranslation(target.clone())
+                    }
+                    _ => Action::Command(command),
+                }
+            })
         };
         let Some(action) = action else {
             return false;
@@ -244,7 +255,7 @@ fn physical(key: keyboard::PhysicalKey) -> PhysicalKey {
 struct Stroke<'a> {
     input: Input<'a>,
     enter: bool,
-    picker: Option<Action>,
+    action: Option<Action>,
     first_press: bool,
 }
 

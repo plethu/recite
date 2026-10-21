@@ -9,6 +9,7 @@ pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> 
             state.ui_scale(),
             format!("Recite Writer · {}", document_caption(state)),
         ),
+        history_buttons(state),
         flex_row((
             text_button(
                 state.ui_scale(),
@@ -25,7 +26,6 @@ pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> 
             ),
             text_button(state.ui_scale(), "Close", Writer::request_close)
                 .disabled(blocked || state.project_jobs_busy()),
-            copy_link(state),
         ))
         .gap(8.px()),
     ))

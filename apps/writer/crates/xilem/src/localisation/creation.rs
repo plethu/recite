@@ -13,7 +13,9 @@ pub(super) struct Creation {
 }
 impl Writer {
     pub(super) fn new_catalogue(&mut self) {
+        self.remember_catalogue_location();
         self.localisation.destination = Destination::Create;
+        self.remember_catalogue_location();
     }
     pub(super) fn search_catalogue_languages(&mut self) {
         let state = &mut self.localisation.creation;

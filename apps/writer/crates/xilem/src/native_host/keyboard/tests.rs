@@ -45,7 +45,7 @@ fn stroke(key: Key<'_>) -> Stroke<'_> {
             },
         },
         enter: false,
-        picker: None,
+        action: None,
         first_press: true,
     }
 }
@@ -60,9 +60,9 @@ fn picker_submission_posts_once_and_does_not_fall_through_to_underlying_writer_c
         let mut enter = stroke(Key::Other);
         enter.input.modifiers = Modifiers::default();
         enter.enter = true;
-        enter.picker = Some(Action::SubmitPicker);
+        enter.action = Some(Action::SubmitPicker);
         enter.first_press = first_press;
-        assert!(keyboard.dispatch(&context, None, false, enter));
+        assert!(keyboard.dispatch(&context, None, focus::Kind::Other, enter));
     }
     assert_eq!(
         receiver
@@ -80,7 +80,12 @@ fn picker_submission_posts_once_and_does_not_fall_through_to_underlying_writer_c
 fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_actions() {
     let (mut context, receiver) = context();
     let mut keyboard = Keyboard::default();
-    assert!(keyboard.dispatch(&context, None, false, stroke(Key::Character("s"))));
+    assert!(keyboard.dispatch(
+        &context,
+        None,
+        focus::Kind::Other,
+        stroke(Key::Character("s"))
+    ));
     let action = receiver
         .try_recv()
         .unwrap()
@@ -90,7 +95,7 @@ fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_act
     assert_eq!(action.generation, context.generation);
     let mut repeat = stroke(Key::Character("s"));
     repeat.first_press = false;
-    assert!(keyboard.dispatch(&context, None, false, repeat));
+    assert!(keyboard.dispatch(&context, None, focus::Kind::Other, repeat));
     assert!(receiver.try_recv().is_err());
     context
         .shortcuts
@@ -99,10 +104,15 @@ fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_act
             "Primary+Alt+S".to_owned().try_into().unwrap(),
         )
         .unwrap();
-    assert!(!keyboard.dispatch(&context, None, false, stroke(Key::Character("s"))));
+    assert!(!keyboard.dispatch(
+        &context,
+        None,
+        focus::Kind::Other,
+        stroke(Key::Character("s"))
+    ));
     let mut rebound = stroke(Key::Character("s"));
     rebound.input.modifiers.alt = true;
-    assert!(keyboard.dispatch(&context, None, false, rebound));
+    assert!(keyboard.dispatch(&context, None, focus::Kind::Other, rebound));
     assert_eq!(
         receiver
             .try_recv()
@@ -113,7 +123,12 @@ fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_act
         Action::Command(WriterCommand::Save)
     );
     for character in ["z", "y", "c", "v", "x", "a"] {
-        assert!(!keyboard.dispatch(&context, None, false, stroke(Key::Character(character))));
+        assert!(!keyboard.dispatch(
+            &context,
+            None,
+            focus::Kind::Other,
+            stroke(Key::Character(character))
+        ));
     }
     assert!(receiver.try_recv().is_err());
 }
@@ -128,10 +143,20 @@ fn apply_belongs_to_the_active_manuscript_and_composition_bypasses_commands() {
     );
     let focus = Some(harness.root_id());
     keyboard.composition = Composition::Preedit(focus);
-    assert!(!keyboard.dispatch(&context, focus, true, stroke(Key::Character("s"))));
+    assert!(!keyboard.dispatch(
+        &context,
+        focus,
+        focus::Kind::Manuscript,
+        stroke(Key::Character("s"))
+    ));
     assert!(receiver.try_recv().is_err());
     // Moving focus retires the old field's preedit guard.
-    assert!(keyboard.dispatch(&context, None, false, stroke(Key::Character("s"))));
+    assert!(keyboard.dispatch(
+        &context,
+        None,
+        focus::Kind::Other,
+        stroke(Key::Character("s"))
+    ));
     receiver.try_recv().unwrap();
     for (active, manuscript, expected) in [
         (true, false, false),
@@ -142,7 +167,16 @@ fn apply_belongs_to_the_active_manuscript_and_composition_bypasses_commands() {
         let mut enter = stroke(Key::Other);
         enter.enter = true;
         assert_eq!(
-            keyboard.dispatch(&context, focus, manuscript, enter),
+            keyboard.dispatch(
+                &context,
+                focus,
+                if manuscript {
+                    focus::Kind::Manuscript
+                } else {
+                    focus::Kind::Other
+                },
+                enter
+            ),
             expected
         );
         if expected {
@@ -176,7 +210,7 @@ fn standard_f6_cycles_panes_in_both_directions_and_releases_do_not_repeat() {
             shift,
             ..Modifiers::default()
         };
-        assert!(keyboard.dispatch(&context, None, false, input));
+        assert!(keyboard.dispatch(&context, None, focus::Kind::Other, input));
         assert_eq!(
             messages
                 .try_recv()
@@ -192,7 +226,7 @@ fn standard_f6_cycles_panes_in_both_directions_and_releases_do_not_repeat() {
             ..Modifiers::default()
         };
         release.first_press = false;
-        assert!(keyboard.dispatch(&context, None, false, release));
+        assert!(keyboard.dispatch(&context, None, focus::Kind::Other, release));
         assert!(messages.try_recv().is_err());
     }
 }

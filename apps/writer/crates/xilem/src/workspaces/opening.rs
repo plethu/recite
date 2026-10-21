@@ -159,6 +159,7 @@ impl Writer {
         self.cancel_map_gesture();
         self.attention.leave_focus();
         self.workspaces.screen = screen;
+        self.remember_location();
         self.status = "Ready".into();
         Ok(())
     }

@@ -89,8 +89,11 @@ impl Writer {
             return;
         }
         self.cancel_project_workspace_open();
+        self.cancel_history_navigation();
+        self.remember_location();
         self.workspaces.screen = Screen::Write;
         self.refresh_map_if_needed();
+        self.remember_location();
     }
     pub(crate) fn open_project_workspace(&mut self, action: Open) {
         if matches!(action, Open::Rename) {
@@ -108,12 +111,14 @@ impl Writer {
         {
             self.attention.leave_focus();
             self.cancel_map_gesture();
+            self.remember_location();
             self.workspaces.screen = match action {
                 Open::Declarations => Screen::Declarations,
                 Open::Build => Screen::Build,
                 Open::Settings => Screen::Settings,
                 Open::Rename => Screen::Rename,
             };
+            self.remember_location();
             return;
         }
         self.navigate(crate::navigation::Target::ProjectWorkspace(action));

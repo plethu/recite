@@ -4,6 +4,39 @@ use recite_core::po::PoDocument;
 use std::fs;
 
 #[test]
+fn failed_post_discard_recovery_fence_prevents_close_until_retry() {
+    let (directory, mut writer, _driver) = fixture();
+    let key = key(&writer);
+    writer.update_translation(&key, 0, "Discard on explicit request.".into());
+    let recovery = directory.path().join("fr.po.recite-editor-recovery.json");
+    let checkout = writer.localisation.slot.checkout(Some(key.id)).unwrap();
+    writer.phase = Phase::Closing;
+    let mut completed = Checked::new(checkout, Action::DiscardForClose, Query::default(), None)
+        .execute_with(|checkout, action| {
+            fs::remove_file(&recovery).unwrap();
+            fs::create_dir(&recovery).unwrap();
+            perform(checkout, action)
+        });
+    writer.accept_checked_catalogue(&mut completed).unwrap();
+    assert!(writer.phase == Phase::ConfirmClose);
+    assert!(!writer.localisation.dirty());
+    assert!(writer.localisation.needs_save());
+    fs::remove_dir(&recovery).unwrap();
+    let checkout = writer.localisation.slot.checkout(Some(key.id)).unwrap();
+    writer.phase = Phase::Closing;
+    let mut completed =
+        Checked::new(checkout, Action::DiscardForClose, Query::default(), None).execute();
+    writer.accept_checked_catalogue(&mut completed).unwrap();
+    assert!(writer.phase == Phase::Closed, "{}", writer.status);
+    drop(writer);
+    assert!(
+        !Catalogue::open_recoverable(&directory.path().join("fr.po"))
+            .unwrap()
+            .dirty()
+    );
+}
+
+#[test]
 fn caught_panic_closes_using_the_last_admitted_recovery_without_serializing_uncertain_state() {
     let (directory, mut writer, _driver) = fixture();
     let key = key(&writer);

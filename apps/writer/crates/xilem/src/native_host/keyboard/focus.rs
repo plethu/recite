@@ -2,16 +2,18 @@
 use super::*;
 use crate::app::keyboard::CommandGeneration;
 use crate::app::picker;
+use crate::localisation::{TranslationField, TranslationTarget};
 use crate::rules::view;
 use xilem::masonry::accesskit;
 use xilem::masonry::core::{Widget, WidgetRef};
 use xilem::masonry::widgets;
 
-#[derive(Clone, Copy, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub(super) enum Kind {
     #[default]
     Other,
     Manuscript,
+    Translation(TranslationTarget),
     Query,
     ActiveResult,
     Text,
@@ -60,11 +62,11 @@ impl Focus {
             self.field = None;
             return Kind::Other;
         };
-        if let Some((cached, scope, kind)) = self.field
-            && cached == focused
-            && scope == generation
+        if let Some((cached, scope, kind)) = &self.field
+            && *cached == focused
+            && *scope == generation
         {
-            return kind;
+            return kind.clone();
         }
         // Picker selection can change a retained button's role in a new command scope.
         let mut widget = root.get_layer_root(0);
@@ -88,7 +90,7 @@ impl Focus {
             };
             widget = child;
         };
-        self.field = Some((focused, generation, kind));
+        self.field = Some((focused, generation, kind.clone()));
         kind
     }
 }
@@ -102,7 +104,9 @@ fn role(widget: WidgetRef<'_, dyn Widget>) -> Kind {
     let Some(input) = widget.downcast::<TextInput>() else {
         return Kind::Other;
     };
-    if input.get_prop::<picker::QueryField>().0 {
+    if let Some(target) = &input.get_prop::<TranslationField>().0 {
+        Kind::Translation(target.clone())
+    } else if input.get_prop::<picker::QueryField>().0 {
         Kind::Query
     } else if input.get_prop::<crate::view::Manuscript>().0
         || input.get_prop::<view::ArgumentField>().0

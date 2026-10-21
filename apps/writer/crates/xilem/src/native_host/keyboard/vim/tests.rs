@@ -105,7 +105,7 @@ fn configured_commands_clear_the_prefix_hint_before_retiring_the_keyboard_scope(
     assert!(keyboard.dispatch(
         &context,
         None,
-        false,
+        focus::Kind::Other,
         Stroke {
             input: Input {
                 key: Key::Character("s"),
@@ -116,7 +116,7 @@ fn configured_commands_clear_the_prefix_hint_before_retiring_the_keyboard_scope(
                 }
             },
             enter: false,
-            picker: None,
+            action: None,
             first_press: true,
         }
     ));

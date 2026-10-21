@@ -1,6 +1,7 @@
 //! A tagged immutable keyboard context routes native host messages through Xilem.
 use super::*;
 use crate::attention::PaneMotion;
+use crate::localisation::TranslationTarget;
 use recite_config::{WriterCommand, WriterShortcuts};
 use xilem::{
     Pod, ViewCtx, WidgetView,
@@ -48,6 +49,7 @@ pub(crate) struct Invocation {
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Action {
     Command(WriterCommand),
+    SaveTranslation(TranslationTarget),
     SubmitPicker,
     PaneHint(bool),
     CyclePane { forward: bool },
@@ -233,6 +235,11 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         }
         match invocation.action {
             Action::Command(command) => app.run_command(command),
+            Action::SaveTranslation(target) => {
+                if let Some(writer) = &mut app.writer {
+                    writer.save_focused_translation(&target);
+                }
+            }
             Action::SubmitPicker => app.submit_picker(),
             Action::PaneHint(pending) => app.pane_hint = pending,
             Action::CyclePane { forward } => {

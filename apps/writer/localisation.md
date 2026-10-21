@@ -64,6 +64,10 @@ or explicitly discard them first. PO drafts use the shared asynchronous recovery
 reopening, recovered drafts retain the original disk baseline, so external edits still cause
 conflicts.
 
+Xilem offers **Discard translations and close** in its unsaved-work prompt. It removes all PO drafts
+and waits for recovery before exiting; unsaved source work stays in its independent recovery copy. A
+failed recovery write keeps Writer open for retry.
+
 The catalogue path opens file actions. Reload accepts external changes only when there are no local
 drafts. Compare shows source, draft and file text for each pending passage. Keep my drafts remaps
 them by stable context/source, checks the compared file fingerprint, and requires a subsequent Save.

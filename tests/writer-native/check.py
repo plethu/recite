@@ -82,6 +82,8 @@ def run_probe(binary, output, scenario):
         )
         if scenario == "specimen":
             from specimen_interactions import run
+        elif scenario == "localisation-final":
+            from localisation_final import run
         elif scenario == "clipboard":
             from clipboard_interactions import run
         elif scenario == "linked-destinations":
@@ -168,6 +170,7 @@ def main():
         choices=(
             "all",
             "specimen",
+            "localisation-final",
             "clipboard",
             "linked-destinations",
             "disk-notices",

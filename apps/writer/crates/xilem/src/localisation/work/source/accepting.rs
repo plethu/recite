@@ -69,6 +69,9 @@ impl Writer {
             }
             Err(error) => self.catalogue_feedback(error.clone()),
         }
+        if completed.result.is_ok() {
+            self.remember_catalogue_location();
+        }
         Ok(())
     }
 }

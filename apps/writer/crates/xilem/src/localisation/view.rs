@@ -95,6 +95,9 @@ pub(crate) fn close_details(writer: &Writer) -> Option<impl WidgetView<Writer> +
                 writer.search_catalogue();
             })
             .disabled(writer.project_jobs_busy()),
+            paragraph(scale, "Discarding translations removes all PO drafts. Unsaved source work stays in recovery.", 640.),
+            text_button(scale, "Discard translations and close", Writer::discard_translations_and_close)
+                .disabled(writer.phase != Phase::ConfirmClose || writer.project_jobs_busy() || writer.localisation.slot.read_only() || writer.localisation.saving()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(8.px()),

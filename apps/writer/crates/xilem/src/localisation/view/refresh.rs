@@ -23,7 +23,7 @@ pub(super) fn refresh(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
         (!current).then(|| paragraph(scale, "The catalogue changed after this review. Recheck before applying source updates.", 640.)),
         text_button(scale, "Recheck source updates", Writer::review_catalogue_sources).disabled(blocked || state.dirty()),
         text_button(scale, "Apply source updates to PO", Writer::apply_catalogue_sources).disabled(blocked || !current),
-        text_button(scale, "Return to translation queue", |writer: &mut Writer| writer.localisation.destination = Destination::Queue).disabled(blocked),
+        text_button(scale, "Return to translation queue", Writer::return_to_translation_queue).disabled(blocked),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()))
 }
 fn paging(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {

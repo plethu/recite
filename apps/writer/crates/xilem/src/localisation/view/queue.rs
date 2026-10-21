@@ -37,11 +37,9 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         label(scale, "Translation queue").text_size(20. * scale),
         label(scale, "Search translations"),
-        text_input(state.query.text.clone(), |writer: &mut Writer, text| {
-            writer.localisation.query.text = text
-        })
-        .text_size(16. * scale)
-        .prop(TextAreaLabel::new("Search translations")),
+        text_input(state.query.text.clone(), Writer::set_catalogue_query)
+            .text_size(16. * scale)
+            .prop(TextAreaLabel::new("Search translations")),
         radio_group(
             flex_col(
                 [

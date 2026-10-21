@@ -58,12 +58,12 @@ at 100/200% UI scale, including typed arguments, translated/plural output and re
 across typing and failed restart. Successful restart resets the trace cursor. Shared render
 regressions bound retained-history and large-value cost; separate visual review covers both
 frontends' record and value pages. A consumer iterator regression also covers reachable scrollbars
-following pruned siblings. This does not establish workspace parity: remaining commands and final
-integration are still in progress. Physical IME, screen-reader announcements, hardware rendering and
-Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes close choices in
-the Tab cycle; the current native drill reaches Keep editing in three presses and verifies that
-cancelling close retains text undo/redo. Automatic focus return and the remaining keyboard workflow
-need acceptance before the default switches.
+following pruned siblings. Command dispatch is exhaustive, and linked destinations cover every
+shared screen. Final integration checks and dependency-policy resolution remain required. Physical
+IME, screen-reader announcements, hardware rendering and Windows/macOS acceptance remain unverified
+for Xilem. The portal scrollbar precedes close choices in the Tab cycle; the current native drill
+reaches Keep editing in three presses and verifies that cancelling close retains text undo/redo.
+Freya remains the default launcher.
 
 Shared scene/beat lookup, command ranking and Vim save/close aliases now drive both frontends. The
 native lookup drill covers query autofocus, Escape focus return, retained manuscript undo/redo,
@@ -174,6 +174,13 @@ controls, search, native text undo, appearance and scale without reading or chan
 preferences. Checkbox/radio indicator geometry and strokes follow UI scale; a mounted-control
 regression checks reflow, focus retention and actions through 100→200→100%. Reading/source text
 sizes remain independent preferences. Actual native renders receive separate visual review.
+
+The `localisation-final` scenario checks translation-field Ctrl/Cmd+S, ordinary catalogue history
+with Alt+Left/Right, and explicit discard of multiple PO drafts through close/reopen at 100/200% UI
+scale. Source bytes remain unchanged. Focused regressions cover stale field targets, restored
+query/filter/page state, cancelled history, direct return during a pending history visit, and
+recovery failures both before and after discard. Project/catalogue headers reuse the common
+Back/Forward controls.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

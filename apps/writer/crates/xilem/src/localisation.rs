@@ -1,6 +1,9 @@
 //! Translation edits use the shared file-backed catalogue, with one native presentation owner.
+mod closing;
 mod creation;
 mod editing;
+mod history;
+mod keyboard;
 pub(crate) mod location;
 mod presentation;
 mod refresh;
@@ -16,6 +19,7 @@ use crate::{
     editor_work::AfterSave as SourceAfterSave,
     workspaces::{Screen, text},
 };
+pub(crate) use keyboard::{TranslationField, TranslationTarget};
 use recite_core::po::PoEntryId;
 use recite_writer_session::localisation::status::TranslationStatus;
 use recite_writer_session::{
@@ -57,7 +61,7 @@ struct Queue {
     total: usize,
     page: usize,
 }
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 struct EntryKey {
     catalogue: Identity,
     id: PoEntryId,
@@ -157,7 +161,9 @@ impl Writer {
         }
         self.attention.leave_focus();
         self.cancel_map_gesture();
+        self.remember_location();
         self.workspaces.screen = Screen::Localisation;
+        self.remember_catalogue_location();
     }
     pub(crate) fn catalogue_feedback(&mut self, message: String) {
         self.status = message
@@ -175,7 +181,10 @@ impl Writer {
         self.localisation.report_page = 0;
     }
     fn catalogue_action(&mut self, action: work::Action) {
-        let closing = matches!(action, work::Action::FlushForClose);
+        let closing = matches!(
+            action,
+            work::Action::FlushForClose | work::Action::DiscardForClose
+        );
         if self.phase == Phase::Closed
             || (!closing && (self.phase != Phase::Writing || self.localisation.slot.read_only()))
             || (self.session.read_only() && !closing)
