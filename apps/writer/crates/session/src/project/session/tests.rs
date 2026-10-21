@@ -1,18 +1,15 @@
-//! Fixed 10,000-passage navigation workload: reuse analysis and bound idle workers.
+//! Fixed 10,000-passage navigation workload: reuse analysis and park inactive owners.
+use super::{DocumentSession, ProjectSession};
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::workload;
-use recite_writer_session::ProjectSession;
 use std::fs;
 
-fn recovery_workers() -> Option<usize> {
-    Some(
-        fs::read_dir("/proc/self/task")
-            .ok()?
-            .filter_map(Result::ok)
-            .filter_map(|entry| fs::read_to_string(entry.path().join("comm")).ok())
-            .filter(|name| name.trim() == "recite-recovery")
-            .count(),
-    )
+fn assert_parked(session: DocumentSession<'_>) {
+    assert!(
+        session.recovery.parked_at(session.recovery.sequence()),
+        "{} retained a recovery worker or undrained snapshot",
+        session.path.display()
+    );
 }
 
 #[test]
@@ -68,6 +65,9 @@ fn retained_navigation_reuses_analysis_and_parks_idle_recovery_workers() {
     let clean_revisit_ms = WallTime.end(started).as_secs_f64() * 1000.;
     for (index, path) in paths.iter().enumerate() {
         project.switch(path).unwrap();
+        for session in project.sessions() {
+            assert_parked(session);
+        }
         project
             .current_mut()
             .edit(|model| {
@@ -75,19 +75,16 @@ fn retained_navigation_reuses_analysis_and_parks_idle_recovery_workers() {
                 Ok(())
             })
             .unwrap();
-        if let Some(workers) = recovery_workers() {
-            assert!(
-                workers <= 1,
-                "{workers} recovery workers exceed the one active owner"
-            );
+        for session in project
+            .sessions()
+            .filter(|session| session.path != project.current().path)
+        {
+            assert_parked(session);
         }
     }
     project.checkpoint().unwrap();
-    if let Some(workers) = recovery_workers() {
-        assert_eq!(
-            workers, 0,
-            "idle retained owners kept recovery workers alive"
-        );
+    for session in project.sessions() {
+        assert_parked(session);
     }
 
     for (index, path) in paths.iter().enumerate() {

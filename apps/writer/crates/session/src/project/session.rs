@@ -185,3 +185,6 @@ fn documents(files: &ProjectFiles) -> Result<Vec<ProjectDocument>, FileError> {
 }
 
 mod editing;
+
+#[cfg(test)]
+mod tests;
