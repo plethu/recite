@@ -13,6 +13,8 @@ use xilem::masonry::accesskit::{
 };
 #[path = "atspi_exposure/pruned.rs"]
 mod pruned;
+#[path = "atspi_exposure/siblings.rs"]
+mod siblings;
 
 #[derive(Default)]
 struct Observations {
