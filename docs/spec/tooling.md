@@ -72,19 +72,24 @@ its [guide](../../apps/writer/guide.md) owns current workflows.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Xilem is the selected migration target following bounded native input, accessibility and maintenance
-experiments. The existing Freya application remains the default until workspace parity is verified.
+Xilem is the default frontend following bounded native experiments and shared-workflow parity
+checks. Freya remains available explicitly for comparison and fallback. The Writer manifest owns
+frontend selection for the launcher and package builders; both install as `recite-writer` with the
+same application identity and shared project, recovery and personal configuration formats.
 Presentation and focus belong to the frontend; source editing belongs to the shared authoring model,
 and file replacement, conflict protection and recovery belong to `recite-writer-session`. Language,
 configuration, compiler and runtime ownership remains outside both frontends. Exercise regression
 checks before upgrading the pinned toolkit.
 
-The opt-in Xilem frontend covers retained project documents, beat/line/reply creation, paged Script
+The Xilem frontend covers retained project documents, beat/line/reply creation, paged Script
 reading, manuscript editing, diagnostics, checked save, recovery and explicit IDE handoff/reload.
 File switching preserves drafts, selection, accepted edit history and recovery leases; closing and
 Save all consider inactive documents too. It uses an external editor for source repair rather than
-embedding a second source editor. This does not establish parity for the remaining workspaces or
-remove the existing Freya Source workflow.
+embedding a second source editor. Map, project tools, settings, localisation, preview and linked
+destinations use shared product owners with frontend-specific presentation. Freya retains its
+embedded Source workflow. Automated parity and owned Linux drills do not establish physical IME,
+screen-reader usability, hardware rendering, Windows/macOS acceptance or a passing dependency audit;
+these remain separate acceptance requirements.
 
 Project-wide beat rename uses the shared reviewed plan and grouped history. Xilem moves the sole
 project owner to a worker separately for Review and Apply, retaining a read-only writing projection

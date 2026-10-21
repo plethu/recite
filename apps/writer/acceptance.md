@@ -4,6 +4,13 @@ Writer is a preview. Native authoring, accessibility, and installed-package acce
 host evidence. Automated tests and captured renders do not establish physical input, screen-reader
 usability, GPU performance, or cross-platform support.
 
+The local Xilem Linux release package passes payload, ABI and CLI inspection, native Wayland focus
+checks, and actual desktop-entry delivery on owned X11 and Wayland hosts. Cold and running-window
+links preserve fixture bytes; startup may return a retryable busy response until navigation is
+ready. The native Nix package also builds and passes its headless CLI checks. Both Flatpak manifests
+parse, but the Xilem Flatpak source build, other native platforms and installed-host lifecycle
+acceptance remain unverified.
+
 ## Repeatable checks
 
 Run from the repository root:
@@ -28,42 +35,45 @@ screen-reader usability.
 
 ## Known limits
 
-The opt-in Xilem migration frontend has passed native Wayland checks in a private Cage compositor
-for typing undo/redo, clipboard exchange with Unicode, checked saves, literal IDE arguments,
-explicit reload with an independent recovery copy, document switching with retained drafts, native
-undo isolation between equal-text fields, and multi-document close/reopen recovery. Source-language
-preview also covers choices, typed condition answers, blocking-effect acknowledgement, stale-input
-notices, restart refusal with an unapplied draft, and native typing history after hiding playback.
-Structured authoring covers creating beats, lines and replies, guarding unapplied drafts, reading
-conditional groups and effects, and editing previously empty beats through native controls. Its
-accessible manuscript name and final layout are checked separately. Welcome/project creation,
-retained temporary examples and native second-launch document selection also pass. Project
-replacement refuses translation drafts and succeeds after Save while the catalogue remains open.
-Automatic disk notices pass native source and PO replacement workflows at 100/200% scale, retaining
-pending drafts and source text undo/redo through explicit comparison. Focused regressions cover save
-races, checkout, same-path catalogue reopening, queued stale actions and changes during an
-observation. Idle watching posts no UI work; notice rendering mounts a fixed number of widgets with
-1,026 or 10,260 retained notices. Focused cold-load tests also reject publication after closing
-begins. Personal settings cover live light/dark/monochrome colours, 100–200% scale, retained
-manuscript undo, validated shortcut edits, persisted configuration and ordinary exit confirmation.
-Native keyboard checks cover focused Apply, immediate Save, live rebinding and retained text
-undo/redo. The native settings drill traverses and activates controls after scrolling; adapter
-regressions cover clipping and registration ordering. Catalogue editing now covers native
-review/save, retained manuscript undo, inspected PO conflict decisions, source-plus-catalogue Save
-All and close/reopen recovery. Separate native checks exercise command search and catalogue editing
-at 200% UI scale with 32px reading text. Catalogue creation and source refresh additionally cover
-explicit language selection, observational review, stale-source refusal, PO-only publication and
-mounted manuscript retention. Configured preview and trace inspection pass owned Wayland workflows
-at 100/200% UI scale, including typed arguments, translated/plural output and record retention
-across typing and failed restart. Successful restart resets the trace cursor. Shared render
-regressions bound retained-history and large-value cost; separate visual review covers both
-frontends' record and value pages. A consumer iterator regression also covers reachable scrollbars
-following pruned siblings. Command dispatch is exhaustive, and linked destinations cover every
-shared screen. Shared workflow checks and all four Writer production-line coverage floors pass.
-Dependency-policy resolution remains required. Physical IME, screen-reader announcements, hardware
-rendering and Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes
-close choices in the Tab cycle; the current native drill reaches Keep editing in three presses and
-verifies that cancelling close retains text undo/redo. Freya remains the default launcher.
+The default Xilem frontend has passed native Wayland checks in a private Cage compositor for typing
+undo/redo, clipboard exchange with Unicode, checked saves, literal IDE arguments, explicit reload
+with an independent recovery copy, document switching with retained drafts, native undo isolation
+between equal-text fields, and multi-document close/reopen recovery. Source-language preview also
+covers choices, typed condition answers, blocking-effect acknowledgement, stale-input notices,
+restart refusal with an unapplied draft, and native typing history after hiding playback. Structured
+authoring covers creating beats, lines and replies, guarding unapplied drafts, reading conditional
+groups and effects, and editing previously empty beats through native controls. Its accessible
+manuscript name and final layout are checked separately. Welcome/project creation, retained
+temporary examples and native second-launch document selection also pass. Project replacement
+refuses translation drafts and succeeds after Save while the catalogue remains open. Automatic disk
+notices pass native source and PO replacement workflows at 100/200% scale, retaining pending drafts
+and source text undo/redo through explicit comparison. Focused regressions cover save races,
+checkout, same-path catalogue reopening, queued stale actions and changes during an observation.
+Idle watching posts no UI work; notice rendering mounts a fixed number of widgets with 1,026 or
+10,260 retained notices. Focused cold-load tests also reject publication after closing begins.
+Personal settings cover live light/dark/monochrome colours, 100–200% scale, retained manuscript
+undo, validated shortcut edits, persisted configuration and ordinary exit confirmation. Native
+keyboard checks cover focused Apply, immediate Save, live rebinding and retained text undo/redo. The
+native settings drill traverses and activates controls after scrolling; adapter regressions cover
+clipping and registration ordering. Catalogue editing now covers native review/save, retained
+manuscript undo, inspected PO conflict decisions, source-plus-catalogue Save All and close/reopen
+recovery. Separate native checks exercise command search and catalogue editing at 200% UI scale with
+32px reading text. Catalogue creation and source refresh additionally cover explicit language
+selection, observational review, stale-source refusal, PO-only publication and mounted manuscript
+retention. Configured preview and trace inspection pass owned Wayland workflows at 100/200% UI
+scale, including typed arguments, translated/plural output and record retention across typing and
+failed restart. Successful restart resets the trace cursor. Shared render regressions bound
+retained-history and large-value cost; separate visual review covers both frontends' record and
+value pages. A consumer iterator regression also covers reachable scrollbars following pruned
+siblings. Command dispatch is exhaustive, and linked destinations cover every shared screen. Shared
+workflow checks and all four Writer production-line coverage floors pass. Dependency-policy
+resolution remains required. Physical IME, screen-reader announcements, hardware rendering and
+Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes close choices in
+the Tab cycle; the current native drill reaches Keep editing in three presses and verifies that
+cancelling close retains text undo/redo. Freya remains an explicit fallback through `just writer
+freya`, native packaging's `--frontend freya`, the Freya Flatpak manifest and Nix's
+`recite-writer-freya` output. Selecting Xilem does not waive the dependency audit or establish
+installed-host acceptance.
 
 Shared scene/beat lookup, command ranking and Vim save/close aliases now drive both frontends. The
 native lookup drill covers query autofocus, Escape focus return, retained manuscript undo/redo,
@@ -186,7 +196,7 @@ The Writer dependency audit also remains red: the pinned graph includes unmainta
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.
 The Xilem addition introduces `rustybuzz` through `usvg`; the other reported package versions were
 already in the Freya lockfile. No dependency-policy exceptions were added. The limits below describe
-the default Freya application.
+the Freya fallback.
 
 - The pinned CodeEditor exposes an unnamed inner TextInput and does not display IME preedit.
   `probe_records_missing_code_editor_preedit_presentation` records the gap; a passing test does not

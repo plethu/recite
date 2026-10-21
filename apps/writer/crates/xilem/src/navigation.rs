@@ -84,6 +84,15 @@ pub(crate) struct Origin {
     draft: RecoveredDraft,
 }
 impl Navigation {
+    fn require_ready(&self) -> Result<(), &'static str> {
+        if self.sender.as_ref().is_some_and(UnboundedSender::is_closed) {
+            return Err("The navigation worker is unavailable. Reopen Writer to retry.");
+        }
+        if self.sender.is_none() || self.runtime.is_none() {
+            return Err("The navigation worker is starting. Retry this action in a moment.");
+        }
+        Ok(())
+    }
     pub(crate) fn take_incoming(
         &mut self,
     ) -> Option<recite_writer_session::activation::IncomingRoute> {
@@ -185,6 +194,7 @@ impl Writer {
         if self.work.busy() || self.navigation.busy() || self.phase != super::Phase::Writing {
             return Err("Finish the current editor action before opening a link.".into());
         }
+        self.navigation.require_ready()?;
         self.navigation.incoming = Some(incoming);
         if let Err(error) = self.begin_navigation(Target::Location(location)) {
             self.finish_navigation_reply(Err(error.clone()));
@@ -214,15 +224,7 @@ impl Writer {
         {
             return Ok(());
         }
-        if self
-            .navigation
-            .sender
-            .as_ref()
-            .is_none_or(UnboundedSender::is_closed)
-            || self.navigation.runtime.is_none()
-        {
-            return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
-        }
+        self.navigation.require_ready()?;
         self.cancel_map_gesture();
         self.trial.cancel();
         if self.source_repair_pending()

@@ -2,6 +2,7 @@ use super::*;
 use crate::tests::support;
 use recite_writer_session::{activation::IncomingRoute, startup::EditorCommand};
 use tokio::sync::mpsc as async_mpsc;
+use xilem::core::View as _;
 
 fn request(
     project: PathBuf,
@@ -19,6 +20,80 @@ fn request(
         },
         response,
     )
+}
+
+#[test]
+fn forwarded_link_can_retry_after_the_native_navigation_worker_starts() {
+    let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+    let other = directory.path().join("other.recite");
+    std::fs::write(
+        &other,
+        ":: other default\n> other@aaaaaaaaaaaaaaaaaaaa\n  Other.\n-> END\n",
+    )
+    .unwrap();
+    let app = App::with_writer(support::open(&directory).unwrap());
+    let before = app.writer.as_ref().unwrap().session.model().recovery();
+    let view = crate::navigation::worker().map_state(|app: &mut App| app.writer.as_mut().unwrap());
+    let mut worker = support::worker::Worker::new(app, view);
+    let route = "recite://writer/write?scene=other.recite";
+    let (incoming, response) = request(directory.path().to_owned(), Some(route));
+    worker.state.accept_activation(incoming);
+    assert_eq!(
+        response.try_recv().unwrap(),
+        Err("The navigation worker is starting. Retry this action in a moment.".into())
+    );
+    let writer = worker.state.writer.as_ref().unwrap();
+    assert_eq!(writer.session.model().recovery(), before);
+    assert!(!writer.navigation.busy());
+    assert!(writer.navigation.history.step(false).is_none());
+    worker.next();
+    let (incoming, response) = request(directory.path().to_owned(), Some(route));
+    worker.state.accept_activation(incoming);
+    assert!(
+        response.try_recv().is_err(),
+        "wait for the checked navigation receipt"
+    );
+    while worker.state.writer.as_ref().unwrap().navigation.busy() {
+        worker.next();
+    }
+    assert_eq!(response.try_recv().unwrap(), Ok(()));
+    assert_eq!(
+        worker
+            .state
+            .writer
+            .as_ref()
+            .unwrap()
+            .session
+            .project()
+            .unwrap()
+            .current()
+            .path(),
+        other
+    );
+    drop(worker.close());
+}
+
+#[test]
+fn a_stopped_navigation_worker_is_not_reported_as_starting() {
+    let directory = support::project(recite_writer_model::FIXTURE).unwrap();
+    let mut app = App::with_writer(support::open(&directory).unwrap());
+    let before = app.writer.as_ref().unwrap().session.model().recovery();
+    let (sender, jobs) = async_mpsc::unbounded_channel();
+    app.writer.as_mut().unwrap().navigation.sender = Some(sender);
+    drop(jobs);
+    let (incoming, response) = request(
+        directory.path().to_owned(),
+        Some("recite://writer/write?scene=scene.recite"),
+    );
+    app.accept_activation(incoming);
+    assert_eq!(
+        response.try_recv().unwrap(),
+        Err("The navigation worker is unavailable. Reopen Writer to retry.".into())
+    );
+    assert_eq!(
+        app.writer.as_ref().unwrap().session.model().recovery(),
+        before
+    );
 }
 
 #[test]

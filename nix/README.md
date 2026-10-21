@@ -2,10 +2,11 @@
 
 The flake builds `recite` and `recite-writer` from the repository's two locked Cargo workspaces. It
 pins nixpkgs and rust-overlay in `flake.lock` and selects the Rust version from
-`.config/mise/config.toml`. The Writer package builds Skia from the source pinned by its Cargo
-dependency, with Nix-provided build tools and system libraries. The
-[package definition](packages.nix) owns source revisions and platform linker adaptations; keep these
-aligned when updating `freya-skia-bindings`.
+`.config/mise/config.toml`. Writer defaults to Xilem; `recite-writer-freya` selects the fallback.
+Both expose `bin/recite-writer` and use the same application identity and personal data. The Freya
+package builds Skia from the source pinned by its Cargo dependency, with Nix-provided build tools
+and system libraries. The [package definition](packages.nix) owns source revisions and platform
+linker adaptations; keep these aligned when updating `freya-skia-bindings`.
 
 From a committed checkout:
 
@@ -14,6 +15,7 @@ nix build .#recite
 nix build .#recite-writer
 nix run .#recite -- --help
 nix run .#recite-writer -- --help
+nix run .#recite-writer-freya -- --help
 nix flake check
 nix develop
 ```

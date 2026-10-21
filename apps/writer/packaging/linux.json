@@ -13,6 +13,8 @@
       "libfontconfig1",
       "libegl1",
       "libgl1",
+      "libvulkan1",
+      "libwayland-client0",
       "libxkbcommon-x11-0"
     ]
   }

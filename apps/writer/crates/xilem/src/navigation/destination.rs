@@ -160,15 +160,7 @@ impl Writer {
         if !plan.needs_work() {
             return self.finish_location_presentation(&plan.location, cancel);
         }
-        if self.navigation.runtime.is_none()
-            || self
-                .navigation
-                .sender
-                .as_ref()
-                .is_none_or(UnboundedSender::is_closed)
-        {
-            return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
-        }
+        self.navigation.require_ready()?;
         let request = Arc::new(Request {
             target: Target::Present(plan.location.clone()),
             origin: Origin::capture(self),

@@ -1,15 +1,18 @@
 # Writer guide
 
-The native writer uses Freya and the shared Recite authoring kernel. Run from the repository root:
+The native writer defaults to Xilem over the shared Recite authoring kernel. Run from the repository
+root:
 
 ```sh
 mise exec -- just writer run
 ```
 
-The opt-in Xilem migration frontend runs with `mise exec -- just writer xilem`. Its welcome screen
-opens or creates projects and offers temporary examples. **Settings** changes personal appearance,
-text sizes, scale and shortcut bindings through the same configuration as Freya. See the
-[acceptance limits](acceptance.md#known-limits) for the remaining migration workspaces and commands.
+Use `mise exec -- just writer freya` for the Freya fallback, or `just writer xilem` to select Xilem
+explicitly. Both use the same projects, personal settings and recovery; choose one frontend at a
+time for a project. Xilem's welcome screen opens or creates projects and offers temporary examples.
+**Settings** changes personal appearance, text sizes, scale and shortcut bindings through the same
+configuration as Freya. See the [acceptance limits](acceptance.md#known-limits) for native-host and
+dependency-policy evidence gaps.
 
 Save translation drafts before opening another project. A saved catalogue may remain open while you
 switch; no separate catalogue-close step is required.
@@ -206,12 +209,12 @@ settings are a separate tab with a manifest editor and an explicit Apply action.
 parser, discovery rules, schema validation and atomic replacement primitives as other clients. A
 changed file on disk is never overwritten by a stale Settings draft.
 
-In the opt-in Xilem frontend, **Settings → Project settings…** opens a retained workspace. **Export
-settings draft** creates a separate TOML file; open it in your IDE, then **Import settings draft**
-to validate and review it. **Apply reviewed settings** publishes those exact contents and refreshes
-project analysis without applying or saving manuscript edits. **Reload saved settings** explicitly
-replaces the captured baseline after external edits. A failed analysis refresh offers a retry; an
-unconfirmed baseline must be reloaded before another Apply.
+In Xilem, **Settings → Project settings…** opens a retained workspace. **Export settings draft**
+creates a separate TOML file; open it in your IDE, then **Import settings draft** to validate and
+review it. **Apply reviewed settings** publishes those exact contents and refreshes project analysis
+without applying or saving manuscript edits. **Reload saved settings** explicitly replaces the
+captured baseline after external edits. A failed analysis refresh offers a retry; an unconfirmed
+baseline must be reloaded before another Apply.
 
 Native trackpad pinch remains unsupported by this pinned backend: Freya does not forward pinch
 events, and its winit version does not emit them on Linux. Ctrl+scroll is available, but is not a

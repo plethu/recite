@@ -5,10 +5,8 @@ Evidence covers desktop association/argv delivery and the real app's IPC ack;
 it does not cover human usability or package-manager upgrade/uninstall.
 """
 
-import json
 import os
 import shutil
-import signal
 import subprocess
 import sys
 import tempfile
@@ -16,90 +14,12 @@ import time
 from pathlib import Path
 from urllib.parse import urlencode
 
-LIMIT = 4096
+from writer_desktop_launcher import LIMIT, alive, diagnostics, events, launch_wrapper, wait_for
 
 
 def require(ok, message):
     if not ok:
         raise RuntimeError(message)
-
-
-def events(log):
-    try:
-        content = log.read_bytes()
-    except FileNotFoundError:
-        return []
-    complete = content.rsplit(b"\n", 1)[0] if not content.endswith(b"\n") else content[:-1]
-    if not complete:
-        return []
-    return [json.loads(line.decode("utf-8")) for line in complete.split(b"\n")]
-
-
-def wait_for(log, select, seconds, what):
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        result = select(events(log))
-        if result:
-            return result
-        time.sleep(0.05)
-    raise RuntimeError(f"timed out waiting for {what}; launcher evidence: {events(log)}")
-
-
-def record(log, value):
-    fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-    try:
-        os.write(fd, (json.dumps(value, ensure_ascii=False) + "\n").encode())
-    finally:
-        os.close(fd)
-
-
-def launch_wrapper():
-    argv = sys.argv[2:]
-    log, stop = Path(os.environ["RECITE_SMOKE_LOG"]), Path(os.environ["RECITE_SMOKE_STOP"])
-    if not argv or any(len(arg.encode()) > LIMIT for arg in argv):
-        record(log, {"event": "rejected", "argv": argv})
-        return 2
-    pid = os.getpid()
-    stderr_path = log.parent / f"writer-{pid}.stderr"
-    stderr_file = stderr_path.open("wb")
-    try:
-        child = subprocess.Popen(
-            [os.environ["RECITE_SMOKE_BINARY"], *argv],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=stderr_file,
-            start_new_session=True,
-        )
-    except OSError as error:
-        stderr_file.close()
-        record(log, {"event": "spawn-error", "pid": pid, "error": str(error)})
-        return 127
-    record(
-        log,
-        {
-            "event": "started",
-            "pid": pid,
-            "child": child.pid,
-            "argv": argv,
-            "stderr": str(stderr_path),
-        },
-    )
-    while True:
-        try:
-            status = child.wait(timeout=0.1)
-            break
-        except subprocess.TimeoutExpired:
-            if stop.exists():
-                child.send_signal(signal.SIGTERM)
-                try:
-                    status = child.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    child.kill()
-                    status = child.wait()
-                break
-    stderr_file.close()
-    record(log, {"event": "exited", "pid": pid, "child": child.pid, "status": status})
-    return status if status >= 0 else min(255, 128 - status)
 
 
 def fixture(base):
@@ -122,16 +42,6 @@ def route(project, scene):
     return "recite://writer/write?" + urlencode({"project": str(project), "scene": scene})
 
 
-def alive(pid):
-    try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-
-
 def invoke(uri, env, timeout=15):
     require(len(uri.encode()) <= LIMIT, "test URI exceeds the ingress bound")
     with tempfile.TemporaryFile() as error_output:
@@ -151,6 +61,7 @@ def invoke(uri, env, timeout=15):
 def forwarded_scene(uri, env, log):
     busy = (
         "The writer is still opening a project.",
+        "The navigation worker is starting. Retry this action in a moment.",
         "A project is still opening. Cancel it or wait for it to finish.",
     )
     deadline = time.monotonic() + 20
@@ -220,7 +131,8 @@ def smoke(root):
         "a DISPLAY or WAYLAND_DISPLAY is required",
     )
 
-    with tempfile.TemporaryDirectory(prefix="recite-desktop-links-") as temp:
+    # Keep activation and display sockets within the Unix pathname limit.
+    with tempfile.TemporaryDirectory(prefix="recite-desktop-links-", dir="/tmp") as temp:
         base = Path(temp)
         dirs = {name: base / name for name in ("config", "data", "state", "runtime", "bin")}
         for path in dirs.values():
@@ -346,8 +258,8 @@ def inside(root):
     )[0]
     require(start1["argv"] == [first], f"desktop argv changed: {start1}")
     first_pid = int(start1["child"])
-    wait_for(log, lambda _: alive(first_pid), 30, "cold app to remain running")
-    require(alive(first_pid), "cold app exited before activation")
+    if not alive(first_pid):
+        raise RuntimeError(f"cold app exited before activation: {diagnostics(log)}")
     start2, retries = forwarded_scene(second, os.environ.copy(), log)
     require(alive(first_pid), "the primary writer exited during running-window delivery")
     bad = "recite://writer/not-a-supported-screen"

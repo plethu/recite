@@ -2,8 +2,23 @@
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd -P)
+frontend=()
+if [[ ${1:-} == --frontend ]]; then
+  frontend=(--frontend "${2:?--frontend requires xilem or freya}")
+  shift 2
+fi
+if [[ $# -gt 1 || ${1:-} == --* ]]; then
+  echo 'usage: package-writer-flatpak.sh [--frontend xilem|freya] [OUTPUT]' >&2
+  exit 2
+fi
+package=$(python3 "$repo/scripts/writer_frontend.py" "${frontend[@]}")
 manifest="$repo/apps/writer/packaging/flatpak/io.github.plethu.recite.yml"
-output=${1:-"$repo/target/writer-flatpak"}
+default_output="$repo/target/writer-flatpak"
+if [[ $package == recite-writer ]]; then
+  manifest="$repo/apps/writer/packaging/flatpak/io.github.plethu.recite-freya.yml"
+  default_output+="-freya"
+fi
+output=${1:-"$default_output"}
 output=$(realpath -m "$output")
 
 # The manifest copies this checkout as a source. Only target/ is excluded.
@@ -33,4 +48,4 @@ flatpak build-bundle \
   "$output/io.github.plethu.recite.flatpak" \
   io.github.plethu.recite
 (cd "$output" && sha256sum io.github.plethu.recite.flatpak >SHA256SUMS)
-python3 "$repo/scripts/check-writer-flatpak.py" "$output"
+python3 "$repo/scripts/check-writer-flatpak.py" "${frontend[@]}" "$output"

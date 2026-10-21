@@ -8,6 +8,13 @@ exclude = [
 ]
 members = ["crates/authoring", "crates/freya", "crates/grammar", "crates/session", "crates/xilem"]
 
+[workspace.metadata.writer]
+default-frontend = "xilem"
+
+[workspace.metadata.writer.frontends]
+xilem = "recite-writer-xilem"
+freya = "recite-writer"
+
 [workspace.package]
 version = "0.0.0"
 edition = "2024"

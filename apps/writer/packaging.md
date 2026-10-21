@@ -60,8 +60,12 @@ mise -E packaging exec -- python scripts/check-writer-package.py target/writer-p
 ```
 
 The command builds the writer with its locked Cargo workspace, packages the native format, and
-writes under `target/writer-packages/`. The checker inspects metadata, payload, license files and
-installed binary CLI flags, then writes `SHA256SUMS`. The
+writes under `target/writer-packages/`. The default frontend comes from the Writer manifest and is
+currently Xilem. Pass `--frontend freya` to package the fallback under
+`target/writer-packages/freya/`, or `--frontend xilem` to select Xilem explicitly. Both packages use
+the same application ID, executable name and personal configuration; they are alternative installs.
+Staging preserves Cargo's original frontend executables. The checker inspects metadata, payload,
+license files and installed binary CLI flags, then writes `SHA256SUMS`. The
 [package preview workflow](../../.github/workflows/writer-packages.yml) runs native builds and
 uploads short-lived CI artifacts. macOS has separate Apple Silicon (`macos-15`) and Intel
 (`macos-15-intel`) jobs; inspection checks the packaged Mach-O architecture before launching it. The
@@ -92,11 +96,12 @@ small uninstall hook. The Windows installer is an app preview, not a deep-link-c
 
 This manifest builds Recite Writer from the current source checkout with the GNOME 50 SDK and
 exports `io.github.plethu.recite.flatpak`. It builds the locked Cargo workspace offline from
-committed, generated sources and builds the `freya-skia-bindings` Skia revision from source.
+committed, generated sources. The default Xilem manifest does not build Skia or GN. The explicit
+Freya variant retains their pinned source build.
 
 Install the build prerequisites in an isolated Flatpak installation or a disposable CI runner:
 `flatpak-builder`, `dbus-run-session`, `org.gnome.Platform//50`, `org.gnome.Sdk//50`, and
-`org.freedesktop.Sdk.Extension.rust-stable//25.08`, plus
+`org.freedesktop.Sdk.Extension.rust-stable//25.08`. Freya also requires
 `org.freedesktop.Sdk.Extension.llvm22//25.08` for Skia's Clang and bindgen. The GNOME SDK supplies
 `ninja`, Python, C/C++ libraries and headers; the runtime supplies `flatpak-spawn`, `msginit`, and
 portal-backed `xdg-open`. The Rust extension must provide Rust 1.96 or newer (the September 2026
@@ -108,8 +113,8 @@ export XDG_DATA_HOME="$PWD/target/writer-flatpak-profile"
 flatpak remote-add --user --if-not-exists flathub \
   https://flathub.org/repo/flathub.flatpakrepo
 flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50 \
-  org.freedesktop.Sdk.Extension.rust-stable//25.08 \
-  org.freedesktop.Sdk.Extension.llvm22//25.08
+  org.freedesktop.Sdk.Extension.rust-stable//25.08
+# Add org.freedesktop.Sdk.Extension.llvm22//25.08 when building Freya.
 ```
 
 From the repository root:
@@ -118,6 +123,7 @@ From the repository root:
 python3 scripts/check-writer-flatpak.py  # static metadata and Cargo lock, no SDK needed
 python3 scripts/check-writer-flatpak.py --builder
 scripts/package-writer-flatpak.sh /path/to/build-output
+scripts/package-writer-flatpak.sh --frontend freya /path/to/freya-output
 ```
 
 The build command writes `build/`, `state/`, `repo/`, the `.flatpak` bundle, and `SHA256SUMS` with a
@@ -136,9 +142,10 @@ python3 flatpak-cargo-generator.py apps/writer/Cargo.lock \
   -o apps/writer/packaging/flatpak/cargo-sources.json
 ```
 
-The Flatpak manifest owns GN, Skia and SDK pins. Update generated Cargo sources with the Writer
-lockfile; each native architecture needs its own SDK and build runner. The shared runtime supplies
-gettext and the preferred-application launcher.
+The Freya Flatpak manifest owns GN, Skia and SDK pins. Both manifests share the locked Cargo source
+list. Update generated Cargo sources with the Writer lockfile; each native architecture needs its
+own SDK and build runner. The shared runtime supplies gettext and the preferred-application
+launcher.
 
 Host filesystem access lets projects live on mounted drives. `org.freedesktop.Flatpak` D-Bus access
 runs explicitly configured producers and editors through `flatpak-spawn --host`; this broad

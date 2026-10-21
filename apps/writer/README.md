@@ -1,9 +1,11 @@
 # Recite writer
 
-The maintained Freya application for editing Recite dialogue, currently a preview. Script opens the
-selected beat in a reading column, with branch previews for comparing replies. Map shows beats,
-branches, convergences and returns; it can stand alone or sit beside Script. Source uses the same
-document and compiler diagnostics.
+The native application for editing Recite dialogue, currently a preview. Xilem is the default
+frontend; Freya remains available for comparison and fallback. Script opens the selected beat in a
+reading column, with branch previews for comparing replies. Map shows beats, branches, convergences
+and returns; it can stand alone or sit beside Script. Xilem hands source editing to your preferred
+IDE with checked saves and explicit import for draft repair. Freya retains its embedded Source
+editor.
 
 Script is the first-use default. Existing Map and Source preferences are kept. Presentation settings
 and map placement are personal; pan and zoom leave the dialogue untouched. Commands
@@ -25,14 +27,16 @@ recurring conversation hub, a branching and reconverging evacuation, and a three
 Example edits live only for the window's lifetime. Project mode provides explicit save, crash
 recovery, and external-edit conflict protection. See the [writer guide](guide.md).
 
-## Xilem migration
+## Frontends
 
-Xilem is the selected replacement frontend. Its file-backed frontend is available separately:
+The default is recorded in `Cargo.toml` under `workspace.metadata.writer`. Select either frontend
+explicitly when comparing the same project:
 
 ```sh
 mise exec -- just writer xilem --project /path/to/project --document dialogue/scene.recite \
     --editor nvim
 mise exec -- just writer xilem --design-system
+mise exec -- just writer freya --project /path/to/project
 ```
 
 Use your editor's own arguments; `--editor-arg` repeats and the source path is appended without a
@@ -103,17 +107,18 @@ location through the toolkit's native clipboard. Linked destinations cover writi
 rules, project tools and catalogue workflows. Source links save accepted source and open the
 configured IDE; recovered source drafts retain their explicit repair workflow. Shared workflow
 parity is covered by headless tests and owned Wayland drills. The native dependency audit remains
-red, and the default launcher continues to use Freya. See [acceptance](acceptance.md) for evidence
-limits.
+red; changing the default does not waive it or establish release readiness. See
+[acceptance](acceptance.md) for evidence limits.
 
 ## Build requirements
 
-This workspace has its own lockfile to contain the pinned Freya native graphics stack. It is
-maintained application code: the repository verification gate runs its formatting, tests, and
-all-target Clippy checks.
+This workspace has its own lockfile to contain both pinned native graphics stacks. It is maintained
+application code: the repository verification gate runs its formatting, tests, and all-target Clippy
+checks.
 
-Native builds need Freya/Skia prerequisites (clang, CMake, pkg-config, and GTK 3 development
-libraries on Linux) and a working desktop session. Linux execution and component tests do not
+Xilem builds need the platform graphics and window-system libraries and a working desktop session.
+Building Freya or the complete workspace also needs Freya/Skia prerequisites (clang, CMake,
+pkg-config, and GTK 3 development libraries on Linux). Linux execution and component tests do not
 establish macOS, Windows, screen-reader, or physical IME acceptance. See
 [remaining validation](acceptance.md).
 
@@ -121,8 +126,8 @@ Creating a dialogue PO catalogue from the Localise workspace requires GNU gettex
 `PATH`). Install gettext before running the writer's full test gate, which exercises real catalogue
 creation. Existing PO editing works without it. See [the localisation workflow](localisation.md).
 
-The writer uses Freya routing for workspace [history and links](guide.md#navigation-and-links),
-including Back/Forward across scenes and the translation queue.
+Both frontends support workspace [history and links](guide.md#navigation-and-links), including
+Back/Forward across scenes and the translation queue.
 
 Flatpak, Nix, and native preview package definitions and artifact checks are available; see
 [packaging](packaging.md) for build instructions, desktop-link support and the remaining platform

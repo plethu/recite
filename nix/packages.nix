@@ -5,7 +5,9 @@
   inherit (pkgs) lib stdenv;
   rustVersion = (builtins.fromTOML (builtins.readFile ../.config/mise/config.toml)).tools.rust.version;
   cliVersion = (builtins.fromTOML (builtins.readFile ../Cargo.toml)).workspace.package.version;
-  writerVersion = (builtins.fromTOML (builtins.readFile ../apps/writer/Cargo.toml)).workspace.package.version;
+  writerManifest = builtins.fromTOML (builtins.readFile ../apps/writer/Cargo.toml);
+  writerVersion = writerManifest.workspace.package.version;
+  writerFrontends = writerManifest.workspace.metadata.writer;
   rustToolchain = pkgs.rust-bin.stable.${rustVersion}.default;
   rustPlatform = pkgs.makeRustPlatform {
     cargo = rustToolchain;
@@ -164,81 +166,94 @@
   writerCraneLib = ((crane.mkLib pkgs).overrideToolchain rustToolchain).overrideScope (_: _: {
     stdenvSelector = p: p.clangStdenv;
   });
-  writerArgs = {
-    pname = "recite-writer";
-    version = writerVersion;
-    src = source;
-    cargoLock = ../apps/writer/Cargo.lock;
-    # Resolve vendoring without building the generated dummy source during evaluation.
-    cargoVendorDir = writerCraneLib.vendorCargoDeps {
+  makeWriter = frontend: let
+    package = writerFrontends.frontends.${frontend};
+    isFreya = frontend == "freya";
+    writerArgs = {
+      pname = "recite-writer-${frontend}";
+      version = writerVersion;
       src = source;
       cargoLock = ../apps/writer/Cargo.lock;
-    };
-    cargoExtraArgs = "--locked -p recite-writer";
-    postUnpack = ''sourceRoot="$sourceRoot/apps/writer"'';
-    doCheck = false;
-    nativeBuildInputs = writerNativeInputs;
-    buildInputs = writerBuildInputs;
-    # Ninja is invoked by Skia's build script, not for the Cargo package itself.
-    dontUseNinjaBuild = true;
-    dontUseNinjaCheck = true;
-    dontUseNinjaInstall = true;
-    env =
-      writerEnv
-      // {
-        CARGO_TARGET_DIR = "target";
-        # Keep bindgen flags identical between dependency and application builds.
-        # https://crane.dev/faq/rebuilds-bindgen.html
-        NIX_OUTPATH_USED_AS_RANDOM_SEED = "recitewrit";
-      };
-    preBuild = ''
-      export NIX_LDFLAGS="$NIX_LDFLAGS ${writerExtraLinkFlags}"
-    '';
-  };
-  writerCargoArtifacts = writerCraneLib.buildDepsOnly ((builtins.removeAttrs writerArgs ["src"])
-    // {
-      dummySrc = writerCraneLib.mkDummySrc {
+      # Resolve vendoring without building the generated dummy source during evaluation.
+      cargoVendorDir = writerCraneLib.vendorCargoDeps {
         src = source;
         cargoLock = ../apps/writer/Cargo.lock;
-        extraDummyScript = ''
-          cp ${../apps/writer/Cargo.lock} "$out/apps/writer/Cargo.lock"
-          # Registry Freya imports this local patch's public editor API.
-          # Keep it real while Crane stubs application-owned crates.
-          cp -Rf ${../apps/writer/vendor/freya-code-editor/src}/. \
-            "$out/apps/writer/vendor/freya-code-editor/src/"
-          cp -Rf ${../apps/writer/vendor/freya-core/src}/. \
-            "$out/apps/writer/vendor/freya-core/src/"
-        '';
       };
-      buildPhaseCargoCommand = "cargo build --profile release ${writerArgs.cargoExtraArgs}";
-    });
-  recite-writer = writerCraneLib.buildPackage (writerArgs
-    // {
-      cargoArtifacts = writerCargoArtifacts;
-      postInstall = lib.optionalString stdenv.hostPlatform.isLinux ''
-        install -Dm644 packaging/icons/recite-writer.png \
-          "$out/share/icons/hicolor/512x512/apps/recite-writer.png"
-        install -Dm644 ${./recite-writer.desktop} \
-          "$out/share/applications/recite-writer.desktop"
+      cargoExtraArgs = "--locked -p ${package}";
+      postUnpack = ''sourceRoot="$sourceRoot/apps/writer"'';
+      doCheck = false;
+      nativeBuildInputs =
+        if isFreya
+        then writerNativeInputs
+        else [pkgs.pkg-config pkgs.makeWrapper] ++ lib.optionals stdenv.hostPlatform.isLinux [pkgs.patchelf];
+      buildInputs =
+        if isFreya
+        then writerBuildInputs
+        else lib.optionals stdenv.hostPlatform.isLinux ([pkgs.fontconfig] ++ linuxLibraries);
+      # Ninja is invoked by Skia's build script, not for the Cargo package itself.
+      dontUseNinjaBuild = true;
+      dontUseNinjaCheck = true;
+      dontUseNinjaInstall = true;
+      env =
+        (lib.optionalAttrs isFreya writerEnv)
+        // {
+          CARGO_TARGET_DIR = "target";
+          # Keep bindgen flags identical between dependency and application builds.
+          # https://crane.dev/faq/rebuilds-bindgen.html
+          NIX_OUTPATH_USED_AS_RANDOM_SEED = "recitewrit";
+        };
+      preBuild = lib.optionalString isFreya ''
+        export NIX_LDFLAGS="$NIX_LDFLAGS ${writerExtraLinkFlags}"
       '';
-      postFixup =
-        lib.optionalString stdenv.hostPlatform.isLinux ''
-          patchelf --add-rpath ${lib.makeLibraryPath linuxLibraries} \
-            "$out/bin/recite-writer"
-          wrapProgram "$out/bin/recite-writer" \
-            --suffix PATH : ${lib.makeBinPath [pkgs.gettext pkgs.xdg-utils]}
-        ''
-        + lib.optionalString stdenv.hostPlatform.isDarwin ''
-          wrapProgram "$out/bin/recite-writer" \
-            --suffix PATH : ${lib.makeBinPath [pkgs.gettext]}
-        '';
-      meta = {
-        description = "Recite dialogue writer";
-        mainProgram = "recite-writer";
-        license = with lib.licenses; [mit asl20];
-        platforms = lib.platforms.linux ++ lib.platforms.darwin;
-      };
-    });
+    };
+    writerCargoArtifacts = writerCraneLib.buildDepsOnly ((builtins.removeAttrs writerArgs ["src"])
+      // {
+        dummySrc = writerCraneLib.mkDummySrc {
+          src = source;
+          cargoLock = ../apps/writer/Cargo.lock;
+          extraDummyScript = ''
+            cp ${../apps/writer/Cargo.lock} "$out/apps/writer/Cargo.lock"
+            # Upstream toolkit crates consume these patches' public APIs.
+            # Stub application crates, but compile the actual dependency patches.
+            cp -Rf ${../apps/writer/vendor}/. "$out/apps/writer/vendor/"
+          '';
+        };
+        buildPhaseCargoCommand = "cargo build --profile release ${writerArgs.cargoExtraArgs}";
+      });
+  in
+    writerCraneLib.buildPackage (writerArgs
+      // {
+        cargoArtifacts = writerCargoArtifacts;
+        postInstall =
+          lib.optionalString (package != "recite-writer") ''
+            mv "$out/bin/${package}" "$out/bin/recite-writer"
+          ''
+          + lib.optionalString stdenv.hostPlatform.isLinux ''
+            install -Dm644 packaging/icons/recite-writer.png \
+              "$out/share/icons/hicolor/512x512/apps/recite-writer.png"
+            install -Dm644 ${./recite-writer.desktop} \
+              "$out/share/applications/recite-writer.desktop"
+          '';
+        postFixup =
+          lib.optionalString stdenv.hostPlatform.isLinux ''
+            patchelf --add-rpath ${lib.makeLibraryPath linuxLibraries} \
+              "$out/bin/recite-writer"
+            wrapProgram "$out/bin/recite-writer" \
+              --suffix PATH : ${lib.makeBinPath [pkgs.gettext pkgs.xdg-utils]}
+          ''
+          + lib.optionalString stdenv.hostPlatform.isDarwin ''
+            wrapProgram "$out/bin/recite-writer" \
+              --suffix PATH : ${lib.makeBinPath [pkgs.gettext]}
+          '';
+        meta = {
+          description = "Recite dialogue writer";
+          mainProgram = "recite-writer";
+          license = with lib.licenses; [mit asl20];
+          platforms = lib.platforms.linux ++ lib.platforms.darwin;
+        };
+      });
+  recite-writer = makeWriter writerFrontends.default-frontend;
+  recite-writer-freya = makeWriter "freya";
 in {
-  inherit pkgs rustToolchain writerEnv writerExtraLinkFlags writerNativeInputs writerBuildInputs recite recite-writer;
+  inherit pkgs rustToolchain writerEnv writerExtraLinkFlags writerNativeInputs writerBuildInputs recite recite-writer recite-writer-freya;
 }

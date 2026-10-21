@@ -14,6 +14,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+
 spec = importlib.util.spec_from_file_location("package_writer", ROOT / "scripts/package-writer.py")
 package_writer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package_writer)
@@ -30,6 +32,61 @@ flatpak_spec.loader.exec_module(flatpak_check)
 
 
 class PackageConfigTests(unittest.TestCase):
+    def test_frontend_selection_is_explicit_and_rejects_unknown_names(self):
+        self.assertEqual(package_writer.package_for(), "recite-writer-xilem")
+        self.assertEqual(package_writer.package_for("xilem"), "recite-writer-xilem")
+        self.assertEqual(package_writer.package_for("freya"), "recite-writer")
+        with self.assertRaisesRegex(ValueError, "unknown Writer frontend"):
+            package_writer.package_for("missing")
+
+    def test_native_packages_keep_app_identity_and_both_cached_frontends(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            release = base / "target/release"
+            release.mkdir(parents=True)
+            payloads = {"recite-writer-xilem": b"Xilem binary", "recite-writer": b"Freya binary"}
+            for package, payload in payloads.items():
+                (release / f"{package}.exe").write_bytes(payload)
+            for frontend, package in ((None, "recite-writer-xilem"), ("freya", "recite-writer")):
+                with self.subTest(frontend=frontend):
+                    packaged = []
+
+                    def run(command, **_):
+                        if command[:2] == ["cargo", "build"]:
+                            self.assertEqual(command[command.index("-p") + 1], package)
+                        else:
+                            self.assertEqual(command[:2], ["cargo", "packager"])
+                            config = json.loads(Path(command[-1]).read_text())
+                            staged = Path(config["binariesDir"]) / "recite-writer.exe"
+                            self.assertEqual(staged.read_bytes(), payloads[package])
+                            self.assertEqual(config["identifier"], "io.github.plethu.recite")
+                            self.assertNotEqual(staged.parent, release)
+                            packaged.append(staged)
+
+                    argv = [
+                        "package-writer.py",
+                        "--target-dir",
+                        str(base / "target"),
+                        "--output-dir",
+                        str(base / "packages"),
+                    ]
+                    if frontend:
+                        argv.extend(["--frontend", frontend])
+                    with (
+                        patch.object(sys, "argv", argv),
+                        patch.object(package_writer, "host_platform", return_value="windows"),
+                        patch.object(
+                            package_writer.subprocess,
+                            "check_output",
+                            return_value=f"cargo-packager {package_writer.PACKAGER_VERSION}\n",
+                        ),
+                        patch.object(package_writer.subprocess, "run", side_effect=run),
+                    ):
+                        self.assertEqual(package_writer.main(), 0)
+                    self.assertEqual(len(packaged), 1)
+                    for cached, payload in payloads.items():
+                        self.assertEqual((release / f"{cached}.exe").read_bytes(), payload)
+
     def test_skia_revision_mismatch_fails_before_native_build(self):
         source = (ROOT / "nix/packages.nix").read_text()
         flatpak_check.check_nix_skia_revision(source)
@@ -137,7 +194,9 @@ class PackageConfigTests(unittest.TestCase):
             source = Path(temporary) / "debug-writer"
             source.write_bytes(b"smoke binary")
             config = package_writer.load_config("linux", target_dir, Path(temporary))
-            staged = package_writer.stage_smoke_binary(config, target_dir, "linux", source)
+            staged = package_writer.stage_binary(
+                config, target_dir / "writer-package/fixture/smoke", "linux", source
+            )
             self.assertEqual(staged.read_bytes(), b"smoke binary")
             self.assertEqual(release.read_bytes(), b"cargo release sentinel")
             self.assertEqual(Path(config["binariesDir"]), staged.parent)
@@ -171,7 +230,7 @@ class PackageConfigTests(unittest.TestCase):
             control.write_text(
                 f"Package: recite-writer\nVersion: {package_writer.debian_version(package_writer.writer_version())}\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
-                f"Depends: libc6 (>= {abi['minimumGlibc']}), libxkbcommon-x11-0\nDescription: test fixture\n"
+                f"Depends: libc6 (>= {abi['minimumGlibc']}), libxkbcommon-x11-0, libvulkan1, libwayland-client0\nDescription: test fixture\n"
             )
             desktop = payload / "usr/share/applications/recite-writer.desktop"
             desktop.parent.mkdir(parents=True)
@@ -201,7 +260,7 @@ class PackageConfigTests(unittest.TestCase):
             control.write_text(
                 f"Package: recite-writer\nVersion: {package_writer.debian_version(package_writer.writer_version())}\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
-                "Depends: libc6 (>= 2.1), libxkbcommon-x11-0\nDescription: test fixture\n"
+                "Depends: libc6 (>= 2.1), libxkbcommon-x11-0, libvulkan1, libwayland-client0\nDescription: test fixture\n"
             )
             self.build_deb_fixture(payload, artifact)
             with self.assertRaisesRegex(ValueError, "below the packaged ELF requirement"):

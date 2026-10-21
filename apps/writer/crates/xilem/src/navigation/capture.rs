@@ -56,15 +56,7 @@ impl Writer {
         )
     }
     pub(super) fn submit_navigation(&mut self, target: Target) -> Result<(), String> {
-        if self
-            .navigation
-            .sender
-            .as_ref()
-            .is_none_or(UnboundedSender::is_closed)
-            || self.navigation.runtime.is_none()
-        {
-            return Err("The navigation worker is unavailable. Reopen Writer to retry.".into());
-        }
+        self.navigation.require_ready()?;
         if matches!(target, Target::Workspace(_) | Target::MapRefresh) {
             let work = self.prepare_map(if matches!(target, Target::Workspace(_)) {
                 crate::map::Purpose::Workspace

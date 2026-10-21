@@ -10,6 +10,8 @@ import tomllib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from writer_frontend import package_for
+
 APP_ID = "io.github.plethu.recite"
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "apps/writer/packaging/flatpak" / f"{APP_ID}.yml"
@@ -32,10 +34,12 @@ def check_nix_skia_revision(source: str) -> None:
     require(revisions == [SKIA_REVISION], "Nix and Flatpak must use the same Skia revision")
 
 
-def check_builder_manifest() -> None:
+def check_builder_manifest(frontend=None) -> None:
+    is_freya = package_for(frontend) == package_for("freya")
+    manifest_path = MANIFEST.with_name(f"{APP_ID}-freya.yml") if is_freya else MANIFEST
     manifest = json.loads(
         subprocess.check_output(
-            ["flatpak-builder", "--show-manifest", str(MANIFEST)],
+            ["flatpak-builder", "--show-manifest", str(manifest_path)],
             text=True,
             timeout=20,
         )
@@ -45,12 +49,8 @@ def check_builder_manifest() -> None:
     require(manifest["runtime"] == "org.gnome.Platform", "wrong runtime")
     require(manifest["runtime-version"] == "50", "wrong runtime version")
     require(
-        {
-            "org.freedesktop.Sdk.Extension.rust-stable",
-            "org.freedesktop.Sdk.Extension.llvm22",
-        }
-        <= set(manifest["sdk-extensions"]),
-        "Rust and LLVM SDK extensions are required",
+        {"org.freedesktop.Sdk.Extension.rust-stable"} <= set(manifest["sdk-extensions"]),
+        "Rust SDK extension is required",
     )
     finish_args = set(manifest["finish-args"])
     require(
@@ -68,6 +68,22 @@ def check_builder_manifest() -> None:
     require(writer["name"] == "recite-writer", "wrong writer module")
     env = writer["build-options"]["env"]
     require(env["CARGO_NET_OFFLINE"] == "true", "Cargo must build offline")
+    expected_frontend = "freya" if is_freya else "xilem"
+    require(
+        any(
+            f"writer_frontend.py --frontend {expected_frontend}" in command
+            for command in writer["build-commands"]
+        ),
+        "manifest must build the selected Writer frontend",
+    )
+    if not is_freya:
+        require(len(manifest["modules"]) == 1, "Xilem must not build Freya's GN/Skia stack")
+        require(not any(key.startswith("SKIA_") for key in env), "unexpected Xilem Skia input")
+        return
+    require(
+        "org.freedesktop.Sdk.Extension.llvm22" in manifest["sdk-extensions"],
+        "Freya requires the LLVM SDK extension",
+    )
     require(
         env["SKIA_SOURCE_DIR"] == "/run/build/recite-writer/skia",
         "Skia must build from pinned source",
@@ -211,10 +227,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("output", nargs="?", type=Path)
     parser.add_argument("--builder", action="store_true", help="also parse with flatpak-builder")
+    parser.add_argument("--frontend", choices=("xilem", "freya"))
     args = parser.parse_args()
     check_sources_and_metadata()
     if args.builder or args.output is not None:
-        check_builder_manifest()
+        check_builder_manifest(args.frontend)
     if args.output is not None:
         check_export(args.output)
     print("Writer Flatpak checks passed")

@@ -29,7 +29,7 @@
     packages = eachSystem (system: let
       packages = packagesFor system;
     in {
-      inherit (packages) recite recite-writer;
+      inherit (packages) recite recite-writer recite-writer-freya;
       default = packages.recite-writer;
     });
 
@@ -43,6 +43,10 @@
       recite-writer = {
         type = "app";
         program = "${packages.recite-writer}/bin/recite-writer";
+      };
+      recite-writer-freya = {
+        type = "app";
+        program = "${packages.recite-writer-freya}/bin/recite-writer";
       };
       default = self.apps.${system}.recite-writer;
     });

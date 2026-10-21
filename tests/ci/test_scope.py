@@ -211,6 +211,14 @@ class ScopeTests(unittest.TestCase):
                 self.assertEqual(selected(path), scope.ENGINE | {"docs"})
 
     def test_packaging_owners_select_only_their_distribution_family(self):
+        self.assertEqual(
+            selected("scripts/writer_frontend.py"),
+            {"writer", "package-config", "maintainability", "docs"},
+        )
+        self.assertEqual(
+            scope.lanes_for_path("scripts/writer_frontend.py"),
+            scope.WRITER_DISTRIBUTION | {"writer", "maintainability", "docs"},
+        )
         for path, lane in (
             ("flake.nix", "nix-packages"),
             ("flake.lock", "nix-packages"),
@@ -221,6 +229,8 @@ class ScopeTests(unittest.TestCase):
             ("tests/writer-flatpak/check.py", "flatpak-packages"),
             ("apps/writer/packaging/icons/recite-writer.svg", "flatpak-packages"),
             ("scripts/package-writer.py", "packages"),
+            ("scripts/check-writer-desktop-links.py", "packages"),
+            ("scripts/writer_desktop_launcher.py", "packages"),
             (".config/mise/config.packaging.toml", "packages"),
             ("scripts/check-writer-package-windows.ps1", "packages"),
             ("tests/writer-packaging/check.py", "packages"),

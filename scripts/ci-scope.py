@@ -40,6 +40,8 @@ def lanes_for_path(path, *, base=None, head=None):
         return owners
     if path == "scripts/check-workflow-performance.sh" or path.startswith("tools/recite-perf/"):
         return frozenset({"workflow-performance", "maintainability"})
+    if path == "scripts/writer_frontend.py":
+        return WRITER_DISTRIBUTION | {"writer", "maintainability", "docs"}
     if path.startswith("nix/") or path in {"flake.nix", "flake.lock"}:
         return frozenset({"nix-packages", "maintainability", "docs"})
     if path.startswith(("apps/writer/packaging/flatpak/", "tests/writer-flatpak/")) or path in {
@@ -154,6 +156,7 @@ def lanes_for_path(path, *, base=None, head=None):
         return WRITER_DISTRIBUTION | {"writer", "maintainability", "docs", "site"}
     if path.startswith(PACKAGING_PREFIXES) or path in {
         "scripts/check-writer-desktop-links.py",
+        "scripts/writer_desktop_launcher.py",
     }:
         return frozenset({"packages", "maintainability", "docs"})
     if path.startswith(
