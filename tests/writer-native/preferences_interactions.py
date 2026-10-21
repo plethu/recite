@@ -1,7 +1,6 @@
 """Live preferences preserve mounted fields and persist through the shared user store."""
 import json
 import os
-import subprocess
 import tempfile
 import tomllib
 import traceback
