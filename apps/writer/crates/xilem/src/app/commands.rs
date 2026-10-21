@@ -1,7 +1,7 @@
 use super::*;
-use crate::attention::PaneMotion;
+use crate::{attention::PaneMotion, map::Workspace, navigation::Target, workspaces::Open};
 use recite_config::WriterCommand;
-use recite_writer_model::StructuralCommand;
+use recite_writer_model::{EditOperation, StructuralCommand};
 
 impl App {
     pub(super) fn run_command(&mut self, command: WriterCommand) {
@@ -24,72 +24,63 @@ impl App {
             self.status = "Choose how to close Writer before running another command.".into();
             return;
         }
-        match command {
-            WriterCommand::Commands => self.open_picker(picker::Search::Commands),
-            WriterCommand::GoTo | WriterCommand::Find => self.open_picker(picker::Search::GoTo),
-            WriterCommand::Settings => self.show_settings(),
-            WriterCommand::OpenProject => {
+        match (&mut self.writer, command) {
+            (_, WriterCommand::Commands) => self.open_picker(picker::Search::Commands),
+            (_, WriterCommand::GoTo | WriterCommand::Find) => {
+                self.open_picker(picker::Search::GoTo)
+            }
+            (_, WriterCommand::Settings) => self.show_settings(),
+            (_, WriterCommand::OpenProject) => {
                 self.show_welcome = true;
                 self.settings_open = false;
             }
-            WriterCommand::Close => self.request_close(),
-            _ if self.settings_open || self.show_welcome => {
+            (_, WriterCommand::Close) => self.request_close(),
+            (_, _) if self.settings_open || self.show_welcome => {
                 self.status = "Return to your document to run this command.".into()
             }
-            _ => {
-                let Some(writer) = &mut self.writer else {
-                    return;
-                };
-                match command {
-                    WriterCommand::Script => writer.show_workspace(crate::map::Workspace::Script),
-                    WriterCommand::Map => writer.show_workspace(crate::map::Workspace::Map),
-                    WriterCommand::Split => writer.show_workspace(crate::map::Workspace::Split),
-                    WriterCommand::Focus => writer.toggle_focus(),
-                    WriterCommand::Localise => writer.open_localisation(),
-                    WriterCommand::Declarations => {
-                        writer.open_project_workspace(crate::workspaces::Open::Declarations)
-                    }
-                    WriterCommand::Build => {
-                        writer.open_project_workspace(crate::workspaces::Open::Build)
-                    }
-                    WriterCommand::Rename => {
-                        writer.open_project_workspace(crate::workspaces::Open::Rename)
-                    }
-                    WriterCommand::NextMatch | WriterCommand::PreviousMatch => {
-                        writer.repeat_lookup(command == WriterCommand::NextMatch)
-                    }
-                    WriterCommand::PaneLeft => writer.focus_pane(PaneMotion::Left),
-                    WriterCommand::PaneRight => writer.focus_pane(PaneMotion::Right),
-                    WriterCommand::PaneUp => writer.focus_pane(PaneMotion::Up),
-                    WriterCommand::PaneDown => writer.focus_pane(PaneMotion::Down),
-                    WriterCommand::Save => writer.save(),
-                    WriterCommand::SaveAll => writer.save_all(),
-                    WriterCommand::Source => writer.open_editor(),
-                    WriterCommand::Apply => writer.navigate(crate::navigation::Target::Edit(
-                        recite_writer_model::EditOperation::Apply,
-                    )),
-                    WriterCommand::Undo | WriterCommand::Redo => {
-                        writer.undo_redo(command == WriterCommand::Redo)
-                    }
-                    WriterCommand::AddBeat | WriterCommand::AddLine | WriterCommand::AddReply => {
-                        writer.navigate(crate::navigation::Target::Structure(match command {
-                            WriterCommand::AddBeat => StructuralCommand::AddBeat,
-                            WriterCommand::AddLine => StructuralCommand::AddLine,
-                            _ => StructuralCommand::AddReply,
-                        }))
-                    }
-                    WriterCommand::Preview => writer.start_trial(),
-                    WriterCommand::Back | WriterCommand::Forward => {
-                        writer.history_step(command == WriterCommand::Forward)
-                    }
-                    _ => {
-                        writer.status = format!(
-                            "{} is not available in this frontend yet.",
-                            recite_writer_session::commands::label(command, false)
-                        )
-                    }
-                }
+            (Some(writer), WriterCommand::Script) => writer.show_workspace(Workspace::Script),
+            (Some(writer), WriterCommand::Map) => writer.show_workspace(Workspace::Map),
+            (Some(writer), WriterCommand::Split) => writer.show_workspace(Workspace::Split),
+            (Some(writer), WriterCommand::Focus) => writer.toggle_focus(),
+            (Some(writer), WriterCommand::Localise) => writer.open_localisation(),
+            (Some(writer), WriterCommand::Declarations) => {
+                writer.open_project_workspace(Open::Declarations)
             }
+            (Some(writer), WriterCommand::Build) => writer.open_project_workspace(Open::Build),
+            (Some(writer), WriterCommand::Rename) => writer.open_project_workspace(Open::Rename),
+            (Some(writer), WriterCommand::NextMatch | WriterCommand::PreviousMatch) => {
+                writer.repeat_lookup(command == WriterCommand::NextMatch)
+            }
+            (Some(writer), WriterCommand::PaneLeft) => writer.focus_pane(PaneMotion::Left),
+            (Some(writer), WriterCommand::PaneRight) => writer.focus_pane(PaneMotion::Right),
+            (Some(writer), WriterCommand::PaneUp) => writer.focus_pane(PaneMotion::Up),
+            (Some(writer), WriterCommand::PaneDown) => writer.focus_pane(PaneMotion::Down),
+            (Some(writer), WriterCommand::Save) => writer.save(),
+            (Some(writer), WriterCommand::SaveAll) => writer.save_all(),
+            (Some(writer), WriterCommand::Source) => writer.open_editor(),
+            (Some(writer), WriterCommand::Apply) => {
+                writer.navigate(Target::Edit(EditOperation::Apply))
+            }
+            (Some(writer), WriterCommand::Undo | WriterCommand::Redo) => {
+                writer.undo_redo(command == WriterCommand::Redo)
+            }
+            (Some(writer), WriterCommand::AddBeat) => {
+                writer.navigate(Target::Structure(StructuralCommand::AddBeat))
+            }
+            (Some(writer), WriterCommand::AddLine) => {
+                writer.navigate(Target::Structure(StructuralCommand::AddLine))
+            }
+            (Some(writer), WriterCommand::AddReply) => {
+                writer.navigate(Target::Structure(StructuralCommand::AddReply))
+            }
+            (Some(writer), WriterCommand::Preview) => writer.start_trial(),
+            (Some(writer), WriterCommand::Back | WriterCommand::Forward) => {
+                writer.history_step(command == WriterCommand::Forward)
+            }
+            (None, _) => (),
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
