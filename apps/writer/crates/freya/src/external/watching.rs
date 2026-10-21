@@ -45,22 +45,24 @@ fn poll_external_changes(mut writer: Writer) {
     let Ok(watch) = &project.watch else {
         return;
     };
-    let paths = match watch.changed() {
-        Ok(paths) => paths,
-        Err(error) => {
-            writer.message.error(format!(
-                "File watching stopped: {error}. Save still checks for external changes."
-            ));
-            return;
-        }
-    };
-    let Some(target) = paths.iter().find(|path| project.externally_changed(path)) else {
+    let changes = watch.changed();
+    if let Some(error) = changes.error {
+        writer.message.error(format!(
+            "File watching stopped: {error}. Save still checks for external changes."
+        ));
+    }
+    let Some(observation) = project
+        .external_checks(&changes.affected)
+        .into_iter()
+        .map(|request| request.observe())
+        .find(|observation| observation.changed())
+    else {
         return;
     };
     if writer.message.is_error() {
         return;
     }
-    let target = target.clone();
+    let target = observation.path().to_owned();
     writer.message.error_with_action(
         text(MsgId::WriterDiskChanged),
         text(MsgId::WriterCompare),

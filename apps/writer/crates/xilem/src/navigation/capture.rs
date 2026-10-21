@@ -95,7 +95,7 @@ impl Writer {
         let model = self.session.model();
         let location = target.location().cloned();
         let destination = match &target {
-            Target::Document(path) => Destination::Switch(Box::new(
+            Target::Document(path) | Target::CompareFile(path) => Destination::Switch(Box::new(
                 self.session
                     .project()
                     .ok_or("Open a project first.")?

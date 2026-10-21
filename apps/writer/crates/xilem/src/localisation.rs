@@ -7,6 +7,7 @@ mod source_navigation;
 #[cfg(test)]
 mod tests;
 mod view;
+mod watching;
 mod work;
 use crate::{
     Phase, Writer,
@@ -23,6 +24,9 @@ use slot::{Identity, Slot};
 pub(crate) use source_navigation::SourceIntent;
 use std::{path::PathBuf, sync::Arc};
 pub(crate) use view::{close_details, panel};
+pub(crate) use watching::{
+    Observation as WatchObservation, Request as WatchRequest, Scope as WatchScope,
+};
 pub(crate) use work::{Completed, Work};
 pub(crate) use work::{Finish, Finished};
 

@@ -61,13 +61,16 @@ impl Component for CatalogueWatch {
                 .as_ref()
                 .is_some_and(|c| c.saving)
             {
-                let paths = watch
+                let changes = watch
                     .peek()
                     .as_ref()
-                    .and_then(|watch| watch.changed().ok())
+                    .map(Watch::changed)
                     .unwrap_or_default();
+                if let Some(error) = changes.error {
+                    writer.message.error(format!("Catalogue watching stopped: {error}. Save still checks for external changes."));
+                }
                 if let Some(catalogue) = writer.localisation.peek().catalogue.as_ref()
-                    && paths.contains(&catalogue.path)
+                    && changes.affected.contains(&catalogue.path)
                     && let Err(error) = worker.write().submit(worker::Request {
                         path: catalogue.path.clone(),
                         baseline: catalogue.saved_fingerprint().clone(),

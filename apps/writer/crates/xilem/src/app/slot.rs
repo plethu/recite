@@ -118,6 +118,7 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
         let mut pod = Passthrough::child_mut(&mut element);
         let result = child.message(child_state, message, pod.downcast(), writer);
         writer.refresh_map_if_needed();
+        writer.resume_external_notices();
         let search = writer.pending_search.take();
         app.open_editor_choices();
         if let Some(search) = search {

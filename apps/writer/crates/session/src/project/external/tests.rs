@@ -203,7 +203,13 @@ fn adopting_disk_clears_the_draft_and_recovery_and_allows_navigation()
     assert!(!model.has_draft());
     assert!(!files.dirty(model.document().source()));
     assert!(!files.has_recovery());
-    assert!(!files.externally_changed(&files.current));
+    assert!(
+        !files
+            .external_check(&files.current)
+            .unwrap()
+            .observe()
+            .changed()
+    );
     assert_eq!(std::fs::read_to_string(&files.current)?, disk);
     let exported: crate::recovery::Recovery =
         serde_json::from_str(&std::fs::read_to_string(copy)?)?;

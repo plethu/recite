@@ -1,8 +1,10 @@
 //! Comparisons observe one exact local session and disk version without changing selection.
 mod merging;
+mod observation;
 mod resolving;
 use super::{FileError, ProjectFiles, read_regular};
 use crate::recovery::Recovery;
+pub use observation::{ExternalCheck, ExternalObservation};
 use recite_writer_model::{NavigationStamp, ProjectContext, RecoveredDraft, Workbench};
 use std::{
     path::{Path, PathBuf},
@@ -72,16 +74,6 @@ impl ProjectFiles {
             artifact: None,
         });
         Ok(())
-    }
-    pub fn externally_changed(&self, path: &Path) -> bool {
-        let baseline = if path == self.current {
-            Some(self.saved.as_ref())
-        } else {
-            self.retained
-                .get(path)
-                .map(|session| session.baseline.as_ref())
-        };
-        baseline.is_some_and(|baseline| read_regular(path).map_or(true, |disk| disk != baseline))
     }
 }
 

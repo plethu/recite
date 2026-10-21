@@ -11,6 +11,18 @@ pub struct Output {
     pub request: Request,
     pub fingerprint: Result<PoDocumentFingerprint, String>,
 }
+impl Request {
+    /// Read and hash on a background worker; no catalogue parse or mutation is required.
+    pub fn read(self) -> Output {
+        let fingerprint = crate::project::read_regular(&self.path)
+            .map(|source| PoDocumentFingerprint::from_source(&source))
+            .map_err(|e| e.to_string());
+        Output {
+            request: self,
+            fingerprint,
+        }
+    }
+}
 pub struct Worker {
     requests: async_channel::Sender<Request>,
     waiting: async_channel::Receiver<Request>,
@@ -47,16 +59,7 @@ impl Worker {
                     .name("writer-catalogue-watch".into())
                     .spawn(move || {
                         while let Ok(request) = waiting.recv_blocking() {
-                            let fingerprint = crate::project::read_regular(&request.path)
-                                .map(|source| PoDocumentFingerprint::from_source(&source))
-                                .map_err(|e| e.to_string());
-                            if output
-                                .send_blocking(Output {
-                                    request,
-                                    fingerprint,
-                                })
-                                .is_err()
-                            {
+                            if output.send_blocking(request.read()).is_err() {
                                 break;
                             }
                         }

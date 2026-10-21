@@ -2,4 +2,4 @@
 mod handoff;
 mod watch;
 pub use handoff::Handoff;
-pub use watch::Watch;
+pub use watch::{Affected, Changes, Subscription, Watch};

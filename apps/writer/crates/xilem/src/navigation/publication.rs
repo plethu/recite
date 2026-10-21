@@ -224,6 +224,9 @@ impl Writer {
         } else {
             "Ready".into()
         };
+        if matches!(request.target, Target::CompareFile(_)) {
+            self.compare_disk_changes();
+        }
         Ok(())
     }
     pub(crate) fn navigation_failed(&mut self, error: String) {

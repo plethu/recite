@@ -39,26 +39,31 @@ conditional groups and effects, and editing previously empty beats through nativ
 accessible manuscript name and final layout are checked separately. Welcome/project creation,
 retained temporary examples and native second-launch document selection also pass. Project
 replacement refuses translation drafts and succeeds after Save while the catalogue remains open.
-Focused cold-load tests also reject publication after closing begins. Personal settings cover live
-light/dark/monochrome colours, 100–200% scale, retained manuscript undo, validated shortcut edits,
-persisted configuration and ordinary exit confirmation. Native keyboard checks cover focused Apply,
-immediate Save, live rebinding and retained text undo/redo. The native settings drill traverses and
-activates controls after scrolling; adapter regressions cover clipping and registration ordering.
-Catalogue editing now covers native review/save, retained manuscript undo, inspected PO conflict
-decisions, source-plus-catalogue Save All and close/reopen recovery. Separate native checks exercise
-command search and catalogue editing at 200% UI scale with 32px reading text. Catalogue creation and
-source refresh additionally cover explicit language selection, observational review, stale-source
-refusal, PO-only publication and mounted manuscript retention. Configured preview and trace
-inspection pass owned Wayland workflows at 100/200% UI scale, including typed arguments,
-translated/plural output and record retention across typing and failed restart. Successful restart
-resets the trace cursor. Shared render regressions bound retained-history and large-value cost;
-separate visual review covers both frontends' record and value pages. A consumer iterator regression
-also covers reachable scrollbars following pruned siblings. This does not establish workspace
-parity: remaining commands and final integration are still in progress. Physical IME, screen-reader
-announcements, hardware rendering and Windows/macOS acceptance remain unverified for Xilem. The
-portal scrollbar precedes close choices in the Tab cycle; the current native drill reaches Keep
-editing in three presses and verifies that cancelling close retains text undo/redo. Automatic focus
-return and the remaining keyboard workflow need acceptance before the default switches.
+Automatic disk notices pass native source and PO replacement workflows at 100/200% scale, retaining
+pending drafts and source text undo/redo through explicit comparison. Focused regressions cover save
+races, checkout, same-path catalogue reopening, queued stale actions and changes during an
+observation. Idle watching posts no UI work; notice rendering mounts a fixed number of widgets with
+1,026 or 10,260 retained notices. Focused cold-load tests also reject publication after closing
+begins. Personal settings cover live light/dark/monochrome colours, 100–200% scale, retained
+manuscript undo, validated shortcut edits, persisted configuration and ordinary exit confirmation.
+Native keyboard checks cover focused Apply, immediate Save, live rebinding and retained text
+undo/redo. The native settings drill traverses and activates controls after scrolling; adapter
+regressions cover clipping and registration ordering. Catalogue editing now covers native
+review/save, retained manuscript undo, inspected PO conflict decisions, source-plus-catalogue Save
+All and close/reopen recovery. Separate native checks exercise command search and catalogue editing
+at 200% UI scale with 32px reading text. Catalogue creation and source refresh additionally cover
+explicit language selection, observational review, stale-source refusal, PO-only publication and
+mounted manuscript retention. Configured preview and trace inspection pass owned Wayland workflows
+at 100/200% UI scale, including typed arguments, translated/plural output and record retention
+across typing and failed restart. Successful restart resets the trace cursor. Shared render
+regressions bound retained-history and large-value cost; separate visual review covers both
+frontends' record and value pages. A consumer iterator regression also covers reachable scrollbars
+following pruned siblings. This does not establish workspace parity: remaining commands and final
+integration are still in progress. Physical IME, screen-reader announcements, hardware rendering and
+Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes close choices in
+the Tab cycle; the current native drill reaches Keep editing in three presses and verifies that
+cancelling close retains text undo/redo. Automatic focus return and the remaining keyboard workflow
+need acceptance before the default switches.
 
 Shared scene/beat lookup, command ranking and Vim save/close aliases now drive both frontends. The
 native lookup drill covers query autofocus, Escape focus return, retained manuscript undo/redo,

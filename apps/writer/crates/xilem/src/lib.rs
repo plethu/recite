@@ -10,6 +10,7 @@ mod lookup;
 mod map;
 mod native_host;
 mod navigation;
+mod notices;
 mod presentation;
 mod reading;
 mod routes;
@@ -51,6 +52,7 @@ struct Writer {
     lookup: Option<lookup::Search>,
     workspaces: workspaces::Workspaces,
     localisation: localisation::Localisation,
+    notices: notices::Notices,
     viewport: kurbo::Size,
     config: recite_config::UserConfig,
     palette: recite_writer_session::palette::Palette<xilem::peniko::Color>,
@@ -117,6 +119,7 @@ impl Writer {
             lookup: None,
             workspaces: Default::default(),
             localisation: Default::default(),
+            notices: Default::default(),
             viewport: kurbo::Size::new(1280., 800.),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),

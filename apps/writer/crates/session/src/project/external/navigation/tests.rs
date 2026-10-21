@@ -47,7 +47,7 @@ fn inspected_baseline_survives_sibling_navigation_with_local_history() {
         assert_eq!(model.document().source(), local);
         assert_eq!(files.saved.as_ref(), disk);
         assert!(files.dirty(model.document().source()));
-        assert!(!files.externally_changed(&original));
+        assert!(!files.external_check(&original).unwrap().observe().changed());
         model.undo().unwrap();
         assert_eq!(model.document().source(), SOURCE);
         model.redo().unwrap();

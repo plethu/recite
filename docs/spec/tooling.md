@@ -226,6 +226,14 @@ one bounded changed passage at a time. A separate IDE merge draft materializes p
 applying it to the live document; Import validates against the captured context and inspected disk,
 then adopts one undoable source replacement. Only explicit Save writes the source file.
 
+Xilem observes source and catalogue changes in the background, including atomic file replacement.
+Notifications coalesce into bounded path batches; overflow requests a rescan of open sources.
+Observation receipts require the same saved baseline and catalogue lifetime. Pending checks resume
+after saves or exclusive project/catalogue work returns its owner, without idle UI polling. Notices
+mount one changed file at a time and require explicit Compare; detection never applies a draft or
+reloads a document. Comparing a retained source uses ordinary draft-preserving file navigation.
+Watch failures remain advisory because checked saves still enforce disk conflicts.
+
 The Xilem editor handoff saves accepted source and recovery in the background without accepting the
 active field draft. It uses the OS preferred application or literal configured arguments. Cancelling
 the launch still reconciles dispatched writes; conflicts prevent launch. An external editor's

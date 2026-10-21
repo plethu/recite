@@ -22,6 +22,7 @@ pub(super) use worker::worker;
 #[derive(Clone)]
 pub(super) enum Target {
     Document(PathBuf),
+    CompareFile(PathBuf),
     Example(String),
     Location(Location),
     CatalogueSource(crate::localisation::SourceIntent),

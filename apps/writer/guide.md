@@ -288,6 +288,11 @@ retained copy, close the writer, preserve any existing `<source>.recite-editor-r
 copy the retained JSON to that path before reopening the source. The original baseline still
 protects external edits.
 
+Xilem reports **Changed on disk** when an open source or catalogue changes outside Writer. Choose
+**Compare changed file** to inspect it, **Next changed file** to visit another notice, or **Dismiss
+notice** to hide it. Detection preserves your drafts and never reloads a file. A dismissed notice
+does not disable conflict checks on Save.
+
 In Xilem, **Compare disk changes** shows changed passages and any unapplied field draft separately.
 **Keep Writer version** preserves your exact document, field draft and Undo history; the next Save
 replaces the inspected disk version. **Use inspected disk version** archives that session and adopts
