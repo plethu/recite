@@ -35,8 +35,9 @@ mise exec -- just writer xilem --project /path/to/project --document dialogue/sc
 ```
 
 Use your editor's own arguments; `--editor-arg` repeats and the source path is appended without a
-shell. Omit it if the editor needs no arguments. Without `--editor`, external opening is disabled.
-For a graphical editor that supports it, pass `--editor-arg --wait` to request a waiting window.
+shell. Omit it if the editor needs no arguments. Without `--editor`, Writer uses the operating
+system's preferred application for the file. For a graphical editor that supports it, pass
+`--editor-arg --wait` to request a waiting window.
 
 This frontend supports project file and beat navigation, manuscript editing, native text undo/redo,
 applying changes, checked saves, diagnostics, crash recovery and guarded closing across retained
@@ -90,12 +91,14 @@ text lookup remains a separate search.
 Declarations inspection and Build scenes open from Commands without applying manuscript drafts.
 Declaration results and details are paged. Build saved reads disk inputs; Save all and build uses
 the shared ordered save path first. Jobs continue after returning to writing; cancellation stays
-pending until the terminal result is collected. Declaration source and producer actions are still in
-progress.
+pending until the terminal result is collected. Standalone declaration sources support checked IDE
+export/import, save and generation; producer actions use the same shared project owner as Freya.
 
-Personal settings and desktop activation also use the shared owners. Remaining workspace commands
-and final parity verification are still in progress. The default launcher continues to use Freya.
-See [acceptance](acceptance.md) for evidence limits.
+Personal settings and desktop activation also use the shared owners. Linked destinations cover
+writing, preview, reply rules, project tools and catalogue workflows. Source links save accepted
+source and open the configured IDE; recovered source drafts retain their explicit repair workflow.
+Final parity verification is still in progress. The default launcher continues to use Freya. See
+[acceptance](acceptance.md) for evidence limits.
 
 ## Build requirements
 

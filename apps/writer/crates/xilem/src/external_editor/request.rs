@@ -1,6 +1,8 @@
+use super::linked::Control;
 use recite_writer_session::ProjectSession;
 use recite_writer_session::{project::SourceRepairArtifact, startup::EditorCommand};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 #[derive(Clone)]
 enum ProjectNext {
     ReloadDeclarations,
@@ -26,6 +28,7 @@ enum Target {
 pub(crate) struct Request {
     target: Target,
     pub(super) editor: Option<EditorCommand>,
+    pub(super) link: Option<Arc<Control>>,
 }
 impl Request {
     pub(crate) fn merge_draft(
@@ -40,6 +43,7 @@ impl Request {
                 next: ProjectNext::ImportMerge,
             },
             editor,
+            link: None,
         }
     }
     pub(crate) fn declaration_source(
@@ -54,6 +58,7 @@ impl Request {
                 next: ProjectNext::ReloadDeclarations,
             },
             editor,
+            link: None,
         }
     }
     pub(crate) fn declaration_draft(
@@ -68,6 +73,7 @@ impl Request {
                 next: ProjectNext::ImportDeclarations,
             },
             editor,
+            link: None,
         }
     }
 
@@ -83,6 +89,7 @@ impl Request {
                 next: ProjectNext::ImportSettings,
             },
             editor,
+            link: None,
         }
     }
     pub(crate) fn project_manifest(
@@ -97,12 +104,14 @@ impl Request {
                 next: ProjectNext::ReloadSettings,
             },
             editor,
+            link: None,
         }
     }
     pub(super) fn source(path: PathBuf, editor: Option<EditorCommand>) -> Self {
         Self {
             target: Target::Source(path),
             editor,
+            link: None,
         }
     }
     pub(super) fn repair(artifact: &SourceRepairArtifact, editor: Option<EditorCommand>) -> Self {
@@ -112,12 +121,14 @@ impl Request {
                 path: artifact.source.clone(),
             },
             editor,
+            link: None,
         }
     }
     pub(super) fn with_system_editor(&self) -> Self {
         Self {
             target: self.target.clone(),
             editor: None,
+            link: None,
         }
     }
     pub(crate) fn path(&self) -> &Path {
@@ -125,6 +136,14 @@ impl Request {
             Target::Source(path)
             | Target::Repair { path, .. }
             | Target::ProjectFile { path, .. } => path,
+        }
+    }
+    pub(super) fn check_link(&self) -> Result<(), String> {
+        self.link.as_ref().map_or(Ok(()), |control| control.check())
+    }
+    pub(super) fn finish_link(&self, result: Result<(), String>) {
+        if let Some(control) = &self.link {
+            control.complete(result);
         }
     }
     pub(super) fn is_current(&self, project: &ProjectSession) -> bool {

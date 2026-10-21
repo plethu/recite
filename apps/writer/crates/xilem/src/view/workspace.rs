@@ -51,7 +51,7 @@ pub(super) fn workspace(
     let script = workspace != Workspace::Map;
     let map_stack = indexed_stack((
         crate::map::panel(state),
-        sized_box(label(1., "")).dims((0.px(), 0.px())),
+        flex_col(()).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!map));
     let script_stack = indexed_stack((
@@ -61,7 +61,7 @@ pub(super) fn workspace(
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(20.px()),
-        sized_box(label(1., "")).dims((0.px(), 0.px())),
+        flex_col(()).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!script));
     let left = state.config.writer.pane_side == WriterPaneSide::Left;
@@ -96,11 +96,8 @@ pub(super) fn workspace(
         GridTrackSize::Fixed(if layout.stacked { gap.px() } else { 0.px() }),
         GridTrackSize::Auto,
     ]);
-    let navigation = indexed_stack((
-        navigation(state),
-        sized_box(label(1., "")).dims((0.px(), 0.px())),
-    ))
-    .active(usize::from(state.attention.is_focused()));
+    let navigation = indexed_stack((navigation(state), flex_col(()).dims((0.px(), 0.px()))))
+        .active(usize::from(state.attention.is_focused()));
     flex_row((navigation, panes))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(if state.attention.is_focused() {
@@ -110,12 +107,9 @@ pub(super) fn workspace(
         })
 }
 pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    indexed_stack((tabs(state), sized_box(label(1., "")).dims((0.px(), 0.px())))).active(
-        usize::from(
-            state.attention.is_focused()
-                || state.workspaces.screen != crate::workspaces::Screen::Write,
-        ),
-    )
+    indexed_stack((tabs(state), flex_col(()).dims((0.px(), 0.px())))).active(usize::from(
+        state.attention.is_focused() || state.workspaces.screen != crate::workspaces::Screen::Write,
+    ))
 }
 fn tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let modes = xilem::view::radio_group(

@@ -3,6 +3,7 @@ mod comparison;
 mod creation;
 mod entry;
 mod files;
+mod passage;
 mod queue;
 mod refresh;
 mod versions;
@@ -34,8 +35,27 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         (!writer.localisation.has_catalogue()).then(|| paragraph(writer.ui_scale(), "Open a PO catalogue or add a language to translate this project. Drafts stay recoverable until you Save.", 640.)),
         files(writer),
         report(writer),
-        indexed_stack((queue(writer), flex_col((entry(writer),)), flex_col((comparison::comparison(writer),)), flex_col((creation::creation(writer),)), flex_col((refresh::refresh(writer),)))).active(match writer.localisation.destination { Destination::Queue => 0, Destination::Entry => 1, Destination::Comparison => 2, Destination::Create => 3, Destination::Refresh => 4 }),
+        destinations(writer),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::Localisation)))
+}
+fn destinations(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let pages = (
+        flex_col((writer.localisation.has_catalogue().then(|| queue(writer)),)),
+        flex_col((entry(writer),)),
+        flex_col((comparison::comparison(writer),)),
+        flex_col((creation::creation(writer),)),
+        flex_col((refresh::refresh(writer),)),
+        flex_col((passage::passage(writer),)),
+    );
+    let selected = match writer.localisation.destination {
+        Destination::Queue => 0,
+        Destination::Entry => 1,
+        Destination::Comparison => 2,
+        Destination::Create => 3,
+        Destination::Refresh => 4,
+        Destination::Passage => 5,
+    };
+    indexed_stack(pages).active(selected)
 }
 pub(crate) fn close_details(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let owner = writer

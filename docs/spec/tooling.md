@@ -209,6 +209,15 @@ during explicit Apply waits for successful publication and retirement, then uses
 save path; cancellation or failure clears that request. Save All takes precedence over repeated
 Save.
 
+Cold and existing-window links prepare the same concrete destination, including project tools,
+selected localisation passages, stable PO entry contexts, disk comparison and source-update review.
+Candidate catalogue owners and inspections remain separate until acceptance. Cancelled, stale and
+failed destination receipts return both exclusive owners before checking publication authority.
+Activation replies wait for the requested destination, including failure after document selection
+has already succeeded. Source links use the existing checked IDE handoff after ordinary prose
+navigation; recovered Source drafts require explicit repair/import. Their activation completes at
+process start, independently of editor exit, and cancellation is checked again at the launcher.
+
 Xilem prepares explicit disk reload on a worker, including discovery, accepted projections, saved
 search inputs and a complete independent recovery archive. Adoption requires the same project root,
 current selection/draft, baseline and retained session inputs. Completed archives remain available

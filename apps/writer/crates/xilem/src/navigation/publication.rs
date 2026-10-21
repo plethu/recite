@@ -11,6 +11,10 @@ impl Writer {
         if let Ok(ResultValue::Reload(prepared)) = &result {
             self.record_reload_archive(prepared);
         }
+        let restored = match &mut result {
+            Ok(ResultValue::Presented(prepared)) => prepared.restore(self),
+            _ => Ok(()),
+        };
         if !self
             .navigation
             .pending
@@ -30,7 +34,7 @@ impl Writer {
                 return None;
             }
         };
-        let result = match &mut value {
+        let result = restored.and_then(|()| match &mut value {
             ResultValue::Repair(repaired) => self.publish_source_repair(&request, repaired),
             _ if request.checkpoint().is_err() => {
                 Err("Navigation cancelled; your current work stays open.".into())
@@ -41,6 +45,9 @@ impl Writer {
                 } else {
                     self.accept_project_workspace(prepared)
                 }
+            }
+            ResultValue::Presented(prepared) => {
+                self.publish_location_destination(&request, prepared)
             }
             ResultValue::Map(prepared) => {
                 let current = match request.target {
@@ -67,12 +74,15 @@ impl Writer {
                 prepared,
                 checkpoint,
             } => self.publish_navigation(&request, prepared, checkpoint.as_ref()),
-        };
+        });
         if let Err(error) = result {
             if let ResultValue::Map(prepared) = &mut value {
                 self.reconcile_map_placement(prepared);
             }
             self.navigation_failed(error);
+            if matches!(request.target, Target::Present(_)) {
+                self.remember_location();
+            }
         } else {
             self.mark_deferred_save_applied(&request);
             if !self.navigation.busy() {
@@ -154,6 +164,15 @@ impl Writer {
         if !request.origin.is_current(self) {
             return Err("The draft changed while navigation was preparing. Your edits remain open; retry navigation.".into());
         }
+        let destination = match &request.target {
+            Target::Location(location) => Some(destination::Plan::capture(
+                self,
+                location,
+                prepared.catalogue_changed,
+                prepared.catalogue.clone(),
+            )?),
+            _ => None,
+        };
         match (&mut prepared.destination, &mut self.session) {
             (PreparedDestination::Current(selection), session) => session
                 .edit(|model| model.accept_navigation(selection))
@@ -206,7 +225,9 @@ impl Writer {
         }
         self.beat_page = 0;
         self.workspaces.screen = crate::workspaces::Screen::Write;
-        self.remember_location();
+        if destination.is_none() {
+            self.remember_location();
+        }
         self.reading.prepare(self.session.model());
         self.sync_map_selection();
         self.invalidate_map();
@@ -226,6 +247,9 @@ impl Writer {
         };
         if matches!(request.target, Target::CompareFile(_)) {
             self.compare_disk_changes();
+        }
+        if let Some(destination) = destination {
+            self.start_location_destination(destination, request.cancel.clone())?;
         }
         Ok(())
     }

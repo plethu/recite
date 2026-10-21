@@ -79,10 +79,41 @@ fn form(
         index + 1
     )));
     flex_col((
-        label(writer.ui_scale(), entry.details.plural.form_caption(index)),
+        paragraph(
+            writer.ui_scale(),
+            format!(
+                "{} · {}",
+                entry.details.plural.form_caption(index),
+                catalogue_caption(writer)
+            ),
+            writer.script_width(),
+        ),
         sized_box(keyed((entry.key.clone(), index), input))
             .dims((writer.script_width().px(), 180.px())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())
+}
+fn catalogue_caption(writer: &Writer) -> String {
+    let catalogue = &writer.localisation;
+    let filename = catalogue
+        .catalogue_path()
+        .and_then(|path| path.file_name())
+        .map(|name| name.to_string_lossy())
+        .unwrap_or_else(|| "PO catalogue".into());
+    let language = catalogue.slot.document().and_then(|document| {
+        document
+            .headers()
+            .iter()
+            .find(|header| header.key().eq_ignore_ascii_case("Language"))
+            .map(|header| header.value())
+    });
+    match language.filter(|language| !language.is_empty()) {
+        Some(language) => format!(
+            "{} · {}",
+            language.chars().take(80).collect::<String>(),
+            filename.chars().take(80).collect::<String>()
+        ),
+        None => filename.chars().take(80).collect(),
+    }
 }

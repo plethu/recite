@@ -9,7 +9,7 @@ use super::{
 use crate::external_editor::Request;
 use recite_writer_session::{
     comparison::ComparisonRow,
-    project::{ExternalDecision, SourceRepairArtifact},
+    project::{ExternalComparison, ExternalDecision, SourceRepairArtifact},
 };
 use std::{path::PathBuf, sync::Arc};
 pub(super) use view::panel;
@@ -21,6 +21,27 @@ pub(super) struct Inspection {
     pub artifact: Option<SourceRepairArtifact>,
     pub archive: Option<PathBuf>,
 }
+impl Inspection {
+    pub(super) fn prepare(comparison: &ExternalComparison) -> Self {
+        Self {
+            path: comparison.path().to_owned(),
+            changes: ComparisonRow::source(
+                "",
+                comparison.writer_source(),
+                comparison.disk_source(),
+            )
+            .into_iter()
+            .filter(|row| row.before != row.after)
+            .flat_map(text::change_pages)
+            .collect(),
+            pending: comparison
+                .pending_draft()
+                .map(|draft| text::pages(draft.draft_snapshot().as_str())),
+            artifact: comparison.artifact().cloned(),
+            archive: comparison.archive().map(PathBuf::from),
+        }
+    }
+}
 #[derive(Default)]
 pub(super) struct Panel {
     inspection: Option<Inspection>,
@@ -30,6 +51,11 @@ pub(super) struct Panel {
     report_page: usize,
 }
 impl Panel {
+    pub(super) fn exchange(&mut self, inspection: &mut Option<Inspection>) {
+        std::mem::swap(&mut self.inspection, inspection);
+        self.page = 0;
+        self.draft_page = 0;
+    }
     pub(super) fn replace(&mut self, inspection: Option<Inspection>) {
         self.inspection = inspection;
         self.page = 0;

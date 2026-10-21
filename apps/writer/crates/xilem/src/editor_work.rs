@@ -1,7 +1,9 @@
 //! Native event-loop scheduling around Recite's shared save policy.
 mod accepting;
+mod completion;
 mod worker;
 use super::{Phase, Writer, feedback};
+use crate::external_editor::linked::Link;
 use recite_writer_model::EditOperation;
 use recite_writer_session::{
     FileError,
@@ -26,6 +28,7 @@ pub(crate) enum AfterSave {
     Build(Option<String>),
     Declarations,
     OpenEditor(std::sync::Arc<crate::external_editor::Request>),
+    OpenLinkedEditor(Link),
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Layers {
@@ -52,7 +55,10 @@ impl EditorWork {
         self.after = AfterSave::Stay;
     }
     pub fn preparing_editor(&self) -> bool {
-        matches!(self.after, AfterSave::OpenEditor(_))
+        matches!(
+            self.after,
+            AfterSave::OpenEditor(_) | AfterSave::OpenLinkedEditor(_)
+        )
     }
 }
 impl Writer {
@@ -83,6 +89,9 @@ impl Writer {
         request: std::sync::Arc<crate::external_editor::Request>,
     ) {
         self.start_save(Scope::AcceptedCurrent, AfterSave::OpenEditor(request));
+    }
+    pub(crate) fn save_for_linked_editor(&mut self, link: Link) {
+        self.start_save(Scope::AcceptedCurrent, AfterSave::OpenLinkedEditor(link));
     }
     fn start_save(&mut self, scope: Scope, after: AfterSave) {
         self.start_save_layers(scope, after, Layers::SourcesAndCatalogue);
@@ -169,7 +178,10 @@ impl Writer {
                 self.work.after = after;
                 self.begin_save_sequence(scope);
             }
-            Err(error) => self.finish_save_work(Err(error)),
+            Err(error) => {
+                self.work.after = after;
+                self.finish_save_work(Err(error));
+            }
         }
     }
     fn begin_save_sequence(&mut self, scope: Scope) {
@@ -199,45 +211,6 @@ impl Writer {
                 "The save worker stopped. Keep Writer open and retry.",
             )
             .into()));
-        }
-    }
-    fn finish_save_work(&mut self, result: Result<(), FileError>) {
-        let Some((files, model)) = self.session.parts_mut() else {
-            self.status = FileError::ProjectRequired.to_string();
-            return;
-        };
-        files.set_saving(false);
-        let _ = files.queue_checkpoint(model);
-        let result = files.finish_save(model, result);
-        self.reading.prepare(self.session.model());
-        self.status = match &result {
-            Ok(()) if self.session.dirty() || self.localisation.dirty() => {
-                "Saved; newer edits remain open.".into()
-            }
-            Ok(()) => "Saved".into(),
-            Err(error) => feedback::file(error),
-        };
-        match std::mem::take(&mut self.work.after) {
-            AfterSave::Close
-                if result.is_ok() && !self.session.dirty() && !self.localisation.dirty() =>
-            {
-                self.close_with_recovery()
-            }
-            AfterSave::Close => self.phase = Phase::ConfirmClose,
-            AfterSave::OpenEditor(request) if result.is_ok() => self.launch_editor(request),
-            AfterSave::Build(asset) if result.is_ok() => self.build_selected(asset),
-            AfterSave::Declarations if result.is_ok() => self.refresh_declaration_rows(),
-            AfterSave::Declarations => {
-                if let Err(error) = &result {
-                    self.schema_feedback(error.to_string());
-                }
-            }
-            AfterSave::Stay | AfterSave::OpenEditor(_) | AfterSave::Build(_) => {}
-        }
-        if self.phase == Phase::Writing {
-            self.refresh_rules();
-            self.invalidate_map();
-            self.refresh_map_if_needed();
         }
     }
 }

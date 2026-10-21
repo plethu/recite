@@ -34,13 +34,17 @@ impl Writer {
                 }
             }
         }
+        if self.source_repair_pending() {
+            return Err("Repair and import the recovered source draft before following this link. Your draft remains open.".into());
+        }
+        let selection = location::selection_location(location);
         let mut rules = None;
         self.session
             .edit(|model| {
                 if model.has_draft() {
                     model.apply()?;
                 }
-                rules = recite_writer_session::location::select(model, location)?;
+                rules = recite_writer_session::location::select(model, &selection)?;
                 Ok(())
             })
             .map_err(|error| error.to_string())?;
@@ -48,6 +52,7 @@ impl Writer {
         self.location = location.clone();
         self.trial.visible = location.screen == recite_writer_session::location::Screen::Preview;
         self.reading.prepare(self.session.model());
+        self.prepare_initial_location_destination(location)?;
         Ok(())
     }
 }

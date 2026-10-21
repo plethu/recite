@@ -1,7 +1,9 @@
 //! Authoring selection and document navigation use the shared product locations.
 use recite_writer_session::location::history as location_history;
 mod capture;
+mod destination;
 mod history;
+mod location;
 mod opening;
 mod publication;
 mod reload;
@@ -25,6 +27,7 @@ pub(super) enum Target {
     CompareFile(PathBuf),
     Example(String),
     Location(Location),
+    Present(Location),
     CatalogueSource(crate::localisation::SourceIntent),
     Lookup {
         location: Location,
@@ -75,12 +78,17 @@ pub(super) struct Request {
     cancel: CancellationToken,
     forwarded: Option<Arc<atomic::AtomicBool>>,
 }
-struct Origin {
+pub(crate) struct Origin {
     window: xilem::WindowId,
     source: AnalysisStamp,
     draft: RecoveredDraft,
 }
 impl Navigation {
+    pub(crate) fn take_incoming(
+        &mut self,
+    ) -> Option<recite_writer_session::activation::IncomingRoute> {
+        self.incoming.take()
+    }
     pub(super) fn new() -> Self {
         Self {
             sender: None,
@@ -110,7 +118,7 @@ impl WorkControl for Request {
     }
 }
 impl Origin {
-    fn capture(writer: &Writer) -> Self {
+    pub(crate) fn capture(writer: &Writer) -> Self {
         let model = writer.session.model();
         Self {
             window: writer.window,
@@ -124,7 +132,7 @@ impl Origin {
             && self.draft.view() == writer.session.model().view()
             && writer.phase == super::Phase::Writing
     }
-    fn is_current(&self, writer: &Writer) -> bool {
+    pub(crate) fn is_current(&self, writer: &Writer) -> bool {
         self.presentation_is_current(writer) && self.draft == writer.session.model().recovery()
     }
 }
@@ -163,33 +171,6 @@ impl Writer {
             Ok(None) => self.status = "Choose a beat in the outline.".into(),
             Err(error) => self.status = feedback::workbench(&error),
         }
-    }
-    pub(super) fn current_location(&self) -> Location {
-        let model = self.session.model();
-        let mut location = Location {
-            document: model.document().key().to_string(),
-            source: model.view() == &View::Source && self.rules.is_none(),
-            beat: model.selected_block().ok().flatten(),
-            passage: match model.view() {
-                View::Passage(id) => Some(id.clone()),
-                _ => self
-                    .rules
-                    .as_ref()
-                    .map(|rules| rules.projection().passage.clone()),
-            },
-            ..self.location.clone()
-        };
-        if self.visible_workspace().has_map() {
-            location.view = Some(recite_config::WriterView::Map);
-            if self.map.workspace == crate::map::Workspace::Map {
-                location.beat = self.map_selected().map(str::to_owned);
-                location.passage = None;
-                location.source = false;
-            }
-        } else {
-            location.view = Some(recite_config::WriterView::Script);
-        }
-        location
     }
     pub(super) fn navigate(&mut self, target: Target) {
         if let Err(error) = self.begin_navigation(target) {
@@ -313,6 +294,7 @@ impl Writer {
             .navigation
             .runtime
             .as_ref()
+            .cloned()
             .ok_or("The navigation worker is starting. Retry this action in a moment.")?;
         let result = self
             .navigation
@@ -325,6 +307,17 @@ impl Writer {
             });
         if let Err(error) = result {
             error.0.request.cancel.interrupt();
+            if let worker::Work::Present(work) = error.0.work {
+                let mut prepared = work
+                    .not_started("The navigation worker stopped. Reopen Writer to retry.".into());
+                let restored = prepared.restore(self);
+                runtime.spawn_blocking(move || drop(prepared));
+                let error = restored.err().unwrap_or_else(|| {
+                    "The navigation worker stopped. Reopen Writer to retry.".into()
+                });
+                self.navigation_failed(error);
+                return Err(self.status.clone());
+            }
             // The worker stays mounted during authoring. Still retire a rejected capture
             // through its runtime, including the transferred recovery fence.
             runtime.spawn_blocking(move || error.0.retire());

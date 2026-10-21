@@ -1,6 +1,8 @@
 //! Translation edits use the shared file-backed catalogue, with one native presentation owner.
 mod creation;
 mod editing;
+pub(crate) mod location;
+mod presentation;
 mod refresh;
 mod slot;
 mod source_navigation;
@@ -86,6 +88,7 @@ enum Destination {
     Comparison,
     Create,
     Refresh,
+    Passage,
 }
 struct Comparison {
     inspection: Inspection,
@@ -107,6 +110,7 @@ pub(crate) struct Localisation {
     after_save: work::AfterSave,
     creation: creation::Creation,
     refresh: Option<refresh::Refresh>,
+    passage: Option<location::PassageContext>,
 }
 impl Localisation {
     pub fn preview_catalogue(&self) -> Option<&Catalogue> {

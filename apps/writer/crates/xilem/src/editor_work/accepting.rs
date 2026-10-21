@@ -50,6 +50,9 @@ impl Writer {
         }
     }
     pub(super) fn drive_save(&mut self, mut sequence: Box<SaveSequence>) {
+        // poll owns the terminal project-context refresh. Prove the linked
+        // source intent before that transition invalidates its analysis stamp.
+        let readiness = self.linked_editor_readiness();
         let Some((files, model)) = self.session.parts_mut() else {
             self.status = FileError::ProjectRequired.to_string();
             return;
@@ -59,7 +62,7 @@ impl Writer {
                 self.work.operation = Some(Operation::Saving(sequence));
                 self.submit_save_work(work);
             }
-            Progress::Finished(result) => self.finish_save_work(result),
+            Progress::Finished(result) => self.complete_save_work(result, readiness),
             Progress::Waiting => {
                 self.work.operation = Some(Operation::Saving(sequence));
             }

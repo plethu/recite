@@ -60,10 +60,15 @@ impl ExternalComparison {
 }
 impl ProjectFiles {
     pub fn compare_external(&mut self, model: &Workbench) -> Result<(), FileError> {
+        self.external = Some(self.external_comparison(model)?);
+        Ok(())
+    }
+    /// Prepare a detached observation; callers can discard it without replacing a live inspection.
+    pub fn external_comparison(&self, model: &Workbench) -> Result<ExternalComparison, FileError> {
         self.require_idle_save()?;
         self.require_navigation_ready()?;
         let disk = read_regular(&self.current)?.into();
-        self.external = Some(ExternalComparison {
+        Ok(ExternalComparison {
             path: self.current.clone(),
             recovery: Recovery::new(self.saved.clone(), model.recovery()),
             pending: model.has_draft(),
@@ -72,8 +77,7 @@ impl ProjectFiles {
             context: self.context.clone(),
             archive: None,
             artifact: None,
-        });
-        Ok(())
+        })
     }
 }
 

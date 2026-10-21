@@ -1,12 +1,9 @@
 //! Disk work owns the real catalogue and always returns it, including failure and cancellation.
 use super::*;
+use crate::localisation::presentation::{Presentation, describe};
 use recite_compiler::authoring::WorkControl;
-pub(super) mod describe;
-use describe::describe;
 use recite_writer_model::Passage;
-use recite_writer_session::localisation::{
-    catalogue::Catalogue, context_data, navigation::Destination as SourceDestination,
-};
+use recite_writer_session::localisation::catalogue::Catalogue;
 use slot::{Checkout, Owner};
 use std::sync::Arc;
 
@@ -44,11 +41,7 @@ enum Completion {
     CloseWindow,
     ClosedCatalogue,
 }
-pub(super) struct Presentation {
-    pub(super) queue: Queue,
-    entry: Option<Entry>,
-    message: &'static str,
-}
+
 impl Checked {
     pub(super) fn new(
         checkout: Checkout,

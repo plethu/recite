@@ -3,6 +3,7 @@ mod accepting;
 #[cfg(test)]
 mod tests;
 use super::*;
+use crate::localisation::presentation;
 use crate::session::{Checkout as ProjectCheckout, RecoveryReason};
 use recite_compiler::authoring::WorkControl;
 use recite_writer_session::{
@@ -160,7 +161,7 @@ fn perform(
         .owner
         .as_ref()
         .ok_or("The catalogue owner is unavailable.")?;
-    let presentation = checked::describe::describe(
+    let presentation = presentation::describe(
         owner,
         query,
         None,

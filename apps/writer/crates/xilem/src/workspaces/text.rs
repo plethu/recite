@@ -1,4 +1,6 @@
 //! Bound mounted text even when an upstream description or build report has one enormous line.
+#[cfg(test)]
+mod tests;
 use recite_writer_session::comparison::ComparisonRow;
 pub(crate) fn change_pages(row: ComparisonRow) -> Vec<ComparisonRow> {
     let before = row.before.as_deref().map(pages).unwrap_or_default();
@@ -32,4 +34,31 @@ pub(crate) fn pages(text: &str) -> Vec<String> {
         pages.push(page);
     }
     pages
+}
+
+/// Reading pages preserve all text while preferring complete words at each boundary.
+pub(crate) fn reading_pages(text: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut page = String::new();
+    let mut length = 0;
+    for word in text.split_inclusive(char::is_whitespace) {
+        let size = word.chars().count();
+        if length + size > 1_000 && !page.is_empty() {
+            result.push(std::mem::take(&mut page));
+            length = 0;
+        }
+        if size > 1_000 {
+            let mut chunks = pages(word);
+            page = chunks.pop().unwrap_or_default();
+            length = page.chars().count();
+            result.extend(chunks);
+        } else {
+            page.push_str(word);
+            length += size;
+        }
+    }
+    if !page.is_empty() {
+        result.push(page);
+    }
+    result
 }

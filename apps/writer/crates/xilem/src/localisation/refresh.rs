@@ -13,10 +13,16 @@ pub(super) struct Refresh {
 pub(super) struct Page {
     pub source: ComparisonRow,
     pub detail: Option<String>,
+    pub change: usize,
 }
 impl Refresh {
     pub fn new(preview: RefreshPreview) -> Self {
-        let pages = preview.changes.iter().flat_map(change_pages).collect();
+        let pages = preview
+            .changes
+            .iter()
+            .enumerate()
+            .flat_map(|(index, change)| change_pages(change, index))
+            .collect();
         Self {
             preview: Arc::new(preview),
             pages,
@@ -24,7 +30,7 @@ impl Refresh {
         }
     }
 }
-fn change_pages(change: &Change) -> Vec<Page> {
+fn change_pages(change: &Change, change_index: usize) -> Vec<Page> {
     let kind = match change.kind {
         Kind::Added => "New",
         Kind::Changed => "Changed",
@@ -46,6 +52,7 @@ fn change_pages(change: &Change) -> Vec<Page> {
     let detail = text::pages(&details.join("\n\n"));
     (0..before.len().max(after.len()).max(detail.len()))
         .map(|index| Page {
+            change: change_index,
             source: ComparisonRow {
                 caption: format!("{kind} · {caption}"),
                 before: before.get(index).cloned(),

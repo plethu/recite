@@ -1,10 +1,7 @@
 //! External reconciliation executes against the checked-out canonical session.
-use super::{FileError, ProjectSession, Success, WorkControl, text};
+use super::{FileError, ProjectSession, Success, WorkControl};
 use crate::workspaces::external::Inspection;
-use recite_writer_session::{
-    comparison::ComparisonRow,
-    project::{ExternalDecision, ExternalResolution},
-};
+use recite_writer_session::project::{ExternalDecision, ExternalResolution};
 use std::path::PathBuf;
 
 pub(crate) enum Action {
@@ -73,17 +70,5 @@ fn adopted(resolution: ExternalResolution, message: &'static str) -> Success {
 }
 pub(super) fn describe(project: &ProjectSession) -> Option<Inspection> {
     let comparison = project.files().external.as_ref()?;
-    Some(Inspection {
-        path: comparison.path().to_owned(),
-        changes: ComparisonRow::source("", comparison.writer_source(), comparison.disk_source())
-            .into_iter()
-            .filter(|row| row.before != row.after)
-            .flat_map(text::change_pages)
-            .collect(),
-        pending: comparison
-            .pending_draft()
-            .map(|draft| text::pages(draft.draft_snapshot().as_str())),
-        artifact: comparison.artifact().cloned(),
-        archive: comparison.archive().map(PathBuf::from),
-    })
+    Some(Inspection::prepare(comparison))
 }

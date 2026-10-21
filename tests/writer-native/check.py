@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "disk-notices":
+        if scenario == "linked-destinations":
+            from linked_destinations import run
+        elif scenario == "disk-notices":
             from disk_notices import run
         elif scenario == "preview-trace-scale":
             from preview_trace import run_scale as run
@@ -161,6 +163,7 @@ def main():
         "--scenario",
         choices=(
             "all",
+            "linked-destinations",
             "disk-notices",
             "structure",
             "startup",

@@ -153,12 +153,20 @@ without replacing newer text or opening a cancelled workspace. Script and Map sh
 slots. Independent 100/200% Map/Split render review covers controls, canvas guidance and manuscript
 alignment.
 
-The fixed 512/2,048-beat workloads each mount three detail cards and 234 accessibility nodes. Their
-whole-scene Fit mounts zero prose cards and 173 nodes. Overview clicks and spatial navigation
-restore a readable card; pan completion does not activate a beat. Removing focused cards transfers
-focus to the persistent viewport, while toolbar focus stays put. These bounded checks do not
-establish hardware rendering performance or physical trackpad acceptance. Run the Wayland drill with
-`mise exec -- just writer probe-xilem target/writer-native/map.json map`.
+The fixed 512/2,048-beat workloads each mount three detail cards and 239 accessibility nodes. Their
+whole-scene Fit mounts zero prose cards and 184 nodes, within the unchanged 240-node cap. Overview
+clicks and spatial navigation restore a readable card; pan completion does not activate a beat.
+Removing focused cards transfers focus to the persistent viewport, while toolbar focus stays put.
+These bounded checks do not establish hardware rendering performance or physical trackpad
+acceptance. Run the Wayland drill with `mise exec -- just writer probe-xilem
+target/writer-native/map.json map`.
+
+The `linked-destinations` native scenario exercises cold passage links, existing-window stable PO
+entry links, and cold/forwarded Source links at 100% and 200% UI scale. Source activation must
+finish when the configured editor starts, while that editor remains open. Cold launch must resume
+when its workers become ready without additional user input. Private native tests also cover all
+twelve linked screens, catalogue replacement refusal, cancelled and failed owner returns, logical
+source-review pages, recovered Source repair, and source-handoff failure/teardown paths.
 
 The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
 D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.

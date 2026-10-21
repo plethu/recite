@@ -69,7 +69,7 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     let grip = input::input(
         input::Kind::Grip(title),
         state.config.ui.keymap == recite_config::Keymap::Vim,
-        sized_box(label(1., "Move · drag or arrow keys"))
+        label(1., "Move · drag or arrow keys")
             .padding(3.px())
             .background_color(state.palette.inset),
         move |state: &mut Writer, action| state.map_input(Source::Grip(move_id.clone()), action),
@@ -82,10 +82,8 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
     .prop(properties::BorderColor {
         color: state.palette.accent,
     });
-    sized_box(
-        flex_col((focus, grip))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(4.px()),
-    )
-    .dims((scene.node(index).width.px(), HEIGHT.px()))
+    flex_col((focus, grip))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(4.px())
+        .dims((scene.node(index).width.px(), HEIGHT.px()))
 }

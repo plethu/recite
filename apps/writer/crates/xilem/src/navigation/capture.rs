@@ -93,7 +93,10 @@ impl Writer {
             return self.send_navigation(request, worker::Work::ProjectWorkspace(work));
         }
         let model = self.session.model();
-        let location = target.location().cloned();
+        let location = match &target {
+            Target::Location(location) => Some(location::selection_location(location)),
+            _ => target.location().cloned(),
+        };
         let destination = match &target {
             Target::Document(path) | Target::CompareFile(path) => Destination::Switch(Box::new(
                 self.session
@@ -118,6 +121,7 @@ impl Writer {
             | Target::Selection(location) => self.location_destination(location)?,
             Target::CatalogueSource(intent) => self.location_destination(intent.location())?,
             Target::Edit(_)
+            | Target::Present(_)
             | Target::Repair(_)
             | Target::Structure(_)
             | Target::Workspace(_)
@@ -144,7 +148,7 @@ impl Writer {
                 .session
                 .project()
                 .map(|project| project.root().to_owned()),
-            catalogue: None,
+            catalogue: self.localisation.catalogue_path().map(PathBuf::from),
             reuse_rules: false,
             initial_view: None,
         };

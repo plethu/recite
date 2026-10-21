@@ -1,5 +1,7 @@
 //! One owned cold-load request; rejected and replaced sessions retire on its worker.
+mod loading;
 use super::*;
+use loading::{Loaded, load};
 use recite_compiler::authoring::{Interrupted, WorkControl};
 use std::sync::atomic;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -43,9 +45,10 @@ impl WorkControl for Request {
 }
 struct Opened {
     request: Arc<Request>,
-    result: Result<Box<Writer>, String>,
+    result: Result<Loaded, String>,
     retire: mpsc::SyncSender<Option<Box<Writer>>>,
 }
+
 enum Output {
     Opened(Opened),
     Chosen(Option<PathBuf>),
@@ -146,49 +149,7 @@ async fn serve(proxy: MessageProxy<Output>, mut jobs: UnboundedReceiver<Job>) {
         }
     }
 }
-fn load(request: &Request) -> Result<Box<Writer>, String> {
-    request.checkpoint().map_err(|e| e.to_string())?;
-    let location = request.options.location()?;
-    let session = match &request.options.intent {
-        Startup::Writer {
-            project: Some(project),
-            ..
-        } => {
-            let document = request.options.document.clone().or_else(|| {
-                location
-                    .as_ref()
-                    .filter(|location| !location.document.is_empty())
-                    .map(|location| location.document.clone().into())
-            });
-            Session::Project(Box::new(
-                recite_writer_session::ProjectSession::open_with_control(
-                    project,
-                    document.as_deref(),
-                    request,
-                )
-                .map_err(|e| e.to_string())?,
-            ))
-        }
-        Startup::Examples { .. } => Session::examples().map_err(|e| e.to_string())?,
-        _ => return Err("Choose a project or a temporary example.".into()),
-    };
-    let mut writer = Writer::from_session(session, request.options.editor.clone());
-    if writer.session.project().is_some() {
-        writer.map.personal_storage();
-    }
-    if let Some(location) = location
-        && let Err(error) = writer.follow_location(&location)
-    {
-        if writer.session.dirty() {
-            writer.status =
-                format!("Recovered your draft; the linked location could not open: {error}");
-        } else {
-            return Err(error);
-        }
-    }
-    request.checkpoint().map_err(|e| e.to_string())?;
-    Ok(Box::new(writer))
-}
+
 impl App {
     fn accept_open(&mut self, output: Opened) {
         let current = self
@@ -196,11 +157,15 @@ impl App {
             .as_ref()
             .is_some_and(|pending| Arc::ptr_eq(&pending.request, &output.request));
         if !current {
-            let _ = output.retire.send(output.result.ok());
+            let _ = output
+                .retire
+                .send(output.result.ok().map(|loaded| loaded.writer));
             return;
         }
         let Some(pending) = self.opening.take() else {
-            let _ = output.retire.send(output.result.ok());
+            let _ = output
+                .retire
+                .send(output.result.ok().map(|loaded| loaded.writer));
             return;
         };
         let valid = output.request.checkpoint().is_ok()
@@ -211,7 +176,7 @@ impl App {
                 _ => false,
             };
         let (retired, result) = match output.result {
-            Ok(mut writer) if valid => {
+            Ok(Loaded { mut writer, location }) if valid => {
                 writer.configure(self.preferences.config.clone());
                 let view = writer.location.view.unwrap_or(self.preferences.config.writer.view);
                 if view == recite_config::WriterView::Map {
@@ -224,15 +189,24 @@ impl App {
                 self.show_welcome = false;
                 self.settings_open = false;
                 self.status.clear();
-                (previous, Ok(()))
+                (previous, location)
             }
-            Ok(writer) => (Some(writer), Err("Project opening was cancelled or the current document changed. Your current work remains open.".into())),
+            Ok(loaded) => (Some(loaded.writer), Err("Project opening was cancelled or the current document changed. Your current work remains open.".into())),
             Err(error) => (None, Err(error)),
         };
         if let Err(error) = &result {
             self.status = error.clone();
         }
         let _ = output.retire.send(retired);
+        if result.is_ok()
+            && let Some(writer) = &mut self.writer
+            && writer.attach_linked_editor_reply(
+                pending.reply.clone(),
+                pending.request.forwarded.clone(),
+            )
+        {
+            return;
+        }
         if let Some(reply) = pending.reply {
             let _ = reply.send(result);
         }

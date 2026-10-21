@@ -2,6 +2,7 @@
 mod builds;
 mod declarations;
 mod external;
+pub(crate) mod location;
 mod opening;
 mod rename;
 pub(crate) use rename::recovery;

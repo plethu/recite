@@ -1,4 +1,5 @@
 //! An independently reaped editor opens only after accepted source and recovery are durable.
+pub(crate) mod linked;
 mod request;
 #[cfg(test)]
 mod tests;
@@ -14,6 +15,7 @@ pub(super) struct ExternalEditor {
     pub sender: Option<UnboundedSender<Arc<Request>>>,
     pending: Option<Arc<Request>>,
     failed: Option<Arc<Request>>,
+    waiting: Option<linked::Link>,
 }
 impl ExternalEditor {
     pub fn new() -> Self {
@@ -21,10 +23,11 @@ impl ExternalEditor {
             sender: None,
             pending: None,
             failed: None,
+            waiting: None,
         }
     }
     pub fn busy(&self) -> bool {
-        self.pending.is_some()
+        self.pending.is_some() || self.waiting.is_some()
     }
     pub fn path(&self) -> Option<&std::path::Path> {
         self.pending.as_ref().map(|request| request.path())
@@ -95,6 +98,12 @@ impl Writer {
                 .is_none_or(|project| !request.is_current(project))
         {
             self.status = "Editor launch cancelled because its source context changed.".into();
+            request.finish_link(Err(self.status.clone()));
+            return;
+        }
+        if let Err(error) = request.check_link() {
+            request.finish_link(Err(error.clone()));
+            self.status = error;
             return;
         }
         let sent = self
@@ -110,6 +119,7 @@ impl Writer {
         } else {
             self.status =
                 "Could not open the editor: the launcher stopped. Your draft remains open.".into();
+            request.finish_link(Err(self.status.clone()));
         }
     }
     fn accept_editor(&mut self, request: Arc<Request>, result: Option<Result<(), String>>) {
