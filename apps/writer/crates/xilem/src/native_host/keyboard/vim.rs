@@ -11,17 +11,11 @@ struct Prefix {
 #[derive(Default)]
 pub(super) struct Vim {
     pending: Option<Prefix>,
-    held: Vec<keyboard::PhysicalKey>,
+    held: held::HeldKeys,
 }
 impl Vim {
     pub fn release(&mut self, physical: keyboard::PhysicalKey, state: ElementState) -> bool {
-        if let Some(index) = self.held.iter().position(|key| key == &physical) {
-            if state == ElementState::Released {
-                self.held.remove(index);
-            }
-            return true;
-        }
-        false
+        self.held.consume(physical, state)
     }
     pub fn synchronize(&mut self, context: &Context, focus: Option<WidgetId>) {
         if self.pending.as_ref().is_some_and(|pending| {
@@ -121,7 +115,7 @@ impl Vim {
             None if !pending => return false,
             None => {}
         }
-        self.held.push(physical);
+        self.held.press(physical);
         true
     }
 }

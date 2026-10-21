@@ -48,6 +48,7 @@ pub(crate) struct Invocation {
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Action {
     Command(WriterCommand),
+    SubmitPicker,
     PaneHint(bool),
     CyclePane { forward: bool },
 }
@@ -232,6 +233,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         }
         match invocation.action {
             Action::Command(command) => app.run_command(command),
+            Action::SubmitPicker => app.submit_picker(),
             Action::PaneHint(pending) => app.pane_hint = pending,
             Action::CyclePane { forward } => {
                 if let Some(writer) = &mut app.writer {

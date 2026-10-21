@@ -1,5 +1,7 @@
 mod focus;
+mod held;
 mod panes;
+mod picker;
 mod vim;
 use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
 use recite_config::WriterCommand;
@@ -8,7 +10,7 @@ use xilem::winit::keyboard;
 use xilem::{
     masonry::{app::RenderRoot, core::WidgetId, widgets::TextInput},
     winit::{
-        event::{ElementState, Ime, WindowEvent},
+        event::{ElementState, Ime, KeyEvent, WindowEvent},
         keyboard::{ModifiersState, NamedKey},
     },
 };
@@ -26,12 +28,14 @@ pub(super) struct Keyboard {
     focus: focus::Focus,
     attention: panes::Attention,
     vim: vim::Vim,
+    held: held::HeldKeys,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
         self.modifiers = ModifiersState::default();
         self.composition = Composition::Idle;
         self.vim = vim::Vim::default();
+        self.held = held::HeldKeys::default();
     }
     pub fn blur(&mut self, root: &RenderRoot) {
         if let Some(context) = root
@@ -58,67 +62,61 @@ impl Keyboard {
             WindowEvent::Focused(false) => self.blur(root),
             WindowEvent::KeyboardInput {
                 event,
-                is_synthetic: false,
+                is_synthetic,
                 ..
-            } => {
-                let Some(context) = root
-                    .get_widget_with_tag(TAG)
-                    .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone())
-                else {
-                    return false;
-                };
-                let enter = event.logical_key == keyboard::Key::Named(NamedKey::Enter);
-                let kind = self.focus.kind(root);
-                let picker = if context.picker_open
-                    && self.normalized_modifiers() == Modifiers::default()
-                {
-                    match event.logical_key {
-                        keyboard::Key::Named(NamedKey::Escape) => Some(WriterCommand::Close),
-                        keyboard::Key::Named(NamedKey::ArrowDown) if kind == focus::Kind::Query => {
-                            Some(WriterCommand::NextMatch)
-                        }
-                        keyboard::Key::Named(NamedKey::ArrowUp) if kind == focus::Kind::Query => {
-                            Some(WriterCommand::PreviousMatch)
-                        }
-                        _ => None,
-                    }
-                } else {
-                    None
-                };
-                let manuscript = enter && kind == focus::Kind::Manuscript;
-                if self.vim.release(event.physical_key, event.state) {
-                    return true;
-                }
-                let consumed = self.dispatch(
-                    &context,
-                    root.focused_widget(),
-                    manuscript,
-                    Stroke {
-                        input: Input {
-                            key: key(&event.logical_key),
-                            physical: physical(event.physical_key),
-                            modifiers: self.normalized_modifiers(),
-                        },
-                        enter,
-                        picker,
-                        first_press: event.state == ElementState::Pressed && !event.repeat,
-                    },
-                );
-                if consumed || !matches!(self.composition, Composition::Idle) {
-                    self.vim.cancel(&context);
-                    return consumed;
-                }
-                return self.vim.event(
-                    &context,
-                    root.focused_widget(),
-                    kind,
-                    event,
-                    self.modifiers,
-                );
-            }
+            } => return self.key_event(root, event, *is_synthetic),
             _ => {}
         }
         false
+    }
+    fn key_event(&mut self, root: &RenderRoot, event: &KeyEvent, is_synthetic: bool) -> bool {
+        if self.held.consume(event.physical_key, event.state)
+            || self.vim.release(event.physical_key, event.state)
+        {
+            return true;
+        }
+        if is_synthetic {
+            return false;
+        }
+        let Some(context) = root
+            .get_widget_with_tag(TAG)
+            .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone())
+        else {
+            return false;
+        };
+        let enter = event.logical_key == keyboard::Key::Named(NamedKey::Enter);
+        let kind = self.focus.kind(root, context.generation);
+        let picker = picker::action(
+            &context,
+            kind,
+            &event.logical_key,
+            self.normalized_modifiers(),
+        );
+        let manuscript = enter && kind == focus::Kind::Manuscript;
+        let consumed = self.dispatch(
+            &context,
+            root.focused_widget(),
+            manuscript,
+            Stroke {
+                input: Input {
+                    key: key(&event.logical_key),
+                    physical: physical(event.physical_key),
+                    modifiers: self.normalized_modifiers(),
+                },
+                enter,
+                picker,
+                first_press: event.state == ElementState::Pressed && !event.repeat,
+            },
+        );
+        if consumed && event.state == ElementState::Pressed {
+            self.held.press(event.physical_key);
+        }
+        if consumed || !matches!(self.composition, Composition::Idle) {
+            self.vim.cancel(&context);
+            return consumed;
+        }
+        self.vim
+            .event(&context, root.focused_widget(), kind, event, self.modifiers)
     }
     fn dispatch(
         &mut self,
@@ -141,8 +139,8 @@ impl Keyboard {
                     primary: true,
                     ..Modifiers::default()
                 };
-        let action = if stroke.picker.is_some() {
-            stroke.picker.map(Action::Command)
+        let action = if let Some(action) = stroke.picker {
+            Some(action)
         } else if apply {
             Some(Action::Command(WriterCommand::Apply))
         } else if context.writer_active
@@ -246,7 +244,7 @@ fn physical(key: keyboard::PhysicalKey) -> PhysicalKey {
 struct Stroke<'a> {
     input: Input<'a>,
     enter: bool,
-    picker: Option<WriterCommand>,
+    picker: Option<Action>,
     first_press: bool,
 }
 

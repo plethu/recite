@@ -21,7 +21,7 @@ pub(super) struct Focus {
     picker: bool,
     return_to: Option<WidgetId>,
     last: Option<WidgetId>,
-    field: Option<(WidgetId, Kind)>,
+    field: Option<(WidgetId, CommandGeneration, Kind)>,
     revealed: Option<CommandGeneration>,
 }
 impl Focus {
@@ -55,19 +55,23 @@ impl Focus {
             self.revealed = Some(generation);
         }
     }
-    pub fn kind(&mut self, root: &RenderRoot) -> Kind {
+    pub fn kind(&mut self, root: &RenderRoot, generation: CommandGeneration) -> Kind {
         let Some(focused) = root.focused_widget() else {
             self.field = None;
             return Kind::Other;
         };
-        if let Some((cached, kind)) = self.field
+        if let Some((cached, scope, kind)) = self.field
             && cached == focused
+            && scope == generation
         {
             return kind;
         }
-        // The field role is immutable for its widget's lifetime, and widget IDs are unique.
+        // Picker selection can change a retained button's role in a new command scope.
         let mut widget = root.get_layer_root(0);
         let kind = loop {
+            if widget.id() == focused {
+                break role(widget);
+            }
             if let Some(input) = widget.downcast::<TextInput>() {
                 break if input.area_pod().id() == focused {
                     role(widget)
@@ -84,7 +88,7 @@ impl Focus {
             };
             widget = child;
         };
-        self.field = Some((focused, kind));
+        self.field = Some((focused, generation, kind));
         kind
     }
 }

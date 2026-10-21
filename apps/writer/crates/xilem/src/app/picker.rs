@@ -152,7 +152,7 @@ impl App {
         }
         self.refresh_picker();
     }
-    fn submit_picker(&mut self) {
+    pub(super) fn submit_picker(&mut self) {
         let active = self.picker.as_ref().map_or(0, |picker| picker.active);
         self.activate_picker(active);
     }

@@ -51,6 +51,32 @@ fn stroke(key: Key<'_>) -> Stroke<'_> {
 }
 
 #[test]
+fn picker_submission_posts_once_and_does_not_fall_through_to_underlying_writer_commands() {
+    let (mut context, receiver) = context();
+    context.picker_open = true;
+    context.writer_active = false;
+    let mut keyboard = Keyboard::default();
+    for first_press in [true, false] {
+        let mut enter = stroke(Key::Other);
+        enter.input.modifiers = Modifiers::default();
+        enter.enter = true;
+        enter.picker = Some(Action::SubmitPicker);
+        enter.first_press = first_press;
+        assert!(keyboard.dispatch(&context, None, false, enter));
+    }
+    assert_eq!(
+        receiver
+            .try_recv()
+            .unwrap()
+            .downcast::<Invocation>()
+            .unwrap()
+            .action,
+        Action::SubmitPicker
+    );
+    assert!(receiver.try_recv().is_err());
+}
+
+#[test]
 fn saved_bindings_take_effect_and_repeat_release_and_native_undo_do_not_post_actions() {
     let (mut context, receiver) = context();
     let mut keyboard = Keyboard::default();
