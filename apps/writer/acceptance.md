@@ -69,6 +69,14 @@ the complete header and focused result button bounds.
 
 The local evidence index is `target/writer-evaluation/retirement-evidence.md`. It names completed
 receipts, failed attempts, source/binary identities and carried-forward baseline evidence.
+
+The final code checkpoint `b62c00d0` passes 1,076 instrumented Writer workspace tests and all four
+unchanged 90% production line-coverage floors; Xilem reaches 90.56%. Strict Xilem lint and the
+refreshed Linux package's payload, ABI and extracted desktop-link checks also pass. Repository
+coverage, critical mutations and the combined project gate passed at the preceding core checkpoint,
+whose inputs remain unchanged. The final UI changes received focused tests and lint. The separate
+all-feature Writer dependency audit remains failing as detailed below.
+
 Diagnostic renders and workflow receipts do not establish physical input, assistive-technology
 usability, installed-host lifecycle acceptance or a passing dependency policy. Both frontends remain
 available for the final human evaluation; these corrections alone do not authorise Freya's
