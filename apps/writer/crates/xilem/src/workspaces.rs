@@ -5,6 +5,7 @@ mod external;
 pub(crate) mod location;
 mod opening;
 mod rename;
+pub(crate) use rename::BeatChoice;
 pub(crate) use rename::recovery;
 mod settings;
 pub(crate) mod text;

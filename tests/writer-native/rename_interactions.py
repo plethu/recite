@@ -1,6 +1,7 @@
 """Grouped rename reviews, native field history and explicit multi-file publication."""
 
 import json
+import os
 import subprocess
 import tempfile
 import tomllib
@@ -9,8 +10,8 @@ from pathlib import Path
 
 from native_window import attach, key, type_text
 from project_interactions import manuscript
-from startup_interactions import fill
-from writer_interactions import SOURCE, capture
+from startup_interactions import field, fill
+from writer_interactions import SOURCE, capture_settled
 
 
 def command(window, query):
@@ -21,6 +22,9 @@ def command(window, query):
 
 def run(api, bus, registry, binary, output):
     results = {"backend": "owned Wayland", "scenario": "rename"}
+    scale = int(os.environ.get("RECITE_NATIVE_SCALE", "100"))
+    assert scale in (100, 200)
+    results["ui_scale"] = scale
     process = None
     try:
         with tempfile.TemporaryDirectory(prefix="recite-rename-") as temporary:
@@ -34,6 +38,8 @@ def run(api, bus, registry, binary, output):
             source.write_text(before)
             other.write_text(reference)
             manifest.write_text(original)
+            config = root / "ui.toml"
+            config.write_text(f"config_version=1\n[writer.presentation]\nui_scale={scale}\n")
             with output.with_suffix(".writer.log").open("w") as log:
                 process = subprocess.Popen(
                     [
@@ -45,12 +51,13 @@ def run(api, bus, registry, binary, output):
                     ],
                     stdout=log,
                     stderr=subprocess.STDOUT,
+                    env=dict(os.environ, RECITE_CONFIG=str(config)),
                 )
                 window = attach(api, bus, registry, process)
                 try:
                     node = manuscript(window)
                 except RuntimeError:
-                    capture(output, "-startup-failure")
+                    capture_settled(window, output, "-startup-failure")
                     results["startup_nodes"] = [name for _, name in window.nodes()]
                     raise
                 prose = window.text(node)
@@ -61,13 +68,32 @@ def run(api, bus, registry, binary, output):
                 key("z", control=True)
                 window.wait(lambda: window.text(node) == prose, "native undo")
                 command(window, "Rename beat")
-                fill(window, "Current beat name", "old")
                 fill(window, "New beat name", "new")
+                proposal = field(window, "New beat name")
+                window.act("Choose existing beat")
+                fill(window, "Search query", "old")
+                capture_settled(window, output, "-beat-choice")
+                key("Escape")
+                window.wait(lambda: not window.find("Search query"), "cancelled beat choice")
+                assert field(window, "New beat name") == proposal
+                assert window.text(proposal) == "new"
+                window.act("Choose existing beat")
+                fill(window, "Search query", "old")
+                key("Return")
+                window.wait(lambda: not window.find("Search query"), "chosen beat proposal")
+                assert window.text(field(window, "Original beat name")) == "old"
+                assert field(window, "New beat name") == proposal
+                assert window.text(proposal) == "new"
+                assert source.read_text() == before
+                results["beat_choice_changes_only_the_proposal_and_cancel_keeps_native_field"] = (
+                    True
+                )
                 window.act("Review project rename")
                 window.wait(
                     lambda: window.find_text("Rename reviewed.", prefix=True), "reviewed rename"
                 )
-                capture(output, "-review")
+                window.reveal_end("More rename changes")
+                capture_settled(window, output, "-review")
                 visited = set()
                 for _ in range(30):
                     caption = window.wait(
@@ -98,7 +124,7 @@ def run(api, bus, registry, binary, output):
                     lambda: window.find_text("Project rename staged.", prefix=True),
                     "grouped rename",
                 )
-                capture(output, "-staged")
+                capture_settled(window, output, "-staged")
                 assert source.read_text() == before and other.read_text() == reference
                 assert manifest.read_text() == original
                 window.act("Return to writing")
@@ -138,6 +164,11 @@ def run(api, bus, registry, binary, output):
                     "all renamed files saved",
                 )
                 results["save_all_publishes_manuscript_references_and_manifest"] = True
+                command(window, "Rename beat")
+                window.wait(lambda: window.find("Undo project rename"), "saved grouped Undo")
+                assert not window.find_text("Project rename staged.", prefix=True)
+                capture_settled(window, output, "-saved")
+                results["saved_rename_retires_staging_guidance_and_keeps_grouped_undo"] = True
                 window.close_clean()
                 assert process.wait(timeout=5) == 0
     except Exception as error:

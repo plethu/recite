@@ -1,4 +1,4 @@
-use super::range;
+use super::changed_range as range;
 #[test]
 fn highlights_changed_words_without_splitting_unicode() {
     let old = "À neuf le tram part.";

@@ -156,7 +156,7 @@ fn pages(writer: &Writer, beat: &beat::Beat) -> Option<impl WidgetView<Writer> +
     })
 }
 fn width(writer: &Writer) -> f64 {
-    (writer.viewport.width - writer.navigation_width() - 32.)
-        .max(280.)
+    writer
+        .content_width()
         .min(1320. * f64::from(writer.ui_scale()))
 }

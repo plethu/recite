@@ -19,12 +19,7 @@ pub(crate) struct Layout {
 }
 impl Layout {
     pub fn resolve(state: &Writer) -> Self {
-        let navigation = if state.attention.is_focused() {
-            0.
-        } else {
-            state.navigation_width()
-        };
-        let available = (state.viewport.width - navigation - 32.).max(280.);
+        let available = state.content_width();
         let workspace = state.visible_workspace();
         let preferred = f64::from(
             state

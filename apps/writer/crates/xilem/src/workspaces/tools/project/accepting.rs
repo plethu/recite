@@ -48,7 +48,9 @@ impl Writer {
                 {
                     self.recovery_copy = Some(archive.clone());
                 }
-                self.workspaces.external.replace(inspection)
+                if matches!(completed.outcome, Outcome::Ready(Ok(_))) {
+                    self.workspaces.external.replace(inspection);
+                }
             }
             None => (),
         }
@@ -56,6 +58,13 @@ impl Writer {
             && let Some(archive) = &success.archive
         {
             self.recovery_copy = Some(archive.clone());
+        }
+        if let Outcome::Ready(Ok(Success {
+            effect: Effect::ExternalResolved(resolved),
+            ..
+        })) = &completed.outcome
+        {
+            self.workspaces.external.resolve(resolved.clone());
         }
         self.reading.prepare(self.session.model());
         self.refresh_rules();
@@ -71,14 +80,15 @@ impl Writer {
                 Some(error.as_str())
             }
         };
-        match completed.family {
-            Family::Rename => self.workspaces.rename.report(details),
-            Family::External => self.workspaces.external.report(details),
-        }
         let message = match &completed.outcome {
-            Outcome::Ready(Ok(success)) if success.warning.is_some() => {
-                "Document adopted; recovery is incomplete. Retry Save or keep this window open."
-            }
+            Outcome::Ready(Ok(success)) if success.warning.is_some() => match &success.effect {
+                Effect::ExternalResolved(_) => {
+                    "Document adopted; see the recovery or comparison details before continuing."
+                }
+                Effect::None => {
+                    "Project action completed; see the operation details before continuing."
+                }
+            },
             Outcome::Ready(Ok(success)) => success.message,
             Outcome::Ready(Err(error)) => error.as_str(),
             Outcome::RecoveryRequired {
@@ -90,6 +100,18 @@ impl Writer {
                 ..
             } => "Project operation stopped unexpectedly.",
         };
+        match completed.family {
+            Family::Rename => match &completed.outcome {
+                Outcome::Ready(Ok(success)) if success.warning.is_none() => {
+                    self.workspaces.rename.inform(message)
+                }
+                _ => self
+                    .workspaces
+                    .rename
+                    .report(Some(details.unwrap_or(message))),
+            },
+            Family::External => self.workspaces.external.report(details),
+        }
         self.status = message
             .lines()
             .next()

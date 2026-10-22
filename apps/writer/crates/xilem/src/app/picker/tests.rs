@@ -7,6 +7,8 @@ use xilem::{
     core::View as _,
     masonry::{core::NewWidget, testing::TestHarness, widgets::SizedBox},
 };
+#[path = "rename/tests.rs"]
+mod rename;
 
 #[test]
 fn go_to_applies_draft_uses_the_worker_and_preserves_cross_document_selection() {

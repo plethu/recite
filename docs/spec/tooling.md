@@ -100,7 +100,11 @@ after that point cannot discard the returned owner. Both frontends exclude newer
 and Save until document recovery and the journal's final directory sync complete. Known checkpoint
 failures offer Retry; an unexpected worker panic requires closing with recovery and reopening.
 Global Undo/Redo reaches grouped history after local document edits. Save all includes the staged
-source, references and manifest in the shared save sequence.
+source, references and manifest in the shared save sequence. Successful publication retires
+informational staging guidance only when the shared owner confirms that the grouped edit is fully
+saved. Partial or failed saves retain that guidance; recovery and error reports remain visible.
+Saving does not retire grouped Undo history. During exclusive work, the scene rail retains the
+current project document and frozen outline with navigation disabled.
 
 Standalone declaration TOML uses the same external-editor boundary in Xilem. A bound source can
 restore an invalid recovered draft; export preserves it in a separate editable TOML file, and
@@ -253,7 +257,12 @@ completes despite cancellation; a late durability failure reports adoption with 
 Xilem composes this workflow through the existing exclusive project worker. Its comparison mounts
 one bounded changed passage at a time. A separate IDE merge draft materializes pending prose without
 applying it to the live document; Import validates against the captured context and inspected disk,
-then adopts one undoable source replacement. Only explicit Save writes the source file.
+then adopts one undoable source replacement. Only explicit Save writes the source file. Both
+frontends retain the full compared wording and emphasise changed words with bold and underline. This
+cue works in monochrome. Comparison wrapping accounts for the scene rail and personal UI scale.
+Successful decisions replace unresolved choices with the specific adopted outcome, source identity,
+Save behavior and recovery access. Recovery or presentation warnings preserve an already-adopted
+outcome. A failed reinspection may retain the result for the same document, never another document.
 
 Xilem observes source and catalogue changes in the background, including atomic file replacement.
 Notifications coalesce into bounded path batches; overflow requests a rescan of open sources.

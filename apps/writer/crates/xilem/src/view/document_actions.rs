@@ -94,7 +94,7 @@ fn document_caption(state: &Writer) -> String {
     )
 }
 fn temporary_notice(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    state.session.project().is_none().then(|| {
+    state.session.project_root().is_none().then(|| {
         label(
             state.ui_scale(),
             "Temporary example · changes are discarded when this window closes",

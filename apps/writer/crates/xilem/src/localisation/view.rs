@@ -41,7 +41,7 @@ pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let queue = matches!(writer.localisation.destination, Destination::Queue);
-    let width = (writer.viewport.width - writer.navigation_width() - 32.).max(280.);
+    let width = writer.content_width();
     let wide = width >= 600. * f64::from(writer.ui_scale());
     flex_row((
         label(

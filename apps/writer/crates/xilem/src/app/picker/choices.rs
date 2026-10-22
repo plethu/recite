@@ -32,6 +32,15 @@ impl App {
                     item: Item::Destination(choice.value.clone()),
                 })
                 .collect(),
+            Request::Rename(request) => request
+                .choices
+                .iter()
+                .map(|choice| Entry {
+                    title: choice.title.clone(),
+                    detail: choice.detail.clone(),
+                    item: Item::RenameBeat(choice.value.clone()),
+                })
+                .collect(),
         };
         self.picker = Some(Picker::new(Purpose::Editor(Box::new(request)), entries));
     }
@@ -53,6 +62,7 @@ impl App {
             (Request::Destination(request), Item::Destination(destination)) => {
                 request.apply(writer, destination);
             }
+            (Request::Rename(request), Item::RenameBeat(beat)) => request.apply(writer, beat),
             _ => writer.status = "Reopen the editor choice to continue.".into(),
         }
     }

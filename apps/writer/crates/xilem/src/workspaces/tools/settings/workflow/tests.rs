@@ -54,7 +54,8 @@ fn settings_conflict_stays_guarded_through_manifest_repair_and_a_fresh_import() 
     jobs.finish(&mut mounted.state);
     mounted.settle();
     assert!(mounted.state.project_settings().unwrap().requires_reload());
-    mounted.activate("Apply reviewed settings");
+    assert!(!mounted.contains_text("Apply reviewed settings"));
+    mounted.state.apply_project_settings();
     assert!(!mounted.state.project_jobs_busy());
     assert_eq!(fs::read_to_string(&manifest).unwrap(), "broken TOML [");
     fs::write(&manifest, &external).unwrap();

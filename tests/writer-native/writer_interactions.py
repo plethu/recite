@@ -1,8 +1,10 @@
 """File-backed migration checks using only an owned project, editor and native window."""
 
+import hashlib
 import json
 import subprocess
 import tempfile
+import time
 import traceback
 from collections import Counter
 from pathlib import Path
@@ -44,6 +46,23 @@ def launch(api, bus, registry, arguments, log, manuscript=True):
 def capture(output, suffix=""):
     path = output.with_name(output.stem + suffix).with_suffix(".png")
     subprocess.run(["grim", str(path)], check=True, timeout=10)
+
+
+def capture_settled(window, output, suffix=""):
+    """After a state assertion, retain a compositor frame that has stopped changing."""
+    previous, unchanged_since = None, time.monotonic()
+
+    def stable():
+        nonlocal previous, unchanged_since
+        capture(output, suffix)
+        path = output.with_name(output.stem + suffix).with_suffix(".png")
+        digest = hashlib.sha256(path.read_bytes()).digest()
+        now = time.monotonic()
+        if digest != previous:
+            previous, unchanged_since = digest, now
+        return now - unchanged_since >= 0.25
+
+    window.wait(stable, "settled compositor frame: " + suffix)
 
 
 def focus_close_choice(window):

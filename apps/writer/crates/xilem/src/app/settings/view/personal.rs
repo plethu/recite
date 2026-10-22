@@ -1,51 +1,23 @@
 use super::*;
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
+use xilem::masonry::kurbo::Axis;
 use xilem::view::checkbox;
+mod reading;
+mod specimen;
 
 pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
     let config = &app.preferences.config;
     let writer = &config.writer;
     let scale = crate::presentation::scale(writer);
     let presentation = writer.presentation;
-    let fields = [
-        ("Reading text size", Field::ReadingSize),
-        ("Source text size", Field::SourceSize),
-        ("UI scale", Field::UiScale),
-        ("Navigation width", Field::DrawerWidth),
-        ("Script width", Field::ScriptWidth),
-    ]
-    .into_iter()
-    .map(|(caption, field)| {
-        let (min, max) = field.bounds();
-        flex_col((
-            label(
-                scale,
-                format!(
-                    "{caption}: {}{}",
-                    presentation.value(field),
-                    if field == Field::UiScale { "%" } else { "" }
-                ),
-            ),
-            flex_row((
-                text_button(
-                    scale,
-                    format!("Decrease {caption}"),
-                    move |app: &mut App| app.adjust_presentation(field, false),
-                )
-                .disabled(presentation.value(field) == min),
-                text_button(
-                    scale,
-                    format!("Increase {caption}"),
-                    move |app: &mut App| app.adjust_presentation(field, true),
-                )
-                .disabled(presentation.value(field) == max),
-            ))
-            .gap(8.px()),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
-    })
-    .collect::<Vec<_>>();
+    let width = (app.viewport.width - 48.).max(280.);
+    let wide = width >= 1000. * f64::from(scale);
+    let sample_width = if wide { width * 0.38 } else { width };
+    let controls_width = if wide {
+        width - sample_width - 32.
+    } else {
+        width
+    };
     let booleans = [
         (
             "Monochrome colours",
@@ -82,13 +54,17 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
     })
     .collect::<Vec<_>>();
     flex_col((
-        text_button(scale, "Project settings…", App::open_project_settings).disabled(
-            app.writer.as_ref().is_none_or(|writer| {
-                writer.session.project().is_none()
-                    || writer.project_jobs_busy()
-                    || writer.phase != crate::Phase::Writing
-            }),
-        ),
+        flex_row((
+            specimen::specimen(app, sample_width),
+            reading::reading(app, controls_width),
+        ))
+        .direction(if wide {
+            Axis::Horizontal
+        } else {
+            Axis::Vertical
+        })
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(32.px()),
         label(scale, "Appearance").text_size(18. * scale),
         radio_group(
             flex_row((
@@ -111,9 +87,6 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
             ))
             .gap(12.px()),
         ),
-        flex_col(fields)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(8.px()),
         label(scale, "Editing").text_size(18. * scale),
         radio_group(
             flex_row((

@@ -9,7 +9,8 @@ from pathlib import Path
 
 from native_window import attach, key, type_text
 from project_interactions import manuscript
-from writer_interactions import SOURCE, capture
+from text_visibility import reveal_text
+from writer_interactions import SOURCE, capture, capture_settled
 
 
 def run(api, bus, registry, binary, output):
@@ -52,7 +53,7 @@ def run(api, bus, registry, binary, output):
                 )
                 assert source.read_text() == disk
                 window.reveal_start("Return to writing")
-                capture(output, "-comparison")
+                capture_settled(window, output, "-comparison")
                 window.reveal_start("Keep Writer version")
                 window.act("Keep Writer version")
                 window.wait(
@@ -113,7 +114,7 @@ def run(api, bus, registry, binary, output):
                     "selected merged prose",
                 )
                 results["ide_merge_import_validates_and_adopts_without_writing_source"] = True
-                capture(output, "-adopted")
+                capture_settled(window, output, "-adopted")
                 window.reveal_start("Save file")
                 window.act("Save file")
                 window.wait(lambda: source.read_text() == merged, "explicit merge save")
@@ -136,18 +137,11 @@ def run(api, bus, registry, binary, output):
                     lambda: window.find_text("Disk comparison ready.", prefix=True),
                     "large-scale comparison",
                 )
-                capture(output, "-comparison200")
+                capture_settled(window, output, "-comparison200")
                 window.reveal_start("Return to writing")
-                capture(output, "-comparison200-top")
-                scrollbar = window.wait(window._outer_scrollbar, "large comparison scrollbar")
-                window.focus(scrollbar)
-                for _ in range(3):
-                    key("Down")
-                window.wait(
-                    lambda: window.find_text("A newer external tram.", contains=True),
-                    "large source comparison",
-                )
-                capture(output, "-comparison200-sources")
+                capture_settled(window, output, "-comparison200-top")
+                reveal_text(window, "A newer external tram.")
+                capture_settled(window, output, "-comparison200-sources")
                 window.close_clean()
                 assert process.wait(timeout=5) == 0
     except Exception as error:

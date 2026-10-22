@@ -44,22 +44,73 @@ impl Inspection {
 }
 #[derive(Default)]
 pub(super) struct Panel {
-    inspection: Option<Inspection>,
+    state: State,
     page: usize,
     draft_page: usize,
     report: Vec<String>,
     report_page: usize,
 }
+#[derive(Default)]
+enum State {
+    #[default]
+    Empty,
+    Reviewing(Inspection),
+    Resolved(Resolved),
+}
+#[derive(Clone)]
+pub(super) struct Resolved {
+    pub path: PathBuf,
+    pub resolution: Resolution,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Resolution {
+    KeepWriter,
+    UseInspectedDisk,
+    Merged,
+}
 impl Panel {
     pub(super) fn exchange(&mut self, inspection: &mut Option<Inspection>) {
-        std::mem::swap(&mut self.inspection, inspection);
+        let previous = std::mem::replace(
+            &mut self.state,
+            inspection.take().map(State::Reviewing).unwrap_or_default(),
+        );
+        *inspection = match previous {
+            State::Reviewing(inspection) => Some(inspection),
+            _ => None,
+        };
         self.page = 0;
         self.draft_page = 0;
     }
     pub(super) fn replace(&mut self, inspection: Option<Inspection>) {
-        self.inspection = inspection;
+        self.state = inspection.map(State::Reviewing).unwrap_or_default();
         self.page = 0;
         self.draft_page = 0;
+    }
+    pub(super) fn inspection(&self) -> Option<&Inspection> {
+        match &self.state {
+            State::Reviewing(inspection) => Some(inspection),
+            _ => None,
+        }
+    }
+    pub(super) fn resolve(&mut self, resolved: Resolved) {
+        self.state = State::Resolved(resolved);
+    }
+    pub(super) fn resolved(&self) -> Option<&Resolved> {
+        match &self.state {
+            State::Resolved(resolved) => Some(resolved),
+            _ => None,
+        }
+    }
+    fn start_comparison(&mut self, path: &std::path::Path) {
+        let previous = match &self.state {
+            State::Empty => None,
+            State::Reviewing(inspection) => Some(inspection.path.as_path()),
+            State::Resolved(resolved) => Some(resolved.path.as_path()),
+        };
+        if previous != Some(path) {
+            self.replace(None);
+            self.report(None);
+        }
     }
     pub(super) fn report(&mut self, report: Option<&str>) {
         self.report = report.map(text::pages).unwrap_or_default();
@@ -75,6 +126,11 @@ impl Writer {
     pub(crate) fn compare_disk_changes(&mut self) {
         if self.project_action_blocked() || self.session.project().is_none() {
             return;
+        }
+        if let Some(project) = self.session.project() {
+            self.workspaces
+                .external
+                .start_comparison(project.current().path());
         }
         self.attention.leave_focus();
         self.cancel_map_gesture();
@@ -94,8 +150,7 @@ impl Writer {
         if let Some(artifact) = self
             .workspaces
             .external
-            .inspection
-            .as_ref()
+            .inspection()
             .and_then(|inspection| inspection.artifact.as_ref())
         {
             self.external_action(ExternalAction::ImportMerge(artifact.source.clone()));
@@ -114,8 +169,7 @@ impl Writer {
         let Some(artifact) = self
             .workspaces
             .external
-            .inspection
-            .as_ref()
+            .inspection()
             .and_then(|inspection| inspection.artifact.as_ref())
         else {
             return;

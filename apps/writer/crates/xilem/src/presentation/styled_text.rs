@@ -21,12 +21,12 @@ pub(crate) fn manuscript_text(size: f32, text: impl Into<ArcStr>) -> StyledText 
     }
 }
 #[derive(Clone, Copy, PartialEq)]
-enum Family {
+pub(super) enum Family {
     Manuscript,
     Source,
 }
 impl Family {
-    fn name(self) -> &'static str {
+    pub(super) fn name(self) -> &'static str {
         match self {
             Self::Manuscript => "Literata",
             Self::Source => "IBM Plex Mono",

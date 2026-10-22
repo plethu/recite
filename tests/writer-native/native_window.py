@@ -177,11 +177,11 @@ class NativeWindow:
         self.focus(node)
         self.wait(lambda: self.find("Manuscript") == node, "admitted inline manuscript")
 
-    def reveal_down(self, label):
+    def reveal_down(self, label, *, prefix=False, contains=False):
         """Reach a content action by paging its owned native document viewport."""
 
         def page():
-            if self.find(label) or self.find_text(label):
+            if self.find_text(label, prefix=prefix, contains=contains):
                 return True
             scrollbar = self.content_scrollbar(label)
             if scrollbar is None:
@@ -196,13 +196,13 @@ class NativeWindow:
         """Reach a content action through its named native viewport."""
         self._reveal(label)
 
-    def reveal_start(self, label):
+    def reveal_start(self, label, *, prefix=False, contains=False):
         """Reach a content action through its named native viewport."""
-        self._reveal(label)
+        self._reveal(label, prefix=prefix, contains=contains)
 
-    def _reveal(self, label):
+    def _reveal(self, label, *, prefix=False, contains=False):
         def scroll():
-            if self.find(label) or self.find_text(label):
+            if self.find_text(label, prefix=prefix, contains=contains):
                 return True
             scrollbar = self.content_scrollbar(label)
             if scrollbar is None:
@@ -214,7 +214,7 @@ class NativeWindow:
         # A pane transition can remove AT-SPI nodes during traversal. Retry the
         # complete live lookup, as act()/field lookup already do.
         self.wait(scroll, "native scroll toward: " + label)
-        self.reveal_down(label)
+        self.reveal_down(label, prefix=prefix, contains=contains)
 
     def _outer_scrollbar(self):
         # Named panes remain exposed while their content scrolls. Prefer the

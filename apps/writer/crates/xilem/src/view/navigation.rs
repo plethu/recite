@@ -10,7 +10,7 @@ const PAGE: usize = 8;
 const UNPAGED: usize = 12;
 
 pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let documents = if state.session.project().is_some() {
+    let documents = if state.session.project_root().is_some() {
         Either::A(project_files(state))
     } else {
         Either::B(examples(state))
@@ -34,7 +34,7 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     .prop(Region(Some(Pane::Navigation)))
 }
 fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    let blocked = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
+    let blocked = state.project_action_blocked();
     flex_col((
         button(
             label(state.ui_scale(), "Search project words…")
@@ -56,7 +56,7 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing;
+    let closing = state.project_action_blocked();
     const FILE_PAGE: usize = 4;
     let pages = state
         .session
@@ -118,6 +118,27 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .collect::<Vec<_>>();
     flex_col((
         print::caps(scale, "SCENES").color(state.palette.muted),
+        state.session.checked_out().then(|| {
+            let key = state.session.model().document().key().to_string();
+            label(
+                scale,
+                format!(
+                    "{} · {key}{}",
+                    display_name(&key),
+                    if state.session.current_dirty() {
+                        " · Unsaved"
+                    } else {
+                        ""
+                    }
+                ),
+            )
+            .prop(LineBreaking::WordWrap)
+            .width((state.drawer_width() - 48.).px())
+        }),
+        state
+            .session
+            .checked_out()
+            .then(|| label(scale, "Project operation in progress")),
         flex_col(files)
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .gap(8.px()),
@@ -143,7 +164,7 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
 
 fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let closing = state.phase != Phase::Writing;
+    let closing = state.project_action_blocked();
     let blocks = state.session.model().document().block_summaries();
     // Short scenes use the slots otherwise occupied by pagination controls.
     let page_size = if blocks.len() <= UNPAGED {

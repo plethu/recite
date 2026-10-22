@@ -44,6 +44,17 @@ fn checkout_disables_the_mounted_native_manuscript_and_return_reenables_the_same
     view = next;
     harness.redraw();
     assert_eq!(manuscript(&harness), (original, true));
+    let tree = harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let mut operation = false;
+    while let Some(node) = pending.pop() {
+        assert_ne!(node.label().as_deref(), Some("Temporary examples"));
+        assert_ne!(node.value().as_deref(), Some("Temporary examples"));
+        operation |= node.label().as_deref() == Some("Project operation in progress")
+            || node.value().as_deref() == Some("Project operation in progress");
+        pending.extend(node.children());
+    }
+    assert!(operation);
     writer
         .session
         .restore_checkout(&mut checkout, None)

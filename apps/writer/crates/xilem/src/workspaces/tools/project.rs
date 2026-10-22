@@ -2,7 +2,10 @@
 use super::*;
 use crate::{
     session::{Checkout, RecoveryReason},
-    workspaces::{external::Inspection, rename, text},
+    workspaces::{
+        external::{Inspection, Resolved},
+        rename, text,
+    },
 };
 use recite_compiler::authoring::WorkControl;
 use recite_writer_session::{FileError, ProjectSession};
@@ -72,12 +75,26 @@ impl Work {
         self.execute_with(Action::perform)
     }
     fn execute_with(
+        self,
+        perform: impl FnOnce(
+            &Action,
+            &mut ProjectSession,
+            &dyn WorkControl,
+        ) -> Result<Success, FileError>,
+    ) -> Completed {
+        self.execute_with_presentation(perform, |action, project| match action {
+            Action::External(_) => Presentation::External(external::describe(project)),
+            _ => Presentation::Rename(renaming::describe(project)),
+        })
+    }
+    fn execute_with_presentation(
         mut self,
         perform: impl FnOnce(
             &Action,
             &mut ProjectSession,
             &dyn WorkControl,
         ) -> Result<Success, FileError>,
+        present: impl FnOnce(&Action, &ProjectSession) -> Presentation,
     ) -> Completed {
         let ticket = self.checkout.ticket.clone();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -112,10 +129,7 @@ impl Work {
             self.checkout
                 .project
                 .as_ref()
-                .map(|project| match &self.action {
-                    Action::External(_) => Presentation::External(external::describe(project)),
-                    _ => Presentation::Rename(renaming::describe(project)),
-                })
+                .map(|project| present(&self.action, project))
         }));
         let pages = match pages {
             Ok(pages) => pages,
@@ -123,8 +137,16 @@ impl Work {
                 if let Some(project) = self.checkout.project.as_mut() {
                     project.parts_mut().0.rename_review = None;
                 }
-                if matches!(outcome, Outcome::Ready(_)) {
-                    outcome=Outcome::Ready(Err("The project returned, but its review could not be rendered. Review again before applying.".into()));
+                let message = "The project returned, but its review could not be rendered. Inspect again before another change.";
+                match &mut outcome {
+                    Outcome::Ready(Ok(success)) => {
+                        success.warning = Some(match success.warning.take() {
+                            Some(warning) => format!("{warning}\n{message}"),
+                            None => message.into(),
+                        });
+                    }
+                    Outcome::Ready(Err(_)) => outcome = Outcome::Ready(Err(message.into())),
+                    Outcome::RecoveryRequired { .. } => (),
                 }
                 None
             }
@@ -142,6 +164,11 @@ struct Success {
     message: &'static str,
     archive: Option<PathBuf>,
     warning: Option<String>,
+    effect: Effect,
+}
+enum Effect {
+    None,
+    ExternalResolved(Resolved),
 }
 impl Success {
     fn message(message: &'static str) -> Self {
@@ -149,6 +176,7 @@ impl Success {
             message,
             archive: None,
             warning: None,
+            effect: Effect::None,
         }
     }
 }

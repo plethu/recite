@@ -116,7 +116,7 @@ fn result(
             .writer
             .as_ref()
             .is_some_and(|writer| !writer.navigation.busy() && !writer.work.busy()),
-        Item::Rule(_) | Item::Destination(_) => app
+        Item::Rule(_) | Item::Destination(_) | Item::RenameBeat(_) => app
             .picker
             .as_ref()
             .zip(app.writer.as_ref())
@@ -205,6 +205,9 @@ fn guidance(mode: Mode) -> &'static str {
         }
         Mode::Destinations => {
             "Choose a beat in this scene, or end the conversation. This applies the current draft and changes its route; Save writes the document to disk."
+        }
+        Mode::RenameBeat => {
+            "Choose an existing beat in this scene. This changes only the rename proposal. Escape keeps the current proposal and review."
         }
     }
 }

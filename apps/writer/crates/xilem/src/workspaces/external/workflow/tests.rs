@@ -42,8 +42,7 @@ fn mounted_merge_pages_preserve_drafts_through_rejected_import_and_save_the_revi
         .state
         .workspaces
         .external
-        .inspection
-        .as_ref()
+        .inspection()
         .unwrap()
         .artifact
         .as_ref()
@@ -83,10 +82,64 @@ fn mounted_merge_pages_preserve_drafts_through_rejected_import_and_save_the_revi
     assert_eq!(mounted.state.session.model().document().source(), merged);
     assert_eq!(fs::read_to_string(&path).unwrap(), external);
     assert!(mounted.state.recovery_copy.as_ref().unwrap().is_file());
+    assert!(mounted.contains_text("Reviewed merge adopted"));
+    assert!(!mounted.contains_text("Keep Writer version"));
+    assert!(!mounted.contains_text("Import reviewed merge"));
     mounted.activate("Return to writing");
     let (sender, mut saves) = mpsc::unbounded_channel();
     mounted.state.work.sender = Some(sender);
     mounted.activate("Save file");
     support::finish_work(&mut mounted.state, &mut saves).unwrap();
     assert_eq!(fs::read_to_string(path).unwrap(), merged);
+}
+
+#[test]
+fn completed_disk_decisions_replace_unresolved_choices_at_both_scales() {
+    for scale in [100, 200] {
+        for (keep, heading) in [
+            (true, "Writer version kept"),
+            (false, "Inspected disk version loaded"),
+        ] {
+            let directory = support::project(SOURCE).unwrap();
+            let mut writer = support::open(&directory).unwrap();
+            writer.config.writer.presentation = writer
+                .config
+                .writer
+                .presentation
+                .with_value(recite_config::WriterPresentationField::UiScale, scale)
+                .unwrap();
+            let path = directory.path().join("scene.recite");
+            let disk = SOURCE.replace("Original manuscript.", "External manuscript.");
+            fs::write(&path, &disk).unwrap();
+            let mut mounted = Mounted::new(writer, surface);
+            let mut tools = ToolDriver::new(&mut mounted.state);
+            mounted.state.compare_disk_changes();
+            tools.finish(&mut mounted.state);
+            mounted.settle();
+            if keep {
+                mounted.state.keep_writer_version();
+            } else {
+                mounted.state.use_inspected_disk();
+            }
+            tools.finish(&mut mounted.state);
+            mounted.settle();
+            assert!(mounted.contains_text(heading));
+            assert!(mounted.contains_text("Return to writing"));
+            assert!(mounted.contains_text("Show recovery copy location"));
+            for retired in [
+                "Compare disk changes",
+                "Keep Writer version",
+                "Use inspected disk version",
+                "Export merge draft",
+            ] {
+                assert!(!mounted.contains_text(retired), "{retired}");
+            }
+            assert_eq!(fs::read_to_string(path).unwrap(), disk);
+            mounted.activate("Inspect current disk version");
+            tools.finish(&mut mounted.state);
+            mounted.settle();
+            assert!(mounted.contains_text("Compare disk changes"));
+            assert!(!mounted.contains_text(heading));
+        }
+    }
 }

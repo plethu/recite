@@ -155,6 +155,9 @@ impl Writer {
     fn script_width(&self) -> f64 {
         view::workspace::Layout::resolve(self).script
     }
+    fn content_width(&self) -> f64 {
+        (self.viewport.width - self.navigation_width() - 32.).max(280.)
+    }
     fn navigation_width(&self) -> f64 {
         if self.attention.is_focused() || self.viewport.width < 900. * f64::from(self.ui_scale()) {
             return 0.;

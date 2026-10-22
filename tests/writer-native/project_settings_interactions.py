@@ -10,7 +10,8 @@ from pathlib import Path
 from native_window import attach, key, type_text
 from picker_interactions import focused
 from project_interactions import manuscript
-from writer_interactions import SOURCE, capture
+from text_visibility import reveal_text
+from writer_interactions import SOURCE, capture, capture_settled
 
 
 def settings(window):
@@ -21,6 +22,9 @@ def settings(window):
 
 def run(api, bus, registry, binary, output):
     results = {"backend": "owned Wayland", "scenario": "project-settings"}
+    scale = int(os.environ.get("RECITE_NATIVE_SCALE", "100"))
+    assert scale in (100, 200)
+    results["ui_scale"] = scale
     process = None
     try:
         with tempfile.TemporaryDirectory(prefix="recite-project-settings-") as temporary:
@@ -43,7 +47,13 @@ def run(api, bus, registry, binary, output):
                 "path.write_text(path.read_text().replace('original','IDE reviewed'))\n"
             )
             launcher.chmod(0o755)
-            environment = dict(os.environ, PATH=str(commands) + os.pathsep + os.environ["PATH"])
+            config = root / "ui.toml"
+            config.write_text(f"config_version=1\n[writer.presentation]\nui_scale={scale}\n")
+            environment = dict(
+                os.environ,
+                RECITE_CONFIG=str(config),
+                PATH=str(commands) + os.pathsep + os.environ["PATH"],
+            )
             with output.with_suffix(".writer.log").open("w") as log:
                 process = subprocess.Popen(
                     [str(binary), "--project", str(project)],
@@ -64,6 +74,7 @@ def run(api, bus, registry, binary, output):
                 )
                 (artifact,) = project.glob(".recite-project-settings-*.toml")
                 assert artifact.read_text() == original
+                window.reveal_end("Open settings draft in editor")
                 window.act("Open settings draft in editor")
                 window.wait(receipt.exists, "owned editor handoff")
                 assert json.loads(receipt.read_text()) == [str(artifact)]
@@ -82,7 +93,13 @@ def run(api, bus, registry, binary, output):
                 )
                 assert manifest.read_text() == original
                 window.reveal_start("Apply reviewed settings")
-                capture(output, "-review")
+                capture_settled(window, output, "-review")
+                window.reveal_end("Show settings preview")
+                window.act("Show settings preview")
+                window.reveal_down("Read-only TOML preview", prefix=True)
+                reveal_text(window, "content_set='IDE reviewed'")
+                capture_settled(window, output, "-preview")
+                window.reveal_start("Apply reviewed settings")
                 window.act("Apply reviewed settings")
                 window.wait(
                     lambda: window.find_text(
@@ -92,7 +109,7 @@ def run(api, bus, registry, binary, output):
                 )
                 assert manifest.read_text() == artifact.read_text()
                 assert source.read_text() == SOURCE
-                capture(output, "-ready")
+                capture_settled(window, output, "-ready")
                 results[
                     "explicit_apply_updates_manifest_and_refreshes_without_saving_manuscript"
                 ] = True
@@ -119,13 +136,20 @@ def run(api, bus, registry, binary, output):
                 window.reveal_start("Apply reviewed settings")
                 window.act("Apply reviewed settings")
                 window.wait(
+                    lambda: window.find_text("Saved settings need confirmation.", prefix=True),
+                    "recovery actions after settings conflict",
+                )
+                capture_settled(window, output, "-conflict")
+                reveal_text(window, "Project settings changed on disk.")
+                window.wait(
                     lambda: window.find_text("Project settings changed on disk.", contains=True),
                     "original baseline conflict",
                 )
                 assert manifest.read_text() == external
                 assert "candidate" in artifact.read_text()
-                capture(output, "-conflict")
+                capture_settled(window, output, "-conflict-detail")
                 results["external_conflict_preserves_manifest_and_review_artifact"] = True
+                window.reveal_end("Reload saved settings")
                 window.act("Reload saved settings")
                 window.wait(
                     lambda: window.find_text(
@@ -146,6 +170,8 @@ def run(api, bus, registry, binary, output):
                 assert process.wait(timeout=5) == 0
     except Exception as error:
         results["error"], results["error_traceback"] = repr(error), traceback.format_exc()
+        if process is not None and process.poll() is None:
+            capture(output, "-error")
     finally:
         if process is not None and process.poll() is None:
             process.terminate()

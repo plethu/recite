@@ -35,6 +35,7 @@ pub(crate) enum Mode {
     ProjectText,
     RulesChoices,
     Destinations,
+    RenameBeat,
 }
 #[derive(Clone, Copy)]
 pub(crate) enum Search {
@@ -55,6 +56,7 @@ impl Purpose {
             Self::Editor(request) => match request.as_ref() {
                 crate::choices::Request::Rules(_) => Mode::RulesChoices,
                 crate::choices::Request::Destination(_) => Mode::Destinations,
+                crate::choices::Request::Rename(_) => Mode::RenameBeat,
             },
         }
     }
@@ -66,6 +68,7 @@ enum Item {
     Lookup(targets::Target),
     Rule(selection::Choice),
     Destination(String),
+    RenameBeat(String),
 }
 struct Entry {
     item: Item,
@@ -91,6 +94,7 @@ impl Mode {
             Self::ProjectText => "Find saved project text",
             Self::RulesChoices => "Choose reply rule value",
             Self::Destinations => "Change destination",
+            Self::RenameBeat => "Choose a beat to rename",
         }
     }
 }
@@ -222,7 +226,7 @@ impl App {
                     }
                 }
             }
-            Some(item @ (Item::Rule(_) | Item::Destination(_))) => {
+            Some(item @ (Item::Rule(_) | Item::Destination(_) | Item::RenameBeat(_))) => {
                 self.activate_editor_choice(item)
             }
             _ => {}

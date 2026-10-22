@@ -12,6 +12,7 @@ pub(super) struct Settings {
     command: WriterCommand,
     drafts: BTreeMap<WriterCommand, String>,
     page: usize,
+    query: String,
     feedback: Option<String>,
 }
 impl Default for Settings {
@@ -21,11 +22,12 @@ impl Default for Settings {
             command: WriterCommand::Save,
             drafts: BTreeMap::new(),
             page: 0,
+            query: String::new(),
             feedback: None,
         }
     }
 }
-const COMMANDS_PER_PAGE: usize = 4;
+const COMMANDS_PER_PAGE: usize = 8;
 fn commands() -> impl Iterator<Item = WriterCommand> {
     WriterCommand::ALL
         .iter()
@@ -40,6 +42,14 @@ fn command_label(command: WriterCommand) -> String {
     }
 }
 impl App {
+    fn matching_shortcuts(&self) -> impl Iterator<Item = WriterCommand> + use<> {
+        let query = self.settings.query.trim().to_lowercase();
+        commands().filter(move |command| command_label(*command).to_lowercase().contains(&query))
+    }
+    fn search_shortcuts(&mut self, query: String) {
+        self.settings.query = query;
+        self.settings.page = 0;
+    }
     fn open_project_settings(&mut self) {
         if let Some(writer) = &mut self.writer {
             writer.open_project_workspace(crate::workspaces::Open::Settings);
@@ -49,7 +59,8 @@ impl App {
     }
     pub(super) fn show_settings(&mut self) {
         self.settings_open = true;
-        self.settings.page = commands()
+        self.settings.page = self
+            .matching_shortcuts()
             .position(|command| command == self.settings.command)
             .unwrap_or(0)
             / COMMANDS_PER_PAGE;

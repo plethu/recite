@@ -43,10 +43,14 @@ def reveal_preference(window, label):
         target = window.find(label)
         if target is not None and within(target):
             return True
+        direction = "Page_Down"
+        if target is not None:
+            rect = window.call(target, "Component", "GetExtents", coordinates)[0]
+            direction = "Up" if rect[1] < viewport[1] else "Down"
         before = positions()
         scrollbar = window._outer_scrollbar()
         window.focus(scrollbar)
-        key("Down")
+        key(direction)
         window.wait(
             lambda: positions() != before,
             "preference scroll movement toward " + label,

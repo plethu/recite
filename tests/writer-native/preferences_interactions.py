@@ -11,7 +11,7 @@ from native_window import key, type_text
 from preference_controls import reveal_preference
 from project_interactions import manuscript
 from startup_interactions import field, fill
-from writer_interactions import SOURCE, capture, launch
+from writer_interactions import SOURCE, capture, capture_settled, launch
 
 
 def run(api, bus, registry, binary, output):
@@ -34,7 +34,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "native draft")
                 window.workspace_action("Settings")
                 window.wait(lambda: window.find("Dark theme"), "personal preferences")
-                capture(output, "-light")
+                capture_settled(window, output, "-light")
                 window.act("Dark theme")
                 window.wait(
                     lambda: (
@@ -42,19 +42,21 @@ def run(api, bus, registry, binary, output):
                     ),
                     "durable dark theme",
                 )
-                dark = window.find("Dark theme")
+                dark = window.wait(lambda: window.find("Dark theme"), "updated theme controls")
                 window.focus(dark)
                 window.act("Increase UI scale")
                 window.wait(lambda: window.find("UI scale: 110%"), "live UI scale")
                 focused = 1 << int(api.Atspi.StateType.FOCUSED)
                 assert window.call(dark, "Accessible", "GetState")[0][0] & focused
                 results["live_theme_and_scale_preserve_native_radio_focus"] = True
-                capture(output, "-dark")
+                capture_settled(window, output, "-dark")
                 for percent in range(120, 201, 10):
                     reveal_preference(window, "Increase UI scale")
                     window.act("Increase UI scale")
                     window.wait(lambda: window.find(f"UI scale: {percent}%"), "increased scale")
-                capture(output, "-scale200")
+                capture_settled(window, output, "-scale200")
+                reveal_preference(window, "Confirm before closing")
+                capture_settled(window, output, "-behaviour200")
                 results["ui_scale_reaches_validated_200_percent"] = True
                 for percent in range(190, 99, -10):
                     reveal_preference(window, "Decrease UI scale")
@@ -69,7 +71,7 @@ def run(api, bus, registry, binary, output):
                         ),
                         "persisted restored scale",
                     )
-                window.act("Increase Reading text size")
+                window.act("Larger reading text")
                 window.wait(lambda: window.find("Reading text size: 21"), "reading size")
                 window.act("Keyboard shortcuts")
                 fill(window, "Shortcut binding", "Primary+Shift+S")
@@ -97,7 +99,7 @@ def run(api, bus, registry, binary, output):
                     "command-specific saved feedback",
                 )
                 assert not window.enabled("Save shortcut")
-                capture(output, "-keyboard")
+                capture_settled(window, output, "-keyboard")
                 fill(window, "Shortcut binding", "Primary+Alt+D")
                 window.act("Save project · Primary+Shift+S")
                 window.act("Save · Primary+Alt+S")
@@ -125,7 +127,7 @@ def run(api, bus, registry, binary, output):
                     lambda: window.text(node) == "The last tram waits.x",
                     "redo after live preferences",
                 )
-                capture(output, "-writer")
+                capture_settled(window, output, "-writer")
                 results["mounted_manuscript_history_survives_preference_changes"] = True
                 assert config.read_text().startswith("# Preserve this personal comment.")
                 results["shared_config_owner_preserves_user_comments"] = True
@@ -150,7 +152,7 @@ def run(api, bus, registry, binary, output):
                 process, window, node = launch(api, bus, registry, arguments, log)
                 window.document_action("Close")
                 window.wait(lambda: window.find("Close Writer"), "ordinary close confirmation")
-                capture(output, "-ordinary-close")
+                capture_settled(window, output, "-ordinary-close")
                 window.act("Keep editing")
                 window.wait(lambda: not window.find("Close Writer"), "cancel ordinary close")
                 window.workspace_action("Settings")
@@ -165,13 +167,23 @@ def run(api, bus, registry, binary, output):
                 window.focus(scrollbar)
                 key("End")
                 window.wait(lambda: window.find("Confirm before closing"), "close preference")
-                capture(output, "-behaviour")
+                capture_settled(window, output, "-behaviour")
                 window.act("Monochrome colours")
                 window.wait(
                     lambda: tomllib.loads(config.read_text())["writer"].get("monochrome") is True,
                     "durable monochrome preference",
                 )
-                capture(output, "-monochrome")
+                checked = 1 << int(api.Atspi.StateType.CHECKED)
+                window.wait(
+                    lambda: (
+                        window.call(window.find("Monochrome colours"), "Accessible", "GetState")[0][
+                            0
+                        ]
+                        & checked
+                    ),
+                    "native monochrome checked state",
+                )
+                capture_settled(window, output, "-monochrome")
                 results["scrolling_exposes_registered_and_actionable_preferences"] = True
                 window.act("Confirm before closing")
                 window.wait(

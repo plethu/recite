@@ -1,4 +1,5 @@
 use super::*;
+use crate::workspaces::external::Resolution;
 use crate::workspaces::tools::{ExternalAction, tests::finish};
 use recite_writer_model::View;
 use recite_writer_session::project::ExternalDecision;
@@ -38,6 +39,18 @@ fn native_comparison_keeps_pending_prose_or_adopts_disk_without_writing_source()
         compare(&mut writer, &mut jobs, directory.path());
         writer.project_action(Action::External(ExternalAction::Resolve(decision)));
         finish(&mut writer, &mut jobs);
+        assert_eq!(
+            writer
+                .workspaces
+                .external
+                .resolved()
+                .map(|resolved| resolved.resolution),
+            Some(match decision {
+                ExternalDecision::KeepWriter => Resolution::KeepWriter,
+                ExternalDecision::UseInspectedDisk => Resolution::UseInspectedDisk,
+            })
+        );
+        assert!(writer.workspaces.external.inspection().is_none());
         assert!(!writer.session.read_only(), "{}", writer.status);
         assert!(writer.recovery_copy.as_ref().unwrap().is_file());
         let model = writer.session.model();
@@ -84,6 +97,14 @@ fn merge_handoff_import_retains_selection_and_one_history_step() {
     finish(&mut writer, &mut jobs);
     assert_eq!(writer.session.model().draft(), "Reviewed merge.");
     assert_eq!(
+        writer
+            .workspaces
+            .external
+            .resolved()
+            .map(|resolved| resolved.resolution),
+        Some(Resolution::Merged)
+    );
+    assert_eq!(
         writer.session.model().view(),
         &View::Passage("11111111111111111111".into())
     );
@@ -121,6 +142,93 @@ fn recovery_failure_after_admission_still_returns_the_adopted_model_and_archive(
     assert!(writer.session.project().unwrap().files().external.is_none());
     assert!(writer.recovery_copy.as_ref().unwrap().is_file());
     assert!(writer.status.contains("adopted"), "{}", writer.status);
+    assert_eq!(
+        writer
+            .workspaces
+            .external
+            .resolved()
+            .map(|resolved| resolved.resolution),
+        Some(Resolution::KeepWriter)
+    );
+}
+
+#[test]
+fn an_adopted_result_survives_a_failed_review_projection_and_failed_reinspection() {
+    let (directory, mut writer, mut jobs) = fixture();
+    compare(&mut writer, &mut jobs, directory.path());
+    writer.keep_writer_version();
+    let job = jobs.try_recv().unwrap();
+    let ToolWork::Project(work) = job.work else {
+        panic!("exclusive work")
+    };
+    let completed =
+        work.execute_with_presentation(Action::perform, |_, _| panic!("review projection"));
+    assert!(matches!(&completed.outcome, Outcome::Ready(Ok(success))
+        if matches!(success.effect, Effect::ExternalResolved(Resolved { resolution: Resolution::KeepWriter, .. }))
+            && success.warning.as_ref().is_some_and(|warning| warning.contains("could not be rendered"))));
+    drop(writer.accept_tool(ToolCompleted {
+        request: job.request,
+        result: Ok(Value::Project(Box::new(completed))),
+    }));
+    assert_eq!(
+        writer
+            .workspaces
+            .external
+            .resolved()
+            .map(|resolved| resolved.resolution),
+        Some(Resolution::KeepWriter)
+    );
+    assert!(writer.recovery_copy.as_ref().unwrap().is_file());
+    assert_eq!(writer.session.model().draft(), "Pending manuscript.");
+    let source = directory.path().join("scene.recite");
+    fs::remove_file(&source).unwrap();
+    writer.compare_disk_changes();
+    finish(&mut writer, &mut jobs);
+    assert_eq!(
+        writer
+            .workspaces
+            .external
+            .resolved()
+            .map(|resolved| resolved.resolution),
+        Some(Resolution::KeepWriter)
+    );
+    fs::write(source, SOURCE).unwrap();
+    writer.compare_disk_changes();
+    finish(&mut writer, &mut jobs);
+    assert!(
+        writer
+            .workspaces
+            .external
+            .resolved()
+            .map(|resolved| resolved.resolution)
+            .is_none()
+    );
+    assert!(writer.workspaces.external.inspection().is_some());
+}
+
+#[test]
+fn a_failed_comparison_on_another_document_cannot_reuse_an_earlier_resolved_outcome() {
+    let (directory, mut writer, mut jobs) = fixture();
+    compare(&mut writer, &mut jobs, directory.path());
+    writer.use_inspected_disk();
+    finish(&mut writer, &mut jobs);
+    assert_eq!(
+        writer.workspaces.external.resolved().unwrap().path,
+        directory.path().join("scene.recite")
+    );
+    writer.return_to_writing();
+    let other = directory.path().join("other.recite");
+    writer
+        .session
+        .project_mut()
+        .unwrap()
+        .switch(&other)
+        .unwrap();
+    fs::remove_file(other).unwrap();
+    writer.compare_disk_changes();
+    finish(&mut writer, &mut jobs);
+    assert!(writer.workspaces.external.resolved().is_none());
+    assert!(writer.workspaces.external.inspection().is_none());
 }
 
 #[test]

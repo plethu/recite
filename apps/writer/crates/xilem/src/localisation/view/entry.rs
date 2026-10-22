@@ -1,4 +1,5 @@
 use super::*;
+use crate::attention::PaneEntry;
 use crate::navigation::Target;
 use recite_writer_session::location::Screen as LinkedScreen;
 mod forms;
@@ -22,29 +23,7 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
         .is_some_and(|owner| owner.catalogue.changed(entry.key.id));
     Some(
         flex_col((
-            state.passage.as_ref().map(|beat| {
-                let name = beat.name.clone();
-                let page = beat.page;
-                text_button(
-                    scale,
-                    "Return to bilingual beat",
-                    move |writer: &mut Writer| {
-                        let mut location = writer.current_location();
-                        location.screen = LinkedScreen::Localise;
-                        location.beat = Some(name.clone());
-                        location.passage = None;
-                        location.page = page;
-                        writer.navigate(Target::Location(location));
-                    },
-                )
-                .disabled(blocked)
-            }),
-            text_button(
-                scale,
-                "Return to translation queue",
-                |writer: &mut Writer| writer.catalogue_action(work::Action::Query),
-            )
-            .disabled(writer.project_action_blocked()),
+            navigation(writer, blocked),
             source::source(writer, entry, blocked),
             wordings::wordings(writer, entry, blocked),
             plural::guide(writer, entry, blocked),
@@ -71,4 +50,37 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(10.px()),
     )
+}
+
+fn navigation(writer: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
+    let state = &writer.localisation;
+    let scale = writer.ui_scale();
+    flex_col((
+        state.passage.as_ref().map(|beat| {
+            let name = beat.name.clone();
+            let page = beat.page;
+            text_button(
+                scale,
+                "Return to bilingual beat",
+                move |writer: &mut Writer| {
+                    let mut location = writer.current_location();
+                    location.screen = LinkedScreen::Localise;
+                    location.beat = Some(name.clone());
+                    location.passage = None;
+                    location.page = page;
+                    writer.navigate(Target::Location(location));
+                },
+            )
+            .disabled(blocked)
+        }),
+        text_button(
+            scale,
+            "Return to translation queue",
+            |writer: &mut Writer| writer.catalogue_action(work::Action::Query),
+        )
+        .disabled(writer.project_action_blocked()),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(8.px())
+    .prop(PaneEntry(true))
 }

@@ -5,7 +5,7 @@ pub(super) fn queue(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
     let state = &writer.localisation;
     let blocked = writer.project_action_blocked() || state.slot.read_only();
-    let width = (writer.viewport.width - writer.navigation_width() - 32.).max(280.);
+    let width = writer.content_width();
     let wide = width >= 600. * f64::from(scale);
     let measure = if wide { (width - 24.) / 2. } else { width };
     let rows = state

@@ -128,6 +128,8 @@ def run_probe(binary, output, scenario):
             from generation_interactions import run
         elif scenario == "project-tools":
             from project_tools_interactions import run
+        elif scenario == "build":
+            from build_interactions import run
         elif scenario == "focus":
             from focus_interactions import run
         elif scenario == "reload":
@@ -196,6 +198,7 @@ def main():
             "reload",
             "focus",
             "project-tools",
+            "build",
             "generation",
             "declaration-source",
             "project-settings",

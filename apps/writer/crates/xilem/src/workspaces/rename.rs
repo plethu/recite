@@ -1,7 +1,11 @@
 //! Rename composes an explicit proposal, bounded review and exclusive project actions.
+mod selection;
+#[cfg(test)]
+mod tests;
 mod view;
 use super::{Writer, text, tools::ProjectAction};
 pub(super) use recite_writer_session::comparison::ComparisonRow as Change;
+pub(crate) use selection::BeatChoice;
 pub(super) use view::panel;
 pub(crate) use view::recovery;
 #[derive(Default)]
@@ -10,8 +14,19 @@ pub(super) struct Panel {
     name: String,
     changes: Vec<Change>,
     page: usize,
-    report: Vec<String>,
+    report: Option<Report>,
     report_page: usize,
+}
+enum Report {
+    Information(Vec<String>),
+    Problem(Vec<String>),
+}
+impl Report {
+    fn pages(&self) -> &[String] {
+        match self {
+            Self::Information(pages) | Self::Problem(pages) => pages,
+        }
+    }
 }
 impl Panel {
     pub(super) fn choose_block(&mut self, block: Option<String>) {
@@ -24,11 +39,25 @@ impl Panel {
         self.page = 0;
     }
     pub(super) fn report(&mut self, report: Option<&str>) {
-        self.report = report.map(text::pages).unwrap_or_default();
+        self.report = report.map(|report| Report::Problem(text::pages(report)));
+        self.report_page = 0;
+    }
+    pub(super) fn inform(&mut self, report: &str) {
+        self.report = Some(Report::Information(text::pages(report)));
         self.report_page = 0;
     }
 }
 impl Writer {
+    pub(crate) fn retire_published_rename_notice(&mut self) {
+        if matches!(self.workspaces.rename.report, Some(Report::Information(_)))
+            && self
+                .session
+                .project()
+                .is_some_and(|project| !project.files().project_edit_pending(self.session.model()))
+        {
+            self.workspaces.rename.report(None);
+        }
+    }
     pub(crate) fn has_project_history(&self, redo: bool) -> bool {
         self.session.project().is_some_and(|project| {
             project

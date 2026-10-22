@@ -25,6 +25,9 @@ impl Writer {
             files.set_saving(false);
             let _ = files.queue_checkpoint(model);
         }
+        if result.is_ok() {
+            self.retire_published_rename_notice();
+        }
         self.reading.prepare(self.session.model());
         self.status = match &result {
             Ok(()) if self.session.dirty() || self.localisation.dirty() => {

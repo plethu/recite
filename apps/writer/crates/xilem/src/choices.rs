@@ -4,6 +4,7 @@ use crate::{Writer, routes, rules};
 pub(crate) enum Request {
     Rules(rules::selection::Request),
     Destination(routes::Request),
+    Rename(crate::workspaces::BeatChoice),
 }
 
 impl Request {
@@ -11,6 +12,7 @@ impl Request {
         match self {
             Self::Rules(request) => request.is_current(writer),
             Self::Destination(request) => request.is_current(writer),
+            Self::Rename(request) => request.is_current(writer),
         }
     }
 }

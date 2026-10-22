@@ -7,10 +7,10 @@ usability, GPU performance, or cross-platform support.
 The paired human comparison on 2026-10-21 rejected Xilem's presentation readiness. The functional
 checks below did not establish interchangeability: Xilem still showed a form-like scaffold in place
 of Freya's fixed scene rail, compact toolbar and whole-beat manuscript with inline editing. The
-writing composition is being corrected against Freya's existing design. A retirement comparison
-needs equivalent rendered and interaction evidence for the same scene, selection, viewport and
-scale, including pending edits, focus mode, Map, Split and the remaining project screens. Narrow
-fixture or recovery render reviews do not satisfy that comparison.
+writing composition has since been corrected against Freya's existing design. A retirement
+comparison needs equivalent rendered and interaction evidence for the same scene, selection,
+viewport and scale, including pending edits, focus mode, Map, Split and the remaining project
+screens. Narrow fixture or recovery render reviews do not satisfy that comparison.
 
 The bounded paired review on 2026-10-22 still recommends keeping both frontends available. A fresh
 reviewer inspected 44 actual cold-route renders of both frontends at 100/200% scale, using the same
@@ -34,19 +34,38 @@ plural arms, source ordering, catalogue replacement, hidden/stale callbacks and 
 field count for 32 versus 1,024 passages. These results establish this slice, not whole-product
 interchangeability or human acceptance.
 
-Further material findings concern initial 200% focus scrolling away titles/source context, rename's
-Review action falling below the proposal, settings without a live writing specimen or compact
-shortcut list, project-settings stages with weak next-action hierarchy, and missing build scope
-information. The external-IDE source/settings workflow remains an accepted design choice; these
-findings do not require restoring an embedded source editor. The cold disk/source-update pairs were
-not equivalent consequential states, so their captures establish no conflict/refresh parity.
+The auxiliary follow-up now corrects the surfaced composition gaps. Personal preferences include a
+live manuscript specimen, compact reading/layout controls and a searchable shortcut list beside its
+editor. Project settings identify the saved manifest and separate export, import, review, Apply and
+reload recovery. Rename uses a declared-beat chooser, a compact retained proposal and source-font
+before/after changes. Its staged result exposes grouped Undo; successful Save all retires staging
+guidance without retiring history. Build identifies its saved project scope, selected output targets
+and actual generated files. Native drills cover both rename scales, selected/all-output publication,
+settings recovery and persistent preferences without replacing manuscript history. Fresh visual
+review closed the surfaced settings, rename and build findings, including actual TOML bodies, 200%
+lower preferences and enabled monochrome controls.
 
-The local receipts and renders are under `target/writer-evaluation/paired-project-v2.json`,
-`paired-catalogue-v1.json` and `paired-settings-v1.json`; the evidence index there records current
-checks and binary identities. These are diagnostic artifacts, not a passing acceptance gate. The
-remaining work is the settings, rename and build composition, meaningful conflict/refresh pairs,
-then final dependency, package and complete-gate evidence. Do not retire Freya on the strength of
-the writing and bilingual corrections or automated workflow coverage.
+Populated Relay Hub source-update pairs now exercise an actual changed passage on both frontends at
+100/200%. Explicit PO publication preserves the translation and translator note and does not write
+source. The completed Xilem queue shows the changed-source review status and saved outcome. Compared
+words use native bold and underline, including in monochrome. The native read-only Label used for
+these comparisons retains complete ordered accessibility text and wrapping; it does not provide
+Prose's pointer selection/copy interaction. Editable manuscript and translation fields retain their
+native selection and history. This is a documented comparison-only capability limit.
+
+Populated disk pairs exercise inspected Keep decisions at both scales while preserving changed disk
+bytes and creating a complete recovery archive. Their first visual follow-up found an unresolved
+choice form remaining after completion. The corrected presentation uses a typed, source-bound
+resolved state, preserves late recovery/presentation warnings, and retires unchosen options. Failed
+reinspection can retain a result for the same document; another document cannot inherit it. Final
+resolved-state native renders are checked separately from the earlier comparison captures.
+
+The local evidence index is `target/writer-evaluation/retirement-evidence.md`. It names completed
+receipts, failed attempts, source/binary identities and carried-forward baseline evidence.
+Diagnostic renders and workflow receipts do not establish physical input, assistive-technology
+usability, installed-host lifecycle acceptance or a passing dependency policy. Both frontends remain
+available for the final human evaluation; these corrections alone do not authorise Freya's
+retirement.
 
 The installed-package and broad native claims below describe signed baseline
 `9ce876da7f6b0945a2a662eba4951a14fd74bd02`. They have not all been repeated after the inline
@@ -62,9 +81,8 @@ renders at 100/200% UI scale closed the reported writing, Map/Split, reference, 
 composition findings. The final Preview follow-up inspected seven states at each scale, including
 real Tab entry to a fully visible language field. These findings cover the writing and Preview
 surfaces; they do not establish whole-product interchangeability, installed-package acceptance for
-this correction or physical keyboard/screen-reader usability. Remaining project screens still need
-equivalent paired acceptance before Freya can be retired; the bounded review above records the
-current gaps.
+this correction or physical keyboard/screen-reader usability. The auxiliary and bilingual follow-ups
+above extend this comparison; the evidence index records the exact checks and their limits.
 
 The corrected Linux release binary was also packaged and checked for payload, ABI, licenses and CLI
 behavior. Its extracted desktop entry passed cold/running-window link delivery and malformed-route
@@ -265,10 +283,12 @@ query/filter/page state, cancelled history, direct return during a pending histo
 recovery failures both before and after discard. Project/catalogue headers reuse the common
 Back/Forward controls.
 
-The Writer dependency audit also remains red: the pinned graph includes unmaintained SVG/font and
-D-Bus dependencies, and the existing image graph includes a license outside the current allowlist.
-The Xilem addition introduces `rustybuzz` through `usvg`; the other reported package versions were
-already in the Freya lockfile. No dependency-policy exceptions were added.
+The compatible Tokio patch release removes the yanked 1.54.0 pin without changing other package
+versions. The locked Flatpak source archive follows the same checksum. The Writer dependency audit
+also remains red: the pinned graph includes unmaintained SVG/font and D-Bus dependencies, and the
+existing image graph includes a license outside the current allowlist. The Xilem addition introduces
+`rustybuzz` through `usvg`; the other reported package versions were already in the Freya lockfile.
+No dependency-policy exceptions were added.
 
 Selected-package production/build graphs distinguish the retirement benefits from the shared work:
 Xilem avoids Skia and Freya's default image codecs, including AVIF. On Linux it also avoids `paste`;
@@ -277,9 +297,10 @@ targets, and Linux retains the D-Bus findings. The combined all-feature audit re
 gate. The NCSA finding belongs to a conditional fuzzing dependency in the AVIF graph, not to a
 fuzzer shipped in the runtime.
 
-The bounded SVG update would require another vendored Xilem crate and changes beyond the approved
-upstream lint baseline. It was not adopted. A coordinated accessibility-stack update is still needed
-for the D-Bus findings; no compatibility fork or policy exception was added to clear them.
+The font finding also reaches Xilem through winit's Linux window-decoration graph. The D-Bus
+findings span AccessKit, portals and desktop preferences; replacing one crate does not migrate all
+consumers. These require coordinated compatible upstream updates. No additional compatibility fork,
+lint waiver, advisory exception or license exception was added to clear the audit.
 
 The limits below describe the Freya fallback.
 

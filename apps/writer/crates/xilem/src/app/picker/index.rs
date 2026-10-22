@@ -96,7 +96,9 @@ impl Picker {
                         }
                         None => {
                             targets::rank(&entry.title, &self.query).or_else(|| match &entry.item {
-                                Item::Destination(value) => targets::rank(value, &self.query),
+                                Item::Destination(value) | Item::RenameBeat(value) => {
+                                    targets::rank(value, &self.query)
+                                }
                                 _ => None,
                             })
                         }

@@ -1,10 +1,10 @@
 use super::*;
-use crate::attention::{Pane, Region};
+use crate::attention::{Pane, PaneEntry, Region};
 use crate::presentation::{label, paragraph, text_button};
 use recite_writer_session::builds::job;
 use xilem::{
     WidgetView,
-    masonry::layout::AsUnit,
+    masonry::{kurbo::Axis, layout::AsUnit},
     style::Style,
     view::{CrossAxisAlignment, flex_col, flex_row},
 };
@@ -74,13 +74,20 @@ pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .project()
         .map(|project| &project.files().builds);
     let busy = builds.is_some_and(|builds| builds.busy());
+    let width = writer.content_width();
     flex_col((
-        label(scale, "Build scenes").text_size(28. * scale),
+        flex_row((
+            label(scale, "Build scenes").text_size(24. * scale),
+            build_actions(writer, busy, builds.is_none_or(|builds| builds.targets.is_empty())),
+        )).direction(if width >= 580. * f64::from(scale) { Axis::Horizontal } else { Axis::Vertical })
+            .cross_axis_alignment(CrossAxisAlignment::Center).gap(24.px()).prop(PaneEntry(true)),
+        writer.session.project().map(|project| paragraph(scale, format!(
+            "recite.project.toml · {} source files · {} output targets", project.documents().len(), builds.map_or(0, |builds| builds.targets.len())
+        ), width)),
+        paragraph(scale, "Every build validates the whole saved project. The selected target limits emitted assets. Save all and build includes your current edits.", width),
         label(scale,"Build target").text_size(18.*scale),
         target_options(writer),
         pagination(writer),
-        paragraph(scale, "Build uses saved project inputs. Save all before building to include your current edits.", 640.),
-        build_actions(writer, busy, builds.is_none_or(|builds| builds.targets.is_empty())),
         feedback(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -104,11 +111,15 @@ fn build_actions(writer: &Writer, busy: bool, empty: bool) -> impl WidgetView<Wr
         .disabled(blocked),
     ))
 }
-fn pagination(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+fn pagination(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
+    let count = writer.session.project()?.files().builds.targets.len();
+    if count <= 5 {
+        return None;
+    }
     let last = writer.session.project().is_none_or(|project| {
         (writer.workspaces.build_page + 1) * 5 >= project.files().builds.targets.len()
     });
-    flex_row((
+    Some(flex_row((
         text_button(
             writer.ui_scale(),
             "Previous outputs",
@@ -121,7 +132,7 @@ fn pagination(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             writer.workspaces.build_page += 1
         })
         .disabled(last),
-    ))
+    )))
 }
 
 fn target_options(writer: &Writer) -> impl WidgetView<Writer> + use<> {

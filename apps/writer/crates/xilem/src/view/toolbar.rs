@@ -139,7 +139,7 @@ fn editing(state: &Writer, width: f64, compact: bool) -> impl WidgetView<Writer>
 pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
     let diagnostics = state.session.model().document().diagnostic_snapshot();
-    let saved = if state.session.project().is_none() {
+    let saved = if state.session.project_root().is_none() {
         "Temporary example"
     } else if state.session.model().has_draft() {
         "Unapplied changes"

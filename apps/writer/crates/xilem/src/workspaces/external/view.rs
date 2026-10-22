@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     attention::{Pane, Region},
-    presentation::{label, manuscript_text, paragraph, source_text, text_button},
+    presentation::{label, manuscript_text, paragraph, source_comparison, text_button},
 };
 use xilem::{
     WidgetView,
@@ -12,7 +12,10 @@ use xilem::{
 };
 
 pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
-    flex_col((
+    if let Some(resolved) = writer.workspaces.external.resolved() {
+        return Either::A(resolved::panel(writer, resolved));
+    }
+    Either::B(flex_col((
         label(writer.ui_scale(), "Compare disk changes").text_size(28. * writer.ui_scale()),
         paragraph(writer.ui_scale(), "Review the versions before choosing a resolution. Each decision keeps a complete recovery copy. Save writes the accepted result.", 640.),
         report(writer),
@@ -20,8 +23,9 @@ pub(in crate::workspaces) fn panel(writer: &Writer) -> impl WidgetView<Writer> +
         pending(writer),
         actions(writer),
         merge(writer),
-    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::External)))
+    )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::External))))
 }
+mod resolved;
 fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = writer.project_action_blocked();
     let stale = !writer.external_comparison_current();
@@ -40,7 +44,7 @@ fn actions(writer: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.external;
-    let inspection = panel.inspection.as_ref()?;
+    let inspection = panel.inspection()?;
     let scale = writer.ui_scale();
     Some(flex_col((
         label(scale, inspection.path.file_name().unwrap_or_default().to_string_lossy().into_owned()),
@@ -58,7 +62,7 @@ fn comparison(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()))
 }
 fn paired_sources(writer: &Writer, change: &ComparisonRow) -> impl WidgetView<Writer> + use<> {
-    let available = (writer.viewport.width - 72.).max(240.);
+    let available = writer.content_width();
     let wide = available >= 920. * f64::from(writer.ui_scale());
     let width = if wide {
         (available - 12.) / 2.
@@ -69,12 +73,14 @@ fn paired_sources(writer: &Writer, change: &ComparisonRow) -> impl WidgetView<Wr
         writer,
         "Accepted Writer source",
         change.before.as_ref(),
+        change.after.as_ref(),
         width,
     );
     let after = source(
         writer,
         "Inspected disk version",
         change.after.as_ref(),
+        change.before.as_ref(),
         width,
     );
     if wide {
@@ -95,6 +101,7 @@ fn source(
     writer: &Writer,
     caption: &'static str,
     value: Option<&String>,
+    other: Option<&String>,
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
     let scale = writer.ui_scale();
@@ -104,7 +111,12 @@ fn source(
     sized_box(
         flex_col((
             label(scale, caption),
-            flex_row((sized_box(source_text(14. * scale, value)).width((width - 24.).px()),)),
+            flex_row((sized_box(source_comparison(
+                14. * scale,
+                value,
+                other.cloned().unwrap_or_default(),
+            ))
+            .width((width - 24.).px()),)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(8.px()),
@@ -115,7 +127,7 @@ fn source(
 }
 fn pending(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let panel = &writer.workspaces.external;
-    let pages = panel.inspection.as_ref()?.pending.as_ref()?;
+    let pages = panel.inspection()?.pending.as_ref()?;
     let value = pages
         .get(panel.draft_page)
         .cloned()
@@ -132,7 +144,8 @@ fn pending(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
                         pages.len().max(1)
                     ),
                 ),
-                flex_row((sized_box(manuscript_text(16. * scale, value)).width(640.px()),)),
+                flex_row((sized_box(manuscript_text(16. * scale, value))
+                    .width((writer.content_width() - 24.).min(640.).px()),)),
                 (pages.len() > 1).then(|| {
                     flex_row((
                         text_button(scale, "Previous field draft part", |writer: &mut Writer| {
@@ -161,8 +174,7 @@ fn merge(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let artifact = writer
         .workspaces
         .external
-        .inspection
-        .as_ref()
+        .inspection()
         .and_then(|inspection| inspection.artifact.as_ref());
     let scale = writer.ui_scale();
     flex_col((
@@ -179,7 +191,7 @@ fn report(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let scale = writer.ui_scale();
     Some(
         flex_col((
-            paragraph(scale, value.clone(), 640.),
+            paragraph(scale, value.clone(), writer.content_width().min(640.)),
             (panel.report.len() > 1).then(|| {
                 flex_row((
                     text_button(

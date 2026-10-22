@@ -68,7 +68,7 @@ fn comparison_pages_are_bounded_and_render_pending_draft_and_merge_actions_at_bo
         finish(&mut writer, &mut jobs);
         writer.export_merge_draft();
         finish(&mut writer, &mut jobs);
-        let inspection = writer.workspaces.external.inspection.as_ref().unwrap();
+        let inspection = writer.workspaces.external.inspection().unwrap();
         assert!(
             inspection
                 .changes
@@ -90,6 +90,27 @@ fn comparison_pages_are_bounded_and_render_pending_draft_and_merge_actions_at_bo
                 .with_size((1280, 800))
                 .with_background(writer.palette.canvas),
         );
+        let mut pending = vec![harness.root_widget().as_dyn()];
+        let mut compared = 0;
+        while let Some(widget) = pending.pop() {
+            if !widget.ctx().is_stashed()
+                && widget.downcast::<Label>().is_some_and(|text| {
+                    let text = text.text();
+                    text.contains("Original manuscript.")
+                        || text.contains("Inspected external manuscript.")
+                })
+            {
+                let bounds = widget
+                    .ctx()
+                    .window_transform()
+                    .transform_rect_bbox(widget.ctx().border_box());
+                assert!(bounds.x0 >= writer.navigation_width(), "{bounds:?}");
+                assert!(bounds.x1 <= 1280., "{bounds:?}");
+                compared += 1;
+            }
+            pending.extend(widget.children());
+        }
+        assert_eq!(compared, 2);
         if let Ok(prefix) = std::env::var("RECITE_CAPTURE_EXTERNAL") {
             let stem = format!("{prefix}-external-{scale}");
             harness.render().save(format!("{stem}.png")).unwrap();
@@ -124,7 +145,7 @@ fn a_large_changed_line_does_not_grow_the_mounted_comparison() {
         writer.workspaces.tools.sender = Some(sender);
         writer.compare_disk_changes();
         finish(&mut writer, &mut jobs);
-        let inspection = writer.workspaces.external.inspection.as_ref().unwrap();
+        let inspection = writer.workspaces.external.inspection().unwrap();
         assert_eq!(inspection.changes.len(), (length + 3).div_ceil(1_000));
         assert!(
             inspection
