@@ -25,7 +25,7 @@ pub(super) fn source(
         }),
         entry.source.get(entry.source_page).map(|source| {
             flex_row((
-                sized_box(manuscript_text(writer.reading_size(), source.clone()))
+                sized_box(manuscript_text(prose_size(writer), source.clone()))
                     .width(writer.script_width().px()),
             ))
         }),

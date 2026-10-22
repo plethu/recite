@@ -1,4 +1,5 @@
 //! Translation edits use the shared file-backed catalogue, with one native presentation owner.
+mod beat;
 mod closing;
 mod creation;
 mod editing;
@@ -54,6 +55,7 @@ struct Row {
     source: String,
     caption: String,
     status: String,
+    translation: String,
 }
 #[derive(Default)]
 struct Queue {
@@ -114,7 +116,7 @@ pub(crate) struct Localisation {
     after_save: work::AfterSave,
     creation: creation::Creation,
     refresh: Option<refresh::Refresh>,
-    passage: Option<location::PassageContext>,
+    passage: Option<beat::Beat>,
 }
 impl Localisation {
     pub fn preview_catalogue(&self) -> Option<&Catalogue> {
@@ -153,17 +155,30 @@ impl Localisation {
 }
 impl Writer {
     pub(crate) fn open_localisation(&mut self) {
-        if self.phase != Phase::Writing
-            || self.session.project().is_none()
-            || self.project_action_blocked()
-        {
+        if !self.can_open_localisation() {
             return;
+        }
+        if self.localisation.has_catalogue() {
+            self.open_translation_beat(0);
+        } else {
+            self.enter_localisation();
+        }
+    }
+    fn can_open_localisation(&self) -> bool {
+        self.phase == Phase::Writing
+            && self.session.project().is_some()
+            && !self.project_action_blocked()
+    }
+    fn enter_localisation(&mut self) -> bool {
+        if !self.can_open_localisation() {
+            return false;
         }
         self.attention.leave_focus();
         self.cancel_map_gesture();
         self.remember_location();
         self.workspaces.screen = Screen::Localisation;
         self.remember_catalogue_location();
+        true
     }
     pub(crate) fn catalogue_feedback(&mut self, message: String) {
         self.status = message
@@ -194,7 +209,7 @@ impl Writer {
         {
             return;
         }
-        let selected = self.localisation.entry.as_ref().map(|entry| entry.key.id);
+        let selected = self.localisation.mounted_entries();
         match self.localisation.slot.checkout(selected) {
             Ok(checkout) => self.submit_catalogue_tool(Work::checked(
                 checkout,

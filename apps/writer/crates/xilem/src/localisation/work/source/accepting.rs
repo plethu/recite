@@ -15,7 +15,7 @@ impl Writer {
                 return;
             }
         };
-        let selected = self.localisation.entry.as_ref().map(|entry| entry.key.id);
+        let selected = self.localisation.mounted_entries();
         match self.localisation.slot.checkout(selected) {
             Ok(catalogue) => self.submit_catalogue_tool(super::super::Work {
                 kind: Kind::Source(Work {
@@ -46,6 +46,7 @@ impl Writer {
             completed.retired_entry = self.localisation.entry.take();
             completed.retired_comparison = self.localisation.comparison.take();
             completed.retired_refresh = self.localisation.refresh.take();
+            completed.retired_beat = self.localisation.passage.take();
             self.localisation.destination = Destination::Queue;
             self.localisation.files_open = false;
             if let Some(path) = self.localisation.slot.path() {

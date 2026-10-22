@@ -128,6 +128,27 @@ impl Prepared {
     }
 }
 impl Writer {
+    pub(crate) fn show_current_catalogue_beat(&mut self, page: usize) -> Result<(), String> {
+        if self.phase != crate::Phase::Writing || self.project_action_blocked() {
+            return Err("Finish the current action before opening translations.".into());
+        }
+        self.navigation.require_ready()?;
+        let mut location = self.current_location();
+        location.screen = Screen::Localise;
+        location.source = false;
+        location.view = Some(recite_config::WriterView::Script);
+        location.beat = location.beat.or_else(|| {
+            self.session
+                .model()
+                .remembered_script_block()
+                .map(str::to_owned)
+        });
+        location.passage = None;
+        location.page = page;
+        let plan = Plan::capture(self, &location, false, None)?;
+        self.remember_location();
+        self.start_location_destination(plan, CancellationToken::new())
+    }
     pub(super) fn prepare_initial_location_destination(
         &mut self,
         location: &Location,

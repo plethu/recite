@@ -9,7 +9,11 @@ pub(crate) struct Search {
 }
 impl Writer {
     pub(crate) fn lookup(&mut self, query: String, target: targets::Target) {
-        let location = target.location(self.current_location());
+        let mut location = target.location(self.current_location());
+        if self.workspaces.screen == crate::workspaces::Screen::Localisation {
+            location.screen = recite_writer_session::location::Screen::Localise;
+            location.page = 0;
+        }
         self.navigate(Target::Lookup {
             location,
             search: Search {

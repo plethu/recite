@@ -21,7 +21,7 @@ enum Installation {
 }
 enum Target {
     Hidden,
-    Passage(Option<String>),
+    Passage(beat::Selection),
     Queue,
     Entry(String),
     Compare,
@@ -54,10 +54,7 @@ enum Projection {
     Hidden,
     Queue(Presentation),
     Entry(Presentation),
-    Passage {
-        context: PassageContext,
-        entry: Option<Entry>,
-    },
+    Passage(Option<beat::Beat>),
     Compare(Option<Comparison>),
     Updates(Option<refresh::Refresh>),
 }
@@ -65,11 +62,7 @@ struct Retired {
     _entry: Option<Entry>,
     _comparison: Option<Comparison>,
     _refresh: Option<refresh::Refresh>,
-    _passage: Option<PassageContext>,
-}
-pub(super) struct PassageContext {
-    pub pages: Vec<String>,
-    pub page: usize,
+    _passage: Option<beat::Beat>,
 }
 impl Localisation {
     pub(crate) fn catalogue_path(&self) -> Option<&Path> {
@@ -102,7 +95,11 @@ impl Plan {
             Installation::Keep
         };
         let target = match location.screen {
-            LinkedScreen::Localise => Target::Passage(location.passage.clone()),
+            LinkedScreen::Localise => Target::Passage(beat::Selection {
+                name: location.beat.clone(),
+                anchor: location.passage.clone(),
+                page: location.page,
+            }),
             LinkedScreen::Translations => Target::Queue,
             LinkedScreen::Entry => Target::Entry(
                 location
@@ -138,7 +135,7 @@ impl Plan {
         !matches!(self.installation, Installation::Keep) || !matches!(self.target, Target::Hidden)
     }
     pub(crate) fn checkout(self, writer: &mut Writer) -> Result<Work, String> {
-        let selected = writer.localisation.entry.as_ref().map(|entry| entry.key.id);
+        let selected = writer.localisation.mounted_entries();
         Ok(Work {
             plan: self,
             checkout: writer.localisation.slot.checkout(selected)?,
@@ -212,12 +209,8 @@ impl Prepared {
                     Destination::Queue
                 };
             }
-            Projection::Passage { context, entry } => {
-                std::mem::swap(&mut state.entry, entry);
-                state.passage = Some(PassageContext {
-                    pages: std::mem::take(&mut context.pages),
-                    page: 0,
-                });
+            Projection::Passage(beat) => {
+                state.passage = beat.take();
                 state.destination = Destination::Passage;
             }
             Projection::Compare(comparison) => {

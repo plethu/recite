@@ -17,13 +17,22 @@ reviewer inspected 44 actual cold-route renders of both frontends at 100/200% sc
 Relay Hub fixture and 1280×720 compositor (1280×690 application windows). This covered declarations,
 builds, rename, disk routes, catalogue passage/queue/entry/source-update routes, personal
 preferences, project settings and shortcuts. The shared project header was compacted while retaining
-its actions and document identity. That correction does not close the remaining product gaps:
+its actions and document identity. The subsequent bilingual workspace slice corrects the three
+largest gaps from that review:
 
-| Retirement blocker                                                                                    | Required comparative evidence                                                                                                                                  |
-| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Localise shows one passage and a launcher instead of the whole-beat bilingual workspace.              | Source, replies, destinations, status and editable translations together, with bounded keyed fields, plural handling, retained drafts, recovery and conflicts. |
-| Catalogue administration and vertical filters push all queue entries below the initial 100% viewport. | Task-led search/filter controls and immediately visible source/status results, with administration secondary.                                                  |
-| Auxiliary screens remove the scene rail and selected-beat context.                                    | Retained project navigation and selection, with an explicit responsive collapse policy and guarded navigation.                                                 |
+| Corrected gap                                      | Evidence and limits                                                                                                                                                                                                                         |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Localise now presents the whole bilingual beat.    | Source-ordered dialogue, replies, destinations, incoming context, status and independently keyed translation fields; structural records remain read only. Eight records mount per page, with plural forms paged separately.                 |
+| Translation queue exposes its content immediately. | Inline search/filter controls and prose-first source/status rows; catalogue file administration is secondary.                                                                                                                               |
+| Auxiliary screens retain scene navigation.         | Persistent scene rail and current document context, with a Scenes picker at scales where the rail collapses. Actual beat/file navigation keeps checked Apply; ordinary Localise opening preserves unapplied manuscript and source recovery. |
+
+A fresh visual reviewer inspected all eight paired `paired-bilingual-v4` renders at 100/200%,
+against the accepted Freya reference, and closed the original findings for this slice. Prose scales
+with the controls. Native bilingual drills exercise independent Undo/Redo, focused-row Save, frozen
+worker checkout, checked beat navigation and explicit missing-entry states. Mounted tests cover
+plural arms, source ordering, catalogue replacement, hidden/stale callbacks and a constant native
+field count for 32 versus 1,024 passages. These results establish this slice, not whole-product
+interchangeability or human acceptance.
 
 Further material findings concern initial 200% focus scrolling away titles/source context, rename's
 Review action falling below the proposal, settings without a live writing specimen or compact
@@ -35,9 +44,9 @@ not equivalent consequential states, so their captures establish no conflict/ref
 The local receipts and renders are under `target/writer-evaluation/paired-project-v2.json`,
 `paired-catalogue-v1.json` and `paired-settings-v1.json`; the evidence index there records current
 checks and binary identities. These are diagnostic artifacts, not a passing acceptance gate. The
-next product slice is the whole-beat translation workspace and retained surrounding context,
-followed by the same paired workflow/render review. Do not retire Freya on the strength of the
-writing-only correction or automated workflow coverage.
+remaining work is the settings, rename and build composition, meaningful conflict/refresh pairs,
+then final dependency, package and complete-gate evidence. Do not retire Freya on the strength of
+the writing and bilingual corrections or automated workflow coverage.
 
 The installed-package and broad native claims below describe signed baseline
 `9ce876da7f6b0945a2a662eba4951a14fd74bd02`. They have not all been repeated after the inline

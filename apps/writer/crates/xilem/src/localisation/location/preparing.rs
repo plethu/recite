@@ -62,44 +62,8 @@ impl Plan {
                 presentation::describe(owner, &self.query, Some(id), passages)
                     .map(Projection::Entry)
             }
-            Target::Passage(anchor) => {
-                let selected = model.selected_block().map_err(|error| error.to_string())?;
-                let passage = passages
-                    .as_deref()
-                    .unwrap_or_default()
-                    .iter()
-                    .find(|passage| {
-                        anchor.as_ref().map_or_else(
-                            || selected.as_ref() == Some(&passage.section),
-                            |anchor| &passage.id == anchor,
-                        )
-                    })
-                    .ok_or("Choose a source passage before opening its localisation context.")?;
-                let entry = match owner {
-                    Some(owner) => {
-                        let id = owner
-                            .catalogue
-                            .document
-                            .entries()
-                            .iter()
-                            .find(|entry| {
-                                entry.context().is_some_and(|context| {
-                                    context.split('&').next() == Some(passage.id.as_str())
-                                })
-                            })
-                            .map(|entry| entry.id());
-                        presentation::describe(owner, &self.query, id, passages.clone())?.entry
-                    }
-                    None => None,
-                };
-                Ok(Projection::Passage {
-                    context: PassageContext {
-                        pages: text::reading_pages(&passage.text),
-                        page: 0,
-                    },
-                    entry,
-                })
-            }
+            Target::Passage(selection) => beat::Beat::prepare(owner, model, selection)
+                .map(|beat| Projection::Passage(Some(beat))),
             Target::Compare => {
                 let compared = owner
                     .ok_or("The linked comparison needs a catalogue.")?

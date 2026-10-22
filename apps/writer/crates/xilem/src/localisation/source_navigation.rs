@@ -1,5 +1,5 @@
 //! A catalogue action carries its scope through Apply and final navigation publication.
-use super::{Destination, EntryKey, Localisation, Screen, Writer};
+use super::{EntryKey, Writer};
 use crate::navigation::Target;
 use recite_core::LocaleId;
 use recite_writer_model::CatalogueRevision;
@@ -92,15 +92,9 @@ impl SourceIntent {
     }
 
     pub(crate) fn check(&self, writer: &Writer) -> Result<(), String> {
-        let Localisation {
-            slot,
-            entry,
-            destination,
-            ..
-        } = &writer.localisation;
-        if writer.workspaces.screen == Screen::Localisation
-            && matches!(destination, Destination::Entry)
-            && entry.as_ref().is_some_and(|entry| entry.key == self.key)
+        let state = &writer.localisation;
+        let slot = &state.slot;
+        if writer.translation_entry_active(&self.key)
             && slot.owner().is_some_and(|owner| {
                 owner.identity == self.key.catalogue && owner.catalogue.revision() == self.revision
             })

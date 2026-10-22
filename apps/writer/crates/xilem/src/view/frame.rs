@@ -15,11 +15,7 @@ pub(super) fn frame<V: WidgetView<Writer>>(
         zstack((
             flex_col((
                 flex_row((
-                    retained(
-                        navigation(state),
-                        state.navigation_width() > 0.
-                            && state.workspaces.screen == crate::workspaces::Screen::Write,
-                    ),
+                    retained(navigation(state), state.navigation_width() > 0.),
                     flex_col((
                         indexed_stack((
                             toolbar::toolbar(state),

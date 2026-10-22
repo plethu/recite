@@ -46,6 +46,13 @@ pub(super) fn describe(
                     .take(160)
                     .collect(),
                 status: TranslationStatus::entry_label(catalogue, *id),
+                translation: catalogue
+                    .forms(*id)
+                    .next()
+                    .unwrap_or_default()
+                    .chars()
+                    .take(160)
+                    .collect(),
             })
         })
         .collect();

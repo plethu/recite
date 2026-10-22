@@ -158,7 +158,7 @@ impl Reading {
     }
 }
 
-fn flatten(entries: &[ScriptEntry]) -> Arc<[Row]> {
+pub(crate) fn flatten(entries: &[ScriptEntry]) -> Arc<[Row]> {
     let mut rows = Vec::new();
     let mut replies = 0;
     let mut passages = 0;

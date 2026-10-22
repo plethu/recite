@@ -29,18 +29,7 @@ impl Property for TranslationField {
 impl UsesProperty<TranslationField> for TextInput {}
 impl Writer {
     pub(crate) fn save_focused_translation(&mut self, target: &TranslationTarget) {
-        if self.phase == Phase::Writing
-            && self.workspaces.screen == Screen::Localisation
-            && matches!(self.localisation.destination, Destination::Entry)
-            && self.localisation.slot.identity() == Some(&target.0.catalogue)
-            && self
-                .localisation
-                .entry
-                .as_ref()
-                .is_some_and(|entry| entry.key == target.0)
-        {
-            self.save_translation_entry();
-        }
+        self.save_translation_key(&target.0);
     }
 }
 

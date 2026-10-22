@@ -20,6 +20,8 @@ impl Localisation {
         if !active {
             return;
         }
+        location.source = false;
+        location.view = Some(recite_config::WriterView::Script);
         location.screen = match self.destination {
             Destination::Queue => LinkedScreen::Translations,
             Destination::Entry => {
@@ -41,7 +43,15 @@ impl Localisation {
                     .map_or(0, |page| page.change);
                 LinkedScreen::Updates
             }
-            Destination::Create | Destination::Passage => LinkedScreen::Localise,
+            Destination::Create => LinkedScreen::Localise,
+            Destination::Passage => {
+                if let Some(beat) = &self.passage {
+                    location.beat = Some(beat.name.clone());
+                    location.page = beat.page;
+                    location.passage = None;
+                }
+                LinkedScreen::Localise
+            }
         };
     }
 }

@@ -78,7 +78,9 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     mounted.settle();
     mounted.activate("More source passage");
     mounted.activate("Previous source part");
-    mounted.activate("Translate this passage");
+    mounted.activate("Translation details");
+    driver.finish(&mut mounted.state);
+    mounted.settle();
     assert_eq!(
         form(&mounted.state, &key),
         "Retained translation while reading source."
@@ -87,6 +89,8 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     support::finish_navigation(&mut mounted.state, &mut navigation).unwrap();
     mounted.settle();
     mounted.activate("Open translation queue");
+    driver.finish(&mut mounted.state);
+    mounted.settle();
     mounted.type_text("Search translations", "Selected source");
     mounted.activate("Search translations");
     driver.finish(&mut mounted.state);

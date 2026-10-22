@@ -73,6 +73,20 @@ fn thousand_declarations_mount_only_one_page_and_project_screens_render_at_perso
             let mut nodes = 0;
             while let Some(node) = pending.pop() {
                 nodes += 1;
+                // The retained scene rail is composed beside the tool, with its own bounded page.
+                if node.label().as_deref() == Some("Scene navigation") {
+                    let mut rail = node.children().collect::<Vec<_>>();
+                    let mut navigation_nodes = 0;
+                    while let Some(child) = rail.pop() {
+                        navigation_nodes += 1;
+                        rail.extend(child.children());
+                    }
+                    assert!(
+                        navigation_nodes <= 64,
+                        "Scene navigation must remain bounded."
+                    );
+                    continue;
+                }
                 if node.role() == Role::Button
                     && let Some(label) = node.label()
                 {

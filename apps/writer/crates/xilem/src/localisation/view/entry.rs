@@ -1,5 +1,8 @@
 use super::*;
+use crate::navigation::Target;
+use recite_writer_session::location::Screen as LinkedScreen;
 mod forms;
+pub(super) use forms::catalogue_caption;
 mod plural;
 mod source;
 #[cfg(test)]
@@ -19,6 +22,23 @@ pub(super) fn entry(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> 
         .is_some_and(|owner| owner.catalogue.changed(entry.key.id));
     Some(
         flex_col((
+            state.passage.as_ref().map(|beat| {
+                let name = beat.name.clone();
+                let page = beat.page;
+                text_button(
+                    scale,
+                    "Return to bilingual beat",
+                    move |writer: &mut Writer| {
+                        let mut location = writer.current_location();
+                        location.screen = LinkedScreen::Localise;
+                        location.beat = Some(name.clone());
+                        location.passage = None;
+                        location.page = page;
+                        writer.navigate(Target::Location(location));
+                    },
+                )
+                .disabled(blocked)
+            }),
             text_button(
                 scale,
                 "Return to translation queue",

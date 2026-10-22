@@ -19,6 +19,7 @@ use queue::queue;
 use xilem::{
     InsertNewline, WidgetView,
     masonry::{
+        kurbo::Axis,
         layout::AsUnit,
         properties::{LineBreaking, TextAreaLabel},
     },
@@ -31,12 +32,46 @@ use xilem::{
 
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        label(writer.ui_scale(), "Translations").text_size(28. * writer.ui_scale()),
+        (!matches!(writer.localisation.destination, Destination::Passage)).then(|| heading(writer)),
         (!writer.localisation.has_catalogue()).then(|| paragraph(writer.ui_scale(), "Open a PO catalogue or add a language to translate this project. Drafts stay recoverable until you Save.", 640.)),
-        files(writer),
+        (!matches!(writer.localisation.destination, Destination::Passage)).then(|| files(writer)),
         report(writer),
         destinations(writer),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::Localisation)))
+}
+fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let queue = matches!(writer.localisation.destination, Destination::Queue);
+    let width = (writer.viewport.width - writer.navigation_width() - 32.).max(280.);
+    let wide = width >= 600. * f64::from(writer.ui_scale());
+    flex_row((
+        label(
+            writer.ui_scale(),
+            if queue {
+                "Translation queue"
+            } else {
+                "Translations"
+            },
+        )
+        .text_size(24. * writer.ui_scale())
+        .prop(LineBreaking::WordWrap)
+        .width(if wide { width * 0.52 } else { width }.px()),
+        (queue && writer.localisation.has_catalogue()).then(|| {
+            label(writer.ui_scale(), entry::catalogue_caption(writer))
+                .prop(LineBreaking::WordWrap)
+                .width(if wide { width * 0.45 } else { width }.px())
+                .color(writer.palette.muted)
+        }),
+    ))
+    .direction(if wide {
+        Axis::Horizontal
+    } else {
+        Axis::Vertical
+    })
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(16.px())
+}
+fn prose_size(writer: &Writer) -> f32 {
+    writer.reading_size() * writer.ui_scale()
 }
 fn destinations(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let pages = (
@@ -90,7 +125,7 @@ pub(crate) fn close_details(writer: &Writer) -> Option<impl WidgetView<Writer> +
                 writer.phase = Phase::Writing;
                 writer.localisation.keep_editing();
                 writer.work.keep_editing();
-                writer.open_localisation();
+                writer.enter_localisation();
                 writer.localisation.query.filter = Filter::Unsaved;
                 writer.search_catalogue();
             })

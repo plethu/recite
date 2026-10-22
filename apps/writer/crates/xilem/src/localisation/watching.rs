@@ -70,8 +70,7 @@ impl Localisation {
 }
 impl Writer {
     pub(crate) fn compare_noticed_catalogue(&mut self, scope: &Scope) {
-        if self.localisation.watch_scope().as_ref() == Some(scope) {
-            self.open_localisation();
+        if self.localisation.watch_scope().as_ref() == Some(scope) && self.enter_localisation() {
             self.compare_catalogue();
         }
     }

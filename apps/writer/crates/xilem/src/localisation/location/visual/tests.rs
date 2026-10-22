@@ -34,7 +34,9 @@ fn source_passage_mounts_one_complete_text_page_at_personal_scales() {
                     ..Location::default()
                 })
                 .unwrap();
-            let passage = writer.localisation.passage.as_ref().unwrap();
+            let passage = writer.localisation.passage.as_ref().unwrap().rows[0]
+                .passage()
+                .unwrap();
             assert_eq!(passage.pages.concat(), text);
             assert!(
                 passage

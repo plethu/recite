@@ -11,7 +11,7 @@ pub(super) use menu::panel;
 pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
     let scale = state.ui_scale();
-    let wide = state.viewport.width - 32. >= 760. * f64::from(scale);
+    let wide = state.viewport.width - state.navigation_width() - 32. >= 760. * f64::from(scale);
     grid((
         history_buttons(state).grid_pos(0, 0),
         flex_row((

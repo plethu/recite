@@ -28,6 +28,8 @@ fn discard_and_close_removes_every_translation_draft_but_retains_source_recovery
             catalogue: writer.localisation.slot.identity().unwrap().clone(),
             id,
         };
+        writer.inspect_translation(&key);
+        driver.finish(&mut writer);
         writer.update_translation(&key, 0, "Discard this draft.".into());
     }
     assert_eq!(

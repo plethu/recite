@@ -12,11 +12,12 @@ pub(super) mod repair;
 mod saving;
 pub(super) mod worker;
 use super::{Writer, feedback, session::Session};
+use crate::workspaces::Screen as WorkspaceScreen;
 use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
 use recite_writer_model::StructuralCommand;
 use recite_writer_model::{AnalysisStamp, EditOperation, RecoveredDraft, View};
 use recite_writer_session::FileError;
-use recite_writer_session::location::Location;
+use recite_writer_session::location::{Location, Screen as LinkedScreen};
 use std::sync::atomic;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
@@ -151,7 +152,30 @@ impl Origin {
 }
 impl Writer {
     pub(super) fn switch(&mut self, path: &std::path::Path) {
-        self.navigate(Target::Document(path.to_owned()));
+        if self.workspaces.screen == WorkspaceScreen::Localisation {
+            let document = self
+                .session
+                .project()
+                .and_then(|project| {
+                    project
+                        .documents()
+                        .iter()
+                        .find(|document| document.path == path)
+                })
+                .map(|document| document.key.to_string());
+            if let Some(document) = document {
+                self.navigate(Target::Location(Location {
+                    document,
+                    beat: None,
+                    passage: None,
+                    page: 0,
+                    screen: LinkedScreen::Localise,
+                    ..self.current_location()
+                }));
+            }
+        } else {
+            self.navigate(Target::Document(path.to_owned()));
+        }
     }
 
     pub(super) fn select_example(&mut self, index: usize) {
@@ -160,14 +184,25 @@ impl Writer {
         }
     }
     pub(super) fn inspect(&mut self, id: String) {
-        self.navigate(Target::Selection(Location {
-            screen: recite_writer_session::location::Screen::Write,
+        let translating = self.workspaces.screen == WorkspaceScreen::Localisation;
+        let location = Location {
+            screen: if translating {
+                LinkedScreen::Localise
+            } else {
+                LinkedScreen::Write
+            },
             beat: Some(id),
             passage: None,
             source: false,
             view: Some(recite_config::WriterView::Script),
+            page: 0,
             ..self.current_location()
-        }));
+        };
+        self.navigate(if translating {
+            Target::Location(location)
+        } else {
+            Target::Selection(location)
+        });
     }
     pub(super) fn read_current(&mut self) {
         match self.session.model().selected_block() {

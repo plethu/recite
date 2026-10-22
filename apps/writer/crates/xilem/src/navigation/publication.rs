@@ -171,12 +171,14 @@ impl Writer {
             return Err("The draft changed while navigation was preparing. Your edits remain open; retry navigation.".into());
         }
         let destination = match &request.target {
-            Target::Location(location) => Some(destination::Plan::capture(
-                self,
-                location,
-                prepared.catalogue_changed,
-                prepared.catalogue.clone(),
-            )?),
+            Target::Location(location) | Target::Lookup { location, .. } => {
+                Some(destination::Plan::capture(
+                    self,
+                    location,
+                    prepared.catalogue_changed,
+                    prepared.catalogue.clone(),
+                )?)
+            }
             _ => None,
         };
         match (&mut prepared.destination, &mut self.session) {

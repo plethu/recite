@@ -33,7 +33,7 @@ mod document_actions;
 mod source_repair;
 use document_actions::recovery_copy;
 mod frame;
-mod reference;
+pub(crate) mod reference;
 mod toolbar;
 
 fn retained<V: WidgetView<Writer>>(child: V, visible: bool) -> impl WidgetView<Writer> {

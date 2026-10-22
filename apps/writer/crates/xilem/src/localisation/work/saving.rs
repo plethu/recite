@@ -70,7 +70,13 @@ impl Writer {
     }
     pub(crate) fn save_translation_entry(&mut self) {
         if let Some(entry) = &self.localisation.entry {
-            self.begin_catalogue_save(Some(vec![entry.key.id]), AfterSave::Stay);
+            let key = entry.key.clone();
+            self.save_translation_key(&key);
+        }
+    }
+    pub(in crate::localisation) fn save_translation_key(&mut self, key: &EntryKey) {
+        if self.translation_entry_active(key) {
+            self.begin_catalogue_save(Some(vec![key.id]), AfterSave::Stay);
         }
     }
     pub(crate) fn save_catalogue_then_sources(&mut self, scope: Scope, after: SourceAfterSave) {

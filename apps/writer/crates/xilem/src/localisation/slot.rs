@@ -64,7 +64,7 @@ pub(super) struct Frozen {
     identity: Identity,
     path: PathBuf,
     document: Arc<PoDocument>,
-    selected: Option<(PoEntryId, Draft)>,
+    drafts: Vec<(PoEntryId, Draft)>,
     dirty: bool,
     needs_save: bool,
 }
@@ -164,9 +164,9 @@ impl Slot {
                 frozen: Some(frozen),
                 ..
             } => frozen
-                .selected
-                .as_ref()
-                .filter(|(entry, _)| *entry == id)
+                .drafts
+                .iter()
+                .find(|(entry, _)| *entry == id)
                 .map(|(_, draft)| draft.clone()),
             _ => None,
         }
@@ -176,7 +176,10 @@ impl Slot {
             ticket.cancel();
         }
     }
-    pub fn checkout(&mut self, selected: Option<PoEntryId>) -> Result<Checkout, String> {
+    pub fn checkout(
+        &mut self,
+        selected: impl IntoIterator<Item = PoEntryId>,
+    ) -> Result<Checkout, String> {
         if self.working() {
             return Err("A catalogue action is still finishing.".into());
         }
@@ -187,7 +190,10 @@ impl Slot {
             identity: owner.identity.clone(),
             path: owner.catalogue.path.clone(),
             document: owner.catalogue.document.clone(),
-            selected: selected.and_then(|id| owner.catalogue.draft(id).map(|draft| (id, draft))),
+            drafts: selected
+                .into_iter()
+                .filter_map(|id| owner.catalogue.draft(id).map(|draft| (id, draft)))
+                .collect(),
             dirty: owner.catalogue.dirty(),
             needs_save: owner.catalogue.dirty() || owner.catalogue.recovery_error().is_some(),
         });

@@ -37,6 +37,7 @@ pub(super) struct Completed {
     retired_entry: Option<Entry>,
     retired_comparison: Option<Comparison>,
     retired_refresh: Option<refresh::Refresh>,
+    retired_beat: Option<beat::Beat>,
 }
 enum Outcome {
     Queue { queue: Queue, message: String },
@@ -58,6 +59,7 @@ impl Work {
             retired_entry: None,
             retired_comparison: None,
             retired_refresh: None,
+            retired_beat: None,
         }
     }
     pub(super) fn not_started(self, error: String) -> Completed {

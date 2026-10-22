@@ -87,6 +87,16 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
         }),
         app.writer
             .as_ref()
+            .filter(|writer| {
+                !app.show_welcome && !app.settings_open && writer.navigation_width() == 0.
+            })
+            .map(|_| {
+                print::action(scale, "Scenes…", blocked, |app: &mut App| {
+                    app.open_picker(picker::Search::GoTo)
+                })
+            }),
+        app.writer
+            .as_ref()
             .filter(|_| !app.show_welcome && !app.settings_open)
             .map(|_| {
                 print::action(scale, "Commands", blocked, |app: &mut App| {

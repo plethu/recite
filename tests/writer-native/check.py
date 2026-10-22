@@ -112,6 +112,8 @@ def run_probe(binary, output, scenario):
             from localisation_sources import run
         elif scenario == "localisation-scale":
             from localisation_scale import run
+        elif scenario == "localisation-beat":
+            from localisation_beat import run
         elif scenario == "localisation":
             from localisation_interactions import run
         elif scenario == "external":
@@ -171,6 +173,7 @@ def main():
             "all",
             "specimen",
             "localisation-final",
+            "localisation-beat",
             "clipboard",
             "linked-destinations",
             "disk-notices",
@@ -290,7 +293,7 @@ def main():
         try:
             code = process.wait(
                 timeout=120
-                if args.scenario in ("all", "preferences", "editor")
+                if args.scenario in ("all", "preferences", "editor", "localisation-beat")
                 or args.scenario.startswith(
                     (
                         "preview-inputs",

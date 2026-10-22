@@ -85,12 +85,7 @@ impl Workbench {
 
     pub fn show_script(&mut self) -> Result<(), WorkbenchError> {
         self.require_applied()?;
-        if let Some(block) = self
-            .script_selection
-            .as_ref()
-            .filter(|block| self.document.sections().contains(block))
-            .cloned()
-        {
+        if let Some(block) = self.remembered_script_block().map(str::to_owned) {
             return self.inspect_block(&block);
         }
         let block = self
@@ -101,6 +96,15 @@ impl Workbench {
             .id
             .clone();
         self.inspect_block(&block)
+    }
+    /// The accepted Script selection, retained while a separate Source draft is open.
+    pub fn remembered_script_block(&self) -> Option<&str> {
+        self.script_selection.as_deref().filter(|block| {
+            self.document
+                .sections()
+                .iter()
+                .any(|section| section == block)
+        })
     }
     pub fn selected_block(&self) -> Result<Option<String>, WorkbenchError> {
         match &self.view {

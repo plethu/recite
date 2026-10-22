@@ -224,7 +224,11 @@ fn catalogue_disk_resolution_rechecks_local_drafts_and_preserves_external_metada
             .iter()
             .any(|row| row.after.as_deref() == Some("External translation."))
     );
-    writer.update_translation(&old, 0, "Newer draft.".into());
+    // A changed owner invalidates the already captured comparison even without a field callback.
+    let catalogue = &mut writer.localisation.slot.owner_mut().unwrap().catalogue;
+    let mut draft = catalogue.draft(old.id).unwrap();
+    draft.forms[0] = "Newer draft.".into();
+    catalogue.update(old.id, draft);
     writer.resolve_catalogue(ExternalDecision::UseDisk);
     driver.finish(&mut writer);
     assert_eq!(form(&writer, &old), "Newer draft.");

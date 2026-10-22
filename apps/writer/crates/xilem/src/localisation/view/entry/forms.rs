@@ -72,7 +72,7 @@ fn form(
     })
     .insert_newline(InsertNewline::OnEnter)
     .font("Literata")
-    .text_size(writer.reading_size())
+    .text_size(prose_size(writer))
     .disabled(blocked)
     .prop(TranslationField::new(entry.key.clone()))
     .prop(TextAreaLabel::new(format!(
@@ -95,7 +95,7 @@ fn form(
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())
 }
-fn catalogue_caption(writer: &Writer) -> String {
+pub(in crate::localisation::view) fn catalogue_caption(writer: &Writer) -> String {
     let catalogue = &writer.localisation;
     let filename = catalogue
         .catalogue_path()

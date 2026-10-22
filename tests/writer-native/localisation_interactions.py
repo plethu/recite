@@ -75,6 +75,9 @@ def _reveal(window, find, label):
 
 def open_catalogue(window, path):
     command(window, "Localise")
+    show_queue(window)
+    if not window.find("Catalogue path") and window.find("Catalogue files"):
+        window.act("Catalogue files")
     reveal(window, "Catalogue path")
     fill(window, "Catalogue path", str(path))
     window.reveal_end("Open catalogue")
@@ -82,7 +85,37 @@ def open_catalogue(window, path):
     reveal(window, "Catalogue files")
 
 
+def show_queue(window):
+    def destination():
+        for caption in (
+            "Open translation queue",
+            "Return to translation queue",
+            "Catalogue files",
+            "Hide catalogue files",
+        ):
+            if window.find(caption) and window.enabled(caption):
+                return caption
+        return None
+
+    caption = window.wait(destination, "translation destination ready")
+    if caption in ("Open translation queue", "Return to translation queue"):
+        window.act(caption)
+        window.wait(
+            lambda: window.find("Catalogue files") or window.find("Hide catalogue files"),
+            "translation queue ready",
+        )
+
+
+def catalogue_action(window, caption):
+    show_queue(window)
+    if not window.find(caption) and window.find("Catalogue files"):
+        window.act("Catalogue files")
+    reveal(window, caption)
+    window.act(caption)
+
+
 def search_entries(window, query):
+    show_queue(window)
     reveal_field(window, "Search translations")
     fill(window, "Search translations", query)
 
@@ -117,6 +150,16 @@ def open_entry(window):
 
 
 def edit(window, value):
+    window.wait(
+        lambda: (
+            (window.find_action("Translation details") and window.enabled("Translation details"))
+            or (window.find("Translation form 1") and window.enabled("Translation form 1"))
+        ),
+        "editable translation destination ready",
+    )
+    if not window.find("Translation form 1"):
+        reveal(window, "Translation details")
+        window.act("Translation details")
     reveal(window, "Translation form 1")
     fill(window, "Translation form 1", value)
 
@@ -183,7 +226,11 @@ def run(api, bus, registry, binary, output):
                     .replace("# translator note", "# external translator note")
                 )
                 po.write_text(disk)
-                window.reveal_end("Save translation")
+                window.wait(
+                    lambda: window.find_text("Changed on disk · 1 file"),
+                    "external catalogue notice laid out",
+                )
+                reveal(window, "Save translation")
                 window.act("Save translation")
                 window.wait(
                     lambda: window.find_text(
@@ -197,8 +244,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(
                     lambda: window.find_text("Catalogue ready.", prefix=True), "queue restored"
                 )
-                window.reveal_start("Compare catalogue disk changes")
-                window.act("Compare catalogue disk changes")
+                catalogue_action(window, "Compare catalogue disk changes")
                 window.wait(
                     lambda: window.find_text("Catalogue comparison ready.", prefix=True),
                     "catalogue comparison",

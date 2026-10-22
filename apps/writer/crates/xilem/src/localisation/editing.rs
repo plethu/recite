@@ -1,7 +1,7 @@
 use super::*;
 impl Writer {
     pub(super) fn update_translation(&mut self, key: &EntryKey, arm: usize, text: String) {
-        if self.phase != Phase::Writing {
+        if !self.translation_entry_active(key) {
             return;
         }
         let Some(owner) = self
@@ -24,7 +24,7 @@ impl Writer {
         self.status = "Translation draft updated; Save publishes the PO file.".into();
     }
     pub(super) fn review_translation(&mut self, key: &EntryKey, reviewed: bool) {
-        if self.phase != Phase::Writing {
+        if !self.translation_entry_active(key) {
             return;
         }
         if let Some(owner) = self
@@ -39,7 +39,7 @@ impl Writer {
         }
     }
     pub(super) fn discard_translation(&mut self, key: &EntryKey) {
-        if self.phase != Phase::Writing {
+        if !self.translation_entry_active(key) {
             return;
         }
         if let Some(owner) = self

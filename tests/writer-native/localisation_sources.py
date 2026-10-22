@@ -8,12 +8,14 @@ import traceback
 from pathlib import Path
 
 from localisation_interactions import (
+    catalogue_action,
     edit,
     open_entry,
     reveal,
     reveal_field,
     reveal_text,
     search_entries,
+    show_queue,
 )
 from native_window import attach, key, type_text
 from project_interactions import manuscript
@@ -23,6 +25,18 @@ from writer_interactions import SOURCE, capture
 
 
 def action(window, caption):
+    if caption in (
+        "Add language",
+        "Review source updates",
+        "Compare catalogue disk changes",
+        "Reload catalogue",
+        "Close catalogue",
+    ):
+        catalogue_action(window, caption)
+        return
+    if caption == "Return to translation queue" and not window.find(caption):
+        show_queue(window)
+        return
     reveal(window, caption)
     window.act(caption)
 
@@ -107,8 +121,7 @@ def run(api, bus, registry, binary, output, scale=100):
                     lambda: "Le dernier tram attend." in po.read_text(), "translation saved"
                 )
                 apply_source(window, "The last tram leaves.")
-                reveal(window, "Return to translation queue")
-                window.act("Return to translation queue")
+                show_queue(window)
                 action(window, "Review source updates")
                 reveal(window, "Apply source updates to PO")
                 capture(output, "-review")

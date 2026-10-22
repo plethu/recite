@@ -35,6 +35,7 @@ pub(super) struct CheckedCompleted {
     retired_entry: Option<Entry>,
     retired_comparison: Option<Comparison>,
     retired_refresh: Option<refresh::Refresh>,
+    retired_beat: Option<beat::Beat>,
 }
 enum Completion {
     Show(Presentation),
@@ -64,6 +65,7 @@ impl Checked {
             retired_entry: None,
             retired_comparison: None,
             retired_refresh: None,
+            retired_beat: None,
             checkout: self.checkout,
             result: Err(error),
         }
@@ -138,6 +140,7 @@ impl Checked {
             retired_entry: None,
             retired_comparison: None,
             retired_refresh: None,
+            retired_beat: None,
         }
     }
 }
@@ -218,6 +221,7 @@ impl Writer {
             completed.retired_entry = self.localisation.entry.take();
             completed.retired_comparison = self.localisation.comparison.take();
             completed.retired_refresh = self.localisation.refresh.take();
+            completed.retired_beat = self.localisation.passage.take();
             self.localisation.queue = Queue::default();
             self.localisation.destination = Destination::Queue;
             self.localisation.files_open = false;

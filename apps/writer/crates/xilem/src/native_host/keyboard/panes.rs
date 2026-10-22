@@ -225,21 +225,19 @@ fn region(widget: WidgetRef<'_, dyn Widget>) -> Option<Pane> {
     }
 }
 fn pane_entry(widget: WidgetRef<'_, dyn Widget>, pane: Pane) -> Option<WidgetId> {
-    if pane == Pane::Preview {
-        let mut pending = vec![widget];
-        while let Some(child) = pending.pop() {
-            if child.ctx().is_stashed() || child.ctx().is_disabled() {
-                continue;
-            }
-            if child
-                .downcast::<Flex>()
-                .is_some_and(|flex| flex.get_prop::<PaneEntry>().0)
-                && let Some(target) = first_focusable(child, false)
-            {
-                return Some(target);
-            }
-            pending.extend(child.children());
+    let mut pending = vec![widget];
+    while let Some(child) = pending.pop() {
+        if child.ctx().is_stashed() || child.ctx().is_disabled() {
+            continue;
         }
+        if child
+            .downcast::<Flex>()
+            .is_some_and(|flex| flex.get_prop::<PaneEntry>().0)
+            && let Some(target) = first_focusable(child, false)
+        {
+            return Some(target);
+        }
+        pending.extend(child.children());
     }
     first_focusable(widget, pane != Pane::Preview)
 }

@@ -174,7 +174,17 @@ writes. Unexpected catalogue failures quarantine editing and close using only ad
 idle, saved catalogue permits project replacement. Drafts, recovery failure, active saves and
 exclusive or quarantined owners still block it. Prepared project loads cannot replace a Writer while
 its close flow is active. Wording choices and plural guidance share one catalogue projection across
-frontends. Translation typing reuses it; a new PO snapshot or changed form count invalidates it.
+frontends. Translation typing reuses it; a new PO snapshot or changed form count invalidates it. The
+bilingual workspace retains scene navigation and shows a bounded page of source-ordered beat
+passages with independently editable translations, review state and targeted saves. Missing or
+ambiguous source wordings require source review rather than choosing an arbitrary catalogue entry.
+Fields retain native history through reflow, other rows' edits, saves and catalogue worker checkout;
+off-page fields may retire while their catalogue drafts remain recoverable. Source or catalogue
+replacement invalidates the projection. Queued field actions require the active entry and catalogue
+lifetime, and Save from a field publishes that entry without applying manuscript drafts. Opening
+Localise for the current beat prepares accepted source without applying a manuscript or recovered
+Source draft; Source retains its remembered Script selection, and Map supplies its visible selected
+beat. Preparation validates a unique projectable declaration before publishing the bilingual view.
 Native entry components page wording choices, plural forms and long rule text independently. Invalid
 plural metadata disables the entry save while retaining drafts. Nearby source excludes wording
 variants of the current passage. Catalogue source actions use the ordinary checked navigation and
