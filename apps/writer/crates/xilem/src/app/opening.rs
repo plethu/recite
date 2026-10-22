@@ -5,7 +5,7 @@ use crate::map::Workspace;
 use loading::{Loaded, load};
 use recite_compiler::authoring::{Interrupted, WorkControl};
 use std::sync::atomic;
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use xilem::{
     ViewCtx,
     core::{MessageProxy, NoElement, View},
@@ -114,6 +114,7 @@ pub(super) fn worker() -> impl View<App, (), ViewCtx, Element = NoElement> {
 }
 async fn serve(proxy: MessageProxy<Output>, mut jobs: UnboundedReceiver<Job>) {
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(30));
+    let mut previous_open: Option<JoinHandle<()>> = None;
     #[cfg(target_os = "linux")]
     let mut inbox: Option<ActivationInbox> = None;
     loop {
@@ -124,13 +125,7 @@ async fn serve(proxy: MessageProxy<Output>, mut jobs: UnboundedReceiver<Job>) {
                     #[cfg(target_os = "linux")]
                     Job::Listen(next) => inbox = Some(next),
                     Job::Open(request) => {
-                        let proxy = proxy.clone();
-                        // Keep polling activation while a cancellable compiler phase runs.
-                        tokio::task::spawn_blocking(move || {
-                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| load(&request))).unwrap_or_else(|_| Err("Project loading stopped unexpectedly. Reopen the project to retry.".into()));
-                            let (retire, retired) = mpsc::sync_channel(1);
-                            if proxy.message(Output::Opened(Opened { request, result, retire })).is_ok() { drop(retired.recv()); }
-                        });
+                        previous_open = Some(tokio::spawn(open_after(previous_open.take(), proxy.clone(), request)));
                     }
                     Job::Browse => { let selected = rfd::AsyncFileDialog::new().set_title("Choose project folder").pick_folder().await; let _ = proxy.message(Output::Chosen(selected.map(|file| file.path().to_owned()))); }
                     Job::Create { path, name } => {
@@ -149,6 +144,36 @@ async fn serve(proxy: MessageProxy<Output>, mut jobs: UnboundedReceiver<Job>) {
             }
         }
     }
+}
+
+async fn open_after(
+    previous: Option<JoinHandle<()>>,
+    proxy: MessageProxy<Output>,
+    request: Arc<Request>,
+) {
+    // Reopening waits for the previous owner's recovery lease to retire.
+    // Await outside serve's loop so activation keeps receiving replies.
+    if let Some(previous) = previous {
+        let _ = previous.await;
+    }
+    let _ = tokio::task::spawn_blocking(move || {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| load(&request)))
+            .unwrap_or_else(|_| {
+                Err("Project loading stopped unexpectedly. Reopen the project to retry.".into())
+            });
+        let (retire, retired) = mpsc::sync_channel(1);
+        if proxy
+            .message(Output::Opened(Opened {
+                request,
+                result,
+                retire,
+            }))
+            .is_ok()
+        {
+            drop(retired.recv());
+        }
+    })
+    .await;
 }
 
 impl App {

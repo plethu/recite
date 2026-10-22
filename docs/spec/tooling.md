@@ -72,14 +72,16 @@ its [guide](../../apps/writer/guide.md) owns current workflows.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Xilem is the default frontend following bounded native experiments and shared-workflow parity
-checks. Freya remains available explicitly for comparison and fallback. The Writer manifest owns
-frontend selection for the launcher and package builders; both install as `recite-writer` with the
-same application identity and shared project, recovery and personal configuration formats.
-Presentation and focus belong to the frontend; source editing belongs to the shared authoring model,
-and file replacement, conflict protection and recovery belong to `recite-writer-session`. Language,
-configuration, compiler and runtime ownership remains outside both frontends. Exercise regression
-checks before upgrading the pinned toolkit.
+Xilem is the default frontend for the ongoing port and evaluation. Freya remains available
+explicitly for comparison and fallback. Default selection does not establish replacement readiness:
+the latest paired product review records remaining translation and workspace-context gaps in
+[Writer acceptance](../../apps/writer/acceptance.md). The Writer manifest owns frontend selection
+for the launcher and package builders; both install as `recite-writer` with the same application
+identity and shared project, recovery and personal configuration formats. Presentation and focus
+belong to the frontend; source editing belongs to the shared authoring model, and file replacement,
+conflict protection and recovery belong to `recite-writer-session`. Language, configuration,
+compiler and runtime ownership remains outside both frontends. Exercise regression checks before
+upgrading the pinned toolkit.
 
 The Xilem frontend covers retained project documents, beat/line/reply creation, paged Script
 reading, manuscript editing, diagnostics, checked save, recovery and explicit IDE handoff/reload.
@@ -216,12 +218,15 @@ Save.
 
 Cold and existing-window links prepare the same concrete destination, including project tools,
 selected localisation passages, stable PO entry contexts, disk comparison and source-update review.
-Candidate catalogue owners and inspections remain separate until acceptance. Cancelled, stale and
-failed destination receipts return both exclusive owners before checking publication authority.
-Activation replies wait for the requested destination, including failure after document selection
-has already succeeded. Source links use the existing checked IDE handoff after ordinary prose
-navigation; recovered Source drafts require explicit repair/import. Their activation completes at
-process start, independently of editor exit, and cancellation is checked again at the launcher.
+Cold project loads wait for the preceding load's complete owner retirement before acquiring another
+project recovery lease. This ordering includes dropping a rejected owner after cancellation;
+activation polling continues independently while the next load waits. Candidate catalogue owners and
+inspections remain separate until acceptance. Cancelled, stale and failed destination receipts
+return both exclusive owners before checking publication authority. Activation replies wait for the
+requested destination, including failure after document selection has already succeeded. Source
+links use the existing checked IDE handoff after ordinary prose navigation; recovered Source drafts
+require explicit repair/import. Their activation completes at process start, independently of editor
+exit, and cancellation is checked again at the launcher.
 
 Xilem prepares explicit disk reload on a worker, including discovery, accepted projections, saved
 search inputs and a complete independent recovery archive. Adoption requires the same project root,

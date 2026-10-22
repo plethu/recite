@@ -122,12 +122,34 @@ fn an_observed_cancelled_load_retires_its_project_before_the_worker_is_reused() 
     let prepared = outputs
         .recv_timeout(std::time::Duration::from_secs(5))
         .unwrap();
+    let mut prepared = prepared.downcast::<Output>().unwrap();
+    let Output::Opened(opened) = prepared.as_mut() else {
+        panic!("prepared project")
+    };
+    let (retire, retired) = mpsc::sync_channel(1);
+    let release = std::mem::replace(&mut opened.retire, retire);
     app.cancel_open();
-    deliver(&view, &mut state, &mut context, &mut app, prepared);
+    deliver(
+        &view,
+        &mut state,
+        &mut context,
+        &mut app,
+        SendMessage(prepared),
+    );
     assert!(app.writer.is_none() && app.opening.is_none());
     assert!(app.status.contains("cancelled"));
-    // Queueing another load tests retirement ordering on the same worker.
+    // Hold the rejected owner after the UI has acknowledged cancellation.
+    // A new load must not race its recovery lease, even while retirement is delayed.
+    let rejected = retired
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap()
+        .expect("cancelled load returns its project owner");
     app.open_selected();
+    assert!(matches!(
+        outputs.recv_timeout(std::time::Duration::from_millis(120)),
+        Err(mpsc::RecvTimeoutError::Timeout)
+    ));
+    release.send(Some(rejected)).unwrap();
     deliver(
         &view,
         &mut state,
