@@ -64,6 +64,7 @@ impl Attention {
             self.screen = Some(screen);
         }
         if screen != Screen::Write {
+            self.synchronize_request(root, context);
             return;
         }
         if matches!(self.writing, WritingFocus::Workspace) && !context.attention.is_focused() {
@@ -84,13 +85,16 @@ impl Attention {
             }
             _ => {}
         }
+        self.synchronize_request(root, context);
+        self.writing_target = root.focused_widget().or(self.writing_target);
+    }
+    fn synchronize_request(&mut self, root: &mut RenderRoot, context: &Context) {
         if self.request.as_ref() != context.attention.pane_request() {
             self.request = context.attention.pane_request().cloned();
             if let Some(request) = &self.request {
                 move_focus(root, request.motion());
             }
         }
-        self.writing_target = root.focused_widget().or(self.writing_target);
     }
 }
 pub(super) fn focus_script(root: &mut RenderRoot) {

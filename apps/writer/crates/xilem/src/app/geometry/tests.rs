@@ -17,6 +17,8 @@ use xilem::{
 };
 #[path = "preview/tests.rs"]
 mod preview;
+#[path = "project/tests.rs"]
+mod project;
 
 fn page(app: &mut App) -> impl WidgetView<App, Widget = Passthrough> + use<> {
     keyed((), view::app(app))

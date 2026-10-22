@@ -1,5 +1,8 @@
 use super::*;
-use crate::workspaces::tools::Work as ToolWork;
+use crate::{
+    attention::{Pane, PaneMotion},
+    workspaces::{Screen, tools::Work as ToolWork},
+};
 impl Writer {
     pub(crate) fn project_action(&mut self, action: Action) {
         let retry = matches!(action, Action::FinishRecovery);
@@ -65,6 +68,9 @@ impl Writer {
         })) = &completed.outcome
         {
             self.workspaces.external.resolve(resolved.clone());
+            if self.workspaces.screen == Screen::External {
+                self.focus_pane(PaneMotion::To(Pane::External));
+            }
         }
         self.reading.prepare(self.session.model());
         self.refresh_rules();

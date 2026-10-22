@@ -166,10 +166,11 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
         } else {
             state.palette.status_text
         }),
-        FlexSpacer::Flex(1.),
         label(state.ui_scale(), state.status.clone())
             .text_size(12. * state.ui_scale())
-            .color(state.palette.status_text),
+            .color(state.palette.status_text)
+            .prop(LineBreaking::WordWrap)
+            .flex(1.),
     ))
     .gap(8.px())
     .padding(xilem::style::Padding::from_vh(6.px(), 16.px()))

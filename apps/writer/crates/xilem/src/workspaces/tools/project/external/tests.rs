@@ -1,6 +1,12 @@
 use super::*;
-use crate::workspaces::external::Resolution;
-use crate::workspaces::tools::{ExternalAction, tests::finish};
+use crate::{
+    attention::{Pane, PaneMotion},
+    workspaces::{
+        Screen,
+        external::Resolution,
+        tools::{ExternalAction, tests::finish},
+    },
+};
 use recite_writer_model::View;
 use recite_writer_session::project::ExternalDecision;
 
@@ -51,6 +57,10 @@ fn native_comparison_keeps_pending_prose_or_adopts_disk_without_writing_source()
             })
         );
         assert!(writer.workspaces.external.inspection().is_none());
+        assert_eq!(
+            writer.attention.pane_request().unwrap().motion(),
+            PaneMotion::To(Pane::External)
+        );
         assert!(!writer.session.read_only(), "{}", writer.status);
         assert!(writer.recovery_copy.as_ref().unwrap().is_file());
         let model = writer.session.model();
@@ -283,4 +293,21 @@ fn rejected_adoption_exposes_the_archive_created_before_cancellation() {
             .iter()
             .any(|label| label.contains(&archive.display().to_string()))
     );
+}
+
+#[test]
+fn completed_disk_decision_does_not_reopen_or_focus_a_workspace_the_author_left() {
+    let (directory, mut writer, mut jobs) = fixture();
+    compare(&mut writer, &mut jobs, directory.path());
+    writer.keep_writer_version();
+    writer.return_to_writing();
+    let attention = writer.attention.clone();
+    finish(&mut writer, &mut jobs);
+    assert!(writer.workspaces.screen == Screen::Write);
+    assert_eq!(writer.attention.pane_request(), attention.pane_request());
+    assert_eq!(
+        writer.workspaces.external.resolved().unwrap().resolution,
+        Resolution::KeepWriter
+    );
+    assert_eq!(writer.session.model().draft(), "Pending manuscript.");
 }

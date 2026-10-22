@@ -1,3 +1,5 @@
+#[path = "context/tests.rs"]
+mod context;
 #[path = "opening/tests.rs"]
 mod opening;
 #[path = "structure/tests.rs"]

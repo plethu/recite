@@ -59,7 +59,13 @@ choice form remaining after completion. The corrected presentation uses a typed,
 resolved state, preserves late recovery/presentation warnings, and retires unchosen options. Failed
 reinspection can retain a result for the same document; another document cannot inherit it. Final
 resolved-state native renders received a separate review, which closed the completed-state finding
-at both scales, including the visible outcome heading and preferred Return action at 200%.
+at both scales, including the visible outcome heading and preferred Return action at 200%. A final
+geometry follow-up caught a long completion message expanding the frame and, after wrapping it, a
+retained scroll offset clipping the result row. The footer now wraps within its allocation; active
+disk completion reveals the preferred Return control once. Completion after leaving that workspace
+preserves focus. Regressions exercise the real worker outcome, bundled fonts, three window widths,
+both scales, incoming-prompt navigation and long translation context. Native captures also measure
+the complete header and focused result button bounds.
 
 The local evidence index is `target/writer-evaluation/retirement-evidence.md`. It names completed
 receipts, failed attempts, source/binary identities and carried-forward baseline evidence.

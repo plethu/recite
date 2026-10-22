@@ -263,7 +263,10 @@ frontends retain the full compared wording and emphasise changed words with bold
 cue works in monochrome. Comparison wrapping accounts for the scene rail and personal UI scale.
 Successful decisions replace unresolved choices with the specific adopted outcome, source identity,
 Save behavior and recovery access. Recovery or presentation warnings preserve an already-adopted
-outcome. A failed reinspection may retain the result for the same document, never another document.
+outcome. Publication on the active disk workspace reveals the completed outcome's preferred Return
+control once; completion after leaving it preserves the author's workspace and focus. Status text
+wraps within the remaining status-bar width. A failed reinspection may retain the result for the
+same document, never another document.
 
 Xilem observes source and catalogue changes in the background, including atomic file replacement.
 Notifications coalesce into bounded path batches; overflow requests a rescan of open sources.
