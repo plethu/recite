@@ -28,7 +28,7 @@ use xilem::{
 const FIRST: &str = "11111111111111111111";
 const SECOND: &str = "22222222222222222222";
 const SOURCE: &str = ":: start default\n> first@11111111111111111111\n  Hello.\n> second@22222222222222222222\n  Another paragraph.\n> missing@33333333333333333333\n  Missing from catalogue.\n-> END\n:: later\n> later@44444444444444444444\n  Another beat.\n-> END\n";
-const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"11111111111111111111&sad\"\nmsgid \"Different wording.\"\nmsgstr \"Variante.\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgid_plural \"Many hellos.\"\nmsgstr[0] \"Bonjour.\"\nmsgstr[1] \"Bonjour à tous.\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Another paragraph.\"\nmsgstr \"Autre paragraphe.\"\n";
+const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"11111111111111111111&sad\"\nmsgid \"Different wording.\"\nmsgstr \"Version.\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgid_plural \"Many hellos.\"\nmsgstr[0] \"Bonjour.\"\nmsgstr[1] \"Bonjour à tous.\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Another paragraph.\"\nmsgstr \"Autre paragraphe.\"\n";
 fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
     keyed((), crate::view::writer(writer))
 }

@@ -31,7 +31,7 @@ msgstr "Language: fr\\n"
 
 msgctxt "11111111111111111111&formal"
 msgid "Different source wording."
-msgstr "Une variante."
+msgstr "Une version."
 
 msgctxt "11111111111111111111"
 msgid "The last tram waits."
@@ -86,7 +86,7 @@ def exercise(window, po, output, results, scale):
     key("s", control=True)
     window.wait(lambda: "Deuxième brouillon publié." in po.read_text(), "focused row saved")
     assert "Premier brouillon indépendant." not in po.read_text()
-    assert "Une variante." in po.read_text()
+    assert "Une version." in po.read_text()
     reveal(window, "Open translation queue")
     window.wait(lambda: window.enabled("Open translation queue"), "save receipt collected")
     window.act("Open translation queue")
