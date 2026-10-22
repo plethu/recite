@@ -74,7 +74,8 @@ its [guide](../../apps/writer/guide.md) owns current workflows.
 
 Xilem is the default frontend for the ongoing port and evaluation. Freya remains available
 explicitly for comparison and fallback. Default selection does not establish replacement readiness:
-the latest paired product review records remaining translation and workspace-context gaps in
+paired follow-ups close the identified writing, translation and auxiliary workspace findings, while
+final comparative use and physical-host acceptance remain pending in
 [Writer acceptance](../../apps/writer/acceptance.md). The Writer manifest owns frontend selection
 for the launcher and package builders; both install as `recite-writer` with the same application
 identity and shared project, recovery and personal configuration formats. Presentation and focus

@@ -12,13 +12,13 @@ comparison needs equivalent rendered and interaction evidence for the same scene
 viewport and scale, including pending edits, focus mode, Map, Split and the remaining project
 screens. Narrow fixture or recovery render reviews do not satisfy that comparison.
 
-The bounded paired review on 2026-10-22 still recommends keeping both frontends available. A fresh
-reviewer inspected 44 actual cold-route renders of both frontends at 100/200% scale, using the same
-Relay Hub fixture and 1280×720 compositor (1280×690 application windows). This covered declarations,
-builds, rename, disk routes, catalogue passage/queue/entry/source-update routes, personal
-preferences, project settings and shortcuts. The shared project header was compacted while retaining
-its actions and document identity. The subsequent bilingual workspace slice corrects the three
-largest gaps from that review:
+The initial bounded paired review on 2026-10-22 recommended keeping both frontends available. A
+fresh reviewer inspected 44 actual cold-route renders of both frontends at 100/200% scale, using the
+same Relay Hub fixture and 1280×720 compositor (1280×690 application windows). This covered
+declarations, builds, rename, disk routes, catalogue passage/queue/entry/source-update routes,
+personal preferences, project settings and shortcuts. The shared project header was compacted while
+retaining its actions and document identity. The subsequent bilingual workspace slice corrects the
+three largest gaps from that review:
 
 | Corrected gap                                      | Evidence and limits                                                                                                                                                                                                                         |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -58,7 +58,8 @@ bytes and creating a complete recovery archive. Their first visual follow-up fou
 choice form remaining after completion. The corrected presentation uses a typed, source-bound
 resolved state, preserves late recovery/presentation warnings, and retires unchosen options. Failed
 reinspection can retain a result for the same document; another document cannot inherit it. Final
-resolved-state native renders are checked separately from the earlier comparison captures.
+resolved-state native renders received a separate review, which closed the completed-state finding
+at both scales, including the visible outcome heading and preferred Return action at 200%.
 
 The local evidence index is `target/writer-evaluation/retirement-evidence.md`. It names completed
 receipts, failed attempts, source/binary identities and carried-forward baseline evidence.
