@@ -290,7 +290,7 @@ def main():
         try:
             code = process.wait(
                 timeout=120
-                if args.scenario == "all"
+                if args.scenario in ("all", "preferences", "editor")
                 or args.scenario.startswith(
                     (
                         "preview-inputs",

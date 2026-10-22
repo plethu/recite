@@ -14,7 +14,7 @@ from writer_interactions import SOURCE, capture
 
 
 def settings(window):
-    window.act("Settings")
+    window.workspace_action("Settings")
     window.act("Project settings…")
     window.wait(lambda: window.find_text("Project settings"), "project settings workspace")
 

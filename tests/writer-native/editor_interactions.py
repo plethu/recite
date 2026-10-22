@@ -9,6 +9,7 @@ import traceback
 from pathlib import Path
 
 from native_window import attach, key, type_text
+from preference_controls import reveal_preference
 from project_interactions import manuscript
 from writer_interactions import SOURCE, capture
 
@@ -131,9 +132,10 @@ def run(api, bus, registry, binary, output):
                 results["failure_feedback_text"] = window.text(feedback)
                 time.sleep(0.15)  # Allow the compositor to paint the already-published failure.
                 capture(output, "-failure")
-                window.act("Settings")
+                window.workspace_action("Settings")
                 window.wait(lambda: window.find("Increase UI scale"), "personal scale controls")
                 for percent in range(110, 201, 10):
+                    reveal_preference(window, "Increase UI scale")
                     window.act("Increase UI scale")
                     window.wait(
                         lambda: window.find(f"UI scale: {percent}%"), "larger interface scale"
@@ -147,16 +149,15 @@ def run(api, bus, registry, binary, output):
                 )
                 time.sleep(0.15)
                 capture(output, "-failure200")
-                window.act("Settings")
+                window.workspace_action("Settings")
                 for percent in range(190, 99, -10):
+                    reveal_preference(window, "Decrease UI scale")
                     window.act("Decrease UI scale")
+                    reveal_preference(window, f"UI scale: {percent}%")
                     window.wait(
                         lambda: window.find(f"UI scale: {percent}%"), "restored interface scale"
                     )
                 window.act("Done with settings")
-                window.wait(
-                    lambda: window.enabled("Use system default"), "available fallback after scaling"
-                )
                 before = receipt.stat().st_mtime_ns
                 window.document_action("Use system default")
                 window.wait(

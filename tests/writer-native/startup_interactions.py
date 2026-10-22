@@ -66,7 +66,7 @@ def run(api, bus, registry, binary, output):
                 key("End", control=True)
                 type_text("x")
                 window.wait(lambda: window.text(node).endswith("waits.x"), "native draft")
-                window.act("Projects")
+                window.workspace_action("Projects")
                 field(window, "Project folder")
                 capture(output, "-projects")
                 window.act("Return to Writer")
@@ -90,7 +90,7 @@ def run(api, bus, registry, binary, output):
                 )
                 results["second_launch_selects_requested_document"] = True
                 capture(output, "-opened")
-                window.act("Projects")
+                window.workspace_action("Projects")
                 field(window, "Project folder")
                 window.act("Create a new project")
                 field(window, "Project name")
@@ -111,7 +111,7 @@ def run(api, bus, registry, binary, output):
                 )
                 results["created_project_uses_shared_starter"] = True
                 capture(output, "-created")
-                window.act("Projects")
+                window.workspace_action("Projects")
                 field(window, "Project folder")
                 window.act("Try temporary examples")
                 window.wait(

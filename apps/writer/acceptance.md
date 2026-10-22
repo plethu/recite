@@ -10,7 +10,34 @@ of Freya's fixed scene rail, compact toolbar and whole-beat manuscript with inli
 writing composition is being corrected against Freya's existing design. A retirement comparison
 needs equivalent rendered and interaction evidence for the same scene, selection, viewport and
 scale, including pending edits, focus mode, Map, Split and the remaining project screens. Narrow
-fixture or recovery render reviews do not satisfy that comparison. Keep both frontends available.
+fixture or recovery render reviews do not satisfy that comparison.
+
+The bounded paired review on 2026-10-22 still recommends keeping both frontends available. A fresh
+reviewer inspected 44 actual cold-route renders of both frontends at 100/200% scale, using the same
+Relay Hub fixture and 1280×720 compositor (1280×690 application windows). This covered declarations,
+builds, rename, disk routes, catalogue passage/queue/entry/source-update routes, personal
+preferences, project settings and shortcuts. The shared project header was compacted while retaining
+its actions and document identity. That correction does not close the remaining product gaps:
+
+| Retirement blocker                                                                                    | Required comparative evidence                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Localise shows one passage and a launcher instead of the whole-beat bilingual workspace.              | Source, replies, destinations, status and editable translations together, with bounded keyed fields, plural handling, retained drafts, recovery and conflicts. |
+| Catalogue administration and vertical filters push all queue entries below the initial 100% viewport. | Task-led search/filter controls and immediately visible source/status results, with administration secondary.                                                  |
+| Auxiliary screens remove the scene rail and selected-beat context.                                    | Retained project navigation and selection, with an explicit responsive collapse policy and guarded navigation.                                                 |
+
+Further material findings concern initial 200% focus scrolling away titles/source context, rename's
+Review action falling below the proposal, settings without a live writing specimen or compact
+shortcut list, project-settings stages with weak next-action hierarchy, and missing build scope
+information. The external-IDE source/settings workflow remains an accepted design choice; these
+findings do not require restoring an embedded source editor. The cold disk/source-update pairs were
+not equivalent consequential states, so their captures establish no conflict/refresh parity.
+
+The local receipts and renders are under `target/writer-evaluation/paired-project-v2.json`,
+`paired-catalogue-v1.json` and `paired-settings-v1.json`; the evidence index there records current
+checks and binary identities. These are diagnostic artifacts, not a passing acceptance gate. The
+next product slice is the whole-beat translation workspace and retained surrounding context,
+followed by the same paired workflow/render review. Do not retire Freya on the strength of the
+writing-only correction or automated workflow coverage.
 
 The installed-package and broad native claims below describe signed baseline
 `9ce876da7f6b0945a2a662eba4951a14fd74bd02`. They have not all been repeated after the inline
@@ -27,7 +54,14 @@ composition findings. The final Preview follow-up inspected seven states at each
 real Tab entry to a fully visible language field. These findings cover the writing and Preview
 surfaces; they do not establish whole-product interchangeability, installed-package acceptance for
 this correction or physical keyboard/screen-reader usability. Remaining project screens still need
-equivalent paired acceptance before a Freya retirement decision.
+equivalent paired acceptance before Freya can be retired; the bounded review above records the
+current gaps.
+
+The corrected Linux release binary was also packaged and checked for payload, ABI, licenses and CLI
+behavior. Its extracted desktop entry passed cold/running-window link delivery and malformed-route
+rejection in an owned desktop session without changing fixture bytes. This refresh covers the
+extracted package; it does not repeat package-manager install/upgrade/uninstall or the earlier
+installed Flatpak acceptance.
 
 The local Xilem Linux release package passes payload, ABI and CLI inspection, native Wayland focus
 checks, and actual desktop-entry delivery on owned X11 and Wayland hosts. Cold and running-window

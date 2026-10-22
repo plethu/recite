@@ -124,6 +124,17 @@ class NativeWindow:
         self.wait(page, "document menu action: " + label)
         return self.act(label)
 
+    def workspace_action(self, label):
+        """Reach app actions through the compact workbench's Workspace menu."""
+
+        def open_menu():
+            if self.find_action(label) is None:
+                self.act("Workspace")
+            return True
+
+        self.wait(open_menu, "workspace action or menu: " + label)
+        return self.act(label)
+
     def section_scrollbar(self, label):
         """Resolve a named pane's own ScrollView through standard AT-SPI children."""
         for anchor, name in self.nodes():

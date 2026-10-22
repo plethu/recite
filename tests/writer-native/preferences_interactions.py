@@ -8,6 +8,7 @@ import traceback
 from pathlib import Path
 
 from native_window import key, type_text
+from preference_controls import reveal_preference
 from project_interactions import manuscript
 from startup_interactions import field, fill
 from writer_interactions import SOURCE, capture, launch
@@ -31,7 +32,7 @@ def run(api, bus, registry, binary, output):
                 key("End", control=True)
                 type_text("x")
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "native draft")
-                window.act("Settings")
+                window.workspace_action("Settings")
                 window.wait(lambda: window.find("Dark theme"), "personal preferences")
                 capture(output, "-light")
                 window.act("Dark theme")
@@ -50,13 +51,24 @@ def run(api, bus, registry, binary, output):
                 results["live_theme_and_scale_preserve_native_radio_focus"] = True
                 capture(output, "-dark")
                 for percent in range(120, 201, 10):
+                    reveal_preference(window, "Increase UI scale")
                     window.act("Increase UI scale")
                     window.wait(lambda: window.find(f"UI scale: {percent}%"), "increased scale")
                 capture(output, "-scale200")
                 results["ui_scale_reaches_validated_200_percent"] = True
                 for percent in range(190, 99, -10):
+                    reveal_preference(window, "Decrease UI scale")
                     window.act("Decrease UI scale")
-                    window.wait(lambda: window.find(f"UI scale: {percent}%"), "restored scale")
+                    window.wait(
+                        lambda: (
+                            tomllib.loads(config.read_text())
+                            .get("writer", {})
+                            .get("presentation", {})
+                            .get("ui_scale", 100)
+                            == percent
+                        ),
+                        "persisted restored scale",
+                    )
                 window.act("Increase Reading text size")
                 window.wait(lambda: window.find("Reading text size: 21"), "reading size")
                 window.act("Keyboard shortcuts")
@@ -94,7 +106,7 @@ def run(api, bus, registry, binary, output):
                     "retained shortcut draft",
                 )
                 window.act("Done with settings")
-                window.act("Settings")
+                window.workspace_action("Settings")
                 window.wait(
                     lambda: window.text(field(window, "Shortcut binding")) == "Primary+Alt+D",
                     "shortcut draft after reopening settings",
@@ -126,7 +138,7 @@ def run(api, bus, registry, binary, output):
                     lambda: window.text(node) == "The last tram waits.x",
                     "recovered draft with persisted preferences",
                 )
-                window.act("Settings")
+                window.workspace_action("Settings")
                 window.wait(lambda: window.find("Reading text size: 21"), "reloaded preferences")
                 assert tomllib.loads(config.read_text()).get("writer", {}).get("theme") == "dark"
                 results["personal_preferences_and_recovery_survive_restart"] = True
@@ -141,10 +153,7 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-ordinary-close")
                 window.act("Keep editing")
                 window.wait(lambda: not window.find("Close Writer"), "cancel ordinary close")
-                window.wait(
-                    lambda: window.enabled("Settings"), "settings enabled after cancelling close"
-                )
-                window.act("Settings")
+                window.workspace_action("Settings")
                 window.wait(
                     lambda: window.find("Dark theme"), "personal preferences after cancelling close"
                 )

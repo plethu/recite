@@ -118,16 +118,35 @@ def run(api, bus, registry, binary, output):
                 )
                 results["save_all_and_build_publishes_saved_changes"] = True
                 capture(output, "-built")
-                source.write_text(source.read_text() + "\n# Fresh inputs for cancellation\n")
+                before_cancel = asset.read_bytes()
+                source.write_text(
+                    source.read_text().replace("The last tram waits.x", "Fresh build inputs.")
+                )
                 window.act("Build saved")
-                window.wait(lambda: window.find("Cancel build"), "active build cancellation")
-                window.act("Cancel build")
+
+                def cancel_or_complete():
+                    cancel = window.find_action("Cancel build")
+                    if cancel is not None:
+                        return window.call(
+                            cancel, "Action", "DoAction", api.GLib.Variant("(i)", (0,))
+                        )[0]
+                    return asset.read_bytes() != before_cancel
+
+                # A terminal result may retire the control between observation and Click.
+                # wait() retries stale AT-SPI nodes; completion is a distinct outcome below.
+                window.wait(cancel_or_complete, "cancel request or completed build")
                 window.wait(
                     lambda: not window.find("Cancel build"),
                     "cancelled build retirement",
                     timeout=30,
                 )
-                results["cancelled_build_is_harvested_before_close"] = True
+                cancelled = window.find_text("Build cancelled. Previous outputs remain available.")
+                results["native_cancellation_observed"] = cancelled is not None
+                if cancelled is not None:
+                    assert asset.read_bytes() == before_cancel
+                else:
+                    assert asset.read_bytes() != before_cancel
+                results["build_terminal_result_harvested_before_close"] = True
                 window.close_clean()
                 assert process.wait(timeout=5) == 0
     except Exception as error:

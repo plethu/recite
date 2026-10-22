@@ -1,38 +1,58 @@
 //! Document toolbar, recovery location and guarded close presentation.
 use super::*;
-use xilem::{masonry::properties::LineBreaking, view::portal};
+use crate::presentation::print;
+use xilem::{
+    masonry::properties::LineBreaking,
+    view::{GridExt, GridTrackSize, grid, portal},
+};
 mod menu;
 pub(super) use menu::panel;
 
 pub(super) fn project_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = state.phase != Phase::Writing || state.work.busy() || state.navigation.busy();
-    flex_col((
-        label(
-            state.ui_scale(),
-            format!("Recite Writer · {}", document_caption(state)),
-        ),
-        history_buttons(state),
+    let scale = state.ui_scale();
+    let wide = state.viewport.width - 32. >= 760. * f64::from(scale);
+    grid((
+        history_buttons(state).grid_pos(0, 0),
         flex_row((
-            text_button(
-                state.ui_scale(),
+            print::action(
+                scale,
                 "Return to writing",
+                state.phase != Phase::Writing,
                 Writer::return_to_writing,
-            )
-            .disabled(state.phase != Phase::Writing),
-            text_button(state.ui_scale(), "Save all", Writer::save_all).disabled(
+            ),
+            print::action(
+                scale,
+                "Save all",
                 blocked
                     || state.session.read_only()
                     || state.source_repair_pending()
                     || state.external_resolution_pending()
                     || state.project_jobs_busy(),
+                Writer::save_all,
             ),
-            text_button(state.ui_scale(), "Close", Writer::request_close)
-                .disabled(blocked || state.project_jobs_busy()),
+            print::action(
+                scale,
+                "Close",
+                blocked || state.project_jobs_busy(),
+                Writer::request_close,
+            ),
         ))
-        .gap(8.px()),
+        .gap(8.px())
+        .grid_pos(u16::from(wide), u16::from(!wide)),
     ))
-    .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .columns([
+        GridTrackSize::FRACTION,
+        if wide {
+            GridTrackSize::Auto
+        } else {
+            GridTrackSize::Fixed(0.px())
+        },
+    ])
+    .rows([GridTrackSize::Auto; 2])
+    .gap(4.px())
+    .padding(xilem::style::Padding::from_vh(4.px(), 16.px()))
+    .background_color(state.palette.surface)
 }
 
 pub(super) fn focus_header(state: &Writer) -> impl WidgetView<Writer> + use<> {
@@ -86,24 +106,27 @@ fn history_buttons(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing;
     flex_row((
-        text_button(scale, "Back", |state: &mut Writer| {
-            state.history_step(false)
-        })
-        .disabled(
+        print::action(
+            scale,
+            "Back",
             closing
                 || state.work.busy()
                 || state.navigation.busy()
                 || state.navigation.history.step(false).is_none(),
+            |state: &mut Writer| state.history_step(false),
         ),
-        text_button(scale, "Forward", |state: &mut Writer| {
-            state.history_step(true)
-        })
-        .disabled(
+        print::action(
+            scale,
+            "Forward",
             closing
                 || state.work.busy()
                 || state.navigation.busy()
                 || state.navigation.history.step(true).is_none(),
+            |state: &mut Writer| state.history_step(true),
         ),
+        print::meta(scale, document_caption(state))
+            .prop(LineBreaking::WordWrap)
+            .flex(1.),
         copy_link(state),
     ))
     .gap(8.px())
