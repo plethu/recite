@@ -170,6 +170,12 @@ def main():
     parser.add_argument("output", type=Path)
     parser.add_argument("--child", action="store_true")
     parser.add_argument(
+        "--renderer",
+        choices=("pixman", "gles2", "vulkan"),
+        default="pixman",
+        help="Renderer for the owned headless compositor; GPU modes require a usable render device.",
+    )
+    parser.add_argument(
         "--scenario",
         choices=(
             "all",
@@ -272,7 +278,7 @@ def main():
             WLR_BACKENDS="headless",
             WLR_HEADLESS_OUTPUTS="1",
             WLR_LIBINPUT_NO_DEVICES="1",
-            WLR_RENDERER="pixman",
+            WLR_RENDERER=args.renderer,
             RECITE_PRIVATE_PROBE="1",
         )
         process = subprocess.Popen(
@@ -289,6 +295,8 @@ def main():
                 "--child",
                 "--scenario",
                 args.scenario,
+                "--renderer",
+                args.renderer,
             ],
             env=environment,
             start_new_session=True,
