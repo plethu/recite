@@ -1,4 +1,6 @@
 //! Source-ordered word index for project passage navigation; never executes dialogue.
+mod excerpt;
+pub use excerpt::passage_excerpt;
 mod results;
 use recite_compiler::authoring::{Interrupted, SavedDocument, WorkControl};
 mod region;
@@ -14,7 +16,9 @@ pub struct SearchHit {
     pub document: Arc<str>,
     pub beat: Arc<str>,
     pub speaker: Arc<str>,
-    pub text: String,
+    /// Frozen author-visible identity, when this saved passage can be selected.
+    pub passage: Option<recite_core::SourceAnchor>,
+    pub text: Box<str>,
 }
 fn words(text: &str) -> impl Iterator<Item = String> + '_ {
     text.split(|c: char| !c.is_alphanumeric() && c != '_')

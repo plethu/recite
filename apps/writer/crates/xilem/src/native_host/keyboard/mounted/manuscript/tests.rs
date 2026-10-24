@@ -4,6 +4,8 @@ use crate::attention::{EditingTarget, FieldRestoration, PassageField};
 use xilem::masonry::core::{Ime as RootIme, TextEvent};
 use xilem::masonry::widgets::TextArea;
 use xilem::winit::keyboard::{Key as NativeKey, KeyCode, PhysicalKey};
+#[path = "reveal/tests.rs"]
+mod reveal;
 
 fn fields() -> (
     RenderRoot,

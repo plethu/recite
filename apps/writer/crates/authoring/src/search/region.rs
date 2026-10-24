@@ -44,12 +44,19 @@ impl RegionIndex {
 
     pub(super) fn add_root(&mut self, context: &mut SearchContext, root: &Statement) {
         root.visit_depth_first(&mut |statement| {
-            let (text, speaker) = match statement {
+            let (text, speaker, passage) = match statement {
                 Statement::Line(line) => (
                     &line.source_text.text,
                     context.speaker(line.speaker.as_ref()),
+                    line.source_id
+                        .anchor()
+                        .filter(|_| line.plural_source_text.is_none()),
                 ),
-                Statement::Choice(choice) => (&choice.source_text.text, Arc::default()),
+                Statement::Choice(choice) => (
+                    &choice.source_text.text,
+                    Arc::default(),
+                    choice.source_id.anchor(),
+                ),
                 _ => return,
             };
             let id = self.hits.len();
@@ -57,13 +64,14 @@ impl RegionIndex {
                 document: context.document.clone(),
                 beat: context.beat.clone(),
                 speaker,
-                text: text.clone(),
+                passage: passage.cloned(),
+                text: text.as_str().into(),
             };
             for field in [
                 hit.document.as_ref(),
                 hit.beat.as_ref(),
                 hit.speaker.as_ref(),
-                hit.text.as_str(),
+                hit.text.as_ref(),
             ] {
                 for word in words(field) {
                     let postings = self.words.entry(word).or_default();

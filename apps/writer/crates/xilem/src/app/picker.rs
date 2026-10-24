@@ -1,6 +1,7 @@
 //! Transient native lookup keeps the mounted manuscript and its input history intact.
 mod choices;
 mod index;
+mod previews;
 #[cfg(test)]
 mod tests;
 pub(super) mod view;
@@ -33,6 +34,7 @@ pub(crate) enum Mode {
     Commands,
     GoTo,
     ProjectText,
+    Passages,
     RulesChoices,
     Destinations,
     RenameBeat,
@@ -42,6 +44,7 @@ pub(crate) enum Search {
     Commands,
     GoTo,
     ProjectText,
+    Passages,
 }
 enum Purpose {
     Search(Search),
@@ -53,6 +56,7 @@ impl Purpose {
             Self::Search(Search::Commands) => Mode::Commands,
             Self::Search(Search::GoTo) => Mode::GoTo,
             Self::Search(Search::ProjectText) => Mode::ProjectText,
+            Self::Search(Search::Passages) => Mode::Passages,
             Self::Editor(request) => match request.as_ref() {
                 crate::choices::Request::Rules(_) => Mode::RulesChoices,
                 crate::choices::Request::Destination(_) => Mode::Destinations,
@@ -65,6 +69,10 @@ impl Purpose {
 enum Item {
     Command(WriterCommand),
     Location(Location),
+    Passage {
+        location: Location,
+        passage: recite_writer_model::Passage,
+    },
     Lookup(targets::Target),
     Rule(selection::Choice),
     Destination(String),
@@ -85,13 +93,15 @@ pub(super) struct Picker {
     active: usize,
     limit: usize,
     total: usize,
+    previews: previews::Previews,
 }
 impl Mode {
     fn title(self) -> &'static str {
         match self {
             Self::Commands => "Commands",
             Self::GoTo => "Go to scene or beat",
-            Self::ProjectText => "Find saved project text",
+            Self::ProjectText => "Find project text",
+            Self::Passages => "Find in this beat",
             Self::RulesChoices => "Choose reply rule value",
             Self::Destinations => "Change destination",
             Self::RenameBeat => "Choose a beat to rename",
@@ -101,7 +111,7 @@ impl Mode {
 impl Picker {
     fn new(purpose: Purpose, entries: Vec<Entry>) -> Self {
         let matches = (0..entries.len()).collect();
-        Self {
+        let mut picker = Self {
             purpose,
             instance: PickerInstance(Arc::new(())),
             revision: PickerRevision::default(),
@@ -111,7 +121,10 @@ impl Picker {
             matches,
             active: 0,
             limit: 100,
-        }
+            previews: Default::default(),
+        };
+        picker.prepare_previews();
+        picker
     }
     pub(super) fn mode(&self) -> Mode {
         self.purpose.mode()
@@ -119,8 +132,18 @@ impl Picker {
     fn step(&mut self, forward: bool) {
         let count = self.matches.len();
         if count != 0 {
-            self.active = (self.active + if forward { 1 } else { count - 1 }) % count;
-            self.revision.advance();
+            self.select((self.active + if forward { 1 } else { count - 1 }) % count);
+        }
+    }
+    fn select(&mut self, active: usize) {
+        self.active = active;
+        self.revision.advance();
+        self.prepare_previews();
+    }
+    fn prepare_previews(&mut self) {
+        if self.mode() == Mode::Passages {
+            self.previews
+                .prepare(&self.entries, &self.matches, &self.query, self.active);
         }
     }
 }
@@ -162,15 +185,14 @@ impl App {
     }
     fn previous_picker_page(&mut self) {
         if let Some(picker) = &mut self.picker {
-            picker.active = picker.active.saturating_sub(PAGE);
-            picker.revision.advance();
+            picker.select(picker.active.saturating_sub(PAGE));
         }
     }
     fn next_picker_page(&mut self) {
         if let Some(picker) = &mut self.picker {
-            picker.active =
-                ((picker.active / PAGE + 1) * PAGE).min(picker.matches.len().saturating_sub(1));
-            picker.revision.advance();
+            picker.select(
+                ((picker.active / PAGE + 1) * PAGE).min(picker.matches.len().saturating_sub(1)),
+            );
         }
     }
     fn load_picker_matches(&mut self) {
@@ -218,7 +240,7 @@ impl App {
                     }
                 }
             }
-            Some(Item::Location(location)) => {
+            Some(Item::Location(location) | Item::Passage { location, .. }) => {
                 if let Some(writer) = &mut self.writer {
                     writer.navigate(crate::navigation::Target::Location(location));
                     if writer.navigation.busy() {

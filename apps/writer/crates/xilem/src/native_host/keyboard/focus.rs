@@ -42,17 +42,22 @@ impl Focus {
             }
             self.editing = editing.cloned();
         }
-        if self.edit_request.as_ref() != request {
-            self.edit_request = request.cloned();
-            if let Some(target) = request
-                .map(EditRequest::target)
-                .filter(|target| Some(*target) == editing)
-                && let Some(field) = super::manuscript::find(root.get_layer_root(0), target)
-                && root.focused_widget() != Some(field)
-            {
-                super::panes::reveal(root, field);
-            }
+        if self.edit_request.as_ref() == request {
+            return;
         }
+        let Some(target) = request
+            .map(EditRequest::target)
+            .filter(|target| Some(*target) == editing)
+        else {
+            self.edit_request = request.cloned();
+            return;
+        };
+        let Some(field) = super::manuscript::find(root.get_layer_root(0), target) else {
+            // Retry this explicit request after its field has mounted.
+            return;
+        };
+        self.edit_request = request.cloned();
+        super::panes::reveal_editor(root, field);
     }
     pub fn synchronize(&mut self, root: &mut RenderRoot, context: &Context) {
         let picker = context.picker_open;

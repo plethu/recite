@@ -3,6 +3,7 @@ use crate::app::Request;
 use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
 use crate::map::Workspace;
+use crate::navigation::rail::{FILE_PAGE, beat_page_size};
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::{group::named, print};
 use recite_writer_session::choices::display_name;
@@ -16,8 +17,6 @@ use xilem::{
     },
     view::canvas,
 };
-const PAGE: usize = 8;
-const UNPAGED: usize = 12;
 
 pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let documents = if state.session.project_root().is_some() {
@@ -47,20 +46,30 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
 fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let blocked = state.project_action_blocked();
     flex_col((
-        button(
-            label(state.ui_scale(), "Search project words…")
-                .prop(LineBreaking::WordWrap)
-                .width((state.drawer_width() - 48.).px()),
-            |state: &mut Writer| state.app_request = Some(Request::Search(Search::ProjectText)),
-        )
-        .disabled(blocked || state.session.project().is_none()),
-        button(
-            label(state.ui_scale(), "Find scene or beat…")
-                .prop(LineBreaking::WordWrap)
-                .width((state.drawer_width() - 48.).px()),
-            |state: &mut Writer| state.app_request = Some(Request::Search(Search::GoTo)),
-        )
-        .disabled(blocked),
+        styled(
+            ControlStyle::Navigation,
+            button(
+                label(state.ui_scale(), "Search project words…")
+                    .weight(FontWeight::MEDIUM)
+                    .color(state.palette.accent)
+                    .prop(LineBreaking::WordWrap)
+                    .width((state.drawer_width() - 48.).px()),
+                |state: &mut Writer| state.app_request = Some(Request::Search(Search::ProjectText)),
+            )
+            .disabled(blocked || state.session.project().is_none()),
+        ),
+        styled(
+            ControlStyle::Navigation,
+            button(
+                label(state.ui_scale(), "Find scene or beat…")
+                    .weight(FontWeight::MEDIUM)
+                    .color(state.palette.accent)
+                    .prop(LineBreaking::WordWrap)
+                    .width((state.drawer_width() - 48.).px()),
+                |state: &mut Writer| state.app_request = Some(Request::Search(Search::GoTo)),
+            )
+            .disabled(blocked),
+        ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(4.px())
@@ -68,7 +77,6 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
 fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.project_action_blocked();
-    const FILE_PAGE: usize = 4;
     let documents = state
         .session
         .project()
@@ -184,11 +192,7 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let closing = state.project_action_blocked();
     let blocks = state.session.model().document().block_summaries();
     // Short scenes use the slots otherwise occupied by pagination controls.
-    let page_size = if blocks.len() <= UNPAGED {
-        UNPAGED
-    } else {
-        PAGE
-    };
+    let page_size = beat_page_size(blocks.len());
     let pages = blocks.len().div_ceil(page_size).max(1);
     let page = state.beat_page.min(pages - 1);
     let selected = if state.visible_workspace() == Workspace::Map {

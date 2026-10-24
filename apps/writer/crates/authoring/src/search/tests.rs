@@ -130,7 +130,7 @@ fn replacements_reuse_identical_regions_and_retained_results_remain_valid() {
             }
         }
         assert_eq!(retained.total(), 3);
-        assert_eq!(retained.get(1).unwrap().text, "Middle courier.");
+        assert_eq!(retained.get(1).unwrap().text.as_ref(), "Middle courier.");
         assert_whole_file_parity(&changed);
     }
 }

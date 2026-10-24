@@ -99,6 +99,11 @@ fn file_pages_bound_native_controls_without_opening_unvisited_documents() {
         .unwrap();
     }
     let mut writer = open(&directory).unwrap();
+    assert_eq!(
+        writer.file_page, 3,
+        "initial selection reveals the current file"
+    );
+    writer.file_page = 0;
     let before = labels(&mut writer).unwrap();
     assert!(before.iter().any(|label| label == "▸ File 00"));
     assert!(!before.iter().any(|label| label == "▸ File 04"));

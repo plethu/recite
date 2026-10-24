@@ -105,9 +105,7 @@ fn quiet_controls(stack: &mut PropertyStack, p: &Palette<Color>) {
         );
         stack.push_layer(
             Selector::classes(&classes).with_hovered(true),
-            PropertySet::new()
-                .with(Background::Color(p.hover))
-                .with(BorderColor { color: p.boundary }),
+            PropertySet::new().with(Background::Color(p.hover)),
         );
         stack.push_layer(
             Selector::classes(&classes).with_active(true),

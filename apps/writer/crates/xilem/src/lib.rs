@@ -100,7 +100,7 @@ impl Writer {
             "Ready"
         }
         .into();
-        Self {
+        let mut writer = Self {
             session,
             editor,
             external: external_editor::ExternalEditor::new(),
@@ -132,7 +132,9 @@ impl Writer {
             reading_context: reading_context::Context::default(),
             palette: presentation::palette(&recite_config::WriterConfig::default()),
             config: Default::default(),
-        }
+        };
+        writer.reveal_navigation();
+        writer
     }
 
     fn configure(&mut self, config: recite_config::UserConfig) {

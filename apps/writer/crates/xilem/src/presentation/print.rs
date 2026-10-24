@@ -76,7 +76,11 @@ pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
                 scale,
                 name,
                 icon,
-                if disabled { palette.muted } else { palette.ink },
+                if disabled {
+                    palette.muted.with_alpha(0.4)
+                } else {
+                    palette.ink
+                },
             ),
             callback,
         )

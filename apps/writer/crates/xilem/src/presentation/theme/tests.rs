@@ -91,7 +91,7 @@ fn quiet_controls_keep_native_geometry_focus_and_actions_in_every_state() {
             .get_widget_with_id(id)
             .get_prop::<BorderColor>()
             .color,
-        palette.boundary
+        Color::TRANSPARENT
     );
     harness.focus_on(Some(id));
     assert_eq!(

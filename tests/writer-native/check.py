@@ -144,6 +144,8 @@ def run_probe(binary, output, scenario):
             from repair_interactions import run
         elif scenario == "picker":
             from picker_interactions import run
+        elif scenario == "passage-lookup":
+            from passage_lookup import run
         elif scenario == "preview":
             from preview_interactions import run
         elif scenario == "keyboard":
@@ -197,6 +199,7 @@ def main():
             "preview-trace",
             "preview-trace-scale",
             "picker",
+            "passage-lookup",
             "repair",
             "rules",
             "routes",

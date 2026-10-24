@@ -157,6 +157,10 @@ impl Reading {
             ),
             View::Block(_) | View::Source => None,
         };
+        self.reveal_selected();
+    }
+
+    pub fn reveal_selected(&mut self) {
         if let Some(index) = self.selected_row {
             self.page = index / PAGE;
         }

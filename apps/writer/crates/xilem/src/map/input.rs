@@ -1,5 +1,7 @@
 //! Local native input delivery; the widget owns capture, never authoring or file I/O.
 use super::Detail;
+use crate::presentation::material::{DotScreen, ScreenCache};
+use std::any::TypeId;
 mod events;
 mod focus;
 mod press;
@@ -17,7 +19,7 @@ use xilem::masonry::{
     imaging::Painter,
     kurbo::{Axis, Point, Size, Stroke, Vec2},
     layout::{LenReq, Length},
-    properties::BorderColor,
+    properties::{BorderColor, CornerRadius},
 };
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum Kind {
@@ -76,6 +78,7 @@ pub(super) struct InputWidget {
     press: Option<PointerPress>,
     focus: Option<FocusRequest>,
     clicks: u8,
+    print: ScreenCache,
 }
 impl InputWidget {
     fn new(child: NewWidget<impl Widget + ?Sized>, kind: Kind, vim: bool) -> Self {
@@ -86,6 +89,7 @@ impl InputWidget {
             press: None,
             focus: None,
             clicks: 0,
+            print: ScreenCache::default(),
         }
     }
     fn child_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, dyn Widget> {
@@ -99,8 +103,14 @@ impl InputWidget {
         this.widget.vim = vim;
     }
 }
+impl core::UsesProperty<DotScreen> for InputWidget {}
 impl Widget for InputWidget {
     type Action = NativeAction;
+    fn property_changed(&mut self, ctx: &mut UpdateCtx<'_>, property_type: TypeId) {
+        if property_type == TypeId::of::<DotScreen>() {
+            ctx.request_paint_only();
+        }
+    }
     fn on_action(
         &mut self,
         ctx: &mut core::ActionCtx<'_>,
@@ -163,6 +173,9 @@ impl Widget for InputWidget {
         if matches!(event, Update::FocusChanged(_)) {
             ctx.request_paint_only();
         }
+        if self.kind.is_card() && matches!(event, Update::ChildFocusChanged(_)) {
+            ctx.request_paint_only();
+        }
         if self.kind.is_card() && *event == Update::ChildFocusChanged(true) {
             ctx.submit_action::<NativeAction>(Input::Focus);
         }
@@ -195,8 +208,27 @@ impl Widget for InputWidget {
         props: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        if ctx.is_focus_target() {
+        let screen = props.get::<DotScreen>(ctx.property_cache());
+        self.print.paint(screen, painter);
+        // Paint the card frame without reserving a second border inside the native
+        // Button's hit box. Its accessibility and pointer bounds remain the full card.
+        if self.kind.is_card() {
             let color = props.get::<BorderColor>(ctx.property_cache()).color;
+            let radius = props.get::<CornerRadius>(ctx.property_cache()).radius.get();
+            painter
+                .stroke(
+                    ctx.border_box().inset(-0.5).to_rounded_rect(radius),
+                    &Stroke::new(1.),
+                    color,
+                )
+                .draw();
+        }
+        if ctx.is_focus_target() || (self.kind.is_card() && ctx.has_focus_target()) {
+            let color = if self.kind.is_card() {
+                screen.ink
+            } else {
+                props.get::<BorderColor>(ctx.property_cache()).color
+            };
             painter
                 .stroke(ctx.border_box().inset(-1.), &Stroke::new(2.), color)
                 .draw();

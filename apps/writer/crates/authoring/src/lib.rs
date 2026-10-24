@@ -46,7 +46,7 @@ mod projection_cache;
 pub use projection_cache::{PreparedProjection, ProjectionRequest};
 
 mod search;
-pub use search::{SearchHit, SearchIndex, SearchResults};
+pub use search::{SearchHit, SearchIndex, SearchResults, passage_excerpt};
 
 #[cfg(feature = "benchmarks")]
 pub mod workload;

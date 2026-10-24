@@ -35,10 +35,9 @@ impl Writer {
             .accept_reload(prepared)
             .map_err(|error| feedback::file(&error))?;
         self.retire_rules();
-        self.beat_page = 0;
-        self.file_page = 0;
         self.reading.prepare(self.session.model());
         self.sync_map_selection();
+        self.reveal_navigation();
         self.invalidate_map();
         self.remember_location();
         self.status = "Reloaded; previous work preserved in a recovery copy.".into();

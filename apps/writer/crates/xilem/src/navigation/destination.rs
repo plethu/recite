@@ -201,6 +201,7 @@ impl Writer {
         cancel: CancellationToken,
     ) -> Result<(), String> {
         self.location = location.clone();
+        self.reveal_navigation();
         self.trial.visible = location.screen == Screen::Preview;
         self.attention.leave_focus();
         self.cancel_map_gesture();

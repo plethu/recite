@@ -60,16 +60,25 @@ pub(super) fn workspace(
     ))
     .active(usize::from(!map));
     let script_stack = indexed_stack((
-        named(
-            "Script pane",
-            portal(
-                flex_row((manuscript(state, surface),))
-                    .main_axis_alignment(xilem::view::MainAxisAlignment::Center)
-                    .cross_axis_alignment(CrossAxisAlignment::Start)
-                    .width(layout.script_pane.px()),
+        flex_col((
+            super::reading::page_controls(state, surface),
+            named(
+                "Script pane",
+                super::reading::viewport::follow_page(
+                    state,
+                    portal(
+                        flex_row((manuscript(state, surface),))
+                            .main_axis_alignment(xilem::view::MainAxisAlignment::Center)
+                            .cross_axis_alignment(CrossAxisAlignment::Start)
+                            .width(layout.script_pane.px()),
+                    )
+                    .constrain_horizontal(true),
+                ),
             )
-            .constrain_horizontal(true),
-        ),
+            .flex(1.),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(8.px()),
         flex_col(()).dims((0.px(), 0.px())),
     ))
     .active(usize::from(!script));

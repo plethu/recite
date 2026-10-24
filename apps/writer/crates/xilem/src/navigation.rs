@@ -7,6 +7,7 @@ mod history;
 mod location;
 mod opening;
 mod publication;
+pub(crate) mod rail;
 mod reload;
 pub(super) mod repair;
 mod saving;

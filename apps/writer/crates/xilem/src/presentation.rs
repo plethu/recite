@@ -10,6 +10,7 @@ pub(crate) mod control_style;
 pub(crate) mod group;
 mod icons;
 pub(crate) mod identity;
+pub(crate) mod material;
 pub(crate) mod print;
 pub(crate) use icons::Icon;
 mod radio;

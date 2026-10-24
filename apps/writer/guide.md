@@ -368,10 +368,17 @@ verification.
 Freya's pane dividers preview a new width with a guide while dragging, then reflow on release.
 Escape cancels the drag. Keyboard resizing remains immediate.
 
-Large beats page their entries without flattening condition groups. Pin reference keeps a labelled
-snapshot alongside the script; Previous/Next beat retraces visits within the current scene. Project
-search matches complete words in saved lines and their document, beat and speaker context. Save
-updates the affected search index; Refresh discovers new files and refreshes the full saved context.
+Large beats page their entries without flattening condition groups. Xilem shows the entry range and
+page controls above the scrolling manuscript and below the entries. **Find in this beat** jumps
+directly to a line or reply by its wording or label, applying the current draft before leaving it.
+Page changes return to the top of the new page. Successful navigation also reveals the selected file
+and beat in the scene rail.
+
+Pin reference keeps a labelled snapshot alongside the script; Previous/Next beat retraces visits
+within the current scene. Project search matches complete words in saved lines and their document,
+beat and speaker context. Excerpts show the matching wording; selecting a frozen passage opens that
+passage directly. Unfrozen text opens its beat. Save updates the affected search index; Refresh
+discovers new files and refreshes the full saved context.
 
 Preview startup prepares catalogues and compiles on one background worker. Restart captures its
 inputs; later control edits belong to the next run. The previous page stays visible while its

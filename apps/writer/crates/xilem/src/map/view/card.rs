@@ -1,11 +1,13 @@
 //! Readable beat cards compose a native selection button and a contextual move grip.
 use super::*;
-use crate::presentation::{excerpt, print};
+use crate::presentation::{excerpt, material, print};
 use recite_writer_session::typography::FONT_UI;
 use xilem::masonry::{
+    kurbo::Rect,
     parley::style::FontWeight,
     properties::{self, BoxShadow},
 };
+use xilem::{peniko::Color, style::Padding};
 
 pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetView<Writer> + use<> {
     let block = &scene.projection.graph.blocks[index];
@@ -54,30 +56,10 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
         scene.node(index).width.px(),
         HEIGHT.px(),
     ))
-    .padding(xilem::style::Padding::all(12.px()))
-    .background_color(if selected {
-        state
-            .palette
-            .surface
-            .lerp_rect(state.palette.selection, 0.35)
-    } else {
-        state.palette.surface
-    })
-    .border_color(if selected {
-        state.palette.accent
-    } else {
-        state.palette.rule
-    })
-    .border_width(1.px())
-    .corner_radius(4.px())
-    .box_shadow(BoxShadow::new(
-        if selected {
-            state.palette.accent
-        } else {
-            state.palette.teal
-        },
-        (4., 4.),
-    ));
+    .padding(Padding::all(12.px()))
+    .background_color(Color::TRANSPARENT)
+    .border_color(Color::TRANSPARENT)
+    .border_width(0.px());
     let focus = input::input(
         input::Kind::Card {
             title: title.clone(),
@@ -94,7 +76,43 @@ pub(super) fn card(state: &Writer, scene: &Scene, index: usize) -> impl WidgetVi
             .as_ref()
             .filter(|focus| focus.beat == block.id)
             .and_then(|_| canvas::focus_request(scene)),
-    );
+    )
+    .background_color(if selected {
+        state
+            .palette
+            .surface
+            .lerp_rect(state.palette.selection, 0.35)
+    } else {
+        state.palette.surface
+    })
+    .border_color(if selected {
+        state.palette.accent
+    } else {
+        state.palette.rule
+    })
+    .border_width(0.px())
+    .corner_radius(4.px())
+    .box_shadow(BoxShadow::new(
+        if selected {
+            state.palette.accent
+        } else {
+            state.palette.teal
+        },
+        (4., 4.),
+    ))
+    .prop(properties::Dimensions::fixed(
+        scene.node(index).width.px(),
+        HEIGHT.px(),
+    ))
+    .prop(material::DotScreen::new(
+        state.palette.accent,
+        selected.then_some(Rect::new(
+            12.,
+            12.,
+            width - 12.,
+            12. + f64::from(16_f32.max(14. / zoom)) * 1.45,
+        )),
+    ));
     let grip = (selected || scene.hovered.as_deref() == Some(&block.id)).then(|| {
         placed::placed(
             Affine::translate((width - 30., 6.)),

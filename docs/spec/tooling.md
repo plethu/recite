@@ -182,6 +182,29 @@ lookup retains only its accepted query and semantic scene/beat target; each invo
 fresh location and advances the cursor only after checked navigation succeeds. Cancelling another
 lookup leaves that accepted search intact. Saved-project-text lookup does not replace it.
 
+Saved-text hits retain their frozen passage anchor when available. Both frontends open that passage
+through checked location selection; unfrozen text retains beat navigation. Excerpts centre the first
+matching prose word and remain bounded without retaining the source file. Current-beat lookup in
+Xilem searches accepted line/reply wording and labels through shared passage snapshots; pending
+field text remains outside that projection. Its case-insensitive substring matches also centre the
+visible excerpts, including partial words. Only the current result page's excerpts are prepared on
+query/page changes; unrelated renders and focus movement within that page reuse them. Activating a
+result applies the outgoing draft through the ordinary guarded navigation path and revalidates the
+destination. Search keeps its current beat and document context visible. An explicit passage reveal
+applies even when that passage already owns focus; it waits for the matching native field to mount
+and reveals the complete editor, centred in its scroll viewport where space permits. Consuming the
+request ends that reveal, so later browsing does not snap back.
+
+Successful navigation reveals the destination's file and beat pages in Xilem's bounded rail.
+Selecting a valid blank document by path or Script link opens its empty writing surface without
+inventing a beat; pending drafts and malformed source retain their ordinary navigation guards.
+Browsing another rail page remains independent until the next accepted destination. Long manuscript
+pages expose their range and controls in fixed pane chrome and below the entries, with direct
+passage lookup available while reading any part of the page. Changing the page resets its native
+scroll position while retaining continuously mounted fields and their undo history. Ordinary
+rebuilds preserve scroll position. This remains paged reading; the pinned virtual-scroll widget's
+focus and accessibility limitations preclude replacing it directly.
+
 Native project-tool screens retain the mounted writing surface and its text history. Declaration
 inspection is paged; generated schemas remain read-only. Build saved uses disk inputs, while Save
 all and build completes the shared ordered save sequence first. Build jobs and terminal polling

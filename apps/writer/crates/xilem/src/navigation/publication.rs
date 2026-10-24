@@ -163,6 +163,7 @@ impl Writer {
         self.retire_rules();
         self.reading.prepare(self.session.model());
         self.sync_map_selection();
+        self.reveal_navigation();
         self.invalidate_map();
         self.remember_location();
         self.status = "Structural edit updated. Save when ready.".into();
@@ -241,13 +242,13 @@ impl Writer {
         if let Target::CatalogueSource(intent) = &request.target {
             intent.complete(self);
         }
-        self.beat_page = 0;
         self.workspaces.screen = crate::workspaces::Screen::Write;
         if destination.is_none() {
             self.remember_location();
         }
         self.reading.prepare(self.session.model());
         self.sync_map_selection();
+        self.reveal_navigation();
         self.invalidate_map();
         if let Target::Lookup { search, .. } = &request.target {
             self.accept_lookup(search);

@@ -1,5 +1,9 @@
+use super::surface::Surface;
 use super::*;
+use crate::app::{Request, picker::Search};
 use crate::keyed::column;
+use crate::presentation::Icon;
+use crate::presentation::material;
 use crate::presentation::print;
 use crate::reading::{Content, Row};
 use recite_core::DocumentKey;
@@ -7,10 +11,11 @@ use recite_writer_model::{AnalysisStamp, RouteOwner};
 use recite_writer_session::choices::display_name;
 mod header;
 mod passage;
+pub(super) mod viewport;
 use crate::reading::PAGE;
 use xilem::{
     AnyWidgetView,
-    masonry::{kurbo::Axis, properties::ContentColor},
+    masonry::{kurbo::Axis, layout::UnitPoint, properties::ContentColor},
     style::Padding,
     view::divider,
 };
@@ -31,7 +36,15 @@ pub(super) fn repair(state: &Writer, error: &str) -> impl WidgetView<Writer> + u
 }
 pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
-        label(state.ui_scale(), "No beats yet").text_size(22. * state.ui_scale()),
+        xilem::view::zstack((
+            material::halftone(
+                state.script_width(),
+                32. * f64::from(state.ui_scale()),
+                state.palette.accent,
+            ),
+            label(state.ui_scale(), "No beats yet").text_size(22. * state.ui_scale()),
+        ))
+        .alignment(UnitPoint::TOP_LEFT),
         prose(
             state.ui_scale(),
             "Add a beat to start writing. Comments and existing source are preserved.",
@@ -195,6 +208,25 @@ fn continuation(
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
 }
+pub(super) fn page_controls(
+    state: &Writer,
+    surface: &Surface<'_>,
+) -> Option<impl WidgetView<Writer> + use<>> {
+    let pages = state.reading.rows.len().div_ceil(PAGE).max(1);
+    (pages > 1 && matches!(surface, Surface::Manuscript { .. } | Surface::Beat { .. })).then(|| {
+        flex_row((
+            pagination(state, state.reading.page.min(pages - 1), pages),
+            print::action(
+                state.ui_scale(),
+                "Find in this beat",
+                state.phase != Phase::Writing || state.navigation.busy() || state.work.busy(),
+                |state: &mut Writer| state.app_request = Some(Request::Search(Search::Passages)),
+            ),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(12.px())
+    })
+}
 fn pagination(
     state: &Writer,
     page: usize,
@@ -203,19 +235,31 @@ fn pagination(
     let closing = state.phase != Phase::Writing;
     (pages > 1).then(|| {
         flex_row((
-            text_button(
+            print::icon_action(
                 state.ui_scale(),
                 "Previous beat entries",
+                Icon::Back,
+                &state.palette,
+                closing || page == 0,
                 move |state: &mut Writer| state.reading.page = page.saturating_sub(1),
-            )
-            .disabled(closing || page == 0),
-            label(state.ui_scale(), format!("{} of {pages}", page + 1)),
-            text_button(
+            ),
+            print::meta(
+                state.ui_scale(),
+                format!(
+                    "Entries {}–{} of {}",
+                    page * PAGE + 1,
+                    ((page + 1) * PAGE).min(state.reading.rows.len()),
+                    state.reading.rows.len()
+                ),
+            ),
+            print::icon_action(
                 state.ui_scale(),
                 "Next beat entries",
+                Icon::Forward,
+                &state.palette,
+                closing || page + 1 >= pages,
                 move |state: &mut Writer| state.reading.page = (page + 1).min(pages - 1),
-            )
-            .disabled(closing || page + 1 >= pages),
+            ),
         ))
         .gap(8.px())
     })

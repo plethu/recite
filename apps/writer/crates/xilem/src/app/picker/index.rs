@@ -1,5 +1,6 @@
 //! Labels and accepted lookup inputs are captured once, not reconstructed on every render.
 use super::*;
+use crate::reading::Content;
 use recite_writer_session::commands::{self, targets};
 
 pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
@@ -48,6 +49,30 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
                 .collect())
         }
         Search::ProjectText => Ok(Vec::new()),
+        Search::Passages => Ok(writer
+            .reading
+            .rows
+            .iter()
+            .filter_map(|row| {
+                let Content::Passage { passage, number } = &row.content else {
+                    return None;
+                };
+                Some(Entry {
+                    title: format!("{} · {}", number.ordinal(), passage.label),
+                    detail: String::new(),
+                    item: Item::Passage {
+                        passage: passage.clone(),
+                        location: Location {
+                            document: writer.session.model().document().key().to_string(),
+                            beat: Some(passage.section.clone()),
+                            passage: Some(passage.id.clone()),
+                            view: Some(recite_config::WriterView::Script),
+                            ..Location::default()
+                        },
+                    },
+                })
+            })
+            .collect()),
     }
 }
 impl Picker {
@@ -64,19 +89,26 @@ impl Picker {
             self.total = results.total();
             self.entries = (0..results.len())
                 .filter_map(|index| results.get(index))
-                .map(|hit| Entry {
-                    title: format!(
+                .map(|hit| {
+                    let mut title = format!(
                         "{} · {}",
                         hit.document,
                         recite_writer_session::choices::display_name(&hit.beat)
-                    ),
-                    detail: hit.text.chars().take(120).collect(),
-                    item: Item::Location(Location {
-                        document: hit.document.to_string(),
-                        beat: Some(hit.beat.to_string()),
-                        view: Some(recite_config::WriterView::Script),
-                        ..Location::default()
-                    }),
+                    );
+                    if !hit.speaker.is_empty() {
+                        title.push_str(&format!(" · {}", hit.speaker));
+                    }
+                    Entry {
+                        title,
+                        detail: hit.excerpt(&self.query, 120),
+                        item: Item::Location(Location {
+                            document: hit.document.to_string(),
+                            beat: Some(hit.beat.to_string()),
+                            passage: hit.passage.as_ref().map(ToString::to_string),
+                            view: Some(recite_config::WriterView::Script),
+                            ..Location::default()
+                        }),
+                    }
                 })
                 .collect();
             self.matches = (0..self.entries.len()).collect();
@@ -94,14 +126,19 @@ impl Picker {
                             matches!(entry.item, Item::Command(candidate) if candidate == command)
                                 .then_some(0)
                         }
-                        None => {
-                            targets::rank(&entry.title, &self.query).or_else(|| match &entry.item {
+                        None => targets::rank(&entry.title, &self.query)
+                            .or_else(|| match &entry.item {
+                                Item::Passage { passage, .. } => {
+                                    targets::rank(&passage.text, &self.query)
+                                }
+                                _ => None,
+                            })
+                            .or_else(|| match &entry.item {
                                 Item::Destination(value) | Item::RenameBeat(value) => {
                                     targets::rank(value, &self.query)
                                 }
                                 _ => None,
-                            })
-                        }
+                            }),
                     };
                     rank.map(|rank| (rank, index))
                 })
@@ -110,5 +147,7 @@ impl Picker {
             self.matches = ranked.into_iter().map(|(_, index)| index).collect();
             self.total = self.matches.len();
         }
+        self.previews.invalidate();
+        self.prepare_previews();
     }
 }

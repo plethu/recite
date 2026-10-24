@@ -6,7 +6,7 @@ use xilem::masonry::{
     accesskit,
     core::{Widget, WidgetRef},
     kurbo::Point,
-    widgets::{Flex, SizedBox, TextArea},
+    widgets::{Flex, Portal, SizedBox, TextArea},
 };
 
 #[derive(Default)]
@@ -164,6 +164,58 @@ pub(super) fn reveal(root: &mut RenderRoot, id: WidgetId) -> bool {
         return true;
     }
     false
+}
+/// Explicit passage navigation gives the editor context without changing ordinary tabbing.
+pub(super) fn reveal_editor(root: &mut RenderRoot, id: WidgetId) {
+    if !reveal(root, id) {
+        return;
+    }
+    let Some(focused) = root.focused_widget() else {
+        return;
+    };
+    let control = focused_control(root, focused);
+    let mut widget = root.get_layer_root(0);
+    let mut viewport = None;
+    while widget.id() != control {
+        if widget.downcast::<Portal<Flex>>().is_some() {
+            viewport = Some(widget.id());
+        }
+        let Some(child) = widget
+            .children()
+            .into_iter()
+            .find(|child| child.ctx().has_focus_target())
+        else {
+            return;
+        };
+        widget = child;
+    }
+    let bounds = widget
+        .ctx()
+        .window_transform()
+        .transform_rect_bbox(widget.ctx().border_box());
+    let Some(viewport) = viewport else {
+        return;
+    };
+    let Some(portal) = root
+        .get_widget(viewport)
+        .and_then(|widget| widget.downcast::<Portal<Flex>>())
+    else {
+        return;
+    };
+    let height = portal.ctx().content_box().height();
+    let oversized = bounds.height() >= height;
+    let anchor = if oversized {
+        bounds.origin()
+    } else {
+        bounds.center()
+    };
+    let local = portal.ctx().to_local(anchor);
+    let position = portal.get_viewport_pos();
+    let top = local.y - if oversized { 0. } else { height / 2. };
+    let position = Point::new(position.x, position.y + top);
+    root.edit_widget(viewport, |mut widget| {
+        Portal::set_viewport_pos(&mut widget.downcast::<Portal<Flex>>(), position);
+    });
 }
 pub(super) fn reveal_focused(root: &mut RenderRoot) {
     if let Some(id) = root.focused_widget() {

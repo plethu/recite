@@ -16,8 +16,8 @@ fn repeated_words_across_fields_and_query_do_not_duplicate_search_hits()
     assert_eq!(count, 4);
     assert_eq!(hits.len(), 3);
     assert_eq!(hits[0].document.as_ref(), "courier.recite");
-    assert_eq!(hits[0].text, "Courier café courier.");
-    assert_eq!(hits[1].text, "Café courier.");
+    assert_eq!(hits[0].text.as_ref(), "Courier café courier.");
+    assert_eq!(hits[1].text.as_ref(), "Café courier.");
     assert_eq!(hits[2].document.as_ref(), "other.recite");
     assert_eq!(index.search("courier", 0), (4, vec![]));
     assert_eq!(index.search("courier missing", 10), (0, vec![]));
@@ -63,8 +63,11 @@ fn search_lowercasing_preserves_unicode_and_source_order() -> Result<(), Box<dyn
     let index = SearchIndex::build(&[document]);
     let (count, hits) = index.search("MIXED_CASE CAFÉ", 2);
     assert_eq!(count, 2);
-    assert_eq!(hits[0].text, "Straße CAFÉ Beacon17 and courier courier.");
-    assert_eq!(hits[1].text, "Couriers wait beside the café.");
+    assert_eq!(
+        hits[0].text.as_ref(),
+        "Straße CAFÉ Beacon17 and courier courier."
+    );
+    assert_eq!(hits[1].text.as_ref(), "Couriers wait beside the café.");
     assert_eq!(index.search("straße beacon17 COURIER", 10).0, 1);
     assert_eq!(index.search("İSTANBUL café", 10).0, 1);
     assert_eq!(index.search("istanbul", 10).0, 0);
@@ -108,7 +111,7 @@ fn shared_search_results_preserve_order_counts_and_their_saved_snapshot()
     drop(index);
     assert_eq!(snapshot.total(), 4);
     assert_eq!(
-        snapshot.get(0).ok_or("first search result")?.text,
+        snapshot.get(0).ok_or("first search result")?.text.as_ref(),
         "Café courier."
     );
     assert_eq!(
@@ -164,8 +167,8 @@ fn search_hits_share_immutable_context_without_retaining_source()
     let hits = index.search_results("courier mara", 2);
     let first = hits.get(0).ok_or("first")?;
     let second = hits.get(1).ok_or("second")?;
-    assert_eq!(first.text, "First courier.");
-    assert_eq!(second.text, "Second courier.");
+    assert_eq!(first.text.as_ref(), "First courier.");
+    assert_eq!(second.text.as_ref(), "Second courier.");
     assert!(Arc::ptr_eq(&first.document, &second.document));
     assert!(Arc::ptr_eq(&first.beat, &second.beat));
     assert!(Arc::ptr_eq(&first.speaker, &second.speaker));

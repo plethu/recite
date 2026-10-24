@@ -7,6 +7,8 @@ use xilem::{
     core::View as _,
     masonry::{core::NewWidget, testing::TestHarness, widgets::SizedBox},
 };
+#[path = "passages/tests.rs"]
+mod passages;
 #[path = "rename/tests.rs"]
 mod rename;
 

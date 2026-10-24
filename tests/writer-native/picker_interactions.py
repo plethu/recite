@@ -96,7 +96,7 @@ def run(api, bus, registry, binary, output):
                     "history forward document",
                 )
                 results["go_to_keyboard_selection_and_back_forward"] = True
-                window.act("Find project text")
+                window.workspace_action("Find project text")
                 fill(window, "Search query", "tram")
                 window.wait(
                     lambda: window.find_text("The last tram waits.x", contains=True),
@@ -108,7 +108,11 @@ def run(api, bus, registry, binary, output):
                     lambda: document_caption(window, "scene.recite", selected=True),
                     "saved text destination",
                 )
-                results["saved_project_text_opens_source_beat"] = True
+                window.wait(
+                    lambda: window.text(manuscript(window)) == "The last tram waits.x",
+                    "saved text opens its matching manuscript passage",
+                )
+                results["saved_project_text_opens_matching_passage"] = True
                 capture(output, "-writer")
                 key("p", control=True)
                 query = field(window, "Search query")
@@ -121,13 +125,13 @@ def run(api, bus, registry, binary, output):
                 )
                 key("Return")
                 window.wait(lambda: not window.find("Search query"), "lookup accepted")
-                window.focus(window.find("Go to"))
+                window.focus(window.find_action("Find scene or beat…"))
                 type_text("n")
                 window.wait(
                     lambda: document_caption(window, "zz-other.recite", selected=True),
                     "next lookup match",
                 )
-                window.focus(window.find("Go to"))
+                window.focus(window.find_action("Find scene or beat…"))
                 type_text("N")
                 window.wait(
                     lambda: document_caption(window, "scene.recite", selected=True),
@@ -139,7 +143,7 @@ def run(api, bus, registry, binary, output):
                 type_text("other")
                 key("Escape")
                 window.wait(lambda: not window.find("Search query"), "cancelled search")
-                window.focus(window.find("Go to"))
+                window.focus(window.find_action("Find scene or beat…"))
                 type_text("n")
                 window.wait(
                     lambda: document_caption(window, "zz-other.recite", selected=True),

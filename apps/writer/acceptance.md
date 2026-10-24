@@ -30,6 +30,18 @@ versus Freya's 32 ms. An earlier post-fix checkpoint recorded 18–19 ms scroll 
 remain in the index. These measure client frame readiness, not physical presentation latency or
 physical input-to-photon performance.
 
+The next refinement restores selected-card and empty-state halftone and removes the abrupt hover
+border on quiet actions. Saved-text search now shows bounded excerpts around matching words and
+opens the frozen matching passage through shared checked navigation. Xilem also searches the current
+beat, reveals accepted file/beat destinations in the paged rail, and keeps long-beat controls above
+the scrolling manuscript. Explicit passage navigation centres the editor where space permits;
+ordinary browsing retains its scroll position. Blank documents selected by path or Script link
+retain their comments and open the empty writing surface. The local evidence for this pass lives in
+`target/writer-evaluation/improvement-pass/`; it does not refresh the earlier hardware timings or
+physical-host acceptance. Search identities fit the unchanged 5.3 MB retained-index bound by using
+compact typed anchors and immutable prose storage; that is a budget result, not a claim of faster
+rendering.
+
 The final software-rendered control remains slower: Xilem's median short pans take 131–160 ms versus
 Freya's 64–80 ms, boundary pans 129–133 versus 64 ms, and scrolling 126–129 versus 27–30 ms. This is
 the current Vello/llvmpipe configuration, not an intrinsic Xilem limitation. The pinned build has no

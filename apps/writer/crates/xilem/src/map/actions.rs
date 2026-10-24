@@ -25,6 +25,7 @@ impl Writer {
                 scene.camera.zoom_to(1., scene.viewport);
             }
             scene.select(Some(beat));
+            self.reveal_rail();
         }
     }
     pub(crate) fn invalidate_map(&mut self) {
@@ -150,6 +151,7 @@ impl Writer {
         if let Some(scene) = self.map_scene_mut() {
             scene.select(Some(beat));
         }
+        self.reveal_rail();
     }
     pub(super) fn focus_map_beat(&mut self, beat: String) {
         if let Some(scene) = self.map_scene_mut()
@@ -165,6 +167,7 @@ impl Writer {
                 token: input::FocusToken::new(),
             });
         }
+        self.reveal_rail();
     }
     pub(super) fn press_map_beat(
         &mut self,

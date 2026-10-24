@@ -57,7 +57,14 @@ fn select_with_source_entry(
             model.select(view)?;
         }
     } else if model.view() == &View::Source {
-        model.show_script()?;
+        if model.has_draft() {
+            return Err(WorkbenchError::DraftPending);
+        }
+        // A valid document without beats already has the correct empty Script
+        // selection. Explicit document links must not invent a missing passage.
+        if !model.document().script_snapshot()?.is_empty() {
+            model.show_script()?;
+        }
     }
     Ok(rules)
 }

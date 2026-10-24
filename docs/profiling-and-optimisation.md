@@ -89,6 +89,16 @@ remain in force. Widget drafts share immutable Rope snapshots; contiguous access
 recovery streams the draft as the same version-1 JSON string. Applying Source drafts and serializing
 recovery still process the full text.
 
+Saved hits also retain typed frozen passage anchors for checked navigation. Anchors use Core's
+compact value storage; hit prose owns an immutable boxed string rather than spare buffer capacity.
+The same 10,000-passage cases keep the saved index below 5.3 MB. Adding navigation identity does not
+waive that bound or allow retained hits to keep an obsolete whole source file alive.
+
+Current-beat lookup shares accepted passage snapshots and prepares only its five visible excerpts
+when the query or result page changes. A 40/1,040-passage regression keeps native result mounting
+constant and checks excerpt reuse during movement within a page. Ranking still scans the beat and
+lowercases complete prose; these bounds do not establish query latency.
+
 Selecting Source shares accepted immutable bytes without allocation. Harvesting editor state retains
 the Rope snapshot until a consumer explicitly needs contiguous text; the inactive prose widget
 retains no Source text. Equal saved-baseline and discovery bytes share storage only after both
