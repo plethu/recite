@@ -23,16 +23,27 @@ across mounting boundaries and 30–33 ms for scrolling, versus Freya's 16 ms.
 
 Profiling identified repeated accessibility ancestor walks. The corrected traversal preserves the
 exposed tree and native text/selection semantics, with differential, exact-interface and fixed-cost
-regressions. The same GPU replay now records 16 ms median short/boundary pans in both frontends;
-Xilem's p95 remains 32 ms versus Freya's 17 ms, with fewer callbacks. Scrolling remains 18–19 ms
-versus 16 ms. Overview medians are 16 ms in both. These measure client frame readiness, not physical
-presentation latency or physical input-to-photon performance.
+regressions. The final signed build records 16 ms medians for short pans, mounting-boundary pans,
+scrolling and overview in both frontends. Short-pan p95 remains 32 ms in Xilem versus Freya's 17 ms,
+with fewer callbacks. Boundary and scroll p95 are 16–17 ms in both; overview p95 is 17 ms in Xilem
+versus Freya's 32 ms. An earlier post-fix checkpoint recorded 18–19 ms scroll medians; both receipts
+remain in the index. These measure client frame readiness, not physical presentation latency or
+physical input-to-photon performance.
 
-The refreshed software-rendered control remains slower: Xilem's median short pans take 161–162 ms
-versus Freya's 80 ms, boundary pans 130–148 versus 64–65 ms, and scrolling 127–144 versus 31 ms.
-Hardware and fallback results are distinct evidence. Grid batching improved low-zoom work; a custom
-hard-shadow experiment did not improve panning and was removed. The remaining timing differences and
-physical assistive-technology evidence stay open. Retain Freya for the next comparison.
+The final software-rendered control remains slower: Xilem's median short pans take 131–160 ms versus
+Freya's 64–80 ms, boundary pans 129–133 versus 64 ms, and scrolling 126–129 versus 27–30 ms. This is
+the current Vello/llvmpipe configuration, not an intrinsic Xilem limitation. The pinned build has no
+runtime CPU/Hybrid renderer switch; alternate backends require a separate feature/integration
+experiment. Hardware and fallback results are distinct evidence. Grid batching improved low-zoom
+work; a custom hard-shadow experiment did not improve panning and was removed. The remaining timing
+differences and physical assistive-technology evidence stay open. Retain Freya for the next
+comparison.
+
+Malformed duplicate beat names now retain independent native rows and their own excerpt text through
+rebuilds, culling and remounting. Removed-row messages cannot activate a replacement; ordinary beat
+identities survive source insertion. This is presentation identity only: existing ID-based
+navigation, selection and diagnostics remain authoritative. A native GPU fixture verifies both
+distinct excerpts after camera changes; the diagnosed singular footer reads “1 problem”.
 
 The paired human comparison on 2026-10-21 rejected Xilem's presentation readiness. The functional
 checks below did not establish interchangeability: Xilem still showed a form-like scaffold in place
@@ -102,11 +113,21 @@ receipts, failed attempts, source/binary identities and carried-forward baseline
 
 The earlier code checkpoint `b62c00d0` passed 1,076 instrumented Writer workspace tests and all four
 unchanged 90% production line-coverage floors; its Xilem result was 90.56%. That percentage is
-historical coverage, not a parity score or a measurement of this corrective batch. Current focused
-checks cover 336 Xilem library tests, 205 consumer tests, the adapter and exact interface ledger,
-strict lint and the refreshed Linux payload/ABI/extracted desktop links. The evidence index records
-the final combined gate separately. The all-feature Writer dependency audit remains failing as
-detailed below.
+historical coverage, not a parity score or a measurement of this corrective batch. The corrective
+batch passes 1,094 instrumented Writer tests and all four unchanged 90% floors. The final Xilem
+refresh covers 360 package tests (337 library tests), with 90.48% production line coverage. All 205
+consumer tests, adapter regressions, the exact interface ledger, strict lint and the refreshed Linux
+payload/ABI/extracted desktop links pass. Core coverage passes all six floors; all 49 viable
+critical mutants are caught, with seven unviable and no timeouts.
+
+The final combined invocation stopped at the editor-parity fixture's fresh-target 120-second
+compilation limit under two cores. Its successful fixture prefix is retained; the unchanged public
+checker passes against the warm canonical target with the original limits. Remaining integration
+owners ran separately. The native editor lane's missing tool environment was corrected through the
+normal maintainability environment. This is composed verification, not a passing original combined
+invocation. The all-feature Writer dependency audit remains failing as detailed below; no timeout,
+resource, coverage or dependency-policy budget was raised. The evidence index binds each result to
+its source and binary.
 
 Diagnostic renders and workflow receipts do not establish physical input, assistive-technology
 usability, installed-host lifecycle acceptance or a passing dependency policy. Both frontends remain
@@ -341,7 +362,8 @@ Xilem avoids Skia and Freya's default image codecs, including AVIF. On Linux it 
 macOS retains `paste` through Metal. SVG/font maintenance findings remain on all three desktop
 targets, and Linux retains the D-Bus findings. The combined all-feature audit remains the enforced
 gate. The NCSA finding belongs to a conditional fuzzing dependency in the AVIF graph, not to a
-fuzzer shipped in the runtime.
+fuzzer shipped in the runtime. The combined audit also exposes the shared image dependency through
+Masonry's testing path; that path does not establish a production AVIF dependency for Xilem.
 
 The font finding also reaches Xilem through winit's Linux window-decoration graph. The D-Bus
 findings span AccessKit, portals and desktop preferences; replacing one crate does not migrate all

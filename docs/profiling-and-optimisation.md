@@ -174,6 +174,11 @@ accessibility polling and profilers outside fair timing segments. Wayland surfac
 measure client frame readiness, not physical presentation or input-to-photon latency. Reconcile both
 software and hardware results before attributing a reported interaction regression.
 
+Distinguish a renderer configuration from a framework limitation. The pinned Writer selects its
+Masonry imaging backend at compile time; WGPU adapter/API variables do not turn Vello/llvmpipe into
+a CPU or Hybrid backend. An alternate backend needs its own compatible feature/integration
+experiment and equivalent output, accessibility and timing checks.
+
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is memoized independently of camera and hover. Content refresh derives current connections
 and labels, and reuses geometry when ordered beat IDs and entry flags, ordered connection endpoints
