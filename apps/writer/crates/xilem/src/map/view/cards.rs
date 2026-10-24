@@ -1,5 +1,6 @@
 //! Visible cards retain their native identity when panning changes mount membership.
 use crate::Writer;
+use recite_writer_session::map::topology::Topology;
 use std::collections::BTreeMap;
 use xilem::{
     Pod, ViewCtx, WidgetView,
@@ -8,9 +9,30 @@ use xilem::{
 };
 
 pub(super) struct Cards<V> {
-    children: Vec<(String, V)>,
+    children: Vec<(CardKey, V)>,
 }
-pub(super) fn cards<V>(children: Vec<(String, V)>) -> Cards<V> {
+/// Valid beats retain their identity across source insertions. A shadowed row's
+/// source index disambiguates malformed duplicates only within that projection;
+/// this key never authorizes navigation or mutation.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(super) enum CardKey {
+    Beat(String),
+    Duplicate { beat: String, source_index: usize },
+}
+pub(super) fn key(graph: &Topology, index: usize) -> CardKey {
+    let beat = graph.blocks[index].id.clone();
+    if graph.ids.get(&beat) == Some(&index) {
+        CardKey::Beat(beat)
+    } else {
+        CardKey::Duplicate {
+            beat,
+            source_index: index,
+        }
+    }
+}
+#[cfg(test)]
+mod tests;
+pub(super) fn cards<V>(children: Vec<(CardKey, V)>) -> Cards<V> {
     Cards { children }
 }
 pub(super) struct Local<T> {
@@ -18,7 +40,7 @@ pub(super) struct Local<T> {
     next: ViewId,
 }
 struct Entry<T> {
-    beat: String,
+    key: CardKey,
     id: ViewId,
     state: T,
 }
@@ -39,12 +61,12 @@ impl<V: WidgetView<Writer>> View<Writer, (), ViewCtx> for Cards<V> {
             entries: Vec::with_capacity(self.children.len()),
             next: ViewId::new(0),
         };
-        for (beat, view) in &self.children {
+        for (key, view) in &self.children {
             let id = local.allocate();
             let (child, state) = ctx.with_id(id, |ctx| view.build(ctx, writer));
             widget = widget.with(child.new_widget, UnitPoint::TOP_LEFT);
             local.entries.push(Entry {
-                beat: beat.clone(),
+                key: key.clone(),
                 id,
                 state,
             });
@@ -62,24 +84,24 @@ impl<V: WidgetView<Writer>> View<Writer, (), ViewCtx> for Cards<V> {
         let previous: BTreeMap<_, _> = previous
             .children
             .iter()
-            .map(|(beat, view)| (beat, view))
+            .map(|(key, view)| (key, view))
             .collect();
         let mut positions: BTreeMap<_, _> = local
             .entries
             .iter()
             .enumerate()
-            .map(|(index, entry)| (entry.beat.clone(), index))
+            .map(|(index, entry)| (entry.key.clone(), index))
             .collect();
         // Append/swap avoids shifting every native child when visibility changes.
         // Lookups scale with mounted cards, rather than the complete source graph.
-        for (index, (beat, view)) in self.children.iter().enumerate() {
-            let existing = positions.get(beat).copied();
+        for (index, (key, view)) in self.children.iter().enumerate() {
+            let existing = positions.get(key).copied();
             let old = existing.unwrap_or_else(|| {
                 let id = local.allocate();
                 let (child, state) = ctx.with_id(id, |ctx| view.build(ctx, writer));
                 ZStack::add(&mut widget, child.new_widget, UnitPoint::TOP_LEFT);
                 local.entries.push(Entry {
-                    beat: beat.clone(),
+                    key: key.clone(),
                     id,
                     state,
                 });
@@ -88,11 +110,11 @@ impl<V: WidgetView<Writer>> View<Writer, (), ViewCtx> for Cards<V> {
             if old != index {
                 ZStack::swap(&mut widget, old, index);
                 local.entries.swap(old, index);
-                positions.insert(local.entries[old].beat.clone(), old);
+                positions.insert(local.entries[old].key.clone(), old);
             }
-            positions.insert(beat.clone(), index);
+            positions.insert(key.clone(), index);
             if existing.is_some()
-                && let Some(previous) = previous.get(beat)
+                && let Some(previous) = previous.get(key)
             {
                 let entry = &mut local.entries[index];
                 ctx.with_id(entry.id, |ctx| {
@@ -109,7 +131,7 @@ impl<V: WidgetView<Writer>> View<Writer, (), ViewCtx> for Cards<V> {
         while local.entries.len() > self.children.len() {
             let index = local.entries.len() - 1;
             let entry = &mut local.entries[index];
-            if let Some(view) = previous.get(&entry.beat) {
+            if let Some(view) = previous.get(&entry.key) {
                 ctx.with_id(entry.id, |ctx| {
                     view.teardown(
                         &mut entry.state,

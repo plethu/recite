@@ -19,7 +19,7 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
                     .into(),
             );
             (
-                scene.projection.graph.blocks[index].id.clone(),
+                super::cards::key(&scene.projection.graph, index),
                 placed::placed(transform, card::card(state, scene, index)),
             )
         })
