@@ -1,3 +1,4 @@
+use compact_str::CompactString;
 use std::fmt;
 use std::hash::{BuildHasher, Hasher};
 
@@ -81,13 +82,13 @@ impl SourceId {
 /// excluded because localisation variants, PO context prefixes and future pack
 /// qualifiers use them as separators.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct StableId(String);
+pub struct StableId(CompactString);
 
 impl StableId {
     pub fn new(value: impl Into<String>) -> Result<Self, CoreValueError> {
         let value = value.into();
         if is_valid_stable_id(&value) {
-            Ok(Self(value))
+            Ok(Self(CompactString::from(value)))
         } else {
             Err(CoreValueError::InvalidValue {
                 kind: "StableId",
@@ -100,6 +101,7 @@ impl StableId {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
 }
 
 impl fmt::Display for StableId {
@@ -137,7 +139,7 @@ impl StableIdGenerator {
     pub fn next_id(&mut self) -> StableId {
         let letters = STABLE_ID_LETTERS.len() as u64;
         let mut bits = self.next_u64();
-        let mut id = String::with_capacity(GENERATED_STABLE_ID_LEN);
+        let mut id = CompactString::with_capacity(GENERATED_STABLE_ID_LEN);
         id.push(char::from(STABLE_ID_LETTERS[(bits % letters) as usize]));
         bits /= letters;
         for _ in 1..GENERATED_STABLE_ID_LEN {
