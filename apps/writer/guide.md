@@ -105,6 +105,11 @@ names and beat IDs. Search cancellation returns focus to the invoking control. I
 editor, Ctrl+Space opens completion candidates, arrows select, Enter accepts a selected result, and
 Escape dismisses. Tab keeps its ordinary editor behaviour.
 
+Map zoom is independent of UI scale: 100% keeps the same card geometry when controls grow. In short
+windows, **Map tools** discloses search, arrangement and help while leaving room to pan. Selecting
+**Script** leaves keyboard focus on its selector; click or Tab into prose to edit it. **Project →
+Read beat** leaves the admitted field through the usual checked draft transition.
+
 Map placement is saved with personal preferences and never changes source order or conversation
 flow. Corrupt or future layout files are left untouched and reported. Renaming a beat preserves its
 placement through its first stable line ID; effects-only beats use their block name.

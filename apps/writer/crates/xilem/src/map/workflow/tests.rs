@@ -1,9 +1,62 @@
 use super::*;
 use crate::{keyed::keyed, tests::support::mounted::Mounted};
+use xilem::masonry::{accesskit::Role, core::WindowEvent};
 use xilem::{WidgetView, masonry::widgets::Passthrough};
 
 fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
     keyed((), crate::view::writer(writer))
+}
+
+#[test]
+fn short_enlarged_workspace_keeps_camera_controls_and_discloses_secondary_tools() {
+    let mut fixture = fixture().unwrap();
+    fixture.writer.viewport.width = 960.;
+    fixture.writer.viewport.height = 461.;
+    let mut config = fixture.writer.config.clone();
+    config.writer.presentation = config
+        .writer
+        .presentation
+        .with_value(recite_config::WriterPresentationField::UiScale, 200)
+        .unwrap();
+    fixture.writer.configure(config);
+    let original = fixture
+        .writer
+        .session
+        .model()
+        .document()
+        .source()
+        .to_owned();
+    let mut mounted = Mounted::new(fixture.writer, surface);
+    mounted
+        .harness
+        .process_window_event(WindowEvent::Resize((960, 461).into()));
+    mounted.settle();
+    let bounds = |name| {
+        let widget = mounted.harness.get_widget_with_id(mounted.find(name));
+        widget
+            .ctx()
+            .window_transform()
+            .transform_rect_bbox(widget.ctx().border_box())
+    };
+    assert_eq!(
+        bounds("Split").intersect(bounds("Try scene")).area(),
+        0.,
+        "mode and scene actions must not overlap"
+    );
+    assert!(
+        mounted.state.map.scene(&mounted.state).unwrap().viewport.1 >= 120.,
+        "compact controls must leave a usable logical canvas"
+    );
+    let fit = bounds("Fit");
+    assert!(fit.x0 >= 0. && fit.x1 <= 960. && fit.y1 <= 461.);
+    mounted.activate("Map tools");
+    mounted.find("Find a beat");
+    mounted.find("Arrange");
+    mounted.activate("Help");
+    assert!(mounted.state.map.scene(&mounted.state).unwrap().tools == Tools::Help);
+    mounted.activate("Hide map tools");
+    assert!(mounted.state.map.scene(&mounted.state).unwrap().tools == Tools::Closed);
+    assert_eq!(mounted.state.session.model().document().source(), original);
 }
 
 #[test]
@@ -57,8 +110,7 @@ fn mounted_map_controls_frame_the_scene_without_mutating_source_or_authoring_his
     let identity = mounted.state.prepare_map(Purpose::Placement).scene;
     assert!(!load(&file, &identity).unwrap().is_empty());
     mounted.settle();
-    mounted.activate("Map actions");
-    mounted.activate("Arrange automatically");
+    mounted.activate("Arrange");
     support::finish_navigation(&mut mounted.state, &mut jobs).unwrap();
     assert!(load(&file, &identity).unwrap().is_empty());
     assert!(
@@ -91,4 +143,35 @@ fn mounted_map_controls_frame_the_scene_without_mutating_source_or_authoring_his
         std::fs::read_to_string(fixture.directory.path().join("scene.recite")).unwrap(),
         source
     );
+}
+
+#[test]
+fn map_search_reveals_a_named_beat_and_keeps_native_typing_focus() {
+    let fixture = fixture().unwrap();
+    let mut mounted = Mounted::new(fixture.writer, surface);
+    let field = mounted.find("Find a beat");
+    mounted.type_text("Find a beat", "Later");
+    assert_eq!(mounted.state.map_selected(), Some("later"));
+    let tree = mounted.harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let mut selected = vec![];
+    while let Some(node) = pending.pop() {
+        if node.role() == Role::ListItem && node.is_selected() == Some(true) {
+            selected.push(node.label().unwrap_or_default());
+        }
+        pending.extend(node.children());
+    }
+    assert_eq!(selected, ["Later · end"]);
+    assert_eq!(mounted.find("Find a beat"), field);
+    assert!(
+        mounted
+            .state
+            .map
+            .scene(&mounted.state)
+            .unwrap()
+            .focus
+            .is_none()
+    );
+    assert_eq!(mounted.state.session.model().document().source(), SOURCE);
+    assert!(!mounted.state.session.model().document().can_undo());
 }

@@ -129,6 +129,22 @@ paths, and restores a readable focused card on selection. Focus requests reveal 
 through the outer scroll container. Collapsing focused cards transfers focus to the persistent map
 viewport.
 
+Map camera zoom alone converts world geometry to logical viewport coordinates; personal UI scale
+changes controls, not card placement or pan distance. Operating-system DPI remains the native
+window's coordinate conversion. Short windows disclose secondary Map tools to preserve the canvas.
+Detail cards retain native identity as viewport membership changes. Their selectable list items
+publish selected state while ordinary child buttons retain activation and keyboard focus. The
+current Linux adapter exposes the item state/action, not a container Selection interface. Synopsis
+labels abbreviate to a bounded number of visual lines while preserving their complete native
+accessibility text. The clamped layout is reused during camera translation.
+
+An admitted manuscript passage owns draft validation independently of native focus. Selecting Script
+does not itself request passage focus; explicit passage navigation and structural creation do. Clean
+editor context follows actual field focus, while unapplied draft/error context survives blur. Read
+beat remains a stable Project-menu command and keeps checked Apply semantics. Refused field focus
+explicitly restores the admitted passage or clears prose focus when none is admitted. Closing a
+picker restores a live origin or an admitted field; it never selects an arbitrary writing field.
+
 Both frontends use the same personal configuration, palette and command wording. Xilem's welcome,
 temporary examples and project creation use shared launch/session owners. Its personal settings
 apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
@@ -147,8 +163,10 @@ authority; failed observations quarantine it, and cancellation cannot erase obse
 Configured native shortcuts use the same validated chord matcher in both frontends. Xilem routes
 commands before text input, retains native text undo/redo, and scopes Apply to the focused
 manuscript. Composition bypasses application shortcuts; document, screen and binding changes
-invalidate queued commands. Unbound Control/Meta chords cannot become literal text. This does not
-establish physical IME or keyboard-layout acceptance on every platform.
+invalidate queued commands. Focus acknowledgements refresh native context independently of command
+freshness, preserving a queued Save for the same admitted document. Unbound Control/Meta chords
+cannot become literal text. This does not establish physical IME or keyboard-layout acceptance on
+every platform.
 
 Writing Focus overlays the selected workspace without replacing its manuscript widgets or native
 text history. Leaving Focus restores and reveals the previous valid native focus target, with a

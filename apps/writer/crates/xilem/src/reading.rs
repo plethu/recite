@@ -51,6 +51,7 @@ pub(super) struct Reading {
     pub rows: Arc<[Row]>,
     pub selected_row: Option<usize>,
     pub replies: usize,
+    pub is_default: bool,
     pub position: Option<BeatPosition>,
     pub error: Option<String>,
     pub page: usize,
@@ -74,6 +75,7 @@ impl Reading {
             rows: Arc::from([]),
             selected_row: None,
             replies: 0,
+            is_default: false,
             position: None,
             error: None,
             page: 0,
@@ -101,6 +103,7 @@ impl Reading {
             self.page = 0;
             self.view = None;
             self.position = None;
+            self.is_default = false;
         }
         if self.view.as_ref() == Some(model.view()) {
             return;
@@ -121,6 +124,12 @@ impl Reading {
         if self.block.as_ref() != Some(id) {
             self.block = Some(id.clone());
             self.page = 0;
+            self.is_default = self
+                .script
+                .as_ref()
+                .ok()
+                .and_then(|blocks| blocks.iter().find(|block| &block.id == id))
+                .is_some_and(|block| block.is_default);
             self.position = self.script.as_ref().ok().and_then(|blocks| {
                 blocks
                     .iter()

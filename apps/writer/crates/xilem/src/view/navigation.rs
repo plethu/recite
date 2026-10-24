@@ -1,11 +1,21 @@
 use super::*;
+use crate::app::Request;
+use crate::app::picker::Search;
 use crate::attention::{Pane, Region};
+use crate::map::Workspace;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::{group::named, print};
-use crate::{app::picker::Search, map::Workspace};
 use recite_writer_session::choices::display_name;
+use xilem::masonry::parley::style::FontWeight;
 use xilem::masonry::properties::LineBreaking;
 use xilem::view::{button, portal};
+use xilem::{
+    masonry::{
+        imaging::Painter,
+        kurbo::{Affine, BezPath},
+    },
+    view::canvas,
+};
 const PAGE: usize = 8;
 const UNPAGED: usize = 12;
 
@@ -19,7 +29,8 @@ pub(super) fn navigation(state: &Writer) -> impl WidgetView<Writer> + use<> {
         "Scene navigation",
         portal(
             flex_col((
-                (state.visible_workspace() != Workspace::Map).then(|| search_controls(state)),
+                print::caps(state.ui_scale(), "SCENES").color(state.palette.muted),
+                search_controls(state),
                 documents,
                 outline(state),
             ))
@@ -40,14 +51,14 @@ fn search_controls(state: &Writer) -> impl WidgetView<Writer> + use<> {
             label(state.ui_scale(), "Search project words…")
                 .prop(LineBreaking::WordWrap)
                 .width((state.drawer_width() - 48.).px()),
-            |state: &mut Writer| state.pending_search = Some(Search::ProjectText),
+            |state: &mut Writer| state.app_request = Some(Request::Search(Search::ProjectText)),
         )
         .disabled(blocked || state.session.project().is_none()),
         button(
             label(state.ui_scale(), "Find scene or beat…")
                 .prop(LineBreaking::WordWrap)
                 .width((state.drawer_width() - 48.).px()),
-            |state: &mut Writer| state.pending_search = Some(Search::GoTo),
+            |state: &mut Writer| state.app_request = Some(Request::Search(Search::GoTo)),
         )
         .disabled(blocked),
     ))
@@ -58,18 +69,13 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.project_action_blocked();
     const FILE_PAGE: usize = 4;
-    let pages = state
+    let documents = state
         .session
         .project()
-        .map_or(&[][..], |project| project.documents())
-        .len()
-        .div_ceil(FILE_PAGE)
-        .max(1);
+        .map_or(&[][..], |project| project.documents());
+    let pages = documents.len().div_ceil(FILE_PAGE).max(1);
     let page = state.file_page.min(pages - 1);
-    let files = state
-        .session
-        .project()
-        .map_or(&[][..], |project| project.documents())
+    let files = documents
         .iter()
         .skip(page * FILE_PAGE)
         .take(FILE_PAGE)
@@ -82,26 +88,38 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
                     .any(|session| session.path() == path && session.dirty())
             });
             let current = project.is_some_and(|project| project.current().path() == path);
+            let key = document.key.as_str();
+            let basename = key.rsplit('/').next().unwrap_or(key);
+            let title = display_name(basename);
+            let ambiguous = documents.iter().any(|other| {
+                other.key != document.key
+                    && other
+                        .key
+                        .as_str()
+                        .rsplit('/')
+                        .next()
+                        .map(display_name)
+                        .as_deref()
+                        == Some(title.as_str())
+            });
+            let caption = if ambiguous {
+                format!("{title} · {key}")
+            } else {
+                title
+            };
             styled(
                 ControlStyle::Navigation,
                 button(
                     label(
                         scale,
                         format!(
-                            "{}{} · {}{}",
+                            "{}{}{}",
                             if current { "▾ " } else { "▸ " },
-                            display_name(
-                                document
-                                    .key
-                                    .as_str()
-                                    .rsplit('/')
-                                    .next()
-                                    .unwrap_or(document.key.as_str())
-                            ),
-                            document.key,
+                            caption,
                             if dirty { " · Unsaved" } else { "" }
                         ),
                     )
+                    .weight(FontWeight::SEMI_BOLD)
                     .color(if current {
                         state.palette.accent
                     } else {
@@ -117,7 +135,6 @@ fn project_files(state: &Writer) -> impl WidgetView<Writer> + use<> {
         })
         .collect::<Vec<_>>();
     flex_col((
-        print::caps(scale, "SCENES").color(state.palette.muted),
         state.session.checked_out().then(|| {
             let key = state.session.model().document().key().to_string();
             label(
@@ -174,32 +191,44 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     };
     let pages = blocks.len().div_ceil(page_size).max(1);
     let page = state.beat_page.min(pages - 1);
+    let selected = if state.visible_workspace() == Workspace::Map {
+        state.map_selected()
+    } else {
+        state.reading.selected.as_deref()
+    };
     let entries = blocks
         .iter()
         .skip(page * page_size)
         .take(page_size)
         .map(|block| {
             let id = block.id().to_string();
-            let current = state.reading.selected.as_deref() == Some(&id);
+            let current = selected == Some(id.as_str());
             styled(
                 ControlStyle::Navigation,
                 button(
-                    label(
-                        scale,
-                        format!(
-                            "{}{}{}{}",
-                            if current { "◆ " } else { "" },
-                            if block.is_default() { "Start · " } else { "" },
-                            display_name(&id),
-                            if block.has_end_destination() {
-                                " · end"
-                            } else {
-                                ""
-                            }
-                        ),
-                    )
-                    .prop(LineBreaking::WordWrap)
-                    .width((state.drawer_width() - 48.).px()),
+                    outline_caption(
+                        state,
+                        current,
+                        label(
+                            scale,
+                            format!(
+                                "{}{}{}",
+                                if block.is_default() { "Start · " } else { "" },
+                                display_name(&id),
+                                if block.has_end_destination() {
+                                    " · end"
+                                } else {
+                                    ""
+                                }
+                            ),
+                        )
+                        .weight(if current {
+                            FontWeight::SEMI_BOLD
+                        } else {
+                            FontWeight::NORMAL
+                        })
+                        .prop(LineBreaking::WordWrap),
+                    ),
                     move |state: &mut Writer| state.inspect(id.clone()),
                 )
                 .disabled(closing)
@@ -232,6 +261,39 @@ fn outline(state: &Writer) -> impl WidgetView<Writer> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
+}
+
+fn outline_caption<V: WidgetView<Writer, Widget: Sized>>(
+    state: &Writer,
+    current: bool,
+    text: V,
+) -> impl WidgetView<Writer> + use<V> {
+    let scale = f64::from(state.ui_scale());
+    let teal = state.palette.teal;
+    let marker = 12. * scale + 8.;
+    let text = text.width((state.drawer_width() - 48. - if current { marker } else { 0. }).px());
+    if !current {
+        return Either::B(text.padding(xilem::style::Padding::left(marker.px())));
+    }
+    Either::A(
+        flex_row((
+            canvas(move |_: &mut Writer, _, recording, _| {
+                let mut diamond = BezPath::new();
+                diamond.move_to((6., 1.));
+                diamond.line_to((11., 6.));
+                diamond.line_to((6., 11.));
+                diamond.line_to((1., 6.));
+                diamond.close_path();
+                Painter::new(recording)
+                    .fill(diamond, teal)
+                    .transform(Affine::scale(scale))
+                    .draw();
+            })
+            .dims(((12. * scale).px(), (12. * scale).px())),
+            text,
+        ))
+        .gap(8.px()),
+    )
 }
 
 fn examples(state: &Writer) -> impl WidgetView<Writer> + use<> {

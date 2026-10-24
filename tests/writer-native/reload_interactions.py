@@ -36,7 +36,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(
                     lambda: window.text(manuscript(window)) == "The tram has left.", "disk adoption"
                 )
-                window.wait(lambda: window.enabled("Save file"), "reload action completed")
+                window.wait(lambda: window.enabled("Save"), "reload action completed")
                 results["reload_seconds"] = time.monotonic() - started
                 copies = list(project.glob(".recite-recovered-*.json"))
                 assert len(copies) == 1

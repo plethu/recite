@@ -10,6 +10,7 @@ use tokio::sync::mpsc;
 use xilem::{
     WidgetView,
     masonry::{
+        accesskit::Role,
         core::{PointerButton, WindowEvent},
         kurbo::{Point, Rect},
         widgets::{Passthrough, SizedBox, TextArea},
@@ -43,6 +44,32 @@ fn painted_menu(mounted: &Mounted<App, impl WidgetView<App, Widget = Passthrough
     panic!("painted document action panel");
 }
 
+fn compact_mode_border(
+    mounted: &Mounted<App, impl WidgetView<App, Widget = Passthrough>>,
+    scale: u16,
+) {
+    let tree = mounted.harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    while let Some(node) = pending.pop() {
+        if node.role() == Role::RadioGroup {
+            let mut children: Vec<_> = node.children().collect();
+            while let Some(child) = children.pop() {
+                if child.role() == Role::RadioButton && child.label().as_deref() == Some("Split") {
+                    assert!(
+                        node.bounding_box().unwrap().x1
+                            <= child.bounding_box().unwrap().x1 + 8. * f64::from(scale),
+                        "mode border must end at its last segment, outside the flexible toolbar space"
+                    );
+                    return;
+                }
+                children.extend(child.children());
+            }
+        }
+        pending.extend(node.children());
+    }
+    panic!("writing mode group");
+}
+
 #[test]
 fn allocated_window_bounds_control_reflow_and_keep_the_manuscript_across_panes() {
     for scale in [100, 200] {
@@ -70,7 +97,13 @@ fn allocated_window_bounds_control_reflow_and_keep_the_manuscript_across_panes()
         mounted.harness.set_default_properties(properties);
         mounted.settle();
         let field = mounted.find("Manuscript");
-        for size in [(900, 650), (1280, 720), (2040, 1230), (900, 650)] {
+        for size in [
+            (900, 650),
+            (960, 503),
+            (1280, 720),
+            (2040, 1230),
+            (900, 650),
+        ] {
             mounted
                 .harness
                 .process_window_event(WindowEvent::Resize(size.into()));
@@ -83,7 +116,14 @@ fn allocated_window_bounds_control_reflow_and_keep_the_manuscript_across_panes()
             for workspace in [Workspace::Map, Workspace::Split, Workspace::Script] {
                 mounted.state.writer.as_mut().unwrap().map.workspace = workspace;
                 mounted.settle();
-                for title in ["Commands", "Workspace", "Document actions ⋯", "Copy link"] {
+                compact_mode_border(&mounted, scale);
+                if size.0 == 2040 && workspace == Workspace::Split {
+                    assert!(
+                        mounted.contains_text("Scene map"),
+                        "enlarged Split must retain its graph"
+                    );
+                }
+                for title in ["Commands", "Workspace", "Project", "Copy link"] {
                     let control = mounted.harness.get_widget_with_id(mounted.find(title));
                     let bounds = control
                         .ctx()
@@ -103,6 +143,17 @@ fn allocated_window_bounds_control_reflow_and_keep_the_manuscript_across_panes()
                         .downcast::<TextArea<true>>()
                         .is_some()
                 );
+                if workspace == Workspace::Script {
+                    let control = mounted.harness.get_widget_with_id(field);
+                    let bounds = control
+                        .ctx()
+                        .window_transform()
+                        .transform_rect_bbox(control.ctx().border_box());
+                    assert!(
+                        bounds.y0 < f64::from(size.1) - 40.,
+                        "initial prose must remain visible, {size:?}, {scale}%: {bounds:?}"
+                    );
+                }
             }
             assert_eq!(mounted.find("Manuscript"), field);
         }
@@ -136,7 +187,7 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
             .get_widget_with_id(field)
             .ctx()
             .window_transform();
-        mounted.activate("Document actions ⋯");
+        mounted.activate("Project");
         assert!(
             mounted
                 .state
@@ -184,7 +235,7 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
             .get_widget_with_id(mounted.find(if scale == 100 {
                 "Find scene or beat…"
             } else {
-                "Go to scene"
+                "Scenes…"
             }));
         let bounds = outside
             .ctx()
@@ -227,7 +278,7 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
                 .harness
                 .process_window_event(WindowEvent::Resize((width, 720).into()));
             mounted.settle();
-            mounted.activate("Document actions ⋯");
+            mounted.activate("Project");
             for label in ["Save file", "Save all", "Focus writing", "Close"] {
                 let control = mounted.harness.get_widget_with_id(mounted.find(label));
                 let bounds = control

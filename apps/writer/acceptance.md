@@ -4,6 +4,36 @@ Writer is a preview. Native authoring, accessibility, and installed-package acce
 host evidence. Automated tests and captured renders do not establish physical input, screen-reader
 usability, GPU performance, or cross-platform support.
 
+The next human comparison on 2026-10-22 also rejected Map presentation readiness. The follow-up
+restores the accepted compact shell, scene rail, dotted canvas, card hierarchy and connection ink.
+Fresh review inspected 22 matched Relay Hub renders: Map, Script, Split and lower camera zooms at
+100%, wide Map/Script/Split at 200%, and narrow Map/Script at 200%. It closed the original scaffold
+and subsequent composition findings. Matches use the same unmodified fixture, viewport, scale and
+actual Script selector. An earlier helper had opened Freya's Split view instead; that pair cannot
+establish Script fidelity. Remaining differences include paper texture, some icon/menu cues and more
+generous 200% reply spacing. These results remain scoped visual evidence, not replacement readiness.
+
+The reported panning gap was measurable on the Radeon 860M GPU. The private compositor's default
+software renderer initially forced the client onto software rendering; the sandbox's missing
+`/dev/dri` did not describe the bounded runner, which can use the GPU. Matched optimized builds now
+run under an owned GPU compositor with client render-device use verified. Each frontend replays 180
+events at 120 Hz, twice in counterbalanced order, under two logical cores and a 6 GiB memory
+ceiling. Xilem initially recorded median frame-callback intervals of 48 ms for short pans, 32 ms
+across mounting boundaries and 30–33 ms for scrolling, versus Freya's 16 ms.
+
+Profiling identified repeated accessibility ancestor walks. The corrected traversal preserves the
+exposed tree and native text/selection semantics, with differential, exact-interface and fixed-cost
+regressions. The same GPU replay now records 16 ms median short/boundary pans in both frontends;
+Xilem's p95 remains 32 ms versus Freya's 17 ms, with fewer callbacks. Scrolling remains 18–19 ms
+versus 16 ms. Overview medians are 16 ms in both. These measure client frame readiness, not physical
+presentation latency or physical input-to-photon performance.
+
+The refreshed software-rendered control remains slower: Xilem's median short pans take 161–162 ms
+versus Freya's 80 ms, boundary pans 130–148 versus 64–65 ms, and scrolling 127–144 versus 31 ms.
+Hardware and fallback results are distinct evidence. Grid batching improved low-zoom work; a custom
+hard-shadow experiment did not improve panning and was removed. The remaining timing differences and
+physical assistive-technology evidence stay open. Retain Freya for the next comparison.
+
 The paired human comparison on 2026-10-21 rejected Xilem's presentation readiness. The functional
 checks below did not establish interchangeability: Xilem still showed a form-like scaffold in place
 of Freya's fixed scene rail, compact toolbar and whole-beat manuscript with inline editing. The
@@ -70,12 +100,13 @@ the complete header and focused result button bounds.
 The local evidence index is `target/writer-evaluation/retirement-evidence.md`. It names completed
 receipts, failed attempts, source/binary identities and carried-forward baseline evidence.
 
-The final code checkpoint `b62c00d0` passes 1,076 instrumented Writer workspace tests and all four
-unchanged 90% production line-coverage floors; Xilem reaches 90.56%. Strict Xilem lint and the
-refreshed Linux package's payload, ABI and extracted desktop-link checks also pass. Repository
-coverage, critical mutations and the combined project gate passed at the preceding core checkpoint,
-whose inputs remain unchanged. The final UI changes received focused tests and lint. The separate
-all-feature Writer dependency audit remains failing as detailed below.
+The earlier code checkpoint `b62c00d0` passed 1,076 instrumented Writer workspace tests and all four
+unchanged 90% production line-coverage floors; its Xilem result was 90.56%. That percentage is
+historical coverage, not a parity score or a measurement of this corrective batch. Current focused
+checks cover 336 Xilem library tests, 205 consumer tests, the adapter and exact interface ledger,
+strict lint and the refreshed Linux payload/ABI/extracted desktop links. The evidence index records
+the final combined gate separately. The all-feature Writer dependency audit remains failing as
+detailed below.
 
 Diagnostic renders and workflow receipts do not establish physical input, assistive-technology
 usability, installed-host lifecycle acceptance or a passing dependency policy. Both frontends remain

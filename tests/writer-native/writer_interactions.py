@@ -27,7 +27,9 @@ def launch(api, bus, registry, arguments, log, manuscript=True):
 
     window = attach(api, bus, registry, process)
     if not manuscript:
-        window.reveal_start("Open in editor")
+        window.wait(
+            lambda: window.find("Project") or window.find("Open in editor"), "native writer tools"
+        )
         return process, window, None
     node = window.wait(
         lambda: next(
@@ -170,10 +172,10 @@ def run(api, bus, registry, binary, output):
                 subprocess.run(["wl-copy", "--", incoming], check=True, timeout=3)
                 key("v", control=True)
                 window.wait(lambda: window.text(node) == incoming, "Unicode paste")
-                window.act("Save file")
+                window.act("Save")
                 window.wait(lambda: incoming in source.read_text(), "checked native save")
                 results["unicode_paste_and_save"] = True
-                window.wait(lambda: window.enabled("Save file"), "durable save completion")
+                window.wait(lambda: window.enabled("Save"), "durable save completion")
                 key("a", control=True)
                 type_text("An unapplied Writer draft.")
                 window.wait(
@@ -181,7 +183,7 @@ def run(api, bus, registry, binary, output):
                 )
                 node = project_exercise(window, "An unapplied Writer draft.", results)
                 capture(output, "-documents")
-                window.act("Open in editor")
+                window.document_action("Open in editor")
                 window.wait(
                     lambda: "# Owned external edit" in source.read_text(), "owned editor completion"
                 )
@@ -202,12 +204,12 @@ def run(api, bus, registry, binary, output):
                 key("End", control=True)
                 type_text("x")
                 window.wait(lambda: window.text(node) == incoming + "x", "closing draft")
-                save_control = window.find_action("Save file")
-                assert window.enabled("Save file")
+                save_control = window.find_action("Save")
+                assert window.enabled("Save")
                 saved_before_close = source.read_text()
                 window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "close guard")
-                assert window.find("Save file") is None
+                assert window.find("Save") is None
                 try:
                     window.call(save_control, "Action", "DoAction", api.GLib.Variant("(i)", (0,)))
                 except api.GLib.Error:
@@ -218,7 +220,7 @@ def run(api, bus, registry, binary, output):
                 results["close_choice_keyboard_focus"] = True
                 key("Return")
                 window.wait(lambda: not window.find("Keep editing"), "cancel closing")
-                window.wait(lambda: window.enabled("Save file"), "save enabled after cancel")
+                window.wait(lambda: window.enabled("Save"), "save enabled after cancel")
                 node = window.wait(
                     lambda: window.find("Manuscript"), "restored manuscript exposure"
                 )

@@ -51,7 +51,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(
                     lambda: window.find("Export draft and open editor"), "recovered source repair"
                 )
-                assert not window.enabled("Save file")
+                assert not window.enabled("Save")
                 assert not window.enabled("Save all")
                 assert source.read_text() == SOURCE
                 capture(output, "-recovered")
@@ -73,7 +73,7 @@ def run(api, bus, registry, binary, output):
                     "invalid import refusal",
                 )
                 assert source.read_text() == SOURCE
-                assert not window.enabled("Save file")
+                assert not window.enabled("Save")
                 capture(output, "-invalid")
                 window.document_action("Close")
                 window.wait(lambda: window.find("Close and keep recovery"), "close recovered draft")
@@ -97,9 +97,9 @@ def run(api, bus, registry, binary, output):
                     "checked repaired source acceptance",
                 )
                 assert source.read_text() == SOURCE
-                assert window.enabled("Save file")
+                assert window.enabled("Save")
                 capture(output, "-accepted")
-                window.act("Save file")
+                window.act("Save")
                 window.wait(lambda: source.read_text() == repaired, "explicit repaired-source save")
                 assert backups[0].is_file() and exported.read_text() == repaired
                 results["restart_import_validates_and_requires_explicit_main_file_save"] = True

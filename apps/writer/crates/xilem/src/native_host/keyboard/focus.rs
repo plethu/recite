@@ -2,7 +2,7 @@
 use super::*;
 use crate::app::keyboard::CommandGeneration;
 use crate::app::picker;
-use crate::attention::EditingTarget;
+use crate::attention::{EditRequest, EditingTarget};
 use crate::localisation::{TranslationField, TranslationTarget};
 use crate::rules::view;
 use xilem::masonry::accesskit;
@@ -27,43 +27,46 @@ pub(super) struct Focus {
     field: Option<(WidgetId, CommandGeneration, Kind)>,
     revealed: Option<CommandGeneration>,
     editing: Option<EditingTarget>,
+    edit_request: Option<EditRequest>,
 }
 impl Focus {
     pub fn synchronize_manuscript(
         &mut self,
         root: &mut RenderRoot,
         editing: Option<&EditingTarget>,
+        request: Option<&EditRequest>,
     ) {
         if self.editing.as_ref() != editing {
-            if editing.is_some() {
-                if let Some(field) = editing
-                    .and_then(|target| super::manuscript::find(root.get_layer_root(0), target))
-                {
-                    if root.focused_widget() != Some(field) {
-                        super::panes::reveal(root, field);
-                    }
-                    self.editing = editing.cloned();
-                }
-            } else {
-                if super::manuscript::focused(root).is_some() {
-                    root.focus_on(None);
-                }
-                self.editing = None;
+            if editing.is_none() && super::manuscript::focused(root).is_some() {
+                root.focus_on(None);
+            }
+            self.editing = editing.cloned();
+        }
+        if self.edit_request.as_ref() != request {
+            self.edit_request = request.cloned();
+            if let Some(target) = request
+                .map(EditRequest::target)
+                .filter(|target| Some(*target) == editing)
+                && let Some(field) = super::manuscript::find(root.get_layer_root(0), target)
+                && root.focused_widget() != Some(field)
+            {
+                super::panes::reveal(root, field);
             }
         }
     }
-    pub fn synchronize(
-        &mut self,
-        root: &mut RenderRoot,
-        picker: bool,
-        generation: CommandGeneration,
-    ) {
+    pub fn synchronize(&mut self, root: &mut RenderRoot, context: &Context) {
+        let picker = context.picker_open;
+        let generation = context.generation;
         if picker != self.picker {
             if picker {
                 self.return_to = root.focused_widget().or(self.last);
                 root.focus_on(find(root, Kind::Query));
             } else if !root.focus_on(self.return_to) || self.return_to.is_none() {
-                root.focus_on(find(root, Kind::Manuscript));
+                let admitted = context
+                    .editing
+                    .as_ref()
+                    .and_then(|target| super::manuscript::find(root.get_layer_root(0), target));
+                root.focus_on(admitted);
             }
             self.picker = picker;
         }

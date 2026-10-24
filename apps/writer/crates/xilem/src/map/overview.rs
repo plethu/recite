@@ -4,13 +4,13 @@ use recite_writer_session::map::layout::HEIGHT;
 use xilem::masonry::kurbo::Rect;
 
 impl Scene {
-    pub(super) fn overview_bounds(&self, index: usize, scale: f64) -> Rect {
+    pub(super) fn overview_bounds(&self, index: usize) -> Rect {
         let node = self.node(index);
-        let zoom = f64::from(self.camera.zoom) * scale;
+        let zoom = f64::from(self.camera.zoom);
         Rect::from_origin_size(
             (
-                f64::from(node.x * self.camera.zoom + self.camera.x) * scale,
-                f64::from(node.y * self.camera.zoom + self.camera.y) * scale,
+                f64::from(node.x * self.camera.zoom + self.camera.x),
+                f64::from(node.y * self.camera.zoom + self.camera.y),
             ),
             (
                 (f64::from(node.width) * zoom).max(2.),
@@ -21,7 +21,6 @@ impl Scene {
 }
 impl Writer {
     pub(super) fn select_overview_beat(&mut self, point: Point) {
-        let scale = f64::from(self.ui_scale());
         let Some(scene) = self
             .map
             .scene(self)
@@ -32,7 +31,7 @@ impl Writer {
         let selected = scene
             .node_indices()
             .filter_map(|index| {
-                let bounds = scene.overview_bounds(index, scale);
+                let bounds = scene.overview_bounds(index);
                 bounds
                     .inflate(4., 4.)
                     .contains(point)

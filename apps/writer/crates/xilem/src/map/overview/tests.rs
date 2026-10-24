@@ -59,7 +59,7 @@ fn overview_interaction(scale: u16) {
         native::surface,
     );
     let canvas = viewport(&harness);
-    let start = native::named(&harness, "Selected · Start");
+    let start = native::named(&harness, "Start");
     harness.focus_on(Some(start));
     writer.zoom_map(0.4);
     native::settle(
@@ -91,7 +91,7 @@ fn overview_interaction(scale: u16) {
     assert_eq!(writer.map.scene(writer).unwrap().detail(), Detail::Dialogue);
     assert_eq!(
         harness.focused_widget_id(),
-        Some(native::named(&harness, "Selected · Later"))
+        Some(native::named(&harness, "Later"))
     );
     let fit = native::named(&harness, "Fit");
     harness.focus_on(Some(fit));
@@ -108,10 +108,9 @@ fn overview_interaction(scale: u16) {
     let selected_point = |writer: &Writer, harness: &TestHarness<Passthrough>| {
         let scene = writer.map.scene(writer).unwrap();
         let node = &scene.projection.graph.nodes[1];
-        let scale = f64::from(writer.ui_scale());
         let local = Point::new(
-            f64::from((node.x + node.width / 2.) * scene.camera.zoom + scene.camera.x) * scale,
-            f64::from((node.y + 80.) * scene.camera.zoom + scene.camera.y) * scale,
+            f64::from((node.x + node.width / 2.) * scene.camera.zoom + scene.camera.x),
+            f64::from((node.y + 80.) * scene.camera.zoom + scene.camera.y),
         );
         harness.get_widget_with_id(canvas).ctx().window_transform() * local
     };
@@ -144,7 +143,7 @@ fn overview_interaction(scale: u16) {
     assert_eq!(writer.map.scene(writer).unwrap().detail(), Detail::Dialogue);
     assert_eq!(
         harness.focused_widget_id(),
-        Some(native::named(&harness, "Selected · Later"))
+        Some(native::named(&harness, "Later"))
     );
     assert!(fixture.jobs.try_recv().is_err());
     assert_eq!(writer.session.model().document().source(), SOURCE);

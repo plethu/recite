@@ -1,7 +1,9 @@
 //! Print hierarchy and native action styles for Recite's writing surfaces.
 use super::control_style::{ControlStyle, styled};
 use super::label;
+use recite_writer_session::palette::Palette;
 use recite_writer_session::typography::{FONT_DISPLAY, FONT_MONO};
+use xilem::peniko::Color;
 use xilem::{
     WidgetView,
     masonry::{
@@ -54,5 +56,31 @@ pub(crate) fn action<S: 'static>(
     styled(
         ControlStyle::Action,
         view::button(label(scale, text), callback).disabled(disabled),
+    )
+}
+
+/// Keep the ordinary native button and its name when the compact face is an icon.
+pub(crate) fn icon_action<S: 'static, F: Fn(&mut S) + Send + Sync + 'static>(
+    scale: f32,
+    name: &'static str,
+    icon: super::Icon,
+    palette: &Palette<Color>,
+    disabled: bool,
+    callback: F,
+) -> impl WidgetView<S, Widget = Button> + use<S, F> {
+    use xilem::{masonry::layout::AsUnit, style::Style};
+    styled(
+        ControlStyle::Action,
+        view::button(
+            super::icons::face(
+                scale,
+                name,
+                icon,
+                if disabled { palette.muted } else { palette.ink },
+            ),
+            callback,
+        )
+        .disabled(disabled)
+        .padding(xilem::style::Padding::all((4. * f64::from(scale)).px())),
     )
 }

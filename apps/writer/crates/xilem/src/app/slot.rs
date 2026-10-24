@@ -126,10 +126,12 @@ impl<V: WidgetView<Writer>> View<App, (), ViewCtx> for WriterSlot<V> {
         writer.refresh_map_if_needed();
         writer.resume_external_notices();
         writer.resume_linked_editor();
-        let search = writer.pending_search.take();
+        let request = writer.app_request.take();
         app.open_editor_choices();
-        if let Some(search) = search {
-            app.open_picker(search);
+        match request {
+            Some(super::Request::Search(search)) => app.open_picker(search),
+            Some(super::Request::Workspace) => app.workspace_menu = !app.workspace_menu,
+            None => {}
         }
         result
     }

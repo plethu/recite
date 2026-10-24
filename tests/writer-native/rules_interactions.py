@@ -58,7 +58,7 @@ def run(api, bus, registry, binary, output):
                 process, window, _ = launch(
                     api, bus, registry, [str(binary), "--project", str(project)], log
                 )
-                window.act("Read beat")
+                window.document_action("Read beat")
                 window.edit_passage(2)
                 window.document_action("Reply rules…")
                 minimum = "standing · minimum · Whole number"

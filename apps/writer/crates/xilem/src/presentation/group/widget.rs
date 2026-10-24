@@ -10,12 +10,14 @@ use xilem::masonry::{
 };
 pub(crate) struct Group {
     name: ArcStr,
+    role: Role,
     child: WidgetPod<dyn Widget>,
 }
 impl Group {
-    pub fn new(name: ArcStr, child: NewWidget<impl Widget + ?Sized>) -> Self {
+    pub fn new(name: ArcStr, role: Role, child: NewWidget<impl Widget + ?Sized>) -> Self {
         Self {
             name,
+            role,
             child: child.erased().to_pod(),
         }
     }
@@ -24,6 +26,10 @@ impl Group {
     }
     pub fn set_name(this: &mut WidgetMut<'_, Self>, name: ArcStr) {
         this.widget.name = name;
+        this.ctx.request_accessibility_update();
+    }
+    pub fn set_role(this: &mut WidgetMut<'_, Self>, role: Role) {
+        this.widget.role = role;
         this.ctx.request_accessibility_update();
     }
 }
@@ -49,7 +55,7 @@ impl Widget for Group {
     }
     fn paint(&mut self, _: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, _: &mut Painter<'_>) {}
     fn accessibility_role(&self) -> Role {
-        Role::Group
+        self.role
     }
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
         node.set_label(self.name.as_ref());

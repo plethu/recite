@@ -16,6 +16,14 @@ fn clean_focus_is_synchronous_and_needs_no_worker_or_source_projection() {
     assert_eq!(writer.session.model().view(), &target(&writer, '2').view());
     assert_eq!(writer.session.model().draft(), "Bravo.");
     assert!(!writer.navigation.busy());
+    assert!(writer.editing_passage(&"2".repeat(20)));
+    writer.native_field_focus(None);
+    assert!(!writer.editing_passage(&"2".repeat(20)));
+    writer.native_field_focus(Some(target(&writer, '2')));
+    assert!(
+        writer.editing_passage(&"2".repeat(20)),
+        "same-target focus is acknowledged"
+    );
     assert!(Arc::ptr_eq(
         &source,
         &writer.session.model().document().source_snapshot()
@@ -108,7 +116,10 @@ fn rejection_cancellation_and_newer_typing_keep_the_outgoing_draft_without_an_ap
                 draft
             }
         );
-        assert_eq!(writer.field_restoration(), Some(target(&writer, '1')));
+        assert_eq!(
+            writer.field_restoration(),
+            Some(FieldRestoration::Passage(target(&writer, '1')))
+        );
         writer.native_field_focus(Some(target(&writer, '1')));
         assert!(writer.field_restoration().is_none());
     }

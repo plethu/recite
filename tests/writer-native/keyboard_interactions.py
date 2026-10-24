@@ -32,11 +32,16 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "typed field")
                 key("Return", control=True)
                 window.wait(
-                    lambda: not window.enabled("Apply draft"), "focused manuscript Apply chord"
+                    lambda: window.find_action("Apply draft") is None,
+                    "focused manuscript Apply chord",
                 )
                 key("s", control=True)
                 window.wait(
                     lambda: "The last tram waits.x" in source.read_text(), "native Save command"
+                )
+                window.wait(
+                    lambda: window.find_text("Saved") and window.enabled("Save"),
+                    "completed Save receipt before settings",
                 )
                 capture(output, "-applied")
                 results["default_save_and_focused_apply_dispatch_without_another_event"] = True
@@ -66,11 +71,17 @@ def run(api, bus, registry, binary, output):
                 assert window.text(node) == "The last tram waits.xy"
                 assert "The last tram waits.xy" not in source.read_text()
                 key("Return", control=True)
-                window.wait(lambda: not window.enabled("Apply draft"), "second Apply command")
+                window.wait(
+                    lambda: window.find_action("Apply draft") is None, "second Apply command"
+                )
                 key("s", control=True, alt=True)
                 window.wait(
                     lambda: "The last tram waits.xy" in source.read_text(),
                     "live rebound Save command",
+                )
+                window.wait(
+                    lambda: window.find_text("Saved") and window.enabled("Save"),
+                    "completed rebound Save receipt",
                 )
                 results["live_rebinding_removes_old_chord_without_inserting_its_character"] = True
                 type_text("z")

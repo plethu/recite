@@ -4,18 +4,14 @@ use xilem::masonry::properties::LineBreaking;
 
 pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let wide = state.script_width() >= 380. * f64::from(scale);
+    let wide = state.script_width() >= 240. * f64::from(scale);
     let blocked = state.phase != Phase::Writing || state.navigation.busy() || state.work.busy();
     flex_col((
         flex_row((
             print::title(scale, display_name(id))
                 .prop(LineBreaking::WordWrap)
                 .flex(if wide { 1. } else { 0. }),
-            flex_row((
-                print::action(scale, "Pin reference", blocked, Writer::pin_reference),
-                print::action(scale, "Read beat", blocked, Writer::read_current),
-            ))
-            .gap(8.px()),
+            print::action(scale, "Pin reference", blocked, Writer::pin_reference),
         ))
         .direction(if wide {
             Axis::Horizontal
@@ -28,8 +24,13 @@ pub(super) fn heading(state: &Writer, id: &str) -> impl WidgetView<Writer> + use
         print::meta(
             scale,
             format!(
-                "{}  ::  {id}    {} replies",
+                "{}  ::  {id}    {}{} replies",
                 state.session.model().document().key(),
+                if state.reading.is_default {
+                    "default  "
+                } else {
+                    ""
+                },
                 state.reading.replies
             ),
         )

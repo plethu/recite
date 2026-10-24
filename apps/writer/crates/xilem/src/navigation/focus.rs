@@ -1,7 +1,7 @@
 //! Native fields retain selection/history; only the admitted passage owns the product draft.
 use super::*;
 use crate::Phase;
-use crate::attention::EditingTarget;
+use crate::attention::{EditingTarget, FieldRestoration};
 
 #[derive(Default)]
 pub(super) enum Admission {
@@ -16,7 +16,7 @@ pub(super) enum Admission {
         latest: Option<EditingTarget>,
         accepted: bool,
     },
-    Restoring(EditingTarget),
+    Restoring(FieldRestoration),
 }
 impl Admission {
     pub fn busy(&self) -> bool {
@@ -24,13 +24,16 @@ impl Admission {
     }
 }
 impl Writer {
-    pub(crate) fn field_restoration(&self) -> Option<EditingTarget> {
+    pub(crate) fn field_restoration(&self) -> Option<FieldRestoration> {
         match &self.navigation.field {
             Admission::Restoring(target) => Some(target.clone()),
             _ => None,
         }
     }
     pub(crate) fn native_field_focus(&mut self, target: Option<EditingTarget>) {
+        if target.is_none() {
+            self.attention.set_field(None);
+        }
         match &mut self.navigation.field {
             Admission::Applying { latest, .. } | Admission::Retiring { latest, .. } => {
                 *latest = target;
@@ -42,6 +45,7 @@ impl Writer {
             return;
         };
         if EditingTarget::capture(self).as_ref() == Some(&target) {
+            self.attention.set_field(Some(target));
             return;
         }
         if self.phase != Phase::Writing
@@ -74,6 +78,7 @@ impl Writer {
         let result = self.session.edit(|model| model.select(target.view()));
         match result {
             Ok(()) => {
+                self.attention.set_field(Some(target));
                 self.retire_rules();
                 self.reading.prepare(self.session.model());
                 self.sync_map_selection();
@@ -87,9 +92,9 @@ impl Writer {
         }
     }
     fn restore_field(&mut self) {
-        self.navigation.field = EditingTarget::capture(self)
-            .map(Admission::Restoring)
-            .unwrap_or_default();
+        self.navigation.field = Admission::Restoring(
+            EditingTarget::capture(self).map_or(FieldRestoration::Clear, FieldRestoration::Passage),
+        );
     }
     pub(super) fn field_apply_completed(&mut self, completed: &Arc<Request>, accepted: bool) {
         if matches!(&self.navigation.field, Admission::Applying { request, .. } if Arc::ptr_eq(request, completed))

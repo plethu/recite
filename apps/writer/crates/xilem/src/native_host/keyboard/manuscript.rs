@@ -1,6 +1,6 @@
 //! Synchronous native focus admission precedes the next key, paste or IME commit.
 use super::*;
-use crate::attention::{EditingTarget, PassageField};
+use crate::attention::{EditingTarget, FieldRestoration, PassageField};
 use xilem::masonry::core::{Widget, WidgetRef};
 
 #[derive(Default)]
@@ -26,12 +26,24 @@ impl Fields {
             super::panes::reveal(root, *owner);
         }
         let restoring = active && context.field_restoration.is_some();
-        if restoring
-            && let Some(target) = &context.field_restoration
-            && let Some(field) = find(root.get_layer_root(0), target)
-            && root.focused_widget() != Some(field)
-        {
-            super::panes::reveal(root, field);
+        if restoring {
+            match context.field_restoration.as_ref() {
+                Some(FieldRestoration::Clear)
+                    if context.editing.is_none() && focused(root).is_some() =>
+                {
+                    root.focus_on(None);
+                }
+                Some(FieldRestoration::Passage(target))
+                    if context.editing.as_ref() == Some(target) =>
+                {
+                    if let Some(field) = find(root.get_layer_root(0), target)
+                        && root.focused_widget() != Some(field)
+                    {
+                        super::panes::reveal(root, field);
+                    }
+                }
+                _ => {}
+            }
         }
         let current = active.then(|| focused(root)).flatten();
         if current == self.observed && !restoring {

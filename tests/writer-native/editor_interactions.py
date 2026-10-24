@@ -50,10 +50,11 @@ def run(api, bus, registry, binary, output):
                     lambda: window.text(node) == "The last tram waits. unfinished",
                     "field draft before handoff",
                 )
+                window.document_control("Open in editor")
                 window.wait(
                     lambda: window.enabled("Open in editor"), "preferred application action"
                 )
-                window.act("Open in editor")
+                window.document_action("Open in editor")
                 window.wait(receipt.exists, "owned OS preferred-application request")
                 assert json.loads(receipt.read_text()) == [str(source)]
                 assert source.read_text() == SOURCE
@@ -90,7 +91,7 @@ def run(api, bus, registry, binary, output):
                 external = SOURCE + "\n# changed externally\n"
                 source.write_text(external)
                 before = receipt.stat().st_mtime_ns
-                window.act("Open in editor")
+                window.document_action("Open in editor")
                 window.wait(
                     lambda: window.find_text("changed on disk", contains=True),
                     "checked-save conflict before editor launch",
@@ -117,7 +118,7 @@ def run(api, bus, registry, binary, output):
                 )
                 window = attach(api, bus, registry, process)
                 node = manuscript(window)
-                window.act("Open in editor")
+                window.document_action("Open in editor")
                 window.wait(
                     lambda: window.find_text(
                         "Could not start the configured editor", contains=True

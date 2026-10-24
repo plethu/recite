@@ -49,7 +49,7 @@ def run(api, bus, registry, binary, output):
                 process, window, _ = launch(
                     api, bus, registry, [str(binary), "--project", str(project)], log
                 )
-                window.act("Read beat")
+                window.document_action("Read beat")
                 window.edit_passage(2)
                 fill(window, "Manuscript", "A revised reply.")
                 window.document_action("Change reply destination…")
@@ -65,7 +65,7 @@ def run(api, bus, registry, binary, output):
                 window.reveal_end("Undo applied")
                 window.act("Undo applied")
                 window.wait(lambda: window.find_text("Applied edit updated."), "route undo")
-                window.act("Read beat")
+                window.document_action("Read beat")
                 window.wait(lambda: window.find_action("→ Accepted"), "original route restored")
                 window.wait(
                     lambda: window.find_text("A revised reply."), "preceding prose still accepted"
@@ -90,6 +90,15 @@ def run(api, bus, registry, binary, output):
                 choose(window, "Accepted")
                 window.wait(lambda: window.find_action("→ Accepted"), "changed continuation")
                 capture(output, "-continuation")
+                focus_bit = 1 << int(api.Atspi.StateType.FOCUSED)
+                results["continuation_before_save"] = {
+                    "focused_names": [
+                        name
+                        for address, name in window.nodes()
+                        if window.call(address, "Accessible", "GetState")[0][0] & focus_bit
+                    ],
+                    "save_enabled": window.enabled("Save"),
+                }
                 key("s", control=True)
                 window.wait(
                     lambda: "-> accepted" in source.read_text().split(":: alternative", 1)[1],
@@ -103,6 +112,12 @@ def run(api, bus, registry, binary, output):
         if process is not None and process.poll() is None:
             capture(output, "-error")
             results["visible_names"] = [name for _, name in window.nodes()]
+            focus_bit = 1 << int(api.Atspi.StateType.FOCUSED)
+            results["focused_names"] = [
+                name
+                for address, name in window.nodes()
+                if window.call(address, "Accessible", "GetState")[0][0] & focus_bit
+            ]
     finally:
         if process is not None and process.poll() is None:
             process.terminate()

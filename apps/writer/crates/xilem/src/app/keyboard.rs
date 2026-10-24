@@ -1,6 +1,6 @@
 //! A tagged immutable keyboard context routes native host messages through Xilem.
 use super::*;
-use crate::attention::{DocumentMenu, EditingTarget, PaneMotion};
+use crate::attention::{DocumentMenu, EditingTarget, FieldRestoration, PaneMotion};
 use crate::localisation::TranslationTarget;
 use recite_config::{WriterCommand, WriterShortcuts};
 use xilem::{
@@ -14,6 +14,9 @@ use xilem::{
         widgets::Passthrough,
     },
 };
+
+mod scope;
+use scope::Scope;
 
 pub(crate) const TAG: WidgetTag<Passthrough> = WidgetTag::named("recite-commands");
 /// Freshness of commands captured from one mounted keyboard context.
@@ -41,7 +44,7 @@ pub(crate) struct Context {
     pub document_menu: DocumentMenu,
     pub attention: crate::attention::Attention,
     pub editing: Option<EditingTarget>,
-    pub field_restoration: Option<EditingTarget>,
+    pub field_restoration: Option<FieldRestoration>,
     pub keymap: recite_config::Keymap,
     pub proxy: MessageProxy<Invocation>,
 }
@@ -64,68 +67,6 @@ impl std::fmt::Debug for Invocation {
         f.debug_struct("CommandInvocation")
             .field("action", &self.action)
             .finish_non_exhaustive()
-    }
-}
-#[derive(PartialEq)]
-struct Scope {
-    writer: Option<DocumentScope>,
-    welcome: bool,
-    settings: bool,
-    picker: Option<(picker::PickerInstance, picker::Mode, picker::PickerRevision)>,
-    keymap: recite_config::Keymap,
-}
-struct DocumentScope {
-    window: WindowId,
-    view: recite_writer_model::View,
-    workspace: crate::map::Workspace,
-    stamp: recite_writer_model::AnalysisStamp,
-    attention: crate::attention::Attention,
-    editing: Option<EditingTarget>,
-    field_restoration: Option<EditingTarget>,
-    writing: bool,
-    screen: crate::workspaces::Screen,
-    document_menu: DocumentMenu,
-}
-impl PartialEq for DocumentScope {
-    fn eq(&self, other: &Self) -> bool {
-        self.window == other.window
-            && self.view == other.view
-            && self.workspace == other.workspace
-            && self.stamp == other.stamp
-            && self.attention == other.attention
-            && self.editing == other.editing
-            && self.field_restoration == other.field_restoration
-            && self.writing == other.writing
-            && self.screen == other.screen
-            && self.document_menu == other.document_menu
-    }
-}
-impl Scope {
-    fn capture(app: &App) -> Self {
-        Self {
-            writer: app.writer.as_ref().map(|writer| {
-                let model = writer.session.model();
-                DocumentScope {
-                    window: writer.window,
-                    view: model.view().clone(),
-                    workspace: writer.map.workspace,
-                    stamp: model.document().analysis_stamp(),
-                    attention: writer.attention.clone(),
-                    editing: EditingTarget::capture(writer),
-                    field_restoration: writer.field_restoration(),
-                    writing: writer.phase == Phase::Writing,
-                    screen: writer.workspaces.screen,
-                    document_menu: writer.document_menu,
-                }
-            }),
-            welcome: app.show_welcome,
-            settings: app.settings_open,
-            keymap: app.preferences.config.ui.keymap,
-            picker: app
-                .picker
-                .as_ref()
-                .map(|picker| (picker.instance.clone(), picker.mode(), picker.revision)),
-        }
     }
 }
 pub(super) struct Host<V> {
@@ -222,7 +163,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         mut element: Mut<'_, Self::Element>,
         app: &mut App,
     ) {
-        if self.scope != prev.scope || self.shortcuts != prev.shortcuts {
+        if !self.scope.same_command_scope(&prev.scope) || self.shortcuts != prev.shortcuts {
             state.generation.advance();
         }
         if self.scope != prev.scope || self.shortcuts != prev.shortcuts {
@@ -266,7 +207,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
             return MessageResult::Stale;
         };
         if invocation.generation != state.generation
-            || self.scope != Scope::capture(app)
+            || !self.scope.same_command_scope(&Scope::capture(app))
             || self.shortcuts != app.preferences.config.writer.shortcuts
         {
             return MessageResult::Stale;

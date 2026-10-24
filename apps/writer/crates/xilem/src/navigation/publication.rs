@@ -89,6 +89,15 @@ impl Writer {
                 self.remember_location();
             }
         } else {
+            let explicit_passage = matches!(request.target, Target::Selection(_))
+                && request.target.location().is_some_and(|location| {
+                    location.screen == LinkedScreen::Write
+                        && location.passage.is_some()
+                        && !location::requests_editor(location)
+                });
+            if explicit_passage && !self.navigation.busy() {
+                self.request_editing();
+            }
             self.mark_deferred_save_applied(&request);
             if !self.navigation.busy() {
                 self.finish_navigation_reply(Ok(()));
@@ -158,6 +167,7 @@ impl Writer {
         self.remember_location();
         self.status = "Structural edit updated. Save when ready.".into();
         self.workspaces.screen = crate::workspaces::Screen::Write;
+        self.request_editing();
         Ok(())
     }
     fn publish_navigation(

@@ -3,6 +3,23 @@ use crate::tests::support::{click, labels, open, project};
 use std::fmt::Write;
 
 #[test]
+fn default_beat_metadata_follows_the_selected_authored_beat() {
+    let directory = project(":: start default\n-> later\n:: later\n-> END\n").unwrap();
+    let mut writer = open(&directory).unwrap();
+    assert!(writer.reading.is_default);
+    writer.change(|model| model.select(View::Source));
+    click(&mut writer, &["Start · Start"]).unwrap();
+    assert!(
+        writer.reading.is_default,
+        "retained block metadata survives Source"
+    );
+    click(&mut writer, &["Later · end"]).unwrap();
+    assert!(!writer.reading.is_default);
+    click(&mut writer, &["Start · Start"]).unwrap();
+    assert!(writer.reading.is_default);
+}
+
+#[test]
 fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
     let directory = project("# Keep this comment.\n").unwrap();
     let mut writer = open(&directory).unwrap();
@@ -52,7 +69,7 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
 fn empty_and_effect_only_beats_have_distinct_reading_states() {
     let directory = project(":: start default\n").unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["◆ Start · Start"]).unwrap();
+    click(&mut writer, &["Start · Start"]).unwrap();
     assert!(
         labels(&mut writer)
             .unwrap()
@@ -69,7 +86,7 @@ fn empty_and_effect_only_beats_have_distinct_reading_states() {
     drop(writer);
     let directory = project(":: start default\n!blocking overlay(work)\n-> END\n").unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["◆ Start · Start · end"]).unwrap();
+    click(&mut writer, &["Start · Start · end"]).unwrap();
     let labels = labels(&mut writer).unwrap();
     assert!(labels.iter().any(|label| label.starts_with("Effect ·")));
     assert!(labels.iter().any(|label| label == "◆ END ◆"));
@@ -92,7 +109,7 @@ fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_synt
     });
     click(
         &mut writer,
-        &["Add line", "Add reply", "Read beat", "Add beat"],
+        &["Add line", "Add reply", "Project", "Read beat", "Add beat"],
     )
     .unwrap();
     assert_eq!(writer.session.model().view(), &selection);
@@ -140,7 +157,7 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     source.push_str("-> END\n");
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["Read beat"]).unwrap();
+    click(&mut writer, &["Project", "Read beat"]).unwrap();
     let rows = writer.reading.rows.clone();
     let source = writer.reading.source.clone().unwrap();
     assert_eq!(rows.len(), 10_001);
@@ -168,9 +185,9 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     click(
         &mut writer,
         &[
-            "Document actions ⋯",
+            "Project",
             "Discard draft",
-            "Document actions ⋯",
+            "Project",
             "Read beat",
             "Next beat entries",
         ],
@@ -203,7 +220,7 @@ fn paged_conditional_entries_keep_their_context_and_plural_fragments_stay_read_o
     source.push_str(":else\n  > plural@aaaaaaaaaaaaaaaaaaaa bind=(count:int=$count)\n    One letter.\n    | Many letters.\n-> END\n");
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["Read beat", "Next beat entries"]).unwrap();
+    click(&mut writer, &["Project", "Read beat", "Next beat entries"]).unwrap();
     let names = labels(&mut writer).unwrap();
     assert!(names.iter().any(|name| name == "Within :if ready()"));
     assert!(names.iter().any(|name| name == "Within Otherwise"));

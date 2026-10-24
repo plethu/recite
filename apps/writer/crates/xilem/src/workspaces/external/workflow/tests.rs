@@ -88,7 +88,7 @@ fn mounted_merge_pages_preserve_drafts_through_rejected_import_and_save_the_revi
     mounted.activate("Return to writing");
     let (sender, mut saves) = mpsc::unbounded_channel();
     mounted.state.work.sender = Some(sender);
-    mounted.activate("Save file");
+    mounted.activate("Save");
     support::finish_work(&mut mounted.state, &mut saves).unwrap();
     assert_eq!(fs::read_to_string(path).unwrap(), merged);
 }

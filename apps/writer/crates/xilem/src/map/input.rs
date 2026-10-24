@@ -23,7 +23,12 @@ use xilem::masonry::{
 pub(super) enum Kind {
     Viewport(Detail),
     Grip(String),
-    Card,
+    Card { title: String, selected: bool },
+}
+impl Kind {
+    fn is_card(&self) -> bool {
+        matches!(self, Self::Card { .. })
+    }
 }
 #[derive(Debug)]
 pub(super) enum Input {
@@ -103,7 +108,7 @@ impl Widget for InputWidget {
         action: &core::ErasedAction,
         source: core::WidgetId,
     ) {
-        if self.kind == Kind::Card
+        if self.kind.is_card()
             && source == self.child.id()
             && let Some(press) = action.downcast_ref::<widgets::ButtonPress>()
         {
@@ -143,7 +148,11 @@ impl Widget for InputWidget {
         event: &AccessEvent,
     ) {
         if ctx.target() == ctx.widget_id() && event.action == Action::Click {
-            ctx.request_focus();
+            if self.kind.is_card() {
+                ctx.submit_action::<NativeAction>(Input::Focus);
+            } else {
+                ctx.request_focus();
+            }
             ctx.set_handled();
         }
     }
@@ -154,10 +163,10 @@ impl Widget for InputWidget {
         if matches!(event, Update::FocusChanged(_)) {
             ctx.request_paint_only();
         }
-        if self.kind == Kind::Card && *event == Update::ChildFocusChanged(true) {
+        if self.kind.is_card() && *event == Update::ChildFocusChanged(true) {
             ctx.submit_action::<NativeAction>(Input::Focus);
         }
-        if self.kind == Kind::Card
+        if self.kind.is_card()
             && let Update::ChildHoveredChanged(hovered) = event
         {
             ctx.submit_action::<NativeAction>(Input::Hover(*hovered));
@@ -197,11 +206,13 @@ impl Widget for InputWidget {
         ChildrenIds::from_slice(&[self.child.id()])
     }
     fn accepts_focus(&self) -> bool {
-        self.kind != Kind::Card
+        !self.kind.is_card()
     }
     fn accessibility_role(&self) -> Role {
         if matches!(self.kind, Kind::Grip(_)) {
             Role::Button
+        } else if self.kind.is_card() {
+            Role::ListItem
         } else {
             Role::GenericContainer
         }
@@ -223,7 +234,11 @@ impl Widget for InputWidget {
                 );
                 node.add_action(Action::Click);
             }
-            Kind::Card => {}
+            Kind::Card { title, selected } => {
+                node.set_label(title.as_str());
+                node.set_selected(*selected);
+                node.add_action(Action::Click);
+            }
         }
     }
 }

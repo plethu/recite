@@ -53,6 +53,13 @@ enum Detail {
     Dialogue,
     Overview,
 }
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum Tools {
+    #[default]
+    Closed,
+    Actions,
+    Help,
+}
 pub(super) struct MapSession {
     pub workspace: Workspace,
     scenes: BTreeMap<DocumentKey, Scene>,
@@ -82,7 +89,8 @@ struct Scene {
     scope: Option<scope::Scope>,
     whole: bool,
     connections: connections::Connections,
-    controls: bool,
+    tools: Tools,
+    search: String,
     gesture: Gesture,
     placement: Option<placement::Change>,
     focus: Option<FocusIntent>,
@@ -136,21 +144,10 @@ impl MapSession {
                 }),
         );
     }
-    pub fn rescale(&mut self, old: f32, next: f32) {
-        if old == next {
-            return;
-        }
+    pub fn cancel_gestures(&mut self) {
         for scene in self.scenes.values_mut() {
             if let Gesture::Panning { camera, .. } = std::mem::take(&mut scene.gesture) {
                 scene.camera = camera;
-            }
-            let viewport = scene.viewport;
-            scene.viewport = (viewport.0 * old / next, viewport.1 * old / next);
-            if scene.camera.framing == Framing::Free {
-                scene.camera.x += (scene.viewport.0 - viewport.0) / 2.;
-                scene.camera.y += (scene.viewport.1 - viewport.1) / 2.;
-            } else {
-                scene.frame();
             }
         }
     }
@@ -189,7 +186,8 @@ impl MapSession {
                     scope: None,
                     whole: false,
                     connections: Default::default(),
-                    controls: false,
+                    tools: Tools::Closed,
+                    search: String::new(),
                     gesture: Gesture::Idle,
                     placement: None,
                     focus: None,

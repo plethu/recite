@@ -51,7 +51,7 @@ struct Writer {
     location: recite_writer_session::location::Location,
     rules: Option<rules::ReplySession>,
     pending_choice: Option<choices::Request>,
-    pending_search: Option<app::picker::Search>,
+    app_request: Option<app::Request>,
     pending_clipboard: Option<String>,
     lookup: Option<lookup::Search>,
     workspaces: workspaces::Workspaces,
@@ -121,7 +121,7 @@ impl Writer {
             location: Default::default(),
             rules: None,
             pending_choice: None,
-            pending_search: None,
+            app_request: None,
             pending_clipboard: None,
             lookup: None,
             workspaces: Default::default(),
@@ -136,8 +136,9 @@ impl Writer {
     }
 
     fn configure(&mut self, config: recite_config::UserConfig) {
-        self.map
-            .rescale(self.ui_scale(), presentation::scale(&config.writer));
+        if self.ui_scale() != presentation::scale(&config.writer) {
+            self.map.cancel_gestures();
+        }
         self.palette = presentation::palette(&config.writer);
         self.config = config;
     }

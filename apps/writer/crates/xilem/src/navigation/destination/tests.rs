@@ -1,4 +1,5 @@
 use super::*;
+use crate::attention::EditingTarget;
 use crate::tests::support;
 use std::{
     fs,
@@ -134,6 +135,17 @@ fn every_linked_screen_has_the_same_destination_on_cold_and_existing_window_navi
                 );
             }
             let actual = writer.current_location();
+            assert_eq!(
+                writer
+                    .attention
+                    .edit_request()
+                    .map(|request| request.target()),
+                (screen == Screen::Write)
+                    .then(|| EditingTarget::capture(&writer))
+                    .flatten()
+                    .as_ref(),
+                "only explicit writing passages request focus, cold={cold}, screen={screen:?}"
+            );
             assert_eq!(actual.screen, screen, "cold={cold}: {}", writer.status);
             assert_eq!(actual.catalogue.as_deref(), Some("fr.po"));
             if !cold

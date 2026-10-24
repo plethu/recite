@@ -57,20 +57,38 @@ fn scene_map_renders_at_personal_scales_and_split_workspace() {
                 }
                 pending.extend(node.children());
             }
-            let compact = workspace == Workspace::Split && scale == 200;
-            assert_eq!(labels.iter().any(|label| label == "Scene map"), !compact);
-            if compact {
+            assert!(labels.iter().any(|label| label == "Scene map"));
+            if workspace == Workspace::Split {
                 assert!(
                     manuscript(&harness).is_some(),
-                    "compact Split prioritises writing"
+                    "Split retains writing alongside Map at both interface scales"
                 );
                 assert_eq!(writer.map.workspace, Workspace::Split);
-            } else {
+            }
+            assert!(
+                labels.iter().any(|label| label.contains("Start")),
+                "{labels:?}"
+            );
+            for dpi in [1., 1.25, 1.] {
+                harness.process_window_event(core::WindowEvent::Rescale(dpi));
+                native::settle(
+                    writer,
+                    &mut harness,
+                    &mut ctx,
+                    &mut view,
+                    &mut local,
+                    native::surface,
+                );
+                let scene = writer.map.scene(writer).unwrap();
+                let card = harness.get_widget_with_id(native::named(&harness, "Start"));
+                let bounds = card
+                    .ctx()
+                    .window_transform()
+                    .transform_rect_bbox(card.ctx().border_box());
                 assert!(
-                    labels
-                        .iter()
-                        .any(|label| label.contains("Selected · Start")),
-                    "{labels:?}"
+                    (bounds.width() - f64::from(scene.node(0).width * scene.camera.zoom)).abs()
+                        < 0.01,
+                    "{scale}% UI, {dpi} DPI: camera zoom must be the sole world-to-logical scale: {bounds:?}"
                 );
             }
             if let Ok(prefix) = std::env::var("RECITE_CAPTURE_MAP") {

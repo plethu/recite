@@ -55,7 +55,7 @@ def run(api, bus, registry, binary, output):
                 process = subprocess.Popen([str(binary)], stdout=log, stderr=subprocess.STDOUT)
                 window = attach(api, bus, registry, process)
                 field(window, "Project folder")
-                assert not window.find("Save file")
+                assert not window.find("Save")
                 capture(output, "-welcome")
                 results["welcome_has_no_fictitious_document"] = True
                 fill(window, "Project folder", str(project))
@@ -117,7 +117,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(
                     lambda: window.find("Temporary examples"), "temporary example navigation"
                 )
-                assert not window.find("Save file")
+                assert not window.find("Save")
                 node = manuscript(window)
                 before = window.text(node)
                 window.focus(node)

@@ -207,6 +207,8 @@ impl Writer {
         self.remember_location();
         if super::location::requests_editor(location) {
             self.queue_linked_editor(cancel)?;
+        } else if location.screen == Screen::Write && location.passage.is_some() {
+            self.request_editing();
         }
         Ok(())
     }

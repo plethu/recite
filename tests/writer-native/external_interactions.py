@@ -115,8 +115,8 @@ def run(api, bus, registry, binary, output):
                 )
                 results["ide_merge_import_validates_and_adopts_without_writing_source"] = True
                 capture_settled(window, output, "-adopted")
-                window.reveal_start("Save file")
-                window.act("Save file")
+                window.reveal_start("Save")
+                window.act("Save")
                 window.wait(lambda: source.read_text() == merged, "explicit merge save")
                 results["explicit_save_publishes_merge_against_inspected_disk_baseline"] = True
                 window.close_clean()

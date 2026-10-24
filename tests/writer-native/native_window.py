@@ -88,8 +88,16 @@ class NativeWindow:
         return None
 
     def act(self, label):
-        node = self.wait(lambda: self.find_action(label), "available action: " + label)
-        return self.call(node, "Action", "DoAction", self.api.GLib.Variant("(i)", (0,)))[0]
+        def activate():
+            node = self.find_action(label)
+            if node is None:
+                return False
+            enabled = 1 << int(self.api.Atspi.StateType.ENABLED)
+            if not self.call(node, "Accessible", "GetState")[0][0] & enabled:
+                return False
+            return self.call(node, "Action", "DoAction", self.api.GLib.Variant("(i)", (0,)))[0]
+
+        return self.wait(activate, "enabled action: " + label)
 
     def find_action(self, label):
         return next(
@@ -102,12 +110,12 @@ class NativeWindow:
             None,
         )
 
-    def document_action(self, label):
+    def document_control(self, label):
         """Follow the document menu's named native group and its own viewport."""
 
         def open_menu():
             if self.find_action(label) is None and self.find("Document actions menu") is None:
-                self.act("Document actions ⋯")
+                self.act("Project")
             return True
 
         self.wait(open_menu, "document action or open menu: " + label)
@@ -122,6 +130,10 @@ class NativeWindow:
             return False
 
         self.wait(page, "document menu action: " + label)
+        return self.find_action(label)
+
+    def document_action(self, label):
+        self.document_control(label)
         return self.act(label)
 
     def workspace_action(self, label):
@@ -164,11 +176,7 @@ class NativeWindow:
         return None
 
     def content_scrollbar(self, label):
-        if (
-            label == "Manuscript"
-            or label.startswith("Edit passage ")
-            or label in ("Pin reference", "Read beat")
-        ):
+        if label == "Manuscript" or label.startswith("Edit passage ") or label == "Pin reference":
             return self.section_scrollbar("Script pane") or self._outer_scrollbar()
         return self._outer_scrollbar()
 

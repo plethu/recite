@@ -7,12 +7,32 @@ use xilem::WindowId;
 use xilem::masonry::core::{Widget, WidgetId, WidgetRef};
 use xilem::masonry::{core, widgets};
 
-/// The accepted passage whose inline field should receive native focus.
+/// The accepted passage whose inline field may own the product draft.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct EditingTarget {
     window: WindowId,
     document: DocumentKey,
     passage: String,
+}
+
+/// A refused native admission must either restore its admitted passage or leave prose.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum FieldRestoration {
+    Clear,
+    Passage(EditingTarget),
+}
+/// An explicit request to reveal/focus a passage, distinct from its draft authority.
+#[derive(Clone, Debug)]
+pub(crate) struct EditRequest(Arc<EditingTarget>);
+impl EditRequest {
+    pub fn target(&self) -> &EditingTarget {
+        &self.0
+    }
+}
+impl PartialEq for EditRequest {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
 }
 
 #[derive(Clone, Default, PartialEq)]
@@ -144,8 +164,13 @@ impl PaneRequest {
 pub(crate) struct Attention {
     focused: bool,
     pane: Option<PaneRequest>,
+    field: Option<EditingTarget>,
+    edit_request: Option<EditRequest>,
 }
 impl Attention {
+    pub fn same_command_scope(&self, other: &Self) -> bool {
+        self.focused == other.focused && self.pane == other.pane
+    }
     pub fn is_focused(&self) -> bool {
         self.focused
     }
@@ -155,8 +180,33 @@ impl Attention {
     pub fn pane_request(&self) -> Option<&PaneRequest> {
         self.pane.as_ref()
     }
+    pub fn field(&self) -> Option<&EditingTarget> {
+        self.field.as_ref()
+    }
+    pub fn set_field(&mut self, field: Option<EditingTarget>) {
+        self.field = field;
+    }
+    pub fn edit_request(&self) -> Option<&EditRequest> {
+        self.edit_request.as_ref()
+    }
+    pub fn clear_edit_request(&mut self) {
+        self.edit_request = None;
+    }
+    pub fn request_edit(&mut self, target: EditingTarget) {
+        self.edit_request = Some(EditRequest(Arc::new(target)));
+    }
 }
 impl Writer {
+    pub(crate) fn editing_passage(&self, passage: &str) -> bool {
+        self.attention
+            .field()
+            .is_some_and(|target| target.belongs_to(self) && target.passage == passage)
+    }
+    pub(crate) fn request_editing(&mut self) {
+        if let Some(target) = EditingTarget::capture(self) {
+            self.attention.request_edit(target);
+        }
+    }
     pub(crate) fn visible_workspace(&self) -> Workspace {
         if self.attention.focused {
             Workspace::Script

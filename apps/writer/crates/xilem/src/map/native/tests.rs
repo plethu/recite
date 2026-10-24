@@ -112,7 +112,7 @@ fn focus_destination(scale: u16) {
         pod.new_widget,
         (1280, 720),
     );
-    let first = named(&harness, "Selected · Start");
+    let first = named(&harness, "Start");
     harness.focus_on(Some(first));
     settle(
         writer,
@@ -132,12 +132,9 @@ fn focus_destination(scale: u16) {
         surface,
     );
     assert_eq!(writer.map_selected(), Some("later"));
-    assert_eq!(
-        harness.focused_widget_id(),
-        Some(named(&harness, "Selected · Later"))
-    );
+    assert_eq!(harness.focused_widget_id(), Some(named(&harness, "Later")));
     assert!(writer.map.scene(writer).unwrap().focus.is_none());
-    for title in ["Selected · Later", "Move Later"] {
+    for title in ["Later", "Move Later"] {
         let widget = harness.get_widget_with_id(named(&harness, title));
         let bounds = widget
             .ctx()
@@ -272,7 +269,7 @@ fn only_a_successful_primary_double_click_opens_the_clicked_card() {
             &mut local,
             surface,
         );
-        let id = named(&harness, "Later · End");
+        let id = named(&harness, "Later · end");
         let widget = harness.get_widget_with_id(id);
         let bounds = widget
             .ctx()

@@ -6,16 +6,25 @@ use widget::Group;
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
-    masonry::{core::ArcStr, properties::Dimensions},
+    masonry::{accesskit::Role, core::ArcStr, properties::Dimensions},
 };
 
 pub(crate) struct Named<V> {
     name: ArcStr,
+    role: Role,
     child: V,
 }
 pub(crate) fn named<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
     Named {
         name: name.into(),
+        role: Role::Group,
+        child,
+    }
+}
+pub(crate) fn list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
+    Named {
+        name: name.into(),
+        role: Role::List,
         child,
     }
 }
@@ -27,7 +36,7 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Named<V> {
         let (child, local) = ctx.with_id(ViewId::new(0), |ctx| self.child.build(ctx, state));
         (
             Pod::new_with_props(
-                Group::new(self.name.clone(), child.new_widget),
+                Group::new(self.name.clone(), self.role, child.new_widget),
                 Dimensions::MAX,
             ),
             local,
@@ -43,6 +52,9 @@ impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Named<V> {
     ) {
         if self.name != previous.name {
             Group::set_name(&mut pod, self.name.clone());
+        }
+        if self.role != previous.role {
+            Group::set_role(&mut pod, self.role);
         }
         ctx.with_id(ViewId::new(0), |ctx| {
             self.child.rebuild(

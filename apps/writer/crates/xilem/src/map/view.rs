@@ -6,6 +6,7 @@ use crate::view::workspace;
 use xilem::masonry::properties;
 mod canvas;
 mod card;
+mod cards;
 mod connections;
 mod overview;
 mod toolbar;
@@ -81,7 +82,8 @@ pub(crate) fn panel(state: &Writer) -> Box<AnyWidgetView<Writer>> {
         connections::panel(state, scene),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
-    .gap(12.px())
+    .gap(8.px())
+    .background_color(state.palette.canvas)
     .prop(Region(Some(Pane::Map)))
     .boxed()
 }

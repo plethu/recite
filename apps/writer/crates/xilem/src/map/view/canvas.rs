@@ -1,33 +1,26 @@
 //! Viewport composition and route painting share one coordinate transform.
 use super::*;
-use crate::view::workspace;
+use crate::{presentation::group, view::workspace};
 use xilem::masonry::imaging::record;
-use xilem::masonry::kurbo::{self, CubicBez, Line, Point, Vec2};
+use xilem::masonry::kurbo::{self, BezPath, Circle, CubicBez, Line, Point, Shape, Vec2};
 use xilem::masonry::properties;
 pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use<> {
-    let scale = f64::from(state.ui_scale());
     let camera = scene.camera;
-    let zoom = f64::from(camera.zoom) * scale;
+    let zoom = f64::from(camera.zoom);
     let cards = scene
         .mounted_indices()
         .map(|index| {
             let node = scene.node(index);
             let transform = Affine::scale(zoom).then_translate(
                 (
-                    f64::from(node.x * camera.zoom + camera.x) * scale,
-                    f64::from(node.y * camera.zoom + camera.y) * scale,
+                    f64::from(node.x * camera.zoom + camera.x),
+                    f64::from(node.y * camera.zoom + camera.y),
                 )
                     .into(),
             );
-            placed::placed(
-                transform,
-                crate::keyed::keyed(
-                    (
-                        state.session.model().document().key().clone(),
-                        scene.projection.graph.blocks[index].id.clone(),
-                    ),
-                    card::card(state, scene, index),
-                ),
+            (
+                scene.projection.graph.blocks[index].id.clone(),
+                placed::placed(transform, card::card(state, scene, index)),
             )
         })
         .collect::<Vec<_>>();
@@ -49,12 +42,15 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         state.config.ui.keymap == recite_config::Keymap::Vim,
         // Cards own the final layer; variable children only append at its end.
         // Full reply captions remain in the explicit Connections list.
-        zstack((drawing, zstack(cards).alignment(UnitPoint::TOP_LEFT)))
-            .alignment(UnitPoint::TOP_LEFT),
+        zstack((
+            drawing,
+            group::list("Scene beats", super::cards::cards(cards)),
+        ))
+        .alignment(UnitPoint::TOP_LEFT),
         |state: &mut Writer, action| state.map_input(Source::Viewport, action),
     );
     let host = host
-        .focus(focus_request(state, scene))
+        .focus(focus_request(scene))
         .disabled(state.phase != crate::Phase::Writing)
         .prop(properties::BorderColor {
             color: state.palette.accent,
@@ -68,15 +64,14 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         .width(width.px()),
     )
 }
-pub(super) fn focus_request(state: &Writer, scene: &Scene) -> Option<input::FocusRequest> {
+pub(super) fn focus_request(scene: &Scene) -> Option<input::FocusRequest> {
     let focus = scene.focus.as_ref()?;
     let index = scene.projection.graph.ids.get(&focus.beat)?;
     let node = scene.node(*index);
-    let scale = f64::from(state.ui_scale());
-    let zoom = f64::from(scene.camera.zoom) * scale;
+    let zoom = f64::from(scene.camera.zoom);
     let origin = Point::new(
-        f64::from(node.x * scene.camera.zoom + scene.camera.x) * scale,
-        f64::from(node.y * scene.camera.zoom + scene.camera.y) * scale,
+        f64::from(node.x * scene.camera.zoom + scene.camera.x),
+        f64::from(node.y * scene.camera.zoom + scene.camera.y),
     );
     Some(input::FocusRequest {
         token: focus.token.clone(),
@@ -88,28 +83,44 @@ pub(super) fn focus_request(state: &Writer, scene: &Scene) -> Option<input::Focu
 }
 
 fn draw_edges(state: &Writer, scene: &Scene, recording: &mut record::Scene) {
-    let scale = f64::from(state.ui_scale());
-    let transform = Affine::scale(scale * f64::from(scene.camera.zoom)).then_translate(
-        (
-            scale * f64::from(scene.camera.x),
-            scale * f64::from(scene.camera.y),
-        )
-            .into(),
-    );
+    let transform = Affine::scale(f64::from(scene.camera.zoom))
+        .then_translate((f64::from(scene.camera.x), f64::from(scene.camera.y)).into());
     let mut painter = Painter::new(recording);
     draw_grid(state, scene, &mut painter);
-    let stroke = Stroke::new(1.5);
     for index in scene.edge_indices() {
         let link = &scene.projection.graph.links[index];
         let active = [scene.selected.as_deref(), scene.hovered.as_deref()]
             .into_iter()
             .flatten()
             .any(|id| link.origin == id || link.destination == id);
-        let color = if active {
-            state.palette.accent
+        let color = if link.returning {
+            state.palette.teal
         } else {
-            state.palette.muted
+            state.palette.accent
         };
+        // Match screen-space ink weights at every zoom level.
+        let weight = if link.returning {
+            1.
+        } else if active {
+            2.
+        } else {
+            1.5
+        };
+        let stroke = Stroke::new(weight / f64::from(scene.camera.zoom))
+            .with_caps(kurbo::Cap::Round)
+            .with_join(kurbo::Join::Round);
+        let dashes: &[f64] = match (link.conditional, link.returning) {
+            (true, true) => &[6., 3., 1., 3.],
+            (true, false) => &[1., 3.],
+            (false, true) => &[4., 3.],
+            (false, false) => &[],
+        };
+        let route_stroke = stroke.clone().with_dashes(
+            0.,
+            dashes
+                .iter()
+                .map(|length| length / f64::from(scene.camera.zoom)),
+        );
         if let Some(curve) = provisional_edge(scene, index) {
             painter
                 .stroke(curve, &stroke, color)
@@ -135,7 +146,7 @@ fn draw_edges(state: &Writer, scene: &Scene, recording: &mut record::Scene) {
         }
         if let Some((path, arrow)) = &scene.projection.paths[index] {
             painter
-                .stroke(path, &stroke, color)
+                .stroke(path, &route_stroke, color)
                 .transform(transform)
                 .draw();
             painter
@@ -166,23 +177,20 @@ fn provisional_edge(scene: &Scene, index: usize) -> Option<CubicBez> {
     ))
 }
 fn draw_grid(state: &Writer, scene: &Scene, painter: &mut Painter<'_, record::Scene>) {
-    let scale = f64::from(state.ui_scale());
-    let step = (40. * f64::from(scene.camera.zoom) * scale).max(16.);
-    let stroke = Stroke::new(0.5);
-    let mut x = (f64::from(scene.camera.x) * scale).rem_euclid(step);
-    let width = f64::from(scene.viewport.0) * scale;
-    let height = f64::from(scene.viewport.1) * scale;
+    let step = (24. * f64::from(scene.camera.zoom)).max(8.);
+    let color = state.palette.canvas.lerp_rect(state.palette.ink, 0.16);
+    let mut dots = BezPath::new();
+    let mut x = (f64::from(scene.camera.x)).rem_euclid(step);
+    let width = f64::from(scene.viewport.0);
+    let height = f64::from(scene.viewport.1);
     while x < width {
-        painter
-            .stroke(Line::new((x, 0.), (x, height)), &stroke, state.palette.rule)
-            .draw();
+        let mut y = (f64::from(scene.camera.y)).rem_euclid(step);
+        while y < height {
+            dots.extend(Circle::new((x, y), 0.75).path_elements(0.1));
+            y += step;
+        }
         x += step;
     }
-    let mut y = (f64::from(scene.camera.y) * scale).rem_euclid(step);
-    while y < height {
-        painter
-            .stroke(Line::new((0., y), (width, y)), &stroke, state.palette.rule)
-            .draw();
-        y += step;
-    }
+    // Non-overlapping dots share one fill, rather than one renderer command per dot.
+    painter.fill(dots, color).draw();
 }

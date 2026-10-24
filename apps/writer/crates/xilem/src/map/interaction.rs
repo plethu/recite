@@ -47,7 +47,9 @@ impl Writer {
                 }
                 self.open_map_beat();
             }
-            Input::Search => self.pending_search = Some(picker::Search::GoTo),
+            Input::Search => {
+                self.app_request = Some(crate::app::Request::Search(picker::Search::GoTo))
+            }
             Input::Focus => {
                 if let Source::Card(id) = source {
                     self.select_map_beat(id);
@@ -76,20 +78,18 @@ impl Writer {
             }
             Input::Pan(delta) => {
                 self.cancel_map_gesture();
-                let scale = self.ui_scale();
                 if let Some(scene) = self.map_scene_mut() {
-                    scene.camera.x += delta.x as f32 / scale;
-                    scene.camera.y += delta.y as f32 / scale;
+                    scene.camera.x += delta.x as f32;
+                    scene.camera.y += delta.y as f32;
                     scene.camera.framing = Framing::Free;
                 }
             }
             Input::Zoom { factor, anchor } => {
                 self.cancel_map_gesture();
-                let scale = self.ui_scale();
                 let pointer = self.config.writer.zoom_to_pointer;
                 if let Some(scene) = self.map_scene_mut() {
                     let anchor = if pointer {
-                        (anchor.x as f32 / scale, anchor.y as f32 / scale)
+                        (anchor.x as f32, anchor.y as f32)
                     } else {
                         (scene.viewport.0 / 2., scene.viewport.1 / 2.)
                     };
@@ -125,15 +125,14 @@ impl Writer {
         };
     }
     fn move_map_gesture(&mut self, point: Point) {
-        let scale = self.ui_scale();
         let Some(scene) = self.map_scene_mut() else {
             return;
         };
         match &mut scene.gesture {
             Gesture::Panning { start, camera, .. } => {
                 let delta = point - *start;
-                scene.camera.x = camera.x + delta.x as f32 / scale;
-                scene.camera.y = camera.y + delta.y as f32 / scale;
+                scene.camera.x = camera.x + delta.x as f32;
+                scene.camera.y = camera.y + delta.y as f32;
                 scene.camera.framing = Framing::Free;
             }
             Gesture::Moving {
@@ -143,10 +142,8 @@ impl Writer {
                 ..
             } => {
                 let delta = point - *start;
-                current.x =
-                    (original.x + delta.x as f32 / (scale * scene.camera.zoom)).clamp(8., 100_000.);
-                current.y = (original.y + delta.y as f32 / (scale * scene.camera.zoom))
-                    .clamp(12., 100_000.);
+                current.x = (original.x + delta.x as f32 / scene.camera.zoom).clamp(8., 100_000.);
+                current.y = (original.y + delta.y as f32 / scene.camera.zoom).clamp(12., 100_000.);
             }
             Gesture::Idle => {}
         }

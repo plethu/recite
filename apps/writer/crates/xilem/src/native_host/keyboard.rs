@@ -224,13 +224,13 @@ impl Keyboard {
             } else {
                 self.vim.cancel(&context);
             }
-            self.focus
-                .synchronize(root, context.picker_open, context.generation);
+            self.focus.synchronize(root, &context);
             self.attention.synchronize(root, &context);
             if !context.picker_open {
                 self.focus.synchronize_manuscript(
                     root,
                     context.editing.as_ref().filter(|_| context.writer_active),
+                    context.attention.edit_request(),
                 );
             }
             self.manuscript

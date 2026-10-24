@@ -1,20 +1,49 @@
 //! Bounded, accessible incident-link lists compose below the map canvas.
 use super::*;
 use crate::map::connections::Direction;
+use crate::presentation::print;
+use recite_writer_session::choices::display_name;
+use xilem::view::portal;
 
-pub(super) fn panel(state: &Writer, scene: &Scene) -> Option<impl WidgetView<Writer> + use<>> {
-    scene.connections.expanded.then(|| {
-        xilem::view::portal(
-            flex_col((
-                connection_list(state, scene, Direction::Outgoing),
-                connection_list(state, scene, Direction::Incoming),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(12.px()),
-        )
-        .constrain_horizontal(true)
-        .height((120. * f64::from(state.ui_scale())).px())
-    })
+pub(super) fn panel(state: &Writer, scene: &Scene) -> impl WidgetView<Writer> + use<> {
+    flex_col((
+        print::action(
+            state.ui_scale(),
+            format!(
+                "{} Connections · {}",
+                if scene.connections.expanded {
+                    "▾"
+                } else {
+                    "▸"
+                },
+                scene
+                    .selected
+                    .as_deref()
+                    .map(display_name)
+                    .unwrap_or_default()
+            ),
+            false,
+            |state: &mut Writer| {
+                if let Some(scene) = state.map_scene_mut() {
+                    scene.connections.expanded = !scene.connections.expanded;
+                }
+            },
+        ),
+        scene.connections.expanded.then(|| {
+            portal(
+                flex_col((
+                    connection_list(state, scene, Direction::Outgoing),
+                    connection_list(state, scene, Direction::Incoming),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .gap(12.px()),
+            )
+            .constrain_horizontal(true)
+            .height((120. * f64::from(state.ui_scale())).px())
+        }),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Start)
+    .gap(4.px())
 }
 fn connection_list(
     state: &Writer,

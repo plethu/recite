@@ -30,9 +30,15 @@ def card(window, title):
         (
             node
             for node, name in window.nodes()
-            if name.startswith("Selected · " + title)
+            if name.startswith(title)
             and window.call(node, "Accessible", "GetRole")[0]
             == int(window.api.Atspi.Role.PUSH_BUTTON)
+            and window.call(
+                window.api.property_value(window.bus, node, window.api.ACCESSIBLE, "Parent"),
+                "Accessible",
+                "GetRole",
+            )[0]
+            == int(window.api.Atspi.Role.LIST_ITEM)
         ),
         None,
     )
@@ -41,6 +47,25 @@ def card(window, title):
 def focused_card(window, title):
     node = card(window, title)
     return node if node and focused(window, node) else None
+
+
+def beat_item(window, title):
+    return next(
+        (
+            node
+            for node, name in window.nodes()
+            if name.startswith(title)
+            and window.call(node, "Accessible", "GetRole")[0]
+            == int(window.api.Atspi.Role.LIST_ITEM)
+        ),
+        None,
+    )
+
+
+def selected_item(window, title):
+    node = beat_item(window, title)
+    bit = 1 << int(window.api.Atspi.StateType.SELECTED)
+    return node if node and window.call(node, "Accessible", "GetState")[0][0] & bit else None
 
 
 def run(api, bus, registry, binary, output):
@@ -62,22 +87,53 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == "At the gate.x", "initial typing")
                 window.act("Map")
                 selected = window.wait(lambda: card(window, "Start"), "accepted Map card")
+                window.wait(lambda: selected_item(window, "Start"), "selected native beat item")
                 capture(output, "-map")
+                item = beat_item(window, "Later")
+                window.call(item, "Action", "DoAction", api.GLib.Variant("(i)", (0,)))
+                window.wait(
+                    lambda: selected_item(window, "Later"),
+                    "accessible item selects without opening Script",
+                )
+                assert window.find("Script pane") is None
+                item = beat_item(window, "Start")
+                window.call(item, "Action", "DoAction", api.GLib.Variant("(i)", (0,)))
+                window.wait(
+                    lambda: selected_item(window, "Start"), "accessible item restores selection"
+                )
+                selector = window.find_action("Script")
+                window.focus(selector)
                 window.act("Script")
                 current = window.wait(lambda: manuscript(window), "return to manuscript")
                 assert current == node
+                window.wait(
+                    lambda: focused(window, selector), "Script selection preserves selector focus"
+                )
                 window.focus(current)
                 key("z", control=True)
                 window.wait(
                     lambda: window.text(current) == "At the gate.", "native undo across Map"
                 )
                 results["map_and_script_preserve_native_field_and_undo"] = True
+                read = window.document_control("Read beat")
+                window.focus(read)
+                key("Return")
+                window.wait(
+                    lambda: window.find("Manuscript") is None,
+                    "Read beat survives focus and native Enter release",
+                )
+                results["read_beat_remains_actionable_after_clean_field_blur"] = True
                 window.act("Map")
                 selected = window.wait(lambda: card(window, "Start"), "return to Map")
                 window.focus(selected)
                 key("Down")
                 selected = window.wait(lambda: card(window, "Later"), "spatial beat selection")
                 window.wait(lambda: focused_card(window, "Later"), "focus follows selected beat")
+                window.wait(
+                    lambda: selected_item(window, "Later"), "native selected state follows beat"
+                )
+                assert selected_item(window, "Start") is None
+                results["native_beat_item_selected_state_tracks_keyboard_selection"] = True
                 capture(output, "-selected")
                 grip = window.wait(
                     lambda: window.find("Move Later", prefix=True), "selected move grip"
@@ -123,8 +179,8 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.find_text("At the bridge."), "opened selected beat")
                 capture(output, "-script")
                 results["arrows_native_focus_enter_and_slash_lookup"] = True
-                window.reveal_start("Save file")
-                window.act("Save file")
+                window.reveal_start("Save")
+                window.act("Save")
                 window.wait(lambda: window.find_text("Saved"), "save before closing")
                 window.close_clean()
                 assert process.wait(timeout=5) == 0

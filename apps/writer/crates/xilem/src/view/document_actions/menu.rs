@@ -70,6 +70,10 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
     let closing = state.phase != Phase::Writing;
     let axis = action_axis(state, width);
     flex_col((
+        state.reading.selected.as_ref().map(|_| {
+            text_button(scale, "Read beat", Writer::read_current)
+                .disabled(closing || state.navigation.busy() || state.work.busy())
+        }),
         state.reading.selected_passage().map(|passage| {
             flex_col((
                 label(scale, format!("Passage · {}", passage.label)),

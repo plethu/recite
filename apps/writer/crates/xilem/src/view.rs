@@ -5,7 +5,7 @@ use xilem::core::one_of::Either;
 use xilem::masonry::core;
 use xilem::masonry::layout::AsUnit;
 use xilem::masonry::widgets;
-use xilem::style::Style;
+use xilem::style::{Padding, Style};
 use xilem::view::{
     CrossAxisAlignment, FlexExt, flex_col, flex_row, indexed_stack, sized_box, text_input,
 };
@@ -98,7 +98,17 @@ pub(super) fn writer(state: &Writer) -> impl WidgetView<Writer, Widget: Sized> +
     xilem::core::fork(
         xilem::view::resize_observer(
             |state: &mut Writer, size| state.viewport.height = size.height,
-            frame::frame(state, content.padding(16.px())),
+            frame::frame(
+                state,
+                content.padding(Padding {
+                    bottom: if state.workspaces.screen == crate::workspaces::Screen::Write {
+                        0.px()
+                    } else {
+                        16.px()
+                    },
+                    ..Padding::all(16.px())
+                }),
+            ),
         ),
         (
             crate::trial::worker(),

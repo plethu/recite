@@ -29,6 +29,19 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
             &mut local,
             native::surface,
         );
+        // Preserve the measured canvas workload independently of toolbar reflow.
+        let height = writer.map.scene(writer).unwrap().viewport.1;
+        harness.process_window_event(WindowEvent::Resize(
+            (1280, (750. + 496. - height).round() as u32).into(),
+        ));
+        native::settle(
+            writer,
+            &mut harness,
+            &mut ctx,
+            &mut view,
+            &mut local,
+            native::surface,
+        );
         let tree = harness.access_tree();
         let mut pending = vec![tree.state().root()];
         let mut nodes = 0;
@@ -99,7 +112,7 @@ fn large_scene_mounts_only_visible_neighbourhood_and_camera_changes_reuse_the_gr
             .map
             .scene(writer)
             .unwrap()
-            .overview_bounds(middle, 1.)
+            .overview_bounds(middle)
             .center();
         writer.select_overview_beat(point);
         assert_eq!(
@@ -198,4 +211,81 @@ fn linear_scene(count: usize) -> String {
         ));
     }
     source
+}
+
+#[test]
+fn panning_across_mount_boundaries_retains_surviving_native_cards() {
+    let source = linear_scene(128);
+    let mut fixture = fixture_source(&source).unwrap();
+    let writer = &mut fixture.writer;
+    writer.map_scene_mut().unwrap().selected = Some("beat_10".into());
+    let graph = writer.map.scene(writer).unwrap().projection.graph.clone();
+    let positions = writer
+        .map
+        .scene(writer)
+        .unwrap()
+        .projection
+        .positions
+        .clone();
+    let mut ctx = ViewCtx::new(
+        Arc::new(NoProxy),
+        Arc::new(tokio::runtime::Runtime::new().unwrap()),
+    );
+    let mut view = native::surface(writer);
+    let (pod, mut local) = view.build(&mut ctx, writer);
+    let mut harness = TestHarness::create_with_size(
+        crate::presentation::Theme::new(&writer.config.writer).initial_properties(),
+        pod.new_widget,
+        (1280, 1000),
+    );
+    native::settle(
+        writer,
+        &mut harness,
+        &mut ctx,
+        &mut view,
+        &mut local,
+        native::surface,
+    );
+    let selected = native::named(&harness, "Beat 10");
+    let initially_mounted = writer
+        .map
+        .scene(writer)
+        .unwrap()
+        .mounted_indices()
+        .collect::<Vec<_>>();
+    for _ in 0..32 {
+        writer.map_input(Source::Viewport, Input::Pan(kurbo::Vec2::new(0., -32.)));
+        native::settle(
+            writer,
+            &mut harness,
+            &mut ctx,
+            &mut view,
+            &mut local,
+            native::surface,
+        );
+        let scene = writer.map.scene(writer).unwrap();
+        assert_eq!(
+            native::named(&harness, "Beat 10"),
+            selected,
+            "a surviving card must not remount when its vector slot changes"
+        );
+        assert!(
+            scene.mounted_indices().count() <= 6,
+            "mount work stays bounded by this fixed viewport"
+        );
+        assert!(Arc::ptr_eq(&graph, &scene.projection.graph));
+        assert!(Arc::ptr_eq(&positions, &scene.projection.positions));
+    }
+    assert_ne!(
+        writer
+            .map
+            .scene(writer)
+            .unwrap()
+            .mounted_indices()
+            .collect::<Vec<_>>(),
+        initially_mounted
+    );
+    assert!(fixture.jobs.try_recv().is_err());
+    assert_eq!(writer.session.model().document().source(), source);
+    assert!(!writer.session.model().document().can_undo());
 }

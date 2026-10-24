@@ -47,7 +47,7 @@ impl InputWidget {
         }
     }
     pub(super) fn request_card_focus(&self, ctx: &mut UpdateCtx<'_>) {
-        if self.kind == Kind::Card
+        if self.kind.is_card()
             && let Some(focus) = &self.focus
         {
             ctx.submit_action::<NativeAction>(NativeAction::FocusTarget {
@@ -61,7 +61,7 @@ impl InputWidget {
             return;
         }
         this.widget.focus = focus.cloned();
-        if this.widget.kind == Kind::Card
+        if this.widget.kind.is_card()
             && let Some(focus) = focus
         {
             this.ctx

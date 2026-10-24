@@ -3,11 +3,10 @@ use super::*;
 use xilem::masonry::imaging::record;
 
 pub(super) fn draw(state: &Writer, scene: &Scene, recording: &mut record::Scene) {
-    let scale = f64::from(state.ui_scale());
     let mut painter = Painter::new(recording);
     for index in scene.visible_indices() {
         let selected = scene.selected.as_deref() == Some(&scene.projection.graph.blocks[index].id);
-        let bounds = scene.overview_bounds(index, scale);
+        let bounds = scene.overview_bounds(index);
         painter
             .fill(
                 bounds,

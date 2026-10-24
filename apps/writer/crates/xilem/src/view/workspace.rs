@@ -2,12 +2,9 @@
 use super::*;
 use crate::map::Workspace;
 use crate::presentation::control_style::{ControlStyle, styled};
-use crate::{
-    app::picker::Search,
-    presentation::{group::named, print},
-};
+use crate::presentation::group::named;
 use recite_config::{WriterPaneSide, WriterPresentationField};
-use xilem::masonry::properties::CheckmarkSize;
+use xilem::masonry::{layout::Dim, properties::CheckmarkSize};
 use xilem::view::{GridExt, GridTrackSize, grid, indexed_stack, portal};
 
 pub(crate) struct Layout {
@@ -30,10 +27,10 @@ impl Layout {
         );
         let scale = f64::from(state.ui_scale());
         let minimum_map = 320. * scale;
-        let compact_split = workspace == Workspace::Split
-            && available < preferred.max(520. * scale) + minimum_map + 20.;
+        let compact_split =
+            workspace == Workspace::Split && available < preferred + minimum_map + 20.;
         let full_script = workspace == Workspace::Script || compact_split;
-        let script = (preferred + if full_script { 144. * scale } else { 0. }).min(available);
+        let script = (preferred + if full_script { 144. } else { 0. }).min(available);
         let map = if workspace == Workspace::Split && !compact_split {
             available - script - 20.
         } else {
@@ -109,11 +106,6 @@ pub(super) fn workspace(
     .width(layout.available.px())
 }
 pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
-    indexed_stack((tabs(state), flex_col(()).dims((0.px(), 0.px())))).active(usize::from(
-        state.attention.is_focused() || state.workspaces.screen != crate::workspaces::Screen::Write,
-    ))
-}
-fn tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let modes = xilem::view::radio_group(
         flex_row(
             [
@@ -155,22 +147,60 @@ fn tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
         .gap(2.px()),
     );
     flex_row((
-        (state.navigation_width() == 0.).then(|| {
-            print::action(
-                state.ui_scale(),
-                "Go to scene",
-                false,
-                |state: &mut Writer| state.pending_search = Some(Search::GoTo),
-            )
-        }),
         sized_box(modes)
+            .width(Dim::MaxContent)
             .padding(2.px())
             .border_color(state.palette.muted)
             .border_width(1.px()),
-        state.session.project().map(|_| {
-            text_button(state.ui_scale(), "Translations", Writer::open_localisation)
-                .disabled(state.project_action_blocked())
-        }),
+        flex_col(()).flex(1.),
     ))
-    .gap(12.px())
+    .gap(0.px())
+}
+
+pub(super) fn authoring_modes(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let localise = state.workspaces.screen == crate::workspaces::Screen::Localisation;
+    sized_box(xilem::view::radio_group(
+        flex_row(
+            [("Write", false), ("Localize", true)].map(|(title, selected)| {
+                let active = selected == localise;
+                styled(
+                    ControlStyle::Segment,
+                    crate::presentation::radio_button(
+                        state.ui_scale(),
+                        title,
+                        active,
+                        move |state: &mut Writer| {
+                            if selected {
+                                state.open_localisation();
+                            } else {
+                                state.return_to_writing();
+                            }
+                        },
+                    )
+                    .disabled(
+                        state.project_action_blocked()
+                            || (selected && state.session.project().is_none()),
+                    )
+                    .label_color(if active {
+                        state.palette.on_stamp
+                    } else {
+                        state.palette.ink
+                    })
+                    .prop(CheckmarkSize {
+                        side: 0.px(),
+                        gap: 0.px(),
+                    })
+                    .background_color(if active {
+                        state.palette.stamp
+                    } else {
+                        state.palette.surface
+                    }),
+                )
+            }),
+        )
+        .gap(2.px()),
+    ))
+    .padding(2.px())
+    .border_color(state.palette.muted)
+    .border_width(1.px())
 }

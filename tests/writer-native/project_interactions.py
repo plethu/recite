@@ -21,11 +21,15 @@ def manuscript(window):
 
 def document_caption(window, name, selected=None):
     key = name.removesuffix(" · Unsaved")
+    basename = key.rsplit("/", 1)[-1].removesuffix(".recite")
+    display = " ".join(
+        word[:1].upper() + word[1:] for word in basename.replace("_", " ").split(" ")
+    )
     for node, caption in window.nodes():
         clean = caption.removesuffix(" · Unsaved")
         current = clean.startswith("▾ ") or clean == "Current · " + key
         matches = clean in (key, "Current · " + key) or (
-            clean.startswith(("▾ ", "▸ ")) and clean.endswith(" · " + key)
+            clean.startswith(("▾ ", "▸ ")) and (clean.endswith(" · " + key) or clean[2:] == display)
         )
         if (
             matches

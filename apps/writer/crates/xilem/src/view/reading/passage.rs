@@ -85,7 +85,9 @@ pub(super) fn row(
                 sized_box(label(scale, "")).width(margin.px()),
                 print::meta(
                     scale,
-                    if active {
+                    if active
+                        && (state.editing_passage(&passage.id) || state.session.model().has_draft())
+                    {
                         passage.label.clone()
                     } else {
                         String::new()

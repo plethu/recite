@@ -27,6 +27,11 @@ use xilem::winit::dpi;
 use xilem::winit::error;
 use xilem::{AppState, WindowId};
 
+pub(super) enum Request {
+    Search(picker::Search),
+    Workspace,
+}
+
 pub(super) struct App {
     writer: Option<Writer>,
     preferences: recite_writer_session::preferences::Preferences,

@@ -6,9 +6,9 @@ use crate::{
 };
 use xilem::{
     WidgetView,
-    masonry::{kurbo::Axis, layout::AsUnit},
+    masonry::{kurbo::Axis, layout::AsUnit, parley::style::FontWeight},
     style::Style,
-    view::{CrossAxisAlignment, FlexExt, flex_col, flex_row, sized_box},
+    view::{CrossAxisAlignment, flex_col, flex_row, sized_box},
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
@@ -40,6 +40,12 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
 }
 
 fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + use<> {
+    let writing = !app.show_welcome
+        && !app.settings_open
+        && app.writer.as_ref().is_some_and(|writer| {
+            writer.workspaces.screen == crate::workspaces::Screen::Write
+                && !writer.attention.is_focused()
+        });
     flex_row((
         sized_box(flex_row((
             identity::wordmark(&app.theme, scale),
@@ -50,15 +56,26 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             .as_ref()
             .filter(|writer| writer.viewport.width >= 1100. * f64::from(scale))
             .map(|writer| {
-                label(scale, writer.session.model().document().key().to_string())
-                    .color(app.theme.palette.ink)
-                    .flex(1.)
+                flex_col((
+                    sized_box(
+                        label(scale, writer.session.model().document().key().to_string())
+                            .weight(FontWeight::SEMI_BOLD)
+                            .color(app.theme.palette.ink),
+                    )
+                    .padding(xilem::style::Padding::from_vh(4.px(), 8.px())),
+                    flex_col(())
+                        .height(1.px())
+                        .background_color(app.theme.palette.teal),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Stretch)
+                .gap(0.px())
             }),
         xilem::view::FlexSpacer::Flex(1.),
         app.writer
             .as_ref()
             .filter(|writer| {
-                !app.show_welcome
+                !writing
+                    && !app.show_welcome
                     && !app.settings_open
                     && writer.session.project().is_some()
                     && writer.viewport.width >= 1100. * f64::from(scale)
@@ -97,14 +114,16 @@ fn identity_bar(app: &App, scale: f32, blocked: bool) -> impl WidgetView<App> + 
             }),
         app.writer
             .as_ref()
-            .filter(|_| !app.show_welcome && !app.settings_open)
+            .filter(|_| !writing && !app.show_welcome && !app.settings_open)
             .map(|_| {
                 print::action(scale, "Commands", blocked, |app: &mut App| {
                     app.open_picker(picker::Search::Commands)
                 })
             }),
-        print::action(scale, "Workspace", blocked, |app: &mut App| {
-            app.workspace_menu = !app.workspace_menu
+        (!writing).then(|| {
+            print::action(scale, "Workspace", blocked, |app: &mut App| {
+                app.workspace_menu = !app.workspace_menu
+            })
         }),
     ))
     .gap(8.px())
@@ -138,6 +157,24 @@ fn workspace_actions(app: &App, scale: f32, searching: bool) -> impl WidgetView<
                 app.show_settings();
             },
         ),
+        app.writer
+            .as_ref()
+            .filter(|_| !app.show_welcome && !app.settings_open)
+            .map(|writer| {
+                print::action(
+                    scale,
+                    "Localize",
+                    searching
+                        || writer.project_action_blocked()
+                        || writer.session.project().is_none(),
+                    |app: &mut App| {
+                        app.workspace_menu = false;
+                        if let Some(writer) = &mut app.writer {
+                            writer.open_localisation();
+                        }
+                    },
+                )
+            }),
         app.writer
             .as_ref()
             .filter(|_| !app.show_welcome && !app.settings_open)

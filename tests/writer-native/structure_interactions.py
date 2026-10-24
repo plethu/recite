@@ -66,12 +66,12 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         type_text("Stay for a moment.")
         window.wait(lambda: window.text(node) == "Stay for a moment.", "reply draft")
         window.act("Apply draft")
-        window.act("Read beat")
+        window.document_action("Read beat")
         window.wait(lambda: window.find_text("Stay for a moment."), "accepted reply reading")
         capture(output, "-written-beat")
         started = time.monotonic()
-        window.reveal_start("Save file")
-        window.act("Save file")
+        window.reveal_start("Save")
+        window.act("Save")
         window.wait(
             lambda: "Stay for a moment." in source.read_text(), "structured save", timeout=30
         )
@@ -99,7 +99,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
     )
     process, window, _ = launch(api, bus, registry, arguments, log)
     try:
-        window.act("Read beat")
+        window.document_action("Read beat")
         window.wait(lambda: window.find_text(":if trusts(player)"), "conditional Script heading")
         window.wait(lambda: window.find_text("Effect ·", prefix=True), "read-only effect")
         capture(output, "-script")
@@ -111,7 +111,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         window.act("Add line")
         node = window.wait(lambda: manuscript(window), "line in previously empty beat")
         window.wait(lambda: window.text(node) == "New dialogue.", "new line selection")
-        window.act("Read beat")
+        window.document_action("Read beat")
         window.wait(lambda: window.find("Edit passage 1"), "new line reading")
         results["script_groups_effects_and_empty_beat_inspection"] = True
         window.document_action("Close")

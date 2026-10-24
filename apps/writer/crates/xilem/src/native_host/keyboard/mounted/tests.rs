@@ -124,29 +124,36 @@ fn document_menu_dismissal_returns_to_its_origin_and_an_action_keeps_destination
 }
 
 #[test]
-fn picker_focus_returns_to_a_live_origin_and_falls_back_after_the_origin_is_disabled() {
+fn picker_focus_returns_to_a_live_origin_and_clears_an_unadmitted_fallback() {
     let (mut root, signals) = mounted();
-    let generation = Default::default();
+    let (mut context, _) = context();
+    let generation = context.generation;
     let mut focus = focus::Focus::default();
     let manuscript = field(&root, SCRIPT);
     let navigation = field(&root, NAVIGATION);
     let query = field(&root, QUERY);
     root.focus_on(Some(manuscript));
-    focus.synchronize(&mut root, false, generation);
+    context.picker_open = false;
+    focus.synchronize(&mut root, &context);
     assert!(focus.kind(&root, generation) == focus::Kind::Manuscript);
-    focus.synchronize(&mut root, true, generation);
+    context.picker_open = true;
+    focus.synchronize(&mut root, &context);
     assert_eq!(root.focused_widget(), Some(query));
     assert!(focus.kind(&root, generation) == focus::Kind::Query);
-    focus.synchronize(&mut root, false, generation);
+    context.picker_open = false;
+    focus.synchronize(&mut root, &context);
     assert_eq!(root.focused_widget(), Some(manuscript));
     root.focus_on(Some(navigation));
-    focus.synchronize(&mut root, false, generation);
+    context.picker_open = false;
+    focus.synchronize(&mut root, &context);
     assert!(focus.kind(&root, generation) == focus::Kind::Text);
-    focus.synchronize(&mut root, true, generation);
+    context.picker_open = true;
+    focus.synchronize(&mut root, &context);
     let origin = root.get_widget_with_tag(NAVIGATION).unwrap().id();
     root.edit_widget(origin, |mut widget| widget.ctx.set_disabled(true));
-    focus.synchronize(&mut root, false, generation);
-    assert_eq!(root.focused_widget(), Some(manuscript));
+    context.picker_open = false;
+    focus.synchronize(&mut root, &context);
+    assert_eq!(root.focused_widget(), None);
     let selected = root.get_widget_with_tag(RESULT).unwrap().id();
     root.focus_on(Some(selected));
     assert!(focus.kind(&root, generation) == focus::Kind::ActiveResult);

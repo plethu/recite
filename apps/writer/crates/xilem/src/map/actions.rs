@@ -1,8 +1,32 @@
 //! Checked transitions between map presentation and the shared authoring session.
 use super::*;
+use recite_writer_session::choices::display_name;
 use tokio::sync::mpsc as async_mpsc;
 use xilem::masonry::kurbo;
 impl Writer {
+    pub(super) fn find_map_beat(&mut self, search: String) {
+        let Some(scene) = self.map_scene_mut() else {
+            return;
+        };
+        scene.search = search;
+        let query = scene.search.trim().to_lowercase();
+        let found = (!query.is_empty())
+            .then(|| {
+                scene.projection.graph.blocks.iter().find(|block| {
+                    block.id.to_lowercase().contains(&query)
+                        || display_name(&block.id).to_lowercase().contains(&query)
+                })
+            })
+            .flatten()
+            .map(|block| block.id.clone());
+        if let Some(beat) = found {
+            // Keep typing focus in the search field while revealing the result.
+            if scene.detail() == Detail::Overview {
+                scene.camera.zoom_to(1., scene.viewport);
+            }
+            scene.select(Some(beat));
+        }
+    }
     pub(crate) fn invalidate_map(&mut self) {
         if self.map.workspace.has_map() {
             self.map.refresh = Some(self.session.model().document().key().clone());
@@ -37,6 +61,7 @@ impl Writer {
         }
     }
     pub(crate) fn show_workspace(&mut self, workspace: Workspace) {
+        self.attention.clear_edit_request();
         self.cancel_project_workspace_open();
         self.workspaces.screen = crate::workspaces::Screen::Write;
         self.attention.leave_focus();
@@ -165,9 +190,8 @@ impl Writer {
         }
     }
     pub(super) fn resize_map(&mut self, size: kurbo::Size) {
-        let scale = self.ui_scale();
         if let Some(scene) = self.map_scene_mut() {
-            scene.viewport = (size.width as f32 / scale, size.height as f32 / scale);
+            scene.viewport = (size.width as f32, size.height as f32);
             scene.frame();
         }
     }

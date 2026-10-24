@@ -61,7 +61,7 @@ fn conditional_headings_do_not_consume_accessible_passage_numbers() {
     let source = ":: start default\n:if ready()\n  > first@11111111111111111111\n    First.\n:else\n  > second@22222222222222222222\n    Second.\n-> END\n";
     let directory = support::project(source).unwrap();
     let mut writer = support::open(&directory).unwrap();
-    support::click(&mut writer, &["Read beat"]).unwrap();
+    support::click(&mut writer, &["Project", "Read beat"]).unwrap();
     let labels = support::labels(&mut writer).unwrap();
     let fields = labels
         .iter()
