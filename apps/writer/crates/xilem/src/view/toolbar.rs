@@ -159,7 +159,11 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
             if diagnostics.is_empty() {
                 "no problems".to_owned()
             } else {
-                format!("{} problems", diagnostics.len())
+                format!(
+                    "{} problem{}",
+                    diagnostics.len(),
+                    if diagnostics.len() == 1 { "" } else { "s" }
+                )
             },
         )
         .color(if diagnostics.is_empty() {
