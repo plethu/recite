@@ -12,6 +12,7 @@ pub(crate) struct Layout {
     pub script: f64,
     script_pane: f64,
     pub compact_split: bool,
+    pub split_available: bool,
     available: f64,
 }
 impl Layout {
@@ -29,8 +30,8 @@ impl Layout {
         let minimum_map = 320. * scale;
         // Prose has its own reading size, but the surrounding controls still scale.
         let minimum_script = preferred.max(400. * scale);
-        let compact_split =
-            workspace == Workspace::Split && available < minimum_script + minimum_map + 20.;
+        let split_available = available >= minimum_script + minimum_map + 20.;
+        let compact_split = workspace == Workspace::Split && !split_available;
         let full_script = workspace == Workspace::Script || compact_split;
         let script = if full_script {
             preferred + 144.
@@ -48,6 +49,7 @@ impl Layout {
             script,
             script_pane: if full_script { available } else { script },
             compact_split,
+            split_available,
             available,
         }
     }
@@ -123,12 +125,20 @@ pub(super) fn workspace(
     .width(layout.available.px())
 }
 pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> {
+    let split_available = Layout::resolve(state).split_available;
     let modes = xilem::view::radio_group(
         flex_row(
             [
                 ("Script", Workspace::Script),
                 ("Map", Workspace::Map),
-                ("Split", Workspace::Split),
+                (
+                    if split_available {
+                        "Split"
+                    } else {
+                        "Split unavailable"
+                    },
+                    Workspace::Split,
+                ),
             ]
             .map(|(title, workspace)| {
                 styled(
@@ -146,6 +156,7 @@ pub(super) fn workspace_tabs(state: &Writer) -> impl WidgetView<Writer> + use<> 
                     })
                     .disabled(
                         state.phase != Phase::Writing
+                            || (workspace == Workspace::Split && !split_available)
                             || (workspace != Workspace::Script
                                 && (state.navigation.busy() || state.work.busy())),
                     )

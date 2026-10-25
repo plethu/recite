@@ -60,25 +60,43 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
 fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let closing = state.phase != Phase::Writing || state.session.read_only();
+    let unfinished = state.unfinished_trial_edit().is_some();
+    let applying = state.navigation.applying_preview();
     flex_row((
         print::primary_action(
             scale,
-            state
-                .trial
-                .submission_caption(state.session.model().preview_page().is_some()),
+            if applying {
+                "Applying edit…"
+            } else if unfinished {
+                "Apply edit and preview"
+            } else {
+                state
+                    .trial
+                    .submission_caption(state.session.model().preview_page().is_some())
+            },
             &state.palette,
             closing
                 || state.trial.busy()
+                || state.navigation.busy()
+                || state.work.busy()
                 || state.localisation.preview_blocked()
                 || state.reading.script().is_err()
                 || state.reading.script().is_ok_and(<[_]>::is_empty),
-            Writer::start_trial,
+            move |state: &mut Writer| {
+                if unfinished {
+                    state.apply_trial_edit()
+                } else {
+                    state.start_trial()
+                }
+            },
         ),
-        state.trial.busy().then(|| {
-            text_button(scale, "Cancel preparation", |state: &mut Writer| {
-                state.trial.cancel()
-            })
-            .disabled(closing || !state.trial.can_cancel())
+        (state.trial.busy() || applying).then(|| {
+            text_button(
+                scale,
+                "Cancel preparation",
+                Writer::cancel_trial_preparation,
+            )
+            .disabled(closing || (!applying && !state.trial.can_cancel()))
         }),
     ))
     .direction(if state.content_width() >= 360. * f64::from(scale) {

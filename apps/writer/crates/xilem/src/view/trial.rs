@@ -9,6 +9,7 @@ use recite_writer_model::PreviewPage;
 use recite_writer_session::preview::catalogue_stale;
 use xilem::view::{GridExt, GridTrackSize, grid, portal};
 mod captions;
+mod context;
 mod controls;
 mod feedback;
 mod inputs;
@@ -33,14 +34,22 @@ fn content(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let busy = state.trial.busy();
     let model = state.session.model();
     let page = model.preview_page().filter(|_| state.trial.visible);
+    let setup_first = state.configuring_trial() && page.is_none_or(|page| page.ended);
     flex_col((
-        (state.trial.visible && !matches!(state.trial.settings.review, Review::Diagnostic))
-            .then(|| paragraph(scale, state.trial.status.clone(), state.script_width())),
+        (state.trial.visible
+            && state.trial_feedback().is_none()
+            && !matches!(state.trial.settings.review, Review::Diagnostic))
+        .then(|| {
+            state
+                .trial_status()
+                .map(|status| paragraph(scale, status.to_owned(), state.script_width()))
+        })
+        .flatten(),
         matches!(state.trial.settings.review, Review::Diagnostic).then(|| feedback::details(state)),
         grid((
             flex_col((page.map(|page| running(state, page, closing || busy)),))
-                .grid_pos(0, u16::from(state.configuring_trial())),
-            setup(state, closing).grid_pos(0, u16::from(!state.configuring_trial())),
+                .grid_pos(0, u16::from(setup_first)),
+            setup(state, closing).grid_pos(0, u16::from(!setup_first)),
         ))
         .columns([GridTrackSize::FRACTION])
         .rows([GridTrackSize::Auto; 2])
@@ -91,12 +100,14 @@ fn running(state: &Writer, page: &PreviewPage, disabled: bool) -> impl WidgetVie
                 .session
                 .model()
                 .preview_provenance()
-                .map(|snapshot| paragraph(scale, snapshot.caption.clone(), state.script_width())),
+                .map(|snapshot| context::summary(state, snapshot)),
             playback::playback(state, page, disabled),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(12.px())
-        .prop(PaneEntry(!state.configuring_trial())),
+        .prop(PaneEntry(
+            !state.configuring_trial() && state.unfinished_trial_edit().is_none(),
+        )),
     )
     .padding(12.px())
     .background_color(state.palette.inset)

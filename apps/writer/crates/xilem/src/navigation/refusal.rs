@@ -7,6 +7,20 @@ pub(crate) struct PassageRefusal {
     expanded: bool,
 }
 impl PassageRefusal {
+    pub(crate) fn title(&self) -> &'static str {
+        if matches!(self.request.target, Target::PreviewEdit(_)) {
+            "Can't preview this edit yet"
+        } else {
+            "Can't continue yet"
+        }
+    }
+    pub(crate) fn footer(&self) -> &'static str {
+        if matches!(self.request.target, Target::PreviewEdit(_)) {
+            "Preview paused"
+        } else {
+            "Continue paused"
+        }
+    }
     pub(crate) fn request(&self) -> Arc<Request> {
         self.request.clone()
     }
@@ -19,17 +33,25 @@ impl PassageRefusal {
 }
 impl Writer {
     pub(super) fn record_reading_refusal(&mut self, request: &Arc<Request>, reason: String) {
-        if matches!(request.target, Target::Reading { .. })
-            && request.origin.is_current(self)
+        if matches!(
+            request.target,
+            Target::Reading { .. } | Target::PreviewEdit(_)
+        ) && request.origin.is_current(self)
             && request.checkpoint().is_ok()
             && !self.attention.is_composing()
         {
-            self.navigation.refusal = Some(PassageRefusal {
+            let refusal = PassageRefusal {
                 request: request.clone(),
                 reason,
                 expanded: false,
-            });
-            self.status = "Can't continue yet.".into();
+            };
+            self.status = refusal.title().into();
+            self.navigation.refusal = Some(refusal);
+        }
+    }
+    pub(super) fn preview_edit_failed(&mut self, request: &Request) {
+        if matches!(request.target, Target::PreviewEdit(_)) && request.checkpoint().is_ok() {
+            self.return_to_trial_edit();
         }
     }
     pub(crate) fn reading_refusal(&self) -> Option<&PassageRefusal> {

@@ -1,4 +1,5 @@
 use super::*;
+use recite_writer_session::messages::{MsgId, text};
 
 #[test]
 fn staged_values_and_language_do_not_mutate_a_running_trial_until_restart() {
@@ -31,6 +32,9 @@ fn staged_values_and_language_do_not_mutate_a_running_trial_until_restart() {
             .caption
             .contains("fr-CA")
     );
+    let captured = writer.session.model().preview_provenance().unwrap();
+    assert_eq!(captured.summary, text(MsgId::WriterSourceOnly));
+    assert!(captured.caption.contains("Source revision"));
     let restarted = begin(&mut writer).unwrap();
     assert!(matches!(
         finish(&mut writer, restarted).unwrap(),
@@ -48,6 +52,10 @@ fn staged_values_and_language_do_not_mutate_a_running_trial_until_restart() {
             .unwrap()
             .caption
             .contains("fr-CA")
+    );
+    assert_eq!(
+        writer.session.model().preview_provenance().unwrap().summary,
+        "fr-CA"
     );
     assert!(!writer.session.dirty());
 }

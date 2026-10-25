@@ -46,7 +46,7 @@ def run(api, bus, registry, binary, output):
                 document.write_text(source)
                 config = project / "config.toml"
                 config.write_text(
-                    f"config_version=1\n[writer]\nconfirm_exit=false\n[writer.presentation]\nui_scale={scale}\n"
+                    f"config_version=1\n[writer]\nconfirm_exit=false\n[writer.presentation]\nui_scale={scale}\nsplit={'true' if scale == 200 else 'false'}\n"
                 )
                 with output.with_name(output.stem + f"-{scale}.writer.log").open("w") as log:
                     process = subprocess.Popen(
@@ -68,7 +68,24 @@ def run(api, bus, registry, binary, output):
                         lambda: window.find_text("If you're here", prefix=True),
                         "Relay Desk reading",
                     )
-                    window.focus(window.find_action("Script"))
+                    if scale == 200:
+                        window.wait(
+                            lambda: window.find("Open map"), "direct constrained Split recovery"
+                        )
+                        capture_settled(window, output, "-200-split-fallback")
+                        result["frames"].append("200-split-fallback")
+                        window.act("Open map")
+                        window.wait(
+                            lambda: window.find_action("Open script"), "map from constrained Split"
+                        )
+                        window.act("Script")
+                        window.wait(
+                            lambda: window.find_text("If you're here", prefix=True),
+                            "Script after constrained Split",
+                        )
+                    window.focus(
+                        window.wait(lambda: window.find_action("Script"), "current Script selector")
+                    )
                     capture_settled(window, output, f"-{scale}-script")
                     result["frames"].append(f"{scale}-script")
                     window.act("Map")
@@ -115,11 +132,15 @@ def run(api, bus, registry, binary, output):
                         lambda: window.find_text("Our courier", prefix=True),
                         "Missing Courier reading",
                     )
-                    window.act("Split")
+                    split = "Split unavailable" if scale == 200 else "Split"
+                    if scale == 200:
+                        assert not window.enabled(split)
+                    else:
+                        window.act(split)
                     window.wait(lambda: window.find("Unpin reference"), "retained pinned reference")
                     window.focus(
                         window.wait(
-                            lambda: window.find_action("Split"),
+                            lambda: window.find_action("Script" if scale == 200 else split),
                             "live Split selector after map preparation",
                         )
                     )

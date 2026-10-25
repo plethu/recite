@@ -10,6 +10,7 @@ mod reading;
 mod tab;
 mod vim;
 use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
+use crate::app::picker::Search;
 use recite_config::WriterCommand;
 use recite_writer_session::commands::keybindings::{self, Input, Key, Modifiers, PhysicalKey};
 use xilem::winit::keyboard;
@@ -226,6 +227,17 @@ impl Keyboard {
         };
         let Some(action) = action else {
             return false;
+        };
+        let action = match action {
+            Action::Command(WriterCommand::Commands) => Action::OpenPicker {
+                search: Search::Commands,
+                generation: context.picker_opening_generation,
+            },
+            Action::Command(WriterCommand::GoTo | WriterCommand::Find) => Action::OpenPicker {
+                search: Search::GoTo,
+                generation: context.picker_opening_generation,
+            },
+            other => other,
         };
         // Clear the hint before a command can retire this keyboard scope.
         self.vim.cancel(context);

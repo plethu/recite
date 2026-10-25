@@ -7,6 +7,9 @@ root:
 mise exec -- just writer run
 ```
 
+Xilem writes warnings and errors to stderr. Set `RUST_LOG=debug` for more diagnostic detail, or
+choose a module-specific filter; redirect stderr when you want to retain those logs.
+
 Use `mise exec -- just writer freya` for the Freya fallback, or `just writer xilem` to select Xilem
 explicitly. Both use the same projects, personal settings and recovery; choose one frontend at a
 time for a project. Xilem's welcome screen opens or creates projects and offers temporary examples.
@@ -69,14 +72,20 @@ stages its catalogue language and wording after successful navigation. Restart r
 
 Preview keeps **Start preview** or **Restart preview** above the scrolling conversation and input
 form. **Inputs for the next run** does not change the current conversation: restarting captures
-language, wording, typed values and the saved-or-draft translation policy. Captured context appears
-before dialogue. Failed or cancelled preparation retains the previous run. Failed preparation also
-leaves feedback beside Restart. **Review current inputs** focuses the first currently invalid scalar
-value, including one on a later page; when the values are valid, it reveals the failed attempt's
-diagnostic. The diagnostic survives further playback of the retained run. Expanded diagnostics
-appear in the scrolling content under **Previous attempt failed**, leaving room for the current task
-at larger UI scales. Last-checked input validity appears with the next-run fields; it does not
-promise that later edits are valid.
+language, wording, typed values and the saved-or-draft translation policy. A short captured
+locale/wording summary appears before dialogue. **Preview context** reveals translation provenance
+and source revision without changing the running conversation. Failed or cancelled preparation
+retains the previous run. Failed preparation also leaves feedback beside Restart. An unfinished
+manuscript edit offers **Return to unfinished edit** or **Apply edit and preview**. Apply checks
+that text before starting and leaves the file unsaved; invalid text returns to the same field with a
+local explanation. Newer typing or cancellation keeps the current conversation. Returning to writing
+also cancels a pending Apply-to-preview action. Starting a run collapses next-run settings;
+**Configure preview** reopens the retained fields below the current conversation. **Review current
+inputs** focuses the first currently invalid scalar value, including one on a later page; when the
+values are valid, it reveals the failed attempt's diagnostic. The diagnostic survives further
+playback of the retained run. Expanded diagnostics appear in the scrolling content under **Error
+details**, leaving room for the current task at larger UI scales. Last-checked input validity
+appears with the next-run fields; it does not promise that later edits are valid.
 
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:
@@ -125,10 +134,11 @@ zoom and position.
 
 Xilem's Settings controls navigation and script widths and the script pane's side. When Split cannot
 fit both panes at the selected UI scale, Script takes priority; **Map** still opens the map, and
-widening the window restores both panes. The selected card stays visible when its map pane resizes,
-without changing zoom. Freya also provides draggable dividers beside the scene drawer and script
-pane: focus a divider and use Left/Right to resize, or Home/End to reach its bounds. Pane
-preferences are restored next launch.
+widening the window restores both panes. The selector marks Split unavailable until it fits. A Split
+workspace opened in a narrow window offers **Open map** beside the explanation. The selected card
+stays visible when its map pane resizes, without changing zoom. Freya also provides draggable
+dividers beside the scene drawer and script pane: focus a divider and use Left/Right to resize, or
+Home/End to reach its bounds. Pane preferences are restored next launch.
 
 Settings also controls reading size, Source size and UI scale independently. **Commands**
 (Ctrl/Cmd+Shift+P) searches workspace actions; **Go to scene or beat** (Ctrl/Cmd+P) searches scene

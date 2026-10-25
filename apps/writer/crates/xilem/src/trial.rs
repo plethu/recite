@@ -21,6 +21,7 @@ use xilem::{
 mod inputs;
 pub(super) use inputs::{Review, Settings, VALUE_PAGE};
 mod preparation;
+mod recovery;
 use preparation::{Outcome, Preparation};
 
 pub(super) struct Trial {
@@ -33,6 +34,7 @@ pub(super) struct Trial {
     pub choice_page: usize,
     pub effect_page: usize,
     pub trace: Browser,
+    pub context_details: bool,
 }
 
 enum Retired {
@@ -66,12 +68,17 @@ impl Trial {
             choice_page: 0,
             effect_page: 0,
             trace: Default::default(),
+            context_details: false,
         }
     }
 }
 
 impl Writer {
     pub(super) fn start_trial(&mut self) {
+        if let Err(error) = self.require_finished_composition() {
+            self.status = error;
+            return;
+        }
         if self.session.read_only() || self.localisation.preview_blocked() {
             self.trial.status = "Finish the project action before starting a preview.".into();
             return;
@@ -81,7 +88,15 @@ impl Writer {
         self.trial.visible = true;
         self.trial.settings.review = Review::Inputs;
         self.focus_pane(PaneMotion::To(Pane::Preview));
-        if self.trial.busy() {
+        if self.trial.busy() || self.navigation.busy() {
+            return;
+        }
+        if self.session.model().has_draft()
+            && let Some(target) = crate::attention::EditingTarget::capture(self)
+        {
+            self.trial.preparation = Preparation::Idle(Outcome::UnfinishedEdit(target));
+            self.trial.settings.open = false;
+            self.trial.status = "Your unfinished manuscript edit is kept. Apply it to include it in the preview, or return to writing.".into();
             return;
         }
         let result = Request::capture(
@@ -98,6 +113,7 @@ impl Writer {
                 .send(request.clone())
                 .map_err(|_| "Preview worker stopped. Reopen Writer to retry.".to_owned())?;
             self.trial.preparation = Preparation::Running(request);
+            self.trial.settings.open = false;
             Ok(())
         });
         self.trial.status = match result {
@@ -109,6 +125,10 @@ impl Writer {
         };
     }
     pub(super) fn configure_trial(&mut self) {
+        if let Err(error) = self.require_finished_composition() {
+            self.status = error;
+            return;
+        }
         self.attention.leave_focus();
         self.workspaces.screen = Screen::Write;
         self.trial.visible = true;
@@ -126,6 +146,9 @@ impl Writer {
         self.focus_pane(PaneMotion::To(Pane::Preview));
     }
     pub(super) fn return_from_trial(&mut self) {
+        if self.navigation.applying_preview() {
+            self.cancel_navigation();
+        }
         self.trial.settings.open = false;
         self.trial.settings.review = Review::Inputs;
         self.trial.visible = false;
@@ -165,7 +188,8 @@ impl Writer {
                     self.trial.choice_page = 0;
                     self.trial.effect_page = 0;
                     self.trial.trace.restart();
-                    self.trial.status = "Preview uses the accepted source snapshot.".into();
+                    self.trial.context_details = false;
+                    self.trial.status.clear();
                     previous.map(|preview| Retired::Preview(Box::new(preview)))
                 }
                 Err(prepared) => {

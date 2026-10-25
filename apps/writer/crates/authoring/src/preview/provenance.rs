@@ -20,12 +20,17 @@ pub enum PreviewCatalogue {
 #[derive(Clone, Debug)]
 pub struct PreviewProvenance {
     pub caption: String,
+    pub summary: String,
     catalogue: PreviewCatalogue,
 }
 
 impl PreviewProvenance {
     pub fn new(caption: String, catalogue: PreviewCatalogue) -> Self {
-        Self { caption, catalogue }
+        Self {
+            summary: caption.clone(),
+            caption,
+            catalogue,
+        }
     }
 
     pub fn catalogue(&self) -> &PreviewCatalogue {

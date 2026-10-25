@@ -39,7 +39,7 @@ pub(crate) enum Mode {
     Destinations,
     RenameBeat,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Search {
     Commands,
     GoTo,

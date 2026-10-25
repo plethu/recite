@@ -26,6 +26,7 @@ pub(super) fn context() -> (Context, mpsc::Receiver<SendMessage>) {
         Context {
             shortcuts: Default::default(),
             generation: Default::default(),
+            picker_opening_generation: Default::default(),
             writer_active: true,
             screen: Some(crate::workspaces::Screen::Write),
             picker_open: false,
@@ -81,6 +82,30 @@ fn picker_submission_posts_once_and_does_not_fall_through_to_underlying_writer_c
         Action::SubmitPicker
     );
     assert!(receiver.try_recv().is_err());
+}
+
+#[test]
+fn native_go_to_uses_opening_authority_while_editing_commands_stay_strict() {
+    let (context, receiver) = context();
+    let mut keyboard = Keyboard::default();
+    assert!(keyboard.dispatch(
+        &context,
+        None,
+        focus::Kind::Manuscript,
+        stroke(Key::Character("p"))
+    ));
+    assert_eq!(
+        receiver
+            .try_recv()
+            .unwrap()
+            .downcast::<Invocation>()
+            .unwrap()
+            .action,
+        Action::OpenPicker {
+            search: Search::GoTo,
+            generation: context.picker_opening_generation
+        }
+    );
 }
 
 #[test]

@@ -6,7 +6,10 @@ use crate::reading::PassageNumber;
 use recite_writer_model::{Passage, PassageKind};
 use xilem::TextAlign;
 use xilem::masonry::kurbo::Axis;
+use xilem::masonry::properties::LineBreaking;
 use xilem::view::button;
+#[cfg(test)]
+mod tests;
 
 pub(super) fn row(
     state: &Writer,
@@ -48,6 +51,9 @@ pub(super) fn row(
         }
     };
     let active = matches!(state.session.model().view(), View::Passage(id) if id == &passage.id);
+    let stacked_reply = !wide
+        && matches!(&passage.kind, PassageKind::Choice { destination: Some(target) } if target != "END");
+    let content_gap = if !wide && speaker.is_empty() { 0. } else { 8. };
     flex_col((
         flex_row((
             indexed_stack((
@@ -75,7 +81,9 @@ pub(super) fn row(
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(number_gap.px()),
-            route(state, passage, if wide { destination } else { width }),
+            (!stacked_reply)
+                .then(|| route(state, passage, if wide { destination } else { width }))
+                .flatten(),
         ))
         .direction(if wide {
             Axis::Horizontal
@@ -83,26 +91,17 @@ pub(super) fn row(
             Axis::Vertical
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
-        sized_box(
-            flex_row((
-                sized_box(label(scale, "")).width(margin.px()),
-                print::meta(
-                    scale,
-                    if active
-                        && (state.editing_passage(&passage.id) || state.session.model().has_draft())
-                    {
-                        passage.label.clone()
-                    } else {
-                        String::new()
-                    },
-                )
-                .text_size(caption_size)
-                .color(state.palette.muted),
-            ))
-            .gap(8.px()),
-        )
-        .height((1.2 * f64::from(state.reading_size())).px()),
+        .gap(content_gap.px()),
+        metadata(
+            state,
+            passage,
+            active,
+            if stacked_reply {
+                CaptionPlacement::BesideDestination { width }
+            } else {
+                CaptionPlacement::Under { margin }
+            },
+        ),
         active
             .then(|| super::refusal::panel(state, measure))
             .flatten()
@@ -120,6 +119,58 @@ pub(super) fn row(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(4.px())
+}
+
+/// Source labels either reserve their own line or share a stacked destination's target height.
+enum CaptionPlacement {
+    Under { margin: f64 },
+    BesideDestination { width: f64 },
+}
+
+fn metadata(
+    state: &Writer,
+    passage: &Passage,
+    active: bool,
+    placement: CaptionPlacement,
+) -> impl WidgetView<Writer> + use<> {
+    let scale = state.ui_scale();
+    let caption_size = 0.6 * state.reading_size();
+    let metadata =
+        if active && (state.editing_passage(&passage.id) || state.session.model().has_draft()) {
+            passage.label.clone()
+        } else {
+            String::new()
+        };
+    match placement {
+        CaptionPlacement::BesideDestination { width } => {
+            let caption_width = width * 0.25;
+            Either::A(
+                flex_row((
+                    route(state, passage, (width - caption_width - 8.).max(80.)),
+                    print::meta(scale, metadata)
+                        .text_size(caption_size)
+                        .prop(LineBreaking::Clip)
+                        .color(state.palette.muted)
+                        .width(caption_width.px()),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .gap(8.px())
+                .width(width.px()),
+            )
+        }
+        CaptionPlacement::Under { margin } => Either::B(
+            sized_box(
+                flex_row((
+                    flex_col(()).dims((margin.px(), 0.px())),
+                    print::meta(scale, metadata)
+                        .text_size(caption_size)
+                        .color(state.palette.muted),
+                ))
+                .gap(8.px()),
+            )
+            .height((0.9 * f64::from(state.reading_size())).px()),
+        ),
+    }
 }
 
 fn route(state: &Writer, passage: &Passage, width: f64) -> Option<impl WidgetView<Writer> + use<>> {

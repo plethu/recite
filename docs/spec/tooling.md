@@ -125,12 +125,13 @@ Its accepted projection is prepared on workers and checked against source identi
 placement writes reconcile even when presentation is cancelled. Camera and local layout never add a
 source undo step. Stable pane slots retain Script's mounted text history. Split requires usable
 widths for both panes at the selected control scale; insufficient space prioritises Script without
-changing the requested workspace. Compact writing chrome shares its scene lookup with the document
-toolbar. A changed map allocation reveals the selected card at the existing zoom; later panning
-remains free. Visible detail cards stay native controls; low-zoom overview paints geometry, retains
-complete outline/Go to/Connections paths, and restores a readable focused card on selection. Focus
-requests reveal the whole card through the outer scroll container. Collapsing focused cards
-transfers focus to the persistent map viewport.
+changing the requested workspace. The selector disables unavailable Split entry; an existing Split
+workspace explains the adaptation and offers Open map. Compact writing chrome shares its scene
+lookup with the document toolbar. A changed map allocation reveals the selected card at the existing
+zoom; later panning remains free. Visible detail cards stay native controls; low-zoom overview
+paints geometry, retains complete outline/Go to/Connections paths, and restores a readable focused
+card on selection. Focus requests reveal the whole card through the outer scroll container.
+Collapsing focused cards transfers focus to the persistent map viewport.
 
 Map camera zoom alone converts world geometry to logical viewport coordinates; personal UI scale
 changes controls, not card placement or pan distance. Operating-system DPI remains the native
@@ -285,8 +286,24 @@ read on the worker.
 
 Xilem keeps Start/Restart and preparation cancellation outside the scrolling preview content,
 derives their captions and availability from the existing preparation lifecycle, and shows captured
-context before playback. Its input form explicitly describes next-run settings rather than inferring
-a match between staged values and the retained run.
+locale and wording before playback; full captured provenance is an explicit disclosure and remains
+attached to the immutable run. Its input form explicitly describes next-run settings rather than
+inferring a match between staged values and the retained run.
+
+The native host initializes filtered stderr diagnostics before the toolkit and respects an existing
+embedding subscriber. Diagnostic verbosity follows `RUST_LOG`; ordinary debug and release runs have
+no implicit unfiltered trace-file sink.
+
+An unfinished manuscript edit has its own recovery outcome: Return to unfinished edit reveals the
+exact field, while Apply edit and preview uses checked Apply before capturing a new run. Invalid
+text returns to that field with local feedback; newer typing, cancellation, composition or changed
+document authority prevents continuation. Apply does not save. Returning to writing cancels a
+pending Apply-to-preview continuation so its result cannot reopen Preview. Source repair retains its
+separate import boundary. Resolved manuscript edits retire obsolete recovery feedback.
+
+Submission collapses next-run settings while retaining their mounted fields and typing history.
+Expanded settings follow a running conversation; their explicit entry still focuses the requested
+input. Current choices, condition answers and effect acknowledgements precede future configuration.
 
 Terminal preview feedback remains beside Start/Restart independently of scroll position. Failure
 retains its diagnostic independently of playback status. Explicit review checks current scalar
@@ -297,10 +314,11 @@ document replacement clears idle terminal feedback and review targets without fr
 preparation slot. Explicit invalid-field review reveals its label, control and validation context
 together when they fit; in a smaller viewport, visibility of the editable control wins. Expanded
 historical diagnostics use the scrolling preview body. Their heading and dismissal control form the
-preferred entry for diagnostic review, while input review still targets the invalid field.
-Current-value checks are described beside next-run inputs as historical checks, not continuing
-validity guarantees. Build target selection uses native radio semantics and never starts a build;
-paths and latest results remain distinct from the selection controls.
+preferred entry for diagnostic review, while input review still targets the invalid field. The
+scrolling details do not repeat the persistent failure headline. Current-value checks are described
+beside next-run inputs as historical checks, not continuing validity guarantees. Build target
+selection uses native radio semantics and never starts a build; paths and latest results remain
+distinct from the selection controls.
 
 Draft overlays require the captured disk baseline and never save or review the actual drafts.
 Catalogue changes invalidate localised trial requests and mark running localised snapshots stale;

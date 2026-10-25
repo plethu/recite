@@ -1,6 +1,7 @@
 //! Single-window host forwarding; command chords are handled before native text input.
 mod accessibility;
 mod keyboard;
+mod logging;
 use keyboard::Keyboard;
 use masonry_winit::{
     app::{AppDriver, EventLoop, MasonryState, MasonryUserEvent, NewWindow},
@@ -11,7 +12,6 @@ use masonry_winit::{
         window::WindowId,
     },
 };
-use xilem::masonry::app;
 use xilem::masonry::core::DefaultProperties;
 use xilem::winit::error;
 
@@ -21,7 +21,7 @@ pub(super) fn run(
     driver: impl AppDriver + 'static,
     defaults: DefaultProperties,
 ) -> Result<(), error::EventLoopError> {
-    let _ = app::try_init_tracing();
+    logging::init();
     let mut host = Host {
         masonry: MasonryState::new(event_loop.create_proxy(), windows, defaults),
         driver,

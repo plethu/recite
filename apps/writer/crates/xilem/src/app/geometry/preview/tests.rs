@@ -92,7 +92,7 @@ fn configuring_preview_uses_the_workspace_and_restores_retained_writing_and_refe
 }
 
 #[test]
-fn configuration_precedes_a_long_run_and_focus_retains_the_collapsed_reference() {
+fn current_run_precedes_configuration_and_focus_retains_the_collapsed_reference() {
     let prose = "A long running conversation remains inspectable. ".repeat(80);
     let source = format!(":: start default\n> hello@11111111111111111111\n  {prose}\n-> END\n");
     let directory = support::project(&source).unwrap();
@@ -112,7 +112,7 @@ fn configuration_precedes_a_long_run_and_focus_retains_the_collapsed_reference()
             .window_transform()
             .transform_rect_bbox(widget.ctx().border_box())
     };
-    assert!(bounds("Preview wording").y0 < bounds("Continue preview").y0);
+    assert!(bounds("Continue preview").y0 < bounds("Preview wording").y0);
     assert!(
         mounted
             .harness

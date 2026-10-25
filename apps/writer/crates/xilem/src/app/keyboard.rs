@@ -27,6 +27,14 @@ impl CommandGeneration {
         self.0 = self.0.wrapping_add(1);
     }
 }
+/// Picker opening reads current state and does not own an earlier analysis snapshot.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct PickerOpeningGeneration(u64);
+impl PickerOpeningGeneration {
+    fn advance(&mut self) {
+        self.0 = self.0.wrapping_add(1);
+    }
+}
 #[derive(Clone, Default)]
 pub(crate) struct KeyboardContext(pub Option<Arc<Context>>);
 impl Property for KeyboardContext {
@@ -38,6 +46,7 @@ impl Property for KeyboardContext {
 pub(crate) struct Context {
     pub shortcuts: WriterShortcuts,
     pub generation: CommandGeneration,
+    pub picker_opening_generation: PickerOpeningGeneration,
     pub writer_active: bool,
     pub screen: Option<crate::workspaces::Screen>,
     pub picker_open: bool,
@@ -56,12 +65,18 @@ pub(crate) struct Invocation {
 }
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Action {
+    OpenPicker {
+        search: picker::Search,
+        generation: PickerOpeningGeneration,
+    },
     Command(WriterCommand),
     SaveTranslation(TranslationTarget),
     SubmitPicker,
     SubmitProject,
     PaneHint(bool),
-    CyclePane { forward: bool },
+    CyclePane {
+        forward: bool,
+    },
     FieldFocus(Option<EditingTarget>),
     DismissDocumentMenu,
 }
@@ -80,6 +95,7 @@ pub(super) struct Host<V> {
 pub(super) struct Hosted<T> {
     child: T,
     generation: CommandGeneration,
+    picker_opening_generation: PickerOpeningGeneration,
     proxy: MessageProxy<Invocation>,
 }
 pub(super) fn host<V: WidgetView<App>>(app: &App, child: V) -> Host<V> {
@@ -94,6 +110,7 @@ impl<V> Host<V> {
         KeyboardContext(Some(Arc::new(Context {
             shortcuts: self.shortcuts.clone(),
             generation: state.generation,
+            picker_opening_generation: state.picker_opening_generation,
             writer_active: self.scope.writer.as_ref().is_some_and(|writer| {
                 writer.writing && writer.screen == crate::workspaces::Screen::Write
             }) && !self.scope.welcome
@@ -158,6 +175,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         let state = Hosted {
             child: child_state,
             generation: CommandGeneration::default(),
+            picker_opening_generation: PickerOpeningGeneration::default(),
             proxy,
         };
         let mut pod = Pod::new_with_props(Passthrough::new(child.new_widget), Dimensions::MAX);
@@ -178,6 +196,9 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
     ) {
         if !self.scope.same_command_scope(&prev.scope) || self.shortcuts != prev.shortcuts {
             state.generation.advance();
+        }
+        if !self.scope.same_picker_opening_scope(&prev.scope) || self.shortcuts != prev.shortcuts {
+            state.picker_opening_generation.advance();
         }
         if self.scope != prev.scope || self.shortcuts != prev.shortcuts {
             element.insert_prop(self.context(state));
@@ -219,13 +240,26 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
         let Some(invocation) = message.take_message::<Invocation>() else {
             return MessageResult::Stale;
         };
-        if invocation.generation != state.generation
-            || !self.scope.same_command_scope(&Scope::capture(app))
-            || self.shortcuts != app.preferences.config.writer.shortcuts
-        {
+        let current = Scope::capture(app);
+        let current_scope = match &invocation.action {
+            Action::OpenPicker { generation, .. } => {
+                *generation == state.picker_opening_generation
+                    && self.scope.same_picker_opening_scope(&current)
+            }
+            _ => {
+                invocation.generation == state.generation && self.scope.same_command_scope(&current)
+            }
+        };
+        if !current_scope || self.shortcuts != app.preferences.config.writer.shortcuts {
             return MessageResult::Stale;
         }
         match invocation.action {
+            Action::OpenPicker { search, .. } => {
+                if let Some(writer) = &mut app.writer {
+                    writer.document_menu = DocumentMenu::Closed;
+                }
+                app.open_picker(search);
+            }
             Action::FieldFocus(target) => {
                 if let Some(writer) = &mut app.writer {
                     writer.native_field_focus(target);

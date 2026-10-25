@@ -40,7 +40,7 @@ impl Request {
                 inputs.variant.trim()
             )
         };
-        let provenance = capture_provenance(
+        let mut provenance = capture_provenance(
             format!(
                 "{} · {} · {} {}",
                 selection,
@@ -55,6 +55,7 @@ impl Request {
             !inputs.locale.is_empty(),
             catalogue,
         );
+        provenance.summary = selection;
         Ok(Self {
             source,
             view: model.view().clone(),

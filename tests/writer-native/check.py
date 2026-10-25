@@ -268,6 +268,12 @@ def main():
             receipt = json.loads(output.read_text())
             receipt["binary"] = {"path": str(binary), "sha256": digest, "unchanged": unchanged}
             receipt["compositor_renderer"] = args.renderer
+            from logging_policy import metrics
+
+            receipt["logging"] = metrics(output)
+            if receipt["logging"]["automatic_dense_trace_files"]:
+                receipt["passed"] = passed = False
+                receipt["logging_error"] = "Writer created an implicit unfiltered trace file."
             if not unchanged:
                 receipt["passed"] = passed = False
                 receipt["binary_error"] = (

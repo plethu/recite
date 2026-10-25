@@ -54,7 +54,12 @@ fn compact_mode_border(
         if node.role() == Role::RadioGroup {
             let mut children: Vec<_> = node.children().collect();
             while let Some(child) = children.pop() {
-                if child.role() == Role::RadioButton && child.label().as_deref() == Some("Split") {
+                if child.role() == Role::RadioButton
+                    && matches!(
+                        child.label().as_deref(),
+                        Some("Split" | "Split unavailable")
+                    )
+                {
                     assert!(
                         node.bounding_box().unwrap().x1
                             <= child.bounding_box().unwrap().x1 + 8. * f64::from(scale),

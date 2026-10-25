@@ -8,9 +8,7 @@ mod values;
 
 pub(super) fn controls(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let settings = &state.trial.settings;
-    flex_col((settings.open.then(|| editor(state, disabled)),))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(10.px())
+    retained(editor(state, disabled), settings.open)
 }
 
 fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {

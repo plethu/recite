@@ -34,6 +34,7 @@ impl Writer {
             Err(error) => {
                 self.navigation_failed(error.clone());
                 self.record_reading_refusal(&request, error);
+                self.preview_edit_failed(&request);
                 if matches!(request.target, Target::Reading { .. }) {
                     self.request_editing();
                 }
@@ -95,6 +96,7 @@ impl Writer {
             }
             self.navigation_failed(error.clone());
             self.record_reading_refusal(&request, error);
+            self.preview_edit_failed(&request);
             if matches!(request.target, Target::Reading { .. }) {
                 self.request_editing();
             }
@@ -155,6 +157,11 @@ impl Writer {
             return Err(message.into());
         }
         match &request.target {
+            Target::PreviewEdit(_) => {
+                self.status = "Ready".into();
+                self.start_trial();
+                Ok(())
+            }
             Target::Edit(target) if *target == operation => {
                 self.status = "Applied edit updated.".into();
                 if operation != EditOperation::Apply {

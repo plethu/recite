@@ -31,7 +31,9 @@ fn compact_split_keeps_the_manuscript_visible_and_retains_the_requested_workspac
     let mounted = Mounted::new(fixture.writer, |writer| native::surface(writer));
     assert!(manuscript(&mounted.harness).is_some());
     assert!(!mounted.contains_text("Scene map"));
-    assert!(mounted.contains_text("Split needs more width · choose Map"));
+    assert!(mounted.contains_text("Script shown · widen the window for Split"));
+    assert!(mounted.contains_text("Split unavailable"));
+    mounted.find("Open map");
     assert_eq!(mounted.state.map.workspace, Workspace::Split);
 }
 

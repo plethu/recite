@@ -1,5 +1,6 @@
 //! Terminal feedback is distinct from the worker slot and the retained conversation.
 use super::{Request, Review, Trial};
+use crate::attention::EditingTarget;
 use std::sync::Arc;
 pub(super) const GUIDANCE: &str =
     "Effects are displayed, never executed. Restart captures your staged inputs.";
@@ -13,12 +14,14 @@ pub(super) enum Preparation {
 pub(super) enum Outcome {
     Ready,
     Failed(String),
+    UnfinishedEdit(EditingTarget),
     Cancelled,
     Changed,
 }
 
 impl Trial {
     pub(crate) fn document_replaced(&mut self) {
+        self.context_details = false;
         self.settings.review = Review::Inputs;
         if !self.busy() {
             self.preparation = Preparation::Idle(Outcome::Ready);
@@ -45,6 +48,12 @@ impl Trial {
 
     pub fn feedback(&self, retained: bool) -> Option<&'static str> {
         match self.preparation {
+            Preparation::Idle(Outcome::UnfinishedEdit(_)) if retained => {
+                Some("Finish your manuscript edit before restarting. Your conversation is kept.")
+            }
+            Preparation::Idle(Outcome::UnfinishedEdit(_)) => {
+                Some("Finish your manuscript edit before starting this preview.")
+            }
             Preparation::Idle(Outcome::Failed(_)) if retained => {
                 Some("Preview failed. Existing conversation kept.")
             }

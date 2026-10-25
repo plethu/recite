@@ -3,6 +3,8 @@ use super::*;
 use crate::reading::Content;
 use recite_writer_model::{Passage, View};
 use recite_writer_session::commands::{self, targets};
+#[cfg(test)]
+mod tests;
 
 pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
     let Some(writer) = &app.writer else {
@@ -30,7 +32,7 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
             .collect()),
         Search::GoTo => {
             let model = writer.session.model();
-            let targets = if writer.session.project().is_some() {
+            let targets = if writer.session.project_root().is_some() {
                 targets::project(model)
             } else {
                 targets::examples(model).map_err(|error| error.to_string())?

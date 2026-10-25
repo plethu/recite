@@ -1,5 +1,6 @@
 use super::*;
 use crate::tests::support::{self, click, labels, open, project};
+use recite_runtime::{EffectAck, preview::PreviewEvent};
 use recite_writer_session::preview::trace::{Place, ValuePosition};
 use tokio::sync::mpsc as async_mpsc;
 
@@ -144,7 +145,8 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
         Ok(())
     });
     writer.start_trial();
-    assert!(writer.trial.status.contains("Apply or discard"));
+    assert!(writer.unfinished_trial_edit().is_some());
+    assert!(!writer.trial.failed());
     assert!(!writer.trial.busy());
 }
 
@@ -199,7 +201,17 @@ fn enum_condition_and_effect_failure_use_the_existing_runtime_contract() {
         ],
     )
     .unwrap();
-    assert!(!writer.trial.status.is_empty());
+    assert!(
+        writer
+            .session
+            .model()
+            .preview_events()
+            .iter()
+            .any(|event| matches!(event,
+                PreviewEvent::EffectAcknowledged { ack: EffectAck::Failed { reason }, .. }
+                    if reason == "Simulated preview failure"
+            ))
+    );
     assert!(!writer.session.dirty());
 }
 
@@ -285,3 +297,6 @@ mod controls;
 
 #[path = "tests/review/tests.rs"]
 mod review;
+
+#[path = "tests/recovery/tests.rs"]
+mod recovery;

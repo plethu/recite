@@ -16,7 +16,7 @@ pub(super) mod repair;
 mod saving;
 pub(super) mod worker;
 use super::{Writer, feedback, session::Session};
-use crate::workspaces::Screen as WorkspaceScreen;
+use crate::{attention::EditingTarget, workspaces::Screen as WorkspaceScreen};
 use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
 use recite_writer_model::StructuralCommand;
 use recite_writer_model::{EditOperation, View};
@@ -45,6 +45,7 @@ pub(super) enum Target {
         window: crate::reading::ReadingWindow,
     },
     PinReference,
+    PreviewEdit(EditingTarget),
     Edit(EditOperation),
     Structure(StructuralCommand),
     Workspace(crate::map::Workspace),
@@ -68,6 +69,13 @@ impl Target {
     fn check_scope(&self, writer: &Writer) -> Result<(), String> {
         if let Self::CatalogueSource(intent) = self {
             intent.check(writer)?;
+        }
+        if let Self::PreviewEdit(target) = self
+            && Some(target) != EditingTarget::capture(writer).as_ref()
+        {
+            return Err(
+                "The unfinished edit changed. Return to writing before trying again.".into(),
+            );
         }
         Ok(())
     }
@@ -123,6 +131,11 @@ impl Navigation {
     }
     pub fn busy(&self) -> bool {
         self.pending.is_some() || self.deferred_save.is_some() || self.field.busy()
+    }
+    pub(crate) fn applying_preview(&self) -> bool {
+        self.pending
+            .as_ref()
+            .is_some_and(|request| matches!(request.target, Target::PreviewEdit(_)))
     }
 }
 impl WorkControl for Request {
@@ -258,6 +271,7 @@ impl Writer {
                     | Target::Structure(_)
                     | Target::Workspace(_)
                     | Target::PinReference
+                    | Target::PreviewEdit(_)
             )
         {
             return Err("Repair and import the recovered source draft before applying it or following a link. You can switch documents to keep this draft for later.".into());
@@ -275,6 +289,7 @@ impl Writer {
                 | Target::Structure(_)
                 | Target::Workspace(_)
                 | Target::PinReference
+                | Target::PreviewEdit(_)
         ) || (matches!(target, Target::Selection(_))
             && matches!(self.session.model().view(), View::Passage(_))))
             && self.session.model().has_draft();
@@ -368,6 +383,7 @@ impl Writer {
                 "Applying reply draft… Controls will reopen when it finishes."
             }
             Target::Edit(EditOperation::Apply) => "Applying draft… You can keep editing.",
+            Target::PreviewEdit(_) => "Applying edit before preview… Your conversation is kept.",
             Target::Edit(EditOperation::Undo) => "Undoing applied edit… You can keep editing.",
             Target::Edit(EditOperation::Redo) => "Redoing applied edit… You can keep editing.",
             Target::Structure(_) => "Preparing structural edit… Your current work stays open.",

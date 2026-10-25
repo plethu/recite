@@ -68,9 +68,6 @@ def run(api, bus, registry, binary, output):
                     lambda: "The last tram waits.x" in source.read_text(), "command search save"
                 )
                 results["command_search_runs_checked_save"] = True
-                window.wait(
-                    lambda: window.enabled("Save"), "terminal save receipt and command scope"
-                )
                 key("p", control=True)
                 query = field(window, "Search query")
                 window.wait(lambda: focused(window, query), "go-to query focus")

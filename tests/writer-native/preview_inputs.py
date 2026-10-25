@@ -129,7 +129,7 @@ def exercise(window, po, output, results):
     capture_end(window, output, "-values")
     restart(window, "Bonjour Ada.")
     capture_end(window, output, "-saved")
-    action(window, "Hide preview inputs")
+    assert window.find("Hide preview inputs") is None
     scrollbar = window.wait(
         lambda: (window.section_scrollbar("Conversation preview"),), "retained conversation layout"
     )[0]
@@ -137,6 +137,13 @@ def exercise(window, po, output, results):
         window.focus(scrollbar)
         key("Home")
     window.wait(lambda: window.find_text("fr-CA", prefix=True), "captured preview context")
+    assert window.find_text("Source revision", contains=True) is None
+    window.act("Preview context")
+    window.wait(
+        lambda: window.find_text("Source revision", contains=True), "expanded captured provenance"
+    )
+    capture_settled(window, output, "-context-details")
+    window.act("Hide preview context")
     capture_settled(window, output, "-current-context")
     action(window, "Continue preview")
     reveal_text(window, "2 billets")
@@ -152,6 +159,7 @@ def exercise(window, po, output, results):
     capture_end(window, output, "-drafts")
     assert po.read_text() == PO
     results["draft_trial_does_not_save_po"] = True
+    action(window, "Configure preview")
     value(window, "tickets", "invalid")
     invalid_field = field(window, "Preview value: tickets")
     start_preview(window)
@@ -159,7 +167,10 @@ def exercise(window, po, output, results):
         lambda: window.find("Preview failed. Existing conversation kept."),
         "fixed restart failure feedback",
     )
-    reveal_text(window, "tickets:", prefix=True)
+    window.wait(
+        lambda: window.find_text("Preparing preview", prefix=True) is None,
+        "retired preview progress after failure",
+    )
     reveal_text(window, "1 billet")
     capture_end(window, output, "-invalid")
     results["invalid_input_preserves_previous_trial"] = True

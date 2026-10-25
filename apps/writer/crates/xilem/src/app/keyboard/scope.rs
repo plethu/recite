@@ -1,6 +1,7 @@
 //! Native context snapshots and command authority have distinct freshness boundaries.
 use super::super::welcome::FormScope;
 use super::*;
+use recite_core::DocumentKey;
 
 #[derive(PartialEq)]
 pub(super) struct Scope {
@@ -13,6 +14,7 @@ pub(super) struct Scope {
 }
 pub(super) struct DocumentScope {
     window: WindowId,
+    document: DocumentKey,
     view: recite_writer_model::View,
     workspace: crate::map::Workspace,
     stamp: recite_writer_model::AnalysisStamp,
@@ -32,10 +34,13 @@ impl PartialEq for DocumentScope {
 }
 impl DocumentScope {
     fn same_command_scope(&self, other: &Self) -> bool {
+        self.same_picker_opening_scope(other) && self.stamp == other.stamp
+    }
+    fn same_picker_opening_scope(&self, other: &Self) -> bool {
         self.window == other.window
+            && self.document == other.document
             && self.view == other.view
             && self.workspace == other.workspace
-            && self.stamp == other.stamp
             && self.attention.same_command_scope(&other.attention)
             && self.editing == other.editing
             && self.writing == other.writing
@@ -45,16 +50,27 @@ impl DocumentScope {
 }
 impl Scope {
     pub(super) fn same_command_scope(&self, other: &Self) -> bool {
-        self.welcome == other.welcome
-            && self.project_form == other.project_form
-            && self.settings == other.settings
-            && self.picker == other.picker
-            && self.keymap == other.keymap
+        self.same_shell(other)
             && match (&self.writer, &other.writer) {
                 (Some(writer), Some(other)) => writer.same_command_scope(other),
                 (None, None) => true,
                 _ => false,
             }
+    }
+    pub(super) fn same_picker_opening_scope(&self, other: &Self) -> bool {
+        self.same_shell(other)
+            && match (&self.writer, &other.writer) {
+                (Some(writer), Some(other)) => writer.same_picker_opening_scope(other),
+                (None, None) => true,
+                _ => false,
+            }
+    }
+    fn same_shell(&self, other: &Self) -> bool {
+        self.welcome == other.welcome
+            && self.project_form == other.project_form
+            && self.settings == other.settings
+            && self.picker == other.picker
+            && self.keymap == other.keymap
     }
     pub(super) fn capture(app: &App) -> Self {
         Self {
@@ -62,6 +78,7 @@ impl Scope {
                 let model = writer.session.model();
                 DocumentScope {
                     window: writer.window,
+                    document: model.document().key().clone(),
                     view: model.view().clone(),
                     workspace: writer.map.workspace,
                     stamp: model.document().analysis_stamp(),

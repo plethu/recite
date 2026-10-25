@@ -166,7 +166,7 @@ fn report(state: &mut Writer, result: Result<(), FileError>) {
     state.trial.choice_page = 0;
     state.trial.effect_page = 0;
     state.trial.status = match result {
-        Ok(()) => "Preview uses the accepted source snapshot.".into(),
+        Ok(()) => String::new(),
         Err(error) => error.to_string(),
     };
 }

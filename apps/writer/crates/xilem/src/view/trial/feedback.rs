@@ -4,9 +4,7 @@ use crate::{attention::EntryContext, presentation::group};
 use xilem::masonry::kurbo::Axis;
 
 pub(super) fn panel(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
-    let message = state
-        .trial
-        .feedback(state.session.model().preview_page().is_some())?;
+    let message = state.trial_feedback()?;
     Some(summary(state, message))
 }
 
@@ -29,6 +27,14 @@ fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + u
                 text_button(scale, "Review current inputs", Writer::review_trial_inputs)
                     .disabled(state.phase != Phase::Writing || state.session.read_only())
             }),
+            state.unfinished_trial_edit().is_some().then(|| {
+                text_button(
+                    scale,
+                    "Return to unfinished edit",
+                    Writer::return_to_trial_edit,
+                )
+                .disabled(state.phase != Phase::Writing || state.session.read_only())
+            }),
         ))
         .direction(if wide {
             Axis::Horizontal
@@ -36,7 +42,9 @@ fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + u
             Axis::Vertical
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
+        .gap(8.px())
+        .prop(PaneEntry(state.unfinished_trial_edit().is_some()))
+        .prop(EntryContext(true)),
     )
 }
 
@@ -47,7 +55,9 @@ pub(super) fn details(state: &Writer) -> impl WidgetView<Writer> + use<> {
         sized_box(
             flex_col((
                 flex_row((
-                    label(scale, "Previous attempt failed").text_size(18. * scale),
+                    print::meta(scale, "Error details")
+                        .text_size(0.7 * state.reading_size())
+                        .color(state.palette.muted),
                     print::action(scale, "Hide preview error", false, Writer::configure_trial),
                 ))
                 .cross_axis_alignment(CrossAxisAlignment::Center)

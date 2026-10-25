@@ -87,6 +87,7 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
     ));
     mounted.activate("Previous trace value part");
     assert_eq!(cursor(mounted.state.trial.trace.place), original_cursor);
+    mounted.activate("Configure preview");
     mounted.replace_text("Preview value: a_count", "not a count");
     mounted.activate("Try scene");
     assert!(
@@ -100,6 +101,8 @@ fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart()
         mounted.state.session.model().preview_page().unwrap().text,
         "2 billets"
     );
+    mounted.settle();
+    mounted.activate("Review current inputs");
     mounted.replace_text("Preview value: a_count", "1");
     mounted.state.change(|model| {
         model.set_draft("Unapplied manuscript.".into());

@@ -5,10 +5,10 @@ import tempfile
 import traceback
 from pathlib import Path
 
-from localisation_interactions import reveal_text
 from native_window import key, type_text
-from preview_controls import diagnostic_focus, submission
+from picker_interactions import focused
 from preview_controls import start as start_preview
+from preview_controls import submission
 
 SOURCE = """:: start default
 > line@11111111111111111111
@@ -98,19 +98,18 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         capture(output, "-stale")
         submission(window)
         start_preview(window)
-        reveal_text(window, "Apply or discard", prefix=True)
-        results["preview_restart_preserves_unapplied_draft_and_previous_run"] = True
-        window.act("Review current inputs")
         window.wait(
-            lambda: window.find("Preview preparation diagnostic"),
-            "retained capture failure diagnostic",
+            lambda: window.find("Apply edit and preview"), "draft-specific preview recovery"
         )
-        window.wait(lambda: window.find("Hide preview error"), "explicit diagnostic disclosure")
-        diagnostic_focus(window)
-        results["short_diagnostic_preserves_the_disclosure_focus_anchor"] = True
-        capture(output, "-failure-details")
-        window.act("Hide preview error")
-        window.act("Return to writing")
+        assert window.find("Review current inputs") is None
+        assert window.find("Find preview language") is None
+        window.wait(
+            lambda: focused(window, window.find("Return to unfinished edit")),
+            "unfinished-edit recovery focus",
+        )
+        capture(output, "-unfinished-edit")
+        results["preview_restart_preserves_unapplied_draft_and_previous_run"] = True
+        window.act("Return to unfinished edit")
         window.reveal_start("Manuscript")
         window.focus(node)
         key("z", control=True)
@@ -124,22 +123,86 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         key("z", control=True)
         window.wait(lambda: window.text(node) == original, "restored manuscript")
         results["preview_preserves_native_typing_history"] = True
+
+        key("End", control=True)
+        type_text(" accepted")
+        window.wait(lambda: window.text(node) == original + " accepted", "draft for explicit Apply")
+        window.act("Try scene")
+        window.wait(lambda: window.find("Apply edit and preview"), "explicit apply admission")
+        window.act("Apply edit and preview")
+        window.wait(
+            lambda: window.find_text(original + " accepted"),
+            "preview includes the checked manuscript edit",
+        )
+        window.wait(
+            lambda: window.find_text("Applying edit before preview", prefix=True) is None,
+            "terminal preview status",
+        )
+        assert source.read_text() == SOURCE
+        capture(output, "-applied-preview")
+        window.act("Return to writing")
+        window.reveal_start("Manuscript")
+        assert window.find("Manuscript") == node
+        window.focus(node)
+        key("z", control=True)
+        window.wait(
+            lambda: window.text(node) != original + " accepted",
+            "native Undo after checked Apply and preview",
+        )
+        key("y", control=True)
+        window.wait(
+            lambda: window.text(node) == original + " accepted",
+            "native Redo after checked Apply and preview",
+        )
+        results["explicit_apply_preview_keeps_disk_and_native_history"] = True
+
+        key("a", control=True)
+        type_text("-> syntax")
+        window.wait(lambda: window.text(node) == "-> syntax", "invalid manuscript draft")
+        window.act("Try scene")
+        window.wait(lambda: window.find("Apply edit and preview"), "invalid edit admission")
+        window.act("Apply edit and preview")
+        window.wait(
+            lambda: window.find("Can't preview this edit yet"), "local failed-apply recovery"
+        )
+        assert window.find("Manuscript") == node
+        assert window.text(node) == "-> syntax"
+        assert source.read_text() == SOURCE
+        capture(output, "-invalid-edit")
+        window.act("Show reason")
+        window.wait(lambda: window.find("Hide reason"), "expanded invalid-edit reason")
+        window.wait(
+            lambda: window.find_text("your editor", contains=True), "actual diagnostic text"
+        )
+        capture(output, "-invalid-edit-reason")
+        window.act("Edit text")
+        window.focus(node)
+        key("a", control=True)
+        type_text(original + " accepted")
+        window.wait(lambda: window.text(node) == original + " accepted", "repaired draft")
+        results["invalid_apply_returns_to_exact_edit_and_keeps_disk"] = True
+        window.act("Save")
+        window.wait(
+            lambda: original + " accepted" in source.read_text(),
+            "explicit Save after preview recovery",
+        )
+        window.wait(lambda: window.enabled("Save"), "completed recovery Save")
         window.close_clean()
         assert process.wait(timeout=5) == 0
     except Exception:
         if process.poll() is None:
             results["preview_visible_names_at_failure"] = [name for _, name in window.nodes()]
-            focused = 1 << int(window.api.Atspi.StateType.FOCUSED)
+            focused_bit = 1 << int(window.api.Atspi.StateType.FOCUSED)
             results["preview_focus_at_failure"] = []
             for target, name in window.nodes():
                 state = window.call(target, "Accessible", "GetState")[0][0]
-                if name == "Hide preview error" or state & focused:
+                if name == "Hide preview error" or state & focused_bit:
                     results["preview_focus_at_failure"].append(
                         {
                             "name": name,
                             "role": window.call(target, "Accessible", "GetRole")[0],
                             "interfaces": window.call(target, "Accessible", "GetInterfaces")[0],
-                            "focused": bool(state & focused),
+                            "focused": bool(state & focused_bit),
                         }
                     )
             capture(output, "-preview-error")

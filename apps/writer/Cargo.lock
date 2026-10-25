@@ -4958,6 +4958,7 @@ dependencies = [
  "rfd",
  "tempfile",
  "tokio",
+ "tracing-subscriber",
  "usvg",
  "xilem",
 ]

@@ -7,9 +7,9 @@ pub(super) fn panel(state: &Writer, width: f64) -> Option<impl WidgetView<Writer
     let request = refusal.request();
     let scale = state.ui_scale();
     Some(status(
-        "Can't continue yet",
+        refusal.title(),
         flex_col((
-            label(scale, "Can't continue yet").color(state.palette.accent),
+            label(scale, refusal.title()).color(state.palette.accent),
             paragraph(
                 scale,
                 "Your text is kept. Review the reason, then retry.",

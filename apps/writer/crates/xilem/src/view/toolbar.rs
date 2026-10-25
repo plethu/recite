@@ -134,7 +134,7 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
 pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
     let diagnostics = state.session.model().document().diagnostic_snapshot();
-    let refused = state.reading_refusal().is_some();
+    let refusal = state.reading_refusal();
     let saved = if state.session.project_root().is_none() {
         "Temporary example"
     } else if dirty {
@@ -146,8 +146,10 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
         print::meta(state.ui_scale(), format!("{saved} ·")).color(state.palette.status_text),
         print::meta(
             state.ui_scale(),
-            if refused {
-                "Continue paused".to_owned()
+            if let Some(refusal) = refusal {
+                refusal.footer().to_owned()
+            } else if state.unfinished_trial_edit().is_some() && state.trial.visible {
+                "Preview needs an applied edit".to_owned()
             } else if diagnostics.is_empty() {
                 "no problems".to_owned()
             } else {
@@ -158,11 +160,16 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 )
             },
         )
-        .color(if diagnostics.is_empty() && !refused {
-            state.palette.status_signal
-        } else {
-            state.palette.status_text
-        }),
+        .color(
+            if diagnostics.is_empty()
+                && refusal.is_none()
+                && state.unfinished_trial_edit().is_none()
+            {
+                state.palette.status_signal
+            } else {
+                state.palette.status_text
+            },
+        ),
         (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
             print::meta(state.ui_scale(), format!("· {}", state.status))
                 .color(state.palette.status_text)

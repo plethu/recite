@@ -116,6 +116,7 @@ impl Writer {
             Target::CatalogueSource(intent) => self.location_destination(intent.location())?,
             Target::PinReference => Destination::Current(Box::new(model.navigation_request())),
             Target::Edit(_)
+            | Target::PreviewEdit(_)
             | Target::Present(_)
             | Target::Repair(_)
             | Target::Structure(_)

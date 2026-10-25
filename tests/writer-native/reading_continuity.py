@@ -40,11 +40,22 @@ def anchored_step(window, node, direction, caption):
 
 
 def leave_anchor_room(window, node):
-    """Keep a visible overlap near the top, where compensation can remain nonnegative."""
-    before = bounds(window, node)[1]
+    """Keep a fully visible overlap near the scroll end, above the action tail."""
     window.focus(window.section_scrollbar("Script pane"))
-    key("Down")
-    window.wait(lambda: bounds(window, node)[1] < before - 100, "browsing room before shift")
+    key("End")
+
+    def reveal_overlap():
+        try:
+            if editor_visible(window, node):
+                return True
+        except window.api.GLib.Error:
+            # A clipped native field is absent from AT-SPI until it re-enters the viewport.
+            pass
+        window.focus(window.section_scrollbar("Script pane"))
+        key("Up")
+        return False
+
+    window.wait(reveal_overlap, "visible overlap above the reading action tail")
     window.focus(node)
     assert editor_visible(window, node)
 

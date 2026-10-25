@@ -17,6 +17,7 @@ recite-writer-model.workspace = true
 recite-writer-session.workspace = true
 rfd = "=0.17.2"
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 usvg = { version = "=0.47.0", default-features = false }
 xilem = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88" }
 

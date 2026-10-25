@@ -9,6 +9,8 @@ const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Original.
 
 #[path = "inline/tests.rs"]
 mod inline;
+#[path = "opening/tests.rs"]
+mod opening;
 
 #[test]
 fn commands_reject_retired_documents_screens_analysis_and_bindings_before_and_after_rebuild() {
