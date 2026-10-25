@@ -3,13 +3,14 @@ use crate::workspaces::{Screen, tests::ToolDriver};
 use recite_writer_session::typography::BUNDLED_FONTS;
 use std::{fs, sync::Arc};
 use xilem::masonry::{
+    accesskit::{NodeId, TreeUpdate},
     app::{RenderRoot, RenderRootOptions, WindowSizePolicy},
     peniko::Blob,
-    widgets::{Button, Label},
+    widgets::Button,
 };
 use xilem::{ViewCtx, core::View as _};
 
-fn render(app: &mut App, width: u32) -> RenderRoot {
+fn render(app: &mut App, width: u32) -> (RenderRoot, TreeUpdate) {
     app.viewport.width = f64::from(width);
     app.viewport.height = 720.;
     let mut context = ViewCtx::new(
@@ -35,22 +36,21 @@ fn render(app: &mut App, width: u32) -> RenderRoot {
         root.register_fonts(Blob::new(Arc::new(bytes.to_vec())));
     }
     root.handle_window_event(WindowEvent::EnableAccessTree);
-    root.redraw();
-    root
+    let (_, update) = root.redraw();
+    (root, update.expect("initial accessible project header"))
 }
 
-fn header_button(root: &RenderRoot, name: &str) -> Rect {
+fn header_button(root: &RenderRoot, update: &TreeUpdate, name: &str) -> Rect {
     let mut pending = vec![root.get_layer_root(0)];
     while let Some(widget) = pending.pop() {
         if widget.ctx().is_stashed() {
             continue;
         }
         if widget.downcast::<Button>().is_some()
-            && widget.children().iter().any(|child| {
-                child
-                    .downcast::<Label>()
-                    .is_some_and(|label| label.text().as_ref() == name)
-            })
+            && widget
+                .children()
+                .iter()
+                .any(|child| accessible_caption(update, NodeId(child.id().to_raw())) == name)
         {
             return widget
                 .ctx()
@@ -60,6 +60,24 @@ fn header_button(root: &RenderRoot, name: &str) -> Rect {
         pending.extend(widget.children().into_iter().rev());
     }
     panic!("missing project header button {name}");
+}
+
+fn accessible_caption(update: &TreeUpdate, id: NodeId) -> String {
+    let mut pending = vec![id];
+    let mut caption = String::new();
+    while let Some(id) = pending.pop() {
+        let (_, node) = update
+            .nodes
+            .iter()
+            .find(|(candidate, _)| *candidate == id)
+            .expect("published child");
+        if let Some(text) = node.label().or(node.value()) {
+            caption.push_str(text);
+        } else {
+            pending.extend(node.children().iter().rev());
+        }
+    }
+    caption
 }
 
 #[test]
@@ -108,7 +126,7 @@ fn project_screen_headers_keep_complete_buttons_inside_the_allocated_window() {
             for width in [900, 1280, 2040] {
                 for screen in [Screen::External, Screen::Settings, Screen::Localisation] {
                     app.writer.as_mut().unwrap().workspaces.screen = screen;
-                    let root = render(&mut app, width);
+                    let (root, update) = render(&mut app, width);
                     let left = app.writer.as_ref().unwrap().navigation_width() + 16.;
                     for title in [
                         "Back",
@@ -118,7 +136,7 @@ fn project_screen_headers_keep_complete_buttons_inside_the_allocated_window() {
                         "Save all",
                         "Close",
                     ] {
-                        let bounds = header_button(&root, title);
+                        let bounds = header_button(&root, &update, title);
                         assert!(
                             bounds.x0 >= left - 0.01
                                 && bounds.x1 <= f64::from(width) - 16. + 0.01

@@ -53,6 +53,43 @@ fn plural_pages_keep_every_form_and_save_the_reviewed_entry_without_changing_sou
     let mut mounted = Mounted::new(writer, surface);
     let mut driver = ToolDriver::new(&mut mounted.state);
     mounted.replace_text("Translation form 1", "Un billet.");
+    let field = mounted.find("Translation form 1");
+    mounted.type_text("Translation form 1", "x");
+    let mut config = mounted.state.config.clone();
+    config.writer.presentation = config
+        .writer
+        .presentation
+        .with_value(recite_config::WriterPresentationField::UiScale, 200)
+        .unwrap();
+    mounted.state.configure(config);
+    mounted.settle();
+    assert_eq!(
+        mounted.find("Translation form 1"),
+        field,
+        "responsive entry keeps the native editor"
+    );
+    use xilem::masonry::core::{
+        TextEvent,
+        keyboard::{Code, Key, KeyState, KeyboardEvent, Modifiers},
+    };
+    mounted
+        .harness
+        .process_text_event(TextEvent::Keyboard(KeyboardEvent {
+            state: KeyState::Down,
+            key: Key::Character("z".into()),
+            code: Code::KeyZ,
+            modifiers: if cfg!(target_os = "macos") {
+                Modifiers::META
+            } else {
+                Modifiers::CONTROL
+            },
+            ..KeyboardEvent::default()
+        }));
+    mounted.settle();
+    assert_eq!(
+        mounted.state.localisation.slot.draft(key.id).unwrap().forms[0],
+        "Un billet."
+    );
     mounted.activate("More plural forms");
     assert_eq!(
         mounted.state.localisation.entry.as_ref().unwrap().form_page,

@@ -79,11 +79,17 @@ fn history(state: &Writer) -> impl WidgetView<Writer> + use<> {
 fn app_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     flex_row((
+        (state.compact_chrome() && state.navigation_width() == 0.).then(|| {
+            print::action(scale, "Scenes…", blocked, |state: &mut Writer| {
+                state.app_request = Some(Request::Search(Search::GoTo));
+            })
+        }),
         print::action(scale, "Commands", blocked, |state: &mut Writer| {
             state.app_request = Some(Request::Search(Search::Commands))
         }),
-        (state.viewport.width - state.navigation_width() >= 600. * f64::from(scale))
-            .then(|| workspace::authoring_modes(state)),
+        (state.viewport.width - state.navigation_width()
+            >= if state.compact_chrome() { 760. } else { 600. } * f64::from(scale))
+        .then(|| workspace::authoring_modes(state)),
         text_button(scale, "Workspace", |state: &mut Writer| {
             state.app_request = Some(Request::Workspace)
         })
@@ -172,7 +178,7 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
             state.palette.status_text
         }),
         (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
-            print::meta(state.ui_scale(), state.status.clone())
+            print::meta(state.ui_scale(), format!("· {}", state.status))
                 .color(state.palette.status_text)
                 .prop(LineBreaking::WordWrap)
                 .flex(1.)

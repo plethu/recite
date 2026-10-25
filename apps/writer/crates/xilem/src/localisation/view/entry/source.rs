@@ -20,13 +20,13 @@ pub(super) fn source(
             paragraph(
                 scale,
                 format!("Source location: {caption}"),
-                writer.script_width(),
+                entry_width(writer),
             )
         }),
         entry.source.get(entry.source_page).map(|source| {
             flex_row((
                 sized_box(manuscript_text(prose_size(writer), source.clone()))
-                    .width(writer.script_width().px()),
+                    .width(entry_width(writer).px()),
             ))
         }),
         (entry.source.len() > 1).then(|| {
@@ -50,10 +50,13 @@ pub(super) fn source(
             ))
             .gap(8.px())
         }),
-        entry
-            .context
-            .get(entry.context_page)
-            .map(|context| paragraph(scale, format!("Nearby source: {context}"), 640.)),
+        entry.context.get(entry.context_page).map(|context| {
+            paragraph(
+                scale,
+                format!("Nearby source: {context}"),
+                entry_width(writer),
+            )
+        }),
         (entry.context.len() > 1).then(|| {
             flex_col((
                 label(

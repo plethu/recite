@@ -47,6 +47,7 @@ def exercise(window, project, output, results):
     reveal_text(window, "1 matching entries", prefix=True)
     open_entry(window)
     edit(window, "Un brouillon distant.")
+    capture(output, "-editing")
     reveal(window, "Preview this passage")
     capture(output, "-actions")
     action(window, "Show source passage")

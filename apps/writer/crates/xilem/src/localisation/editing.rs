@@ -21,7 +21,7 @@ impl Writer {
         *form = text;
         draft.reviewed = false;
         owner.catalogue.update(key.id, draft);
-        self.status = "Translation draft updated; Save publishes the PO file.".into();
+        self.status = "Translation draft updated · Save to keep it.".into();
     }
     pub(super) fn review_translation(&mut self, key: &EntryKey, reviewed: bool) {
         if !self.translation_entry_active(key) {

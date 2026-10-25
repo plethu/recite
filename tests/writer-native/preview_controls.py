@@ -53,5 +53,7 @@ def within_content(window, node):
         return False
     coordinates = window.api.GLib.Variant("(u)", (int(window.api.Atspi.CoordType.WINDOW),))
     bounds = window.call(node, "Component", "GetExtents", coordinates)[0]
-    clip = window.call(scrollbar, "Component", "GetExtents", coordinates)[0]
+    # A scrollbar may be shorter than its viewport; measure the actual native owner.
+    viewport = window.api.property_value(window.bus, scrollbar, window.api.ACCESSIBLE, "Parent")
+    clip = window.call(viewport, "Component", "GetExtents", coordinates)[0]
     return bounds[1] >= clip[1] and bounds[1] + bounds[3] <= clip[1] + clip[3]

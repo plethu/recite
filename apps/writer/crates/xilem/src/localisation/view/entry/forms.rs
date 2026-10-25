@@ -1,4 +1,5 @@
 use super::*;
+use crate::presentation::manuscript_text;
 use recite_writer_session::localisation::catalogue::Draft;
 
 pub(super) fn forms(
@@ -80,6 +81,23 @@ fn form(
         index + 1
     )));
     flex_col((
+        (!wide(writer)).then(|| {
+            let source = entry
+                .source
+                .get(entry.source_page)
+                .map(String::as_str)
+                .unwrap_or("");
+            let mut excerpt = source.chars().take(180).collect::<String>();
+            if source.chars().count() > 180 {
+                excerpt.push('…');
+            }
+            flex_col((
+                label(writer.ui_scale(), "Source passage").color(writer.palette.muted),
+                manuscript_text(prose_size(writer), excerpt).width(entry_width(writer).px()),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(4.px())
+        }),
         paragraph(
             writer.ui_scale(),
             format!(
@@ -87,10 +105,10 @@ fn form(
                 entry.details.plural.form_caption(index),
                 catalogue_caption(writer)
             ),
-            writer.script_width(),
+            entry_width(writer),
         ),
         sized_box(keyed((entry.key.clone(), index), input))
-            .dims((writer.script_width().px(), 180.px())),
+            .dims((entry_width(writer).px(), 180.px())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(6.px())

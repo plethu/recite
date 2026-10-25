@@ -37,7 +37,7 @@ pub(super) fn wordings(
                     || writer.localisation.saving()
                     || current,
             );
-            flex_row((sized_box(action).width(writer.script_width().px()),))
+            flex_row((sized_box(action).width(entry_width(writer).px()),))
         })
         .collect::<Vec<_>>();
     Some(

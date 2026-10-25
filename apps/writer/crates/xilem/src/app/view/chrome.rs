@@ -8,7 +8,7 @@ use xilem::{
     WidgetView,
     masonry::{kurbo::Axis, layout::AsUnit, parley::style::FontWeight},
     style::Style,
-    view::{CrossAxisAlignment, flex_col, flex_row, sized_box},
+    view::{CrossAxisAlignment, flex_col, flex_row, indexed_stack, sized_box},
 };
 pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
     let scale = crate::presentation::scale(&app.preferences.config.writer);
@@ -18,9 +18,20 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
             .writer
             .as_ref()
             .is_some_and(|writer| writer.phase != Phase::Writing);
+    let compact_writing = !app.show_welcome
+        && !app.settings_open
+        && app.writer.as_ref().is_some_and(|writer| {
+            writer.compact_chrome()
+                && writer.workspaces.screen == crate::workspaces::Screen::Write
+                && !writer.attention.is_focused()
+        });
     sized_box(
         flex_col((
-            identity_bar(app, scale, blocked),
+            indexed_stack((
+                identity_bar(app, scale, blocked),
+                flex_col(()).dims((0.px(), 0.px())),
+            ))
+            .active(usize::from(compact_writing)),
             app.workspace_menu
                 .then(|| workspace_actions(app, scale, searching)),
             (!app.status.is_empty() && (!app.show_welcome || app.settings_open))

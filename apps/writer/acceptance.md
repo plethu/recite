@@ -355,6 +355,21 @@ preferences. Checkbox/radio indicator geometry and strokes follow UI scale; a mo
 regression checks reflow, focus retention and actions through 100→200→100%. Reading/source text
 sizes remain independent preferences. Actual native renders receive separate visual review.
 
+The `workbench` scenario captures the shared Relay Hub branching fixture at 100% and 200% UI scale:
+Script, Map, native inline editing with Undo, and Split with a pinned reference after beat
+navigation. It preserves the source bytes and uses owned project copies. Run it with `mise exec --
+just writer probe-xilem target/writer-native/workbench.json workbench`. Compact Split prioritises
+Script when both panes cannot fit, explains that adaptation, and keeps Map available through its
+selector.
+
+A previous migration review mistook functional coverage and narrow fixture renders for product
+equivalence, leaving obvious workbench differences for the maintainer to discover. Prevent that
+failure by comparing representative workflows against the accepted reference, including combined
+states such as Split plus reference and translation editing plus source context. A reviewer with a
+clean context must inspect the actual renders against the original task before receiving the
+implementation rationale or earlier verdict. Keep visual, interaction, accessibility and performance
+evidence distinct; none of these screenshots establishes whole-application equivalence.
+
 The `localisation-final` scenario checks translation-field Ctrl/Cmd+S, ordinary catalogue history
 with Alt+Left/Right, and explicit discard of multiple PO drafts through close/reopen at 100/200% UI
 scale. Source bytes remain unchanged. Focused regressions cover stale field targets, restored

@@ -11,7 +11,7 @@ pub(crate) struct Layout {
     pub map: f64,
     pub script: f64,
     script_pane: f64,
-    compact_split: bool,
+    pub compact_split: bool,
     available: f64,
 }
 impl Layout {
@@ -27,10 +27,17 @@ impl Layout {
         );
         let scale = f64::from(state.ui_scale());
         let minimum_map = 320. * scale;
+        // Prose has its own reading size, but the surrounding controls still scale.
+        let minimum_script = preferred.max(400. * scale);
         let compact_split =
-            workspace == Workspace::Split && available < preferred + minimum_map + 20.;
+            workspace == Workspace::Split && available < minimum_script + minimum_map + 20.;
         let full_script = workspace == Workspace::Script || compact_split;
-        let script = (preferred + if full_script { 144. } else { 0. }).min(available);
+        let script = if full_script {
+            preferred + 144.
+        } else {
+            minimum_script
+        }
+        .min(available);
         let map = if workspace == Workspace::Split && !compact_split {
             available - script - 20.
         } else {

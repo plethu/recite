@@ -194,8 +194,13 @@ impl Writer {
     }
     pub(super) fn resize_map(&mut self, size: kurbo::Size) {
         if let Some(scene) = self.map_scene_mut() {
-            scene.viewport = (size.width as f32, size.height as f32);
+            let viewport = (size.width as f32, size.height as f32);
+            let resized = scene.viewport != viewport;
+            scene.viewport = viewport;
             scene.frame();
+            if resized && scene.camera.framing == Framing::Free {
+                scene.reveal_selected();
+            }
         }
     }
     pub(super) fn zoom_map(&mut self, factor: f32) {

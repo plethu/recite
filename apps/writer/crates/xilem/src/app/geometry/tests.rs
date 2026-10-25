@@ -12,8 +12,8 @@ use xilem::{
     masonry::{
         accesskit::Role,
         core::{PointerButton, WindowEvent},
-        kurbo::{Point, Rect},
-        widgets::{Passthrough, SizedBox, TextArea},
+        kurbo::Rect,
+        widgets::{Passthrough, SizedBox, TextArea, TextInput},
     },
 };
 #[path = "preview/tests.rs"]
@@ -179,7 +179,8 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
             .harness
             .process_window_event(WindowEvent::Resize((1280, 720).into()));
         mounted.settle();
-        mounted.replace_text("Manuscript", "Keep this native draft.");
+        let draft = "Keep this native draft.\n".repeat(12);
+        mounted.replace_text("Manuscript", &draft);
         let field = mounted.find("Manuscript");
         let before = mounted.harness.get_widget_with_id(field).ctx().border_box();
         let transform = mounted
@@ -230,22 +231,24 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
                 && panel.width() < 1280.,
             "{scale}% painted panel: {panel:?}"
         );
-        let outside = mounted
-            .harness
-            .get_widget_with_id(mounted.find(if scale == 100 {
-                "Find scene or beat…"
-            } else {
-                "Scenes…"
-            }));
-        let bounds = outside
+        let field_widget = mounted.harness.get_widget_with_id(field);
+        let bounds = field_widget
             .ctx()
             .window_transform()
-            .transform_rect_bbox(outside.ctx().border_box());
-        let point = Point::new(bounds.x0 + 2., bounds.center().y);
+            .transform_rect_bbox(field_widget.ctx().border_box());
+        let visible = bounds.intersect(Rect::new(0., 0., 1280., 640.));
+        let exposed = Rect::new(visible.x0, visible.y0.max(panel.y1), visible.x1, visible.y1);
         assert!(
-            !panel.contains(point),
-            "outside action {point:?}: {panel:?}"
+            exposed.height() >= 32.,
+            "a usable manuscript area below the panel: {visible:?}, {panel:?}"
         );
+        let point = exposed.center();
+        assert!(bounds.contains(point) && !panel.contains(point));
+        let area = field_widget
+            .downcast::<TextInput>()
+            .map_or(field, |input| input.area_pod().id());
+        let dismiss = mounted.find("Dismiss document actions");
+        mounted.harness.focus_on(Some(dismiss));
         mounted.harness.mouse_move(point);
         mounted
             .harness
@@ -254,12 +257,11 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
             .harness
             .mouse_button_release(Some(PointerButton::Primary));
         mounted.settle();
-        assert!(
-            mounted.state.picker.is_some(),
-            "outside action must receive the pointer"
+        assert_eq!(
+            mounted.harness.focused_widget_id(),
+            Some(area),
+            "outside pointer reaches the native manuscript"
         );
-        mounted.state.picker = None;
-        mounted.settle();
         mounted.activate("Dismiss document actions");
         assert_eq!(mounted.find("Manuscript"), field);
         assert_eq!(
@@ -271,7 +273,7 @@ fn document_actions_overlay_preserves_the_manuscript_allocation_and_native_field
                 .session
                 .model()
                 .draft(),
-            "Keep this native draft."
+            draft
         );
         for width in [900, 1280] {
             mounted

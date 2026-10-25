@@ -31,10 +31,12 @@ use xilem::{
 };
 
 pub(crate) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
+    let compact_entry =
+        writer.compact_chrome() && matches!(writer.localisation.destination, Destination::Entry);
     flex_col((
-        (!matches!(writer.localisation.destination, Destination::Passage)).then(|| heading(writer)),
+        (!compact_entry && !matches!(writer.localisation.destination, Destination::Passage)).then(|| heading(writer)),
         (!writer.localisation.has_catalogue()).then(|| paragraph(writer.ui_scale(), "Open a PO catalogue or add a language to translate this project. Drafts stay recoverable until you Save.", 640.)),
-        (!matches!(writer.localisation.destination, Destination::Passage)).then(|| files(writer)),
+        (!compact_entry && !matches!(writer.localisation.destination, Destination::Passage)).then(|| files(writer)),
         report(writer),
         destinations(writer),
     )).cross_axis_alignment(CrossAxisAlignment::Start).gap(12.px()).prop(Region(Some(Pane::Localisation)))
@@ -71,7 +73,7 @@ fn heading(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     .gap(16.px())
 }
 fn prose_size(writer: &Writer) -> f32 {
-    writer.reading_size() * writer.ui_scale()
+    writer.reading_size()
 }
 fn destinations(writer: &Writer) -> impl WidgetView<Writer> + use<> {
     let pages = (

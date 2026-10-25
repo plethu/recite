@@ -123,11 +123,14 @@ loaded output, independently of project-analysis refresh and Save's own validati
 Native Map geometry, synopsis, spatial selection and personal-placement format have shared owners.
 Its accepted projection is prepared on workers and checked against source identity before adoption;
 placement writes reconcile even when presentation is cancelled. Camera and local layout never add a
-source undo step. Stable pane slots retain Script's mounted text history. Visible detail cards stay
-native controls; low-zoom overview paints geometry, retains complete outline/Go to/Connections
-paths, and restores a readable focused card on selection. Focus requests reveal the whole card
-through the outer scroll container. Collapsing focused cards transfers focus to the persistent map
-viewport.
+source undo step. Stable pane slots retain Script's mounted text history. Split requires usable
+widths for both panes at the selected control scale; insufficient space prioritises Script without
+changing the requested workspace. Compact writing chrome shares its scene lookup with the document
+toolbar. A changed map allocation reveals the selected card at the existing zoom; later panning
+remains free. Visible detail cards stay native controls; low-zoom overview paints geometry, retains
+complete outline/Go to/Connections paths, and restores a readable focused card on selection. Focus
+requests reveal the whole card through the outer scroll container. Collapsing focused cards
+transfers focus to the persistent map viewport.
 
 Map camera zoom alone converts world geometry to logical viewport coordinates; personal UI scale
 changes controls, not card placement or pan distance. Operating-system DPI remains the native
@@ -239,22 +242,25 @@ Localise for the current beat prepares accepted source without applying a manusc
 Source draft; Source retains its remembered Script selection, and Map supplies its visible selected
 beat. Preparation validates a unique projectable declaration before publishing the bilingual view.
 Native entry components page wording choices, plural forms and long rule text independently. Invalid
-plural metadata disables the entry save while retaining drafts. Nearby source excludes wording
-variants of the current passage. Catalogue source actions use the ordinary checked navigation and
-draft-Apply path. Native receipts also require the originating entry and catalogue revision at both
-publication stages. Preview language and wording change only after successful navigation; opening
-the pane does not restart a run. Existing PO language metadata uses validated BCP-47 tags, including
-private-use and extension tags, independently of the catalogue-creation picker. Disk decisions
-require the exact inspected local catalogue and external fingerprint. Keeping drafts preserves
-compatible translations for review against the adopted PO metadata; using disk explicitly discards
-those drafts. Catalogue creation and source refresh share extraction and review policy with Freya.
-Both native owners are checked out for source operations and returned on cancellation, failed
-dispatch and unwind. Unresolved current or retained source fields refuse extraction. Refresh Apply
-re-extracts source and checks the exact reviewed catalogue before publication. A completed PO write
-remains an applied result even if recovery subsequently fails; both frontends surface that warning.
-Configured preview captures the same locale, wording, typed values and saved-or-draft catalogue
-policy in both frontends. Native controls page interpolation inputs and language results; staged
-changes do not replace an active run. Saved catalogue bytes are read on the worker.
+plural metadata disables the entry save while retaining drafts. Wide entry details pair source and
+translation columns; compact forms carry a bounded source excerpt beside the field, with full source
+context below. Translation prose follows reading size independently of control scale. Nearby source
+excludes wording variants of the current passage. Catalogue source actions use the ordinary checked
+navigation and draft-Apply path. Native receipts also require the originating entry and catalogue
+revision at both publication stages. Preview language and wording change only after successful
+navigation; opening the pane does not restart a run. Existing PO language metadata uses validated
+BCP-47 tags, including private-use and extension tags, independently of the catalogue-creation
+picker. Disk decisions require the exact inspected local catalogue and external fingerprint. Keeping
+drafts preserves compatible translations for review against the adopted PO metadata; using disk
+explicitly discards those drafts. Catalogue creation and source refresh share extraction and review
+policy with Freya. Both native owners are checked out for source operations and returned on
+cancellation, failed dispatch and unwind. Unresolved current or retained source fields refuse
+extraction. Refresh Apply re-extracts source and checks the exact reviewed catalogue before
+publication. A completed PO write remains an applied result even if recovery subsequently fails;
+both frontends surface that warning. Configured preview captures the same locale, wording, typed
+values and saved-or-draft catalogue policy in both frontends. Native controls page interpolation
+inputs and language results; staged changes do not replace an active run. Saved catalogue bytes are
+read on the worker.
 
 Xilem keeps Start/Restart and preparation cancellation outside the scrolling preview content,
 derives their captions and availability from the existing preparation lifecycle, and shows captured

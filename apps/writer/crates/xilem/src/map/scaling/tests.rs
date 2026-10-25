@@ -4,6 +4,28 @@ use recite_config::WriterPresentationField;
 use xilem::masonry::kurbo::{Point, Size, Vec2};
 
 #[test]
+fn pane_resize_reveals_the_selected_card_without_resetting_zoom_or_later_pan() {
+    let mut fixture = fixture().unwrap();
+    let writer = &mut fixture.writer;
+    let scene = writer.map_scene_mut().unwrap();
+    let selected = scene.projection.graph.blocks.last().unwrap().id.clone();
+    scene.select(Some(selected));
+    scene.camera.zoom = 0.8;
+    scene.camera.framing = Framing::Free;
+    writer.resize_map(Size::new(420., 300.));
+    let scene = writer.map.scene(writer).unwrap();
+    let index = scene.projection.graph.ids[scene.selected.as_ref().unwrap()];
+    let bounds = scene.overview_bounds(index);
+    assert!(bounds.x0 >= 0. && bounds.x1 <= 420.);
+    assert!(bounds.y0 >= 0. && bounds.y1 <= 300.);
+    assert_eq!(scene.camera.zoom, 0.8);
+    writer.map_input(Source::Viewport, Input::Pan(Vec2::new(-700., -500.)));
+    let panned = writer.map.scene(writer).unwrap().camera;
+    writer.resize_map(Size::new(420., 300.));
+    assert!(writer.map.scene(writer).unwrap().camera == panned);
+}
+
+#[test]
 fn camera_geometry_pan_placement_and_pointer_zoom_are_independent_of_interface_scale() {
     let mut observed = vec![];
     for scale in [100, 200] {

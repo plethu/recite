@@ -1,5 +1,5 @@
 use super::*;
-use crate::tests::support::NoProxy;
+use crate::tests::support::{NoProxy, mounted::Mounted};
 use xilem::masonry::core;
 use xilem::masonry::widgets;
 use xilem::{ViewCtx, core::View, masonry::testing::TestHarness};
@@ -16,11 +16,37 @@ fn manuscript(harness: &TestHarness<widgets::Passthrough>) -> Option<core::Widge
 }
 
 #[test]
+fn compact_split_keeps_the_manuscript_visible_and_retains_the_requested_workspace() {
+    let mut fixture = fixture().unwrap();
+    let writer = &mut fixture.writer;
+    writer.viewport.width = 1280.;
+    writer.map.workspace = Workspace::Split;
+    let mut config = writer.config.clone();
+    config.writer.presentation = config
+        .writer
+        .presentation
+        .with_value(recite_config::WriterPresentationField::UiScale, 200)
+        .unwrap();
+    writer.configure(config);
+    let mounted = Mounted::new(fixture.writer, |writer| native::surface(writer));
+    assert!(manuscript(&mounted.harness).is_some());
+    assert!(!mounted.contains_text("Scene map"));
+    assert!(mounted.contains_text("Split needs more width · choose Map"));
+    assert_eq!(mounted.state.map.workspace, Workspace::Split);
+}
+
+#[test]
 fn scene_map_renders_at_personal_scales_and_split_workspace() {
     for scale in [100, 200] {
         for workspace in [Workspace::Map, Workspace::Split] {
             let mut fixture = fixture().unwrap();
             let writer = &mut fixture.writer;
+            let width = if scale == 200 && workspace == Workspace::Split {
+                2400
+            } else {
+                1440
+            };
+            writer.viewport.width = f64::from(width);
             writer.map.workspace = workspace;
             let mut config = writer.config.clone();
             config.writer.presentation = config
@@ -38,7 +64,7 @@ fn scene_map_renders_at_personal_scales_and_split_workspace() {
             let mut harness = TestHarness::create_with_size(
                 crate::presentation::Theme::new(&writer.config.writer).initial_properties(),
                 pod.new_widget,
-                (1440, 1000),
+                (width, 1000),
             );
             native::settle(
                 writer,

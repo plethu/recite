@@ -1,7 +1,6 @@
 //! Both reading aids reuse one bounded read-only block without mounting more editors.
 use super::*;
 use crate::presentation::{group::named, manuscript_text, print};
-use crate::workspaces::Screen;
 use recite_writer_model::{PassageKind, ScriptEntry};
 use recite_writer_session::{choices::display_name, reading::Excerpt};
 use xilem::{
@@ -197,16 +196,8 @@ fn entry_view(state: &Writer, entry: &ScriptEntry, width: f64) -> Box<AnyWidgetV
                     .prop(LineBreaking::WordWrap)
                     .width(caption_width.px())
                     .color(state.palette.muted),
-                manuscript_text(
-                    0.75 * state.reading_size()
-                        * if state.workspaces.screen == Screen::Localisation {
-                            state.ui_scale()
-                        } else {
-                            1.
-                        },
-                    passage.text.clone(),
-                )
-                .width((width - caption_width - 8.).px()),
+                manuscript_text(0.75 * state.reading_size(), passage.text.clone())
+                    .width((width - caption_width - 8.).px()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(4.px())

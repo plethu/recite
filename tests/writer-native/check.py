@@ -80,7 +80,9 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "specimen":
+        if scenario == "workbench":
+            from workbench_interactions import run
+        elif scenario == "specimen":
             from specimen_interactions import run
         elif scenario == "localisation-final":
             from localisation_final import run
@@ -182,6 +184,7 @@ def main():
         choices=(
             "all",
             "specimen",
+            "workbench",
             "localisation-final",
             "localisation-beat",
             "clipboard",
@@ -307,7 +310,8 @@ def main():
         try:
             code = process.wait(
                 timeout=120
-                if args.scenario in ("all", "preferences", "editor", "localisation-beat")
+                if args.scenario
+                in ("all", "preferences", "editor", "localisation-beat", "workbench")
                 or args.scenario.startswith(
                     (
                         "preview-inputs",

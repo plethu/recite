@@ -118,10 +118,12 @@ viewport centre when disabled in Settings). Zoom controls include **100%** and *
 not rearrange cards. **Arrange automatically** resets card placement while preserving the camera's
 zoom and position.
 
-Xilem's Settings controls navigation and script widths and the script pane's side. Split stacks its
-panes when they no longer fit beside each other. Freya also provides draggable dividers beside the
-scene drawer and script pane: focus a divider and use Left/Right to resize, or Home/End to reach its
-bounds. Pane preferences are restored next launch.
+Xilem's Settings controls navigation and script widths and the script pane's side. When Split cannot
+fit both panes at the selected UI scale, Script takes priority; **Map** still opens the map, and
+widening the window restores both panes. The selected card stays visible when its map pane resizes,
+without changing zoom. Freya also provides draggable dividers beside the scene drawer and script
+pane: focus a divider and use Left/Right to resize, or Home/End to reach its bounds. Pane
+preferences are restored next launch.
 
 Settings also controls reading size, Source size and UI scale independently. **Commands**
 (Ctrl/Cmd+Shift+P) searches workspace actions; **Go to scene or beat** (Ctrl/Cmd+P) searches scene

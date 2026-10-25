@@ -18,7 +18,7 @@ pub(super) fn guide(
                 paragraph(
                     scale,
                     wording(MsgId::WriterEntryPluralInvalid),
-                    writer.script_width(),
+                    entry_width(writer),
                 )
             }),
             guide.valid().then(|| {
@@ -50,7 +50,7 @@ fn rule(writer: &Writer, entry: &Entry, blocked: bool) -> impl WidgetView<Writer
         entry.rule.pages.get(entry.rule.page).map(|rule| {
             flex_row((
                 sized_box(source_text(14. * writer.ui_scale(), rule.clone()))
-                    .width(writer.script_width().px()),
+                    .width(entry_width(writer).px()),
             ))
         }),
         (entry.rule.pages.len() > 1).then(|| {
