@@ -198,7 +198,7 @@ impl Writer {
             Ok(()) if self.source_repair_pending() => {
                 "Recovered source draft awaiting repair and import.".into()
             }
-            Ok(()) => "Draft updated".into(),
+            Ok(()) => "Ready".into(),
             Err(error) => feedback::file(&error),
         };
         self.reading.prepare(self.session.model());
@@ -207,6 +207,10 @@ impl Writer {
         self.navigate(navigation::Target::Reload);
     }
     fn request_close(&mut self) {
+        if let Err(error) = self.require_finished_composition() {
+            self.status = error;
+            return;
+        }
         if self.work.busy() || self.navigation.busy() || self.project_jobs_busy() {
             self.status = "An editor action is still finishing. Your work remains open.".into();
             return;

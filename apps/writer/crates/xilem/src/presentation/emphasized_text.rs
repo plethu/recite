@@ -1,4 +1,4 @@
-//! One native text layout retains shaping and accessibility across emphasised ranges.
+//! Native emphasis preserves text order, shaping and accessibility for comparisons and search.
 use super::styled_text::Family;
 use recite_writer_session::comparison::changed_range;
 use std::ops::Range;
@@ -13,42 +13,69 @@ use xilem::{
     },
 };
 
-pub(crate) struct ComparisonText {
+mod search;
+#[derive(PartialEq)]
+enum Emphasis {
+    ChangedFrom(ArcStr),
+    Search(ArcStr),
+}
+
+pub(crate) fn manuscript_search(size: f32, text: String, query: String) -> EmphasizedText {
+    search_text(size, text, query, Family::Manuscript)
+}
+pub(crate) fn search_label(size: f32, text: String, query: String) -> EmphasizedText {
+    search_text(size, text, query, Family::Ui)
+}
+fn search_text(size: f32, text: String, query: String, family: Family) -> EmphasizedText {
+    EmphasizedText {
+        text: text.into(),
+        emphasis: Emphasis::Search(query.into()),
+        size,
+        family,
+    }
+}
+pub(crate) struct EmphasizedText {
     text: ArcStr,
-    other: ArcStr,
+    emphasis: Emphasis,
     size: f32,
     family: Family,
 }
-pub(crate) fn manuscript_comparison(size: f32, text: String, other: String) -> ComparisonText {
-    ComparisonText {
+pub(crate) fn manuscript_comparison(size: f32, text: String, other: String) -> EmphasizedText {
+    EmphasizedText {
         text: text.into(),
-        other: other.into(),
+        emphasis: Emphasis::ChangedFrom(other.into()),
         size,
         family: Family::Manuscript,
     }
 }
-pub(crate) fn source_comparison(size: f32, text: String, other: String) -> ComparisonText {
-    ComparisonText {
+pub(crate) fn source_comparison(size: f32, text: String, other: String) -> EmphasizedText {
+    EmphasizedText {
         text: text.into(),
-        other: other.into(),
+        emphasis: Emphasis::ChangedFrom(other.into()),
         size,
         family: Family::Source,
     }
 }
-impl ComparisonText {
+impl EmphasizedText {
     fn styles(&self) -> Vec<(Range<usize>, StyleProperty)> {
-        let range = changed_range(&self.text, &self.other);
-        if range.is_empty() {
-            return vec![];
-        }
-        vec![
-            (range.clone(), StyleProperty::FontWeight(FontWeight::BOLD)),
-            (range, StyleProperty::Underline(true)),
-        ]
+        let ranges = match &self.emphasis {
+            Emphasis::ChangedFrom(other) => vec![changed_range(&self.text, other)],
+            Emphasis::Search(query) => search::ranges(&self.text, query),
+        };
+        ranges
+            .into_iter()
+            .filter(|range| !range.is_empty())
+            .flat_map(|range| {
+                [
+                    (range.clone(), StyleProperty::FontWeight(FontWeight::BOLD)),
+                    (range, StyleProperty::Underline(true)),
+                ]
+            })
+            .collect()
     }
 }
-impl ViewMarker for ComparisonText {}
-impl<State: 'static> View<State, (), ViewCtx> for ComparisonText {
+impl ViewMarker for EmphasizedText {}
+impl<State: 'static> View<State, (), ViewCtx> for EmphasizedText {
     type Element = Pod<Label>;
     type ViewState = ();
     fn build(&self, _: &mut ViewCtx, _: &mut State) -> (Self::Element, ()) {
@@ -66,7 +93,7 @@ impl<State: 'static> View<State, (), ViewCtx> for ComparisonText {
         mut element: Mut<'_, Self::Element>,
         _: &mut State,
     ) {
-        if self.text != previous.text || self.other != previous.other {
+        if self.text != previous.text || self.emphasis != previous.emphasis {
             Label::set_text(&mut element, self.text.clone());
             Label::set_ranged_styles(&mut element, self.styles());
         }

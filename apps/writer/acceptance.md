@@ -4,6 +4,29 @@ Writer is a preview. Native authoring, accessibility, and installed-package acce
 host evidence. Automated tests and captured renders do not establish physical input, screen-reader
 usability, GPU performance, or cross-platform support.
 
+The UI/UX release target is at least 9/10 for sustained writing. That is a product acceptance
+decision supported by evidence, not a percentage derived from passing checks. Before presenting that
+decision, exercise representative branching projects and substantial beats at ordinary and large
+control sizes, including combined workspace states. Independent review must inspect actual renders
+without inheriting the implementer's verdict. Substantive unresolved workflow or visual findings
+keep the affected surface unfinished.
+
+The daily-writing evidence must cover repeated writing, revision, scoped search, preview and return,
+native Undo/Redo, stable action positions, and Save of the visible edit. Long-beat navigation must
+retain useful adjacent prose, truthful location and the admitted draft through failed transitions.
+Recovery, external changes, catalogue editing and project tools need their own journeys. Keep native
+fixture checks, hardware latency, physical assistive-technology use and voluntary sustained writer
+sessions distinct. Successful short automated cycles establish those cycles, not comfort over a full
+working day.
+
+The `writing-journey` native scenario checks draft-inclusive beat search, explicit saved-project
+scope, query/prose history, modal focus containment, blocked background actions, stable Save
+geometry and repeated complete saves at 100/200% UI scale. The `reading-continuity` scenario
+exercises overlapping entry ranges, native field/history retention, feasible visible anchoring and
+refused outgoing text before checked continuation. Native receipts include the executable hash and
+reject a binary replaced during capture. Build completion must precede capture; a hash alone does
+not prove the binary contains the current worktree.
+
 The next human comparison on 2026-10-22 also rejected Map presentation readiness. The follow-up
 restores the accepted compact shell, scene rail, dotted canvas, card hierarchy and connection ink.
 Fresh review inspected 22 matched Relay Hub renders: Map, Script, Split and lower camera zooms at

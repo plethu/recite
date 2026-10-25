@@ -65,7 +65,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
         key("a", control=True)
         type_text("Stay for a moment.")
         window.wait(lambda: window.text(node) == "Stay for a moment.", "reply draft")
-        window.act("Apply draft")
+        window.document_action("Apply draft")
         window.document_action("Read beat")
         window.wait(lambda: window.find_text("Stay for a moment."), "accepted reply reading")
         capture(output, "-written-beat")

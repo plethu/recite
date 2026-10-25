@@ -56,6 +56,7 @@ impl Writer {
         )
     }
     pub(super) fn submit_navigation(&mut self, target: Target) -> Result<(), String> {
+        self.require_finished_composition()?;
         self.navigation.require_ready()?;
         if matches!(target, Target::Workspace(_) | Target::MapRefresh) {
             let work = self.prepare_map(if matches!(target, Target::Workspace(_)) {
@@ -110,6 +111,7 @@ impl Writer {
             }
             Target::Location(location)
             | Target::Lookup { location, .. }
+            | Target::Reading { location, .. }
             | Target::Selection(location) => self.location_destination(location)?,
             Target::CatalogueSource(intent) => self.location_destination(intent.location())?,
             Target::PinReference => Destination::Current(Box::new(model.navigation_request())),

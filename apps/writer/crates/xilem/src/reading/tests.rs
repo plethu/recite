@@ -43,7 +43,7 @@ fn blank_document_creates_a_beat_and_edits_its_frozen_first_line() {
         model.set_draft("An opening line.".into());
         Ok(())
     });
-    click(&mut writer, &["Apply draft", "Add reply"]).unwrap();
+    click(&mut writer, &["Project", "Apply draft", "Add reply"]).unwrap();
     let reply = writer.session.model().view().clone();
     assert_ne!(first, reply);
     let source = writer.session.model().document().source();
@@ -122,7 +122,7 @@ fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_synt
         model.set_draft("-> syntax".into());
         Ok(())
     });
-    click(&mut writer, &["Apply draft"]).unwrap();
+    click(&mut writer, &["Project", "Apply draft"]).unwrap();
     assert!(writer.status.contains("your editor"));
     assert_eq!(writer.session.model().draft(), "-> syntax");
 }
@@ -195,7 +195,7 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     .unwrap();
     assert!(Arc::ptr_eq(&rows, &writer.reading.rows));
     let mounted = labels(&mut writer).unwrap();
-    assert!(mounted.iter().any(|name| name == "Edit passage 17"));
+    assert!(mounted.iter().any(|name| name == "Edit passage 9"));
     assert!(!mounted.iter().any(|name| name == "Edit passage 1"));
     assert_eq!(
         mounted
@@ -220,7 +220,16 @@ fn paged_conditional_entries_keep_their_context_and_plural_fragments_stay_read_o
     source.push_str(":else\n  > plural@aaaaaaaaaaaaaaaaaaaa bind=(count:int=$count)\n    One letter.\n    | Many letters.\n-> END\n");
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
-    click(&mut writer, &["Project", "Read beat", "Next beat entries"]).unwrap();
+    click(
+        &mut writer,
+        &[
+            "Project",
+            "Read beat",
+            "Next beat entries",
+            "Next beat entries",
+        ],
+    )
+    .unwrap();
     let names = labels(&mut writer).unwrap();
     assert!(names.iter().any(|name| name == "Within :if ready()"));
     assert!(names.iter().any(|name| name == "Within Otherwise"));
@@ -231,8 +240,12 @@ fn paged_conditional_entries_keep_their_context_and_plural_fragments_stay_read_o
     );
     assert!(!names.iter().any(|name| name == "Manuscript"));
     assert_eq!(writer.session.model().document().source(), source);
-    click(&mut writer, &["Previous beat entries"]).unwrap();
-    assert_eq!(writer.reading.page, 0);
+    click(
+        &mut writer,
+        &["Previous beat entries", "Previous beat entries"],
+    )
+    .unwrap();
+    assert_eq!(writer.reading.window.start(), 0);
 }
 
 #[test]

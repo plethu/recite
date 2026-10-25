@@ -150,7 +150,7 @@ fn native_view_actions_apply_discard_undo_and_guard_save() {
         model.set_draft("Accepted.".into());
         Ok(())
     });
-    click(&mut writer, &["Apply draft", "Undo applied"]).unwrap();
+    click(&mut writer, &["Project", "Apply draft", "Undo applied"]).unwrap();
     assert_eq!(writer.session.model().draft(), original);
     click(&mut writer, &["Project", "Redo applied"]).unwrap();
     assert_eq!(writer.session.model().draft(), "Accepted.");

@@ -9,10 +9,11 @@ use crate::reading::{Content, Row};
 use recite_core::DocumentKey;
 use recite_writer_model::{AnalysisStamp, RouteOwner};
 use recite_writer_session::choices::display_name;
+mod controls;
 mod header;
 mod passage;
+mod refusal;
 pub(super) mod viewport;
-use crate::reading::PAGE;
 use xilem::{
     AnyWidgetView,
     masonry::{kurbo::Axis, layout::UnitPoint, properties::ContentColor},
@@ -55,11 +56,9 @@ pub(super) fn empty(state: &Writer) -> impl WidgetView<Writer> + use<> {
 }
 pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
-    let pages = rows.len().div_ceil(PAGE).max(1);
-    let page = state.reading.page.min(pages - 1);
-    let start = page * PAGE;
-    let end = (start + PAGE).min(rows.len());
-    let entries = (start..end)
+    let range = state.reading.window.range(rows.len());
+    let at_end = range.end == rows.len();
+    let entries = range
         .map(|index| {
             let key = match &rows[index].content {
                 Content::Passage { passage, .. } => RowIdentity::Passage(
@@ -83,8 +82,7 @@ pub(super) fn block(state: &Writer, id: &str, rows: &[Row]) -> impl WidgetView<W
                 "No dialogue yet. Add a line or reply, or edit the source in your editor.",
             )
         }),
-        pagination(state, page, pages),
-        (page + 1 == pages
+        (at_end
             && !matches!(
                 rows.last().map(|row| &row.content),
                 Some(Content::Continuation(_))
@@ -208,59 +206,4 @@ fn continuation(
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
 }
-pub(super) fn page_controls(
-    state: &Writer,
-    surface: &Surface<'_>,
-) -> Option<impl WidgetView<Writer> + use<>> {
-    let pages = state.reading.rows.len().div_ceil(PAGE).max(1);
-    (pages > 1 && matches!(surface, Surface::Manuscript { .. } | Surface::Beat { .. })).then(|| {
-        flex_row((
-            pagination(state, state.reading.page.min(pages - 1), pages),
-            print::action(
-                state.ui_scale(),
-                "Find in this beat",
-                state.phase != Phase::Writing || state.navigation.busy() || state.work.busy(),
-                |state: &mut Writer| state.app_request = Some(Request::Search(Search::Passages)),
-            ),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(12.px())
-    })
-}
-fn pagination(
-    state: &Writer,
-    page: usize,
-    pages: usize,
-) -> Option<impl WidgetView<Writer> + use<>> {
-    let closing = state.phase != Phase::Writing;
-    (pages > 1).then(|| {
-        flex_row((
-            print::icon_action(
-                state.ui_scale(),
-                "Previous beat entries",
-                Icon::Back,
-                &state.palette,
-                closing || page == 0,
-                move |state: &mut Writer| state.reading.page = page.saturating_sub(1),
-            ),
-            print::meta(
-                state.ui_scale(),
-                format!(
-                    "Entries {}–{} of {}",
-                    page * PAGE + 1,
-                    ((page + 1) * PAGE).min(state.reading.rows.len()),
-                    state.reading.rows.len()
-                ),
-            ),
-            print::icon_action(
-                state.ui_scale(),
-                "Next beat entries",
-                Icon::Forward,
-                &state.palette,
-                closing || page + 1 >= pages,
-                move |state: &mut Writer| state.reading.page = (page + 1).min(pages - 1),
-            ),
-        ))
-        .gap(8.px())
-    })
-}
+pub(super) use controls::page_controls;

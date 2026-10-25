@@ -111,3 +111,52 @@ fn explicit_reveal_waits_for_its_matching_field_to_mount() {
     focus.synchronize_manuscript(&mut root, Some(&target), attention.edit_request());
     assert_eq!(root.focused_widget(), Some(field(&root, LATE)));
 }
+
+#[test]
+fn overlapping_reading_shifts_preserve_the_visible_native_anchor_in_both_directions() {
+    use crate::native_host::keyboard::reading::Position;
+    use crate::{reading::Direction, view::ReadingViewport};
+    let (mut root, _signals, _) = late();
+    let mut writer = Writer::from_session(Session::examples().unwrap(), None);
+    let viewport = root.get_widget_with_tag(VIEWPORT).unwrap().id();
+    root.edit_widget(viewport, |mut widget| {
+        widget.insert_prop(ReadingViewport::capture(&writer));
+        Portal::set_viewport_pos(&mut widget.downcast::<Portal<Flex>>(), Point::new(0., 700.));
+    });
+    root.redraw();
+    let mut position = Position::default();
+    for direction in [
+        Direction::Next,
+        Direction::Previous,
+        Direction::Next,
+        Direction::Previous,
+    ] {
+        let before = bounds(&root).1;
+        position.capture(&root);
+        writer.reading.window = writer.reading.window.shifted(direction, 40).unwrap();
+        let portal = root.get_widget_with_tag(VIEWPORT).unwrap();
+        let spacer = portal.children()[0].children()[0].id();
+        root.edit_widget(spacer, |mut widget| {
+            SizedBox::set_height(
+                &mut widget.downcast(),
+                if direction == Direction::Next {
+                    400.
+                } else {
+                    800.
+                }
+                .px(),
+            );
+        });
+        root.edit_widget(viewport, |mut widget| {
+            widget.insert_prop(ReadingViewport::capture(&writer));
+        });
+        root.redraw();
+        position.synchronize(&mut root);
+        root.redraw();
+        let after = bounds(&root).1;
+        assert!(
+            (after.y0 - before.y0).abs() < 1.,
+            "{direction:?}: {before:?} to {after:?}"
+        );
+    }
+}

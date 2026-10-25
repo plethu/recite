@@ -5,6 +5,8 @@ use std::sync::mpsc;
 use tokio::sync::mpsc as async_mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
 
+#[path = "composition/tests.rs"]
+mod composition;
 #[path = "failure/tests.rs"]
 mod failure;
 #[path = "history/tests.rs"]

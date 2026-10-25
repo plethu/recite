@@ -41,6 +41,7 @@ pub(crate) struct Context {
     pub writer_active: bool,
     pub screen: Option<crate::workspaces::Screen>,
     pub picker_open: bool,
+    pub picker_instance: Option<picker::PickerInstance>,
     pub project_form_ready: bool,
     pub document_menu: DocumentMenu,
     pub attention: crate::attention::Attention,
@@ -98,6 +99,11 @@ impl<V> Host<V> {
             }) && !self.scope.welcome
                 && !self.scope.settings,
             picker_open: self.scope.picker.is_some(),
+            picker_instance: self
+                .scope
+                .picker
+                .as_ref()
+                .map(|(instance, _, _)| instance.clone()),
             project_form_ready: self
                 .scope
                 .project_form

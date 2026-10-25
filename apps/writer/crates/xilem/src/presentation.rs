@@ -1,10 +1,14 @@
 //! Personal presentation is a cached projection of the shared authored palette.
-mod comparison_text;
+mod emphasized_text;
 mod excerpt;
+mod fit_content;
 pub(crate) use excerpt::excerpt;
+pub(crate) use fit_content::fit_content;
 mod controls;
 mod styled_text;
-pub(crate) use comparison_text::{manuscript_comparison, source_comparison};
+pub(crate) use emphasized_text::{
+    manuscript_comparison, manuscript_search, search_label, source_comparison,
+};
 pub(crate) use styled_text::{manuscript_text, source_text};
 pub(crate) mod control_style;
 pub(crate) mod group;

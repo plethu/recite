@@ -26,6 +26,7 @@ impl Writer {
         request: &Request,
         prepared: &mut PreparedReload,
     ) -> Result<(), String> {
+        self.require_finished_composition()?;
         if !request.origin.is_current(self) {
             return Err("The document changed while reload was preparing. Your current work stays open; the captured draft has a recovery copy.".into());
         }

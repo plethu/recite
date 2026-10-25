@@ -6,8 +6,11 @@ mod focus;
 mod history;
 mod location;
 mod opening;
+mod origin;
+pub(crate) use origin::Origin;
 mod publication;
 pub(crate) mod rail;
+mod refusal;
 mod reload;
 pub(super) mod repair;
 mod saving;
@@ -16,7 +19,7 @@ use super::{Writer, feedback, session::Session};
 use crate::workspaces::Screen as WorkspaceScreen;
 use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
 use recite_writer_model::StructuralCommand;
-use recite_writer_model::{AnalysisStamp, EditOperation, RecoveredDraft, View};
+use recite_writer_model::{EditOperation, View};
 use recite_writer_session::FileError;
 use recite_writer_session::location::{Location, Screen as LinkedScreen};
 use std::sync::atomic;
@@ -37,6 +40,10 @@ pub(super) enum Target {
         search: crate::lookup::Search,
     },
     Selection(Location),
+    Reading {
+        location: Location,
+        window: crate::reading::ReadingWindow,
+    },
     PinReference,
     Edit(EditOperation),
     Structure(StructuralCommand),
@@ -52,7 +59,8 @@ impl Target {
         match self {
             Self::Location(location)
             | Self::Lookup { location, .. }
-            | Self::Selection(location) => Some(location),
+            | Self::Selection(location)
+            | Self::Reading { location, .. } => Some(location),
             Self::CatalogueSource(intent) => Some(intent.location()),
             _ => None,
         }
@@ -76,6 +84,7 @@ pub(super) struct Navigation {
     pub(super) history: location_history::History,
     visit: Option<location_history::Step>,
     field: focus::Admission,
+    refusal: Option<refusal::PassageRefusal>,
 }
 pub(super) struct Request {
     target: Target,
@@ -83,11 +92,7 @@ pub(super) struct Request {
     cancel: CancellationToken,
     forwarded: Option<Arc<atomic::AtomicBool>>,
 }
-pub(crate) struct Origin {
-    window: xilem::WindowId,
-    source: AnalysisStamp,
-    draft: RecoveredDraft,
-}
+
 impl Navigation {
     fn require_ready(&self) -> Result<(), &'static str> {
         if self.sender.as_ref().is_some_and(UnboundedSender::is_closed) {
@@ -113,6 +118,7 @@ impl Navigation {
             history: Default::default(),
             visit: None,
             field: Default::default(),
+            refusal: None,
         }
     }
     pub fn busy(&self) -> bool {
@@ -132,25 +138,7 @@ impl WorkControl for Request {
         Ok(())
     }
 }
-impl Origin {
-    pub(crate) fn capture(writer: &Writer) -> Self {
-        let model = writer.session.model();
-        Self {
-            window: writer.window,
-            source: model.document().analysis_stamp(),
-            draft: model.recovery(),
-        }
-    }
-    fn presentation_is_current(&self, writer: &Writer) -> bool {
-        self.window == writer.window
-            && self.source.is_current(writer.session.model().document())
-            && self.draft.view() == writer.session.model().view()
-            && writer.phase == super::Phase::Writing
-    }
-    pub(crate) fn is_current(&self, writer: &Writer) -> bool {
-        self.presentation_is_current(writer) && self.draft == writer.session.model().recovery()
-    }
-}
+
 impl Writer {
     pub(super) fn switch(&mut self, path: &std::path::Path) {
         if self.workspaces.screen == WorkspaceScreen::Localisation {
@@ -244,6 +232,7 @@ impl Writer {
         }
     }
     pub(super) fn begin_navigation(&mut self, target: Target) -> Result<(), String> {
+        self.require_finished_composition()?;
         if self.session.read_only() {
             return Err(FileError::ProjectActionPending.to_string());
         }
@@ -262,6 +251,7 @@ impl Writer {
             && matches!(
                 target,
                 Target::Location(_)
+                    | Target::Reading { .. }
                     | Target::CatalogueSource(_)
                     | Target::Lookup { .. }
                     | Target::Edit(_)
@@ -278,6 +268,7 @@ impl Writer {
         let applies = (matches!(
             target,
             Target::Location(_)
+                | Target::Reading { .. }
                 | Target::CatalogueSource(_)
                 | Target::Lookup { .. }
                 | Target::Edit(_)

@@ -134,6 +134,7 @@ impl App {
                 && writer.localisation.can_leave()
                 && !writer.navigation.busy()
                 && !writer.project_jobs_busy()
+                && !writer.attention.is_composing()
                 && match &writer.session {
                     Session::Project(project) => project.files().can_leave(writer.session.model()),
                     Session::Examples { .. } => !writer.session.dirty(),

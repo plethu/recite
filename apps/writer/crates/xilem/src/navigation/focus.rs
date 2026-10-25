@@ -49,6 +49,7 @@ impl Writer {
             return;
         }
         if self.phase != Phase::Writing
+            || self.attention.is_composing()
             || self.session.read_only()
             || self.navigation.busy()
             || self.work.busy()

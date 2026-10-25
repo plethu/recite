@@ -6,6 +6,7 @@ mod manuscript;
 mod panes;
 mod picker;
 mod project;
+mod reading;
 mod tab;
 mod vim;
 use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
@@ -24,7 +25,10 @@ use xilem::{
 enum Composition {
     #[default]
     Idle,
-    Preedit(Option<WidgetId>),
+    Preedit {
+        focus: Option<WidgetId>,
+        _guard: Option<crate::attention::Preedit>,
+    },
 }
 #[derive(Default)]
 pub(super) struct Keyboard {
@@ -37,6 +41,7 @@ pub(super) struct Keyboard {
     manuscript: manuscript::Fields,
     document_menu: document_menu::Focus,
     tab: tab::Reveal,
+    reading: reading::Position,
 }
 impl Keyboard {
     pub fn reset(&mut self) {
@@ -57,6 +62,12 @@ impl Keyboard {
         self.reset();
     }
     pub fn event(&mut self, root: &mut RenderRoot, event: &WindowEvent) -> bool {
+        // Termination ends the lease even if stale field authority rejects the text itself.
+        if matches!(event, WindowEvent::Ime(Ime::Commit(_) | Ime::Disabled))
+            || matches!(event, WindowEvent::Ime(Ime::Preedit(text, _)) if text.is_empty())
+        {
+            self.composition = Composition::Idle;
+        }
         if manuscript::blocks_input(root, event) {
             return true;
         }
@@ -66,7 +77,11 @@ impl Keyboard {
                 self.composition = if text.is_empty() {
                     Composition::Idle
                 } else {
-                    Composition::Preedit(root.focused_widget())
+                    let guard = manuscript::hold_preedit(root);
+                    Composition::Preedit {
+                        focus: root.focused_widget(),
+                        _guard: guard,
+                    }
                 };
             }
             WindowEvent::Ime(Ime::Commit(_) | Ime::Disabled) => {
@@ -171,7 +186,7 @@ impl Keyboard {
         kind: focus::Kind,
         stroke: Stroke<'_>,
     ) -> bool {
-        if matches!(self.composition, Composition::Preedit(focus) if focus != focused) {
+        if matches!(self.composition, Composition::Preedit { focus, .. } if focus != focused) {
             self.composition = Composition::Idle;
         }
         if !matches!(self.composition, Composition::Idle) {
@@ -228,6 +243,7 @@ impl Keyboard {
             .get_widget_with_tag(TAG)
             .and_then(|widget| widget.get_prop::<KeyboardContext>().0.clone());
         if let Some(context) = context {
+            self.reading.synchronize(root);
             if matches!(self.composition, Composition::Idle) {
                 self.vim.synchronize(&context, root.focused_widget());
             } else {
@@ -245,6 +261,7 @@ impl Keyboard {
             self.manuscript
                 .synchronize(root, &context, &self.composition);
             self.document_menu.synchronize(root, &context);
+            self.reading.capture(root);
         }
     }
     fn normalized_modifiers(&self) -> Modifiers {

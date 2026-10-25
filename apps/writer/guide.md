@@ -27,6 +27,11 @@ name and kind above the complete, paged detail. Build targets use radio choices,
 below their labels and the latest result in its own section. Selecting a target does not start a
 build.
 
+In a project, **Save** includes the prose currently being edited; no separate Apply step is needed.
+The writing toolbar stays in place while you type, and the footer says **Unsaved changes** until
+publication completes. **Project → Apply draft** remains available to update the working document
+without writing it to disk.
+
 Save translation drafts before opening another project. A saved catalogue may remain open while you
 switch; no separate catalogue-close step is required.
 
@@ -130,6 +135,11 @@ Settings also controls reading size, Source size and UI scale independently. **C
 names and beat IDs. Search cancellation returns focus to the invoking control. In Freya's Source
 editor, Ctrl+Space opens completion candidates, arrows select, Enter accepts a selected result, and
 Escape dismisses. Tab keeps its ordinary editor behaviour.
+
+Search opens over the document and returns to the invoking field when cancelled. **Scenes / beats**,
+**Project text**, and **This beat** switch scope while retaining the query. This beat includes the
+visible prose edit; Project text explicitly searches saved files. Saving includes edits in the next
+project-text search. Matching words are emphasised in the bounded result excerpts.
 
 Map zoom is independent of UI scale: 100% keeps the same card geometry when controls grow. In short
 windows, **Map tools** discloses search, arrangement and help while leaving room to pan. Selecting
@@ -394,11 +404,15 @@ verification.
 Freya's pane dividers preview a new width with a guide while dragging, then reflow on release.
 Escape cancels the drag. Keyboard resizing remains immediate.
 
-Large beats page their entries without flattening condition groups. Xilem shows the entry range and
-page controls above the scrolling manuscript and below the entries. **Find in this beat** jumps
-directly to a line or reply by its wording or label, applying the current draft before leaving it.
-Page changes return to the top of the new page. Successful navigation also reveals the selected file
-and beat in the scene rail.
+Large beats keep condition groups and show an entry range above the manuscript. Xilem's fixed
+Previous/Next controls move by eight entries with sixteen mounted at a time, retaining adjacent
+prose, native editors and a visible scroll anchor where the viewport permits. A step that retains
+your active passage leaves its text edit untouched. Leaving that passage checks its text before
+moving; a rejected edit keeps the passage and range open. **Find in this beat** jumps directly to a
+line or reply by its wording or label. A refused continuation shows **Edit text** and **Show
+reason** beside the affected passage; its text Undo remains available. Explicit jumps reveal their
+destination; ordinary browsing keeps its position. Successful navigation also reveals the selected
+file and beat in the scene rail.
 
 Pin reference keeps a labelled snapshot alongside the script; Previous/Next beat retraces visits
 within the current scene. Project search matches complete words in saved lines and their document,

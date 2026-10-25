@@ -36,7 +36,7 @@ fn saved_text_and_current_beat_lookup_open_the_matching_off_page_passage() {
             writer.session.model().view(),
             &recite_writer_model::View::Passage(format!("{:020x}", 39))
         );
-        assert_eq!(writer.reading.page, 2);
+        assert_eq!(writer.reading.window.start(), 32);
         assert_eq!(
             writer.reading.selected_passage().unwrap().text,
             "Courier 39 waits in the café."
@@ -49,14 +49,15 @@ fn saved_text_and_current_beat_lookup_open_the_matching_off_page_passage() {
                 .source()
                 .contains("Keep this outgoing draft.")
         );
-        writer.reading.page = 0;
+        writer.reading.window = Default::default();
         app.open_picker(mode);
         app.filter_picker("Courier 39".into());
         app.activate_picker(0);
         let writer = app.writer.as_mut().unwrap();
         support::finish_navigation(writer, &mut jobs).unwrap();
         assert_eq!(
-            writer.reading.page, 2,
+            writer.reading.window.start(),
+            32,
             "reopening the selected passage reveals its page again"
         );
     }

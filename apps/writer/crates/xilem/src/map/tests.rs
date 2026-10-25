@@ -136,6 +136,24 @@ fn placement_refresh_keeps_newer_typing_and_camera_and_uses_no_source_undo_step(
 }
 
 #[test]
+fn composition_defers_automatic_refresh_without_losing_its_pending_request() {
+    let mut fixture = fixture().unwrap();
+    let writer = &mut fixture.writer;
+    writer.invalidate_map();
+    let pending = writer.map.refresh.clone();
+    let status = writer.status.clone();
+    let preedit = writer.attention.begin_preedit();
+    writer.refresh_map_if_needed();
+    assert!(pending.is_some());
+    assert_eq!(writer.map.refresh, pending);
+    assert_eq!(writer.status, status);
+    assert!(fixture.jobs.try_recv().is_err());
+    drop(preedit);
+    writer.refresh_map_if_needed();
+    assert!(writer.map.refresh.is_none());
+}
+
+#[test]
 fn completed_placement_write_is_reconciled_when_a_newer_script_choice_cancels_display() {
     let mut fixture = fixture().unwrap();
     let writer = &mut fixture.writer;

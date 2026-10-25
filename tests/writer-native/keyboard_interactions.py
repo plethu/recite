@@ -32,7 +32,7 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "typed field")
                 key("Return", control=True)
                 window.wait(
-                    lambda: window.find_action("Apply draft") is None,
+                    lambda: window.find_text("Applied edit updated.", contains=True),
                     "focused manuscript Apply chord",
                 )
                 key("s", control=True)
@@ -40,7 +40,9 @@ def run(api, bus, registry, binary, output):
                     lambda: "The last tram waits.x" in source.read_text(), "native Save command"
                 )
                 window.wait(
-                    lambda: window.find_text("Saved") and window.enabled("Save"),
+                    lambda: (
+                        window.find_text("Saved to disk", prefix=True) and window.enabled("Save")
+                    ),
                     "completed Save receipt before settings",
                 )
                 capture(output, "-applied")
@@ -72,7 +74,8 @@ def run(api, bus, registry, binary, output):
                 assert "The last tram waits.xy" not in source.read_text()
                 key("Return", control=True)
                 window.wait(
-                    lambda: window.find_action("Apply draft") is None, "second Apply command"
+                    lambda: window.find_text("Applied edit updated.", contains=True),
+                    "second Apply command",
                 )
                 key("s", control=True, alt=True)
                 window.wait(
@@ -80,7 +83,9 @@ def run(api, bus, registry, binary, output):
                     "live rebound Save command",
                 )
                 window.wait(
-                    lambda: window.find_text("Saved") and window.enabled("Save"),
+                    lambda: (
+                        window.find_text("Saved to disk", prefix=True) and window.enabled("Save")
+                    ),
                     "completed rebound Save receipt",
                 )
                 results["live_rebinding_removes_old_chord_without_inserting_its_character"] = True

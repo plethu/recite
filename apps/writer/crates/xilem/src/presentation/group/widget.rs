@@ -59,6 +59,9 @@ impl Widget for Group {
     }
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
         node.set_label(self.name.as_ref());
+        if self.role == Role::Dialog {
+            node.set_modal();
+        }
         node.set_live(if self.role == Role::Status {
             Live::Polite
         } else {

@@ -35,6 +35,7 @@ impl Writer {
     }
     pub(crate) fn refresh_map_if_needed(&mut self) {
         if self.navigation.busy()
+            || self.attention.is_composing()
             || self.workspaces.screen != crate::workspaces::Screen::Write
             || self.attention.is_focused()
             || self.work.busy()

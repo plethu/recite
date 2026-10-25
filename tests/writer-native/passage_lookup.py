@@ -49,7 +49,7 @@ def run(api, bus, registry, binary, output):
             for n in range(9):
                 (project / f"other_{n}.recite").write_text(
                     "".join(
-                        f":: beat_{beat}{' default' if beat == 0 else ''}\n-> {f'beat_{beat + 1}' if beat < 19 else 'END'}\n"
+                        f":: beat_{n * 20 + beat}\n-> {f'beat_{n * 20 + beat + 1}' if beat < 19 else 'END'}\n"
                         for beat in range(20)
                     )
                 )
@@ -65,6 +65,9 @@ def run(api, bus, registry, binary, output):
                     registry,
                     [str(binary), "--project", str(project), "--document", "scene.recite"],
                     log,
+                )
+                window.wait(
+                    lambda: window.find_text("no problems", contains=True), "valid project fixture"
                 )
                 window.focus(node)
                 key("End", control=True)
@@ -82,14 +85,17 @@ def run(api, bus, registry, binary, output):
                 # capture it without requiring a byte-identical sequence of frames.
                 capture(output, "-passage-search")
                 key("Return")
-                node = manuscript(window)
-                window.wait(
-                    lambda: (
-                        window.text(node) == "Courier 39 waits in the café."
-                        and focused(window, node)
-                    ),
-                    "exact late passage and native focus",
-                )
+
+                def arrived():
+                    current = manuscript(window)
+                    return (
+                        current
+                        if window.text(current) == "Courier 39 waits in the café."
+                        and focused(window, current)
+                        else None
+                    )
+
+                node = window.wait(arrived, "exact late passage and native focus")
                 window.wait(lambda: editor_visible(window, node), "complete late editor visibility")
                 window.wait(lambda: window.find_text("Entries 33–41 of 41"), "late reading page")
                 capture(output, "-late-passage")
@@ -106,7 +112,7 @@ def run(api, bus, registry, binary, output):
                 )
                 results["exact_passage_focus_native_undo_and_outgoing_save"] = True
                 window.act("Previous beat entries")
-                window.wait(lambda: window.find_text("Entries 17–32 of 41"), "preceding page")
+                window.wait(lambda: window.find_text("Entries 25–40 of 41"), "preceding page")
                 capture_settled(window, output, "-previous-page")
                 window.workspace_action("Find project text")
                 fill(window, "Search query", "courier 39")
@@ -118,14 +124,14 @@ def run(api, bus, registry, binary, output):
                 )
                 results["saved_search_targets_the_matching_passage"] = True
                 key("p", control=True)
-                fill(window, "Search query", "other_8 18")
+                fill(window, "Search query", "other_8 178")
                 key("Return")
                 if scale == 100:
                     window.wait(
                         lambda: document_caption(window, "other_8.recite", selected=True),
                         "off-page file revealed",
                     )
-                    window.wait(lambda: window.find("Beat 18"), "off-page beat revealed")
+                    window.wait(lambda: window.find("Beat 178"), "off-page beat revealed")
                     results["accepted_destination_reveals_file_and_beat_pages"] = True
                 else:
                     window.wait(

@@ -32,7 +32,11 @@ impl Writer {
         let mut value = match result {
             Ok(value) => value,
             Err(error) => {
-                self.navigation_failed(error);
+                self.navigation_failed(error.clone());
+                self.record_reading_refusal(&request, error);
+                if matches!(request.target, Target::Reading { .. }) {
+                    self.request_editing();
+                }
                 self.field_apply_completed(&request, false);
                 return None;
             }
@@ -46,6 +50,7 @@ impl Writer {
                 if request.origin.window != self.window || self.phase != crate::Phase::Writing {
                     Err("The project window changed while its workspace was opening.".into())
                 } else {
+                    self.require_finished_composition()?;
                     self.accept_project_workspace(prepared)?;
                     self.remember_location();
                     Ok(())
@@ -63,7 +68,10 @@ impl Writer {
                     Err("The scene changed while its map was preparing.".into())
                 } else {
                     match request.target {
-                        Target::Workspace(workspace) => self.accept_map(prepared, workspace),
+                        Target::Workspace(workspace) => {
+                            self.require_finished_composition()?;
+                            self.accept_map(prepared, workspace)
+                        }
                         Target::MapRefresh => self.accept_map(prepared, self.map.workspace),
                         _ => Err("Invalid map request.".into()),
                     }
@@ -85,17 +93,23 @@ impl Writer {
             if let ResultValue::Map(prepared) = &mut value {
                 self.reconcile_map_placement(prepared);
             }
-            self.navigation_failed(error);
+            self.navigation_failed(error.clone());
+            self.record_reading_refusal(&request, error);
+            if matches!(request.target, Target::Reading { .. }) {
+                self.request_editing();
+            }
             if matches!(request.target, Target::Present(_)) {
                 self.remember_location();
             }
         } else {
-            let explicit_passage = matches!(request.target, Target::Selection(_))
-                && request.target.location().is_some_and(|location| {
-                    location.screen == LinkedScreen::Write
-                        && location.passage.is_some()
-                        && !location::requests_editor(location)
-                });
+            let explicit_passage = matches!(
+                request.target,
+                Target::Selection(_) | Target::Reading { .. }
+            ) && request.target.location().is_some_and(|location| {
+                location.screen == LinkedScreen::Write
+                    && location.passage.is_some()
+                    && !location::requests_editor(location)
+            });
             if explicit_passage && !self.navigation.busy() {
                 self.request_editing();
             }
@@ -118,6 +132,7 @@ impl Writer {
         prepared: &mut recite_writer_model::PreparedEdit,
         operation: EditOperation,
     ) -> Result<(), String> {
+        self.require_finished_composition()?;
         request.target.check_scope(self)?;
         if !request.origin.presentation_is_current(self) {
             return Err(
@@ -160,6 +175,7 @@ impl Writer {
         request: &Request,
         prepared: &mut recite_writer_model::PreparedStructuralEdit,
     ) -> Result<(), String> {
+        self.require_finished_composition()?;
         if !request.origin.is_current(self) {
             return Err("The draft changed while the structural edit was preparing. Your current work stays open.".into());
         }
@@ -183,6 +199,7 @@ impl Writer {
         prepared: &mut recite_writer_session::navigation::Prepared,
         checkpoint: Option<&recite_writer_session::project::ReadyCheckpoint>,
     ) -> Result<(), String> {
+        self.require_finished_composition()?;
         request.target.check_scope(self)?;
         if !request.origin.is_current(self) {
             return Err("The draft changed while navigation was preparing. Your edits remain open; retry navigation.".into());
@@ -219,7 +236,7 @@ impl Writer {
             }
             _ => return Err("The navigation destination is no longer available.".into()),
         }
-        if let Target::Selection(location) = &request.target {
+        if let Target::Selection(location) | Target::Reading { location, .. } = &request.target {
             self.trial.visible =
                 location.screen == recite_writer_session::location::Screen::Preview;
             self.trial.settings.open = false;
@@ -255,6 +272,9 @@ impl Writer {
         self.reading.prepare(self.session.model());
         self.sync_map_selection();
         self.reveal_navigation();
+        if let Target::Reading { window, .. } = &request.target {
+            self.reading.window = *window;
+        }
         self.invalidate_map();
         if let Target::Lookup { search, .. } = &request.target {
             self.accept_lookup(search);

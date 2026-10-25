@@ -23,6 +23,7 @@ pub(super) enum Kind {
 #[derive(Default)]
 pub(super) struct Focus {
     picker: bool,
+    picker_instance: Option<picker::PickerInstance>,
     return_to: Option<WidgetId>,
     last: Option<WidgetId>,
     field: Option<(WidgetId, CommandGeneration, Kind)>,
@@ -75,7 +76,10 @@ impl Focus {
                 root.focus_on(admitted);
             }
             self.picker = picker;
+        } else if picker && self.picker_instance != context.picker_instance {
+            root.focus_on(find(root, Kind::Query));
         }
+        self.picker_instance = context.picker_instance.clone();
         if !picker {
             self.last = root.focused_widget().or(self.last);
             self.revealed = None;

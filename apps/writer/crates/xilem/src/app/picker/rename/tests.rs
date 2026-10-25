@@ -3,7 +3,8 @@ use super::*;
 #[test]
 fn rename_beat_choices_keep_native_result_cost_bounded_as_the_scene_grows() {
     let mut baseline = None;
-    for count in [8, 1024] {
+    let mut whole_app_baseline = None;
+    for count in [8, 40, 1024, 1040] {
         let mut source = ":: start default\n-> END\n".to_owned();
         for index in 1..count {
             source.push_str(&format!(":: beat_{index:04}\n-> END\n"));
@@ -37,7 +38,32 @@ fn rename_beat_choices_keep_native_result_cost_bounded_as_the_scene_grows() {
             pending.extend(node.children());
         }
         assert!(buttons <= 9, "Rename choices must mount only one page");
-        assert_eq!(*baseline.get_or_insert(nodes), nodes);
+        if matches!(count, 40 | 1040) {
+            assert_eq!(
+                *whole_app_baseline.get_or_insert(nodes),
+                nodes,
+                "retained workspace and dialog stay bounded once sidebar pagination is present"
+            );
+        }
+        let mut pending = vec![tree.state().root()];
+        let dialog = loop {
+            let node = pending.pop().expect("native chooser dialog");
+            if node.role() == accesskit::Role::Dialog {
+                break node;
+            }
+            pending.extend(node.children());
+        };
+        let mut pending = vec![dialog];
+        let mut result_nodes = 0;
+        while let Some(node) = pending.pop() {
+            result_nodes += 1;
+            pending.extend(node.children());
+        }
+        assert_eq!(
+            *baseline.get_or_insert(result_nodes),
+            result_nodes,
+            "result cost remains constant across the sidebar pagination boundary"
+        );
         app.filter_picker("beat_0007".into());
         assert_eq!(app.picker.as_ref().unwrap().total, 1);
         app.activate_picker(0);

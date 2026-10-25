@@ -19,6 +19,8 @@ const NAVIGATION: WidgetTag<TextInput> = WidgetTag::named("mounted-navigation");
 const QUERY: WidgetTag<TextInput> = WidgetTag::named("mounted-query");
 const MAP: WidgetTag<Button> = WidgetTag::named("mounted-map");
 const RESULT: WidgetTag<Button> = WidgetTag::named("mounted-result");
+#[path = "composition/tests.rs"]
+mod composition;
 #[path = "input/tests.rs"]
 mod input;
 #[path = "manuscript/tests.rs"]

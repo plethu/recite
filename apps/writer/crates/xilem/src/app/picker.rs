@@ -13,8 +13,8 @@ use recite_writer_session::location::Location;
 pub(crate) use view::{ActiveResult, QueryField};
 const PAGE: usize = 5;
 /// One opening has a distinct authority even when its mode and query are identical.
-#[derive(Clone)]
-pub(super) struct PickerInstance(Arc<()>);
+#[derive(Clone, Default)]
+pub(crate) struct PickerInstance(Arc<()>);
 impl PartialEq for PickerInstance {
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.0, &other.0)
@@ -113,7 +113,7 @@ impl Picker {
         let matches = (0..entries.len()).collect();
         let mut picker = Self {
             purpose,
-            instance: PickerInstance(Arc::new(())),
+            instance: PickerInstance::default(),
             revision: PickerRevision::default(),
             query: String::new(),
             total: entries.len(),
@@ -148,6 +148,18 @@ impl Picker {
     }
 }
 impl App {
+    fn switch_search(&mut self, search: Search) {
+        let Some(picker) = self
+            .picker
+            .as_ref()
+            .filter(|picker| matches!(picker.purpose, Purpose::Search(_)))
+        else {
+            return;
+        };
+        let query = picker.query.clone();
+        self.open_picker(search);
+        self.filter_picker(query);
+    }
     pub(super) fn open_picker(&mut self, search: Search) {
         if self.settings_open
             || self.show_welcome

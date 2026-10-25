@@ -16,6 +16,7 @@ pub(super) fn row(
     width: f64,
 ) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
+    let caption_size = 0.6 * state.reading_size();
     let wide = width >= 560. * f64::from(scale);
     let margin = if wide {
         (96. * f64::from(scale)).min(width * 0.15)
@@ -51,6 +52,8 @@ pub(super) fn row(
         flex_row((
             indexed_stack((
                 print::caps(scale, speaker.clone())
+                    .text_size(caption_size)
+                    .letter_spacing(0.066 * state.reading_size())
                     .text_alignment(if wide {
                         TextAlign::End
                     } else {
@@ -64,6 +67,7 @@ pub(super) fn row(
             flex_row((
                 reply.map(|number| {
                     print::meta(scale, number.to_string())
+                        .text_size(caption_size)
                         .width(number_width.px())
                         .color(state.palette.muted)
                 }),
@@ -93,11 +97,20 @@ pub(super) fn row(
                         String::new()
                     },
                 )
+                .text_size(caption_size)
                 .color(state.palette.muted),
             ))
             .gap(8.px()),
         )
-        .height((24. * f64::from(scale)).px()),
+        .height((1.2 * f64::from(state.reading_size())).px()),
+        active
+            .then(|| super::refusal::panel(state, measure))
+            .flatten()
+            .map(|notice| {
+                sized_box(notice).padding(Padding::left(
+                    (margin + if wide { 8. } else { 0. } + number_width + number_gap).px(),
+                ))
+            }),
         match &passage.kind {
             PassageKind::Choice {
                 destination: Some(target),

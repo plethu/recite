@@ -29,6 +29,7 @@ pub(super) fn context() -> (Context, mpsc::Receiver<SendMessage>) {
             writer_active: true,
             screen: Some(crate::workspaces::Screen::Write),
             picker_open: false,
+            picker_instance: None,
             project_form_ready: false,
             document_menu: Default::default(),
             attention: Default::default(),
@@ -148,7 +149,10 @@ fn apply_belongs_to_the_active_manuscript_and_composition_bypasses_commands() {
         core::NewWidget::new(widgets::Label::new("Composition owner")),
     );
     let focus = Some(harness.root_id());
-    keyboard.composition = Composition::Preedit(focus);
+    keyboard.composition = Composition::Preedit {
+        focus,
+        _guard: None,
+    };
     assert!(!keyboard.dispatch(
         &context,
         focus,
@@ -200,7 +204,10 @@ fn apply_belongs_to_the_active_manuscript_and_composition_bypasses_commands() {
         }
     }
     keyboard.modifiers = ModifiersState::CONTROL;
-    keyboard.composition = Composition::Preedit(focus);
+    keyboard.composition = Composition::Preedit {
+        focus,
+        _guard: None,
+    };
     keyboard.reset();
     assert_eq!(keyboard.normalized_modifiers(), Modifiers::default());
     assert!(matches!(keyboard.composition, Composition::Idle));

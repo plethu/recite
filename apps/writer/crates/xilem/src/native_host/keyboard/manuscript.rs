@@ -3,6 +3,17 @@ use super::*;
 use crate::attention::{EditingTarget, FieldRestoration, PassageField};
 use xilem::masonry::core::{Widget, WidgetRef};
 
+pub(super) fn hold_preedit(root: &RenderRoot) -> Option<crate::attention::Preedit> {
+    let (_, target) = focused(root)?;
+    let context = root
+        .get_widget_with_tag(TAG)?
+        .get_prop::<KeyboardContext>()
+        .0
+        .clone()?;
+    (context.writer_active && !context.picker_open && context.editing.as_ref() == Some(&target))
+        .then(|| context.attention.begin_preedit())
+}
+
 #[derive(Default)]
 pub(super) struct Fields {
     observed: Option<(WidgetId, EditingTarget)>,
@@ -18,7 +29,9 @@ impl Fields {
             && !context.picker_open
             && root.get_layer_root(0).ctx().is_window_focused();
         if active
-            && let Composition::Preedit(Some(owner)) = composition
+            && let Composition::Preedit {
+                focus: Some(owner), ..
+            } = composition
             && let Some(target) = &context.editing
             && find(root.get_layer_root(0), target) == Some(*owner)
             && root.focused_widget() != Some(*owner)

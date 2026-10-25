@@ -6,6 +6,9 @@ use std::sync::Arc;
 use xilem::WindowId;
 use xilem::masonry::core::{Widget, WidgetId, WidgetRef};
 use xilem::masonry::{core, widgets};
+mod composition;
+use composition::Composition;
+pub(crate) use composition::Preedit;
 
 /// The accepted passage whose inline field may own the product draft.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -172,12 +175,19 @@ impl PaneRequest {
 }
 #[derive(Clone, Default, PartialEq)]
 pub(crate) struct Attention {
+    composition: Composition,
     focused: bool,
     pane: Option<PaneRequest>,
     field: Option<EditingTarget>,
     edit_request: Option<EditRequest>,
 }
 impl Attention {
+    pub fn begin_preedit(&self) -> Preedit {
+        self.composition.begin()
+    }
+    pub fn is_composing(&self) -> bool {
+        self.composition.active()
+    }
     pub fn same_command_scope(&self, other: &Self) -> bool {
         self.focused == other.focused && self.pane == other.pane
     }
@@ -207,6 +217,13 @@ impl Attention {
     }
 }
 impl Writer {
+    pub(crate) fn require_finished_composition(&self) -> Result<(), String> {
+        if self.attention.is_composing() {
+            Err("Finish text composition before leaving this passage.".into())
+        } else {
+            Ok(())
+        }
+    }
     pub(crate) fn editing_passage(&self, passage: &str) -> bool {
         self.attention
             .field()

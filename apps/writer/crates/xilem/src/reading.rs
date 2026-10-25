@@ -1,9 +1,12 @@
-//! Accepted Script projection and a paged, flat reading list; field drafts reuse it.
+//! Accepted Script projection and bounded overlapping reading; field drafts reuse it.
 use recite_core::DocumentKey;
 use recite_writer_model::{Passage, PassageKind, ScriptBlock, ScriptEntry, View, Workbench};
 use std::sync::Arc;
 
-pub(super) const PAGE: usize = 16;
+mod navigation;
+mod window;
+pub(super) use window::CAPACITY as PAGE;
+pub(crate) use window::{Direction, ReadingWindow};
 pub(super) struct BeatPosition {
     index: usize,
     total: usize,
@@ -54,7 +57,7 @@ pub(super) struct Reading {
     pub is_default: bool,
     pub position: Option<BeatPosition>,
     pub error: Option<String>,
-    pub page: usize,
+    pub window: ReadingWindow,
 }
 
 impl Reading {
@@ -78,13 +81,15 @@ impl Reading {
             is_default: false,
             position: None,
             error: None,
-            page: 0,
+            window: ReadingWindow::default(),
         }
     }
 
     /// Called at file/edit/navigation boundaries, never by a renderer.
     pub fn prepare(&mut self, model: &Workbench) {
         let source = model.document().source_snapshot();
+        let changed_document = self.key.as_ref() != Some(model.document().key());
+        let previous_beat = self.selected.clone();
         if self.key.as_ref() != Some(model.document().key())
             || self
                 .source
@@ -100,7 +105,9 @@ impl Reading {
             self.block = None;
             self.rows = Arc::from([]);
             self.error = None;
-            self.page = 0;
+            if changed_document {
+                self.window = ReadingWindow::default();
+            }
             self.view = None;
             self.position = None;
             self.is_default = false;
@@ -123,7 +130,9 @@ impl Reading {
         };
         if self.block.as_ref() != Some(id) {
             self.block = Some(id.clone());
-            self.page = 0;
+            if previous_beat.as_ref() != Some(id) {
+                self.window = ReadingWindow::default();
+            }
             self.is_default = self
                 .script
                 .as_ref()
@@ -150,6 +159,7 @@ impl Reading {
                 Arc::from([])
             };
             self.replies = self.rows.iter().filter(|row| row.reply.is_some()).count();
+            self.window.normalize(self.rows.len());
         }
         self.selected_row = match model.view() {
             View::Passage(id) => self.rows.iter().position(
@@ -162,7 +172,7 @@ impl Reading {
 
     pub fn reveal_selected(&mut self) {
         if let Some(index) = self.selected_row {
-            self.page = index / PAGE;
+            self.window.reveal(index);
         }
     }
 

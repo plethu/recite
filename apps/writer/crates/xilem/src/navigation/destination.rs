@@ -218,6 +218,7 @@ impl Writer {
         request: &Request,
         prepared: &mut Prepared,
     ) -> Result<(), String> {
+        self.require_finished_composition()?;
         request.checkpoint().map_err(|error| error.to_string())?;
         if !request.origin.is_current(self) {
             return Err("The document changed while its linked destination was preparing. Your work remains open.".into());

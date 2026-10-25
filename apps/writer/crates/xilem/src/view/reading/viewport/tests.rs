@@ -21,7 +21,7 @@ use xilem::{
 fn make(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
     keyed(
         (),
-        follow_page(
+        follow_reading(
             writer,
             portal(
                 flex_col((text_input(
@@ -76,7 +76,7 @@ fn page_reset_retains_the_native_editor_and_undo_while_other_rebuilds_keep_scrol
         position(&mounted.harness, portal).y > 600.,
         "ordinary rebuild retains browsing position"
     );
-    mounted.state.reading.page += 1;
+    mounted.state.reading.window.reveal(32);
     mounted.settle();
     assert_eq!(position(&mounted.harness, portal), Point::ORIGIN);
     assert_eq!(mounted.find("Retained editor"), field);

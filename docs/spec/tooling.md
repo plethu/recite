@@ -192,28 +192,49 @@ lookup retains only its accepted query and semantic scene/beat target; each invo
 fresh location and advances the cursor only after checked navigation succeeds. Cancelling another
 lookup leaves that accepted search intact. Saved-project-text lookup does not replace it.
 
+Native search is a modal dialog over the retained, disabled workspace. Switching ordinary search
+scope preserves the query and native field history while retiring the previous result authority;
+query focus follows the new scope. Closing restores the invoking field. Workers continue to
+reconcile while the dialog is open. Ordinary prose Save includes the current field without a
+separate Apply action; the stable toolbar and unsaved indicator do not expose that staging step.
+
 Saved-text hits retain their frozen passage anchor when available. Both frontends open that passage
 through checked location selection; unfrozen text retains beat navigation. Excerpts centre the first
 matching prose word and remain bounded without retaining the source file. Current-beat lookup in
-Xilem searches accepted line/reply wording and labels through shared passage snapshots; pending
-field text remains outside that projection. Its case-insensitive substring matches also centre the
-visible excerpts, including partial words. Only the current result page's excerpts are prepared on
-query/page changes; unrelated renders and focus movement within that page reuse them. Activating a
-result applies the outgoing draft through the ordinary guarded navigation path and revalidates the
-destination. Search keeps its current beat and document context visible. An explicit passage reveal
-applies even when that passage already owns focus; it waits for the matching native field to mount
-and reveals the complete editor, centred in its scroll viewport where space permits. Consuming the
-request ends that reveal, so later browsing does not snap back.
+Xilem searches line/reply wording and labels through shared passage snapshots, including the active
+visible prose edit captured when lookup opens. Saved-project search retains its saved-file boundary.
+Its case-insensitive substring matches also centre the visible excerpts, including partial words.
+Only the current result page's excerpts are prepared on query/page changes; unrelated renders and
+focus movement within that page reuse them. Activating a result applies the outgoing draft through
+the ordinary guarded navigation path and revalidates the destination. Search keeps its current beat
+and document context visible. An explicit passage reveal applies even when that passage already owns
+focus; it waits for the matching native field to mount and reveals the complete editor, centred in
+its scroll viewport where space permits. Consuming the request ends that reveal, so later browsing
+does not snap back.
 
 Successful navigation reveals the destination's file and beat pages in Xilem's bounded rail.
 Selecting a valid blank document by path or Script link opens its empty writing surface without
 inventing a beat; pending drafts and malformed source retain their ordinary navigation guards.
-Browsing another rail page remains independent until the next accepted destination. Long manuscript
-pages expose their range and controls in fixed pane chrome and below the entries, with direct
-passage lookup available while reading any part of the page. Changing the page resets its native
-scroll position while retaining continuously mounted fields and their undo history. Ordinary
-rebuilds preserve scroll position. This remains paged reading; the pinned virtual-scroll widget's
-focus and accessibility limitations preclude replacing it directly.
+Browsing another rail page remains independent until the next accepted destination. Long manuscripts
+expose one range and navigation row in fixed pane chrome, with direct passage lookup available
+throughout. Explicit steps overlap by eight records within the unchanged sixteen-record native
+budget. Retaining the admitted passage changes neither draft nor accepted source; a step that would
+evict it publishes only after ordinary checked selection accepts the outgoing draft. Refusal,
+cancellation and newer typing retain the old range. Continuously mounted fields retain native undo.
+An exact-current refused continuation exposes local edit/reason controls and a short footer summary;
+editing the draft retires that warning, and old disclosure actions cannot expand a replacement. The
+viewport compensates a retained visible passage's position where scroll limits permit; a step
+without a visible retained passage reveals the destination boundary. Explicit jumps reset/reveal
+their destination, while ordinary rebuilds preserve browsing. This remains bounded explicit
+navigation; the pinned virtual-scroll widget's focus and accessibility limitations preclude
+replacing it directly.
+
+Native manuscript preedit holds a synchronous lease on the admitted writing surface. Navigation,
+queued field admission, closing and prepared edit/reload/workspace adoption cannot retire that
+surface until Commit, cancellation or host teardown releases the lease. Query and settings preedit
+retain their ordinary native lifetime without guarding unrelated manuscript receipts. Automatic map
+refresh defers before consuming its pending request. IME termination releases the lease even when
+stale field authority refuses delivery of the text itself.
 
 Native project-tool screens retain the mounted writing surface and its text history. Declaration
 inspection is paged; generated schemas remain read-only. Build saved uses disk inputs, while Save

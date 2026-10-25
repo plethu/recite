@@ -1,6 +1,7 @@
 //! Labels and accepted lookup inputs are captured once, not reconstructed on every render.
 use super::*;
 use crate::reading::Content;
+use recite_writer_model::{Passage, View};
 use recite_writer_session::commands::{self, targets};
 
 pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
@@ -61,7 +62,7 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
                     title: format!("{} · {}", number.ordinal(), passage.label),
                     detail: String::new(),
                     item: Item::Passage {
-                        passage: passage.clone(),
+                        passage: visible_passage(writer, passage),
                         location: Location {
                             document: writer.session.model().document().key().to_string(),
                             beat: Some(passage.section.clone()),
@@ -74,6 +75,13 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
             })
             .collect()),
     }
+}
+fn visible_passage(writer: &Writer, passage: &Passage) -> Passage {
+    let mut visible = passage.clone();
+    if writer.session.model().view() == &View::Passage(passage.id.clone()) {
+        visible.text = writer.session.model().draft().to_owned();
+    }
+    visible
 }
 impl Picker {
     pub(super) fn refresh(

@@ -2,7 +2,9 @@
 """Exercise the Xilem Writer on owned Wayland, D-Bus, project and editor fixtures."""
 
 import argparse
+import hashlib
 import importlib.util
+import json
 import os
 import signal
 import subprocess
@@ -80,7 +82,11 @@ def run_probe(binary, output, scenario):
             "private registry",
             registry_process,
         )
-        if scenario == "workbench":
+        if scenario == "reading-continuity":
+            from reading_continuity import run
+        elif scenario == "writing-journey":
+            from writing_journey import run
+        elif scenario == "workbench":
             from workbench_interactions import run
         elif scenario == "specimen":
             from specimen_interactions import run
@@ -185,6 +191,8 @@ def main():
             "all",
             "specimen",
             "workbench",
+            "writing-journey",
+            "reading-continuity",
             "localisation-final",
             "localisation-beat",
             "clipboard",
@@ -252,7 +260,20 @@ def main():
                 "owned accessibility bus launcher",
                 launcher,
             )
+            with binary.open("rb") as executable:
+                digest = hashlib.file_digest(executable, "sha256").hexdigest()
             passed = run_probe(binary, output, args.scenario)
+            with binary.open("rb") as executable:
+                unchanged = hashlib.file_digest(executable, "sha256").hexdigest() == digest
+            receipt = json.loads(output.read_text())
+            receipt["binary"] = {"path": str(binary), "sha256": digest, "unchanged": unchanged}
+            receipt["compositor_renderer"] = args.renderer
+            if not unchanged:
+                receipt["passed"] = passed = False
+                receipt["binary_error"] = (
+                    "Executable changed during the probe; rerun after building."
+                )
+            output.write_text(json.dumps(receipt, indent=2) + "\n")
         if not passed:
             sys.exit(2)
         return
@@ -311,7 +332,15 @@ def main():
             code = process.wait(
                 timeout=120
                 if args.scenario
-                in ("all", "preferences", "editor", "localisation-beat", "workbench")
+                in (
+                    "all",
+                    "preferences",
+                    "editor",
+                    "localisation-beat",
+                    "workbench",
+                    "writing-journey",
+                    "reading-continuity",
+                )
                 or args.scenario.startswith(
                     (
                         "preview-inputs",

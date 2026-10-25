@@ -71,7 +71,7 @@ pub(super) fn workspace(
             super::reading::page_controls(state, surface),
             named(
                 "Script pane",
-                super::reading::viewport::follow_page(
+                super::reading::viewport::follow_reading(
                     state,
                     portal(
                         flex_row((manuscript(state, surface),))
@@ -79,7 +79,8 @@ pub(super) fn workspace(
                             .cross_axis_alignment(CrossAxisAlignment::Start)
                             .width(layout.script_pane.px()),
                     )
-                    .constrain_horizontal(true),
+                    .constrain_horizontal(true)
+                    .prop(ReadingViewport::capture(state)),
                 ),
             )
             .flex(1.),

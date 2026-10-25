@@ -1,9 +1,7 @@
 //! Compact writing tools share the reference shell; narrow windows reflow by groups.
 use super::*;
 use crate::app::{Request, picker::Search};
-use crate::navigation::Target;
 use crate::presentation::{Icon, print};
-use recite_writer_model::EditOperation;
 use recite_writer_session::choices::display_name;
 use xilem::{
     masonry::properties::LineBreaking,
@@ -100,21 +98,8 @@ fn app_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
 fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let history = state.viewport.width - state.navigation_width() >= 600. * f64::from(scale);
-    let editable = matches!(state.session.model().view(), View::Passage(_))
-        || state
-            .rules
-            .as_ref()
-            .is_some_and(|rules| rules.is_open_for(state.session.model()));
     flex_row((
         print::action(scale, "Try scene", blocked, Writer::start_trial),
-        (editable && state.session.model().has_draft()).then(|| {
-            print::action(
-                scale,
-                "Apply draft",
-                blocked || state.session.read_only(),
-                |state: &mut Writer| state.navigate(Target::Edit(EditOperation::Apply)),
-            )
-        }),
         history.then(|| {
             print::icon_action(
                 scale,
@@ -149,10 +134,9 @@ fn document_tools(state: &Writer, blocked: bool) -> impl WidgetView<Writer> + us
 pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let dirty = state.session.current_dirty() || state.session.model().has_draft();
     let diagnostics = state.session.model().document().diagnostic_snapshot();
+    let refused = state.reading_refusal().is_some();
     let saved = if state.session.project_root().is_none() {
         "Temporary example"
-    } else if state.session.model().has_draft() {
-        "Unapplied changes"
     } else if dirty {
         "Unsaved changes"
     } else {
@@ -162,7 +146,9 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
         print::meta(state.ui_scale(), format!("{saved} ·")).color(state.palette.status_text),
         print::meta(
             state.ui_scale(),
-            if diagnostics.is_empty() {
+            if refused {
+                "Continue paused".to_owned()
+            } else if diagnostics.is_empty() {
                 "no problems".to_owned()
             } else {
                 format!(
@@ -172,7 +158,7 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 )
             },
         )
-        .color(if diagnostics.is_empty() {
+        .color(if diagnostics.is_empty() && !refused {
             state.palette.status_signal
         } else {
             state.palette.status_text
