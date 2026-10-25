@@ -268,8 +268,8 @@ def run(api, bus, registry, binary, output):
                 assert source.read_text() == malformed
                 assert not window.enabled("Add beat")
                 window.document_action("Configure preview")
-                window.reveal_start("Start / restart preview")
-                assert not window.enabled("Start / restart preview")
+                window.wait(lambda: window.find("Start preview"), "initial preview action")
+                assert not window.enabled("Start preview")
                 capture(output, "-source")
                 results["malformed_source_preserved_for_external_repair"] = True
                 window.close_clean()

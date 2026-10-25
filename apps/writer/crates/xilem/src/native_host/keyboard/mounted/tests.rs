@@ -25,6 +25,8 @@ mod input;
 mod manuscript;
 #[path = "preview/tests.rs"]
 mod preview;
+#[path = "project/tests.rs"]
+mod project;
 #[path = "tab/tests.rs"]
 mod tab;
 

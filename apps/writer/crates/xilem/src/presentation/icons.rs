@@ -17,8 +17,8 @@ pub(crate) enum Icon {
     Link,
     Undo,
     Redo,
-    ZoomIn,
-    ZoomOut,
+    Plus,
+    Minus,
 }
 impl Icon {
     fn path(self) -> BezPath {
@@ -34,10 +34,10 @@ impl Icon {
                 path.line_to((inside, 12.));
                 path.line_to((outside, 19.));
             }
-            Self::ZoomIn | Self::ZoomOut => {
+            Self::Plus | Self::Minus => {
                 path.move_to((5., 12.));
                 path.line_to((19., 12.));
-                if matches!(self, Self::ZoomIn) {
+                if matches!(self, Self::Plus) {
                     path.move_to((12., 5.));
                     path.line_to((12., 19.));
                 }

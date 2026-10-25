@@ -62,12 +62,19 @@ def run(api, bus, registry, binary, output):
                 )
                 type_text("speaker_0555")
                 window.wait(
-                    lambda: window.find_text("Showing 1–1 of 1 declarations"),
+                    lambda: window.find_text("Showing 1–1 of 1 declaration"),
                     "filtered declaration",
                 )
                 window.wait(
                     lambda: window.find_text("Announcer 555"), "selected declaration detail"
                 )
+                assert not window.find("Previous declarations") and not window.find(
+                    "Next declarations"
+                )
+                assert not window.find("Previous declaration detail") and not window.find(
+                    "More declaration detail"
+                )
+                results["single_page_declaration_has_no_inactive_pagers"] = True
                 capture(output, "-declarations")
                 results["declaration_query_focus_and_selected_detail"] = True
                 window.act("Return to writing")
@@ -86,6 +93,12 @@ def run(api, bus, registry, binary, output):
                 results["project_tools_preserve_native_field_identity_and_undo"] = True
                 command(window, "Build scenes")
                 window.wait(lambda: window.find("Build saved"), "build workspace")
+                window.wait(
+                    lambda: window.find_text(
+                        "recite.project.toml · 1 source file · 1 output target"
+                    ),
+                    "singular saved build input and target summary",
+                )
                 capture(output, "-build")
                 window.act("Build saved")
                 window.act("Return to writing")
@@ -117,6 +130,10 @@ def run(api, bus, registry, binary, output):
                     timeout=30,
                 )
                 results["save_all_and_build_publishes_saved_changes"] = True
+                assert not window.find("Previous build report") and not window.find(
+                    "More build report"
+                )
+                results["single_page_build_result_has_no_inactive_pager"] = True
                 capture(output, "-built")
                 before_cancel = asset.read_bytes()
                 source.write_text(

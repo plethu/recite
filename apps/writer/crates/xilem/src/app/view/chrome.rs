@@ -23,7 +23,8 @@ pub(super) fn app_bar(app: &App) -> impl WidgetView<App> + use<> {
             identity_bar(app, scale, blocked),
             app.workspace_menu
                 .then(|| workspace_actions(app, scale, searching)),
-            (!app.status.is_empty()).then(|| paragraph(scale, app.status.clone(), 800.)),
+            (!app.status.is_empty() && (!app.show_welcome || app.settings_open))
+                .then(|| paragraph(scale, app.status.clone(), 800.)),
             app.pane_hint.then(|| {
                 paragraph(
                     scale,

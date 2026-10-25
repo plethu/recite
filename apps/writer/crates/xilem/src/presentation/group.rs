@@ -28,6 +28,13 @@ pub(crate) fn list<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
         child,
     }
 }
+pub(crate) fn status<V>(name: impl Into<ArcStr>, child: V) -> Named<V> {
+    Named {
+        name: name.into(),
+        role: Role::Status,
+        child,
+    }
+}
 impl<V> ViewMarker for Named<V> {}
 impl<S: 'static, V: WidgetView<S>> View<S, (), ViewCtx> for Named<V> {
     type Element = Pod<Group>;

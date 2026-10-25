@@ -106,7 +106,7 @@ fn zoom(state: &Writer) -> impl WidgetView<Writer> + use<> {
         print::icon_action(
             scale,
             "Zoom out",
-            Icon::ZoomOut,
+            Icon::Minus,
             &state.palette,
             false,
             |state: &mut Writer| state.zoom_map(1. / 1.2),
@@ -123,7 +123,7 @@ fn zoom(state: &Writer) -> impl WidgetView<Writer> + use<> {
         print::icon_action(
             scale,
             "Zoom in",
-            Icon::ZoomIn,
+            Icon::Plus,
             &state.palette,
             false,
             |state: &mut Writer| state.zoom_map(1.2),

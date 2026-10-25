@@ -55,6 +55,35 @@ def run(api, bus, registry, binary, output):
                     window.act("Increase UI scale")
                     window.wait(lambda: window.find(f"UI scale: {percent}%"), "increased scale")
                 capture_settled(window, output, "-scale200")
+                coordinates = api.GLib.Variant("(u)", (int(api.Atspi.CoordType.WINDOW),))
+                viewport = window.call(
+                    window._outer_scrollbar(), "Component", "GetExtents", coordinates
+                )[0]
+                for caption in ("Narrower script", "Wider script"):
+                    control = window.wait(lambda: window.find(caption), "last layout adjustment")
+                    bounds = window.call(control, "Component", "GetExtents", coordinates)[0]
+                    assert (
+                        bounds[1] >= viewport[1]
+                        and bounds[1] + bounds[3] <= viewport[1] + viewport[3]
+                    )
+                results["all_five_layout_adjustment_pairs_fit_at_200_percent"] = True
+                window.focus(window._outer_scrollbar())
+                key("Page_Down")
+
+                def specimen_visible():
+                    specimen = window.find_text("The last tram waits.")
+                    if specimen is None:
+                        return False
+                    bounds = window.call(specimen, "Component", "GetExtents", coordinates)[0]
+                    return (
+                        bounds[1] >= viewport[1]
+                        and bounds[1] + bounds[3] <= viewport[1] + viewport[3]
+                    )
+
+                window.wait(
+                    specimen_visible, "writing specimen within the enlarged settings viewport"
+                )
+                capture_settled(window, output, "-specimen200")
                 reveal_preference(window, "Confirm before closing")
                 capture_settled(window, output, "-behaviour200")
                 results["ui_scale_reaches_validated_200_percent"] = True
@@ -72,7 +101,7 @@ def run(api, bus, registry, binary, output):
                         "persisted restored scale",
                     )
                 window.act("Larger reading text")
-                window.wait(lambda: window.find("Reading text size: 21"), "reading size")
+                window.wait(lambda: window.find("Reading text size: 21 px"), "reading size")
                 window.act("Keyboard shortcuts")
                 fill(window, "Shortcut binding", "Primary+Shift+S")
                 window.act("Save shortcut")
@@ -99,6 +128,7 @@ def run(api, bus, registry, binary, output):
                     "command-specific saved feedback",
                 )
                 assert not window.enabled("Save shortcut")
+                window.focus(window.find("Keyboard shortcuts"))
                 capture_settled(window, output, "-keyboard")
                 fill(window, "Shortcut binding", "Primary+Alt+D")
                 window.act("Save project · Primary+Shift+S")
@@ -127,6 +157,9 @@ def run(api, bus, registry, binary, output):
                     lambda: window.text(node) == "The last tram waits.x",
                     "redo after live preferences",
                 )
+                # The editor caret animates; verify text/undo above, then focus a
+                # stable action before requiring a pixel-stable context frame.
+                window.focus(window.wait(lambda: window.find("Commands"), "writer commands"))
                 capture_settled(window, output, "-writer")
                 results["mounted_manuscript_history_survives_preference_changes"] = True
                 assert config.read_text().startswith("# Preserve this personal comment.")
@@ -141,7 +174,7 @@ def run(api, bus, registry, binary, output):
                     "recovered draft with persisted preferences",
                 )
                 window.workspace_action("Settings")
-                window.wait(lambda: window.find("Reading text size: 21"), "reloaded preferences")
+                window.wait(lambda: window.find("Reading text size: 21 px"), "reloaded preferences")
                 assert tomllib.loads(config.read_text()).get("writer", {}).get("theme") == "dark"
                 results["personal_preferences_and_recovery_survive_restart"] = True
                 window.act("Done with settings")

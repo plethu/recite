@@ -123,3 +123,58 @@ fn quiet_controls_keep_native_geometry_focus_and_actions_in_every_state() {
     click(&mut harness, id);
     assert!(harness.pop_action::<ButtonPress>().is_none());
 }
+
+#[test]
+fn primary_controls_keep_their_target_and_show_distinct_focus_and_disabled_states() {
+    for dark in [false, true] {
+        let config = WriterConfig {
+            theme: if dark {
+                WriterTheme::Dark
+            } else {
+                WriterTheme::Light
+            },
+            ..Default::default()
+        };
+        let palette = palette(&config);
+        let button = NewWidget::new(Button::new(NewWidget::new(Label::new("Create project"))))
+            .with_class(ControlStyle::Primary.class());
+        let id = button.id();
+        let mut harness = TestHarness::create_with_size(
+            properties(&palette, 1.),
+            NewWidget::new(Flex::column().with_fixed(button)),
+            (500, 200),
+        );
+        let size = harness.get_widget_with_id(id).ctx().border_box().size();
+        assert_eq!(
+            *harness.get_widget_with_id(id).get_prop::<Background>(),
+            Background::Color(palette.accent)
+        );
+        harness.mouse_move_to(id);
+        harness.focus_on(Some(id));
+        assert_eq!(
+            harness
+                .get_widget_with_id(id)
+                .get_prop::<BorderColor>()
+                .color,
+            palette.on_accent
+        );
+        assert_eq!(
+            harness.get_widget_with_id(id).ctx().border_box().size(),
+            size
+        );
+        click(&mut harness, id);
+        assert!(harness.pop_action::<ButtonPress>().is_some());
+        harness.edit_widget_with_id(id, |mut widget| widget.ctx.set_disabled(true));
+        harness.redraw();
+        assert_eq!(
+            *harness.get_widget_with_id(id).get_prop::<Background>(),
+            Background::Color(palette.inset)
+        );
+        assert_eq!(
+            harness.get_widget_with_id(id).ctx().border_box().size(),
+            size
+        );
+        click(&mut harness, id);
+        assert!(harness.pop_action::<ButtonPress>().is_none());
+    }
+}

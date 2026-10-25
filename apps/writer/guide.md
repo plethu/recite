@@ -10,9 +10,18 @@ mise exec -- just writer run
 Use `mise exec -- just writer freya` for the Freya fallback, or `just writer xilem` to select Xilem
 explicitly. Both use the same projects, personal settings and recovery; choose one frontend at a
 time for a project. Xilem's welcome screen opens or creates projects and offers temporary examples.
+Enter in a ready project folder or name submits the form; composition and native text Undo remain
+with the field. Open/Create and any failure message stay together beneath a short form, and remain
+visible while a tall form scrolls.
+
 **Settings** changes personal appearance, text sizes, scale and shortcut bindings through the same
 configuration as Freya. See the [acceptance limits](acceptance.md#known-limits) for native-host and
-dependency-policy evidence gaps.
+dependency-policy evidence gaps. Reading and layout adjustments use paired minus/plus controls with
+full accessible names. At larger UI scales, these controls precede the live writing specimen.
+
+Declarations and build reports show paging controls only when more than one page exists. Declaration
+search distinguishes an empty project from a query with no matches; selecting a result shows its
+name and kind above the complete, paged detail.
 
 Save translation drafts before opening another project. A saved catalogue may remain open while you
 switch; no separate catalogue-close step is required.
@@ -48,6 +57,14 @@ sources, including accepted unsaved edits. **Apply source updates to PO** rechec
 writes only the PO; source files still need their own Save. These operations retain the mounted
 manuscript while editing is temporarily paused. **Preview this passage** navigates to the source and
 stages its catalogue language and wording after successful navigation. Restart remains explicit.
+
+Preview keeps **Start preview** or **Restart preview** above the scrolling conversation and input
+form. **Inputs for the next run** does not change the current conversation: restarting captures
+language, wording, typed values and the saved-or-draft translation policy. Captured context appears
+before dialogue. Failed or cancelled preparation retains the previous run. Failed preparation also
+leaves feedback beside Restart. **Review current inputs** focuses the first currently invalid scalar
+value, including one on a later page; when the values are valid, it reveals the failed attempt's
+diagnostic. The diagnostic survives further playback of the retained run.
 
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:

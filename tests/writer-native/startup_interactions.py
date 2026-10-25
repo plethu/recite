@@ -59,7 +59,7 @@ def run(api, bus, registry, binary, output):
                 capture(output, "-welcome")
                 results["welcome_has_no_fictitious_document"] = True
                 fill(window, "Project folder", str(project))
-                window.act("Open selected project")
+                key("Return")
                 node = manuscript(window)
                 window.wait(lambda: window.text(node) == "The last tram waits.", "opened project")
                 window.focus(node)
@@ -98,7 +98,7 @@ def run(api, bus, registry, binary, output):
                 created = root / "created"
                 fill(window, "Project folder", str(created))
                 fill(window, "Project name", "A native beginning")
-                window.act("Create project")
+                key("Return")
                 window.wait(
                     lambda: created.joinpath("recite.project.toml").is_file(),
                     "starter project files",

@@ -17,6 +17,7 @@ from localisation_interactions import (
 )
 from localisation_sources import action
 from native_window import attach
+from preview_controls import start as start_preview
 from preview_inputs import value
 from project_interactions import manuscript
 from startup_interactions import fill
@@ -57,7 +58,7 @@ def exercise(window, project, output, results):
     window.reveal_end("Preview value: tickets")
     value(window, "tickets", "2")
     action(window, "Hide preview inputs")
-    action(window, "Start / restart preview")
+    start_preview(window)
     reveal(window, "Answer true")
     action(window, "Preview trace")
     action(window, "Open trace record 1 · Condition requested · accepts")
@@ -92,7 +93,7 @@ def exercise(window, project, output, results):
     window.document_action("Configure preview")
     action(window, "Hide preview inputs")
     reveal_text(window, "spoken")
-    action(window, "Start / restart preview")
+    start_preview(window)
     reveal_text(window, "Apply or discard", prefix=True)
     reveal_text(window, "spoken")
     action(window, "Return to writing")
@@ -100,7 +101,7 @@ def exercise(window, project, output, results):
     reveal_text(window, "Applied edit updated.")
     window.document_action("Configure preview")
     action(window, "Hide preview inputs")
-    action(window, "Start / restart preview")
+    start_preview(window)
     window.reveal_end("Open trace record 1 · Condition requested · accepts")
     capture(output, "-restarted")
     assert (project / "scene.recite").read_text() == SOURCE

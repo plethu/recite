@@ -35,6 +35,11 @@ fn finish(
 fn install(writer: &mut Writer) -> Result<(), Box<dyn std::error::Error>> {
     let request = begin(writer)?;
     assert!(finish(writer, request)?.is_none());
+    assert!(
+        writer.session.model().preview_page().is_some(),
+        "successful preview fixture: {}",
+        writer.trial.status
+    );
     Ok(())
 }
 
@@ -71,6 +76,10 @@ fn cancelled_or_obsolete_preparations_never_replace_the_running_trial() {
                 "Hello."
             );
         }
+        assert!(
+            !writer.trial.failed(),
+            "cancellation or stale output is not an input validation failure"
+        );
         writer.phase = Phase::Writing;
         writer.change(|model| {
             model.discard();
@@ -123,11 +132,13 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
     writer.trial.sender = None;
     writer.start_trial();
     assert!(writer.trial.status.contains("unavailable"));
+    assert!(writer.trial.failed());
     let (sender, requests) = async_mpsc::unbounded_channel();
     drop(requests);
     writer.trial.sender = Some(sender);
     writer.start_trial();
     assert!(writer.trial.status.contains("stopped"));
+    assert!(writer.trial.failed());
     writer.change(|model| {
         model.set_draft("Unapplied".into());
         Ok(())
@@ -268,3 +279,9 @@ mod workflow;
 
 #[path = "tests/presentation/tests.rs"]
 mod presentation;
+
+#[path = "tests/controls/tests.rs"]
+mod controls;
+
+#[path = "tests/review/tests.rs"]
+mod review;

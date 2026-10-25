@@ -17,6 +17,7 @@ pub(super) enum Kind {
     Translation(TranslationTarget),
     Query,
     ActiveResult,
+    ProjectForm,
     Text,
 }
 #[derive(Default)]
@@ -139,6 +140,8 @@ fn role(widget: WidgetRef<'_, dyn Widget>) -> Kind {
     };
     if let Some(target) = &input.get_prop::<TranslationField>().0 {
         Kind::Translation(target.clone())
+    } else if input.get_prop::<crate::app::ProjectField>().0 {
+        Kind::ProjectForm
     } else if input.get_prop::<picker::QueryField>().0 {
         Kind::Query
     } else if input.get_prop::<crate::view::Manuscript>().0

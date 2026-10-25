@@ -17,7 +17,7 @@ fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let help = paragraph(
         scale,
-        "Stage language, wording and values here. Restart captures them; the running conversation keeps its existing inputs.",
+        "Starting or restarting captures these settings. Changes here apply to the next run; the current conversation keeps its captured inputs.",
         state.script_width(),
     );
     let drafts = checkbox(
@@ -28,7 +28,7 @@ fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     .text_size(14. * scale)
     .disabled(disabled);
     flex_col((
-        label(scale, "Staged preview inputs").text_size(20. * scale),
+        label(scale, "Inputs for the next run").text_size(20. * scale),
         help,
         language::selector(state, disabled),
         label(scale, "Preview wording (empty for default)"),

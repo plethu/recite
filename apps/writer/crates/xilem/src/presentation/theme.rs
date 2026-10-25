@@ -84,7 +84,35 @@ fn control<W: Widget>(properties: &mut DefaultProperties, p: &Palette<Color>, sc
             .with(BorderColor { color: p.rule }),
     );
     quiet_controls(&mut stack, p);
+    primary_controls(&mut stack, p);
     properties.insert_stack::<W>(stack);
+}
+
+fn primary_controls(stack: &mut PropertyStack, p: &Palette<Color>) {
+    let classes = [ControlStyle::Primary.class()];
+    stack.push_layer(
+        Selector::classes(&classes),
+        PropertySet::new()
+            .with(Background::Color(p.accent))
+            .with(BorderColor { color: p.accent })
+            .with(BorderWidth { width: 2.px() }),
+    );
+    for (selector, alpha) in [
+        (Selector::classes(&classes).with_hovered(true), 0.9),
+        (Selector::classes(&classes).with_active(true), 0.8),
+    ] {
+        stack.push_layer(selector, Background::Color(p.accent.with_alpha(alpha)));
+    }
+    stack.push_layer(
+        Selector::classes(&classes).with_focused(true),
+        BorderColor { color: p.on_accent },
+    );
+    stack.push_layer(
+        Selector::classes(&classes).with_disabled(true),
+        PropertySet::new()
+            .with(Background::Color(p.inset))
+            .with(BorderColor { color: p.rule }),
+    );
 }
 
 fn quiet_controls(stack: &mut PropertyStack, p: &Palette<Color>) {

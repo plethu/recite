@@ -81,9 +81,15 @@ pub(super) fn panel(writer: &Writer) -> impl WidgetView<Writer> + use<> {
             build_actions(writer, busy, builds.is_none_or(|builds| builds.targets.is_empty())),
         )).direction(if width >= 580. * f64::from(scale) { Axis::Horizontal } else { Axis::Vertical })
             .cross_axis_alignment(CrossAxisAlignment::Center).gap(24.px()).prop(PaneEntry(true)),
-        writer.session.project().map(|project| paragraph(scale, format!(
-            "recite.project.toml · {} source files · {} output targets", project.documents().len(), builds.map_or(0, |builds| builds.targets.len())
-        ), width)),
+        writer.session.project().map(|project| {
+            let sources = project.documents().len();
+            let targets = builds.map_or(0, |builds| builds.targets.len());
+            paragraph(scale, format!(
+                "recite.project.toml · {sources} {} · {targets} {}",
+                if sources == 1 { "source file" } else { "source files" },
+                if targets == 1 { "output target" } else { "output targets" },
+            ), width)
+        }),
         paragraph(scale, "Every build validates the whole saved project. The selected target limits emitted assets. Save all and build includes your current edits.", width),
         label(scale,"Build target").text_size(18.*scale),
         target_options(writer),
@@ -196,25 +202,28 @@ fn feedback(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     Some(
         flex_col((
             paragraph(writer.ui_scale(), report.clone(), 640.),
-            flex_row((
-                text_button(
-                    writer.ui_scale(),
-                    "Previous build report",
-                    |writer: &mut Writer| {
-                        writer.workspaces.feedback_page =
-                            writer.workspaces.feedback_page.saturating_sub(1);
-                    },
-                )
-                .disabled(writer.workspaces.feedback_page == 0),
-                text_button(
-                    writer.ui_scale(),
-                    "More build report",
-                    |writer: &mut Writer| writer.workspaces.feedback_page += 1,
-                )
-                .disabled(
-                    writer.workspaces.feedback_page + 1 >= writer.workspaces.build_feedback.len(),
-                ),
-            )),
+            (writer.workspaces.build_feedback.len() > 1).then(|| {
+                flex_row((
+                    text_button(
+                        writer.ui_scale(),
+                        "Previous build report",
+                        |writer: &mut Writer| {
+                            writer.workspaces.feedback_page =
+                                writer.workspaces.feedback_page.saturating_sub(1);
+                        },
+                    )
+                    .disabled(writer.workspaces.feedback_page == 0),
+                    text_button(
+                        writer.ui_scale(),
+                        "More build report",
+                        |writer: &mut Writer| writer.workspaces.feedback_page += 1,
+                    )
+                    .disabled(
+                        writer.workspaces.feedback_page + 1
+                            >= writer.workspaces.build_feedback.len(),
+                    ),
+                ))
+            }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start),
     )

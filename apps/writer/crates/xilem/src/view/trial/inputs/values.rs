@@ -1,4 +1,6 @@
 use super::*;
+use crate::attention::{EntryContext, PaneEntry};
+use crate::trial::VALUE_PAGE;
 use recite_core::ast::{InterpolationBinding, InterpolationType};
 use recite_writer_session::preview::parse_value;
 
@@ -6,16 +8,20 @@ pub(super) fn values(state: &Writer, disabled: bool) -> impl WidgetView<Writer> 
     let scale = state.ui_scale();
     let settings = &state.trial.settings;
     let bindings = state.session.model().document().preview_bindings();
-    let pages = bindings.len().div_ceil(4).max(1);
+    let pages = bindings.len().div_ceil(VALUE_PAGE).max(1);
     let page = settings.binding_page.min(pages - 1);
     let fields = bindings
         .iter()
-        .skip(page * 4)
-        .take(4)
+        .skip(page * VALUE_PAGE)
+        .take(VALUE_PAGE)
         .map(|binding| {
             keyed(
                 (binding.value.clone(), binding.value_type),
-                field(state, binding, disabled),
+                flex_col((field(state, binding, disabled),))
+                    .prop(PaneEntry(
+                        state.configuring_trial() && settings.review.targets(binding),
+                    ))
+                    .prop(EntryContext(true)),
             )
         })
         .collect::<Vec<_>>();
@@ -84,7 +90,7 @@ fn field(
             InterpolationType::Float => "finite number",
             InterpolationType::Boolean => "true or false",
         };
-        let invalid = !value.is_empty()
+        let invalid = (!value.is_empty() || state.trial.settings.review.targets(binding))
             && binding.value_type != InterpolationType::String
             && parse_value(binding.value_type, &value).is_err();
         let caption = format!("Preview value: {name}");

@@ -1,10 +1,12 @@
 //! Native context snapshots and command authority have distinct freshness boundaries.
+use super::super::welcome::FormScope;
 use super::*;
 
 #[derive(PartialEq)]
 pub(super) struct Scope {
     pub(super) writer: Option<DocumentScope>,
     pub(super) welcome: bool,
+    pub(super) project_form: Option<FormScope>,
     pub(super) settings: bool,
     pub(super) picker: Option<(picker::PickerInstance, picker::Mode, picker::PickerRevision)>,
     pub(super) keymap: recite_config::Keymap,
@@ -44,6 +46,7 @@ impl DocumentScope {
 impl Scope {
     pub(super) fn same_command_scope(&self, other: &Self) -> bool {
         self.welcome == other.welcome
+            && self.project_form == other.project_form
             && self.settings == other.settings
             && self.picker == other.picker
             && self.keymap == other.keymap
@@ -71,6 +74,7 @@ impl Scope {
                 }
             }),
             welcome: app.show_welcome,
+            project_form: (app.show_welcome && !app.settings_open).then(|| FormScope::capture(app)),
             settings: app.settings_open,
             keymap: app.preferences.config.ui.keymap,
             picker: app

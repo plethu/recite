@@ -8,6 +8,7 @@ pub(super) mod picker;
 mod settings;
 mod slot;
 mod view;
+mod welcome;
 use super::{Phase, Writer, session::Session};
 use opening::{Job, Opening};
 use recite_compiler::authoring::CancellationToken;
@@ -22,6 +23,7 @@ use std::{
     sync::{Arc, mpsc},
 };
 use tokio::sync::mpsc::UnboundedSender;
+pub(crate) use welcome::ProjectField;
 use xilem::masonry::kurbo::Size;
 use xilem::winit::dpi;
 use xilem::winit::error;
@@ -46,6 +48,7 @@ pub(super) struct App {
     native_path: Option<PathBuf>,
     name: String,
     creating: bool,
+    welcome_layout: welcome::Measurements,
     auxiliary: bool,
     status: String,
     pane_hint: bool,
@@ -109,8 +112,9 @@ impl App {
             native_path: None,
             name: String::new(),
             creating: false,
+            welcome_layout: Default::default(),
             auxiliary: false,
-            status: "Open a project or create one to start writing.".into(),
+            status: String::new(),
             pane_hint: false,
             workspace_menu: false,
             viewport: Size::new(1280., 800.),
@@ -148,7 +152,7 @@ impl App {
         }
     }
     fn open_selected(&mut self) {
-        if self.opening.is_some() || self.auxiliary {
+        if !self.project_form_ready() {
             return;
         }
         let path = self
@@ -184,6 +188,12 @@ impl App {
                 self.status = error;
             }
         }
+    }
+    fn project_form_ready(&self) -> bool {
+        self.opening.is_none()
+            && !self.auxiliary
+            && !self.path.trim().is_empty()
+            && (!self.creating || !self.name.trim().is_empty())
     }
     fn browse(&mut self) {
         if self.auxiliary || self.opening.is_some() {

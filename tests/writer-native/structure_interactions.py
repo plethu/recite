@@ -40,8 +40,8 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
     try:
         window.wait(lambda: window.find("No beats yet"), "valid empty document")
         window.document_action("Configure preview")
-        window.reveal_end("Start / restart preview")
-        assert not window.enabled("Start / restart preview")
+        window.wait(lambda: window.find("Start preview"), "initial preview action")
+        assert not window.enabled("Start preview")
         capture(output, "-empty")
         window.act("Return to writing")
         window.reveal_start("Add beat")

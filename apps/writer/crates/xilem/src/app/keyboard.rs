@@ -41,6 +41,7 @@ pub(crate) struct Context {
     pub writer_active: bool,
     pub screen: Option<crate::workspaces::Screen>,
     pub picker_open: bool,
+    pub project_form_ready: bool,
     pub document_menu: DocumentMenu,
     pub attention: crate::attention::Attention,
     pub editing: Option<EditingTarget>,
@@ -57,6 +58,7 @@ pub(crate) enum Action {
     Command(WriterCommand),
     SaveTranslation(TranslationTarget),
     SubmitPicker,
+    SubmitProject,
     PaneHint(bool),
     CyclePane { forward: bool },
     FieldFocus(Option<EditingTarget>),
@@ -96,6 +98,11 @@ impl<V> Host<V> {
             }) && !self.scope.welcome
                 && !self.scope.settings,
             picker_open: self.scope.picker.is_some(),
+            project_form_ready: self
+                .scope
+                .project_form
+                .as_ref()
+                .is_some_and(|form| form.ready),
             document_menu: self
                 .scope
                 .writer
@@ -225,6 +232,7 @@ impl<V: WidgetView<App>> View<App, (), ViewCtx> for Host<V> {
                 }
             }
             Action::SubmitPicker => app.submit_picker(),
+            Action::SubmitProject => app.open_selected(),
             Action::DismissDocumentMenu => {
                 if let Some(writer) = &mut app.writer {
                     writer.document_menu = DocumentMenu::Dismissed;

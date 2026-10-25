@@ -19,7 +19,9 @@ use xilem::{
 };
 
 mod inputs;
-pub(super) use inputs::Settings;
+pub(super) use inputs::{Review, Settings, VALUE_PAGE};
+mod preparation;
+use preparation::{Outcome, Preparation};
 
 pub(super) struct Trial {
     sender: Option<UnboundedSender<Arc<Request>>>,
@@ -31,12 +33,6 @@ pub(super) struct Trial {
     pub choice_page: usize,
     pub effect_page: usize,
     pub trace: Browser,
-}
-
-enum Preparation {
-    Idle,
-    Running(Arc<Request>),
-    Cancelling,
 }
 
 enum Retired {
@@ -62,26 +58,14 @@ impl Trial {
     pub fn new() -> Self {
         Self {
             sender: None,
-            preparation: Preparation::Idle,
+            preparation: Preparation::Idle(Outcome::Ready),
             settings: Settings::default(),
             visible: false,
             answer: String::new(),
-            status: "Effects are displayed, never executed. Restart captures your staged inputs."
-                .into(),
+            status: preparation::GUIDANCE.into(),
             choice_page: 0,
             effect_page: 0,
             trace: Default::default(),
-        }
-    }
-
-    pub fn busy(&self) -> bool {
-        !matches!(self.preparation, Preparation::Idle)
-    }
-
-    pub fn cancel(&mut self) {
-        if self.busy() {
-            self.preparation = Preparation::Cancelling;
-            self.status = "Cancelled; finishing the current compiler phase.".into();
         }
     }
 }
@@ -95,6 +79,7 @@ impl Writer {
         self.workspaces.screen = Screen::Write;
         self.attention.leave_focus();
         self.trial.visible = true;
+        self.trial.settings.review = Review::Inputs;
         self.focus_pane(PaneMotion::To(Pane::Preview));
         if self.trial.busy() {
             return;
@@ -117,7 +102,10 @@ impl Writer {
         });
         self.trial.status = match result {
             Ok(()) => "Preparing preview… You can keep editing.".into(),
-            Err(error) => error,
+            Err(error) => {
+                self.trial.preparation = Preparation::Idle(Outcome::Failed(error.clone()));
+                error
+            }
         };
     }
     pub(super) fn configure_trial(&mut self) {
@@ -125,6 +113,7 @@ impl Writer {
         self.workspaces.screen = Screen::Write;
         self.trial.visible = true;
         self.trial.settings.open = true;
+        self.trial.settings.review = Review::Inputs;
         self.document_menu = crate::attention::DocumentMenu::Closed;
         self.focus_pane(PaneMotion::To(Pane::Preview));
     }
@@ -133,10 +122,12 @@ impl Writer {
     }
     pub(super) fn close_trial_inputs(&mut self) {
         self.trial.settings.open = false;
+        self.trial.settings.review = Review::Inputs;
         self.focus_pane(PaneMotion::To(Pane::Preview));
     }
     pub(super) fn return_from_trial(&mut self) {
         self.trial.settings.open = false;
+        self.trial.settings.review = Review::Inputs;
         self.trial.visible = false;
         let pane = if self.visible_workspace() == Workspace::Map {
             Pane::Map
@@ -147,14 +138,23 @@ impl Writer {
     }
 
     fn accept_trial(&mut self, output: Output) {
-        let preparation = std::mem::replace(&mut self.trial.preparation, Preparation::Idle);
+        let preparation = std::mem::replace(
+            &mut self.trial.preparation,
+            Preparation::Idle(Outcome::Ready),
+        );
         let current = matches!(preparation, Preparation::Running(ref request) if Arc::ptr_eq(request, &output.request))
             && self.phase == Phase::Writing
             && output
                 .request
                 .is_current(self.session.model(), self.localisation.preview_catalogue());
+        let cancelled = matches!(preparation, Preparation::Cancelling);
         drop(preparation);
         if !current {
+            self.trial.preparation = Preparation::Idle(if cancelled {
+                Outcome::Cancelled
+            } else {
+                Outcome::Changed
+            });
             self.trial.status =
                 "Preview inputs changed or preparation was cancelled. Restart when ready.".into();
         }
@@ -168,11 +168,17 @@ impl Writer {
                     self.trial.status = "Preview uses the accepted source snapshot.".into();
                     previous.map(|preview| Retired::Preview(Box::new(preview)))
                 }
-                Err(prepared) => Some(Retired::Prepared(prepared)),
+                Err(prepared) => {
+                    self.trial.preparation = Preparation::Idle(Outcome::Changed);
+                    self.trial.status =
+                        "Preview inputs changed before publication. Restart when ready.".into();
+                    Some(Retired::Prepared(prepared))
+                }
             },
             Ok(prepared) => Some(Retired::Prepared(prepared)),
             Err(error) => {
                 if current {
+                    self.trial.preparation = Preparation::Idle(Outcome::Failed(error.clone()));
                     self.trial.status = if self.session.model().preview_page().is_some() {
                         format!("{error}\nThe running preview below is unchanged.")
                     } else {

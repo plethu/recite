@@ -152,29 +152,40 @@ fn inspection(writer: &Writer) -> impl WidgetView<Writer> + use<> {
         .prop(TextAreaLabel::new("Search declarations")),
         label(
             scale,
-            format!(
-                "Showing {}–{} of {} declarations",
-                if panel.matches.is_empty() {
-                    0
+            if panel.matches.is_empty() {
+                if panel.query.trim().is_empty() {
+                    "No declarations in this project.".into()
                 } else {
-                    panel.page * PAGE + 1
-                },
-                ((panel.page + 1) * PAGE).min(panel.matches.len()),
-                panel.matches.len()
-            ),
+                    "No declarations match this search.".into()
+                }
+            } else {
+                format!(
+                    "Showing {}–{} of {} {}",
+                    panel.page * PAGE + 1,
+                    ((panel.page + 1) * PAGE).min(panel.matches.len()),
+                    panel.matches.len(),
+                    if panel.matches.len() == 1 {
+                        "declaration"
+                    } else {
+                        "declarations"
+                    },
+                )
+            },
         ),
         declaration_rows(writer),
-        flex_row((
-            text_button(scale, "Previous declarations", |writer: &mut Writer| {
-                writer.workspaces.declarations.page =
-                    writer.workspaces.declarations.page.saturating_sub(1);
-            })
-            .disabled(panel.page == 0),
-            text_button(scale, "Next declarations", |writer: &mut Writer| {
-                writer.workspaces.declarations.page += 1
-            })
-            .disabled((panel.page + 1) * PAGE >= panel.matches.len()),
-        )),
+        (panel.matches.len() > PAGE).then(|| {
+            flex_row((
+                text_button(scale, "Previous declarations", |writer: &mut Writer| {
+                    writer.workspaces.declarations.page =
+                        writer.workspaces.declarations.page.saturating_sub(1);
+                })
+                .disabled(panel.page == 0),
+                text_button(scale, "Next declarations", |writer: &mut Writer| {
+                    writer.workspaces.declarations.page += 1
+                })
+                .disabled((panel.page + 1) * PAGE >= panel.matches.len()),
+            ))
+        }),
         declaration_detail(writer),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -216,28 +227,29 @@ fn declaration_detail(writer: &Writer) -> Option<impl WidgetView<Writer> + use<>
     let scale = writer.ui_scale();
     Some(
         flex_col((
-            label(scale, "Selected declaration").text_size(18. * scale),
-            label(scale, format!("{name} · {kind}")),
+            label(scale, format!("{name} · {kind}")).text_size(18. * scale),
             paragraph(
                 scale,
                 detail.get(panel.detail_page).cloned().unwrap_or_default(),
                 640.,
             ),
-            flex_row((
-                text_button(
-                    scale,
-                    "Previous declaration detail",
-                    |writer: &mut Writer| {
-                        writer.workspaces.declarations.detail_page =
-                            writer.workspaces.declarations.detail_page.saturating_sub(1);
-                    },
-                )
-                .disabled(panel.detail_page == 0),
-                text_button(scale, "More declaration detail", |writer: &mut Writer| {
-                    writer.workspaces.declarations.detail_page += 1
-                })
-                .disabled(detail.len() <= panel.detail_page + 1),
-            )),
+            (detail.len() > 1).then(|| {
+                flex_row((
+                    text_button(
+                        scale,
+                        "Previous declaration detail",
+                        |writer: &mut Writer| {
+                            writer.workspaces.declarations.detail_page =
+                                writer.workspaces.declarations.detail_page.saturating_sub(1);
+                        },
+                    )
+                    .disabled(panel.detail_page == 0),
+                    text_button(scale, "More declaration detail", |writer: &mut Writer| {
+                        writer.workspaces.declarations.detail_page += 1
+                    })
+                    .disabled(detail.len() <= panel.detail_page + 1),
+                ))
+            }),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start),
     )

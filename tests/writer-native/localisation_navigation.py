@@ -17,7 +17,7 @@ from localisation_interactions import (
     search_entries,
 )
 from localisation_sources import action
-from native_window import attach
+from native_window import attach, key
 from preview_inputs import capture_end, restart
 from project_interactions import manuscript
 from project_tools_interactions import command
@@ -57,10 +57,12 @@ def exercise(window, project, output, results):
     results["source_action_selects_cross_file_passage_without_saving"] = True
     capture(output, "-source")
     command(window, "Localise")
+    search_entries(window, "formal")
+    open_entry(window)
     reveal_field(window, "Translation form 1")
     assert window.text(field(window, "Translation form 1")) == "Un brouillon distant."
     action(window, "Preview this passage")
-    reveal(window, "Start / restart preview")
+    window.wait(lambda: window.find("Start preview"), "initial preview action")
     action(window, "Configure preview")
     reveal_field(window, "Preview wording")
     assert window.text(field(window, "Preview wording")) == "formal"
@@ -73,8 +75,10 @@ def exercise(window, project, output, results):
     assert po.read_text() == PO
     results["preview_can_capture_draft_without_publishing_po"] = True
     action(window, "Return to writing")
-    reveal(window, "scene.recite · Unsaved")
-    action(window, "scene.recite · Unsaved")
+    key("p", control=True)
+    fill(window, "Search query", "scene.recite")
+    key("Return")
+    window.wait(lambda: not window.find("Search query"), "explicit source document navigation")
     reveal_field(window, "Manuscript")
     window.wait(
         lambda: window.text(manuscript(window)) == "Kept source draft.",

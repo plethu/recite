@@ -5,6 +5,7 @@ use worker::{Completed, ResultValue};
 
 impl Writer {
     pub(crate) fn accept_navigation(&mut self, completed: Completed) -> Option<ResultValue> {
+        let document = self.session.model().document().key().clone();
         let Completed {
             request,
             mut result,
@@ -102,6 +103,11 @@ impl Writer {
             if !self.navigation.busy() {
                 self.finish_navigation_reply(Ok(()));
             }
+        }
+        if self.session.model().document().key() != &document
+            || (accepted && matches!(request.target, Target::Reload))
+        {
+            self.trial.document_replaced();
         }
         self.field_apply_completed(&request, accepted);
         Some(value)

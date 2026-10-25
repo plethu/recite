@@ -1,11 +1,12 @@
 use super::*;
 use crate::presentation::group::named;
+use crate::presentation::{Icon, print};
 use xilem::masonry::properties::LineBreaking;
 
 pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let presentation = app.preferences.config.writer.presentation;
     let scale = crate::presentation::scale(&app.preferences.config.writer);
-    let wide = width >= 520. * f64::from(scale);
+    let wide = width >= 300. * f64::from(scale);
     let fields = [
         (
             "Reading text size",
@@ -49,20 +50,28 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                     format!(
                         "{caption}: {}{}",
                         presentation.value(field),
-                        if field == Field::UiScale { "%" } else { "" }
+                        if field == Field::UiScale { "%" } else { " px" }
                     ),
                 )
                 .prop(LineBreaking::WordWrap)
                 .width((190. * f64::from(scale)).min(width).px()),
                 flex_row((
-                    text_button(scale, decrease, move |app: &mut App| {
-                        app.adjust_presentation(field, false)
-                    })
-                    .disabled(presentation.value(field) == min),
-                    text_button(scale, increase, move |app: &mut App| {
-                        app.adjust_presentation(field, true)
-                    })
-                    .disabled(presentation.value(field) == max),
+                    print::icon_action(
+                        scale,
+                        decrease,
+                        Icon::Minus,
+                        &app.theme.palette,
+                        presentation.value(field) == min,
+                        move |app: &mut App| app.adjust_presentation(field, false),
+                    ),
+                    print::icon_action(
+                        scale,
+                        increase,
+                        Icon::Plus,
+                        &app.theme.palette,
+                        presentation.value(field) == max,
+                        move |app: &mut App| app.adjust_presentation(field, true),
+                    ),
                 ))
                 .gap(8.px()),
             ))
@@ -81,7 +90,7 @@ pub(super) fn reading(app: &App, width: f64) -> impl WidgetView<App> + use<> {
         label(scale, "Reading and layout").text_size(18. * scale),
         flex_col(fields)
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(10.px()),
+            .gap(6.px()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())

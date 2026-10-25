@@ -2,7 +2,7 @@ use super::*;
 use crate::{keyed::keyed, tests::support::mounted::Mounted};
 use xilem::{
     masonry::{
-        accesskit::{Action, Role},
+        accesskit::{Action, Live, Role},
         properties::TextAreaLabel,
         widgets::Passthrough,
     },
@@ -60,4 +60,34 @@ fn named_groups_expose_their_children_and_preserve_native_controls_when_renamed(
     mounted.activate("Owned action");
     assert!(mounted.state.invoked);
     assert_eq!(mounted.state.text, "Retained draft");
+}
+
+fn status_page(state: &mut State) -> impl WidgetView<State, Widget = Passthrough> + use<> {
+    keyed((), status(state.name, flex_col(())))
+}
+
+#[test]
+fn changing_status_is_a_polite_native_live_region_without_a_keyboard_stop() {
+    let mut mounted = Mounted::new(
+        State {
+            name: "Preview failed.",
+            text: String::new(),
+            invoked: false,
+        },
+        status_page,
+    );
+    mounted.state.name = "Preparation cancelled.";
+    mounted.settle();
+    let tree = mounted.harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let node = loop {
+        let node = pending.pop().expect("native status region");
+        if node.role() == Role::Status {
+            break node;
+        }
+        pending.extend(node.children());
+    };
+    assert_eq!(node.label().as_deref(), Some("Preparation cancelled."));
+    assert_eq!(node.data().live(), Some(Live::Polite));
+    assert!(!node.data().supports_action(Action::Focus));
 }

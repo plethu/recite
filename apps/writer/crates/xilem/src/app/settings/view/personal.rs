@@ -1,7 +1,7 @@
 use super::*;
 use recite_config::{Keymap, WriterPaneSide, WriterPresentationField as Field, WriterTheme};
-use xilem::masonry::kurbo::Axis;
 use xilem::view::checkbox;
+use xilem::view::{GridExt, GridTrackSize, grid};
 mod reading;
 mod specimen;
 
@@ -54,16 +54,19 @@ pub(super) fn personal(app: &App) -> impl WidgetView<App> + use<> {
     })
     .collect::<Vec<_>>();
     flex_col((
-        flex_row((
-            specimen::specimen(app, sample_width),
-            reading::reading(app, controls_width),
+        grid((
+            specimen::specimen(app, sample_width).grid_pos(0, u16::from(!wide)),
+            reading::reading(app, controls_width).grid_pos(u16::from(wide), 0),
         ))
-        .direction(if wide {
-            Axis::Horizontal
+        .columns(if wide {
+            vec![
+                GridTrackSize::Fixed(sample_width.px()),
+                GridTrackSize::Fixed(controls_width.px()),
+            ]
         } else {
-            Axis::Vertical
+            vec![GridTrackSize::Fixed(width.px())]
         })
-        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .rows(vec![GridTrackSize::Auto; if wide { 1 } else { 2 }])
         .gap(32.px()),
         label(scale, "Appearance").text_size(18. * scale),
         radio_group(

@@ -5,6 +5,7 @@ mod history;
 mod manuscript;
 mod panes;
 mod picker;
+mod project;
 mod tab;
 mod vim;
 use crate::app::keyboard::{Action, Context, Invocation, KeyboardContext, TAG};
@@ -117,6 +118,14 @@ impl Keyboard {
             event.logical_key,
             self.normalized_modifiers(),
         )
+        .or_else(|| {
+            project::submit(
+                &context,
+                &kind,
+                event.logical_key,
+                self.normalized_modifiers(),
+            )
+        })
         .or_else(|| document_menu::escape(&context, event.logical_key, self.normalized_modifiers()))
         .or_else(|| history::key(&context, event.logical_key, self.normalized_modifiers()));
         let consumed = self.dispatch(

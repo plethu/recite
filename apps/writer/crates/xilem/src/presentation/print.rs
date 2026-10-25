@@ -11,6 +11,7 @@ use xilem::{
         parley::{FontFamily, FontFamilyName, GenericFamily, style::FontWeight},
         widgets::Button,
     },
+    style::Style,
     view::{self, Label},
 };
 
@@ -56,6 +57,29 @@ pub(crate) fn action<S: 'static>(
     styled(
         ControlStyle::Action,
         view::button(label(scale, text), callback).disabled(disabled),
+    )
+}
+
+pub(crate) fn primary_action<S: 'static, T: Into<ArcStr>, F: Fn(&mut S) + Send + Sync + 'static>(
+    scale: f32,
+    text: T,
+    palette: &Palette<Color>,
+    disabled: bool,
+    callback: F,
+) -> impl WidgetView<S, Widget = Button> + use<S, T, F> {
+    styled(
+        ControlStyle::Primary,
+        view::button(
+            label(scale, text)
+                .weight(FontWeight::SEMI_BOLD)
+                .color(if disabled {
+                    palette.muted
+                } else {
+                    palette.on_accent
+                }),
+            callback,
+        )
+        .disabled(disabled),
     )
 }
 

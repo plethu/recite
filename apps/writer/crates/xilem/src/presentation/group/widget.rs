@@ -1,5 +1,5 @@
 use xilem::masonry::{
-    accesskit::{Node, Role},
+    accesskit::{Live, Node, Role},
     core::{
         AccessCtx, ArcStr, ChildrenIds, LayoutCtx, MeasureCtx, NewWidget, NoAction, PaintCtx,
         PropertiesRef, RegisterCtx, Widget, WidgetMut, WidgetPod,
@@ -59,6 +59,11 @@ impl Widget for Group {
     }
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
         node.set_label(self.name.as_ref());
+        node.set_live(if self.role == Role::Status {
+            Live::Polite
+        } else {
+            Live::Off
+        });
     }
     fn children_ids(&self) -> ChildrenIds {
         ChildrenIds::from_slice(&[self.child.id()])

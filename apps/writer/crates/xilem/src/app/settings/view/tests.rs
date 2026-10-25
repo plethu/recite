@@ -121,3 +121,69 @@ fn personal_controls_expose_their_native_checkbox_names() {
         "{labels:?}"
     );
 }
+
+#[test]
+fn compact_reading_controls_keep_their_identity_and_fit_before_the_specimen() {
+    use recite_config::WriterPresentationField;
+    use xilem::masonry::core::WindowEvent;
+    let mut mounted = Mounted::new(App::empty(), surface);
+    mounted
+        .harness
+        .process_window_event(WindowEvent::Resize((1280, 720).into()));
+    mounted.settle();
+    let increase = mounted.find("Increase UI scale");
+    for _ in 0..10 {
+        mounted.activate("Increase UI scale");
+        assert_eq!(mounted.find("Increase UI scale"), increase);
+    }
+    assert_eq!(
+        mounted
+            .state
+            .preferences
+            .config
+            .writer
+            .presentation
+            .value(WriterPresentationField::UiScale),
+        200
+    );
+    let mut bottom = 0.;
+    for (decrease, increase) in [
+        ("Smaller reading text", "Larger reading text"),
+        ("Smaller source text", "Larger source text"),
+        ("Decrease UI scale", "Increase UI scale"),
+        ("Narrower navigation", "Wider navigation"),
+        ("Narrower script", "Wider script"),
+    ] {
+        let first = mounted.harness.get_widget_with_id(mounted.find(decrease));
+        let second = mounted.harness.get_widget_with_id(mounted.find(increase));
+        let first = first
+            .ctx()
+            .window_transform()
+            .transform_rect_bbox(first.ctx().border_box());
+        let second = second
+            .ctx()
+            .window_transform()
+            .transform_rect_bbox(second.ctx().border_box());
+        assert!(
+            first.x1 <= second.x0 && second.x1 <= 1280.,
+            "{decrease}: {first:?} {second:?}"
+        );
+        // Keep at least a 24px logical target after doubling the UI scale.
+        assert!(first.width() >= 48. && first.height() >= 48., "{first:?}");
+        assert!(second.y1 <= 720., "{increase}: {second:?}");
+        bottom = second.y1;
+    }
+    let tree = mounted.harness.access_tree();
+    let mut pending = vec![tree.state().root()];
+    let top = loop {
+        let node = pending.pop().expect("writing specimen");
+        if node.label().or_else(|| node.value()).as_deref() == Some("Writing preview") {
+            break node.bounding_box().unwrap().y0;
+        }
+        pending.extend(node.children());
+    };
+    assert!(
+        top >= bottom,
+        "compact settings put controls before the specimen"
+    );
+}

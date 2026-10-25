@@ -5,6 +5,8 @@ use crate::{
 };
 use recite_config::WriterPresentationField;
 use xilem::masonry::properties::LineBreaking;
+#[cfg(test)]
+mod tests;
 
 pub(super) fn specimen(app: &App, width: f64) -> impl WidgetView<App> + use<> {
     let config = &app.preferences.config.writer;
@@ -48,7 +50,7 @@ pub(super) fn specimen(app: &App, width: f64) -> impl WidgetView<App> + use<> {
                 .width((width - 32.).max(200.).px())
                 .color(app.theme.palette.muted)
             }),
-            manuscript_text(size * scale, excerpt).width((width - 32.).max(200.).px()),
+            manuscript_text(size, excerpt).width((width - 32.).max(200.).px()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(12.px()),

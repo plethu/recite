@@ -133,6 +133,16 @@ pub(crate) struct Region(pub Option<Pane>);
 /// A contextual pane's preferred entry, without changing its geometry or Tab order.
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct PaneEntry(pub bool);
+/// Explicit pane entry reveals this small field group, then prioritises its editable control.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) struct EntryContext(pub bool);
+impl core::UsesProperty<EntryContext> for widgets::Flex {}
+impl core::Property for EntryContext {
+    fn static_default() -> &'static Self {
+        static NONE: EntryContext = EntryContext(false);
+        &NONE
+    }
+}
 impl core::UsesProperty<PaneEntry> for widgets::Flex {}
 impl core::Property for PaneEntry {
     fn static_default() -> &'static Self {

@@ -1,6 +1,6 @@
 //! Native pane geometry and focus history stay outside product commands.
 use super::*;
-use crate::attention::{Pane, PaneEntry, PaneMotion, PaneRequest, Region};
+use crate::attention::{EntryContext, Pane, PaneEntry, PaneMotion, PaneRequest, Region};
 use crate::workspaces::Screen;
 use xilem::masonry::{
     accesskit,
@@ -29,7 +29,12 @@ struct Target {
     pane: Pane,
     center: Point,
     focused: bool,
-    widget: WidgetId,
+    entry: Entry,
+}
+#[derive(Clone, Copy)]
+struct Entry {
+    focus: WidgetId,
+    context: WidgetId,
 }
 impl Attention {
     pub fn synchronize(&mut self, root: &mut RenderRoot, context: &Context) {
@@ -58,7 +63,7 @@ impl Attention {
                     Screen::Write => Pane::Script,
                 };
                 if let Some(target) = targets(root).iter().find(|target| target.pane == pane) {
-                    reveal(root, target.widget);
+                    reveal_entry(root, target.entry);
                 }
             }
             self.screen = Some(screen);
@@ -100,20 +105,20 @@ impl Attention {
 pub(super) fn focus_script(root: &mut RenderRoot) {
     let panes = targets(root);
     if let Some(target) = panes.iter().find(|target| target.pane == Pane::Script) {
-        reveal(root, target.widget);
+        reveal_entry(root, target.entry);
     }
 }
 pub(super) fn focus_pane(root: &mut RenderRoot, pane: Pane) -> bool {
     targets(root)
         .iter()
         .find(|target| target.pane == pane)
-        .is_some_and(|target| reveal(root, target.widget))
+        .is_some_and(|target| reveal_entry(root, target.entry))
 }
 fn move_focus(root: &mut RenderRoot, direction: PaneMotion) {
     let panes = targets(root);
     if let PaneMotion::To(pane) = direction {
         if let Some(target) = panes.iter().find(|target| target.pane == pane) {
-            reveal(root, target.widget);
+            reveal_entry(root, target.entry);
         }
         return;
     }
@@ -140,7 +145,7 @@ fn move_focus(root: &mut RenderRoot, direction: PaneMotion) {
             } else {
                 panes.len() - 1
             };
-            reveal(root, panes[(index + step) % panes.len()].widget);
+            reveal_entry(root, panes[(index + step) % panes.len()].entry);
             return;
         }
     };
@@ -151,15 +156,32 @@ fn move_focus(root: &mut RenderRoot, direction: PaneMotion) {
             let offset = target.center - origin.center;
             let forward = offset.x * dx + offset.y * dy;
             let sideways = (offset.x * dy - offset.y * dx).abs();
-            (forward > 1. && forward > sideways).then_some((target.widget, offset.hypot()))
+            (forward > 1. && forward > sideways).then_some((target.entry, offset.hypot()))
         })
         .min_by(|left, right| left.1.total_cmp(&right.1));
-    if let Some((id, _)) = target {
-        reveal(root, id);
+    if let Some((entry, _)) = target {
+        reveal_entry(root, entry);
     }
 }
 pub(super) fn reveal(root: &mut RenderRoot, id: WidgetId) -> bool {
-    if root.focus_on(Some(id)) {
+    reveal_entry(
+        root,
+        Entry {
+            focus: id,
+            context: id,
+        },
+    )
+}
+fn reveal_entry(root: &mut RenderRoot, entry: Entry) -> bool {
+    if root.focus_on(Some(entry.focus)) {
+        if entry.context != entry.focus {
+            root.handle_access_event(accesskit::ActionRequest {
+                action: accesskit::Action::ScrollIntoView,
+                target_tree: accesskit::TreeId::ROOT,
+                target_node: entry.context.to_raw().into(),
+                data: None,
+            });
+        }
         reveal_focused(root);
         return true;
     }
@@ -256,12 +278,12 @@ fn targets(root: &RenderRoot) -> Vec<Target> {
             continue;
         }
         if let Some(pane) = region(widget) {
-            if let Some(target) = pane_entry(widget, pane) {
+            if let Some(entry) = pane_entry(widget, pane) {
                 targets.push(Target {
                     pane,
                     center: widget.ctx().window_transform() * widget.ctx().border_box().center(),
                     focused: widget.ctx().has_focus_target(),
-                    widget: target,
+                    entry,
                 });
             }
         } else {
@@ -280,7 +302,7 @@ fn region(widget: WidgetRef<'_, dyn Widget>) -> Option<Pane> {
             .and_then(|widget| widget.get_prop::<Region>().0)
     }
 }
-fn pane_entry(widget: WidgetRef<'_, dyn Widget>, pane: Pane) -> Option<WidgetId> {
+fn pane_entry(widget: WidgetRef<'_, dyn Widget>, pane: Pane) -> Option<Entry> {
     let mut pending = vec![widget];
     while let Some(child) = pending.pop() {
         if child.ctx().is_stashed() || child.ctx().is_disabled() {
@@ -291,11 +313,21 @@ fn pane_entry(widget: WidgetRef<'_, dyn Widget>, pane: Pane) -> Option<WidgetId>
             .is_some_and(|flex| flex.get_prop::<PaneEntry>().0)
             && let Some(target) = first_focusable(child, false)
         {
-            return Some(target);
+            let context = child
+                .downcast::<Flex>()
+                .filter(|flex| flex.get_prop::<EntryContext>().0)
+                .map_or(target, |flex| flex.id());
+            return Some(Entry {
+                focus: target,
+                context,
+            });
         }
         pending.extend(child.children());
     }
-    first_focusable(widget, pane != Pane::Preview)
+    first_focusable(widget, pane != Pane::Preview).map(|focus| Entry {
+        focus,
+        context: focus,
+    })
 }
 fn first_focusable(widget: WidgetRef<'_, dyn Widget>, prefer_text: bool) -> Option<WidgetId> {
     let mut pending = vec![widget];

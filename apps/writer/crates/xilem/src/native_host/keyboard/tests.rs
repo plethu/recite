@@ -29,6 +29,7 @@ pub(super) fn context() -> (Context, mpsc::Receiver<SendMessage>) {
             writer_active: true,
             screen: Some(crate::workspaces::Screen::Write),
             picker_open: false,
+            project_form_ready: false,
             document_menu: Default::default(),
             attention: Default::default(),
             editing: None,

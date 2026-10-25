@@ -18,9 +18,11 @@ from localisation_interactions import (
 )
 from localisation_sources import action
 from native_window import attach, key, type_text
+from preview_controls import diagnostic_focus, focused_in_content, within_content
+from preview_controls import start as start_preview
 from project_interactions import manuscript
 from startup_interactions import field, fill
-from writer_interactions import capture
+from writer_interactions import capture, capture_settled
 
 SOURCE = """:: start default
 > hello@11111111111111111111 bind=(name:string=$person)
@@ -52,7 +54,7 @@ def value(window, name, content):
 
 
 def restart(window, expected):
-    action(window, "Start / restart preview")
+    start_preview(window)
     reveal_text(window, expected)
 
 
@@ -66,24 +68,29 @@ def capture_end(window, output, suffix):
     capture(output, suffix)
 
 
-def tab_to_language(window):
-    """Observe a real Tab move and its viewport bounds without probe scrolling."""
+def configuration_focus_and_tab(window):
+    """Observe the automatic input focus and native forward/backward Tab moves."""
+
+    def visible_and_focused(caption):
+        node = (
+            field(window, caption) if caption == "Find preview language" else window.find(caption)
+        )
+        return focused_in_content(window, node)
+
+    window.wait(
+        lambda: visible_and_focused("Find preview language"),
+        "configuration focuses the visible preview language input",
+    )
     key("Tab")
-    focused = 1 << int(window.api.Atspi.StateType.FOCUSED)
-    coordinates = window.api.GLib.Variant("(u)", (int(window.api.Atspi.CoordType.WINDOW),))
-
-    def visible():
-        node = field(window, "Find preview language")
-        if not window.call(node, "Accessible", "GetState")[0][0] & focused:
-            return False
-        viewport = window.section_scrollbar("Conversation preview")
-        if viewport is None:
-            return False
-        bounds = window.call(node, "Component", "GetExtents", coordinates)[0]
-        clip = window.call(viewport, "Component", "GetExtents", coordinates)[0]
-        return bounds[1] >= clip[1] and bounds[1] + bounds[3] <= clip[1] + clip[3]
-
-    window.wait(visible, "Tab reveals the preview language input within its viewport")
+    window.wait(
+        lambda: visible_and_focused("Search preview languages"),
+        "Tab reaches the visible language search action",
+    )
+    key("Tab", shift=True)
+    window.wait(
+        lambda: visible_and_focused("Find preview language"),
+        "Shift+Tab returns to the visible preview language input",
+    )
 
 
 def exercise(window, po, output, results):
@@ -102,7 +109,7 @@ def exercise(window, po, output, results):
     edit(window, "Salut {name}.")
     action(window, "Return to writing")
     window.document_action("Configure preview")
-    tab_to_language(window)
+    configuration_focus_and_tab(window)
     capture(output, "-language-tab")
     results["native_tab_reveals_preview_input"] = True
     reveal_field(window, "Find preview language")
@@ -110,6 +117,10 @@ def exercise(window, po, output, results):
     action(window, "Search preview languages")
     action(window, "Preview in French (Canada) · fr-CA")
     reveal_text(window, "Preview language:", prefix=True)
+    action(window, "Hide preview inputs")
+    action(window, "Configure preview")
+    configuration_focus_and_tab(window)
+    results["selected_locale_configuration_focuses_the_language_query"] = True
     capture(output, "-language")
     reveal_field(window, "Preview wording")
     fill(window, "Preview wording", "formal")
@@ -118,9 +129,19 @@ def exercise(window, po, output, results):
     capture_end(window, output, "-values")
     restart(window, "Bonjour Ada.")
     capture_end(window, output, "-saved")
+    action(window, "Hide preview inputs")
+    scrollbar = window.wait(
+        lambda: (window.section_scrollbar("Conversation preview"),), "retained conversation layout"
+    )[0]
+    if scrollbar is not None:
+        window.focus(scrollbar)
+        key("Home")
+    window.wait(lambda: window.find_text("fr-CA", prefix=True), "captured preview context")
+    capture_settled(window, output, "-current-context")
     action(window, "Continue preview")
     reveal_text(window, "2 billets")
     results["saved_localised_plural_and_locale_variant_fallback"] = True
+    action(window, "Configure preview")
     value(window, "tickets", "1")
     reveal_text(window, "2 billets")
     results["staging_leaves_running_snapshot_unchanged"] = True
@@ -132,12 +153,57 @@ def exercise(window, po, output, results):
     assert po.read_text() == PO
     results["draft_trial_does_not_save_po"] = True
     value(window, "tickets", "invalid")
-    action(window, "Start / restart preview")
+    invalid_field = field(window, "Preview value: tickets")
+    start_preview(window)
+    window.wait(
+        lambda: window.find("Preview failed. Existing conversation kept."),
+        "fixed restart failure feedback",
+    )
     reveal_text(window, "tickets:", prefix=True)
     reveal_text(window, "1 billet")
     capture_end(window, output, "-invalid")
     results["invalid_input_preserves_previous_trial"] = True
+    window.act("Review current inputs")
+    window.wait(
+        lambda: focused_in_content(window, field(window, "Preview value: tickets")),
+        "review reveals and focuses the invalid value",
+    )
+    window.wait(
+        lambda: (
+            within_content(window, window.find("tickets · whole number"))
+            and within_content(window, window.find("Enter a whole number."))
+        ),
+        "review reveals the value label, input and validation hint together",
+    )
+    assert field(window, "Preview value: tickets") == invalid_field
+    key("z", control=True)
+    window.wait(
+        lambda: window.text(invalid_field) == "invali",
+        "native keystroke undo after reviewing failed restart",
+    )
+    key("y", control=True)
+    window.wait(
+        lambda: window.text(invalid_field) == "invalid",
+        "typing redo after reviewing failed restart",
+    )
+    window.focus(window.find("Review current inputs"))
+    capture_settled(window, output, "-review-invalid")
+    results["fixed_failure_feedback_and_review_preserve_field_identity_and_undo"] = True
     value(window, "tickets", "2")
+    window.act("Review current inputs")
+    diagnostic = window.wait(
+        lambda: window.find("Preview preparation diagnostic"),
+        "retained failure diagnostic after correcting current values",
+    )
+    coordinates = window.api.GLib.Variant("(u)", (int(window.api.Atspi.CoordType.WINDOW),))
+    frame = window.call(window.application, "Accessible", "GetChildren")[0][0]
+    bounds = window.call(diagnostic, "Component", "GetExtents", coordinates)[0]
+    viewport = window.call(frame, "Component", "GetExtents", coordinates)[0]
+    assert bounds[1] >= viewport[1] and bounds[1] + bounds[3] <= viewport[1] + viewport[3]
+    diagnostic_focus(window)
+    capture_settled(window, output, "-error-details")
+    results["corrected_current_inputs_reveal_the_failed_attempt_diagnostic"] = True
+    window.act("Hide preview error")
     action(window, "Use source language only")
     restart(window, "Hello Ada.")
     window.act("Return to writing")

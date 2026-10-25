@@ -1,4 +1,5 @@
 use super::*;
+use crate::{attention::PaneEntry, trial::Review};
 use recite_writer_session::localisation::setup::languages;
 
 pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
@@ -19,22 +20,29 @@ pub(super) fn selector(state: &Writer, disabled: bool) -> impl WidgetView<Writer
             state.trial.settings.languages.clear();
         })
         .disabled(disabled || settings.locale.is_empty()),
-        label(scale, "Find preview language"),
-        sized_box(
-            text_input(settings.query.clone(), |state: &mut Writer, value| {
-                state.trial.settings.query = value
-            })
-            .text_size(16. * scale)
-            .disabled(disabled)
-            .prop(properties::TextAreaLabel::new("Find preview language")),
-        )
-        .width(state.script_width().px()),
-        text_button(
-            scale,
-            "Search preview languages",
-            Writer::search_preview_languages,
-        )
-        .disabled(disabled),
+        flex_col((
+            label(scale, "Find preview language"),
+            sized_box(
+                text_input(settings.query.clone(), |state: &mut Writer, value| {
+                    state.trial.settings.query = value
+                })
+                .text_size(16. * scale)
+                .disabled(disabled)
+                .prop(properties::TextAreaLabel::new("Find preview language")),
+            )
+            .width(state.script_width().px()),
+            text_button(
+                scale,
+                "Search preview languages",
+                Writer::search_preview_languages,
+            )
+            .disabled(disabled),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(8.px())
+        .prop(PaneEntry(
+            state.configuring_trial() && matches!(state.trial.settings.review, Review::Inputs),
+        )),
         choices(state, disabled),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)

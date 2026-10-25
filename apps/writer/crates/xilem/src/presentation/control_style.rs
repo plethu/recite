@@ -6,6 +6,7 @@ use xilem::{
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ControlStyle {
+    Primary,
     Action,
     Navigation,
     Segment,
@@ -14,6 +15,7 @@ pub(crate) enum ControlStyle {
 impl ControlStyle {
     pub fn class(self) -> &'static str {
         match self {
+            Self::Primary => "writer-primary",
             Self::Action => "writer-action",
             Self::Navigation => "writer-navigation",
             Self::Segment => "writer-segment",

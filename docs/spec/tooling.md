@@ -148,7 +148,11 @@ picker restores a live origin or an admitted field; it never selects an arbitrar
 Both frontends use the same personal configuration, palette and command wording. Xilem's welcome,
 temporary examples and project creation use shared launch/session owners. Its personal settings
 apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
-validation. Ordinary exit confirmation never weakens the unsaved-work guard.
+validation. Ordinary exit confirmation never weakens the unsaved-work guard. The project form keeps
+submission actions visible independently of its scrolling fields and groups them directly below
+short content. Unmodified Enter submits a ready form through the guarded shared handler; native
+composition and field Undo retain ownership. Compact presentation adjustments retain their complete
+native names and mounted identity across theme and scale changes.
 
 Xilem's project settings workspace retains a conflict-checked opening baseline. Export creates a
 separate TOML draft for the external editor; explicit Import validates the prospective project and
@@ -247,10 +251,25 @@ re-extracts source and checks the exact reviewed catalogue before publication. A
 remains an applied result even if recovery subsequently fails; both frontends surface that warning.
 Configured preview captures the same locale, wording, typed values and saved-or-draft catalogue
 policy in both frontends. Native controls page interpolation inputs and language results; staged
-changes do not replace an active run. Saved catalogue bytes are read on the worker. Draft overlays
-require the captured disk baseline and never save or review the actual drafts. Catalogue changes
-invalidate localised trial requests and mark running localised snapshots stale; source-only trials
-ignore catalogue changes.
+changes do not replace an active run. Saved catalogue bytes are read on the worker.
+
+Xilem keeps Start/Restart and preparation cancellation outside the scrolling preview content,
+derives their captions and availability from the existing preparation lifecycle, and shows captured
+context before playback. Its input form explicitly describes next-run settings rather than inferring
+a match between staged values and the retained run.
+
+Terminal preview feedback remains beside Start/Restart independently of scroll position. Failure
+retains its diagnostic independently of playback status. Explicit review checks current scalar
+inputs once using shared validation and worker defaults, focuses a named typed invalid field on its
+bounded page, or reveals the preparation diagnostic when current scalars are valid. Cancellation and
+stale publication remain distinct outcomes; neither attributes an error to current inputs. Accepted
+document replacement clears idle terminal feedback and review targets without freeing an occupied
+preparation slot. Explicit invalid-field review reveals its label, control and validation context
+together when they fit; in a smaller viewport, visibility of the editable control wins.
+
+Draft overlays require the captured disk baseline and never save or review the actual drafts.
+Catalogue changes invalidate localised trial requests and mark running localised snapshots stale;
+source-only trials ignore catalogue changes.
 
 Registered schema generation retains one shared activity owner through command validation, process
 execution and checked output publication. Native publication receipts are reconciled even after
