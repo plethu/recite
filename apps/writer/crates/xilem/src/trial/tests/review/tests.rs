@@ -90,7 +90,7 @@ fn reviewing_a_failed_restart_targets_current_values_and_preserves_its_diagnosti
         "corrected values must not be blamed for the failed captured attempt"
     );
     mounted.replace_text("Preview value: input5", "invalid again");
-    assert!(mounted.contains_text("Scalar inputs were valid when last reviewed."));
+    assert!(mounted.contains_text("Values were valid when checked."));
     mounted.replace_text("Preview value: input5", "2");
     mounted.activate("Continue preview");
     assert!(mounted.state.session.model().preview_page().unwrap().ended);

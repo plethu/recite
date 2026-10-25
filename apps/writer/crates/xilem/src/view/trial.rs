@@ -36,6 +36,7 @@ fn content(state: &Writer) -> impl WidgetView<Writer> + use<> {
     flex_col((
         (state.trial.visible && !matches!(state.trial.settings.review, Review::Diagnostic))
             .then(|| paragraph(scale, state.trial.status.clone(), state.script_width())),
+        matches!(state.trial.settings.review, Review::Diagnostic).then(|| feedback::details(state)),
         grid((
             flex_col((page.map(|page| running(state, page, closing || busy)),))
                 .grid_pos(0, u16::from(state.configuring_trial())),

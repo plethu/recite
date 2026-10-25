@@ -103,14 +103,20 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
                     scale,
                     "Open an existing project",
                     !app.creating,
-                    |app: &mut App| app.creating = false,
+                    |app: &mut App| {
+                        app.creating = false;
+                        app.clear_project_problem();
+                    },
                 )
                 .disabled(busy),
                 radio_button(
                     scale,
                     "Create a new project",
                     app.creating,
-                    |app: &mut App| app.creating = true,
+                    |app: &mut App| {
+                        app.creating = true;
+                        app.clear_project_problem();
+                    },
                 )
                 .disabled(busy),
             ))
@@ -120,6 +126,7 @@ fn fields(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
         ),
         folder(app, layout),
         app.creating.then(|| name(app, layout)),
+        super::feedback::details(app, scale, width),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(12.px())
@@ -144,6 +151,7 @@ fn folder(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
         ),
         flex_row((
             text_input(app.path.clone(), |app: &mut App, text| {
+                app.clear_project_problem();
                 app.path = text;
                 app.native_path = None;
             })
@@ -172,7 +180,7 @@ fn name(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     } = layout;
     flex_col((
         label(scale, "Project name"),
-        text_input(app.name.clone(), |app: &mut App, text| app.name = text)
+        text_input(app.name.clone(), |app: &mut App, text| { app.name = text; app.clear_project_problem(); })
             .placeholder("Project name").text_size(14. * scale)
             .disabled(app.opening.is_some() || app.auxiliary)
             .prop(TextAreaLabel::new("Project name")).prop(ProjectField(true))
@@ -193,7 +201,8 @@ fn submission(app: &App, layout: Layout) -> impl WidgetView<App> + use<> {
     let busy = app.opening.is_some() || app.auxiliary;
     sized_box(
         flex_col((
-            (!app.status.is_empty()).then(|| {
+            super::feedback::panel(app, layout.scale, layout.width),
+            (app.welcome_problem.is_none() && !app.status.is_empty()).then(|| {
                 portal(paragraph(scale, app.status.clone(), width - 16.))
                     .constrain_horizontal(true)
                     .height((56. * f64::from(scale)).px())

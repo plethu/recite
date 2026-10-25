@@ -1,29 +1,16 @@
 //! A failed restart stays visible beside its action, even with the old run scrolled into view.
 use super::*;
-use crate::{presentation::group, trial::Review};
+use crate::{attention::EntryContext, presentation::group};
 use xilem::masonry::kurbo::Axis;
 
 pub(super) fn panel(state: &Writer) -> Option<impl WidgetView<Writer> + use<>> {
     let message = state
         .trial
         .feedback(state.session.model().preview_page().is_some())?;
-    let diagnostic =
-        state.trial.failed() && matches!(state.trial.settings.review, Review::Diagnostic);
-    Some(
-        flex_col((
-            summary(state, message, diagnostic),
-            diagnostic.then(|| details(state)),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px()),
-    )
+    Some(summary(state, message))
 }
 
-fn summary(
-    state: &Writer,
-    message: &'static str,
-    diagnostic: bool,
-) -> impl WidgetView<Writer> + use<> {
+fn summary(state: &Writer, message: &'static str) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     let wide = state.content_width() >= 360. * f64::from(scale);
     group::status(
@@ -39,22 +26,8 @@ fn summary(
                 },
             ),
             state.trial.failed().then(|| {
-                text_button(
-                    scale,
-                    if diagnostic {
-                        "Hide preview error"
-                    } else {
-                        "Review current inputs"
-                    },
-                    move |state: &mut Writer| {
-                        if diagnostic {
-                            state.configure_trial();
-                        } else {
-                            state.review_trial_inputs();
-                        }
-                    },
-                )
-                .disabled(state.phase != Phase::Writing || state.session.read_only())
+                text_button(scale, "Review current inputs", Writer::review_trial_inputs)
+                    .disabled(state.phase != Phase::Writing || state.session.read_only())
             }),
         ))
         .direction(if wide {
@@ -63,24 +36,34 @@ fn summary(
             Axis::Vertical
         })
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(8.px())
-        .prop(PaneEntry(diagnostic)),
+        .gap(8.px()),
     )
 }
 
-fn details(state: &Writer) -> impl WidgetView<Writer> + use<> {
+pub(super) fn details(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let scale = state.ui_scale();
     named(
         "Preview preparation diagnostic",
-        flex_col((portal(paragraph(
-            scale,
-            format!(
-                "Scalar inputs were valid when last reviewed. Failed attempt:\n{}",
-                state.trial.failure().unwrap_or_default()
-            ),
-            state.content_width() - 16.,
-        ))
-        .constrain_horizontal(true)
-        .height((72. * f64::from(scale)).px()),)),
+        sized_box(
+            flex_col((
+                flex_row((
+                    label(scale, "Previous attempt failed").text_size(18. * scale),
+                    print::action(scale, "Hide preview error", false, Writer::configure_trial),
+                ))
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .gap(16.px())
+                .prop(PaneEntry(true))
+                .prop(EntryContext(true)),
+                paragraph(
+                    scale,
+                    state.trial.failure().unwrap_or_default().to_owned(),
+                    state.content_width() - 48.,
+                ),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(8.px()),
+        )
+        .padding(12.px())
+        .background_color(state.palette.inset),
     )
 }

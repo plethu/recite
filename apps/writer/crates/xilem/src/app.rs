@@ -49,6 +49,7 @@ pub(super) struct App {
     name: String,
     creating: bool,
     welcome_layout: welcome::Measurements,
+    welcome_problem: Option<welcome::Problem>,
     auxiliary: bool,
     status: String,
     pane_hint: bool,
@@ -113,6 +114,7 @@ impl App {
             name: String::new(),
             creating: false,
             welcome_layout: Default::default(),
+            welcome_problem: None,
             auxiliary: false,
             status: String::new(),
             pane_hint: false,
@@ -170,10 +172,11 @@ impl App {
                 name: self.name.trim().to_owned(),
             }) {
                 Ok(()) => {
+                    self.welcome_problem = None;
                     self.auxiliary = true;
                     self.status = "Creating project…".into();
                 }
-                Err(error) => self.status = error,
+                Err(error) => self.project_failed(welcome::ProjectAction::Create, error),
             }
         } else {
             let options = LaunchOptions {
@@ -185,7 +188,7 @@ impl App {
                 editor: None,
             };
             if let Err(error) = self.start_open(options, None, None) {
-                self.status = error;
+                self.project_failed(welcome::ProjectAction::Open, error);
             }
         }
     }
@@ -241,6 +244,7 @@ impl App {
             origin,
             reply,
         });
+        self.welcome_problem = None;
         self.status = "Opening project…".into();
         Ok(())
     }

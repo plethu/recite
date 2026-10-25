@@ -142,3 +142,24 @@ fn queued_project_submission_cannot_inherit_changed_form_inputs() {
     app.auxiliary = true;
     assert!(initial != FormScope::capture(&app));
 }
+
+#[test]
+fn project_failure_leads_with_recovery_and_discloses_the_original_diagnostic() {
+    let mut app = App::empty();
+    app.path = "/tmp/missing-project".into();
+    app.project_failed(
+        ProjectAction::Open,
+        "Cannot read /tmp/missing-project/recite.project.toml".into(),
+    );
+    let mut mounted = Mounted::new(app, page);
+    let folder = mounted.find("Project folder");
+    assert!(mounted.contains_text("Project didn’t open"));
+    assert!(mounted.contains_text("Choose the folder containing recite.project.toml"));
+    assert!(!mounted.contains_text("Cannot read /tmp/missing-project"));
+    mounted.activate("Show project error details");
+    assert!(mounted.contains_text("Cannot read /tmp/missing-project"));
+    mounted.replace_text("Project folder", "/tmp/corrected-project");
+    assert_eq!(mounted.find("Project folder"), folder);
+    assert!(mounted.state.welcome_problem.is_none());
+    assert!(mounted.state.status.is_empty());
+}

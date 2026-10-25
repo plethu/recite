@@ -152,7 +152,10 @@ validation. Ordinary exit confirmation never weakens the unsaved-work guard. The
 submission actions visible independently of its scrolling fields and groups them directly below
 short content. Unmodified Enter submits a ready form through the guarded shared handler; native
 composition and field Undo retain ownership. Compact presentation adjustments retain their complete
-native names and mounted identity across theme and scale changes.
+native names and mounted identity across theme and scale changes. Project failure recovery uses the
+attempted action, without parsing diagnostic strings. It leads with folder/create guidance and
+retains the original diagnostic behind explicit disclosure. Editing the form clears that attempt’s
+feedback without replacing the native fields.
 
 Xilem's project settings workspace retains a conflict-checked opening baseline. Export creates a
 separate TOML draft for the external editor; explicit Import validates the prospective project and
@@ -265,7 +268,12 @@ bounded page, or reveals the preparation diagnostic when current scalars are val
 stale publication remain distinct outcomes; neither attributes an error to current inputs. Accepted
 document replacement clears idle terminal feedback and review targets without freeing an occupied
 preparation slot. Explicit invalid-field review reveals its label, control and validation context
-together when they fit; in a smaller viewport, visibility of the editable control wins.
+together when they fit; in a smaller viewport, visibility of the editable control wins. Expanded
+historical diagnostics use the scrolling preview body. Their heading and dismissal control form the
+preferred entry for diagnostic review, while input review still targets the invalid field.
+Current-value checks are described beside next-run inputs as historical checks, not continuing
+validity guarantees. Build target selection uses native radio semantics and never starts a build;
+paths and latest results remain distinct from the selection controls.
 
 Draft overlays require the captured disk baseline and never save or review the actual drafts.
 Catalogue changes invalidate localised trial requests and mark running localised snapshots stale;

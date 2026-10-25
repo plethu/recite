@@ -7,9 +7,13 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
     let wide = state.content_width() >= 600. * f64::from(scale);
     flex_col((
         grid((
-            label(scale, "Conversation preview")
-                .text_size(18. * scale)
-                .grid_pos(0, 0),
+            flex_row((
+                label(scale, "Preview").text_size(18. * scale),
+                submission(state),
+            ))
+            .cross_axis_alignment(CrossAxisAlignment::Center)
+            .gap(16.px())
+            .grid_pos(0, 0),
             flex_row((
                 print::action(
                     scale,
@@ -47,7 +51,6 @@ pub(super) fn header(state: &Writer) -> impl WidgetView<Writer> + use<> {
         ])
         .rows([GridTrackSize::Auto; 2])
         .gap(8.px()),
-        submission(state),
         feedback::panel(state),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -71,10 +74,12 @@ fn submission(state: &Writer) -> impl WidgetView<Writer> + use<> {
                 || state.reading.script().is_ok_and(<[_]>::is_empty),
             Writer::start_trial,
         ),
-        text_button(scale, "Cancel preparation", |state: &mut Writer| {
-            state.trial.cancel()
-        })
-        .disabled(closing || !state.trial.can_cancel()),
+        state.trial.busy().then(|| {
+            text_button(scale, "Cancel preparation", |state: &mut Writer| {
+                state.trial.cancel()
+            })
+            .disabled(closing || !state.trial.can_cancel())
+        }),
     ))
     .direction(if state.content_width() >= 360. * f64::from(scale) {
         Axis::Horizontal

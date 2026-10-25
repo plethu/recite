@@ -84,6 +84,7 @@ pub(super) fn worker() -> impl View<App, (), ViewCtx, Element = NoElement> {
             Output::Chosen(path) => {
                 app.auxiliary = false;
                 if let Some(path) = path {
+                    app.clear_project_problem();
                     app.path = path.display().to_string();
                     app.native_path = Some(path);
                 }
@@ -104,7 +105,7 @@ pub(super) fn worker() -> impl View<App, (), ViewCtx, Element = NoElement> {
                             app.status = error;
                         }
                     }
-                    Err(error) => app.status = error,
+                    Err(error) => app.project_failed(super::welcome::ProjectAction::Create, error),
                 }
             }
             #[cfg(target_os = "linux")]
@@ -201,6 +202,7 @@ impl App {
                 (None, None) => true,
                 _ => false,
             };
+        let failed = valid && output.result.is_err();
         let (retired, result) = match output.result {
             Ok(Loaded { mut writer, location }) if valid => {
                 writer.configure(self.preferences.config.clone());
@@ -219,7 +221,11 @@ impl App {
             Err(error) => (None, Err(error)),
         };
         if let Err(error) = &result {
-            self.status = error.clone();
+            if failed {
+                self.project_failed(super::welcome::ProjectAction::Open, error.clone());
+            } else {
+                self.status = error.clone();
+            }
         }
         let _ = output.retire.send(retired);
         if result.is_ok()

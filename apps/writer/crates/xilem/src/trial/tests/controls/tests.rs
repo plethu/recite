@@ -3,7 +3,7 @@ use crate::{keyed::keyed, tests::support::mounted::Mounted};
 use recite_config::WriterPresentationField;
 use xilem::{
     WidgetView,
-    masonry::{core::WindowEvent, widgets::Passthrough},
+    masonry::{accesskit::Role, core::WindowEvent, widgets::Passthrough},
 };
 
 fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
@@ -91,5 +91,57 @@ fn preview_submission_retains_identity_through_preparation_cancellation_and_rest
         ));
         mounted.settle();
         assert_eq!(mounted.find("Restart preview"), submit);
+    }
+}
+
+#[test]
+fn diagnostics_use_natural_height_inside_the_existing_scrolling_body() {
+    for scale in [100, 200] {
+        for long in [false, true] {
+            let directory = project(SOURCE).unwrap();
+            let mut writer = open(&directory).unwrap();
+            let mut config = writer.config.clone();
+            config.writer.presentation = config
+                .writer
+                .presentation
+                .with_value(WriterPresentationField::UiScale, scale)
+                .unwrap();
+            writer.configure(config);
+            writer.trial.preparation = Preparation::Idle(Outcome::Failed(if long {
+                "A diagnostic line.\n".repeat(100) + "End of full diagnostic."
+            } else {
+                "A short diagnostic.".into()
+            }));
+            writer.review_trial_inputs();
+            let mounted = Mounted::new(writer, surface);
+            let tree = mounted.harness.access_tree();
+            let mut pending = vec![tree.state().root()];
+            let diagnostic = loop {
+                let node = pending.pop().expect("diagnostic group");
+                if node.label().as_deref() == Some("Preview preparation diagnostic") {
+                    break node;
+                }
+                pending.extend(node.children());
+            };
+            let height = diagnostic.bounding_box().unwrap().height();
+            let mut ancestor = diagnostic;
+            let viewport = loop {
+                ancestor = ancestor.parent().expect("outer preview viewport");
+                if ancestor.data().role() == Role::ScrollView {
+                    break ancestor.bounding_box().unwrap().height();
+                }
+            };
+            let factor = f64::from(scale) / 100.;
+            assert!(viewport > 0. && viewport <= 900.);
+            if long {
+                assert!(height > viewport, "long reports use the outer scroll area");
+                assert!(mounted.contains_text("End of full diagnostic."));
+            } else {
+                assert!(
+                    height < 120. * factor,
+                    "short reports must not reserve an empty panel: {height}"
+                );
+            }
+        }
     }
 }

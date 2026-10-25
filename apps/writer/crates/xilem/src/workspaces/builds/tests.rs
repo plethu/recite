@@ -25,7 +25,7 @@ fn mounted_build_selection_pages_keep_saved_inputs_separate_from_save_all_and_bu
     });
     let mut mounted = Mounted::new(writer, surface);
     mounted.activate("Next outputs");
-    mounted.activate("Output · scene5 · build/scene5.recitec");
+    mounted.activate("scene5");
     mounted.activate("Previous outputs");
     assert_eq!(
         mounted

@@ -46,7 +46,16 @@ def run(api, bus, registry, binary, output):
                 window.wait(lambda: window.text(node) == "The last tram waits.x", "pending prose")
                 command(window, "Build scenes")
                 window.wait(lambda: window.find("Build saved"), "build workspace")
-                window.act("Output · opening · build/first.recitec")
+                target = window.find_action("opening")
+                assert window.call(target, "Accessible", "GetRole")[0] == int(
+                    api.Atspi.Role.RADIO_BUTTON
+                )
+                window.act("opening")
+                checked = 1 << int(api.Atspi.StateType.CHECKED)
+                window.wait(
+                    lambda: window.call(target, "Accessible", "GetState")[0][0] & checked,
+                    "selected build radio",
+                )
                 window.act("Build saved")
                 first = project / "build/first.recitec"
                 second = project / "build/second.recitec"

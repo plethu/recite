@@ -12,7 +12,9 @@ explicitly. Both use the same projects, personal settings and recovery; choose o
 time for a project. Xilem's welcome screen opens or creates projects and offers temporary examples.
 Enter in a ready project folder or name submits the form; composition and native text Undo remain
 with the field. Open/Create and any failure message stay together beneath a short form, and remain
-visible while a tall form scrolls.
+visible while a tall form scrolls. Failed project access leads with recovery guidance; **Show
+project error details** retains the original diagnostic. Editing the folder or project name clears
+that attempt’s feedback.
 
 **Settings** changes personal appearance, text sizes, scale and shortcut bindings through the same
 configuration as Freya. See the [acceptance limits](acceptance.md#known-limits) for native-host and
@@ -21,7 +23,9 @@ full accessible names. At larger UI scales, these controls precede the live writ
 
 Declarations and build reports show paging controls only when more than one page exists. Declaration
 search distinguishes an empty project from a query with no matches; selecting a result shows its
-name and kind above the complete, paged detail.
+name and kind above the complete, paged detail. Build targets use radio choices, with output paths
+below their labels and the latest result in its own section. Selecting a target does not start a
+build.
 
 Save translation drafts before opening another project. A saved catalogue may remain open while you
 switch; no separate catalogue-close step is required.
@@ -64,7 +68,10 @@ language, wording, typed values and the saved-or-draft translation policy. Captu
 before dialogue. Failed or cancelled preparation retains the previous run. Failed preparation also
 leaves feedback beside Restart. **Review current inputs** focuses the first currently invalid scalar
 value, including one on a later page; when the values are valid, it reveals the failed attempt's
-diagnostic. The diagnostic survives further playback of the retained run.
+diagnostic. The diagnostic survives further playback of the retained run. Expanded diagnostics
+appear in the scrolling content under **Previous attempt failed**, leaving room for the current task
+at larger UI scales. Last-checked input validity appears with the next-run fields; it does not
+promise that later edits are valid.
 
 Without arguments, Writer opens the project welcome screen. `--project PATH` opens a project;
 `--examples` opens three temporary examples:

@@ -11,7 +11,6 @@ const SETUP: WidgetTag<Button> = WidgetTag::named("preview-setup");
 const VALUE: WidgetTag<TextInput> = WidgetTag::named("preview-value");
 const FIELD_CONTEXT: WidgetTag<Flex> = WidgetTag::named("preview-field-context");
 const VIEWPORT: WidgetTag<Portal<Flex>> = WidgetTag::named("preview-value-viewport");
-const DIAGNOSTIC: WidgetTag<Portal<Label>> = WidgetTag::named("preview-diagnostic");
 
 #[test]
 fn preview_pane_prefers_setup_and_falls_back_to_return_when_setup_is_disabled() {
@@ -42,34 +41,31 @@ fn preview_pane_prefers_setup_and_falls_back_to_return_when_setup_is_disabled() 
 }
 
 #[test]
-fn diagnostics_prefer_their_disclosure_control_and_remain_reachable_by_tab() {
+fn diagnostic_review_prefers_disclosure_and_tab_reaches_current_inputs() {
     let (mut root, _signals) = mounted();
     let pane = root.get_layer_root(0).children()[0].children()[0].children()[1].id();
-    let body = Flex::column()
-        .with_fixed(NewWidget::new(Button::with_text("Return to writing")).with_tag(RETURN))
+    let content = Flex::column()
         .with_fixed(
             NewWidget::new(Flex::column().with_fixed(
                 NewWidget::new(Button::with_text("Hide preview error")).with_tag(SETUP),
             ))
             .with_props(PaneEntry(true)),
         )
-        .with_fixed(
-            NewWidget::new(
-                Portal::new(NewWidget::new(Label::new(
-                    "The failed attempt's diagnostic.",
-                )))
-                .constrain_horizontal(true),
-            )
-            .with_tag(DIAGNOSTIC),
-        );
+        .with_fixed(NewWidget::new(Label::new(
+            "The failed attempt's diagnostic.",
+        )))
+        .with_fixed(NewWidget::new(TextInput::new("Current input")).with_tag(VALUE));
+    let body = Flex::column()
+        .with_fixed(NewWidget::new(Button::with_text("Return to writing")).with_tag(RETURN))
+        .with_fixed(NewWidget::new(
+            Portal::new(NewWidget::new(content)).constrain_horizontal(true),
+        ));
     root.edit_widget(pane, |mut widget| {
         widget.insert_prop(Region(Some(Pane::Preview)));
         SizedBox::set_child(&mut widget.downcast::<SizedBox>(), NewWidget::new(body));
     });
     let anchor = root.get_widget_with_tag(SETUP).unwrap().id();
-    let diagnostic = root.get_widget_with_tag(DIAGNOSTIC).unwrap();
-    assert!(diagnostic.ctx().accepts_focus());
-    let diagnostic = diagnostic.id();
+    let input = field(&root, VALUE);
     assert!(panes::focus_pane(&mut root, Pane::Preview));
     assert_eq!(root.focused_widget(), Some(anchor));
     root.handle_text_event(core::TextEvent::Keyboard(text_key::KeyboardEvent {
@@ -78,7 +74,7 @@ fn diagnostics_prefer_their_disclosure_control_and_remain_reachable_by_tab() {
         code: text_key::Code::Tab,
         ..Default::default()
     }));
-    assert_eq!(root.focused_widget(), Some(diagnostic));
+    assert_eq!(root.focused_widget(), Some(input));
 }
 
 #[test]

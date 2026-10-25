@@ -14,6 +14,7 @@ pub(super) fn controls(state: &Writer, disabled: bool) -> impl WidgetView<Writer
 }
 
 fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
+    let settings = &state.trial.settings;
     let scale = state.ui_scale();
     let help = paragraph(
         scale,
@@ -29,6 +30,13 @@ fn editor(state: &Writer, disabled: bool) -> impl WidgetView<Writer> + use<> {
     .disabled(disabled);
     flex_col((
         label(scale, "Inputs for the next run").text_size(20. * scale),
+        matches!(settings.review, Review::Diagnostic).then(|| {
+            paragraph(
+                scale,
+                "Values were valid when checked. Changes below apply to the next run.",
+                state.script_width(),
+            )
+        }),
         help,
         language::selector(state, disabled),
         label(scale, "Preview wording (empty for default)"),

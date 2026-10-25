@@ -9,6 +9,9 @@ use xilem::masonry::{
 mod view;
 pub(in crate::app) use view::panel;
 
+mod feedback;
+pub(super) use feedback::{Problem, ProjectAction};
+
 /// Actual native extents let short forms stay together and tall forms scroll.
 #[derive(Default)]
 pub(super) struct Measurements {
