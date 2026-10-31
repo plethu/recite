@@ -121,3 +121,71 @@ fn schema_fingerprint_differences_remain_inspectable_beyond_the_first_hex_page()
     assert_eq!(fields.len(), 4);
     assert_eq!(fields[2].part(0).value, "No schema");
 }
+
+#[test]
+fn preview_level_errors_name_their_category_and_keep_reasons_borrowed() {
+    use recite_runtime::preview::PreviewError;
+    fn text<'a>(field: &'a Field<'_>) -> &'a str {
+        match &field.value {
+            Value::Text(text) => text,
+            Value::Hex(_) => panic!("{} should be text", field.name),
+        }
+    }
+    let reason = "missing asset hash";
+    // Each variant with the detail it must show; supplied reasons stay borrowed.
+    let cases = [
+        (
+            PreviewError::AssetRevisionFailed {
+                reason: reason.into(),
+            },
+            Some(reason),
+        ),
+        (PreviewError::ConditionPending, None),
+        (PreviewError::ConditionNotPending, None),
+        (
+            PreviewError::ConditionReplayMismatch {
+                mismatch: reason.into(),
+            },
+            Some(reason),
+        ),
+        (PreviewError::ConditionRequestIdOverflow, None),
+        (PreviewError::SnapshotPendingCondition, None),
+        (
+            PreviewError::SnapshotEncodeFailed {
+                reason: reason.into(),
+            },
+            Some(reason),
+        ),
+        (
+            PreviewError::SnapshotDecodeFailed {
+                reason: reason.into(),
+            },
+            Some(reason),
+        ),
+        (PreviewError::SnapshotStateMismatch, None),
+    ];
+    let mut categories = std::collections::BTreeSet::new();
+    for (error, supplied) in &cases {
+        let fields = error::fields(error);
+        assert_eq!(fields.len(), 2);
+        assert_eq!(fields[0].name, "Error");
+        assert!(
+            categories.insert(text(&fields[0]).to_owned()),
+            "duplicate category"
+        );
+        assert_eq!(fields[1].name, "Reason");
+        assert!(!text(&fields[1]).is_empty());
+        if let Some(supplied) = supplied {
+            assert!(matches!(fields[1].value, Value::Text(Cow::Borrowed(_))));
+            assert_eq!(text(&fields[1]), *supplied);
+        }
+    }
+    let format = error::fields(&PreviewError::UnsupportedSnapshotFormat {
+        snapshot_format_version: 9,
+    });
+    assert_eq!(text(&format[0]), "Unsupported snapshot format");
+    assert_eq!(
+        (format[1].name.as_ref(), text(&format[1])),
+        ("Format version", "9")
+    );
+}
