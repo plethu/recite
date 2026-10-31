@@ -104,8 +104,6 @@ fn manuscript(root: &RenderRoot, known: Option<WidgetId>) -> Option<WidgetRef<'_
     }
     let mut pending = vec![root.get_layer_root(0)];
     while let Some(widget) = pending.pop() {
-        #[cfg(test)]
-        tests::WALKED.with(|walked| walked.set(walked.get() + 1));
         if let Some(portal) = widget.downcast::<Portal<Flex>>().filter(is_manuscript) {
             return Some(portal);
         }

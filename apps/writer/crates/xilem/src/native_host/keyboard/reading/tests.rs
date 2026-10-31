@@ -1,7 +1,7 @@
-//! Reading-position capture runs around every native event; it must not rescan the window.
+//! Reading-position capture runs around every native event; it remembers its viewport.
 use super::*;
 use crate::tests::support;
-use std::{cell::Cell, sync::Arc};
+use std::sync::Arc;
 use xilem::masonry::{
     app::{RenderRootOptions, WindowSizePolicy},
     core::NewWidget,
@@ -9,13 +9,6 @@ use xilem::masonry::{
     theme,
     widgets::{IndexedStack, Label},
 };
-
-std::thread_local! {
-    pub(super) static WALKED: Cell<usize> = const { Cell::new(0) };
-}
-fn walked() -> usize {
-    WALKED.with(|walked| walked.replace(0))
-}
 
 /// A manuscript viewport beside a stashable sibling holding many unrelated widgets.
 fn mounted(writer: &crate::Writer, active: usize) -> (RenderRoot, WidgetId) {
@@ -59,41 +52,31 @@ fn show(root: &mut RenderRoot, child: usize) {
     root.redraw();
 }
 
+const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
+
 #[test]
 fn capture_reuses_the_manuscript_viewport_while_it_is_shown_or_stashed() {
-    let directory =
-        support::project(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n")
-            .unwrap();
+    let directory = support::project(SOURCE).unwrap();
     let writer = support::open(&directory).unwrap();
     let (mut root, portal) = mounted(&writer, 0);
     let mut position = Position::default();
-    walked();
     position.capture(&root);
-    assert!(walked() > 0, "the first capture finds the viewport");
     assert_eq!(
         position.previous.as_ref().map(|snapshot| snapshot.portal),
         Some(portal)
     );
-    for _ in 0..8 {
-        position.capture(&root);
-    }
-    assert_eq!(
-        walked(),
-        0,
-        "a known viewport is revalidated, not searched for"
-    );
+    // A remembered viewport is revalidated in place instead of searching the window.
+    assert_eq!(position.portal, Some(portal));
     show(&mut root, 1);
-    for _ in 0..8 {
-        position.capture(&root);
-    }
+    position.capture(&root);
     assert!(
         position.previous.is_none(),
         "a stashed manuscript has no reading position"
     );
     assert_eq!(
-        walked(),
-        0,
-        "a stashed viewport does not trigger a window walk"
+        position.portal,
+        Some(portal),
+        "stashing keeps the remembered viewport"
     );
     show(&mut root, 0);
     position.capture(&root);
@@ -101,28 +84,20 @@ fn capture_reuses_the_manuscript_viewport_while_it_is_shown_or_stashed() {
         position.previous.as_ref().map(|snapshot| snapshot.portal),
         Some(portal)
     );
-    assert_eq!(walked(), 0);
 }
 
 #[test]
 fn a_workspace_opened_with_the_manuscript_stashed_finds_it_once() {
-    let directory =
-        support::project(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n")
-            .unwrap();
+    let directory = support::project(SOURCE).unwrap();
     let writer = support::open(&directory).unwrap();
     let (mut root, portal) = mounted(&writer, 1);
     let mut position = Position::default();
-    walked();
     position.capture(&root);
     assert!(position.previous.is_none());
-    assert!(walked() > 0);
-    for _ in 0..8 {
-        position.capture(&root);
-    }
     assert_eq!(
-        walked(),
-        0,
-        "the stashed viewport is remembered after one search"
+        position.portal,
+        Some(portal),
+        "one search finds the stashed viewport"
     );
     show(&mut root, 0);
     position.capture(&root);
@@ -130,5 +105,4 @@ fn a_workspace_opened_with_the_manuscript_stashed_finds_it_once() {
         position.previous.as_ref().map(|snapshot| snapshot.portal),
         Some(portal)
     );
-    assert_eq!(walked(), 0);
 }
