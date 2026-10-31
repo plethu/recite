@@ -46,17 +46,15 @@ fn adapt_lsp_driver(control: &Path) -> Result<(), Box<dyn std::error::Error>> {
     if owner.contains("fn diagnostic_related_sources(") {
         return Ok(());
     }
-    let source = fs::read_to_string(&path)?;
-    let current = ".diagnostic_related_sources(&diagnostics.uri, &diagnostics.diagnostics)";
-    let historical = ".diagnostic_sources_for_uri(&diagnostics.uri)";
-    match source.matches(current).count() {
-        0 if source.matches(historical).count() == 1 => Ok(()),
-        1 => {
-            fs::write(path, source.replace(current, historical))?;
-            Ok(())
-        }
-        _ => Err("unrecognized control LSP diagnostic publication adapter".into()),
-    }
+    rewrite_harness(
+        &path,
+        &[(
+            ".diagnostic_related_sources(&diagnostics.uri, &diagnostics.diagnostics)",
+            ".diagnostic_sources_for_uri(&diagnostics.uri)",
+            1,
+        )],
+        "LSP diagnostic publication",
+    )
 }
 
 fn adapt_completion_workload(control: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -65,21 +63,66 @@ fn adapt_completion_workload(control: &Path) -> Result<(), Box<dyn std::error::E
         return Ok(());
     }
     let owner = fs::read_to_string(control.join("apps/writer/crates/authoring/src/completion.rs"))?;
-    if owner.contains("pub fn source(&self)") {
+    if !owner.contains("pub fn source(&self)") {
+        rewrite_harness(
+            &path,
+            &[(
+                "workload.completions.source()",
+                "workload.workload.draft.as_str()",
+                2,
+            )],
+            "completion replacement",
+        )?;
+    }
+    // Revisions were plain integers before the typed document version.
+    let model = fs::read_to_string(control.join("apps/writer/crates/authoring/src/lib.rs"))?;
+    if model.contains("DocumentVersion") {
         return Ok(());
     }
-    let source = fs::read_to_string(&path)?;
-    let current = "workload.completions.source()";
-    let historical = "workload.workload.draft.as_str()";
-    match (
-        source.matches(current).count(),
-        source.matches(historical).count(),
-    ) {
-        (0, 2) => Ok(()),
-        (2, 0) => {
-            fs::write(path, source.replace(current, historical))?;
-            Ok(())
-        }
-        _ => Err("unrecognized control completion replacement adapter".into()),
+    rewrite_harness(
+        &path,
+        &[
+            (
+                "{Document, DocumentVersion, ProjectContext",
+                "{Document, ProjectContext",
+                1,
+            ),
+            ("revision: DocumentVersion,", "revision: i64,", 1),
+        ],
+        "completion revision",
+    )
+}
+
+/// Replace each exact `(current, historical, occurrences)` snippet. A harness
+/// already on every historical snippet is left alone; any other shape fails, so
+/// a changed harness cannot silently measure a different path.
+fn rewrite_harness(
+    path: &Path,
+    snippets: &[(&str, &str, usize)],
+    adapter: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let source = fs::read_to_string(path)?;
+    let on = |historical_side: bool| {
+        snippets.iter().all(|&(current, historical, occurrences)| {
+            let (wanted, other) = if historical_side {
+                (historical, current)
+            } else {
+                (current, historical)
+            };
+            source.matches(wanted).count() == occurrences && !source.contains(other)
+        })
+    };
+    if on(true) {
+        return Ok(());
     }
+    if !on(false) {
+        return Err(format!("unrecognized control {adapter} adapter").into());
+    }
+    let adapted = snippets
+        .iter()
+        .fold(source, |source, (current, historical, _)| {
+            source.replace(current, historical)
+        });
+    fs::write(path, adapted)?;
+    Ok(())
 }
