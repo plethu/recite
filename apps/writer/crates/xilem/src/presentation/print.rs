@@ -4,6 +4,9 @@ use super::label;
 use recite_writer_session::palette::Palette;
 use recite_writer_session::typography::{FONT_DISPLAY, FONT_MONO};
 use xilem::peniko::Color;
+
+mod separator;
+pub(crate) use separator::separator;
 use xilem::{
     WidgetView,
     masonry::{

@@ -143,7 +143,8 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
         "Saved to disk"
     };
     flex_row((
-        print::meta(state.ui_scale(), format!("{saved} ·")).color(state.palette.status_text),
+        print::meta(state.ui_scale(), saved).color(state.palette.status_text),
+        print::separator(state.ui_scale(), state.palette.status_text),
         print::meta(
             state.ui_scale(),
             if let Some(refusal) = refusal {
@@ -171,13 +172,19 @@ pub(super) fn status(state: &Writer) -> impl WidgetView<Writer> + use<> {
             },
         ),
         (!matches!(state.status.as_str(), "Ready" | "Map ready")).then(|| {
-            print::meta(state.ui_scale(), format!("· {}", state.status))
-                .color(state.palette.status_text)
-                .prop(LineBreaking::WordWrap)
-                .flex(1.)
+            (
+                print::separator(state.ui_scale(), state.palette.status_text),
+                print::meta(state.ui_scale(), state.status.clone())
+                    .color(state.palette.status_text)
+                    .prop(LineBreaking::WordWrap)
+                    .flex(1.),
+            )
         }),
     ))
-    .gap(8.px())
+    .gap((8. * f64::from(state.ui_scale())).px())
     .padding(xilem::style::Padding::from_vh(6.px(), 16.px()))
     .background_color(state.palette.status_bar)
 }
+
+#[cfg(test)]
+mod tests;
