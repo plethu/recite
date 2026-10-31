@@ -6,10 +6,10 @@ fn collects_deferred_effects_in_source_order_and_returns_them_at_end() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> before@f4e165af87225d22bbeb\n",
+            "> @before\n",
             "  Before.\n",
             "! deferred first(alpha, \"beta\", 3, 0.5, true)\n",
-            "> middle@a179e0df75e958fa949b\n",
+            "> @middle\n",
             "  Middle.\n",
             "! deferred second()\n",
             "-> END\n",
@@ -17,18 +17,14 @@ fn collects_deferred_effects_in_source_order_and_returns_them_at_end() {
     );
     let mut session = start_scene(&asset, None).expect("starts");
 
-    assert_line(
-        next(&asset, &mut session),
-        "f4e165af87225d22bbeb",
-        "Before.",
-    );
+    assert_line(next(&asset, &mut session), "before", "Before.");
     assert!(session.deferred_effects().is_empty());
     let middle = next(&asset, &mut session);
     assert!(
         !matches!(middle, Ok(DialogueEvent::Effect(_))),
         "deferred effects must not emit effect events"
     );
-    assert_line(middle, "a179e0df75e958fa949b", "Middle.");
+    assert_line(middle, "middle", "Middle.");
     assert_eq!(
         session
             .deferred_effects()
@@ -81,12 +77,12 @@ fn deferred_effects_follow_selected_choice_and_divert_paths() {
         concat!(
             ":: start default\n",
             "! deferred entered_start()\n",
-            "> prompt_line@3482ad56276d981ccd11\n",
+            "> @prompt_line\n",
             "  What next?\n",
-            "  ? work@c2d6f363bce8384c6d3b\n",
+            "  ? @work\n",
             "    Work.\n",
             "    -> work\n",
-            "  ? leave@6adaf25eb5d10a953c6d\n",
+            "  ? @leave\n",
             "    Leave.\n",
             "    -> END\n",
             ":: work\n",
@@ -107,7 +103,7 @@ fn deferred_effects_follow_selected_choice_and_divert_paths() {
         choose(
             &asset,
             &mut session,
-            ChoiceId::new("c2d6f363bce8384c6d3b").expect("valid choice ID"),
+            ChoiceId::new("work").expect("valid choice ID"),
         ),
         ["entered_start", "entered_work", "entered_finish"],
     );

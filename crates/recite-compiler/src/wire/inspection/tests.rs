@@ -14,9 +14,9 @@ fn inspection_preserves_legacy_text_rows_without_exposing_storage_mode() {
             "dialogue/legacy.recite",
             concat!(
                 ":: start default\n",
-                "> line@11111111111111111111\n",
+                "> @ffee6p8\n",
                 "  Literal text.\n",
-                "  ? choice@22222222222222222222\n",
+                "  ? @rthh7ab\n",
                 "    Literal choice.\n",
                 "    -> END\n",
             ),

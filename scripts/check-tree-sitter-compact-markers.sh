@@ -78,7 +78,7 @@ done
 
 echo "== malformed separator and payload recovery =="
 recovery_file="$scratch/compact-markers-recovery.recite"
-printf '%s' $'::compact_recovery default\n!immediate play_sfx()\n::\n! \n!bogus play_sfx()\n! immediate\n! immediate ,\n!;immediate play_sfx()\n! immediate play_sfx()\n>following@0123456789abcdef0123\n  Recovery prose.\n' >"$recovery_file"
+printf '%s' $'::compact_recovery default\n!immediate play_sfx()\n::\n! \n!bogus play_sfx()\n! immediate\n! immediate ,\n!;immediate play_sfx()\n! immediate play_sfx()\n>@ez1fh09\n  Recovery prose.\n' >"$recovery_file"
 recovery_tree="$scratch/compact-markers-recovery.tree"
 recovery_rc=0
 if (cd "$repo_root" && tree-sitter parse --grammar-path "$grammar_dir" "$recovery_file") >"$recovery_tree" 2>&1; then

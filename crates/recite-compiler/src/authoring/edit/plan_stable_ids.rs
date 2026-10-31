@@ -1,22 +1,18 @@
-use std::collections::BTreeMap;
-
-use recite_core::{DocumentKey, SourcePosition};
+use recite_core::{SourcePosition, StableIdGenerator};
 
 use super::helpers::{document, make_plan, point_range};
-use super::stable_selection::{
-    InsertionKind, generated_anchor, insertion_kind, insertion_label, occupied_anchors,
-    source_id_kind,
-};
+use super::stable_selection::{needs_insertion, occupied_ids, unoccupied_id};
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
-use crate::authoring::{AuthoringQuery, StableIdKind, StableIdSummary};
+use crate::authoring::{AuthoringQuery, StableIdSummary};
 
-/// Plans deterministic insertion of every missing or draft stable ID in the
-/// effective project snapshot.
+/// Plans insertion of every missing stable ID in the effective project
+/// snapshot, drawing new IDs from `ids`.
 pub(super) fn plan_insert_missing_ids(
     snapshot: &AuthoringQuery<'_>,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot.checkpoint()?;
-    plan_insert(snapshot, |_, _| true)
+    plan_insert(snapshot, ids, |_, _| true)
 }
 
 /// Plans insertion for the one stable-ID header at a source position.
@@ -24,6 +20,7 @@ pub(super) fn plan_insert_missing_id(
     snapshot: &AuthoringQuery<'_>,
     key: &recite_core::DocumentKey,
     position: SourcePosition,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot.checkpoint()?;
     let document = document(snapshot, key)?;
@@ -39,7 +36,7 @@ pub(super) fn plan_insert_missing_id(
             line: position.line(),
             column: position.column(),
         }),
-        [_] => plan_insert(snapshot, |candidate, stable| {
+        [_] => plan_insert(snapshot, ids, |candidate, stable| {
             candidate == key && is_selected(stable, position)
         }),
         _ => Err(AuthoringEditError::AmbiguousSymbol {
@@ -51,9 +48,12 @@ pub(super) fn plan_insert_missing_id(
 }
 
 impl AuthoringQuery<'_> {
-    /// Plans deterministic insertion of all missing stable IDs.
-    pub fn plan_insert_missing_ids(&self) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_ids(self)
+    /// Plans insertion of all missing stable IDs.
+    pub fn plan_insert_missing_ids(
+        &self,
+        ids: &mut StableIdGenerator,
+    ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+        plan_insert_missing_ids(self, ids)
     }
 
     /// Plans insertion of the missing stable ID at `position`.
@@ -61,13 +61,15 @@ impl AuthoringQuery<'_> {
         &self,
         key: &recite_core::DocumentKey,
         position: SourcePosition,
+        ids: &mut StableIdGenerator,
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_id(self, key, position)
+        plan_insert_missing_id(self, key, position, ids)
     }
 }
 
 pub(super) fn plan_insert(
     snapshot: &AuthoringQuery<'_>,
+    ids: &mut StableIdGenerator,
     select: impl Fn(&recite_core::DocumentKey, &StableIdSummary) -> bool,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot.checkpoint()?;
@@ -99,43 +101,34 @@ pub(super) fn plan_insert(
         }
     }
 
-    let mut ordinals = BTreeMap::<(DocumentKey, String, StableIdKind), u32>::new();
     let mut candidates = Vec::new();
     for document in snapshot.documents() {
         snapshot.checkpoint()?;
         for stable in document.summary().stable_ids() {
             snapshot.checkpoint()?;
-            let insertion = match insertion_kind(stable) {
-                Ok(Some(insertion)) => insertion,
-                Ok(None) => continue,
+            match needs_insertion(stable) {
+                Ok(true) => {}
+                Ok(false) => continue,
                 Err(()) => {
                     return Err(AuthoringEditError::UnsupportedStableId {
                         document: document.key().clone(),
                     });
                 }
-            };
-            let ordinal_key = (
-                document.key().clone(),
-                stable.enclosing_block().as_str().to_owned(),
-                stable.kind(),
-            );
-            let ordinal = ordinals.entry(ordinal_key).or_insert(0);
-            *ordinal = ordinal.saturating_add(1);
-            if !select(document.key(), stable) {
-                continue;
             }
-            candidates.push((document, stable, insertion, *ordinal));
+            if select(document.key(), stable) {
+                candidates.push((document, stable));
+            }
         }
     }
 
     if candidates.is_empty() {
         return Err(AuthoringEditError::NoEdits);
     }
-    // Namespace construction is needed only when an anchor will be generated.
+    // Namespace construction is needed only when an ID will be generated.
     // Keep all completeness/ambiguity checks above even for a no-op request.
-    let mut occupied = occupied_anchors(snapshot)?;
+    let mut occupied = occupied_ids(snapshot)?;
     let mut edits = Vec::new();
-    for (document, stable, insertion, ordinal) in candidates {
+    for (document, stable) in candidates {
         snapshot.checkpoint()?;
         let Some(span) = stable.insertion_span() else {
             return Err(AuthoringEditError::MissingSpan {
@@ -143,45 +136,11 @@ pub(super) fn plan_insert(
                 role: "stable-ID insertion",
             });
         };
-        let label = insertion_label(stable, ordinal);
-        let kind = source_id_kind(stable.kind());
-        let anchor = generated_anchor(
-            &mut occupied,
-            document.key().as_str(),
-            kind,
-            stable.span().start.line(),
-            stable.span().start.column(),
-            &label,
-        )
-        .ok_or_else(|| AuthoringEditError::AnchorNamespaceExhausted {
-            document: document.key().clone(),
-        })?;
-        let insertion_position = match insertion {
-            InsertionKind::FullId => SourcePosition::new(
-                stable.span().start.line(),
-                stable.span().start.column().checked_add(1).ok_or_else(|| {
-                    AuthoringEditError::UnmappableRange {
-                        document: document.key().clone(),
-                    }
-                })?,
-            )
-            .map_err(|_| AuthoringEditError::UnmappableRange {
-                document: document.key().clone(),
-            })?,
-            InsertionKind::AnchorOnly | InsertionKind::AtAnchor => span.start,
-        };
-        let replacement = insertion_text(
-            document.key(),
-            document.source_text(),
-            insertion_position,
-            insertion,
-            &label,
-            &anchor,
-        )?;
+        let id = unoccupied_id(&mut occupied, ids);
         edits.push(SourceEdit::new(
             document.key().clone(),
-            point_range(insertion_position),
-            replacement,
+            point_range(span.start),
+            format!(" {}", id.field()),
         ));
     }
     make_plan(
@@ -200,33 +159,4 @@ fn is_selected(stable: &StableIdSummary, position: SourcePosition) -> bool {
         || stable
             .insertion_span()
             .is_some_and(|span| span.start == position)
-}
-
-fn insertion_text(
-    document: &recite_core::DocumentKey,
-    source: &str,
-    position: SourcePosition,
-    insertion: InsertionKind,
-    label: &str,
-    anchor: &str,
-) -> Result<String, AuthoringEditError> {
-    match insertion {
-        InsertionKind::AnchorOnly => Ok(anchor.to_owned()),
-        InsertionKind::AtAnchor => Ok(format!("@{anchor}")),
-        InsertionKind::FullId => {
-            let range = point_range(position);
-            let (_, offset) = super::validate::byte_offsets(source, range).map_err(|_| {
-                AuthoringEditError::UnmappableRange {
-                    document: document.clone(),
-                }
-            })?;
-            let next = source[offset..].chars().next();
-            let id = format!("{label}@{anchor}");
-            Ok(if next.is_none_or(char::is_whitespace) {
-                format!(" {id}")
-            } else {
-                format!(" {id} ")
-            })
-        }
-    }
 }

@@ -88,7 +88,11 @@ impl Model {
 }
 
 fn choice_id(stage: usize, quit: bool) -> String {
-    format!("{:020x}", stage * 3 + if quit { 3 } else { 2 })
+    if quit {
+        format!("quit_{stage}")
+    } else {
+        format!("continue_{stage}")
+    }
 }
 
 fn prompt(stage: usize, gates: &[bool]) -> Observation {
@@ -108,8 +112,9 @@ fn fixture(stages: usize) -> Result<CompiledDialogue, TestCaseError> {
             format!("stage_{}", stage + 1)
         };
         source.push_str(&format!(
-            ":: stage_{stage}{default}\n> prompt_{stage}@{:020x}\n  Next?\n  ? continue_{stage}@{} requires=(gate_{stage}())\n    Continue.\n    -> {target}\n  ? quit_{stage}@{}\n    Quit.\n    -> END\n",
-            stage * 3 + 1, choice_id(stage, false), choice_id(stage, true)
+            ":: stage_{stage}{default}\n> @prompt_{stage}\n  Next?\n  ? requires=(gate_{stage}()) @{}\n    Continue.\n    -> {target}\n  ? @{}\n    Quit.\n    -> END\n",
+            choice_id(stage, false),
+            choice_id(stage, true)
         ));
     }
     let options = CompileOptions::new(
@@ -188,7 +193,7 @@ fn apply(
     let id = match action {
         Action::Continue => choice_id(stage, false),
         Action::Quit => choice_id(stage, true),
-        Action::UnknownChoice => "ffffffffffffffffffff".to_owned(),
+        Action::UnknownChoice => "bkr28cq".to_owned(),
         Action::Next => unreachable!(),
     };
     Ok(choose(

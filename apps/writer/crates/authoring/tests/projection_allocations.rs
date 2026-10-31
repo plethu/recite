@@ -8,7 +8,7 @@ fn giant_projection_capture_and_publication_do_no_source_sized_ui_work()
     let mut source = String::from(":: giant default\n");
     for n in 0..20_000 {
         source.push_str(&format!(
-            "> line_{n}@{n:020x}\n  The courier waits beside the café.\n"
+            "> @line_{n}\n  The courier waits beside the café.\n"
         ));
     }
     source.push_str("-> END\n");
@@ -32,13 +32,13 @@ fn giant_projection_capture_and_publication_do_no_source_sized_ui_work()
     let script = document.cached_script().ok_or("script")?;
     for _ in 0..100 {
         assert!(document.accept_projection(&prepared));
-        assert!(document.find_passage("00000000000000004e1f")?.is_some());
+        assert!(document.find_passage("line_19999")?.is_some());
     }
     let after = dhat::HeapStats::get();
     dhat::assert_eq!(after.total_bytes, before.total_bytes);
     dhat::assert_eq!(after.total_blocks, before.total_blocks);
     assert_eq!(passages.len(), 20_000);
     assert_eq!(script.len(), 1);
-    assert_eq!(passages.last().ok_or("last")?.label, "line_19999");
+    assert_eq!(passages.last().ok_or("last")?.id, "line_19999");
     Ok(())
 }

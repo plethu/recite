@@ -50,7 +50,7 @@ fn plural_line_structured_metadata_adapter_runner_required() -> TestResult<()> {
         .0
         .insert_plural(
             "fr-FR",
-            "5fcf9a1f7b20211f4a92",
+            "plural_line",
             "You have one letter.",
             "You have {count} letters.",
             vec![
@@ -198,9 +198,7 @@ fn lifecycle_and_choice_error_cases_use_published_categories() -> TestResult<()>
         send(
             &mut app,
             &mut cursor,
-            ReciteRequest::SelectChoice(
-                ChoiceId::new("8706986735003ec9aaec").expect("unavailable choice"),
-            ),
+            ReciteRequest::SelectChoice(ChoiceId::new("j12cqy0").expect("unavailable choice")),
         )?,
         "unavailable_choice_error_conditioned_choice",
     )?;
@@ -209,7 +207,7 @@ fn lifecycle_and_choice_error_cases_use_published_categories() -> TestResult<()>
         send(
             &mut app,
             &mut cursor,
-            ReciteRequest::SelectChoice(ChoiceId::new("3f481d9991fa22e23b0c").expect("choice")),
+            ReciteRequest::SelectChoice(ChoiceId::new("mkkr74x").expect("choice")),
         )?,
         "no_active_session_error_after_explicit_end",
     )?;
@@ -265,7 +263,7 @@ fn blocking_ack_and_stale_choice_use_published_categories() -> TestResult<()> {
     let blocking = send(
         &mut app,
         &mut cursor,
-        ReciteRequest::SelectChoice(ChoiceId::new("3f481d9991fa22e23b0c").expect("work choice")),
+        ReciteRequest::SelectChoice(ChoiceId::new("mkkr74x").expect("work choice")),
     )?;
     let ReciteOutputValue::Dialogue(events) = blocking.value else {
         panic!("blocking batch");
@@ -300,9 +298,7 @@ fn blocking_ack_and_stale_choice_use_published_categories() -> TestResult<()> {
         send(
             &mut app,
             &mut cursor,
-            ReciteRequest::SelectChoice(
-                ChoiceId::new("3f481d9991fa22e23b0c").expect("stale choice"),
-            ),
+            ReciteRequest::SelectChoice(ChoiceId::new("mkkr74x").expect("stale choice")),
         )?,
         "stale_choice_error_after_prompt_transition",
     )?;

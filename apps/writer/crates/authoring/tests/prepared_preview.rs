@@ -1,6 +1,7 @@
 use recite_writer_model::{PreparedPreview, PreviewRequest, PreviewSetup, View, Workbench};
 
-const SOURCE: &str = ":: start default\n> guide@12345678901234567890\n  Hello.\n-> END\n:: other\n> guide@12345678901234567891\n  Other.\n-> END\n";
+const SOURCE: &str =
+    ":: start default\n> @w3xnt5r\n  Hello.\n-> END\n:: other\n> @rbgkhpf\n  Other.\n-> END\n";
 
 #[test]
 fn prepared_trials_are_send_and_remain_fixed_after_an_edit()

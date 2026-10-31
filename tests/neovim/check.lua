@@ -275,8 +275,8 @@ assert_true(
   "missing-ID code action targeted the wrong insertion point"
 )
 assert_true(
-  change.edits[1].newText == " line@34e5ee56e949afa2bbf3",
-  "missing-ID code action invented the wrong stable ID: " .. vim.inspect(actions)
+  change.edits[1].newText:match("^ @[a-z][0-9a-z]+$") ~= nil and #change.edits[1].newText == 9,
+  "missing-ID code action did not append a generated stable ID: " .. vim.inspect(actions)
 )
 
 vim.cmd("edit " .. escaped(invalid))

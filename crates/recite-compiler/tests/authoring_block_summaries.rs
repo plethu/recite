@@ -22,7 +22,7 @@ fn badges_describe_authored_destinations_without_inferring_reachability()
         &mut kernel,
         concat!(
             ":: first default\n-> next\n# -> END\n",
-            ":: next\n> line@11111111111111111111\n  Say END.\n  ? choice@22222222222222222222\n    Finish.\n    -> END\n",
+            ":: next\n> @ffee6p8\n  Say END.\n  ? @rthh7ab\n    Finish.\n    -> END\n",
             ":: conditional\n:if ready()\n  -> END\n",
             ":: matched\n:match mood()\n  :case _\n    -> END\n",
             ":: unreachable\n-> first\n-> END\n",

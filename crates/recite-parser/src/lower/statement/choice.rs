@@ -1,5 +1,5 @@
 use recite_core::{
-    AvailabilityReasonId, SourceId, SourceRecoveryClass,
+    AvailabilityReasonId, SourceRecoveryClass,
     ast::{
         Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement, ChoiceTarget,
         SourceText, Statement,
@@ -12,7 +12,7 @@ use crate::header::{HeaderField, HeaderKeyValue};
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
 
-use super::super::{Lowerer, header_fields};
+use super::super::{Lowerer, header_fields, split_source_id};
 use super::choice_reason::{parse_reason_override_value, source_column};
 
 impl Lowerer<'_, '_> {
@@ -23,6 +23,7 @@ impl Lowerer<'_, '_> {
         let base_column = indent + 1;
         let choice_span = span_for_line(self.path, header.number, base_column);
         let fields = header_fields(trimmed, StatementMarker::Choice, header, base_column);
+        let (id, fields) = split_source_id(self.path, header, StatementMarker::Choice, &fields);
         let if_index = fields.iter().position(|field| field.text == "if");
         if let Some(if_index) = if_index {
             self.mark(SourceRecoveryClass::ConditionFunctions);
@@ -30,54 +31,13 @@ impl Lowerer<'_, '_> {
             self.diagnostics
                 .push(trailing_choice_if(fields[if_index].span(self.path)));
         }
-        let choice_fields = if let Some(if_index) = if_index {
-            &fields[..if_index]
-        } else {
-            fields.as_slice()
-        };
-
-        let mut field_start = 0;
-        let (source_id, source_id_span, source_id_insertion_span) =
-            if let Some(first) = choice_fields.first().copied() {
-                if first.key_value(self.path).is_none() {
-                    field_start = 1;
-                    (
-                        SourceId::parse(Some(first.text)),
-                        Some(first.span(self.path)),
-                        crate::source::span_for_line(
-                            self.path,
-                            header.number,
-                            first.column + first.text.chars().count(),
-                        ),
-                    )
-                } else {
-                    (
-                        SourceId::Missing,
-                        None,
-                        super::super::insertion_span_after_marker(
-                            self.path,
-                            header,
-                            StatementMarker::Choice,
-                        ),
-                    )
-                }
-            } else {
-                (
-                    SourceId::Missing,
-                    None,
-                    super::super::insertion_span_after_marker(
-                        self.path,
-                        header,
-                        StatementMarker::Choice,
-                    ),
-                )
-            };
+        let choice_fields = &fields[..if_index.unwrap_or(fields.len())];
 
         let ChoiceClauses {
             metadata_fields,
             availability_requirement,
             availability_reason_override,
-        } = self.lower_choice_clauses(&choice_fields[field_start..]);
+        } = self.lower_choice_clauses(choice_fields);
         let (metadata, echo, bindings) = self.lower_choice_metadata(&metadata_fields);
         let body = self.lower_prose_body(choice_index, true, false);
         let mut target = None;
@@ -96,8 +56,8 @@ impl Lowerer<'_, '_> {
             SourceText::new(body.text, body.text_span),
             choice_span,
         )
-        .with_source_id(source_id)
-        .with_source_id_spans(source_id_span, source_id_insertion_span)
+        .with_source_id(id.source_id)
+        .with_source_id_spans(id.span, id.fields_end)
         .with_metadata(metadata)
         .with_interpolation_bindings(bindings)
         .with_echo(echo)

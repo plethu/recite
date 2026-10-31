@@ -71,46 +71,34 @@
       ]
     },
     "line-statement": {
-      "begin": "^([ \\t]*)(>)[ \\t]*(?:(?!(?:[^\\s@#=(),\\[\\]{}|:]+)[ \\t]*=)([^\\s@#=(),\\[\\]{}|:]+)(?:[ \\t]*(@)([^\\s#]*)?)?)?",
+      "begin": "^([ \\t]*)(>)",
       "beginCaptures": {
         "2": {
           "name": "punctuation.definition.line.recite"
-        },
-        "3": {
-          "name": "entity.name.label.recite"
-        },
-        "4": {
-          "name": "punctuation.definition.anchor.recite"
-        },
-        "5": {
-          "name": "constant.other.anchor.recite"
         }
       },
       "end": "$",
       "patterns": [
+        {
+          "include": "#stable-id-field"
+        },
         {
           "include": "#header-content"
         }
       ]
     },
     "choice-statement": {
-      "begin": "^([ \\t]*)(\\?)[ \\t]*(?:(?!(?:[^\\s@#=(),\\[\\]{}|:]+)[ \\t]*=)([^\\s@#=(),\\[\\]{}|:]+)(?:[ \\t]*(@)([^\\s#]*)?)?)?",
+      "begin": "^([ \\t]*)(\\?)",
       "beginCaptures": {
         "2": {
           "name": "punctuation.definition.choice.recite"
-        },
-        "3": {
-          "name": "entity.name.label.recite"
-        },
-        "4": {
-          "name": "punctuation.definition.anchor.recite"
-        },
-        "5": {
-          "name": "constant.other.anchor.recite"
         }
       },
       "end": "$",
       "patterns": [
+        {
+          "include": "#stable-id-field"
+        },
         {
           "include": "#header-content"
         }
@@ -430,6 +418,17 @@
     "invalid-lexical": {
       "name": "invalid.illegal.recite",
       "match": "(?:\"[^\"\\r\\n]*$|\\[[^\\]\\r\\n]*$|\\{[^}\\r\\n]*$)"
+    },
+    "stable-id-field": {
+      "match": "(?<=^|[ \\t>?])(@)([^\\s#]*)",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.stable-id.recite"
+        },
+        "2": {
+          "name": "constant.other.stable-id.recite"
+        }
+      }
     }
   }
 }

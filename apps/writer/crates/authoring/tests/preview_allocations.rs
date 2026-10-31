@@ -10,7 +10,7 @@ fn cold_preview_capture_cost_is_independent_of_source_size()
     let mut source = String::from(":: giant default\n");
     for n in 0..20_000 {
         source.push_str(&format!(
-            "> line_{n}@{n:020x}\n  The courier waits beside the café.\n"
+            "> @line_{n}\n  The courier waits beside the café.\n"
         ));
     }
     source.push_str("-> END\n");

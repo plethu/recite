@@ -3,8 +3,8 @@ use recite_compiler::authoring::AuthoringKernel;
 
 #[test]
 fn reference_edits_preserve_structural_errors_and_provider_dependencies() {
-    let source = ":: a default\n> line@11111111111111111111\n  First.\n? reply@11111111111111111111 echo=line(99999999999999999999)\n  Reply.\n  -> missing\n:: a default\n-> b.recite::b\n";
-    let b = ":: b default\n> line@11111111111111111111\n  Other.\n-> END\n";
+    let source = ":: a default\n> @ffee6p8\n  First.\n? echo=line(pm96kqq) @ffee6p8\n  Reply.\n  -> missing\n:: a default\n-> b.recite::b\n";
+    let b = ":: b default\n> @ffee6p8\n  Other.\n-> END\n";
     let c = ":: c\n-> END\n";
     for complete in [true, false] {
         let mut kernel = AuthoringKernel::new();
@@ -59,7 +59,7 @@ fn reference_recovery_completeness_and_simultaneous_changes_match_batch() {
         for b in [
             provider,
             ":: b\n:if broken(\n",
-            ":: b\n> line@bad\n  Broken.\n",
+            ":: b\n> @Bad\n  Broken.\n",
             "",
         ] {
             for a in [

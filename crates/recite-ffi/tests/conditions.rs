@@ -11,10 +11,10 @@ fn missing_condition_handler_returns_error_at_start() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if has_item()\n",
-        "  > has@50000000000000000001\n",
+        "  > @has\n",
         "    Has item.\n",
         ":else\n",
-        "  > no@50000000000000000002\n",
+        "  > @kt5mshd\n",
         "    No item.\n",
         "-> END\n",
     ));
@@ -47,10 +47,10 @@ fn condition_error_message_prefix_does_not_override_status() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if ready()\n",
-        "  > yes@51000000000000000001\n",
+        "  > @ndq6zsa\n",
         "    Ready.\n",
         ":else\n",
-        "  > no@51000000000000000002\n",
+        "  > @wz061tg\n",
         "    Not ready.\n",
         "-> END\n",
     ));
@@ -104,19 +104,19 @@ fn condition_error_message_prefix_does_not_override_status() {
 fn condition_callback_invoked_via_choose_branch() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> intro@70000000000000000001\n",
+        "> @n7wzmka\n",
         "  Choose.\n",
-        "> branch_prompt@70000000000000000002\n",
+        "> @branch_prompt\n",
         "  Pick:\n",
-        "  ? branch@70000000000000000003\n",
+        "  ? @j51d9fa\n",
         "    Branch.\n",
         "    -> branch\n",
         ":: branch\n",
         ":if flag()\n",
-        "  > flag_set@70000000000000000004\n",
+        "  > @flag_set\n",
         "    Flag is set.\n",
         ":else\n",
-        "  > flag_clear@70000000000000000005\n",
+        "  > @flag_clear\n",
         "    Flag is clear.\n",
         "-> END\n",
     ));
@@ -212,17 +212,17 @@ fn condition_callback_invoked_via_choose_branch() {
 fn condition_args_msgpack_decoded_in_callback() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> intro@80000000000000000001\n",
+        "> @y8qw2dg\n",
         "  Choose.\n",
-        "  ? branch@80000000000000000002\n",
+        "  ? @nvw7pm3\n",
         "    Branch.\n",
         "    -> branch\n",
         ":: branch\n",
         ":if has_item(sword)\n",
-        "  > yes@80000000000000000003\n",
+        "  > @q8fbaz0\n",
         "    Has sword.\n",
         ":else\n",
-        "  > no@80000000000000000004\n",
+        "  > @hfpfe5j\n",
         "    No sword.\n",
         "-> END\n",
     ));
@@ -349,10 +349,10 @@ fn condition_args_named_maps_have_canonical_order_and_preserve_kinds() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if inspect(sword, \"sword\", 3, 1.5, true)\n",
-        "  > yes@81000000000000000001\n",
+        "  > @c3tapms\n",
         "    Yes.\n",
         ":else\n",
-        "  > no@81000000000000000002\n",
+        "  > @sst7mz2\n",
         "    No.\n",
         "-> END\n",
     ));

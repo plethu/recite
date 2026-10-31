@@ -36,12 +36,12 @@ fn source_hint_preserves_recovered_rejected_prose_and_explicit_passage_selection
 -> Result<(), Box<dyn std::error::Error>> {
     let (dir, mut files, mut current, other) = two_scenes()?;
     let original = files.current.clone();
-    let source = ":: other\n> line@11111111111111111111\n  Before.\n-> END\n";
+    let source = ":: other\n> @ffee6p8\n  Before.\n-> END\n";
     std::fs::write(&other, source)?;
-    let selected = View::Passage("11111111111111111111".into());
+    let selected = View::Passage("ffee6p8".into());
     files.switch(&mut current, &other, None, |m| m.select(selected.clone()))?;
     assert_eq!(current.view(), &selected);
-    let rejected = "> intruder\n  Preserve this rejected prose.";
+    let rejected = ">\n  Preserve this rejected prose.";
     current.set_draft(rejected.into());
     assert!(current.apply().is_err());
     files.switch(&mut current, &original, None, |_| Ok(()))?;

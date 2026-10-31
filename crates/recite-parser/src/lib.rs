@@ -16,7 +16,7 @@
 //!
 //! let source = concat!(
 //!     ":: start default\n",
-//!     "> intro_001\n",
+//!     "> @intro_001\n",
 //!     "  Hello.\n",
 //!     "-> END\n",
 //! );

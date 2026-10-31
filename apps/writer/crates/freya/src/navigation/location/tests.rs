@@ -6,7 +6,7 @@ fn links_round_trip_unicode_paths_and_queue_state() {
         screen: Screen::Translations,
         document: "scenes/a & b.recite".into(),
         beat: Some("arrival".into()),
-        passage: Some("11111111111111111111".into()),
+        passage: Some("ffee6p8".into()),
         catalogue: Some("locale/fr-CA.po".into()),
         query: "bonjour & café?".into(),
         attention: true,
@@ -50,18 +50,18 @@ fn source_update_links_keep_the_selected_change() {
 
 #[test]
 fn reply_rule_links_require_a_target_and_preserve_it_in_history() {
-    let route: Location = "/reply-rules?scene=hello.recite&passage=22222222222222222222"
+    let route: Location = "/reply-rules?scene=hello.recite&passage=rthh7ab"
         .parse()
         .expect("reply route");
     assert_eq!(route.to_string().parse::<Location>(), Ok(route.clone()));
     let other = Location {
-        passage: Some("33333333333333333333".into()),
+        passage: Some("bqyvpqq".into()),
         ..route.clone()
     };
     assert!(!route.same_place(&other));
     assert!("/reply-rules".parse::<Location>().is_err());
     assert!(
-        "/reply-rules?passage=22222222222222222222&view=source"
+        "/reply-rules?passage=rthh7ab&view=source"
             .parse::<Location>()
             .is_err()
     );

@@ -4,7 +4,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, write_file};
 
-use super::support::{authoring_schema, position_after};
+use super::support::{authoring_schema, position_after_in_header};
 
 pub(super) fn resolves_metadata_array_elements_by_declared_type() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -35,19 +35,19 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "> speakers@e1f2031425364758697a talker=[hazel,rhea]\n",
-        "> spaced@789abcdef0123456789ab talker=[hazel, rhea]\n",
-        "> spaced_registry@89abcdef0123456789abc item=[map, map]\n",
-        "> spaced_enum@9abcdef0123456789abcd mood_kind=[calm, angry]\n",
-        "> invalid@f102031425364758697a talker=[hazel,portrait_by_speaker]\n",
-        "> trailing@0123456789abcdef0123 talker=[hazel,]\n",
-        "> closed@123456789abcdef01234 talker=[hazel,rhea)\n",
-        "> registry@23456789abcdef012345 item=[map]\n",
-        "> enum@3456789abcdef01234567 mood_kind=[calm,angry]\n",
-        "> complete@456789abcdef012345678 talker=[ha\n",
-        "> registry_complete@56789abcdef0123456789 item=[m\n",
-        "> enum_complete@6789abcdef0123456789a mood_kind=[a\n",
-        "> second_complete@789abcdef0123456789ab talker=[hazel, r\n",
+        "> talker=[hazel,rhea] @szcdxz6\n",
+        "> talker=[hazel, rhea] @spaced\n",
+        "> item=[map, map] @spaced_registry\n",
+        "> mood_kind=[calm, angry] @spaced_enum\n",
+        "> talker=[hazel,portrait_by_speaker] @wf8nesa\n",
+        "> talker=[hazel,] @ez1fh09\n",
+        "> talker=[hazel,rhea) @closed\n",
+        "> item=[map] @registry\n",
+        "> mood_kind=[calm,angry] @enum\n",
+        "> talker=[ha @complete\n",
+        "> item=[m @registry_complete\n",
+        "> mood_kind=[a @enum_complete\n",
+        "> talker=[hazel, r @second_complete\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -55,14 +55,14 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
     let first = harness
         .hover(
             source_uri.clone(),
-            position_after(source, "speakers@e1f2031425364758697a talker=["),
+            position_after_in_header(source, "szcdxz6", "talker=["),
         )
         .expect("first speaker array element hover");
     assert!(hover_text(first).contains("Recite speaker `hazel`"));
     let second = harness
         .hover(
             source_uri.clone(),
-            position_after(source, "speakers@e1f2031425364758697a talker=[hazel,"),
+            position_after_in_header(source, "szcdxz6", "talker=[hazel,"),
         )
         .expect("second speaker array element hover");
     assert!(hover_text(second).contains("Recite speaker `rhea`"));
@@ -70,36 +70,36 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
     let first_range = harness
         .hover(
             source_uri.clone(),
-            position_after(source, "speakers@e1f2031425364758697a talker=["),
+            position_after_in_header(source, "szcdxz6", "talker=["),
         )
         .and_then(|hover| hover.range)
         .expect("first speaker array element range");
     assert_eq!(
         first_range,
         Range::new(
-            position_after(source, "speakers@e1f2031425364758697a talker=["),
-            position_after(source, "speakers@e1f2031425364758697a talker=[hazel"),
+            position_after_in_header(source, "szcdxz6", "talker=["),
+            position_after_in_header(source, "szcdxz6", "talker=[hazel"),
         )
     );
     let second_hover = harness
         .hover(
             source_uri.clone(),
-            position_after(source, "spaced@789abcdef0123456789ab talker=[hazel, "),
+            position_after_in_header(source, "spaced", "talker=[hazel, "),
         )
         .expect("spaced second speaker array element hover");
     assert!(hover_text(second_hover).contains("Recite speaker `rhea`"));
     let second_range = harness
         .hover(
             source_uri.clone(),
-            position_after(source, "spaced@789abcdef0123456789ab talker=[hazel, "),
+            position_after_in_header(source, "spaced", "talker=[hazel, "),
         )
         .and_then(|hover| hover.range)
         .expect("spaced second speaker array element range");
     assert_eq!(
         second_range,
         Range::new(
-            position_after(source, "spaced@789abcdef0123456789ab talker=[hazel, "),
-            position_after(source, "spaced@789abcdef0123456789ab talker=[hazel, rhea"),
+            position_after_in_header(source, "spaced", "talker=[hazel, "),
+            position_after_in_header(source, "spaced", "talker=[hazel, rhea"),
         )
     );
 
@@ -107,7 +107,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(source, "invalid@f102031425364758697a talker=[hazel,"),
+                position_after_in_header(source, "wf8nesa", "talker=[hazel,"),
             )
             .is_none(),
         "an invalid array element must not fall through to a same-name schema symbol",
@@ -116,7 +116,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(source, "trailing@0123456789abcdef0123 talker=["),
+                position_after_in_header(source, "ez1fh09", "talker=["),
             )
             .is_none(),
         "a trailing-comma array must fail closed",
@@ -125,7 +125,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(source, "closed@123456789abcdef01234 talker=[hazel,"),
+                position_after_in_header(source, "closed", "talker=[hazel,"),
             )
             .is_none(),
         "an array with an invalid closing delimiter must fail closed",
@@ -136,7 +136,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
             harness
                 .hover(
                     source_uri.clone(),
-                    position_after(source, "spaced_registry@89abcdef0123456789abc item=[map, ",),
+                    position_after_in_header(source, "spaced_registry", "item=[map, "),
                 )
                 .expect("registry array element hover"),
         )
@@ -145,18 +145,15 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
     let registry_range = harness
         .hover(
             source_uri.clone(),
-            position_after(source, "spaced_registry@89abcdef0123456789abc item=[map, "),
+            position_after_in_header(source, "spaced_registry", "item=[map, "),
         )
         .and_then(|hover| hover.range)
         .expect("registry array element range");
     assert_eq!(
         registry_range,
         Range::new(
-            position_after(source, "spaced_registry@89abcdef0123456789abc item=[map, "),
-            position_after(
-                source,
-                "spaced_registry@89abcdef0123456789abc item=[map, map"
-            ),
+            position_after_in_header(source, "spaced_registry", "item=[map, "),
+            position_after_in_header(source, "spaced_registry", "item=[map, map"),
         )
     );
     assert!(
@@ -164,10 +161,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
             harness
                 .hover(
                     source_uri.clone(),
-                    position_after(
-                        source,
-                        "spaced_enum@9abcdef0123456789abcd mood_kind=[calm, ",
-                    ),
+                    position_after_in_header(source, "spaced_enum", "mood_kind=[calm, "),
                 )
                 .expect("enum array element hover"),
         )
@@ -176,24 +170,15 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
     let enum_range = harness
         .hover(
             source_uri.clone(),
-            position_after(
-                source,
-                "spaced_enum@9abcdef0123456789abcd mood_kind=[calm, ",
-            ),
+            position_after_in_header(source, "spaced_enum", "mood_kind=[calm, "),
         )
         .and_then(|hover| hover.range)
         .expect("enum array element range");
     assert_eq!(
         enum_range,
         Range::new(
-            position_after(
-                source,
-                "spaced_enum@9abcdef0123456789abcd mood_kind=[calm, "
-            ),
-            position_after(
-                source,
-                "spaced_enum@9abcdef0123456789abcd mood_kind=[calm, angry"
-            ),
+            position_after_in_header(source, "spaced_enum", "mood_kind=[calm, "),
+            position_after_in_header(source, "spaced_enum", "mood_kind=[calm, angry"),
         )
     );
 
@@ -202,7 +187,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "complete@456789abcdef012345678 talker=[ha"),
+                    position_after_in_header(source, "complete", "talker=[ha"),
                 )
                 .expect("speaker array completion"),
         ),
@@ -213,7 +198,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "registry_complete@56789abcdef0123456789 item=[m"),
+                    position_after_in_header(source, "registry_complete", "item=[m"),
                 )
                 .expect("registry array completion"),
         ),
@@ -224,7 +209,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "enum_complete@6789abcdef0123456789a mood_kind=[a"),
+                    position_after_in_header(source, "enum_complete", "mood_kind=[a"),
                 )
                 .expect("enum array completion"),
         ),
@@ -235,10 +220,7 @@ pub(super) fn resolves_metadata_array_elements_by_declared_type() {
             harness
                 .completion(
                     source_uri,
-                    position_after(
-                        source,
-                        "second_complete@789abcdef0123456789ab talker=[hazel, r"
-                    ),
+                    position_after_in_header(source, "second_complete", "talker=[hazel, r"),
                 )
                 .expect("spaced second speaker array completion"),
         ),

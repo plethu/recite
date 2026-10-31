@@ -20,11 +20,7 @@ fn shared_language_pressure_fixture_preserves_ids_forms_and_bindings() {
             .iter()
             .map(|entry| entry.id.as_str())
             .collect::<Vec<_>>(),
-        [
-            "0a1b2c3d4e5f60718293",
-            "55667788990011223344",
-            "77889900112233445566"
-        ]
+        ["atcf38h", "bt20t3f", "letters.close"]
     );
     assert_eq!(
         dialogue
@@ -32,13 +28,13 @@ fn shared_language_pressure_fixture_preserves_ids_forms_and_bindings() {
             .iter()
             .map(|entry| entry.id.as_str())
             .collect::<Vec<_>>(),
-        ["66778899001122334455"]
+        ["ask_news"]
     );
 
     let arrival = dialogue
         .lines
         .iter()
-        .find(|line| line.id.as_str() == "55667788990011223344")
+        .find(|line| line.id.as_str() == "bt20t3f")
         .expect("arrival line");
     assert_eq!(
         arrival.authored_source_text,
@@ -49,7 +45,7 @@ fn shared_language_pressure_fixture_preserves_ids_forms_and_bindings() {
     let plural = dialogue
         .lines
         .iter()
-        .find(|line| line.id.as_str() == "0a1b2c3d4e5f60718293")
+        .find(|line| line.id.as_str() == "atcf38h")
         .expect("plural line");
     assert_eq!(plural.source_text, "You have one letter.");
     assert_eq!(
@@ -59,7 +55,7 @@ fn shared_language_pressure_fixture_preserves_ids_forms_and_bindings() {
     assert_eq!(plural.interpolation_bindings[0].name, "count");
 
     let choice = &dialogue.choices[0];
-    assert_eq!(choice.id.as_str(), "66778899001122334455");
+    assert_eq!(choice.id.as_str(), "ask_news");
     assert_eq!(choice.authored_source_text, "Tell me about {topic}.");
     assert_eq!(choice.interpolation_bindings[0].name, "topic");
 }

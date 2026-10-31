@@ -69,7 +69,7 @@ for expectation in \
 done
 
 recovery_file="$scratch/compact-divert-recovery.recite"
-printf '%s' $':: compact_recovery default\n> first@0123456789abcdef0123\n  First.\n->target,\n> following@fedcba98765432100123\n  Following.\n->\n' >"$recovery_file"
+printf '%s' $':: compact_recovery default\n> @ez1fh09\n  First.\n->target,\n> @q5khbap\n  Following.\n->\n' >"$recovery_file"
 recovery_tree="$scratch/compact-divert-recovery.tree"
 recovery_rc=0
 if (cd "$repo_root" && tree-sitter parse --grammar-path "$grammar_dir" "$recovery_file") >"$recovery_tree" 2>&1; then

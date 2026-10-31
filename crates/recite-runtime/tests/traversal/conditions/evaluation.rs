@@ -7,7 +7,7 @@ fn condition_failure_is_structured_and_keeps_session_position() {
         concat!(
             ":: start default\n",
             ":if trusts(player)\n",
-            "  > secret@3d288c3a5a3eeab7a706\n",
+            "  > @f9m7evh\n",
             "    Secret.\n",
             "-> END\n",
         ),
@@ -26,7 +26,7 @@ fn condition_failure_is_structured_and_keeps_session_position() {
     );
     assert_line(
         next_with_context(&asset, &mut session, &passing),
-        "3d288c3a5a3eeab7a706",
+        "f9m7evh",
         "Secret.",
     );
 }
@@ -38,7 +38,7 @@ fn deep_conditions_are_rejected_before_start_or_traversal() {
         concat!(
             ":: start default\n",
             ":if trusts(player)\n",
-            "  > secret@0f6acff71aded65053d9\n",
+            "  > @fvzd2ns\n",
             "    Secret.\n",
             "-> END\n",
         ),
@@ -73,9 +73,9 @@ fn boolean_conditions_short_circuit_left_to_right() {
         concat!(
             ":: start default\n",
             ":if first() and missing()\n",
-            "  > secret@ab00cd8d95b73818601c\n",
+            "  > @fbqf8rt\n",
             "    Secret.\n",
-            "> after@581bfeea8819e7e8d6a2\n",
+            "> @x325k9p\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -85,7 +85,7 @@ fn boolean_conditions_short_circuit_left_to_right() {
 
     assert_line(
         next_with_context(&and_asset, &mut and_session, &and_context),
-        "581bfeea8819e7e8d6a2",
+        "x325k9p",
         "After.",
     );
     assert_eq!(
@@ -101,9 +101,9 @@ fn boolean_conditions_short_circuit_left_to_right() {
         concat!(
             ":: start default\n",
             ":if first() or missing()\n",
-            "  > secret@83802662763d479795b1\n",
+            "  > @svb3z6n\n",
             "    Secret.\n",
-            "> after@d9b586786f4355cd15ea\n",
+            "> @n6vvads\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -113,7 +113,7 @@ fn boolean_conditions_short_circuit_left_to_right() {
 
     assert_line(
         next_with_context(&or_asset, &mut or_session, &or_context),
-        "83802662763d479795b1",
+        "svb3z6n",
         "Secret.",
     );
     assert_eq!(

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn assembling_shifted_regions_preserves_previously_published_snapshots() {
-    let source = ":: a default\r\n> a@11111111111111111111\r\n  Café 🦀\r\n:: b\r\n> b@22222222222222222222\r\n  Middle\r\n:: c\r\n-> missing\r\n";
+    let source = ":: a default\r\n> @ffee6p8\r\n  Café 🦀\r\n:: b\r\n> @rthh7ab\r\n  Middle\r\n:: c\r\n-> missing\r\n";
     let mut kernel = AuthoringKernel::new();
     compare(&mut kernel, &[("a.recite", source)], None, true);
     let published = kernel.snapshot().clone();
@@ -22,10 +22,9 @@ fn assembling_shifted_regions_preserves_previously_published_snapshots() {
 
 #[test]
 fn region_edits_and_global_recovery_match_batch_validation() {
-    let a =
-        "# preamble\n:: a default\n> a@11111111111111111111\n  Café 🦀\n-> other.recite::target\n";
-    let b = ":: b\n> b@22222222222222222222\n  Hello {unknown}.\n? choice@33333333333333333333 echo=a@11111111111111111111\n  Yes\n  -> a\n";
-    let c = ":: c\n:if missing()\n  > c@44444444444444444444\n    Nested\n-> END\n";
+    let a = "# preamble\n:: a default\n> @ffee6p8\n  Café 🦀\n-> other.recite::target\n";
+    let b = ":: b\n> @rthh7ab\n  Hello {unknown}.\n? echo=@ffee6p8 @bqyvpqq\n  Yes\n  -> a\n";
+    let c = ":: c\n:if missing()\n  > @z0g6c80\n    Nested\n-> END\n";
     let source = format!("{a}{b}{c}");
     let other = ":: target\n-> a.recite::b\n";
     let schema = ProjectSchema::empty_v1();
@@ -35,7 +34,7 @@ fn region_edits_and_global_recovery_match_batch_validation() {
             source.clone(),
             source.replace("Café 🦀", "A new sentence 🦀"),
             source.replace("Café 🦀", "A new\n  paragraph"),
-            source.replace("22222222222222222222", "11111111111111111111"),
+            source.replace("rthh7ab", "ffee6p8"),
             source.replace(":: b", ":: renamed"),
             source.replace(":: b", "  :: b"),
             source.replace(":: b", "::"),
@@ -78,8 +77,8 @@ fn region_edits_and_global_recovery_match_batch_validation() {
 
 #[test]
 fn relocating_multiple_files_updates_primary_and_related_project_diagnostics() {
-    let a = ":: shared default\n> duplicate@11111111111111111111\n  First 🦀.\n? reply@33333333333333333333 echo=line(22222222222222222222)\n  Reply\n  -> missing\n";
-    let b = ":: shared default\n> duplicate@11111111111111111111\n  Second.\n-> a.recite::absent\n";
+    let a = ":: shared default\n> @ffee6p8\n  First 🦀.\n? echo=line(rthh7ab) @bqyvpqq\n  Reply\n  -> missing\n";
+    let b = ":: shared default\n> @ffee6p8\n  Second.\n-> a.recite::absent\n";
     let mut kernel = AuthoringKernel::new();
     compare(&mut kernel, &[("a.recite", a), ("b.recite", b)], None, true);
     assert!(kernel.snapshot().documents().iter().any(|document| {
@@ -102,8 +101,8 @@ fn relocating_multiple_files_updates_primary_and_related_project_diagnostics() {
 
 #[test]
 fn unrelated_recovery_invalidates_unknown_echo_diagnostics_in_both_directions() {
-    let a = ":: a default\n> a@11111111111111111111\n  Hello\n";
-    let b = ":: b\n? b@22222222222222222222 echo=line(33333333333333333333)\n  Reply\n  -> END\n";
+    let a = ":: a default\n> @ffee6p8\n  Hello\n";
+    let b = ":: b\n? echo=line(bqyvpqq) @rthh7ab\n  Reply\n  -> END\n";
     let c = ":: c\n-> END\n";
     let mut kernel = AuthoringKernel::new();
     for edited in [a.to_owned(), format!("{a}stray text\n"), a.to_owned()] {

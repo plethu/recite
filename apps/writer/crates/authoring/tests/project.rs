@@ -5,12 +5,12 @@ use recite_writer_model::{Document, ProjectContext, View, Workbench};
 #[test]
 fn cross_file_preview_uses_the_current_document_and_its_unsaved_overlay()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> question@11111111111111111111\n  Unsaved question.\n-> a.recite::answer\n";
+    let source = ":: start default\n> @ffee6p8\n  Unsaved question.\n-> a.recite::answer\n";
     let context = ProjectContext {
         documents: vec![
             SavedDocument::new(
                 DocumentKey::new("a.recite")?,
-                ":: answer\n> response@22222222222222222222\n  From another file.\n-> END\n",
+                ":: answer\n> @rthh7ab\n  From another file.\n-> END\n",
             ),
             SavedDocument::new(
                 DocumentKey::new("z.recite")?,
@@ -43,7 +43,7 @@ fn cross_file_preview_uses_the_current_document_and_its_unsaved_overlay()
 fn unchanged_effective_project_preserves_preview_revision_and_undo()
 -> Result<(), Box<dyn std::error::Error>> {
     let key = DocumentKey::new("scene.recite")?;
-    let source = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
     let context = ProjectContext {
         documents: vec![SavedDocument::new(key.clone(), source)],
         schema: None,
@@ -162,7 +162,7 @@ fn recovery_keeps_rejected_prose_separate_from_applied_source()
 #[test]
 fn schema_refresh_retains_drafts_and_undo_but_invalidates_preview()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> line@11111111111111111111 portrait=calm\n  Hello.\n-> END\n";
+    let source = ":: start default\n> portrait=calm @ffee6p8\n  Hello.\n-> END\n";
     let mut workbench = Workbench::open("scene.recite", source)?;
     workbench.set_draft("An applied edit.".into());
     workbench.apply()?;

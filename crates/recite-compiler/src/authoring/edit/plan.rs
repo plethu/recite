@@ -1,3 +1,5 @@
+use recite_core::DocumentKey;
+
 use super::super::{AuthoringQuery, AuthoringSnapshot, CancellationToken, SnapshotGeneration};
 use super::error::AuthoringEditError;
 use super::operation::AuthoringEditOperation;
@@ -62,6 +64,41 @@ impl AuthoringEditPlan {
     /// Hosts should perform this check before projecting or applying edits.
     pub fn validate(&self, snapshot: &AuthoringSnapshot) -> Result<(), AuthoringEditError> {
         self.validate_with_control(&snapshot.query(&CancellationToken::new()))
+    }
+
+    /// Validates the plan against `snapshot` and returns each edited document's
+    /// new text, in document order. Hosts that write files or buffers use this
+    /// instead of applying ranges themselves.
+    pub fn apply(
+        &self,
+        snapshot: &AuthoringSnapshot,
+    ) -> Result<Vec<(DocumentKey, String)>, AuthoringEditError> {
+        let token = CancellationToken::new();
+        let query = snapshot.query(&token);
+        self.validate_with_control(&query)?;
+        let mut edited = Vec::<(DocumentKey, String)>::new();
+        // Edits are sorted by document then range, so applying each document's
+        // edits back to front keeps earlier byte offsets valid.
+        for edit in self.edits.iter().rev() {
+            let document = query.document(edit.document()).ok_or_else(|| {
+                AuthoringEditError::StaleDocument {
+                    document: edit.document().clone(),
+                }
+            })?;
+            if edited.last().is_none_or(|(key, _)| key != edit.document()) {
+                edited.push((edit.document().clone(), document.source_text().to_owned()));
+            }
+            let (start, end) =
+                super::validate::indexed_byte_offsets(document.source_index(), edit.range())
+                    .map_err(|_| AuthoringEditError::UnmappableRange {
+                        document: edit.document().clone(),
+                    })?;
+            if let Some((_, text)) = edited.last_mut() {
+                text.replace_range(start..end, edit.replacement());
+            }
+        }
+        edited.reverse();
+        Ok(edited)
     }
 
     /// Validate freshness and ranges under the query's cooperative work lifetime.

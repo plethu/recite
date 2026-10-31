@@ -54,7 +54,7 @@ fn hidden_choice_and_reason_tree_survive_prompt_snapshot_restore() -> Result<(),
             .iter()
             .map(|choice| choice.as_str())
             .collect::<Vec<_>>(),
-        ["12345678901234567891", "12345678901234567892"]
+        ["rbgkhpf", "dzy442e"]
     );
     let locked = &prompt.choices()[0].availability;
     assert!(!locked.is_available);
@@ -103,12 +103,12 @@ fn asset_with_reason() -> Result<recite_core::compiled::CompiledDialogue, String
             concat!(
                 ":: start default\n",
                 ":if trust_gte(hazel, rhea, 3)\n",
-                "  > hidden_line@12345678901234567893\n    Hidden.\n",
-                "    ? hidden_choice@12345678901234567894\n      Hidden choice.\n      -> END\n",
-                "> prompt@12345678901234567890\n  Choose.\n",
-                "  ? locked@12345678901234567891 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+                "  > @hidden_line\n    Hidden.\n",
+                "    ? @hidden_choice\n      Hidden choice.\n      -> END\n",
+                "> @w3xnt5r\n  Choose.\n",
+                "  ? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @rbgkhpf\n",
                 "    Locked.\n    -> END\n",
-                "  ? leave@12345678901234567892\n    Leave.\n    -> END\n",
+                "  ? @dzy442e\n    Leave.\n    -> END\n",
             ),
         )],
         CompileOptions::new(

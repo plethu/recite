@@ -1,8 +1,8 @@
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{Document, EditOperation, View, Workbench};
 
-const ID: &str = "11111111111111111111";
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello, 世界.\n-> END\n\n:: later\n> other@22222222222222222222\n  Later.\n-> END\n";
+const ID: &str = "ffee6p8";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello, 世界.\n-> END\n\n:: later\n> @rthh7ab\n  Later.\n-> END\n";
 
 fn model(source: &str, warm: bool) -> Result<Workbench, Box<dyn std::error::Error>> {
     let document = Document::new(source)?;

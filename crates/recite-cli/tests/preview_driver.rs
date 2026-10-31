@@ -14,7 +14,7 @@ fn run_and_trace_project_the_preview_event_sequence() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> hello@aaaaaaaaaaaaaaaaaaaa\n",
+            "> @m3ffvrt\n",
             "  Hello from preview.\n",
             "-> END\n",
         ),
@@ -31,7 +31,7 @@ fn run_and_trace_project_the_preview_event_sequence() {
         .arg(&fixture));
     run_output
         .assert_success()
-        .assert_stdout_contains("line aaaaaaaaaaaaaaaaaaaa: Hello from preview.");
+        .assert_stdout_contains("line m3ffvrt: Hello from preview.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -60,14 +60,14 @@ fn block_fixture_choice_is_refused_when_the_block_has_multiple_prompts() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> first@bbbbbbbbbbbbbbbbbbbb\n",
+            "> @qdjf739\n",
             "  First?\n",
-            "  ? yes@cccccccccccccccccccc\n",
+            "  ? @z1pshhd\n",
             "    Yes.\n",
             "    -> END\n",
-            "> second@dddddddddddddddddddd\n",
+            "> @yt5egpn\n",
             "  Second?\n",
-            "  ? no@eeeeeeeeeeeeeeeeeeee\n",
+            "  ? @no\n",
             "    No.\n",
             "    -> END\n",
         ),
@@ -96,14 +96,14 @@ fn preview_projection_keeps_choice_before_followup_condition() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Choose.\n",
-            "  ? yes@22222222222222222222\n",
+            "  ? @rthh7ab\n",
             "    Yes.\n",
             "    -> chosen\n",
             ":: chosen\n",
             ":if trusts(player)\n",
-            "  > result@33333333333333333333\n",
+            "  > @bqyvpqq\n",
             "    Result.\n",
             "-> END\n",
         ),
@@ -112,7 +112,7 @@ fn preview_projection_keeps_choice_before_followup_condition() {
     let fixture = write_file(
         temp.path(),
         "runtime-fixture.toml",
-        "[conditions]\n\"trusts(player)\" = true\n\n[choices]\n11111111111111111111 = \"22222222222222222222\"\n",
+        "[conditions]\n\"trusts(player)\" = true\n\n[choices]\nffee6p8 = \"rthh7ab\"\n",
     );
     let output = run(recite()
         .arg("trace")
@@ -143,14 +143,14 @@ fn multi_prompt_trace_exposes_only_line_fixture_keys_and_missing_selection_is_di
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> first@44444444444444444444\n",
+            "> @z0g6c80\n",
             "  First?\n",
-            "  ? yes@55555555555555555555\n",
+            "  ? @yes\n",
             "    Yes.\n",
             "    -> END\n",
-            "> second@66666666666666666666\n",
+            "> @h2zyg2g\n",
             "  Second?\n",
-            "  ? no@77777777777777777777\n",
+            "  ? @wx4me54\n",
             "    No.\n",
             "    -> END\n",
         ),
@@ -159,7 +159,7 @@ fn multi_prompt_trace_exposes_only_line_fixture_keys_and_missing_selection_is_di
     let fixture = write_file(
         temp.path(),
         "runtime-fixture.toml",
-        "[choices]\n44444444444444444444 = \"55555555555555555555\"\n66666666666666666666 = \"77777777777777777777\"\n",
+        "[choices]\nz0g6c80 = \"yes\"\nh2zyg2g = \"wx4me54\"\n",
     );
     let output = run(recite()
         .arg("trace")
@@ -178,7 +178,7 @@ fn multi_prompt_trace_exposes_only_line_fixture_keys_and_missing_selection_is_di
         .expect("prompt event");
     assert_eq!(
         prompt["prompt"]["identity"]["fixture_keys"],
-        serde_json::json!(["44444444444444444444"])
+        serde_json::json!(["z0g6c80"])
     );
 
     let missing_fixture = write_file(temp.path(), "missing.toml", "");

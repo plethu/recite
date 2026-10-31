@@ -8,13 +8,13 @@ fn snapshot_restore_round_trip() {
     // Snapshot at a pending prompt; restore must return empty batch (prompt still pending).
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> save_prompt@40000000000000000001\n",
+        "> @save_prompt\n",
         "  Save here.\n",
-        "  ? go@40000000000000000002\n",
+        "  ? @go\n",
         "    Continue.\n",
         "    -> after\n",
         ":: after\n",
-        "> after_line@40000000000000000003\n",
+        "> @after_line\n",
         "  Restored.\n",
         "-> END\n",
     ));
@@ -70,7 +70,7 @@ fn snapshot_restore_round_trip() {
     );
 
     // Can still make the choice from the restored session.
-    let choice_cstr = cstr("40000000000000000002");
+    let choice_cstr = cstr("go");
     let mut batch3 = ReciteBuffer::null();
     let choose_status =
         unsafe { recite_session_choose(session2, choice_cstr.as_ptr(), &raw mut batch3) };
@@ -91,7 +91,7 @@ fn snapshot_restore_reemits_pending_effect_with_same_request_id() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         "! blocking play_sound(chime)\n",
-        "> after@41000000000000000001\n",
+        "> @after\n",
         "  After.\n",
         "-> END\n",
     ));
@@ -182,7 +182,7 @@ fn snapshot_restore_reemits_pending_effect_with_same_request_id() {
 fn restore_from_ended_session_returns_no_active_session() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> line@90000000000000000001\n",
+        "> @nedkf2c\n",
         "  Done.\n",
         "-> END\n",
     ));
@@ -241,9 +241,9 @@ fn restore_from_ended_session_returns_no_active_session() {
 fn restore_schema_fingerprint_mismatch_returns_schema_mismatch_status() {
     let source = concat!(
         ":: start default\n",
-        "> save_prompt@91000000000000000001\n",
+        "> @t1jmfck\n",
         "  Save here.\n",
-        "  ? continue@91000000000000000002\n",
+        "  ? @q2fjxbx\n",
         "    Continue.\n",
         "    -> END\n",
     );
@@ -337,7 +337,7 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
     let first_bytes = compile_to_bytes_with_schema(
         concat!(
             ":: start default\n",
-            "> line@92000000000000000001\n",
+            "> @bwg39z1\n",
             "  First.\n",
             "-> END\n",
         ),
@@ -346,7 +346,7 @@ fn restore_non_schema_asset_content_mismatch_returns_save_load_status() {
     let second_bytes = compile_to_bytes_with_schema(
         concat!(
             ":: start default\n",
-            "> line@92000000000000000001\n",
+            "> @bwg39z1\n",
             "  Changed.\n",
             "-> END\n",
         ),

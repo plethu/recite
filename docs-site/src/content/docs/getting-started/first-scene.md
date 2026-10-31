@@ -14,31 +14,30 @@ Create `dialogue/crossroads.recite`:
 ```text
 :: which_way default
 
-> alice_way_001@7701ceab59d2adfa057a speaker=alice
+> speaker=alice @alice_way_001
   Would you tell me, please, which way I ought to go from here?
 
-> cat_way_001@e26ae3e6834c21c1b716 speaker=cheshire_cat portrait=grin
+> speaker=cheshire_cat portrait=grin @cat_way_001
   That depends a good deal on where you want to get to.
 
-? answer_anywhere@a6f46c2edbe8466b9bfd
+? @answer_anywhere
   I don't much care where.
   -> anywhere
 
 :: anywhere
 
-> cat_anywhere_001@a11b4b64dceda892c08e speaker=cheshire_cat
+> speaker=cheshire_cat @cat_anywhere_001
   Then it doesn't matter which way you go.
 
 ! deferred mark_thread(alice_crossroads, direction_unsettled)
 -> END
 ```
 
-Each line and choice header is a `label@anchor` pair: the label (`alice_way_001`) is editable
-context for you, and the 20-hex anchor is the frozen ID that localisation and saves key on. When you
-author with the LSP, its explicit missing-ID action fills in anchors; clients may configure that
-action on save. When hand-writing, use a unique 20-character lowercase hex value. The `! deferred`
-statement is a typed effect request. The runtime never executes it; it hands it to your game when
-the scene ends.
+Each line and choice header ends with its stable ID, such as `@alice_way_001`. Localisation and
+saves key on that ID, so keep it when you edit the text. You can write a readable ID yourself, or
+leave the header without one and run `recite assign-ids`; the LSP's missing-ID action does the same
+in your editor, and clients may configure it on save. The `! deferred` statement is a typed effect
+request. The runtime never executes it; it hands it to your game when the scene ends.
 
 ## Validate and compile
 
@@ -48,8 +47,8 @@ recite compile dialogue/crossroads.recite -o crossroads.recitec
 ```
 
 `validate` exits non-zero with structured diagnostics if the scene is malformed: wrong indentation,
-duplicate anchors, or a divert to a missing block. `compile` writes the deterministic MessagePack
-asset the runtime consumes.
+duplicate IDs, or a divert to a missing block. `compile` writes the deterministic MessagePack asset
+the runtime consumes.
 
 ## Play it interactively
 
@@ -66,7 +65,7 @@ Deterministic runs use a TOML fixture that answers every prompt. Create `fixture
 
 ```toml
 [choices]
-"which_way" = "a6f46c2edbe8466b9bfd"
+"which_way" = "answer_anywhere"
 ```
 
 ```bash
@@ -74,12 +73,12 @@ recite run crossroads.recitec --block which_way --fixture fixture.toml
 ```
 
 ```text
-line 7701ceab59d2adfa057a: Would you tell me, please, which way I ought to go from here?
-line e26ae3e6834c21c1b716: That depends a good deal on where you want to get to.
+line alice_way_001: Would you tell me, please, which way I ought to go from here?
+line cat_way_001: That depends a good deal on where you want to get to.
 prompt
-  [1] a6f46c2edbe8466b9bfd: I don't much care where.
-selected choice a6f46c2edbe8466b9bfd
-line a11b4b64dceda892c08e: Then it doesn't matter which way you go.
+  [1] answer_anywhere: I don't much care where.
+selected choice answer_anywhere
+line cat_anywhere_001: Then it doesn't matter which way you go.
 end
 deferred effects:
   mark_thread (alice_crossroads, direction_unsettled)
@@ -94,9 +93,9 @@ trace` emits the same run as structured JSON for snapshot tests and CI.
 recite extract dialogue/crossroads.recite
 ```
 
-This produces gettext POT entries whose `msgctxt` is the anchor. Label edits keep that context.
-Prose edits also retain the anchor, but gettext matches the source text too: refresh the catalogue
-and review retained translations after changing prose.
+This produces gettext POT entries whose `msgctxt` is the stable ID. Prose edits keep that ID, but
+gettext matches the source text too: refresh the catalogue and review retained translations after
+changing prose.
 
 From here: the [source format reference](/reference/source-format/) covers the full statement
 vocabulary, and the [CLI reference](/reference/cli/) covers every command.

@@ -19,16 +19,16 @@ fn run_trace_and_play_plain_preview_dialogue_locale_catalogs() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@75f6c2ec830c44fc0b07\n",
+            "> @intro\n",
             "  Hello.\n",
-            "  ? help@7648ae75984a9367d2b8\n",
+            "  ? @help\n",
             "    Help me.\n",
             "    -> help\n",
-            "  ? leave@d095be3772cca8f41dfc\n",
+            "  ? @leave\n",
             "    Leave.\n",
             "    -> END\n",
             ":: help\n",
-            "> helped@a65d329b1d6d610af8ee\n",
+            "> @helped\n",
             "  Done.\n",
             "-> END\n",
         ),
@@ -42,15 +42,15 @@ fn run_trace_and_play_plain_preview_dialogue_locale_catalogs() {
             "msgstr \"\"\n",
             "\"Language: fr-FR\\n\"\n",
             "\n",
-            "msgctxt \"75f6c2ec830c44fc0b07\"\n",
+            "msgctxt \"intro\"\n",
             "msgid \"Hello.\"\n",
             "msgstr \"Bonjour.\"\n",
             "\n",
-            "msgctxt \"7648ae75984a9367d2b8\"\n",
+            "msgctxt \"help\"\n",
             "msgid \"Help me.\"\n",
             "msgstr \"Aidez-moi.\"\n",
             "\n",
-            "msgctxt \"a65d329b1d6d610af8ee\"\n",
+            "msgctxt \"helped\"\n",
             "msgid \"Done.\"\n",
             "msgstr \"\"\n",
         ),
@@ -65,7 +65,7 @@ locale = "fr-FR"
 "fr-FR" = ["locale/fr-FR.po"]
 
 [choices]
-"75f6c2ec830c44fc0b07" = "7648ae75984a9367d2b8"
+"intro" = "help"
 "#,
     );
 
@@ -73,7 +73,7 @@ locale = "fr-FR"
         temp.path(),
         "default.toml",
         r#"[choices]
-"75f6c2ec830c44fc0b07" = "7648ae75984a9367d2b8"
+"intro" = "help"
 "#,
     );
     let default_run = run(recite()
@@ -84,9 +84,9 @@ locale = "fr-FR"
         .arg("--fixture")
         .arg(&default_fixture));
     default_run.assert_success().assert_stderr("");
-    default_run.assert_stdout_contains("prompt 75f6c2ec830c44fc0b07: Hello.");
-    default_run.assert_stdout_contains("  [1] 7648ae75984a9367d2b8: Help me.");
-    default_run.assert_stdout_contains("line a65d329b1d6d610af8ee: Done.");
+    default_run.assert_stdout_contains("prompt intro: Hello.");
+    default_run.assert_stdout_contains("  [1] help: Help me.");
+    default_run.assert_stdout_contains("line helped: Done.");
 
     let run_output = run(recite()
         .arg("run")
@@ -96,9 +96,9 @@ locale = "fr-FR"
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("prompt 75f6c2ec830c44fc0b07: Bonjour.");
-    run_output.assert_stdout_contains("  [1] 7648ae75984a9367d2b8: Aidez-moi.");
-    run_output.assert_stdout_contains("line a65d329b1d6d610af8ee: Done.");
+    run_output.assert_stdout_contains("prompt intro: Bonjour.");
+    run_output.assert_stdout_contains("  [1] help: Aidez-moi.");
+    run_output.assert_stdout_contains("line helped: Done.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -195,13 +195,13 @@ locale = "fr-FR"
         .stdin
         .as_mut()
         .expect("stdin")
-        .write_all(b"7648ae75984a9367d2b8\n")
+        .write_all(b"help\n")
         .expect("write stdin");
     let output = child.wait_with_output().expect("wait");
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("prompt 75f6c2ec830c44fc0b07: Bonjour.");
-    output.assert_stdout_contains("[1] 7648ae75984a9367d2b8: Aidez-moi.");
-    output.assert_stdout_contains("line a65d329b1d6d610af8ee: Done.");
+    output.assert_stdout_contains("prompt intro: Bonjour.");
+    output.assert_stdout_contains("[1] help: Aidez-moi.");
+    output.assert_stdout_contains("line helped: Done.");
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn dialogue_locale_falls_back_to_language_catalog() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     write_file(
@@ -237,7 +237,7 @@ fr = ["locale/fr.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line 11111111111111111111: Salut.");
+    output.assert_stdout_contains("line ffee6p8: Salut.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -261,18 +261,18 @@ fn dialogue_locale_falls_back_through_intermediate_locale() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     write_file(
         temp.path(),
         "locale/zh-Hant.po",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Ni hao.\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Ni hao.\"\n",
     );
     write_file(
         temp.path(),
         "locale/zh.po",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Wrong fallback.\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Wrong fallback.\"\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -294,7 +294,7 @@ zh = ["locale/zh.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line 11111111111111111111: Ni hao.");
+    output.assert_stdout_contains("line ffee6p8: Ni hao.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -320,7 +320,7 @@ fn plural_dialogue_uses_gettext_arms_and_records_resolution_trace() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> letters@22222222222222222222 bind=(count:int=$remaining)\n",
+            "> bind=(count:int=$remaining) @rthh7ab\n",
             "  You have one letter.\n",
             "  | You have {count} letters.\n",
             "-> END\n",
@@ -336,7 +336,7 @@ fn plural_dialogue_uses_gettext_arms_and_records_resolution_trace() {
             "\"Language: fr\\n\"\n",
             "\"Plural-Forms: nplurals=3; plural=(n == 0 ? 0 : n == 1 ? 1 : 2);\\n\"\n",
             "\n",
-            "msgctxt \"22222222222222222222\"\n",
+            "msgctxt \"rthh7ab\"\n",
             "msgid \"You have one letter.\"\n",
             "msgid_plural \"You have {count} letters.\"\n",
             "msgstr[0] \"Vous avez une lettre.\"\n",
@@ -366,7 +366,7 @@ remaining = { int = 2 }
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("line 22222222222222222222: Vous avez 2 lettres.");
+    run_output.assert_stdout_contains("line rthh7ab: Vous avez 2 lettres.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -381,7 +381,7 @@ remaining = { int = 2 }
     assert_eq!(
         trace["events"][0]["line"],
         serde_json::json!({
-            "id": "22222222222222222222",
+            "id": "rthh7ab",
             "source_text": "You have {count} letters.",
             "text": "Vous avez 2 lettres.",
             "speaker": null,
@@ -394,22 +394,22 @@ remaining = { int = 2 }
                 "attempts": [
                     {
                         "locale": "fr-CA",
-                        "context": "22222222222222222222",
-                        "key": "22222222222222222222",
+                        "context": "rthh7ab",
+                        "key": "rthh7ab",
                         "selected_arm": null,
                         "outcome": "missing_plural_forms"
                     },
                     {
                         "locale": "fr",
-                        "context": "22222222222222222222",
-                        "key": "22222222222222222222",
+                        "context": "rthh7ab",
+                        "key": "rthh7ab",
                         "selected_arm": 2,
                         "outcome": "matched"
                     }
                 ],
                 "matched_locale": "fr",
-                "matched_context": "22222222222222222222",
-                "matched_key": "22222222222222222222",
+                "matched_context": "rthh7ab",
+                "matched_key": "rthh7ab",
                 "matched_arm": 2,
                 "source_fallback_arm": null,
                 "outcome": "translated"
@@ -426,10 +426,10 @@ fn plural_trace_records_no_match_and_all_empty_source_fallbacks() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> missing@33333333333333333333 bind=(count:int=$remaining)\n",
+            "> bind=(count:int=$remaining) @bqyvpqq\n",
             "  One missing letter.\n",
             "  | Many missing letters.\n",
-            "> empty@44444444444444444444 bind=(count:int=$remaining)\n",
+            "> bind=(count:int=$remaining) @z0g6c80\n",
             "  One empty letter.\n",
             "  | Many empty letters.\n",
             "-> END\n",
@@ -444,7 +444,7 @@ fn plural_trace_records_no_match_and_all_empty_source_fallbacks() {
             "msgstr \"\"\n",
             "\"Language: fr\\n\"\n",
             "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n",
-            "msgctxt \"44444444444444444444\"\n",
+            "msgctxt \"z0g6c80\"\n",
             "msgid \"One empty letter.\"\n",
             "msgid_plural \"Many empty letters.\"\n",
             "msgstr[0] \"\"\n",
@@ -478,7 +478,7 @@ remaining = { int = 2 }
     let events = trace["events"].as_array().expect("events array");
     let missing = events
         .iter()
-        .find(|event| event["line"]["id"] == "33333333333333333333")
+        .find(|event| event["line"]["id"] == "bqyvpqq")
         .expect("missing-entry line trace");
     assert_eq!(missing["line"]["text"], "Many missing letters.");
     assert_eq!(missing["line"]["plural"]["source_fallback_arm"], 1);
@@ -489,7 +489,7 @@ remaining = { int = 2 }
 
     let empty = events
         .iter()
-        .find(|event| event["line"]["id"] == "44444444444444444444")
+        .find(|event| event["line"]["id"] == "z0g6c80")
         .expect("all-empty line trace");
     assert_eq!(empty["line"]["text"], "Many empty letters.");
     assert_eq!(empty["line"]["plural"]["source_fallback_arm"], 1);

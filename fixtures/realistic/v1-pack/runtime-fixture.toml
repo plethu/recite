@@ -4,7 +4,7 @@ locale = "en-US"
 en-US = ["locales/en-US.po"]
 
 [anchors]
-choice_anchor_line = "11111111111111111111"
+choice_anchor_line = "ffee6p8"
 first_line_block = "arrival_return"
 first_prompt_block = "objects"
 deferred_effect_block = "deferred_anchor"
@@ -18,11 +18,11 @@ deferred_effect_block = "deferred_anchor"
 "trust_at_least(operator, lacuna, 2)" = true
 
 [choices]
-"11111111111111111111" = "21111111111111111111"
-"11111111111111111113" = "21111111111111111114"
-"1111111111111111111a" = "21111111111111111116"
-"11111111111111111120" = "21111111111111111119"
-"11111111111111111122" = "2111111111111111111c"
+"ffee6p8" = "wpgvzx4"
+"t3key0n" = "turn_shutter"
+"relationship_prompt" = "press_manifest"
+"localization_prompt" = "follow_archive"
+"effects_prompt" = "finish_watch"
 
 [effects]
 auto_ack_blocking = true

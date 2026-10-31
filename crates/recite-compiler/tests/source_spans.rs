@@ -11,7 +11,7 @@ fn choice_requirement_source_survives_supported_line_endings_and_unicode()
         for final_ending in ["", ending] {
             let source = [
                 ":: start default",
-                "? ask@11111111111111111111 hint=\"é🦀\" requires=(ready(\"café 🦀\"))",
+                "? hint=\"é🦀\" requires=(ready(\"café 🦀\")) @ffee6p8",
                 "  Ask about the café.",
                 "  -> END",
             ]
@@ -27,7 +27,7 @@ fn choice_requirement_source_survives_supported_line_endings_and_unicode()
 fn choice_requirement_after_a_long_unicode_header_keeps_its_complete_span()
 -> Result<(), Box<dyn std::error::Error>> {
     let source = format!(
-        ":: start default\n? ask@11111111111111111111 hint=\"{}é\" requires=(ready())\n  Ask.\n  -> END",
+        ":: start default\n? hint=\"{}é\" requires=(ready()) @ffee6p8\n  Ask.\n  -> END",
         "x".repeat(100_000),
     );
     assert_requirement_source(&source, "requires=(ready())")

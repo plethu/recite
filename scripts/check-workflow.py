@@ -102,7 +102,7 @@ def check(recite, root):
     command(recite, root, "check-markup", "src", "--schema", schema)
     command(recite, root, "compile", "src", "--schema", schema, "-o", "build/dialogue.recitec")
     command(recite, root, "extract", "src", "--schema", schema, "-o", "dialogue.pot")
-    assert "11111111111111111111" in (root / "dialogue.pot").read_text()
+    assert "ffee6p8" in (root / "dialogue.pot").read_text()
     runtime = ["build/dialogue.recitec", "--block", "arrival", "--fixture", "runtime-fixture.toml"]
     output = command(recite, root, "run", *runtime)
     assert "LACUNA" in output

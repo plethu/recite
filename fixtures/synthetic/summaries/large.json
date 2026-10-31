@@ -20,8 +20,8 @@
   "files": [
     {
       "path": "locales/en-US.po",
-      "bytes": 10197664,
-      "blake3": "51dced25a52be4afc1ba390086d80fea7cc3416609f853cb8afc62ed21194272"
+      "bytes": 9517664,
+      "blake3": "cab70ab5f46b0b7340773d3a9cba956ac1eb288cfb215cb5da73129f9208f85e"
     },
     {
       "path": "recite.project.toml",
@@ -30,8 +30,8 @@
     },
     {
       "path": "runtime-fixture.toml",
-      "bytes": 122022,
-      "blake3": "45f541ad468523feb19992c04bfe17127209d97069ff46256f0bd8fc9ca54e7c"
+      "bytes": 97016,
+      "blake3": "6b3f2b7b4c4ca87ec0e44116f5d614252f2d4e9bd7784e7acd252873f616af31"
     },
     {
       "path": "schema/synthetic.schema.json",
@@ -40,104 +40,104 @@
     },
     {
       "path": "src/shard-000.recite",
-      "bytes": 518378,
-      "blake3": "e6746480f723efe56c2212a3a8425858af9f02e2d9a26f2faacb0107a014e2f8"
+      "bytes": 458378,
+      "blake3": "2049e7ffabc13837974eeadd15709677289669c3e4f06d62a705dee164623875"
     },
     {
       "path": "src/shard-001.recite",
-      "bytes": 517995,
-      "blake3": "d2fcf85dc32b59880d8075893b6b02d9c0852a14d27eb31f46fd5f6b7759622f"
+      "bytes": 457995,
+      "blake3": "fe9aa94e0f5dab02cde063feba1535b97f146423c9dc5f774345c48cf377f43e"
     },
     {
       "path": "src/shard-002.recite",
-      "bytes": 517856,
-      "blake3": "b8228f0cccc3517076508f1a86d002692243a934dd8f6b87ab13b7399de20b7c"
+      "bytes": 457856,
+      "blake3": "7fda72bbe6cd1cbcf2ecc6f1750c5408c68239af4b79f8ffb1701c355ff69e2d"
     },
     {
       "path": "src/shard-003.recite",
-      "bytes": 517774,
-      "blake3": "c977d8007e34f29cd04472effe2ffbc37942b98397c69313f8f339811fcf05e2"
+      "bytes": 457774,
+      "blake3": "ca83f09bece599c2c147f4d68b854f6ee9ef40e6a6ce898e3c6ec8e4726dc3bf"
     },
     {
       "path": "src/shard-004.recite",
-      "bytes": 518129,
-      "blake3": "35a1b437ca037830a738ea043ece73f96ef8eae7a8ba88a731ef95a68560b5e9"
+      "bytes": 458129,
+      "blake3": "5d391627a2ebea7d3db32a3110db353f2b43624cbe14a50df3797538efa61e65"
     },
     {
       "path": "src/shard-005.recite",
-      "bytes": 517962,
-      "blake3": "8a26ce3c338a39a88d94d6dc490e92da8913aaf8d452920a8dcfa97e5afe29b3"
+      "bytes": 457962,
+      "blake3": "ff40bed994815d973cf2b72814c941e8c501e00d437c2047dcfb1bb566be14f7"
     },
     {
       "path": "src/shard-006.recite",
-      "bytes": 517933,
-      "blake3": "4c68278d4a4ad3ba379b8297024ca7647a1350d1e1f8aef65a88738bd68164b6"
+      "bytes": 457933,
+      "blake3": "a8ff1ad7ba11af1e0ebb0c397394860e57e762f4b92da8572f0bc22347a88748"
     },
     {
       "path": "src/shard-007.recite",
-      "bytes": 517713,
-      "blake3": "948377b91c6dbb053b72943d2dd705e670c1520f427e1ee0adae7ab8edcaa5c9"
+      "bytes": 457713,
+      "blake3": "4009ae1255ec100d4aef24ee168f00527544e363de61c590e0fb9a6cc1554b14"
     },
     {
       "path": "src/shard-008.recite",
-      "bytes": 518185,
-      "blake3": "04a8113df88dac884a54ae2995e939b3645eb10905848e82951362f3f59ba81b"
+      "bytes": 458185,
+      "blake3": "5b5910b2a7518f9b41d38e2925bb342c5d6ccd6d9156142d1d47ba09a4c81da8"
     },
     {
       "path": "src/shard-009.recite",
-      "bytes": 517952,
-      "blake3": "dfee5ad83753809c7cab2ec39395118b9c6392410dd2b05f5433c29a788f1cd5"
+      "bytes": 457952,
+      "blake3": "59184626fef53bbd6a705c1ae575f0dca577407f008b21bae4f28072fffa1e6a"
     },
     {
       "path": "src/shard-010.recite",
-      "bytes": 517965,
-      "blake3": "c1176e3b643cf38c8baa5d598472f295f9ba8a7987ee0f84fe68d2142cd1790c"
+      "bytes": 457965,
+      "blake3": "4d32057edd9f1d3843c1ad5ffe64ba529670e25f41a9ee1ca7a0bc1978bab612"
     },
     {
       "path": "src/shard-011.recite",
-      "bytes": 517457,
-      "blake3": "f02cea661a29e817d4b08ac63c286226f98bbb1acb95cac82e4e5220e6fecfd4"
+      "bytes": 457457,
+      "blake3": "8b0a5014f0a975db7c349fcd456575491abaa0627fb3866fa2602c99417fdffc"
     },
     {
       "path": "src/shard-012.recite",
-      "bytes": 518052,
-      "blake3": "75d3c7bfdfe7b434c0403753f506b8d62aaec55e1ff859325780741f3d6905c0"
+      "bytes": 458052,
+      "blake3": "e35bbb1a5288bb0ad3d5ed9dda33488044df4fa22551e1e251ed89cf6c5921cc"
     },
     {
       "path": "src/shard-013.recite",
-      "bytes": 517699,
-      "blake3": "78a3cfad50b376d5d173985c3c251b927ab9c995890f97667b5ad70329d09112"
+      "bytes": 457699,
+      "blake3": "8236f9539c05461816cc479ed181d4f6763991be08ef0037bdd930cbf45f329d"
     },
     {
       "path": "src/shard-014.recite",
-      "bytes": 517970,
-      "blake3": "1db18c83756d2982b8b8a249014aaad30064238fbf32bc6d61eebc158ff9dd39"
+      "bytes": 457970,
+      "blake3": "c43df16c09760eede98d49260f1f22f78f21603b3654283082f97420f70cbdf2"
     },
     {
       "path": "src/shard-015.recite",
-      "bytes": 517893,
-      "blake3": "e46a5f07df07708d87f211242c9bd4f89767286c35ea22027dea51598ce43c74"
+      "bytes": 457893,
+      "blake3": "4278a79c131fbd70f170fba71fe207c6765c16530c0674582dfd313bf4c0ffac"
     },
     {
       "path": "src/shard-016.recite",
-      "bytes": 518107,
-      "blake3": "dce026bd991c1c3fca16248104a0f7b03fad90c5b823c5f0891507af506dd21f"
+      "bytes": 458107,
+      "blake3": "0cd2a1b4eaeda24f3115357174347f092d8ae2659df07134a2fc04877f5a10cf"
     },
     {
       "path": "src/shard-017.recite",
-      "bytes": 517718,
-      "blake3": "3769d61e76f0c6352d101968e7fd6ae2a025556533cc954749357236d1e336dc"
+      "bytes": 457718,
+      "blake3": "452285feaa1ca8c3ddf1111eb2149106cd10fe873862272c45149207c5354ff6"
     },
     {
       "path": "src/shard-018.recite",
-      "bytes": 518312,
-      "blake3": "92084d0547e38fd58dbd8c51aa406735d34017e7b120a149a2aeb0be8312897f"
+      "bytes": 458312,
+      "blake3": "27db74c5e68da2f257ccbda4e78d4877cf1d882d8dc19f102c4ea4005718c3a3"
     },
     {
       "path": "src/shard-019.recite",
-      "bytes": 517694,
-      "blake3": "ad688f9f31f1bd58a8c5228a79676cb1e6823383905d38d96f725693452bd88c"
+      "bytes": 457694,
+      "blake3": "d999d3176cacb3b7acb7e09f39e3d15dbafe1a89d589f708a038581aa1bf5bf8"
     }
   ],
-  "summary_hash": "3dd8630ea045aec4800b745a69f4c1cf40ee8eda683b05064854baa01059e525"
+  "summary_hash": "57e9f40c4dd2fc2d7e492189586d252d90e96c3c291318d6a6cbb943b21eb45a"
 }

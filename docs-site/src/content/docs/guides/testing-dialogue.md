@@ -5,7 +5,7 @@ description: Verify source, host decisions, effects and saved sessions without r
 
 Use a runtime fixture to make the game's answers explicit. In the
 [complete example](/examples/headless-cli/), `runtime-fixture.toml` records boolean and enum
-condition results, selected choice anchors, and automatic blocking-effect acknowledgement. It also
+condition results, selected choice IDs, and automatic blocking-effect acknowledgement. It also
 selects the test PO catalogue.
 
 ```sh
@@ -16,9 +16,9 @@ recite trace build/dialogue.recitec --block arrival --fixture runtime-fixture.to
 recite check-fresh .
 ```
 
-Use choice anchors in fixtures so editing the displayed text does not change the selection. Supply
-every condition and choice needed by the path. A fixture that cannot answer a prompt fails rather
-than inventing a game decision.
+Use choice IDs in fixtures so editing the displayed text does not change the selection. Supply every
+condition and choice needed by the path. A fixture that cannot answer a prompt fails rather than
+inventing a game decision.
 
 Trace records let you assert lines, choices, metadata, effect order and termination. Compare
 structured fields or deterministic JSON, rather than terminal layout. The sample's smoke check runs

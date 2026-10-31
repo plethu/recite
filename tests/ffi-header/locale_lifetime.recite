@@ -1,14 +1,14 @@
 :: start default
-> intro@81000000000000000001
+> @c3tapms
   Hello.
-> letters@81000000000000000002 bind=(count:int=$count)
+> bind=(count:int=$count) @sst7mz2
   One letter.
   | Many letters.
-  ? continue@81000000000000000003
+  ? @continue
     Continue.
     -> after
 :: after
 ! blocking finish()
-> done@81000000000000000004
+> @done
   Done.
 -> END

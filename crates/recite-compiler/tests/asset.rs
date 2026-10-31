@@ -81,11 +81,7 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
             .iter()
             .map(|entry| entry.id.as_str())
             .collect::<Vec<_>>(),
-        [
-            "2119548317bb586e3865",
-            "637b1854a7f3ed42f045",
-            "75bfa2976ec9548f608a"
-        ]
+        ["cm3myr8", "secret_001", "work_001"]
     );
     assert_eq!(
         dialogue
@@ -93,7 +89,7 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
             .iter()
             .map(|entry| entry.id.as_str())
             .collect::<Vec<_>>(),
-        ["b84cc9fa241a33bcdf05"]
+        ["ask_work"]
     );
     assert_eq!(
         dialogue
@@ -136,7 +132,7 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
     ));
 
     let intro = &dialogue.lines[0];
-    assert_eq!(intro.id.as_str(), "637b1854a7f3ed42f045");
+    assert_eq!(intro.id.as_str(), "cm3myr8");
     assert_eq!(intro.speaker.map(|index| index.as_u32()), Some(1));
     assert_eq!(
         metadata_keys_for(dialogue, intro.metadata),
@@ -161,7 +157,7 @@ fn plural_lines_round_trip_both_source_forms_through_wire_and_inspection() {
             "dialogue/plural.recite",
             concat!(
                 ":: start default\n",
-                "> letters@22222222222222222222 bind=(count:int=$remaining)\n",
+                "> bind=(count:int=$remaining) @rthh7ab\n",
                 "  You have one letter.\n",
                 "  | You have {count} letters.\n",
                 "-> END\n",
@@ -211,7 +207,7 @@ fn schema_availability_reasons_compile_into_runtime_asset() {
             "dialogue/start.recite",
             concat!(
                 ":: start default\n",
-                "? ask_news@a94b83f2d8bd65101cc3 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+                "? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @z58rq7p\n",
                 "  What's the news?\n",
                 "  -> END\n",
             ),
@@ -275,7 +271,7 @@ fn compiler_consumes_full_manifest_without_mixing_producer_metadata_into_schema_
     let report = compile_inputs_with_schema(
         [CompileInput::new(
             "dialogue/start.recite",
-            ":: start default\n> intro@637b1854a7f3ed42f045\n  Hello.\n-> END\n",
+            ":: start default\n> @cm3myr8\n  Hello.\n-> END\n",
         )],
         CompileOptions::new(
             CompilerVersion::new("0.0.1").expect("valid compiler version"),
@@ -323,7 +319,7 @@ fn compiler_generated_messagepack_decodes_punctuation_metadata_keys() {
             "dialogue/main.recite",
             concat!(
                 ":: start default\n",
-                "> intro@ddb0434d0a42138a483b ui:portrait=flat\n",
+                "> ui:portrait=flat @intro\n",
                 "  Hello.\n",
                 "-> END\n",
             ),
@@ -351,19 +347,14 @@ fn compilation_order_is_canonical_for_project_inputs() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line@3ddabe33285601e01c18\n",
+            "> @start_line\n",
             "  Start.\n",
             "-> dialogue/next.recite::next\n",
         ),
     );
     let next = CompileInput::new(
         "dialogue/next.recite",
-        concat!(
-            ":: next\n",
-            "> next_line@11111111111111111111\n",
-            "  Next.\n",
-            "-> END\n",
-        ),
+        concat!(":: next\n", "> @ffee6p8\n", "  Next.\n", "-> END\n",),
     );
 
     let forward = compile_inputs([start.clone(), next.clone()], options())
@@ -391,21 +382,11 @@ fn compilation_order_is_canonical_for_project_inputs() {
 fn default_block_index_is_stable_when_default_block_is_not_first() {
     let alpha = CompileInput::new(
         "dialogue/alpha.recite",
-        concat!(
-            ":: alpha\n",
-            "> alpha_line@11111111111111111111\n",
-            "  Alpha.\n",
-            "-> END\n",
-        ),
+        concat!(":: alpha\n", "> @ffee6p8\n", "  Alpha.\n", "-> END\n",),
     );
     let zed = CompileInput::new(
         "dialogue/zed.recite",
-        concat!(
-            ":: zed default\n",
-            "> zed_line@22222222222222222222\n",
-            "  Zed.\n",
-            "-> END\n",
-        ),
+        concat!(":: zed default\n", "> @rthh7ab\n", "  Zed.\n", "-> END\n",),
     );
 
     let output = compile_inputs([zed, alpha], options())
@@ -436,7 +417,7 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
             "dialogue/bad.recite",
             concat!(
                 ":: start default\n",
-                "> line@a543a786de9b562d6229\n",
+                "> @vnh153v\n",
                 "  Text.\n",
                 "    Mixed indent.\n",
             ),
@@ -454,11 +435,7 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
     let validation_failure = compile_inputs(
         [CompileInput::new(
             "dialogue/bad.recite",
-            concat!(
-                ":: start default\n",
-                "? missing_target@11111111111111111111\n",
-                "  Choose.\n",
-            ),
+            concat!(":: start default\n", "? @ffee6p8\n", "  Choose.\n",),
         )],
         options(),
     )
@@ -475,7 +452,7 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
             "dialogue/bad.recite",
             concat!(
                 ":: start default\n",
-                "? choose@8913b182d2fb5b7fe6ed echo=line(4b1b2483a1e83884c933)\n",
+                "? echo=line(4b1b2483a1e83884c933) @choose\n",
                 "  Choose.\n",
                 "  -> END\n",
             ),
@@ -493,11 +470,7 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
     let non_finite_metadata = compile_inputs(
         [CompileInput::new(
             "dialogue/bad.recite",
-            concat!(
-                ":: start default\n",
-                "> line@11111111111111111111 score=NaN\n",
-                "  Text.\n",
-            ),
+            concat!(":: start default\n", "> score=NaN @ffee6p8\n", "  Text.\n",),
         )],
         options(),
     )

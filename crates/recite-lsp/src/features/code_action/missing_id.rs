@@ -2,6 +2,7 @@ use lsp_types::Range;
 use recite_compiler::authoring::{
     AuthoringEditError, AuthoringEditPlan, AuthoringQuery, SourceRange,
 };
+use recite_core::StableIdGenerator;
 
 use super::CodeActionDocument;
 use crate::edit_projection::{EditDocument, project_plan};
@@ -31,7 +32,11 @@ fn plan_for_range(
         range.end,
     )?;
     let source_range = SourceRange::new(start, end);
-    match snapshot.plan_insert_missing_ids_in_range(document.source.key, source_range) {
+    match snapshot.plan_insert_missing_ids_in_range(
+        document.source.key,
+        source_range,
+        &mut StableIdGenerator::from_system(),
+    ) {
         Ok(plan) => Some(plan),
         Err(AuthoringEditError::NoEdits | AuthoringEditError::NoSymbol { .. }) => None,
         Err(_) => None,
@@ -44,7 +49,10 @@ pub(super) fn fix_all(
     documents: &[EditDocument<'_>],
 ) -> Option<lsp_types::WorkspaceEdit> {
     let plan = snapshot
-        .plan_insert_missing_ids_for_document(document.source.key)
+        .plan_insert_missing_ids_for_document(
+            document.source.key,
+            &mut StableIdGenerator::from_system(),
+        )
         .ok()?;
     project_plan(&plan, snapshot, documents)
 }

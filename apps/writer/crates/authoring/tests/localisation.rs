@@ -5,12 +5,12 @@ use recite_writer_model::{Document, ProjectContext};
 #[test]
 fn extraction_covers_project_with_current_overlay_and_context()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> question@11111111111111111111\n  Unsaved question.\n-> a.recite::answer\n";
+    let source = ":: start default\n> @ffee6p8\n  Unsaved question.\n-> a.recite::answer\n";
     let context = ProjectContext {
         documents: vec![
             SavedDocument::new(
                 DocumentKey::new("a.recite")?,
-                ":: answer\n> response@22222222222222222222\n  From another file.\n-> END\n",
+                ":: answer\n> @rthh7ab\n  From another file.\n-> END\n",
             ),
             SavedDocument::new(
                 DocumentKey::new("z.recite")?,
@@ -28,7 +28,7 @@ fn extraction_covers_project_with_current_overlay_and_context()
         catalogue
             .entries
             .iter()
-            .any(|e| e.source_text == "Unsaved question." && e.context == "11111111111111111111")
+            .any(|e| e.source_text == "Unsaved question." && e.context == "ffee6p8")
     );
     assert!(
         catalogue
@@ -44,8 +44,7 @@ fn extraction_covers_project_with_current_overlay_and_context()
 #[test]
 fn extraction_reports_source_errors_instead_of_partial_catalogues()
 -> Result<(), Box<dyn std::error::Error>> {
-    let document =
-        Document::new(":: start default\n> line@11111111111111111111\n  Hello.\n-> missing\n")?;
+    let document = Document::new(":: start default\n> @ffee6p8\n  Hello.\n-> missing\n")?;
     let report = document.extract_catalogue();
     assert!(report.catalog.is_none());
     assert!(!report.diagnostics.is_empty());
@@ -64,7 +63,7 @@ fn example_schema_text_is_included() -> Result<(), Box<dyn std::error::Error>> {
     .ok_or("schema")?;
     let document = Document::in_project(
         DocumentKey::new("scene.recite")?,
-        ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
         ProjectContext {
             documents: vec![],
             schema: Some(schema),

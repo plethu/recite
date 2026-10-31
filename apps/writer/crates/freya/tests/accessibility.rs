@@ -276,9 +276,7 @@ fn source_can_be_replaced_applied_and_read_without_a_pointer() {
             Modifiers::CONTROL
         },
     );
-    test.write_text(
-        ":: start\n> greeting@11111111111111111111\n  Keyboard-only writing.\n-> END\n",
-    );
+    test.write_text(":: start\n> @ffee6p8\n  Keyboard-only writing.\n-> END\n");
     test.poll_n(Duration::from_millis(16), 4);
     command(&mut test, "Apply");
     command(&mut test, "Script");

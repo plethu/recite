@@ -41,7 +41,7 @@ The CLI should support a fixture format for headless runs:
 "trust_gte(hazel, rhea, 3)" = true
 
 [choices]
-small_talk_start = "7f3a9c2e4b6d8f019a2b"
+small_talk_start = "hazel_rhea.small_talk"
 
 [effects]
 auto_ack_blocking = true

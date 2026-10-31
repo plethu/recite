@@ -4,29 +4,29 @@ use freya_testing::prelude::*;
 
 const SOURCE: &str = "\
 :: start default
-> ru@11111111111111111101 speaker=mara
+> speaker=mara @ru
   Если ты насчёт передатчика — возьми номерок.
-> el@11111111111111111102 speaker=mara
+> speaker=mara @el
   Αν ήρθες για τον πομπό, πάρε αριθμό.
-> ja@11111111111111111103 speaker=mara
+> speaker=mara @ja
   送信機のことなら、番号札を取ってください。
-> zh@11111111111111111104 speaker=mara
+> speaker=mara @zh
   如果你是为了发射机来的，请先取号。
-> ko@11111111111111111105 speaker=mara
+> speaker=mara @ko
   송신기 때문에 왔다면 번호표를 뽑으세요.
-> ar@11111111111111111106 speaker=mara
+> speaker=mara @ar
   إذا جئت بخصوص جهاز الإرسال، فخذ رقماً.
-> he@11111111111111111107 speaker=mara
+> speaker=mara @he
   אם באת בגלל המשדר, קח מספר.
-> hi@11111111111111111108 speaker=mara
+> speaker=mara @hi
   अगर आप ट्रांसमीटर के बारे में आए हैं, तो नंबर ले लीजिए।
-> th@11111111111111111109 speaker=mara
+> speaker=mara @th
   ถ้าคุณมาเรื่องเครื่องส่งสัญญาณ กรุณารับบัตรคิว
-> mix@11111111111111111110 speaker=mara
+> speaker=mara @mix
   Mara says «привет», 你好, مرحبا and שלום at once.
 -> next
 :: next
-> end@11111111111111111111 speaker=mara
+> speaker=mara @ffee6p8
   Конец. 終わり。 النهاية.
 ";
 

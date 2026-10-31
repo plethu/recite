@@ -14,7 +14,7 @@ use recite_runtime::{
 fn distinct_plural_asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
-        "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining) bind=(name:string=$name)\n",
+        "> bind=(count:int=$remaining) bind=(name:string=$name) @ycxgk0k\n",
         "  {name} has one letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",
@@ -117,8 +117,8 @@ impl LocaleProvider for TranslatedPluralProvider {
             }),
             selected_arm: Some(usize::from(count != 1)),
             matched_locale: Some("fr".to_owned()),
-            matched_context: Some("8843fd6f53f020a12b31".to_owned()),
-            matched_key: Some("8843fd6f53f020a12b31".to_owned()),
+            matched_context: Some("ycxgk0k".to_owned()),
+            matched_key: Some("ycxgk0k".to_owned()),
             attempts: Vec::new(),
         })
     }

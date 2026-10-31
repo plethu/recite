@@ -60,7 +60,7 @@ fn fixture() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     std::fs::write(dir.path().join("schema.json"), source.export_json())?;
     std::fs::write(
         dir.path().join("a.recite"),
-        ":: start default speaker=mara\n> line@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default speaker=mara\n> @ffee6p8\n  Hello.\n-> END\n",
     )?;
     std::fs::write(
         dir.path().join("b.recite"),

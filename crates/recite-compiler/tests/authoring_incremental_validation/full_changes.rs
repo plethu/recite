@@ -2,13 +2,13 @@ use super::*;
 
 #[test]
 fn full_replacements_and_deleted_keys_preserve_dependency_diagnostics() {
-    let a = ":: a default\n> a@11111111111111111111\n  A.\n-> END\n";
-    let b = ":: b\n> b@22222222222222222222\n  B.\n-> END\n";
-    let c = ":: c\n> c@11111111111111111111\n  C.\n-> END\n";
-    let d = ":: d\n> d@22222222222222222222\n  D.\n-> END\n";
-    let changed_a = a.replace("11111111111111111111", "55555555555555555555");
-    let changed_b = b.replace("22222222222222222222", "44444444444444444444");
-    let changed_d = d.replace("22222222222222222222", "44444444444444444444");
+    let a = ":: a default\n> @ffee6p8\n  A.\n-> END\n";
+    let b = ":: b\n> @rthh7ab\n  B.\n-> END\n";
+    let c = ":: c\n> @ffee6p8\n  C.\n-> END\n";
+    let d = ":: d\n> @rthh7ab\n  D.\n-> END\n";
+    let changed_a = a.replace("ffee6p8", "yes");
+    let changed_b = b.replace("rthh7ab", "z0g6c80");
+    let changed_d = d.replace("rthh7ab", "z0g6c80");
     let mut kernel = AuthoringKernel::new();
     for documents in [
         vec![("a.recite", a), ("b.recite", b), ("c.recite", c)],

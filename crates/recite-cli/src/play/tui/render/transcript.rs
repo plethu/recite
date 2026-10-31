@@ -46,10 +46,7 @@ fn render_transcript_entry<'a>(
         TuiTranscriptKind::Condition | TuiTranscriptKind::Choice | TuiTranscriptKind::Ack => {
             if let Some(id) = entry.id.as_deref() {
                 spans.push(Span::raw(" "));
-                spans.push(Span::styled(
-                    super::prompt::short_choice_id(id),
-                    palette.muted(),
-                ));
+                spans.push(Span::styled(id.to_owned(), palette.muted()));
             }
             if !entry.text.is_empty() {
                 spans.push(Span::raw(" -> "));
@@ -60,10 +57,7 @@ fn render_transcript_entry<'a>(
         TuiTranscriptKind::Effect | TuiTranscriptKind::Deferred => {
             if let Some(id) = entry.id.as_deref() {
                 spans.push(Span::raw(" "));
-                spans.push(Span::styled(
-                    super::prompt::short_choice_id(id),
-                    palette.muted(),
-                ));
+                spans.push(Span::styled(id.to_owned(), palette.muted()));
             }
             if !entry.text.is_empty() {
                 spans.push(Span::raw(" "));
@@ -81,10 +75,7 @@ fn render_transcript_entry<'a>(
         TuiTranscriptKind::Line | TuiTranscriptKind::Prompt => {
             if let Some(id) = entry.id.as_deref() {
                 spans.push(Span::raw(" "));
-                spans.push(Span::styled(
-                    super::prompt::short_choice_id(id),
-                    palette.muted(),
-                ));
+                spans.push(Span::styled(id.to_owned(), palette.muted()));
             }
             let mut lines = vec![Line::from(spans)];
             lines.extend(wrap_continuation(entry.text.as_str(), width, 2));
@@ -190,10 +181,7 @@ pub(super) fn prompt_header_line<'a>(
     let mut spans = vec![transcript_label_span(kind, messages, palette)];
     if let Some(id) = id {
         spans.push(Span::raw(" "));
-        spans.push(Span::styled(
-            super::prompt::short_choice_id(id),
-            palette.muted(),
-        ));
+        spans.push(Span::styled(id.to_owned(), palette.muted()));
     }
     Line::from(spans)
 }

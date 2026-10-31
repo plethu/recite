@@ -273,8 +273,7 @@ fn project_rename_reviews_references_and_undoes_every_file_together()
     drop(files);
     let first = dir.path().join("scene.recite");
     let second = dir.path().join("other.recite");
-    let before =
-        ":: start default\n> line@11111111111111111111\n  Hello.\n-> old\n\n:: old\n-> END\n";
+    let before = ":: start default\n> @ffee6p8\n  Hello.\n-> old\n\n:: old\n-> END\n";
     let reference = ":: elsewhere\n-> scene.recite::old\n";
     fs::write(&first, before)?;
     fs::write(&second, reference)?;
@@ -294,12 +293,7 @@ fn project_rename_reviews_references_and_undoes_every_file_together()
     );
     files.apply_rename(&mut model)?;
     assert!(model.document().source().contains(":: new"));
-    assert!(
-        model
-            .document()
-            .source()
-            .contains("line@11111111111111111111")
-    );
+    assert!(model.document().source().contains("@ffee6p8"));
     assert_eq!(fs::read_to_string(&first)?, before);
     files.switch(&mut model, &second, None, |_| Ok(()))?;
     assert!(model.document().source().contains("scene.recite::new"));

@@ -29,11 +29,11 @@ fn legacy(facts: &[&ProjectFacts], complete: bool, stable: bool) -> Vec<Diagnost
 fn borrowed_facts_preserve_complete_ordered_diagnostics_and_related_presentations() {
     let first = facts(
         "z.recite",
-        ":: same default\n> line@11111111111111111111\n  First.\n? reply@22222222222222222222 echo=line(33333333333333333333)\n  Reply.\n  -> missing\n:: same default\n-> END\n",
+        ":: same default\n> @ffee6p8\n  First.\n? echo=line(bqyvpqq) @rthh7ab\n  Reply.\n  -> missing\n:: same default\n-> END\n",
     );
     let second = facts(
         "a.recite",
-        ":: same default\n? reply@11111111111111111111 echo=line(33333333333333333333)\n  Reply.\n  -> missing\n> line@33333333333333333333\n  Later.\n-> END\n",
+        ":: same default\n? echo=line(bqyvpqq) @ffee6p8\n  Reply.\n  -> missing\n> @bqyvpqq\n  Later.\n-> END\n",
     );
     let mut unfrozen = second.clone();
     let passages = std::sync::Arc::make_mut(&mut unfrozen.passages);

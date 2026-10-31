@@ -11,17 +11,17 @@ fn immediate_effects_emit_in_reached_source_order_and_traversal_continues() {
             "  ! immediate trusted_sfx()\n",
             ":else\n",
             "  ! immediate wary_sfx()\n",
-            "> prompt@8a32954b25c59aba6d2b\n",
+            "> @prompt\n",
             "  Choose.\n",
-            "  ? work@0d22b65183c6720f5f76\n",
+            "  ? @work\n",
             "    Work.\n",
             "    -> work\n",
-            "  ? leave@eed3dece07494ef59413\n",
+            "  ? @leave\n",
             "    Leave.\n",
             "    -> leave\n",
             ":: work\n",
             "! immediate work_sfx()\n",
-            "> done@47ec1949e7254b1015dd\n",
+            "> @done\n",
             "  Done.\n",
             "-> END\n",
             ":: leave\n",
@@ -51,7 +51,7 @@ fn immediate_effects_emit_in_reached_source_order_and_traversal_continues() {
         choose_with_context(
             &asset,
             &mut session,
-            ChoiceId::new("0d22b65183c6720f5f76").expect("valid choice ID"),
+            ChoiceId::new("work").expect("valid choice ID"),
             &context,
         ),
         "work_sfx",
@@ -59,7 +59,7 @@ fn immediate_effects_emit_in_reached_source_order_and_traversal_continues() {
     );
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "47ec1949e7254b1015dd",
+        "done",
         "Done.",
     );
     assert_end_effects(next_with_context(&asset, &mut session, &context), []);

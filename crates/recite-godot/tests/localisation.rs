@@ -13,19 +13,19 @@ fn localised_asset() -> recite_godot::ReciteDialogueAsset {
         "dialogue/localisation.recitec",
         concat!(
             ":: start default\n",
-            "> greeting@73000000000000000001 bind=(name:string=$name)\n",
+            "> bind=(name:string=$name) @greeting\n",
             "  Hello {name}.\n",
-            "> letters@73000000000000000002 bind=(count:int=$count)\n",
+            "> bind=(count:int=$count) @letters\n",
             "  You have one letter.\n",
             "  | You have {count} letters.\n",
-            "> prompt@73000000000000000003\n",
+            "> @prompt\n",
             "  Pick one.\n",
-            "  ? choose@73000000000000000004\n",
+            "  ? @choose\n",
             "    Choose this.\n",
             "    -> after\n",
             ":: after\n",
             "! blocking finish()\n",
-            "> after@73000000000000000005\n",
+            "> @after\n",
             "  Finished.\n",
             "-> END\n",
         ),
@@ -42,16 +42,11 @@ fn values() -> InterpolationValues {
 fn catalog() -> ReciteDialogueCatalog {
     let mut catalog = ReciteDialogueCatalog::new();
     must_ok_unit(catalog.set_plural_forms("fr", "nplurals=2; plural=(n != 1);"));
-    must_ok_unit(catalog.insert(
-        "fr",
-        "73000000000000000001",
-        "Hello {name}.",
-        "Bonjour {name}.",
-    ));
+    must_ok_unit(catalog.insert("fr", "greeting", "Hello {name}.", "Bonjour {name}."));
     must_ok_unit(catalog.insert_for_domain(
         "fr",
         TextDomain::Choice,
-        "73000000000000000004",
+        "choose",
         "Choose this.",
         "Choisir ceci.",
         None,
@@ -59,7 +54,7 @@ fn catalog() -> ReciteDialogueCatalog {
     must_ok_unit(catalog.insert_for_domain(
         "fr",
         TextDomain::Line,
-        "73000000000000000001",
+        "greeting",
         "Hello {name}.",
         "Bonjour formel {name}.",
         Some("formal"),
@@ -67,14 +62,14 @@ fn catalog() -> ReciteDialogueCatalog {
     must_ok_unit(catalog.insert_for_domain(
         "fr",
         TextDomain::Choice,
-        "73000000000000000004",
+        "choose",
         "Choose this.",
         "Choisir ceci formel.",
         Some("formal"),
     ));
     must_ok_unit(catalog.insert_plural(
         "fr",
-        "73000000000000000002",
+        "letters",
         "You have one letter.",
         "You have {count} letters.",
         vec![
@@ -86,7 +81,7 @@ fn catalog() -> ReciteDialogueCatalog {
     must_ok_unit(catalog.insert_for_domain(
         "fr",
         TextDomain::Line,
-        "73000000000000000005",
+        "after",
         "Finished.",
         "Terminé.",
         None,
@@ -103,8 +98,8 @@ fn catalog_translates_line_plural_choice_and_restore() {
 
     let outputs = must_ok(driver.start(&asset, None, Some("fr-CA")));
     assert_eq!(output_kinds(&outputs), ["line", "line", "prompt"]);
-    assert_line(&outputs[0], "73000000000000000001", "Bonjour Ada.");
-    assert_line(&outputs[1], "73000000000000000002", "Vous avez 2 lettres.");
+    assert_line(&outputs[0], "greeting", "Bonjour Ada.");
+    assert_line(&outputs[1], "letters", "Vous avez 2 lettres.");
     let plural = match &outputs[1] {
         ReciteOutput::Line(line) => match line.plural.as_ref() {
             Some(plural) => plural,
@@ -136,12 +131,12 @@ fn catalog_translates_line_plural_choice_and_restore() {
     restored.set_interpolation_values(values());
     restored.set_locale_catalog(catalog());
     assert!(must_ok(restored.restore(&asset, &snapshot)).is_empty());
-    let outputs = must_ok(restored.select_choice("73000000000000000004"));
+    let outputs = must_ok(restored.select_choice("choose"));
     assert_eq!(output_kinds(&outputs), ["effect"]);
     let effect_id = assert_effect(&outputs[0], "finish", "blocking");
     let outputs = must_ok(restored.acknowledge_effect(&effect_id, true, None));
     assert_eq!(output_kinds(&outputs), ["line", "end"]);
-    assert_line(&outputs[0], "73000000000000000005", "Terminé.");
+    assert_line(&outputs[0], "after", "Terminé.");
 }
 
 #[test]
@@ -152,8 +147,8 @@ fn missing_catalog_entries_fall_back_to_authored_source() {
     driver.set_locale_catalog(ReciteDialogueCatalog::new());
 
     let outputs = must_ok(driver.start(&asset, None, Some("fr-CA")));
-    assert_line(&outputs[0], "73000000000000000001", "Hello Ada.");
-    assert_line(&outputs[1], "73000000000000000002", "You have 2 letters.");
+    assert_line(&outputs[0], "greeting", "Hello Ada.");
+    assert_line(&outputs[1], "letters", "You have 2 letters.");
 }
 
 #[test]
@@ -164,7 +159,7 @@ fn variant_is_context_first_and_re_supplied_on_restore() {
     driver.set_locale_catalog(catalog());
 
     let outputs = must_ok(driver.start_with_variant(&asset, None, Some("fr-CA"), Some("formal")));
-    assert_line(&outputs[0], "73000000000000000001", "Bonjour formel Ada.");
+    assert_line(&outputs[0], "greeting", "Bonjour formel Ada.");
     let ReciteOutput::Prompt { choices, .. } = &outputs[2] else {
         panic!("expected prompt output");
     };

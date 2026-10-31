@@ -1,7 +1,7 @@
 use super::{AuthoringEditError, AuthoringEditPlan};
 use crate::authoring::CancellationToken;
 use crate::authoring::{AuthoringSnapshot, SourceRange};
-use recite_core::{DocumentKey, SourcePosition};
+use recite_core::{DocumentKey, SourcePosition, StableIdGenerator};
 /// Synchronous edit planning against a completed snapshot.
 pub fn plan_rename_block(
     snapshot: &AuthoringSnapshot,
@@ -16,39 +16,43 @@ pub fn plan_rename_block(
 /// Synchronous edit planning against a completed snapshot.
 pub fn plan_insert_missing_ids(
     snapshot: &AuthoringSnapshot,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot
         .query(&CancellationToken::new())
-        .plan_insert_missing_ids()
+        .plan_insert_missing_ids(ids)
 }
 /// Synchronous edit planning against a completed snapshot.
 pub fn plan_insert_missing_id(
     snapshot: &AuthoringSnapshot,
     key: &recite_core::DocumentKey,
     position: SourcePosition,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot
         .query(&CancellationToken::new())
-        .plan_insert_missing_id(key, position)
+        .plan_insert_missing_id(key, position, ids)
 }
 /// Synchronous edit planning against a completed snapshot.
 pub fn plan_insert_missing_ids_for_document(
     snapshot: &AuthoringSnapshot,
     key: &recite_core::DocumentKey,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot
         .query(&CancellationToken::new())
-        .plan_insert_missing_ids_for_document(key)
+        .plan_insert_missing_ids_for_document(key, ids)
 }
 /// Synchronous edit planning against a completed snapshot.
 pub fn plan_insert_missing_ids_in_range(
     snapshot: &AuthoringSnapshot,
     key: &recite_core::DocumentKey,
     range: SourceRange,
+    ids: &mut StableIdGenerator,
 ) -> Result<AuthoringEditPlan, AuthoringEditError> {
     snapshot
         .query(&CancellationToken::new())
-        .plan_insert_missing_ids_in_range(key, range)
+        .plan_insert_missing_ids_in_range(key, range, ids)
 }
 /// Synchronous edit planning against a completed snapshot.
 pub fn plan_create_block_stub(
@@ -79,28 +83,34 @@ impl AuthoringSnapshot {
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
         plan_rename_block(self, key, position, new_name)
     }
-    pub fn plan_insert_missing_ids(&self) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_ids(self)
+    pub fn plan_insert_missing_ids(
+        &self,
+        ids: &mut StableIdGenerator,
+    ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+        plan_insert_missing_ids(self, ids)
     }
     pub fn plan_insert_missing_id(
         &self,
         key: &recite_core::DocumentKey,
         position: SourcePosition,
+        ids: &mut StableIdGenerator,
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_id(self, key, position)
+        plan_insert_missing_id(self, key, position, ids)
     }
     pub fn plan_insert_missing_ids_for_document(
         &self,
         key: &recite_core::DocumentKey,
+        ids: &mut StableIdGenerator,
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_ids_for_document(self, key)
+        plan_insert_missing_ids_for_document(self, key, ids)
     }
     pub fn plan_insert_missing_ids_in_range(
         &self,
         key: &recite_core::DocumentKey,
         range: SourceRange,
+        ids: &mut StableIdGenerator,
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
-        plan_insert_missing_ids_in_range(self, key, range)
+        plan_insert_missing_ids_in_range(self, key, range, ids)
     }
     pub fn plan_create_block_stub(
         &self,

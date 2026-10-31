@@ -6,18 +6,18 @@ use support::*;
 fn interpolation_source() -> &'static str {
     concat!(
         ":: start default\n",
-        "> greeting@91000000000000000001 bind=(name:string=$name) bind=(ready:bool=$ready)\n",
+        "> bind=(name:string=$name) bind=(ready:bool=$ready) @t1jmfck\n",
         "  Hello {name}; ready={ready}.\n",
-        "> letters@91000000000000000002 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @q2fjxbx\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
-        "> prompt@91000000000000000003 bind=(name:string=$name)\n",
+        "> bind=(name:string=$name) @prompt\n",
         "  Pick for {name}.\n",
-        "  ? choose@91000000000000000004 bind=(name:string=$name) bind=(ready:bool=$ready)\n",
+        "  ? bind=(name:string=$name) bind=(ready:bool=$ready) @choose\n",
         "    Choose {name} ({ready}).\n",
         "    -> after\n",
         ":: after\n",
-        "> remaining@91000000000000000005 bind=(remaining:int=$remaining)\n",
+        "> bind=(remaining:int=$remaining) @remaining\n",
         "  Remaining: {remaining}.\n",
         "-> END\n",
     )

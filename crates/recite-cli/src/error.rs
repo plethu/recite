@@ -4,6 +4,7 @@ use recite_core::compiled::CompiledAssetDecodeError;
 use std::io;
 use std::path::PathBuf;
 
+mod conversions;
 mod user_message;
 
 #[derive(Debug)]
@@ -92,6 +93,10 @@ pub(crate) enum CliError {
         prompt_keys: Vec<String>,
     },
     NoInputs,
+    StableIdBaseline {
+        reference: String,
+        detail: String,
+    },
     OutputOverwritesInput {
         output: PathBuf,
         input: PathBuf,
@@ -299,6 +304,10 @@ impl std::fmt::Display for CliError {
                 prompt_keys.join("|")
             ),
             Self::NoInputs => formatter.write_str("no .recite inputs found"),
+            Self::StableIdBaseline { reference, detail } => write!(
+                formatter,
+                "cannot read stable IDs at `{reference}`: {detail}"
+            ),
             Self::OutputOverwritesInput { output, input } => write!(
                 formatter,
                 "refusing to overwrite input {} with output {}",
@@ -355,45 +364,3 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {}
-
-impl From<io::Error> for CliError {
-    fn from(error: io::Error) -> Self {
-        Self::Io(error)
-    }
-}
-
-impl From<recite_core::CoreValueError> for CliError {
-    fn from(error: recite_core::CoreValueError) -> Self {
-        Self::Core(error)
-    }
-}
-
-impl From<recite_core::compiled::CompiledValueError> for CliError {
-    fn from(error: recite_core::compiled::CompiledValueError) -> Self {
-        Self::CompiledValue(error)
-    }
-}
-
-impl From<recite_compiler::compile::CompileError> for CliError {
-    fn from(error: recite_compiler::compile::CompileError) -> Self {
-        Self::Compile(error)
-    }
-}
-
-impl From<recite_runtime::DialogueError> for CliError {
-    fn from(error: recite_runtime::DialogueError) -> Self {
-        Self::Runtime(error)
-    }
-}
-
-impl From<recite_benchmarks::BenchmarkError> for CliError {
-    fn from(error: recite_benchmarks::BenchmarkError) -> Self {
-        Self::Benchmark(error)
-    }
-}
-
-impl From<recite_config::ConfigError> for CliError {
-    fn from(source: recite_config::ConfigError) -> Self {
-        Self::UserConfig { source }
-    }
-}

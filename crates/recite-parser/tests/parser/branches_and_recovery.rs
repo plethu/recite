@@ -5,7 +5,7 @@ fn condition_precedence_and_grouping_are_lowered() {
     let source = concat!(
         ":: tavern_arrival\n",
         ":if knows_a() or knows_b() and not (blocked())\n",
-        "  > gated_line@76f3e924707c7391ada3\n",
+        "  > @qkmqjwx\n",
         "    Hi.\n",
     );
 
@@ -35,12 +35,12 @@ fn condition_parser_rejects_dangling_and_trailing_tokens() {
     let source = concat!(
         ":: tavern_arrival\n",
         ":if knows_secret(player) trailing\n",
-        "  > trailing_tokens@f7bdc23ba7a5cb2b29f6\n",
+        "  > @trailing_tokens\n",
         "    Hi.\n",
         ":if knows_a() and\n",
-        "  > dangling_operator@2bf645e52fce99236c14\n",
+        "  > @dangling_operator\n",
         "    Hi.\n",
-        "? ask@9ef6f5db414aeedfe60e if knows_secret(player) sfx=door\n",
+        "? if knows_secret(player) sfx=door @ask\n",
         "  Ask.\n",
     );
 
@@ -56,13 +56,13 @@ fn condition_parser_rejects_dangling_and_trailing_tokens() {
             .iter()
             .map(|diagnostic| (diagnostic.span.start.line(), diagnostic.span.start.column()))
             .collect::<Vec<_>>(),
-        [(2, 26), (5, 18), (8, 28)]
+        [(2, 26), (5, 18), (8, 3)]
     );
 
     let choice = choice_statement(single_block(&lowered), 0);
     assert_eq!(
         choice.id.as_ref().map(recite_core::ChoiceId::as_str),
-        Some("9ef6f5db414aeedfe60e")
+        Some("ask")
     );
     assert!(choice.availability_requirement.is_none());
     assert!(choice.metadata.is_empty());
@@ -91,11 +91,11 @@ fn else_only_attaches_to_immediately_preceding_if() {
     let source = concat!(
         ":: tavern_arrival\n",
         ":if knows_secret(player)\n",
-        "  > gated_line@b6b26d29e5133c89c4d4\n",
+        "  > @ywrehht\n",
         "    Hi.\n",
         "# comment breaks the if/else adjacency\n",
         ":else\n",
-        "  > fallback_line@5cf66b61dd11e6cdecad\n",
+        "  > @fallback_line\n",
         "    Hi.\n",
     );
 
@@ -120,12 +120,12 @@ fn nested_if_else_and_match_bodies_keep_their_owners() {
         ":: tavern_arrival\n",
         ":if outer()\n",
         "  :if inner()\n",
-        "    > inner_true@a72fbfd57f1d43d0ea9a\n",
+        "    > @inner_true\n",
         "      Inner true.\n",
         "  :else\n",
         "    :match stage(thread)\n",
         "      :case ready\n",
-        "        > ready_line@440e60c8a3277595b5ee\n",
+        "        > @ready_line\n",
         "          Ready.\n",
     );
 
@@ -158,7 +158,7 @@ fn empty_if_and_match_bodies_lower_without_panics() {
         ":: tavern_arrival\n",
         ":if knows_secret(player)\n",
         ":match thread_stage(thread)\n",
-        "> after_empty_bodies@1922554c3f1ad69fdfd2\n",
+        "> @after_empty_bodies\n",
         "  Carry on.\n",
     );
 
@@ -184,7 +184,7 @@ fn case_extra_token_diagnostic_points_at_extra_field() {
         ":: tavern_arrival\n",
         ":match thread_stage(thread)\n",
         "  :case tired extra\n",
-        "    > tired_line@49f1bd4973f3105dba9f\n",
+        "    > @tired_line\n",
         "      Tired.\n",
     );
 
@@ -200,23 +200,23 @@ fn case_extra_token_diagnostic_points_at_extra_field() {
 fn malformed_headers_conditions_and_cases_report_diagnostics() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> line@82cc7e460b11d88c0c11 bare key=\n",
+        "> bare key= @sw0sfps\n",
         "  Hello.\n",
-        "? if@cd8afc035fbf1f835d87 knows_secret(player)\n",
+        "? knows_secret(player) @if\n",
         "  Choice.\n",
         "->\n",
         "! delayed play()\n",
         ":if knows_secret(\n",
-        "  > gated@701cf2ef48bb76b67e9a\n",
+        "  > @gated\n",
         "    Hi.\n",
         ":else trailing\n",
-        "  > fallback@7dec7fac028a4505641a\n",
+        "  > @fallback\n",
         "    Hi.\n",
         ":case tired\n",
-        "  > orphan@a5937c770583e84455ea\n",
+        "  > @orphan\n",
         "    No.\n",
         ":match thread_stage(thread)\n",
-        "  > not_case@821f6c84f87f021a712e\n",
+        "  > @not_case\n",
         "    No.\n",
     );
 
@@ -243,9 +243,9 @@ fn conditional_body_is_not_flattened_into_block_statements() {
     let source = concat!(
         ":: tavern_arrival\n",
         ":if knows_secret(player)\n",
-        "  > gated_line@0585f40c4c005b954076\n",
+        "  > @nyt5x79\n",
         "    You know the password.\n",
-        "> ordinary_line@213e9ffd21d449db603c\n",
+        "> @ordinary_line\n",
         "  Welcome.\n",
     );
 
@@ -261,13 +261,13 @@ fn conditional_body_is_not_flattened_into_block_statements() {
     };
     assert_eq!(
         gated_line.id.as_ref().map(recite_core::LineId::as_str),
-        Some("0585f40c4c005b954076")
+        Some("nyt5x79")
     );
 
     let line = line_statement(single_block(&lowered), 1);
     assert_eq!(
         line.id.as_ref().map(recite_core::LineId::as_str),
-        Some("213e9ffd21d449db603c")
+        Some("ordinary_line")
     );
     assert_eq!(line.source_text.text, "Welcome.");
 }
@@ -276,9 +276,9 @@ fn conditional_body_is_not_flattened_into_block_statements() {
 fn nested_choice_body_is_not_appended_to_parent_prose() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> prompt_line@5588327e98b7326b9c71\n",
+        "> @prompt_line\n",
         "  What do you need?\n",
-        "  ? ask_road@ff45a305ae9bb621ed7a\n",
+        "  ? @va3tq8e\n",
         "    Ask about the road.\n",
         "  Still parent prose.\n",
     );
@@ -303,12 +303,12 @@ fn lowering_summary_stays_stable_for_supported_and_recovered_statements() {
     let source = concat!(
         ":: tavern_arrival default\n",
         "# scene opener\n",
-        "> ta_001@be22b6be80ad826f28ab speaker=innkeeper portrait=neutral repeat=true\n",
+        "> speaker=innkeeper portrait=neutral repeat=true @ta_001\n",
         "  Welcome.\n",
-        "  ? ask_road@88a9cea14cb701044f23\n",
+        "  ? @j6h2n18\n",
         "    Ask about the road.\n",
         "  Still parent prose.\n",
-        "? unsupported_choice@6bc0f66cce756ee22259\n",
+        "? @unsupported_choice\n",
         "  Ask about work.\n",
     );
 

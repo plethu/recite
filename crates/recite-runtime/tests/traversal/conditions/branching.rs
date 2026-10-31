@@ -6,15 +6,15 @@ fn true_condition_enters_then_branch_and_resumes_parent_range() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> before@a90e86884f3aa3bf3ab7\n",
+            "> @before\n",
             "  Before.\n",
             ":if trusts(player, \"hazel rhea\", 3, 0.75, true)\n",
-            "  > secret@4dff358182d02d9090e3\n",
+            "  > @r2res3q\n",
             "    Secret.\n",
             ":else\n",
-            "  > fallback@4cc0a18fca48337278d1\n",
+            "  > @bfm3at4\n",
             "    Fallback.\n",
-            "> after@ebb571c54e9fa639e36f\n",
+            "> @g201j3j\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -24,17 +24,17 @@ fn true_condition_enters_then_branch_and_resumes_parent_range() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "a90e86884f3aa3bf3ab7",
+        "before",
         "Before.",
     );
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "4dff358182d02d9090e3",
+        "r2res3q",
         "Secret.",
     );
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "ebb571c54e9fa639e36f",
+        "g201j3j",
         "After.",
     );
     assert_eq!(
@@ -63,12 +63,12 @@ fn false_condition_enters_else_branch() {
         concat!(
             ":: start default\n",
             ":if trusts(player)\n",
-            "  > secret@0547a337cc70d1ef8296\n",
+            "  > @tysehr8\n",
             "    Secret.\n",
             ":else\n",
-            "  > fallback@577a8dcc422289725eee\n",
+            "  > @rw5t851\n",
             "    Fallback.\n",
-            "> after@212e132e461f67d686e2\n",
+            "> @dazzq65\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -78,12 +78,12 @@ fn false_condition_enters_else_branch() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "577a8dcc422289725eee",
+        "rw5t851",
         "Fallback.",
     );
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "212e132e461f67d686e2",
+        "dazzq65",
         "After.",
     );
 }
@@ -95,9 +95,9 @@ fn false_condition_without_else_skips_gated_statements() {
         concat!(
             ":: start default\n",
             ":if trusts(player)\n",
-            "  > secret@5fdf752af69d9fec62ed\n",
+            "  > @ffwjkvq\n",
             "    Secret.\n",
-            "> after@d49fcda74fa96cfd6166\n",
+            "> @sjqnnx0\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -107,7 +107,7 @@ fn false_condition_without_else_skips_gated_statements() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "d49fcda74fa96cfd6166",
+        "sjqnnx0",
         "After.",
     );
 }
@@ -119,7 +119,7 @@ fn not_condition_inverts_context_result() {
         concat!(
             ":: start default\n",
             ":if not trusts(player)\n",
-            "  > secret@a38565dc5cbb70673ae6\n",
+            "  > @vpn3etk\n",
             "    Secret.\n",
             "-> END\n",
         ),
@@ -129,7 +129,7 @@ fn not_condition_inverts_context_result() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "a38565dc5cbb70673ae6",
+        "vpn3etk",
         "Secret.",
     );
 }

@@ -1,7 +1,7 @@
 use recite_writer_model::{Document, EditError, FIXTURE, PassageKind, Preview};
 
-const ALICE: &str = "7701ceab59d2adfa057a";
-const CHOICE: &str = "a6f46c2edbe8466b9bfd";
+const ALICE: &str = "alice_way_001";
+const CHOICE: &str = "answer_anywhere";
 
 #[test]
 fn speaker_edit_changes_the_effective_duplicate_assignment()
@@ -40,7 +40,7 @@ fn drafts_guard_context_and_undo_restores_invalid_source_safely()
     model.discard();
     assert!(!model.preview_stale());
     model.select(View::Source)?;
-    let invalid = ":: bad\n> bad@bad\n  Keep me.\n";
+    let invalid = ":: bad\n> @Bad\n  Keep me.\n";
     model.set_draft(invalid.into());
     model.apply()?;
     assert!(model.preview_stale());
@@ -88,12 +88,7 @@ fn multiline_unicode_edits_preserve_ids_comments_and_crlf() -> Result<(), Box<dy
 fn prose_cannot_inject_control_flow_and_stale_edits_are_refused()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut doc = Document::new(FIXTURE)?;
-    for text in [
-        "Hello\n-> END",
-        "> other@33333333333333333333\nHello",
-        "Hello\n",
-        "",
-    ] {
+    for text in ["Hello\n-> END", "> @bqyvpqq\nHello", "Hello\n", ""] {
         assert!(matches!(
             doc.replace_text(doc.revision(), ALICE, text),
             Err(EditError::NotProse)
@@ -181,7 +176,7 @@ fn invalid_source_survives_and_preview_uses_the_real_choice_path()
     assert!(preview.advance(None)?.ended);
     doc.replace_source(
         doc.revision(),
-        ":: bad\n> wrong@bad\n  Keep my draft.\n".to_owned(),
+        ":: bad\n> @Bad\n  Keep my draft.\n".to_owned(),
     )?;
     assert!(doc.source().contains("Keep my draft."));
     assert!(!doc.diagnostics().is_empty());
@@ -200,7 +195,7 @@ fn real_document_names_separate_generated_choice_ids() -> Result<(), Box<dyn std
     let first_id = first.selected()?.ok_or("first choice")?.id.clone();
     let second_id = second.selected()?.ok_or("second choice")?.id.clone();
     assert_ne!(first_id, second_id);
-    let invalid = recite_writer_model::Workbench::open("invalid.recite", ":: bad\n> broken@bad\n")?;
+    let invalid = recite_writer_model::Workbench::open("invalid.recite", ":: bad\n> @Bad\n")?;
     assert_eq!(invalid.view(), &recite_writer_model::View::Source);
     Ok(())
 }

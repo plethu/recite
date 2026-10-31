@@ -65,13 +65,10 @@ fn write_and_write_all_aliases_persist_edits_through_existing_save_commands() ->
     )?;
     let a = dir.path().join("a.recite");
     let b = dir.path().join("b.recite");
-    std::fs::write(
-        &a,
-        ":: start default\n> first@11111111111111111111\n  First scene.\n-> END\n",
-    )?;
+    std::fs::write(&a, ":: start default\n> @ffee6p8\n  First scene.\n-> END\n")?;
     std::fs::write(
         &b,
-        ":: other default\n> second@22222222222222222222\n  Second scene.\n-> END\n",
+        ":: other default\n> @rthh7ab\n  Second scene.\n-> END\n",
     )?;
     let mut test =
         TestingRunner::new(recite_writer::editor_app, (1400., 1000.).into(), |_| {}, 1.).0;

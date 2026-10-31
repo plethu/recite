@@ -58,7 +58,7 @@ fn failed_scene_save_cleanup_blocks_leaving_until_retry() -> Result<(), Box<dyn 
     let original = files.current.clone();
     files.switch(&mut current, &other, None, |_| Ok(()))?;
     current.select(recite_writer_model::View::Source)?;
-    let changed = ":: changed\n> line@11111111111111111111\n  Changed text.\n-> END\n";
+    let changed = ":: changed\n> @ffee6p8\n  Changed text.\n-> END\n";
     current.set_draft(changed.into());
     files.switch(&mut current, &original, None, |_| Ok(()))?;
     let recovery = other.with_file_name("b.recite.recite-editor-recovery.json");
@@ -275,7 +275,7 @@ fn excluded_retained_scene_keeps_its_draft_navigation_and_save_path()
     std::fs::write(&manifest, original_manifest)?;
     let a = root.join("a.recite");
     let b = root.join("b.recite");
-    let source = ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Original.\n-> END\n";
     let changed = source.replace("Original.", "Unsaved.");
     std::fs::write(&a, source)?;
     std::fs::write(&b, ":: other\n-> END\n")?;
@@ -325,7 +325,7 @@ fn extraction_uses_retained_edits_and_refreshes_clean_scenes()
     )?;
     let a = root.join("a.recite");
     let b = root.join("b.recite");
-    let source = ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Original.\n-> END\n";
     std::fs::write(&a, source)?;
     std::fs::write(&b, ":: other\n-> END\n")?;
     let mut files = ProjectFiles::open(&root)?;

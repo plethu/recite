@@ -11,7 +11,7 @@ fn owned_passage_mutation_does_not_change_document_or_earlier_snapshots()
     assert_eq!(copy, *original);
     assert_eq!(copy.text.as_ptr(), original.text.as_ptr());
     copy.text = "A separate café draft.".into();
-    copy.id = "ffffffffffffffffffff".into();
+    copy.id = "bkr28cq".into();
     assert_eq!(document.find_passage(&original.id)?, Some(original.clone()));
     assert_eq!(document.find_passage(&copy.id)?, None);
     assert_eq!(document.source(), FIXTURE);

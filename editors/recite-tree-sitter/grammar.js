@@ -87,8 +87,9 @@ module.exports = grammar({
 
     header_attribute: ($) => seq($.hspace, $.metadata_field),
 
-    choice_attribute: ($) =>
-      seq($.hspace, choice($.requires_clause, $.reason_clause, $.metadata_field)),
+    choice_attribute: ($) => seq($.hspace, $._choice_field),
+
+    _choice_field: ($) => choice($.requires_clause, $.reason_clause, $.metadata_field),
 
     requires_clause: ($) =>
       seq(
@@ -220,25 +221,17 @@ module.exports = grammar({
     // escapes the opening brace, while the closing brace remains unescaped).
     escaped_brace: (_$) => token(prec(1, /\\[{}]/)),
 
-    // Header IDs are deliberately syntax-only. Keep the label and any
-    // author-entered suffix available to editor tooling, including while a
-    // draft is incomplete or semantically malformed. The parser/compiler
-    // owns the stable-anchor policy.
-    line_name: ($) => prec(1, seq($.identifier, optional(seq("@", optional($.id_suffix))))),
-    choice_name: ($) => prec(1, seq($.identifier, optional(seq("@", optional($.id_suffix))))),
+    // A line or choice header ends with its stable ID, `@id`. The ID is
+    // deliberately syntax-only: any non-space spelling stays one token so
+    // drafts and malformed IDs remain visible to editor tooling. The
+    // parser/compiler owns the stable-ID grammar.
+    stable_id_attribute: ($) => seq(optional($.hspace), field("id", $.stable_id_field)),
+    stable_id_field: ($) => seq("@", optional($.stable_id)),
+    stable_id: (_$) => token(prec(2, /[^\s#]+/)),
     target: ($) => choice($.end_target, /[^\s\r\n#]+/),
     end_target: (_$) => token(prec(1, "END")),
 
     block_name: ($) => $.identifier,
-    id_suffix: ($) => choice($.stable_id, $.draft_id),
-    // `stable_id` is a useful lexical classification for captures, not a
-    // validity decision. A draft or malformed suffix remains an id fragment
-    // in the tree and is validated by the production parser/compiler.
-    stable_id: (_$) => token(prec(2, /[0-9a-f]{20}/)),
-    // Keep the same lexical precedence as stable_id so a longer malformed
-    // suffix wins as one token instead of leaving a valid-looking prefix and
-    // an ERROR node behind.
-    draft_id: (_$) => token(prec(2, /[^\s#]+/)),
     function_name: ($) => prec(1, $.identifier),
     metadata_key: ($) => $.identifier,
     type_name: ($) => $.identifier,

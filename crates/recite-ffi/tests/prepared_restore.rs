@@ -44,13 +44,13 @@ fn restore_prepares_before_conditions_and_failed_begin_can_be_retried() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if ready()\n",
-        "  > first@aa000000000000000001\n    First yes.\n",
+        "  > @mmjhfrx\n    First yes.\n",
         ":else\n",
-        "  > first_no@aa000000000000000002\n    First no.\n",
+        "  > @sa1cyv5\n    First no.\n",
         ":if ready()\n",
-        "  > second@aa000000000000000003\n    Second yes.\n",
+        "  > @second\n    Second yes.\n",
         ":else\n",
-        "  > second_no@aa000000000000000004\n    Second no.\n",
+        "  > @second_no\n    Second no.\n",
         "-> END\n",
     ));
     let mut asset = 0;

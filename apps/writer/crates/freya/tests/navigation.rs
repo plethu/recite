@@ -55,7 +55,7 @@ fn queue_is_a_screen_and_back_restores_its_search() -> Result<(), Box<dyn std::e
     let mut source = (0..40)
         .map(|i| {
             format!(
-                "msgctxt \"{i:020}\"\nmsgid {}\nmsgstr \"\"\n\n",
+                "msgctxt \"synthetic_{i}\"\nmsgid {}\nmsgstr \"\"\n\n",
                 serde_json::to_string(&format!("{query} synthetic {i}")).unwrap_or_default()
             )
         })
@@ -170,7 +170,7 @@ fn back_and_forward_preserve_edits_without_requiring_a_save()
     let second = dir.path().join("b.recite");
     std::fs::write(
         &second,
-        ":: other default\n> other@33333333333333333333\n  Other scene.\n-> END\n",
+        ":: other default\n> @bqyvpqq\n  Other scene.\n-> END\n",
     )?;
     let mut test = TestingRunner::new(
         recite_writer::editor_app,

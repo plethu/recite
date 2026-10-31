@@ -9,13 +9,13 @@ fn shared_language_pressure_fixture_preserves_localised_markup_and_source_fallba
     );
     let provider = RecordingLocaleProvider::default()
         .with(
-            "55667788990011223344",
+            "bt20t3f",
             TextDomain::Line,
             Some("formal"),
             "[slow]La marée tourne, {traveller_name}.[/slow]",
         )
         .with(
-            "66778899001122334455",
+            "ask_news",
             TextDomain::Choice,
             Some("formal"),
             "Parle-moi de {topic}.",
@@ -56,14 +56,14 @@ fn shared_language_pressure_fixture_preserves_localised_markup_and_source_fallba
     let DialogueEvent::Line(line) = runtime_choose_with(
         &asset,
         &mut session,
-        ChoiceId::new("66778899001122334455").expect("choice ID"),
+        ChoiceId::new("ask_news").expect("choice ID"),
         &EmptyDialogueContext,
         resolution,
     )
     .expect("chooses the letters block") else {
         panic!("expected plural line");
     };
-    assert_eq!(line.id.as_str(), "0a1b2c3d4e5f60718293");
+    assert_eq!(line.id.as_str(), "atcf38h");
     assert_eq!(line.source_text, "You have {count} letters.");
     assert_eq!(line.text, "You have 2 letters.");
     assert_eq!(line.plural.as_ref().expect("plural trace").count, 2);
@@ -74,6 +74,6 @@ fn shared_language_pressure_fixture_preserves_localised_markup_and_source_fallba
     else {
         panic!("expected closing line");
     };
-    assert_eq!(line.id.as_str(), "77889900112233445566");
+    assert_eq!(line.id.as_str(), "letters.close");
     assert_eq!(line.text, "The ledger closes.");
 }

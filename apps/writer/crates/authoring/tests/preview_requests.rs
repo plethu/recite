@@ -4,7 +4,7 @@ use recite_writer_model::{ConditionValue, Document, EffectAck, Preview};
 fn pending_condition_can_be_answered_without_recompiling_the_trial()
 -> Result<(), Box<dyn std::error::Error>> {
     let document = Document::new(
-        ":: start default\n:if trusts(player)\n  > yes@12345678901234567890\n    Yes.\n:else\n  > no@12345678901234567891\n    No.\n-> END\n",
+        ":: start default\n:if trusts(player)\n  > @w3xnt5r\n    Yes.\n:else\n  > @rbgkhpf\n    No.\n-> END\n",
     )?;
     let mut preview = Preview::new(&document)?;
     let page = preview.advance(None)?;

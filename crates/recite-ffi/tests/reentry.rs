@@ -65,7 +65,7 @@ fn callbacks_cannot_reenter_or_free_the_session_registry() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if ready()\n",
-        "  > hello@52000000000000000001\n",
+        "  > @y2e1mn4\n",
         "    Hello.\n",
         "-> END\n",
     ));

@@ -1,8 +1,9 @@
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{Document, EditOperation, PreparedEdit, View, Workbench, WorkbenchError};
 
-const ONE: &str = ":: one default\n> first@11111111111111111111\n  First.\n-> END\n";
-const TWO: &str = ":: one default\n> first@11111111111111111111\n  First.\n-> two\n:: two\n> second@22222222222222222222\n  Second.\n-> END\n";
+const ONE: &str = ":: one default\n> @ffee6p8\n  First.\n-> END\n";
+const TWO: &str =
+    ":: one default\n> @ffee6p8\n  First.\n-> two\n:: two\n> @rthh7ab\n  Second.\n-> END\n";
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -35,25 +36,25 @@ fn parity(actual: &Workbench, expected: &Workbench) {
 
 #[test]
 fn prepared_history_matches_selection_fallbacks_and_accepts_malformed_source() -> Result {
-    let empty_two = TWO.replace("> second@22222222222222222222\n  Second.\n", "");
+    let empty_two = TWO.replace("> @rthh7ab\n  Second.\n", "");
     let malformed = ":: one default\n? incomplete(\n";
     for (before, after, view, restored) in [
         (
             ONE,
             TWO,
-            View::Passage("11111111111111111111".into()),
-            View::Passage("11111111111111111111".into()),
+            View::Passage("ffee6p8".into()),
+            View::Passage("ffee6p8".into()),
         ),
         (
             empty_two.as_str(),
             TWO,
-            View::Passage("22222222222222222222".into()),
+            View::Passage("rthh7ab".into()),
             View::Block("two".into()),
         ),
         (
             ONE,
             TWO,
-            View::Passage("22222222222222222222".into()),
+            View::Passage("rthh7ab".into()),
             View::Block("one".into()),
         ),
         (
@@ -62,16 +63,11 @@ fn prepared_history_matches_selection_fallbacks_and_accepts_malformed_source() -
             View::Block("two".into()),
             View::Block("one".into()),
         ),
-        (
-            "",
-            ONE,
-            View::Passage("11111111111111111111".into()),
-            View::Source,
-        ),
+        ("", ONE, View::Passage("ffee6p8".into()), View::Source),
         (
             malformed,
             ONE,
-            View::Passage("11111111111111111111".into()),
+            View::Passage("ffee6p8".into()),
             View::Source,
         ),
         (
@@ -110,12 +106,12 @@ fn prepared_history_matches_selection_fallbacks_and_accepts_malformed_source() -
 #[test]
 fn newer_prose_or_changed_view_or_analysis_cannot_advance_history() -> Result {
     for changed in ["draft", "view", "analysis"] {
-        let view = View::Passage("11111111111111111111".into());
+        let view = View::Passage("ffee6p8".into());
         let mut actual = model(ONE, TWO, view.clone())?;
         let mut prepared = prepare(&actual, EditOperation::Undo)?;
         match changed {
             "draft" => actual.set_draft("Newer typing.".into()),
-            "view" => actual.select(View::Passage("22222222222222222222".into()))?,
+            "view" => actual.select(View::Passage("rthh7ab".into()))?,
             _ => actual.refresh_project(Default::default())?,
         }
         let accepted = actual.document().source_snapshot();
@@ -142,7 +138,7 @@ fn newer_prose_or_changed_view_or_analysis_cannot_advance_history() -> Result {
 #[test]
 fn empty_history_is_cheap_but_still_requires_an_applied_field() -> Result {
     let mut model = Workbench::from_document(Document::new(ONE)?, Some(View::Source))?;
-    model.select(View::Passage("11111111111111111111".into()))?;
+    model.select(View::Passage("ffee6p8".into()))?;
     assert!(model.document().cached_script().is_none());
     for operation in [EditOperation::Undo, EditOperation::Redo] {
         assert!(model.edit_request(operation)?.is_none());

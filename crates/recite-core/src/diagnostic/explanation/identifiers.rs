@@ -6,14 +6,14 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         "RECITE_ID001",
         DiagnosticCategory::Identifier,
         "A dialogue line is missing its required stable line ID.",
-        &["A line was written without an `@id` anchor."],
+        &["A line was written without a trailing `@id`."],
         &["Add a stable line ID and keep it unchanged once authored."],
     ),
     DiagnosticExplanation::new(
         "RECITE_ID002",
         DiagnosticCategory::Identifier,
         "A choice is missing its required stable choice ID.",
-        &["A choice was written without an `@id` anchor."],
+        &["A choice was written without a trailing `@id`."],
         &["Add a stable choice ID and keep it unchanged once authored."],
     ),
     DiagnosticExplanation::new(
@@ -29,20 +29,6 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         "Two or more choices use the same stable choice ID.",
         &["A choice was copied without changing the ID."],
         &["Give each distinct choice a unique stable choice ID."],
-    ),
-    DiagnosticExplanation::new(
-        "RECITE_ID005",
-        DiagnosticCategory::Identifier,
-        "A line still uses a draft line ID.",
-        &["The line was generated or stubbed and was never assigned a final ID."],
-        &["Replace the draft ID with the final stable line ID before shipping."],
-    ),
-    DiagnosticExplanation::new(
-        "RECITE_ID006",
-        DiagnosticCategory::Identifier,
-        "A choice still uses a draft choice ID.",
-        &["The choice was generated or stubbed and was never assigned a final ID."],
-        &["Replace the draft ID with the final stable choice ID before shipping."],
     ),
     DiagnosticExplanation::new(
         "RECITE_ID007",
@@ -62,8 +48,8 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         "RECITE_ID034",
         DiagnosticCategory::Identifier,
         "A PO catalogue stable ID is malformed.",
-        &["A PO context or extracted source-ID comment is not a frozen Recite ID."],
-        &["Restore the stable ID and keep its source anchor unchanged."],
+        &["A PO context is not a valid Recite stable ID."],
+        &["Restore the stable ID that the source header uses."],
     ),
     DiagnosticExplanation::new(
         "RECITE_ID035",

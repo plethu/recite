@@ -708,7 +708,7 @@ assert ":: work\n" not in after
 assert "    -> work\n" not in after
 PY
 echo "lsp_rename_edit=non_empty_workspace_edit_applied_and_saved"
-wait_for_file_match "$project_dir/code-action.recite" '^> line@56d52d8cd8619971011f([[:space:]]*)$' || {
+wait_for_file_match "$project_dir/code-action.recite" '^> @ca4w7az([[:space:]]*)$' || {
   echo "Zed did not apply the canonical missing-ID workspace edit" >&2
   sed -n '1,12p' "$project_dir/code-action.recite" >&2
   exit 1

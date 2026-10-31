@@ -1,6 +1,6 @@
 //! Structured insertions share the compiler's stable-ID planner and one undo boundary.
 use crate::{Document, EditError, projection::offset};
-use recite_core::SourcePosition;
+use recite_core::{SourcePosition, StableIdGenerator, StatementHeader};
 
 impl Document {
     pub fn set_continuation(
@@ -58,21 +58,14 @@ impl Document {
             .ok_or(EditError::Destination)?;
         let position = SourcePosition::new(declaration.span().start.line(), 4)?;
         let plan = snapshot.plan_rename_block(self.key(), position, name)?;
-        plan.validate(snapshot)?;
-        if plan
-            .edits()
-            .iter()
-            .any(|edit| edit.document() != self.key())
-        {
+        let [(document, next)] = plan
+            .apply(snapshot)?
+            .try_into()
+            .map_err(|_| EditError::SourceRequired("this rename also changes another scene"))?;
+        if &document != self.key() {
             return Err(EditError::SourceRequired(
                 "this rename also changes another scene",
             ));
-        }
-        let mut next = self.source().to_owned();
-        for edit in plan.edits().iter().rev() {
-            let start = offset(&next, edit.range().start())?;
-            let end = offset(&next, edit.range().end())?;
-            next.replace_range(start..end, edit.replacement());
         }
         self.replace_source(expected, next)
     }
@@ -111,8 +104,9 @@ impl Document {
         };
         let mut next = format!("{}{newline}{newline}:: {id}{entry}{newline}", self.source());
         let insertion = next.len();
+        let header = StatementHeader::line();
         next.push_str(&format!(
-            ">{newline}  New dialogue.{newline}-> END{newline}"
+            "{header}{newline}  New dialogue.{newline}-> END{newline}"
         ));
         let (next, _) = self.freeze_inserted_passage(next, insertion)?;
         self.replace_source(expected, next)?;
@@ -172,7 +166,10 @@ impl Document {
         let mut next = self.source().to_owned();
         next.insert_str(
             insertion,
-            &format!("{prefix}>{newline}  New dialogue.{newline}{newline}"),
+            &format!(
+                "{prefix}{}{newline}  New dialogue.{newline}{newline}",
+                StatementHeader::line()
+            ),
         );
         let (next, id) = self.freeze_inserted_passage(next, insertion + prefix.len())?;
         self.replace_source(expected, next)?;
@@ -181,7 +178,7 @@ impl Document {
 
     pub(crate) fn freeze_inserted_passage(
         &self,
-        mut next: String,
+        next: String,
         insertion: usize,
     ) -> Result<(String, String), EditError> {
         let line = u32::try_from(
@@ -194,16 +191,15 @@ impl Document {
         )
         .map_err(|_| EditError::Position)?;
         let candidate = Self::in_project(self.key().clone(), next.clone(), self.project_context())?;
-        let plan = candidate
-            .kernel()
-            .snapshot()
-            .plan_insert_missing_id(candidate.key(), SourcePosition::new(line, 1)?)?;
-        plan.validate(candidate.kernel().snapshot())?;
-        for edit in plan.edits().iter().rev() {
-            let start = offset(&next, edit.range().start())?;
-            let end = offset(&next, edit.range().end())?;
-            next.replace_range(start..end, edit.replacement());
-        }
+        let plan = candidate.kernel().snapshot().plan_insert_missing_id(
+            candidate.key(),
+            SourcePosition::new(line, 1)?,
+            &mut StableIdGenerator::from_system(),
+        )?;
+        let [(_, next)] = plan
+            .apply(candidate.kernel().snapshot())?
+            .try_into()
+            .map_err(|_| EditError::MissingPassage)?;
         let added = crate::projection::passages(&next)?
             .into_iter()
             .find(|passage| passage.header_line == line)

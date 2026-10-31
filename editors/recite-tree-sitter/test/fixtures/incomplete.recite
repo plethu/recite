@@ -1,8 +1,8 @@
 :: start default
-> intro@
+>
   [slow]Unclosed {name
 :match relationship(player,
 :case
-? choose@0123456789abcdef0123 requires=(trusts(player)
+? requires=(trusts(player) @ez1fh09
   Text still available while typing
   ->

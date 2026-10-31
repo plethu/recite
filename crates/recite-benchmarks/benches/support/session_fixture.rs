@@ -48,7 +48,7 @@ pub(super) fn load(
     let compiled = report.asset.ok_or_else(|| error("missing session asset"))?;
     let asset = LoadedDialogue::from_bytes(&compiled.messagepack)?;
     assert_eq!(asset.dialogue().sources.len(), source_count);
-    Ok((asset, ChoiceId::new("11111111111111111111")?))
+    Ok((asset, ChoiceId::new("ffee6p8")?))
 }
 
 pub(super) fn ready(query: ConditionQuery<'_>) -> Result<ConditionValue, ConditionEvaluationError> {

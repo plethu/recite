@@ -7,6 +7,7 @@ cli-help-command-validate = Validate dialogue source without writing compiled ou
 cli-help-command-compile = Compile dialogue source to a MessagePack .recitec asset
 cli-help-command-extract = Extract gettext POT entries
 cli-help-command-check-ids = Report stable line and choice ID diagnostics
+cli-help-command-assign-ids = Append generated stable IDs to line and choice headers that have none
 cli-help-command-check-markup = Validate inline markup, optionally against a schema manifest
 cli-help-command-check-metadata = Validate metadata against a schema manifest
 cli-help-command-validate-project = Validate recite.project.toml and referenced compiled assets
@@ -20,6 +21,8 @@ cli-help-command-trace = Emit deterministic JSON for a headless fixture run
 cli-help-command-play = Play a compiled asset interactively
 cli-help-command-bench = Generate benchmark scale reports for fixtures or a project root
 cli-help-arg-paths = One or more .recite files, or directories containing .recite files
+cli-help-arg-since = Git revision whose stable IDs must still exist, such as the last release tag
+cli-help-arg-allow-removed = Stable ID intentionally removed since --since; repeat for each ID
 cli-help-arg-schema = Generated schema manifest JSON
 cli-help-arg-schema-inspection = Standalone Recite schema TOML or generated schema manifest JSON
 cli-help-arg-project-root = Project root containing recite.project.toml
@@ -66,6 +69,12 @@ cli-success-files = { $count ->
        *[other] { $count } files
     }, no diagnostics
 cli-success-project = project, no diagnostics
+cli-ids-assigned = { $count ->
+        [one] assigned { $count } stable ID
+       *[other] assigned { $count } stable IDs
+    }
+cli-ids-none-missing = every line and choice already has a stable ID
+cli-ids-removed = stable ID `@{$id}` from {$reference} is missing; restore it or pass --allow-removed {$id}
 cli-diagnostic-errors = { $count ->
         [one] { $count } error
        *[other] { $count } errors
@@ -324,6 +333,7 @@ cli-error-fixture-choice-not-in-prompt = fixture choice `{$choice}` is not in pr
 cli-error-ambiguous-fixture-choice = fixture block choice `{$block}` is ambiguous across {$prompt_count} prompts; use a line ID
 cli-error-fixture-toml = failed to parse fixture {$path}: {$source}
 cli-error-missing-path = input path does not exist: {$path}
+cli-error-stable-id-baseline = cannot read stable IDs at `{$reference}`: {$detail}
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys
 cli-error-no-inputs = no .recite inputs found
 cli-error-output-overwrites-input = refusing to overwrite input {$input} with output {$output}

@@ -32,7 +32,7 @@ fn describe(blocks: &SyntaxBlocks, row: usize) -> Vec<String> {
 #[test]
 fn viewport_after_interrupted_edit_reparses_before_querying_and_keeps_undo_coordinates() {
     let source = (0..1_000)
-        .map(|n| format!(":: block{n}\n> line@{n:020x}\n  Hello 🦊 {{value}}.\n"))
+        .map(|n| format!(":: block{n}\n> @line_{n:x}\n  Hello 🦊 {{value}}.\n"))
         .collect::<String>();
     let mut rope = Rope::from_str(&source);
     let mailbox = Mailbox::default();

@@ -4,11 +4,11 @@ use super::*;
 fn locale_variant_is_supplied_on_start_and_restore() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> greeting@78000000000000000001\n",
+        "> @wxrj67z\n",
         "  Hello.\n",
-        "> prompt@78000000000000000002\n",
+        "> @qs9kzn5\n",
         "  Pick one.\n",
-        "  ? choose@78000000000000000003\n",
+        "  ? @n0ag869\n",
         "    Choose this.\n",
         "    -> after\n",
         ":: after\n",
@@ -100,7 +100,7 @@ fn locale_variant_is_supplied_on_start_and_restore() {
 fn locale_callback_failure_rolls_back_begin_for_retry() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> greeting@74000000000000000001\n",
+        "> @zdststb\n",
         "  Hello.\n",
         "-> END\n",
     ));
@@ -148,16 +148,16 @@ fn locale_callback_failure_rolls_back_begin_for_retry() {
 fn locale_callback_failure_rolls_back_choose_and_acknowledge() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> prompt@75000000000000000001\n",
+        "> @mqwxp0y\n",
         "  Pick one.\n",
-        "  ? choose@75000000000000000002\n",
+        "  ? @cyt3t7b\n",
         "    Choose this.\n",
         "    -> after\n",
         ":: after\n",
-        "> after@75000000000000000003\n",
+        "> @r069grp\n",
         "  After.\n",
         "! blocking finish()\n",
-        "> done@75000000000000000004\n",
+        "> @done\n",
         "  Done.\n",
         "-> END\n",
     ));

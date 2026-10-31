@@ -99,7 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let work = send(
                     &mut app,
                     &mut cursor,
-                    ReciteRequest::SelectChoice(ChoiceId::new("3f481d9991fa22e23b0c")?),
+                    ReciteRequest::SelectChoice(ChoiceId::new("mkkr74x")?),
                 )?;
                 let ReciteOutputValue::Dialogue(events) = work.value else {
                     return Err(io::Error::other("missing work dialogue").into());
@@ -123,7 +123,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let ending = send(
                     &mut app,
                     &mut cursor,
-                    ReciteRequest::SelectChoice(ChoiceId::new("ced14b8623bba2198c6d")?),
+                    ReciteRequest::SelectChoice(ChoiceId::new("t680psd")?),
                 )?;
                 assert!(matches!(ending.value, ReciteOutputValue::Dialogue(_)));
                 let ended = send(&mut app, &mut cursor, ReciteRequest::End)?;

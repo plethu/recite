@@ -14,15 +14,15 @@ fn prose_edits_preserve_nested_structure_and_relocate_later_headings()
     let source = concat!(
         ":: start default\n",
         ":if ready()\n",
-        "  > first@11111111111111111111\n",
+        "  > @ffee6p8\n",
         "    Café.\n",
         "  ! immediate mark_done()\n",
         ":else\n",
-        "  ? reply@22222222222222222222\n",
+        "  ? @rthh7ab\n",
         "    Later.\n",
         "    -> finish\n",
         ":: finish\n",
-        "> last@33333333333333333333\n",
+        "> @bqyvpqq\n",
         "  Goodbye.\n",
         "-> END\n",
     );
@@ -34,12 +34,9 @@ fn prose_edits_preserve_nested_structure_and_relocate_later_headings()
                 .then(|| document.script_snapshot())
                 .transpose()?;
             for (id, text) in [
-                ("11111111111111111111", "Café 🐧\nمرحبا"),
-                (
-                    "22222222222222222222",
-                    "A different reply.\nAnother paragraph.",
-                ),
-                ("33333333333333333333", "Goodbye e\u{301}."),
+                ("ffee6p8", "Café 🐧\nمرحبا"),
+                ("rthh7ab", "A different reply.\nAnother paragraph."),
+                ("bqyvpqq", "Goodbye e\u{301}."),
             ] {
                 document.replace_text(document.revision(), id, text)?;
                 assert_eq!(
@@ -113,8 +110,8 @@ fn rejected_and_unchanged_prose_preserve_revision_history_and_snapshots()
         "",
         "Hello\n",
         "Hello\n-> END",
-        "> injected@44444444444444444444\nHello",
-        "Hello\r:: injected\n> other@44444444444444444444\nOther",
+        "> @z0g6c80\nHello",
+        "Hello\r:: injected\n> @z0g6c80\nOther",
     ] {
         assert!(matches!(
             document.replace_text(revision, &passage.id, text),
@@ -152,18 +149,18 @@ fn duplicate_block_names_do_not_confuse_projection_replacement()
 -> Result<(), Box<dyn std::error::Error>> {
     let source = concat!(
         "# Comment before the first beat.\n",
-        ":: same default\n> first@11111111111111111111\n  First.\n-> END\n",
+        ":: same default\n> @ffee6p8\n  First.\n-> END\n",
         ":: same\n! immediate mark_done()\n",
-        "> second@22222222222222222222\n  Second.\n-> END\n",
-        ":: last\n? reply@33333333333333333333\n  Reply.\n  -> END\n",
+        "> @rthh7ab\n  Second.\n-> END\n",
+        ":: last\n? @bqyvpqq\n  Reply.\n  -> END\n",
     );
     let mut document = Document::new(source)?;
     assert!(!document.diagnostics().is_empty());
     let previous = document.script_snapshot()?;
     for (id, text) in [
-        ("11111111111111111111", "First, longer.\nAnd another line."),
-        ("22222222222222222222", "Second, shorter."),
-        ("33333333333333333333", "Reply 🐧."),
+        ("ffee6p8", "First, longer.\nAnd another line."),
+        ("rthh7ab", "Second, shorter."),
+        ("bqyvpqq", "Reply 🐧."),
     ] {
         document.replace_text(document.revision(), id, text)?;
         matches_reopened(&document)?;
@@ -178,20 +175,16 @@ fn plural_source_id_aliases_keep_full_script_reprojection() -> Result<(), Box<dy
 {
     let source = concat!(
         ":: first default\n",
-        "> plural@11111111111111111111 bind=(count:int=$count)\n",
+        "> bind=(count:int=$count) @ffee6p8\n",
         "  One letter.\n  | Many letters.\n-> END\n",
-        ":: second\n> editable@11111111111111111111\n  Editable.\n-> END\n",
+        ":: second\n> @ffee6p8\n  Editable.\n-> END\n",
     );
     for warm_script in [false, true] {
         let mut document = Document::new(source)?;
         if warm_script {
             document.script_snapshot()?;
         }
-        document.replace_text(
-            document.revision(),
-            "11111111111111111111",
-            "Changed 🐧.\nAnother line.",
-        )?;
+        document.replace_text(document.revision(), "ffee6p8", "Changed 🐧.\nAnother line.")?;
         matches_reopened(&document)?;
         assert!(document.undo()?);
         matches_reopened(&document)?;
@@ -203,15 +196,15 @@ fn plural_source_id_aliases_keep_full_script_reprojection() -> Result<(), Box<dy
 fn one_restart_region_can_replace_multiple_blocks_and_shift_later_passages()
 -> Result<(), Box<dyn std::error::Error>> {
     let source = concat!(
-        ":: first default\n> first@11111111111111111111\n  First.\n-> END\n",
-        ":: second\n> second@22222222222222222222\n  Second.\n-> END\n",
-        "  :: indented\n> third@33333333333333333333\n  Third.\n-> END\n",
-        ":: last\n> last@44444444444444444444\n  Last.\n-> END\n",
+        ":: first default\n> @ffee6p8\n  First.\n-> END\n",
+        ":: second\n> @rthh7ab\n  Second.\n-> END\n",
+        "  :: indented\n> @bqyvpqq\n  Third.\n-> END\n",
+        ":: last\n> @z0g6c80\n  Last.\n-> END\n",
     );
     assert_eq!(recite_parser::source_regions(source).len(), 3);
     let mut document = Document::new(source)?;
     assert_eq!(document.script_snapshot()?.len(), 4);
-    for id in ["22222222222222222222", "33333333333333333333"] {
+    for id in ["rthh7ab", "bqyvpqq"] {
         for text in ["Longer café 🐧.\nTwo lines.\nThree lines.", "Short."] {
             document.replace_text(document.revision(), id, text)?;
             matches_reopened(&document)?;

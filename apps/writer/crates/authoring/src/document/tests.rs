@@ -62,8 +62,7 @@ fn sibling_uses_authoritative_inputs_and_independent_history() -> Result<(), Edi
     updated.documents[0] = SavedDocument::new(original.key().clone(), original.source());
     let key = DocumentKey::new("b.recite")?;
     // A recovered unsaved source shadows this sibling's saved input.
-    let source =
-        ":: answer\n> reply@11111111111111111111\n  Recovered prose.\n-> a.recite::renamed\n";
+    let source = ":: answer\n> @ffee6p8\n  Recovered prose.\n-> a.recite::renamed\n";
     let mut sibling = original.open_sibling_with_control(
         key.clone(),
         source,
@@ -138,7 +137,7 @@ fn sibling_schema_change_and_same_key_match_cold_opening() -> Result<(), Box<dyn
     schema.metadata.remove("portrait");
     let mut changed = context()?;
     changed.schema = Some(schema);
-    let source = ":: answer\n> reply@11111111111111111111 portrait=calm\n  Hello.\n-> END\n";
+    let source = ":: answer\n> portrait=calm @ffee6p8\n  Hello.\n-> END\n";
     for (key, inputs) in [
         (DocumentKey::new("b.recite")?, changed),
         (original.key().clone(), context()?),

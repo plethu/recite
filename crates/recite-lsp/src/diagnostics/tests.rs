@@ -113,11 +113,7 @@ fn related_spans_resolve_open_project_file_text() {
     let first_path = temp.path().join("dialogue/first.recite");
     std::fs::create_dir_all(first_path.parent().expect("dialogue parent"))
         .expect("create dialogue directory");
-    std::fs::write(
-        &first_path,
-        ":: first\n> shared@83709c28414d0ce4659c\n  First.\n",
-    )
-    .expect("write first source");
+    std::fs::write(&first_path, ":: first\n> @jewfq0h\n  First.\n").expect("write first source");
     let first_uri = file_path_to_uri(&first_path).expect("valid first URI");
     let second_uri =
         file_path_to_uri(&temp.path().join("dialogue/second.recite")).expect("valid second URI");
@@ -132,7 +128,7 @@ fn related_spans_resolve_open_project_file_text() {
     workspace.open_refreshes(
         first_uri.clone(),
         1,
-        ":: first\n> shared@83709c28414d0ce4659c\n  😀First.\n".to_owned(),
+        ":: first\n> @jewfq0h\n  😀First.\n".to_owned(),
     );
     let diagnostic = diagnostic_with_id(
         "compatibility message",

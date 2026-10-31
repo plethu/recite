@@ -62,7 +62,7 @@ fn structured_compile_and_extract_project_machine_artifacts_or_typed_entries() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = temp.path().join("dialogue.recitec");
 
@@ -99,7 +99,7 @@ fn structured_compile_and_extract_project_machine_artifacts_or_typed_entries() {
     assert_eq!(extract_records.len(), 2);
     assert_eq!(
         extract_records[1]["data"]["entries"][0]["context"],
-        "11111111111111111111"
+        "ffee6p8"
     );
     assert_eq!(
         extract_records[1]["data"]["entries"][0]["source_text"],
@@ -176,7 +176,7 @@ fn structured_run_and_trace_share_deterministic_trace_data_without_run_text() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     let fixture = write_file(temp.path(), "fixture.toml", "");
@@ -216,9 +216,7 @@ fn structured_run_and_trace_share_deterministic_trace_data_without_run_text() {
         "Hello."
     );
     assert!(String::from_utf8_lossy(&run_output.stdout).contains("command.result"));
-    assert!(
-        !String::from_utf8_lossy(&run_output.stdout).contains("line 11111111111111111111: Hello.")
-    );
+    assert!(!String::from_utf8_lossy(&run_output.stdout).contains("line ffee6p8: Hello."));
 }
 
 #[test]
@@ -255,12 +253,12 @@ fn structured_rejects_fixture_choices_with_typed_details() {
         "choice.recite",
         concat!(
             ":: start default\n",
-            "> intro@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Choose.\n",
-            "  ? left@22222222222222222222\n",
+            "  ? @rthh7ab\n",
             "    Left.\n",
             "    -> END\n",
-            "  ? right@33333333333333333333\n",
+            "  ? @bqyvpqq\n",
             "    Right.\n",
             "    -> END\n",
         ),
@@ -269,7 +267,7 @@ fn structured_rejects_fixture_choices_with_typed_details() {
     let fixture = write_file(
         temp.path(),
         "invalid-choice.toml",
-        "[choices]\n11111111111111111111 = \"not-a-choice\"\n",
+        "[choices]\nffee6p8 = \"not-a-choice\"\n",
     );
 
     let output = run(recite()
@@ -335,7 +333,7 @@ fn structured_rejects_output_input_alias_with_both_paths() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
 
     let output = run(recite()
@@ -370,7 +368,7 @@ fn structured_schema_diagnostics_are_typed_content_results() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let schema = write_file(temp.path(), "schema.json", "{}");
     let asset = temp.path().join("dialogue.recitec");
@@ -403,7 +401,7 @@ fn structured_output_is_invariant_under_user_ui_configuration() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let configured = write_file(temp.path(), "configured.toml", "[ui]\nlocale = \"en-GB\"\n");
     let malformed = write_file(temp.path(), "malformed.toml", "[ui\nlocale =");
@@ -433,7 +431,7 @@ fn human_run_keeps_the_existing_output_bytes() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     let fixture = write_file(temp.path(), "fixture.toml", "");
@@ -446,7 +444,7 @@ fn human_run_keeps_the_existing_output_bytes() {
         .arg(&fixture));
     output
         .assert_success()
-        .assert_stdout("line 11111111111111111111: Hello.\nend\n")
+        .assert_stdout("line ffee6p8: Hello.\nend\n")
         .assert_stderr("");
 }
 

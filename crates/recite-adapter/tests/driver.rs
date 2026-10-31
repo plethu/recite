@@ -13,8 +13,7 @@ use support::{asset, request};
 #[test]
 fn missing_catalogue_entry_delivers_authored_source_text() -> Result<(), Box<dyn std::error::Error>>
 {
-    let asset =
-        asset(":: start default\n> intro@11111111111111111111\n  Authored source.\n-> END\n")?;
+    let asset = asset(":: start default\n> @ffee6p8\n  Authored source.\n-> END\n")?;
     let catalogue = ReciteDialogueCatalog::new();
     let mut driver = SessionDriver::new();
     let events = driver.start(
@@ -33,7 +32,7 @@ fn missing_catalogue_entry_delivers_authored_source_text() -> Result<(), Box<dyn
 #[test]
 fn prepared_begin_is_single_use_and_failed_encoding_rolls_back()
 -> Result<(), Box<dyn std::error::Error>> {
-    let asset = asset(":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n")?;
+    let asset = asset(":: start default\n> @ffee6p8\n  Hello.\n-> END\n")?;
     let mut driver = SessionDriver::new();
     driver.prepare(request(&asset))?;
     assert!(driver.is_prepared());
@@ -60,7 +59,7 @@ fn prepared_begin_is_single_use_and_failed_encoding_rolls_back()
 #[test]
 fn failed_start_leaves_owner_free_and_second_start_preserves_original()
 -> Result<(), Box<dyn std::error::Error>> {
-    let asset = asset(":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n")?;
+    let asset = asset(":: start default\n> @ffee6p8\n  Hello.\n-> END\n")?;
     let mut driver = SessionDriver::new();
     let result = driver.start_with(
         request(&asset),
@@ -94,9 +93,8 @@ fn failed_start_leaves_owner_free_and_second_start_preserves_original()
 
 #[test]
 fn restore_prompt_is_empty_and_blocking_effect_reemits() -> Result<(), Box<dyn std::error::Error>> {
-    let prompt_asset = asset(
-        ":: start default\n> prompt@11111111111111111111\n  Pick.\n  ? go@22222222222222222222\n    Go.\n    -> END\n",
-    )?;
+    let prompt_asset =
+        asset(":: start default\n> @ffee6p8\n  Pick.\n  ? @rthh7ab\n    Go.\n    -> END\n")?;
     let mut first = SessionDriver::new();
     let events = first.start(
         request(&prompt_asset),
@@ -117,9 +115,8 @@ fn restore_prompt_is_empty_and_blocking_effect_reemits() -> Result<(), Box<dyn s
             .is_empty()
     );
 
-    let effect_asset = asset(
-        ":: start default\n! blocking play_sound(chime)\n> after@33333333333333333333\n  After.\n-> END\n",
-    )?;
+    let effect_asset =
+        asset(":: start default\n! blocking play_sound(chime)\n> @bqyvpqq\n  After.\n-> END\n")?;
     let mut effect_driver = SessionDriver::new();
     let first_events = effect_driver.start(
         request(&effect_asset),
@@ -142,10 +139,10 @@ fn restore_prompt_is_empty_and_blocking_effect_reemits() -> Result<(), Box<dyn s
 fn prior_prompt_choice_is_stale_only_after_committed_transition_and_restore()
 -> Result<(), Box<dyn std::error::Error>> {
     let asset = asset(
-        ":: start default\n? first@11111111111111111111\n  First.\n  -> later\n:: later\n? second@22222222222222222222\n  Second.\n  -> END\n",
+        ":: start default\n? @ffee6p8\n  First.\n  -> later\n:: later\n? @rthh7ab\n  Second.\n  -> END\n",
     )?;
-    let first = ChoiceId::new("11111111111111111111")?;
-    let second = ChoiceId::new("22222222222222222222")?;
+    let first = ChoiceId::new("ffee6p8")?;
+    let second = ChoiceId::new("rthh7ab")?;
     let unknown = ChoiceId::new("missing_choice")?;
     let mut driver = SessionDriver::new();
     assert!(matches!(
@@ -250,7 +247,7 @@ fn prior_prompt_choice_is_stale_only_after_committed_transition_and_restore()
     );
     assert!(matches!(
         &driver.select_choice(
-            ChoiceId::new("11111111111111111111")?,
+            ChoiceId::new("ffee6p8")?,
             &EmptyDialogueContext,
             LocaleResolution::new()
         )?[..],
@@ -262,9 +259,8 @@ fn prior_prompt_choice_is_stale_only_after_committed_transition_and_restore()
 #[test]
 fn failed_choice_and_ack_encoding_keep_session_checkpoint() -> Result<(), Box<dyn std::error::Error>>
 {
-    let prompt_asset = asset(
-        ":: start default\n> prompt@11111111111111111111\n  Pick.\n  ? go@22222222222222222222\n    Go.\n    -> END\n",
-    )?;
+    let prompt_asset =
+        asset(":: start default\n> @ffee6p8\n  Pick.\n  ? @rthh7ab\n    Go.\n    -> END\n")?;
     let mut driver = SessionDriver::new();
     driver.start(
         request(&prompt_asset),
@@ -272,7 +268,7 @@ fn failed_choice_and_ack_encoding_keep_session_checkpoint() -> Result<(), Box<dy
         LocaleResolution::new(),
     )?;
     let before = driver.snapshot()?;
-    let choice = recite_core::ChoiceId::new("22222222222222222222")?;
+    let choice = recite_core::ChoiceId::new("rthh7ab")?;
     let rejected = driver.select_choice_with(
         choice.clone(),
         &EmptyDialogueContext,
@@ -287,9 +283,8 @@ fn failed_choice_and_ack_encoding_keep_session_checkpoint() -> Result<(), Box<dy
             .is_empty()
     );
 
-    let effect_asset = asset(
-        ":: start default\n! blocking play_sound(chime)\n> after@33333333333333333333\n  After.\n-> END\n",
-    )?;
+    let effect_asset =
+        asset(":: start default\n! blocking play_sound(chime)\n> @bqyvpqq\n  After.\n-> END\n")?;
     let mut effect_driver = SessionDriver::new();
     let events = effect_driver.start(
         request(&effect_asset),

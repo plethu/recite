@@ -151,8 +151,8 @@ fn source_route_hint_applies_only_to_its_document() -> Result<(), Box<dyn std::e
 fn recovered_fields_take_priority_over_a_source_route_hint()
 -> Result<(), Box<dyn std::error::Error>> {
     use recite_writer_model::View;
-    let text = ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
-    for view in [View::Source, View::Passage("11111111111111111111".into())] {
+    let text = ":: start default\n> @ffee6p8\n  Original.\n-> END\n";
+    for view in [View::Source, View::Passage("ffee6p8".into())] {
         let dir = project()?;
         std::fs::write(dir.path().join("scene.recite"), text)?;
         let mut files = ProjectFiles::open(dir.path())?;

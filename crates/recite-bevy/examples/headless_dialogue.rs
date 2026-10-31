@@ -149,7 +149,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .insert_for_domain(
             "fr-FR",
             TextDomain::Line,
-            "11111111111111111111",
+            "ffee6p8",
             "Welcome.",
             "Bienvenue.",
             Some("formal"),
@@ -182,7 +182,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let work = send(
         &mut app,
         &mut cursor,
-        ReciteRequest::SelectChoice(ChoiceId::new("22222222222222222222")?),
+        ReciteRequest::SelectChoice(ChoiceId::new("rthh7ab")?),
     );
     let pending = batch(&work)?
         .iter()

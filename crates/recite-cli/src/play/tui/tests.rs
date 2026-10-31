@@ -82,26 +82,26 @@ fn asset(source: &str) -> CompiledDialogue {
 fn tui_shared_preview_loop_projects_real_events_and_unavailable_focus() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> intro@18c570b9af4d973ba876\n",
+        "> @intro\n",
         "  Choose.\n",
-        "  ? locked@c491f4cbe1944ebc5bc6 requires=(trusts(player))\n",
+        "  ? requires=(trusts(player)) @locked\n",
         "    Locked.\n",
         "    -> locked\n",
-        "  ? go@c491f4cbe1944ebc5bc5\n",
+        "  ? @go\n",
         "    Go.\n",
         "    -> branch\n",
         ":: branch\n",
         ":if trusts(player)\n",
         "  ! deferred save(slot)\n",
-        "  > done@d491f4cbe1944ebc5bc5\n",
+        "  > @done\n",
         "    Done.\n",
         ":else\n",
         "  ! deferred denied(slot)\n",
-        "  > denied@d491f4cbe1944ebc5bc6\n",
+        "  > @denied\n",
         "    Denied.\n",
         "-> END\n",
         ":: locked\n",
-        "> locked_line@d491f4cbe1944ebc5bc7\n",
+        "> @locked_line\n",
         "  Locked.\n",
         "-> END\n",
     ));
@@ -124,8 +124,7 @@ fn tui_shared_preview_loop_projects_real_events_and_unavailable_focus() {
     run_preview(&asset, "start", None, &mut ui).expect("shared preview loop");
 
     assert!(ui.state.transcript.iter().any(|entry| {
-        entry.kind == TuiTranscriptKind::Choice
-            && entry.id.as_deref() == Some("c491f4cbe1944ebc5bc5")
+        entry.kind == TuiTranscriptKind::Choice && entry.id.as_deref() == Some("go")
     }));
     assert_eq!(ui.condition_answers.get("trusts(player)"), Some(&false));
     assert!(

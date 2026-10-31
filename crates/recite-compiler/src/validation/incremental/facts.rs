@@ -74,13 +74,13 @@ impl ProjectFacts {
         file.visit_statements_depth_first(&mut |statement| match statement {
             Statement::Line(line) => passages.push(PassageFact {
                 identity: Identity::Line(line.id.clone()),
-                frozen: matches!(line.source_id, SourceId::Frozen { .. }),
+                frozen: matches!(line.source_id, SourceId::Frozen(_)),
                 span: line.span.clone(),
             }),
             Statement::Choice(choice) => {
                 passages.push(PassageFact {
                     identity: Identity::Choice(choice.id.clone(), choice.echo.clone()),
-                    frozen: matches!(choice.source_id, SourceId::Frozen { .. }),
+                    frozen: matches!(choice.source_id, SourceId::Frozen(_)),
                     span: choice.span.clone(),
                 });
                 if let Some(target) = &choice.target {

@@ -23,8 +23,8 @@ impl LocaleProvider for LegacyLocaleProvider {
         _variant: Option<&str>,
     ) -> Result<Option<String>, LocaleError> {
         Ok(match id {
-            "8843fd6f53f020a12b31" => Some("Bonjour.".to_owned()),
-            "b2c08cc280c726da34bf" => Some("Choisir.".to_owned()),
+            "ycxgk0k" => Some("Bonjour.".to_owned()),
+            "rkj778k" => Some("Choisir.".to_owned()),
             _ => None,
         })
     }
@@ -54,9 +54,9 @@ impl LocaleProvider for LegacyLocaleProvider {
 fn legacy_wire_rows_preserve_braced_line_and_choice_text_across_snapshot() {
     let source = concat!(
         ":: start default\n",
-        "> intro@8843fd6f53f020a12b31\n",
+        "> @ycxgk0k\n",
         "  Hello.\n",
-        "  ? ask@b2c08cc280c726da34bf\n",
+        "  ? @rkj778k\n",
         "    Choose.\n",
         "    -> END\n",
         "-> END\n",

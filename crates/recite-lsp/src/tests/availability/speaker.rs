@@ -4,7 +4,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, write_file};
 
-use super::support::{authoring_schema, position_after};
+use super::support::{authoring_schema, position_after, position_after_in_header};
 
 pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -66,10 +66,10 @@ pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "> ordinary@d1e2f30415263748596a speaker=hazel\n",
+        "> speaker=hazel @ordinary\n",
         "  Ordinary speaker field.\n",
-        "? contextual@e1f2031425364758697a mood=warm speaker=hazel\n",
-        "? invalid@f102031425364758697a mood=warm speaker=rhea\n",
+        "? mood=warm speaker=hazel @szcdxz6\n",
+        "? mood=warm speaker=rhea @wf8nesa\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -77,7 +77,7 @@ pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
     let ordinary_hover = harness
         .hover(
             source_uri.clone(),
-            position_after(source, "ordinary@d1e2f30415263748596a speaker=hazel"),
+            position_after_in_header(source, "ordinary", "speaker=hazel"),
         )
         .expect("ordinary speaker hover");
     assert!(hover_text(ordinary_hover).contains("Recite speaker `hazel`"));
@@ -85,10 +85,7 @@ pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
     let contextual_hover = harness
         .hover(
             source_uri.clone(),
-            position_after(
-                source,
-                "contextual@e1f2031425364758697a mood=warm speaker=hazel",
-            ),
+            position_after_in_header(source, "szcdxz6", "mood=warm speaker=hazel"),
         )
         .expect("choice metadata speaker hover");
     let contextual_text = hover_text(contextual_hover);
@@ -111,7 +108,7 @@ pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
             harness
                 .completion(
                     source_uri,
-                    position_after(source, "contextual@e1f2031425364758697a mood=warm speaker="),
+                    position_after_in_header(source, "szcdxz6", "mood=warm speaker="),
                 )
                 .expect("choice metadata speaker completion"),
         ),
@@ -151,9 +148,9 @@ pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "> ordinary@d1e2f30415263748596a speaker=\n",
-        "? typed@e1f2031425364758697a speaker=\n",
-        "? resolved@f102031425364758697a speaker=hazel\n",
+        "> speaker= @ordinary\n",
+        "? speaker= @szcdxz6\n",
+        "? speaker=hazel @wf8nesa\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -163,7 +160,7 @@ pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "ordinary@d1e2f30415263748596a speaker="),
+                    position_after_in_header(source, "ordinary", "speaker="),
                 )
                 .expect("ordinary speaker completion"),
         ),
@@ -174,7 +171,7 @@ pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "typed@e1f2031425364758697a speaker="),
+                    position_after_in_header(source, "szcdxz6", "speaker="),
                 )
                 .expect("choice speaker metadata completion"),
         ),
@@ -184,7 +181,7 @@ pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
     let hover = harness
         .hover(
             source_uri,
-            position_after(source, "resolved@f102031425364758697a speaker=hazel"),
+            position_after_in_header(source, "wf8nesa", "speaker=hazel"),
         )
         .expect("choice speaker metadata hover");
     assert!(hover_text(hover).contains("Recite speaker `hazel`"));
@@ -219,8 +216,8 @@ pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_t
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "? unrelated@e1f2031425364758697a speaker=\n",
-        "? invalid@f102031425364758697a speaker=hazel\n",
+        "? speaker= @szcdxz6\n",
+        "? speaker=hazel @wf8nesa\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -230,7 +227,7 @@ pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_t
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "unrelated@e1f2031425364758697a speaker="),
+                    position_after_in_header(source, "szcdxz6", "speaker="),
                 )
                 .expect("unrelated metadata completion"),
         )
@@ -241,7 +238,7 @@ pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_t
         harness
             .hover(
                 source_uri,
-                position_after(source, "invalid@f102031425364758697a speaker=hazel"),
+                position_after_in_header(source, "wf8nesa", "speaker=hazel"),
             )
             .is_none(),
         "an invalid choice metadata value must not fall through to builtin speaker hover",
@@ -279,9 +276,9 @@ pub(super) fn completes_registry_and_enum_choice_metadata_values() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=hazel\n",
-        "? registry@e1f2031425364758697a item=\n",
-        "? enum@f102031425364758697a mood_kind=\n",
-        "? resolved@0123456789abcdef0123 item=map mood_kind=calm\n",
+        "? item= @szcdxz6\n",
+        "? mood_kind= @wf8nesa\n",
+        "? item=map mood_kind=calm @ez1fh09\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -291,7 +288,7 @@ pub(super) fn completes_registry_and_enum_choice_metadata_values() {
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "registry@e1f2031425364758697a item="),
+                    position_after_in_header(source, "szcdxz6", "item="),
                 )
                 .expect("registry metadata completion"),
         ),
@@ -302,7 +299,7 @@ pub(super) fn completes_registry_and_enum_choice_metadata_values() {
             harness
                 .completion(
                     source_uri.clone(),
-                    position_after(source, "enum@f102031425364758697a mood_kind="),
+                    position_after_in_header(source, "wf8nesa", "mood_kind="),
                 )
                 .expect("enum metadata completion"),
         ),
@@ -314,7 +311,7 @@ pub(super) fn completes_registry_and_enum_choice_metadata_values() {
             harness
                 .hover(
                     source_uri.clone(),
-                    position_after(source, "resolved@0123456789abcdef0123 item=map"),
+                    position_after_in_header(source, "ez1fh09", "item=map"),
                 )
                 .expect("registry metadata hover"),
         )

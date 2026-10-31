@@ -1,16 +1,20 @@
 use super::{MAX_CONTEXT_PASSAGES, MAX_VALIDATED_PASSAGES};
 use crate::authoring::{AuthoringKernel, AuthoringRequest, SavedDocument};
-use recite_core::DocumentKey;
+use recite_core::{DocumentKey, StableIdGenerator, StatementHeader};
 
 #[test]
 fn independent_large_files_do_not_materialize_one_project_sized_context() {
+    let mut ids = StableIdGenerator::seeded(0);
     let files = (0..17).map(|file| {
         let mut text = format!(
             ":: scene_{file}{}\n",
             if file == 0 { " default" } else { "" }
         );
-        for line in 0..1000 {
-            text.push_str(&format!("> line@{:020x}\n  Hello.\n", file * 1000 + line));
+        for _ in 0..1000 {
+            text.push_str(&format!(
+                "{}\n  Hello.\n",
+                StatementHeader::line().id(&ids.next_id())
+            ));
         }
         SavedDocument::new(
             DocumentKey::new(format!("scene-{file}.recite")).unwrap(),
@@ -41,10 +45,15 @@ fn independent_large_files_do_not_materialize_one_project_sized_context() {
 fn oversized_shared_provider_is_validated_once_with_bounded_dependent_work() {
     use super::VALIDATED_BATCHES;
     const PASSAGES: usize = 4_096;
+    let mut ids = StableIdGenerator::seeded(0);
     let mut provider = String::from(":: provider default\n");
-    for n in 0..PASSAGES {
-        provider.push_str(&format!("> line@{n:020x}\n  Provider prose.\n"));
+    for _ in 0..PASSAGES {
+        provider.push_str(&format!(
+            "{}\n  Provider prose.\n",
+            StatementHeader::line().id(&ids.next_id())
+        ));
     }
+    let users = (0..128).map(|_| ids.next_id()).collect::<Vec<_>>();
     provider.push_str("-> END\n");
     let mut kernel = AuthoringKernel::new();
     for header in ["provider", "renamed", "provider"] {
@@ -52,12 +61,12 @@ fn oversized_shared_provider_is_validated_once_with_bounded_dependent_work() {
             DocumentKey::new("provider.recite").unwrap(),
             provider.replacen(":: provider", &format!(":: {header}"), 1),
         )];
-        for n in 0..128 {
+        for (n, id) in users.iter().enumerate() {
             files.push(SavedDocument::new(
                 DocumentKey::new(format!("user-{n:03}.recite")).unwrap(),
                 format!(
-                    ":: user_{n}\n> line@{:020x}\n  User prose.\n-> provider.recite::provider\n",
-                    PASSAGES + n
+                    ":: user_{n}\n{}\n  User prose.\n-> provider.recite::provider\n",
+                    StatementHeader::line().id(id)
                 ),
             ));
         }

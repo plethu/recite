@@ -22,7 +22,8 @@ fn project_queries_and_edit_plans_stop_without_poisoning_the_snapshot()
     let snapshot = kernel.snapshot();
     let expected_symbols = snapshot.project_symbols(SymbolQueryOptions::default());
     let expected_rename = snapshot.plan_rename_block(&b, SourcePosition::new(1, 4)?, "renamed")?;
-    let expected_ids = snapshot.plan_insert_missing_ids()?;
+    let expected_ids =
+        snapshot.plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))?;
     let mut interrupted_rename = 0;
     let mut interrupted_ids = 0;
     for cutoff in 0..64 {
@@ -48,7 +49,10 @@ fn project_queries_and_edit_plans_stop_without_poisoning_the_snapshot()
             result => assert_eq!(result?, expected_rename),
         }
         let control = CancellationToken::interrupt_after(cutoff);
-        match snapshot.query(&control).plan_insert_missing_ids() {
+        match snapshot
+            .query(&control)
+            .plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))
+        {
             Err(AuthoringEditError::Interrupted(_)) => interrupted_ids += 1,
             result => assert_eq!(result?, expected_ids),
         }
@@ -58,7 +62,10 @@ fn project_queries_and_edit_plans_stop_without_poisoning_the_snapshot()
         snapshot.plan_rename_block(&b, SourcePosition::new(1, 4)?, "renamed")?,
         expected_rename
     );
-    assert_eq!(snapshot.plan_insert_missing_ids()?, expected_ids);
+    assert_eq!(
+        snapshot.plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))?,
+        expected_ids
+    );
     Ok(())
 }
 

@@ -2,7 +2,7 @@ use recite_core::po::{PoDocument, PoEntryId};
 
 #[test]
 fn review_preserves_unrelated_flags_comments_and_crlf() -> Result<(), Box<dyn std::error::Error>> {
-    let source = "# note\r\n#, fuzzy, custom-flag\r\n#. context\r\nmsgctxt \"11111111111111111111\"\r\nmsgid \"Hello\"\r\nmsgstr \"Bonjour\"\r\n";
+    let source = "# note\r\n#, fuzzy, custom-flag\r\n#. context\r\nmsgctxt \"ffee6p8\"\r\nmsgid \"Hello\"\r\nmsgstr \"Bonjour\"\r\n";
     let mut document = PoDocument::parse(source)?;
     document.set_fuzzy(PoEntryId::new(0), false)?;
     assert_eq!(document.source(), source.replace("fuzzy, ", ""));
@@ -15,8 +15,7 @@ fn review_preserves_unrelated_flags_comments_and_crlf() -> Result<(), Box<dyn st
 }
 #[test]
 fn invalid_translation_cannot_be_marked_reviewed() -> Result<(), Box<dyn std::error::Error>> {
-    let source =
-        "#, fuzzy\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour\"\n";
+    let source = "#, fuzzy\nmsgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour\"\n";
     let mut document = PoDocument::parse(source)?;
     assert!(document.set_fuzzy(PoEntryId::new(0), false).is_err());
     assert_eq!(document.source(), source);

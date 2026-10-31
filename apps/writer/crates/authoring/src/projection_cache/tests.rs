@@ -2,9 +2,7 @@ use super::*;
 
 #[test]
 fn worker_hints_share_only_live_passage_rows_and_their_paired_id_map() {
-    let document =
-        Document::new(":: start default\n? reply@22222222222222222222\n  Continue.\n  -> END\n")
-            .unwrap();
+    let document = Document::new(":: start default\n? @rthh7ab\n  Continue.\n  -> END\n").unwrap();
     assert!(document.projections.capture_passages().is_none());
     let passages = document.passage_snapshot().unwrap();
     let no_ids = document.projections.capture_passages().unwrap().restore();
@@ -12,7 +10,7 @@ fn worker_hints_share_only_live_passage_rows_and_their_paired_id_map() {
     assert!(no_ids.ids.get().is_none());
     assert_eq!(
         document
-            .reply_rules_request("22222222222222222222")
+            .reply_rules_request("rthh7ab")
             .prepare()
             .unwrap()
             .text,
@@ -20,7 +18,7 @@ fn worker_hints_share_only_live_passage_rows_and_their_paired_id_map() {
     );
     drop(no_ids);
     drop(passages);
-    document.find_passage("22222222222222222222").unwrap();
+    document.find_passage("rthh7ab").unwrap();
     let hint = document.projections.capture_passages().unwrap();
     let cache = hint.restore();
     assert!(Arc::ptr_eq(

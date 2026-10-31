@@ -3,7 +3,7 @@ use recite_writer_model::Document;
 use std::time::Duration;
 fn request(n: usize) -> ProjectionRequest {
     Document::new(format!(
-        ":: start default\n> line@11111111111111111111\n  Hello {n}.\n-> END\n"
+        ":: start default\n> @ffee6p8\n  Hello {n}.\n-> END\n"
     ))
     .unwrap()
     .projection_request()
@@ -49,7 +49,7 @@ fn invalid_source_reports_failure_and_worker_recovers() {
     let receiver = worker.results();
     worker
         .submit(
-            Document::new(":: broken\n? invalid\n")
+            Document::new(":: broken\n?\n")
                 .unwrap()
                 .projection_request(),
         )

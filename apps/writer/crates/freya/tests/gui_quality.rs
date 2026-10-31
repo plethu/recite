@@ -42,9 +42,7 @@ fn project_search_can_continue_past_one_hundred_and_clear_without_losing_input()
     )?;
     let mut source = String::from(":: start\n");
     for index in 0..106 {
-        source.push_str(&format!(
-            "> line_{index}@{index:020}\n  Lantern number {index}.\n"
-        ));
+        source.push_str(&format!("> @line_{index}\n  Lantern number {index}.\n"));
     }
     source.push_str("-> END\n");
     std::fs::write(dir.path().join("scene.recite"), source)?;
@@ -127,7 +125,7 @@ fn destination_picker_search_changes_only_the_reply_and_supports_undo()
 #[test]
 fn diagnostic_opens_source_and_places_the_edit_cursor_at_its_location()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start\n> line@11111111111111111111\n  Hello.\n-> missing\n";
+    let source = ":: start\n> @ffee6p8\n  Hello.\n-> missing\n";
     let model = recite_writer_model::Workbench::new(source)?;
     let diagnostics = model.document().diagnostics();
     let diagnostic = diagnostics.first().ok_or("diagnostic")?;

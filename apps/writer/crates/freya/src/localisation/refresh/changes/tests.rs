@@ -1,11 +1,11 @@
 use super::*;
 #[test]
 fn changes_use_supplied_notes_and_same_beat_source_context() {
-    let old=PoDocument::parse("# Translator says: keep this short\nmsgctxt \"11111111111111111111\"\nmsgid \"Nine\"\nmsgstr \"Neuf\"\n").expect("old");
+    let old=PoDocument::parse("# Translator says: keep this short\nmsgctxt \"ffee6p8\"\nmsgid \"Nine\"\nmsgstr \"Neuf\"\n").expect("old");
     let template=PoDocument::parse(concat!(
-        "#. file: scene.recite\n#. block: tram\n#. speaker: Mara\nmsgctxt \"11111111111111111111\"\nmsgid \"Eight\"\nmsgstr \"\"\n\n",
-        "#. file: scene.recite\n#. block: tram\nmsgctxt \"22222222222222222222\"\nmsgid \"Will you come?\"\nmsgstr \"\"\n\n",
-        "#. file: other.recite\n#. block: tram\nmsgctxt \"33333333333333333333\"\nmsgid \"Elsewhere\"\nmsgstr \"\"\n"
+        "#. file: scene.recite\n#. block: tram\n#. speaker: Mara\nmsgctxt \"ffee6p8\"\nmsgid \"Eight\"\nmsgstr \"\"\n\n",
+        "#. file: scene.recite\n#. block: tram\nmsgctxt \"rthh7ab\"\nmsgid \"Will you come?\"\nmsgstr \"\"\n\n",
+        "#. file: other.recite\n#. block: tram\nmsgctxt \"bqyvpqq\"\nmsgid \"Elsewhere\"\nmsgstr \"\"\n"
     )).expect("template");
     let next = old.refreshed(&template).expect("refresh");
     let changes = collect(&old, &next, &template);

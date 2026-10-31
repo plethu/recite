@@ -21,16 +21,6 @@ impl PoEntry {
                 .filter(|variant| !variant.is_empty())
         })
     }
-    #[must_use]
-    pub fn stable_id_metadata(&self) -> Option<&str> {
-        self.comments.iter().find_map(|comment| {
-            comment
-                .text()
-                .strip_prefix("source id:")
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-        })
-    }
     /// Source line on which this PO entry begins.
     #[must_use]
     pub const fn line(&self) -> usize {

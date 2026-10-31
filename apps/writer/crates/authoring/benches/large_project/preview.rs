@@ -6,8 +6,8 @@ use serde_json::Value;
 
 pub(super) fn catalogue(rows: &mut Vec<Value>) -> Result<(), Box<dyn std::error::Error>> {
     let document = Document::new(concat!(
-        ":: start default\n> prompt@000000000000000003e6\n  Wording 998.\n",
-        "? reply@000000000000000003e7\n  Wording 999.\n  -> END\n",
+        ":: start default\n> @prompt\n  Wording 998.\n",
+        "? @reply\n  Wording 999.\n  -> END\n",
     ))?;
     assert!(document.diagnostics().is_empty());
     let mut po = String::from("msgid \"\"\nmsgstr \"Language: fr\\n\"\n\n");

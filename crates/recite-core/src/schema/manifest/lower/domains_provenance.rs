@@ -170,7 +170,7 @@ pub(super) fn lower_contextual_domain_provenance(
             Ok(origins) => origins
                 .into_iter()
                 .filter_map(|(context_name, value)| {
-                    if !crate::is_valid_source_label(&context_name) {
+                    if !crate::is_valid_source_name(&context_name) {
                         context.diagnostics.push(schema_diagnostic(
                             MALFORMED_SHAPE,
                             "diagnostic-schema-001-context-origin-name",

@@ -12,7 +12,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
     let mut kernel = fixture();
     let source = concat!(
         ":: start\n",
-        "? ask@11111111111111111111 requires=(knows_secret()) reason=innkeeper_trust_hint\n",
+        "? requires=(knows_secret()) reason=innkeeper_trust_hint @ffee6p8\n",
         ":if knows_secret\n",
         "  ordinary prose requires=(knows_secret())\n",
         "-> target.recite::finish\n",
@@ -44,7 +44,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
         Some("target.recite")
     );
 
-    let reason_position = position(2, 76);
+    let reason_position = position(2, 51);
     let QueryResult::Ready(reason_hover) = snapshot.hover(&document, reason_position) else {
         panic!("availability reason hover is ready");
     };
@@ -56,7 +56,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
             parameters: 0
         }] if name == "innkeeper_trust_hint" && template == "Trust is too low."
     ));
-    assert_eq!(reason_hover.location().span().start.column(), 61);
+    assert_eq!(reason_hover.location().span().start.column(), 36);
     assert_eq!(
         reason_hover
             .location()
@@ -64,10 +64,10 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
             .end
             .as_ref()
             .map(|end| end.column()),
-        Some(80)
+        Some(55)
     );
 
-    let QueryResult::Ready(requires_hover) = snapshot.hover(&document, position(2, 28)) else {
+    let QueryResult::Ready(requires_hover) = snapshot.hover(&document, position(2, 3)) else {
         panic!("requires clause hover is ready");
     };
     assert!(matches!(
@@ -76,7 +76,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
             kind: recite_compiler::authoring::ClauseKind::Requires
         }]
     ));
-    assert_eq!(requires_hover.location().span().start.column(), 28);
+    assert_eq!(requires_hover.location().span().start.column(), 3);
     assert_eq!(
         requires_hover
             .location()
@@ -84,7 +84,7 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
             .end
             .as_ref()
             .map(|end| end.column()),
-        Some(52)
+        Some(27)
     );
 
     let QueryResult::Ready(if_hover) = snapshot.hover(&document, position(3, 1)) else {
@@ -195,7 +195,7 @@ fn malformed_reason_and_partial_reference_queries_remain_conservative() {
     let mut kernel = fixture();
     let source = concat!(
         ":: start\n",
-        "? ask@11111111111111111111 reason=innkeeper_trust_hint,\n",
+        "? reason=innkeeper_trust_hint, @ffee6p8\n",
         "-> missing\n",
     );
     kernel
@@ -208,7 +208,7 @@ fn malformed_reason_and_partial_reference_queries_remain_conservative() {
     let snapshot = kernel.snapshot();
     let document = key("main.recite");
     assert!(matches!(
-        snapshot.hover(&document, position(2, 47)),
+        snapshot.hover(&document, position(2, 22)),
         QueryResult::NoMatch
     ));
     assert!(matches!(

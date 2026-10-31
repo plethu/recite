@@ -8,18 +8,14 @@ fn follows_diverts_to_the_target_block_before_emitting() {
             ":: start default\n",
             "-> work\n",
             ":: work\n",
-            "> work_line@e1e064643088888ec47f\n",
+            "> @work_line\n",
             "  Work waits.\n",
             "-> END\n",
         ),
     );
     let mut session = start_scene(&asset, None).expect("starts");
 
-    assert_line(
-        next(&asset, &mut session),
-        "e1e064643088888ec47f",
-        "Work waits.",
-    );
+    assert_line(next(&asset, &mut session), "work_line", "Work waits.");
 }
 
 #[test]
@@ -28,11 +24,11 @@ fn traversal_is_deterministic_for_repeated_sessions() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> first@c2c0ee1a603322accd75\n",
+            "> @first\n",
             "  First.\n",
             "-> work\n",
             ":: work\n",
-            "> second@34c171d33aafd8c20456\n",
+            "> @second\n",
             "  Second.\n",
             "-> END\n",
         ),

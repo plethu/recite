@@ -120,7 +120,7 @@ fn blake3_fingerprints_accept_exactly_32_byte_digests() {
 fn canonical_source_fingerprint_is_blake3_with_stable_digest_length() {
     let first = canonical_source_fingerprint(":: start default\n-> END\n");
     let second = canonical_source_fingerprint(":: start default\n-> END\n");
-    let changed = canonical_source_fingerprint(":: start default\n> line\n  Text.\n");
+    let changed = canonical_source_fingerprint(":: start default\n>\n  Text.\n");
 
     assert_eq!(first, second);
     assert_ne!(first, changed);

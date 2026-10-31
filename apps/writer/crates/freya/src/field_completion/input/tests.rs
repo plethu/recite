@@ -8,7 +8,7 @@ fn utf16_completion_ranges_match_exact_unicode_prefixes_in_multichunk_ropes()
     for newline in ["\n", "\r\n"] {
         for paragraphs in [1, 300] {
             let source = format!(
-                ":: destination default\n> line@11111111111111111111\n{}-> dest",
+                ":: destination default\n> @ffee6p8\n{}-> dest",
                 "  Café 🐧 שלום.\n".repeat(paragraphs)
             )
             .replace('\n', newline);

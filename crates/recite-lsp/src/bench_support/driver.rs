@@ -222,7 +222,7 @@ impl LspBenchmarkDriver {
             vec![TextDocumentContentChangeEvent {
                 range: None,
                 range_length: None,
-                text: ":: stale\n> stale\n".to_owned(),
+                text: ":: stale\n>\n".to_owned(),
             }],
         );
 

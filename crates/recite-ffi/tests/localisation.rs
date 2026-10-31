@@ -32,19 +32,19 @@ struct ReturnedStrings {
 fn locale_callback_translates_start_choose_and_restore() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> greeting@71000000000000000001 bind=(name:string=$name)\n",
+        "> bind=(name:string=$name) @tvdc73h\n",
         "  Hello {name}.\n",
-        "> letters@71000000000000000002 bind=(count:int=$count)\n",
+        "> bind=(count:int=$count) @pbp5z5v\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
-        "> prompt@71000000000000000003\n",
+        "> @d02t70w\n",
         "  Pick one.\n",
-        "  ? choose@71000000000000000004\n",
+        "  ? @ddt6vh3\n",
         "    Choose this.\n",
         "    -> after\n",
         ":: after\n",
         "! blocking finish()\n",
-        "> after@71000000000000000005\n",
+        "> @g54yv1n\n",
         "  Finished.\n",
         "-> END\n",
     ));
@@ -195,9 +195,9 @@ fn locale_callback_translates_start_choose_and_restore() {
 fn locale_callback_can_return_source_fallback_for_line_and_plural() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> greeting@72000000000000000001\n",
+        "> @cctjn87\n",
         "  Hello.\n",
-        "> letters@72000000000000000002 bind=(count:int=$count)\n",
+        "> bind=(count:int=$count) @sb079v4\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",
@@ -280,19 +280,17 @@ unsafe extern "C" fn locale_callback(
         storage.attempts.clear();
         storage.strings.reserve(4);
         let translation = match (id, is_plural) {
-            ("71000000000000000001", false) => Some("Bonjour {name}."),
-            ("78000000000000000001", false) if query.variant.is_null() => Some("Bonjour."),
-            ("78000000000000000001", false) => Some("Bonjour formel."),
-            ("75000000000000000001", false) => None,
-            ("75000000000000000002", false) => None,
-            ("75000000000000000003", false) => Some("Après."),
-            ("75000000000000000004", false) => Some("Fini."),
-            ("71000000000000000002", true) if query.count != 1 => {
-                Some("Vous avez {count} lettres.")
-            }
-            ("71000000000000000003", false) => None,
-            ("71000000000000000004", false) => Some("Choisir ceci."),
-            ("71000000000000000005", false) => Some("Terminé."),
+            ("tvdc73h", false) => Some("Bonjour {name}."),
+            ("wxrj67z", false) if query.variant.is_null() => Some("Bonjour."),
+            ("wxrj67z", false) => Some("Bonjour formel."),
+            ("mqwxp0y", false) => None,
+            ("cyt3t7b", false) => None,
+            ("r069grp", false) => Some("Après."),
+            ("done", false) => Some("Fini."),
+            ("pbp5z5v", true) if query.count != 1 => Some("Vous avez {count} lettres."),
+            ("d02t70w", false) => None,
+            ("ddt6vh3", false) => Some("Choisir ceci."),
+            ("g54yv1n", false) => Some("Terminé."),
             _ => None,
         };
         let Some(translation) = translation else {

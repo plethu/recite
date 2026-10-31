@@ -21,14 +21,14 @@ fn expected() -> PotDocument {
     PotDocument {
         entries: vec![
             PotEntry {
-                context: "11111111111111111111".to_owned(),
+                context: "ffee6p8".to_owned(),
                 source_text: "Hello".to_owned(),
                 plural_source_text: None,
                 comments: Vec::new(),
                 reference: None,
             },
             PotEntry {
-                context: "22222222222222222222".to_owned(),
+                context: "rthh7ab".to_owned(),
                 source_text: "One letter".to_owned(),
                 plural_source_text: Some("Many letters".to_owned()),
                 comments: Vec::new(),
@@ -78,7 +78,7 @@ fn translated_po(language: &str, hello: &str, plural_arms: &[&str]) -> String {
         .map(|(index, value)| format!("msgstr[{index}] \"{value}\"\n"))
         .collect::<String>();
     format!(
-        "msgid \"\"\nmsgstr \"\"\n\"Language: {language}\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"{hello}\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"One letter\"\nmsgid_plural \"Many letters\"\n{arms}"
+        "msgid \"\"\nmsgstr \"\"\n\"Language: {language}\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"{hello}\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"One letter\"\nmsgid_plural \"Many letters\"\n{arms}"
     )
 }
 
@@ -127,13 +127,13 @@ fn missing_fuzzy_obsolete_and_incomplete_plural_remain_visible() {
         "\"Language: fr\\n\"\n",
         "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n",
         "#, fuzzy\n",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
-        "msgctxt \"22222222222222222222\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
+        "msgctxt \"rthh7ab\"\n",
         "msgid \"One letter\"\n",
         "msgid_plural \"Many letters\"\n",
         "msgstr[0] \"Une lettre\"\n",
         "msgstr[1] \"\"\n\n",
-        "#~ msgctxt \"22222222222222222222\"\n",
+        "#~ msgctxt \"rthh7ab\"\n",
         "#~ msgid \"One letter\"\n",
         "#~ msgid_plural \"Many letters\"\n",
         "#~ msgstr[0] \"Une lettre\"\n",
@@ -174,13 +174,13 @@ fn missing_fuzzy_obsolete_and_incomplete_plural_remain_visible() {
 fn variants_contexts_and_explicit_fallback_are_deterministic() {
     let variant = concat!(
         "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\n",
-        "msgctxt \"11111111111111111111&formal\"\n",
+        "msgctxt \"ffee6p8&formal\"\n",
         "msgid \"Hello\"\n",
         "msgstr \"Bonjour, formel\"\n",
     );
     let fallback = concat!(
         "msgid \"\"\nmsgstr \"\"\n\"Language: de\\n\"\n\n",
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"Hello\"\n",
         "msgstr \"Hallo\"\n",
     );
@@ -261,12 +261,12 @@ fn split_headerless_catalogues_share_an_explicit_locale() {
     let first = input(
         "a-fr",
         "fr",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n",
     );
     let second = input(
         "z-fr",
         "fr",
-        "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\nmsgctxt \"99999999999999999999\"\nmsgid \"Stale\"\nmsgstr \"Ancien\"\n",
+        "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\nmsgctxt \"pm96kqq\"\nmsgid \"Stale\"\nmsgstr \"Ancien\"\n",
     );
     let summary = build(
         &expected(),
@@ -309,12 +309,12 @@ fn conflicting_catalogue_records_and_candidates_are_rejected() {
             input(
                 "a-fr",
                 "fr",
-                "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"A\"\n",
+                "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"A\"\n",
             ),
             input(
                 "z-fr",
                 "fr",
-                "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
+                "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
             ),
         ],
         recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
@@ -325,7 +325,7 @@ fn conflicting_catalogue_records_and_candidates_are_rejected() {
             context,
             source_text,
             ..
-        }) if context == "11111111111111111111" && source_text == "Hello"
+        }) if context == "ffee6p8" && source_text == "Hello"
     ));
 
     let duplicate_variants =
@@ -359,7 +359,7 @@ fn conflicting_catalogue_records_and_candidates_are_rejected() {
 
 #[test]
 fn private_use_catalogue_identity_and_welsh_parent_are_supported() {
-    let source = "msgid \"\"\nmsgstr \"Language: cy-x-cofi\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Dialect translation\"\n";
+    let source = "msgid \"\"\nmsgstr \"Language: cy-x-cofi\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Dialect translation\"\n";
     let dialect = input("cofi", "CY-x-COFI", source);
     let base = input("welsh", "cy", &source.replace("cy-x-cofi", "cy"));
     for (catalogues, wanted) in [(vec![base.clone(), dialect], "cofi"), (vec![base], "welsh")] {

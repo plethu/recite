@@ -2,10 +2,10 @@ use crate::editing::{Pane, Writer};
 use freya::prelude::*;
 use recite_writer_model::{Document, View, Workbench};
 
-pub(crate) const A: &str = "11111111111111111111";
-pub(crate) const B: &str = "22222222222222222222";
-pub(crate) const C: &str = "33333333333333333333";
-pub(crate) const SOURCE: &str = ":: start default\n> a@11111111111111111111\n  Before A.\n> b@22222222222222222222\n  Before B.\n> c@33333333333333333333\n  Before C.\n-> END\n";
+pub(crate) const A: &str = "ffee6p8";
+pub(crate) const B: &str = "rthh7ab";
+pub(crate) const C: &str = "bqyvpqq";
+pub(crate) const SOURCE: &str = ":: start default\n> @ffee6p8\n  Before A.\n> @rthh7ab\n  Before B.\n> @bqyvpqq\n  Before C.\n-> END\n";
 pub(crate) fn model() -> Workbench {
     let mut model =
         Workbench::from_document(Document::new(SOURCE).unwrap(), Some(View::Source)).unwrap();

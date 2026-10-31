@@ -12,9 +12,9 @@ fn rejects_second_start_while_session_is_active() {
         "dialogue/active.recitec",
         concat!(
             ":: start default\n",
-            "> prompt@33333333333333333331\n",
+            "> @qckv0sq\n",
             "  Active?\n",
-            "  ? end@33333333333333333332\n",
+            "  ? @end\n",
             "    End.\n",
             "    -> END\n",
         ),
@@ -35,7 +35,7 @@ fn unknown_start_block_uses_contract_error_category() {
         "dialogue/unknown-block.recitec",
         concat!(
             ":: start default\n",
-            "> intro@33333333333333333333\n",
+            "> @bqyvpqq\n",
             "  Hello.\n",
             "-> END\n",
         ),
@@ -55,16 +55,16 @@ fn choice_errors_are_structured_and_keep_prompt_pending() {
         "dialogue/choices.recitec",
         concat!(
             ":: start default\n",
-            "> prompt@44444444444444444441\n",
+            "> @b1hymmg\n",
             "  Pick.\n",
-            "  ? locked@44444444444444444442 requires=(trusts(player))\n",
+            "  ? requires=(trusts(player)) @locked\n",
             "    Locked.\n",
             "    -> locked\n",
-            "  ? open@44444444444444444443\n",
+            "  ? @open\n",
             "    Open.\n",
             "    -> END\n",
             ":: locked\n",
-            "> locked_line@44444444444444444444\n",
+            "> @z0g6c80\n",
             "  Secret.\n",
             "-> END\n",
         ),
@@ -77,17 +77,11 @@ fn choice_errors_are_structured_and_keep_prompt_pending() {
         driver.select_choice("missing-choice"),
         "invalid_choice_error",
     );
-    assert_error_code(
-        driver.select_choice("44444444444444444442"),
-        "unavailable_choice_error",
-    );
+    assert_error_code(driver.select_choice("locked"), "unavailable_choice_error");
 
-    let outputs = must_ok(driver.select_choice("44444444444444444443"));
+    let outputs = must_ok(driver.select_choice("open"));
     assert_eq!(output_kinds(&outputs), ["end"]);
-    assert_error_code(
-        driver.select_choice("44444444444444444443"),
-        "stale_choice_error",
-    );
+    assert_error_code(driver.select_choice("open"), "stale_choice_error");
 }
 
 #[test]
@@ -105,14 +99,14 @@ fn changed_asset_is_used_for_next_session_only() {
     let mut active_driver = ReciteDialogueDriver::new();
     must_ok(active_driver.start(&first_asset, None, None));
 
-    let outputs = must_ok(active_driver.select_choice("99999999999999999992"));
+    let outputs = must_ok(active_driver.select_choice("continue"));
     assert_eq!(output_kinds(&outputs), ["line", "end"]);
-    assert_line(&outputs[0], "99999999999999999993", "Old active asset.");
+    assert_line(&outputs[0], "after", "Old active asset.");
 
     let mut next_driver = ReciteDialogueDriver::new();
     must_ok(next_driver.start(&changed_asset, None, None));
-    let outputs = must_ok(next_driver.select_choice("99999999999999999992"));
-    assert_line(&outputs[0], "99999999999999999993", "New asset.");
+    let outputs = must_ok(next_driver.select_choice("continue"));
+    assert_line(&outputs[0], "after", "New asset.");
 }
 
 #[test]
@@ -132,13 +126,13 @@ fn changed_asset_source(line: &str) -> String {
         "{}{}{}",
         concat!(
             ":: start default\n",
-            "> prompt@99999999999999999991\n",
+            "> @rtdatqr\n",
             "  Reload?\n",
-            "  ? continue@99999999999999999992\n",
+            "  ? @continue\n",
             "    Continue.\n",
             "    -> after\n",
             ":: after\n",
-            "> after@99999999999999999993\n",
+            "> @after\n",
             "  ",
         ),
         line,

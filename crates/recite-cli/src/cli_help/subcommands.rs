@@ -57,6 +57,22 @@ pub(super) fn localise(command: &mut clap::Command, messages: &Messages) {
         "check-ids" => {
             set_about(command, messages.text(MsgId::CliHelpCommandCheckIds));
             localise_paths(command, messages);
+            set_arg_help(
+                command,
+                "since",
+                messages.text(MsgId::CliHelpArgSince),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "allow_removed",
+                messages.text(MsgId::CliHelpArgAllowRemoved),
+                messages,
+            );
+        }
+        "assign-ids" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandAssignIds));
+            localise_paths(command, messages);
         }
         "check-markup" => {
             set_about(command, messages.text(MsgId::CliHelpCommandCheckMarkup));

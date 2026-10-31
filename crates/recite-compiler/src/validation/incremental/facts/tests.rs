@@ -8,15 +8,15 @@ fn facts(path: &str, source: &str) -> ProjectFacts {
 
 #[test]
 fn ordered_export_guard_matches_the_owned_projection() {
-    let source = ":: a default\n> line@11111111111111111111\n  First.\n? reply@22222222222222222222 echo=line(11111111111111111111)\n  Reply.\n  -> a\n:: b\n-> END\n";
+    let source = ":: a default\n> @ffee6p8\n  First.\n? echo=line(ffee6p8) @rthh7ab\n  Reply.\n  -> a\n:: b\n-> END\n";
     let original = facts("a.recite", source);
     let mut variants = vec![original.clone()];
     for (from, to, same) in [
         ("First.", "A longer café paragraph.", true),
-        ("echo=line(11111111111111111111)", "echo=none", true),
+        ("echo=line(ffee6p8)", "echo=none", true),
         ("  -> a", "  -> b", true),
         (":: a default", ":: renamed default", false),
-        ("11111111111111111111", "33333333333333333333", false),
+        ("ffee6p8", "bqyvpqq", false),
         (" default", "", false),
     ] {
         let next = facts("a.recite", &source.replace(from, to));
@@ -35,7 +35,7 @@ fn ordered_export_guard_matches_the_owned_projection() {
     non_export_changes.participation = ValidationParticipation::all_incomplete();
     let passages = std::sync::Arc::make_mut(&mut non_export_changes.passages);
     passages[0].identity = Identity::Choice(
-        Some(ChoiceId::new("11111111111111111111").unwrap()),
+        Some(ChoiceId::new("ffee6p8").unwrap()),
         ChoiceEcho::SelectedText,
     );
     passages[0].frozen = !passages[0].frozen;

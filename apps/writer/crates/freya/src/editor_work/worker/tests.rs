@@ -13,7 +13,7 @@ fn saved_search_owners_retire_on_worker_before_recovery_even_on_failure()
             "format_version = 1\n",
         )?;
         let path = dir.path().join("scene.recite");
-        let source = ":: start default\n> greeting@11111111111111111111\n  Hello.\n-> END\n";
+        let source = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
         std::fs::write(&path, source)?;
         let mut files = ProjectFiles::open(dir.path())?;
         let mut model = files.workbench_with_control(

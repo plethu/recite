@@ -18,11 +18,11 @@ pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
         1,
         concat!(
             ":: start default\n",
-            "> intro@d0c93b6fa28cacf4b1b0 speaker=rhea talker=ghost sfx=missing portrait=neutral\n",
+            "> speaker=rhea talker=ghost sfx=missing portrait=neutral @zv5txpv\n",
             "  [ghost]Hello[/ghost]\n",
-            "> missing_context@6e9cc3e62c1b68602ec8 portrait=neutral\n",
+            "> portrait=neutral @missing_context\n",
             "  Missing context.\n",
-            "? ask@8d454f8d90909d59c202 requires=(missing_condition(hazel))\n",
+            "? requires=(missing_condition(hazel)) @ask\n",
             "  Ask?\n",
             "  -> END\n",
             "! immediate missing_effect(snap)\n",
@@ -43,9 +43,9 @@ pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
             "RECITE_VALIDATE017"
         ]
     );
-    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 49));
-    assert_eq!(published.diagnostics[2].range.start, Position::new(1, 76));
-    assert_eq!(published.diagnostics[5].range.start, Position::new(3, 48));
+    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 22));
+    assert_eq!(published.diagnostics[2].range.start, Position::new(1, 49));
+    assert_eq!(published.diagnostics[5].range.start, Position::new(3, 11));
 
     harness.finish();
 }
@@ -86,7 +86,7 @@ pub(super) fn did_save_schema_reloads_and_republishes_source_diagnostics() {
         1,
         concat!(
             ":: start default\n",
-            "> intro@e3ca7d7cd6e07208a608\n",
+            "> @q73pq9p\n",
             "  Hello.\n",
             "! immediate play_sfx(missing)\n",
         ),
@@ -127,7 +127,7 @@ pub(super) fn did_save_schema_reloads_from_non_canonical_schema_uri() {
         1,
         concat!(
             ":: start default\n",
-            "> intro@e3ca7d7cd6e07208a608\n",
+            "> @q73pq9p\n",
             "  Hello.\n",
             "! immediate play_sfx(missing)\n",
         ),

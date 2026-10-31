@@ -66,7 +66,7 @@ fn availability_origins_and_tagged_arguments_survive_output_projection() {
         let bytes = encode_batch(vec![DialogueEvent::Prompt {
             line: None,
             choices: vec![DialogueChoice {
-                id: ChoiceId::new("11111111111111111111").expect("choice ID"),
+                id: ChoiceId::new("ffee6p8").expect("choice ID"),
                 source_text: "Ask.".to_owned(),
                 text: "Ask.".to_owned(),
                 metadata: Vec::new(),
@@ -168,7 +168,7 @@ fn empty_and_normal_batches_use_the_same_messagepack_encoder() {
 #[test]
 fn plural_line_metadata_survives_ffi_conversion_without_translation_template() {
     let line = DialogueLine {
-        id: LineId::new("22222222222222222222").expect("line ID"),
+        id: LineId::new("rthh7ab").expect("line ID"),
         source_text: "many {count}".to_owned(),
         text: "many 0".to_owned(),
         speaker: None,
@@ -181,8 +181,8 @@ fn plural_line_metadata_survives_ffi_conversion_without_translation_template() {
             resolution: DialoguePluralResolution {
                 attempts: vec![PluralResolutionAttempt {
                     locale: "fr-CA".to_owned(),
-                    context: "22222222222222222222".to_owned(),
-                    key: "22222222222222222222".to_owned(),
+                    context: "rthh7ab".to_owned(),
+                    key: "rthh7ab".to_owned(),
                     selected_arm: Some(0),
                     outcome: PluralResolutionOutcome::MissingEntry,
                 }],
@@ -213,7 +213,7 @@ fn plural_line_metadata_survives_ffi_conversion_without_translation_template() {
 fn escaped_plural_braces_survive_runtime_and_ffi_serialization() {
     let source = concat!(
         ":: start default\n",
-        "> letters@22222222222222222222 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @rthh7ab\n",
         "  You have \\{count\\} letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",

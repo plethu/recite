@@ -40,10 +40,10 @@ recite run build/dialogue.recitec --block arrival --fixture runtime-fixture.toml
 recite trace build/dialogue.recitec --block arrival --fixture runtime-fixture.toml
 ```
 
-The POT contains stable contexts such as `11111111111111111111`. The runtime fixture selects choices
-by those anchors, supplies condition results and acknowledges blocking effects. Its `[dialogue]`
-section selects the included `en-US` catalogue. The run prints the LACUNA conversation; trace
-returns the structured events and decisions. Running the same fixture again produces the same trace.
+The POT contains stable contexts such as `ffee6p8`. The runtime fixture selects choices by those
+IDs, supplies condition results and acknowledges blocking effects. Its `[dialogue]` section selects
+the included `en-US` catalogue. The run prints the LACUNA conversation; trace returns the structured
+events and decisions. Running the same fixture again produces the same trace.
 
 An effect in the trace is a request to the host. This headless fixture supplies acknowledgements for
 testing; Recite does not perform the requested game work.
@@ -59,8 +59,8 @@ Wait for a successful build. In `src/arrival.recite`, replace `-> src/effects.re
 Restore the target, change `The case narrows` to `The case turns`, and save again. The next
 successful build replaces the asset. Run `recite check-fresh .` in another terminal.
 
-Keep the anchors after `@` when editing text. The [authoring guide](/guides/authoring-loop/) covers
-editor diagnostics and [engine refresh](/adapters/authoring/).
+Keep the `@` IDs when editing text. The [authoring guide](/guides/authoring-loop/) covers editor
+diagnostics and [engine refresh](/adapters/authoring/).
 
 ## Repeat the check in CI
 

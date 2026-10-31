@@ -46,7 +46,7 @@ test("edited and opened Recite files execute; real diagnostics replace invalid s
   await page.getByRole("button", { name: "Run scene", exact: true }).click();
   await expect(transcript).toContainText("😀 <img src=x onerror=alert(1)>");
   await expect(transcript.locator("img")).toHaveCount(0);
-  await source.fill(":: start default\r\n> hello@11111111111111111111\r\n  😀\r\n-> missing\r\n");
+  await source.fill(":: start default\r\n> @ffee6p8\r\n  😀\r\n-> missing\r\n");
   await expect(page.getByRole("button", { name: "Continue", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Run scene", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("could not compile");
@@ -55,9 +55,7 @@ test("edited and opened Recite files execute; real diagnostics replace invalid s
   await page.getByLabel("Open a .recite file").setInputFiles({
     name: "opened.recite",
     mimeType: "text/plain",
-    buffer: Buffer.from(
-      ":: start default\n> opened@11111111111111111111\n  From a real file.\n-> END\n",
-    ),
+    buffer: Buffer.from(":: start default\n> @ffee6p8\n  From a real file.\n-> END\n"),
   });
   await expect(source).toHaveValue(/From a real file\./);
   await page.getByRole("button", { name: "Run scene", exact: true }).click();
@@ -108,7 +106,7 @@ test("effect integers stay exact and memory exhaustion allows a fresh scene", as
   const original = await source.inputValue();
   const transcript = page.getByRole("list", { name: "Dialogue transcript" });
   await source.fill(
-    ":: start default\n! blocking record(9223372036854775807)\n> done@11111111111111111111\n  Request acknowledged.\n-> END\n",
+    ":: start default\n! blocking record(9223372036854775807)\n> @ffee6p8\n  Request acknowledged.\n-> END\n",
   );
   await page.getByRole("button", { name: "Run scene", exact: true }).click();
   await expect(transcript).toContainText("record(9223372036854775807)");

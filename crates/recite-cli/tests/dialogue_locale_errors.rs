@@ -11,7 +11,7 @@ fn simple_asset(temp: &TempDir) -> PathBuf {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  Hello.\n-> END\n",
     );
     compile_project_asset(temp.path(), &source, "dialogue.recitec", None)
 }
@@ -62,7 +62,7 @@ fn malformed_catalog_reports_catalog_path_and_line() {
     let malformed_catalog = write_file(
         temp.path(),
         "malformed.po",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -92,12 +92,12 @@ fn conflicting_catalog_entries_are_rejected() {
     let first = write_file(
         temp.path(),
         "first.po",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
     );
     let second = write_file(
         temp.path(),
         "second.po",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -122,9 +122,9 @@ fn runtime_projection_ignores_fuzzy_and_obsolete_entries() {
         temp.path(),
         "stale.po",
         concat!(
-            "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n\n",
-            "#, fuzzy\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Fuzzy.\"\n\n",
-            "#~ msgctxt \"11111111111111111111\"\n#~ msgid \"Hello.\"\n#~ msgstr \"Obsolete.\"\n",
+            "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n\n",
+            "#, fuzzy\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Fuzzy.\"\n\n",
+            "#~ msgctxt \"ffee6p8\"\n#~ msgid \"Hello.\"\n#~ msgstr \"Obsolete.\"\n",
         ),
     );
     let fixture = write_file(
@@ -137,7 +137,7 @@ fn runtime_projection_ignores_fuzzy_and_obsolete_entries() {
     );
     let output = run_fixture(&asset, &fixture);
     output.assert_success();
-    output.assert_stdout_contains("line 11111111111111111111: Bonjour.");
+    output.assert_stdout_contains("line ffee6p8: Bonjour.");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains("Fuzzy."));
     assert!(!stdout.contains("Obsolete."));
@@ -192,7 +192,7 @@ fn plural_catalog_entries_require_complete_plural_metadata() {
         temp.path(),
         "plural.po",
         concat!(
-            "msgctxt \"11111111111111111111\"\n",
+            "msgctxt \"ffee6p8\"\n",
             "msgid \"Hello.\"\n",
             "msgid_plural \"Hello.\"\n",
             "msgstr[0] \"Bonjour.\"\n",
@@ -229,7 +229,7 @@ fn unusable_plural_rules_are_rejected_before_runtime_lookup() {
             "msgid \"\"\n",
             "msgstr \"\"\n",
             "\"Plural-Forms: nplurals=2; plural=2;\\n\"\n\n",
-            "msgctxt \"11111111111111111111\"\n",
+            "msgctxt \"ffee6p8\"\n",
             "msgid \"Hello.\"\n",
             "msgid_plural \"Hellos.\"\n",
             "msgstr[0] \"Bonjour.\"\n",
@@ -262,7 +262,7 @@ fn unusable_plural_arithmetic_is_projected_as_a_catalog_rule_error() {
             "msgid \"\"\n",
             "msgstr \"\"\n",
             "\"Plural-Forms: nplurals=2; plural=n / 0;\\n\"\n\n",
-            "msgctxt \"11111111111111111111\"\n",
+            "msgctxt \"ffee6p8\"\n",
             "msgid \"Hello.\"\n",
             "msgid_plural \"Hellos.\"\n",
             "msgstr[0] \"Bonjour.\"\n",

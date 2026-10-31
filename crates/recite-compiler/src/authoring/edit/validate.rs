@@ -1,9 +1,5 @@
 use super::types::SourceRange;
-use recite_core::{SourceLineIndex, SourcePosition, byte_offset_for_position};
-
-pub(super) fn byte_offsets(source: &str, range: SourceRange) -> Result<(usize, usize), ()> {
-    resolve_range(range, |position| byte_offset_for_position(source, position))
-}
+use recite_core::{SourceLineIndex, SourcePosition};
 
 pub(super) fn indexed_byte_offsets(
     source: &SourceLineIndex,

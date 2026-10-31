@@ -82,7 +82,7 @@ fn realistic_v1_pack_compiles_extracts_catalog_and_traverses()
     let runtime_fixture = RuntimeFixture::load(&project.runtime_fixture_source()?)?;
     let catalog = CatalogProvider::load(&project, &runtime_fixture)?;
     assert_eq!(
-        catalog.get("1111111111111111111b"),
+        catalog.get("notice_01"),
         Some("Clock notice: Meridian Station reports minute zero before the embassy relay.")
     );
 
@@ -204,7 +204,7 @@ fn generated_project_replaces_stale_output() -> Result<(), Box<dyn std::error::E
         .expect("lock generated project");
     let project = BenchmarkProject::load(BenchmarkScale::Small)?;
     let stale = project.root().join("src/stale.recite");
-    fs::write(&stale, ":: stale\n> stale\n")?;
+    fs::write(&stale, ":: stale\n>\n")?;
 
     let project = BenchmarkProject::load(BenchmarkScale::Small)?;
 
@@ -240,8 +240,8 @@ fn tiny_catalog_loads_from_runtime_fixture() -> Result<(), Box<dyn std::error::E
     let fixture = RuntimeFixture::load(&project.runtime_fixture_source()?)?;
     let catalog = CatalogProvider::load(&project, &fixture)?;
     assert_eq!(
-        catalog.get("44bbd8153af5a8182d93"),
-        Some("line translation for 44bbd8153af5a8182d93")
+        catalog.get("line_00000_000"),
+        Some("line translation for line_00000_000")
     );
     Ok(())
 }

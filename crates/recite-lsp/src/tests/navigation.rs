@@ -1,3 +1,4 @@
+use crate::tests::support::{position_after, position_inside};
 use lsp_types::{
     DocumentChanges, GotoDefinitionResponse, OneOf, Position, PrepareRenameResponse, Range,
     TextEdit, Uri,
@@ -14,11 +15,11 @@ pub(super) fn definition_resolves_block_references() {
         1,
         concat!(
             ":: start default\n",
-            "> intro@8a535b2e538dd4f39758\n",
+            "> @intro\n",
             "  Hello.\n",
             "-> target\n",
             ":: target\n",
-            "> target_line@b7cf36a63a75edb16a8f\n",
+            "> @d1myh18\n",
             "  There.\n",
         ),
     );
@@ -55,7 +56,7 @@ pub(super) fn typed_features_follow_open_overlay_generation() {
 
     let updated = concat!(
         ":: start default\r\n",
-        "> line@a1b2c3d4e5f60718293a\r\n",
+        "> @y0txed0\r\n",
         "  😀 overlay text.\r\n",
         "-> fresh_target\r\n",
         ":: fresh_target\r\n",
@@ -199,13 +200,13 @@ pub(super) fn rename_updates_only_block_symbols() {
     let temp = TempDir::new().expect("tempdir");
     let source = concat!(
         ":: start default\n",
-        "> target@8392209a350039cc0dfd\n",
+        "> @target\n",
         "  This stable line ID must stay target.\n",
-        "? choice_target@5a9d82b6cb8104fc9f19\n",
+        "? @choice_target\n",
         "  This choice ID must stay choice_target.\n",
         "  -> target\n",
         ":: target\n",
-        "> second@1a9463b9bc53e7500590\n",
+        "> @second\n",
         "  Done.\n",
     );
     write_file(temp.path(), "rename.recite", source);
@@ -266,7 +267,7 @@ pub(super) fn rename_rejects_non_block_symbols_and_invalid_names() {
         1,
         concat!(
             ":: start default\n",
-            "> line_id@6deabd0ba0f3a4d7938a\n",
+            "> @line_id\n",
             "  Hello.\n",
             "-> target\n",
             ":: target\n",
@@ -313,38 +314,4 @@ fn completion_labels(response: lsp_types::CompletionResponse) -> Vec<String> {
             list.items.into_iter().map(|item| item.label).collect()
         }
     }
-}
-
-fn position_after(source: &str, needle: &str) -> Position {
-    position_for_byte_index(
-        source,
-        source
-            .find(needle)
-            .unwrap_or_else(|| panic!("needle not found: {needle}"))
-            + needle.len(),
-    )
-}
-
-fn position_inside(source: &str, needle: &str) -> Position {
-    position_for_byte_index(
-        source,
-        source
-            .find(needle)
-            .unwrap_or_else(|| panic!("needle not found: {needle}"))
-            + 1,
-    )
-}
-
-fn position_for_byte_index(source: &str, byte_index: usize) -> Position {
-    let mut line = 0_u32;
-    let mut character = 0_u32;
-    for value in source[..byte_index].chars() {
-        if value == '\n' {
-            line = line.saturating_add(1);
-            character = 0;
-        } else {
-            character = character.saturating_add(value.len_utf16() as u32);
-        }
-    }
-    Position::new(line, character)
 }

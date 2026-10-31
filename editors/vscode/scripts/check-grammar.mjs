@@ -70,8 +70,7 @@ for (const scope of [
   "punctuation.definition.effect.recite",
   "punctuation.definition.divert.recite",
   "entity.name.section.recite",
-  "entity.name.label.recite",
-  "constant.other.anchor.recite",
+  "constant.other.stable-id.recite",
   "variable.other.reference.recite",
   "constant.language.recite",
   "variable.parameter.recite",
@@ -90,17 +89,23 @@ for (const scope of [
   assert(scopes.includes(scope), `TextMate grammar is missing lexical scope ${scope}`);
 }
 
+const stableIdField = grammar.repository["stable-id-field"];
+assert(
+  stableIdField?.captures?.["1"]?.name === "punctuation.definition.stable-id.recite",
+  "the stable-ID prefix must keep its own scope",
+);
+assert(
+  stableIdField?.captures?.["2"]?.name === "constant.other.stable-id.recite",
+  "stable IDs must stay de-emphasizable as their own scope",
+);
+
 for (const rule of ["line-statement", "choice-statement"]) {
   const statement = grammar.repository[rule];
   assert(typeof statement.begin === "string", `${rule} must be line-bounded with begin`);
   assert(statement.end === "$", `${rule} must stop at the physical line end`);
   assert(
-    statement.beginCaptures?.["4"]?.name === "punctuation.definition.anchor.recite",
-    `${rule} must keep the anchor separator distinct from the label`,
-  );
-  assert(
-    statement.beginCaptures?.["5"]?.name === "constant.other.anchor.recite",
-    `${rule} must keep anchors de-emphasizable as their own scope`,
+    statement.patterns?.[0]?.include === "#stable-id-field",
+    `${rule} must classify its trailing stable ID before other header content`,
   );
 }
 
@@ -123,7 +128,7 @@ const incomplete = await readRepositoryFile(
   fixtureManifest.incomplete_fixture,
   "incomplete fixture",
 );
-for (const probe of [/unfinished@/, /\{traveller_name$/m, /\? ask_more@/, /->$/m]) {
+for (const probe of [/speaker=archivist @$/m, /\{traveller_name$/m, /\? @ask_mo$/m, /->$/m]) {
   assert(probe.test(incomplete), `incomplete fixture is missing recovery probe ${probe}`);
 }
 

@@ -4,7 +4,7 @@ use super::*;
 fn syntax_tree_round_trips_source_text() {
     let source = concat!(
         ":: tavern_arrival default\r\n",
-        "> ta_001@adfa366c452c0c649fb2 speaker=innkeeper\r\n",
+        "> speaker=innkeeper @f2bg83k\r\n",
         "  Welcome [slow]back[/slow].\r\n",
     );
 
@@ -34,8 +34,8 @@ fn bare_cr_and_mixed_endings_preserve_syntax_and_source_spans() {
 fn statement_markers_classify_consistently() {
     let source = concat!(
         ":: tavern\n",
-        "> line@1ae75ebb2fae238d8ade\n",
-        "? choice@e0541a57a16607b99cb5\n",
+        "> @yw2060b\n",
+        "? @z1v5c2d\n",
         "! deferred effect\n",
         "-> END\n",
         ":if knows_secret(player)\n",
@@ -112,7 +112,7 @@ fn directive_markers_are_boundary_aware() {
 fn directive_like_prose_does_not_terminate_line_bodies() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> ta_001@0bf7b16fcf5fcbc4a0aa\n",
+        "> @wyry7e9\n",
         "  :ifx this is prose, not a directive.\n",
         "  :casefile is also prose.\n",
         "  :matchmaking remains prose.\n",
@@ -189,10 +189,9 @@ fn shared_language_pressure_fixture_round_trips_and_lowers_without_diagnostics()
     let Statement::Line(line) = &lowered.source_file.blocks[0].statements[1] else {
         panic!("expected interpolated line after the fixture comment");
     };
-    assert_eq!(line.source_id.label(), Some("arrivée.interpolée"));
     assert_eq!(
-        line.source_id.anchor().map(|anchor| anchor.as_str()),
-        Some("55667788990011223344")
+        line.source_id.stable_id().map(|id| id.as_str()),
+        Some("bt20t3f")
     );
     assert_eq!(
         line.source_text.text,
@@ -212,8 +211,8 @@ fn shared_language_pressure_fixture_round_trips_and_lowers_without_diagnostics()
         panic!("expected the interpolated nested choice");
     };
     assert_eq!(
-        choice.source_id.anchor().map(|anchor| anchor.as_str()),
-        Some("66778899001122334455")
+        choice.source_id.stable_id().map(|id| id.as_str()),
+        Some("ask_news")
     );
     assert_eq!(choice.source_text.text, "Tell me about {topic}.");
     assert_eq!(choice.interpolation_bindings[0].name, "topic");

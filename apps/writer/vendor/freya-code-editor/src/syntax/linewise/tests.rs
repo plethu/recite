@@ -23,7 +23,7 @@ fn metadata_eligibility_matches_scanning_all_supported_and_rejected_breaks() {
         for second in breaks {
             for phase in 0..8 {
                 let source = format!(
-                    "{}# {}{first}:: start default{second}> line@11111111111111111111\r\n  Café 🦊.{first}-> END{second}",
+                    "{}# {}{first}:: start default{second}> @ffee6p8\r\n  Café 🦊.{first}-> END{second}",
                     "\r\n".repeat(phase),
                     "é🦊".repeat(500),
                 );

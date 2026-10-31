@@ -91,14 +91,14 @@ fn missing_ids_keep_typed_identity_and_exact_insertion_points_across_crlf_utf8()
             .insertion_span()
             .expect("parser insertion span")
             .start,
-        recite_core::SourcePosition::new(2, 3).expect("valid insertion position")
+        recite_core::SourcePosition::new(2, 2).expect("valid insertion position")
     );
     assert_eq!(
         document.summary().stable_ids()[1]
             .insertion_span()
             .expect("parser insertion span")
             .start,
-        recite_core::SourcePosition::new(4, 3).expect("valid insertion position")
+        recite_core::SourcePosition::new(4, 2).expect("valid insertion position")
     );
 }
 

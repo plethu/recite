@@ -11,7 +11,7 @@ fn diagnostics_are_sorted_by_canonical_source_order() {
         "dialogue/order.recite",
         concat!(
             ":: start\n",
-            "? choose_path@3cba055063924b49c4f1\n",
+            "? @choose_path\n",
             "  Choose.\n",
             "  >\n",
             "    Nested missing line ID.\n",
@@ -37,17 +37,13 @@ fn diagnostics_are_sorted_by_canonical_source_order() {
 fn validation_is_independent_of_caller_file_order() {
     let first = lower(
         "dialogue/a.recite",
-        concat!(
-            ":: first default\n",
-            "> shared@31c87ff9bdb89723be77\n",
-            "  First.\n",
-        ),
+        concat!(":: first default\n", "> @rqen1rk\n", "  First.\n",),
     );
     let second = lower(
         "dialogue/b.recite",
         concat!(
             ":: second default\n",
-            "? shared@31c87ff9bdb89723be77\n",
+            "? @rqen1rk\n",
             "  Second.\n",
             "  -> END\n",
         ),
@@ -74,9 +70,9 @@ fn line_and_choice_ids_share_one_localisable_namespace() {
         "dialogue/shared.recite",
         concat!(
             ":: start default\n",
-            "> shared@c1cb25f1a9db29fd0a62\n",
+            "> @s5ety6e\n",
             "  Line.\n",
-            "? shared@c1cb25f1a9db29fd0a62\n",
+            "? @s5ety6e\n",
             "  Choice.\n",
             "  -> END\n",
         ),

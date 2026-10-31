@@ -13,8 +13,8 @@ curly-brace blocks or competing nesting styles into this vocabulary:
 
 ```text
 :: block_name default      # block
-> line_id@94d299352de485ec0b23                  # line
-? choice_id@c9f4c6bbcb7103982051                # choice
+> fields @line_id          # line
+? fields @choice_id        # choice
 ! mode effect(...)         # effect
 -> target                  # goto
 :if condition(...)         # conditional branch
@@ -59,7 +59,7 @@ Named blocks contain statements and may declare metadata and a default speaker c
 ```text
 :: tavern_arrival default
 
-> ta_001@b5960ef350446cba696b speaker=innkeeper portrait=neutral
+> speaker=innkeeper portrait=neutral @ta_001
   Welcome to the Rusty Flagon. Haven't seen you in a while.
 ```
 
@@ -77,14 +77,14 @@ Rhea: Hello.
 Instead, speaker must be structured in the line header:
 
 ```text
-> rhea_001@44b166e10a429205d903 speaker=rhea
+> speaker=rhea @rhea_001
   Hello.
 ```
 
 Multiline prose is represented by the indented body:
 
 ```text
-> rhea_014@f4dc069011f35d4c1ce5 speaker=rhea portrait=concerned
+> speaker=rhea portrait=concerned @rhea_014
   I didn't know it was that bad.
 
   I mean, I knew it was bad.
@@ -101,11 +101,11 @@ Choices have stable localisable IDs, source text, ordered metadata and a target 
 These clauses are dedicated syntax, not metadata:
 
 ```text
-? ask_news@b34dda3cb1fa5853566e requires=(trust_gte(innkeeper, player, 3))
+? requires=(trust_gte(innkeeper, player, 3)) @ask_news
   What's the news?
   -> local_news
 
-? ask_news_deeper@3ef1d3aca256d6ad1260 topic=rumours requires=(trust_gte(innkeeper, player, 5)) reason=innkeeper_trust_hint
+? topic=rumours requires=(trust_gte(innkeeper, player, 5)) reason=innkeeper_trust_hint @ask_news_deeper
   What aren't you telling visitors?
   -> guarded_rumours
 ```
@@ -123,7 +123,7 @@ Use `:if` to omit a choice entirely:
 
 ```text
 :if route_active(rhea_confession)
-  ? confess@f6c109bab34c9529ca23
+  ? @confess
     Tell Rhea the truth.
     -> confession
 ```
@@ -133,7 +133,7 @@ Choice echo policies:
 ```text
 echo = none
 echo = selected_text
-echo = line(4b3a1d9e8c7f6a5b2c10)
+echo = line(confession_echo)
 ```
 
 The default is `none`; repeating the selected choice requires an explicit echo policy.
@@ -194,7 +194,7 @@ For example, a chance-based skill check is authored as ordinary choice metadata 
 resolution:
 
 ```text
-? talk_down_guard@e8abb4465a68f6ad75bd check_skill=speech check_threshold=20 check_actor=player
+? check_skill=speech check_threshold=20 check_actor=player @talk_down_guard
   Talk the guard down.
   -> attempt_talk_down
 
@@ -202,10 +202,10 @@ resolution:
 ! blocking resolve_dialogue_check(talk_down_guard, player, speech, 20)
 :match dialogue_check_result(talk_down_guard)
   :case success
-    > guard_relents@c123e8e85bf15374cb60
+    > @guard_relents
       Fine. Go through.
   :case failure
-    > guard_refuses@f64d7023a39ec8ec5345
+    > @guard_refuses
       Not a chance.
 ```
 
@@ -216,25 +216,42 @@ structured presentation affordances without changing the underlying `DialogueCho
 
 ### 5.4.2 ID Assignment Policy
 
-Every line and choice must reach the compiler with a stable anchor. Source headers use
-`label@anchor`: the label is editable author-facing context, and the anchor is the canonical machine
-identity.
+Every line and choice must reach the compiler with a stable ID. A header spells its ID as one
+trailing `@id` field after any metadata and clauses:
 
-- Authors may write line and choice headers without an ID. Example: `>` alone, or draft `>
-  hazel_rhea.small_talk@` with no anchor.
-- The LSP inserts a deterministic-but-unique 20-character lowercase hex anchor into the source file,
-  producing e.g. `> hazel_rhea.small_talk@7f3a9c2e4b6d8f019a2b`. Anchors are selected to be unique
-  across the project's shared line/choice namespace at insertion time.
-- Once written to disk, anchors are **frozen**. The LSP never rewrites an existing anchor. Label
-  edits are display/context changes and do not create rename records.
-- Replacing an anchor changes identity. Explicit migration records for anchor replacement are future
-  work.
-- The compiler errors if any line or choice has a missing, draft, malformed, or plain unsuffixed ID.
-  `recite check-ids` enforces the same.
+```text
+> speaker=mara @desk_greeting
+? requires=(trusts(player)) @k7q3m9x
+```
 
-The anchor is gettext `msgctxt`; source text is `msgid`. Anchors survive prose and label edits, but
+- An ID uses lowercase ASCII letters, digits, `_`, `.` and `-`, and starts with a letter or `_`. `&`
+  (localisation variants), `:` (catalogue context prefixes) and `/` (reserved for a future pack
+  qualifier) never appear in an ID. Lines and choices share one project namespace.
+- Generated IDs are the documented default: seven lowercase Crockford base32 characters without `i`,
+  `l`, `o` or `u`, starting with a letter. Tooling draws them at random and checks each against the
+  project namespace, so branches that insert at the same place do not generate the same ID. Authors
+  may write a readable ID instead; it carries the same freeze obligation.
+- A header without an ID is incomplete. `recite assign-ids` and the LSP missing-ID action append a
+  generated `@id` field after the header's last field. Neither rewrites an existing or malformed ID.
+- Once written, an ID is **frozen**. Changing it changes identity: translations and saves keyed on
+  the old ID no longer match. Before a release, an ID change only requires regenerating catalogues
+  and development saves. After a release, treat it as a breaking content change: `recite check-ids
+  --since <release tag>` fails for every ID that has disappeared since that git revision unless it
+  is acknowledged with `--allow-removed <id>`, and fails if the revision is unavailable rather than
+  passing on an empty baseline. Projects outside git keep only the duplicate check.
+- Concurrent branches can still add the same ID. The compiler and `recite check-ids` report the
+  duplicate before merge; reassign the branch's new ID.
+- The compiler errors if any line or choice has a missing, malformed or duplicate ID. `recite
+  check-ids` enforces the same.
+- A bare ID belongs to the project's own content. A future pack or DLC qualifier is applied when
+  assets are loaded and does not change source.
+
+The ID is gettext `msgctxt`; source text is `msgid`. IDs survive prose and metadata edits, but
 changed prose requires catalogue refresh and translation review: lookup matches both fields. A
 retained translation for changed source is review material, not an exact match.
+
+Compiled assets carry a format version. A runtime refuses a version it does not know rather than
+migrating it; development assets and snapshots from before this ID format are regenerated.
 
 ### 5.5 Prompts
 
@@ -244,14 +261,14 @@ and choices as one UI state.
 The source format should support prompts as a line with nested choices:
 
 ```text
-> ta_prompt_001@573fd5e9fea65bf417b8 speaker=innkeeper portrait=neutral
+> speaker=innkeeper portrait=neutral @ta_prompt_001
   What do you need?
 
-  ? ta_opt_room@2df8dcd8991aacebed0c
+  ? @zbcjedn
     I need a room.
     -> get_room
 
-  ? ta_opt_news@2a8f40266bfbea97f8bd requires=(trust_gte(innkeeper, player, 3))
+  ? requires=(trust_gte(innkeeper, player, 3)) @ta_opt_news
     What's the news?
     -> local_news
 ```
@@ -259,11 +276,11 @@ The source format should support prompts as a line with nested choices:
 A prompt may also omit line text and present choices only:
 
 ```text
-? ta_opt_room@e777d797e41647f748ea
+? @mb944yy
   I need a room.
   -> get_room
 
-? ta_opt_leave@9e99c50eca0ac27500fa
+? @ta_opt_leave
   Never mind.
   -> END
 ```
@@ -311,10 +328,10 @@ runtime delivery.
 Examples:
 
 ```text
-> hazel_rhea.small_talk.005@42b9ac5ab7fc3ee50cac speaker=rhea portrait=concerned
+> speaker=rhea portrait=concerned @hazel_rhea.small_talk.005
   [slow]I didn't know it was that bad.[/slow]
 
-> hazel_rhea.small_talk.002@70c4f1ab40a347430ba7 speaker=hazel portrait=flat
+> speaker=hazel portrait=flat @hazel_rhea.small_talk.002
   [shake]Yeah, funny.[/shake]
 ```
 
@@ -350,10 +367,10 @@ on a condition expression.
 
 ```text
 :if familiarity_gte(hazel, rhea, 3)
-  > greet_warm_001@944703ea8a80a2530044 speaker=rhea
+  > speaker=rhea @greet_warm_001
     You again. Good.
 :else
-  > greet_cold_001@096efb0a031aa3c6582c speaker=rhea
+  > speaker=rhea @greet_cold_001
     Do I know you?
 ```
 
@@ -378,16 +395,16 @@ an enum. It is not general destructuring.
 ```text
 :match thread_stage(rhea_job_response)
   :case tired
-    > rhea_tired_001@dda242f6d7cd21051a6d speaker=rhea
+    > speaker=rhea @rhea_tired_001
       I'm exhausted. Let's keep it short.
   :case angry
-    > rhea_angry_001@03f0d7a77024f6731eb4 speaker=rhea
+    > speaker=rhea @rhea_angry_001
       Don't.
   :case fine
-    > rhea_fine_001@4df2ea266529d3f1a0ff speaker=rhea
+    > speaker=rhea @rhea_fine_001
       All right, what's up?
   :case _
-    > rhea_default_001@f85d3061266f7f9de56c speaker=rhea
+    > speaker=rhea @rhea_default_001
       Hey.
 ```
 
@@ -416,7 +433,7 @@ identifier (letters, digits, underscores; must start with a letter). Whitespace 
 not permitted.
 
 ```text
-> letters_001@c6df367933e543042076 speaker=narrator bind=(letters_remaining:int=$letters_remaining)
+> speaker=narrator bind=(letters_remaining:int=$letters_remaining) @fdm9t1h
   You have {letters_remaining} letters.
 ```
 
@@ -456,7 +473,7 @@ continuation line prefixed with `|`. Selection between forms is governed by the 
 gettext `Plural-Forms` expression, not by recite source syntax.
 
 ```text
-> letters_001@d6e98b87e1e0a4699603 speaker=narrator bind=(count:int=$letters_remaining)
+> speaker=narrator bind=(count:int=$letters_remaining) @a2az6wq
   You have one letter.
   | You have {count} letters.
 ```

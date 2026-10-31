@@ -26,9 +26,13 @@ use recite_core::{
     DiagnosticCategory, DiagnosticCode, explain_diagnostic_code, suggest_diagnostic_code,
 };
 
+mod assign_ids;
 mod bench;
+mod check_ids;
 mod project;
+use assign_ids::assign_ids_command;
 use bench::bench_command;
+use check_ids::check_ids_command;
 use project::project_check;
 
 pub(crate) fn run_command(
@@ -50,12 +54,8 @@ pub(crate) fn run_command(
         }
         Command::Compile(args) => compile_command(args, stderr, messages),
         Command::Extract(args) => extract_command(args, stdout, stderr, messages),
-        Command::CheckIds(args) => {
-            let diagnostics = validate_inputs(&args.paths, None)?;
-            report_targeted_diagnostics(stderr, messages, diagnostics, |diagnostic| {
-                diagnostic.code.category() == DiagnosticCategory::Identifier
-            })
-        }
+        Command::CheckIds(args) => check_ids_command(&args, stderr, messages),
+        Command::AssignIds(args) => assign_ids_command(args, stderr, messages),
         Command::CheckMarkup(args) => {
             let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
             let diagnostics = validate_inputs(&args.paths, schema.as_ref())?;

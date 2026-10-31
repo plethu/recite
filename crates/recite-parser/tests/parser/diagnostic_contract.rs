@@ -9,7 +9,7 @@ fn parser_diagnostics_are_structured_and_recordable() {
         "! blocking\n",
         ":if @\n",
         ":case tired\n",
-        "? ask@a74221348f0e47548c59 if trust_gte(hazel, rhea, 3)\n",
+        "? if trust_gte(hazel, rhea, 3) @hcpcvvy\n",
         "  What's the news?\n",
     );
 

@@ -19,14 +19,14 @@ fn expected() -> PotDocument {
     PotDocument {
         entries: vec![
             PotEntry {
-                context: "11111111111111111111".to_owned(),
+                context: "ffee6p8".to_owned(),
                 source_text: "Hello".to_owned(),
                 plural_source_text: None,
                 comments: Vec::new(),
                 reference: None,
             },
             PotEntry {
-                context: "22222222222222222222".to_owned(),
+                context: "rthh7ab".to_owned(),
                 source_text: "One letter".to_owned(),
                 plural_source_text: Some("Many letters".to_owned()),
                 comments: Vec::new(),
@@ -45,7 +45,7 @@ fn input(id: &str, locale: &str, source: &str) -> CatalogInput {
 
 fn translated_po(language: &str) -> String {
     format!(
-        "msgid \"\"\nmsgstr \"\"\n\"Language: {language}\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n"
+        "msgid \"\"\nmsgstr \"\"\n\"Language: {language}\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n"
     )
 }
 
@@ -53,7 +53,7 @@ fn translated_po(language: &str) -> String {
 fn locale_truncation_precedes_default_and_named_variant_is_major() {
     let variant = concat!(
         "msgid \"\"\nmsgstr \"\"\n\"Language: pt\\n\"\n\n",
-        "msgctxt \"11111111111111111111&formal\"\n",
+        "msgctxt \"ffee6p8&formal\"\n",
         "msgid \"Hello\"\nmsgstr \"Olá, formal\"\n",
     );
     let policy = recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("PT_br")))
@@ -121,7 +121,7 @@ fn locale_identity_is_canonical_and_po_language_must_match() {
 fn same_locale_resolution_searches_later_catalogue_sources() {
     let expected = PotDocument {
         entries: vec![PotEntry {
-            context: "33333333333333333333".to_owned(),
+            context: "bqyvpqq".to_owned(),
             source_text: "Later source".to_owned(),
             plural_source_text: None,
             comments: Vec::new(),
@@ -134,12 +134,12 @@ fn same_locale_resolution_searches_later_catalogue_sources() {
             input(
                 "a-fr",
                 "fr",
-                "msgctxt \"11111111111111111111\"\nmsgid \"Earlier source\"\nmsgstr \"Plus tôt\"\n",
+                "msgctxt \"ffee6p8\"\nmsgid \"Earlier source\"\nmsgstr \"Plus tôt\"\n",
             ),
             input(
                 "z-fr",
                 "fr",
-                "msgctxt \"33333333333333333333\"\nmsgid \"Later source\"\nmsgstr \"Plus tard\"\n",
+                "msgctxt \"bqyvpqq\"\nmsgid \"Later source\"\nmsgstr \"Plus tard\"\n",
             ),
         ],
         recite_compiler::authoring::CatalogResolutionPolicy::new(Some(locale("fr"))),
@@ -185,12 +185,12 @@ fn stale_fuzzy_and_obsolete_plural_records_remain_in_lossless_inventory() {
         "msgid \"\"\nmsgstr \"\"\n",
         "\"Language: fr\\n\"\n",
         "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n\n",
         "#, fuzzy\n",
-        "msgctxt \"99999999999999999999\"\n",
+        "msgctxt \"pm96kqq\"\n",
         "msgid \"Old one\"\nmsgid_plural \"Old many\"\n",
         "msgstr[0] \"Ancien\"\nmsgstr[1] \"\"\n\n",
-        "#~ msgctxt \"88888888888888888888\"\n",
+        "#~ msgctxt \"go\"\n",
         "#~ msgid \"Removed one\"\n#~ msgid_plural \"Removed many\"\n",
         "#~ msgstr[0] \"Retire\"\n#~ msgstr[1] \"Retires\"\n",
     );
@@ -208,7 +208,7 @@ fn stale_fuzzy_and_obsolete_plural_records_remain_in_lossless_inventory() {
     let stale = catalog
         .records()
         .iter()
-        .find(|record| record.context() == Some("99999999999999999999"))
+        .find(|record| record.context() == Some("pm96kqq"))
         .expect("stale fuzzy record");
     assert!(stale.is_fuzzy());
     assert!(matches!(
@@ -219,7 +219,10 @@ fn stale_fuzzy_and_obsolete_plural_records_remain_in_lossless_inventory() {
             translated_arms: 1,
         }
     ));
-    assert!(catalog.records().iter().any(|record| {
-        record.context() == Some("88888888888888888888") && record.is_obsolete()
-    }));
+    assert!(
+        catalog
+            .records()
+            .iter()
+            .any(|record| { record.context() == Some("go") && record.is_obsolete() })
+    );
 }

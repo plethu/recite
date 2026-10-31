@@ -81,8 +81,8 @@ fn compare(
 
 #[test]
 fn edits_recovery_removal_and_completeness_match_batch_validation() {
-    let a = ":: start default\n> hello@11111111111111111111\n  Hello.\n-> b.recite::there\n";
-    let b = ":: there\n> next@22222222222222222222\n  Next.\n-> END\n";
+    let a = ":: start default\n> @ffee6p8\n  Hello.\n-> b.recite::there\n";
+    let b = ":: there\n> @rthh7ab\n  Next.\n-> END\n";
     for schema in [None, Some(ProjectSchema::empty_v1())] {
         let mut kernel = schema.clone().map_or_else(AuthoringKernel::new, |schema| {
             AuthoringKernel::with_schema(schema).expect("valid schema")
@@ -94,11 +94,11 @@ fn edits_recovery_removal_and_completeness_match_batch_validation() {
                 a.replace("Hello.", "[unknown]bad markup[/unknown]"),
                 a.replace("Hello.", "Hello {unbound}."),
                 a.replace("Hello.", "Hello.\n  Another paragraph."),
-                a.replace("11111111111111111111", "22222222222222222222"),
+                a.replace("ffee6p8", "rthh7ab"),
                 a.replace(":: start default", ":: there default"),
                 a.replace(" default", ""),
                 a.replace("b.recite::there", "b.recite::missing"),
-                a.replace("11111111111111111111", "bad"),
+                a.replace("ffee6p8", "bad"),
                 a.replace("-> b.recite::there", ":if broken("),
                 a.to_owned(),
             ] {
@@ -161,8 +161,8 @@ fn every_source_fixture_matches_the_batch_validator_after_a_previous_revision() 
 
 #[test]
 fn echo_targets_and_related_diagnostic_locations_are_invalidated() {
-    let line = ":: first default\n> spoken@11111111111111111111\n  First.\n-> END\n";
-    let choice = ":: second\n? reply@22222222222222222222 echo=line(11111111111111111111)\n  Again.\n  -> END\n";
+    let line = ":: first default\n> @ffee6p8\n  First.\n-> END\n";
+    let choice = ":: second\n? echo=line(ffee6p8) @rthh7ab\n  Again.\n  -> END\n";
     let mut kernel = AuthoringKernel::new();
     compare(
         &mut kernel,
@@ -180,10 +180,7 @@ fn echo_targets_and_related_diagnostic_locations_are_invalidated() {
     compare(
         &mut kernel,
         &[
-            (
-                "a.recite",
-                &line.replace("11111111111111111111", "33333333333333333333"),
-            ),
+            ("a.recite", &line.replace("ffee6p8", "bqyvpqq")),
             ("b.recite", choice),
         ],
         None,
@@ -203,10 +200,7 @@ fn echo_targets_and_related_diagnostic_locations_are_invalidated() {
             ("a.recite", line),
             (
                 "b.recite",
-                &choice.replace(
-                    "echo=line(11111111111111111111)",
-                    "echo=line(44444444444444444444)",
-                ),
+                &choice.replace("echo=line(ffee6p8)", "echo=line(z0g6c80)"),
             ),
         ],
         None,
@@ -244,16 +238,16 @@ fn echo_targets_and_related_diagnostic_locations_are_invalidated() {
 #[test]
 fn joining_splitting_and_removing_components_matches_batch() {
     let variants = [
-        ":: first default\n> line@11111111111111111111\n  Hello.\n-> END\n",
-        ":: first\n> line@22222222222222222222\n  Hello.\n-> END\n",
-        ":: second default\n> line@11111111111111111111\n  Hello.\n-> END\n",
+        ":: first default\n> @ffee6p8\n  Hello.\n-> END\n",
+        ":: first\n> @rthh7ab\n  Hello.\n-> END\n",
+        ":: second default\n> @ffee6p8\n  Hello.\n-> END\n",
         ":: first\n-> b.recite::second\n",
-        ":: first\n* reply@33333333333333333333 echo=line(22222222222222222222)\n  Reply.\n  -> END\n",
-        ":: first default\n> line@broken\n  Broken.\n",
+        ":: first\n* @bqyvpqq echo=line(rthh7ab)\n  Reply.\n  -> END\n",
+        ":: first default\n> @Bad\n  Broken.\n",
         "",
     ];
-    let b = ":: second\n> line@22222222222222222222\n  Other.\n-> END\n";
-    let c = ":: third\n> line@33333333333333333333\n  Independent.\n-> END\n";
+    let b = ":: second\n> @rthh7ab\n  Other.\n-> END\n";
+    let c = ":: third\n> @bqyvpqq\n  Independent.\n-> END\n";
     let mut kernel = AuthoringKernel::new();
     // Reuse one kernel across every transition, including removal of a target,
     // missing-default owner changes and global recovery/completeness changes.

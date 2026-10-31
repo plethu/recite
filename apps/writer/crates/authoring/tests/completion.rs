@@ -27,7 +27,8 @@ fn draft_queries_match_fresh_project_analysis_without_mutating_accepted_state()
     use recite_compiler::authoring::SavedDocument;
     use recite_core::DocumentKey;
     use recite_writer_model::ProjectContext;
-    let source = ":: start default\n> line@11111111111111111111\n  Café 🐧.\n-> destination\n:: destination\n-> END\n";
+    let source =
+        ":: start default\n> @ffee6p8\n  Café 🐧.\n-> destination\n:: destination\n-> END\n";
     let key = DocumentKey::new("active.recite")?;
     let context = ProjectContext {
         documents: vec![SavedDocument::new(
@@ -67,10 +68,8 @@ fn indexed_replacements_match_scalar_scanner_and_outlive_documents()
 -> Result<(), Box<dyn std::error::Error>> {
     for newline in ["\n", "\r\n", "\r"] {
         for token in ["dest", ""] {
-            let source = format!(
-                ":: destination default\n> line@11111111111111111111\n  Café 🐧 שלום.\n-> {token}"
-            )
-            .replace('\n', newline);
+            let source = format!(":: destination default\n> @ffee6p8\n  Café 🐧 שלום.\n-> {token}")
+                .replace('\n', newline);
             let completions = {
                 let document = Document::new(&source)?;
                 document.complete_draft(

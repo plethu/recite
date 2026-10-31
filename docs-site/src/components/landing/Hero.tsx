@@ -1,7 +1,7 @@
 import { text } from "../../content/messages.ts";
 
 const example =
-  ":: junction default\n\n> again@cbd81a23d91fceb42a21 speaker=Technician\n  Again.\n\n? plan@cbd81a23d91fceb42a24\n  Unfold the survey plan.\n  -> plan";
+  ":: junction default\n\n> speaker=Technician @again\n  Again.\n\n? @plan\n  Unfold the survey plan.\n  -> plan";
 
 export function LandingHero() {
   return (

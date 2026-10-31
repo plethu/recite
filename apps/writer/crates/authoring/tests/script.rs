@@ -49,14 +49,14 @@ fn hub_script_edits_prose_without_losing_effects_or_return_links()
 #[test]
 fn conditional_prose_remains_editable_with_structure_visible()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n:if has_flag(ready)\n  > ready@44000000000000000001 speaker=mara\n    Ready to go.\n  -> finish\n:else\n  > waiting@44000000000000000002 speaker=mara\n    Not yet.\n  -> END\n:: finish\n! immediate set_flag(done, true)\n-> END\n";
+    let source = ":: start default\n:if has_flag(ready)\n  > speaker=mara @fw9rjbz\n    Ready to go.\n  -> finish\n:else\n  > speaker=mara @waiting\n    Not yet.\n  -> END\n:: finish\n! immediate set_flag(done, true)\n-> END\n";
     let mut document =
         Document::open(recite_core::DocumentKey::new("conditional.recite")?, source)?;
     let script = document.script()?;
     assert!(
         matches!(&script[0].entries[0], ScriptEntry::Group { heading, entries } if heading == ":if has_flag(ready)" && entries.len() == 2)
     );
-    document.replace_text(document.revision(), "44000000000000000001", "Let's go.")?;
+    document.replace_text(document.revision(), "fw9rjbz", "Let's go.")?;
     assert_eq!(
         document.source(),
         source.replace("Ready to go.", "Let's go.")
@@ -153,7 +153,7 @@ fn final_multiline_prose_remains_editable_without_a_trailing_newline()
         let source = [
             "# Café — preserve byte positions after Unicode.",
             ":: relay default",
-            "> courier@44000000000000000001",
+            "> @fw9rjbz",
             "\tCafé 🐧",
             "\tمرحبا",
         ]

@@ -4,8 +4,7 @@ use recite_writer_model::Document;
 #[test]
 fn prose_and_labels_reuse_captions_while_names_badges_and_order_invalidate()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source =
-        ":: first default\n> line@11111111111111111111\n  Before.\n-> second\n:: second\n-> END\n";
+    let source = ":: first default\n> @ffee6p8\n  Before.\n-> second\n:: second\n-> END\n";
     let document = Document::new(source)?;
     let original = refresh(document.block_summaries(), None);
     assert_eq!(original[0].label, "Start · First");
@@ -19,8 +18,7 @@ fn prose_and_labels_reuse_captions_while_names_badges_and_order_invalidate()
         source.replace("-> END", "-> first"),
         source.replace(" default", ""),
         source.replace("first", "ÉLAN_😀"),
-        ":: second\n-> END\n:: first default\n> line@11111111111111111111\n  Before.\n-> second\n"
-            .into(),
+        ":: second\n-> END\n:: first default\n> @ffee6p8\n  Before.\n-> second\n".into(),
     ] {
         let document = Document::new(changed)?;
         let refreshed = refresh(document.block_summaries(), Some(&original));
@@ -146,7 +144,7 @@ fn summaries_preserve_script_badges_and_recoverable_outline()
         assert_eq!(captions.len(), script.len());
     }
     for source in [
-        ":: repair\n> line\n  Unfrozen.\n-> END\n",
+        ":: repair\n>\n  Unfrozen.\n-> END\n",
         ":: repair\n-> END\n::\n",
     ] {
         let document = Document::new(source)?;

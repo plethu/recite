@@ -21,7 +21,7 @@ fn plural_evaluator_rejects_unbounded_expression_growth() {
 fn header_braces_are_not_dialogue_placeholders_and_field_order_is_checked() {
     let header = concat!("msgid \"\"\nmsgstr \"\"\n", "\"Project: {name}\\n\"\n",);
     assert!(PoDocument::parse(header).is_ok());
-    let out_of_order = "msgid \"Hello\"\nmsgctxt \"11111111111111111111\"\nmsgstr \"\"\n";
+    let out_of_order = "msgid \"Hello\"\nmsgctxt \"ffee6p8\"\nmsgstr \"\"\n";
     assert!(matches!(
         PoDocument::parse(out_of_order)
             .expect_err("gettext field order is checked")
@@ -33,8 +33,8 @@ fn header_braces_are_not_dialogue_placeholders_and_field_order_is_checked() {
 #[test]
 fn duplicate_active_catalogue_keys_are_rejected() {
     let source = concat!(
-        "msgctxt \"11111111111111111111\"\nmsgid \"same\"\nmsgstr \"one\"\n\n",
-        "msgctxt \"11111111111111111111\"\nmsgid \"same\"\nmsgstr \"two\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"same\"\nmsgstr \"one\"\n\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"same\"\nmsgstr \"two\"\n",
     );
     assert!(matches!(
         PoDocument::parse(source)
@@ -47,8 +47,8 @@ fn duplicate_active_catalogue_keys_are_rejected() {
 #[test]
 fn adjacent_records_and_gnu_control_escapes_round_trip() {
     let source = concat!(
-        "msgctxt \"11111111111111111111\"\nmsgid \"first\"\nmsgstr \"one\"\n",
-        "msgctxt \"22222222222222222222\"\nmsgid \"second\"\nmsgstr \"\\001\\177\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"first\"\nmsgstr \"one\"\n",
+        "msgctxt \"rthh7ab\"\nmsgid \"second\"\nmsgstr \"\\001\\177\"\n",
     );
     let mut document = PoDocument::parse(source).expect("adjacent records parse");
     assert_eq!(document.entries().len(), 2);
@@ -79,12 +79,9 @@ fn gettext_msgfmt_fixture_with_adjacent_records_parses() {
         Some("Deuxièmes")
     );
     assert!(!document.entries()[3].is_header());
-    assert_eq!(
-        document.entries()[3].context(),
-        Some("33333333333333333333")
-    );
+    assert_eq!(document.entries()[3].context(), Some("bqyvpqq"));
     assert_eq!(document.entries()[3].source_text(), "");
-    assert!(document.find("33333333333333333333", "").is_some());
+    assert!(document.find("bqyvpqq", "").is_some());
     assert!(document.entries()[4].flags().contains(&"fuzzy".to_owned()));
     assert!(document.entries()[5].is_obsolete());
 }
@@ -92,7 +89,7 @@ fn gettext_msgfmt_fixture_with_adjacent_records_parses() {
 #[test]
 fn batch_edits_validate_once_and_roll_back_on_failure() {
     let source = concat!(
-        "msgctxt \"11111111111111111111\"\n",
+        "msgctxt \"ffee6p8\"\n",
         "msgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n",
     );
     let mut document = PoDocument::parse(source).expect("document parses");
@@ -118,10 +115,10 @@ fn batch_edits_validate_once_and_roll_back_on_failure() {
 
 #[test]
 fn semantic_diagnostics_point_at_the_offending_field_value() {
-    let source = "msgctxt \"bad\"\nmsgid \"{name}\"\nmsgstr \"{other}\"\n";
+    let source = "msgctxt \"Bad\"\nmsgid \"{name}\"\nmsgstr \"{other}\"\n";
     let error = PoDocument::parse(source).expect_err("bad context is rejected");
     assert_eq!(error.line(), 1);
-    assert!(error.column() > 1);
+    assert!(error.column() > 3);
     assert!(error.diagnostic().span.end.is_some());
 }
 
@@ -132,7 +129,7 @@ fn writes_reject_symlinks_and_preserve_mode() {
     let temp = TempDir::new().expect("tempdir");
     let path = temp.path().join("catalog.po");
     let target = temp.path().join("target.po");
-    let source = "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
+    let source = "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
     fs::write(&target, source).expect("write target");
     fs::set_permissions(&target, fs::Permissions::from_mode(0o640)).expect("set mode");
     symlink(&target, &path).expect("create symlink");
@@ -178,7 +175,7 @@ fn stale_write_is_structured_and_does_not_clobber_external_content() {
 fn cooperative_writers_serialize_and_one_stale_writer_conflicts() {
     let temp = TempDir::new().expect("tempdir");
     let path = temp.path().join("catalog.po");
-    let source = "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
+    let source = "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
     fs::write(&path, source).expect("write fixture");
     let first = PoDocument::read(&path).expect("load fixture");
     let expected = first.fingerprint();
@@ -212,11 +209,7 @@ fn cooperative_writers_serialize_and_one_stale_writer_conflicts() {
 fn successful_write_replaces_the_file_and_returns_new_fingerprint() {
     let temp = TempDir::new().expect("tempdir");
     let path = temp.path().join("catalog.po");
-    fs::write(
-        &path,
-        "msgctxt \"33333333333333333333\"\nmsgid \"Hello\"\nmsgstr \"\"\n",
-    )
-    .expect("write fixture");
+    fs::write(&path, "msgctxt \"bqyvpqq\"\nmsgid \"Hello\"\nmsgstr \"\"\n").expect("write fixture");
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -262,7 +255,7 @@ fn successful_write_replaces_the_file_and_returns_new_fingerprint() {
 fn malformed_po_reports_structured_kinds_without_flattening() {
     let cases = [
         (
-            "msgctxt \"11111111111111111111\"\nmsgid \"{name}\"\nmsgstr \"{other}\"\n",
+            "msgctxt \"ffee6p8\"\nmsgid \"{name}\"\nmsgstr \"{other}\"\n",
             PoDiagnosticKind::PlaceholderMismatch(String::new()),
         ),
         (

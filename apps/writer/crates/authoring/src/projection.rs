@@ -20,7 +20,6 @@ pub enum PassageKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PassageContent {
     pub id: String,
-    pub label: String,
     pub section: String,
     pub text: String,
     pub kind: PassageKind,
@@ -54,7 +53,6 @@ impl fmt::Debug for Passage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Passage")
             .field("id", &self.id)
-            .field("label", &self.label)
             .field("section", &self.section)
             .field("text", &self.text)
             .field("kind", &self.kind)
@@ -123,17 +121,16 @@ pub(crate) fn passages_from(
                 ),
                 _ => continue,
             };
-            let SourceId::Frozen { label, anchor } = id else {
+            let SourceId::Frozen(stable_id) = id else {
                 return Err(EditError::MissingPassage);
             };
-            if !seen.insert(anchor.as_str()) {
+            if !seen.insert(stable_id.as_str()) {
                 return Err(EditError::MissingPassage);
             }
             let (text_range, indentation) = prose_range(source, text, &nodes)?;
             result.push(Passage {
                 content: Arc::new(PassageContent {
-                    id: anchor.to_string(),
-                    label: label.clone(),
+                    id: stable_id.to_string(),
                     section: block.id.to_string(),
                     text: text.text.clone(),
                     kind,

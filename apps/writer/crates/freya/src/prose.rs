@@ -3,6 +3,7 @@ use crate::design::Button;
 use crate::design::tokens as t;
 use crate::{editing::Writer, palette};
 use freya::{animation::use_animation, prelude::*};
+use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, PassageKind, View};
 pub(crate) mod focus;
 
@@ -124,7 +125,7 @@ impl Component for ProseField {
                 .spacing(t::SPACE_MD)
                 .on_pointer_enter(move |_| hovered.set(true))
                 .child(
-                    t::meta(format!("{} · {}", passage.label, t::short_id(&passage.id)))
+                    t::meta(format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id))
                         .font_size(11. * t::ui_scale())
                         .width(Size::flex(1.))
                         .max_lines(1),
@@ -288,7 +289,7 @@ impl Component for ProseField {
 fn details_content(writer: Writer, passage: &Passage) -> Element {
     let mut content = rect().width(Size::fill()).spacing(t::SPACE_XS).child(
         label()
-            .text(format!("{}@{}", passage.label, passage.id))
+            .text(format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id))
             .font_size(t::small()),
     );
     if let PassageKind::Choice { destination } = &passage.kind {

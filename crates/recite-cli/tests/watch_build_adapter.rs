@@ -7,6 +7,7 @@ use recite_compiler::authoring::{
     BuildControl, BuildEngine, BuildInputAuthority, BuildInputKind, FreshnessStatus,
 };
 use recite_core::compiled::decode_compiled_dialogue_messagepack;
+use recite_core::{StableId, StatementHeader};
 use tempfile::TempDir;
 
 fn write_file(root: &Path, relative: &str, contents: &str) {
@@ -34,12 +35,14 @@ fn manifest(schema: Option<&str>) -> String {
 }
 
 fn valid_source() -> &'static str {
-    ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n"
+    ":: start default speaker=hazel\n> @ffee6p8\n  Hello.\n-> END\n"
 }
 
 fn valid_source_with(block: &str, id: &str, default: bool) -> String {
     let default = if default { " default" } else { "" };
-    format!(":: {block}{default} speaker=hazel\n> intro@{id}\n  Hello.\n-> END\n")
+    let line = StatementHeader::line()
+        .id(&StableId::new(id).unwrap_or_else(|error| panic!("test ID `{id}`: {error}")));
+    format!(":: {block}{default} speaker=hazel\n{line}\n  Hello.\n-> END\n")
 }
 
 fn ready(root: &Path) -> ProjectBuildRequest {
@@ -68,12 +71,12 @@ fn preparation_captures_saved_manifest_schema_and_sorted_sources() {
     write_file(
         temp.path(),
         "dialogue/z.recite",
-        &valid_source_with("z", "11111111111111111111", true),
+        &valid_source_with("z", "ffee6p8", true),
     );
     write_file(
         temp.path(),
         "dialogue/a.recite",
-        &valid_source_with("a", "22222222222222222222", false),
+        &valid_source_with("a", "rthh7ab", false),
     );
     write_file(
         temp.path(),

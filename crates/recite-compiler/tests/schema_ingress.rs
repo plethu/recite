@@ -15,7 +15,7 @@ use recite_core::{
     },
 };
 
-const SOURCE: &str = ":: start default\n> hello@12345678901234567890\n  Hello.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @w3xnt5r\n  Hello.\n-> END\n";
 
 fn schema_with_unused_invalid_declaration() -> ProjectSchema {
     let mut schema = ProjectSchema::empty_v1();
@@ -147,7 +147,7 @@ fn compile_with_programmatic_schema_rejects_non_finite_availability_reason_liter
             "dialogue/start.recite",
             concat!(
                 ":: start default\n",
-                "? blocked_choice@fa18ce77aacd995c1666 requires=(blocked())\n",
+                "? requires=(blocked()) @blocked_choice\n",
                 "  Blocked.\n",
                 "  -> END\n",
             ),

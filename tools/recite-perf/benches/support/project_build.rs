@@ -4,6 +4,7 @@ use recite_compiler::authoring::{
     BuildCandidate, BuildControl, BuildEngine, BuildGeneration, SnapshotGeneration,
 };
 use recite_config::ProjectDiscoveryReport;
+use recite_core::{StableIdGenerator, StatementHeader};
 
 pub(super) struct Input {
     pub discovery: Option<ProjectDiscoveryReport>,
@@ -17,15 +18,16 @@ pub(super) fn prepare(files: usize) -> Input {
         "format_version = 1\n[[scenes]]\nid = \"probe\"\nasset = \"build/probe.recitec\"\nblock = \"shard_0\"\nparticipants = [\"narrator\"]\n",
     )
     .unwrap_or_else(|error| panic!("project input: {error}"));
+    let mut ids = StableIdGenerator::seeded(0);
     for file in 0..files {
         let mut source = format!(
             ":: shard_{file}{}\n",
             if file == 0 { " default" } else { "" }
         );
-        for line in 0..25 {
+        for _ in 0..25 {
             source.push_str(&format!(
-                "> line_{file}_{line}@{:020x}\n  A courier greets the café 世界.\n",
-                file * 25 + line + 1
+                "{}\n  A courier greets the café 世界.\n",
+                StatementHeader::line().id(&ids.next_id())
             ));
         }
         source.push_str("-> END\n");

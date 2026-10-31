@@ -86,15 +86,12 @@ fn stdio_malformed_workspace_folder_does_not_block_later_folder() {
     let valid = valid_root.join("src/references.recite");
     std::fs::write(
         &valid,
-        ":: start default\n> intro@8a535b2e538dd4f39758\n  Hello.\n-> src/definitions.recite::target\n",
+        ":: start default\n> @intro\n  Hello.\n-> src/definitions.recite::target\n",
     )
-        .unwrap_or_else(|error| panic!("write valid source: {error}"));
+    .unwrap_or_else(|error| panic!("write valid source: {error}"));
     let definition = valid_root.join("src/definitions.recite");
-    std::fs::write(
-        &definition,
-        ":: target\n> line@b7cf36a63a75edb16a8f\n  There.\n",
-    )
-    .unwrap_or_else(|error| panic!("write definition source: {error}"));
+    std::fs::write(&definition, ":: target\n> @d1myh18\n  There.\n")
+        .unwrap_or_else(|error| panic!("write definition source: {error}"));
 
     let malformed_manifest_uri = file_uri(&malformed_root.join("recite.project.toml"));
     let mut harness = StdioHarness::start(json!({
@@ -119,7 +116,7 @@ fn stdio_malformed_workspace_folder_does_not_block_later_folder() {
                 "uri": valid_uri,
                 "languageId": "recite",
                 "version": 1,
-                "text": ":: start default\n> intro@8a535b2e538dd4f39758\n  Hello.\n-> src/definitions.recite::target\n"
+                "text": ":: start default\n> @intro\n  Hello.\n-> src/definitions.recite::target\n"
             }
         }),
     );
@@ -157,7 +154,7 @@ fn stdio_excluded_open_file_is_diagnosable_without_cross_project_diagnostics() {
         .unwrap_or_else(|error| panic!("create dialogue root: {error}"));
     std::fs::write(
         temp.path().join("dialogue/kept.recite"),
-        ":: kept default\n> shared@83709c28414d0ce4659c\n  Kept.\n",
+        ":: kept default\n> @jewfq0h\n  Kept.\n",
     )
     .unwrap_or_else(|error| panic!("write project source: {error}"));
     let excluded = temp.path().join("generated.recite");
@@ -174,7 +171,7 @@ fn stdio_excluded_open_file_is_diagnosable_without_cross_project_diagnostics() {
                 "uri": excluded_uri.clone(),
                 "languageId": "recite",
                 "version": 1,
-                "text": ":: generated default\n> shared@83709c28414d0ce4659c\n  Generated.\n"
+                "text": ":: generated default\n> @jewfq0h\n  Generated.\n"
             }
         }),
     );

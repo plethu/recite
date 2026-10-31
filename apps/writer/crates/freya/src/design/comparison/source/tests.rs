@@ -1,8 +1,8 @@
 use super::*;
 #[test]
 fn source_rows_align_insertions_and_preserve_unicode_crlf_and_final_newline() {
-    let before = ":: old\r\n> line\r\n  À neuf.\r\n-> old\r\n";
-    let after = "# inserted\r\n:: new\r\n> line\r\n  À neuf.\r\n-> new";
+    let before = ":: old\r\n>\r\n  À neuf.\r\n-> old\r\n";
+    let after = "# inserted\r\n:: new\r\n>\r\n  À neuf.\r\n-> new";
     let rows = ComparisonRow::source("scene.recite", before, after);
     assert_eq!(
         rows.iter()

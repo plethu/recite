@@ -4,7 +4,7 @@ use serde_json::Value;
 
 pub(super) fn run(rows: &mut Vec<Value>) -> Result<(), Box<dyn std::error::Error>> {
     let mut source = String::from(
-        ":: start default\n? reply@22222222222222222222 requires=(standing(3))\n  Continue.\n  -> END\n",
+        ":: start default\n? requires=(standing(3)) @rthh7ab\n  Continue.\n  -> END\n",
     );
     for _ in 0..1_000 {
         source.push_str("# ");
@@ -12,7 +12,7 @@ pub(super) fn run(rows: &mut Vec<Value>) -> Result<(), Box<dyn std::error::Error
         source.push('\n');
     }
     let document = Document::new(source)?;
-    let mut rules = document.reply_rules("22222222222222222222")?;
+    let mut rules = document.reply_rules("rthh7ab")?;
     for _ in 0..5 {
         assert!(!measure("rules_clean_changed", rows, || rules.changed()));
         let copy = measure("rules_snapshot", rows, || rules.clone());

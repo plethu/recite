@@ -12,7 +12,7 @@ fn linked_project() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     std::fs::write(dir.path().join("a.recite"), recite_writer_model::FIXTURE)?;
     std::fs::write(
         dir.path().join("b.recite"),
-        ":: other default\n> other@33333333333333333333\n  Other scene.\n-> END\n",
+        ":: other default\n> @bqyvpqq\n  Other scene.\n-> END\n",
     )?;
     Ok(dir)
 }
@@ -40,7 +40,7 @@ fn welcome_owner_opens_forwarded_projects_and_switches_cleanly()
     let second = linked_project()?;
     std::fs::write(
         second.path().join("b.recite"),
-        ":: other default\n> other@33333333333333333333\n  Second project scene.\n-> END\n",
+        ":: other default\n> @bqyvpqq\n  Second project scene.\n-> END\n",
     )?;
     let (sender, receiver) = std::sync::mpsc::sync_channel(16);
     let inbox = crate::ActivationInbox::new(receiver);
@@ -142,7 +142,7 @@ fn received_route_updates_history_and_refuses_a_source_draft()
         1.,
     );
     test.poll_n(std::time::Duration::from_millis(16), 40);
-    for passage in ["missing", "33333333333333333333"] {
+    for passage in ["missing", "bqyvpqq"] {
         let rejected = target
             .replace("/write?", "/reply-rules?")
             .replace("&beat=other", "")
@@ -211,7 +211,7 @@ fn received_route_refuses_translation_drafts() -> Result<(), Box<dyn std::error:
     let root = dir.path().to_path_buf();
     std::fs::create_dir(root.join("locale"))?;
     let catalogue = root.join("locale/fr.po");
-    let saved = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"7701ceab59d2adfa057a\"\nmsgid \"Would you tell me, please, which way I ought to go from here?\"\nmsgstr \"Bonjour\"\n";
+    let saved = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"alice_way_001\"\nmsgid \"Would you tell me, please, which way I ought to go from here?\"\nmsgstr \"Bonjour\"\n";
     std::fs::write(&catalogue, saved)?;
     let (sender, receiver) = std::sync::mpsc::sync_channel(16);
     let inbox = crate::ActivationInbox::new(receiver);
@@ -221,7 +221,7 @@ fn received_route_refuses_translation_drafts() -> Result<(), Box<dyn std::error:
             .append_pair("project", &root.to_string_lossy())
             .append_pair("scene", "a.recite")
             .append_pair("catalogue", "locale/fr.po")
-            .append_pair("entry", "7701ceab59d2adfa057a")
+            .append_pair("entry", "alice_way_001")
             .finish()
     );
     let target = format!(
@@ -284,7 +284,7 @@ fn route_less_project_switch_clears_clean_catalogue() -> Result<(), Box<dyn std:
     std::fs::create_dir(first.path().join("locale"))?;
     std::fs::write(
         first.path().join("locale/fr.po"),
-        "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"7701ceab59d2adfa057a\"\nmsgid \"Would you tell me, please, which way I ought to go from here?\"\nmsgstr \"Bonjour\"\n",
+        "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"alice_way_001\"\nmsgid \"Would you tell me, please, which way I ought to go from here?\"\nmsgstr \"Bonjour\"\n",
     )?;
     let initial = format!(
         "recite://writer/translation?{}",
@@ -292,7 +292,7 @@ fn route_less_project_switch_clears_clean_catalogue() -> Result<(), Box<dyn std:
             .append_pair("project", &first.path().to_string_lossy())
             .append_pair("scene", "a.recite")
             .append_pair("catalogue", "locale/fr.po")
-            .append_pair("entry", "7701ceab59d2adfa057a")
+            .append_pair("entry", "alice_way_001")
             .finish()
     );
     let (sender, receiver) = std::sync::mpsc::sync_channel(16);
@@ -331,7 +331,7 @@ fn a_source_route_cannot_replace_recovered_invalid_prose() -> Result<(), Box<dyn
     let root = dir.path().to_path_buf();
     let mut files = crate::project::ProjectFiles::open(&root)?;
     let mut model = files.workbench()?;
-    let rejected = "> intruder\n  Preserve this rejected draft.";
+    let rejected = ">\n  Preserve this rejected draft.";
     model.set_draft(rejected.into());
     assert!(model.apply().is_err());
     files.checkpoint(&model)?;

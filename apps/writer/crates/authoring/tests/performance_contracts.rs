@@ -6,7 +6,7 @@ use std::sync::Arc;
 #[test]
 fn repeated_words_across_fields_and_query_do_not_duplicate_search_hits()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: courier default\n> first@00000000000000000001 speaker=courier\n  Courier café courier.\n> second@00000000000000000002\n  Café courier.\n-> END\n";
+    let source = ":: courier default\n> speaker=courier @qkv50yd\n  Courier café courier.\n> @nz8qsyj\n  Café courier.\n-> END\n";
     let documents = ["courier.recite", "other.recite"]
         .into_iter()
         .map(|key| Ok(SavedDocument::new(DocumentKey::new(key)?, source)))
@@ -53,9 +53,9 @@ fn search_lowercasing_preserves_unicode_and_source_order() -> Result<(), Box<dyn
 {
     let source = concat!(
         ":: start default speaker=İSTANBUL\n",
-        "> first@00000000000000000001\n",
+        "> @qkv50yd\n",
         "  Straße CAFÉ Beacon17 and courier courier.\n",
-        "? reply@00000000000000000002\n",
+        "? @nz8qsyj\n",
         "  Couriers wait beside the café.\n",
         "  -> END\n",
     );
@@ -75,7 +75,7 @@ fn search_lowercasing_preserves_unicode_and_source_order() -> Result<(), Box<dyn
 #[test]
 fn shared_search_results_preserve_order_counts_and_their_saved_snapshot()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> first@00000000000000000001 speaker=mara\n  Café courier.\n> second@00000000000000000002\n  Another café.\n-> END\n";
+    let source = ":: start default\n> speaker=mara @qkv50yd\n  Café courier.\n> @nz8qsyj\n  Another café.\n-> END\n";
     let documents = ["a.recite", "b.recite"]
         .into_iter()
         .map(|key| Ok(SavedDocument::new(DocumentKey::new(key)?, source)))
@@ -159,8 +159,7 @@ fn recovery_shares_immutable_drafts_and_preserves_the_existing_json_shape()
 #[test]
 fn search_hits_share_immutable_context_without_retaining_source()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source =
-        ":: start default speaker=Mara\n> first\n  First courier.\n> second\n  Second courier.\n";
+    let source = ":: start default speaker=Mara\n>\n  First courier.\n>\n  Second courier.\n";
     let index = SearchIndex::build(&[SavedDocument::new(DocumentKey::new("a.recite")?, source)]);
     let hits = index.search_results("courier mara", 2);
     let first = hits.get(0).ok_or("first")?;

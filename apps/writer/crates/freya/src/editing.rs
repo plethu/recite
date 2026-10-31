@@ -8,9 +8,9 @@ pub type Session = State<Result<Workbench, WorkbenchError>>;
 
 /// The shared query colours stable IDs like names. Writer dims them so writers read the name,
 /// not the hash; editor integrations keep the shared query unchanged.
-const STABLE_ID_CAPTURE: &str = "((stable_id) @label)";
+const STABLE_ID_CAPTURE: &str = "((stable_id_field) @label)";
 static HIGHLIGHTS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    recite_writer_grammar::HIGHLIGHTS.replace(STABLE_ID_CAPTURE, "((stable_id) @comment)")
+    recite_writer_grammar::HIGHLIGHTS.replace(STABLE_ID_CAPTURE, "((stable_id_field) @comment)")
 });
 
 pub fn editor_data(text: &str, source: bool, dark: bool) -> CodeEditorData {

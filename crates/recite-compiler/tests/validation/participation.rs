@@ -43,7 +43,7 @@ fn all_complete_participation_preserves_schema_and_schema_free_reports() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> first@11111111111111111111 portrait=1\n",
+            "> portrait=1 @ffee6p8\n",
             "  [unknown]Hello {name}.\n",
             "! immediate missing_effect()\n",
         ),
@@ -72,17 +72,13 @@ fn all_complete_participation_preserves_ordering_for_reversed_inputs() {
         "dialogue/zeta.recite",
         concat!(
             ":: zeta default\n",
-            "> first@11111111111111111111 unknown=1\n",
+            "> unknown=1 @ffee6p8\n",
             "  [unknown]Hello.\n",
         ),
     );
     let second = lower_clean(
         "dialogue/alpha.recite",
-        concat!(
-            ":: alpha\n",
-            "> second@22222222222222222222\n",
-            "  Hello.\n",
-        ),
+        concat!(":: alpha\n", "> @rthh7ab\n", "  Hello.\n",),
     );
     let files = [first, second];
     let forward = [participated(&files[0]), participated(&files[1])];
@@ -168,10 +164,10 @@ fn incomplete_classes_do_not_suppress_unrelated_clean_file_diagnostics() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> line@11111111111111111111 unknown=1\n",
+            "> unknown=1 @ffee6p8\n",
             "  [unknown]Hello.\n",
             ":if missing_condition()\n",
-            "  > gated@22222222222222222222\n",
+            "  > @rthh7ab\n",
             "    Gated.\n",
             "! immediate missing_effect()\n",
         ),
@@ -180,10 +176,10 @@ fn incomplete_classes_do_not_suppress_unrelated_clean_file_diagnostics() {
         "dialogue/other.recite",
         concat!(
             ":: other\n",
-            "> bad@33333333333333333333 unknown=1\n",
+            "> unknown=1 @bqyvpqq\n",
             "  [ghost]Other.\n",
             ":if missing_condition()\n",
-            "  > nested@44444444444444444444\n",
+            "  > @z0g6c80\n",
             "    Nested.\n",
             "! immediate missing_effect()\n",
         ),
@@ -219,11 +215,7 @@ fn incomplete_classes_do_not_suppress_unrelated_clean_file_diagnostics() {
 fn incomplete_ast_structure_suppresses_interpolation_diagnostics() {
     let source = lower_clean(
         "dialogue/start.recite",
-        concat!(
-            ":: start default\n",
-            "> line@11111111111111111111\n",
-            "  Hello {missing}.\n",
-        ),
+        concat!(":: start default\n", "> @ffee6p8\n", "  Hello {missing}.\n",),
     );
     let complete = [participated(&source)];
     assert_eq!(
@@ -249,11 +241,11 @@ fn incomplete_ast_structure_suppresses_interpolation_diagnostics() {
 fn incomplete_stable_ids_do_not_contribute_duplicate_or_echo_evidence() {
     let first = lower_clean(
         "dialogue/first.recite",
-        ":: first default\n> same@11111111111111111111\n  First.\n",
+        ":: first default\n> @ffee6p8\n  First.\n",
     );
     let second = lower_clean(
         "dialogue/second.recite",
-        ":: second\n> same@11111111111111111111\n  Second.\n",
+        ":: second\n> @ffee6p8\n  Second.\n",
     );
     let incomplete =
         ValidationParticipation::all_complete().with_stable_ids(ValidationCompleteness::Incomplete);
@@ -280,9 +272,9 @@ fn incomplete_project_keeps_same_file_id_duplicates_but_not_cross_file_duplicate
         "dialogue/first.recite",
         concat!(
             ":: first default\n",
-            "> same@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  First.\n",
-            "? choose@22222222222222222222\n",
+            "? @rthh7ab\n",
             "  Choose.\n",
             "  -> END\n",
         ),
@@ -291,9 +283,9 @@ fn incomplete_project_keeps_same_file_id_duplicates_but_not_cross_file_duplicate
         "dialogue/second.recite",
         concat!(
             ":: second\n",
-            "> same@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Second.\n",
-            "? choose@22222222222222222222\n",
+            "? @rthh7ab\n",
             "  Choose.\n",
             "  -> END\n",
         ),
@@ -310,14 +302,14 @@ fn incomplete_project_keeps_same_file_id_duplicates_but_not_cross_file_duplicate
         "dialogue/local.recite",
         concat!(
             ":: local default\n",
-            "> same@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  First.\n",
-            "> same@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Second.\n",
-            "? choose@22222222222222222222\n",
+            "? @rthh7ab\n",
             "  Choose.\n",
             "  -> END\n",
-            "? choose@22222222222222222222\n",
+            "? @rthh7ab\n",
             "  Again.\n",
             "  -> END\n",
         ),
@@ -359,9 +351,9 @@ fn same_path_incomplete_stable_ids_suppress_duplicate_evidence_in_both_input_ord
         "dialogue/shared.recite",
         concat!(
             ":: start default\n",
-            "> repeated@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  First.\n",
-            "> repeated@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Second.\n",
         ),
     );
@@ -389,11 +381,11 @@ fn same_path_incomplete_stable_ids_suppress_duplicate_evidence_in_both_input_ord
 fn incomplete_block_definitions_do_not_contribute_duplicate_evidence() {
     let first = lower_clean(
         "dialogue/first.recite",
-        ":: shared default\n> first@11111111111111111111\n  First.\n",
+        ":: shared default\n> @ffee6p8\n  First.\n",
     );
     let second = lower_clean(
         "dialogue/second.recite",
-        ":: shared\n> second@22222222222222222222\n  Second.\n",
+        ":: shared\n> @rthh7ab\n  Second.\n",
     );
     let incomplete = ValidationParticipation::all_complete()
         .with_block_definitions(ValidationCompleteness::Incomplete);
@@ -439,9 +431,9 @@ fn unknown_choice_echo_is_indeterminate_until_all_stable_ids_are_complete() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> line@11111111111111111111\n",
+            "> @ffee6p8\n",
             "  Line.\n",
-            "? choose@22222222222222222222 echo=line(missing)\n",
+            "? echo=line(missing) @rthh7ab\n",
             "  Choose.\n",
             "  -> END\n",
         ),

@@ -96,7 +96,7 @@ fn nested_source() -> SourceFile {
         at(8),
     );
     let choice = Choice::new(
-        Some(ChoiceId::new("22222222222222222222").expect("valid choice ID")),
+        Some(ChoiceId::new("rthh7ab").expect("valid choice ID")),
         SourceText::new("Ask.", at(6)),
         at(5),
     )
@@ -111,7 +111,7 @@ fn nested_source() -> SourceFile {
     )
     .with_target(ChoiceTarget::new(DivertTarget::End, at(16)));
     let line = Line::new(
-        Some(LineId::new("11111111111111111111").expect("valid line ID")),
+        Some(LineId::new("ffee6p8").expect("valid line ID")),
         SourceText::new("One item.", at(4)),
         at(3),
     )

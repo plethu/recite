@@ -55,7 +55,7 @@ impl LspMemoryReport {
                 .iter()
                 .filter(|stable| {
                     stable.kind() == recite_compiler::authoring::StableIdKind::Line
-                        && matches!(stable.source_id(), SourceId::Frozen { .. })
+                        && matches!(stable.source_id(), SourceId::Frozen(_))
                 })
                 .count();
             report.choice_ids += summary
@@ -63,7 +63,7 @@ impl LspMemoryReport {
                 .iter()
                 .filter(|stable| {
                     stable.kind() == recite_compiler::authoring::StableIdKind::Choice
-                        && matches!(stable.source_id(), SourceId::Frozen { .. })
+                        && matches!(stable.source_id(), SourceId::Frozen(_))
                 })
                 .count();
             report.metadata_keys += summary.metadata().len();

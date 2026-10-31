@@ -17,7 +17,7 @@ use recite_runtime::{
 fn asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
-        "> hello_001@8843fd6f53f020a12b31 bind=(name:string=$display)\n",
+        "> bind=(name:string=$display) @ycxgk0k\n",
         "  Hello, {name}; {name}!\n",
         "-> END\n",
     );
@@ -66,7 +66,7 @@ struct CountingValues {
 fn plural_asset() -> recite_core::compiled::CompiledDialogue {
     let source = concat!(
         ":: start default\n",
-        "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @ycxgk0k\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",
@@ -121,8 +121,8 @@ impl LocaleProvider for PluralProvider {
             }),
             selected_arm: Some(usize::from(count != 1)),
             matched_locale: Some("fr-FR".to_owned()),
-            matched_context: Some("8843fd6f53f020a12b31".to_owned()),
-            matched_key: Some("8843fd6f53f020a12b31".to_owned()),
+            matched_context: Some("ycxgk0k".to_owned()),
+            matched_key: Some("ycxgk0k".to_owned()),
             attempts: Vec::new(),
         })
     }
@@ -188,8 +188,8 @@ impl LocaleProvider for LocaleRuleWithoutTranslation {
             matched_context: None,
             attempts: vec![PluralResolutionAttempt {
                 locale: "fr".to_owned(),
-                context: "8843fd6f53f020a12b31".to_owned(),
-                key: "8843fd6f53f020a12b31".to_owned(),
+                context: "ycxgk0k".to_owned(),
+                key: "ycxgk0k".to_owned(),
                 selected_arm: Some(0),
                 outcome: PluralResolutionOutcome::MissingEntry,
             }],
@@ -256,8 +256,8 @@ impl LocaleProvider for CountingPluralProvider {
             template: Some("Vous avez une lettre.".to_owned()),
             selected_arm: Some(0),
             matched_locale: Some("fr".to_owned()),
-            matched_context: Some("8843fd6f53f020a12b31".to_owned()),
-            matched_key: Some("8843fd6f53f020a12b31".to_owned()),
+            matched_context: Some("ycxgk0k".to_owned()),
+            matched_key: Some("ycxgk0k".to_owned()),
             attempts: Vec::new(),
         })
     }

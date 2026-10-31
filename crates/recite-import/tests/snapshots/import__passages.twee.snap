@@ -7,7 +7,7 @@ expression: report
   "family": "twee",
   "file": "passages.twee",
   "status": "complete",
-  "source": ":: block_70f412f31d88097ea1e5 default\n> imported_57fdc0944279c48fe34b@57fdc0944279c48fe34b\n  The station is quiet.\n  ? imported_b192a22386ecc821bd42@b192a22386ecc821bd42\n    Listen\n    -> block_2ba9548142754b276e94\n:: block_2ba9548142754b276e94\n> imported_d09eb8bd7f57ec55394e@d09eb8bd7f57ec55394e\n  The signal returns.\n-> END\n",
+  "source": ":: block_70f412f31d88097ea1e5 default\n> @gnm2nd9\n  The station is quiet.\n  ? @e9t9ce7\n    Listen\n    -> block_2ba9548142754b276e94\n:: block_2ba9548142754b276e94\n> @yrqernz\n  The signal returns.\n-> END\n",
   "mappings": [
     {
       "provenance": {
@@ -54,7 +54,7 @@ expression: report
       },
       "construct": "line",
       "original_id": null,
-      "generated_id": "imported_57fdc0944279c48fe34b@57fdc0944279c48fe34b",
+      "generated_id": "gnm2nd9",
       "generated_line": 2
     },
     {
@@ -78,7 +78,7 @@ expression: report
       },
       "construct": "choice",
       "original_id": null,
-      "generated_id": "imported_b192a22386ecc821bd42@b192a22386ecc821bd42",
+      "generated_id": "e9t9ce7",
       "generated_line": 4
     },
     {
@@ -126,7 +126,7 @@ expression: report
       },
       "construct": "line",
       "original_id": null,
-      "generated_id": "imported_d09eb8bd7f57ec55394e@d09eb8bd7f57ec55394e",
+      "generated_id": "yrqernz",
       "generated_line": 8
     }
   ],

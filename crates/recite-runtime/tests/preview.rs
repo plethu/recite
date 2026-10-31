@@ -54,7 +54,7 @@ impl LocaleProvider for CountingProvider {
 
 #[test]
 fn preview_projects_lines_end_and_transcript_without_duplicate_condition_control() {
-    let asset = asset(":: start default\n> hello@12345678901234567890\n  Hello.\n-> END\n");
+    let asset = asset(":: start default\n> @w3xnt5r\n  Hello.\n-> END\n");
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
 
     let line = preview.step(PreviewInputs::new());
@@ -68,7 +68,7 @@ fn preview_projects_lines_end_and_transcript_without_duplicate_condition_control
 
 #[test]
 fn source_only_preview_bypasses_locale_provider() {
-    let asset = asset(":: start default\n> hello@12345678901234567890\n  Hello.\n-> END\n");
+    let asset = asset(":: start default\n> @w3xnt5r\n  Hello.\n-> END\n");
     let provider = CountingProvider {
         calls: Cell::new(0),
     };
@@ -81,7 +81,7 @@ fn source_only_preview_bypasses_locale_provider() {
 
 #[test]
 fn restart_is_explicit_and_changed_payload_is_not_swapped_silently() {
-    let asset = asset(":: start default\n> hello@12345678901234567890\n  Hello.\n-> END\n");
+    let asset = asset(":: start default\n> @w3xnt5r\n  Hello.\n-> END\n");
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
     preview.step(PreviewInputs::new());
     let restarted = preview.dispatch(
@@ -112,9 +112,9 @@ fn condition_answer_replays_transactionally_and_rejects_wrong_id_or_type() {
     let asset = asset(concat!(
         ":: start default\n",
         ":if trusts(player)\n",
-        "  > yes@12345678901234567890\n    Yes.\n",
+        "  > @w3xnt5r\n    Yes.\n",
         ":else\n",
-        "  > no@12345678901234567891\n    No.\n",
+        "  > @rbgkhpf\n    No.\n",
         "-> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
@@ -166,9 +166,7 @@ fn condition_answer_replays_transactionally_and_rejects_wrong_id_or_type() {
 
 #[test]
 fn changed_input_revision_refuses_replay_without_mutating_session() {
-    let asset = asset(
-        ":: start default\n:if trusts(player)\n  > yes@12345678901234567890\n    Yes.\n-> END\n",
-    );
+    let asset = asset(":: start default\n:if trusts(player)\n  > @w3xnt5r\n    Yes.\n-> END\n");
     let first_provider = CountingProvider {
         calls: Cell::new(0),
     };
@@ -207,9 +205,9 @@ fn sequential_conditions_and_short_circuit_replay_in_source_order() {
     let asset = asset(concat!(
         ":: start default\n",
         ":if trusts(player) and has_key(player)\n",
-        "  > yes@12345678901234567890\n    Yes.\n",
+        "  > @w3xnt5r\n    Yes.\n",
         ":else\n",
-        "  > no@12345678901234567891\n    No.\n",
+        "  > @rbgkhpf\n    No.\n",
         "-> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
@@ -242,10 +240,10 @@ fn sequential_conditions_and_short_circuit_replay_in_source_order() {
 fn availability_answer_is_in_prompt_projection_and_locked_choice_cannot_advance() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> prompt@12345678901234567890\n  Choose.\n",
-        "  ? locked@12345678901234567891 requires=(trusts(player))\n",
+        "> @w3xnt5r\n  Choose.\n",
+        "  ? requires=(trusts(player)) @rbgkhpf\n",
         "    Locked.\n    -> END\n",
-        "  ? leave@12345678901234567892\n",
+        "  ? @dzy442e\n",
         "    Leave.\n    -> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
@@ -282,8 +280,8 @@ fn divert_prompt_provenance_uses_trial_block() {
         ":: start default\n",
         "-> target\n",
         ":: target\n",
-        "> target_line@12345678901234567890\n  Target.\n",
-        "  ? target_choice@12345678901234567891\n    Continue.\n    -> END\n",
+        "> @w3xnt5r\n  Target.\n",
+        "  ? @rbgkhpf\n    Continue.\n    -> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
     let output = preview.step(PreviewInputs::new());
@@ -300,7 +298,7 @@ fn divert_condition_provenance_uses_trial_block() {
         "-> gated\n",
         ":: gated\n",
         ":if trusts(player)\n",
-        "  > yes@12345678901234567890\n    Yes.\n",
+        "  > @w3xnt5r\n    Yes.\n",
         "-> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
@@ -317,9 +315,9 @@ fn successful_enum_condition_replay_is_typed_and_deterministic() {
         ":: start default\n",
         ":match mood()\n",
         "  :case ready\n",
-        "    > ready@12345678901234567890\n      Ready.\n",
+        "    > @w3xnt5r\n      Ready.\n",
         "  :case _\n",
-        "    > other@12345678901234567891\n      Other.\n",
+        "    > @rbgkhpf\n      Other.\n",
         "-> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");

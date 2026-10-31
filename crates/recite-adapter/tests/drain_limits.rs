@@ -3,12 +3,12 @@ mod support;
 use std::fmt::Write;
 
 use recite_adapter::{AdapterErrorKind, SessionDriver};
-use recite_core::ChoiceId;
+use recite_core::{ChoiceId, StableIdGenerator, StatementHeader};
 use recite_runtime::{DialogueEvent, EffectAck, EmptyDialogueContext, LocaleResolution};
 
 use support::{asset, request};
 
-const LINE_LOOP: &str = ":: looping\n> repeated@11111111111111111111\n  Again.\n-> looping\n";
+const LINE_LOOP: &str = ":: looping\n> @ffee6p8\n  Again.\n-> looping\n";
 
 #[test]
 fn line_and_immediate_effect_loops_fail_without_committing()
@@ -49,7 +49,7 @@ fn line_and_immediate_effect_loops_fail_without_committing()
 fn choice_and_acknowledgement_loops_keep_the_pending_boundary()
 -> Result<(), Box<dyn std::error::Error>> {
     let choice_asset = asset(&format!(
-        ":: start default\n> prompt@22222222222222222222\n  Pick.\n  ? again@33333333333333333333\n    Again.\n    -> looping\n{LINE_LOOP}"
+        ":: start default\n> @rthh7ab\n  Pick.\n  ? @bqyvpqq\n    Again.\n    -> looping\n{LINE_LOOP}"
     ))?;
     let mut driver = SessionDriver::new();
     driver.start(
@@ -60,7 +60,7 @@ fn choice_and_acknowledgement_loops_keep_the_pending_boundary()
     let checkpoint = driver.snapshot()?;
     let error = driver
         .select_choice(
-            ChoiceId::new("33333333333333333333")?,
+            ChoiceId::new("bqyvpqq")?,
             &EmptyDialogueContext,
             LocaleResolution::new(),
         )
@@ -98,14 +98,19 @@ fn choice_and_acknowledgement_loops_keep_the_pending_boundary()
 fn terminal_event_at_the_batch_limit_succeeds_and_one_more_fails()
 -> Result<(), Box<dyn std::error::Error>> {
     // 9,999 lines followed by one terminal event is exactly 10,000 events.
+    let mut ids = StableIdGenerator::seeded(0);
     let mut source = String::from(":: start default\n");
-    for id in 0..9_999 {
-        writeln!(&mut source, "> line{id}@{id:020}\n  Line.")?;
+    for _ in 0..9_999 {
+        writeln!(
+            &mut source,
+            "{}\n  Line.",
+            StatementHeader::line().id(&ids.next_id())
+        )?;
     }
     for terminal in [
         "-> END\n",
         "! blocking play_sound(chime)\n-> END\n",
-        "> prompt@99999999999999999999\n  Pick.\n  ? go@88888888888888888888\n    Go.\n    -> END\n",
+        "> @pm96kqq\n  Pick.\n  ? @go\n    Go.\n    -> END\n",
     ] {
         let asset = asset(&format!("{source}{terminal}"))?;
         let mut driver = SessionDriver::new();
@@ -117,7 +122,7 @@ fn terminal_event_at_the_batch_limit_succeeds_and_one_more_fails()
         assert_eq!(events.len(), 10_000);
         assert!(!matches!(events.last(), Some(DialogueEvent::Line(_))));
     }
-    source.push_str("> extra@77777777777777777777\n  Too many.\n-> END\n");
+    source.push_str("> @wx4me54\n  Too many.\n-> END\n");
     let asset = asset(&source)?;
     let mut driver = SessionDriver::new();
     let error = driver

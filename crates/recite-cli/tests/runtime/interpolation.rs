@@ -10,7 +10,7 @@ fn run_fixture_supplies_explicitly_tagged_interpolation_values() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@11111111111111111111 bind=(name:string=$display) bind=(count:int=$remaining)\n",
+            "> bind=(name:string=$display) bind=(count:int=$remaining) @ffee6p8\n",
             "  Hello {name}, you have {count}.\n",
             "-> END\n",
         ),
@@ -32,7 +32,7 @@ remaining = { int = 3 }
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line 11111111111111111111: Hello Ada, you have 3.");
+    output.assert_stdout_contains("line ffee6p8: Hello Ada, you have 3.");
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn run_fixture_only_resolves_bindings_in_the_selected_plural_form() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> letters@11111111111111111111 bind=(count:int=$remaining) bind=(name:string=$name)\n",
+            "> bind=(count:int=$remaining) bind=(name:string=$name) @ffee6p8\n",
             "  {name} has one letter.\n",
             "  | You have {count} letters.\n",
             "-> END\n",
@@ -65,7 +65,7 @@ remaining = { int = 2 }
         .arg("--fixture")
         .arg(&plural_fixture));
     plural_output.assert_success().assert_stderr("");
-    plural_output.assert_stdout_contains("line 11111111111111111111: You have 2 letters.");
+    plural_output.assert_stdout_contains("line ffee6p8: You have 2 letters.");
 
     let singular_fixture = write_file(
         temp.path(),
@@ -93,12 +93,12 @@ fn trace_exposes_structured_choice_availability_reasons() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro@82db0b1dab0a52136d77\n",
+            "> @intro\n",
             "  Welcome.\n",
-            "  ? ask_news@e8572a78baac6863754d requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "  ? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @ask_news\n",
             "    Ask for private news.\n",
             "    -> END\n",
-            "  ? leave@be22df697e7ee4d7ba1b\n",
+            "  ? @leave\n",
             "    Leave.\n",
             "    -> END\n",
         ),
@@ -131,7 +131,7 @@ locale = "fr-FR"
 "trust_gte(hazel, rhea, 3)" = false
 
 [choices]
-82db0b1dab0a52136d77 = "be22df697e7ee4d7ba1b"
+intro = "leave"
 "#,
     );
 
@@ -150,7 +150,7 @@ locale = "fr-FR"
         .expect("prompt choices");
     let ask_news = choices
         .iter()
-        .find(|choice| choice["id"] == "e8572a78baac6863754d")
+        .find(|choice| choice["id"] == "ask_news")
         .expect("ask_news choice");
 
     assert_eq!(ask_news["is_available"], false);

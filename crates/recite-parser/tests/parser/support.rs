@@ -260,10 +260,7 @@ fn metadata_keys(metadata: &recite_core::ast::SourceMetadata) -> String {
 fn source_id_summary(source_id: &recite_core::SourceId) -> String {
     match source_id {
         recite_core::SourceId::Missing => "<missing>".to_owned(),
-        recite_core::SourceId::Draft { label } => format!("{label}@"),
-        recite_core::SourceId::Frozen { label, anchor } => {
-            format!("{label}@{}", anchor.as_str())
-        }
+        recite_core::SourceId::Frozen(id) => format!("@{id}"),
         recite_core::SourceId::Malformed { raw } => format!("<malformed {raw:?}>"),
     }
 }

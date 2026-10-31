@@ -4,7 +4,7 @@ use super::*;
 fn plural_lines_reject_additional_body_prose() {
     let source = concat!(
         ":: start default\n",
-        "> letters@22222222222222222222 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @rthh7ab\n",
         "  You have one letter.\n",
         "  | You have {count} letters.\n",
         "  This would be a third source form.\n",
@@ -19,7 +19,7 @@ fn plural_lines_reject_additional_body_prose() {
 fn count_binding_without_a_continuation_is_ordinary_interpolation() {
     let source = concat!(
         ":: start default\n",
-        "> letters@22222222222222222222 bind=(count:int=$remaining)\n",
+        "> bind=(count:int=$remaining) @rthh7ab\n",
         "  You have {count} letters.\n",
         "-> END\n",
     );
@@ -32,7 +32,7 @@ fn count_binding_without_a_continuation_is_ordinary_interpolation() {
 fn plural_forms_may_use_distinct_non_count_bindings() {
     let source = concat!(
         ":: start default\n",
-        "> letters@22222222222222222222 bind=(count:int=$remaining) bind=(name:string=$name)\n",
+        "> bind=(count:int=$remaining) bind=(name:string=$name) @rthh7ab\n",
         "  {name} has one letter.\n",
         "  | You have {count} letters.\n",
         "-> END\n",
@@ -46,7 +46,7 @@ fn plural_forms_may_use_distinct_non_count_bindings() {
 fn unsupported_interpolation_type_aliases_are_rejected_before_compilation() {
     for value_type in ["integer", "boolean"] {
         let source = format!(
-            ":: start default\n> hello_001@8843fd6f53f020a12b31 bind=(name:{value_type}=$display)\n  Hello, {{name}}.\n-> END\n"
+            ":: start default\n> bind=(name:{value_type}=$display) @ycxgk0k\n  Hello, {{name}}.\n-> END\n"
         );
         let report = recite_compiler::compile::compile_inputs(
             [recite_compiler::compile::CompileInput::new(
@@ -70,10 +70,10 @@ fn unsupported_interpolation_type_aliases_are_rejected_before_compilation() {
         let diagnostic = &report.diagnostics[0];
         assert_eq!(diagnostic.code.as_str(), "RECITE_PARSE008");
         assert_eq!(diagnostic.span.start.line(), 2);
-        assert_eq!(diagnostic.span.start.column(), 45);
+        assert_eq!(diagnostic.span.start.column(), 14);
         assert_eq!(
             diagnostic.span.end.map(|position| position.column()),
-            Some(44 + value_type.chars().count() as u32)
+            Some(13 + value_type.chars().count() as u32)
         );
     }
 }

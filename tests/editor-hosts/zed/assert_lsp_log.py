@@ -241,7 +241,7 @@ def main() -> int:
         }
     ]
     new_text = action_change["edits"][0]["newText"]
-    assert new_text == " line@56d52d8cd8619971011f"
+    assert new_text == " @ca4w7az"
     applied_code_action = (project_path / "code-action.recite").read_text(encoding="utf-8")
     assert applied_code_action.splitlines()[1] == f">{new_text}"
     rename_transactions = [

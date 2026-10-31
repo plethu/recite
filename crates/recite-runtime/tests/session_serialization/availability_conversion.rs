@@ -8,9 +8,9 @@ fn pending_prompt_snapshot_for_conversion_test() -> (
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line@f58e7e11803840ed96f3\n",
+            "> @edg92mr\n",
             "  What next?\n",
-            "  ? work@9e36f4ebaaeb53f27825\n",
+            "  ? @e4ms8dx\n",
             "    Work.\n",
             "    -> END\n",
         ),

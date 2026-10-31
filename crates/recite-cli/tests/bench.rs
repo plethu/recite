@@ -160,9 +160,9 @@ fn bench_project_root_compiler_smoke() {
         concat!(
             ":: start default speaker=hazel\n",
             ":if ready()\n",
-            "  > gated@11111111111111111112\n    Ready.\n",
-            "> intro@11111111111111111111\n  Hello.\n",
-            "  ? proceed@21111111111111111111 requires=(ready())\n",
+            "  > @vmw0zj5\n    Ready.\n",
+            "> @ffee6p8\n  Hello.\n",
+            "  ? requires=(ready()) @wpgvzx4\n",
             "    Continue.\n    -> END\n",
             "-> END\n",
         ),

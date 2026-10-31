@@ -22,7 +22,7 @@ fn extracts_plural_source_forms_as_one_gettext_entry() {
         "dialogue/letters.recite",
         concat!(
             ":: start default\n",
-            "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining) bind=(name:string=$name)\n",
+            "> bind=(count:int=$remaining) bind=(name:string=$name) @ycxgk0k\n",
             "  {name} has one letter.\n",
             "  | You have {count} letters.\n",
             "-> END\n",
@@ -42,9 +42,8 @@ fn extracts_plural_source_forms_as_one_gettext_entry() {
         concat!(
             "#. file: dialogue/letters.recite\n",
             "#. block: start\n",
-            "#. source id: letters_001@8843fd6f53f020a12b31\n",
             "#: dialogue/letters.recite:3:3\n",
-            "msgctxt \"8843fd6f53f020a12b31\"\n",
+            "msgctxt \"ycxgk0k\"\n",
             "msgid \"{name} has one letter.\"\n",
             "msgid_plural \"You have {count} letters.\"\n",
             "msgstr[0] \"\"\n",
@@ -69,9 +68,9 @@ fn structured_entries_preserve_context_before_formatting() {
         "dialogue/prompt.recite",
         concat!(
             ":: start default speaker=narrator\n",
-            "> prompt_001@39f4107f8b9cc6420e54 speaker=hazel\n",
+            "> speaker=hazel @prompt_001\n",
             "  Choose.\n",
-            "  ? agree_001@fdd0b2c7cf75d179d1ba\n",
+            "  ? @agree_001\n",
             "    Yes.\n",
             "    -> END\n",
         ),
@@ -80,7 +79,7 @@ fn structured_entries_preserve_context_before_formatting() {
     let document = extract_pot(inputs).catalog.expect("valid POT catalog");
 
     assert_eq!(document.entries.len(), 2);
-    assert_eq!(document.entries[0].context, "39f4107f8b9cc6420e54");
+    assert_eq!(document.entries[0].context, "prompt_001");
     assert_eq!(document.entries[0].source_text, "Choose.");
     assert_eq!(
         document.entries[0].comments,
@@ -88,22 +87,20 @@ fn structured_entries_preserve_context_before_formatting() {
             "file: dialogue/prompt.recite",
             "block: start",
             "speaker: hazel",
-            "source id: prompt_001@39f4107f8b9cc6420e54"
         ]
     );
     let first_reference = document.entries[0].reference.as_ref().unwrap();
     assert_eq!(first_reference.line, 3);
     assert_eq!(first_reference.column, 3);
 
-    assert_eq!(document.entries[1].context, "fdd0b2c7cf75d179d1ba");
+    assert_eq!(document.entries[1].context, "agree_001");
     assert_eq!(document.entries[1].source_text, "Yes.");
     assert_eq!(
         document.entries[1].comments,
         [
             "file: dialogue/prompt.recite",
             "block: start",
-            "speaker: hazel",
-            "source id: agree_001@fdd0b2c7cf75d179d1ba"
+            "speaker: hazel"
         ]
     );
     let second_reference = document.entries[1].reference.as_ref().unwrap();
@@ -117,9 +114,9 @@ fn extracts_inline_markup_from_recite_source_unchanged() {
         "dialogue/markup.recite",
         concat!(
             ":: start default\n",
-            "> marked_line@e9b2866e1a048bc51c36\n",
+            "> @marked_line\n",
             "  [slow]Choose[/slow].\n",
-            "  ? marked_choice@9ac81f995ed84dc9b753\n",
+            "  ? @marked_choice\n",
             "    [shake]Ask now[/shake].\n",
             "    -> END\n",
         ),
@@ -128,9 +125,9 @@ fn extracts_inline_markup_from_recite_source_unchanged() {
     let document = extract_pot(inputs).catalog.expect("valid POT catalog");
 
     assert_eq!(document.entries.len(), 2);
-    assert_eq!(document.entries[0].context, "e9b2866e1a048bc51c36");
+    assert_eq!(document.entries[0].context, "marked_line");
     assert_eq!(document.entries[0].source_text, "[slow]Choose[/slow].");
-    assert_eq!(document.entries[1].context, "9ac81f995ed84dc9b753");
+    assert_eq!(document.entries[1].context, "marked_choice");
     assert_eq!(document.entries[1].source_text, "[shake]Ask now[/shake].");
 }
 
@@ -220,7 +217,7 @@ fn project_inputs() -> Vec<CompileInput> {
             "dialogue/b.recite",
             concat!(
                 ":: later\n",
-                "> later_line@2d12c8f9e4ed2220115d speaker=hazel\n",
+                "> speaker=hazel @later_line\n",
                 "  Later \"quoted\" text.\n",
             ),
         ),
@@ -228,23 +225,23 @@ fn project_inputs() -> Vec<CompileInput> {
             "dialogue/a.recite",
             concat!(
                 ":: start default speaker=narrator\n",
-                "> intro_001@3405f692e824dbcfeb0a\n",
+                "> @intro_001\n",
                 "  Welcome\\home.\n",
-                "  ? ask_work@ea0500bd7f56ff76a26d\n",
+                "  ? @ask_work\n",
                 "    Ask about work.\n",
                 "    -> dialogue/b.recite::later\n",
                 ":if trusts(player)\n",
-                "  > secret_001@747bda8c394633508ae4 speaker=hazel\n",
+                "  > speaker=hazel @secret_001\n",
                 "    I can tell you.\n",
                 ":else\n",
-                "  > fallback_001@10a38c94916b96109a1b\n",
+                "  > @fallback_001\n",
                 "    Not yet.\n",
                 ":match stage(thread)\n",
                 "  :case ready\n",
-                "    > ready_001@6fccfe013a697c7c5d3a speaker=hazel\n",
+                "    > speaker=hazel @ready_001\n",
                 "      Ready.\n",
                 "  :case _\n",
-                "    > waiting_001@73fdf511bdf43fb5441b\n",
+                "    > @waiting_001\n",
                 "      Waiting.\n",
             ),
         ),

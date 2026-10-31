@@ -1,6 +1,5 @@
 ---
 source: crates/recite-compiler/tests/../../../tests/support/fixtures.rs
-assertion_line: 12
 expression: actual
 ---
 #: dialogue/escape.recite:1:1

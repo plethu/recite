@@ -59,7 +59,7 @@ fn project_refresh_keeps_local_receipts_but_edits_and_reopen_reject_them()
     assert!(!document.accept_projection(&prepared));
     assert!(document.cached_script().is_none());
     assert!(
-        Document::new(":: broken\n? invalid\n")?
+        Document::new(":: broken\n?\n")?
             .projection_request()
             .prepare()
             .is_err()

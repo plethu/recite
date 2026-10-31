@@ -7,9 +7,9 @@ fn restores_continuation_stack_inside_conditional_branch() {
         concat!(
             ":: start default\n",
             ":if trusts(player)\n",
-            "  > inside@eedc6e8ea24b3e6809f8\n",
+            "  > @pg92x7f\n",
             "    Inside.\n",
-            "> after@26a5f3da3383cf221b7d\n",
+            "> @tkmsp5e\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -23,7 +23,7 @@ fn restores_continuation_stack_inside_conditional_branch() {
 
     assert_line(
         runtime_next(&asset, &mut session, &context),
-        "eedc6e8ea24b3e6809f8",
+        "pg92x7f",
         "Inside.",
     );
     assert_snapshot_encoding(&session);
@@ -32,7 +32,7 @@ fn restores_continuation_stack_inside_conditional_branch() {
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
-        "26a5f3da3383cf221b7d",
+        "tkmsp5e",
         "After.",
     );
     assert_eq!(
@@ -50,7 +50,7 @@ fn restores_end_state_reached_inside_conditional_branch() {
             ":if trusts(player)\n",
             "  ! deferred branch_done()\n",
             "  -> END\n",
-            "> after@e1c13dacc2bb0e82080d\n",
+            "> @f750fzk\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -84,12 +84,12 @@ fn restores_continuation_stack_inside_match_arm() {
             ":: start default\n",
             ":match mood()\n",
             "  :case tired\n",
-            "    > inside@2faca4e74f3382336ff7\n",
+            "    > @wwjwj2z\n",
             "      Inside.\n",
             "  :case _\n",
-            "    > fallback@66cec1a7117cd4905dd7\n",
+            "    > @frta933\n",
             "      Fallback.\n",
-            "> after@3cc87e383f3f09945030\n",
+            "> @ckwk4wx\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -103,7 +103,7 @@ fn restores_continuation_stack_inside_match_arm() {
 
     assert_line(
         runtime_next(&asset, &mut session, &context),
-        "2faca4e74f3382336ff7",
+        "wwjwj2z",
         "Inside.",
     );
     assert_snapshot_encoding(&session);
@@ -112,7 +112,7 @@ fn restores_continuation_stack_inside_match_arm() {
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
-        "3cc87e383f3f09945030",
+        "ckwk4wx",
         "After.",
     );
 }
@@ -128,15 +128,15 @@ fn restores_nested_match_and_if_continuations() {
             "    :if trusts(player)\n",
             "      :match stage()\n",
             "        :case tired\n",
-            "          > deep@fb4f4bf0d1d3c7ee0a26\n",
+            "          > @deep\n",
             "            Deep.\n",
             "        :case _\n",
-            "          > other@796fb82b1df076c6d2c9\n",
+            "          > @other\n",
             "            Other.\n",
             "  :case _\n",
-            "    > fallback@ce1625c7fb901d4f6833\n",
+            "    > @b3yssg4\n",
             "      Fallback.\n",
-            "> after@0275abeda43f946b048a\n",
+            "> @trjba8e\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -154,7 +154,7 @@ fn restores_nested_match_and_if_continuations() {
 
     assert_line(
         runtime_next(&asset, &mut session, &context),
-        "fb4f4bf0d1d3c7ee0a26",
+        "deep",
         "Deep.",
     );
     assert_snapshot_encoding(&session);
@@ -163,7 +163,7 @@ fn restores_nested_match_and_if_continuations() {
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
-        "0275abeda43f946b048a",
+        "trjba8e",
         "After.",
     );
 }

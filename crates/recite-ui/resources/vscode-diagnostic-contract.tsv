@@ -105,8 +105,6 @@ diagnostic-id-001
 diagnostic-id-002
 diagnostic-id-003	id	string
 diagnostic-id-004	id	string
-diagnostic-id-005
-diagnostic-id-006
 diagnostic-id-007	id	string
 diagnostic-id-008	id	string
 diagnostic-validate-022	tag	string
@@ -451,8 +449,6 @@ diagnostic-id-003-related
 diagnostic-id-003-help
 diagnostic-id-004-related
 diagnostic-id-004-help
-diagnostic-id-005-help
-diagnostic-id-006-help
 diagnostic-id-007-help
 diagnostic-id-008-help
 diagnostic-validate-022-help
@@ -501,12 +497,6 @@ diagnostic-id-003-remediation-001
 diagnostic-id-004-meaning
 diagnostic-id-004-cause-001
 diagnostic-id-004-remediation-001
-diagnostic-id-005-meaning
-diagnostic-id-005-cause-001
-diagnostic-id-005-remediation-001
-diagnostic-id-006-meaning
-diagnostic-id-006-cause-001
-diagnostic-id-006-remediation-001
 diagnostic-id-007-meaning
 diagnostic-id-007-cause-001
 diagnostic-id-007-remediation-001

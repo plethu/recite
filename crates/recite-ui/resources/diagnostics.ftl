@@ -118,20 +118,16 @@ diagnostic-id-001 = line header must include a stable line id
 diagnostic-id-002 = choice header must include a stable choice id
 diagnostic-id-003 = duplicate localisable id `{$id}` on line
 diagnostic-id-004 = duplicate localisable id `{$id}` on choice
-diagnostic-id-005 = line header has an unfrozen draft source id
-diagnostic-id-006 = choice header has an unfrozen draft source id
 diagnostic-id-007 = line header has malformed source id `{$id}`
 diagnostic-id-008 = choice header has malformed source id `{$id}`
-diagnostic-id-001-help = add a stable author-visible ID to the line header
-diagnostic-id-002-help = add a stable author-visible ID to the choice header
+diagnostic-id-001-help = end the line header with `@id`, or run `recite assign-ids`
+diagnostic-id-002-help = end the choice header with `@id`, or run `recite assign-ids`
 diagnostic-id-003-related = first localisable ID is here
 diagnostic-id-003-help = rename one of the duplicate localisable IDs
 diagnostic-id-004-related = first localisable ID is here
 diagnostic-id-004-help = rename one of the duplicate localisable IDs
-diagnostic-id-005-help = freeze the line ID as `label@20hexanchor`
-diagnostic-id-006-help = freeze the choice ID as `label@20hexanchor`
-diagnostic-id-007-help = use `label@20hexanchor`; plain unsuffixed IDs are invalid
-diagnostic-id-008-help = use `label@20hexanchor`; plain unsuffixed IDs are invalid
+diagnostic-id-007-help = end the header with one `@id` using lowercase letters, digits, `_`, `.` or `-`, starting with a letter or `_`
+diagnostic-id-008-help = end the header with one `@id` using lowercase letters, digits, `_`, `.` or `-`, starting with a letter or `_`
 
 # RECITE_VALIDATE005-016
 diagnostic-validate-005 = project must declare exactly one default block
@@ -371,12 +367,12 @@ diagnostic-fresh-003-remediation-001 = Recompile the source with the current Rec
 
 # RECITE_ID001
 diagnostic-id-001-meaning = A dialogue line is missing its required stable line ID.
-diagnostic-id-001-cause-001 = A line was written without an `@id` anchor.
+diagnostic-id-001-cause-001 = A line was written without a trailing `@id`.
 diagnostic-id-001-remediation-001 = Add a stable line ID and keep it unchanged once authored.
 
 # RECITE_ID002
 diagnostic-id-002-meaning = A choice is missing its required stable choice ID.
-diagnostic-id-002-cause-001 = A choice was written without an `@id` anchor.
+diagnostic-id-002-cause-001 = A choice was written without a trailing `@id`.
 diagnostic-id-002-remediation-001 = Add a stable choice ID and keep it unchanged once authored.
 
 # RECITE_ID003
@@ -388,16 +384,6 @@ diagnostic-id-003-remediation-001 = Give each distinct line a unique stable line
 diagnostic-id-004-meaning = Two or more choices use the same stable choice ID.
 diagnostic-id-004-cause-001 = A choice was copied without changing the ID.
 diagnostic-id-004-remediation-001 = Give each distinct choice a unique stable choice ID.
-
-# RECITE_ID005
-diagnostic-id-005-meaning = A line still uses a draft line ID.
-diagnostic-id-005-cause-001 = The line was generated or stubbed and was never assigned a final ID.
-diagnostic-id-005-remediation-001 = Replace the draft ID with the final stable line ID before shipping.
-
-# RECITE_ID006
-diagnostic-id-006-meaning = A choice still uses a draft choice ID.
-diagnostic-id-006-cause-001 = The choice was generated or stubbed and was never assigned a final ID.
-diagnostic-id-006-remediation-001 = Replace the draft ID with the final stable choice ID before shipping.
 
 # RECITE_ID007
 diagnostic-id-007-meaning = A line ID has an invalid shape.
@@ -411,8 +397,8 @@ diagnostic-id-008-remediation-001 = Rename the choice ID to the supported stable
 
 # RECITE_ID034
 diagnostic-id-034-meaning = A PO catalogue stable ID is malformed.
-diagnostic-id-034-cause-001 = A PO context or extracted source-ID comment is not a frozen Recite ID.
-diagnostic-id-034-remediation-001 = Restore the stable ID and keep its source anchor unchanged.
+diagnostic-id-034-cause-001 = A PO context is not a valid Recite stable ID.
+diagnostic-id-034-remediation-001 = Restore the stable ID that the source header uses.
 
 # RECITE_ID035
 diagnostic-id-035-meaning = A PO catalogue contains duplicate active durable keys.

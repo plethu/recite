@@ -31,8 +31,7 @@ fn app() -> impl IntoElement {
         .child(
             rect()
                 .on_press(move |_| {
-                    let source =
-                        ":: start default\n? reply@11111111111111111111\n  Continue.\n  -> END\n";
+                    let source = ":: start default\n? @ffee6p8\n  Continue.\n  -> END\n";
                     let document = Document::new(source).unwrap();
                     let projected = document.script_snapshot().unwrap();
                     let reply = projected[0]

@@ -4,7 +4,7 @@ use recite_writer_model::{Document, ProjectContext, rename_manifest_source};
 #[test]
 fn compiler_rename_includes_qualified_references_without_touching_frozen_ids()
 -> Result<(), Box<dyn std::error::Error>> {
-    let source = ":: start default\n> line@11111111111111111111\n  À neuf.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  À neuf.\n-> END\n";
     let document = Document::in_project(
         DocumentKey::new("a.recite")?,
         source,
@@ -18,7 +18,7 @@ fn compiler_rename_includes_qualified_references_without_touching_frozen_ids()
     )?;
     let plan = document.plan_project_rename("start", "renamed")?;
     assert_eq!(plan.changes.len(), 2);
-    assert!(plan.changes[0].after.contains("line@11111111111111111111"));
+    assert!(plan.changes[0].after.contains("@ffee6p8"));
     assert!(plan.changes[0].after.contains("À neuf."));
     assert!(plan.changes[1].after.contains("a.recite::renamed"));
     Ok(())

@@ -4,7 +4,7 @@ use recite_compiler::authoring::{
     AuthoringEditError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument,
     QueryClass, SavedDocument, SnapshotGeneration, SourceFingerprint,
 };
-use recite_core::{DocumentKey, SourcePosition};
+use recite_core::{DocumentKey, SourcePosition, StatementHeader};
 
 fn key(value: &str) -> DocumentKey {
     match DocumentKey::new(value.to_owned()) {
@@ -131,36 +131,45 @@ fn non_bmp_definition_range_is_end_exclusive() {
 fn duplicate_block_ownership_refuses_stable_id_planning() {
     let kernel = kernel([SavedDocument::new(
         key("main.recite"),
-        ":: source\n> line\n:: source\n> other\n",
+        ":: source\n>\n:: source\n>\n",
     )]);
     let snapshot = kernel.snapshot();
     assert!(matches!(
-        snapshot.plan_insert_missing_ids(),
+        snapshot.plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1)),
         Err(AuthoringEditError::AmbiguousBlock { block }) if block.as_str() == "source"
     ));
 }
 
 #[test]
-fn stable_id_anchor_inputs_remain_known_and_combined_namespace_collides() {
+fn generated_ids_skip_ids_already_in_the_combined_namespace() {
+    let occupied = recite_core::StableIdGenerator::seeded(1).next_id();
     let snapshot = kernel([
-        SavedDocument::new(key("main.recite"), ":: source\n> line\n"),
+        SavedDocument::new(key("main.recite"), ":: source\n>\n"),
         SavedDocument::new(
             key("other.recite"),
-            ":: other\n> line\n  ? choice@955f817fa5db1ac97e5b\n",
+            format!(
+                ":: other\n> @line\n  {}\n",
+                StatementHeader::choice().id(&occupied)
+            ),
         ),
     ]);
-    let plan = match snapshot.snapshot().plan_insert_missing_ids() {
+    let plan = match snapshot
+        .snapshot()
+        .plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))
+    {
         Ok(plan) => plan,
         Err(error) => panic!("stable ID should be planable: {error:?}"),
     };
-    let Some(edit) = plan
-        .edits()
-        .iter()
-        .find(|edit| edit.document() == &key("main.recite"))
-    else {
-        panic!("main stable ID edit is missing");
+    let [edit] = plan.edits() else {
+        panic!("expected one stable ID edit");
     };
-    assert_eq!(edit.replacement(), "@dfdb708cf91598dfe6e5");
+    let mut expected = recite_core::StableIdGenerator::seeded(1);
+    let _ = expected.next_id();
+    assert_eq!(edit.document(), &key("main.recite"));
+    assert_eq!(
+        edit.replacement(),
+        format!(" {}", expected.next_id().field())
+    );
 }
 
 #[test]
@@ -222,18 +231,24 @@ fn incomplete_cross_document_reference_coverage_refuses_rename() {
 #[test]
 fn plan_order_is_independent_of_request_document_order() {
     let first = kernel([
-        SavedDocument::new(key("z.recite"), ":: z\n> line\n"),
-        SavedDocument::new(key("a.recite"), ":: a\n> line\n"),
+        SavedDocument::new(key("z.recite"), ":: z\n>\n"),
+        SavedDocument::new(key("a.recite"), ":: a\n>\n"),
     ]);
     let second = kernel([
-        SavedDocument::new(key("a.recite"), ":: a\n> line\n"),
-        SavedDocument::new(key("z.recite"), ":: z\n> line\n"),
+        SavedDocument::new(key("a.recite"), ":: a\n>\n"),
+        SavedDocument::new(key("z.recite"), ":: z\n>\n"),
     ]);
-    let first_plan = match first.snapshot().plan_insert_missing_ids() {
+    let first_plan = match first
+        .snapshot()
+        .plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))
+    {
         Ok(plan) => plan,
         Err(error) => panic!("first order should be planable: {error:?}"),
     };
-    let second_plan = match second.snapshot().plan_insert_missing_ids() {
+    let second_plan = match second
+        .snapshot()
+        .plan_insert_missing_ids(&mut recite_core::StableIdGenerator::seeded(1))
+    {
         Ok(plan) => plan,
         Err(error) => panic!("second order should be planable: {error:?}"),
     };

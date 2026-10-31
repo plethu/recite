@@ -28,7 +28,7 @@ fn full_revision_sees_schema_payload_with_reused_header_identity() -> Result<(),
         .template = "A different reason.".to_owned();
     let input = CompileInput::new(
         "dialogue/start.recite",
-        ":: start default\n? ask@a94b83f2d8bd65101cc3 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n  Ask.\n  -> END\n",
+        ":: start default\n? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @z58rq7p\n  Ask.\n  -> END\n",
     );
     let first = compile_with_schema(input.clone(), &first)?;
     let second = compile_with_schema(input, &second)?;

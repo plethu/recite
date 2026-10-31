@@ -14,7 +14,7 @@ fn describe(blocks: &SyntaxBlocks, row: usize) -> Vec<String> {
 #[test]
 fn interrupted_edited_tree_accepts_further_edits_and_matches_a_fresh_parse() {
     let source = (0..1_000)
-        .map(|n| format!(":: block{n}\n> line@{n:020x}\n  Hello 🦊 {{value}}.\n"))
+        .map(|n| format!(":: block{n}\n> @line_{n:x}\n  Hello 🦊 {{value}}.\n"))
         .collect::<String>();
     let mut rope = Rope::from_str(&source);
     let language = EditorLanguage::new(

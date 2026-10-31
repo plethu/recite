@@ -366,7 +366,7 @@ async function runHostProbe() {
     ...(repairAction.command.arguments ?? []),
   );
   assert.equal(repairApplied, true, "host applies the guarded stable-ID repair command");
-  await waitFor(() => /line@[0-9a-f]{20}/u.test(repair.getText()), "stable-ID repair edit");
+  await waitFor(() => / @[a-z][0-9a-z]{6}$/mu.test(repair.getText()), "stable-ID repair edit");
 
   const renameEditor = await vscode.window.showTextDocument(valid);
   renameEditor.selection = new vscode.Selection(targetPosition, targetPosition);

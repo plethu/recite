@@ -47,14 +47,14 @@ fn uncached_identity_matches_canonical_bytes_for_large_unicode_prose() {
         let text = "Café 🦉\n".repeat(repetitions);
         let mut wire = support::valid_wire_asset();
         wire.lines.push(support::WireLine {
-            id: "11111111111111111111",
+            id: "ffee6p8",
             source_text: &text,
             speaker: None,
             metadata: support::WireRange(0, 0),
             source_map: 0,
         });
         wire.line_lookup.push(support::WireLookupEntry {
-            id: "11111111111111111111",
+            id: "ffee6p8",
             index: 0,
         });
         let bytes = rmp_serde::to_vec(&wire).expect("wire fixture encodes");

@@ -45,7 +45,7 @@ fn first_scene_commands_and_transcript_match_the_documented_source() {
         .assert_stderr("ok  1 file, no diagnostics\n");
     run(recite().arg("extract").arg(&source))
         .assert_success()
-        .assert_stdout_contains("msgctxt \"7701ceab59d2adfa057a\"");
+        .assert_stdout_contains("msgctxt \"alice_way_001\"");
     let asset = compile_project_asset(temp.path(), &source, "crossroads.recitec", None);
     let fixture = write_file(temp.path(), "fixture.toml", &fixtures[0]);
     run(recite()

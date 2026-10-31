@@ -107,8 +107,8 @@ def fixture(base):
     project.mkdir()
     files = {
         "recite.project.toml": 'format_version = 1\n[project]\ncontent_set = "desktop-smoke"\nversion = "1"\n',
-        "first scene.recite": ":: start default\n> cold_open@0123456789abcdef0123\n  Cold launch fixture.\n-> END\n",
-        "second scene λ.recite": ":: start default\n> second_scene@abcdef0123456789abcd\n  Running instance fixture.\n-> END\n",
+        "first scene.recite": ":: start default\n> @ez1fh09\n  Cold launch fixture.\n-> END\n",
+        "second scene λ.recite": ":: start default\n> @second_scene\n  Running instance fixture.\n-> END\n",
     }
     snapshot = {}
     for name, text in files.items():

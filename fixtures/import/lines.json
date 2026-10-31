@@ -2,14 +2,14 @@
   {
     "node": "Start",
     "text": "The station is quiet.",
-    "id": "arrival@11111111111111111111",
+    "id": "ffee6p8",
     "speaker": "operator",
     "next": "End"
   },
   {
     "node": "End",
     "text": "The signal returns.",
-    "id": "reply@11111111111111111112",
+    "id": "vmw0zj5",
     "speaker": "operator",
     "next": "END"
   }

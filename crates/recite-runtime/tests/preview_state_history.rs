@@ -36,7 +36,7 @@ fn earlier_preview_outputs_and_snapshots_survive_appends_restart_and_restore()
     assert!(first.state().selected_choice_history().is_empty());
     assert_eq!(first.state().deferred_effects().len(), 1);
 
-    let selecting = preview.choose(ChoiceId::new("11111111111111111111")?, PreviewInputs::new());
+    let selecting = preview.choose(ChoiceId::new("ffee6p8")?, PreviewInputs::new());
     let request = selecting
         .events()
         .iter()
@@ -76,7 +76,7 @@ fn deferred_effects_before_suspension_commit_once_and_failed_replay_discards_the
     let asset = preview_support::asset(concat!(
         ":: start default\n! deferred progress()\n",
         ":if ready()\n  ! deferred second()\n  :if ready()\n",
-        "    ? continue@11111111111111111111\n      Continue.\n      -> start\n",
+        "    ? @ffee6p8\n      Continue.\n      -> start\n",
         "  :else\n    -> END\n:else\n  -> END\n",
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new())?;
@@ -156,7 +156,7 @@ fn rejected_and_failed_answers_preserve_nonempty_history_for_retry_and_restore()
     let asset = preview_support::asset(include_str!(
         "../../../fixtures/recite/valid/benchmarks/session_deferred.recite"
     ));
-    let choice = ChoiceId::new("11111111111111111111")?;
+    let choice = ChoiceId::new("ffee6p8")?;
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new())?;
     let opening = requested(&preview.step(PreviewInputs::new()));
     preview.answer(

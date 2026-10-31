@@ -56,7 +56,7 @@ for escaped_file in "$escaped_lf_file" "$escaped_crlf_file" "$escaped_eof_file";
 done
 
 escaped_recovery_file="$scratch/escaped-braces-recovery.recite"
-printf '%s' $':: escaped_recovery default\n> first@0123456789abcdef0123\n  Two slashes \\\\{name}\n> next@fedcba98765432100123\n  Recovery keeps the following statement.\n-> END\n' >"$escaped_recovery_file"
+printf '%s' $':: escaped_recovery default\n> @ez1fh09\n  Two slashes \\\\{name}\n> @q5khbap\n  Recovery keeps the following statement.\n-> END\n' >"$escaped_recovery_file"
 escaped_recovery_output="$scratch/escaped-braces-recovery.tree"
 escaped_recovery_rc=0
 if (

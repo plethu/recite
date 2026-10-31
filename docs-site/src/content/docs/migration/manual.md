@@ -43,16 +43,16 @@ Sequence: SetActive(Gate,true)
 
 ```text
 :: gate_check default
-> gate_001@8f6939290fcd3122d120 speaker=guard
+> speaker=guard @gate_001
   Papers?
 
-? gate_show_pass@646ec5b28069a5b31d62 requires=(has_pass(player))
+? requires=(has_pass(player)) @gate_show_pass
   Here they are.
   -> open_gate
 
 :: open_gate
 ! blocking set_gate_open(town_gate)
-> gate_002@bf3f381355fb355f3970 speaker=guard
+> speaker=guard @gate_002
   Go on.
 -> END
 ```
@@ -88,15 +88,15 @@ Guide: Keep it lit.
 
 ```text
 :: start default
-> start_001@d37069f78b6ac6d910bf speaker=guide
+> speaker=guide @start_001
   Take this lantern.
 ! blocking grant_item(lantern)
-? start_thanks@64083accc1d568b8b3c5
+? @start_thanks
   Thanks.
   -> end
 
 :: end
-> end_001@9d4a9f6974b38d8e2392 speaker=guide
+> speaker=guide @end_001
   Keep it lit.
 -> END
 ```
@@ -132,16 +132,16 @@ if {Power.online}:
 
 ```text
 :: start default
-> lift_001@ad82d453e24d1d9d71d7 speaker=mira
+> speaker=mira @lift_001
   The lift is offline.
-? lift_try_switch@727902127db19ed79d97
+? @lift_try_switch
   Try the switch.
   -> check
 
 :: check
 ! blocking try_switch(power_panel)
 :if power_online()
-  > lift_002@400cd2e9e42c14d8856f speaker=mira
+  > speaker=mira @lift_002
     That worked.
 -> END
 ```

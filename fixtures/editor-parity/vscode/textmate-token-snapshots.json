@@ -73,25 +73,23 @@
       "tokens": [[":else", ["source.recite", "keyword.control.conditional.recite"]]]
     },
     {
-      "id": "anchor",
-      "source": "> line@anchor",
+      "id": "stable-id",
+      "source": "> @line_anchor",
       "tokens": [
         [">", ["source.recite", "punctuation.definition.line.recite"]],
         [" ", ["source.recite"]],
-        ["line", ["source.recite", "entity.name.label.recite"]],
-        ["@", ["source.recite", "punctuation.definition.anchor.recite"]],
-        ["anchor", ["source.recite", "constant.other.anchor.recite"]]
+        ["@", ["source.recite", "punctuation.definition.stable-id.recite"]],
+        ["line_anchor", ["source.recite", "constant.other.stable-id.recite"]]
       ]
     },
     {
-      "id": "choice-anchor",
-      "source": "? choice@anchor",
+      "id": "choice-stable-id",
+      "source": "? @choice_anchor",
       "tokens": [
         ["?", ["source.recite", "punctuation.definition.choice.recite"]],
         [" ", ["source.recite"]],
-        ["choice", ["source.recite", "entity.name.label.recite"]],
-        ["@", ["source.recite", "punctuation.definition.anchor.recite"]],
-        ["anchor", ["source.recite", "constant.other.anchor.recite"]]
+        ["@", ["source.recite", "punctuation.definition.stable-id.recite"]],
+        ["choice_anchor", ["source.recite", "constant.other.stable-id.recite"]]
       ]
     },
     {
@@ -244,11 +242,9 @@
     },
     {
       "id": "invalid-quote",
-      "source": "> line speaker=\"unterminated",
+      "source": "> speaker=\"unterminated",
       "tokens": [
         [">", ["source.recite", "punctuation.definition.line.recite"]],
-        [" ", ["source.recite"]],
-        ["line", ["source.recite", "entity.name.label.recite"]],
         [" ", ["source.recite"]],
         ["speaker", ["source.recite", "variable.parameter.recite"]],
         ["=", ["source.recite", "keyword.operator.assignment.recite"]],
@@ -257,11 +253,9 @@
     },
     {
       "id": "invalid-array",
-      "source": "> line choices=[one, two",
+      "source": "> choices=[one, two",
       "tokens": [
         [">", ["source.recite", "punctuation.definition.line.recite"]],
-        [" ", ["source.recite"]],
-        ["line", ["source.recite", "entity.name.label.recite"]],
         [" ", ["source.recite"]],
         ["choices", ["source.recite", "variable.parameter.recite"]],
         ["=", ["source.recite", "keyword.operator.assignment.recite"]],
@@ -270,11 +264,9 @@
     },
     {
       "id": "trailing-hash",
-      "source": "> line trailing # not comment",
+      "source": "> trailing # not comment",
       "tokens": [
         [">", ["source.recite", "punctuation.definition.line.recite"]],
-        [" ", ["source.recite"]],
-        ["line", ["source.recite", "entity.name.label.recite"]],
         [" ", ["source.recite"]],
         ["trailing", ["source.recite", "constant.other.symbol.recite"]],
         [" # ", ["source.recite"]],

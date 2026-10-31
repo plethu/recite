@@ -18,7 +18,7 @@ struct OrderCallbackStorage {
 fn c_abi_locale_attempts_preserve_context_first_order_and_trace() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> letters@79000000000000000001 bind=(count:int=$count)\n",
+        "> bind=(count:int=$count) @letters\n",
         "  One letter.\n",
         "  | Many letters.\n",
         "-> END\n",
@@ -82,26 +82,22 @@ fn c_abi_locale_attempts_preserve_context_first_order_and_trace() {
     assert_eq!(line["text"], "Beaucoup de lettres.");
     let resolution = &line["plural"]["resolution"];
     assert_eq!(resolution["matched_locale"], "fr");
-    assert_eq!(resolution["matched_context"], "79000000000000000001");
-    assert_eq!(resolution["matched_key"], "79000000000000000001");
+    assert_eq!(resolution["matched_context"], "letters");
+    assert_eq!(resolution["matched_key"], "letters");
     assert_eq!(resolution["matched_arm"], 1);
 
     let attempts = resolution["attempts"].as_array().expect("attempts array");
     assert_eq!(attempts.len(), 4);
     let expected = [
-        (
-            "fr-CA",
-            "79000000000000000001&formal",
-            "missing_translation",
-        ),
-        ("fr", "79000000000000000001&formal", "missing_translation"),
-        ("fr-CA", "79000000000000000001", "missing_entry"),
-        ("fr", "79000000000000000001", "matched"),
+        ("fr-CA", "letters&formal", "missing_translation"),
+        ("fr", "letters&formal", "missing_translation"),
+        ("fr-CA", "letters", "missing_entry"),
+        ("fr", "letters", "matched"),
     ];
     for (attempt, (locale, context, outcome)) in attempts.iter().zip(expected) {
         assert_eq!(attempt["locale"], locale);
         assert_eq!(attempt["context"], context);
-        assert_eq!(attempt["key"], "79000000000000000001");
+        assert_eq!(attempt["key"], "letters");
         assert_eq!(attempt["selected_arm"], 1);
         assert_eq!(attempt["outcome"], outcome);
     }
@@ -128,17 +124,17 @@ unsafe extern "C" fn ordered_locale_callback(
         // MissingEntry without inventing a new ABI outcome.
         let text = push_string(&mut storage, "Beaucoup de lettres.");
         let matched_locale = push_string(&mut storage, "fr");
-        let matched_context = push_string(&mut storage, "79000000000000000001");
-        let matched_key = push_string(&mut storage, "79000000000000000001");
+        let matched_context = push_string(&mut storage, "letters");
+        let matched_key = push_string(&mut storage, "letters");
         for (locale, context, outcome) in [
-            ("fr-CA", "79000000000000000001&formal", 2),
-            ("fr", "79000000000000000001&formal", 2),
-            ("fr-CA", "79000000000000000001", 1),
-            ("fr", "79000000000000000001", 3),
+            ("fr-CA", "letters&formal", 2),
+            ("fr", "letters&formal", 2),
+            ("fr-CA", "letters", 1),
+            ("fr", "letters", 3),
         ] {
             let locale = push_string(&mut storage, locale);
             let context = push_string(&mut storage, context);
-            let key = push_string(&mut storage, "79000000000000000001");
+            let key = push_string(&mut storage, "letters");
             storage.attempts.push(ReciteLocaleAttempt {
                 locale,
                 context,

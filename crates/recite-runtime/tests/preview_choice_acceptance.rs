@@ -13,14 +13,14 @@ use recite_runtime::{
 fn branch_asset() -> recite_core::compiled::CompiledDialogue {
     asset(concat!(
         ":: start default\n",
-        "> intro@18c570b9af4d973ba876\n",
+        "> @intro\n",
         "  Choose.\n",
-        "  ? go@c491f4cbe1944ebc5bc5\n",
+        "  ? @go\n",
         "    Go.\n",
         "    -> branch\n",
         ":: branch\n",
         ":if trusts(player)\n",
-        "  > done@d491f4cbe1944ebc5bc5\n",
+        "  > @done\n",
         "    Done.\n",
         "-> END\n",
     ))

@@ -57,7 +57,7 @@ impl HostFixture {
             &ready,
             LocaleResolution::new(),
         ));
-        let choice = must(ChoiceId::new("11111111111111111111"));
+        let choice = must(ChoiceId::new("ffee6p8"));
         for _ in 0..history {
             must(driver.select_choice(choice.clone(), &ready, LocaleResolution::new()));
         }
@@ -128,9 +128,7 @@ impl HostSession {
         let mut batch = Batch(ReciteBuffer::null());
         // SAFETY: this thread owns the live handle, choice is static UTF-8,
         // and batch is writable. The returned allocation is owned by Batch.
-        check(unsafe {
-            recite_session_choose(self.0, c"11111111111111111111".as_ptr(), &raw mut batch.0)
-        });
+        check(unsafe { recite_session_choose(self.0, c"ffee6p8".as_ptr(), &raw mut batch.0) });
         batch
     }
 }

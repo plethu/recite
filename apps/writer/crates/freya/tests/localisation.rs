@@ -449,7 +449,7 @@ fn refresh_refuses_a_project_changed_after_preview() -> Result<(), Box<dyn std::
     support::click(&mut test, "Refresh from source")?;
     std::fs::write(
         dir.path().join("other.recite"),
-        ":: extra\n> new@99999999999999999999\n  New source.\n-> END\n",
+        ":: extra\n> @pm96kqq\n  New source.\n-> END\n",
     )?;
     support::click(&mut test, "Update catalogue")?;
     assert!(has_text(&test, "changed while preparing"));

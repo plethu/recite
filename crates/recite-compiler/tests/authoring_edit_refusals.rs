@@ -196,13 +196,19 @@ fn single_stable_id_selection_does_not_capture_later_header_columns() {
     assert!(
         kernel
             .snapshot()
-            .plan_insert_missing_id(&key("main.recite"), position(2, 1))
+            .plan_insert_missing_id(
+                &key("main.recite"),
+                position(2, 1),
+                &mut recite_core::StableIdGenerator::seeded(1)
+            )
             .is_ok()
     );
     assert!(matches!(
-        kernel
-            .snapshot()
-            .plan_insert_missing_id(&key("main.recite"), position(2, 10)),
+        kernel.snapshot().plan_insert_missing_id(
+            &key("main.recite"),
+            position(2, 10),
+            &mut recite_core::StableIdGenerator::seeded(1)
+        ),
         Err(AuthoringEditError::NoSymbol { .. })
     ));
 }

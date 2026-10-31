@@ -1,6 +1,6 @@
 use super::ANALYZE_COUNT;
 use crate::authoring::{AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration};
-use recite_core::{DocumentKey, SourcePosition};
+use recite_core::{DocumentKey, SourcePosition, StableIdGenerator, StatementHeader};
 use std::cell::Cell;
 
 fn key(value: &str) -> DocumentKey {
@@ -25,7 +25,7 @@ fn analysis_is_reused_for_queries_and_unchanged_documents() {
     kernel
         .apply(request(
             SnapshotGeneration::initial(),
-            ":: a\n> line@11111111111111111111\n  A\n",
+            ":: a\n> @ffee6p8\n  A\n",
             ":: b\n",
         ))
         .expect("initial request accepted");
@@ -48,11 +48,7 @@ fn analysis_is_reused_for_queries_and_unchanged_documents() {
 
     let generation = kernel.snapshot().generation();
     kernel
-        .apply(request(
-            generation,
-            ":: a\n> line@22222222222222222222\n  A\n",
-            ":: b\n",
-        ))
+        .apply(request(generation, ":: a\n> @rthh7ab\n  A\n", ":: b\n"))
         .expect("one-document replacement accepted");
     assert_eq!(ANALYZE_COUNT.with(Cell::get), 3);
 }
@@ -62,7 +58,7 @@ fn prose_revalidates_one_file_and_reuses_project_diagnostics() {
     super::PROJECT_VALIDATION_COUNT.with(|count| count.set(0));
     ANALYZE_COUNT.with(|count| count.set(0));
     let mut kernel = AuthoringKernel::new();
-    let a = ":: a default\n> line@11111111111111111111\n  A\n-> END\n";
+    let a = ":: a default\n> @ffee6p8\n  A\n-> END\n";
     let b = ":: b\n-> missing\n";
     kernel
         .apply(request(kernel.snapshot().generation(), a, b))
@@ -101,7 +97,7 @@ fn local_markup_errors_change_without_rebuilding_project_indexes() {
     super::PROJECT_VALIDATION_COUNT.with(|count| count.set(0));
     let mut kernel = AuthoringKernel::with_schema(recite_core::schema::ProjectSchema::empty_v1())
         .expect("valid schema");
-    let a = ":: a default\n> line@11111111111111111111\n  Hello.\n-> END\n";
+    let a = ":: a default\n> @ffee6p8\n  Hello.\n-> END\n";
     let b = ":: b\n-> END\n";
     kernel
         .apply(request(kernel.snapshot().generation(), a, b))
@@ -146,13 +142,15 @@ fn local_markup_errors_change_without_rebuilding_project_indexes() {
 fn shared_destination_does_not_revalidate_unrelated_callers() {
     use crate::validation::incremental::VALIDATED_DOCUMENTS;
     let mut kernel = AuthoringKernel::new();
+    let mut ids = StableIdGenerator::seeded(0);
     let mut saved: Vec<_> = (0..100)
         .map(|n| {
             SavedDocument::new(
                 key(&format!("scene{n:03}.recite")),
                 format!(
-                    ":: beat{n}{}\n> line@{n:020x}\n  Hello.\n-> scene000.recite::beat0\n",
-                    if n == 0 { " default" } else { "" }
+                    ":: beat{n}{}\n{}\n  Hello.\n-> scene000.recite::beat0\n",
+                    if n == 0 { " default" } else { "" },
+                    StatementHeader::line().id(&ids.next_id())
                 ),
             )
         })
@@ -165,8 +163,8 @@ fn shared_destination_does_not_revalidate_unrelated_callers() {
         ))
         .unwrap();
     for text in [
-        ":: beat50\n> line@ffffffffffffffffffff\n  Hello.\n-> scene000.recite::beat0\n",
-        ":: beat50\n> line@ffffffffffffffffffff\n  Hello.\n  More words.\n-> scene000.recite::beat0\n",
+        ":: beat50\n> @bkr28cq\n  Hello.\n-> scene000.recite::beat0\n",
+        ":: beat50\n> @bkr28cq\n  Hello.\n  More words.\n-> scene000.recite::beat0\n",
     ] {
         VALIDATED_DOCUMENTS.with(|count| count.set(0));
         saved[50] = SavedDocument::new(key("scene050.recite"), text);
@@ -246,7 +244,7 @@ fn incremental_edits_share_the_accepted_schema_and_preserve_published_snapshots(
     );
     let mut kernel = AuthoringKernel::with_schema(schema).expect("valid schema accepted once");
     let accepted_schema = Arc::clone(kernel.snapshot().schema.as_ref().expect("accepted schema"));
-    let source = ":: a default\n:if ready()\n  > hello@11111111111111111111\n    Hello.\n-> END\n";
+    let source = ":: a default\n:if ready()\n  > @ffee6p8\n    Hello.\n-> END\n";
     let other = ":: b\n-> END\n";
     kernel
         .apply(request(kernel.snapshot().generation(), source, other))

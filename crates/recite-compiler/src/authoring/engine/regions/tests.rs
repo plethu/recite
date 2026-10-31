@@ -3,7 +3,7 @@ use std::cell::Cell;
 use crate::authoring::{
     AuthoringKernel, AuthoringRequest, Interrupted, SavedDocument, WorkControl,
 };
-use recite_core::DocumentKey;
+use recite_core::{DocumentKey, StableIdGenerator, StatementHeader};
 
 fn request(kernel: &AuthoringKernel, source: &str) -> AuthoringRequest {
     AuthoringRequest::new(
@@ -41,11 +41,13 @@ fn metadata_line_counts_exclude_only_the_synthetic_empty_line() {
 
 #[test]
 fn relocation_shares_spanless_bindings_without_mutating_retained_snapshots() {
+    let mut ids = StableIdGenerator::seeded(0);
     let mut source = String::from(":: a default\n-> b\n:: b\n");
     for index in 0..1_000 {
-        source.push_str(&format!(
-            "> line@{index:020x} bind=(name:string=$value_{index})\n  Hello {{name}}.\n"
-        ));
+        let header = StatementHeader::line()
+            .field("bind", format_args!("(name:string=$value_{index})"))
+            .id(&ids.next_id());
+        source.push_str(&format!("{header}\n  Hello {{name}}.\n"));
     }
     let key = DocumentKey::new("a.recite").unwrap();
     let mut kernel = AuthoringKernel::new();
@@ -109,7 +111,7 @@ fn invalid_cached_coordinates_fall_back_to_cold_analysis() {
 
 #[test]
 fn typing_and_line_insertion_parse_only_the_changed_region() {
-    let source = ":: a default\n> a@11111111111111111111\n  Hello.\n:: b\n> b@22222222222222222222\n  Later.\n:: c\n-> END\n";
+    let source = ":: a default\n> @ffee6p8\n  Hello.\n:: b\n> @rthh7ab\n  Later.\n:: c\n-> END\n";
     let mut kernel = AuthoringKernel::new();
     kernel.apply(request(&kernel, source)).unwrap();
     for replacement in ["New prose.", "New\n  paragraph.", "Hello."] {
@@ -143,8 +145,14 @@ impl WorkControl for Budget {
 
 #[test]
 fn interrupted_region_candidates_leave_committed_analysis_unchanged() {
+    let mut ids = StableIdGenerator::seeded(0);
     let source: String = (0..20)
-        .map(|n| format!(":: block{n}\n> line@{n:020x}\n  Hello.\n"))
+        .map(|n| {
+            format!(
+                ":: block{n}\n{}\n  Hello.\n",
+                StatementHeader::line().id(&ids.next_id())
+            )
+        })
         .collect();
     let mut kernel = AuthoringKernel::new();
     kernel.apply(request(&kernel, &source)).unwrap();
@@ -178,13 +186,15 @@ fn interrupted_region_candidates_leave_committed_analysis_unchanged() {
 #[test]
 fn recovery_revalidates_echo_consumers_without_visiting_unrelated_files() {
     use crate::validation::incremental::VALIDATED_DOCUMENTS;
+    let mut ids = StableIdGenerator::seeded(0);
     let mut saved: Vec<_> = (0..30)
         .map(|n| {
             SavedDocument::new(
                 DocumentKey::new(format!("file{n:02}.recite")).unwrap(),
                 format!(
-                    ":: block{n}{}\n> line@{n:020x}\n  Hello.\n",
-                    if n == 0 { " default" } else { "" }
+                    ":: block{n}{}\n{}\n  Hello.\n",
+                    if n == 0 { " default" } else { "" },
+                    StatementHeader::line().id(&ids.next_id())
                 ),
             )
         })

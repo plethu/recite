@@ -1,5 +1,5 @@
 //! Reviewable project rename patches come exclusively from the compiler planner.
-use crate::{Document, EditError, projection::offset};
+use crate::{Document, EditError};
 use recite_core::{DocumentKey, SourcePosition};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RenameChange {
@@ -27,30 +27,22 @@ impl Document {
             SourcePosition::new(declaration.span().start.line(), 4)?,
             name,
         )?;
-        plan.validate(snapshot)?;
-        let mut edits = std::collections::BTreeMap::<DocumentKey, Vec<_>>::new();
-        for edit in plan.edits() {
-            edits.entry(edit.document().clone()).or_default().push(edit);
-        }
-        let mut changes = Vec::new();
-        for (document, edits) in edits {
-            let before = snapshot
-                .document(&document)
-                .ok_or(EditError::Position)?
-                .source_text()
-                .to_owned();
-            let mut after = before.clone();
-            for edit in edits.into_iter().rev() {
-                let start = offset(&before, edit.range().start())?;
-                let end = offset(&before, edit.range().end())?;
-                after.replace_range(start..end, edit.replacement());
-            }
-            changes.push(RenameChange {
-                document,
-                before,
-                after,
-            });
-        }
+        let changes = plan
+            .apply(snapshot)?
+            .into_iter()
+            .map(|(document, after)| {
+                let before = snapshot
+                    .document(&document)
+                    .ok_or(EditError::Position)?
+                    .source_text()
+                    .to_owned();
+                Ok(RenameChange {
+                    document,
+                    before,
+                    after,
+                })
+            })
+            .collect::<Result<_, EditError>>()?;
         Ok(ProjectRename { changes })
     }
 }
@@ -59,7 +51,7 @@ impl Document {
 pub fn rename_manifest_source(source: &str, block: &str, name: &str) -> Result<String, EditError> {
     if name == recite_core::ast::END_DIVERT_TARGET
         || name.contains("::")
-        || !recite_core::is_valid_source_label(name)
+        || !recite_core::is_valid_source_name(name)
     {
         return Err(EditError::Destination);
     }

@@ -12,9 +12,7 @@ pub(super) fn full_change_replaces_and_clears_diagnostics() {
     harness.did_change(
         uri.clone(),
         2,
-        vec![full_change(
-            ":: tavern default\n> intro@1f6bec0fb5fdbe141952\n  Hello.\n",
-        )],
+        vec![full_change(":: tavern default\n> @hg50s57\n  Hello.\n")],
     );
     let published = harness.recv_publish_diagnostics();
     assert_eq!(published.version, Some(2));
@@ -27,11 +25,7 @@ pub(super) fn stale_versions_do_not_publish_or_overwrite_newer_text() {
     let harness = Harness::start();
     let uri = uri("file:///workspace/dialogue/stale.recite");
 
-    harness.did_open(
-        uri.clone(),
-        3,
-        ":: tavern default\n> intro@b582eea0d14bd11d5bad\n  Hello.\n",
-    );
+    harness.did_open(uri.clone(), 3, ":: tavern default\n> @jkykmx3\n  Hello.\n");
     assert!(harness.recv_publish_diagnostics().diagnostics.is_empty());
 
     harness.did_change(uri.clone(), 2, vec![full_change("oops\n:: tavern\n")]);
@@ -44,11 +38,7 @@ pub(super) fn malformed_changes_are_ignored() {
     let harness = Harness::start();
     let uri = uri("file:///workspace/dialogue/non-full.recite");
 
-    harness.did_open(
-        uri.clone(),
-        1,
-        ":: tavern default\n> intro@fbe31c8fe0289a3d5d4d\n  Hello.\n",
-    );
+    harness.did_open(uri.clone(), 1, ":: tavern default\n> @q6czkhj\n  Hello.\n");
     assert!(harness.recv_publish_diagnostics().diagnostics.is_empty());
 
     harness.did_change(
@@ -73,9 +63,7 @@ pub(super) fn malformed_changes_are_ignored() {
     harness.did_change(
         uri.clone(),
         4,
-        vec![full_change(
-            ":: tavern default\n> intro@d2547260577d7b3d4ead\n  Hello.\n",
-        )],
+        vec![full_change(":: tavern default\n> @dzhemxw\n  Hello.\n")],
     );
     let published = harness.recv_publish_diagnostics();
     assert_eq!(published.version, Some(4));

@@ -72,9 +72,9 @@ fn regional_search_matches_whole_file_lowering_across_fixtures_and_incomplete_so
         assert_whole_file_parity(&source[..middle]);
     }
     for source in [
-        "::\n> orphan\n  Café 🦊.\n:: good\n> line\n  Current.\n",
-        ":: start\n  :: indented\n  > nested\n    Nested.\n:: next\n> line\n  Next.\n",
-        ":: start\n! immediate call(\n:: next\n? reply\n  Reply.\n  -> END\n",
+        "::\n>\n  Café 🦊.\n:: good\n>\n  Current.\n",
+        ":: start\n  :: indented\n  >\n    Nested.\n:: next\n>\n  Next.\n",
+        ":: start\n! immediate call(\n:: next\n?\n  Reply.\n  -> END\n",
     ] {
         assert_whole_file_parity(source);
     }
@@ -82,7 +82,7 @@ fn regional_search_matches_whole_file_lowering_across_fixtures_and_incomplete_so
     // retain exactly the same indexing and nested statement order.
     let mut single = String::from(":: giant default\n");
     for n in 0..10_000 {
-        single.push_str(&format!("> line_{n}@{n:020x}\n  Café courier {n}.\n"));
+        single.push_str(&format!("> @line_{n}\n  Café courier {n}.\n"));
     }
     single.push_str("-> END\n");
     assert_eq!(recite_parser::source_regions(&single).len(), 1);
@@ -91,25 +91,25 @@ fn regional_search_matches_whole_file_lowering_across_fixtures_and_incomplete_so
 
 #[test]
 fn replacements_reuse_identical_regions_and_retained_results_remain_valid() {
-    let original = ":: first default\n> a\n  First courier.\n:: middle\n> b\n  Middle courier.\n:: last\n> c\n  Last courier.\n";
+    let original = ":: first default\n>\n  First courier.\n:: middle\n>\n  Middle courier.\n:: last\n>\n  Last courier.\n";
     let key = DocumentKey::new("scene.recite").unwrap();
     for changed in [
         original.replace("Middle", "Changed"),
         original.replace(
             ":: middle",
-            ":: inserted\n> x\n  Inserted courier.\n:: middle",
+            ":: inserted\n>\n  Inserted courier.\n:: middle",
         ),
-        original.replace(":: middle\n> b\n  Middle courier.\n", ""),
+        original.replace(":: middle\n>\n  Middle courier.\n", ""),
         original.replace(
             "  Middle courier.",
-            "  Middle courier.\n:: split\n> x\n  Split.",
+            "  Middle courier.\n:: split\n>\n  Split.",
         ),
         original.replace(":: middle", "  :: middle"),
         original.replace(":: middle", ":: first"),
         original.replace(":: middle", "::"),
         original.replace(":: middle", ":: first\n:: first"),
         original.replace("\n", "\r\n"),
-        ":: giant default\n> a\n  One courier.\n".into(),
+        ":: giant default\n>\n  One courier.\n".into(),
     ] {
         let input = SavedDocument::new(key.clone(), original);
         let mut index = SearchIndex::build(&[input]);
@@ -142,7 +142,7 @@ fn one_changed_group_reuses_prefix_and_shifted_suffix_shards() {
         .collect::<String>();
     let key = DocumentKey::new("scene.recite").unwrap();
     for middle in [
-        ":: inserted\n> x\n  Inserted.\n:: block_40",
+        ":: inserted\n>\n  Inserted.\n:: block_40",
         "  :: block_40",
         ":: block_40\n! bad(",
         ":: duplicate",

@@ -6,11 +6,11 @@ use recite_writer_model::{Document, Preview, PreviewSetup};
 fn trial_uses_fixed_plural_values_and_records_variant_locale_fallback()
 -> Result<(), Box<dyn std::error::Error>> {
     let document = Document::new(
-        ":: start default\n> tickets@12345678901234567890 bind=(count:int=$tickets)\n  {count} ticket\n  | {count} tickets\n-> END\n",
+        ":: start default\n> bind=(count:int=$tickets) @w3xnt5r\n  {count} ticket\n  | {count} tickets\n-> END\n",
     )?;
     assert_eq!(document.preview_bindings()[0].value, "tickets");
     let po = PoDocument::parse(
-        "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"12345678901234567890\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n",
+        "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"w3xnt5r\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n",
     )?;
     let mut setup = PreviewSetup {
         policy: CatalogResolutionPolicy::new(Some(LocaleId::new("fr-CA")?))
@@ -28,13 +28,10 @@ fn trial_uses_fixed_plural_values_and_records_variant_locale_fallback()
     assert_eq!(preview.advance(None)?.text, "2 billets");
     let trace = preview
         .trace()
-        .plural_line("12345678901234567890")
+        .plural_line("w3xnt5r")
         .ok_or("plural trace")?;
     assert_eq!(trace.matched_locale.as_deref(), Some("fr"));
-    assert_eq!(
-        trace.matched_context.as_deref(),
-        Some("12345678901234567890")
-    );
+    assert_eq!(trace.matched_context.as_deref(), Some("w3xnt5r"));
     assert_eq!(trace.matched_arm, Some(1));
     assert_eq!(trace.attempts.len(), 4);
     use recite_runtime::localisation::PluralResolutionOutcome;

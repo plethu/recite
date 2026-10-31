@@ -54,6 +54,7 @@ pub(crate) enum ErrorCode {
     InvalidProjectRoot,
     MissingFixtureChoice,
     NoInputs,
+    StableIdBaseline,
     OutputOverwritesInput,
     PlayEof,
     PlayInvalidInput,

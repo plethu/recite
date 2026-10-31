@@ -49,7 +49,7 @@ fn script_fallback_opens_the_first_block_even_when_it_has_only_effects()
     model.set_draft(
         concat!(
             ":: effects_first default\n! immediate ring_bell()\n-> later\n",
-            ":: later\n> line@11111111111111111111\n  Later prose.\n-> END\n",
+            ":: later\n> @ffee6p8\n  Later prose.\n-> END\n",
         )
         .into(),
     );

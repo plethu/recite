@@ -12,11 +12,11 @@ prose.
 ```text
 :: gate_check default speaker=guard
 
-> gate_001@ae703fc627755242ebc7 mood=impatient
+> mood=impatient @b1w0tg8
   Papers?
 
 :if has_pass(player)
-  ? gate_show_pass@7f2eb1f55623952e6434
+  ? @w388zqy
     Here they are.
     -> open_gate
 
@@ -24,7 +24,7 @@ prose.
 
 ! blocking set_gate_open(town_gate)
 
-> gate_002@7cfd0149209d8e2f5359
+> @xg4jb1d
   Go on.
 
 -> END
@@ -39,8 +39,8 @@ Recite uses a small statement vocabulary:
 
 ```text
 :: block_name default speaker=guard  # block
-> line_001@335096a87620c0ccbf2f speaker=guard             # line
-? choice_001@63e10f410e48a6773297                         # choice
+> speaker=guard             # line @a6p6x73
+?                         # choice @m8tz49s
 ! blocking set_gate_open(town_gate)  # effect
 -> open_gate                         # target
 :if has_pass(player)                 # conditional branch
@@ -58,7 +58,7 @@ Blank lines inside a prose body are preserved as paragraph breaks.
 Dialogue prose is not a quoted string. It is the indented body owned by a line header:
 
 ```text
-> gate_003@68e651c6d898d7f39f00 speaker=guard portrait=neutral
+> speaker=guard portrait=neutral @qekwjc5
   Move along.
 ```
 
@@ -73,13 +73,13 @@ A block can provide a default speaker for lines that do not name one:
 ```text
 :: gate_check default speaker=guard
 
-> gate_001@258bfad65f45bd3661bc
+> @gnrhw2n
   Papers?
 
-> gate_002@60ba4b9486ed20ce6735 speaker=captain
+> speaker=captain @e9c132f
   Let them through.
 
-> gate_003@b13991cde6630c24fe5b mood=impatient
+> mood=impatient @kje99zw
   Well?
 ```
 
@@ -94,7 +94,7 @@ permits them.
 ```text
 :: gate_check default speaker=guard location=town_gate
 
-> gate_004@3b654fa7ef8715d05428 portrait=neutral caption="Door closes"
+> portrait=neutral caption="Door closes" @gate_004
   Last warning.
 ```
 
@@ -110,11 +110,11 @@ statement field has specific defaulting behavior.
 Choices are localisable records with stable IDs, body text, metadata, and a target:
 
 ```text
-? gate_show_pass@191a4a3ecf68db47f96a tone=polite
+? tone=polite @njnwr3m
   Here they are.
   -> open_gate
 
-? gate_leave@a8f0209d81e33a0c858f
+? @gate_leave
   I'll come back later.
   -> END
 ```
@@ -129,15 +129,15 @@ absent.
 Choices may be nested under a line to model a prompt:
 
 ```text
-> gate_prompt_001@15585b913a65e0892edb
+> @gate_prompt_001
   What do you show the guard?
 
   :if has_pass(player)
-    ? gate_show_pass@456751c5fc90888fe004
+    ? @hewxgyh
       The signed pass.
       -> open_gate
 
-  ? gate_back_away@b861d38fafdf6ceab3f0
+  ? @gate_back_away
     Nothing.
     -> END
 ```
@@ -149,10 +149,10 @@ included; they do not mutate the game:
 
 ```text
 :if reputation_at_least(town_guard, 3)
-  > gate_known_001@84cad7e66e4e1882cff4
+  > @gate_known_001
     I know you. Go on.
 :else
-  > gate_unknown_001@b2fac71bc5030b065f3c
+  > @gate_unknown_001
     Papers?
 ```
 
@@ -163,7 +163,7 @@ Use `:match` and `:case` for schema-declared enum state:
   :case open
     -> open_gate
   :case closed
-    > gate_closed_001@a4bdc33d4c6caa81e951
+    > @gate_closed_001
       Not today.
   :case _
     -> END
@@ -185,17 +185,19 @@ Blocking effects require the host to acknowledge the effect before traversal con
 The current compiler contract requires every line and choice to have a stable ID before compilation:
 
 ```text
-> gate_005@79ab5f91ee4e42b3da54
+> @gate_005
   Keep moving.
 
-? gate_ask_news@70c6b181e0398ce66cfb
+? @gate_ask_news
   Any news from the road?
   -> road_news
 ```
 
-The LSP provides explicit actions to insert missing line and choice anchors without rewriting
-existing ones. Clients may configure the action on save. Labels remain editable; replacing an anchor
-changes identity. Changed source text requires catalogue refresh and translation review.
+A line or choice header ends with one `@id` field after its metadata. An ID uses lowercase letters,
+digits, `_`, `.` and `-`, and starts with a letter or `_`. Write a readable ID yourself, or leave it
+out and let `recite assign-ids` or the LSP's missing-ID action append a generated seven-character
+ID. Neither rewrites an existing ID. Changing an ID changes identity, and changed source text
+requires catalogue refresh and translation review.
 
 Once an ID is written, it is frozen. Tooling must not silently rewrite existing IDs because
 localisation, fixtures, traces, and save-compatible dialogue state depend on stable identifiers.
@@ -209,8 +211,8 @@ same things after their syntax. Each Writer term maps to one source or CLI term:
 | -------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
 | scene                | a `.recite` file      | One file of blocks. Writer's sidebar lists scenes.                                                         |
 | beat                 | block (`:: name`)     | One named block; a map card in Writer.                                                                     |
-| line                 | line (`> name@id`)    | A localisable line of dialogue with an optional speaker.                                                   |
-| reply                | choice (`? name@id`)  | An option the player picks; its `->` target is the reply's destination.                                    |
+| line                 | line (`> … @id`)      | A localisable line of dialogue with an optional speaker.                                                   |
+| reply                | choice (`? … @id`)    | An option the player picks; its `->` target is the reply's destination.                                    |
 | Try scene, Run scene | `recite play`         | Writer's Try scene and the playground's Run scene both traverse the compiled scene, as `recite play` does. |
 | problems             | diagnostics           | Writer's status bar counts the open scene's diagnostics.                                                   |
 

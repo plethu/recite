@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use recite_core::{DocumentKey, schema::load_schema_manifest_str};
+use recite_core::{DocumentKey, StableId, StatementHeader, schema::load_schema_manifest_str};
 use recite_writer_model::{Document, PassageKind, ProjectContext, ScriptBlock, ScriptEntry};
 
 pub(super) struct ScriptWorkload {
@@ -17,8 +17,11 @@ pub(super) fn effects(passages: usize) -> ScriptWorkload {
     let mut source =
         String::from("# Original deterministic effects/prose stress probe.\n:: relay default\n");
     for id in 0..passages {
+        let header = StatementHeader::line()
+            .field("speaker", "mara")
+            .id(&courier_id(id));
         source.push_str(&format!(
-            "! immediate change_disposition(mara, 1)\n> courier_{id}@{id:020x} speaker=mara\n  Café — the courier returns. Beacon{id} remains unanswered.\n\n"
+            "! immediate change_disposition(mara, 1)\n{header}\n  Café — the courier returns. Beacon{id} remains unanswered.\n\n"
         ));
     }
     source.push_str("-> END\n");
@@ -43,6 +46,11 @@ pub(super) fn effects(passages: usize) -> ScriptWorkload {
     ScriptWorkload { document, passages }
 }
 
+fn courier_id(index: usize) -> StableId {
+    StableId::new(format!("courier_{index}"))
+        .unwrap_or_else(|error| panic!("Writer fixture ID is invalid: {error}"))
+}
+
 pub(super) fn validate_script(projected: ProjectedScript) {
     let passages = projected.workload.passages;
     assert_eq!(projected.script.len(), 1);
@@ -58,8 +66,7 @@ pub(super) fn validate_script(projected: ProjectedScript) {
         let ScriptEntry::Passage(passage) = &pair[1] else {
             panic!("effect {id} did not retain its following passage");
         };
-        assert_eq!(passage.id, format!("{id:020x}"));
-        assert_eq!(passage.label, format!("courier_{id}"));
+        assert_eq!(passage.id, courier_id(id).as_str());
         assert_eq!(passage.section, "relay");
         assert_eq!(
             passage.text,

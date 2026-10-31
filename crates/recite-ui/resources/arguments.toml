@@ -16,6 +16,9 @@ item = "string"
 [arguments."cli-success-files"]
 count = "integer"
 
+[arguments."cli-ids-assigned"]
+count = "integer"
+
 [arguments."cli-diagnostic-errors"]
 count = "integer"
 
@@ -336,6 +339,14 @@ source = "string"
 
 [arguments."cli-error-missing-path"]
 path = "string"
+
+[arguments."cli-error-stable-id-baseline"]
+reference = "string"
+detail = "string"
+
+[arguments."cli-ids-removed"]
+id = "string"
+reference = "string"
 
 [arguments."cli-error-missing-fixture-choice"]
 prompt_keys = "string"

@@ -31,7 +31,7 @@ fn dropped_or_ambiguous_regions_never_claim_ast_completeness() {
         ":: start\n:case orphan\n  -> missing\n",
         ":: start\n  -> kept\n   -> missing\n",
         ":: start\n  -> next\n  prose after statement\n",
-        "? choice@11111111111111111111 if\n",
+        "? if @ffee6p8\n",
         "::\n",
         ":: start\n->\n",
         ":: start\n! broken\n",
@@ -47,14 +47,14 @@ fn dropped_or_ambiguous_regions_never_claim_ast_completeness() {
 
 #[test]
 fn targeted_recovery_marks_only_the_affected_class() {
-    let metadata = recovery_for(":: start\n> line@11111111111111111111 bind=(name:string=$)\n");
+    let metadata = recovery_for(":: start\n> bind=(name:string=$) @ffee6p8\n");
     assert!(!metadata.metadata().is_complete());
     assert!(metadata.block_references().is_complete());
 }
 
 #[test]
 fn syntax_recovery_marks_stable_ids_incomplete() {
-    let recovery = recovery_for(":: start\n> line@bad\n  Recoverable ID.\nsyntax error\n");
+    let recovery = recovery_for(":: start\n> @Bad\n  Recoverable ID.\nsyntax error\n");
     assert!(!recovery.stable_ids().is_complete());
     assert!(!recovery.block_references().is_complete());
 }
@@ -63,11 +63,11 @@ fn syntax_recovery_marks_stable_ids_incomplete() {
 fn invalid_ids_do_not_suppress_independent_stable_id_diagnostics() {
     let source = concat!(
         ":: start default\n",
-        "> malformed@bad\n",
+        "> @Bad\n",
         "  Malformed ID.\n",
-        "> duplicate@11111111111111111111\n",
+        "> @ffee6p8\n",
         "  First duplicate.\n",
-        "> duplicate@11111111111111111111\n",
+        "> @ffee6p8\n",
         "  Second duplicate.\n",
         ">\n",
         "  Missing ID.\n",
@@ -164,7 +164,7 @@ fn malformed_diagnostics_are_local_and_recovery_preserves_clean_validation() {
             [
                 SavedDocument::new(
                     DocumentKey::new("clean.recite").expect("valid key"),
-                    ":: start\n> line@11111111111111111111\n  A line with an ID.\n-> malformed.recite::missing\n",
+                    ":: start\n> @ffee6p8\n  A line with an ID.\n-> malformed.recite::missing\n",
                 ),
                 SavedDocument::new(
                     DocumentKey::new("malformed.recite").expect("valid key"),
@@ -192,11 +192,11 @@ fn symbol_readiness_reports_the_actual_incomplete_classes() {
         ("::\n", QueryClass::BlockDefinitions),
         (":: start\n->\n", QueryClass::BlockReferences),
         (
-            ":: start\n> line@bad\n  Recoverable ID.\nsyntax error\n",
+            ":: start\n> @Bad\n  Recoverable ID.\nsyntax error\n",
             QueryClass::StableIds,
         ),
         (
-            ":: start\n> line@11111111111111111111 bind=(name:string=$)\n",
+            ":: start\n> bind=(name:string=$) @ffee6p8\n",
             QueryClass::Metadata,
         ),
         (":: start\n:if broken(\n", QueryClass::ConditionFunctions),

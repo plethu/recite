@@ -1,6 +1,5 @@
 use super::diagnostics::{PoDiagnostic, PoPluralDiagnostic, error, error_span};
 use super::types::EntryBuilder;
-use crate::SourceId;
 
 mod headers;
 mod markup;
@@ -62,16 +61,6 @@ pub(super) fn validate(
     }
     if stale || header {
         return Ok(());
-    }
-    for (value, range) in &b.source_id_comments {
-        if !matches!(SourceId::parse(Some(value)), SourceId::Frozen { .. }) {
-            return Err(error_span(
-                name,
-                source,
-                range.clone(),
-                PoDiagnostic::InvalidStableId(value.clone()),
-            ));
-        }
     }
     let source_names = placeholder_names(
         name,
@@ -149,6 +138,13 @@ pub(super) fn validate(
     Ok(())
 }
 
+/// Non-dialogue catalogue contexts; dialogue contexts are bare stable IDs.
+const CONTEXT_PREFIXES: [&str; 3] = [
+    "dialogue_speaker:",
+    "availability_reason:",
+    "presentation_label:",
+];
+
 fn validate_context(
     name: &str,
     source: &str,
@@ -160,11 +156,10 @@ fn validate_context(
     if context.matches('&').count() > 1
         || base.is_empty()
         || (context.contains('&') && variant.trim().is_empty())
-        || (base.contains('@') && !matches!(SourceId::parse(Some(base)), SourceId::Frozen { .. }))
-        || (base.len() == 20
-            && !base
-                .chars()
-                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)))
+        || !(CONTEXT_PREFIXES
+            .iter()
+            .any(|prefix| base.starts_with(prefix))
+            || crate::is_valid_stable_id(base))
     {
         return Err(field_error(
             name,
@@ -175,11 +170,7 @@ fn validate_context(
             PoDiagnostic::InvalidStableId(context.to_owned()),
         ));
     }
-    for prefix in [
-        "dialogue_speaker:",
-        "availability_reason:",
-        "presentation_label:",
-    ] {
+    for prefix in CONTEXT_PREFIXES {
         if let Some(value) = base.strip_prefix(prefix) {
             if value.trim().is_empty() {
                 return Err(field_error(
@@ -194,25 +185,7 @@ fn validate_context(
             return Ok(());
         }
     }
-    if base.contains('@') {
-        return Ok(());
-    }
-    if base.len() == 20
-        && base
-            .chars()
-            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
-    {
-        Ok(())
-    } else {
-        Err(field_error(
-            name,
-            source,
-            line,
-            b,
-            super::types::PoFieldTarget::Context,
-            PoDiagnostic::InvalidStableId(context.to_owned()),
-        ))
-    }
+    Ok(())
 }
 
 fn field_error(

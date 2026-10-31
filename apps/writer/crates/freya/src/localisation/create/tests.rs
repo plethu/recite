@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn new_catalogues_have_target_plural_arms_and_no_translations() -> Result<(), String> {
-    let template = "#. block: opening\n#. speaker: narrator\nmsgctxt \"11111111111111111111\"\nmsgid \"One letter\"\nmsgid_plural \"{count} letters\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
+    let template = "#. block: opening\n#. speaker: narrator\nmsgctxt \"ffee6p8\"\nmsgid \"One letter\"\nmsgid_plural \"{count} letters\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
     for (tag, arms) in [("ja", 1), ("fr-CA", 2), ("ru", 3), ("pl", 3), ("en", 2)] {
         let locale = language(tag)?;
         let document = initialise(template, &locale, &AtomicBool::new(false))?;
@@ -19,7 +19,7 @@ fn new_catalogues_have_target_plural_arms_and_no_translations() -> Result<(), St
                 .any(|h| h.key() == "Last-Translator")
         );
         let plural = document
-            .find("11111111111111111111", "One letter")
+            .find("ffee6p8", "One letter")
             .ok_or("plural entry")?;
         assert_eq!(plural.plural_translations().len(), arms, "{tag}");
         assert!(
@@ -30,7 +30,7 @@ fn new_catalogues_have_target_plural_arms_and_no_translations() -> Result<(), St
         );
         assert_eq!(
             document
-                .find("22222222222222222222", "Hello")
+                .find("rthh7ab", "Hello")
                 .and_then(|e| e.translation()),
             Some("")
         );
@@ -43,9 +43,8 @@ fn new_catalogues_have_target_plural_arms_and_no_translations() -> Result<(), St
 fn creation_never_overwrites_existing_files_or_symlinks() -> Result<(), String> {
     let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
     let path = dir.path().join("locale/fr.po");
-    let document =
-        PoDocument::parse("msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n")
-            .map_err(|e| e.to_string())?;
+    let document = PoDocument::parse("msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n")
+        .map_err(|e| e.to_string())?;
     let created = persist(&document, &path)?;
     assert_eq!(created.path, path);
     assert_eq!(created.document.source(), document.source());
@@ -97,7 +96,7 @@ fn locale_is_explicit_and_cannot_escape_the_suggested_directory() {
 #[test]
 fn singular_catalogues_do_not_require_a_plural_database() -> Result<(), String> {
     let document = initialise(
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n",
+        "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n",
         &language("ar")?,
         &AtomicBool::new(false),
     )?;
@@ -109,7 +108,7 @@ fn singular_catalogues_do_not_require_a_plural_database() -> Result<(), String> 
     );
     assert_eq!(
         document
-            .find("11111111111111111111", "Hello")
+            .find("ffee6p8", "Hello")
             .and_then(|e| e.translation()),
         Some("")
     );
@@ -118,7 +117,7 @@ fn singular_catalogues_do_not_require_a_plural_database() -> Result<(), String> 
 
 #[test]
 fn plural_metadata_is_required_and_cancelled_preparations_are_discarded() -> Result<(), String> {
-    let template = "msgctxt \"11111111111111111111\"\nmsgid \"One\"\nmsgid_plural \"Many\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    let template = "msgctxt \"ffee6p8\"\nmsgid \"One\"\nmsgid_plural \"Many\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
     let neutral = PoDocument::parse(template).map_err(|e| e.to_string())?;
     assert_eq!(
         normalise(neutral, &language("fr")?).map(|_| ()),
@@ -130,7 +129,7 @@ fn plural_metadata_is_required_and_cancelled_preparations_are_discarded() -> Res
 
 #[test]
 fn cofi_catalogue_keeps_its_identity_and_uses_welsh_as_its_base() -> Result<(), String> {
-    let template = "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
+    let template = "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n";
     let target = language("CY-x-COFI")?;
     assert_eq!(target.base().to_string(), "cy");
     let cofi = initialise(template, &target, &AtomicBool::new(false))?;

@@ -7,7 +7,7 @@ use tempfile::Builder;
 
 use support::stdio::{StdioHarness, file_uri};
 
-const SHARED_SOURCE: &str = ":: source default\n> shared@83709c28414d0ce4659c\n  Shared.\n";
+const SHARED_SOURCE: &str = ":: source default\n> @jewfq0h\n  Shared.\n";
 
 #[test]
 fn stdio_nested_fallback_folder_survives_manifest_refresh() {

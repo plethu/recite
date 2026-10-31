@@ -5,10 +5,10 @@ fn empty_condition_args_are_encoded_as_an_empty_array() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if ready()\n",
-        "  > yes@82000000000000000001\n",
+        "  > @yes\n",
         "    Yes.\n",
         ":else\n",
-        "  > no@82000000000000000002\n",
+        "  > @no\n",
         "    No.\n",
         "-> END\n",
     ));

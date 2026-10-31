@@ -30,7 +30,7 @@ fn summaries_and_queries_preserve_typed_values_spans_and_navigation() {
                     "dialogue/main.recite",
                     concat!(
                         ":: start scene=opening retries=3 values=[one, \"two\"]\n",
-                        "> intro@11111111111111111111\n",
+                        "> @ffee6p8\n",
                         "  Hello.\n",
                         "  -> dialogue/target.recite::finish\n"
                     ),

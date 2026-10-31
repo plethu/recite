@@ -7,7 +7,7 @@ expression: report
   "family": "yarn",
   "file": "input",
   "status": "partial",
-  "source": ":: block_a04d85288af0982a4cec default\n> imported_4b68315f53f2881a35f9@4b68315f53f2881a35f9\n  Hello.\n-> END\n",
+  "source": ":: block_a04d85288af0982a4cec default\n> @aej5m1c\n  Hello.\n-> END\n",
   "mappings": [
     {
       "provenance": {
@@ -54,7 +54,7 @@ expression: report
       },
       "construct": "line",
       "original_id": null,
-      "generated_id": "imported_4b68315f53f2881a35f9@4b68315f53f2881a35f9",
+      "generated_id": "aej5m1c",
       "generated_line": 2
     }
   ],

@@ -30,15 +30,15 @@ Beside the manifest, create `main.recite`:
 
 ```recite
 :: start default speaker=narrator
-> greeting@11111111111111111111
+> @ffee6p8
   The door is open.
-? leave@22222222222222222222
+? @rthh7ab
   Leave.
   -> END
 ```
 
-The anchors after `@` identify the line and choice. Keep them when editing their text. For larger
-projects, use the editor's stable-ID actions to add missing anchors. If you use game conditions or
+The `@` IDs identify the line and choice. Keep them when editing their text. Run `recite
+assign-ids`, or use the editor's stable-ID action, to add missing IDs. If you use game conditions or
 effects, export the engine's schema first and set `[project].schema` to that manifest's relative
 path.
 

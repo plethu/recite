@@ -169,7 +169,7 @@ fn maintained_workflow_preserves_blocking_snapshot_and_active_revision_on_refres
     let choice = batch(send(
         &mut app,
         &mut cursor,
-        ReciteRequest::SelectChoice(ChoiceId::new("21111111111111111111")?),
+        ReciteRequest::SelectChoice(ChoiceId::new("wpgvzx4")?),
     ));
     assert!(!choice.is_empty());
     send(&mut app, &mut cursor, ReciteRequest::End);

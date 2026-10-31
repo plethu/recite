@@ -4,7 +4,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use recite_core::{SourceId, SourceIdKind};
+use recite_core::{StableIdGenerator, StatementHeader};
 
 use super::{PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION};
 
@@ -44,8 +44,6 @@ pub fn starter_slug(name: &str) -> String {
 pub fn starter_files(name: &str) -> [(String, String); 2] {
     let slug = starter_slug(name);
     let scene = format!("{slug}.recite");
-    let anchor =
-        SourceId::generated_anchor(&scene, SourceIdKind::Line, 2, 1, "opening", 0).to_string();
     [
         (
             PROJECT_MANIFEST_FILE.to_owned(),
@@ -55,7 +53,10 @@ pub fn starter_files(name: &str) -> [(String, String); 2] {
         ),
         (
             scene,
-            format!(":: start default\n> opening@{anchor}\n  This is where the scene begins.\n"),
+            format!(
+                ":: start default\n{}\n  This is where the scene begins.\n",
+                StatementHeader::line().id(&StableIdGenerator::from_system().next_id())
+            ),
         ),
     ]
 }

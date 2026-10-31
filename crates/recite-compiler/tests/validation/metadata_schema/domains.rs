@@ -5,11 +5,11 @@ fn validates_flat_and_contextual_metadata_domains() {
         "dialogue/start.recite",
         concat!(
             ":: start default speaker=hazel\n",
-            "> intro@fcbba9f67b73ef5bcc1f portrait_domain=neutral subject=rhea emotion=calm tags=[flat, neutral]\n",
+            "> portrait_domain=neutral subject=rhea emotion=calm tags=[flat, neutral] @mhd02nc\n",
             "  Hello.\n",
-            "> explicit@efe6cc3c3057d6f36d3a speaker=rhea portrait_domain=flat\n",
+            "> speaker=rhea portrait_domain=flat @explicit\n",
             "  Hello.\n",
-            "> fallback@4d873c2b07e41eb549c3 portrait_domain=neutral\n",
+            "> portrait_domain=neutral @fallback\n",
             "  Hello.\n",
         ),
     )];
@@ -35,12 +35,12 @@ fn contextual_value_names_are_resolved_by_context_and_fallback_policy() {
         "dialogue/start.recite",
         concat!(
             ":: contextual default speaker=hazel\n",
-            "> same_name@11111111111111111111 speaker=hazel portrait_domain=hazel\n",
+            "> speaker=hazel portrait_domain=hazel @ffee6p8\n",
             "  Same name is valid in the hazel context.\n",
-            "> rejected@22222222222222222222 speaker=rhea portrait_domain=hazel\n",
+            "> speaker=rhea portrait_domain=hazel @rthh7ab\n",
             "  Same name is not valid in the rhea context.\n",
             ":: fallback\n",
-            "> fallback@33333333333333333333 portrait_domain=neutral\n",
+            "> portrait_domain=neutral @bqyvpqq\n",
             "  Missing context uses the declared flat fallback.\n",
         ),
     )];
@@ -54,7 +54,7 @@ fn contextual_value_names_are_resolved_by_context_and_fallback_policy() {
     );
 
     assert_codes(&report, ["RECITE_VALIDATE031"]);
-    assert_spans(&report, [(4, 62)]);
+    assert_spans(&report, [(4, 32)]);
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn reports_invalid_metadata_domain_values_on_value_spans() {
         "dialogue/start.recite",
         concat!(
             ":: start default speaker=rhea\n",
-            "> intro@4d62d02c2f1e53710a5a portrait_domain=neutral tags=[flat, missing]\n",
+            "> portrait_domain=neutral tags=[flat, missing] @jtxwznr\n",
             "  Hello.\n",
         ),
     )];
@@ -78,7 +78,7 @@ fn reports_invalid_metadata_domain_values_on_value_spans() {
     );
 
     assert_codes(&report, ["RECITE_VALIDATE031", "RECITE_VALIDATE031"]);
-    assert_spans(&report, [(2, 46), (2, 59)]);
+    assert_spans(&report, [(2, 19), (2, 32)]);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn reports_missing_and_malformed_metadata_domain_context() {
     let schema = metadata_domain_schema();
     let missing = [lower(
         "dialogue/start.recite",
-        ":: start default\n> intro@11111111111111111111 emotion=calm\n  Hello.\n",
+        ":: start default\n> emotion=calm @ffee6p8\n  Hello.\n",
     )];
 
     let report = validate_inputs(
@@ -97,11 +97,11 @@ fn reports_missing_and_malformed_metadata_domain_context() {
         recite_compiler::validation::ProjectCompleteness::Complete,
     );
     assert_codes(&report, ["RECITE_VALIDATE032"]);
-    assert_spans(&report, [(2, 38)]);
+    assert_spans(&report, [(2, 11)]);
 
     let malformed = [lower(
         "dialogue/start.recite",
-        ":: start default\n> intro@11111111111111111111 subject=\"rhea\" emotion=calm\n  Hello.\n",
+        ":: start default\n> subject=\"rhea\" emotion=calm @ffee6p8\n  Hello.\n",
     )];
 
     let report = validate_inputs(
@@ -112,7 +112,7 @@ fn reports_missing_and_malformed_metadata_domain_context() {
         recite_compiler::validation::ProjectCompleteness::Complete,
     );
     assert_codes(&report, ["RECITE_VALIDATE029", "RECITE_VALIDATE033"]);
-    assert_spans(&report, [(2, 38), (2, 38)]);
+    assert_spans(&report, [(2, 11), (2, 11)]);
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn block_metadata_does_not_use_default_speaker_as_field_speaker_context() {
     let schema = metadata_domain_schema();
     let files = [lower(
         "dialogue/start.recite",
-        ":: start default speaker=hazel block_context=flat\n> intro@11111111111111111111\n  Hello.\n",
+        ":: start default speaker=hazel block_context=flat\n> @ffee6p8\n  Hello.\n",
     )];
 
     let report = validate_inputs(
@@ -140,7 +140,7 @@ fn repeated_metadata_selector_reports_selector_span() {
     let schema = metadata_domain_schema();
     let files = [lower(
         "dialogue/start.recite",
-        ":: start default\n> intro@11111111111111111111 subject=rhea subject=hazel emotion=calm\n  Hello.\n",
+        ":: start default\n> subject=rhea subject=hazel emotion=calm @ffee6p8\n  Hello.\n",
     )];
 
     let report = validate_inputs(
@@ -152,7 +152,7 @@ fn repeated_metadata_selector_reports_selector_span() {
     );
 
     assert_codes(&report, ["RECITE_VALIDATE033"]);
-    assert_spans(&report, [(2, 43)]);
+    assert_spans(&report, [(2, 16)]);
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn reports_mixed_array_metadata_type_mismatch_before_domain_validation() {
     let schema = metadata_domain_schema();
     let files = [lower(
         "dialogue/start.recite",
-        ":: start default\n> intro@11111111111111111111 tags=[flat, \"neutral\"]\n  Hello.\n",
+        ":: start default\n> tags=[flat, \"neutral\"] @ffee6p8\n  Hello.\n",
     )];
 
     let report = validate_inputs(
@@ -172,7 +172,7 @@ fn reports_mixed_array_metadata_type_mismatch_before_domain_validation() {
     );
 
     assert_codes(&report, ["RECITE_VALIDATE029"]);
-    assert_spans(&report, [(2, 35)]);
+    assert_spans(&report, [(2, 8)]);
 }
 use super::super::*;
 use super::support::metadata_domain_schema;

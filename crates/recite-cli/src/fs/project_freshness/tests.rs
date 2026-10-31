@@ -69,7 +69,7 @@ fn asset_groups_preserve_first_encountered_filesystem_error() {
 #[test]
 fn shared_assets_keep_source_freshness_and_scene_specific_checks() {
     let root = TempDir::new().expect("tempdir");
-    let source = ":: start default\n> line@11111111111111111111 speaker=hazel\n  Café.\n-> END\n";
+    let source = ":: start default\n> speaker=hazel @ffee6p8\n  Café.\n-> END\n";
     let path = root.path().join("z.recitec");
     let compiled = compile_inputs(
         [CompileInput::new("dialogue.recite", source)],

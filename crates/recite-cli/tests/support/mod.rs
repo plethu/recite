@@ -77,7 +77,7 @@ pub(crate) fn corrupt_compiler_compatibility(asset: &Path) {
 }
 
 pub(crate) fn project_source() -> &'static str {
-    ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n"
+    ":: start default speaker=hazel\n> @ffee6p8\n  Hello.\n-> END\n"
 }
 
 pub(crate) fn schema_manifest<const N: usize>(speakers: [&str; N]) -> String {

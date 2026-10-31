@@ -37,7 +37,7 @@ fn pending_project() -> Result<(tempfile::TempDir, ProjectFiles), Box<dyn std::e
     )?;
     let mut snapshots = BTreeMap::new();
     for (name, block, anchor) in [("a.recite", "start default", 1), ("b.recite", "other", 2)] {
-        let source = format!(":: {block}\n> line@{anchor:020}\n  Saved {name}.\n-> END\n");
+        let source = format!(":: {block}\n> @line_{anchor}\n  Saved {name}.\n-> END\n");
         fs::write(dir.path().join(name), &source)?;
         let mut model = Workbench::open(name, &source)?;
         model.set_draft(format!("Recovered {name}."));

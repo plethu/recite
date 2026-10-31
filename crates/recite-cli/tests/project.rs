@@ -118,7 +118,7 @@ fn check_fresh_uses_project_relative_embedded_source_paths() {
     write_recite(
         temp.path(),
         "Source/dialogue.recite",
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Shadow source.\n-> END\n",
+        ":: start default speaker=hazel\n> @ffee6p8\n  Shadow source.\n-> END\n",
     );
     write_project_manifest(
         temp.path(),
@@ -226,7 +226,7 @@ participants = ["hazel"]
 
     fs::write(
         &source,
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Changed.\n-> END\n",
+        ":: start default speaker=hazel\n> @ffee6p8\n  Changed.\n-> END\n",
     )
     .expect("stale source");
     fs::write(&schema, schema_manifest(["hazel", "rhea"])).expect("stale schema");
@@ -250,7 +250,7 @@ fn check_fresh_keeps_producer_metadata_out_of_schema_identity() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro@637b1854a7f3ed42f045\n  Hello.\n-> END\n",
+        ":: start default\n> @cm3myr8\n  Hello.\n-> END\n",
     );
     let schema = write_file(
         temp.path(),

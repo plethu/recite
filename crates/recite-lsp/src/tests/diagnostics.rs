@@ -64,7 +64,7 @@ pub(super) fn did_open_publishes_lowering_diagnostics() {
     let uri = uri("file:///workspace/dialogue/lowering.recite");
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_road@a5b41169900e68f23ea0\n",
+        "? @ask_road\n",
         "  Ask about the road.\n",
         "    Wrong choice indent.\n",
         ":if knows_secret(player)\n",
@@ -115,17 +115,17 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
             ":: start default\n",
             ">\n",
             "  Missing line id.\n",
-            "> repeated@83709c28414d0ce4659c\n",
+            "> @jewfq0h\n",
             "  First repeated line id.\n",
-            "> prompt@b6b804baf5b0ea3ec34a\n",
+            "> @prompt\n",
             "  Prompt.\n",
-            "  ? repeated_choice@88d47ec76de1bbce527a\n",
+            "  ? @ydk8hyw\n",
             "    First repeated choice.\n",
             "    -> missing_block\n",
-            "  ? other_choice_label@88d47ec76de1bbce527a\n",
+            "  ? @ydk8hyw\n",
             "    Second repeated choice.\n",
             "    -> END\n",
-            "> other_line_label@83709c28414d0ce4659c\n",
+            "> @jewfq0h\n",
             "  Second repeated line id.\n",
         ),
     );
@@ -156,7 +156,7 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
         2,
         vec![full_change(concat!(
             ":: start default\n",
-            "> fixed@64cd2c5a62499a4e9bb4\n",
+            "> @fixed\n",
             "  Fixed.\n",
         ))],
     );
@@ -195,7 +195,7 @@ pub(super) fn related_spans_resolve_project_files_and_target_text() {
     write_file(
         temp.path(),
         "dialogue/first.recite",
-        ":: first\n> shared@83709c28414d0ce4659c\n  😀First.\n",
+        ":: first\n> @jewfq0h\n  😀First.\n",
     );
     let first_uri = file_uri(&first_path);
     let second_uri = file_uri(&temp.path().join("dialogue/second.recite"));
@@ -208,11 +208,7 @@ pub(super) fn related_spans_resolve_project_files_and_target_text() {
     }))
     .0;
 
-    harness.did_open(
-        second_uri.clone(),
-        1,
-        ":: second\n> shared@83709c28414d0ce4659c\n  Second.\n",
-    );
+    harness.did_open(second_uri.clone(), 1, ":: second\n> @jewfq0h\n  Second.\n");
     let published = harness.recv_publish_diagnostics();
     let duplicate = published
         .diagnostics
@@ -261,7 +257,7 @@ pub(super) fn related_spans_resolve_project_files_and_target_text() {
     )]);
     let published = publish_diagnostics(
         second_uri.clone(),
-        ":: second\n> shared@83709c28414d0ce4659c\n  Second.\n",
+        ":: second\n> @jewfq0h\n  Second.\n",
         Some(1),
         &[diagnostic],
         &workspace.ui_catalog,

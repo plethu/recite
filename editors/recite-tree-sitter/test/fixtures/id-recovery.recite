@@ -1,19 +1,17 @@
 :: recovery default
 >
-  A bare line header remains available while its label is being drafted.
-> missing@
-  A draft header without an anchor remains visible.
-> malformed@bad
-  A malformed anchor remains attached to its line.
-? choice@NOT_AN_ANCHOR
-  A malformed choice anchor remains attached to its choice.
+  A header without an ID remains available while its ID is missing.
+> speaker=hazel @
+  An empty ID field remains visible while it is being typed.
+> @Malformed
+  A malformed ID remains attached to its line.
+? requires=(trusts(player)) @NOT_AN_ID
+  A malformed choice ID remains attached to its choice.
   -> END
 ?
-  A bare choice header remains available while its label is being drafted.
-> long@0123456789abcdef01234
-  An overlong hexadecimal suffix remains one malformed fragment.
-> prefix_junk@0123456789abcdef0123junk
-  A valid-looking prefix followed by junk remains one malformed fragment.
-> valid@0123456789abcdef0123
-  A valid anchor remains separately classified.
+  A bare choice header remains available while its ID is missing.
+> @0123456789abcdef0123junk
+  A digit-led ID with trailing junk remains one fragment.
+> mood=calm @ez1fh09
+  A generated ID follows the metadata.
   -> END

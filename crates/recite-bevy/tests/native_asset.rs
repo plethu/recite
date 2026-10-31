@@ -34,7 +34,7 @@ fn asset_server_loads_compiled_bytes_and_rejects_bad_refresh_with_retained_revis
     let path = temp.path().join("dialogue.recitec");
     fs::write(
         &path,
-        compile(":: start default\n> first@11111111111111111111\n  First.\n-> END\n")?,
+        compile(":: start default\n> @ffee6p8\n  First.\n-> END\n")?,
     )?;
     let mut app = App::new();
     app.add_plugins((

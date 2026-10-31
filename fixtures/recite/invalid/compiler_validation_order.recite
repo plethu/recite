@@ -1,11 +1,11 @@
 :: start
-? choose_path@ec6cbb162e05a98546b6
+? @choose_path
   Choose.
   >
     Nested missing line ID.
   -> missing_target
-> repeated@2ab0264c57c2fd1a7929
+> @repeated
   First repeated line.
-? repeated@2ab0264c57c2fd1a7929
+? @repeated
   Duplicate choice.
   -> END

@@ -47,7 +47,7 @@ fn assert_fresh(data: &mut CodeEditorData) {
 #[test]
 fn background_matches_full_highlights_through_replacements_and_line_breaks() {
     for source in [
-        ":: start\n> id@11111111111111111111\n  Hello 🦊.\n-> END\n",
+        ":: start\n> @ffee6p8\n  Hello 🦊.\n-> END\n",
         "# a\r\nx\n",
         "# a\rx\nb",
         "# a\u{b}b\u{c}c\u{85}d\u{2028}e\u{2029}f",
@@ -69,7 +69,7 @@ fn background_matches_full_highlights_through_replacements_and_line_breaks() {
 #[test]
 fn background_coalesces_edits_and_rejects_old_config_or_viewport_outputs() {
     let source = (0..1000)
-        .map(|n| format!(":: block{n}\n> id@{n:020}\n  Hello 🦊 {{value}}.\n"))
+        .map(|n| format!(":: block{n}\n> @id_{n}\n  Hello 🦊 {{value}}.\n"))
         .collect::<String>();
     let mut data = CodeEditorData::new(Rope::from_str(&source), Some(language()));
     data.enable_background_highlighting().unwrap();

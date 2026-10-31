@@ -30,7 +30,8 @@ pub struct ReplyRules {
     source: std::sync::Arc<str>,
     original_condition: Option<RuleExpression>,
     condition_range: Option<Range<usize>>,
-    header_end: usize,
+    /// Where a new `requires=` clause goes: after the last field, before the ID.
+    header_fields_end: usize,
     requirement_range: Option<Range<usize>>,
     effect_insertion: Option<(usize, String)>,
     effect_ranges: Vec<Range<usize>>,
@@ -88,7 +89,7 @@ impl ReplyRules {
                     patches.push((range.clone(), condition.source()?))
                 }
                 (Some(condition), None) => patches.push((
-                    self.header_end..self.header_end,
+                    self.header_fields_end..self.header_fields_end,
                     format!(" requires=({})", condition.source()?),
                 )),
                 (None, Some(_)) => patches.push((

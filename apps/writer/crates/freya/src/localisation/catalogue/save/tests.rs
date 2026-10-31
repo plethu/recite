@@ -21,7 +21,8 @@ impl Catalogue {
         result
     }
 }
-const SOURCE: &str = "# translator note\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n";
+const SOURCE: &str =
+    "# translator note\nmsgctxt \"ffee6p8\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n";
 
 #[test]
 fn queue_cache_does_not_retain_an_obsolete_passage_snapshot()
@@ -61,7 +62,7 @@ fn local_save_patches_shared_queue_forms_without_rebuilding_structural_rows()
         .document
         .entries()
         .iter()
-        .find(|e| e.context() == Some("11111111111111111111"))
+        .find(|e| e.context() == Some("ffee6p8"))
         .ok_or("entry")?
         .id();
     let index = catalogue.queue_index(None);
@@ -260,10 +261,7 @@ fn a_partial_save_preserves_other_entries_including_newer_typing()
     let path = dir.path().join("fr.po");
     std::fs::write(
         &path,
-        format!(
-            "{SOURCE}\n{}",
-            SOURCE.replace("11111111111111111111", "22222222222222222222")
-        ),
+        format!("{SOURCE}\n{}", SOURCE.replace("ffee6p8", "rthh7ab")),
     )?;
     let mut catalogue = Catalogue::open_recoverable(&path)?;
     let first = PoEntryId::new(0);

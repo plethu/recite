@@ -48,7 +48,7 @@ fn search_input_identity_includes_document_order_and_membership()
     let mut documents = files.context.documents.clone();
     let extra = recite_compiler::authoring::SavedDocument::new(
         recite_core::DocumentKey::new("extra.recite")?,
-        ":: extra\n> extra@44444444444444444444\n  Extra passage. Tell me.\n-> END\n",
+        ":: extra\n> @z0g6c80\n  Extra passage. Tell me.\n-> END\n",
     );
     documents.push(extra);
     let expanded = files.refreshed_search(&documents);

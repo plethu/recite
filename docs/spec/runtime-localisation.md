@@ -128,9 +128,8 @@ For dialogue lines and choices:
 ```po
 #. file: Dialogue/hazel_rhea/small_talk.recite
 #. block: small_talk_start
-#. source id: small_talk_001@8f1c2d3e4a5b6c708192
 #. speaker: rhea
-msgctxt "8f1c2d3e4a5b6c708192"
+msgctxt "small_talk_001"
 msgid "Oh, hey! Didn't expect to see you here."
 msgstr ""
 ```
@@ -190,8 +189,8 @@ The runtime never invents broader locales beyond BCP-47 truncation. Cross-locale
 IDs may support variant suffixes:
 
 ```text
-8f1c2d3e4a5b6c708192&formal
-8f1c2d3e4a5b6c708192
+small_talk_001&formal
+small_talk_001
 ```
 
 The caller explicitly selects the grammatical or register variant; the runtime never infers one.
@@ -217,9 +216,8 @@ Plural lines (§5.11) extract to standard gettext plural entries:
 ```po
 #. file: Dialogue/town/inventory.recite
 #. block: post_courier
-#. source id: letters_001@5e4d3c2b1a0987654321
 #. speaker: narrator
-msgctxt "5e4d3c2b1a0987654321"
+msgctxt "letters_001"
 msgid "You have one letter."
 msgid_plural "You have {count} letters."
 msgstr[0] ""

@@ -41,8 +41,8 @@ final_names=(
 final_sources=(
   '# final comment'
   ':: final'
-  '> final'
-  '? final'
+  '> @final'
+  '? @final'
   '! immediate play_sfx("relay")'
   '-> END'
   ':if true'
@@ -68,7 +68,7 @@ if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$adjacent_output"; then
 fi
 
 echo "== blank lines, CRLF, and production differential =="
-boundary_source=$':: physical default\n> line@0123456789abcdef0123 bind=(name:string=$name)\n   \n\t\n  [slow]Final {name} prose.[/slow]'
+boundary_source=$':: physical default\n> bind=(name:string=$name) @ez1fh09\n   \n\t\n  [slow]Final {name} prose.[/slow]'
 parse_clean blank-indentation prose_line "$boundary_source"
 boundary_file="$scratch/boundary.recite"
 printf '%s' "$boundary_source" >"$boundary_file"
@@ -94,7 +94,7 @@ if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$spaced_adjacent_output"; then
 fi
 
 echo "== indented block headers and body boundaries =="
-indented_block_source=$':: outer default\n  > first@0123456789abcdef0123\n    First body.\n  :: nested speaker=guide\n  > nested@fedcba9876543210fedc\n    Nested body.\n\t:: tabbed\n\t> tabbed@00112233445566778899\n\t  Tabbed body.\n'
+indented_block_source=$':: outer default\n  > @ez1fh09\n    First body.\n  :: nested speaker=guide\n  > @kv44p50\n    Nested body.\n\t:: tabbed\n\t> @ek7zajm\n\t  Tabbed body.\n'
 parse_clean indented-block block_statement "$indented_block_source"
 indented_block_file="$scratch/indented-block.recite"
 printf '%s' "$indented_block_source" >"$indented_block_file"
@@ -141,7 +141,7 @@ for production_fixture in "$indented_block_file" "$indented_block_eof_file" "$in
 done
 
 malformed_block_file="$scratch/malformed-indented-block.recite"
-printf '%s' $':: outer default\n> outer@0123456789abcdef0123\n  Outer body.\n  ::: malformed\n  :: recovered\n> recovered@fedcba9876543210fedc\n  Recovered body.\n' >"$malformed_block_file"
+printf '%s' $':: outer default\n> @ez1fh09\n  Outer body.\n  ::: malformed\n  :: recovered\n> @kv44p50\n  Recovered body.\n' >"$malformed_block_file"
 malformed_block_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$malformed_block_file" 2>&1)" || true
 if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$malformed_block_output" \
   || [[ "$(grep -Fc '(block_statement' <<<"$malformed_block_output")" -lt 3 ]]; then
@@ -174,7 +174,7 @@ for expectation in \
   fi
 done
 
-crlf_source=$':: physical default\r\n> line@0123456789abcdef0123 bind=(name:string=$name)\r\n  [slow]Final {name} prose.[/slow]'
+crlf_source=$':: physical default\r\n> bind=(name:string=$name) @ez1fh09\r\n  [slow]Final {name} prose.[/slow]'
 parse_clean crlf prose_line "$crlf_source"
 crlf_file="$scratch/crlf.recite"
 printf '%s' "$crlf_source" >"$crlf_file"

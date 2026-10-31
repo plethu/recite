@@ -20,17 +20,15 @@ pub(super) fn project(
         manifest.push_str(&format!("[[scenes]]\nid = \"scene.{index}\"\nasset = \"compiled/{index}.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n"));
     }
     std::fs::write(directory.path().join("recite.project.toml"), manifest)?;
-    let mut source = String::from(
-        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Bonjour, café.\n",
-    );
+    let mut source = String::from(":: start default speaker=hazel\n> @ffee6p8\n  Bonjour, café.\n");
     if with_schema {
-        source.push_str("? ask@a94b83f2d8bd65101cc3 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n  What's the news?\n  -> dialogue/other.recite::other\n");
+        source.push_str("? requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint @z58rq7p\n  What's the news?\n  -> dialogue/other.recite::other\n");
     }
     source.push_str("-> dialogue/other.recite::other\n");
     std::fs::write(directory.path().join("dialogue/start.recite"), source)?;
     std::fs::write(
         directory.path().join("dialogue/other.recite"),
-        ":: other\n> end@22222222222222222222\n  Au revoir.\n-> END\n",
+        ":: other\n> @rthh7ab\n  Au revoir.\n-> END\n",
     )?;
     let preparation = ProjectBuildRequest::prepare(directory.path())?;
     assert!(preparation.is_ready(), "{:?}", preparation.diagnostics());

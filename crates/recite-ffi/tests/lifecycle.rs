@@ -7,9 +7,9 @@ use support::*;
 fn session_start_drains_lines_to_end() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> line1@20000000000000000001\n",
+        "> @line1\n",
         "  Line one.\n",
-        "> line2@20000000000000000002\n",
+        "> @line2\n",
         "  Line two.\n",
         "-> END\n",
     ));
@@ -46,22 +46,22 @@ fn session_start_drains_lines_to_end() {
 fn session_start_stops_at_prompt() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> intro@30000000000000000001\n",
+        "> @intro\n",
         "  Choose.\n",
-        "> choice_prompt@30000000000000000002\n",
+        "> @choice_prompt\n",
         "  Pick:\n",
-        "  ? a@30000000000000000003\n",
+        "  ? @a\n",
         "    A.\n",
         "    -> a_block\n",
-        "  ? b@30000000000000000004\n",
+        "  ? @b\n",
         "    B.\n",
         "    -> b_block\n",
         ":: a_block\n",
-        "> a_line@30000000000000000005\n",
+        "> @a_line\n",
         "  Chose A.\n",
         "-> END\n",
         ":: b_block\n",
-        "> b_line@30000000000000000006\n",
+        "> @b_line\n",
         "  Chose B.\n",
         "-> END\n",
     ));
@@ -110,19 +110,19 @@ fn session_start_stops_at_prompt() {
 fn start_choose_snapshot_restore_choose_end_lifecycle() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> first_prompt@4a000000000000000001\n",
+        "> @first_prompt\n",
         "  First choice.\n",
-        "  ? left@4a000000000000000002\n",
+        "  ? @left\n",
         "    Left.\n",
         "    -> second\n",
         ":: second\n",
-        "> second_prompt@4a000000000000000003\n",
+        "> @second_prompt\n",
         "  Second choice.\n",
-        "  ? finish@4a000000000000000004\n",
+        "  ? @finish\n",
         "    Finish.\n",
         "    -> done\n",
         ":: done\n",
-        "> done_line@4a000000000000000005\n",
+        "> @done_line\n",
         "  Done.\n",
         "-> END\n",
     ));
@@ -144,7 +144,7 @@ fn start_choose_snapshot_restore_choose_end_lifecycle() {
     assert_eq!(event_kinds(&decode_batch(&batch1)), ["prompt"]);
     unsafe { recite_buffer_free(&raw mut batch1) };
 
-    let first_choice = cstr("4a000000000000000002");
+    let first_choice = cstr("left");
     let mut batch2 = ReciteBuffer::null();
     let choose_status =
         unsafe { recite_session_choose(session1, first_choice.as_ptr(), &raw mut batch2) };
@@ -177,7 +177,7 @@ fn start_choose_snapshot_restore_choose_end_lifecycle() {
     );
     unsafe { recite_buffer_free(&raw mut restore_batch) };
 
-    let second_choice = cstr("4a000000000000000004");
+    let second_choice = cstr("finish");
     let mut final_batch = ReciteBuffer::null();
     let final_choose_status =
         unsafe { recite_session_choose(session2, second_choice.as_ptr(), &raw mut final_batch) };
@@ -195,10 +195,10 @@ fn session_create_register_begin_sequence() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
         ":if ready()\n",
-        "  > yes@aa000000000000000001\n",
+        "  > @mmjhfrx\n",
         "    Ready.\n",
         ":else\n",
-        "  > no@aa000000000000000002\n",
+        "  > @sa1cyv5\n",
         "    Not ready.\n",
         "-> END\n",
     ));
@@ -279,13 +279,13 @@ fn session_create_register_begin_sequence() {
 fn session_begin_failure_rolls_back_and_allows_retry() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> before@ab000000000000000001\n",
+        "> @before\n",
         "  Before.\n",
         ":if ready()\n",
-        "  > yes@ab000000000000000002\n",
+        "  > @yes\n",
         "    Ready.\n",
         ":else\n",
-        "  > no@ab000000000000000003\n",
+        "  > @no\n",
         "    Not ready.\n",
         "-> END\n",
     ));
@@ -370,7 +370,7 @@ fn session_begin_failure_rolls_back_and_allows_retry() {
 fn session_begin_twice_returns_already_active() {
     let bytes = compile_to_bytes(concat!(
         ":: start default\n",
-        "> line@bb000000000000000001\n",
+        "> @x9h8vfk\n",
         "  Hi.\n",
         "-> END\n",
     ));

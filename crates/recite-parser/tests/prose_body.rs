@@ -6,14 +6,14 @@ fn unicode_prose_preserves_internal_blanks_and_trims_boundary_blanks() {
     for newline in ["\n", "\r\n"] {
         let source = [
             ":: start default",
-            "> prompt@5e0925cd041f2f6df9e2",
+            "> @mqbmky6",
             "",
             "  Café ☕  ",
             "  ",
             "  日本語 🌿",
             "",
             "  ",
-            "  ? continue@8d398d18dbde0d7303c2",
+            "  ? @txkzs21",
             "",
             "    進みます。",
             "    ",
@@ -45,7 +45,7 @@ fn unicode_prose_preserves_internal_blanks_and_trims_boundary_blanks() {
 fn tab_indented_prose_preserves_unicode_and_plural_spans() {
     let source = concat!(
         ":: start default\n",
-        "> letters@5e0925cd041f2f6df9e2\n",
+        "> @mqbmky6\n",
         "\tUne lettre égarée.\n",
         "\t| Des lettres égarées.\n",
         "\n",
@@ -72,7 +72,7 @@ fn tab_indented_prose_preserves_unicode_and_plural_spans() {
 fn mixed_indent_recovery_keeps_only_the_accepted_unicode_prose() {
     let source = concat!(
         ":: start default\n",
-        "> prompt@5e0925cd041f2f6df9e2\n",
+        "> @mqbmky6\n",
         "  Café ☕\n",
         "    診断する行\n",
         "  Déjà vu.\n",
