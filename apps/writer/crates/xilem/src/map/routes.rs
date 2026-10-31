@@ -4,7 +4,11 @@
 //! `OVERSCAN` before committing the camera, so routes and the dot grid must already be drawn
 //! past each viewport edge. This canvas leaves clipping to the Map viewport; its accessible node
 //! still reports the visible viewport.
+mod grid;
+pub(super) use grid::Grid;
+
 use crate::Writer;
+use recite_writer_session::map::topology::OVERSCAN;
 use xilem::{
     Pod, ViewCtx,
     core::{MessageCtx, MessageResult, Mut, View, ViewMarker},
@@ -25,6 +29,8 @@ const DESCRIPTION: &str = "Dialogue routes; use Connections below for their acce
 pub(super) struct RoutesWidget {
     scene: Scene,
     width: Length,
+    grid: Grid,
+    tile: Option<grid::Tile>,
 }
 impl Widget for RoutesWidget {
     type Action = NoAction;
@@ -44,7 +50,11 @@ impl Widget for RoutesWidget {
         }
     }
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
-    fn paint(&mut self, _: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+        let area = ctx
+            .border_box()
+            .inflate(f64::from(OVERSCAN), f64::from(OVERSCAN));
+        grid::paint(self.grid, ctx.scale_factor(), area, &mut self.tile, painter);
         painter.replay(&self.scene);
     }
     fn accessibility_role(&self) -> Role {
@@ -61,10 +71,11 @@ impl Widget for RoutesWidget {
 /// Re-records the routes from accepted Writer state on every rebuild, like Xilem's canvas.
 pub(super) struct Routes {
     width: Length,
+    grid: Grid,
     draw: fn(&Writer, &mut Scene),
 }
-pub(super) fn routes(width: Length, draw: fn(&Writer, &mut Scene)) -> Routes {
-    Routes { width, draw }
+pub(super) fn routes(width: Length, grid: Grid, draw: fn(&Writer, &mut Scene)) -> Routes {
+    Routes { width, grid, draw }
 }
 impl ViewMarker for Routes {}
 impl View<Writer, (), ViewCtx> for Routes {
@@ -76,6 +87,8 @@ impl View<Writer, (), ViewCtx> for Routes {
         let widget = RoutesWidget {
             scene,
             width: self.width,
+            grid: self.grid,
+            tile: None,
         };
         (ctx.create_pod(widget), ())
     }
@@ -91,6 +104,7 @@ impl View<Writer, (), ViewCtx> for Routes {
             element.widget.width = self.width;
             element.ctx.request_layout();
         }
+        element.widget.grid = self.grid;
         element.widget.scene.clear();
         (self.draw)(state, &mut element.widget.scene);
         element.ctx.request_paint_only();
