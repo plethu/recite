@@ -4,10 +4,11 @@ use crate::{attention::PassageField, view::ReadingViewport};
 use xilem::masonry::{
     accesskit::{Action as NativeAction, ActionRequest, TreeId},
     core::WidgetRef,
-    kurbo::{Point, Rect},
+    kurbo::{Point, Rect, Size},
     widgets::{Flex, Portal},
 };
 
+/// A passage row in the manuscript content's coordinates, which scrolling does not change.
 struct Row {
     id: WidgetId,
     bounds: Rect,
@@ -15,9 +16,18 @@ struct Row {
 struct Snapshot {
     scope: ReadingViewport,
     portal: WidgetId,
+    /// The visible viewport in window coordinates.
     bounds: Rect,
     rows: Vec<Row>,
+    /// Content offset at the top of the viewport.
     position: Point,
+    content: Size,
+}
+impl Snapshot {
+    /// A row's top relative to the visible viewport.
+    fn visible_top(&self, row: &Row) -> f64 {
+        row.bounds.y0 - self.position.y
+    }
 }
 #[derive(Default)]
 pub(super) struct Position {
@@ -42,16 +52,21 @@ impl Position {
         {
             return;
         }
-        let Some(current) = manuscript(root, self.portal).and_then(snapshot) else {
+        let Some(current) = manuscript(root, self.portal).and_then(|portal| snapshot(portal, None))
+        else {
             return;
         };
         if current.portal != previous.portal || !current.scope.shifted_from(&previous.scope) {
             return;
         }
+        let height = previous.bounds.height();
         let anchor = previous
             .rows
             .iter()
-            .filter(|row| row.bounds.y1 > previous.bounds.y0 && row.bounds.y0 < previous.bounds.y1)
+            .filter(|row| {
+                let top = previous.visible_top(row);
+                top + row.bounds.height() > 0. && top < height
+            })
             .filter_map(|old| {
                 current
                     .rows
@@ -60,12 +75,13 @@ impl Position {
                     .map(|new| (old, new))
             })
             .min_by(|(a, _), (b, _)| {
-                (a.bounds.y0 - previous.bounds.y0)
+                previous
+                    .visible_top(a)
                     .abs()
-                    .total_cmp(&(b.bounds.y0 - previous.bounds.y0).abs())
+                    .total_cmp(&previous.visible_top(b).abs())
             });
         if let Some((old, new)) = anchor {
-            let delta = (new.bounds.y0 - current.bounds.y0) - (old.bounds.y0 - previous.bounds.y0);
+            let delta = current.visible_top(new) - previous.visible_top(old);
             root.edit_widget(current.portal, |mut widget| {
                 let mut portal = widget.downcast::<Portal<Flex>>();
                 Portal::set_viewport_pos(
@@ -85,7 +101,7 @@ impl Position {
     pub fn capture(&mut self, root: &RenderRoot) {
         let portal = manuscript(root, self.portal);
         self.portal = portal.map(|portal| portal.id());
-        self.previous = portal.and_then(snapshot);
+        self.previous = portal.and_then(|portal| snapshot(portal, self.previous.take()));
     }
 }
 /// Finds the manuscript viewport, reusing a known one while it remains that viewport.
@@ -111,7 +127,11 @@ fn manuscript(root: &RenderRoot, known: Option<WidgetId>) -> Option<WidgetRef<'_
     }
     None
 }
-fn snapshot(portal: WidgetRef<'_, Portal<Flex>>) -> Option<Snapshot> {
+/// Captures the manuscript rows, reusing `previous` rows while the content is unchanged.
+///
+/// Rows are kept in content coordinates, so scrolling alone only updates the viewport
+/// position; a changed reading scope or content size measures the rows again.
+fn snapshot(portal: WidgetRef<'_, Portal<Flex>>, previous: Option<Snapshot>) -> Option<Snapshot> {
     if portal.ctx().is_stashed() {
         return None;
     }
@@ -119,6 +139,27 @@ fn snapshot(portal: WidgetRef<'_, Portal<Flex>>) -> Option<Snapshot> {
         .ctx()
         .window_transform()
         .transform_rect_bbox(portal.ctx().content_box());
+    let scope = portal.get_prop::<ReadingViewport>();
+    let position = portal.get_viewport_pos();
+    let content = portal
+        .as_dyn()
+        .children()
+        .into_iter()
+        .find(|child| child.downcast::<Flex>().is_some())
+        .map_or(Size::ZERO, |child| child.ctx().border_box().size());
+    if let Some(previous) = previous
+        && previous.portal == portal.id()
+        && previous.scope == *scope
+        && previous.content == content
+    {
+        return Some(Snapshot {
+            bounds,
+            position,
+            ..previous
+        });
+    }
+    // Window-space row bounds map to content space through the viewport's top-left corner.
+    let origin = bounds.origin().to_vec2() - position.to_vec2();
     let mut pending = portal.as_dyn().children();
     let mut rows = Vec::new();
     while let Some(widget) = pending.pop() {
@@ -128,12 +169,13 @@ fn snapshot(portal: WidgetRef<'_, Portal<Flex>>) -> Option<Snapshot> {
         if let Some(input) = widget.downcast::<TextInput>()
             && input.get_prop::<PassageField>().0.is_some()
         {
+            let window = widget
+                .ctx()
+                .window_transform()
+                .transform_rect_bbox(widget.ctx().border_box());
             rows.push(Row {
                 id: widget.id(),
-                bounds: widget
-                    .ctx()
-                    .window_transform()
-                    .transform_rect_bbox(widget.ctx().border_box()),
+                bounds: window - origin,
             });
         } else {
             pending.extend(widget.children());
@@ -141,11 +183,12 @@ fn snapshot(portal: WidgetRef<'_, Portal<Flex>>) -> Option<Snapshot> {
     }
     rows.sort_by(|a, b| a.bounds.y0.total_cmp(&b.bounds.y0));
     Some(Snapshot {
-        scope: portal.get_prop::<ReadingViewport>().clone(),
+        scope: scope.clone(),
         portal: portal.id(),
         bounds,
         rows,
-        position: portal.get_viewport_pos(),
+        position,
+        content,
     })
 }
 
