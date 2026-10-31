@@ -44,6 +44,11 @@ every mounted card's subtree each frame. Paint is still requested for the whole 
 Map panning regression bounds nodes per local pan frame. Platform adapters must derive descendant
 geometry from ancestor transforms, as the AT-SPI exposure regressions check.
 
+Every Masonry pass also named each parent widget before recursing into its children, only to use
+that name in an unreachable panic message. That split each widget type name on every frame. The name
+is now formatted only when the panic fires; see
+[`recurse-lazy-name.patch`](../patches/recurse-lazy-name.patch).
+
 Twenty unchanged source files have an explicitly approved lint baseline in
 `scripts/lint-suppressions-upstream.json`. The lint gate verifies their complete SHA-256 hashes;
 changing any byte invalidates that baseline. Modified and newly added files retain normal policy.
