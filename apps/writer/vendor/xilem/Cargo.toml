@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["masonry", "masonry_winit"]
+members = ["masonry", "masonry_core", "masonry_winit"]
 
 [workspace.package]
 # Xilem version, also used by other packages which want to mimic Xilem's version.
@@ -19,7 +19,7 @@ repository = "https://github.com/linebender/xilem"
 [workspace.dependencies]
 
 masonry = { version = "0.4.0", path = "masonry", default-features = false }
-masonry_core = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", default-features = false }
+masonry_core = { version = "0.4.0", path = "masonry_core", default-features = false }
 masonry_imaging = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", default-features = false }
 masonry_testing = { version = "0.4.0", git = "https://github.com/linebender/xilem", rev = "271a27a6d4a930f7878d404f9014e3c50a3a9b88", default-features = false }
 masonry_winit = { version = "0.4.0", path = "masonry_winit", default-features = false }

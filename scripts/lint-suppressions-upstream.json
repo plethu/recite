@@ -52,5 +52,71 @@
     "sha256": "6d776f36c3676f37b918f6fd300b4c61f3979937e1ba7757bcfed72bec31c74d",
     "upstream_path": "masonry/src/widgets/step_input.rs",
     "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/app/layer_stack.rs",
+    "sha256": "ecc4bbad5a34021beda6f5915e8f44eb8bb27e674a4207360cbc2c43865312d9",
+    "upstream_path": "masonry_core/src/app/layer_stack.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/app/tracing_backend.rs",
+    "sha256": "2d5568bb515a326788e5e8ad1ffceb2d870b237896a005813f48a98755d3254f",
+    "upstream_path": "masonry_core/src/app/tracing_backend.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/core/contexts.rs",
+    "sha256": "fef261b9b64ef4306f900e108eda720256b2aa4f69092ac09e975c42cac27dea",
+    "upstream_path": "masonry_core/src/core/contexts.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/core/events.rs",
+    "sha256": "55064d12df476a22baef52c48f2839372bf008070708dad3df59ef5a52f5cb17",
+    "upstream_path": "masonry_core/src/core/events.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/core/widget.rs",
+    "sha256": "16c0c60fcd46e08ff5a97482b50da0fd62b0b10d636c8ca72620659d6fd8c2d1",
+    "upstream_path": "masonry_core/src/core/widget.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/lib.rs",
+    "sha256": "f575bbc3d627e2e36a89d21951994e7ce2dc60807e22b70575a9a20ea51261a4",
+    "upstream_path": "masonry_core/src/lib.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/properties/background.rs",
+    "sha256": "858a7c36953a0f2bf554d680efaa194bbe9761586c70e1c9f892388d24d83176",
+    "upstream_path": "masonry_core/src/properties/background.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/properties/border_color.rs",
+    "sha256": "51e358bc13eaac0c1576effb54d9c8240e538402aa2c1d2d328ffe3c5694559d",
+    "upstream_path": "masonry_core/src/properties/border_color.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/properties/border_width.rs",
+    "sha256": "771c2c50469dd3b3bdc1852f326e76f81d83bad3a1247891b5276d399b251dd8",
+    "upstream_path": "masonry_core/src/properties/border_width.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/properties/corner_radius.rs",
+    "sha256": "4c69fae26f7f4384cf3c8919bcfce75a22b8f0a8d0b3137797f73abda7b7674a",
+    "upstream_path": "masonry_core/src/properties/corner_radius.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
+  },
+  {
+    "path": "apps/writer/vendor/xilem/masonry_core/src/properties/types/gradient.rs",
+    "sha256": "97818ddc2cb6bd82a0a4b43e1a1c1d802d0e9e0607bb3782967e26ccbfb4642a",
+    "upstream_path": "masonry_core/src/properties/types/gradient.rs",
+    "revision": "271a27a6d4a930f7878d404f9014e3c50a3a9b88"
   }
 ]

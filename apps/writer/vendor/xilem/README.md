@@ -1,6 +1,6 @@
 # Writer toolkit fixes
 
-Only Masonry and its winit adapter are retained from Xilem revision
+Only Masonry, its core and its winit adapter are retained from Xilem revision
 `271a27a6d4a930f7878d404f9014e3c50a3a9b88`. Other Xilem packages use that same Git revision. The
 workspace manifest resolves their original relative paths to the pinned repository. Screenshots are
 omitted; upstream source and Apache-2.0 notices are retained.
@@ -35,6 +35,15 @@ patch. Writer excerpt tests cover reflow, cache invalidation, Unicode text reten
 transform cost; native checks must additionally verify complete AT-SPI `GetText` on a visibly
 abbreviated excerpt. These Labels do not add pointer selection to the actionable Map cards.
 
-Nine unchanged source files have an explicitly approved lint baseline in
+Masonry's compose pass additionally rebuilds an accessibility node only when that widget's own
+transform changes. Upstream marked every descendant of a moved widget, although AccessKit nodes
+carry parent-relative transforms and descendants are unchanged; panning the Map therefore resent
+every mounted card's subtree each frame. Paint is still requested for the whole subtree. The patch is
+[`compose-local-accessibility.patch`](../patches/compose-local-accessibility.patch).
+`compose_accessibility` covers the emitted node set and consumer-computed descendant bounds; the
+Map panning regression bounds nodes per local pan frame. Platform adapters must derive descendant
+geometry from ancestor transforms, as the AT-SPI exposure regressions check.
+
+Twenty unchanged source files have an explicitly approved lint baseline in
 `scripts/lint-suppressions-upstream.json`. The lint gate verifies their complete SHA-256 hashes;
 changing any byte invalidates that baseline. Modified and newly added files retain normal policy.

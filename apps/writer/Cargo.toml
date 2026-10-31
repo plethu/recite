@@ -56,4 +56,5 @@ freya-core = { path = "vendor/freya-core" }
 
 [patch."https://github.com/linebender/xilem"]
 masonry = { path = "vendor/xilem/masonry" }
+masonry_core = { path = "vendor/xilem/masonry_core" }
 masonry_winit = { path = "vendor/xilem/masonry_winit" }

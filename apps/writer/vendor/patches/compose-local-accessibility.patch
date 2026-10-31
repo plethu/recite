@@ -1,0 +1,29 @@
+--- a/masonry_core/src/passes/compose.rs
++++ b/masonry_core/src/passes/compose.rs
+@@ -23,7 +23,8 @@
+     let id = state.id;
+     let _span = enter_span_if(global_state.trace.compose, state);
+ 
+-    let transformed = parent_transformed || state.transform_changed;
++    let moved_locally = state.transform_changed;
++    let transformed = parent_transformed || moved_locally;
+ 
+     if !transformed && !state.needs_compose {
+         return;
+@@ -45,9 +46,13 @@
+         widget.compose(&mut ctx);
+     }
+ 
+-    // We need to update the accessibility node's coordinates and repaint it at the new position.
+-    state.request_accessibility = true;
+-    state.needs_accessibility = true;
++    // Accessibility nodes carry parent-relative transforms, so only a local transform change
++    // alters this node; descendants of a moved ancestor keep their nodes. Repaint at the new
++    // position regardless.
++    if moved_locally {
++        state.request_accessibility = true;
++        state.needs_accessibility = true;
++    }
+     state.needs_paint = true;
+ 
+     state.needs_compose = false;
