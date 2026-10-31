@@ -72,9 +72,13 @@ across trajectories. At 100% both builds already held 16 ms medians. Pixman runs
 remain render-bound. The earlier 2040×1230 configuration was not repeated. The AT-SPI adapter then
 filtered each translated clip region once per node and stopped re-notifying unchanged nodes. A
 second matched GPU replay against that build reduced client CPU by 30–43% for drags and wheel
-panning at 69% and 100% zoom, and 7–9% in overview, with unchanged frame pacing. AccessKit no longer
-leads the profile; glyph hinting while encoding each frame's text and Masonry's whole-tree paint
-traversal now do.
+panning at 69% and 100% zoom, and 7–9% in overview, with unchanged frame pacing. Native event
+synchronization then stopped searching the whole widget tree for the manuscript viewport, and
+Masonry stopped formatting a parent type name for every recursion. Another matched replay reduced
+client CPU by 16–21% for drags and wheel panning at 69% zoom and 7–16% at 100%. Vello rendering and
+Masonry's whole-tree paint traversal now lead the client profile, followed by glyph hinting: Vello
+caches eight hinting instances and Writer's visible font sizes exceed that. Disabling hinting for
+Map card text alone did not measurably change client CPU.
 
 The next refinement restores selected-card and empty-state halftone and removes the abrupt hover
 border on quiet actions. Saved-text search now shows bounded excerpts around matching words and
