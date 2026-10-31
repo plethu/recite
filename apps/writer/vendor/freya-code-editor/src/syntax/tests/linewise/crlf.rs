@@ -58,7 +58,7 @@ fn complete_pairs_and_lf_conversion_remain_fast_but_pair_damage_falls_back() {
 #[test]
 fn offscreen_pair_damage_and_repair_require_a_new_full_parse_before_reuse() {
     let source = (0..40)
-        .map(|n| format!(":: block_{n}\r\n> line_{n}\r\n  Café 🦊.\r\n-> END\r\n"))
+        .map(|n| format!(":: block_{n}\r\n> @line_{n}\r\n  Café 🦊.\r\n-> END\r\n"))
         .collect::<String>();
     let (mut rope, mut highlighter) = seeded(&source);
     let cr = rope.line_to_char(100) + rope.line(100).len_chars() - 2;

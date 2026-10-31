@@ -45,7 +45,7 @@ pub(super) fn bindings(rows: &mut Vec<Value>) -> Result<(), Box<dyn std::error::
     let mut source = String::from(":: start default\n");
     for n in 0..1_000 {
         source.push_str(&format!(
-            "> line_{n} bind=(name:string=$person)\n  Hello {{name}}.\n"
+            "> bind=(name:string=$person) @line_{n}\n  Hello {{name}}.\n"
         ));
     }
     let document = Document::new(source)?;

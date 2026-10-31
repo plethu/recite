@@ -138,7 +138,7 @@ fn replacements_reuse_identical_regions_and_retained_results_remain_valid() {
 #[test]
 fn one_changed_group_reuses_prefix_and_shifted_suffix_shards() {
     let original = (0..96)
-        .map(|n| format!(":: block_{n}\n> line_{n}\n  Courier {n}.\n"))
+        .map(|n| format!(":: block_{n}\n> @line_{n}\n  Courier {n}.\n"))
         .collect::<String>();
     let key = DocumentKey::new("scene.recite").unwrap();
     for middle in [
@@ -165,14 +165,14 @@ fn one_changed_group_reuses_prefix_and_shifted_suffix_shards() {
 #[test]
 fn repeated_boundary_inserts_keep_shards_packed() {
     let mut source = (0..96)
-        .map(|n| format!(":: block_{n}\n> line_{n}\n  Courier {n}.\n"))
+        .map(|n| format!(":: block_{n}\n> @line_{n}\n  Courier {n}.\n"))
         .collect::<String>();
     let key = DocumentKey::new("scene.recite").unwrap();
     let mut index = SearchIndex::build(&[SavedDocument::new(key.clone(), &source)]);
     for n in 0..200 {
         source = source.replace(
             ":: block_40",
-            &format!(":: inserted_{n}\n> new_{n}\n  Inserted courier.\n:: block_40"),
+            &format!(":: inserted_{n}\n> @new_{n}\n  Inserted courier.\n:: block_40"),
         );
         index.replace_document(SavedDocument::new(key.clone(), &source));
         let shards = &index.documents[0].1.shards;
@@ -181,7 +181,7 @@ fn repeated_boundary_inserts_keep_shards_packed() {
     }
     for n in (0..200).rev() {
         source = source.replace(
-            &format!(":: inserted_{n}\n> new_{n}\n  Inserted courier.\n"),
+            &format!(":: inserted_{n}\n> @new_{n}\n  Inserted courier.\n"),
             "",
         );
         index.replace_document(SavedDocument::new(key.clone(), &source));
@@ -202,7 +202,7 @@ fn repeated_boundary_inserts_keep_shards_packed() {
 fn initial_shards_are_balanced_even_for_large_prime_region_counts() {
     for count in [1, 17, 31, 33, 65, 1025] {
         let source = (0..count)
-            .map(|n| format!(":: block_{n}\n> line_{n}\n  Text.\n"))
+            .map(|n| format!(":: block_{n}\n> @line_{n}\n  Text.\n"))
             .collect::<String>();
         let index = SearchIndex::build(&[SavedDocument::new(
             DocumentKey::new("scene.recite").unwrap(),

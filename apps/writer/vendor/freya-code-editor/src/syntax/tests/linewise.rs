@@ -99,7 +99,7 @@ fn clean_line_edits_match_full_projection_across_grouping_phases_and_split_join_
 #[test]
 fn offscreen_paste_errors_repair_replacement_coalescing_and_cancellation_use_safe_fallbacks() {
     let source = (0..40)
-        .map(|n| format!(":: block_{n}\n> line_{n}\n  Text 🦊.\n-> END\n"))
+        .map(|n| format!(":: block_{n}\n> @line_{n}\n  Text 🦊.\n-> END\n"))
         .collect::<String>();
     let theme = EditorSyntaxTheme::default();
     let mut rope = Rope::from_str(&source);
