@@ -6,14 +6,14 @@ use serde_json::Value;
 
 pub(super) fn catalogue(rows: &mut Vec<Value>) -> Result<(), Box<dyn std::error::Error>> {
     let document = Document::new(concat!(
-        ":: start default\n> @prompt\n  Wording 998.\n",
-        "? @reply\n  Wording 999.\n  -> END\n",
+        ":: start default\n> @entry_998\n  Wording 998.\n",
+        "? @entry_999\n  Wording 999.\n  -> END\n",
     ))?;
     assert!(document.diagnostics().is_empty());
     let mut po = String::from("msgid \"\"\nmsgstr \"Language: fr\\n\"\n\n");
     for n in 0..1_000 {
         po.push_str(&format!(
-            "msgctxt \"{n:020x}\"\nmsgid \"Wording {n}.\"\nmsgstr \"Traduit {n}.\"\n\n"
+            "msgctxt \"entry_{n}\"\nmsgid \"Wording {n}.\"\nmsgstr \"Traduit {n}.\"\n\n"
         ));
     }
     let locale = LocaleId::new("fr")?;

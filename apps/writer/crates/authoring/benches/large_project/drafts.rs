@@ -87,7 +87,7 @@ pub(super) fn run(
         model.undo()?;
         assert_eq!(model.document().source(), accepted.as_ref());
     }
-    model.select(View::Passage("j209fqe".into()))?;
+    model.select(View::Passage("line_0".into()))?;
     let original = model.draft().to_owned();
     model.set_draft(format!("{original} Prepared history."));
     model.apply()?;
@@ -150,7 +150,7 @@ pub(super) fn run(
         assert_eq!(model.view(), &View::Source);
         assert!(!model.has_draft());
         measure("navigation_retire", rows, || drop(prepared));
-        model.select(View::Passage("j209fqe".into()))?;
+        model.select(View::Passage("line_0".into()))?;
     }
     Ok(())
 }
