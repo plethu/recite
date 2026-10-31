@@ -29,7 +29,7 @@
     packages = eachSystem (system: let
       packages = packagesFor system;
     in {
-      inherit (packages) recite recite-writer recite-writer-freya;
+      inherit (packages) recite recite-writer;
       default = packages.recite-writer;
     });
 
@@ -43,10 +43,6 @@
       recite-writer = {
         type = "app";
         program = "${packages.recite-writer}/bin/recite-writer";
-      };
-      recite-writer-freya = {
-        type = "app";
-        program = "${packages.recite-writer-freya}/bin/recite-writer";
       };
       default = self.apps.${system}.recite-writer;
     });
@@ -80,10 +76,6 @@
           ]
           ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.xdg-utils]
           ++ packages.writerNativeInputs ++ packages.writerBuildInputs;
-        inherit (packages.writerEnv) SKIA_SOURCE_DIR SKIA_GN_COMMAND SKIA_NINJA_COMMAND SKIA_USE_SYSTEM_LIBRARIES;
-        shellHook = ''
-          export NIX_LDFLAGS="$NIX_LDFLAGS ${packages.writerExtraLinkFlags}"
-        '';
       };
     });
   };

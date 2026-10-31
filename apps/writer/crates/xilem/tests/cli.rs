@@ -3,7 +3,7 @@ use std::process::Command;
 #[test]
 fn help_and_startup_errors_run_without_a_display_or_touching_a_project() {
     for flag in ["--help", "-h"] {
-        let output = Command::new(env!("CARGO_BIN_EXE_recite-writer-xilem"))
+        let output = Command::new(env!("CARGO_BIN_EXE_recite-writer"))
             .arg(flag)
             .output()
             .unwrap();
@@ -29,7 +29,7 @@ fn help_and_startup_errors_run_without_a_display_or_touching_a_project() {
             "--help",
         ],
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_recite-writer-xilem"))
+        let output = Command::new(env!("CARGO_BIN_EXE_recite-writer"))
             .args(arguments)
             .env_remove("DISPLAY")
             .env_remove("WAYLAND_DISPLAY")

@@ -1,11 +1,9 @@
 # Recite writer
 
-The native application for editing Recite dialogue, currently a preview. Xilem is the default
-frontend; Freya remains available for comparison and fallback. Script opens the selected beat in a
-reading column, with branch previews for comparing replies. Map shows beats, branches, convergences
-and returns; it can stand alone or sit beside Script. Xilem hands source editing to your preferred
-IDE with checked saves and explicit import for draft repair. Freya retains its embedded Source
-editor.
+The native application for editing Recite dialogue, currently a preview, built on Xilem. Script
+opens the selected beat in a reading column, with branch previews for comparing replies. Map shows
+beats, branches, convergences and returns; it can stand alone or sit beside Script. Source editing
+goes to your preferred IDE, with checked saves and explicit import for draft repair.
 
 Script is the first-use default. Existing Map and Source preferences are kept. Presentation settings
 and map placement are personal; pan and zoom leave the dialogue untouched. Commands
@@ -19,7 +17,6 @@ mise exec -- just writer run
 mise exec -- just writer run --project /path/to/project
 mise exec -- just writer run --examples
 mise exec -- just writer check
-mise exec -- just writer accessibility
 ```
 
 The default opens the project welcome screen. `--examples` opens three original examples: a
@@ -27,16 +24,12 @@ recurring conversation hub, a branching and reconverging evacuation, and a three
 Example edits live only for the window's lifetime. Project mode provides explicit save, crash
 recovery, and external-edit conflict protection. See the [writer guide](guide.md).
 
-## Frontends
-
-The default is recorded in `Cargo.toml` under `workspace.metadata.writer`. Select either frontend
-explicitly when comparing the same project:
+## Launch options
 
 ```sh
-mise exec -- just writer xilem --project /path/to/project --document dialogue/scene.recite \
+mise exec -- just writer run --project /path/to/project --document dialogue/scene.recite \
     --editor nvim
-mise exec -- just writer xilem --design-system
-mise exec -- just writer freya --project /path/to/project
+mise exec -- just writer run --design-system
 ```
 
 Use your editor's own arguments; `--editor-arg` repeats and the source path is appended without a
@@ -77,14 +70,14 @@ after edits. Apply or discard a manuscript draft before restarting. Cancel inval
 while the active compiler phase finishes. Hiding playback retains manuscript typing history. Preview
 inputs select language, wording, interpolation values and saved or draft catalogue policy for the
 next run. Preview trace inspects typed events and localisation decisions through bounded record and
-complete-value pages shared with Freya.
+complete-value pages.
 
-Map and Split share accepted topology, synopsis, personal placement and spatial navigation with
-Freya. Camera changes leave source untouched; placement saves beside personal configuration. Native
-cards, keyboard selection, move handles, paged Connections and Go to provide equivalent routes
-through the scene. Large scenes start with nearby beats; whole-scene Fit uses a structural overview,
-and selecting a beat restores a readable native card. Script stays mounted across workspace changes
-so its native typing history survives. Geometry and personal placement I/O run on workers; checked
+Map and Split use the shared topology, synopsis, personal placement and spatial navigation owners.
+Camera changes leave source untouched; placement saves beside personal configuration. Native cards,
+keyboard selection, move handles, paged Connections and Go to provide equivalent routes through the
+scene. Large scenes start with nearby beats; whole-scene Fit uses a structural overview, and
+selecting a beat restores a readable native card. Script stays mounted across workspace changes so
+its native typing history survives. Geometry and personal placement I/O run on workers; checked
 receipts preserve newer typing and reconcile completed writes after cancellation.
 
 Focus writing hides surrounding panes while preserving the mounted manuscript and its native text
@@ -100,7 +93,7 @@ Declarations inspection and Build scenes open from Commands without applying man
 Declaration results and details are paged. Build saved reads disk inputs; Save all and build uses
 the shared ordered save path first. Jobs continue after returning to writing; cancellation stays
 pending until the terminal result is collected. Standalone declaration sources support checked IDE
-export/import, save and generation; producer actions use the same shared project owner as Freya.
+export/import, save and generation; producer actions use the shared project owner.
 
 Personal settings and desktop activation also use the shared owners. Copy link sends the current
 location through the toolkit's native clipboard. Linked destinations cover writing, preview, reply
@@ -112,15 +105,13 @@ red; changing the default does not waive it or establish release readiness. See
 
 ## Build requirements
 
-This workspace has its own lockfile to contain both pinned native graphics stacks. It is maintained
+This workspace has its own lockfile to contain the pinned native graphics stack. It is maintained
 application code: the repository verification gate runs its formatting, tests, and all-target Clippy
 checks.
 
-Xilem builds need the platform graphics and window-system libraries and a working desktop session.
-Building Freya or the complete workspace also needs Freya/Skia prerequisites (clang, CMake,
-pkg-config, and GTK 3 development libraries on Linux). Linux execution and component tests do not
-establish macOS, Windows, screen-reader, or physical IME acceptance. See
-[remaining validation](acceptance.md).
+Builds need the platform graphics and window-system libraries, pkg-config and a working desktop
+session. Linux execution and component tests do not establish macOS, Windows, screen-reader, or
+physical IME acceptance. See [remaining validation](acceptance.md).
 
 Creating a dialogue PO catalogue from the Localise workspace requires GNU gettext (`msginit` on
 `PATH`). Install gettext before running the writer's full test gate, which exercises real catalogue

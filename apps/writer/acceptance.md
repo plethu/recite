@@ -19,6 +19,19 @@ fixture checks, hardware latency, physical assistive-technology use and voluntar
 sessions distinct. Successful short automated cycles establish those cycles, not comfort over a full
 working day.
 
+## Frontend decision
+
+Xilem is the only Writer frontend. Freya was retired on 2026-10-31, before the paired comparison
+this record previously required. Freya's accessibility gaps were the reason to move: on its current
+release and main branch, text inputs expose no AT-SPI Text interface, the code editor has no
+accessible name, and scrolled children keep their pre-scroll bounds. Fixing those needs upstream
+work that Recite would not consume. The last revision containing Freya is `07557e4a`. Comparisons
+below that name Freya are dated evidence against that fallback, not current options.
+
+Retiring Freya removes the software-rendering fallback. Freya's Skia renderer was faster than
+Xilem's Vello under llvmpipe, and no paired software measurement has been taken since the Map
+panning fixes. Physical screen-reader, IME and non-Linux evidence remain open for Xilem.
+
 The `writing-journey` native scenario checks draft-inclusive beat search, explicit saved-project
 scope, query/prose history, modal focus containment, blocked background actions, stable Save
 geometry and repeated complete saves at 100/200% UI scale. The `reading-continuity` scenario
@@ -105,8 +118,7 @@ the current Vello/llvmpipe configuration, not an intrinsic Xilem limitation. The
 runtime CPU/Hybrid renderer switch; alternate backends require a separate feature/integration
 experiment. Hardware and fallback results are distinct evidence. Grid batching improved low-zoom
 work; a custom hard-shadow experiment did not improve panning and was removed. The remaining timing
-differences and physical assistive-technology evidence stay open. Retain Freya for the next
-comparison.
+differences and physical assistive-technology evidence stay open.
 
 A disposable Vello Hybrid build has since been measured; it is not adopted. Selecting it needed two
 trial-only changes: Xilem inherits `xilem_masonry` with default features, which always enable Vello
@@ -127,10 +139,8 @@ distinct excerpts after camera changes; the diagnosed singular footer reads “1
 The paired human comparison on 2026-10-21 rejected Xilem's presentation readiness. The functional
 checks below did not establish interchangeability: Xilem still showed a form-like scaffold in place
 of Freya's fixed scene rail, compact toolbar and whole-beat manuscript with inline editing. The
-writing composition has since been corrected against Freya's existing design. A retirement
-comparison needs equivalent rendered and interaction evidence for the same scene, selection,
-viewport and scale, including pending edits, focus mode, Map, Split and the remaining project
-screens. Narrow fixture or recovery render reviews do not satisfy that comparison.
+writing composition has since been corrected against Freya's existing design. The full paired
+comparison was not run; see [Frontend decision](#frontend-decision).
 
 The initial bounded paired review on 2026-10-22 recommended keeping both frontends available. A
 fresh reviewer inspected 44 actual cold-route renders of both frontends at 100/200% scale, using the
@@ -209,9 +219,7 @@ resource, coverage or dependency-policy budget was raised. The evidence index bi
 its source and binary.
 
 Diagnostic renders and workflow receipts do not establish physical input, assistive-technology
-usability, installed-host lifecycle acceptance or a passing dependency policy. Both frontends remain
-available for the final human evaluation; these corrections alone do not authorise Freya's
-retirement.
+usability, installed-host lifecycle acceptance or a passing dependency policy.
 
 The installed-package and broad native claims below describe signed baseline
 `9ce876da7f6b0945a2a662eba4951a14fd74bd02`. They have not all been repeated after the inline
@@ -246,7 +254,7 @@ configured IDE handoff, producer publication/cancellation, preview and structura
 links round-trip at 100/200% scale. Both manifests grant the specific screen-reader status service;
 the installed accessibility tree uses Flatpak's separate AT-SPI proxy. These checks use an owned
 compositor and private bus. Physical-host lifecycle acceptance and other native platforms remain
-unverified; Freya's full Flatpak source build has not been repeated.
+unverified.
 
 ## Repeatable checks
 
@@ -254,9 +262,7 @@ Run from the repository root:
 
 ```sh
 mise exec -- just writer check
-mise exec -- just writer accessibility
-mise exec -- just writer probe-accessibility
-mise exec -- just writer probe-xilem target/writer-native/result.json
+mise exec -- just writer probe target/writer-native/result.json
 ```
 
 The [Writer gate](justfile) owns automated coverage, including focused accessibility tests. These
@@ -264,11 +270,10 @@ checks verify model transitions and accessibility metadata; native announcements
 usability still require the drills below. Use the [packaging matrix](packaging.md) for install,
 upgrade, uninstall and desktop activation.
 
-The Linux AT-SPI probe requires native Focus and Click to pass separately: focus must change without
-activation, then Click must publish the changed action status. It needs a focused window; a headless
-Wayland compositor also needs an active virtual keyboard seat. The local Freya core patch publishes
-changed accessibility properties for stable nodes. Passing this probe does not establish
-screen-reader usability.
+The native probe drives the Writer over AT-SPI on a private Cage compositor and D-Bus session. A
+headless compositor focuses the window only once a virtual keyboard seat exists, which the probe
+starts with `wtype`. CI runs its `specimen` scenario. Passing it does not establish screen-reader
+usability.
 
 ## Known limits
 
@@ -307,10 +312,8 @@ workflow checks and all four Writer production-line coverage floors pass. Depend
 resolution remains required. Physical IME, screen-reader announcements, hardware rendering and
 Windows/macOS acceptance remain unverified for Xilem. The portal scrollbar precedes close choices in
 the Tab cycle; the current native drill reaches Keep editing in three presses and verifies that
-cancelling close retains text undo/redo. Freya remains an explicit fallback through `just writer
-freya`, native packaging's `--frontend freya`, the Freya Flatpak manifest and Nix's
-`recite-writer-freya` output. Selecting Xilem does not waive the dependency audit or establish
-installed-host acceptance.
+cancelling close retains text undo/redo. Selecting Xilem does not waive the dependency audit or
+establish installed-host acceptance.
 
 Shared scene/beat lookup, command ranking and Vim save/close aliases now drive both frontends. The
 native lookup drill covers query autofocus, Escape focus return, retained manuscript undo/redo,
@@ -325,10 +328,10 @@ covers undo/redo, nested lookup restoration, directional Vim panes, prefix cance
 cycling, window blur and revealing the previous focus target after outer scrolling. A host signal
 delivery regression requires F6's visible and AT-SPI focus to update without additional input. These
 Focus and prefix states have separate render review. Native n/N repeats accepted scene/beat lookup,
-including project-wide targets; Freya retains its filtered scene-navigation surface. Both share
-ordered wrapping/fallback selection. Native checked publication preserves the cursor after
-cancellation, failed Apply or newer typing, and cancelling another picker preserves the query.
-Saved-text results do not replace this cursor because individual text hits have no stable identity.
+including project-wide targets, with ordered wrapping/fallback selection. Native checked publication
+preserves the cursor after cancellation, failed Apply or newer typing, and cancelling another picker
+preserves the query. Saved-text results do not replace this cursor because individual text hits have
+no stable identity.
 
 Native project tools load declarations/build targets on the navigation worker and retain unapplied
 manuscript drafts. A fixed 1,026-declaration fixture mounts five result controls within 128 native
@@ -480,45 +483,23 @@ findings span AccessKit, portals and desktop preferences; replacing one crate do
 consumers. These require coordinated compatible upstream updates. No additional compatibility fork,
 lint waiver, advisory exception or license exception was added to clear the audit.
 
-The limits below describe the Freya fallback.
+ARM Linux, native macOS/Windows, screen readers, physical IME/BiDi, display scaling and sustained
+large-project sessions still need recorded host evidence.
 
-- The pinned CodeEditor exposes an unnamed inner TextInput and does not display IME preedit.
-  `probe_records_missing_code_editor_preedit_presentation` records the gap; a passing test does not
-  mean IME support passes. After upgrading Freya, replace it with a positive assertion once fixed.
-  Multiline Input has a separate positive composition test. The existing upstream report is
-  [Freya #2248](https://github.com/marc2332/freya/issues/2248); the maintainer asked us to pause
-  duplicate upstream patch work.
-- Exact prose caret/selection restoration after Input remounts is deferred pending a supported
-  upstream approach; see [Freya #2308](https://github.com/marc2332/freya/issues/2308). Draft
-  retention and Source caret restoration remain required.
-- An owned Wayland recovery comparison observed advertised AT-SPI objects that returned
-  `UnknownObject` in Freya's full writing workspace. The native drill could not reach the restored
-  prose field reliably. Its snapshot was visibly restored, and focused regressions verify retained
-  prose and Source drafts across saved view preferences; this does not establish native
-  accessibility or a complete native cross-frontend recovery pass.
-- The backend does not forward native trackpad pinch. Ctrl+scroll zoom tests do not establish
-  physical gesture support or smooth trackpad scrolling.
-- ARM Linux, native macOS/Windows, screen readers, physical IME/BiDi, display scaling and sustained
-  large-project sessions still need recorded host evidence.
-
-The AT-SPI probe uses a private D-Bus session and temporary preferences. It needs Linux
-AT-SPI/Python bindings and a display or Xvfb. Neither it nor package inspection installs the app or
-changes the user's desktop associations.
+The native probe uses a private compositor, D-Bus session and temporary preferences. It needs Cage,
+wtype, grim, wl-clipboard and the Linux AT-SPI/Python bindings. Neither it nor package inspection
+installs the app or changes the user's desktop associations.
 
 ## Start here: a real writing session
 
-Use separate copies of a real project for the two frontends. Launch Xilem with `mise exec -- just
-writer xilem`, then repeat with `mise exec -- just writer freya`. Close the first before launching
-the second: they share single-instance routing, preferences and recovery. Use separate
-`RECITE_CONFIG` paths if you want to compare their settings independently.
+Use a copy of a real project. Launch the Writer with `mise exec -- just writer run`.
 
 Spend 30–45 minutes doing ordinary work:
 
 1. Create a beat, write several lines and replies, change destinations and use previews. Navigate
    with the sidebar, graph and history.
-2. Undo and redo, switch Script/Map/Split, save and reopen. In Xilem, use **Open in editor**, make a
-   source edit, then compare or reload it while retaining recovery. In Freya, also edit in Source
-   and apply it. Compare the effort of these two source workflows.
+2. Undo and redo, switch Script/Map/Split, save and reopen. Use **Open in editor**, make a source
+   edit, then compare or reload it while retaining recovery.
 3. Open a PO catalogue, translate several passages, mark one reviewed, use the queue, and leave
    drafts in more than one beat.
 4. Quit. The dialog should name those drafts and offer working navigation, save-all and discard-all
@@ -526,10 +507,7 @@ Spend 30–45 minutes doing ordinary work:
 5. Reopen and verify the saved text and destinations.
 
 Report anything that made you hunt for a control, lose your place, or wonder whether work was saved.
-Include the steps and the expected behavior. After the separate runs, keep an unsaved recoverable
-draft in one frontend, close it, and reopen that same project in the other. Verify the draft and
-stable IDs, then repeat in the other direction. Keep both only for a named capability or usability
-gap; record what would close that gap before retiring the fallback.
+Include the steps and the expected behavior.
 
 ## Recovery and conflict drill
 

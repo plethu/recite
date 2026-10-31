@@ -35,7 +35,6 @@ modules:
           - target
           - .flatpak-builder
           - apps/writer/target
-          - apps/writer/vendor/freya-code-editor/target
           - editors/zed/target
           - node_modules
           - docs-site/node_modules
@@ -43,8 +42,8 @@ modules:
           - .turbo
       - cargo-sources.json
     build-commands:
-      - cargo --offline --frozen build --manifest-path apps/writer/Cargo.toml -p "$(python3 scripts/writer_frontend.py --frontend xilem)" --release -j 4
-      - install -Dm755 apps/writer/target/release/recite-writer-xilem /app/bin/recite-writer
+      - cargo --offline --frozen build --manifest-path apps/writer/Cargo.toml -p recite-writer --release -j 4
+      - install -Dm755 apps/writer/target/release/recite-writer /app/bin/recite-writer
       - install -Dm644 apps/writer/packaging/flatpak/io.github.plethu.recite.desktop /app/share/applications/io.github.plethu.recite.desktop
       - install -Dm644 apps/writer/packaging/flatpak/io.github.plethu.recite.metainfo.xml /app/share/metainfo/io.github.plethu.recite.metainfo.xml
       - install -Dm644 apps/writer/packaging/icons/recite-writer.svg /app/share/icons/hicolor/scalable/apps/io.github.plethu.recite.svg

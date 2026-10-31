@@ -42,9 +42,9 @@ fn fixture(value: usize) -> usize {
 RUST
 ast-grep scan --config tools/ast-grep/sgconfig.yml
 # Palette ownership covers fresh Writer files and ignores its exact owners/tests.
-writer_source=apps/writer/crates/freya/src
-mkdir -p "$writer_source/design/palette" "$writer_source/nested"
-for source in edge.rs nested/palette.rs design/palette.rs design/material.rs design/palette/tests.rs; do
+writer_source=apps/writer/crates/xilem/src
+mkdir -p "$writer_source/presentation" "$writer_source/nested"
+for source in edge.rs nested/palette.rs presentation/theme.rs presentation.rs presentation/tests.rs; do
   cat >"$writer_source/$source" <<'RUST'
 fn colour(red: u8) { Color::from_rgb(red, 0, 0); }
 RUST
@@ -86,7 +86,7 @@ ast-grep scan --config tools/ast-grep/sgconfig.yml
 # Numeric identity policy covers fresh production source in every owned workspace.
 # No Git metadata or pre-existing file list may be required to enforce it.
 for scope in crates/demo/src crates/demo/src/nested \
-  apps/writer/crates/freya/src apps/writer/crates/xilem/src/nested \
+  apps/writer/crates/xilem/src apps/writer/crates/xilem/src/nested \
   apps/writer/crates/session/src apps/writer/crates/authoring/src/nested \
   editors/zed/src tools/demo/src; do
   mkdir -p "$scope"

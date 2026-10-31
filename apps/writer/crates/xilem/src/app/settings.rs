@@ -1,4 +1,4 @@
-//! Personal preferences use the same durable owner as the Freya frontend.
+//! Personal preferences, persisted through the shared `recite_config` user configuration.
 #[cfg(test)]
 mod tests;
 mod view;

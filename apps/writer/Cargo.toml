@@ -6,14 +6,7 @@ exclude = [
     "vendor/accesskit-atspi-common",
     "vendor/accesskit-consumer"
 ]
-members = ["crates/authoring", "crates/freya", "crates/grammar", "crates/session", "crates/xilem"]
-
-[workspace.metadata.writer]
-default-frontend = "xilem"
-
-[workspace.metadata.writer.frontends]
-xilem = "recite-writer-xilem"
-freya = "recite-writer"
+members = ["crates/authoring", "crates/grammar", "crates/session", "crates/xilem"]
 
 [workspace.package]
 version = "0.0.0"
@@ -51,8 +44,6 @@ debug = 0
 accesskit_atspi_common = { path = "vendor/accesskit-atspi-common" }
 accesskit_consumer = { path = "vendor/accesskit-consumer" }
 copypasta = { path = "vendor/copypasta" }
-freya-code-editor = { path = "vendor/freya-code-editor" }
-freya-core = { path = "vendor/freya-core" }
 
 [patch."https://github.com/linebender/xilem"]
 masonry = { path = "vendor/xilem/masonry" }

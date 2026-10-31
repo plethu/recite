@@ -32,71 +32,47 @@ flatpak_spec.loader.exec_module(flatpak_check)
 
 
 class PackageConfigTests(unittest.TestCase):
-    def test_frontend_selection_is_explicit_and_rejects_unknown_names(self):
-        self.assertEqual(package_writer.package_for(), "recite-writer-xilem")
-        self.assertEqual(package_writer.package_for("xilem"), "recite-writer-xilem")
-        self.assertEqual(package_writer.package_for("freya"), "recite-writer")
-        with self.assertRaisesRegex(ValueError, "unknown Writer frontend"):
-            package_writer.package_for("missing")
-
-    def test_native_packages_keep_app_identity_and_both_cached_frontends(self):
+    def test_native_packages_keep_app_identity_and_cached_build_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             release = base / "target/release"
             release.mkdir(parents=True)
-            payloads = {"recite-writer-xilem": b"Xilem binary", "recite-writer": b"Freya binary"}
-            for package, payload in payloads.items():
-                (release / f"{package}.exe").write_bytes(payload)
-            for frontend, package in ((None, "recite-writer-xilem"), ("freya", "recite-writer")):
-                with self.subTest(frontend=frontend):
-                    packaged = []
+            built = release / "recite-writer.exe"
+            built.write_bytes(b"Writer binary")
+            packaged = []
 
-                    def run(command, **_):
-                        if command[:2] == ["cargo", "build"]:
-                            self.assertEqual(command[command.index("-p") + 1], package)
-                        else:
-                            self.assertEqual(command[:2], ["cargo", "packager"])
-                            config = json.loads(Path(command[-1]).read_text())
-                            staged = Path(config["binariesDir"]) / "recite-writer.exe"
-                            self.assertEqual(staged.read_bytes(), payloads[package])
-                            self.assertEqual(config["identifier"], "io.github.plethu.recite")
-                            self.assertNotEqual(staged.parent, release)
-                            packaged.append(staged)
+            def run(command, **_):
+                if command[:2] == ["cargo", "build"]:
+                    self.assertEqual(command[command.index("-p") + 1], "recite-writer")
+                else:
+                    self.assertEqual(command[:2], ["cargo", "packager"])
+                    config = json.loads(Path(command[-1]).read_text())
+                    staged = Path(config["binariesDir"]) / "recite-writer.exe"
+                    self.assertEqual(staged.read_bytes(), b"Writer binary")
+                    self.assertEqual(config["identifier"], "io.github.plethu.recite")
+                    self.assertNotEqual(staged.parent, release)
+                    packaged.append(staged)
 
-                    argv = [
-                        "package-writer.py",
-                        "--target-dir",
-                        str(base / "target"),
-                        "--output-dir",
-                        str(base / "packages"),
-                    ]
-                    if frontend:
-                        argv.extend(["--frontend", frontend])
-                    with (
-                        patch.object(sys, "argv", argv),
-                        patch.object(package_writer, "host_platform", return_value="windows"),
-                        patch.object(
-                            package_writer.subprocess,
-                            "check_output",
-                            return_value=f"cargo-packager {package_writer.PACKAGER_VERSION}\n",
-                        ),
-                        patch.object(package_writer.subprocess, "run", side_effect=run),
-                    ):
-                        self.assertEqual(package_writer.main(), 0)
-                    self.assertEqual(len(packaged), 1)
-                    for cached, payload in payloads.items():
-                        self.assertEqual((release / f"{cached}.exe").read_bytes(), payload)
-
-    def test_skia_revision_mismatch_fails_before_native_build(self):
-        source = (ROOT / "nix/packages.nix").read_text()
-        flatpak_check.check_nix_skia_revision(source)
-        stale = source.replace(
-            flatpak_check.SKIA_REVISION, "41382841f36aa208e7433f3c46d14237a1b15054"
-        )
-        with self.assertRaisesRegex(ValueError, "same Skia revision"):
-            flatpak_check.check_nix_skia_revision(stale)
-        with self.assertRaisesRegex(ValueError, "one Nix Skia source"):
-            flatpak_check.check_nix_skia_revision("")
+            argv = [
+                "package-writer.py",
+                "--target-dir",
+                str(base / "target"),
+                "--output-dir",
+                str(base / "packages"),
+            ]
+            with (
+                patch.object(sys, "argv", argv),
+                patch.object(package_writer, "host_platform", return_value="windows"),
+                patch.object(
+                    package_writer.subprocess,
+                    "check_output",
+                    return_value=f"cargo-packager {package_writer.PACKAGER_VERSION}\n",
+                ),
+                patch.object(package_writer.subprocess, "run", side_effect=run),
+            ):
+                self.assertEqual(package_writer.main(), 0)
+            self.assertEqual(len(packaged), 1)
+            self.assertEqual(built.read_bytes(), b"Writer binary")
 
     def test_numbered_prereleases_preserve_app_identity_and_debian_upgrade_order(self):
         versions = ["0.2.0-beta.1", "0.2.0-beta.2", "0.2.0-rc.1", "0.2.0"]

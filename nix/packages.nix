@@ -7,7 +7,6 @@
   cliVersion = (builtins.fromTOML (builtins.readFile ../Cargo.toml)).workspace.package.version;
   writerManifest = builtins.fromTOML (builtins.readFile ../apps/writer/Cargo.toml);
   writerVersion = writerManifest.workspace.package.version;
-  writerFrontends = writerManifest.workspace.metadata.writer;
   rustToolchain = pkgs.rust-bin.stable.${rustVersion}.default;
   rustPlatform = pkgs.makeRustPlatform {
     cargo = rustToolchain;
@@ -44,75 +43,6 @@
         && !(builtins.elem (baseNameOf path) ["target" "node_modules" ".direnv"])
       );
   };
-  skiaRepo = pkgs.fetchFromGitHub {
-    owner = "rust-skia";
-    repo = "skia";
-    rev = "61e7ca4e99062cdd0ab69445d5963fb3365778f6"; # m153-0.101.2
-    hash = "sha256-xKCkvQoTAMlLvKdVzzSxTST6kER4kRUIDjvTRZ9z72o=";
-  };
-  # Skia's DEPS pins these sources. The system-library switches below cover
-  # the other active third-party dependencies, but these three remain in the
-  # GN graph for Writer's Wuffs and Vulkan-enabled Skia build.
-  skiaExternals = pkgs.linkFarm "recite-skia-externals" ([
-      {
-        name = "wuffs";
-        path = pkgs.fetchFromGitHub {
-          owner = "google";
-          repo = "wuffs-mirror-release-c";
-          rev = "e3f919ccfe3ef542cfc983a82146070258fb57f8";
-          hash = "sha256-373d2F/STcgCHEq+PO+SCHrKVOo6uO1rqqwRN5eeBCw=";
-        };
-      }
-      {
-        name = "vulkanmemoryallocator";
-        path = pkgs.fetchFromGitHub {
-          owner = "GPUOpen-LibrariesAndSDKs";
-          repo = "VulkanMemoryAllocator";
-          rev = "eb744ea7a2b17040121b4bbb4d6f9e8a77e3cae7";
-          hash = "sha256-LBZJcom7G7maF9wpUVeVEJQAJwGy6365INk3VD0/0PM=";
-        };
-      }
-      {
-        name = "spirv-cross";
-        path = pkgs.fetchFromGitHub {
-          owner = "KhronosGroup";
-          repo = "SPIRV-Cross";
-          rev = "b8fcf307f1f347089e3c46eb4451d27f32ebc8d3";
-          hash = "sha256-H43M9DXfEuyKuvo6rjb5k0KEbYOSFodbPJh8ZKY4PQg=";
-        };
-      }
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      {
-        # Skia's macOS build embeds FreeType even with system libraries enabled.
-        name = "freetype";
-        path = pkgs.fetchgit {
-          url = "https://chromium.googlesource.com/chromium/src/third_party/freetype2.git";
-          rev = "264b5fbf5b912b39f98d038bf75d39be0a73f21b";
-          hash = "sha256-RRoTXV063rJBTL/JkVXuRZiNbPZLjtUP/kvt6XybG/k=";
-        };
-      }
-    ]);
-  skiaSource = pkgs.runCommand "recite-skia-source" {} ''
-    cp -R ${skiaRepo} "$out"
-    chmod -R u+w "$out"
-    # Skia's system HarfBuzz rule assumes a FHS include tree.
-    substituteInPlace "$out/third_party/harfbuzz/BUILD.gn" \
-      --replace-fail /usr/include/harfbuzz ${pkgs.harfbuzz.dev}/include/harfbuzz
-    ln -s ${skiaExternals} "$out/third_party/externals"
-  '';
-  writerEnv = {
-    SKIA_SOURCE_DIR = "${skiaSource}";
-    SKIA_GN_COMMAND = "${pkgs.gn}/bin/gn";
-    SKIA_NINJA_COMMAND = "${pkgs.ninja}/bin/ninja";
-    SKIA_USE_SYSTEM_LIBRARIES = "1";
-  };
-  # Skia's GN system WebP target names all three libraries. The bindings only
-  # emit libwebp; macOS bindings also omit the other system-library links.
-  writerExtraLinkFlags =
-    "-lwebpdemux -lwebpmux"
-    + lib.optionalString stdenv.hostPlatform.isDarwin
-    " -lpng -lz -lharfbuzz -licuuc -licui18n -licuio -lexpat -ljpeg -lwebp";
   linuxLibraries = with pkgs; [
     libGL
     vulkan-loader
@@ -124,30 +54,10 @@
     libxrandr
     libxcb
   ];
-  writerBuildInputs = with pkgs;
-    [
-      fontconfig
-      freetype
-      expat
-      libpng
-      zlib
-      harfbuzz
-      icu
-      libjpeg_turbo
-      libwebp
-      rustPlatform.bindgenHook
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux linuxLibraries;
-  writerNativeInputs = with pkgs;
-    [
-      pkg-config
-      python3
-      gn
-      ninja
-      makeWrapper
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [pkgs.patchelf]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [pkgs.cctools.libtool];
+  writerBuildInputs = lib.optionals stdenv.hostPlatform.isLinux ([pkgs.fontconfig] ++ linuxLibraries);
+  writerNativeInputs =
+    [pkgs.pkg-config pkgs.makeWrapper]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [pkgs.patchelf];
   recite = rustPlatform.buildRustPackage {
     pname = "recite";
     version = cliVersion;
@@ -166,11 +76,9 @@
   writerCraneLib = ((crane.mkLib pkgs).overrideToolchain rustToolchain).overrideScope (_: _: {
     stdenvSelector = p: p.clangStdenv;
   });
-  makeWriter = frontend: let
-    package = writerFrontends.frontends.${frontend};
-    isFreya = frontend == "freya";
+  recite-writer = let
     writerArgs = {
-      pname = "recite-writer-${frontend}";
+      pname = "recite-writer";
       version = writerVersion;
       src = source;
       cargoLock = ../apps/writer/Cargo.lock;
@@ -179,32 +87,12 @@
         src = source;
         cargoLock = ../apps/writer/Cargo.lock;
       };
-      cargoExtraArgs = "--locked -p ${package}";
+      cargoExtraArgs = "--locked -p recite-writer";
       postUnpack = ''sourceRoot="$sourceRoot/apps/writer"'';
       doCheck = false;
-      nativeBuildInputs =
-        if isFreya
-        then writerNativeInputs
-        else [pkgs.pkg-config pkgs.makeWrapper] ++ lib.optionals stdenv.hostPlatform.isLinux [pkgs.patchelf];
-      buildInputs =
-        if isFreya
-        then writerBuildInputs
-        else lib.optionals stdenv.hostPlatform.isLinux ([pkgs.fontconfig] ++ linuxLibraries);
-      # Ninja is invoked by Skia's build script, not for the Cargo package itself.
-      dontUseNinjaBuild = true;
-      dontUseNinjaCheck = true;
-      dontUseNinjaInstall = true;
-      env =
-        (lib.optionalAttrs isFreya writerEnv)
-        // {
-          CARGO_TARGET_DIR = "target";
-          # Keep bindgen flags identical between dependency and application builds.
-          # https://crane.dev/faq/rebuilds-bindgen.html
-          NIX_OUTPATH_USED_AS_RANDOM_SEED = "recitewrit";
-        };
-      preBuild = lib.optionalString isFreya ''
-        export NIX_LDFLAGS="$NIX_LDFLAGS ${writerExtraLinkFlags}"
-      '';
+      nativeBuildInputs = writerNativeInputs;
+      buildInputs = writerBuildInputs;
+      env.CARGO_TARGET_DIR = "target";
     };
     writerCargoArtifacts = writerCraneLib.buildDepsOnly ((builtins.removeAttrs writerArgs ["src"])
       // {
@@ -224,16 +112,12 @@
     writerCraneLib.buildPackage (writerArgs
       // {
         cargoArtifacts = writerCargoArtifacts;
-        postInstall =
-          lib.optionalString (package != "recite-writer") ''
-            mv "$out/bin/${package}" "$out/bin/recite-writer"
-          ''
-          + lib.optionalString stdenv.hostPlatform.isLinux ''
-            install -Dm644 packaging/icons/recite-writer.png \
-              "$out/share/icons/hicolor/512x512/apps/recite-writer.png"
-            install -Dm644 ${./recite-writer.desktop} \
-              "$out/share/applications/recite-writer.desktop"
-          '';
+        postInstall = lib.optionalString stdenv.hostPlatform.isLinux ''
+          install -Dm644 packaging/icons/recite-writer.png \
+            "$out/share/icons/hicolor/512x512/apps/recite-writer.png"
+          install -Dm644 ${./recite-writer.desktop} \
+            "$out/share/applications/recite-writer.desktop"
+        '';
         postFixup =
           lib.optionalString stdenv.hostPlatform.isLinux ''
             patchelf --add-rpath ${lib.makeLibraryPath linuxLibraries} \
@@ -252,8 +136,6 @@
           platforms = lib.platforms.linux ++ lib.platforms.darwin;
         };
       });
-  recite-writer = makeWriter writerFrontends.default-frontend;
-  recite-writer-freya = makeWriter "freya";
 in {
-  inherit pkgs rustToolchain writerEnv writerExtraLinkFlags writerNativeInputs writerBuildInputs recite recite-writer recite-writer-freya;
+  inherit pkgs rustToolchain writerNativeInputs writerBuildInputs recite recite-writer;
 }

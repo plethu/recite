@@ -148,12 +148,10 @@ class ScopeTests(unittest.TestCase):
 
     def test_writer_keeps_ui_and_accessibility_without_packaging(self):
         for path in (
-            "apps/writer/crates/freya/src/app.rs",
-            "scripts/check-writer-native-accessibility.py",
-            "scripts/writer_accessibility_host.py",
+            "apps/writer/crates/xilem/src/app.rs",
+            "tests/writer-native/check.py",
+            "tests/writer-native/atspi.py",
             "tools/ast-grep/rules/rust-writer-palette.yml",
-            "tools/ast-grep/rules/rust-writer-cold-projections.yml",
-            "tools/ast-grep/tests/rust-writer-cold-projections-test.yml",
             "tools/ast-grep/tests/rust-writer-palette-test.yml",
         ):
             self.assertEqual(selected(path), {"writer", "maintainability"})
@@ -211,14 +209,6 @@ class ScopeTests(unittest.TestCase):
                 self.assertEqual(selected(path), scope.ENGINE | {"docs"})
 
     def test_packaging_owners_select_only_their_distribution_family(self):
-        self.assertEqual(
-            selected("scripts/writer_frontend.py"),
-            {"writer", "package-config", "maintainability", "docs"},
-        )
-        self.assertEqual(
-            scope.lanes_for_path("scripts/writer_frontend.py"),
-            scope.WRITER_DISTRIBUTION | {"writer", "maintainability", "docs"},
-        )
         for path, lane in (
             ("flake.nix", "nix-packages"),
             ("flake.lock", "nix-packages"),

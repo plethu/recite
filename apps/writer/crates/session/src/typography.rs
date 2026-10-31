@@ -81,7 +81,7 @@ pub const FONT_DISPLAY: &[&str] = &[
     "Noto Serif Devanagari",
     "Noto Serif Thai",
     // Scripts the bundled faces lack: macOS, then Linux (Noto) families, before the generic.
-    // Skia also falls back per glyph through the system font manager; naming these fixes the
+    // The shaper also falls back per glyph through system fonts; naming these fixes the
     // choice. One Han face serves Chinese and Japanese until text carries a locale.
     "PingFang SC",
     "Hiragino Sans",
@@ -105,7 +105,7 @@ pub const FONT_MONO: &[&str] = &[
     "Cascadia Mono",
     "DejaVu Sans Mono",
     // Scripts the bundled faces lack: macOS, then Linux (Noto) families, before the generic.
-    // Skia also falls back per glyph through the system font manager; naming these fixes the
+    // The shaper also falls back per glyph through system fonts; naming these fixes the
     // choice. One Han face serves Chinese and Japanese until text carries a locale.
     "PingFang SC",
     "Hiragino Sans",

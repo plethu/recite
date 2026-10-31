@@ -1,26 +1,23 @@
 # Writer guide
 
-The native writer defaults to Xilem over the shared Recite authoring kernel. Run from the repository
-root:
+The native writer is built with Xilem over the shared Recite authoring kernel. Run from the
+repository root:
 
 ```sh
 mise exec -- just writer run
 ```
 
-Xilem writes warnings and errors to stderr. Set `RUST_LOG=debug` for more diagnostic detail, or
+The Writer writes warnings and errors to stderr. Set `RUST_LOG=debug` for more diagnostic detail, or
 choose a module-specific filter; redirect stderr when you want to retain those logs.
 
-Use `mise exec -- just writer freya` for the Freya fallback, or `just writer xilem` to select Xilem
-explicitly. Both use the same projects, personal settings and recovery; choose one frontend at a
-time for a project. Xilem's welcome screen opens or creates projects and offers temporary examples.
-Enter in a ready project folder or name submits the form; composition and native text Undo remain
-with the field. Open/Create and any failure message stay together beneath a short form, and remain
-visible while a tall form scrolls. Failed project access leads with recovery guidance; **Show
-project error details** retains the original diagnostic. Editing the folder or project name clears
-that attempt’s feedback.
+The welcome screen opens or creates projects and offers temporary examples. Enter in a ready project
+folder or name submits the form; composition and native text Undo remain with the field. Open/Create
+and any failure message stay together beneath a short form, and remain visible while a tall form
+scrolls. Failed project access leads with recovery guidance; **Show project error details** retains
+the original diagnostic. Editing the folder or project name clears that attempt’s feedback.
 
-**Settings** changes personal appearance, text sizes, scale and shortcut bindings through the same
-configuration as Freya. See the [acceptance limits](acceptance.md#known-limits) for native-host and
+**Settings** changes personal appearance, text sizes, scale and shortcut bindings through the shared
+personal configuration. See the [acceptance limits](acceptance.md#known-limits) for native-host and
 dependency-policy evidence gaps. Reading and layout adjustments use paired minus/plus controls with
 full accessible names. At larger UI scales, these controls precede the live writing specimen.
 
@@ -38,7 +35,7 @@ without writing it to disk.
 Save translation drafts before opening another project. A saved catalogue may remain open while you
 switch; no separate catalogue-close step is required.
 
-In Xilem beat reading, **Reply rules…** opens typed conditions and the destination's direct effects.
+In beat reading, **Reply rules…** opens typed conditions and the destination's direct effects.
 **Show actions** reveals grouping, negation, effect ordering and delivery controls; **Choose
 value…** searches declared registry or enum values. Changes stay in a recoverable draft until
 **Apply reply** or **Save file**. Apply updates the working document; Save also writes it to disk.
@@ -48,27 +45,27 @@ available to correct. Text undo remains available while a field is open, includi
 picker and Apply. Changing rule-field pages ends that page's field undo history; applied edits use
 document undo.
 
-In Xilem, **Rename beat** in Commands opens the project rename workspace. Enter the current and new
-beat names, choose **Review project rename**, and inspect the paged source and manifest changes.
-**Apply project rename** stages one grouped Undo/Redo step; **Save all** writes the affected files.
-Changing either name discards the old review. Review and Apply briefly pause editing while their
-worker owns the project, retaining the mounted manuscript field. If recovery fails after staging,
-editing stays paused until **Retry project edit recovery** succeeds, or you close keeping recovery
-and reopen. An unexpected worker failure requires reopening.
+**Rename beat** in Commands opens the project rename workspace. Enter the current and new beat
+names, choose **Review project rename**, and inspect the paged source and manifest changes. **Apply
+project rename** stages one grouped Undo/Redo step; **Save all** writes the affected files. Changing
+either name discards the old review. Review and Apply briefly pause editing while their worker owns
+the project, retaining the mounted manuscript field. If recovery fails after staging, editing stays
+paused until **Retry project edit recovery** succeeds, or you close keeping recovery and reopen. An
+unexpected worker failure requires reopening.
 
-In Xilem, **Translations** or **Localise** in Commands opens a PO catalogue workspace. Enter its
-path, choose **Open catalogue**, then search or filter the queue and open an entry. **Save
-translation** publishes that entry; **Save all** includes translation drafts and source edits.
-Returning to writing preserves the mounted manuscript and its text undo history. If another tool
-changes the PO file, **Compare catalogue disk changes** offers explicit draft/disk decisions against
-the inspected versions. Closing with recovery retains translation drafts; reopen the same project
-and catalogue to restore them. **Add language** searches language names and tags, shows the new
-`locale/<locale>.po` destination, and creates a blank catalogue using GNU gettext. Resolve
-manuscript field drafts first. **Review source updates** compares the PO with current project
-sources, including accepted unsaved edits. **Apply source updates to PO** rechecks those inputs and
-writes only the PO; source files still need their own Save. These operations retain the mounted
-manuscript while editing is temporarily paused. **Preview this passage** navigates to the source and
-stages its catalogue language and wording after successful navigation. Restart remains explicit.
+**Translations** or **Localise** in Commands opens a PO catalogue workspace. Enter its path, choose
+**Open catalogue**, then search or filter the queue and open an entry. **Save translation**
+publishes that entry; **Save all** includes translation drafts and source edits. Returning to
+writing preserves the mounted manuscript and its text undo history. If another tool changes the PO
+file, **Compare catalogue disk changes** offers explicit draft/disk decisions against the inspected
+versions. Closing with recovery retains translation drafts; reopen the same project and catalogue to
+restore them. **Add language** searches language names and tags, shows the new `locale/<locale>.po`
+destination, and creates a blank catalogue using GNU gettext. Resolve manuscript field drafts first.
+**Review source updates** compares the PO with current project sources, including accepted unsaved
+edits. **Apply source updates to PO** rechecks those inputs and writes only the PO; source files
+still need their own Save. These operations retain the mounted manuscript while editing is
+temporarily paused. **Preview this passage** navigates to the source and stages its catalogue
+language and wording after successful navigation. Restart remains explicit.
 
 Preview keeps **Start preview** or **Restart preview** above the scrolling conversation and input
 form. **Inputs for the next run** does not change the current conversation: restarting captures
@@ -99,28 +96,22 @@ Switch scenes in the sidebar. Applied edits, field drafts, undo history, and pre
 each example for the lifetime of the window; nothing is saved to disk. Closing the window discards
 these temporary sessions.
 
-Xilem offers **Script**, **Map** and **Split** workspace views. Script shows the selected beat;
+The Writer offers **Script**, **Map** and **Split** workspace views. Script shows the selected beat;
 Split keeps it beside the map. **Focus writing** hides the surrounding controls until **Exit focus**
 restores them. Source commands open the preferred editor through **Open in editor**. After external
 edits, **Compare disk changes** reviews them, or **Reload (keep recovery copy)** retains the current
 session before loading the file. Save Writer drafts before handing their contents to the editor;
 opening the editor alone does not apply them.
 
-Freya also has an embedded Source view, **Script + Map**, and **Exit focus writing**. Existing view
-preferences remain valid. Each open scene retains its view and selection within the window.
+Existing view preferences remain valid. Each open scene retains its view and selection within the
+window.
 
-Cold Script and Map projections prepare in the background when their surfaces need them. In Freya, a
-view command from Source leaves Source editable during preparation; newer drafts or navigation keep
-that command from changing your view when preparation finishes.
+Cold Script and Map projections prepare in the background when their surfaces need them.
 
-In Map, click a card to select it; use **Open script** or Enter to write in that beat. Xilem's
-project files and beat outline are paged; use **Go to scene or beat** to search directly. Start/end
-labels identify entry and exit points; the graph shows branching and convergence rather than
-imposing a parent-child hierarchy on beats.
-
-In Freya, double-clicking a card also opens its writing pane; the **Close beat editor** icon or
-Escape returns to the map. Select the title to rename in place; Enter applies and Escape cancels.
-Its sidebar opens scenes as accordions, with beats indented in source order.
+In Map, click a card to select it; use **Open script** or Enter to write in that beat. Project files
+and the beat outline are paged; use **Go to scene or beat** to search directly. Start/end labels
+identify entry and exit points; the graph shows branching and convergence rather than imposing a
+parent-child hierarchy on beats.
 
 Expand reply destinations independently to compare branches inside the writing pane. These previews
 stay one level deep; **Edit [beat]** enters that beat. Previews show authored content without
@@ -132,19 +123,16 @@ viewport centre when disabled in Settings). Zoom controls include **100%** and *
 not rearrange cards. **Arrange automatically** resets card placement while preserving the camera's
 zoom and position.
 
-Xilem's Settings controls navigation and script widths and the script pane's side. When Split cannot
-fit both panes at the selected UI scale, Script takes priority; **Map** still opens the map, and
+Settings controls navigation and script widths and the script pane's side. When Split cannot fit
+both panes at the selected UI scale, Script takes priority; **Map** still opens the map, and
 widening the window restores both panes. The selector marks Split unavailable until it fits. A Split
 workspace opened in a narrow window offers **Open map** beside the explanation. The selected card
-stays visible when its map pane resizes, without changing zoom. Freya also provides draggable
-dividers beside the scene drawer and script pane: focus a divider and use Left/Right to resize, or
-Home/End to reach its bounds. Pane preferences are restored next launch.
+stays visible when its map pane resizes, without changing zoom. Pane preferences are restored next
+launch.
 
 Settings also controls reading size, Source size and UI scale independently. **Commands**
 (Ctrl/Cmd+Shift+P) searches workspace actions; **Go to scene or beat** (Ctrl/Cmd+P) searches scene
-names and beat IDs. Search cancellation returns focus to the invoking control. In Freya's Source
-editor, Ctrl+Space opens completion candidates, arrows select, Enter accepts a selected result, and
-Escape dismisses. Tab keeps its ordinary editor behaviour.
+names and beat IDs. Search cancellation returns focus to the invoking control.
 
 Search opens over the document and returns to the invoking field when cancelled. **Scenes / beats**,
 **Project text**, and **This beat** switch scope while retaining the query. This beat includes the
@@ -165,19 +153,16 @@ outline. Return routes are identified from dialogue flow, independently of card 
 
 **Add beat** creates a separate beat and opens it for writing. If the project has no default entry,
 the new beat becomes its default. **Rename** uses the compiler's rename operation, preserving line
-IDs and updating references. Inline renames in Freya refuse cross-scene edits. Xilem's **Rename
-beat** workspace and Freya's Source view provide reviewed multi-file renames. **Add line** inserts
-before the beat's branching or continuation; **Add reply** turns an existing unconditional
-continuation into a reply with the same destination. **Change destination…** rewires a reply or an
-unconditional continuation. These changes share the document's undo history.
+IDs and updating references. The **Rename beat** workspace provides reviewed multi-file renames.
+**Add line** inserts before the beat's branching or continuation; **Add reply** turns an existing
+unconditional continuation into a reply with the same destination. **Change destination…** rewires a
+reply or an unconditional continuation. These changes share the document's undo history.
 
 Prose remains a text field throughout: clicking places the caret without changing the text's layout.
-Hover and focus indicate editability without changing text geometry. Xilem's **Apply draft** accepts
-the field into the working document; Save also writes it to disk. Opening a retained workspace keeps
-the manuscript draft and its text undo history. Freya applies valid prose when leaving its field or
-changing context. Rejected text stays available with an explanation and a Discard draft action.
-Freya's Source changes use explicit Apply / Discard actions and share Script's working document.
-Neither frontend saves manuscript edits automatically.
+Hover and focus indicate editability without changing text geometry. **Apply draft** accepts the
+field into the working document; Save also writes it to disk. Opening a retained workspace keeps the
+manuscript draft and its text undo history. Rejected text stays available with an explanation and a
+Discard draft action. The Writer never saves manuscript edits automatically.
 
 To edit files in a project:
 
@@ -186,16 +171,11 @@ mise exec -- just writer run --project /path/to/project
 ```
 
 The project argument opens that project through Recite's shared manifest discovery. Select a scene
-in the sidebar, edit in Script, and click **Save file** in Xilem or **Save** in Freya; Ctrl+S (Cmd+S
-on macOS) works in both. Save applies the current field draft first; rejected prose remains
-available to repair. Xilem retains drafts while switching files; opening another project requires
-resolving unsaved work. Freya requires saving source edits and resolving Source drafts before
-switching a saved-project scene.
+in the sidebar, edit in Script, and click **Save file**, or press Ctrl+S (Cmd+S on macOS). Save
+applies the current field draft first; rejected prose remains available to repair. Drafts are
+retained while switching files; opening another project requires resolving unsaved work.
 
-Select a beat in the map or outline to navigate the scene. In Freya, the sidebar icon beside the
-Recite name reclaims sidebar space. **Line actions ▾** opens the selected line's or reply's details
-and the Add reply menu. Arrow keys move between actions; Escape or Tab returns to the trigger.
-Source draft actions stay beside its source editor.
+Select a beat in the map or outline to navigate the scene.
 
 ## Navigation and links
 
@@ -204,20 +184,19 @@ buttons use the same history. The history covers Write, Localise and the transla
 beats, lines and Source view. Queue searches replace the current history entry; each keystroke does
 not add another Back step. Returning from a line restores the search, filter and page.
 
-Navigation uses the shared authoring model. Xilem preserves manuscript drafts and their mounted text
-fields while opening retained workspaces. Freya's saved-project scene changes require saving source
-edits and applying or discarding Source drafts first. Switching catalogues requires resolving PO
-drafts. A failed navigation restores the history cursor and keeps the current screen. Temporary
-example sessions retain their drafts and undo history.
+Navigation uses the shared authoring model. Manuscript drafts and their mounted text fields are
+preserved while opening retained workspaces. Switching catalogues requires resolving PO drafts. A
+failed navigation restores the history cursor and keeps the current screen. Temporary example
+sessions retain their drafts and undo history.
 
 Copy link writes a `recite://writer/...` URL to the clipboard. The routes are `/write`, `/localise`
 and `/translations`. Query parameters identify the project, scene, beat or stable line ID, catalogue
 and queue search/filter/page. They contain locations, not document contents or translation drafts.
 Catalogue paths inside the current project are relative to its root.
 
-Xilem's **Copy link to this view** uses the same location format and leaves manuscript drafts
-unapplied. **Link sent to clipboard** reports delivery to the toolkit; the operating system does not
-provide a success receipt for that setter.
+**Copy link to this view** uses the same location format and leaves manuscript drafts unapplied.
+**Link sent to clipboard** reports delivery to the toolkit; the operating system does not provide a
+success receipt for that setter.
 
 Open a link on startup, with the corresponding project:
 
@@ -260,28 +239,24 @@ beside its source and destination. Return and condition markers remain visible. 
 focus highlights the matching route and its beats; selecting a row reveals the linked beat.
 Conversation endings are labelled without a navigation action. Tab reaches controls and connections.
 
-Open **Settings**, or press Ctrl+, (Cmd+, on macOS). In Freya it lives at the bottom of the
-navigation rail. User preferences include theme, workspace view, reduced motion, zoom anchoring,
-exit confirmation, and the shared Standard/Vim keymap. Vim adds h/j/k/l for map navigation and i to
-edit; text fields keep ordinary typing. This is a navigation keymap, not a Vim text editor
-emulation.
+Open **Settings**, or press Ctrl+, (Cmd+, on macOS). User preferences include theme, workspace view,
+reduced motion, zoom anchoring, exit confirmation, and the shared Standard/Vim keymap. Vim adds
+h/j/k/l for map navigation and i to edit; text fields keep ordinary typing. This is a navigation
+keymap, not a Vim text editor emulation.
 
 User changes are saved through `recite-config` to the displayed personal configuration path. Project
-settings in Freya are a separate tab with a manifest editor and an explicit Apply action. They use
-the same parser, discovery rules, schema validation and atomic replacement primitives as other
-clients. A changed file on disk is never overwritten by a stale Settings draft.
+settings use the same parser, discovery rules, schema validation and atomic replacement primitives
+as other clients. A changed file on disk is never overwritten by a stale Settings draft.
 
-In Xilem, **Settings → Project settings…** opens a retained workspace. **Export settings draft**
-creates a separate TOML file; open it in your IDE, then **Import settings draft** to validate and
-review it. **Apply reviewed settings** publishes those exact contents and refreshes project analysis
-without applying or saving manuscript edits. **Reload saved settings** explicitly replaces the
-captured baseline after external edits. A failed analysis refresh offers a retry; an unconfirmed
-baseline must be reloaded before another Apply.
+**Settings → Project settings…** opens a retained workspace. **Export settings draft** creates a
+separate TOML file; open it in your IDE, then **Import settings draft** to validate and review it.
+**Apply reviewed settings** publishes those exact contents and refreshes project analysis without
+applying or saving manuscript edits. **Reload saved settings** explicitly replaces the captured
+baseline after external edits. A failed analysis refresh offers a retry; an unconfirmed baseline
+must be reloaded before another Apply.
 
-Native trackpad pinch remains unsupported by the pinned Freya backend: it does not forward pinch
-events, and its winit version does not emit them on Linux. Ctrl+scroll is available, but is not a
-substitute for native gesture support. Keyboard component tests do not establish screen-reader or
-hardware acceptance.
+Ctrl+scroll zooms the map; native trackpad pinch has not been verified. Keyboard component tests do
+not establish screen-reader or hardware acceptance.
 
 Shared controls, dialog layout and motion are described in the
 [writer design system](design-system.md).
@@ -313,9 +288,9 @@ Structured reply drafts keep their validation rules through document switching a
 and Save refuse malformed syntax or additional project diagnostics, retaining the draft for repair.
 A rejected recovery selection also leaves the current field intact.
 
-In the Xilem frontend, recovered source drafts use **Export draft and open editor**. This creates a
-unique `recite-source-repair-*.txt` beside the document and a complete JSON recovery backup. Repair
-that text in your preferred editor, then choose **Import repaired source**. After restarting Writer,
+Recovered source drafts use **Export draft and open editor**. This creates a unique
+`recite-source-repair-*.txt` beside the document and a complete JSON recovery backup. Repair that
+text in your preferred editor, then choose **Import repaired source**. After restarting Writer,
 choose that same text file with **Choose file…**. Import validates and accepts the repaired text;
 **Save file** then writes it to the project. The exported text and backup remain available. Save
 controls stay disabled while the source draft awaits repair and import.
@@ -357,19 +332,19 @@ retained copy, close the writer, preserve any existing `<source>.recite-editor-r
 copy the retained JSON to that path before reopening the source. The original baseline still
 protects external edits.
 
-Xilem reports **Changed on disk** when an open source or catalogue changes outside Writer. Choose
-**Compare changed file** to inspect it, **Next changed file** to visit another notice, or **Dismiss
-notice** to hide it. Detection preserves your drafts and never reloads a file. A dismissed notice
-does not disable conflict checks on Save.
+The Writer reports **Changed on disk** when an open source or catalogue changes outside Writer.
+Choose **Compare changed file** to inspect it, **Next changed file** to visit another notice, or
+**Dismiss notice** to hide it. Detection preserves your drafts and never reloads a file. A dismissed
+notice does not disable conflict checks on Save.
 
-In Xilem, **Compare disk changes** shows changed passages and any unapplied field draft separately.
-**Keep Writer version** preserves your exact document, field draft and Undo history; the next Save
-replaces the inspected disk version. **Use inspected disk version** archives that session and adopts
-the disk source as one Undo step. Both retain a complete recovery copy, whose path is available
-under **Show recovery copy location**. A changed local field or newer disk version requires a fresh
-review. For a manual merge, choose **Export merge draft**, open the separate text file in your IDE,
-then **Import reviewed merge**. Export includes pending prose without applying it in Writer. Import
-checks the edited source and retains your selected field when valid; Save publishes it explicitly.
+**Compare disk changes** shows changed passages and any unapplied field draft separately. **Keep
+Writer version** preserves your exact document, field draft and Undo history; the next Save replaces
+the inspected disk version. **Use inspected disk version** archives that session and adopts the disk
+source as one Undo step. Both retain a complete recovery copy, whose path is available under **Show
+recovery copy location**. A changed local field or newer disk version requires a fresh review. For a
+manual merge, choose **Export merge draft**, open the separate text file in your IDE, then **Import
+reviewed merge**. Export includes pending prose without applying it in Writer. Import checks the
+edited source and retains your selected field when valid; Save publishes it explicitly.
 
 Recovery is written after buffer updates, so an abrupt crash can lose changes that have not reached
 that update. A corrupt or unsupported snapshot is left untouched and reported; move it aside for
@@ -385,14 +360,14 @@ project context** rereads project sources and schema while retaining the current
 draft, and undo history. It marks an existing preview stale. A failed refresh retains the last
 accepted context and reports the error.
 
-In Xilem, **Declarations → Declaration source** binds standalone TOML. Open the saved source in your
-editor, explicitly **Reload declaration source**, then **Save and generate declarations**. Reload
-preserves the previous draft in a separate TOML recovery copy. An invalid recovered draft offers
-**Export declaration draft**; repair that separate file in your editor, then **Import repaired
-declaration draft**. Import stages validated TOML; Save and generate writes the source and output.
-The read-only preview is optional. **Producer** reloads the registration for review or reloads valid
-generated JSON from disk. After output changes, **Validate declaration draft** checks whether the
-current TOML matches it; project-analysis refresh does not establish that fact.
+**Declarations → Declaration source** binds standalone TOML. Open the saved source in your editor,
+explicitly **Reload declaration source**, then **Save and generate declarations**. Reload preserves
+the previous draft in a separate TOML recovery copy. An invalid recovered draft offers **Export
+declaration draft**; repair that separate file in your editor, then **Import repaired declaration
+draft**. Import stages validated TOML; Save and generate writes the source and output. The read-only
+preview is optional. **Producer** reloads the registration for review or reloads valid generated
+JSON from disk. After output changes, **Validate declaration draft** checks whether the current TOML
+matches it; project-analysis refresh does not establish that fact.
 
 Preview compiles that same set of effective sources and schema. Script starts at the selected line's
 beat; Source starts at the compiled default block. Cross-file links use the normal Recite reference
@@ -411,18 +386,15 @@ The [acceptance guide](acceptance.md) owns real writing sessions, recovery/confl
 native keyboard, IME and screen-reader checks. Run `mise exec -- just writer check` for automated
 verification.
 
-Freya's pane dividers preview a new width with a guide while dragging, then reflow on release.
-Escape cancels the drag. Keyboard resizing remains immediate.
-
-Large beats keep condition groups and show an entry range above the manuscript. Xilem's fixed
-Previous/Next controls move by eight entries with sixteen mounted at a time, retaining adjacent
-prose, native editors and a visible scroll anchor where the viewport permits. A step that retains
-your active passage leaves its text edit untouched. Leaving that passage checks its text before
-moving; a rejected edit keeps the passage and range open. **Find in this beat** jumps directly to a
-line or reply by its wording or label. A refused continuation shows **Edit text** and **Show
-reason** beside the affected passage; its text Undo remains available. Explicit jumps reveal their
-destination; ordinary browsing keeps its position. Successful navigation also reveals the selected
-file and beat in the scene rail.
+Large beats keep condition groups and show an entry range above the manuscript. Fixed Previous/Next
+controls move by eight entries with sixteen mounted at a time, retaining adjacent prose, native
+editors and a visible scroll anchor where the viewport permits. A step that retains your active
+passage leaves its text edit untouched. Leaving that passage checks its text before moving; a
+rejected edit keeps the passage and range open. **Find in this beat** jumps directly to a line or
+reply by its wording or label. A refused continuation shows **Edit text** and **Show reason** beside
+the affected passage; its text Undo remains available. Explicit jumps reveal their destination;
+ordinary browsing keeps its position. Successful navigation also reveals the selected file and beat
+in the scene rail.
 
 Pin reference keeps a labelled snapshot alongside the script; Previous/Next beat retraces visits
 within the current scene. Project search matches complete words in saved lines and their document,

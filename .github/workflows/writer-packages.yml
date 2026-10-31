@@ -63,7 +63,6 @@ jobs:
           desktop-file-validate apps/writer/packaging/flatpak/io.github.plethu.recite.desktop
           appstreamcli validate --no-net apps/writer/packaging/flatpak/io.github.plethu.recite.metainfo.xml
           python3 scripts/check-writer-flatpak.py --builder
-          python3 scripts/check-writer-flatpak.py --builder --frontend freya
       - name: Build and inspect Flatpak
         run: dbus-run-session -- scripts/package-writer-flatpak.sh target/writer-flatpak
       - name: Upload Flatpak preview

@@ -3,7 +3,6 @@
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import os
 import signal
@@ -12,20 +11,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts"))
-SPEC = importlib.util.spec_from_file_location(
-    "writer_probe", ROOT / "scripts/check-writer-native-accessibility.py"
-)
-writer_probe = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(writer_probe)
-
-ACCESSIBLE = writer_probe.ACCESSIBLE
-child_process = writer_probe.child_process
-call = writer_probe.call
-wait_for = writer_probe.wait_for
-GLib = writer_probe.GLib
-Gio = writer_probe.Gio
+import atspi
+from atspi import ACCESSIBLE, Gio, GLib, call, child_process, wait_for
 
 
 def atspi_binary(name):
@@ -61,7 +48,7 @@ def run_probe(binary, output, scenario):
         None,
         None,
     )
-    registry = ("org.a11y.atspi.Registry", writer_probe.ROOT)
+    registry = ("org.a11y.atspi.Registry", atspi.ROOT)
     registry_binary = atspi_binary("at-spi2-registryd")
     with (
         child_process(
@@ -171,7 +158,7 @@ def run_probe(binary, output, scenario):
         else:
             from writer_interactions import run
 
-        return run(writer_probe, bus, registry, binary, output)
+        return run(atspi, bus, registry, binary, output)
 
 
 def main():

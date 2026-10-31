@@ -2,10 +2,10 @@ id: rust-writer-palette
 language: Rust
 severity: error
 files:
-  - "apps/writer/crates/freya/src/**/*.rs"
+  - "apps/writer/crates/xilem/src/**/*.rs"
 ignores:
-  - "apps/writer/crates/freya/src/design/palette.rs"
-  - "apps/writer/crates/freya/src/design/material.rs"
+  - "apps/writer/crates/xilem/src/presentation/theme.rs"
+  - "apps/writer/crates/xilem/src/presentation.rs"
   - "**/tests.rs"
 message: Construct Writer colours in the semantic palette or material owner.
 note: |

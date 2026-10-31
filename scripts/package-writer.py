@@ -14,11 +14,10 @@ import tempfile
 import tomllib
 from pathlib import Path
 
-from writer_frontend import package_for
-
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "apps/writer/packaging"
 PACKAGER_VERSION = "0.11.8"
+PACKAGE = "recite-writer"
 ABI_SYMBOL = re.compile(r"Name: (GLIBC|GLIBCXX|CXXABI)_([0-9]+(?:\.[0-9]+)+)\b")
 
 
@@ -110,7 +109,6 @@ def stage_binary(config, directory, target, source):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--platform", choices=("linux", "macos", "windows"))
-    parser.add_argument("--frontend", choices=("xilem", "freya"))
     parser.add_argument("--target-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument(
@@ -125,13 +123,9 @@ def main():
         parser.error("native packaging requires the matching host OS")
 
     target_dir = (args.target_dir or ROOT / "apps/writer/target").resolve()
-    package = package_for(args.frontend)
-    package_root = ROOT / "target/writer-packages"
-    if package == package_for("freya"):
-        package_root /= "freya"
-    output_dir = (args.output_dir or package_root / target).resolve()
+    output_dir = (args.output_dir or ROOT / "target/writer-packages" / target).resolve()
     config = load_config(target, target_dir, output_dir)
-    config["binariesDir"] = str(target_dir / "writer-package" / package / "release")
+    config["binariesDir"] = str(target_dir / "writer-package" / PACKAGE / "release")
     inputs = config["icons"] + ([config["licenseFile"]] if "licenseFile" in config else [])
     for path in inputs:
         if not Path(path).is_file():
@@ -151,7 +145,7 @@ def main():
         if not source.is_file():
             parser.error(f"missing smoke binary: {source}")
         binary = stage_binary(
-            config, target_dir / "writer-package" / package / "smoke", target, source
+            config, target_dir / "writer-package" / PACKAGE / "smoke", target, source
         )
         print(f"staged smoke binary {source}; this package is not a release build")
     else:
@@ -164,18 +158,18 @@ def main():
                 "--manifest-path",
                 str(ROOT / "apps/writer/Cargo.toml"),
                 "-p",
-                package,
+                PACKAGE,
                 "--target-dir",
                 str(target_dir),
             ],
             cwd=ROOT,
             check=True,
         )
-        binary = target_dir / "release" / (f"{package}.exe" if target == "windows" else package)
+        binary = target_dir / "release" / (f"{PACKAGE}.exe" if target == "windows" else PACKAGE)
         if not binary.is_file():
             parser.error(f"missing built writer: {binary}")
         binary = stage_binary(
-            config, target_dir / "writer-package" / package / "release", target, binary
+            config, target_dir / "writer-package" / PACKAGE / "release", target, binary
         )
     if not binary.is_file():
         parser.error(f"missing built writer: {binary}")

@@ -16,9 +16,12 @@ buttons, segments, search, destination pickers and graph cards.
 
 ## Ownership
 
-[`crates/freya/src/design`](crates/freya/src/design) owns palette, typography, geometry and shared
-controls. Use its tokens rather than local colour, spacing or timing constants. Dialogue typography
-is shared across writing, localisation, preview and excerpts; fonts resolve locally with fallbacks.
+[`crates/session/src/palette.rs`](crates/session/src/palette.rs) and
+[`crates/session/src/typography`](crates/session/src/typography) own the palette and type;
+[`crates/xilem/src/presentation`](crates/xilem/src/presentation) maps them onto toolkit properties
+and shared controls. Use these tokens rather than local colour, spacing or timing constants.
+Dialogue typography is shared across writing, localisation, preview and excerpts; fonts resolve
+locally with fallbacks.
 
 Use quiet toolbar actions and a filled plum primary action. The primary fill appears once per
 screen, and a modal's primary takes precedence over anything behind it. Stamps, a 1.5-pixel ink

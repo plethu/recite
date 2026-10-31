@@ -13,10 +13,10 @@ register that inventory, so these families resolve without system fonts. Each fa
 | `ibm-plex-sans/IBMPlexSans-{Regular,Italic,Medium,MediumItalic,SemiBold}.ttf` | IBM Plex Sans      | 3.005   | github.com/IBM/plex `@ibm/plex-sans@1.1.0`                     | static 400, 500, 600; italic 400, 500 |
 | `ibm-plex-mono/IBMPlexMono-{Regular,Italic,Medium}.ttf`                       | IBM Plex Mono      | 2.005   | github.com/IBM/plex `@ibm/plex-mono@2.5.0`                     | static 400, 500; italic 400           |
 
-Freya renders a variable file at its default instance whatever weight is requested, so display type
-uses the static Fraunces cut and Plex ships the static weights the UI uses. The variable Fraunces
-stays as the next fallback. The upstream Fraunces release zip has no licence file; the project's OFL
-text comes from google/fonts.
+Display type uses the static Fraunces cut, and Plex ships the static weights the UI uses. These were
+chosen when the retired Freya frontend rendered variable files only at their default instance. The
+variable Fraunces stays as the next fallback. The upstream Fraunces release zip has no licence file;
+the project's OFL text comes from google/fonts.
 
 Fraunces italic is not shipped because no display text in Writer is italic.
 

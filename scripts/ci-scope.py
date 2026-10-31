@@ -40,8 +40,6 @@ def lanes_for_path(path, *, base=None, head=None):
         return owners
     if path == "scripts/check-workflow-performance.sh" or path.startswith("tools/recite-perf/"):
         return frozenset({"workflow-performance", "maintainability"})
-    if path == "scripts/writer_frontend.py":
-        return WRITER_DISTRIBUTION | {"writer", "maintainability", "docs"}
     if path.startswith("nix/") or path in {"flake.nix", "flake.lock"}:
         return frozenset({"nix-packages", "maintainability", "docs"})
     if path.startswith(("apps/writer/packaging/flatpak/", "tests/writer-flatpak/")) or path in {
@@ -188,13 +186,9 @@ def lanes_for_path(path, *, base=None, head=None):
         if path.startswith("crates/recite-benchmarks/"):
             return RUST | {"workflow-performance"}
         return RUST
-    if path.startswith("apps/writer/") or path in {
+    if path.startswith(("apps/writer/", "tests/writer-native/")) or path in {
         "tools/ast-grep/rules/rust-writer-palette.yml",
-        "tools/ast-grep/rules/rust-writer-cold-projections.yml",
-        "tools/ast-grep/tests/rust-writer-cold-projections-test.yml",
         "tools/ast-grep/tests/rust-writer-palette-test.yml",
-        "scripts/check-writer-native-accessibility.py",
-        "scripts/writer_accessibility_host.py",
     }:
         lanes = {"writer", "maintainability"}
         if path.startswith("apps/writer/crates/authoring/"):

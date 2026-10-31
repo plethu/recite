@@ -72,33 +72,28 @@ its [guide](../../apps/writer/guide.md) owns current workflows.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Xilem is the default frontend for the ongoing port and evaluation. Freya remains available
-explicitly for comparison and fallback. Default selection does not establish replacement readiness:
-paired follow-ups close the identified writing, translation and auxiliary workspace findings, while
-final comparative use and physical-host acceptance remain pending in
-[Writer acceptance](../../apps/writer/acceptance.md). The Writer manifest owns frontend selection
-for the launcher and package builders; both install as `recite-writer` with the same application
-identity and shared project, recovery and personal configuration formats. Presentation and focus
-belong to the frontend; source editing belongs to the shared authoring model, and file replacement,
-conflict protection and recovery belong to `recite-writer-session`. Language, configuration,
-compiler and runtime ownership remains outside both frontends. Exercise regression checks before
-upgrading the pinned toolkit.
+Xilem is the Writer frontend; the Freya frontend was retired on 2026-10-31 (see
+[Writer acceptance](../../apps/writer/acceptance.md#frontend-decision)), where physical-host
+acceptance remains pending. The `recite-writer` package owns presentation and focus; source editing
+belongs to the shared authoring model, and file replacement, conflict protection and recovery belong
+to `recite-writer-session`. Language, configuration, compiler and runtime ownership remains outside
+the frontend. Exercise regression checks before upgrading the pinned toolkit.
 
 The Xilem frontend covers retained project documents, beat/line/reply creation, paged Script
 reading, manuscript editing, diagnostics, checked save, recovery and explicit IDE handoff/reload.
 File switching preserves drafts, selection, accepted edit history and recovery leases; closing and
 Save all consider inactive documents too. It uses an external editor for source repair rather than
 embedding a second source editor. Map, project tools, settings, localisation, preview and linked
-destinations use shared product owners with frontend-specific presentation. Freya retains its
-embedded Source workflow. Automated parity and owned Linux drills do not establish physical IME,
-screen-reader usability, hardware rendering, Windows/macOS acceptance or a passing dependency audit;
-these remain separate acceptance requirements.
+destinations use shared product owners with frontend-specific presentation. Automated parity and
+owned Linux drills do not establish physical IME, screen-reader usability, hardware rendering,
+Windows/macOS acceptance or a passing dependency audit; these remain separate acceptance
+requirements.
 
 Project-wide beat rename uses the shared reviewed plan and grouped history. Xilem moves the sole
 project owner to a worker separately for Review and Apply, retaining a read-only writing projection
 and mounted native fields. The durable grouped journal commits before the model swap; cancellation
-after that point cannot discard the returned owner. Both frontends exclude newer edits, navigation
-and Save until document recovery and the journal's final directory sync complete. Known checkpoint
+after that point cannot discard the returned owner. The Writer excludes newer edits, navigation and
+Save until document recovery and the journal's final directory sync complete. Known checkpoint
 failures offer Retry; an unexpected worker panic requires closing with recovery and reopening.
 Global Undo/Redo reaches grouped history after local document edits. Save all includes the staged
 source, references and manifest in the shared save sequence. Successful publication retires
@@ -157,7 +152,7 @@ beat remains a stable Project-menu command and keeps checked Apply semantics. Re
 explicitly restores the admitted passage or clears prose focus when none is admitted. Closing a
 picker restores a live origin or an admitted field; it never selects an arbitrary writing field.
 
-Both frontends use the same personal configuration, palette and command wording. Xilem's welcome,
+The Writer uses the shared personal configuration, palette and command wording. Its welcome,
 temporary examples and project creation use shared launch/session owners. Its personal settings
 apply theme and scale without replacing mounted editor history; shortcut edits use shared conflict
 validation. Ordinary exit confirmation never weakens the unsaved-work guard. The project form keeps
@@ -179,13 +174,12 @@ producer authority, and require explicit baseline reload before another Apply. F
 navigation guarded until a checked retry restores project context. Unstarted reloads preserve prior
 authority; failed observations quarantine it, and cancellation cannot erase observed saved changes.
 
-Configured native shortcuts use the same validated chord matcher in both frontends. Xilem routes
-commands before text input, retains native text undo/redo, and scopes Apply to the focused
-manuscript. Composition bypasses application shortcuts; document, screen and binding changes
-invalidate queued commands. Focus acknowledgements refresh native context independently of command
-freshness, preserving a queued Save for the same admitted document. Unbound Control/Meta chords
-cannot become literal text. This does not establish physical IME or keyboard-layout acceptance on
-every platform.
+Configured native shortcuts use the shared validated chord matcher. Xilem routes commands before
+text input, retains native text undo/redo, and scopes Apply to the focused manuscript. Composition
+bypasses application shortcuts; document, screen and binding changes invalidate queued commands.
+Focus acknowledgements refresh native context independently of command freshness, preserving a
+queued Save for the same admitted document. Unbound Control/Meta chords cannot become literal text.
+This does not establish physical IME or keyboard-layout acceptance on every platform.
 
 Writing Focus overlays the selected workspace without replacing its manuscript widgets or native
 text history. Leaving Focus restores and reveals the previous valid native focus target, with a
@@ -207,7 +201,7 @@ query focus follows the new scope. Closing restores the invoking field. Workers 
 reconcile while the dialog is open. Ordinary prose Save includes the current field without a
 separate Apply action; the stable toolbar and unsaved indicator do not expose that staging step.
 
-Saved-text hits retain their frozen passage anchor when available. Both frontends open that passage
+Saved-text hits retain their frozen passage anchor when available. The Writer opens that passage
 through checked location selection; unfrozen text retains beat navigation. Excerpts centre the first
 matching prose word and remain bounded without retaining the source file. Current-beat lookup in
 Xilem searches line/reply wording and labels through shared passage snapshots, including the active
@@ -259,20 +253,20 @@ sequence. Close waits for both layers and their recovery; cancelling close prese
 writes. Unexpected catalogue failures quarantine editing and close using only admitted recovery. An
 idle, saved catalogue permits project replacement. Drafts, recovery failure, active saves and
 exclusive or quarantined owners still block it. Prepared project loads cannot replace a Writer while
-its close flow is active. Wording choices and plural guidance share one catalogue projection across
-frontends. Translation typing reuses it; a new PO snapshot or changed form count invalidates it. The
-bilingual workspace retains scene navigation and shows a bounded page of source-ordered beat
-passages with independently editable translations, review state and targeted saves. Missing or
-ambiguous source wordings require source review rather than choosing an arbitrary catalogue entry.
-Fields retain native history through reflow, other rows' edits, saves and catalogue worker checkout;
-off-page fields may retire while their catalogue drafts remain recoverable. Source or catalogue
-replacement invalidates the projection. Queued field actions require the active entry and catalogue
-lifetime, and Save from a field publishes that entry without applying manuscript drafts. Opening
-Localise for the current beat prepares accepted source without applying a manuscript or recovered
-Source draft; Source retains its remembered Script selection, and Map supplies its visible selected
-beat. Preparation validates a unique projectable declaration before publishing the bilingual view.
-Native entry components page wording choices, plural forms and long rule text independently. Invalid
-plural metadata disables the entry save while retaining drafts. Wide entry details pair source and
+its close flow is active. Wording choices and plural guidance share one catalogue projection.
+Translation typing reuses it; a new PO snapshot or changed form count invalidates it. The bilingual
+workspace retains scene navigation and shows a bounded page of source-ordered beat passages with
+independently editable translations, review state and targeted saves. Missing or ambiguous source
+wordings require source review rather than choosing an arbitrary catalogue entry. Fields retain
+native history through reflow, other rows' edits, saves and catalogue worker checkout; off-page
+fields may retire while their catalogue drafts remain recoverable. Source or catalogue replacement
+invalidates the projection. Queued field actions require the active entry and catalogue lifetime,
+and Save from a field publishes that entry without applying manuscript drafts. Opening Localise for
+the current beat prepares accepted source without applying a manuscript or recovered Source draft;
+Source retains its remembered Script selection, and Map supplies its visible selected beat.
+Preparation validates a unique projectable declaration before publishing the bilingual view. Native
+entry components page wording choices, plural forms and long rule text independently. Invalid plural
+metadata disables the entry save while retaining drafts. Wide entry details pair source and
 translation columns; compact forms carry a bounded source excerpt beside the field, with full source
 context below. Translation prose follows reading size independently of control scale. Nearby source
 excludes wording variants of the current passage. Catalogue source actions use the ordinary checked
@@ -282,15 +276,14 @@ navigation; opening the pane does not restart a run. Existing PO language metada
 BCP-47 tags, including private-use and extension tags, independently of the catalogue-creation
 picker. Disk decisions require the exact inspected local catalogue and external fingerprint. Keeping
 drafts preserves compatible translations for review against the adopted PO metadata; using disk
-explicitly discards those drafts. Catalogue creation and source refresh share extraction and review
-policy with Freya. Both native owners are checked out for source operations and returned on
+explicitly discards those drafts. Catalogue creation and source refresh use the shared extraction
+and review policy. The native owner is checked out for source operations and returned on
 cancellation, failed dispatch and unwind. Unresolved current or retained source fields refuse
 extraction. Refresh Apply re-extracts source and checks the exact reviewed catalogue before
-publication. A completed PO write remains an applied result even if recovery subsequently fails;
-both frontends surface that warning. Configured preview captures the same locale, wording, typed
-values and saved-or-draft catalogue policy in both frontends. Native controls page interpolation
-inputs and language results; staged changes do not replace an active run. Saved catalogue bytes are
-read on the worker.
+publication. A completed PO write remains an applied result even if recovery subsequently fails; the
+Writer surfaces that warning. Configured preview captures the locale, wording, typed values and
+saved-or-draft catalogue policy. Native controls page interpolation inputs and language results;
+staged changes do not replace an active run. Saved catalogue bytes are read on the worker.
 
 Xilem keeps Start/Restart and preparation cancellation outside the scrolling preview content,
 derives their captions and availability from the existing preparation lifecycle, and shows captured
@@ -379,9 +372,9 @@ completes despite cancellation; a late durability failure reports adoption with 
 Xilem composes this workflow through the existing exclusive project worker. Its comparison mounts
 one bounded changed passage at a time. A separate IDE merge draft materializes pending prose without
 applying it to the live document; Import validates against the captured context and inspected disk,
-then adopts one undoable source replacement. Only explicit Save writes the source file. Both
-frontends retain the full compared wording and emphasise changed words with bold and underline. This
-cue works in monochrome. Comparison wrapping accounts for the scene rail and personal UI scale.
+then adopts one undoable source replacement. Only explicit Save writes the source file. The Writer
+retains the full compared wording and emphasise changed words with bold and underline. This cue
+works in monochrome. Comparison wrapping accounts for the scene rail and personal UI scale.
 Successful decisions replace unresolved choices with the specific adopted outcome, source identity,
 Save behavior and recovery access. Recovery or presentation warnings preserve an already-adopted
 outcome. Publication on the active disk workspace reveals the completed outcome's preferred Return
@@ -417,7 +410,7 @@ worker for destruction. The runtime owns its caption and catalogue provenance, s
 trials recover their own metadata when switching files. A failed restart preserves that provenance
 with the prior run.
 
-Both frontends inspect that run through the shared trace projection. Events, translation lookups and
+The Writer inspects that run through the shared trace projection. Events, translation lookups and
 plural lookups retain their own capture order. Presentation mounts eight summaries or six record
 fields at a time; complete text and hexadecimal digest values use bounded pages. Typed arguments,
 pending versus committed choices and lookup attempts remain distinct. Typing and failed restart

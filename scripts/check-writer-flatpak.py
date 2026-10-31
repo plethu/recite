@@ -3,19 +3,15 @@
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 import tomllib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from writer_frontend import package_for
-
 APP_ID = "io.github.plethu.recite"
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "apps/writer/packaging/flatpak" / f"{APP_ID}.yml"
-SKIA_REVISION = "61e7ca4e99062cdd0ab69445d5963fb3365778f6"
 
 
 def require(condition: bool, message: str) -> None:
@@ -23,23 +19,10 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
-def check_nix_skia_revision(source: str) -> None:
-    blocks = re.findall(
-        r"^\s*skiaRepo\s*=\s*pkgs\.fetchFromGitHub\s*\{(.*?)^\s*\};",
-        source,
-        re.MULTILINE | re.DOTALL,
-    )
-    require(len(blocks) == 1, "expected one Nix Skia source declaration")
-    revisions = re.findall(r'^\s*rev\s*=\s*"([^"]+)";', blocks[0], re.MULTILINE)
-    require(revisions == [SKIA_REVISION], "Nix and Flatpak must use the same Skia revision")
-
-
-def check_builder_manifest(frontend=None) -> None:
-    is_freya = package_for(frontend) == package_for("freya")
-    manifest_path = MANIFEST.with_name(f"{APP_ID}-freya.yml") if is_freya else MANIFEST
+def check_builder_manifest() -> None:
     manifest = json.loads(
         subprocess.check_output(
-            ["flatpak-builder", "--show-manifest", str(manifest_path)],
+            ["flatpak-builder", "--show-manifest", str(MANIFEST)],
             text=True,
             timeout=20,
         )
@@ -73,7 +56,6 @@ def check_builder_manifest(frontend=None) -> None:
             ".git",
             "target",
             "apps/writer/target",
-            "apps/writer/vendor/freya-code-editor/target",
             "editors/zed/target",
             "node_modules",
             "docs-site/node_modules",
@@ -85,50 +67,14 @@ def check_builder_manifest(frontend=None) -> None:
     )
     env = writer["build-options"]["env"]
     require(env["CARGO_NET_OFFLINE"] == "true", "Cargo must build offline")
-    expected_frontend = "freya" if is_freya else "xilem"
     require(
-        any(
-            f"writer_frontend.py --frontend {expected_frontend}" in command
-            for command in writer["build-commands"]
-        ),
-        "manifest must build the selected Writer frontend",
+        any("-p recite-writer " in command for command in writer["build-commands"]),
+        "manifest must build the Writer package",
     )
-    if not is_freya:
-        require(len(manifest["modules"]) == 1, "Xilem must not build Freya's GN/Skia stack")
-        require(not any(key.startswith("SKIA_") for key in env), "unexpected Xilem Skia input")
-        return
-    require(
-        "org.freedesktop.Sdk.Extension.llvm22" in manifest["sdk-extensions"],
-        "Freya requires the LLVM SDK extension",
-    )
-    require(
-        env["SKIA_SOURCE_DIR"] == "/run/build/recite-writer/skia",
-        "Skia must build from pinned source",
-    )
-    skia = next(
-        source
-        for source in writer["sources"]
-        if isinstance(source, dict) and source.get("dest") == "skia"
-    )
-    require(skia["commit"] == SKIA_REVISION, "wrong Skia revision")
-    externals = {
-        source.get("dest"): source.get("commit")
-        for source in writer["sources"]
-        if isinstance(source, dict)
-    }
-    require(
-        {
-            "skia/third_party/externals/wuffs": "e3f919ccfe3ef542cfc983a82146070258fb57f8",
-            "skia/third_party/externals/vulkanmemoryallocator": "eb744ea7a2b17040121b4bbb4d6f9e8a77e3cae7",
-            "skia/third_party/externals/spirv-cross": "b8fcf307f1f347089e3c46eb4451d27f32ebc8d3",
-        }.items()
-        <= externals.items(),
-        "missing Skia DEPS revisions",
-    )
+    require(len(manifest["modules"]) == 1, "the Writer needs no separately built modules")
 
 
 def check_sources_and_metadata() -> None:
-    check_nix_skia_revision((ROOT / "nix/packages.nix").read_text())
     sources = json.loads((MANIFEST.parent / "cargo-sources.json").read_text())
     cargo_lock = tomllib.loads((ROOT / "apps/writer/Cargo.lock").read_text())
     expected = {
@@ -245,11 +191,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("output", nargs="?", type=Path)
     parser.add_argument("--builder", action="store_true", help="also parse with flatpak-builder")
-    parser.add_argument("--frontend", choices=("xilem", "freya"))
     args = parser.parse_args()
     check_sources_and_metadata()
     if args.builder or args.output is not None:
-        check_builder_manifest(args.frontend)
+        check_builder_manifest()
     if args.output is not None:
         check_export(args.output)
     print("Writer Flatpak checks passed")
