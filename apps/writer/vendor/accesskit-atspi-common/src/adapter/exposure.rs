@@ -145,12 +145,15 @@ impl AdapterChangeHandler<'_> {
         {
             return;
         }
-        self.exposure.children_events.extend(
-            NodeWrapper(new)
-                .children_changes(&NodeWrapper(old))
-                .into_iter()
-                .map(|event| (new.id(), event)),
+        let (old_filter, new_filter) = (&self.exposure.old_filter, &self.exposure.new_filter);
+        let events = NodeWrapper(new).children_changes(
+            &NodeWrapper(old),
+            &|node| old_filter.filter(node),
+            &|node| new_filter.filter(node),
         );
+        self.exposure
+            .children_events
+            .extend(events.into_iter().map(|event| (new.id(), event)));
     }
 
     pub(super) fn emit_children_changed(&mut self) {

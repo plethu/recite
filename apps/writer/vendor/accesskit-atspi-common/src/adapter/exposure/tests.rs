@@ -202,7 +202,9 @@ fn camera_translation_across_the_clip_registers_exactly_the_changed_exposure() {
     let adapter = adapter_for(nodes, ledger.clone());
     let before = exposed(&adapter);
     *ledger.0.lock().unwrap() = Ledger::default();
+    crate::filters::take_filter_calls();
     let handler = translate(&adapter, camera, (0., -2_400.));
+    let calls = crate::filters::take_filter_calls();
     let queued = handler.exposure.children_events.len();
     drop(handler);
     let after = exposed(&adapter);
@@ -217,4 +219,7 @@ fn camera_translation_across_the_clip_registers_exactly_the_changed_exposure() {
     );
     assert!(!ledger.registered.is_empty() && !ledger.unregistered.is_empty());
     assert!(queued > 0, "the viewport's exposed child edges changed");
+    // Child-edge diffs reuse the per-state caches; registering and retiring the changed
+    // controls accounts for the rest. Uncached child diffs took 270 calls for this input.
+    assert!(calls <= 36, "exposure filter work regressed: {calls}");
 }

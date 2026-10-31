@@ -56,10 +56,11 @@ impl NodeWrapper<'_> {
         self.0.id()
     }
 
-    fn filtered_child_ids(
-        &self,
-    ) -> impl DoubleEndedIterator<Item = NodeId> + FusedIterator<Item = NodeId> + '_ {
-        self.0.filtered_children(&filter).map(|child| child.id())
+    fn filtered_child_ids<'f>(
+        &'f self,
+        filter: &'f impl Fn(&Node) -> FilterResult,
+    ) -> impl DoubleEndedIterator<Item = NodeId> + FusedIterator<Item = NodeId> + 'f {
+        self.0.filtered_children(filter).map(|child| child.id())
     }
 
     pub(crate) fn role(&self) -> AtspiRole {
@@ -606,9 +607,16 @@ impl NodeWrapper<'_> {
         }
     }
 
-    pub(crate) fn children_changes(&self, old: &NodeWrapper<'_>) -> Vec<ObjectEvent> {
-        let old_children = old.filtered_child_ids().collect::<Vec<_>>();
-        let new_children = self.filtered_child_ids().collect::<Vec<_>>();
+    /// Child edges added or removed between two tree states, each filtered by its own state's
+    /// exposure rule.
+    pub(crate) fn children_changes(
+        &self,
+        old: &NodeWrapper<'_>,
+        old_filter: &impl Fn(&Node) -> FilterResult,
+        new_filter: &impl Fn(&Node) -> FilterResult,
+    ) -> Vec<ObjectEvent> {
+        let old_children = old.filtered_child_ids(old_filter).collect::<Vec<_>>();
+        let new_children = self.filtered_child_ids(new_filter).collect::<Vec<_>>();
         let old_ids = old_children.iter().copied().collect::<std::collections::HashSet<_>>();
         let new_ids = new_children.iter().copied().collect::<std::collections::HashSet<_>>();
         let mut events = Vec::new();

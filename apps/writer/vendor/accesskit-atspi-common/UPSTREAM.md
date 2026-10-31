@@ -50,3 +50,9 @@ parents' child edges diffed. Unchanged nodes therefore receive no notifications,
 Map panning had spent about half its client CPU here. A fixed camera translation of 128 controls now
 updates one node with at most two uncached filter calls, previously 3,112, and emits no events. A
 translation across the clip registers and retires exactly the direct filter's changed exposure.
+
+[`../patches/accesskit-cached-child-edges.patch`](../patches/accesskit-cached-child-edges.patch),
+applied after the region patch, diffs queued child edges through the same per-state caches.
+Scrolling a manuscript queues many parents whose children cross the clip; their uncached child
+filtering had become most of the remaining adapter cost. The fixed translation across the clip now
+makes 36 uncached filter calls, previously 270, all from registering and retiring changed controls.
