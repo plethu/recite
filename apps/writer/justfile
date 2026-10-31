@@ -18,8 +18,6 @@ check:
     just writer packaging
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
-    cargo test --locked --manifest-path apps/writer/Cargo.toml -p accesskit_consumer@0.36.0 --lib
-    cargo test --locked --manifest-path apps/writer/Cargo.toml -p accesskit_atspi_common@0.18.1 --lib
     cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings -D clippy::excessive_nesting
     cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-features --lib --bins -- -D warnings -D clippy::cognitive_complexity -D clippy::excessive_nesting
     just writer heap

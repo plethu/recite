@@ -101,9 +101,6 @@
           cargoLock = ../apps/writer/Cargo.lock;
           extraDummyScript = ''
             cp ${../apps/writer/Cargo.lock} "$out/apps/writer/Cargo.lock"
-            # Upstream toolkit crates consume these patches' public APIs.
-            # Stub application crates, but compile the actual dependency patches.
-            cp -Rf ${../apps/writer/vendor}/. "$out/apps/writer/vendor/"
           '';
         };
         buildPhaseCargoCommand = "cargo build --profile release ${writerArgs.cargoExtraArgs}";

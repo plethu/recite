@@ -1,6 +1,5 @@
 [workspace]
 resolver = "3"
-exclude = ["vendor/accesskit-atspi-common", "vendor/accesskit-consumer"]
 members = ["crates/authoring", "crates/grammar", "crates/session", "crates/xilem"]
 
 [workspace.package]
@@ -36,7 +35,7 @@ debug = "line-tables-only"
 debug = 0
 
 [patch.crates-io]
-accesskit_atspi_common = { path = "vendor/accesskit-atspi-common" }
-accesskit_consumer = { path = "vendor/accesskit-consumer" }
 # Forked fixes; see RECITE.md on each branch.
+accesskit_atspi_common = { git = "https://github.com/plethu/accesskit", rev = "9fa7febed546dd525f6bbe7291a397014d6528cf" }
+accesskit_consumer = { git = "https://github.com/plethu/accesskit", rev = "9fa7febed546dd525f6bbe7291a397014d6528cf" }
 copypasta = { git = "https://github.com/plethu/copypasta", rev = "98fba518cc6f6f97ba2fa87d82fb0390c69c7584" }

@@ -60,11 +60,7 @@ Packages/com.recite.dialogue/Tests~/Headless/obj/
 .agents/private/
 .agents/tmp/
 
-# Maintained dependency patch; preserve it despite machine-wide vendor ignores.
-!apps/writer/vendor/
 # Reusable task results; execution state is never source.
 /.turbo/
 /.jj/
 
-!apps/writer/vendor/patches/
-!apps/writer/vendor/patches/**
