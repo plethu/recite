@@ -1,11 +1,6 @@
 [workspace]
 resolver = "3"
-exclude = [
-    "vendor/xilem/*",
-    "vendor/copypasta",
-    "vendor/accesskit-atspi-common",
-    "vendor/accesskit-consumer"
-]
+exclude = ["vendor/accesskit-atspi-common", "vendor/accesskit-consumer"]
 members = ["crates/authoring", "crates/grammar", "crates/session", "crates/xilem"]
 
 [workspace.package]
@@ -43,9 +38,5 @@ debug = 0
 [patch.crates-io]
 accesskit_atspi_common = { path = "vendor/accesskit-atspi-common" }
 accesskit_consumer = { path = "vendor/accesskit-consumer" }
-copypasta = { path = "vendor/copypasta" }
-
-[patch."https://github.com/linebender/xilem"]
-masonry = { path = "vendor/xilem/masonry" }
-masonry_core = { path = "vendor/xilem/masonry_core" }
-masonry_winit = { path = "vendor/xilem/masonry_winit" }
+# Forked fixes; see RECITE.md on each branch.
+copypasta = { git = "https://github.com/plethu/copypasta", rev = "98fba518cc6f6f97ba2fa87d82fb0390c69c7584" }

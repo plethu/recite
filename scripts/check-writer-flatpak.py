@@ -90,6 +90,16 @@ def check_sources_and_metadata() -> None:
         (source["url"], source["sha256"]) for source in sources if source["type"] == "archive"
     }
     require(actual == expected, "Cargo sources must match the writer lockfile")
+    # Lockfile git sources read `git+URL?rev=REV#COMMIT`; the generator records URL and COMMIT.
+    expected_git = {
+        (package["source"][4:].split("?")[0].split("#")[0], package["source"].rsplit("#", 1)[1])
+        for package in cargo_lock["package"]
+        if package.get("source", "").startswith("git+")
+    }
+    actual_git = {
+        (source["url"], source["commit"]) for source in sources if source["type"] == "git"
+    }
+    require(actual_git == expected_git, "Cargo git sources must match the writer lockfile")
 
     desktop = (MANIFEST.parent / f"{APP_ID}.desktop").read_text()
     require("Exec=recite-writer %u" in desktop, "desktop entry must accept links")

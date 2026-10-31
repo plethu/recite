@@ -12,8 +12,6 @@
     "../.clang-format"
   ],
   "excludes": [
-    "../apps/writer/vendor/xilem/**",
-    "../apps/writer/vendor/copypasta/**",
     "../apps/writer/vendor/accesskit-atspi-common/README.md",
     "../apps/writer/vendor/accesskit-atspi-common/CHANGELOG.md",
     "../apps/writer/vendor/accesskit-atspi-common/.cargo_vcs_info.json",

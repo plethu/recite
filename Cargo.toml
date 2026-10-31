@@ -44,8 +44,6 @@ critical_mutation_files = [
 [workspace.metadata.typos.files]
 # Preserve upstream dependency prose (CONTRIBUTING.md).
 extend-exclude = [
-    "apps/writer/vendor/xilem",
-    "apps/writer/vendor/copypasta",
     "apps/writer/vendor/accesskit-consumer/README.md",
     "apps/writer/vendor/accesskit-consumer/CHANGELOG.md"
 ]

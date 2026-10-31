@@ -1,6 +1,0 @@
----
-source: masonry/src/doc/color_rectangle.rs
-assertion_line: 257
-expression: harness.root_widget()
----
-ColorRectangle

@@ -10,7 +10,6 @@ cp "$repo_root/scripts/check-lint-suppressions.sh" \
   "$repo_root/scripts/check-lint-suppressions.py" \
   "$repo_root/scripts/lint_suppression_ast.py" \
   "$repo_root/scripts/lint_suppression_scan.py" \
-  "$repo_root/scripts/lint_suppression_upstream.py" \
   "$repo_root/scripts/lint_suppression_meta.py" "$test_root/repo/scripts/"
 chmod +x "$test_root/repo/scripts/check-lint-suppressions.sh"
 git -C "$test_root/repo" init -q -b main
@@ -417,6 +416,3 @@ git -C "$test_root/repo" checkout "$base_tip" -- crates/demo/src/independent.rs
 git -C "$test_root/repo" commit -qm head-addition
 check_fails "$base_tip" HEAD "lint suppression policy violation"
 echo 'merge-base suppression comparison passed'
-# shellcheck source=tests/lint-suppressions/upstream.sh
-source "$repo_root/tests/lint-suppressions/upstream.sh"
-check_upstream_suppressions "$test_root"
