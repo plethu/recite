@@ -4,13 +4,13 @@ use crate::tests::support;
 use std::sync::Arc;
 use xilem::masonry::{
     app::{RenderRootOptions, WindowSizePolicy},
-    core::NewWidget,
+    core::{NewWidget, Widget},
     peniko::Blob,
     theme,
     widgets::{IndexedStack, Label, TextInput},
 };
 
-fn root(widget: NewWidget<impl xilem::masonry::core::Widget>) -> RenderRoot {
+fn root(widget: NewWidget<impl Widget>) -> RenderRoot {
     let mut root = RenderRoot::new(
         widget,
         |_| {},
