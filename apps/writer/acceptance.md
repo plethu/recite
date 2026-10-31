@@ -78,7 +78,14 @@ Masonry stopped formatting a parent type name for every recursion. Another match
 client CPU by 16–21% for drags and wheel panning at 69% zoom and 7–16% at 100%. Vello rendering and
 Masonry's whole-tree paint traversal now lead the client profile, followed by glyph hinting: Vello
 caches eight hinting instances and Writer's visible font sizes exceed that. Disabling hinting for
-Map card text alone did not measurably change client CPU.
+Map card text alone did not measurably change client CPU. The Map dot grid then became one repeating
+tile per zoom and device scale instead of thousands of encoded dots per frame; native captures match
+the previous dot weight, and overview panning client CPU fell by about a third. A matched native
+editing replay types 77 characters and wheel-scrolls a 150-line beat: diffing AT-SPI child edges
+through the cached filters and keeping reading rows in content coordinates reduced scrolling client
+CPU by 17% and typing by 5%, with steady 16 ms frames. Typing's remaining Writer-side cost is the
+whole-view rebuild per keystroke, about 13% of client CPU, spread across Xilem's diffing of
+unchanged views.
 
 The next refinement restores selected-card and empty-state halftone and removes the abrupt hover
 border on quiet actions. Saved-text search now shows bounded excerpts around matching words and
