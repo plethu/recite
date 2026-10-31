@@ -60,6 +60,18 @@ versus Freya's 32 ms. An earlier post-fix checkpoint recorded 18–19 ms scroll 
 remain in the index. These measure client frame readiness, not physical presentation latency or
 physical input-to-photon performance.
 
+Local panning then removed the per-event Writer rebuild and the per-descendant accessibility resend.
+The headless fixed-cost regression drags 1,080 px over a 128-beat scene in 180 moves: Writer
+rebuilds fell from 182 to 8 and emitted accessibility nodes from 17,599 to 556, with at most two
+nodes on frames that only translate retained content. Local and committed renders are
+pixel-identical at the same position in four directions, including overview. A matched native GPU
+replay against the preceding build used the Relay Hub fixture on the owned compositor's default
+1280×720 output, with the screen-reader bus enabled. At 69% zoom, short-pan p95 fell from 32 to 17
+ms with 95 rather than 80–82 callbacks, boundary-pan p95 from 32 to 17 ms, and client CPU by 12–25%
+across trajectories. At 100% both builds already held 16 ms medians. Pixman runs were unchanged and
+remain render-bound. The earlier 2040×1230 configuration was not repeated. Remaining client CPU is
+mostly the AT-SPI adapter reconciling the translated clip region, then per-frame scene encoding.
+
 The next refinement restores selected-card and empty-state halftone and removes the abrupt hover
 border on quiet actions. Saved-text search now shows bounded excerpts around matching words and
 opens the frozen matching passage through shared checked navigation. Xilem also searches the current
@@ -80,6 +92,16 @@ experiment. Hardware and fallback results are distinct evidence. Grid batching i
 work; a custom hard-shadow experiment did not improve panning and was removed. The remaining timing
 differences and physical assistive-technology evidence stay open. Retain Freya for the next
 comparison.
+
+A disposable Vello Hybrid build has since been measured; it is not adopted. Selecting it needed two
+trial-only changes: Xilem inherits `xilem_masonry` with default features, which always enable Vello
+and take precedence, and Hybrid rejects Masonry's box shadow, which is a blurred rounded rectangle
+even with zero blur, so every Map card failed to render. With hard shadows filled directly, Hybrid
+rendered the Relay Hub Map without visible differences. Under the two-CPU software bound at 69% zoom
+it moved short-pan medians from 48 to 32 ms, overview from 48 to 32 ms and scrolling from 29–34 to
+24 ms, with 19–53% more callbacks. On the GPU, pacing was unchanged and client CPU rose 16–73% for
+short, scroll and overview pans. Hybrid therefore suits a software fallback, which the pinned
+toolkit can select only at compile time.
 
 Malformed duplicate beat names now retain independent native rows and their own excerpt text through
 rebuilds, culling and remounting. Removed-row messages cannot activate a replacement; ordinary beat

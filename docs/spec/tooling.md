@@ -142,6 +142,14 @@ current Linux adapter exposes the item state/action, not a container Selection i
 labels abbreviate to a bounded number of visual lines while preserving their complete native
 accessibility text. The clamped layout is reused during camera translation.
 
+Cards, routes and the dot grid are mounted and drawn a fixed overscan beyond each viewport edge.
+Drag and wheel panning translate that retained content without rebuilding Writer state, and commit
+the camera through the ordinary gesture or pan input when the overscan would be exposed, when a drag
+is released and once wheel input settles. Escape and pointer cancellation still restore the
+gesture's origin. A local frame and the committed frame at the same position render identically. The
+routes canvas keeps the visible viewport as its accessible bounds, and translating it updates that
+container's accessibility node rather than every mounted descendant.
+
 An admitted manuscript passage owns draft validation independently of native focus. Selecting Script
 does not itself request passage focus; explicit passage navigation and structural creation do. Clean
 editor context follows actual field focus, while unapplied draft/error context survives blur. Read
