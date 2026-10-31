@@ -1,0 +1,134 @@
+//! Reading-position capture runs around every native event; it must not rescan the window.
+use super::*;
+use crate::tests::support;
+use std::{cell::Cell, sync::Arc};
+use xilem::masonry::{
+    app::{RenderRootOptions, WindowSizePolicy},
+    core::NewWidget,
+    peniko::Blob,
+    theme,
+    widgets::{IndexedStack, Label},
+};
+
+std::thread_local! {
+    pub(super) static WALKED: Cell<usize> = const { Cell::new(0) };
+}
+fn walked() -> usize {
+    WALKED.with(|walked| walked.replace(0))
+}
+
+/// A manuscript viewport beside a stashable sibling holding many unrelated widgets.
+fn mounted(writer: &crate::Writer, active: usize) -> (RenderRoot, WidgetId) {
+    let manuscript = NewWidget::new(Portal::new(NewWidget::new(
+        Flex::column().with_fixed(NewWidget::new(Label::new("Manuscript"))),
+    )))
+    .with_props(ReadingViewport::capture(writer));
+    let portal = manuscript.id();
+    let map = (0..200).fold(Flex::column(), |column, index| {
+        column.with_fixed(NewWidget::new(Label::new(format!("Map card {index}"))))
+    });
+    let stack = IndexedStack::new()
+        .with(manuscript)
+        .with(NewWidget::new(map))
+        .with_active_child(active);
+    let mut root = RenderRoot::new(
+        NewWidget::new(stack),
+        |_| {},
+        RenderRootOptions {
+            default_properties: Arc::new(theme::default_property_set()),
+            use_system_fonts: false,
+            size_policy: WindowSizePolicy::User,
+            size: (900, 500).into(),
+            scale_factor: 1.,
+            test_font: Some(Blob::new(Arc::new(
+                include_bytes!(
+                    "../../../../../../assets/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf"
+                )
+                .to_vec(),
+            ))),
+        },
+    );
+    root.redraw();
+    (root, portal)
+}
+fn show(root: &mut RenderRoot, child: usize) {
+    let stack = root.get_layer_root(0).id();
+    root.edit_widget(stack, |mut widget| {
+        IndexedStack::set_active_child(&mut widget.downcast(), child);
+    });
+    root.redraw();
+}
+
+#[test]
+fn capture_reuses_the_manuscript_viewport_while_it_is_shown_or_stashed() {
+    let directory =
+        support::project(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n")
+            .unwrap();
+    let writer = support::open(&directory).unwrap();
+    let (mut root, portal) = mounted(&writer, 0);
+    let mut position = Position::default();
+    walked();
+    position.capture(&root);
+    assert!(walked() > 0, "the first capture finds the viewport");
+    assert_eq!(
+        position.previous.as_ref().map(|snapshot| snapshot.portal),
+        Some(portal)
+    );
+    for _ in 0..8 {
+        position.capture(&root);
+    }
+    assert_eq!(
+        walked(),
+        0,
+        "a known viewport is revalidated, not searched for"
+    );
+    show(&mut root, 1);
+    for _ in 0..8 {
+        position.capture(&root);
+    }
+    assert!(
+        position.previous.is_none(),
+        "a stashed manuscript has no reading position"
+    );
+    assert_eq!(
+        walked(),
+        0,
+        "a stashed viewport does not trigger a window walk"
+    );
+    show(&mut root, 0);
+    position.capture(&root);
+    assert_eq!(
+        position.previous.as_ref().map(|snapshot| snapshot.portal),
+        Some(portal)
+    );
+    assert_eq!(walked(), 0);
+}
+
+#[test]
+fn a_workspace_opened_with_the_manuscript_stashed_finds_it_once() {
+    let directory =
+        support::project(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n")
+            .unwrap();
+    let writer = support::open(&directory).unwrap();
+    let (mut root, portal) = mounted(&writer, 1);
+    let mut position = Position::default();
+    walked();
+    position.capture(&root);
+    assert!(position.previous.is_none());
+    assert!(walked() > 0);
+    for _ in 0..8 {
+        position.capture(&root);
+    }
+    assert_eq!(
+        walked(),
+        0,
+        "the stashed viewport is remembered after one search"
+    );
+    show(&mut root, 0);
+    position.capture(&root);
+    assert_eq!(
+        position.previous.as_ref().map(|snapshot| snapshot.portal),
+        Some(portal)
+    );
+    assert_eq!(walked(), 0);
+}

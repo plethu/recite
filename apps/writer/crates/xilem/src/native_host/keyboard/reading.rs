@@ -3,6 +3,7 @@ use super::*;
 use crate::{attention::PassageField, view::ReadingViewport};
 use xilem::masonry::{
     accesskit::{Action as NativeAction, ActionRequest, TreeId},
+    core::WidgetRef,
     kurbo::{Point, Rect},
     widgets::{Flex, Portal},
 };
@@ -21,6 +22,9 @@ struct Snapshot {
 #[derive(Default)]
 pub(super) struct Position {
     previous: Option<Snapshot>,
+    /// The manuscript viewport, revalidated before reuse. Synchronization runs around every
+    /// native event, and Map workspaces keep it stashed rather than unmounted.
+    portal: Option<WidgetId>,
 }
 impl Position {
     pub fn synchronize(&self, root: &mut RenderRoot) {
@@ -38,7 +42,7 @@ impl Position {
         {
             return;
         }
-        let Some(current) = snapshot(root) else {
+        let Some(current) = manuscript(root, self.portal).and_then(snapshot) else {
             return;
         };
         if current.portal != previous.portal || !current.scope.shifted_from(&previous.scope) {
@@ -79,52 +83,73 @@ impl Position {
         }
     }
     pub fn capture(&mut self, root: &RenderRoot) {
-        self.previous = snapshot(root);
+        let portal = manuscript(root, self.portal);
+        self.portal = portal.map(|portal| portal.id());
+        self.previous = portal.and_then(snapshot);
     }
 }
-fn snapshot(root: &RenderRoot) -> Option<Snapshot> {
+/// Finds the manuscript viewport, reusing a known one while it remains that viewport.
+///
+/// The search includes stashed panes: a Map workspace opened directly keeps Script stashed,
+/// and its viewport must still be found once. [`snapshot`] refuses a stashed viewport.
+fn manuscript(root: &RenderRoot, known: Option<WidgetId>) -> Option<WidgetRef<'_, Portal<Flex>>> {
+    let is_manuscript =
+        |portal: &WidgetRef<'_, Portal<Flex>>| portal.get_prop::<ReadingViewport>().is_manuscript();
+    if let Some(portal) = known
+        .and_then(|id| root.get_widget(id))
+        .and_then(|widget| widget.downcast::<Portal<Flex>>())
+        .filter(is_manuscript)
+    {
+        return Some(portal);
+    }
     let mut pending = vec![root.get_layer_root(0)];
     while let Some(widget) = pending.pop() {
-        if widget.ctx().is_stashed() {
-            continue;
-        }
-        if let Some(portal) = widget.downcast::<Portal<Flex>>()
-            && portal.get_prop::<ReadingViewport>().is_manuscript()
-        {
-            let bounds = widget
-                .ctx()
-                .window_transform()
-                .transform_rect_bbox(widget.ctx().content_box());
-            let mut pending = widget.children();
-            let mut rows = Vec::new();
-            while let Some(widget) = pending.pop() {
-                if widget.ctx().is_stashed() {
-                    continue;
-                }
-                if let Some(input) = widget.downcast::<TextInput>()
-                    && input.get_prop::<PassageField>().0.is_some()
-                {
-                    rows.push(Row {
-                        id: widget.id(),
-                        bounds: widget
-                            .ctx()
-                            .window_transform()
-                            .transform_rect_bbox(widget.ctx().border_box()),
-                    });
-                } else {
-                    pending.extend(widget.children());
-                }
-            }
-            rows.sort_by(|a, b| a.bounds.y0.total_cmp(&b.bounds.y0));
-            return Some(Snapshot {
-                scope: portal.get_prop::<ReadingViewport>().clone(),
-                portal: widget.id(),
-                bounds,
-                rows,
-                position: portal.get_viewport_pos(),
-            });
+        #[cfg(test)]
+        tests::WALKED.with(|walked| walked.set(walked.get() + 1));
+        if let Some(portal) = widget.downcast::<Portal<Flex>>().filter(is_manuscript) {
+            return Some(portal);
         }
         pending.extend(widget.children());
     }
     None
 }
+fn snapshot(portal: WidgetRef<'_, Portal<Flex>>) -> Option<Snapshot> {
+    if portal.ctx().is_stashed() {
+        return None;
+    }
+    let bounds = portal
+        .ctx()
+        .window_transform()
+        .transform_rect_bbox(portal.ctx().content_box());
+    let mut pending = portal.as_dyn().children();
+    let mut rows = Vec::new();
+    while let Some(widget) = pending.pop() {
+        if widget.ctx().is_stashed() {
+            continue;
+        }
+        if let Some(input) = widget.downcast::<TextInput>()
+            && input.get_prop::<PassageField>().0.is_some()
+        {
+            rows.push(Row {
+                id: widget.id(),
+                bounds: widget
+                    .ctx()
+                    .window_transform()
+                    .transform_rect_bbox(widget.ctx().border_box()),
+            });
+        } else {
+            pending.extend(widget.children());
+        }
+    }
+    rows.sort_by(|a, b| a.bounds.y0.total_cmp(&b.bounds.y0));
+    Some(Snapshot {
+        scope: portal.get_prop::<ReadingViewport>().clone(),
+        portal: portal.id(),
+        bounds,
+        rows,
+        position: portal.get_viewport_pos(),
+    })
+}
+
+#[cfg(test)]
+mod tests;
