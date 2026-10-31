@@ -20,7 +20,7 @@ def generate(root: Path, *, documents=100, blocks=20, lines=10, shared_destinati
             text += f":: scene_{document:03}_{block:03}\n"
             for line in range(lines):
                 identity = document * blocks * lines + block * lines + line
-                text += f"> line@{identity:020x}\n  Shared destination fixture prose.\n"
+                text += f"> @line_{identity}\n  Shared destination fixture prose.\n"
             target = block % shared_destinations
             text += f"-> src/shard-{target:03}.recite::scene_{target:03}_000\n"
         (source / f"shard-{document:03}.recite").write_text(text)

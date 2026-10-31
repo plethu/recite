@@ -82,7 +82,7 @@ def measure(binary, root, samples, ranged=False, workloads=WORKLOADS):
                             else f"\n# recovered {version}\n"
                         )
                     elif kind == "stable_id":
-                        overlay = text.replace("line_00000_000@", f"line_00000_000_v{version}@", 1)
+                        overlay = text.replace("@line_00000_000\n", f"@line_00000_000_v{version}\n", 1)
                     else:
                         overlay = text + f"\n:: measured_{version}\n-> END\n"
                     assert overlay != text

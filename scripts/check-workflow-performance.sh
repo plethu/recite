@@ -56,6 +56,15 @@ control="$output/control-source"
 mkdir -p "$control"
 trap 'rm -rf "$control"' EXIT
 git archive "$base" | tar -x -C "$control"
+# A control that predates trailing stable IDs (#234) can neither compile the
+# current harness nor read its fixtures. This waiver expires once every
+# comparison base has the new format.
+if [[ ! -f "$control/crates/recite-core/src/statement_header.rs" ]]; then
+  echo "Base $base predates the trailing stable-ID source format; skipping the base comparison."
+  printf '{"status":"waived","reason":"control predates the trailing stable-ID source format (#234)","control":"%s"}\n' \
+    "$base" >"$evidence/waiver.json"
+  exit 0
+fi
 # Fetch both locked graphs before the overlay needs offline resolution. A clean
 # runner may lack dependencies unused by the harness helper binary.
 cp "$control/Cargo.lock" "$evidence/control-original-Cargo.lock"

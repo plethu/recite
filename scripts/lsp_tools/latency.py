@@ -88,7 +88,7 @@ def run(binary, root, samples, config_root):
                     )
             results["requests"][name] = observations
         version = 2
-        draft = re.sub(r"@[0-9a-f]{20}", "", text, count=1)
+        draft = re.sub(r" @[a-z_][a-z0-9_.-]*$", "", text, count=1, flags=re.MULTILINE)
         assert draft != text, "fixture lacks an authored stable ID"
         client.send(
             "textDocument/didChange",
