@@ -38,3 +38,12 @@ chains at depths 16/32/64 now visit 19/35/67 hidden-state ancestors, versus 2,09
 the original wrapper. Test-only accounting records actual inherited visits. Differential cases
 include hidden focused parents, active descendants, attached grafts and hidden adjacent branches;
 `just writer check` runs the pinned consumer suite alongside the adapter regressions.
+
+[`../patches/accesskit-reachable-cache.patch`](../patches/accesskit-reachable-cache.patch), applied
+after the reachable-filter patch, adds `ReachableFilter`. It memoizes inherited visibility, combined
+transforms, local results and ancestor exclusion for one tree state, so filtering a region costs one
+evaluation per node instead of one per node and ancestor. The clipping rule now takes its parent
+filter, sibling filter and bounding boxes as inputs, so direct and memoized callers share it. The
+differential corpus compares both query orders with `common_filter_reachable` and with the original
+wrapper, including bounding boxes. A fixed 64-deep region requires at most one base check per node.
+A cache serves one tree state and is never invalidated.

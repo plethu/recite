@@ -1,5 +1,12 @@
 //! Reconcile geometry-dependent filtering without scanning unrelated text updates.
+//!
+//! A changed transform, clip or child list can change which nodes in the surrounding clip
+//! region are exposed. The updated node itself is notified in full. Other region nodes keep
+//! their data, so they only change exposure: they are registered or retired, and their
+//! filtered parents' child edges are diffed. Platform notifications for unchanged nodes
+//! remain limited to nodes the tree reports as updated, as upstream.
 use super::*;
+use accesskit_consumer::ReachableFilter;
 
 #[derive(Default)]
 pub(super) struct ExposureChanges {
@@ -8,6 +15,9 @@ pub(super) struct ExposureChanges {
     updated: HashSet<NodeId>,
     parents: HashSet<NodeId>,
     children_events: Vec<(NodeId, ObjectEvent)>,
+    /// One update compares a fixed old and new tree state; each is filtered once per node.
+    old_filter: ReachableFilter,
+    new_filter: ReachableFilter,
 }
 
 #[cfg(test)]
@@ -59,22 +69,29 @@ impl AdapterChangeHandler<'_> {
             &mut self.exposure.new_subtrees,
             &mut ids,
         );
+        self.update_exposed_node(old, new);
         for id in ids {
             let old_node = old.tree_state.node_by_id(id);
             let new_node = new.tree_state.node_by_id(id);
+            let old_result = old_node.map(|node| self.exposure.old_filter.filter(&node));
+            let new_result = new_node.map(|node| self.exposure.new_filter.filter(&node));
+            if old_result == new_result {
+                continue;
+            }
             match (old_node, new_node) {
-                (Some(old), Some(new)) => self.update_exposed_node(&old, &new),
-                (None, Some(new)) if filter(&new) == FilterResult::Include => self.add_node(&new),
-                (Some(old), None) if filter(&old) == FilterResult::Include => {
+                (_, Some(new)) if new_result == Some(FilterResult::Include) => self.add_node(&new),
+                (Some(old), _) if old_result == Some(FilterResult::Include) => {
                     self.remove_node(&old)
                 }
                 _ => {}
             }
-            for parent in old_node
-                .and_then(|node| node.filtered_parent(&filter))
-                .into_iter()
-                .chain(new_node.and_then(|node| node.filtered_parent(&filter)))
-            {
+            let old_parent = old_node.and_then(|node| {
+                node.filtered_parent(&|node| self.exposure.old_filter.filter(node))
+            });
+            let new_parent = new_node.and_then(|node| {
+                node.filtered_parent(&|node| self.exposure.new_filter.filter(node))
+            });
+            for parent in old_parent.into_iter().chain(new_parent) {
                 if let (Some(old_parent), Some(new_parent)) = (
                     old.tree_state.node_by_id(parent.id()),
                     new.tree_state.node_by_id(parent.id()),
@@ -89,7 +106,11 @@ impl AdapterChangeHandler<'_> {
         if !self.exposure.updated.insert(new.id()) {
             return;
         }
-        match (filter(old), filter(new)) {
+        let results = (
+            self.exposure.old_filter.filter(old),
+            self.exposure.new_filter.filter(new),
+        );
+        match results {
             (FilterResult::Include, FilterResult::Include) => {
                 let old_wrapper = NodeWrapper(old);
                 let new_wrapper = NodeWrapper(new);
@@ -118,8 +139,8 @@ impl AdapterChangeHandler<'_> {
         // A transformed region reaches the same parent through many descendants.
         // Its children diff has already been queued, including the exposure checks.
         if self.exposure.parents.contains(&new.id())
-            || filter(old) != FilterResult::Include
-            || filter(new) != FilterResult::Include
+            || self.exposure.old_filter.filter(old) != FilterResult::Include
+            || self.exposure.new_filter.filter(new) != FilterResult::Include
             || !self.exposure.parents.insert(new.id())
         {
             return;

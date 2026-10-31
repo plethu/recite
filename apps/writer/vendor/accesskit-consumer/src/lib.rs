@@ -18,7 +18,8 @@ pub use node::{Node, NodeId};
 
 pub(crate) mod filters;
 pub use filters::{
-    FilterResult, common_filter, common_filter_reachable, common_filter_with_root_exception,
+    FilterResult, ReachableFilter, common_filter, common_filter_reachable,
+    common_filter_with_root_exception,
 };
 
 pub(crate) mod iterators;

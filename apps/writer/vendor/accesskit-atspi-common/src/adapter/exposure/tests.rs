@@ -81,9 +81,28 @@ fn same_bounds_text_edit_does_not_walk_the_thousand_control_region() {
     );
 }
 
-#[test]
-fn camera_transform_reconciles_a_control_region_with_bounded_filter_work() {
-    const CONTROLS: u64 = 128;
+#[derive(Default)]
+struct Ledger {
+    registered: HashSet<NodeId>,
+    unregistered: HashSet<NodeId>,
+    events: usize,
+}
+#[derive(Clone, Default)]
+struct Recording(Arc<Mutex<Ledger>>);
+impl AdapterCallback for Recording {
+    fn register_interfaces(&self, _: &Adapter, id: NodeId, _: InterfaceSet) {
+        self.0.lock().unwrap().registered.insert(id);
+    }
+    fn unregister_interfaces(&self, _: &Adapter, id: NodeId, _: InterfaceSet) {
+        self.0.lock().unwrap().unregistered.insert(id);
+    }
+    fn emit_event(&self, _: &Adapter, _: Event) {
+        self.0.lock().unwrap().events += 1;
+    }
+}
+
+/// A clipped viewport holding one transparent camera layer of stacked controls.
+fn camera_region(controls: u64, spacing: f64) -> (Vec<(LocalId, NodeData)>, NodeData) {
     let mut root = NodeData::new(Role::Window);
     root.set_children(vec![LocalId(1)]);
     let mut viewport = NodeData::new(Role::ScrollView);
@@ -91,21 +110,25 @@ fn camera_transform_reconciles_a_control_region_with_bounded_filter_work() {
     viewport.set_bounds(Rect::new(0., 0., 1000., 1000.));
     viewport.set_children(vec![LocalId(2)]);
     let mut camera = NodeData::new(Role::GenericContainer);
-    camera.set_children((3..3 + CONTROLS).map(LocalId).collect::<Vec<_>>());
+    camera.set_children((3..3 + controls).map(LocalId).collect::<Vec<_>>());
     let mut nodes = vec![
         (LocalId(0), root),
         (LocalId(1), viewport),
         (LocalId(2), camera.clone()),
     ];
-    for index in 3..3 + CONTROLS {
+    for index in 3..3 + controls {
         let mut button = NodeData::new(Role::Button);
         button.set_label(format!("Beat {index}"));
-        button.set_bounds(Rect::new(0., 0., 100., 100.));
+        let y = (index - 3) as f64 * spacing;
+        button.set_bounds(Rect::new(0., y, 100., y + 100.));
         nodes.push((LocalId(index), button));
     }
-    let adapter = Adapter::new(
+    (nodes, camera)
+}
+fn adapter_for(nodes: Vec<(LocalId, NodeData)>, callback: Recording) -> Adapter {
+    Adapter::new(
         &AppContext::new(None),
-        Callback(Arc::new(Mutex::new(0))),
+        callback,
         TreeUpdate {
             nodes,
             tree: Some(TreeData::new(LocalId(0))),
@@ -115,11 +138,28 @@ fn camera_transform_reconciles_a_control_region_with_bounded_filter_work() {
         false,
         WindowBounds::default(),
         Actions,
-    );
-    let mut handler = AdapterChangeHandler::new(&adapter);
+    )
+}
+fn exposed(adapter: &Adapter) -> HashSet<NodeId> {
+    let tree = adapter.context.tree.read().unwrap();
+    let mut pending = vec![tree.state().root()];
+    let mut exposed = HashSet::new();
+    while let Some(node) = pending.pop() {
+        if accesskit_consumer::common_filter_reachable(&node) == FilterResult::Include {
+            exposed.insert(node.id());
+        }
+        pending.extend(node.children());
+    }
+    exposed
+}
+fn translate(
+    adapter: &Adapter,
+    mut camera: NodeData,
+    offset: (f64, f64),
+) -> AdapterChangeHandler<'_> {
+    camera.set_transform(accesskit::Affine::translate(offset));
+    let mut handler = AdapterChangeHandler::new(adapter);
     let mut tree = adapter.context.tree.write().unwrap();
-    camera.set_transform(accesskit::Affine::translate((20., 10.)));
-    crate::filters::take_filter_calls();
     tree.update_and_process_changes(
         TreeUpdate {
             nodes: vec![(LocalId(2), camera)],
@@ -129,14 +169,52 @@ fn camera_transform_reconciles_a_control_region_with_bounded_filter_work() {
         },
         &mut handler,
     );
+    handler
+}
+
+#[test]
+fn camera_translation_inside_the_clip_notifies_only_the_moved_layer() {
+    const CONTROLS: u64 = 128;
+    let (nodes, camera) = camera_region(CONTROLS, 0.);
+    let ledger = Recording::default();
+    let adapter = adapter_for(nodes, ledger.clone());
+    *ledger.0.lock().unwrap() = Ledger::default();
+    crate::filters::take_filter_calls();
+    let handler = translate(&adapter, camera, (20., 10.));
     let calls = crate::filters::take_filter_calls();
-    assert_eq!(handler.exposure.updated.len(), 2 + CONTROLS as usize);
-    assert_eq!(handler.exposure.parents.len(), 2 + CONTROLS as usize);
-    assert!(
-        handler.exposure.children_events.is_empty(),
-        "panning preserves the exposed child edges"
+    // The region was reconciled, but only the moved layer received a full update.
+    assert_eq!(handler.exposure.new_subtrees.len(), 2 + CONTROLS as usize);
+    assert_eq!(handler.exposure.updated.len(), 1);
+    assert!(handler.exposure.parents.is_empty());
+    assert!(handler.exposure.children_events.is_empty());
+    let ledger = ledger.0.lock().unwrap();
+    assert!(ledger.registered.is_empty() && ledger.unregistered.is_empty());
+    assert_eq!(ledger.events, 0, "no exposure or state changed");
+    // Region filtering is memoized per tree state; uncached, this input took 3,112 calls.
+    // The two remaining calls are the moved layer's own text-change parent lookups.
+    assert!(calls <= 2, "camera filter work regressed: {calls}");
+}
+
+#[test]
+fn camera_translation_across_the_clip_registers_exactly_the_changed_exposure() {
+    let (nodes, camera) = camera_region(64, 150.);
+    let ledger = Recording::default();
+    let adapter = adapter_for(nodes, ledger.clone());
+    let before = exposed(&adapter);
+    *ledger.0.lock().unwrap() = Ledger::default();
+    let handler = translate(&adapter, camera, (0., -2_400.));
+    let queued = handler.exposure.children_events.len();
+    drop(handler);
+    let after = exposed(&adapter);
+    let ledger = ledger.0.lock().unwrap();
+    assert_eq!(
+        ledger.registered,
+        after.difference(&before).copied().collect()
     );
-    // The original repeated parent checks made 4,150 calls for this exact input.
-    // Deduplication reduces that to 3,112 without dropping exposed controls.
-    assert!(calls <= 3_200, "camera filter work regressed: {calls}");
+    assert_eq!(
+        ledger.unregistered,
+        before.difference(&after).copied().collect()
+    );
+    assert!(!ledger.registered.is_empty() && !ledger.unregistered.is_empty());
+    assert!(queued > 0, "the viewport's exposed child edges changed");
 }

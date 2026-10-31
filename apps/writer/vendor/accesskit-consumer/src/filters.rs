@@ -65,12 +65,19 @@ fn common_filter_without_parent_checks(node: &Node) -> FilterResult {
 fn is_first_sibling_in_parent_bbox<'a>(
     mut siblings: impl Iterator<Item = Node<'a>>,
     parent_bbox: Rect,
+    bounding_box: &impl Fn(&Node) -> Option<Rect>,
 ) -> bool {
     siblings.next().is_some_and(|sibling| {
-        sibling
-            .bounding_box()
-            .is_some_and(|bbox| !bbox.intersect(parent_bbox).is_empty())
+        bounding_box(&sibling).is_some_and(|bbox| !bbox.intersect(parent_bbox).is_empty())
     })
+}
+
+/// Inputs to the clipping rule. Direct callers walk the tree for each value;
+/// [`ReachableFilter`] supplies memoized ones.
+struct Geometry<'g, P, S, B> {
+    parent_filter: &'g P,
+    sibling_filter: &'g S,
+    bounding_box: &'g B,
 }
 
 pub fn common_filter(node: &Node) -> FilterResult {
@@ -84,11 +91,21 @@ pub fn common_filter(node: &Node) -> FilterResult {
         }
     }
 
-    geometry_filter(node, &common_filter_without_parent_checks)
+    let geometry = Geometry {
+        parent_filter: &common_filter_without_parent_checks,
+        sibling_filter: &common_filter_without_parent_checks,
+        bounding_box: &|node: &Node| node.bounding_box(),
+    };
+    geometry_filter(node, &geometry)
 }
 
-fn geometry_filter(node: &Node, parent_filter: &impl Fn(&Node) -> FilterResult) -> FilterResult {
-    if let Some(parent) = node.filtered_parent(parent_filter) {
+fn geometry_filter<P, S, B>(node: &Node, geometry: &Geometry<'_, P, S, B>) -> FilterResult
+where
+    P: Fn(&Node) -> FilterResult,
+    S: Fn(&Node) -> FilterResult,
+    B: Fn(&Node) -> Option<Rect>,
+{
+    if let Some(parent) = node.filtered_parent(geometry.parent_filter) {
         if parent.clips_children() {
             // If the parent clips its children, then exclude this subtree
             // if this child's bounding box isn't inside the parent's bounding
@@ -96,15 +113,17 @@ fn geometry_filter(node: &Node, parent_filter: &impl Fn(&Node) -> FilterResult) 
             // the parent's bounding box either. The latter condition is meant
             // to allow off-screen items to be seen by consumers so they can be
             // scrolled into view.
-            if let Some(bbox) = node.bounding_box() {
-                if let Some(parent_bbox) = parent.bounding_box() {
+            if let Some(bbox) = (geometry.bounding_box)(node) {
+                if let Some(parent_bbox) = (geometry.bounding_box)(&parent) {
                     if bbox.intersect(parent_bbox).is_empty()
                         && !(is_first_sibling_in_parent_bbox(
-                            node.following_filtered_siblings(&common_filter_without_parent_checks),
+                            node.following_filtered_siblings(geometry.sibling_filter),
                             parent_bbox,
+                            geometry.bounding_box,
                         ) || is_first_sibling_in_parent_bbox(
-                            node.preceding_filtered_siblings(&common_filter_without_parent_checks),
+                            node.preceding_filtered_siblings(geometry.sibling_filter),
                             parent_bbox,
+                            geometry.bounding_box,
                         ))
                     {
                         return FilterResult::ExcludeSubtree;
@@ -127,7 +146,12 @@ pub fn common_filter_reachable(node: &Node) -> FilterResult {
     let ancestry_is_visible = !node.is_hidden();
     let base = |node: &Node| common_filter_base(node, || !ancestry_is_visible && node.is_hidden());
     let parent_filter = |node: &Node| base(node).unwrap_or(FilterResult::Include);
-    let local = |node: &Node| base(node).unwrap_or_else(|| geometry_filter(node, &parent_filter));
+    let geometry = Geometry {
+        parent_filter: &parent_filter,
+        sibling_filter: &common_filter_without_parent_checks,
+        bounding_box: &|node: &Node| node.bounding_box(),
+    };
+    let local = |node: &Node| base(node).unwrap_or_else(|| geometry_filter(node, &geometry));
     let result = local(node);
     if result == FilterResult::ExcludeSubtree {
         return result;
@@ -141,6 +165,9 @@ pub fn common_filter_reachable(node: &Node) -> FilterResult {
     }
     result
 }
+
+mod cache;
+pub use cache::ReachableFilter;
 
 #[cfg(test)]
 #[path = "filters/reachable_tests.rs"]

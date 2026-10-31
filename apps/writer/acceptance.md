@@ -69,8 +69,12 @@ replay against the preceding build used the Relay Hub fixture on the owned compo
 1280×720 output, with the screen-reader bus enabled. At 69% zoom, short-pan p95 fell from 32 to 17
 ms with 95 rather than 80–82 callbacks, boundary-pan p95 from 32 to 17 ms, and client CPU by 12–25%
 across trajectories. At 100% both builds already held 16 ms medians. Pixman runs were unchanged and
-remain render-bound. The earlier 2040×1230 configuration was not repeated. Remaining client CPU is
-mostly the AT-SPI adapter reconciling the translated clip region, then per-frame scene encoding.
+remain render-bound. The earlier 2040×1230 configuration was not repeated. The AT-SPI adapter then
+filtered each translated clip region once per node and stopped re-notifying unchanged nodes. A
+second matched GPU replay against that build reduced client CPU by 30–43% for drags and wheel
+panning at 69% and 100% zoom, and 7–9% in overview, with unchanged frame pacing. AccessKit no longer
+leads the profile; glyph hinting while encoding each frame's text and Masonry's whole-tree paint
+traversal now do.
 
 The next refinement restores selected-card and empty-state halftone and removes the abrupt hover
 border on quiet actions. Saved-text search now shows bounded excerpts around matching words and

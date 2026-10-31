@@ -98,11 +98,25 @@ fn corpus(depth: u64, variant: u64, step: u64) -> TreeUpdate {
     }
 }
 fn compare(tree: &Tree, ids: &[NodeId]) {
+    // Memoized results must not depend on query order.
+    let forward = ReachableFilter::new();
+    let backward = ReachableFilter::new();
+    for id in ids.iter().rev() {
+        backward.filter(&tree.state().node_by_id(nid(*id)).unwrap());
+    }
     for id in ids {
         let node = tree.state().node_by_id(nid(*id)).unwrap();
+        let expected = reference(&node);
+        assert_eq!(common_filter_reachable(&node), expected, "node {id:?}");
+        assert_eq!(forward.filter(&node), expected, "cached node {id:?}");
         assert_eq!(
-            common_filter_reachable(&node),
-            reference(&node),
+            backward.filter(&node),
+            expected,
+            "reverse cached node {id:?}"
+        );
+        assert_eq!(
+            forward.bounding_box(&node),
+            node.bounding_box(),
             "node {id:?}"
         );
     }
@@ -290,4 +304,29 @@ fn reachable_filter_preserves_visibility_across_attached_grafts() {
             }
         }
     }
+}
+#[test]
+fn cached_filter_checks_each_node_once_across_a_deep_region() {
+    let depth = 64;
+    let update = corpus(depth, 1, 1);
+    let ids = update.nodes.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+    let tree = Tree::new(update, true);
+    take_base_checks();
+    let filter = ReachableFilter::new();
+    for id in &ids {
+        filter.filter(&tree.state().node_by_id(nid(*id)).unwrap());
+    }
+    let cached = take_base_checks();
+    for id in &ids {
+        common_filter_reachable(&tree.state().node_by_id(nid(*id)).unwrap());
+    }
+    let direct = take_base_checks();
+    // One base check per node, independent of depth; the direct filter repeats
+    // the ancestor chain for every node.
+    assert!(
+        cached <= ids.len(),
+        "{cached} checks for {} nodes",
+        ids.len()
+    );
+    assert!(direct > cached * 10, "direct {direct}, cached {cached}");
 }

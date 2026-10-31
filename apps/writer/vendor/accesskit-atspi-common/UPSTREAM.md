@@ -41,3 +41,12 @@ uses the sibling consumer's ancestor-aware filter. The parent is marked only aft
 inclusion checks succeed. A fixed camera-update regression retains all 128 registered controls and
 child edges while bounding filter calls at 3,200 (3,112 measured, previously 4,150). These operation
 counts establish the local traversal improvement, not native frame latency or GPU performance.
+
+[`../patches/accesskit-exposure-region.patch`](../patches/accesskit-exposure-region.patch), applied
+after the exposure-cost patch, filters each reconciled region through one sibling-consumer cache per
+tree state. Only the updated node receives a full update. Other region nodes keep their data, so
+they are registered or retired only when their exposure changes, and only then are their filtered
+parents' child edges diffed. Unchanged nodes therefore receive no notifications, as upstream. Native
+Map panning had spent about half its client CPU here. A fixed camera translation of 128 controls now
+updates one node with at most two uncached filter calls, previously 3,112, and emits no events. A
+translation across the clip registers and retires exactly the direct filter's changed exposure.
