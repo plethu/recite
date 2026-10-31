@@ -174,17 +174,22 @@ impl Geometry {
     }
 }
 
+/// Screen distance beyond each viewport edge that stays mounted and drawn.
+///
+/// Native clients may translate retained content by up to this distance before
+/// committing the camera, without exposing an unmounted edge.
+pub const OVERSCAN: f32 = 160.;
+
 pub fn visible(
     bounds: (f32, f32, f32, f32),
     camera: super::camera::Camera,
     size: (f32, f32),
 ) -> bool {
     let (x, y, w, h) = bounds;
-    let margin = 160.;
-    x * camera.zoom + camera.x <= size.0 + margin
-        && (x + w) * camera.zoom + camera.x >= -margin
-        && y * camera.zoom + camera.y <= size.1 + margin
-        && (y + h) * camera.zoom + camera.y >= -margin
+    x * camera.zoom + camera.x <= size.0 + OVERSCAN
+        && (x + w) * camera.zoom + camera.x >= -OVERSCAN
+        && y * camera.zoom + camera.y <= size.1 + OVERSCAN
+        && (y + h) * camera.zoom + camera.y >= -OVERSCAN
 }
 
 #[cfg(test)]

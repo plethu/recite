@@ -25,18 +25,7 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         })
         .collect::<Vec<_>>();
     let width = workspace::Layout::resolve(state).map;
-    let drawing = sized_box(
-        canvas(|state: &mut Writer, _, recording, _| {
-            if let Some(scene) = state.map.scene(state) {
-                draw_edges(state, scene, recording);
-                if scene.detail() == Detail::Overview {
-                    super::overview::draw(state, scene, recording);
-                }
-            }
-        })
-        .alt_text("Dialogue routes; use Connections below for their accessible list."),
-    )
-    .width(width.px());
+    let drawing = super::routes::routes(width.px(), draw);
     let host = input::input(
         input::Kind::Viewport(scene.detail()),
         state.config.ui.keymap == recite_config::Keymap::Vim,
@@ -50,6 +39,10 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         |state: &mut Writer, action| state.map_input(Source::Viewport, action),
     );
     let host = host
+        .camera(
+            scene.camera,
+            matches!(scene.gesture, Gesture::Panning { .. }),
+        )
         .focus(focus_request(scene))
         .disabled(state.phase != crate::Phase::Writing)
         .prop(properties::BorderColor {
@@ -63,6 +56,15 @@ pub(super) fn viewport(state: &Writer, scene: &Scene) -> impl WidgetView<Writer>
         ))
         .width(width.px()),
     )
+}
+/// Routes, the dot grid and the overview share viewport coordinates.
+fn draw(state: &Writer, recording: &mut record::Scene) {
+    if let Some(scene) = state.map.scene(state) {
+        draw_edges(state, scene, recording);
+        if scene.detail() == Detail::Overview {
+            super::overview::draw(state, scene, recording);
+        }
+    }
 }
 pub(super) fn focus_request(scene: &Scene) -> Option<input::FocusRequest> {
     let focus = scene.focus.as_ref()?;
@@ -176,15 +178,18 @@ fn provisional_edge(scene: &Scene, index: usize) -> Option<CubicBez> {
         end,
     ))
 }
+/// Dots cover the overscan that the viewport may reveal before committing a pan.
 fn draw_grid(state: &Writer, scene: &Scene, painter: &mut Painter<'_, record::Scene>) {
     let step = (24. * f64::from(scene.camera.zoom)).max(8.);
     let color = state.palette.canvas.lerp_rect(state.palette.ink, 0.16);
     let mut dots = BezPath::new();
-    let mut x = (f64::from(scene.camera.x)).rem_euclid(step);
-    let width = f64::from(scene.viewport.0);
-    let height = f64::from(scene.viewport.1);
+    let margin = (f64::from(topology::OVERSCAN) / step).ceil() * step;
+    let first = |origin: f32| f64::from(origin).rem_euclid(step) - margin;
+    let width = f64::from(scene.viewport.0) + margin;
+    let height = f64::from(scene.viewport.1) + margin;
+    let mut x = first(scene.camera.x);
     while x < width {
-        let mut y = (f64::from(scene.camera.y)).rem_euclid(step);
+        let mut y = first(scene.camera.y);
         while y < height {
             dots.extend(Circle::new((x, y), 0.75).path_elements(0.1));
             y += step;

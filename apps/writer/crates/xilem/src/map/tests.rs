@@ -13,6 +13,8 @@ mod lifecycle;
 mod native;
 #[path = "overview/tests.rs"]
 mod overview;
+#[path = "panning/tests.rs"]
+mod panning;
 #[path = "scaling/tests.rs"]
 mod scaling;
 #[path = "visual/tests.rs"]

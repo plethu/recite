@@ -4,6 +4,7 @@ use crate::presentation::material::{DotScreen, ScreenCache};
 use std::any::TypeId;
 mod events;
 mod focus;
+mod pan;
 mod press;
 mod view;
 pub(super) use focus::{FocusRequest, FocusToken};
@@ -12,9 +13,9 @@ use xilem::masonry::widgets;
 use xilem::masonry::{
     accesskit::{Action, Node, Role},
     core::{
-        self, AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget,
-        PaintCtx, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget,
-        WidgetMut, WidgetPod,
+        self, AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, LayoutCtx, MeasureCtx,
+        NewWidget, PaintCtx, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update,
+        UpdateCtx, Widget, WidgetMut, WidgetPod,
     },
     imaging::Painter,
     kurbo::{Axis, Point, Size, Stroke, Vec2},
@@ -79,6 +80,7 @@ pub(super) struct InputWidget {
     focus: Option<FocusRequest>,
     clicks: u8,
     print: ScreenCache,
+    pan: pan::LocalPan,
 }
 impl InputWidget {
     fn new(child: NewWidget<impl Widget + ?Sized>, kind: Kind, vim: bool) -> Self {
@@ -90,6 +92,7 @@ impl InputWidget {
             focus: None,
             clicks: 0,
             print: ScreenCache::default(),
+            pan: pan::LocalPan::default(),
         }
     }
     fn child_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, dyn Widget> {
@@ -166,6 +169,9 @@ impl Widget for InputWidget {
             ctx.set_handled();
         }
     }
+    fn on_anim_frame(&mut self, ctx: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, interval: u64) {
+        self.settle_wheel_pan(ctx, interval);
+    }
     fn update(&mut self, ctx: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, event: &Update) {
         if *event == Update::WidgetAdded {
             self.request_card_focus(ctx);
@@ -201,6 +207,9 @@ impl Widget for InputWidget {
         if matches!(self.kind, Kind::Viewport(_)) {
             ctx.set_clip_path(size.to_rect());
         }
+    }
+    fn compose(&mut self, ctx: &mut ComposeCtx<'_>) {
+        ctx.set_child_scroll_translation(&mut self.child, self.pan.offset());
     }
     fn paint(
         &mut self,

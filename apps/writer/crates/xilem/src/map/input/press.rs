@@ -10,6 +10,7 @@ impl InputWidget {
         let superseded = matches!(event, PointerEvent::Scroll(_))
             || matches!(event, PointerEvent::Gesture(event) if matches!(event.gesture, PointerGesture::Pinch(_)));
         if superseded && self.press.take().is_some() {
+            self.cancel_local_pan(ctx);
             if ctx.is_pointer_capture_target() {
                 ctx.release_pointer();
             }

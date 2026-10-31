@@ -28,24 +28,31 @@ impl InputWidget {
             {
                 ctx.capture_pointer();
                 ctx.request_focus();
+                self.commit_wheel_pan(ctx);
                 let point = event.state.logical_position();
+                let point = Point::new(point.x, point.y);
                 self.press = Some(PointerPress {
                     button: event.button,
-                    motion: Motion::ClickCandidate(Point::new(point.x, point.y)),
+                    motion: Motion::ClickCandidate(point),
                 });
-                ctx.submit_action::<NativeAction>(Input::Begin(Point::new(point.x, point.y)));
+                self.begin_local_pan(point);
+                ctx.submit_action::<NativeAction>(Input::Begin(point));
                 ctx.set_handled();
             }
             PointerEvent::Move(event) if self.press.is_some() => {
                 let point = event.current.logical_position();
-                self.track_motion(Point::new(point.x, point.y));
-                ctx.submit_action::<NativeAction>(Input::Move(Point::new(point.x, point.y)));
+                let point = Point::new(point.x, point.y);
+                self.track_motion(point);
+                if !self.drag_local_pan(ctx, point) {
+                    ctx.submit_action::<NativeAction>(Input::Move(point));
+                }
                 ctx.set_handled();
             }
             PointerEvent::Up(event)
                 if self.press.is_some_and(|press| press.button == event.button) =>
             {
                 let position = event.state.logical_position();
+                self.release_local_pan(ctx, Point::new(position.x, position.y));
                 self.finish_press(
                     ctx,
                     Point::new(position.x, position.y),
@@ -55,6 +62,7 @@ impl InputWidget {
             }
             PointerEvent::Cancel(_) if self.press.is_some() => {
                 self.press = None;
+                self.cancel_local_pan(ctx);
                 ctx.submit_action::<NativeAction>(Input::Cancel);
                 ctx.set_handled();
             }
@@ -70,19 +78,20 @@ impl InputWidget {
                         ),
                     )
                     .to_logical::<f64>(scale);
-                let action = if event.state.modifiers.ctrl() || event.state.modifiers.meta() {
-                    Input::Zoom {
+                if event.state.modifiers.ctrl() || event.state.modifiers.meta() {
+                    self.commit_wheel_pan(ctx);
+                    ctx.submit_action::<NativeAction>(Input::Zoom {
                         factor: (-delta.y as f32 / 300.).exp(),
                         anchor: ctx.local_position(event.state.position),
-                    }
+                    });
                 } else {
-                    Input::Pan(Vec2::new(delta.x, delta.y))
-                };
-                ctx.submit_action::<NativeAction>(action);
+                    self.wheel_local_pan(ctx, Vec2::new(delta.x, delta.y));
+                }
                 ctx.set_handled();
             }
             PointerEvent::Gesture(event) if matches!(self.kind, Kind::Viewport(_)) => {
                 if let PointerGesture::Pinch(delta) = event.gesture {
+                    self.commit_wheel_pan(ctx);
                     ctx.submit_action::<NativeAction>(Input::Zoom {
                         factor: (1. + delta).max(0.001),
                         anchor: ctx.local_position(event.state.position),
@@ -105,6 +114,7 @@ impl InputWidget {
         }
         if event.key == Key::Named(NamedKey::Escape) && self.press.is_some() {
             self.press = None;
+            self.cancel_local_pan(ctx);
             ctx.release_pointer();
             ctx.submit_action::<NativeAction>(Input::Cancel);
             ctx.set_handled();
@@ -137,6 +147,7 @@ impl InputWidget {
             None
         };
         if let Some(action) = action {
+            self.commit_wheel_pan(ctx);
             ctx.submit_action::<NativeAction>(action);
             ctx.set_handled();
         }

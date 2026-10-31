@@ -8,6 +8,7 @@ mod placed;
 mod placement;
 mod preparation;
 mod publication;
+mod routes;
 mod scene;
 mod view;
 use crate::{Writer, navigation::Target};

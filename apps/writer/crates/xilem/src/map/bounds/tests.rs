@@ -197,7 +197,7 @@ fn allocated_map_canvas_grows_with_the_window_and_exposes_more_of_the_scene() {
     assert!(fixture.jobs.try_recv().is_err());
 }
 
-fn linear_scene(count: usize) -> String {
+pub(super) fn linear_scene(count: usize) -> String {
     let mut source = String::new();
     for index in 0..count {
         source.push_str(&format!(

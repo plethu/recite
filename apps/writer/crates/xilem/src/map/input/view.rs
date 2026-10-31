@@ -1,5 +1,6 @@
 use super::*;
 use crate::Writer;
+use recite_writer_session::map::camera::Camera;
 use xilem::{
     Pod, ViewCtx, WidgetView,
     core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker},
@@ -13,6 +14,7 @@ pub(in crate::map) struct InputView<V, F> {
     callback: F,
     disabled: bool,
     focus: Option<FocusRequest>,
+    camera: Option<(Camera, bool)>,
 }
 pub(in crate::map) fn input<V, F>(kind: Kind, vim: bool, child: V, callback: F) -> InputView<V, F> {
     InputView {
@@ -22,6 +24,7 @@ pub(in crate::map) fn input<V, F>(kind: Kind, vim: bool, child: V, callback: F) 
         callback,
         disabled: false,
         focus: None,
+        camera: None,
     }
 }
 impl<V, F> InputView<V, F> {
@@ -31,6 +34,11 @@ impl<V, F> InputView<V, F> {
     }
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+    /// Lets a viewport translate its content locally between camera commits.
+    pub fn camera(mut self, committed: Camera, panning: bool) -> Self {
+        self.camera = Some((committed, panning));
         self
     }
 }
@@ -45,6 +53,9 @@ impl<V: WidgetView<Writer>, F: Fn(&mut Writer, Input) + Send + Sync + 'static>
         let pod = ctx.with_action_widget(|_| {
             let mut widget = InputWidget::new(child.new_widget, self.kind.clone(), self.vim);
             widget.focus = self.focus.clone();
+            if let Some((camera, _)) = self.camera {
+                widget.pan = super::pan::LocalPan::committed(camera);
+            }
             let mut pod = Pod::new_with_props(widget, Dimensions::MAX);
             pod.new_widget.options.disabled = self.disabled;
             pod
@@ -75,6 +86,9 @@ impl<V: WidgetView<Writer>, F: Fn(&mut Writer, Input) + Send + Sync + 'static>
             InputWidget::restore_overview_focus(&mut element);
         }
         InputWidget::configure_focus(&mut element, self.focus.as_ref());
+        if let Some((camera, panning)) = self.camera {
+            InputWidget::configure_camera(&mut element, camera, panning);
+        }
     }
     fn teardown(
         &self,

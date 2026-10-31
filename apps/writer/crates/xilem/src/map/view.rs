@@ -22,8 +22,8 @@ use xilem::{
     },
     style::Style,
     view::{
-        CrossAxisAlignment, FlexExt, button_any_pointer, canvas, flex_col, flex_row,
-        resize_observer, sized_box, zstack,
+        CrossAxisAlignment, FlexExt, button_any_pointer, flex_col, flex_row, resize_observer,
+        sized_box, zstack,
     },
 };
 
