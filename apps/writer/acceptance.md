@@ -483,6 +483,16 @@ findings span AccessKit, portals and desktop preferences; replacing one crate do
 consumers. These require coordinated compatible upstream updates. No additional compatibility fork,
 lint waiver, advisory exception or license exception was added to clear the audit.
 
+On 2026-10-31, after Freya's retirement, the all-feature audit passes bans, licenses and sources;
+the NCSA finding left with Freya's AVIF graph, and the yanked `clipboard-win` 5.4.1 moved to the
+compatible 5.4.3. Advisories still fail on six unmaintained crates, all reached through the pinned
+Xilem stack: `paste` (RUSTSEC-2024-0436) through `metal` and `wgpu-hal` on macOS; `rustybuzz`
+(RUSTSEC-2026-0206) and `ttf-parser` (RUSTSEC-2026-0192) through `usvg`'s text feature, which
+`xilem_masonry` enables, and winit's Adwaita decorations; and `zvariant`, `zvariant_derive` and
+`zbus_names` (RUSTSEC-2026-0370 to 0372), which zbus 6 merges into `zbus`. Upstream Xilem's main
+branch still pins the same `wgpu`, `usvg`, `winit` and AccessKit versions, so these wait on
+framework upgrades. The toolkit forks carry Writer fixes, not audit workarounds.
+
 ARM Linux, native macOS/Windows, screen readers, physical IME/BiDi, display scaling and sustained
 large-project sessions still need recorded host evidence.
 
