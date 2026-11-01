@@ -15,7 +15,7 @@ pub(crate) fn prepare(count: usize) -> Input {
         entries: Vec::new(),
     };
     for index in 0..count {
-        let context = format!("{index:020x}");
+        let context = format!("line_{index}");
         let source_text = format!("Choice {index}.");
         po.push_str(&format!(
             "msgctxt \"{context}\"\nmsgid \"{source_text}\"\nmsgstr \"Traduit {index}.\"\n\n"

@@ -13,12 +13,12 @@ pub(super) fn prepare(existing: usize) -> Import {
     let mut catalog = ReciteDialogueCatalog::new();
     for i in 0..existing {
         catalog
-            .insert("fr", &format!("{i:020x}"), "Hello.", "Bonjour.")
+            .insert("fr", &format!("line_{i}"), "Hello.", "Bonjour.")
             .unwrap_or_else(|error| panic!("valid catalog: {error}"));
     }
     let po = (existing..existing + 100)
         .map(|i| {
-            format!("msgctxt \"{i:020x}\"\nmsgid \"New line.\"\nmsgstr \"Nouvelle ligne.\"\n\n")
+            format!("msgctxt \"line_{i}\"\nmsgid \"New line.\"\nmsgstr \"Nouvelle ligne.\"\n\n")
         })
         .collect();
     Import {
@@ -39,7 +39,7 @@ pub(super) fn validate(workload: Import) {
         let actual = workload
             .catalog
             .lookup(
-                &format!("{i:020x}"),
+                &format!("line_{i}"),
                 source,
                 TextDomain::Line,
                 &locale,
