@@ -3,7 +3,7 @@ use recite_writer_model::{
     EditOperation, RuleArgument, RuleExpression, SourceValidation, Workbench,
 };
 
-const SOURCE: &str = "# preserve this comment\r\n:: start default\r\n? reply@22222222222222222222 requires=(standing(3))\r\n  Continue.\r\n  # preserve divert\r\n  -> END\r\n";
+const SOURCE: &str = "# preserve this comment\r\n:: start default\r\n? requires=(standing(3)) @rthh7ab\r\n  Continue.\r\n  # preserve divert\r\n  -> END\r\n";
 
 fn first_argument(node: &mut RuleExpression) -> Option<&mut RuleArgument> {
     match node {
@@ -18,7 +18,7 @@ fn first_argument(node: &mut RuleExpression) -> Option<&mut RuleArgument> {
 #[test]
 fn staged_invalid_arguments_are_recoverable_and_do_not_change_accepted_source() {
     let mut model = Workbench::new(SOURCE).unwrap();
-    let mut rules = model.open_reply_rules("22222222222222222222").unwrap();
+    let mut rules = model.open_reply_rules("rthh7ab").unwrap();
     model
         .stage_reply_rules(&mut rules, |rules| {
             first_argument(rules.condition.as_mut().unwrap())
@@ -50,7 +50,7 @@ fn staged_invalid_arguments_are_recoverable_and_do_not_change_accepted_source() 
 #[test]
 fn stale_source_draft_rejects_rule_staging_without_mutating_either_owner() {
     let mut model = Workbench::new(SOURCE).unwrap();
-    let mut rules = model.open_reply_rules("22222222222222222222").unwrap();
+    let mut rules = model.open_reply_rules("rthh7ab").unwrap();
     model.set_draft(SOURCE.replace("Continue.", "Independent source edit."));
     let before = model.recovery();
     let previous_rules = rules.clone();

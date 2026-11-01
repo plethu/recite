@@ -10,7 +10,7 @@ fn blocks() -> Result<Arc<[ScriptBlock]>, Box<dyn std::error::Error>> {
 
 #[test]
 fn incident_lists_include_end_and_missing_targets_and_do_not_duplicate_self_links() {
-    let document = Document::new(":: start default\n? one@11111111111111111111\n  Finish.\n  -> END\n? two@22222222222222222222\n  Again.\n  -> start\n? three@33333333333333333333\n  Missing.\n  -> absent\n").unwrap();
+    let document = Document::new(":: start default\n? @ffee6p8\n  Finish.\n  -> END\n? @rthh7ab\n  Again.\n  -> start\n? @bqyvpqq\n  Missing.\n  -> absent\n").unwrap();
     let graph = Topology::new(
         document.script_snapshot().unwrap(),
         &placement::Positions::new(),

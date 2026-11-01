@@ -6,7 +6,7 @@ use recite_writer_model::{SearchIndex, passage_excerpt};
 fn saved_hits_identify_distinct_passages_and_retain_their_snapshot()
 -> Result<(), Box<dyn std::error::Error>> {
     let key = DocumentKey::new("scene.recite")?;
-    let source = ":: start default\n> first@11111111111111111111\n  Courier waits.\n> second@22222222222222222222\n  Courier leaves.\n? reply@33333333333333333333\n  Courier?\n  -> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Courier waits.\n> @rthh7ab\n  Courier leaves.\n? @bqyvpqq\n  Courier?\n  -> END\n";
     let mut index = SearchIndex::build(&[SavedDocument::new(key.clone(), source)]);
     let results = index.search_results("courier", 10);
     let ids = (0..results.len())
@@ -17,14 +17,7 @@ fn saved_hits_identify_distinct_passages_and_retain_their_snapshot()
                 .map(|id| id.as_str())
         })
         .collect::<Vec<_>>();
-    assert_eq!(
-        ids,
-        [
-            Some("11111111111111111111"),
-            Some("22222222222222222222"),
-            Some("33333333333333333333")
-        ]
-    );
+    assert_eq!(ids, [Some("ffee6p8"), Some("rthh7ab"), Some("bqyvpqq")]);
     index.replace_document(SavedDocument::new(
         key,
         source.replace("Courier", "Zeppelin"),
@@ -37,7 +30,7 @@ fn saved_hits_identify_distinct_passages_and_retain_their_snapshot()
             .passage
             .as_ref()
             .map(|id| id.as_str()),
-        Some("22222222222222222222")
+        Some("rthh7ab")
     );
     Ok(())
 }
@@ -63,7 +56,7 @@ fn snippets_show_late_unicode_matches_with_bounded_output() -> Result<(), Box<dy
         "A quiet hallway. ".repeat(500),
         "🦊 ".repeat(500)
     );
-    let source = format!(":: start default\n> line@11111111111111111111\n  {text}\n-> END\n");
+    let source = format!(":: start default\n> @ffee6p8\n  {text}\n-> END\n");
     let index = SearchIndex::build(&[SavedDocument::new(
         DocumentKey::new("scene.recite")?,
         source,

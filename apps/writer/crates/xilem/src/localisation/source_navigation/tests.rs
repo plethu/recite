@@ -6,9 +6,9 @@ use recite_core::po::PoEntryId;
 use std::fs;
 use tokio::sync::mpsc;
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
-const OTHER: &str = ":: elsewhere\n> letter@22222222222222222222\n  A letter.\n-> END\n";
-const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\n#. file: other.recite\n#. block: elsewhere\nmsgctxt \"22222222222222222222&formal\"\nmsgid \"A letter.\"\nmsgstr \"Un courrier.\"\n\n#. file: scene.recite\n#. block: start\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
+const OTHER: &str = ":: elsewhere\n> @rthh7ab\n  A letter.\n-> END\n";
+const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\n#. file: other.recite\n#. block: elsewhere\nmsgctxt \"rthh7ab&formal\"\nmsgid \"A letter.\"\nmsgstr \"Un courrier.\"\n\n#. file: scene.recite\n#. block: start\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
 
 struct Fixture {
     directory: tempfile::TempDir,
@@ -84,7 +84,7 @@ fn source_actions_cross_files_preserve_po_drafts_and_stage_preview_only_after_su
         );
         assert_eq!(
             writer.session.model().view(),
-            &recite_writer_model::View::Passage("22222222222222222222".into())
+            &recite_writer_model::View::Passage("rthh7ab".into())
         );
         assert!(writer.workspaces.screen == Screen::Write);
         assert_eq!(
@@ -170,7 +170,7 @@ fn stale_catalogue_or_entry_scope_and_cancellation_reject_apply_and_destination_
                         .unwrap()
                         .entries()
                         .iter()
-                        .find(|entry| entry.context() == Some("11111111111111111111"))
+                        .find(|entry| entry.context() == Some("ffee6p8"))
                         .unwrap()
                         .id();
                     writer.localisation.entry.as_mut().unwrap().key.id = id;
@@ -228,7 +228,7 @@ fn stale_catalogue_or_entry_scope_and_cancellation_reject_apply_and_destination_
 #[test]
 fn failed_destinations_and_invalid_language_leave_staged_settings_and_translation_open() {
     for po in [
-        PO.replace("22222222222222222222&formal", "99999999999999999999&formal"),
+        PO.replace("rthh7ab&formal", "unknown_destination&formal"),
         PO.replace("file: other.recite", "file: absent.recite"),
         PO.replace("Language: fr", "Language: not/a/locale"),
     ] {

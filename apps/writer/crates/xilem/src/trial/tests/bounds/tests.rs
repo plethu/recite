@@ -7,7 +7,7 @@ fn five_hundred_twelve_choices_mount_sixteen_controls_and_keep_runtime_indices()
     for index in 0..512 {
         writeln!(
             source,
-            "? reply@{:020}\n  Choice {index:03}\n  -> END",
+            "? @reply_{}\n  Choice {index:03}\n  -> END",
             index + 2
         )
         .unwrap();

@@ -79,9 +79,9 @@ fn rope_backed_draft_streams_through_the_durable_codec() {
 
 #[test]
 fn checked_source_policy_survives_the_cached_recovery_encoder() {
-    let source = ":: start default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+    let source = ":: start default\n? @rthh7ab\n  Continue.\n  -> END\n";
     let mut model = recite_writer_model::Workbench::new(source).unwrap();
-    model.open_reply_rules("22222222222222222222").unwrap();
+    model.open_reply_rules("rthh7ab").unwrap();
     model.set_draft(":: start default\n? invalid".into());
     let recovery = Recovery::new(source.into(), model.recovery());
     let mut encoding = Encoding::default();

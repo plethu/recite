@@ -2,7 +2,7 @@ use super::*;
 use crate::{navigation::worker, tests::support};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
-const SOURCE: &str = ":: part_a default\n> first@11111111111111111111\n  First.\n-> END\n:: part_b\n> second@22222222222222222222\n  Second.\n-> END\n:: part_c\n> third@33333333333333333333\n  Third.\n-> END\n";
+const SOURCE: &str = ":: part_a default\n> @ffee6p8\n  First.\n-> END\n:: part_b\n> @rthh7ab\n  Second.\n-> END\n:: part_c\n> @bqyvpqq\n  Third.\n-> END\n";
 struct Fixture {
     writer: Writer,
     jobs: UnboundedReceiver<worker::Job>,

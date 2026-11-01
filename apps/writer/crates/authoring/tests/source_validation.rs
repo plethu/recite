@@ -3,13 +3,13 @@ use recite_writer_model::{
     Document, EditOperation, RecoveredDraft, SourceValidation, View, Workbench,
 };
 
-const SOURCE: &str = ":: start default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+const SOURCE: &str = ":: start default\n? @rthh7ab\n  Continue.\n  -> END\n";
 const INVALID: &str = ":: start default\n? invalid";
 
 #[test]
 fn rules_validation_survives_detachment_serialization_and_synchronous_apply() {
     let mut model = Workbench::new(SOURCE).unwrap();
-    model.open_reply_rules("22222222222222222222").unwrap();
+    model.open_reply_rules("rthh7ab").unwrap();
     assert_eq!(model.source_validation(), SourceValidation::NoNewErrors);
     model.set_draft(INVALID.into());
     let bytes = serde_json::to_vec(&model.recovery()).unwrap();
@@ -38,7 +38,7 @@ fn policy_changes_invalidate_queued_permissive_edits_and_navigation() {
     let request = model.edit_request(EditOperation::Apply).unwrap().unwrap();
     let navigation = model.navigation_request();
     let mut prepared = request.prepare(&CancellationToken::new()).unwrap();
-    model.open_reply_rules("22222222222222222222").unwrap();
+    model.open_reply_rules("rthh7ab").unwrap();
     assert!(!navigation.is_current(&model));
     assert!(model.accept_edit(&mut prepared).is_err());
     assert_eq!(model.document().source(), SOURCE);
@@ -48,7 +48,7 @@ fn policy_changes_invalidate_queued_permissive_edits_and_navigation() {
 #[test]
 fn prepared_checked_apply_preserves_newer_typing_and_its_validation_policy() {
     let mut model = Workbench::new(SOURCE).unwrap();
-    model.open_reply_rules("22222222222222222222").unwrap();
+    model.open_reply_rules("rthh7ab").unwrap();
     let submitted = SOURCE.replace("Continue.", "Submitted.");
     model.set_draft(submitted.clone());
     let request = model.edit_request(EditOperation::Apply).unwrap().unwrap();
@@ -97,7 +97,7 @@ fn legacy_recovery_remains_freeform_and_explicit_repair_requires_valid_source() 
 fn malformed_recovery_policy_is_rejected_before_current_work_changes() {
     let recovery: RecoveredDraft = serde_json::from_value(serde_json::json!({
         "source": SOURCE,
-        "view": { "Passage": "22222222222222222222" },
+        "view": { "Passage": "rthh7ab" },
         "draft": "unsafe policy combination",
         "source_validation": "NoNewErrors",
     }))
@@ -167,7 +167,7 @@ fn invalid_recovery_selections_preserve_the_current_field_and_its_policy() {
         }))
         .unwrap();
         let mut model = Workbench::new(SOURCE).unwrap();
-        model.open_reply_rules("22222222222222222222").unwrap();
+        model.open_reply_rules("rthh7ab").unwrap();
         model.set_draft("Current unsaved rules.".into());
         let before = model.recovery();
         assert!(recovery.restore(&mut model).is_err());

@@ -18,7 +18,7 @@ fn catalogue_scale_timing() -> Result<(), Box<dyn std::error::Error>> {
         .min(entries);
     let mut source = String::new();
     for i in 0..entries {
-        source.push_str(&format!("#. file: scenes/chapter.recite\n#. block: chapter_start\n# translator note\nmsgctxt \"{i:020}\"\nmsgid \"Hello {{name}} — café dialogue passage {i}\"\nmsgstr \"Bonjour {{name}} — scène traduite {i}\"\n\n"));
+        source.push_str(&format!("#. file: scenes/chapter.recite\n#. block: chapter_start\n# translator note\nmsgctxt \"line_{i}\"\nmsgid \"Hello {{name}} — café dialogue passage {i}\"\nmsgstr \"Bonjour {{name}} — scène traduite {i}\"\n\n"));
     }
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("fr.po");

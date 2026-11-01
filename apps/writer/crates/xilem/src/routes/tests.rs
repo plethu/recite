@@ -3,7 +3,7 @@ use crate::navigation::{self, Target};
 use crate::tests::support;
 use recite_writer_model::{EditOperation, View};
 use tokio::sync::mpsc as async_mpsc;
-const SOURCE: &str = "# Keep comments.\n:: start default\n? reply@22222222222222222222\n  Let me through.\n  -> accepted\n:: accepted\n-> END\n:: alternative\n-> END\n";
+const SOURCE: &str = "# Keep comments.\n:: start default\n? @rthh7ab\n  Let me through.\n  -> accepted\n:: accepted\n-> END\n:: alternative\n-> END\n";
 struct Fixture {
     directory: tempfile::TempDir,
     writer: Writer,
@@ -32,7 +32,7 @@ fn destination_choice_applies_prose_first_and_uses_one_separate_structural_undo_
         model.set_draft("New reply prose.".into());
         Ok(())
     });
-    writer.choose_destination(RouteOwner::Reply("22222222222222222222".into()));
+    writer.choose_destination(RouteOwner::Reply("rthh7ab".into()));
     let crate::choices::Request::Destination(request) = writer.pending_choice.take().unwrap()
     else {
         panic!("destination request")
@@ -80,7 +80,7 @@ fn stale_or_undeclared_destination_receipts_do_not_apply_a_draft() {
     for invalid in [false, true] {
         let mut fixture = fixture().unwrap();
         let writer = &mut fixture.writer;
-        writer.choose_destination(RouteOwner::Reply("22222222222222222222".into()));
+        writer.choose_destination(RouteOwner::Reply("rthh7ab".into()));
         let crate::choices::Request::Destination(request) = writer.pending_choice.take().unwrap()
         else {
             panic!("destination request")
@@ -120,7 +120,7 @@ fn cancelled_or_newer_typing_structural_jobs_preserve_source_selection_and_histo
         assert!(!writer.session.model().document().can_undo());
         assert_eq!(
             writer.session.model().view(),
-            &View::Passage("22222222222222222222".into())
+            &View::Passage("rthh7ab".into())
         );
     }
 }

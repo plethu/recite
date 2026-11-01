@@ -14,14 +14,12 @@ fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough>
 #[test]
 fn plural_pages_keep_every_form_and_save_the_reviewed_entry_without_changing_source() {
     let text = "A long source passage remains inspectable. ".repeat(60);
-    let source = format!(
-        ":: start default\n> line@11111111111111111111\n  {text}\n  | Multiple tickets.\n-> END\n"
-    );
+    let source = format!(":: start default\n> @ffee6p8\n  {text}\n  | Multiple tickets.\n-> END\n");
     let directory = support::project(&source).unwrap();
     let path = directory.path().join("fr.po");
     let rule = format!("nplurals=6; plural=(n{}%6);", " ".repeat(2200));
     let mut po = format!(
-        "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: {rule}\\n\"\n\n#, fuzzy\nmsgctxt \"11111111111111111111\"\nmsgid \"{text}\"\nmsgid_plural \"Multiple tickets.\"\n"
+        "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: {rule}\\n\"\n\n#, fuzzy\nmsgctxt \"ffee6p8\"\nmsgid \"{text}\"\nmsgid_plural \"Multiple tickets.\"\n"
     );
     for index in 0..6 {
         po.push_str(&format!("msgstr[{index}] \"form {index}\"\n"));
@@ -130,7 +128,7 @@ fn plural_pages_keep_every_form_and_save_the_reviewed_entry_without_changing_sou
     let entry = saved
         .entries()
         .iter()
-        .find(|entry| entry.context() == Some("11111111111111111111"))
+        .find(|entry| entry.context() == Some("ffee6p8"))
         .unwrap();
     assert_eq!(entry.plural_translations()[0].text(), "Un billet.");
     assert_eq!(entry.plural_translations()[4].text(), "Cinq billets.");

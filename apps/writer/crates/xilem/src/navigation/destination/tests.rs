@@ -9,8 +9,8 @@ use tokio::sync::mpsc as async_mpsc;
 #[path = "failure/tests.rs"]
 mod failure;
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
-const PO: &str = "#. file: scene.recite\n#. block: start\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n? @rthh7ab\n  Continue.\n  -> END\n";
+const PO: &str = "#. file: scene.recite\n#. block: start\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
 const SCREENS: &[Screen] = &[
     Screen::Write,
     Screen::Preview,
@@ -50,13 +50,13 @@ fn location(screen: Screen) -> Location {
         beat: Some("start".into()),
         passage: Some(
             if screen == Screen::Rules {
-                "22222222222222222222"
+                "rthh7ab"
             } else {
-                "11111111111111111111"
+                "ffee6p8"
             }
             .into(),
         ),
-        entry: (screen == Screen::Entry).then(|| "11111111111111111111".into()),
+        entry: (screen == Screen::Entry).then(|| "ffee6p8".into()),
         ..Location::default()
     }
 }

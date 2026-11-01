@@ -48,8 +48,8 @@ def run(api, bus, registry, binary, output):
             (project / "zz-other.recite").write_text(
                 SOURCE.replace("The last tram waits.", "Another document.")
                 .replace("opening", "other")
-                .replace("11111111111111111111", "33333333333333333333")
-                .replace("22222222222222222222", "44444444444444444444")
+                .replace("ffee6p8", "bqyvpqq")
+                .replace("rthh7ab", "z0g6c80")
             )
             with output.with_suffix(".writer.log").open("w") as log:
                 process = subprocess.Popen([str(binary)], stdout=log, stderr=subprocess.STDOUT)

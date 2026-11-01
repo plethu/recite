@@ -25,9 +25,9 @@ from writer_interactions import capture
 
 SOURCE = """:: start default
 :if accepts(actor, "spoken", 7, 2.5, true, false)
-  > hello@11111111111111111111
+  > @ffee6p8
     Hello.
-> tickets@22222222222222222222 bind=(count:int=$tickets)
+> bind=(count:int=$tickets) @rthh7ab
   {count} ticket
   | {count} tickets
 -> END
@@ -35,11 +35,11 @@ SOURCE = """:: start default
 PO = """msgid ""
 msgstr "Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n"
 
-msgctxt "11111111111111111111&formal"
+msgctxt "ffee6p8&formal"
 msgid "Hello."
 msgstr "Bonjour formel."
 
-msgctxt "22222222222222222222"
+msgctxt "rthh7ab"
 msgid "{count} ticket"
 msgid_plural "{count} tickets"
 msgstr[0] "{count} billet"

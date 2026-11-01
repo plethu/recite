@@ -4,7 +4,7 @@ use recite_runtime::{EffectAck, preview::PreviewEvent};
 use recite_writer_session::preview::trace::{Place, ValuePosition};
 use tokio::sync::mpsc as async_mpsc;
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
 
 fn begin(writer: &mut Writer) -> Result<Arc<Request>, Box<dyn std::error::Error>> {
     let (sender, mut requests) = async_mpsc::unbounded_channel();
@@ -152,7 +152,7 @@ fn successful_restart_returns_the_old_run_to_the_worker_and_failure_preserves_it
 
 #[test]
 fn native_preview_actions_play_choices_conditions_effects_and_keep_authoring_undo() {
-    let source = ":: start default\n> line@11111111111111111111\n  Hello.\n? go@22222222222222222222\n  Choose the branch\n  -> branch\n:: branch\n:if trusts(player)\n  > yes@33333333333333333333\n    Yes.\n:else\n  > no@44444444444444444444\n    No.\n! blocking overlay(work)\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n? @rthh7ab\n  Choose the branch\n  -> branch\n:: branch\n:if trusts(player)\n  > @bqyvpqq\n    Yes.\n:else\n  > @z0g6c80\n    No.\n! blocking overlay(work)\n-> END\n";
     let directory = project(source).unwrap();
     let mut writer = open(&directory).unwrap();
     install(&mut writer).unwrap();
@@ -187,7 +187,7 @@ fn native_preview_actions_play_choices_conditions_effects_and_keep_authoring_und
 
 #[test]
 fn enum_condition_and_effect_failure_use_the_existing_runtime_contract() {
-    let source = ":: start default\n:match mood(player)\n  :case calm\n    > calm@11111111111111111111\n      Calm.\n  :case _\n    > other@22222222222222222222\n      Other.\n! blocking overlay(work)\n-> END\n";
+    let source = ":: start default\n:match mood(player)\n  :case calm\n    > @ffee6p8\n      Calm.\n  :case _\n    > @rthh7ab\n      Other.\n! blocking overlay(work)\n-> END\n";
     let directory = project(source).unwrap();
     let mut writer = open(&directory).unwrap();
     install(&mut writer).unwrap();

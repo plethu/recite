@@ -30,7 +30,7 @@ def run(api, bus, registry, binary, output):
             config.parent.mkdir(parents=True, exist_ok=True)
             config.write_text('config_version = 1\n[ui]\nkeymap = "vim"\n')
             (project / "zz-other.recite").write_text(
-                ":: other\n> third@33333333333333333333\n  Another scene waits.\n-> END\n"
+                ":: other\n> @bqyvpqq\n  Another scene waits.\n-> END\n"
             )
             with output.with_suffix(".writer.log").open("w") as log:
                 process, window, node = launch(

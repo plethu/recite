@@ -23,9 +23,9 @@ fn navigate_after_render(
 #[test]
 fn long_beat_controls_do_not_leak_into_reply_rules_or_source_repair() {
     let lines = (100..132)
-        .map(|n| format!("> line_{n}@{n:020x}\n  A long beat passage.\n"))
+        .map(|n| format!("> @line_{n}\n  A long beat passage.\n"))
         .collect::<String>();
-    let source = SOURCE.replacen("? reply@", &format!("{lines}? reply@"), 1);
+    let source = SOURCE.replacen("? requires=", &format!("{lines}? requires="), 1);
     let mut fixture = open_fixture(&source).unwrap();
     let writer = &mut fixture.writer;
     assert!(writer.reading.rows.len() > crate::reading::PAGE);

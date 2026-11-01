@@ -8,12 +8,12 @@ fn retained_checked_source_cannot_bypass_validation_in_save_all()
     let (dir, mut files) = project()?;
     let active = files.current.clone();
     let retained = dir.path().join("other.recite");
-    let source = ":: other default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+    let source = ":: other default\n? @rthh7ab\n  Continue.\n  -> END\n";
     std::fs::write(&retained, source)?;
     let mut model = files.workbench()?;
     files.refresh(&mut model)?;
     files.switch(&mut model, &retained, None, |_| Ok(()))?;
-    model.open_reply_rules("22222222222222222222")?;
+    model.open_reply_rules("rthh7ab")?;
     model.set_draft(":: other default\n? invalid".into());
     files.switch(&mut model, &active, None, |_| Ok(()))?;
 

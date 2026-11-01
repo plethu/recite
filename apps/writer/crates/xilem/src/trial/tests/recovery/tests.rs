@@ -235,10 +235,9 @@ fn recovered_source_never_offers_manuscript_apply_or_enqueues_preview() {
 
 #[test]
 fn current_request_precedes_expanded_next_run_settings_without_replacing_either() {
-    let directory = project(
-        ":: start default\n:if trusts(player)\n  > line@11111111111111111111\n    Hello.\n-> END\n",
-    )
-    .unwrap();
+    let directory =
+        project(":: start default\n:if trusts(player)\n  > @ffee6p8\n    Hello.\n-> END\n")
+            .unwrap();
     let mut writer = open(&directory).unwrap();
     install(&mut writer).unwrap();
     writer.configure_trial();

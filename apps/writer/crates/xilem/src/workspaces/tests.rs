@@ -20,8 +20,7 @@ fn finish_build(writer: &mut Writer) {
 }
 
 pub(super) fn fixture() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
-    let directory =
-        support::project(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n")?;
+    let directory = support::project(":: start default\n> @ffee6p8\n  Hello.\n-> END\n")?;
     fs::write(
         directory.path().join("recite.project.toml"),
         "format_version=1\n[project]\ncontent_set='trial'\nversion='1'\nschema='schema.json'\n[[scenes]]\nid='start'\nasset='build/start.recitec'\nblock='start'\nparticipants=['mara']\n",

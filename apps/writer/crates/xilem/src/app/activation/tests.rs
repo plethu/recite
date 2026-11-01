@@ -26,11 +26,7 @@ fn request(
 fn forwarded_link_can_retry_after_the_native_navigation_worker_starts() {
     let directory = support::project(recite_writer_model::FIXTURE).unwrap();
     let other = directory.path().join("other.recite");
-    std::fs::write(
-        &other,
-        ":: other default\n> other@aaaaaaaaaaaaaaaaaaaa\n  Other.\n-> END\n",
-    )
-    .unwrap();
+    std::fs::write(&other, ":: other default\n> @m3ffvrt\n  Other.\n-> END\n").unwrap();
     let app = App::with_writer(support::open(&directory).unwrap());
     let before = app.writer.as_ref().unwrap().session.model().recovery();
     let view = crate::navigation::worker().map_state(|app: &mut App| app.writer.as_mut().unwrap());

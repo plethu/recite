@@ -123,11 +123,11 @@ fn picker_opening_still_rejects_changed_lifetime_document_selection_screen_picke
                 *model = Workbench::open("other.recite", SOURCE)?;
                 model.select(DocumentView::Source)
             }),
-            2 => {
-                app.writer.as_mut().unwrap().change(|model| {
-                    model.select(DocumentView::Passage("22222222222222222222".into()))
-                })
-            }
+            2 => app
+                .writer
+                .as_mut()
+                .unwrap()
+                .change(|model| model.select(DocumentView::Passage("rthh7ab".into()))),
             3 => app.writer.as_mut().unwrap().workspaces.screen = Screen::Build,
             4 => app.open_picker(picker::Search::Commands),
             5 => {

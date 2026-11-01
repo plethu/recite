@@ -13,8 +13,8 @@ mod visual;
 #[path = "workflow/tests.rs"]
 mod workflow;
 
-pub(super) const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
-const PO: &str = "#. file: scene.recite\n#. block: start\n# translator note\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+pub(super) const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
+const PO: &str = "#. file: scene.recite\n#. block: start\n# translator note\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
 pub(super) fn fixture() -> (tempfile::TempDir, Writer, ToolDriver) {
     let directory = support::project(SOURCE).unwrap();
     fs::write(directory.path().join("fr.po"), PO).unwrap();
@@ -77,7 +77,7 @@ fn save_all_then_close_publishes_translations_and_source_through_the_normal_sour
     writer
         .session
         .edit(|model| {
-            model.select(View::Passage("11111111111111111111".into()))?;
+            model.select(View::Passage("ffee6p8".into()))?;
             model.set_draft("Source edit.".into());
             Ok(())
         })

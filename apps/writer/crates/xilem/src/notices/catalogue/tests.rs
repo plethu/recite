@@ -10,7 +10,7 @@ fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough>
 fn mounted_catalogue_notice_compares_without_applying_drafts_and_retires_with_its_lifetime() {
     let directory = support::project(SOURCE).unwrap();
     let po = directory.path().join("fr.po");
-    let original = "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+    let original = "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
     fs::write(&po, original).unwrap();
     let writer = support::open(&directory).unwrap();
     let mut mounted = Mounted::new(writer, surface);

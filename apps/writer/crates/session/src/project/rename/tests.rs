@@ -2,8 +2,7 @@ use super::*;
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_writer_model::View;
 use std::{fs, io};
-const SOURCE: &str =
-    ":: start default\n> line@11111111111111111111\n  Hello.\n-> old\n\n:: old\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> old\n\n:: old\n-> END\n";
 fn fixture() -> (tempfile::TempDir, ProjectFiles, Workbench) {
     let root = tempfile::tempdir().unwrap();
     fs::write(
@@ -42,9 +41,7 @@ fn cold_recovered_changes_are_retained_and_refuse_the_reviewed_rename() {
 #[test]
 fn final_grouped_cleanup_sync_failure_keeps_edit_navigation_and_save_excluded_until_retry() {
     let (root, mut files, mut model) = fixture();
-    model
-        .select(View::Passage("11111111111111111111".into()))
-        .unwrap();
+    model.select(View::Passage("ffee6p8".into())).unwrap();
     files.review_rename(&mut model, "old", "new").unwrap();
     let blocked = root.path().join("a.recite.recite-editor-recovery.json");
     fs::create_dir(&blocked).unwrap();

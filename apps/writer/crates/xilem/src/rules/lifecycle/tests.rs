@@ -16,7 +16,7 @@ fn retired_and_reopened_reply_rejects_a_receipt_even_at_the_same_source_and_stru
             .session
             .model()
             .document()
-            .reply_rules("22222222222222222222")
+            .reply_rules("rthh7ab")
             .unwrap(),
     );
     writer.install_rules(&mut projection);
@@ -33,9 +33,7 @@ fn only_the_latest_pending_choice_can_open_and_retirement_clears_it() {
     let mut fixture = fixture().unwrap();
     let writer = &mut fixture.writer;
     writer.pick_rule_choice(selection::Target::AddCondition(None));
-    writer.choose_destination(recite_writer_model::RouteOwner::Reply(
-        "22222222222222222222".into(),
-    ));
+    writer.choose_destination(recite_writer_model::RouteOwner::Reply("rthh7ab".into()));
     assert!(matches!(
         writer.pending_choice,
         Some(crate::choices::Request::Destination(_))
@@ -60,7 +58,7 @@ fn editing_reply_text_applies_checked_rule_draft_and_exits_source_backing_view()
     assert!(writer.rules.is_none());
     assert_eq!(
         writer.session.model().view(),
-        &recite_writer_model::View::Passage("22222222222222222222".into())
+        &recite_writer_model::View::Passage("rthh7ab".into())
     );
     assert_eq!(writer.current_location().screen, Screen::Write);
     assert_eq!(writer.session.model().draft(), "Let me through.");
@@ -98,9 +96,7 @@ fn structural_authoring_and_reload_retire_rule_presentation_and_its_picker_recei
 
 #[test]
 fn undo_removing_the_open_reply_retires_controls_and_preserves_redo() {
-    let directory =
-        support::project(":: start default\n> line@11111111111111111111\n  Begin.\n-> END\n")
-            .unwrap();
+    let directory = support::project(":: start default\n> @ffee6p8\n  Begin.\n-> END\n").unwrap();
     let mut writer = support::open(&directory).unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let (sender, mut jobs) = async_mpsc::unbounded_channel();
@@ -143,9 +139,7 @@ fn destination_change_from_rules_applies_typed_arguments_then_retires_old_destin
     let writer = &mut fixture.writer;
     let target = first_argument(writer).unwrap();
     writer.edit_rule_argument(target, "5".into());
-    writer.choose_destination(recite_writer_model::RouteOwner::Reply(
-        "22222222222222222222".into(),
-    ));
+    writer.choose_destination(recite_writer_model::RouteOwner::Reply("rthh7ab".into()));
     let crate::choices::Request::Destination(request) = writer.pending_choice.take().unwrap()
     else {
         panic!("destination request")
@@ -155,7 +149,7 @@ fn destination_change_from_rules_applies_typed_arguments_then_retires_old_destin
     assert!(writer.rules.is_none());
     assert_eq!(
         writer.session.model().view(),
-        &recite_writer_model::View::Passage("22222222222222222222".into())
+        &recite_writer_model::View::Passage("rthh7ab".into())
     );
     assert!(
         writer

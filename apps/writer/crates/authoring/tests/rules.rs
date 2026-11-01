@@ -6,7 +6,7 @@ const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n? requires=(standi
 fn requirement_envelopes_keep_negation_calls_and_adjacent_attributes_valid() -> TestResult {
     for requirement in ["", " requires=(ready())"] {
         let source = format!(
-            "# Keep authored spacing.\n:: start default\n? reply@22222222222222222222{requirement} reason=closed_gate\n  Continue.\n  -> END\n"
+            "# Keep authored spacing.\n:: start default\n?{requirement} reason=closed_gate @rthh7ab\n  Continue.\n  -> END\n"
         );
         let mut model = Workbench::new(&source)?;
         model.select(View::Source)?;
@@ -21,20 +21,20 @@ fn requirement_envelopes_keep_negation_calls_and_adjacent_attributes_valid() -> 
             ),
             (call, "(ready())"),
         ] {
-            let mut rules = model.document().reply_rules("22222222222222222222")?;
+            let mut rules = model.document().reply_rules("rthh7ab")?;
             rules.condition = Some(condition);
             let expected = rules.source()?;
             let header = if requirement.is_empty() {
-                format!("? reply@22222222222222222222 reason=closed_gate requires={value}")
+                format!("? reason=closed_gate requires={value} @rthh7ab")
             } else {
-                format!("? reply@22222222222222222222 requires={value} reason=closed_gate")
+                format!("? requires={value} reason=closed_gate @rthh7ab")
             };
             assert!(expected.lines().any(|line| line == header));
             assert!(expected.starts_with("# Keep authored spacing.\n"));
             model.set_draft(expected.clone());
             model.apply_reply_rules(&rules)?;
             assert_eq!(model.document().source(), expected);
-            let reprojected = model.document().reply_rules("22222222222222222222")?;
+            let reprojected = model.document().reply_rules("rthh7ab")?;
             assert_eq!(
                 reprojected.source()?,
                 expected,

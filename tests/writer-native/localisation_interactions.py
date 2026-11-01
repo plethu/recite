@@ -15,7 +15,7 @@ from writer_interactions import SOURCE, capture
 PO = """#. file: scene.recite
 #. block: opening
 # translator note
-msgctxt "11111111111111111111"
+msgctxt "ffee6p8"
 msgid "The last tram waits."
 msgstr "Le dernier tram attend."
 """

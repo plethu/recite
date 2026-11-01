@@ -14,7 +14,7 @@ fn project() -> (tempfile::TempDir, ProjectFiles, Workbench) {
     fs::write(dir.path().join("first.recite"), FIXTURE).unwrap();
     fs::write(
         dir.path().join("second.recite"),
-        ":: second\n> text@22222222222222222222\n  Second.\n-> END\n",
+        ":: second\n> @rthh7ab\n  Second.\n-> END\n",
     )
     .unwrap();
     let mut files = ProjectFiles::open(dir.path()).unwrap();

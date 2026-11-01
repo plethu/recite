@@ -3,6 +3,7 @@ use super::*;
 use crate::presentation::control_style::{ControlStyle, styled};
 use crate::presentation::print;
 use crate::reading::PassageNumber;
+use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, PassageKind};
 use xilem::TextAlign;
 use xilem::masonry::kurbo::Axis;
@@ -137,7 +138,7 @@ fn metadata(
     let caption_size = 0.6 * state.reading_size();
     let metadata =
         if active && (state.editing_passage(&passage.id) || state.session.model().has_draft()) {
-            passage.label.clone()
+            format!("{STABLE_ID_FIELD_PREFIX}{}", passage.id)
         } else {
             String::new()
         };

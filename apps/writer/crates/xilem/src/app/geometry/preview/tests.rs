@@ -94,7 +94,7 @@ fn configuring_preview_uses_the_workspace_and_restores_retained_writing_and_refe
 #[test]
 fn current_run_precedes_configuration_and_focus_retains_the_collapsed_reference() {
     let prose = "A long running conversation remains inspectable. ".repeat(80);
-    let source = format!(":: start default\n> hello@11111111111111111111\n  {prose}\n-> END\n");
+    let source = format!(":: start default\n> @ffee6p8\n  {prose}\n-> END\n");
     let directory = support::project(&source).unwrap();
     let mut writer = support::open(&directory).unwrap();
     writer.publish_reference().unwrap();

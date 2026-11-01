@@ -1,6 +1,6 @@
 use super::*;
 use std::fs;
-const SOURCE: &str = "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+const SOURCE: &str = "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
 
 #[test]
 fn comparison_rejects_newer_drafts_review_changes_and_a_different_owner()

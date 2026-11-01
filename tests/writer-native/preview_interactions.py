@@ -11,17 +11,17 @@ from preview_controls import start as start_preview
 from preview_controls import submission
 
 SOURCE = """:: start default
-> line@11111111111111111111
+> @ffee6p8
   Hello.
-? go@22222222222222222222
+? @rthh7ab
   Choose the branch
   -> branch
 :: branch
 :if trusts(player)
-  > yes@55555555555555555555
+  > @yes
     Yes.
 :else
-  > no@66666666666666666666
+  > @no
     No.
 ! blocking overlay(work)
 -> END

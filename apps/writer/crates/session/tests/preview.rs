@@ -2,9 +2,8 @@ use recite_writer_model::{PreviewSetup, Workbench};
 use recite_writer_session::ProjectSession;
 use std::fs;
 
-const FIRST: &str =
-    ":: first default\n> first@11111111111111111111\n  First.\n-> second.recite::second\n";
-const SECOND: &str = ":: second\n> second@22222222222222222222\n  Saved second.\n-> END\n";
+const FIRST: &str = ":: first default\n> @ffee6p8\n  First.\n-> second.recite::second\n";
+const SECOND: &str = ":: second\n> @rthh7ab\n  Saved second.\n-> END\n";
 
 fn start(project: &mut ProjectSession) -> Result<(), Box<dyn std::error::Error>> {
     let prepared = project

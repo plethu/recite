@@ -5,7 +5,7 @@ use recite_writer_session::{project::ProjectFiles, recovery::Recovery};
 fn repair_exports_the_captured_field_with_backup_and_stays_out_of_source_discovery()
 -> Result<(), Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
-    let source = ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
+    let source = ":: start default\n> @ffee6p8\n  Original.\n-> END\n";
     let path = directory.path().join("scene.recite");
     std::fs::write(
         directory.path().join("recite.project.toml"),

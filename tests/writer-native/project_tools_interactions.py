@@ -43,7 +43,7 @@ def run(api, bus, registry, binary, output):
             )
             source = project / "scene.recite"
             original = SOURCE + "".join(
-                f":: spare_{index}\n> spare_{index}@{index + 1000:020x}\n  Another line.\n-> END\n"
+                f":: spare_{index}\n> @spare_{index}\n  Another line.\n-> END\n"
                 for index in range(8192)
             )
             source.write_text(original)

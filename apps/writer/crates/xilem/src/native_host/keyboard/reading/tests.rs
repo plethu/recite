@@ -79,7 +79,7 @@ fn show(root: &mut RenderRoot, child: usize) {
     root.redraw();
 }
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
 
 #[test]
 fn capture_reuses_the_manuscript_viewport_while_it_is_shown_or_stashed() {

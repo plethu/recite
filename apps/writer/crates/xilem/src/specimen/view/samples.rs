@@ -14,7 +14,7 @@ pub(super) fn samples(state: &Specimen) -> impl WidgetView<Specimen> + use<> {
         flex_row((manuscript_text(20., state.manuscript.clone()).width(640.px()),)),
         flex_row((source_text(
             15.,
-            ":: harbour default\n> narrator@7701ceab59d2adfa057a\n  The last tram waits.\n-> END",
+            ":: harbour default\n> @narrator\n  The last tram waits.\n-> END",
         )
         .width(640.px()),)),
         label(scale, "Surfaces and selection").text_size(22. * scale),

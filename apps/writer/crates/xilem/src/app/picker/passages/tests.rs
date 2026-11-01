@@ -3,9 +3,7 @@ use super::*;
 fn long_beat(passages: usize) -> String {
     let mut source = String::from(":: start default\n");
     for n in 1..=passages {
-        source.push_str(&format!(
-            "> line_{n}@{n:020x}\n  Courier {n} waits in the café.\n"
-        ));
+        source.push_str(&format!("> @line_{n}\n  Courier {n} waits in the café.\n"));
     }
     source.push_str("-> END\n");
     source
@@ -34,7 +32,7 @@ fn saved_text_and_current_beat_lookup_open_the_matching_off_page_passage() {
         support::finish_navigation(writer, &mut jobs).unwrap();
         assert_eq!(
             writer.session.model().view(),
-            &recite_writer_model::View::Passage(format!("{:020x}", 39))
+            &recite_writer_model::View::Passage(format!("line_{}", 39))
         );
         assert_eq!(writer.reading.window.start(), 32);
         assert_eq!(
@@ -194,7 +192,7 @@ fn partial_word_lookup_previews_the_late_matching_text() {
         "{}İstanbul's Courier’s packet waits.",
         "A quiet hallway. ".repeat(500)
     );
-    let source = format!(":: start default\n> line@11111111111111111111\n  {text}\n-> END\n");
+    let source = format!(":: start default\n> @ffee6p8\n  {text}\n-> END\n");
     let directory = support::project(&source).unwrap();
     let mut app = App::with_writer(support::open(&directory).unwrap());
     app.open_picker(Search::Passages);
@@ -220,7 +218,7 @@ fn partial_word_lookup_previews_the_late_matching_text() {
 
 #[test]
 fn speaker_only_saved_search_keeps_its_matching_context_visible() {
-    let source = ":: start default\n> line@11111111111111111111 speaker=mara\n  The station is quiet.\n-> END\n";
+    let source = ":: start default\n> speaker=mara @ffee6p8\n  The station is quiet.\n-> END\n";
     let directory = support::project(source).unwrap();
     let mut app = App::with_writer(support::open(&directory).unwrap());
     app.open_picker(Search::ProjectText);

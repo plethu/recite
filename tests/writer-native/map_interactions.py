@@ -13,13 +13,13 @@ from startup_interactions import field
 from writer_interactions import capture, launch
 
 SOURCE = """:: start default
-> line@11111111111111111111
+> @ffee6p8
   At the gate.
-? reply@22222222222222222222
+? @rthh7ab
   Continue.
   -> later
 :: later
-> line@33333333333333333333
+> @bqyvpqq
   At the bridge.
 -> END
 """

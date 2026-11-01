@@ -2,7 +2,7 @@ use super::*;
 use crate::localisation::catalogue::Draft;
 use std::fs;
 
-const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"One letter\"\nmsgid_plural \"Many letters\"\nmsgstr[0] \"Une lettre\"\nmsgstr[1] \"Plusieurs lettres\"\n\nmsgctxt \"11111111111111111111&formal\"\nmsgid \"One letter\"\nmsgid_plural \"Many letters\"\nmsgstr[0] \"Un courrier\"\nmsgstr[1] \"Plusieurs courriers\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Other\"\nmsgstr \"Autre\"\n";
+const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"One letter\"\nmsgid_plural \"Many letters\"\nmsgstr[0] \"Une lettre\"\nmsgstr[1] \"Plusieurs lettres\"\n\nmsgctxt \"ffee6p8&formal\"\nmsgid \"One letter\"\nmsgid_plural \"Many letters\"\nmsgstr[0] \"Un courrier\"\nmsgstr[1] \"Plusieurs courriers\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Other\"\nmsgstr \"Autre\"\n";
 
 fn fixture(source: &str) -> Result<(tempfile::TempDir, Catalogue), Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
@@ -18,7 +18,7 @@ fn wording_family_and_target_language_plural_examples_preserve_entry_identity() 
         .document
         .entries()
         .iter()
-        .find(|entry| entry.context() == Some("11111111111111111111&formal"))
+        .find(|entry| entry.context() == Some("ffee6p8&formal"))
         .unwrap()
         .id();
     let details = catalogue.entry_details(id).unwrap();
@@ -28,7 +28,7 @@ fn wording_family_and_target_language_plural_examples_preserve_entry_identity() 
             .iter()
             .map(|wording| wording.context.as_str())
             .collect::<Vec<_>>(),
-        ["11111111111111111111", "11111111111111111111&formal"]
+        ["ffee6p8", "ffee6p8&formal"]
     );
     assert_eq!(details.wordings[1].entry, id);
     assert_eq!(details.wordings[1].caption, "formal");
@@ -48,7 +48,7 @@ fn repeated_typing_reuses_one_projection_and_changed_form_counts_invalidate_it()
         .document
         .entries()
         .iter()
-        .find(|entry| entry.context() == Some("11111111111111111111"))
+        .find(|entry| entry.context() == Some("ffee6p8"))
         .unwrap()
         .id();
     let original = catalogue.entry_details(id).unwrap();
@@ -92,7 +92,7 @@ fn saved_metadata_replaces_guidance_and_missing_or_huge_rules_fail_without_heade
         .document
         .entries()
         .iter()
-        .find(|entry| entry.context() == Some("11111111111111111111"))
+        .find(|entry| entry.context() == Some("ffee6p8"))
         .unwrap()
         .id();
     let original = catalogue.entry_details(id).unwrap();

@@ -201,7 +201,7 @@ pub(super) fn linear_scene(count: usize) -> String {
     let mut source = String::new();
     for index in 0..count {
         source.push_str(&format!(
-            ":: beat_{index}{}\n> line@{index:020}\n  Dialogue for beat {index}.\n-> {}\n",
+            ":: beat_{index}{}\n> @line_{index}\n  Dialogue for beat {index}.\n-> {}\n",
             if index == 0 { " default" } else { "" },
             if index + 1 == count {
                 "END".into()

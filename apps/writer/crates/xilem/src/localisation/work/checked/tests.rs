@@ -55,7 +55,10 @@ fn caught_panic_closes_using_the_last_admitted_recovery_without_serializing_unce
         |checkout, _| {
             let owner = checkout.owner.as_mut().unwrap();
             owner.catalogue.document = Arc::new(
-                PoDocument::parse("msgctxt \"11111111111111111111\"\nmsgid \"Uncertain replacement\"\nmsgstr \"\"\n").unwrap(),
+                PoDocument::parse(
+                    "msgctxt \"ffee6p8\"\nmsgid \"Uncertain replacement\"\nmsgstr \"\"\n",
+                )
+                .unwrap(),
             );
             panic!("injected after partial mutation");
         },
@@ -141,10 +144,8 @@ fn failed_recovery_preflight_prevents_exclusive_mutation_and_retains_newer_draft
     let mut completed = Checked::new(checkout, Action::Query, Query::default(), None).execute_with(
         |checkout, _| {
             checkout.owner.as_mut().unwrap().catalogue.document = Arc::new(
-                PoDocument::parse(
-                    "msgctxt \"11111111111111111111\"\nmsgid \"Uncertain\"\nmsgstr \"\"\n",
-                )
-                .unwrap(),
+                PoDocument::parse("msgctxt \"ffee6p8\"\nmsgid \"Uncertain\"\nmsgstr \"\"\n")
+                    .unwrap(),
             );
             panic!("after preflight repaired durability");
         },

@@ -27,10 +27,10 @@ use xilem::{
         widgets::{Passthrough, TextInput},
     },
 };
-const FIRST: &str = "11111111111111111111";
-const SECOND: &str = "22222222222222222222";
-const SOURCE: &str = ":: start default\n> first@11111111111111111111\n  Hello.\n> second@22222222222222222222\n  Another paragraph.\n> missing@33333333333333333333\n  Missing from catalogue.\n-> END\n:: later\n> later@44444444444444444444\n  Another beat.\n-> END\n";
-const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"11111111111111111111&sad\"\nmsgid \"Different wording.\"\nmsgstr \"Version.\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgid_plural \"Many hellos.\"\nmsgstr[0] \"Bonjour.\"\nmsgstr[1] \"Bonjour à tous.\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Another paragraph.\"\nmsgstr \"Autre paragraphe.\"\n";
+const FIRST: &str = "ffee6p8";
+const SECOND: &str = "rthh7ab";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n> @rthh7ab\n  Another paragraph.\n> @bqyvpqq\n  Missing from catalogue.\n-> END\n:: later\n> @z0g6c80\n  Another beat.\n-> END\n";
+const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"ffee6p8&sad\"\nmsgid \"Different wording.\"\nmsgstr \"Version.\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgid_plural \"Many hellos.\"\nmsgstr[0] \"Bonjour.\"\nmsgstr[1] \"Bonjour à tous.\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Another paragraph.\"\nmsgstr \"Autre paragraphe.\"\n";
 fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough> + use<> {
     keyed((), crate::view::writer(writer))
 }
@@ -239,8 +239,8 @@ fn bilingual_page_and_frozen_checkout_cost_stay_bounded_as_the_beat_grows() {
         let mut source = ":: start default\n".to_owned();
         let mut po = String::new();
         for index in 0..count {
-            source.push_str(&format!("> line@{index:020x}\n  Source {index}.\n"));
-            po.push_str(&format!("msgctxt \"{index:020x}\"\nmsgid \"Source {index}.\"\nmsgstr \"Translation {index}.\"\n\n"));
+            source.push_str(&format!("> @line_{index}\n  Source {index}.\n"));
+            po.push_str(&format!("msgctxt \"line_{index}\"\nmsgid \"Source {index}.\"\nmsgstr \"Translation {index}.\"\n\n"));
         }
         source.push_str("-> END\n");
         let directory = support::project(&source).unwrap();
@@ -250,7 +250,7 @@ fn bilingual_page_and_frozen_checkout_cost_stay_bounded_as_the_beat_grows() {
             .follow_location(&Location {
                 screen: Screen::Localise,
                 catalogue: Some("fr.po".into()),
-                passage: Some(format!("{:020x}", count - 2)),
+                passage: Some(format!("line_{}", count - 2)),
                 ..Location::default()
             })
             .unwrap();

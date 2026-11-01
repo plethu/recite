@@ -31,7 +31,7 @@ def run(api, bus, registry, binary, output):
                 source = project / "scène & notes.recite"
                 source.write_text(SOURCE)
                 (project / "fr.po").write_text(
-                    'msgctxt "11111111111111111111"\nmsgid "The last tram waits."\nmsgstr "Le dernier tram attend."\n'
+                    'msgctxt "ffee6p8"\nmsgid "The last tram waits."\nmsgstr "Le dernier tram attend."\n'
                 )
                 config = project / "config.toml"
                 config.write_text(f"config_version=1\n[writer.presentation]\nui_scale={scale}\n")

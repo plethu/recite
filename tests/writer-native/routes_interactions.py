@@ -12,17 +12,17 @@ from writer_interactions import capture, launch
 
 SOURCE = """# Preserve comments and line IDs.
 :: start default
-> first@11111111111111111111
+> @ffee6p8
   A gate stands open.
-? reply@22222222222222222222
+? @rthh7ab
   Let me through.
   -> accepted
 :: accepted
-> entered@33333333333333333333
+> @bqyvpqq
   The gate opens.
 -> END
 :: alternative
-> wait@44444444444444444444
+> @z0g6c80
   Wait here.
 -> END
 """
@@ -82,7 +82,7 @@ def run(api, bus, registry, binary, output):
                     ),
                     "checked reply save",
                 )
-                assert "reply@22222222222222222222" in source.read_text()
+                assert "@rthh7ab" in source.read_text()
                 results["route_requires_explicit_save_and_preserves_ids"] = True
                 window.act("Alternative · end")
                 window.reveal_end("Change continuation…")

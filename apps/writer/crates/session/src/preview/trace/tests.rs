@@ -25,10 +25,9 @@ fn long_utf8_values_use_direct_nonempty_windows_without_loss_or_unbounded_output
 fn large_condition_and_nested_runtime_error_reasons_stay_borrowed_and_paged() {
     use recite_runtime::{DialogueError, preview::PreviewError};
     use recite_writer_model::Workbench;
-    let mut model = Workbench::new(
-        ":: start default\n:if accepts()\n  > line@11111111111111111111\n    Accepted.\n-> END\n",
-    )
-    .unwrap();
+    let mut model =
+        Workbench::new(":: start default\n:if accepts()\n  > @ffee6p8\n    Accepted.\n-> END\n")
+            .unwrap();
     model.start_preview().unwrap();
     let request_id = model
         .preview_page()
@@ -44,7 +43,7 @@ fn large_condition_and_nested_runtime_error_reasons_stay_borrowed_and_paged() {
             reason: reason.clone(),
         },
         PreviewError::Runtime(DialogueError::LocaleLookupFailed {
-            id: "11111111111111111111".into(),
+            id: "ffee6p8".into(),
             reason: reason.clone(),
         }),
     ] {

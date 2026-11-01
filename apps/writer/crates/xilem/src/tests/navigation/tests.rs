@@ -35,11 +35,7 @@ fn scene_navigation_disambiguates_equal_file_names_before_switching() {
 fn inactive_draft_guards_window_closing_and_save_close_covers_every_open_file() {
     let directory = project(recite_writer_model::FIXTURE).unwrap();
     let other = directory.path().join("other.recite");
-    fs::write(
-        &other,
-        ":: other\n> other@aaaaaaaaaaaaaaaaaaaa\n  Other paragraph.\n-> END\n",
-    )
-    .unwrap();
+    fs::write(&other, ":: other\n> @m3ffvrt\n  Other paragraph.\n-> END\n").unwrap();
     let mut writer = open(&directory).unwrap();
     writer.change(|model| {
         model.set_draft("Keep my first draft.".into());

@@ -68,7 +68,7 @@ fn query_preedit_does_not_guard_manuscript_and_rejected_termination_releases_an_
 fn preedit_survives_the_real_next_button_and_commit_reaches_the_same_native_field() {
     let source = ":: start default\n".to_owned()
         + &(1..=40)
-            .map(|n| format!("> line_{n}@{n:020x}\n  Line {n}.\n"))
+            .map(|n| format!("> @line_{n}\n  Line {n}.\n"))
             .collect::<String>()
         + "-> END\n";
     let directory = support::project(&source).unwrap();

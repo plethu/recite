@@ -17,11 +17,10 @@ fn context_fixture(source: &str) -> (tempfile::TempDir, Writer) {
 
 #[test]
 fn incoming_prompt_pages_preserve_the_draft_and_navigate_to_the_chosen_origin() {
-    let mut source =
-        ":: start default\n> first@11111111111111111111\n  Hello.\n-> END\n".to_owned();
+    let mut source = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n".to_owned();
     for index in 0..6 {
         source.push_str(&format!(
-            ":: origin_{index}\n? reply@{:020x}\n  Question {index}?\n  -> start\n",
+            ":: origin_{index}\n? @reply_{}\n  Question {index}?\n  -> start\n",
             index + 10
         ));
     }
@@ -93,7 +92,7 @@ fn incoming_prompt_pages_preserve_the_draft_and_navigate_to_the_chosen_origin() 
 #[test]
 fn long_structural_context_can_be_read_in_both_directions_without_changing_source() {
     let source = format!(
-        ":: start default\n:if ready()\n  !blocking overlay(\"First context {} Last context\")\n  > first@11111111111111111111\n    Hello.\n:else\n  > second@22222222222222222222\n    Otherwise spoken.\n-> END\n",
+        ":: start default\n:if ready()\n  !blocking overlay(\"First context {} Last context\")\n  > @ffee6p8\n    Hello.\n:else\n  > @rthh7ab\n    Otherwise spoken.\n-> END\n",
         "retained context words ".repeat(120)
     );
     let (directory, writer) = context_fixture(&source);

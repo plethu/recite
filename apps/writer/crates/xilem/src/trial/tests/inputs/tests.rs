@@ -3,7 +3,8 @@ use recite_writer_session::messages::{MsgId, text};
 
 #[test]
 fn staged_values_and_language_do_not_mutate_a_running_trial_until_restart() {
-    let source = ":: start default\n> line@11111111111111111111 bind=(name:string=$person)\n  Hello {name}.\n-> END\n";
+    let source =
+        ":: start default\n> bind=(name:string=$person) @ffee6p8\n  Hello {name}.\n-> END\n";
     let directory = project(source).unwrap();
     let mut writer = open(&directory).unwrap();
     writer

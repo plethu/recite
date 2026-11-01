@@ -11,8 +11,7 @@ use xilem::{
     },
 };
 
-const SOURCE: &str =
-    ":: start default\n> line@11111111111111111111\n  A repeated delivery.\n-> start\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  A repeated delivery.\n-> start\n";
 
 #[test]
 fn trace_render_cost_depends_on_visible_records_not_retained_history() {
@@ -85,7 +84,7 @@ fn selected_argument_render_cost_is_independent_of_argument_count_and_text_lengt
         let value = "駅🚉".repeat(length);
         let rest = vec!["actor"; arguments].join(", ");
         let source = format!(
-            ":: start default\n:if accepts(\"{value}\", {rest})\n  > line@11111111111111111111\n    Accepted.\n-> END\n"
+            ":: start default\n:if accepts(\"{value}\", {rest})\n  > @ffee6p8\n    Accepted.\n-> END\n"
         );
         let directory = support::project(&source).unwrap();
         let mut writer = support::open(&directory).unwrap();
@@ -186,7 +185,7 @@ fn rendered_values(writer: &mut Writer) -> (usize, Vec<String>) {
 fn trace_list_record_and_complete_value_render_at_personal_scales() {
     let argument = "A captured argument remains fully inspectable. ".repeat(80);
     let source = format!(
-        ":: start default\n:if accepts(\"{argument}\")\n  > line@11111111111111111111\n    Accepted.\n-> END\n"
+        ":: start default\n:if accepts(\"{argument}\")\n  > @ffee6p8\n    Accepted.\n-> END\n"
     );
     for scale in [100, 200] {
         for (stage, place) in [

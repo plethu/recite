@@ -17,12 +17,10 @@ fn documents(app: &App) -> Vec<String> {
 
 #[test]
 fn project_lookup_keeps_its_documents_while_a_worker_exclusively_owns_the_project() {
-    let directory =
-        support::project(":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n")
-            .unwrap();
+    let directory = support::project(":: start default\n> @ffee6p8\n  Hello.\n-> END\n").unwrap();
     std::fs::write(
         directory.path().join("other.recite"),
-        ":: other\n> other@22222222222222222222\n  Other.\n-> END\n",
+        ":: other\n> @rthh7ab\n  Other.\n-> END\n",
     )
     .unwrap();
     let writer = support::open(&directory).unwrap();

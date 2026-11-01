@@ -9,7 +9,7 @@ fn binding_view(count: usize) -> (usize, Writer) {
         .map(|index| format!("bind=(name{index:03}:string=$person{index:03})"))
         .collect::<Vec<_>>()
         .join(" ");
-    let mut source = format!(":: start default\n> line@11111111111111111111 {bindings}\n  Hello");
+    let mut source = format!(":: start default\n> {bindings} @ffee6p8\n  Hello");
     for index in 0..count {
         write!(source, " {{name{index:03}}}").unwrap();
     }

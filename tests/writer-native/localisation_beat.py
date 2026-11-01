@@ -16,28 +16,28 @@ from writer_interactions import capture
 FIRST = "Translation · passage 1 · form 1"
 SECOND = "Translation · passage 2 · form 1"
 SOURCE = """:: opening default
-> first@11111111111111111111
+> @ffee6p8
   The last tram waits.
-? second@22222222222222222222
+? @rthh7ab
   Shall we go?
   -> later
 :: later
-> missing@33333333333333333333
+> @bqyvpqq
   A passage without a catalogue entry.
 -> opening
 """
 PO = """msgid ""
 msgstr "Language: fr\\n"
 
-msgctxt "11111111111111111111&formal"
+msgctxt "ffee6p8&formal"
 msgid "Different source wording."
 msgstr "Une version."
 
-msgctxt "11111111111111111111"
+msgctxt "ffee6p8"
 msgid "The last tram waits."
 msgstr "Le dernier tram attend."
 
-msgctxt "22222222222222222222"
+msgctxt "rthh7ab"
 msgid "Shall we go?"
 msgstr "On y va ?"
 """

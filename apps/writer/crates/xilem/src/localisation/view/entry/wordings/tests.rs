@@ -11,10 +11,13 @@ use xilem::{
 
 fn family(count: usize) -> (tempfile::TempDir, Writer) {
     let (directory, mut writer, mut driver) = fixture();
-    let mut po =
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Default\"\n\n".to_owned();
+    let mut po = "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Default\"\n\n".to_owned();
     for index in 0..count {
-        writeln!(po, "msgctxt \"11111111111111111111&wording_{index:06}\"\nmsgid \"Hello.\"\nmsgstr \"Version {index}\"\n").unwrap();
+        writeln!(
+            po,
+            "msgctxt \"ffee6p8&wording_{index:06}\"\nmsgid \"Hello.\"\nmsgstr \"Version {index}\"\n"
+        )
+        .unwrap();
     }
     std::fs::write(directory.path().join("fr.po"), po).unwrap();
     writer.catalogue_action(work::Action::Reload);

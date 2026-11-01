@@ -14,8 +14,8 @@ from native_window import attach, key
 from startup_interactions import field
 from writer_interactions import capture
 
-SOURCE = ":: start default\n> line@11111111111111111111\n  The last tram waits.\n-> END\n"
-PO = 'msgctxt "99999999999999999999"\nmsgid "Other"\nmsgstr "Autre"\n\n#. file: scene.recite\n#. block: start\nmsgctxt "11111111111111111111"\nmsgid "The last tram waits."\nmsgstr "Le dernier tram attend."\n'
+SOURCE = ":: start default\n> @ffee6p8\n  The last tram waits.\n-> END\n"
+PO = 'msgctxt "unrelated_line"\nmsgid "Other"\nmsgstr "Autre"\n\n#. file: scene.recite\n#. block: start\nmsgctxt "ffee6p8"\nmsgid "The last tram waits."\nmsgstr "Le dernier tram attend."\n'
 
 
 def route(screen, **query):
@@ -52,7 +52,7 @@ def run(api, bus, registry, binary, output):
                         base
                         + [
                             "--route",
-                            route("localise", catalogue="fr.po", passage="11111111111111111111"),
+                            route("localise", catalogue="fr.po", passage="ffee6p8"),
                         ],
                         env=environment,
                         stdout=log,
@@ -76,7 +76,7 @@ def run(api, bus, registry, binary, output):
                         base
                         + [
                             "--route",
-                            route("translation", catalogue="fr.po", entry="11111111111111111111"),
+                            route("translation", catalogue="fr.po", entry="ffee6p8"),
                         ],
                         env=environment,
                         stdout=log,
@@ -113,7 +113,7 @@ def run(api, bus, registry, binary, output):
                         base
                         + [
                             "--route",
-                            route("localise", catalogue="fr.po", passage="11111111111111111111"),
+                            route("localise", catalogue="fr.po", passage="ffee6p8"),
                         ],
                         env=environment,
                         stdout=log,

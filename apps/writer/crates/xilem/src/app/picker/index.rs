@@ -1,6 +1,7 @@
 //! Labels and accepted lookup inputs are captured once, not reconstructed on every render.
 use super::*;
 use crate::reading::Content;
+use recite_core::STABLE_ID_FIELD_PREFIX;
 use recite_writer_model::{Passage, View};
 use recite_writer_session::commands::{self, targets};
 #[cfg(test)]
@@ -61,7 +62,11 @@ pub(super) fn entries(app: &App, search: Search) -> Result<Vec<Entry>, String> {
                     return None;
                 };
                 Some(Entry {
-                    title: format!("{} · {}", number.ordinal(), passage.label),
+                    title: format!(
+                        "{} · {STABLE_ID_FIELD_PREFIX}{}",
+                        number.ordinal(),
+                        passage.id
+                    ),
                     detail: String::new(),
                     item: Item::Passage {
                         passage: visible_passage(writer, passage),

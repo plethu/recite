@@ -11,8 +11,7 @@ use xilem::{
     },
 };
 
-const SOURCE: &str =
-    ":: start default\n> line@11111111111111111111\n  Original manuscript.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Original manuscript.\n-> END\n";
 #[path = "workflow/tests.rs"]
 mod workflow;
 
@@ -48,9 +47,7 @@ fn comparison_pages_are_bounded_and_render_pending_draft_and_merge_actions_at_bo
         writer
             .session
             .edit(|model| {
-                model.select(recite_writer_model::View::Passage(
-                    "11111111111111111111".into(),
-                ))?;
+                model.select(recite_writer_model::View::Passage("ffee6p8".into()))?;
                 model.set_draft(
                     "Unapplied manuscript text remains separate from the accepted source.".into(),
                 );

@@ -65,7 +65,7 @@ fn a_rescan_captures_each_open_document_once_including_retained_sources() {
         &second,
         SOURCE
             .replace(":: start default", ":: other")
-            .replace("11111111111111111111", "33333333333333333333"),
+            .replace("ffee6p8", "bqyvpqq"),
     )
     .unwrap();
     let mut project = ProjectSession::open(directory.path(), None).unwrap();

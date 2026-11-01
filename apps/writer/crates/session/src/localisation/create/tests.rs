@@ -77,8 +77,7 @@ fn post_creation_recovery_failure_reports_the_created_file_and_preserves_it()
     let directory = tempfile::tempdir()?;
     let path = directory.path().join("fr.po");
     let lock = RecoveryStore::open(&path)?;
-    let document =
-        PoDocument::parse("msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"\"\n")?;
+    let document = PoDocument::parse("msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"\"\n")?;
     let error = persist(&document, &path)
         .err()
         .ok_or("expected recovery lock failure")?;

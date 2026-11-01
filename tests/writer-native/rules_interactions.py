@@ -12,9 +12,9 @@ from writer_interactions import capture, launch
 
 SOURCE = """# Preserve comments and IDs.
 :: start default
-> first@11111111111111111111
+> @ffee6p8
   A gate stands open.
-? reply@22222222222222222222 requires=(standing(3))
+? requires=(standing(3)) @rthh7ab
   Let me through.
   -> accepted
 :: accepted
@@ -116,7 +116,7 @@ def run(api, bus, registry, binary, output):
                     "checked reply save",
                 )
                 assert "# Keep this effect comment." in source.read_text()
-                assert "reply@22222222222222222222" in source.read_text()
+                assert "@rthh7ab" in source.read_text()
                 results[
                     "invalid_save_preserves_source_then_declared_choice_saves_with_comments_and_ids"
                 ] = True

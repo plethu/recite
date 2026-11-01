@@ -2,6 +2,7 @@
 use super::*;
 use crate::attention::{DocumentMenu, Pane, Region};
 use crate::presentation::{group::named, print};
+use recite_core::STABLE_ID_FIELD_PREFIX;
 use xilem::{
     core::{MessageResult, map_message_result},
     masonry::kurbo::Axis,
@@ -76,7 +77,10 @@ fn content(state: &Writer, width: f64) -> impl WidgetView<Writer> + use<> {
         }),
         state.reading.selected_passage().map(|passage| {
             flex_col((
-                label(scale, format!("Passage · {}", passage.label)),
+                label(
+                    scale,
+                    format!("Passage · {STABLE_ID_FIELD_PREFIX}{}", passage.id),
+                ),
                 manuscript::draft_actions(state, true, axis),
                 matches!(
                     passage.kind,

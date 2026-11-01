@@ -12,7 +12,7 @@ use xilem::masonry::{
     widgets::Passthrough,
 };
 
-const SOURCE: &str = ":: start default\n> a@11111111111111111111\n  Alpha.\n> b@22222222222222222222\n  Bravo.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Alpha.\n> @rthh7ab\n  Bravo.\n-> END\n";
 
 fn page(app: &mut App) -> impl WidgetView<App, Widget = Passthrough> + use<> {
     keyed((), view::app(app))

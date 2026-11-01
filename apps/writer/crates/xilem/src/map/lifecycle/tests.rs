@@ -102,7 +102,7 @@ fn reload_refreshes_visible_map_and_inactive_write_receipts_update_the_cached_ge
     let other = directory.path().join("other.recite");
     std::fs::write(
         &other,
-        ":: other default\n> line@44444444444444444444\n  Another scene.\n-> END\n",
+        ":: other default\n> @z0g6c80\n  Another scene.\n-> END\n",
     )
     .unwrap();
     let mut fixture = fixture_project(directory).unwrap();

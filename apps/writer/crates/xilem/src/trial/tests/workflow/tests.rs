@@ -12,11 +12,11 @@ fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough>
 fn mounted_preview_inputs_and_trace_preserve_the_old_run_until_a_valid_restart() {
     let argument = "A long captured condition argument remains inspectable. ".repeat(60);
     let source = format!(
-        ":: start default\n:if accepts(\"{argument}\", actor, other, third, fourth)\n  > tickets@12345678901234567890 bind=(count:int=$a_count)\n    {{count}} ticket\n    | {{count}} tickets\n> details@11111111111111111111 bind=(person:string=$b_person) bind=(ratio:float=$c_ratio) bind=(flag:bool=$d_flag) bind=(tail:string=$e_tail)\n  {{person}} {{ratio}} {{flag}} {{tail}}\n-> END\n"
+        ":: start default\n:if accepts(\"{argument}\", actor, other, third, fourth)\n  > bind=(count:int=$a_count) @tickets\n    {{count}} ticket\n    | {{count}} tickets\n> bind=(person:string=$b_person) bind=(ratio:float=$c_ratio) bind=(flag:bool=$d_flag) bind=(tail:string=$e_tail) @ffee6p8\n  {{person}} {{ratio}} {{flag}} {{tail}}\n-> END\n"
     );
     let directory = project(&source).unwrap();
     let po = directory.path().join("fr.po");
-    fs::write(&po, "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"12345678901234567890\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n").unwrap();
+    fs::write(&po, "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"tickets\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n").unwrap();
     let mut writer = open(&directory).unwrap();
     writer.open_localisation();
     let mut mounted = Mounted::new(writer, surface);

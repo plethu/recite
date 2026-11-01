@@ -21,7 +21,7 @@ mod scaling;
 mod visual;
 #[path = "workflow/tests.rs"]
 mod workflow;
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  At the gate.\n? reply@22222222222222222222\n  Continue.\n  -> later\n:: later\n> line@33333333333333333333\n  At the bridge.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  At the gate.\n? @rthh7ab\n  Continue.\n  -> later\n:: later\n> @bqyvpqq\n  At the bridge.\n-> END\n";
 struct Fixture {
     directory: tempfile::TempDir,
     writer: Writer,

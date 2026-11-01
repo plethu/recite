@@ -81,8 +81,7 @@ fn focus_stashes_surrounding_panes_and_preserves_native_field_identity_and_undo(
     Ok(())
 }
 fn focus_lifetime(scale: u16, workspace: Workspace) -> Result<(), Box<dyn std::error::Error>> {
-    let directory =
-        support::project(":: start default\n> line@11111111111111111111\n  First.\n-> END\n")?;
+    let directory = support::project(":: start default\n> @ffee6p8\n  First.\n-> END\n")?;
     let mut writer = support::open(&directory)?;
     writer.config.writer.presentation = writer
         .config

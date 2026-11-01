@@ -25,9 +25,9 @@ from startup_interactions import field, fill
 from writer_interactions import capture, capture_settled
 
 SOURCE = """:: start default
-> hello@11111111111111111111 bind=(name:string=$person)
+> bind=(name:string=$person) @ffee6p8
   Hello {name}.
-> tickets@22222222222222222222 bind=(count:int=$tickets)
+> bind=(count:int=$tickets) @rthh7ab
   {count} ticket
   | {count} tickets
 -> END
@@ -35,11 +35,11 @@ SOURCE = """:: start default
 PO = """msgid ""
 msgstr "Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n"
 
-msgctxt "11111111111111111111"
+msgctxt "ffee6p8"
 msgid "Hello {name}."
 msgstr "Bonjour {name}."
 
-msgctxt "22222222222222222222"
+msgctxt "rthh7ab"
 msgid "{count} ticket"
 msgid_plural "{count} tickets"
 msgstr[0] "{count} billet"

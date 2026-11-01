@@ -91,11 +91,10 @@ args=["-c", "cp fixture.json \"$1\"", "producer", "{output}"]
 #[cfg(unix)]
 #[test]
 fn schema_refresh_retires_stale_rule_controls_and_preserves_the_repairable_draft_policy() {
-    let source =
-        ":: start default\n? reply@11111111111111111111 requires=(missing())\n  Hello.\n  -> END\n";
+    let source = ":: start default\n? requires=(missing()) @ffee6p8\n  Hello.\n  -> END\n";
     let (_directory, mut writer, mut jobs) = fixture_source(Some(source));
     let (_, model) = writer.session.parts_mut().unwrap();
-    let mut projection = model.open_reply_rules("11111111111111111111").unwrap();
+    let mut projection = model.open_reply_rules("ffee6p8").unwrap();
     model
         .stage_reply_rules(&mut projection, |rules| rules.condition = None)
         .unwrap();

@@ -6,9 +6,9 @@ use recite_writer_session::{
 };
 use std::fs;
 
-const FIRST: &str = ":: first default\n> first@11111111111111111111\n  First.\n-> END\n";
-const SECOND: &str = ":: second\n> second@22222222222222222222\n  Second.\n-> END\n";
-const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Second.\"\nmsgstr \"Deuxième.\"\n";
+const FIRST: &str = ":: first default\n> @ffee6p8\n  First.\n-> END\n";
+const SECOND: &str = ":: second\n> @rthh7ab\n  Second.\n-> END\n";
+const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Second.\"\nmsgstr \"Deuxième.\"\n";
 
 fn start(
     project: &mut ProjectSession,
@@ -60,7 +60,7 @@ fn retained_files_own_their_trial_captions_and_catalogue_freshness_through_resta
         .document
         .entries()
         .iter()
-        .find(|entry| entry.context() == Some("22222222222222222222"))
+        .find(|entry| entry.context() == Some("rthh7ab"))
         .unwrap()
         .id();
     catalogue.update(

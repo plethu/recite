@@ -131,7 +131,7 @@ fn structural_actions_preserve_rejected_prose_and_offer_external_repair_for_synt
 fn incomplete_and_ambiguous_headers_remain_visible_without_authorizing_edits() {
     for source in [
         ":: start default\n->\n",
-        ":: start default\n> one@11111111111111111111\n  First.\n-> END\n:: start\n> two@22222222222222222222\n  Second.\n-> END\n",
+        ":: start default\n> @ffee6p8\n  First.\n-> END\n:: start\n> @rthh7ab\n  Second.\n-> END\n",
     ] {
         let directory = project(source).unwrap();
         let mut writer = open(&directory).unwrap();
@@ -152,7 +152,7 @@ fn incomplete_and_ambiguous_headers_remain_visible_without_authorizing_edits() {
 fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
     let mut source = ":: start default\n".to_owned();
     for index in 0..10_000 {
-        writeln!(&mut source, "> line_{index}@{index:020}\n  Line {index}.").unwrap();
+        writeln!(&mut source, "> @line_{index}\n  Line {index}.").unwrap();
     }
     source.push_str("-> END\n");
     let directory = project(&source).unwrap();
@@ -211,13 +211,9 @@ fn ten_thousand_line_reading_is_paged_and_reused_while_typing() {
 fn paged_conditional_entries_keep_their_context_and_plural_fragments_stay_read_only() {
     let mut source = ":: start default\n:if ready()\n".to_owned();
     for index in 0..20 {
-        writeln!(
-            &mut source,
-            "  > line_{index}@{index:020}\n    Line {index}."
-        )
-        .unwrap();
+        writeln!(&mut source, "  > @line_{index}\n    Line {index}.").unwrap();
     }
-    source.push_str(":else\n  > plural@aaaaaaaaaaaaaaaaaaaa bind=(count:int=$count)\n    One letter.\n    | Many letters.\n-> END\n");
+    source.push_str(":else\n  > bind=(count:int=$count) @m3ffvrt\n    One letter.\n    | Many letters.\n-> END\n");
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
     click(

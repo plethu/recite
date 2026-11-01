@@ -24,15 +24,15 @@ from project_tools_interactions import command
 from startup_interactions import field, fill
 from writer_interactions import capture
 
-SOURCE = ":: start default\n> hello@11111111111111111111\n  Hello.\n-> END\n"
-OTHER = ":: letters\n> letter@22222222222222222222\n  A letter.\n-> END\n"
+SOURCE = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n"
+OTHER = ":: letters\n> @rthh7ab\n  A letter.\n-> END\n"
 PO = """msgid ""
 msgstr "Language: fr\\n"
 
 #. file: zz-other.recite
 #. block: letters
 # translator note
-msgctxt "22222222222222222222&formal"
+msgctxt "rthh7ab&formal"
 msgid "A letter."
 msgstr "Un courrier."
 """

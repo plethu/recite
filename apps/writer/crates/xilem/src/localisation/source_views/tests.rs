@@ -81,7 +81,7 @@ fn source_refresh_review_cost_depends_on_visible_page_not_entries_or_source_leng
         let mut after = String::new();
         for index in 0..count {
             before.push_str(&format!(
-                "msgctxt \"{index:020}\"\nmsgid \"Original {index}\"\nmsgstr \"Translated\"\n\n"
+                "msgctxt \"line_{index}\"\nmsgid \"Original {index}\"\nmsgstr \"Translated\"\n\n"
             ));
             let source = if index == 0 {
                 "x".repeat(length)
@@ -89,7 +89,7 @@ fn source_refresh_review_cost_depends_on_visible_page_not_entries_or_source_leng
                 format!("Updated {index}")
             };
             after.push_str(&format!(
-                "msgctxt \"{index:020}\"\nmsgid \"{source}\"\nmsgstr \"\"\n\n"
+                "msgctxt \"line_{index}\"\nmsgid \"{source}\"\nmsgstr \"\"\n\n"
             ));
         }
         let owner = writer.localisation.slot.owner_mut().unwrap();

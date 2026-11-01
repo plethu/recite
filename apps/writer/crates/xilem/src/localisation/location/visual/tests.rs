@@ -30,7 +30,7 @@ fn source_passage_mounts_one_complete_text_page_at_personal_scales() {
                 .follow_location(&Location {
                     screen: LinkedScreen::Localise,
                     catalogue: Some("fr.po".into()),
-                    passage: Some("11111111111111111111".into()),
+                    passage: Some("ffee6p8".into()),
                     ..Location::default()
                 })
                 .unwrap();

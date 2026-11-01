@@ -5,7 +5,7 @@ use std::fs;
 #[path = "cost/tests.rs"]
 mod cost;
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Saved prose.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Saved prose.\n-> END\n";
 fn project() -> Result<(tempfile::TempDir, ProjectSession), Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
     fs::write(
@@ -17,7 +17,7 @@ fn project() -> Result<(tempfile::TempDir, ProjectSession), Box<dyn std::error::
         directory.path().join("b.recite"),
         SOURCE
             .replace("start", "other")
-            .replace("11111111111111111111", "22222222222222222222"),
+            .replace("ffee6p8", "rthh7ab"),
     )?;
     let project = ProjectSession::open(directory.path(), Some(Path::new("a.recite")))?;
     Ok((directory, project))

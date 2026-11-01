@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 fn ordinary_catalogue_history_restores_query_filter_page_and_entry_after_checked_publication() {
     let directory = support::project(SOURCE).unwrap();
     let po = (1..=18)
-        .map(|index| format!("msgctxt \"{index:020x}\"\nmsgid \"Hello {index}\"\nmsgstr \"\"\n\n"))
+        .map(|index| format!("msgctxt \"line_{index}\"\nmsgid \"Hello {index}\"\nmsgstr \"\"\n\n"))
         .collect::<String>();
     fs::write(directory.path().join("fr.po"), po).unwrap();
     let mut writer = support::open(&directory).unwrap();

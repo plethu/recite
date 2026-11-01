@@ -1,7 +1,7 @@
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{SourceValidation, View, Workbench};
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Original.\n-> END\n";
 const INVALID: &str = ":: start default\n? invalid";
 
 #[test]

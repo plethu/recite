@@ -5,7 +5,11 @@ use std::fs;
 fn fixture() -> (tempfile::TempDir, Catalogue) {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("fr.po");
-    fs::write(&path, "# translator note\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n").unwrap();
+    fs::write(
+        &path,
+        "# translator note\nmsgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n",
+    )
+    .unwrap();
     let catalogue = Catalogue::open_recoverable(&path).unwrap();
     (root, catalogue)
 }

@@ -1,8 +1,8 @@
 use recite_compiler::authoring::CancellationToken;
 use recite_writer_model::{SourceValidation, View, Workbench};
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
-const LINE: &str = "11111111111111111111";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Original.\n-> END\n";
+const LINE: &str = "ffee6p8";
 
 #[test]
 fn full_source_adoption_retains_earlier_history_and_restores_the_resolved_field() {

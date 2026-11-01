@@ -9,8 +9,7 @@ use tokio::sync::mpsc;
 mod external;
 #[path = "visual/tests.rs"]
 mod visual;
-const SOURCE: &str =
-    ":: start default\n> line@11111111111111111111\n  Hello.\n-> old\n\n:: old\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> old\n\n:: old\n-> END\n";
 fn fixture() -> (tempfile::TempDir, Writer, mpsc::UnboundedReceiver<Job>) {
     let directory = support::project(SOURCE).unwrap();
     fs::write(

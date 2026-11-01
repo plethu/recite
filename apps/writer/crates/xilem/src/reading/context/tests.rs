@@ -5,7 +5,7 @@ use crate::{
 use recite_writer_model::View;
 use tokio::sync::mpsc;
 
-const SOURCE: &str = ":: first default\n> greeting@11111111111111111111\n  First.\n? reply@22222222222222222222\n  Where?\n  -> second\n:: second\n> answer@33333333333333333333\n  Second.\n-> END\n";
+const SOURCE: &str = ":: first default\n> @ffee6p8\n  First.\n? @rthh7ab\n  Where?\n  -> second\n:: second\n> @bqyvpqq\n  Second.\n-> END\n";
 
 fn pinned_text(writer: &Writer) -> String {
     format!(

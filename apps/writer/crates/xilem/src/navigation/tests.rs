@@ -18,7 +18,8 @@ mod repair;
 #[path = "visual/tests.rs"]
 mod visual;
 
-const SOURCE: &str = ":: first default\n> one@11111111111111111111\n  First.\n-> second\n:: second\n> two@22222222222222222222\n  Second.\n-> END\n";
+const SOURCE: &str =
+    ":: first default\n> @ffee6p8\n  First.\n-> second\n:: second\n> @rthh7ab\n  Second.\n-> END\n";
 struct Fixture {
     directory: tempfile::TempDir,
     writer: Writer,
@@ -29,10 +30,7 @@ struct Fixture {
 fn fixture() -> Result<Fixture, Box<dyn std::error::Error>> {
     let directory = project(SOURCE)?;
     let other = directory.path().join("other.recite");
-    std::fs::write(
-        &other,
-        ":: other\n> third@aaaaaaaaaaaaaaaaaaaa\n  Other.\n-> END\n",
-    )?;
+    std::fs::write(&other, ":: other\n> @m3ffvrt\n  Other.\n-> END\n")?;
     let mut writer = open(&directory)?;
     let (sender, jobs) = async_mpsc::unbounded_channel();
     writer.navigation.sender = Some(sender);

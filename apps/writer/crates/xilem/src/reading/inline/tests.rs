@@ -36,7 +36,10 @@ fn selection(
 
 #[test]
 fn initial_edit_keeps_the_whole_beat_and_rejected_navigation_keeps_its_draft() {
-    let directory = support::project(":: start default\n> greeting@11111111111111111111\n  Hello.\n? question@22222222222222222222\n  What happened?\n  -> END\n").unwrap();
+    let directory = support::project(
+        ":: start default\n> @ffee6p8\n  Hello.\n? @rthh7ab\n  What happened?\n  -> END\n",
+    )
+    .unwrap();
     let mut writer = support::open(&directory).unwrap();
     assert_eq!(writer.reading.rows.len(), 2);
     assert_eq!(writer.reading.selected_row, Some(0));
@@ -58,7 +61,7 @@ fn initial_edit_keeps_the_whole_beat_and_rejected_navigation_keeps_its_draft() {
 
 #[test]
 fn conditional_headings_do_not_consume_accessible_passage_numbers() {
-    let source = ":: start default\n:if ready()\n  > first@11111111111111111111\n    First.\n:else\n  > second@22222222222222222222\n    Second.\n-> END\n";
+    let source = ":: start default\n:if ready()\n  > @ffee6p8\n    First.\n:else\n  > @rthh7ab\n    Second.\n-> END\n";
     let directory = support::project(source).unwrap();
     let mut writer = support::open(&directory).unwrap();
     support::click(&mut writer, &["Project", "Read beat"]).unwrap();
@@ -75,7 +78,7 @@ fn conditional_headings_do_not_consume_accessible_passage_numbers() {
     support::click(&mut writer, &["Edit passage 2"]).unwrap();
     assert_eq!(
         writer.session.model().view(),
-        &View::Passage("22222222222222222222".into())
+        &View::Passage("rthh7ab".into())
     );
     assert_eq!(writer.session.model().draft(), "Second.");
     assert_eq!(writer.session.model().document().source(), source);
@@ -83,10 +86,10 @@ fn conditional_headings_do_not_consume_accessible_passage_numbers() {
 
 #[test]
 fn preceding_siblings_can_change_without_replacing_the_active_native_field_or_undo() {
-    let original = ":: start default\n> active@11111111111111111111\n  Original.\n> tail@22222222222222222222\n  Afterwards.\n-> END\n";
+    let original = ":: start default\n> @ffee6p8\n  Original.\n> @rthh7ab\n  Afterwards.\n-> END\n";
     let inserted = original.replace(
         ":: start default\n",
-        ":: start default\n> before@33333333333333333333\n  Before.\n",
+        ":: start default\n> @bqyvpqq\n  Before.\n",
     );
     let directory = support::project(original).unwrap();
     let mut mounted = Mounted::new(support::open(&directory).unwrap(), page);
@@ -103,7 +106,7 @@ fn preceding_siblings_can_change_without_replacing_the_active_native_field_or_un
         mounted.state.change(|model| {
             let draft = model.draft().to_owned();
             let mut replacement = Workbench::open(model.document().key().as_str(), source)?;
-            replacement.select(View::Passage("11111111111111111111".into()))?;
+            replacement.select(View::Passage("ffee6p8".into()))?;
             replacement.set_draft(draft);
             *model = replacement;
             Ok(())

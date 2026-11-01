@@ -42,7 +42,7 @@ def run(api, bus, registry, binary, output):
             source.write_text(
                 ":: start default\n"
                 + "".join(
-                    f"> line_{n}@{n:020x}\n  Courier {n} waits in the café.\n" for n in range(1, 41)
+                    f"> @line_{n}\n  Courier {n} waits in the café.\n" for n in range(1, 41)
                 )
                 + "-> END\n"
             )

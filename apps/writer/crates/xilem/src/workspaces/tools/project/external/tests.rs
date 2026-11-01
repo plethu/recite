@@ -14,9 +14,7 @@ fn compare(writer: &mut Writer, jobs: &mut mpsc::UnboundedReceiver<Job>, root: &
     writer
         .session
         .edit(|model| {
-            model
-                .select(View::Passage("11111111111111111111".into()))
-                .unwrap();
+            model.select(View::Passage("ffee6p8".into())).unwrap();
             model.set_draft("Pending manuscript.".into());
             Ok(())
         })
@@ -32,7 +30,7 @@ fn compare(writer: &mut Writer, jobs: &mut mpsc::UnboundedReceiver<Job>, root: &
     assert_eq!(writer.session.model().draft(), "Pending manuscript.");
     assert_eq!(
         writer.session.model().view(),
-        &View::Passage("11111111111111111111".into())
+        &View::Passage("ffee6p8".into())
     );
 }
 #[test]
@@ -116,7 +114,7 @@ fn merge_handoff_import_retains_selection_and_one_history_step() {
     );
     assert_eq!(
         writer.session.model().view(),
-        &View::Passage("11111111111111111111".into())
+        &View::Passage("ffee6p8".into())
     );
     writer.session.edit(|model| model.undo()).unwrap();
     assert_eq!(writer.session.model().document().source(), SOURCE);

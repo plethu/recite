@@ -47,7 +47,7 @@ def run(api, bus, registry, binary, output):
                         "--project",
                         str(root),
                         "--route",
-                        "recite://writer/write?scene=scene.recite&passage=11111111111111111111",
+                        "recite://writer/write?scene=scene.recite&passage=ffee6p8",
                     ],
                     stdout=log,
                     stderr=subprocess.STDOUT,

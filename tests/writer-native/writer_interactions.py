@@ -14,9 +14,9 @@ from project_interactions import exercise as project_exercise
 from project_interactions import switch
 
 SOURCE = """:: opening default
-> first@11111111111111111111
+> @ffee6p8
   The last tram waits.
-> second@22222222222222222222
+> @rthh7ab
   A second paragraph.
 -> END
 """
@@ -101,8 +101,8 @@ def run(api, bus, registry, binary, output):
             other = project / "zz-other.recite"
             other.write_text(
                 SOURCE.replace(":: opening default", ":: other")
-                .replace("11111111111111111111", "33333333333333333333")
-                .replace("22222222222222222222", "44444444444444444444")
+                .replace("ffee6p8", "bqyvpqq")
+                .replace("rthh7ab", "z0g6c80")
                 .replace("The last tram waits.", "An unapplied Writer draft.")
             )
             (project / "recite.project.toml").write_text(

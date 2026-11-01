@@ -1,6 +1,7 @@
 use recite_writer_model::{Document, EditError, View, Workbench};
 
-const DUPLICATE: &str = ":: same default\n> one@11111111111111111111\n  First.\n-> END\n:: same\n> two@22222222222222222222\n  Second.\n-> END\n";
+const DUPLICATE: &str =
+    ":: same default\n> @ffee6p8\n  First.\n-> END\n:: same\n> @rthh7ab\n  Second.\n-> END\n";
 
 #[test]
 fn ambiguous_beat_selection_and_structural_edits_preserve_source_revision_and_history() {
@@ -73,13 +74,11 @@ fn recovery_can_restore_an_unprojectable_block_without_authorizing_a_structural_
 #[test]
 fn history_restores_unprojectable_source_and_keeps_redo_after_rejected_inspection() {
     let invalid = ":: start default\n->\n";
-    let valid = ":: start default\n> line@11111111111111111111\n  Restored.\n-> END\n";
+    let valid = ":: start default\n> @ffee6p8\n  Restored.\n-> END\n";
     let mut model = Workbench::new(invalid).unwrap();
     model.set_draft(valid.into());
     model.apply().unwrap();
-    model
-        .select(View::Passage("11111111111111111111".into()))
-        .unwrap();
+    model.select(View::Passage("ffee6p8".into())).unwrap();
     model.undo().unwrap();
     assert_eq!(model.document().source(), invalid);
     assert!(model.inspect_block("start").is_err());

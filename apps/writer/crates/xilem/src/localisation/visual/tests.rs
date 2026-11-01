@@ -181,7 +181,7 @@ fn catalogue_size_and_long_sources_do_not_increase_mounted_queue_cost() {
                 format!("Source {index:06}")
             };
             po.push_str(&format!(
-                "msgctxt \"{index:020}\"\nmsgid \"{source}\"\nmsgstr \"Translation\"\n\n"
+                "msgctxt \"line_{index}\"\nmsgid \"{source}\"\nmsgstr \"Translation\"\n\n"
             ));
         }
         fs::write(directory.path().join("fr.po"), po).unwrap();

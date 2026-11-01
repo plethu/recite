@@ -14,7 +14,7 @@ fn capture_shares_all_saved_inputs_and_only_captures_open_overlays()
         fs::write(
             directory.path().join(format!("scene_{index:03}.recite")),
             format!(
-                ":: beat_{index:03}{}\n> line@{index:020}\n  Scene {index}.\n-> END\n",
+                ":: beat_{index:03}{}\n> @line_{index}\n  Scene {index}.\n-> END\n",
                 if index == 0 { " default" } else { "" }
             ),
         )?;

@@ -18,8 +18,8 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     let mut source = ":: start default\n".to_owned();
     let mut po = String::new();
     for (index, text) in texts.iter().enumerate() {
-        source.push_str(&format!("> line@{index:020x}\n  {text}\n"));
-        po.push_str(&format!("#. file: scene.recite\n#. block: start\nmsgctxt \"{index:020x}\"\nmsgid \"{text}\"\nmsgstr \"Original translation {index}.\"\n\n"));
+        source.push_str(&format!("> @line_{index}\n  {text}\n"));
+        po.push_str(&format!("#. file: scene.recite\n#. block: start\nmsgctxt \"line_{index}\"\nmsgid \"{text}\"\nmsgstr \"Original translation {index}.\"\n\n"));
     }
     source.push_str("-> END\n");
     let directory = support::project(&source).unwrap();
@@ -56,7 +56,7 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
     mounted.settle();
     assert_eq!(
         mounted.state.session.model().view(),
-        &View::Passage("00000000000000000001".into())
+        &View::Passage("line_1".into())
     );
     assert_eq!(
         form(&mounted.state, &key),
@@ -70,7 +70,7 @@ fn mounted_source_context_pages_and_source_links_keep_the_translation_draft() {
         screen: LinkedScreen::Localise,
         document: "scene.recite".into(),
         catalogue: Some("fr.po".into()),
-        passage: Some("00000000000000000001".into()),
+        passage: Some("line_1".into()),
         ..Location::default()
     };
     mounted.state.navigate(Target::Location(linked.clone()));

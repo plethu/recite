@@ -116,11 +116,11 @@ fn linked_catalogue_must_stay_inside_its_project() -> Result<(), Box<dyn std::er
 }
 #[test]
 fn rules_reuse_preserves_validation_but_explicit_clean_source_links_are_freeform() {
-    let source = ":: start default\n? reply@22222222222222222222\n  Continue.\n  -> END\n";
+    let source = ":: start default\n? @rthh7ab\n  Continue.\n  -> END\n";
     let mut model = recite_writer_model::Workbench::new(source).unwrap();
     let rules = super::Location {
         screen: super::Screen::Rules,
-        passage: Some("22222222222222222222".into()),
+        passage: Some("rthh7ab".into()),
         ..super::Location::default()
     };
     super::select(&mut model, &rules).unwrap();

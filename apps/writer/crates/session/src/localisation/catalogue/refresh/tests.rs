@@ -6,7 +6,7 @@ fn post_publication_recovery_error_returns_an_applied_receipt_with_the_new_owner
 -> Result<(), Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
     let path = directory.path().join("fr.po");
-    let source = "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n";
+    let source = "msgctxt \"ffee6p8\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n";
     fs::write(&path, source)?;
     let mut catalogue = Catalogue::open_recoverable(&path)?;
     catalogue.update(

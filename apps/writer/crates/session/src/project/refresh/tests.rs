@@ -2,7 +2,7 @@ use super::*;
 use crate::project::ProjectSession;
 use std::{fs, path::Path};
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Saved prose.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Saved prose.\n-> END\n";
 fn project() -> (tempfile::TempDir, ProjectSession) {
     let directory = tempfile::tempdir().unwrap();
     fs::write(
@@ -36,7 +36,7 @@ fn refresh_accepts_newer_typing_preserves_undo_and_keeps_disk_baselines() {
     .unwrap();
     fs::write(
         directory.path().join("b.recite"),
-        SOURCE.replace("11111111111111111111", "22222222222222222222"),
+        SOURCE.replace("ffee6p8", "rthh7ab"),
     )
     .unwrap();
     let mut prepared = prepare(&project);

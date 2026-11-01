@@ -22,9 +22,9 @@ from startup_interactions import field, fill
 from writer_interactions import capture
 
 SOURCE = """:: start default
-> hello@11111111111111111111
+> @ffee6p8
   Hello.
-> letters@22222222222222222222 bind=(count:int=$letters)
+> bind=(count:int=$letters) @rthh7ab
   One letter
   | Many letters
 -> END
@@ -35,7 +35,7 @@ msgstr "Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n"
 #. file: scene.recite
 #. block: start
 # translator note
-msgctxt "22222222222222222222"
+msgctxt "rthh7ab"
 msgid "One letter"
 msgid_plural "Many letters"
 msgstr[0] "Une lettre"
@@ -43,7 +43,7 @@ msgstr[1] "Plusieurs lettres"
 
 #. file: scene.recite
 #. block: start
-msgctxt "22222222222222222222&formal"
+msgctxt "rthh7ab&formal"
 msgid "One letter"
 msgid_plural "Many letters"
 msgstr[0] "Un courrier"

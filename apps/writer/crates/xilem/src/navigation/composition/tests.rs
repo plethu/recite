@@ -7,7 +7,7 @@ fn queued_native_focus_and_close_cannot_retire_the_composing_passage() {
     let mut fixture = fixture().unwrap();
     let writer = &mut fixture.writer;
     let selected = writer.session.model().view().clone();
-    let target = EditingTarget::passage(writer, "22222222222222222222".into());
+    let target = EditingTarget::passage(writer, "rthh7ab".into());
     let preedit = writer.attention.begin_preedit();
     writer.native_field_focus(Some(target.clone()));
     assert_eq!(writer.session.model().view(), &selected);

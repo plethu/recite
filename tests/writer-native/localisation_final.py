@@ -43,7 +43,7 @@ def run(api, bus, registry, binary, output):
                 po = project / "fr.po"
                 po.write_text(
                     PO
-                    + '\n#. file: scene.recite\n#. block: opening\nmsgctxt "22222222222222222222"\nmsgid "A second paragraph."\nmsgstr "Un second paragraphe."\n'
+                    + '\n#. file: scene.recite\n#. block: opening\nmsgctxt "rthh7ab"\nmsgid "A second paragraph."\nmsgstr "Un second paragraphe."\n'
                 )
                 config = project / "config.toml"
                 config.write_text(f"config_version=1\n[writer.presentation]\nui_scale={scale}\n")

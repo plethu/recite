@@ -5,9 +5,9 @@ use crate::tests::support;
 fn mixed_beat_keeps_conditions_effects_plural_fragments_and_continuations_in_source_order() {
     let mut source = ":: start default\n:if ready()\n".to_owned();
     for index in 0..9 {
-        source.push_str(&format!("  > line@{index:020x}\n    Source {index}.\n"));
+        source.push_str(&format!("  > @line_{index}\n    Source {index}.\n"));
     }
-    source.push_str("  !blocking overlay(work)\n  ? reply@aaaaaaaaaaaaaaaaaaaa\n    Leave now?\n    -> later\n:else\n  > plural@bbbbbbbbbbbbbbbbbbbb bind=(count:int=$count)\n    One letter.\n    | Many letters.\n-> later\n:: later\n-> start\n");
+    source.push_str("  !blocking overlay(work)\n  ? @m3ffvrt\n    Leave now?\n    -> later\n:else\n  > bind=(count:int=$count) @plural\n    One letter.\n    | Many letters.\n-> later\n:: later\n-> start\n");
     let directory = support::project(&source).unwrap();
     let writer = support::open(&directory).unwrap();
     let model = writer.session.model();
@@ -16,7 +16,7 @@ fn mixed_beat_keeps_conditions_effects_plural_fragments_and_continuations_in_sou
         model,
         &Selection {
             name: None,
-            anchor: Some("aaaaaaaaaaaaaaaaaaaa".into()),
+            anchor: Some("m3ffvrt".into()),
             page: 0,
         },
     )
@@ -26,7 +26,7 @@ fn mixed_beat_keeps_conditions_effects_plural_fragments_and_continuations_in_sou
         .rows
         .iter()
         .filter_map(Row::passage)
-        .find(|row| row.source.id == "aaaaaaaaaaaaaaaaaaaa")
+        .find(|row| row.source.id == "m3ffvrt")
         .unwrap();
     assert_eq!(reply.reply, Some(1));
     assert_eq!(reply.groups.as_ref(), [":if ready()"]);

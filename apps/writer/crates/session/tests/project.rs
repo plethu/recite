@@ -2,8 +2,8 @@ use recite_writer_model::{View, Workbench};
 use recite_writer_session::{FileError, ProjectSession};
 use std::{fs, path::Path};
 
-const FIRST: &str = ":: first default\n> first@11111111111111111111\n  First paragraph.\n-> second.recite::second\n";
-const SECOND: &str = ":: second\n> second@22222222222222222222\n  Second paragraph.\n-> END\n";
+const FIRST: &str = ":: first default\n> @ffee6p8\n  First paragraph.\n-> second.recite::second\n";
+const SECOND: &str = ":: second\n> @rthh7ab\n  Second paragraph.\n-> END\n";
 fn fixture() -> Result<tempfile::TempDir, Box<dyn std::error::Error>> {
     let directory = tempfile::tempdir()?;
     fs::write(

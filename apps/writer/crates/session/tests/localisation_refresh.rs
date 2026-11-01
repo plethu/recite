@@ -10,8 +10,9 @@ use recite_writer_session::{
 };
 use std::fs;
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
-const PO: &str = "# Translator's note\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
+const PO: &str =
+    "# Translator's note\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
 
 #[test]
 fn refreshed_sources_preserve_translations_and_require_exact_reviewed_inputs()
@@ -91,7 +92,7 @@ fn shared_extraction_uses_retained_accepted_edits_and_rejects_unresolved_fields(
     fs::write(&b, ":: other\n-> END\n")?;
     let mut project = ProjectSession::open(&root, Some(&a))?;
     project.current_mut().edit(|model| {
-        model.select(View::Passage("11111111111111111111".into()))?;
+        model.select(View::Passage("ffee6p8".into()))?;
         model.set_draft("Accepted unsaved.".into());
         model.apply()
     })?;
@@ -109,7 +110,7 @@ fn shared_extraction_uses_retained_accepted_edits_and_rejects_unresolved_fields(
     assert!(extract(&project)?.contains("Changed on disk."));
     project.switch(&a)?;
     project.current_mut().edit(|model| {
-        model.select(View::Passage("11111111111111111111".into()))?;
+        model.select(View::Passage("ffee6p8".into()))?;
         model.set_draft("Unapplied field.".into());
         Ok(())
     })?;

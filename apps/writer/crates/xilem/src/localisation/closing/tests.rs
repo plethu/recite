@@ -11,7 +11,7 @@ fn discard_and_close_removes_every_translation_draft_but_retains_source_recovery
     let path = directory.path().join("fr.po");
     writer.catalogue_action(work::Action::Close);
     driver.finish(&mut writer);
-    fs::write(&path, "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"Goodbye.\"\nmsgstr \"Au revoir.\"\n").unwrap();
+    fs::write(&path, "msgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"Goodbye.\"\nmsgstr \"Au revoir.\"\n").unwrap();
     writer.open_catalogue_path();
     driver.finish(&mut writer);
     let ids = writer

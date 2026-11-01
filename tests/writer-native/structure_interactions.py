@@ -94,7 +94,7 @@ def exercise(api, bus, registry, arguments, log, source, output, results, launch
 
     source.write_text(
         ":: start default\n:if trusts(player)\n"
-        "  > first@77777777777777777777\n    A conditional line.\n"
+        "  > @first\n    A conditional line.\n"
         "! blocking overlay(work)\n-> END\n:: empty\n"
     )
     process, window, _ = launch(api, bus, registry, arguments, log)

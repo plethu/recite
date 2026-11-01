@@ -25,7 +25,7 @@ fn fields(
     }
     Ok(fields)
 }
-const SOURCE: &str = ":: start default\n:if accepts(actor, \"spoken\", 7, 2.5, true, false)\n  > line@11111111111111111111\n    Accepted.\n? reply@22222222222222222222\n  Go.\n  -> chosen\n:: chosen\n:if follows()\n  > after@33333333333333333333\n    Afterwards.\n! immediate notify(actor, \"spoken\", 7, 2.5, true, false)\n! deferred mark()\n-> END\n";
+const SOURCE: &str = ":: start default\n:if accepts(actor, \"spoken\", 7, 2.5, true, false)\n  > @ffee6p8\n    Accepted.\n? @rthh7ab\n  Go.\n  -> chosen\n:: chosen\n:if follows()\n  > @bqyvpqq\n    Afterwards.\n! immediate notify(actor, \"spoken\", 7, 2.5, true, false)\n! deferred mark()\n-> END\n";
 
 #[test]
 fn record_pages_keep_function_and_typed_arguments_together_and_clamp_obsolete_cursors() {
@@ -140,8 +140,8 @@ fn typed_arguments_and_pending_versus_committed_choices_remain_distinct() {
 
 #[test]
 fn localisation_and_plural_details_preserve_fallback_steps_and_selected_form() {
-    let source = ":: start default\n> hello@11111111111111111111\n  Hello.\n> tickets@22222222222222222222 bind=(count:int=$tickets)\n  {count} ticket\n  | {count} tickets\n-> END\n";
-    let po = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n";
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n> bind=(count:int=$tickets) @rthh7ab\n  {count} ticket\n  | {count} tickets\n-> END\n";
+    let po = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n\nmsgctxt \"rthh7ab\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n";
     let mut model = Workbench::new(source).unwrap();
     model
         .start_preview_with(PreviewSetup {

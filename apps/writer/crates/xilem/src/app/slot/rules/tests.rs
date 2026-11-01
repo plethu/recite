@@ -8,7 +8,7 @@ use recite_writer_session::location::{Location, Screen};
 use tokio::sync::mpsc as async_mpsc;
 use xilem::{WidgetView, masonry::widgets::Passthrough};
 
-const SOURCE: &str = "# Keep manuscript comments.\n:: start default\n? reply@22222222222222222222 requires=(standing(3))\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n# Keep effect comments.\n-> END\n";
+const SOURCE: &str = "# Keep manuscript comments.\n:: start default\n? requires=(standing(3)) @rthh7ab\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n# Keep effect comments.\n-> END\n";
 
 fn surface(app: &mut App) -> impl WidgetView<App, Widget = Passthrough> + use<> {
     crate::keyed::keyed((), view::app(app))
@@ -48,7 +48,7 @@ fn mounted_rules_picker_grouping_effect_order_and_history_preserve_authored_byte
     writer.navigation.runtime = Some(runtime.handle().clone());
     writer.navigate(Target::Location(Location {
         screen: Screen::Rules,
-        passage: Some("22222222222222222222".into()),
+        passage: Some("rthh7ab".into()),
         ..Location::default()
     }));
     support::finish_navigation(&mut writer, &mut jobs).unwrap();
@@ -124,7 +124,7 @@ fn mounted_rules_picker_grouping_effect_order_and_history_preserve_authored_byte
     for expected in [
         "# Keep manuscript comments.",
         "# Keep effect comments.",
-        "reply@22222222222222222222",
+        "@rthh7ab",
         "play_sfx(bell)",
         "mark_map(floodgate)",
         "ready()",

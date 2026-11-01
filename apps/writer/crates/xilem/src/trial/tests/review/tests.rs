@@ -19,7 +19,7 @@ fn reviewing_a_failed_restart_targets_current_values_and_preserves_its_diagnosti
         .collect::<Vec<_>>()
         .join(" ");
     let directory = project(&format!(
-        ":: start default\n> line@11111111111111111111 {bindings}\n  {text}\n-> END\n"
+        ":: start default\n> {bindings} @ffee6p8\n  {text}\n-> END\n"
     ))
     .unwrap();
     let mut writer = open(&directory).unwrap();
@@ -119,7 +119,7 @@ fn reviewing_a_failed_restart_targets_current_values_and_preserves_its_diagnosti
 
 #[test]
 fn review_with_valid_scalars_exposes_the_actual_preparation_diagnostic() {
-    let directory = project(":: start default\n> line@11111111111111111111 bind=(flag:bool=$flag) bind=(person:string=$person)\n  {flag} {person}\n-> END\n").unwrap();
+    let directory = project(":: start default\n> bind=(flag:bool=$flag) bind=(person:string=$person) @ffee6p8\n  {flag} {person}\n-> END\n").unwrap();
     let mut writer = open(&directory).unwrap();
     let request = begin(&mut writer).unwrap();
     let (receipt, returned) = mpsc::sync_channel(1);
@@ -147,7 +147,7 @@ fn document_replacement_clears_terminal_feedback_and_preserves_in_flight_occupan
     let other = directory.path().join("other.recite");
     fs::write(
         &other,
-        ":: other\n> other@22222222222222222222\n  Other conversation.\n-> END\n",
+        ":: other\n> @rthh7ab\n  Other conversation.\n-> END\n",
     )
     .unwrap();
     let mut writer = open(&directory).unwrap();

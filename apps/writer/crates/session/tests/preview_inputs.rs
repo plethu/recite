@@ -6,8 +6,8 @@ use recite_writer_session::{
 };
 use std::{collections::BTreeMap, fs};
 
-const SOURCE: &str = ":: start default\n> tickets@12345678901234567890 bind=(count:int=$tickets)\n  {count} ticket\n  | {count} tickets\n-> END\n";
-const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"12345678901234567890\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n";
+const SOURCE: &str = ":: start default\n> bind=(count:int=$tickets) @tickets\n  {count} ticket\n  | {count} tickets\n-> END\n";
+const PO: &str = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"tickets\"\nmsgid \"{count} ticket\"\nmsgid_plural \"{count} tickets\"\nmsgstr[0] \"{count} billet\"\nmsgstr[1] \"{count} billets\"\n";
 
 fn inputs(drafts: bool) -> Inputs {
     Inputs {
@@ -38,7 +38,7 @@ fn localised_trial_captures_drafts_values_and_wording_without_saving_or_reviewin
         .document
         .entries()
         .iter()
-        .find(|entry| entry.context() == Some("12345678901234567890"))
+        .find(|entry| entry.context() == Some("tickets"))
         .unwrap()
         .id();
     catalogue.update(
@@ -111,7 +111,7 @@ fn freshness_distinguishes_source_only_catalogue_replacement_view_and_field_draf
 
 #[test]
 fn values_parse_as_declared_scalars_and_bad_inputs_leave_the_previous_run_intact() {
-    let source = ":: start default\n> line@11111111111111111111 bind=(name:string=$person) bind=(count:int=$count) bind=(ratio:float=$ratio) bind=(ready:bool=$ready)\n  {name}: {count}, {ratio}, {ready}.\n-> END\n";
+    let source = ":: start default\n> bind=(name:string=$person) bind=(count:int=$count) bind=(ratio:float=$ratio) bind=(ready:bool=$ready) @ffee6p8\n  {name}: {count}, {ratio}, {ready}.\n-> END\n";
     let mut model = Workbench::new(source).unwrap();
     let mut values = BTreeMap::from([
         ("person".into(), "Renée".into()),
@@ -184,8 +184,8 @@ fn cancellation_precedes_catalogue_io_and_invalid_wording_is_reported() {
 
 #[test]
 fn requested_wording_selects_its_own_catalogue_entry() {
-    let source = ":: start default\n> greeting@11111111111111111111\n  Hello.\n-> END\n";
-    let po = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n\nmsgctxt \"11111111111111111111&formal\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
+    let source = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
+    let po = "msgid \"\"\nmsgstr \"Language: fr\\n\"\n\nmsgctxt \"ffee6p8\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n\nmsgctxt \"ffee6p8&formal\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n";
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("fr.po");
     fs::write(&path, po).unwrap();

@@ -34,7 +34,7 @@ fn command<V: WidgetView<App, Widget = Passthrough>>(
 
 #[test]
 fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
-    let original = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
+    let original = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
     let directory = support::project(original).unwrap();
     fs::write(directory.path().join("recite.project.toml"), "format_version=1\n[project]\nschema='schema.json'\n[[scenes]]\nid='start'\nasset='build/start.recitec'\nblock='start'\nparticipants=['mara']\n").unwrap();
     fs::write(
@@ -150,7 +150,7 @@ fn mounted_commands_compose_authoring_history_workspaces_and_explicit_save() {
             .count(),
         1
     );
-    assert!(structured.contains("line@11111111111111111111"));
+    assert!(structured.contains("@ffee6p8"));
     assert_eq!(
         fs::read_to_string(directory.path().join("scene.recite")).unwrap(),
         original
@@ -206,7 +206,7 @@ fn mounted_project_text_pages_load_all_matches_and_apply_the_field_only_on_navig
     let source = (0..130)
         .map(|index| {
             format!(
-                ":: beat{index:03}{}\n> line@{index:020x}\n  Shared needle{index:03}.\n-> END\n",
+                ":: beat{index:03}{}\n> @line_{index}\n  Shared needle{index:03}.\n-> END\n",
                 if index == 0 { " default" } else { "" }
             )
         })

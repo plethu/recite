@@ -6,9 +6,8 @@ mod faults;
 #[path = "navigation/tests.rs"]
 mod navigation;
 
-pub(super) const SOURCE: &str =
-    ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
-const LINE: &str = "11111111111111111111";
+pub(super) const SOURCE: &str = ":: start default\n> @ffee6p8\n  Original.\n-> END\n";
+const LINE: &str = "ffee6p8";
 pub(super) fn fixture() -> (tempfile::TempDir, ProjectFiles, Workbench) {
     let directory = tempfile::tempdir().unwrap();
     fs::write(

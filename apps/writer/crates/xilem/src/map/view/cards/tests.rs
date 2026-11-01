@@ -46,7 +46,7 @@ fn button(harness: &TestHarness<Passthrough>, text: &str) -> Option<WidgetId> {
 }
 #[test]
 fn duplicate_rows_reconcile_independently_and_retired_messages_cannot_reach_remounted_rows() {
-    let directory = support::project(":: same default\n> first@11111111111111111111\n  First twin.\n:: same\n> second@22222222222222222222\n  Second twin.\n:: neighbour\n> last@33333333333333333333\n  Neighbour.\n").unwrap();
+    let directory = support::project(":: same default\n> @ffee6p8\n  First twin.\n:: same\n> @rthh7ab\n  Second twin.\n:: neighbour\n> @bqyvpqq\n  Neighbour.\n").unwrap();
     let mut writer = support::open(&directory).unwrap();
     let graph = Topology::new(
         writer.session.model().document().script_snapshot().unwrap(),

@@ -11,10 +11,10 @@ fn surface(writer: &mut Writer) -> impl WidgetView<Writer, Widget = Passthrough>
 }
 
 #[test]
-fn revealing_a_long_reply_label_never_moves_the_following_reply() {
+fn revealing_a_long_reply_id_never_moves_the_following_reply() {
+    let long_id = "long_source_id_".repeat(12);
     let source = format!(
-        ":: start default\n> greeting@11111111111111111111\n  Hello.\n? {}@22222222222222222222\n  First reply\n  -> next\n? other@33333333333333333333\n  Second reply\n  -> next\n:: next\n> end@44444444444444444444\n  Goodbye.\n-> END\n",
-        "long_source_label_".repeat(12)
+        ":: start default\n> @ffee6p8\n  Hello.\n? @{long_id}\n  First reply\n  -> next\n? @bqyvpqq\n  Second reply\n  -> next\n:: next\n> @z0g6c80\n  Goodbye.\n-> END\n"
     );
     let directory = project(&source).unwrap();
     let mut writer = open(&directory).unwrap();
@@ -35,7 +35,7 @@ fn revealing_a_long_reply_label_never_moves_the_following_reply() {
         .translation()
         .y;
     mounted.state.change(|model| {
-        model.select(View::Passage("22222222222222222222".into()))?;
+        model.select(View::Passage(long_id.clone()))?;
         model.set_draft("Edited first reply".into());
         Ok(())
     });

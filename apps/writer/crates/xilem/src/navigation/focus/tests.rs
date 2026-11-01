@@ -2,9 +2,19 @@ use super::*;
 use crate::tests::support::{open, project};
 use tokio::sync::mpsc;
 
-const SOURCE: &str = ":: start default\n> a@11111111111111111111\n  Alpha.\n> b@22222222222222222222\n  Bravo.\n> c@33333333333333333333\n  Charlie.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Alpha.\n> @rthh7ab\n  Bravo.\n> @bqyvpqq\n  Charlie.\n-> END\n";
+fn id(digit: char) -> String {
+    match digit {
+        '1' => "ffee6p8",
+        '2' => "rthh7ab",
+        '3' => "bqyvpqq",
+        _ => unreachable!("fixture has three passages"),
+    }
+    .into()
+}
+
 fn target(writer: &Writer, digit: char) -> EditingTarget {
-    EditingTarget::passage(writer, digit.to_string().repeat(20))
+    EditingTarget::passage(writer, id(digit))
 }
 
 #[test]
@@ -16,12 +26,12 @@ fn clean_focus_is_synchronous_and_needs_no_worker_or_source_projection() {
     assert_eq!(writer.session.model().view(), &target(&writer, '2').view());
     assert_eq!(writer.session.model().draft(), "Bravo.");
     assert!(!writer.navigation.busy());
-    assert!(writer.editing_passage(&"2".repeat(20)));
+    assert!(writer.editing_passage(&id('2')));
     writer.native_field_focus(None);
-    assert!(!writer.editing_passage(&"2".repeat(20)));
+    assert!(!writer.editing_passage(&id('2')));
     writer.native_field_focus(Some(target(&writer, '2')));
     assert!(
-        writer.editing_passage(&"2".repeat(20)),
+        writer.editing_passage(&id('2')),
         "same-target focus is acknowledged"
     );
     assert!(Arc::ptr_eq(

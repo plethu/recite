@@ -5,7 +5,8 @@ use crate::tests::support::NoProxy;
 use tokio::sync::mpsc;
 use xilem::masonry::theme;
 use xilem::{core::DynMessage, masonry::testing::TestHarness};
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Original.\n> next@22222222222222222222\n  Afterwards.\n-> END\n";
+const SOURCE: &str =
+    ":: start default\n> @ffee6p8\n  Original.\n> @rthh7ab\n  Afterwards.\n-> END\n";
 
 #[path = "inline/tests.rs"]
 mod inline;
@@ -155,10 +156,7 @@ fn queued_save_survives_focus_acknowledgement_and_context_refresh_without_losing
                 writer.attention.set_field(Some(target.clone()));
             } else {
                 writer.phase = Phase::ConfirmClose;
-                writer.native_field_focus(Some(EditingTarget::passage(
-                    &writer,
-                    "22222222222222222222".into(),
-                )));
+                writer.native_field_focus(Some(EditingTarget::passage(&writer, "rthh7ab".into())));
                 writer.phase = Phase::Writing;
                 assert_eq!(
                     writer.field_restoration(),
@@ -263,10 +261,7 @@ fn clearing_refused_focus_retires_its_request_without_retargeting_a_queued_save(
         writer.navigation.runtime = Some(runtime.handle().clone());
         writer.show_workspace(crate::map::Workspace::Map);
         assert!(writer.navigation.busy());
-        writer.native_field_focus(Some(EditingTarget::passage(
-            &writer,
-            "11111111111111111111".into(),
-        )));
+        writer.native_field_focus(Some(EditingTarget::passage(&writer, "ffee6p8".into())));
         assert_eq!(writer.field_restoration(), Some(FieldRestoration::Clear));
         support::finish_navigation(&mut writer, &mut jobs).unwrap();
         let mut app = App::with_writer(writer);

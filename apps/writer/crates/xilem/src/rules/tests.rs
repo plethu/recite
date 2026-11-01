@@ -11,7 +11,7 @@ mod bounds;
 mod lifecycle;
 #[path = "visual/tests.rs"]
 mod visual;
-const SOURCE: &str = "# Keep this comment.\n:: start default\n? reply@22222222222222222222 requires=(standing(3))\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n# Keep effect spacing.\n! blocking mark_map(floodgate)\n-> END\n";
+const SOURCE: &str = "# Keep this comment.\n:: start default\n? requires=(standing(3)) @rthh7ab\n  Let me through.\n  -> accepted\n:: accepted\n! immediate play_sfx(gate_latch)\n# Keep effect spacing.\n! blocking mark_map(floodgate)\n-> END\n";
 struct Fixture {
     directory: tempfile::TempDir,
     writer: Writer,
@@ -30,7 +30,7 @@ fn open_fixture(source: &str) -> Result<Fixture, Box<dyn std::error::Error>> {
     writer.navigation.runtime = Some(runtime.handle().clone());
     writer.navigate(Target::Location(Location {
         screen: Screen::Rules,
-        passage: Some("22222222222222222222".into()),
+        passage: Some("rthh7ab".into()),
         ..Location::default()
     }));
     support::finish_navigation(&mut writer, &mut jobs)?;
@@ -81,7 +81,7 @@ fn apply_reprojects_ranges_preserves_control_identity_and_typed_edits_stay_locke
     assert_eq!(writer.current_location().screen, Screen::Rules);
     assert_eq!(
         writer.current_location().passage.as_deref(),
-        Some("22222222222222222222")
+        Some("rthh7ab")
     );
     writer.edit_rule_argument(target.clone(), "7".into());
     writer.navigate(Target::Edit(EditOperation::Apply));

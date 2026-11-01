@@ -8,7 +8,7 @@ mod catalogue;
 #[path = "visual/tests.rs"]
 mod visual;
 
-const SOURCE: &str = ":: start default\n> line@11111111111111111111\n  Hello.\n-> END\n";
+const SOURCE: &str = ":: start default\n> @ffee6p8\n  Hello.\n-> END\n";
 
 fn connect(writer: &mut Writer) -> mpsc::Receiver<Request> {
     let (send, requests) = mpsc::channel(1);
@@ -47,7 +47,7 @@ fn atomic_replacement_and_deletion_are_advisory_and_keep_unapplied_drafts() {
     writer
         .session
         .edit(|model| {
-            model.select(View::Passage("11111111111111111111".into()))?;
+            model.select(View::Passage("ffee6p8".into()))?;
             model.set_draft("Keep this exact pending draft.".into());
             Ok(())
         })
@@ -198,11 +198,7 @@ fn comparing_a_retained_source_uses_normal_navigation_and_preserves_both_documen
     let directory = support::project(SOURCE).unwrap();
     let path = directory.path().join("scene.recite");
     let other = directory.path().join("other.recite");
-    fs::write(
-        &other,
-        SOURCE.replace("11111111111111111111", "22222222222222222222"),
-    )
-    .unwrap();
+    fs::write(&other, SOURCE.replace("ffee6p8", "rthh7ab")).unwrap();
     let mut writer = support::open(&directory).unwrap();
     writer.change(|model| {
         model.set_draft("Retained draft.".into());

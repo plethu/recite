@@ -2,7 +2,7 @@ use recite_compiler::authoring::{CancellationToken, Interrupted, WorkControl};
 use recite_writer_model::{PreparedStructuralEdit, RouteOwner, StructuralCommand, View, Workbench};
 use std::sync::atomic::{AtomicUsize, Ordering};
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
-const SOURCE: &str = "# Keep comments.\n:: start default\n> first@11111111111111111111\n  Before.\n-> later\n:: later\n> second@22222222222222222222\n  Later.\n-> END\n";
+const SOURCE: &str = "# Keep comments.\n:: start default\n> @ffee6p8\n  Before.\n-> later\n:: later\n> @rthh7ab\n  Later.\n-> END\n";
 fn prepare(model: &Workbench, command: StructuralCommand) -> Result<PreparedStructuralEdit> {
     let request = model.structural_request(command)?;
     Ok(
@@ -32,12 +32,7 @@ fn structural_commands_preserve_earlier_history_and_each_create_one_live_undo_st
         model.accept_structural_edit(&mut prepared)?;
         assert!(!model.has_draft());
         assert!(model.document().source().contains("# Keep comments."));
-        assert!(
-            model
-                .document()
-                .source()
-                .contains("first@11111111111111111111")
-        );
+        assert!(model.document().source().contains("@ffee6p8"));
         assert!(model.accept_structural_edit(&mut prepared).is_err());
         let after = model.document().source().to_owned();
         assert_ne!(after, previous, "{command:?}");
@@ -121,7 +116,7 @@ fn interrupted_or_invalid_commands_leave_live_state_and_draft_unchanged() -> Res
         prepare(
             &model,
             StructuralCommand::Destination {
-                owner: RouteOwner::Reply("11111111111111111111".into()),
+                owner: RouteOwner::Reply("ffee6p8".into()),
                 destination: "END".into()
             }
         )
@@ -147,6 +142,6 @@ fn interrupted_or_invalid_commands_leave_live_state_and_draft_unchanged() -> Res
             .is_err()
     );
     assert_eq!(model.draft(), "Pending text.");
-    assert_eq!(model.view(), &View::Passage("11111111111111111111".into()));
+    assert_eq!(model.view(), &View::Passage("ffee6p8".into()));
     Ok(())
 }
