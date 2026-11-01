@@ -1,5 +1,6 @@
 use compact_str::CompactString;
 use std::fmt;
+use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hasher};
 
 use crate::{ChoiceId, CoreValueError, LineId, STABLE_ID_FIELD_PREFIX};
@@ -124,7 +125,7 @@ impl StableIdGenerator {
     /// Seeds from the process's OS-provided hashing keys.
     #[must_use]
     pub fn from_system() -> Self {
-        let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+        let mut hasher = RandomState::new().build_hasher();
         hasher.write_u64(0);
         Self::seeded(hasher.finish())
     }
