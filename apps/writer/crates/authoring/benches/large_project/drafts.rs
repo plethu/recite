@@ -169,7 +169,10 @@ pub(super) fn budget(row: &Value) -> Option<u64> {
     dhat::assert!(
         row["allocations"]
             .as_u64()
-            .is_some_and(|count| count <= allocations)
+            .is_some_and(|count| count <= allocations),
+        "operation={} allocations={} budget={allocations}",
+        row["operation"],
+        row["allocations"]
     );
     Some(bytes)
 }

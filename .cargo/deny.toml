@@ -63,3 +63,9 @@ exceptions = [
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# Writer toolkit forks carrying Recite fixes; each pins a rev and documents itself in RECITE.md.
+allow-git = [
+    "https://github.com/plethu/accesskit",
+    "https://github.com/plethu/copypasta",
+    "https://github.com/plethu/xilem",
+]

@@ -52,7 +52,7 @@ impl LspWorkspace {
             retired_schema_uris: BTreeSet::new(),
             retired_schema_targets: BTreeMap::new(),
             generation,
-            next_partition_build_id: 0,
+            next_partition_build_id: super::PartitionBuildId::default(),
             ui_catalog,
         };
         workspace.rebuild_for_documents_with_schemas(saved, documents, schemas)?;

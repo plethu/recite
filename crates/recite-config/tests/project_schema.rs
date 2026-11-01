@@ -1,4 +1,6 @@
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 use recite_config::{ProjectSchemaError, discover_project};
 use tempfile::TempDir;
@@ -102,7 +104,7 @@ fn schema_keys_reject_traversal_empty_and_outside_absolute_declarations() -> Res
 #[cfg(unix)]
 #[test]
 fn schema_aliases_keep_declared_keys_but_must_resolve_inside_the_project() -> Result {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
     let dir = TempDir::new()?;
     let outside = TempDir::new()?;
     fs::write(dir.path().join("actual.json"), "{\"schema_version\":1}")?;

@@ -1,5 +1,7 @@
 mod support;
 
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use std::path::Path;
 
 use serde_json::{Value, json};
@@ -119,7 +121,7 @@ fn stdio_sibling_fallback_builtin_exclusion_does_not_join_manifest_kernel() {
 #[cfg(unix)]
 #[test]
 fn stdio_symlinked_workspace_root_preserves_hidden_alias_exclusion() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = Builder::new()
         .prefix("recite % stdio symlink root ")

@@ -28,7 +28,7 @@ fn giant_block_search_bounds_peak_and_preserves_replaced_snapshots()
     assert_eq!(retained.len(), 20_000);
     for n in [0, 19_999] {
         assert_eq!(
-            retained.get(n).ok_or("hit")?.text,
+            retained.get(n).ok_or("hit")?.text.as_ref(),
             format!(
                 "The courier waits beside the café. Beacon{} remains unanswered.",
                 n % 4096

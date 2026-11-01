@@ -164,6 +164,21 @@ capturing a checkpoint still copies draft IDs and handles, while cloning a check
 Serialization and full final-source validation remain separate work. These probes exclude native
 painting and real input and do not establish the release baseline.
 
+For native frame comparisons, verify the actual client's rendering backend in the same execution
+context as the replay. A sandbox's device inventory does not describe an external bounded runner.
+The owned Wayland probe defaults to `--renderer pixman` for portability; that compositor can force
+software rendering even when the host has a usable GPU. Its optional `--renderer gles2` and
+`--renderer vulkan` modes require a render device. Record the client backend/device, compositor,
+matched optimized builds, fixture, viewport, scale, input schedule and process limits. Keep capture,
+accessibility polling and profilers outside fair timing segments. Wayland surface-frame callbacks
+measure client frame readiness, not physical presentation or input-to-photon latency. Reconcile both
+software and hardware results before attributing a reported interaction regression.
+
+Distinguish a renderer configuration from a framework limitation. The pinned Writer selects its
+Masonry imaging backend at compile time; WGPU adapter/API variables do not turn Vello/llvmpipe into
+a CPU or Hybrid backend. An alternate backend needs its own compatible feature/integration
+experiment and equivalent output, accessibility and timing checks.
+
 Map geometry timing covers authored, linear and high-fan-out graphs separately from painting.
 Topology is memoized independently of camera and hover. Content refresh derives current connections
 and labels, and reuses geometry when ordered beat IDs and entry flags, ordered connection endpoints
@@ -175,8 +190,7 @@ Kernel-open timing excludes filesystem discovery, indexing and painting. The
 [profile script](../scripts/profile-writer.sh) records builds/environment, refuses overwrite and
 runs perf or bench-only DHAT instrumentation; instrumented latency is not normal-run timing and
 production allocation is unchanged. Allocation bounds run in `just writer check`; investigate
-unexplained regressions before changing them. Native scale requirements belong to
-[Writer acceptance](../apps/writer/acceptance.md#scale-and-performance).
+unexplained regressions before changing them.
 
 ## Bounded regression checks
 

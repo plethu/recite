@@ -125,7 +125,18 @@ pub struct BuildMetadata {
     pub features: FeatureMetadata,
     /// Revision of timing boundaries, independent of product and wire versions.
     #[serde(default)]
-    pub measurement_revision: u32,
+    pub measurement_revision: MeasurementRevision,
+}
+
+/// Compatibility of benchmark timing boundaries, independent of product versions.
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(transparent)]
+pub struct MeasurementRevision(u32);
+impl MeasurementRevision {
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -205,7 +216,7 @@ pub struct BaselineDelta {
 }
 
 pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<BenchReport> {
-    const MEASUREMENT_REVISION: u32 = 1;
+    const MEASUREMENT_REVISION: MeasurementRevision = MeasurementRevision(1);
     if options
         .baseline
         .as_ref()

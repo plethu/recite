@@ -1,6 +1,8 @@
 mod support;
 
 use serde_json::{Value, json};
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use tempfile::Builder;
 
 use support::stdio::{StdioHarness, file_uri};
@@ -8,7 +10,7 @@ use support::stdio::{StdioHarness, file_uri};
 #[cfg(unix)]
 #[test]
 fn retired_symlink_alias_keeps_target_excluded_until_final_close() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = Builder::new()
         .prefix("recite retired symlink schema ")

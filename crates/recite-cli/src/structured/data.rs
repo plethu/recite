@@ -1,3 +1,4 @@
+use crate::structured::sequence::RecordSequence;
 use std::fs;
 use std::path::Path;
 
@@ -15,7 +16,7 @@ use crate::schema_inspection::{MachinePathProjection, machine_path};
 #[derive(Serialize)]
 pub(super) struct StartedRecord<'a> {
     pub(super) version: u16,
-    pub(super) sequence: u64,
+    pub(super) sequence: RecordSequence,
     pub(super) event: &'static str,
     pub(super) command: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -25,7 +26,7 @@ pub(super) struct StartedRecord<'a> {
 #[derive(Serialize)]
 pub(super) struct ResultRecord {
     pub(super) version: u16,
-    pub(super) sequence: u64,
+    pub(super) sequence: RecordSequence,
     pub(super) event: &'static str,
     pub(super) command: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -38,7 +39,7 @@ pub(super) struct ResultRecord {
 #[derive(Serialize)]
 pub(super) struct ErrorRecord {
     pub(super) version: u16,
-    pub(super) sequence: u64,
+    pub(super) sequence: RecordSequence,
     pub(super) event: &'static str,
     pub(super) command: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]

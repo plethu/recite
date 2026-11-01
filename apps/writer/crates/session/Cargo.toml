@@ -1,0 +1,37 @@
+[package]
+name = "recite-writer-session"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+async-channel = "2.5.0"
+isolang = { version = "2.4", features = ["list_languages", "local_names"] }
+language-tags = "0.3.2"
+unic-langid = "0.9"
+notify = "8.2.0"
+recite-build = { path = "../../../../crates/recite-build", version = "0.1.0" }
+recite-ui = { path = "../../../../crates/recite-ui", version = "0.1.0" }
+similar = "=2.7.0"
+wait-timeout = "0.2.1"
+url = "2.5"
+atomic-write-file = "0.3.1"
+recite-compiler.workspace = true
+recite-config = { path = "../../../../crates/recite-config", version = "0.1.0" }
+recite-core.workspace = true
+recite-runtime.workspace = true
+recite-writer-model.workspace = true
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["raw_value"] }
+tempfile = "3"
+thiserror.workspace = true
+
+[dev-dependencies]
+criterion = { version = "0.8.2", default-features = false }
+recite-writer-model = { workspace = true, features = ["benchmarks"] }
+ropey = "=1.6.1"
+
+[lints]
+workspace = true

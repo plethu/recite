@@ -17,13 +17,13 @@ fn retained_search_hits_release_replaced_source_bytes() -> Result<(), Box<dyn st
     ));
     assert!(old_source.upgrade().is_none());
     assert_eq!(
-        retained.get(0).ok_or("retained hit")?.text,
+        retained.get(0).ok_or("retained hit")?.text.as_ref(),
         "Original courier."
     );
     assert_eq!(index.search_results("zeppelin", 1).total(), 1);
     drop(index);
     assert_eq!(
-        retained.get(0).ok_or("retained hit")?.text,
+        retained.get(0).ok_or("retained hit")?.text.as_ref(),
         "Original courier."
     );
     Ok(())

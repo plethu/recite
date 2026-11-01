@@ -2,6 +2,8 @@
 
 mod support;
 
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
@@ -138,7 +140,7 @@ impl RetiredSchemaAliases {
     }
 
     fn with_discovery_root(directory: &str) -> Self {
-        use std::os::unix::fs::symlink;
+        use unix_fs::symlink;
 
         let temp = Builder::new()
             .prefix("recite reactivated schema aliases ")
@@ -208,7 +210,7 @@ fn switch_schema(harness: &mut StdioHarness, root: &Path, schema: &str) {
 
 fn retarget(alias: &Path, target: &Path) {
     std::fs::remove_file(alias).unwrap_or_else(|error| panic!("remove schema alias: {error}"));
-    std::os::unix::fs::symlink(target, alias)
+    unix_fs::symlink(target, alias)
         .unwrap_or_else(|error| panic!("retarget schema alias: {error}"));
 }
 

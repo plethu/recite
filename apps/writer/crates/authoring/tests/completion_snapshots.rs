@@ -105,7 +105,10 @@ fn captured_queries_can_be_interrupted_at_every_checkpoint()
             ));
             assert!(snapshot.is_current(&document));
             assert_eq!(document.source(), ACCEPTED);
-            assert_eq!(document.revision(), 1);
+            assert_eq!(
+                document.revision(),
+                recite_writer_model::DocumentVersion::new(1)
+            );
         }
     }
     Ok(())

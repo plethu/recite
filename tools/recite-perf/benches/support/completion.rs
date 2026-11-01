@@ -1,13 +1,13 @@
 //! Fixed wide/dense projects; opening, expected outputs and disposal are outside counters.
 use recite_core::SourcePosition;
-use recite_writer_model::{Document, ProjectContext, SourceCompletions, workload};
+use recite_writer_model::{Document, DocumentVersion, ProjectContext, SourceCompletions, workload};
 
 pub(super) struct CompletionWorkload {
     document: Document,
     draft: String,
     position: SourcePosition,
     expected_names: Vec<String>,
-    revision: i64,
+    revision: DocumentVersion,
     accepted_source: String,
 }
 

@@ -78,6 +78,8 @@ def check_linux(directory):
             "libfontconfig.so.1": "libfontconfig1",
             "libEGL.so.1": "libegl1",
             "libGL.so.1": "libgl1",
+            "libvulkan.so.1": "libvulkan1",
+            "libwayland-client.so.0": "libwayland-client0",
         }
         dynamic = subprocess.check_output(["readelf", "-d", str(binary)], text=True)
         needed = set(re.findall(r"Shared library: \[(.+?)\]", dynamic))
@@ -85,8 +87,8 @@ def check_linux(directory):
         if unknown:
             raise ValueError(f"review unmapped writer runtime libraries: {sorted(unknown)}")
         declared = {part.strip().split(" (")[0] for part in metadata.get("Depends", "").split(",")}
-        # Winit loads this at runtime, so ELF DT_NEEDED cannot discover it.
-        runtime_dependencies = {"libxkbcommon-x11-0"}
+        # Winit and WGPU load these at runtime; ELF DT_NEEDED cannot discover them.
+        runtime_dependencies = {"libxkbcommon-x11-0", "libvulkan1", "libwayland-client0"}
         missing = (
             {debian_for_library[library] for library in needed} | runtime_dependencies
         ) - declared

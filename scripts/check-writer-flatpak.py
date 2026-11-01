@@ -3,7 +3,6 @@
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 import tomllib
@@ -13,23 +12,11 @@ from pathlib import Path
 APP_ID = "io.github.plethu.recite"
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "apps/writer/packaging/flatpak" / f"{APP_ID}.yml"
-SKIA_REVISION = "61e7ca4e99062cdd0ab69445d5963fb3365778f6"
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise ValueError(message)
-
-
-def check_nix_skia_revision(source: str) -> None:
-    blocks = re.findall(
-        r"^\s*skiaRepo\s*=\s*pkgs\.fetchFromGitHub\s*\{(.*?)^\s*\};",
-        source,
-        re.MULTILINE | re.DOTALL,
-    )
-    require(len(blocks) == 1, "expected one Nix Skia source declaration")
-    revisions = re.findall(r'^\s*rev\s*=\s*"([^"]+)";', blocks[0], re.MULTILINE)
-    require(revisions == [SKIA_REVISION], "Nix and Flatpak must use the same Skia revision")
 
 
 def check_builder_manifest() -> None:
@@ -45,12 +32,8 @@ def check_builder_manifest() -> None:
     require(manifest["runtime"] == "org.gnome.Platform", "wrong runtime")
     require(manifest["runtime-version"] == "50", "wrong runtime version")
     require(
-        {
-            "org.freedesktop.Sdk.Extension.rust-stable",
-            "org.freedesktop.Sdk.Extension.llvm22",
-        }
-        <= set(manifest["sdk-extensions"]),
-        "Rust and LLVM SDK extensions are required",
+        {"org.freedesktop.Sdk.Extension.rust-stable"} <= set(manifest["sdk-extensions"]),
+        "Rust SDK extension is required",
     )
     finish_args = set(manifest["finish-args"])
     require(
@@ -59,6 +42,7 @@ def check_builder_manifest() -> None:
             "--socket=fallback-x11",
             "--device=dri",
             "--filesystem=host",
+            "--talk-name=org.a11y.Bus",
             "--talk-name=org.freedesktop.Flatpak",
         }
         <= finish_args,
@@ -66,36 +50,31 @@ def check_builder_manifest() -> None:
     )
     writer = manifest["modules"][-1]
     require(writer["name"] == "recite-writer", "wrong writer module")
+    checkout = next(source for source in writer["sources"] if source.get("type") == "dir")
+    require(
+        {
+            ".git",
+            "target",
+            "apps/writer/target",
+            "editors/zed/target",
+            "node_modules",
+            "docs-site/node_modules",
+            ".venv",
+            ".turbo",
+        }
+        <= set(checkout["skip"]),
+        "source checkout must exclude build output and development caches",
+    )
     env = writer["build-options"]["env"]
     require(env["CARGO_NET_OFFLINE"] == "true", "Cargo must build offline")
     require(
-        env["SKIA_SOURCE_DIR"] == "/run/build/recite-writer/skia",
-        "Skia must build from pinned source",
+        any("-p recite-writer " in command for command in writer["build-commands"]),
+        "manifest must build the Writer package",
     )
-    skia = next(
-        source
-        for source in writer["sources"]
-        if isinstance(source, dict) and source.get("dest") == "skia"
-    )
-    require(skia["commit"] == SKIA_REVISION, "wrong Skia revision")
-    externals = {
-        source.get("dest"): source.get("commit")
-        for source in writer["sources"]
-        if isinstance(source, dict)
-    }
-    require(
-        {
-            "skia/third_party/externals/wuffs": "e3f919ccfe3ef542cfc983a82146070258fb57f8",
-            "skia/third_party/externals/vulkanmemoryallocator": "eb744ea7a2b17040121b4bbb4d6f9e8a77e3cae7",
-            "skia/third_party/externals/spirv-cross": "b8fcf307f1f347089e3c46eb4451d27f32ebc8d3",
-        }.items()
-        <= externals.items(),
-        "missing Skia DEPS revisions",
-    )
+    require(len(manifest["modules"]) == 1, "the Writer needs no separately built modules")
 
 
 def check_sources_and_metadata() -> None:
-    check_nix_skia_revision((ROOT / "nix/packages.nix").read_text())
     sources = json.loads((MANIFEST.parent / "cargo-sources.json").read_text())
     cargo_lock = tomllib.loads((ROOT / "apps/writer/Cargo.lock").read_text())
     expected = {
@@ -111,6 +90,16 @@ def check_sources_and_metadata() -> None:
         (source["url"], source["sha256"]) for source in sources if source["type"] == "archive"
     }
     require(actual == expected, "Cargo sources must match the writer lockfile")
+    # Lockfile git sources read `git+URL?rev=REV#COMMIT`; the generator records URL and COMMIT.
+    expected_git = {
+        (package["source"][4:].split("?")[0].split("#")[0], package["source"].rsplit("#", 1)[1])
+        for package in cargo_lock["package"]
+        if package.get("source", "").startswith("git+")
+    }
+    actual_git = {
+        (source["url"], source["commit"]) for source in sources if source["type"] == "git"
+    }
+    require(actual_git == expected_git, "Cargo git sources must match the writer lockfile")
 
     desktop = (MANIFEST.parent / f"{APP_ID}.desktop").read_text()
     require("Exec=recite-writer %u" in desktop, "desktop entry must accept links")
@@ -160,6 +149,7 @@ def check_export(output: Path) -> None:
         require((files / relative).is_file(), f"missing {relative}")
     metadata = (build / "metadata").read_text()
     require("org.freedesktop.Flatpak" in metadata, "host spawn permission missing")
+    require("org.a11y.Bus=talk" in metadata, "screen-reader status permission missing")
     require(
         "x-scheme-handler/recite" in (files / f"share/applications/{APP_ID}.desktop").read_text(),
         "packaged desktop entry lost link registration",

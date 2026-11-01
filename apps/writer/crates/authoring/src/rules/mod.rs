@@ -1,6 +1,8 @@
 //! Reply rule edits preserve source outside the edited expressions and effect slots.
+use crate::DocumentVersion;
 mod effect;
 mod expression;
+mod tree;
 pub use effect::RuleEffect;
 pub use expression::RuleExpression;
 mod projection;
@@ -26,7 +28,7 @@ pub struct ReplyRules {
     pub available_conditions: Vec<RuleExpression>,
     pub available_effects: Vec<RuleEffect>,
     key: DocumentKey,
-    revision: i64,
+    revision: DocumentVersion,
     source: std::sync::Arc<str>,
     original_condition: Option<RuleExpression>,
     condition_range: Option<Range<usize>>,
@@ -86,11 +88,11 @@ impl ReplyRules {
         if self.condition != self.original_condition {
             match (&self.condition, &self.condition_range) {
                 (Some(condition), Some(range)) => {
-                    patches.push((range.clone(), condition.source()?))
+                    patches.push((range.clone(), condition.requirement_source()?))
                 }
                 (Some(condition), None) => patches.push((
                     self.header_fields_end..self.header_fields_end,
-                    format!(" requires=({})", condition.source()?),
+                    format!(" requires={}", condition.requirement_source()?),
                 )),
                 (None, Some(_)) => patches.push((
                     self.requirement_range.clone().ok_or(EditError::Position)?,
@@ -180,36 +182,17 @@ impl ReplyRules {
     }
     pub fn validate(&self, document: &Document) -> Result<String, EditError> {
         let source = self.validate_draft(document)?;
-        let candidate =
-            Document::in_project(self.key.clone(), source.clone(), document.project_context())?;
-        if !recite_parser::lower_source_file(self.key.as_str(), &source)
-            .diagnostics
-            .is_empty()
-        {
-            return Err(EditError::SourceRequired(
-                "repair the rule syntax before applying",
-            ));
-        }
-        // Existing project diagnostics may remain, but rule edits must not introduce new errors.
-        let mut remaining = document.diagnostics();
-        for diagnostic in candidate.diagnostics() {
-            let Some(index) = remaining
-                .iter()
-                .position(|old| old.code == diagnostic.code && old.message == diagnostic.message)
-            else {
-                return Err(EditError::InvalidRules(diagnostic.message));
-            };
-            remaining.swap_remove(index);
-        }
+        document.validate_source_change(&source)?;
         Ok(source)
     }
 }
 impl Workbench {
     pub fn apply_reply_rules(&mut self, rules: &ReplyRules) -> Result<(), WorkbenchError> {
-        let source = rules.validate(self.document())?;
-        if self.draft() != source {
+        let source = rules.validate_draft(self.document())?;
+        if self.view() != &crate::View::Source || self.draft() != source {
             return Err(EditError::Stale.into());
         }
+        self.stage_repaired_source(self.draft_snapshot().clone())?;
         self.apply()
     }
 }

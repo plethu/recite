@@ -1,0 +1,46 @@
+id: rust-numeric-identities
+valid:
+  - |
+    struct CommandGeneration(u64);
+    struct RecoverySequence(u64);
+    struct Pending {
+        generation: CommandGeneration,
+        expected_sequence: Option<RecoverySequence>,
+        count: u64,
+        index: usize,
+        offset: u32,
+        width: u16,
+    }
+    fn accept(generation: CommandGeneration, count: u64) {}
+  - |
+    struct Mounted { child_id: xilem::core::ViewId }
+    struct Options { enabled: Option<bool>, caption: String }
+    type ByteCount = u64;
+    type Epochs = Vec<Epoch>;
+  - |
+    struct Counts {
+        by_generation: BTreeMap<Generation, usize>,
+        by_id: HashMap<RequestId, u64>,
+    }
+invalid:
+  - "struct Context { generation: u64 }"
+  - "struct Buffer { pub(crate) expected_revision: i64 }"
+  - "struct Receipt { sequence: Option<u64> }"
+  - "enum Output { Ready { request_id: u32 } }"
+  - "struct Fence { epoch: std::sync::atomic::AtomicU64 }"
+  - "struct Fence { epoch: AtomicUsize }"
+  - "struct Pending { token: std::primitive::u64 }"
+  - "struct Pending { ticket: core::primitive::u32 }"
+  - "struct Pending { request_id: std::num::NonZeroU64 }"
+  - "struct Pending { generations: Vec<u64> }"
+  - "struct Pending { revision: std::option::Option<core::primitive::i64> }"
+  - "fn synchronize(generation: u64) {}"
+  - "fn synchronize(expected_revision: Option<i64>) {}"
+  - "type CommandGeneration = u64;"
+  - "pub type RecoverySequence = std::primitive::u64;"
+  - "type RequestId = Option<NonZeroU64>;"
+  - "struct Query { serial: u64 }"
+  - "struct Pending { revision: Option<Arc<Mutex<u64>>> }"
+  - "fn accept(revision: &u64) {}"
+  - "struct Pending { ids: [u64; 4] }"
+  - "fn accept(ids: &[u64]) {}"

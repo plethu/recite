@@ -1,5 +1,7 @@
 //! Immutable accepted inputs for background trial preparation.
 use super::{Document, ProjectContext};
+use crate::DocumentVersion;
+use crate::projection_cache::preview_bindings;
 use crate::{Preview, PreviewError, PreviewPage, PreviewSetup, Workbench};
 use recite_compiler::authoring::AuthoringKernel;
 use recite_core::DocumentKey;
@@ -9,7 +11,7 @@ use std::sync::Arc;
 pub struct PreviewRequest {
     source: Arc<str>,
     key: DocumentKey,
-    revision: i64,
+    revision: DocumentVersion,
     pub(crate) kernel: Arc<AuthoringKernel>,
     pub(crate) context: Arc<ProjectContext>,
     block: Option<String>,
@@ -43,7 +45,7 @@ impl PreviewRequest {
     }
     /// Resolve caller inputs from accepted summaries on the preparing thread.
     pub fn preview_bindings(&self) -> Arc<[recite_core::ast::InterpolationBinding]> {
-        crate::projection_cache::preview_bindings::collect(&self.kernel)
+        preview_bindings::collect(&self.kernel)
     }
     pub fn prepare(&self, setup: PreviewSetup) -> Result<Box<PreparedPreview>, PreviewError> {
         let mut preview = self.compile(setup)?;

@@ -4,12 +4,14 @@ use recite_adapter::AdapterError;
 use recite_runtime::DialogueEvent;
 
 use crate::ReciteDialogueAsset;
+mod sequence;
+pub use sequence::OutputSequence;
 
 /// One observed result. Each request gets a monotonic sequence number and an
 /// ordered output batch so independent readers see the same runtime order.
 #[derive(Message, Clone, Debug)]
 pub struct ReciteOutput {
-    pub sequence: u64,
+    pub sequence: OutputSequence,
     pub value: ReciteOutputValue,
 }
 

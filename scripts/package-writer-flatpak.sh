@@ -2,11 +2,15 @@
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd -P)
+if [[ $# -gt 1 || ${1:-} == --* ]]; then
+  echo 'usage: package-writer-flatpak.sh [OUTPUT]' >&2
+  exit 2
+fi
 manifest="$repo/apps/writer/packaging/flatpak/io.github.plethu.recite.yml"
 output=${1:-"$repo/target/writer-flatpak"}
 output=$(realpath -m "$output")
 
-# The manifest copies this checkout as a source. Only target/ is excluded.
+# The manifest copies this checkout; target/ is excluded from its source snapshot.
 if [[ "$output" == / || "$repo" == "$output" || "$repo" == "$output/"* ]] \
   || [[ "$output" == "$repo/"* && "$output" != "$repo/target" && "$output" != "$repo/target/"* ]]; then
   echo 'output must be under target/ or outside the checkout and its ancestors' >&2

@@ -44,6 +44,36 @@ fn a_blank_scene_in_an_existing_project_does_not_add_another_default()
 }
 
 #[test]
+fn creation_supplies_a_missing_default_even_when_other_beats_already_exist()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_compiler::authoring::SavedDocument;
+    use recite_core::DocumentKey;
+    use recite_writer_model::{Document, ProjectContext};
+    for source in ["", ":: local\n-> END\n"] {
+        let mut document = Document::in_project(
+            DocumentKey::new("scene.recite")?,
+            source,
+            ProjectContext {
+                documents: vec![SavedDocument::new(
+                    DocumentKey::new("other.recite")?,
+                    ":: sibling\n-> END\n",
+                )],
+                schema: None,
+            },
+        )?;
+        document.add_beat(document.revision())?;
+        assert!(document.source().contains(":: new_beat_1 default\n"));
+        assert!(document.diagnostics().is_empty());
+        document.add_beat(document.revision())?;
+        assert_eq!(document.source().matches(" default").count(), 1);
+        document.undo()?;
+        document.undo()?;
+        assert_eq!(document.source(), source);
+    }
+    Ok(())
+}
+
+#[test]
 fn additions_are_unique_and_undoable_without_rewriting_existing_ids()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut session = WRITER_EXAMPLES[2].open()?;

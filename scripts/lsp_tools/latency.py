@@ -15,6 +15,8 @@ from pathlib import Path
 
 from .client import Client, position
 
+GENERATED_ID = re.compile(r"@[a-hj-km-np-tv-z][0-9a-hj-km-np-tv-z]{6}\b")
+
 
 def run(binary, root, samples, config_root):
     source = sorted((root / "src").glob("*.recite"))[0]
@@ -103,8 +105,10 @@ def run(binary, root, samples, config_root):
             elapsed, response = client.request(*operations["code_action"])
             assert response.get("result"), response
             if index >= 2:
-                normalized = json.dumps(response["result"], sort_keys=True).replace(
-                    str(root), "$PROJECT"
+                # Fix-all assigns fresh random IDs; compare everything except their spelling.
+                normalized = GENERATED_ID.sub(
+                    "@$GENERATED",
+                    json.dumps(response["result"], sort_keys=True).replace(str(root), "$PROJECT"),
                 )
                 results["requests"]["code_action_fix_all"].append(
                     {

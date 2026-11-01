@@ -1,6 +1,7 @@
 use std::path::Path;
 
-use recite_compiler::authoring::BuildStatusProjection;
+use recite_compiler::authoring::{BuildGeneration, BuildStatusProjection, SnapshotGeneration};
+use serde::Serialize;
 
 use crate::structured::data::diagnostic_records;
 use crate::structured::errors::StructuredError;
@@ -80,8 +81,8 @@ impl BuildCompletedData {
         recovery_records.sort();
         recovery_records.dedup();
         Ok(Self {
-            generation: projection.generation().map_or(0, |value| value.as_u64()),
-            snapshot_generation: projection.snapshot_generation().map(|value| value.as_u64()),
+            generation: projection.generation().unwrap_or_default(),
+            snapshot_generation: projection.snapshot_generation(),
             status,
             outcome,
             inputs: input_keys(projection),
@@ -100,7 +101,7 @@ impl BuildCompletedData {
     }
 
     pub(super) fn from_diagnostics(
-        generation: u64,
+        generation: BuildGeneration,
         inputs: &[String],
         diagnostics: &[recite_core::Diagnostic],
     ) -> Result<Self, crate::error::CliError> {
@@ -124,7 +125,11 @@ impl BuildCompletedData {
         })
     }
 
-    pub(super) fn from_error(generation: u64, inputs: &[String], error: StructuredError) -> Self {
+    pub(super) fn from_error(
+        generation: BuildGeneration,
+        inputs: &[String],
+        error: StructuredError,
+    ) -> Self {
         Self {
             generation,
             snapshot_generation: None,
@@ -151,4 +156,18 @@ fn sorted_inputs(inputs: &[String]) -> Vec<String> {
     inputs.sort();
     inputs.dedup();
     inputs
+}
+
+// Numeric projection stays at the JSON boundary; coordination retains compiler-owned types.
+pub(super) fn serialize_build_generation<S: serde::Serializer>(
+    value: &BuildGeneration,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.serialize_u64(value.as_u64())
+}
+pub(super) fn serialize_snapshot_generation<S: serde::Serializer>(
+    value: &Option<SnapshotGeneration>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    value.map(SnapshotGeneration::as_u64).serialize(serializer)
 }

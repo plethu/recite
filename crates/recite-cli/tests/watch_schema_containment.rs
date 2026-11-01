@@ -1,5 +1,7 @@
 use std::fmt::Display;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use std::path::Path;
 
 use recite_cli::watch::ProjectBuildRequest;
@@ -99,7 +101,7 @@ fn non_utf8_schema_remains_a_typed_read_error() {
 #[cfg(unix)]
 #[test]
 fn schema_symlink_to_inside_is_read_but_keeps_declared_key() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = require(TempDir::new(), "tempdir");
     write_project(temp.path(), "schema/link.json");
@@ -137,7 +139,7 @@ fn schema_symlink_to_inside_is_read_but_keeps_declared_key() {
 #[cfg(unix)]
 #[test]
 fn schema_symlink_to_outside_is_a_typed_preparation_error() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let project = require(TempDir::new(), "project tempdir");
     let outside = require(TempDir::new(), "outside tempdir");

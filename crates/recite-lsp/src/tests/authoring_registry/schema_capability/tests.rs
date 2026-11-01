@@ -1,3 +1,5 @@
+use crate::features::code_action::schema_capability;
+use crate::features::schema_hover;
 mod freshness;
 
 #[test]
@@ -37,8 +39,7 @@ pub(super) fn schema_hover_exposes_compared_channels_and_unavailable_reasons() {
         Some(&evidence),
     )
     .expect("compared summary");
-    let compared_detail =
-        crate::features::schema_hover::hover_detail(None, &compared, &[], &catalog);
+    let compared_detail = schema_hover::hover_detail(None, &compared, &[], &catalog);
     assert!(compared_detail.contains("Freshness stale"));
     assert!(compared_detail.contains("content stale"));
     assert!(compared_detail.contains("manifest fresh"));
@@ -49,11 +50,11 @@ pub(super) fn schema_hover_exposes_compared_channels_and_unavailable_reasons() {
         &recite_core::schema::ProjectSchema::empty_v1(),
     );
     assert!(
-        crate::features::schema_hover::hover_detail(None, &no_producer, &[], &catalog)
+        schema_hover::hover_detail(None, &no_producer, &[], &catalog)
             .contains("no producer metadata")
     );
     assert!(
-        crate::features::schema_hover::hover_detail(
+        schema_hover::hover_detail(
             None,
             &recite_compiler::authoring::SchemaSummary::from_schema(&expected),
             &[],
@@ -94,8 +95,7 @@ pub(super) fn schema_capability_projection_keeps_producer_actions_visible_and_di
         Some(&evidence),
     )
     .expect("summary");
-    let actions =
-        crate::features::code_action::schema_capability::actions(&summary, false, &catalog);
+    let actions = schema_capability::actions(&summary, false, &catalog);
     let actions = actions
         .iter()
         .filter_map(|action| match action {
@@ -151,8 +151,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
         Some(&evidence),
     )
     .expect("summary");
-    let actions =
-        crate::features::code_action::schema_capability::actions(&summary, false, &catalog);
+    let actions = schema_capability::actions(&summary, false, &catalog);
     let titles = actions
         .iter()
         .filter_map(|action| match action {
@@ -217,15 +216,14 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
         Some(&evidence),
     )
     .expect("summary");
-    let detail = crate::features::schema_hover::hover_detail(None, &summary, &[], &catalog);
+    let detail = schema_hover::hover_detail(None, &summary, &[], &catalog);
     assert!(detail.contains("STALE CONTENT-STALE"));
     freshness::assert_absent_content_fingerprint(&catalog);
 
     let empty = recite_compiler::authoring::SchemaSummary::from_schema(
         &recite_core::schema::ProjectSchema::empty_v1(),
     );
-    let empty_actions =
-        crate::features::code_action::schema_capability::actions(&empty, false, &catalog);
+    let empty_actions = schema_capability::actions(&empty, false, &catalog);
     let unavailable = empty_actions
         .iter()
         .filter_map(|action| match action {
@@ -240,10 +238,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
             .as_ref()
             .is_some_and(|reason| reason.reason.contains("OTHER"))
     );
-    assert!(
-        crate::features::schema_hover::hover_detail(None, &empty, &[], &catalog)
-            .contains("NO-PRODUCER")
-    );
+    assert!(schema_hover::hover_detail(None, &empty, &[], &catalog).contains("NO-PRODUCER"));
 }
 
 pub(super) fn localized_schema_catalog() -> recite_ui::UiCatalog {

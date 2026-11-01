@@ -134,6 +134,7 @@ fn control_completion_adapter_preserves_current_source_identity_fast_path() {
         let control = directory.path().join("control");
         let harness = "tools/recite-perf/benches/support/completion.rs";
         let owner = "apps/writer/crates/authoring/src/completion.rs";
+        let model = "apps/writer/crates/authoring/src/lib.rs";
         let current = "workload.completions.source()";
         let source = format!("{current} {current}");
         let production = if source_accessor {
@@ -151,6 +152,7 @@ fn control_completion_adapter_preserves_current_source_identity_fast_path() {
             .unwrap();
             fs::write(root.join(harness), &source).unwrap();
             fs::write(root.join(owner), production).unwrap();
+            fs::write(root.join(model), "pub use DocumentVersion;").unwrap();
         }
         let expected = if source_accessor {
             source.clone()
@@ -182,6 +184,72 @@ fn control_completion_adapter_preserves_current_source_identity_fast_path() {
                 .output()
                 .unwrap();
             assert!(!status.status.success());
+        }
+    }
+}
+
+#[test]
+fn control_completion_adapter_keeps_integer_revisions_before_typed_versions() {
+    for typed_versions in [false, true] {
+        let directory = tempfile::tempdir().unwrap();
+        let candidate = directory.path().join("candidate");
+        let control = directory.path().join("control");
+        let harness = "tools/recite-perf/benches/support/completion.rs";
+        let owner = "apps/writer/crates/authoring/src/completion.rs";
+        let model = "apps/writer/crates/authoring/src/lib.rs";
+        let source = "use recite_writer_model::{Document, DocumentVersion, ProjectContext};\n\
+                      struct Workload { revision: DocumentVersion, }\n";
+        let exports = if typed_versions {
+            "pub use recite_compiler::authoring::DocumentVersion;"
+        } else {
+            "pub use document::Document;"
+        };
+        for root in [&candidate, &control] {
+            fs::create_dir_all(root.join(harness).parent().unwrap()).unwrap();
+            fs::create_dir_all(root.join(owner).parent().unwrap()).unwrap();
+            fs::write(
+                root.join("Cargo.toml"),
+                "[workspace.dependencies]\ntoml_edit = '0.24'\n",
+            )
+            .unwrap();
+            fs::write(root.join(harness), source).unwrap();
+            fs::write(root.join(owner), "pub fn source(&self) {}").unwrap();
+            fs::write(root.join(model), exports).unwrap();
+        }
+        let expected = if typed_versions {
+            source.to_owned()
+        } else {
+            "use recite_writer_model::{Document, ProjectContext};\n\
+             struct Workload { revision: i64, }\n"
+                .to_owned()
+        };
+        for _ in 0..2 {
+            let output = Command::new(env!("CARGO_BIN_EXE_recite-perf"))
+                .arg("prepare")
+                .arg(&candidate)
+                .arg(&control)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(fs::read_to_string(candidate.join(harness)).unwrap(), source);
+            assert_eq!(fs::read_to_string(control.join(harness)).unwrap(), expected);
+        }
+        if !typed_versions {
+            // A partially changed harness must fail rather than guess.
+            let unknown = "use recite_writer_model::{Document, DocumentVersion, ProjectContext};\n";
+            fs::write(control.join(harness), unknown).unwrap();
+            let status = Command::new(env!("CARGO_BIN_EXE_recite-perf"))
+                .arg("prepare")
+                .arg(&candidate)
+                .arg(&control)
+                .output()
+                .unwrap();
+            assert!(!status.status.success());
+            assert_eq!(fs::read_to_string(control.join(harness)).unwrap(), unknown);
         }
     }
 }

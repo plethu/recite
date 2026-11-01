@@ -316,8 +316,7 @@ semantics. [`recite-config`](../../crates/recite-config/src/lib.rs) owns platfor
 defaults, validation and source-preserving edits: use `$RECITE_CONFIG` first, otherwise the shared
 OS-aware configuration strategy. Missing config uses defaults; malformed UI config must not affect
 `run` or `trace`. Loading is read-only. Explicit changes retain unrelated settings and comments and
-refuse stale writes. The [Writer guide](../../apps/writer/guide.md#keyboard-and-preferences) owns
-its controls.
+refuse stale writes.
 
 The shared color and contrast preferences apply to the TUI. Color must never be the sole carrier of
 meaning: retain the selected-choice marker, unavailable/reason text, condition `yes`/`no` labels,

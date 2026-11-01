@@ -9,6 +9,7 @@ use recite_compiler::authoring::{
     AuthoringError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument, WorkControl,
 };
 use std::sync::Arc;
+mod candidate;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
@@ -24,6 +25,7 @@ pub(crate) struct SourceEditRequest {
     pub(crate) draft: DraftSnapshot,
     operation: Operation,
     rules: Option<Box<crate::ReplyRules>>,
+    validation: crate::SourceValidation,
 }
 enum Operation {
     Apply,
@@ -49,6 +51,7 @@ pub(crate) struct PreparedSourceEdit {
     projections: Option<ProjectionCache>,
     retired_history: Vec<Arc<Change>>,
     accepted: bool,
+    version: DocumentVersion,
 }
 
 impl Document {
@@ -68,6 +71,7 @@ impl Document {
             draft,
             operation,
             rules: None,
+            validation: crate::SourceValidation::default(),
         })
     }
 
@@ -77,6 +81,7 @@ impl Document {
             draft,
             operation: Operation::Prose(id, self.projections.capture_local()),
             rules: None,
+            validation: crate::SourceValidation::default(),
         }
     }
 
@@ -84,7 +89,7 @@ impl Document {
         &mut self,
         prepared: &mut PreparedSourceEdit,
     ) -> Result<(), EditError> {
-        if prepared.accepted || !prepared.request.base.is_current(self) {
+        if !prepared.is_current(self) {
             return Err(EditError::Stale);
         }
         if let Some(kernel) = prepared.kernel.take() {
@@ -94,7 +99,7 @@ impl Document {
                 self.projections = projections;
             }
             self.source = prepared.source.clone();
-            self.version += 1; // Preparation checked overflow against this exact revision.
+            self.version = prepared.version;
         }
         match std::mem::replace(&mut prepared.history, HistoryEdit::None) {
             HistoryEdit::None => {}
@@ -110,6 +115,10 @@ impl Document {
 }
 
 impl SourceEditRequest {
+    pub(crate) fn requiring_validation(mut self, validation: crate::SourceValidation) -> Self {
+        self.validation = validation;
+        self
+    }
     /// Preserve Rules validation when its controls still describe this exact draft.
     pub(crate) fn with_rules(mut self, rules: crate::ReplyRules) -> Self {
         self.rules = Some(Box::new(rules));
@@ -134,24 +143,29 @@ impl SourceEditRequest {
             Operation::Undo(change) => change.apply(&self.base.source, true).into(),
             Operation::Redo(change) => change.apply(&self.base.source, false).into(),
         };
-        if let Some(rules) = &self.rules
-            && rules.belongs_to(&self.base.projection_document())
-            && rules.changed()
-            && rules
-                .source()
-                .is_ok_and(|rules_source| rules_source.as_str() == source.as_ref())
-        {
-            rules.validate(&self.base.projection_document())?;
+        let rules = self.rules.as_ref().filter(|rules| {
+            rules.belongs_to(&self.base.projection_document())
+                && rules.changed()
+                && rules
+                    .source()
+                    .is_ok_and(|text| text.as_str() == source.as_ref())
+        });
+        if let Some(rules) = rules {
+            rules.validate_draft(&self.base.projection_document())?;
         }
-        let (kernel, history) = if source == self.base.source {
+        let validate = matches!(self.operation, Operation::Apply)
+            && (rules.is_some() || self.validation == crate::SourceValidation::NoNewErrors);
+        let (kernel, history, version) = if source == self.base.source {
             // A pristine Rope may have flattened into a second whole-file string.
             source = self.base.source.clone();
-            (None, HistoryEdit::None)
+            (None, HistoryEdit::None, self.base.version)
         } else {
             let version = self
                 .base
                 .version
+                .as_i64()
                 .checked_add(1)
+                .map(DocumentVersion::new)
                 .ok_or(EditError::RevisionExhausted)?;
             let history = match &self.operation {
                 Operation::Apply | Operation::Prose(..) => {
@@ -166,16 +180,16 @@ impl SourceEditRequest {
                     self.base.context.documents.clone(),
                     [OpenDocument::from_shared(
                         self.base.key.clone(),
-                        DocumentVersion::new(version),
+                        version,
                         source.clone(),
                     )],
                 ),
                 control,
             )?;
-            (Some(Arc::new(kernel)), history)
+            (Some(Arc::new(kernel)), history, version)
         };
         control.checkpoint().map_err(AuthoringError::from)?;
-        Ok(PreparedSourceEdit {
+        let prepared = PreparedSourceEdit {
             request: self,
             source,
             kernel,
@@ -184,17 +198,29 @@ impl SourceEditRequest {
             projections,
             retired_history: Vec::new(),
             accepted: false,
-        })
+            version,
+        };
+        if validate {
+            prepared
+                .request
+                .base
+                .projection_document()
+                .validate_source_candidate(&prepared.projection_document())?;
+        }
+        Ok(prepared)
     }
 }
 
 impl PreparedSourceEdit {
+    pub(crate) fn is_current(&self, document: &Document) -> bool {
+        !self.accepted && self.request.base.is_current(document)
+    }
     pub(crate) fn projection_document(&self) -> Document {
         let mut document = self.request.base.projection_document();
         if let Some(kernel) = &self.kernel {
             document.source = self.source.clone();
             document.kernel = kernel.clone();
-            document.version += 1; // Preparation checked this exact revision.
+            document.version = self.version;
             if let Some(projections) = &self.projections {
                 document.projections = projections.capture_local().restore();
             }

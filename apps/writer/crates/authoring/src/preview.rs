@@ -1,6 +1,9 @@
+use crate::DocumentVersion;
 mod catalogue;
 mod setup;
 pub use setup::PreviewSetup;
+mod provenance;
+pub use provenance::{CatalogueRevision, PreviewCatalogue, PreviewProvenance};
 
 use recite_compiler::compile::{
     CompileError, CompileInput, CompileOptions, compile_inputs_with_catalogue,
@@ -54,9 +57,10 @@ pub struct PreviewPage {
 /// The compiled asset remains fixed until an explicit new preview is started.
 pub struct Preview {
     session: OwnedPreview,
-    revision: i64,
+    revision: DocumentVersion,
     catalogues: catalogue::TrialCatalogues,
     values: recite_runtime::localisation::InterpolationValues,
+    provenance: Option<PreviewProvenance>,
 }
 
 self_cell::self_cell! {
@@ -87,7 +91,7 @@ impl Preview {
     pub(crate) fn from_request(
         request: &crate::PreviewRequest,
         block: Option<&str>,
-        revision: i64,
+        revision: DocumentVersion,
         setup: PreviewSetup,
     ) -> Result<Self, PreviewError> {
         let trial_options = setup.options();
@@ -120,6 +124,7 @@ impl Preview {
             revision,
             catalogues,
             values: setup.values,
+            provenance: setup.provenance,
         })
     }
 
@@ -127,11 +132,15 @@ impl Preview {
         self.session.borrow_dependent().trace()
     }
 
+    pub fn provenance(&self) -> Option<&PreviewProvenance> {
+        self.provenance.as_ref()
+    }
+
     pub fn events(&self) -> &[PreviewEvent] {
         self.session.borrow_dependent().trace().events()
     }
 
-    pub const fn revision(&self) -> i64 {
+    pub const fn revision(&self) -> DocumentVersion {
         self.revision
     }
 

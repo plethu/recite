@@ -1,4 +1,5 @@
 use super::*;
+use crate::validation::project;
 use crate::validation::{ValidationCompleteness, ValidationParticipation};
 use recite_core::{
     SourceId,
@@ -120,6 +121,6 @@ fn legacy_source(facts: &ProjectFacts) -> SourceFile {
 }
 
 fn sorted(mut diagnostics: Vec<Diagnostic>) -> Vec<Diagnostic> {
-    crate::validation::project::sort_diagnostics_by_source(&mut diagnostics);
+    project::sort_diagnostics_by_source(&mut diagnostics);
     diagnostics
 }

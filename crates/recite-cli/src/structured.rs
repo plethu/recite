@@ -18,6 +18,7 @@ pub(crate) mod error_mapping;
 #[path = "structured/errors.rs"]
 pub(crate) mod errors;
 mod operations;
+pub(crate) mod sequence;
 
 #[cfg(test)]
 mod tests;

@@ -1,10 +1,16 @@
+use crate::DocumentVersion;
 use recite_core::{SpeakerId, StatementHeader};
 use recite_parser::{ReciteSyntaxKind, ReciteSyntaxNode, metadata_assignments, parse};
 
 use crate::{DOCUMENT_NAME, Document, EditError, Passage, PassageKind, projection::offset};
 
 impl Document {
-    pub fn replace_text(&mut self, expected: i64, id: &str, text: &str) -> Result<(), EditError> {
+    pub fn replace_text(
+        &mut self,
+        expected: DocumentVersion,
+        id: &str,
+        text: &str,
+    ) -> Result<(), EditError> {
         self.check_revision(expected)?;
         let (next, projections) = self.prepare_text(id, text)?;
         self.replace_source(expected, next)?;
@@ -65,7 +71,12 @@ impl Document {
         Ok((next.into(), Some(projections)))
     }
 
-    pub fn set_speaker(&mut self, expected: i64, id: &str, speaker: &str) -> Result<(), EditError> {
+    pub fn set_speaker(
+        &mut self,
+        expected: DocumentVersion,
+        id: &str,
+        speaker: &str,
+    ) -> Result<(), EditError> {
         self.check_revision(expected)?;
         let passage = self.passage(id)?;
         if !matches!(passage.kind, PassageKind::Dialogue { .. }) {
@@ -96,7 +107,7 @@ impl Document {
 
     pub fn set_destination(
         &mut self,
-        expected: i64,
+        expected: DocumentVersion,
         id: &str,
         destination: &str,
     ) -> Result<(), EditError> {
@@ -116,7 +127,7 @@ impl Document {
 
     pub(crate) fn replace_target(
         &mut self,
-        expected: i64,
+        expected: DocumentVersion,
         line: u32,
         destination: &str,
     ) -> Result<(), EditError> {
@@ -138,9 +149,14 @@ impl Document {
     }
 
     /// Adds one choice to a section; the existing compiler planner freezes its ID.
-    pub fn add_choice(&mut self, expected: i64, section: &str) -> Result<String, EditError> {
+    pub fn add_choice(
+        &mut self,
+        expected: DocumentVersion,
+        section: &str,
+    ) -> Result<String, EditError> {
         self.check_revision(expected)?;
         self.passage_snapshot()?;
+        let index = self.unique_block_index(section)?;
         let blocks = self
             .kernel()
             .snapshot()
@@ -148,10 +164,6 @@ impl Document {
             .ok_or(EditError::Position)?
             .summary()
             .blocks();
-        let index = blocks
-            .iter()
-            .position(|block| block.id().as_str() == section)
-            .ok_or(EditError::Destination)?;
         let mut insertion = if let Some(next) = blocks.get(index + 1) {
             offset(self.source(), next.span().start)?
         } else {

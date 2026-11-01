@@ -4,12 +4,14 @@
 mod stdio;
 
 use serde_json::json;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use stdio::{StdioHarness, file_uri};
 use tempfile::Builder;
 
 #[test]
 fn symlink_schema_keeps_configured_uri_across_startup_overlay_and_close() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = Builder::new()
         .prefix("recite symlink schema stdio ")
@@ -67,7 +69,7 @@ fn symlink_schema_keeps_configured_uri_across_startup_overlay_and_close() {
 
 #[test]
 fn closing_retired_schema_alias_clears_exact_uri_when_target_is_saved_dialogue() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = tempfile::tempdir().unwrap();
     let manifest = temp.path().join("recite.project.toml");

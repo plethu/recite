@@ -1,4 +1,6 @@
 //! Source-ordered word index for project passage navigation; never executes dialogue.
+mod excerpt;
+pub use excerpt::passage_excerpt;
 mod results;
 use recite_compiler::authoring::{Interrupted, SavedDocument, WorkControl};
 mod region;
@@ -8,13 +10,34 @@ mod document;
 use document::DocumentIndex;
 use std::sync::Arc;
 
-/// Immutable context labels share storage across hits; prose belongs to this saved snapshot.
+/// Prose belongs to this saved snapshot; its context is shared with neighbouring hits.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SearchHit {
-    pub document: Arc<str>,
-    pub beat: Arc<str>,
-    pub speaker: Arc<str>,
-    pub text: String,
+    origin: Arc<HitOrigin>,
+    /// Frozen author-visible identity, when this saved passage can be selected.
+    pub passage: Option<recite_core::StableId>,
+    pub text: Box<str>,
+}
+/// Consecutive hits in one block with one speaker share a single context.
+#[derive(Debug, PartialEq)]
+struct HitOrigin {
+    document: Arc<str>,
+    beat: Arc<str>,
+    speaker: Arc<str>,
+}
+impl SearchHit {
+    #[must_use]
+    pub fn document(&self) -> &str {
+        &self.origin.document
+    }
+    #[must_use]
+    pub fn beat(&self) -> &str {
+        &self.origin.beat
+    }
+    #[must_use]
+    pub fn speaker(&self) -> &str {
+        &self.origin.speaker
+    }
 }
 fn words(text: &str) -> impl Iterator<Item = String> + '_ {
     text.split(|c: char| !c.is_alphanumeric() && c != '_')
@@ -91,7 +114,7 @@ impl SearchIndex {
     pub fn search_results(&self, query: &str, limit: usize) -> SearchResults {
         let (total, hits) = self.search_with(query, limit, |document, id| results::SearchMatch {
             document: document.clone(),
-            id,
+            index: id,
         });
         SearchResults::new(total, hits)
     }

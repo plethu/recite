@@ -32,7 +32,7 @@ pub(crate) use config::WorkspaceConfig;
 pub(crate) use document_keys::{
     document_key_for_identity, document_key_for_open, document_key_for_saved,
 };
-pub(crate) use kernel::KernelPartition;
+pub(crate) use kernel::{KernelPartition, PartitionBuildId};
 use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
 pub(crate) use snapshot::LiveProjectSnapshot;
@@ -55,7 +55,7 @@ pub(crate) struct LspWorkspace {
     retired_schema_uris: BTreeSet<String>,
     retired_schema_targets: BTreeMap<String, String>,
     generation: SnapshotGeneration,
-    next_partition_build_id: u64,
+    next_partition_build_id: PartitionBuildId,
     pub(crate) ui_catalog: std::sync::Arc<UiCatalog>,
 }
 

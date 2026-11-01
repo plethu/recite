@@ -55,6 +55,7 @@ impl Workbench {
             draft_revision: revision,
             preview: None,
             page: None,
+            source_validation: super::SourceValidation::default(),
         };
         if let Some(view) = initial {
             workbench.select(view)?;

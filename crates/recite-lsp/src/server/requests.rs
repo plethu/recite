@@ -1,10 +1,11 @@
+use super::QuerySerial;
 use super::{Server, ServerError, freshness::Fence, query::Query};
 use lsp_server::{ErrorCode, Request, RequestId, Response};
 use recite_compiler::authoring::CancellationToken;
 use std::collections::BTreeMap;
 
 pub(super) struct Pending {
-    pub(super) serial: u64,
+    pub(super) serial: QuerySerial,
     pub(super) fence: Fence,
     pub(super) control: CancellationToken,
     pub(super) state: RequestState,
@@ -60,10 +61,10 @@ impl Server {
         };
         self.serial = self
             .serial
-            .checked_add(1)
+            .checked_next()
             .ok_or(ServerError::SequenceExhausted)?;
         let fence = self.epochs.fence(self.known_scope(query.uri()));
-        tracing::trace!(phase = "queued", id = %id, serial = self.serial);
+        tracing::trace!(phase = "queued", id = %id, serial = self.serial.as_u64());
         self.requests.insert(
             id,
             Pending {

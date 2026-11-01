@@ -58,6 +58,8 @@ sav = "sav"
 
 # French text in the localisation workflow specimen.
 reste = "reste"
+cours = "cours"
+courrier = "courrier"
 
 [workspace.metadata.typos.default.extend-identifiers]
 # Published crate name in archived dependency-probe lockfile evidence.
@@ -118,6 +120,7 @@ unicode-width = "0.2.0"
 wasm-bindgen = "=0.2.128"
 
 [workspace.lints.clippy]
+absolute_paths = "warn"
 expect_used = "warn"
 todo = "warn"
 unimplemented = "warn"

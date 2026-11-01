@@ -1,5 +1,5 @@
 use super::{AuthoringError, AuthoringKernel, SnapshotGeneration};
-use crate::authoring::engine::{build_delta, build_documents, rebuild_analyses};
+use crate::authoring::engine::{self, build_delta, build_documents, rebuild_analyses};
 use crate::authoring::input_state::{
     changed_keys, effective_documents, unique_open, unique_saved, validate_overlay_versions,
 };
@@ -53,8 +53,7 @@ impl AuthoringKernel {
         )?;
         if cfg!(test) && (!project_changed.is_empty() || project_complete != self.project_complete)
         {
-            crate::authoring::engine::PROJECT_VALIDATION_COUNT
-                .with(|count| count.set(count.get() + 1));
+            engine::PROJECT_VALIDATION_COUNT.with(|count| count.set(count.get() + 1));
         }
         let mut project_index = Arc::clone(&self.project_index);
         let mut project_diagnostics = Arc::clone(&self.project_diagnostics);

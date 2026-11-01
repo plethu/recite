@@ -1,4 +1,6 @@
 use serde_json::json;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use tempfile::TempDir;
 
 use crate::workspace::WorkspaceConfig;
@@ -17,7 +19,7 @@ pub(crate) fn all() {
 
 #[cfg(unix)]
 pub(crate) fn source_ownership_is_order_independent() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(temp.path(), "one.recite", ":: one\n");
@@ -62,7 +64,7 @@ pub(crate) fn source_ownership_is_order_independent() {
 
 #[cfg(unix)]
 pub(crate) fn canonical_symlink_excludes_apply_to_refreshes() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(
@@ -91,7 +93,7 @@ pub(crate) fn canonical_symlink_excludes_apply_to_refreshes() {
 
 #[cfg(unix)]
 pub(crate) fn symlink_alias_replacement_reconciles_canonical_identity() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
@@ -122,7 +124,7 @@ pub(crate) fn symlink_alias_replacement_reconciles_canonical_identity() {
 
 #[cfg(unix)]
 pub(crate) fn symlink_identity_replacements_remove_stale_documents() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let alias = temp.path().join("alias.recite");

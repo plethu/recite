@@ -1,5 +1,7 @@
 use lsp_types::NumberOrString;
 use serde_json::json;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 use tempfile::TempDir;
 
 use crate::paths::stable_path_identity;
@@ -104,7 +106,7 @@ pub(crate) fn manifest_refresh_reuses_unchanged_sibling_kernel() {
 
 #[cfg(unix)]
 pub(crate) fn saved_uri_replacement_removes_old_canonical_entry() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
@@ -188,7 +190,7 @@ pub(crate) fn did_save_rekeys_new_open_file_without_duplicate_summary() {
 
 #[cfg(unix)]
 pub(crate) fn open_nonexistent_aliases_share_one_fallback_key() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let real = temp.path().join("real");
@@ -257,7 +259,7 @@ pub(crate) fn did_close_refreshes_saved_summary_before_falling_back() {
 
 #[cfg(unix)]
 pub(crate) fn open_alias_owner_switch_reseeds_kernel_version_state() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let real_directory = temp.path().join("z");

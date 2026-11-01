@@ -161,6 +161,7 @@ _check-quality:
     tests/maintainability/check.sh
     tests/maintainability/format-replay.sh
     tests/ast-grep/check.sh
+    tests/test-organization/check.sh
     just maintainability
     tests/lint-suppressions/check.sh
 

@@ -1,13 +1,31 @@
+use crate::DocumentVersion;
+mod commands;
 mod edit;
+pub use commands::{PreparedStructuralEdit, RouteOwner, StructuralCommand, StructuralRequest};
+mod frozen;
+mod identity;
+pub use frozen::FrozenWorkbench;
+pub use identity::NavigationStamp;
 mod preparing;
 pub use preparing::{NavigationRequest, PreparedNavigation};
+mod context_refresh;
+pub use context_refresh::{ContextRefreshRequest, PreparedContextRefresh};
 mod navigation;
 mod opening;
 mod preview;
+mod rules;
 pub use edit::{EditRequest, PreparedEdit};
+mod field_state;
+mod source_repair;
+mod source_replacement;
+use field_state::FieldState;
+pub use source_replacement::{PreparedSourceReplacement, SourceReplacementRequest};
+mod source_validation;
+pub use source_repair::{PreparedSourceRepair, SourceRepairRequest};
 mod structure;
 use crate::{Document, DraftSnapshot, EditError, PassageKind, Preview, PreviewError, PreviewPage};
 use recite_compiler::authoring::{CancellationToken, WorkControl};
+pub use source_validation::SourceValidation;
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum View {
@@ -28,6 +46,8 @@ pub enum WorkbenchError {
     NoPreview,
     #[error("The bundled writer example schema is invalid.")]
     ExampleSchema,
+    #[error("The linked scene is not open. Choose an available bundled example.")]
+    ExampleUnavailable,
 }
 
 impl From<PreviewError> for WorkbenchError {
@@ -43,10 +63,11 @@ pub struct Workbench {
     draft: DraftSnapshot,
     loaded: DraftSnapshot,
     dirty: bool,
-    draft_revision: i64,
+    draft_revision: DocumentVersion,
     preview: Option<Preview>,
     page: Option<PreviewPage>,
     script_selection: Option<String>,
+    source_validation: SourceValidation,
 }
 
 impl Workbench {
@@ -100,9 +121,13 @@ impl Workbench {
         }
         match &self.view {
             View::Block(_) => {}
-            View::Source => self
-                .document
-                .replace_source(self.draft_revision, self.draft.text_snapshot())?,
+            View::Source => {
+                if self.source_validation == SourceValidation::NoNewErrors {
+                    self.document.validate_source_change(self.draft.as_str())?;
+                }
+                self.document
+                    .replace_source(self.draft_revision, self.draft.text_snapshot())?;
+            }
             View::Passage(id) => {
                 self.document
                     .replace_text(self.draft_revision, id, self.draft.as_str())?

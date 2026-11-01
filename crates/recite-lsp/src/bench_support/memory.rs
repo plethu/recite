@@ -11,8 +11,10 @@ pub struct LspMemoryReport {
     pub diagnostics: usize,
     pub block_definitions: usize,
     pub block_references: usize,
-    pub line_ids: usize,
-    pub choice_ids: usize,
+    #[serde(rename = "line_ids")]
+    pub line_id_count: usize,
+    #[serde(rename = "choice_ids")]
+    pub choice_id_count: usize,
     pub metadata_keys: usize,
     pub condition_functions: usize,
     pub effect_functions: usize,
@@ -27,8 +29,8 @@ impl LspMemoryReport {
             diagnostics: 0,
             block_definitions: 0,
             block_references: 0,
-            line_ids: 0,
-            choice_ids: 0,
+            line_id_count: 0,
+            choice_id_count: 0,
             metadata_keys: 0,
             condition_functions: 0,
             effect_functions: 0,
@@ -50,7 +52,7 @@ impl LspMemoryReport {
             let summary = document.summary();
             report.source_files += 1;
             report.block_references += summary.block_references().len();
-            report.line_ids += summary
+            report.line_id_count += summary
                 .stable_ids()
                 .iter()
                 .filter(|stable| {
@@ -58,7 +60,7 @@ impl LspMemoryReport {
                         && matches!(stable.source_id(), SourceId::Frozen(_))
                 })
                 .count();
-            report.choice_ids += summary
+            report.choice_id_count += summary
                 .stable_ids()
                 .iter()
                 .filter(|stable| {
@@ -82,8 +84,8 @@ impl LspMemoryReport {
         self.indexed_source_bytes
             .saturating_add(self.block_definitions.saturating_mul(96))
             .saturating_add(self.block_references.saturating_mul(128))
-            .saturating_add(self.line_ids.saturating_mul(96))
-            .saturating_add(self.choice_ids.saturating_mul(96))
+            .saturating_add(self.line_id_count.saturating_mul(96))
+            .saturating_add(self.choice_id_count.saturating_mul(96))
             .saturating_add(self.metadata_keys.saturating_mul(96))
             .saturating_add(self.condition_functions.saturating_mul(112))
             .saturating_add(self.effect_functions.saturating_mul(112))
@@ -113,8 +115,8 @@ impl LspMemoryReport {
             self.diagnostics,
             self.block_definitions,
             self.block_references,
-            self.line_ids,
-            self.choice_ids,
+            self.line_id_count,
+            self.choice_id_count,
             self.metadata_keys,
             self.condition_functions,
             self.effect_functions,

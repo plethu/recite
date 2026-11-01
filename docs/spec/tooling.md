@@ -53,8 +53,9 @@ workflows, comments, unknown metadata and stable IDs; edits are explicit and und
 an equivalent accessible list/outline. Automatic layout is the default; local viewport or stable-ID
 sidecar layout never becomes dialogue semantics. The beat outline uses accepted compiler summaries,
 including recognized headers in incomplete source; selecting an entry still uses the normal Script
-validation. Its default and END badges describe authored syntax, not reachability. Unapplied Source
-drafts do not change this accepted outline.
+validation and requires one unambiguous local declaration. Recovery and history may still restore an
+incomplete selection without authorizing a structural edit. Its default and END badges describe
+authored syntax, not reachability. Unapplied Source drafts do not change this accepted outline.
 
 The workbench supports project opening, editing, diagnostics, completion, search/navigation,
 recovery, conflict-aware saving, schema inspection and producer actions, lossless gettext PO
@@ -66,15 +67,45 @@ in v1.
 Keyboard, focus, screen-reader, IME, BiDi/RTL, scaling, high-contrast and non-colour paths must
 cover every essential operation. Cancellation, stale generations, progress, failure/retry and focus
 restoration are observable states. Reduced motion and external-edit protection are required.
-[Writer acceptance](../../apps/writer/acceptance.md) owns repeatable human checks and known limits;
-its [guide](../../apps/writer/guide.md) owns current workflows.
+Hands-on acceptance is tracked in #237.
 
 ### 15.5 Native GUI Strategy and Accessibility Proof
 
-Freya owns presentation, focus, interaction and file-session orchestration. Language, configuration,
-compiler and runtime ownership remains outside the frontend. Reconsider the framework for a concrete
-accessibility, input, distribution or maintenance blocker, and exercise regression checks before
-upgrading the pinned version.
+Xilem is the Writer frontend. The `recite-writer` package owns presentation, focus and interaction;
+source editing belongs to the shared authoring model, and file replacement, conflict protection and
+recovery belong to `recite-writer-session`. Language, configuration, compiler and runtime ownership
+remains outside the frontend. Toolkit fixes live on pinned forks; exercise regression checks before
+moving a pin. Software rendering is required wherever no usable GPU is available.
+
+The Writer holds these contracts across every workspace; the crate tests are their executable form:
+
+- **Drafts and history survive.** Navigation, file switches, workspace changes, reloads, catalogue
+  work and project tools never discard an unapplied field draft or native text history. Moving away
+  from a draft applies it through the ordinary checked path and stops on refusal, cancellation or
+  newer typing. Apply never saves; only explicit Save writes files, and Save all follows the shared
+  ordered save sequence across sources, catalogues and staged project edits.
+- **Work is checked before publication.** Expensive work (projections, previews, reloads, disk
+  comparison, builds, schema generation, catalogue operations) runs on workers against captured
+  inputs. A result publishes only into the same document, baseline and destination it was prepared
+  for; stale, cancelled or failed results return exclusive owners and change nothing visible.
+  Results that already wrote durable state still report that outcome after cancellation.
+- **Composition is protected.** IME preedit holds the writing surface until commit or cancellation;
+  application shortcuts never consume composition, and unbound Control/Meta chords never become
+  text.
+- **External editors stay external.** Source repair, standalone declarations and project settings
+  round-trip through explicit export/import with validation; the Writer never embeds a second source
+  editor or silently rewrites authored source. Disk changes are observed and offered for explicit
+  comparison; detection never reloads or applies anything.
+- **Cost is bounded by what is visible.** Manuscript pages, map overscan, search results, catalogue
+  entries, trace records and diagnostics mount a fixed budget of native widgets regardless of
+  project size, and camera movement or typing reuses retained content.
+- **Assistive paths are complete.** Every operation is reachable by keyboard with visible and
+  accessible focus, and focus is restored after dialogs, pickers and workspace changes. Controls
+  keep complete accessible names when visually abbreviated, queued accessibility actions are checked
+  against current widget identity, and colour is never the only cue.
+- **Preview is a trial.** Runtime preview uses accepted source and captured settings, never executes
+  game effects, persists trial state or applies drafts, and keeps its run and provenance until an
+  explicit restart succeeds.
 
 Linux, Windows and macOS remain first-class desktop targets, not implied platform acceptance. Claims
 require native evidence for authoring, assistive technology, physical input, startup, memory and

@@ -10,6 +10,7 @@ mod rules;
 use criterion::measurement::{Measurement, WallTime};
 use recite_writer_model::{Document, ProjectContext, SearchIndex, View, Workbench, workload};
 use serde_json::{Value, json};
+use std::env::consts;
 use std::hint::black_box;
 
 fn measure<T>(name: &str, rows: &mut Vec<Value>, operation: impl FnOnce() -> T) -> T {
@@ -387,7 +388,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    let report = json!({"os":std::env::consts::OS, "arch":std::env::consts::ARCH,
+    let report = json!({"os":consts::OS, "arch":consts::ARCH,
         "profile":"bench", "search_index_builder":"cooperative", "heap_instrumented":cfg!(feature = "heap-profile"), "shared_destination":linked, "passages":passages, "documents":inputs.len(), "source_bytes":bytes,
         "diagnostic_count":diagnostic_count, "history_bytes":history_bytes, "process_peak_rss":peak, "samples":rows});
     let text = serde_json::to_string_pretty(&report)?;

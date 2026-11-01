@@ -72,6 +72,8 @@ def ast_grep_scan(sources: list[tuple[str, str]]) -> dict[str, list[AstEvent]]:
             destination = root / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(source, encoding="utf-8")
+        # Git already selected these exact inputs. Ignore settings must not hide them
+        # from the parser inside this private source tree.
         result = subprocess.run(
             [
                 executable,
@@ -81,6 +83,16 @@ def ast_grep_scan(sources: list[tuple[str, str]]) -> dict[str, list[AstEvent]]:
                 "--json=stream",
                 "--no-ignore",
                 "hidden",
+                "--no-ignore",
+                "dot",
+                "--no-ignore",
+                "exclude",
+                "--no-ignore",
+                "global",
+                "--no-ignore",
+                "parent",
+                "--no-ignore",
+                "vcs",
                 str(root),
             ],
             capture_output=True,

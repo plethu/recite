@@ -23,6 +23,7 @@ pub enum ProjectSettingsError {
 }
 
 /// A project-owned manifest edit; user preferences never enter this file.
+#[derive(Clone)]
 pub struct ProjectSettings {
     path: PathBuf,
     source: String,
@@ -43,6 +44,25 @@ impl ProjectSettings {
         &self.source
     }
 
+    /// Inspect a candidate without writing it. Publication validates it again under the manifest lock.
+    pub fn validate_preserving_documents(
+        &self,
+        replacement: &str,
+        documents: &[PathBuf],
+    ) -> Result<super::ProjectDiscoveryReport, ProjectSettingsError> {
+        let report = validate(&self.path, replacement)?;
+        for path in documents {
+            if !report
+                .documents()
+                .iter()
+                .any(|document| document.path() == path)
+            {
+                return Err(ProjectSettingsError::OpenDocument(path.clone()));
+            }
+        }
+        Ok(report)
+    }
+
     pub fn save(&mut self, replacement: &str) -> Result<(), ProjectSettingsError> {
         self.save_preserving_documents(replacement, &[])
     }
@@ -60,16 +80,7 @@ impl ProjectSettings {
                 if current != Some(self.source.as_str()) {
                     return Err(ProjectSettingsError::Conflict);
                 }
-                let report = validate(&self.path, replacement)?;
-                for path in documents {
-                    if !report
-                        .documents()
-                        .iter()
-                        .any(|document| document.path() == path)
-                    {
-                        return Err(ProjectSettingsError::OpenDocument(path.clone()));
-                    }
-                }
+                self.validate_preserving_documents(replacement, documents)?;
                 Ok(replacement.to_owned())
             })
             .map_err(|error| match error {

@@ -10,7 +10,7 @@ class DocumentScopeTests(unittest.TestCase):
         for path in (
             "docs/recite-production-spec.md",
             "README.md",
-            "apps/writer/acceptance.md",
+            "apps/writer/README.md",
             "apps/writer/packaging.md",
             "docs/LICENSE-POLICY.md",
         ):

@@ -1,3 +1,4 @@
+use super::{QuerySerial, UpdateRevision};
 use super::{freshness::Epochs, query::Query, updates::Update};
 use crate::{
     diagnostics::{clear_diagnostics, publish_diagnostics},
@@ -20,14 +21,14 @@ use std::{
 mod tests;
 
 pub(super) struct AnalysisJob {
-    pub(super) through: u64,
+    pub(super) through: UpdateRevision,
     pub(super) epochs: Epochs,
     pub(super) updates: Vec<Arc<Update>>,
     pub(super) refresh_uris: Vec<Uri>,
     pub(super) control: CancellationToken,
 }
 pub(super) struct AnalysisResult {
-    pub(super) through: u64,
+    pub(super) through: UpdateRevision,
     pub(super) epochs: Epochs,
     pub(super) result: Result<Option<AnalysisSnapshot>, String>,
 }
@@ -37,13 +38,13 @@ pub(super) struct AnalysisSnapshot {
     pub(super) diagnostics: Vec<PublishDiagnosticsParams>,
 }
 pub(super) struct QueryJob {
-    pub(super) serial: u64,
+    pub(super) serial: QuerySerial,
     pub(super) query: Query,
     pub(super) workspace: Arc<LspWorkspace>,
     pub(super) control: CancellationToken,
 }
 pub(super) struct QueryResult {
-    pub(super) serial: u64,
+    pub(super) serial: QuerySerial,
     pub(super) result: Result<serde_json::Value, String>,
 }
 
@@ -65,9 +66,9 @@ impl Workers {
             // Each input has one consumer. Keep capacity one and use the
             // standard blocking receive; results remain selectable Crossbeam channels.
             while let Ok(job) = inputs.recv() {
-                tracing::trace!(phase = "analysis_start", revision = job.through);
+                tracing::trace!(phase = "analysis_start", revision = job.through.as_u64());
                 let result = analyze(&params, &catalog, cached.as_deref(), &job);
-                tracing::trace!(phase = "analysis_end", revision = job.through);
+                tracing::trace!(phase = "analysis_end", revision = job.through.as_u64());
                 if let Ok(Some(snapshot)) = &result {
                     cached = Some(Arc::clone(&snapshot.workspace));
                 }
@@ -87,9 +88,9 @@ impl Workers {
         let (outputs, queried) = bounded(1);
         let query_thread = thread::spawn(move || {
             while let Ok(job) = inputs.recv() {
-                tracing::trace!(phase = "query_start", serial = job.serial);
+                tracing::trace!(phase = "query_start", serial = job.serial.as_u64());
                 let result = job.query.execute(&job.workspace, &job.control);
-                tracing::trace!(phase = "query_end", serial = job.serial);
+                tracing::trace!(phase = "query_end", serial = job.serial.as_u64());
                 if outputs
                     .send(QueryResult {
                         serial: job.serial,

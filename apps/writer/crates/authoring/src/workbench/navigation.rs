@@ -14,7 +14,7 @@ impl Workbench {
         // The old draft was already committed; history may have removed its target.
         self.load(String::new().into());
         match block {
-            Some(block) => self.inspect_block(&block),
+            Some(block) => self.select(View::Block(block)),
             None => self.select(View::Source),
         }
     }
@@ -27,6 +27,26 @@ impl Workbench {
     }
     pub fn select(&mut self, view: View) -> Result<(), WorkbenchError> {
         self.require_applied()?;
+        self.install_view(view, super::SourceValidation::Freeform)
+    }
+
+    pub(crate) fn restore_draft(
+        &mut self,
+        view: View,
+        draft: crate::DraftSnapshot,
+        validation: super::SourceValidation,
+    ) -> Result<(), WorkbenchError> {
+        // Selection validation finishes before displacing any current field state.
+        self.install_view(view, validation)?;
+        self.set_draft_snapshot(draft);
+        Ok(())
+    }
+
+    fn install_view(
+        &mut self,
+        view: View,
+        validation: super::SourceValidation,
+    ) -> Result<(), WorkbenchError> {
         let text = match &view {
             View::Source => self.document.source_snapshot().into(),
             View::Block(block) => {
@@ -52,23 +72,21 @@ impl Workbench {
             self.script_selection = Some(block);
         }
         self.view = view;
+        self.source_validation = validation;
         self.load(text);
         Ok(())
     }
     /// Enter a beat without executing any dialogue or effects.
     pub fn inspect_block(&mut self, block: &str) -> Result<(), WorkbenchError> {
+        self.require_applied()?;
+        self.document.validate_script_block(block)?;
         self.select(View::Block(block.into()))
     }
 
     pub fn show_script(&mut self) -> Result<(), WorkbenchError> {
         self.require_applied()?;
-        if let Some(block) = self
-            .script_selection
-            .as_ref()
-            .filter(|block| self.document.sections().contains(block))
-            .cloned()
-        {
-            return self.select(View::Block(block));
+        if let Some(block) = self.remembered_script_block().map(str::to_owned) {
+            return self.inspect_block(&block);
         }
         let block = self
             .document
@@ -77,7 +95,16 @@ impl Workbench {
             .ok_or(EditError::MissingPassage)?
             .id
             .clone();
-        self.select(View::Block(block))
+        self.inspect_block(&block)
+    }
+    /// The accepted Script selection, retained while a separate Source draft is open.
+    pub fn remembered_script_block(&self) -> Option<&str> {
+        self.script_selection.as_deref().filter(|block| {
+            self.document
+                .sections()
+                .iter()
+                .any(|section| section == block)
+        })
     }
     pub fn selected_block(&self) -> Result<Option<String>, WorkbenchError> {
         match &self.view {

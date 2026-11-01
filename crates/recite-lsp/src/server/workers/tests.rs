@@ -16,7 +16,7 @@ fn update_batch_projects_final_versions_once_in_first_seen_uri_order() {
     let changed: Uri = "untitled:z".parse().unwrap();
     let sibling: Uri = "untitled:a".parse().unwrap();
     let job = AnalysisJob {
-        through: 2,
+        through: crate::server::UpdateRevision::for_test(2),
         epochs: Epochs::default(),
         updates: vec![
             Arc::new(change(changed.clone(), 2, "oops\n:: changed\n")),

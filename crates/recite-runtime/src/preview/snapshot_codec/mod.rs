@@ -15,9 +15,7 @@ use recite_core::{BlockId, ChoiceId, LocaleId};
 use serde::Deserialize;
 use std::io::Cursor;
 
-use super::model::{
-    PreviewConditionRequestId, PreviewError, PreviewSnapshot, PreviewState, PreviewStatus,
-};
+use super::model::{PreviewError, PreviewSnapshot, PreviewState, PreviewStatus};
 use wire::{
     AssetRevisionWire, SnapshotWire, StateWire, StatusWire, WaitingForChoiceWire,
     WaitingForEffectWire,
@@ -71,7 +69,7 @@ impl SnapshotWire {
                 .locale()
                 .map(|locale| locale.as_str().to_owned()),
             variant: snapshot.options.variant().map(str::to_owned),
-            next_condition_id: snapshot.next_condition_request_id().get(),
+            next_condition_id: snapshot.next_condition_request_id(),
             state: StateWire::from_state(snapshot.state())?,
         })
     }
@@ -99,7 +97,7 @@ impl SnapshotWire {
             session: self.session,
             initial_block: self.initial_block,
             options,
-            next_condition_id: PreviewConditionRequestId::new(self.next_condition_id),
+            next_condition_id: self.next_condition_id,
             state,
         })
     }

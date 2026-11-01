@@ -1,12 +1,14 @@
 use crate::schema_inspection::MachinePathProjection;
 use crate::structured::data::ArtifactMetadata;
 use crate::structured::errors::StructuredError;
+use recite_compiler::authoring::{BuildGeneration, SnapshotGeneration};
 use recite_core::DiagnosticRecord;
 use serde::Serialize;
 
 #[derive(Serialize)]
 pub(super) struct BuildStartedData {
-    pub(super) generation: u64,
+    #[serde(serialize_with = "super::wire::serialize_build_generation")]
+    pub(super) generation: BuildGeneration,
     pub(super) trigger: BuildTriggerDto,
 }
 
@@ -19,8 +21,10 @@ pub(super) enum BuildTriggerDto {
 
 #[derive(Serialize)]
 pub(super) struct BuildCompletedData {
-    pub(super) generation: u64,
-    pub(super) snapshot_generation: Option<u64>,
+    #[serde(serialize_with = "super::wire::serialize_build_generation")]
+    pub(super) generation: BuildGeneration,
+    #[serde(serialize_with = "super::wire::serialize_snapshot_generation")]
+    pub(super) snapshot_generation: Option<SnapshotGeneration>,
     pub(super) status: BuildStatusDto,
     pub(super) outcome: BuildOutcomeDto,
     pub(super) inputs: Vec<String>,
@@ -176,7 +180,10 @@ pub(super) enum RestartGuidanceDto {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(super) enum CancellationDto {
     User,
-    Superseded { by_generation: u64 },
+    Superseded {
+        #[serde(serialize_with = "super::wire::serialize_build_generation")]
+        by_generation: BuildGeneration,
+    },
     Unknown,
 }
 

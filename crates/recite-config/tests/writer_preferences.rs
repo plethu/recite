@@ -1,4 +1,6 @@
 use recite_config::{UserConfigEdit, UserConfigStore, resolve_config_path};
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 fn update_exit(path: &std::path::Path, confirm: bool) -> Result<(), Box<dyn std::error::Error>> {
     let resolved = resolve_config_path(Platform::Linux, &PlatformRoots::new(), Some(path))?;
     UserConfigStore::new(resolved).update(UserConfigEdit::WriterConfirmExit(confirm))?;
@@ -94,7 +96,7 @@ fn symlink_config_is_not_replaced() -> Result<(), Box<dyn std::error::Error>> {
     let target = root.path().join("original.toml");
     let link = root.path().join("config.toml");
     std::fs::write(&target, "config_version = 1\n")?;
-    std::os::unix::fs::symlink(&target, &link)?;
+    unix_fs::symlink(&target, &link)?;
     assert!(update_exit(&link, false).is_err());
     assert_eq!(std::fs::read_to_string(target)?, "config_version = 1\n");
     assert!(std::fs::symlink_metadata(link)?.is_symlink());

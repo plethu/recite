@@ -12,6 +12,15 @@ pub enum RuleExpression {
     Group(Box<RuleExpression>),
 }
 impl RuleExpression {
+    /// Header values need one enclosing group; recursive expression rendering stays unchanged.
+    pub(super) fn requirement_source(&self) -> Result<String, EditError> {
+        let source = self.source()?;
+        Ok(match self {
+            Self::Call { .. } | Self::Not(_) => format!("({source})"),
+            Self::All(_) | Self::Any(_) | Self::Group(_) => source,
+        })
+    }
+
     pub(super) fn validate(&self) -> Result<(), EditError> {
         match self {
             Self::Call { arguments, .. } => arguments.iter().try_for_each(RuleArgument::validate),

@@ -13,6 +13,8 @@ use std::{
 mod bootstrap;
 mod error;
 mod freshness;
+mod identity;
+use identity::{QuerySerial, UpdateRevision};
 mod notifications;
 mod query;
 mod requests;
@@ -41,14 +43,14 @@ struct Server {
     epochs: Epochs,
     analyzed_epochs: Epochs,
     documents: Documents,
-    updates: VecDeque<(u64, Arc<Update>)>,
-    revision: u64,
-    analyzed_revision: Option<u64>,
+    updates: VecDeque<(UpdateRevision, Arc<Update>)>,
+    revision: UpdateRevision,
+    analyzed_revision: Option<UpdateRevision>,
     analyzing: Option<CancellationToken>,
     analysis_partition: Option<String>,
-    querying: Option<(u64, CancellationToken)>,
+    querying: Option<(QuerySerial, CancellationToken)>,
     requests: Requests,
-    serial: u64,
+    serial: QuerySerial,
     output: VecDeque<Publication>,
     dirty_diagnostics: Vec<Uri>,
     shutdown_requested: bool,
@@ -70,13 +72,13 @@ impl Server {
             analyzed_epochs: Epochs::default(),
             documents: Documents::default(),
             updates: VecDeque::new(),
-            revision: 0,
+            revision: UpdateRevision::default(),
             analyzed_revision: None,
             analyzing: None,
             analysis_partition: None,
             querying: None,
             requests: Requests::new(),
-            serial: 0,
+            serial: QuerySerial::default(),
             output: VecDeque::new(),
             dirty_diagnostics: Vec::new(),
             shutdown_requested: false,

@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "apps/writer/packaging"
 PACKAGER_VERSION = "0.11.8"
+PACKAGE = "recite-writer"
 ABI_SYMBOL = re.compile(r"Name: (GLIBC|GLIBCXX|CXXABI)_([0-9]+(?:\.[0-9]+)+)\b")
 
 
@@ -95,14 +96,13 @@ def load_config(target, target_dir, output_dir):
     return config
 
 
-def stage_smoke_binary(config, target_dir, target, source):
-    """Keep local smoke inputs away from Cargo's fingerprinted release output."""
-    smoke_dir = target_dir / "writer-package-smoke"
-    staged = smoke_dir / ("recite-writer.exe" if target == "windows" else "recite-writer")
-    smoke_dir.mkdir(parents=True, exist_ok=True)
+def stage_binary(config, directory, target, source):
+    """Preserve the installed name without changing Cargo's fingerprinted output."""
+    staged = directory / ("recite-writer.exe" if target == "windows" else "recite-writer")
+    directory.mkdir(parents=True, exist_ok=True)
     if source != staged:
         shutil.copy2(source, staged)
-    config["binariesDir"] = str(smoke_dir)
+    config["binariesDir"] = str(directory)
     return staged
 
 
@@ -125,6 +125,7 @@ def main():
     target_dir = (args.target_dir or ROOT / "apps/writer/target").resolve()
     output_dir = (args.output_dir or ROOT / "target/writer-packages" / target).resolve()
     config = load_config(target, target_dir, output_dir)
+    config["binariesDir"] = str(target_dir / "writer-package" / PACKAGE / "release")
     inputs = config["icons"] + ([config["licenseFile"]] if "licenseFile" in config else [])
     for path in inputs:
         if not Path(path).is_file():
@@ -143,7 +144,9 @@ def main():
         source = args.binary.resolve()
         if not source.is_file():
             parser.error(f"missing smoke binary: {source}")
-        binary = stage_smoke_binary(config, target_dir, target, source)
+        binary = stage_binary(
+            config, target_dir / "writer-package" / PACKAGE / "smoke", target, source
+        )
         print(f"staged smoke binary {source}; this package is not a release build")
     else:
         subprocess.run(
@@ -155,17 +158,18 @@ def main():
                 "--manifest-path",
                 str(ROOT / "apps/writer/Cargo.toml"),
                 "-p",
-                "recite-writer",
+                PACKAGE,
                 "--target-dir",
                 str(target_dir),
             ],
             cwd=ROOT,
             check=True,
         )
-        binary = (
-            target_dir
-            / "release"
-            / ("recite-writer.exe" if target == "windows" else "recite-writer")
+        binary = target_dir / "release" / (f"{PACKAGE}.exe" if target == "windows" else PACKAGE)
+        if not binary.is_file():
+            parser.error(f"missing built writer: {binary}")
+        binary = stage_binary(
+            config, target_dir / "writer-package" / PACKAGE / "release", target, binary
         )
     if not binary.is_file():
         parser.error(f"missing built writer: {binary}")

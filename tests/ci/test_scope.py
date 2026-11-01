@@ -148,12 +148,10 @@ class ScopeTests(unittest.TestCase):
 
     def test_writer_keeps_ui_and_accessibility_without_packaging(self):
         for path in (
-            "apps/writer/crates/freya/src/app.rs",
-            "scripts/check-writer-native-accessibility.py",
-            "scripts/writer_accessibility_host.py",
+            "apps/writer/crates/xilem/src/app.rs",
+            "tests/writer-native/check.py",
+            "tests/writer-native/atspi.py",
             "tools/ast-grep/rules/rust-writer-palette.yml",
-            "tools/ast-grep/rules/rust-writer-cold-projections.yml",
-            "tools/ast-grep/tests/rust-writer-cold-projections-test.yml",
             "tools/ast-grep/tests/rust-writer-palette-test.yml",
         ):
             self.assertEqual(selected(path), {"writer", "maintainability"})
@@ -221,6 +219,8 @@ class ScopeTests(unittest.TestCase):
             ("tests/writer-flatpak/check.py", "flatpak-packages"),
             ("apps/writer/packaging/icons/recite-writer.svg", "flatpak-packages"),
             ("scripts/package-writer.py", "packages"),
+            ("scripts/check-writer-desktop-links.py", "packages"),
+            ("scripts/writer_desktop_launcher.py", "packages"),
             (".config/mise/config.packaging.toml", "packages"),
             ("scripts/check-writer-package-windows.ps1", "packages"),
             ("tests/writer-packaging/check.py", "packages"),

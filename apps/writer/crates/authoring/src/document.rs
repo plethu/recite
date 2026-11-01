@@ -14,8 +14,12 @@ pub use source_edit::EditOperation;
 pub(crate) use source_edit::{PreparedSourceEdit, SourceEditRequest};
 mod completion;
 pub use completion::CompletionSnapshot;
+mod identity;
+pub use identity::AnalysisStamp;
 mod diagnostics;
 pub use diagnostics::DiagnosticSnapshot;
+mod blocks;
+mod validation;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {
@@ -33,8 +37,8 @@ pub enum EditError {
     Stale,
     #[error("{argument} needs a valid {expected} value.")]
     InvalidRuleValue { argument: String, expected: String },
-    #[error("Cannot apply rules: {0}")]
-    InvalidRules(String),
+    #[error("Cannot apply this source change: {0}")]
+    InvalidSourceChange(String),
     #[error("This content needs Source view: {0}")]
     SourceRequired(&'static str),
     #[error("The selected line no longer exists or has no unique frozen ID.")]
@@ -62,7 +66,7 @@ pub struct ProjectContext {
 pub struct Document {
     source: std::sync::Arc<str>,
     key: DocumentKey,
-    version: i64,
+    version: DocumentVersion,
     kernel: Arc<AuthoringKernel>,
     context: Arc<ProjectContext>,
     history: crate::history::History,
@@ -101,7 +105,7 @@ impl Document {
         let mut document = Self {
             source: String::new().into(),
             key,
-            version: 0,
+            version: DocumentVersion::new(0),
             kernel: Arc::new(kernel),
             context: Arc::new(context),
             history: crate::history::History::default(),
@@ -127,14 +131,14 @@ impl Document {
         }
         control.checkpoint().map_err(AuthoringError::from)?;
         let source: std::sync::Arc<str> = source.into().into();
-        let version = 1;
+        let version = DocumentVersion::new(1);
         let kernel = self.kernel.updated(
             AuthoringRequest::new(
                 self.kernel.snapshot().generation(),
                 context.documents.clone(),
                 [OpenDocument::from_shared(
                     key.clone(),
-                    DocumentVersion::new(version),
+                    version,
                     source.clone(),
                 )],
             ),
@@ -181,13 +185,11 @@ impl Document {
         }
         let version = self
             .version
+            .as_i64()
             .checked_add(1)
+            .map(DocumentVersion::new)
             .ok_or(EditError::RevisionExhausted)?;
-        let open = OpenDocument::from_shared(
-            self.key.clone(),
-            DocumentVersion::new(version),
-            self.source_snapshot(),
-        );
+        let open = OpenDocument::from_shared(self.key.clone(), version, self.source_snapshot());
         let kernel = if same_schema {
             self.kernel.updated(
                 AuthoringRequest::new(
@@ -227,7 +229,7 @@ impl Document {
     pub fn source_snapshot(&self) -> std::sync::Arc<str> {
         self.source.clone()
     }
-    pub const fn revision(&self) -> i64 {
+    pub const fn revision(&self) -> DocumentVersion {
         self.version
     }
     pub fn passages(&self) -> Result<Vec<Passage>, EditError> {
@@ -289,7 +291,7 @@ impl Document {
     /// Source editing preserves invalid buffers so the writer can repair them.
     pub fn replace_source(
         &mut self,
-        expected: i64,
+        expected: DocumentVersion,
         source: impl AsRef<str> + Into<Arc<str>>,
     ) -> Result<(), EditError> {
         self.check_revision(expected)?;
@@ -305,6 +307,9 @@ impl Document {
 
     pub fn can_undo(&self) -> bool {
         self.history.can_undo()
+    }
+    pub fn can_redo(&self) -> bool {
+        self.history.redo_change().is_some()
     }
 
     pub fn undo(&mut self) -> Result<bool, EditError> {
@@ -328,7 +333,7 @@ impl Document {
         self.history.bytes()
     }
 
-    pub(crate) fn check_revision(&self, expected: i64) -> Result<(), EditError> {
+    pub(crate) fn check_revision(&self, expected: DocumentVersion) -> Result<(), EditError> {
         if expected != self.version {
             return Err(EditError::Stale);
         }
@@ -360,7 +365,9 @@ impl Document {
     ) -> Result<(), EditError> {
         let version = self
             .version
+            .as_i64()
             .checked_add(1)
+            .map(DocumentVersion::new)
             .ok_or(EditError::RevisionExhausted)?;
         let kernel = self.kernel.updated(
             AuthoringRequest::new(
@@ -368,7 +375,7 @@ impl Document {
                 self.context.documents.clone(),
                 [OpenDocument::from_shared(
                     self.key.clone(),
-                    DocumentVersion::new(version),
+                    version,
                     source.clone(),
                 )],
             ),

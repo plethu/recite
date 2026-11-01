@@ -147,7 +147,7 @@ fn full_sync_coalescing_preserves_lifecycle_boundaries_and_rejects_old_versions(
         server.notification(Notification::new("textDocument/didChange".to_owned(), json!({"textDocument": {"uri": uri, "version": version}, "contentChanges": [{"text": format!(":: v{version}")}]})))?;
     }
     assert_eq!(server.updates.len(), 2);
-    assert_eq!(server.revision, 3);
+    assert_eq!(server.revision, super::UpdateRevision::for_test(3));
     server.notification(Notification::new(
         "textDocument/didClose".to_owned(),
         json!({"textDocument": {"uri": uri}}),
@@ -242,7 +242,7 @@ fn superseded_close_diagnostics_are_recomputed_before_publication()
             assert!(server.epochs.advance(None).is_some());
         }
         server.analysis_finished(AnalysisResult {
-            through: 0,
+            through: crate::server::UpdateRevision::for_test(0),
             epochs: Epochs::default(),
             result: Ok(Some(AnalysisSnapshot {
                 workspace: Arc::new(workspace),
@@ -321,7 +321,7 @@ fn hot_partition_cannot_repeatedly_restart_bootstrap_or_sibling_analysis()
 fn exhaustion_and_worker_loss_fail_explicitly_without_reusing_identity()
 -> Result<(), Box<dyn std::error::Error>> {
     let (mut exhausted, _client) = server();
-    exhausted.serial = u64::MAX;
+    exhausted.serial = super::QuerySerial::for_test(u64::MAX);
     assert!(matches!(
         exhausted.request(completion(1, "untitled:test")),
         Err(super::ServerError::SequenceExhausted)

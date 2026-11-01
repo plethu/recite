@@ -1,3 +1,5 @@
+use std::fs::File;
+use tracing_subscriber::fmt::time::Uptime;
 fn main() {
     if let Err(error) = configure_trace() {
         eprintln!("recite-lsp: cannot configure native trace: {error}");
@@ -14,10 +16,10 @@ fn configure_trace() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         return Ok(());
     };
     let path = std::path::PathBuf::from(directory).join(format!("{}.jsonl", std::process::id()));
-    let file = std::fs::File::create_new(path)?;
+    let file = File::create_new(path)?;
     tracing_subscriber::fmt()
         .json()
-        .with_timer(tracing_subscriber::fmt::time::Uptime::default())
+        .with_timer(Uptime::default())
         .with_thread_ids(true)
         .with_writer(std::sync::Mutex::new(file))
         .with_max_level(tracing::Level::TRACE)

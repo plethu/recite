@@ -2,24 +2,24 @@
 use recite_compiler::authoring::SavedDocument;
 use recite_core::DocumentKey;
 
-pub fn source(passages: usize, first_id: usize, per_beat: usize) -> String {
+pub fn source(passages: usize, first_index: usize, per_beat: usize) -> String {
     let mut source = String::new();
     for passage in 0..passages {
-        let beat = first_id + passage / per_beat;
+        let beat = first_index + passage / per_beat;
         if passage.is_multiple_of(per_beat) {
             if passage > 0 {
                 source.push_str(&format!("-> beat_{beat}\n\n"));
             }
             source.push_str(&format!(
                 ":: beat_{beat}{}\n",
-                if passage == 0 && first_id == 0 {
+                if passage == 0 && first_index == 0 {
                     " default"
                 } else {
                     ""
                 }
             ));
         }
-        let id = first_id + passage;
+        let id = first_index + passage;
         source.push_str(&format!("> speaker=mara @line_{id}\n  The courier waits beside the café. Beacon{} remains unanswered.\n\n", id % 4096));
     }
     source.push_str("-> END\n");

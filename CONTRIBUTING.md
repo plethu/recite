@@ -68,6 +68,12 @@ Recite's own source remains MIT OR Apache-2.0. Distributions must retain depende
 MPL source availability obligations described in the
 [Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 
+Owned Rust workspaces enable Clippy's `absolute_paths` lint. Import a useful owner instead of
+repeating long crate paths in signatures and expressions; keep names such as `navigation::Target`
+and `Target::Workspace` qualified. `clippy.toml` permits short paths up to three segments. Rustfmt
+orders imports; Clippy checks their use. Macro and attribute paths follow Clippy's upstream
+coverage.
+
 The complete check needs network access for dependency installation and the advisory database. Its
 isolated fixture builds also need temporary disk space. If `/tmp` is a small RAM-backed filesystem,
 use `TMPDIR=/var/tmp just check`; the temporary directory must be outside the checkout so isolation
@@ -151,6 +157,15 @@ Writer control models keep role-specific selection and toggle state in enums. Th
 gate rejects multiple `Option<bool>` state fields in one control under `src/design`; independent
 configuration overrides remain outside that rule. Complexity and nesting limits alone do not check
 the relationships between those fields.
+
+Owned Rust coordination uses distinct value types for numeric identities and freshness markers. The
+same ast-grep gate checks production source across the root, Writer and editor/tool workspaces. It
+rejects primitive fields, parameters and aliases named for IDs, revisions, generations, sequences,
+epochs, tokens, tickets or serials, including optional, atomic and homogeneous collection storage.
+Reuse an existing domain type or introduce a newtype; a type alias does not distinguish identities.
+Keep numeric wire encodings at serialization boundaries. Counts, indexes and format-version numbers
+stay numeric. The rule relies on semantic naming; it cannot infer identities hidden behind arbitrary
+names or the role of each value in mixed containers.
 
 The [site](docs-site/README.md) uses Eleventy with mise-managed Bun for builds and checks. Its
 output is static HTML, CSS and browser modules; hosting needs no Node server or UI framework

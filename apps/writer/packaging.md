@@ -1,173 +1,58 @@
-# Writer packaging and desktop integration
+# Writer packaging
 
-The writer has preview package definitions and repeatable artifact checks. For each release
-candidate, record actual OS/architecture results separately from configured CI jobs, artifact
-inspection and headless launches. Installed upgrade/uninstall, desktop activation, signing or
-notarisation, GUI usability, accessibility and physical input require their own evidence. The
-[acceptance guide](acceptance.md) owns native interaction checks; package-specific limits follow.
+| Platform | Preview artifact                                                | `recite://` links                                    |
+| -------- | --------------------------------------------------------------- | ---------------------------------------------------- |
+| Linux    | Flatpak; `.deb` for the Ubuntu CI baseline                      | Desktop entry; later launches reach the open window  |
+| macOS    | Apple Silicon and Intel `.app`/`.dmg`                           | Not registered until the app handles URL-open events |
+| Windows  | Current-user NSIS installer                                     | Not registered until uninstall can check ownership   |
+| Nix      | Flake packages for Linux and macOS ([nix](../../nix/README.md)) | Linux desktop entry                                  |
 
-| Platform | Preview artifact                                                               | Desktop activation                                                              |
-| -------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Linux    | Flatpak for distribution across distros; `.deb` for the native Ubuntu baseline | `recite://` desktop entry; one project-writer window per user configuration     |
-| macOS    | Separate Apple Silicon and Intel `.app` and `.dmg`, native CI configured       | Deferred; the host needs an incoming URL-event bridge                           |
-| Windows  | Current-user NSIS, native CI configured                                        | Deferred; protocol registration needs verified ownership-safe uninstall         |
-| Nix      | Flake packages and apps for the CLI and Writer, on Linux and macOS             | Linux desktop entry; desktop activation depends on how the package is installed |
-
-The [Flatpak instructions](#flatpak) cover source builds, offline Cargo dependencies and bundle
-checks. The [Nix instructions](../../nix/README.md) cover `nix build`, `nix run`, and the
-development shell. Flatpak uses the standard Cargo source generator. The package workflow declares
-x86-64 and ARM64 Linux builds for both formats, and both Mac architectures for Nix and native
-bundles.
-
-The [package build instructions](#native-packages) name the pinned tool, artifact checks and current
-limits. `--help` and `--version` work without a display. The default launch opens project controls;
-`--examples` opens temporary examples. A project link selects its project before resolving its
-location.
-
-Linux forwards later project/link launches to one project-writer window per user configuration. The
-[navigation guide](guide.md#navigation-and-links) describes draft protection and partial route
-failures. Examples and the specimen remain independent. macOS and Windows package candidates omit
-URL registration until the native activation and ownership-safe uninstall paths are verified.
+The application ID is `io.github.plethu.recite`. The icon source is
+`packaging/icons/recite-writer.svg`.
 
 ## Native packages
 
-The packaging directory defines native package candidates: Linux `.deb`, macOS `.app` and `.dmg`,
-and Windows current-user NSIS. The application ID is `io.github.plethu.recite`. Packages include the
-repository's MIT/Apache dual-license notice and both license texts. The icon uses the shared
-[Recite identity](../../assets/identity/README.md). Its source is
-`packaging/icons/recite-writer.svg`; the native icon files are derived from that source.
-
-For Linux distribution across distros, start with the [Flatpak source build](#flatpak). The
-repository also provides [Nix packages and a development shell](../../nix/README.md). The native
-formats below remain useful for platform-specific installation checks.
-
-The workflow uses
-[cargo-packager 0.11.8](https://github.com/crabnebula-dev/cargo-packager/releases/tag/cargo-packager-v0.11.8)
-and its [published configuration fields](https://docs.crabnebula.dev/packager/configuration/). From
-the repository root, after installing the native build dependencies:
+Packages are built with cargo-packager 0.11.8:
 
 ```sh
 mise -E packaging install cargo:cargo-packager
-```
-
-Run packaging commands with that tool environment:
-
-```sh
 mise -E packaging exec -- python tests/writer-packaging/check.py
 mise -E packaging exec -- python scripts/package-writer.py --check-config
-mise -E packaging exec -- python scripts/package-writer.py
-mise -E packaging exec -- python scripts/check-writer-package.py target/writer-packages/linux  # Linux host
+mise -E packaging exec -- python scripts/package-writer.py            # writes target/writer-packages/
+mise -E packaging exec -- python scripts/check-writer-package.py target/writer-packages/linux
+mise -E packaging exec -- python scripts/check-writer-desktop-links.py /path/to/extracted-deb
 ```
 
-The command builds the writer with its locked Cargo workspace, packages the native format, and
-writes under `target/writer-packages/`. The checker inspects metadata, payload, license files and
-installed binary CLI flags, then writes `SHA256SUMS`. The
-[package preview workflow](../../.github/workflows/writer-packages.yml) runs native builds and
-uploads short-lived CI artifacts. macOS has separate Apple Silicon (`macos-15`) and Intel
-(`macos-15-intel`) jobs; inspection checks the packaged Mach-O architecture before launching it. The
-Windows runner also installs, reinstalls the same version and uninstalls the preview under its
-disposable account. It preserves any pre-existing `recite://` association.
-
-Linux artifact checks compare declared runtime libraries and ABI requirements with the actual
-binary. Use the declared Ubuntu CI baseline before offering a package across distributions; a local
-build against newer system libraries does not establish older-system support.
-
-For a bounded local packager smoke, `--binary /path/to/recite-writer` stages an already built native
-binary instead of building a release binary. Such an artifact is only a packaging fixture; its bytes
-may be a debug build. The normal CI invocation builds with Cargo's release profile. Smoke staging
-uses a separate directory and never overwrites Cargo's cached release executable.
-
-The Linux desktop entry accepts one URL (`%u`) and declares `x-scheme-handler/recite`. With a
-display and `gio` available, run `mise -E packaging exec -- python
-scripts/check-writer-desktop-links.py /path/to/extracted-deb` to exercise cold launch and
-running-window delivery in a private desktop session. The Linux CI lane runs it under Xvfb. The
-[installed-link matrix](#required-deep-link-handling) also requires upgrade and uninstall checks.
-macOS omits URL scheme registration until the app handles native URL-open events. Windows also omits
-scheme registration: cargo-packager 0.11.8's
-[NSIS uninstall template](https://github.com/crabnebula-dev/cargo-packager/blob/cargo-packager-v0.11.8/crates/packager/src/package/nsis/installer.nsi#L561-L567)
-does not provide a verified runtime ownership check, and the published NSIS configuration has no
-small uninstall hook. The Windows installer is an app preview, not a deep-link-capable install.
+`--binary /path/to/recite-writer` stages an existing build for a quick packaging smoke. Build Linux
+packages on the declared Ubuntu baseline; newer local libraries don't establish older-system
+support.
 
 ## Flatpak
 
-This manifest builds Recite Writer from the current source checkout with the GNOME 50 SDK and
-exports `io.github.plethu.recite.flatpak`. It builds the locked Cargo workspace offline from
-committed, generated sources and builds the `freya-skia-bindings` Skia revision from source.
-
-Install the build prerequisites in an isolated Flatpak installation or a disposable CI runner:
-`flatpak-builder`, `dbus-run-session`, `org.gnome.Platform//50`, `org.gnome.Sdk//50`, and
-`org.freedesktop.Sdk.Extension.rust-stable//25.08`, plus
-`org.freedesktop.Sdk.Extension.llvm22//25.08` for Skia's Clang and bindgen. The GNOME SDK supplies
-`ninja`, Python, C/C++ libraries and headers; the runtime supplies `flatpak-spawn`, `msginit`, and
-portal-backed `xdg-open`. The Rust extension must provide Rust 1.96 or newer (the September 2026
-x86_64 branch has 1.98.1). On an existing workstation, do not install these into the normal user
-profile solely for this preview. One isolated setup is:
+Needs `flatpak-builder`, `dbus-run-session`, `org.gnome.Platform//50`, `org.gnome.Sdk//50` and
+`org.freedesktop.Sdk.Extension.rust-stable//25.08`. Install them into a throwaway profile
+(`XDG_DATA_HOME=$PWD/target/writer-flatpak-profile`) rather than your user profile.
 
 ```sh
-export XDG_DATA_HOME="$PWD/target/writer-flatpak-profile"
-flatpak remote-add --user --if-not-exists flathub \
-  https://flathub.org/repo/flathub.flatpakrepo
-flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50 \
-  org.freedesktop.Sdk.Extension.rust-stable//25.08 \
-  org.freedesktop.Sdk.Extension.llvm22//25.08
-```
-
-From the repository root:
-
-```sh
-python3 scripts/check-writer-flatpak.py  # static metadata and Cargo lock, no SDK needed
+python3 scripts/check-writer-flatpak.py              # metadata and Cargo sources, no SDK needed
 python3 scripts/check-writer-flatpak.py --builder
 scripts/package-writer-flatpak.sh /path/to/build-output
 ```
 
-The build command writes `build/`, `state/`, `repo/`, the `.flatpak` bundle, and `SHA256SUMS` with a
-relative bundle filename under the output directory. It does not install the application, add a
-remote, or alter desktop associations. The script runs artifact, metadata, license, desktop-link
-declaration, and headless `--help`/`--version` checks against the GNOME runtime after export. The
-host bridge smoke uses a private D-Bus session. The manifest uses a `dir` source to capture the
-current checkout, including uncommitted Writer changes. For a reproducible source release, replace
-that source with a pinned archive and keep the same locked Cargo sources.
-
-Refresh `cargo-sources.json` when `apps/writer/Cargo.lock` changes using
+When `apps/writer/Cargo.lock` changes, regenerate the offline sources with
 [flatpak-cargo-generator](https://github.com/flatpak/flatpak-builder-tools/tree/41c20aa10819cdb2a4f3ca171758a96d1955c018/cargo):
 
 ```sh
-python3 flatpak-cargo-generator.py apps/writer/Cargo.lock \
-  -o apps/writer/packaging/flatpak/cargo-sources.json
+python3 flatpak-cargo-generator.py apps/writer/Cargo.lock -o apps/writer/packaging/flatpak/cargo-sources.json
 ```
 
-The Flatpak manifest owns GN, Skia and SDK pins. Update generated Cargo sources with the Writer
-lockfile; each native architecture needs its own SDK and build runner. The shared runtime supplies
-gettext and the preferred-application launcher.
+The manifest grants host filesystem access so projects can live anywhere, and
+`org.freedesktop.Flatpak` so configured editors and producers run on the host through `flatpak-spawn
+--host`.
 
-Host filesystem access lets projects live on mounted drives. `org.freedesktop.Flatpak` D-Bus access
-runs explicitly configured producers and editors through `flatpak-spawn --host`; this broad
-permission should remain visible to reviewers. Commands retain separate arguments and the validated
-project directory. Cancelling generation terminates the host-command bridge and its child.
+## Desktop links
 
-## Required deep-link handling
-
-For each supported desktop platform, the installed package must:
-
-- Register `recite://` with the desktop: a Linux desktop entry and scheme association, macOS bundle
-  URL types and URL-open event handling, or Windows protocol registration and activation handling.
-- Open the project identified by a link before resolving its scene, passage, catalogue or
-  translation-queue location. Report missing/moved projects and unavailable targets without silently
-  selecting a different project.
-- Deliver links to an already-running writer and focus the appropriate window. Running-window
-  delivery must pass through the same route validation and draft guards as Back/Forward. Neither
-  startup nor activation may discard source or translation edits or create competing writers for the
-  same files.
-- Preserve encoded paths, Unicode, spaces and queue queries when handing off the URL. Parse it as
-  data; never interpolate it into a shell command. Reject malformed or unsupported routes without
-  modifying project content.
-- Keep registration usable after an upgrade and remove registrations owned by the package on
-  uninstall, without removing another application's association.
-
-The installation smoke matrix must exercise cold launch and running-window activation from an actual
-desktop link, correct project/scene/catalogue selection, queue search/filter/page restoration,
-unsaved-edit refusal, malformed links, upgrade and uninstall. Record results and limits separately
-for each OS.
-
-The [route format, Copy link control and startup arguments](guide.md#navigation-and-links) share one
-route validator. Headless route tests do not satisfy the installed-link matrix.
+An installed package must register `recite://`, open the linked project before resolving its
+location, deliver later links to the running window through the same draft guards as Back/Forward,
+treat the URL as data (never shell input), and survive upgrade while uninstall removes only its own
+registration.

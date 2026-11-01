@@ -4,6 +4,12 @@ valid:
     #[cfg(test)]
     mod tests;
   - |
+    #[cfg(test)]
+    pub(super) mod tests;
+  - |
+    #[cfg(test)]
+    pub(crate) mod tests;
+  - |
     fn production() {
         let first = Some(1);
         let second = Some(2);
@@ -30,4 +36,14 @@ invalid:
     mod tests {
         #[test]
         fn inline_test() {}
+    }
+  - |
+    pub(super) mod tests {
+        #[test]
+        fn visible_inline_test() {}
+    }
+  - |
+    pub(crate) mod tests {
+        #[test]
+        fn crate_visible_inline_test() {}
     }

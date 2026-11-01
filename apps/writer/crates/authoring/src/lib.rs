@@ -1,6 +1,8 @@
 //! Source-preserving authoring sessions for the native Recite writer.
 //! Parsing, validation, IDs, compilation, and preview use the real Recite crates.
 
+pub use recite_compiler::authoring::DocumentVersion;
+
 mod document;
 mod draft_snapshot;
 mod edits;
@@ -14,19 +16,25 @@ mod structure;
 mod workbench;
 
 pub use document::{
-    CompletionSnapshot, DiagnosticSnapshot, Document, EditError, EditOperation, PreparedPreview,
-    PreviewRequest, ProjectContext,
+    AnalysisStamp, CompletionSnapshot, DiagnosticSnapshot, Document, EditError, EditOperation,
+    PreparedPreview, PreviewRequest, ProjectContext,
 };
 pub use draft_snapshot::DraftSnapshot;
 pub use examples::{WRITER_EXAMPLES, WriterExample};
 pub use flow::{SceneLink, scene_endings, scene_links};
-pub use preview::{Preview, PreviewError, PreviewPage, PreviewSetup};
+pub use preview::{
+    CatalogueRevision, Preview, PreviewCatalogue, PreviewError, PreviewPage, PreviewProvenance,
+    PreviewSetup,
+};
 pub use projection::{Passage, PassageContent, PassageKind};
 pub use recovery::RecoveredDraft;
 pub use script::{ScriptBlock, ScriptEntry};
 pub use workbench::{
-    EditRequest, NavigationRequest, PreparedEdit, PreparedNavigation, View, Workbench,
-    WorkbenchError,
+    ContextRefreshRequest, EditRequest, FrozenWorkbench, NavigationRequest, NavigationStamp,
+    PreparedContextRefresh, PreparedEdit, PreparedNavigation, PreparedSourceRepair,
+    PreparedSourceReplacement, PreparedStructuralEdit, RouteOwner, SourceRepairRequest,
+    SourceReplacementRequest, SourceValidation, StructuralCommand, StructuralRequest, View,
+    Workbench, WorkbenchError,
 };
 
 pub const FIXTURE: &str =
@@ -38,7 +46,7 @@ mod projection_cache;
 pub use projection_cache::{PreparedProjection, ProjectionRequest};
 
 mod search;
-pub use search::{SearchHit, SearchIndex, SearchResults};
+pub use search::{SearchHit, SearchIndex, SearchResults, passage_excerpt};
 
 #[cfg(feature = "benchmarks")]
 pub mod workload;

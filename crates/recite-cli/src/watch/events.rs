@@ -118,8 +118,8 @@ impl WatchState {
         Ok(generation)
     }
 
-    pub(super) const fn next_build_generation_number(&self) -> u64 {
-        self.build_generation.as_u64()
+    pub(super) const fn upcoming_build_generation(&self) -> BuildGeneration {
+        self.build_generation
     }
 
     pub(super) const fn last_build_generation(&self) -> Option<BuildGeneration> {

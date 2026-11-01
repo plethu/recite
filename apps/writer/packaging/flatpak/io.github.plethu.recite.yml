@@ -4,7 +4,6 @@ runtime-version: "50"
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-  - org.freedesktop.Sdk.Extension.llvm22
 command: recite-writer
 finish-args:
   - --socket=wayland
@@ -13,39 +12,19 @@ finish-args:
   - --device=dri
   # A project can live anywhere the user has access, including mounted drives.
   - --filesystem=host
+  # AccessKit reads screen-reader status on the session bus before using the
+  # separately proxied accessibility bus.
+  - --talk-name=org.a11y.Bus
   # Explicit, project-configured producers and editors run on the host.
   - --talk-name=org.freedesktop.Flatpak
 modules:
-  # Source-built GN, following the maintained Neovide Flatpak recipe.
-  - name: gn
-    buildsystem: simple
-    build-options:
-      env:
-        CC: gcc
-        CXX: g++
-    sources:
-      - type: git
-        url: https://gn.googlesource.com/gn
-        commit: 6e8dcdebbadf4f8aa75e6a4b6e0bdf89dce1513a
-      - type: file
-        path: last_commit_position.h
-    build-commands:
-      - python3 build/gen.py --allow-warnings --no-last-commit-position --out-path out
-      - install -Dm644 last_commit_position.h out/last_commit_position.h
-      - ninja -C out -j 4
-      - install -Dm755 out/gn /app/bin/gn
   - name: recite-writer
     buildsystem: simple
     build-options:
       env:
-        PATH: /usr/lib/sdk/llvm22/bin:/usr/lib/sdk/rust-stable/bin:/app/bin:/usr/bin
-        LIBCLANG_PATH: /usr/lib/sdk/llvm22/lib
+        PATH: /usr/lib/sdk/rust-stable/bin:/app/bin:/usr/bin
         CARGO_HOME: /run/build/recite-writer/cargo
         CARGO_NET_OFFLINE: "true"
-        SKIA_SOURCE_DIR: /run/build/recite-writer/skia
-        SKIA_GN_COMMAND: /app/bin/gn
-        SKIA_NINJA_COMMAND: /usr/bin/ninja
-        SKIA_USE_SYSTEM_LIBRARIES: "1"
     sources:
       # Local previews include the current checkout, including uncommitted GUI
       # work. A source release can replace this with a pinned archive source.
@@ -56,29 +35,14 @@ modules:
           - target
           - .flatpak-builder
           - apps/writer/target
+          - editors/zed/target
+          - node_modules
+          - docs-site/node_modules
+          - .venv
+          - .turbo
       - cargo-sources.json
-      - type: git
-        url: https://github.com/rust-skia/skia.git
-        tag: m153-0.101.2
-        commit: 61e7ca4e99062cdd0ab69445d5963fb3365778f6
-        dest: skia
-      # Skia's DEPS-pinned sources used by Wuffs and the Vulkan backend.
-      - type: git
-        url: https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c.git
-        commit: e3f919ccfe3ef542cfc983a82146070258fb57f8
-        dest: skia/third_party/externals/wuffs
-      - type: git
-        url: https://chromium.googlesource.com/external/github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
-        commit: eb744ea7a2b17040121b4bbb4d6f9e8a77e3cae7
-        dest: skia/third_party/externals/vulkanmemoryallocator
-      - type: git
-        url: https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Cross
-        commit: b8fcf307f1f347089e3c46eb4451d27f32ebc8d3
-        dest: skia/third_party/externals/spirv-cross
     build-commands:
-      # Append demux after Skia's static objects: GNU ld drops earlier shared
-      # libraries under --as-needed (LLVM lld is less order-sensitive).
-      - cargo --offline --frozen rustc --manifest-path apps/writer/Cargo.toml -p recite-writer --bin recite-writer --release -j 4 -- -C link-arg=-lwebpdemux
+      - cargo --offline --frozen build --manifest-path apps/writer/Cargo.toml -p recite-writer --release -j 4
       - install -Dm755 apps/writer/target/release/recite-writer /app/bin/recite-writer
       - install -Dm644 apps/writer/packaging/flatpak/io.github.plethu.recite.desktop /app/share/applications/io.github.plethu.recite.desktop
       - install -Dm644 apps/writer/packaging/flatpak/io.github.plethu.recite.metainfo.xml /app/share/metainfo/io.github.plethu.recite.metainfo.xml
@@ -87,9 +51,7 @@ modules:
       - install -Dm644 LICENSE /app/share/licenses/io.github.plethu.recite/LICENSE
       - install -Dm644 LICENSE-MIT /app/share/licenses/io.github.plethu.recite/LICENSE-MIT
       - install -Dm644 LICENSE-APACHE /app/share/licenses/io.github.plethu.recite/LICENSE-APACHE
-      - install -Dm644 apps/writer/crates/freya/fonts/fraunces/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/Fraunces-OFL.txt
-      - install -Dm644 apps/writer/crates/freya/fonts/literata/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/Literata-OFL.txt
-      - install -Dm644 apps/writer/crates/freya/fonts/ibm-plex-sans/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/IBM-Plex-Sans-OFL.txt
-      - install -Dm644 apps/writer/crates/freya/fonts/ibm-plex-mono/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/IBM-Plex-Mono-OFL.txt
-cleanup:
-  - /bin/gn
+      - install -Dm644 apps/writer/assets/fonts/fraunces/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/Fraunces-OFL.txt
+      - install -Dm644 apps/writer/assets/fonts/literata/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/Literata-OFL.txt
+      - install -Dm644 apps/writer/assets/fonts/ibm-plex-sans/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/IBM-Plex-Sans-OFL.txt
+      - install -Dm644 apps/writer/assets/fonts/ibm-plex-mono/OFL.txt /app/share/licenses/io.github.plethu.recite/fonts/IBM-Plex-Mono-OFL.txt

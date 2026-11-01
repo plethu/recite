@@ -1,25 +1,19 @@
 //! Prepare destination selection against immutable analysis; retain live history and preview.
-use super::{View, Workbench, WorkbenchError};
-use crate::{
-    CompletionSnapshot, DraftSnapshot, EditError, ProjectContext,
-    projection_cache::CachedProjections,
-};
+use super::{Workbench, WorkbenchError, identity::SelectionStamp};
+use crate::DocumentVersion;
+use crate::{CompletionSnapshot, EditError, ProjectContext, projection_cache::CachedProjections};
 use recite_compiler::authoring::{AuthoringError, WorkControl};
 
 pub struct NavigationRequest {
     base: CompletionSnapshot,
     projections: CachedProjections,
-    view: View,
-    script: Option<String>,
-    draft: DraftSnapshot,
-    loaded: DraftSnapshot,
-    dirty: bool,
+    selection: SelectionStamp,
 }
 pub struct PreparedNavigation {
     request: NavigationRequest,
     model: Workbench,
     accepted: bool,
-    rules_revision: Option<i64>,
+    rules_revision: Option<DocumentVersion>,
 }
 impl Workbench {
     /// Capture a destination without copying its history, preview or projection arrays.
@@ -27,11 +21,7 @@ impl Workbench {
         NavigationRequest {
             base: self.document.completion_snapshot(),
             projections: self.document.projections.capture_local(),
-            view: self.view.clone(),
-            script: self.script_selection.clone(),
-            draft: self.draft.clone(),
-            loaded: self.loaded.clone(),
-            dirty: self.dirty,
+            selection: self.selection_stamp(),
         }
     }
     /// Publish prepared context/selection once; keep the receipt for worker retirement.
@@ -52,6 +42,7 @@ impl Workbench {
         std::mem::swap(&mut self.draft, &mut prepared.model.draft);
         std::mem::swap(&mut self.loaded, &mut prepared.model.loaded);
         self.dirty = prepared.model.dirty;
+        self.source_validation = prepared.model.source_validation;
         self.draft_revision = self.document.revision();
         prepared.accepted = true;
         Ok(())
@@ -59,12 +50,7 @@ impl Workbench {
 }
 impl NavigationRequest {
     pub fn is_current(&self, model: &Workbench) -> bool {
-        self.base.is_current(model.document())
-            && self.view == model.view
-            && self.script == model.script_selection
-            && self.draft == model.draft
-            && self.loaded == model.loaded
-            && self.dirty == model.dirty
+        self.base.is_current(model.document()) && self.selection.is_current(model)
     }
     pub fn prepare(
         self,
@@ -84,13 +70,14 @@ impl NavigationRequest {
         let model = Workbench {
             draft_revision: document.revision(),
             document,
-            view: self.view.clone(),
-            script_selection: self.script.clone(),
-            draft: self.draft.clone(),
-            loaded: self.loaded.clone(),
-            dirty: self.dirty,
+            view: self.selection.view.clone(),
+            script_selection: self.selection.script.clone(),
+            draft: self.selection.draft.clone(),
+            loaded: self.selection.loaded.clone(),
+            dirty: self.selection.dirty,
             preview: None,
             page: None,
+            source_validation: self.selection.source_validation,
         };
         Ok(PreparedNavigation {
             request: self,
@@ -101,6 +88,9 @@ impl NavigationRequest {
     }
 }
 impl PreparedNavigation {
+    pub(super) fn into_parts(self) -> (NavigationRequest, Workbench) {
+        (self.request, self.model)
+    }
     /// Preserve staged Rules across sibling edits only when their source and schema stayed equal.
     pub fn refresh_rules(&self, rules: &mut crate::ReplyRules, document: &crate::Document) -> bool {
         self.accepted

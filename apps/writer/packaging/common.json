@@ -13,19 +13,19 @@
     { "src": "LICENSE-MIT", "target": "licenses/LICENSE-MIT" },
     { "src": "LICENSE-APACHE", "target": "licenses/LICENSE-APACHE" },
     {
-      "src": "apps/writer/crates/freya/fonts/fraunces/OFL.txt",
+      "src": "apps/writer/assets/fonts/fraunces/OFL.txt",
       "target": "licenses/fonts/Fraunces-OFL.txt"
     },
     {
-      "src": "apps/writer/crates/freya/fonts/literata/OFL.txt",
+      "src": "apps/writer/assets/fonts/literata/OFL.txt",
       "target": "licenses/fonts/Literata-OFL.txt"
     },
     {
-      "src": "apps/writer/crates/freya/fonts/ibm-plex-sans/OFL.txt",
+      "src": "apps/writer/assets/fonts/ibm-plex-sans/OFL.txt",
       "target": "licenses/fonts/IBM-Plex-Sans-OFL.txt"
     },
     {
-      "src": "apps/writer/crates/freya/fonts/ibm-plex-mono/OFL.txt",
+      "src": "apps/writer/assets/fonts/ibm-plex-mono/OFL.txt",
       "target": "licenses/fonts/IBM-Plex-Mono-OFL.txt"
     }
   ]

@@ -4,6 +4,8 @@
 )]
 
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs as unix_fs;
 
 use recite_config::{
     Coverage, DiscoveryDiagnostic, DocumentKey, DocumentKeyError, ProjectDiscoveryError,
@@ -258,7 +260,7 @@ fn invalid_roots_and_excludes_reject_windows_and_parent_shapes() {
 #[cfg(unix)]
 #[test]
 fn symlink_directories_are_not_recurred_and_outside_files_are_reported() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().expect("tempdir");
     let outside = TempDir::new().expect("outside tempdir");
@@ -292,7 +294,7 @@ fn symlink_directories_are_not_recurred_and_outside_files_are_reported() {
 #[cfg(unix)]
 #[test]
 fn symlink_files_must_remain_inside_their_configured_source_root() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().expect("tempdir");
     write(
@@ -321,7 +323,7 @@ fn symlink_files_must_remain_inside_their_configured_source_root() {
 #[cfg(unix)]
 #[test]
 fn canonical_symlink_targets_cannot_bypass_excludes() {
-    use std::os::unix::fs::symlink;
+    use unix_fs::symlink;
 
     let temp = TempDir::new().expect("tempdir");
     write(

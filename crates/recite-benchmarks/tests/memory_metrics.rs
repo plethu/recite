@@ -31,8 +31,8 @@ fn lsp_memory_report_counts_only_frozen_line_and_choice_ids()
 
     assert_eq!(first, second);
     assert_eq!(first.source_files, 1);
-    assert_eq!(first.line_ids, 1);
-    assert_eq!(first.choice_ids, 1);
+    assert_eq!(first.line_id_count, 1);
+    assert_eq!(first.choice_id_count, 1);
     assert_eq!(first.block_definitions, 1);
     assert_eq!(first.block_references, 0);
     assert_eq!(first.metadata_keys, 0);

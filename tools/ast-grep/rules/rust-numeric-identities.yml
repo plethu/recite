@@ -1,0 +1,77 @@
+id: rust-numeric-identities
+language: Rust
+severity: error
+files:
+  - "crates/*/src/**/*.rs"
+  - "apps/writer/crates/*/src/**/*.rs"
+  - "editors/zed/src/**/*.rs"
+  - "tools/*/src/**/*.rs"
+ignores:
+  - "**/tests.rs"
+  - "**/tests/**"
+message: Use a distinct value type for identities and freshness markers instead of an integer or primitive alias.
+note: |
+  Coordination code must distinguish unrelated revisions, generations,
+  recovery sequences and request identities. Reuse a meaningful ecosystem type
+  where one exists; otherwise keep primitive storage inside a domain newtype.
+  Counts and indexes remain numeric. This naming-based backstop covers named
+  fields, parameters and identity aliases. Keep numeric wire encodings through
+  transparent serialization. The rule cannot infer identities hidden behind
+  arbitrary names or distinguish the roles of values in mixed containers.
+
+utils:
+  numeric-storage:
+    any:
+      - kind: primitive_type
+        regex: "^[ui](8|16|32|64|128|size)$"
+      - kind: scoped_type_identifier
+        regex: "^(std|core)::primitive::[ui](8|16|32|64|128|size)$"
+      - kind: type_identifier
+        regex: "^(Atomic|NonZero)[UI](8|16|32|64|128|size)$"
+      - kind: scoped_type_identifier
+        regex: "(^|::)(Atomic|NonZero)[UI](8|16|32|64|128|size)$"
+  contains-numeric-storage:
+    any:
+      - matches: numeric-storage
+      - all:
+          - any:
+              - kind: reference_type
+              - kind: array_type
+          - has:
+              matches: contains-numeric-storage
+      - all:
+          - kind: generic_type
+          - has:
+              field: type
+              regex: "(^|::)(Option|Box|Arc|Weak|Cell|RefCell|Mutex|RwLock|Vec|VecDeque|BTreeSet|HashSet|Wrapping|Saturating|Pin)$"
+          - has:
+              kind: type_arguments
+              has:
+                matches: contains-numeric-storage
+
+rule:
+  any:
+    - all:
+        - kind: field_declaration
+        - has:
+            field: name
+            regex: "(^|_|#)(id|generation|revision|sequence|epoch|token|ticket|serial)s?$"
+        - has:
+            field: type
+            matches: contains-numeric-storage
+    - all:
+        - kind: parameter
+        - has:
+            field: pattern
+            regex: "(^|_|#)(id|generation|revision|sequence|epoch|token|ticket|serial)s?$"
+        - has:
+            field: type
+            matches: contains-numeric-storage
+    - all:
+        - kind: type_item
+        - has:
+            field: name
+            regex: "(Id|ID|Generation|Revision|Sequence|Epoch|Token|Ticket|Serial)s?$"
+        - has:
+            field: type
+            matches: contains-numeric-storage

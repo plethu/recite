@@ -148,8 +148,8 @@ fn tiny_lsp_initial_index_reports_stable_memory_counts() -> Result<(), Box<dyn s
     assert!(report.indexed_source_bytes > 0);
     assert_eq!(report.block_definitions, 10);
     assert!(report.block_references > 0);
-    assert!(report.line_ids > 0);
-    assert!(report.choice_ids > 0);
+    assert!(report.line_id_count > 0);
+    assert!(report.choice_id_count > 0);
     assert!(report.estimated_summary_bytes >= report.indexed_source_bytes);
     assert!(report.to_markdown().contains("estimated_summary_bytes"));
     Ok(())

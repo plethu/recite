@@ -17,7 +17,7 @@
     "\\.(snap|patch|lock|unity|tscn|meta|recite|recitec|po|png|ico|icns|gz)$",
     "^editors/recite-tree-sitter/test/corpus/directive-boundaries\\.txt$",
     "^apps/writer/packaging/flatpak/(cargo-sources\\.json|last_commit_position\\.h)$",
-    "^apps/writer/crates/freya/fonts/[^/]+/OFL\\.txt$",
+    "^apps/writer/assets/fonts/[^/]+/OFL\\.txt$",
     "^docs-site/public/fonts/licenses/[^/]+-OFL\\.txt$"
   ],
   "AllowedContentTypes": [],

@@ -18,7 +18,10 @@ git -C "$test_root/repo" config user.email fixture@example.invalid
 git -C "$test_root/repo" config commit.gpgsign false
 check_passes() {
   local base="$1" head="$2" output
-  output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$base" "$head" 2>&1)"
+  if ! output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$base" "$head" 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
   [[ "$output" == *"lint suppression policy passed"* ]] || {
     echo "lint suppression fixture unexpectedly failed" >&2
     printf '%s\n' "$output" >&2

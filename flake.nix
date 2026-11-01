@@ -76,10 +76,6 @@
           ]
           ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.xdg-utils]
           ++ packages.writerNativeInputs ++ packages.writerBuildInputs;
-        inherit (packages.writerEnv) SKIA_SOURCE_DIR SKIA_GN_COMMAND SKIA_NINJA_COMMAND SKIA_USE_SYSTEM_LIBRARIES;
-        shellHook = ''
-          export NIX_LDFLAGS="$NIX_LDFLAGS ${packages.writerExtraLinkFlags}"
-        '';
       };
     });
   };
