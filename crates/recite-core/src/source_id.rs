@@ -1,6 +1,6 @@
 use compact_str::CompactString;
-use std::fmt;
 use std::collections::hash_map::RandomState;
+use std::fmt;
 use std::hash::{BuildHasher, Hasher};
 
 use crate::{ChoiceId, CoreValueError, LineId, STABLE_ID_FIELD_PREFIX};
