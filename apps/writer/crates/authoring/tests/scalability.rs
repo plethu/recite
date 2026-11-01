@@ -37,7 +37,7 @@ fn search_replaces_one_document_and_combines_speaker_with_unicode_words()
     let mut index = SearchIndex::build(&[a, b]);
     let (count, hits) = index.search("alice café", 1);
     assert_eq!(count, 1);
-    assert_eq!(hits[0].document.as_ref(), "b.recite");
+    assert_eq!(hits[0].document(), "b.recite");
     index.replace_document(SavedDocument::new(
         DocumentKey::new("b.recite")?,
         recite_writer_model::FIXTURE,

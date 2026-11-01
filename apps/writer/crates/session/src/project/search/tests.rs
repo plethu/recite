@@ -64,8 +64,7 @@ fn search_input_identity_includes_document_order_and_membership()
             .search_results("tell", 10)
             .get(0)
             .ok_or("hit")?
-            .document
-            .as_ref(),
+            .document(),
         "extra.recite"
     );
     documents.clear();

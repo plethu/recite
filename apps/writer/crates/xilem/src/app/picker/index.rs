@@ -107,18 +107,18 @@ impl Picker {
                 .map(|hit| {
                     let mut title = format!(
                         "{} · {}",
-                        hit.document,
-                        recite_writer_session::choices::display_name(&hit.beat)
+                        hit.document(),
+                        recite_writer_session::choices::display_name(hit.beat())
                     );
-                    if !hit.speaker.is_empty() {
-                        title.push_str(&format!(" · {}", hit.speaker));
+                    if !hit.speaker().is_empty() {
+                        title.push_str(&format!(" · {}", hit.speaker()));
                     }
                     Entry {
                         title,
                         detail: hit.excerpt(&self.query, 120),
                         item: Item::Location(Location {
-                            document: hit.document.to_string(),
-                            beat: Some(hit.beat.to_string()),
+                            document: hit.document().to_string(),
+                            beat: Some(hit.beat().to_string()),
                             passage: hit.passage.as_ref().map(ToString::to_string),
                             view: Some(recite_config::WriterView::Script),
                             ..Location::default()

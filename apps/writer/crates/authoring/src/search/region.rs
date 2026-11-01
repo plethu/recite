@@ -1,4 +1,4 @@
-use super::{SearchHit, words};
+use super::{HitOrigin, SearchHit, words};
 use recite_compiler::authoring::SavedDocument;
 use recite_core::ast::Statement;
 use std::{
@@ -25,7 +25,9 @@ impl RegionIndex {
                 checkpoint()?;
                 let current = context.get_or_insert_with(|| SearchContext::new(document, block));
                 // A parser restart region may contain indented recovered blocks.
-                if current.beat.as_ref() != block.id.as_str() || current.block_span != block.span {
+                if current.block.beat.as_ref() != block.id.as_str()
+                    || current.block_span != block.span
+                {
                     *current = SearchContext::new(document, block);
                 }
                 index.add_root(current, root);
@@ -44,35 +46,28 @@ impl RegionIndex {
 
     pub(super) fn add_root(&mut self, context: &mut SearchContext, root: &Statement) {
         root.visit_depth_first(&mut |statement| {
-            let (text, speaker, passage) = match statement {
+            let (text, origin, passage) = match statement {
                 Statement::Line(line) => (
                     &line.source_text.text,
                     context.speaker(line.speaker.as_ref()),
                     line.source_id
-                        .anchor()
+                        .stable_id()
                         .filter(|_| line.plural_source_text.is_none()),
                 ),
                 Statement::Choice(choice) => (
                     &choice.source_text.text,
-                    Arc::default(),
-                    choice.source_id.anchor(),
+                    context.reply.clone(),
+                    choice.source_id.stable_id(),
                 ),
                 _ => return,
             };
             let id = self.hits.len();
             let hit = SearchHit {
-                document: context.document.clone(),
-                beat: context.beat.clone(),
-                speaker,
+                origin,
                 passage: passage.cloned(),
                 text: text.as_str().into(),
             };
-            for field in [
-                hit.document.as_ref(),
-                hit.beat.as_ref(),
-                hit.speaker.as_ref(),
-                hit.text.as_ref(),
-            ] {
+            for field in [hit.document(), hit.beat(), hit.speaker(), hit.text.as_ref()] {
                 for word in words(field) {
                     let postings = self.words.entry(word).or_default();
                     // Hits arrive in source order, so the last ID deduplicates
@@ -127,33 +122,48 @@ impl RegionIndex {
 }
 
 pub(super) struct SearchContext {
-    document: Arc<str>,
-    beat: Arc<str>,
-    speaker: Arc<str>,
-    last_speaker: Arc<str>,
+    /// Lines without an explicit speaker use the block default.
+    block: Arc<HitOrigin>,
+    /// Replies have no speaker.
+    reply: Arc<HitOrigin>,
+    last_speaker: Arc<HitOrigin>,
     block_span: recite_core::SourceSpan,
 }
 impl SearchContext {
     pub(super) fn new(document: &SavedDocument, block: &recite_core::ast::Block) -> Self {
-        let speaker: Arc<str> = block
-            .default_speaker
-            .as_ref()
-            .map_or_else(Arc::default, |s| Arc::from(s.as_str()));
+        let document: Arc<str> = Arc::from(document.key().as_str());
+        let beat: Arc<str> = Arc::from(block.id.as_str());
+        let origin = |speaker| {
+            Arc::new(HitOrigin {
+                document: document.clone(),
+                beat: beat.clone(),
+                speaker,
+            })
+        };
+        let default = origin(
+            block
+                .default_speaker
+                .as_ref()
+                .map_or_else(Arc::default, |s| Arc::from(s.as_str())),
+        );
         Self {
-            document: Arc::from(document.key().as_str()),
-            beat: Arc::from(block.id.as_str()),
-            last_speaker: speaker.clone(),
-            speaker,
+            reply: origin(Arc::default()),
+            last_speaker: default.clone(),
+            block: default,
             block_span: block.span.clone(),
         }
     }
-    fn speaker(&mut self, explicit: Option<&recite_core::SpeakerId>) -> Arc<str> {
+    fn speaker(&mut self, explicit: Option<&recite_core::SpeakerId>) -> Arc<HitOrigin> {
         let Some(speaker) = explicit else {
-            return self.speaker.clone();
+            return self.block.clone();
         };
         // Consecutive explicit labels share storage without an interning table.
-        if self.last_speaker.as_ref() != speaker.as_str() {
-            self.last_speaker = Arc::from(speaker.as_str());
+        if self.last_speaker.speaker.as_ref() != speaker.as_str() {
+            self.last_speaker = Arc::new(HitOrigin {
+                document: self.block.document.clone(),
+                beat: self.block.beat.clone(),
+                speaker: Arc::from(speaker.as_str()),
+            });
         }
         self.last_speaker.clone()
     }

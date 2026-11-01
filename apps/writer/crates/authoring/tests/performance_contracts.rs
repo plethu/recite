@@ -15,10 +15,10 @@ fn repeated_words_across_fields_and_query_do_not_duplicate_search_hits()
     let (count, hits) = index.search("COURIER café courier CAFÉ", 3);
     assert_eq!(count, 4);
     assert_eq!(hits.len(), 3);
-    assert_eq!(hits[0].document.as_ref(), "courier.recite");
+    assert_eq!(hits[0].document(), "courier.recite");
     assert_eq!(hits[0].text.as_ref(), "Courier café courier.");
     assert_eq!(hits[1].text.as_ref(), "Café courier.");
-    assert_eq!(hits[2].document.as_ref(), "other.recite");
+    assert_eq!(hits[2].document(), "other.recite");
     assert_eq!(index.search("courier", 0), (4, vec![]));
     assert_eq!(index.search("courier missing", 10), (0, vec![]));
     assert_eq!(index.search("...", 10), (0, vec![]));
@@ -115,11 +115,7 @@ fn shared_search_results_preserve_order_counts_and_their_saved_snapshot()
         "Café courier."
     );
     assert_eq!(
-        snapshot
-            .get(2)
-            .ok_or("third search result")?
-            .document
-            .as_ref(),
+        snapshot.get(2).ok_or("third search result")?.document(),
         "b.recite"
     );
     Ok(())
@@ -169,8 +165,8 @@ fn search_hits_share_immutable_context_without_retaining_source()
     let second = hits.get(1).ok_or("second")?;
     assert_eq!(first.text.as_ref(), "First courier.");
     assert_eq!(second.text.as_ref(), "Second courier.");
-    assert!(Arc::ptr_eq(&first.document, &second.document));
-    assert!(Arc::ptr_eq(&first.beat, &second.beat));
-    assert!(Arc::ptr_eq(&first.speaker, &second.speaker));
+    assert!(std::ptr::eq(first.document(), second.document()));
+    assert!(std::ptr::eq(first.beat(), second.beat()));
+    assert!(std::ptr::eq(first.speaker(), second.speaker()));
     Ok(())
 }
